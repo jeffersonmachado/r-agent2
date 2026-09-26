@@ -28,7 +28,16 @@
  *
  * Uso:
  *   node scripts/governance/api-surface-wave.js
- *   API_SURFACE_BASE_URL=http://localhost:3001 node scripts/governance/api-surface-wave.js
+ *   API_SURFACE_BASE_URL=http://127.0.0.1:3001 node scripts/governance/api-surface-wave.js
+ *
+ * O default é IP LITERAL (127.0.0.1), nunca 'localhost': o undici conta a
+ * resolução DNS DENTRO do connect timeout e `dns.lookup` roda no threadpool do
+ * libuv (4 threads) disputado com o fs/crypto do processo. Medido neste repo em
+ * 2026-09-25: `dns.lookup('localhost')` 0-15ms ocioso → 3015ms sob saturação, e
+ * conexão nova 5797ms por 'localhost' vs 6ms pelo IP literal. Com 846 itens ×
+ * até 3 probes, um blip do resolvedor vira 'network-error' e degrada itens
+ * saudáveis para BLOCKED (5 itens em 2026-09-26, mesmo com as rotas
+ * respondendo 401 em 20-40ms quando sondadas em sequência).
  *
  * Credenciais (defaults = credenciais QA locais documentadas em AGENTS.md):
  *   API_SURFACE_ADMIN_USER / API_SURFACE_ADMIN_PASSWORD
@@ -48,11 +57,27 @@ const INVENTORY_PATH = path.join(ROOT_DIR, 'config', 'system-inventory.json');
 const EXEMPTIONS_PATH = path.join(ROOT_DIR, 'config', 'api-surface-exemptions.json');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'api-surface-report.json');
 
-const BASE_URL = (process.env.API_SURFACE_BASE_URL || 'http://localhost:3001').replace(/\/+$/, '');
+const BASE_URL = (process.env.API_SURFACE_BASE_URL || 'http://127.0.0.1:3001').replace(/\/+$/, '');
 const ADMIN_USER = process.env.API_SURFACE_ADMIN_USER || 'systemadmin';
 const ADMIN_PASSWORD = process.env.API_SURFACE_ADMIN_PASSWORD || 'Admin123!';
-const PROBE_TIMEOUT_MS = Number(process.env.API_SURFACE_PROBE_TIMEOUT_MS || 8000);
-const CONCURRENCY = Number(process.env.API_SURFACE_CONCURRENCY || 8);
+/**
+ * Dimensionamento da sonda. A wave prova EXISTÊNCIA da rota, enforcement de auth
+ * e de classificação — não SLA de latência. Com 8s e concorrência 8 (defaults
+ * antigos) a própria sonda saturava o servidor e itens saudáveis caíam em
+ * network-error: medido em 2026-09-26, o log passou a mostrar
+ * `20 | This operation was aborted` (AbortError do timeout) e o CONJUNTO de
+ * rotas que falhava MUDOU entre execuções (/api/schedules,
+ * /api/test-executions/artifacts, /api/support/dashboard, /api/support/dashboard
+ * e /api/qa-waves/*), enquanto as mesmas rotas respondiam 401 em 20-573ms quando
+ * sondadas em sequência. Assinatura de contenção do servidor, não de rota
+ * quebrada. Timeout 30s + concorrência 3 + retry com backoff.
+ *
+ * O fail-closed continua intacto: recusa de transporte (servidor morto) falha em
+ * milissegundos e nunca é absorvida por timeout, e 404 com header
+ * `x-api-route-fallback` segue marcando rota não registrada.
+ */
+const PROBE_TIMEOUT_MS = Number(process.env.API_SURFACE_PROBE_TIMEOUT_MS || 30000);
+const CONCURRENCY = Number(process.env.API_SURFACE_CONCURRENCY || 3);
 
 /**
  * Substitui parâmetros de rota (:id, *) por valor de probe inócuo.
@@ -80,6 +105,7 @@ function concretePath(routePath) {
 async function probeOnce(method, routePath, headers) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  const startedAt = Date.now();
   try {
     const res = await fetch(`${BASE_URL}${routePath}`, {
       method,
@@ -100,7 +126,31 @@ async function probeOnce(method, routePath, headers) {
       await res.arrayBuffer().catch(() => {});
     }
     return { status: res.status, notFoundFallback };
-  } catch {
+  } catch (err) {
+    // Diagnóstico obrigatório. Sem a causa, um blip de transporte vira
+    // "servidor inalcançável" no relatório e a investigação desvia por
+    // sessões — medido em 2026-09-26: 14 itens BLOCKED com p1/p2/p3 =
+    // network-error e nenhuma causa registrada, embora as MESMAS rotas
+    // respondessem 401 em 3ms por curl no mesmo instante. O contrato de
+    // retorno permanece { error: true } (o motor puro decide o estado);
+    // a causa é apenas registrada no log do runner.
+    const cause = err && err.cause ? err.cause : null;
+    const aggregate = cause && Array.isArray(cause.errors)
+      ? cause.errors.map((e) => (e && (e.code || e.name || e.message)) || '?').join('|')
+      : null;
+    const detail = [
+      err && (err.code || err.name),
+      err && err.message,
+      cause && (cause.code || cause.name),
+      cause && cause.message,
+      aggregate ? `subErrors=${aggregate}` : null,
+    ].filter(Boolean).join(' | ');
+    // `ms` distingue as duas classes de falha: ~0-50ms = recusa real de
+    // transporte (servidor morto/conn recusada); ~PROBE_TIMEOUT_MS = a sonda
+    // abortou por lentidão do servidor sob carga (medido: 20 | This operation
+    // was aborted depois de 30s). A primeira é defeito; a segunda é capacidade.
+    const elapsed = Date.now() - startedAt;
+    console.log(`[api-surface-wave] transporte falhou (${method} ${routePath}) apos ${elapsed}ms: ${detail || 'sem detalhe'}`);
     return { error: true };
   } finally {
     clearTimeout(timer);
@@ -108,21 +158,27 @@ async function probeOnce(method, routePath, headers) {
 }
 
 /**
- * Probe com retry único (padrão) para blips de rede: probeOnce retorna
- * { error: true } em falha de transporte (ECONNREFUSED, timeout abortado,
- * contenção da máquina). Retentar uma vez com backoff curto recupera o
- * transitório; erro persistente continua { error: true } → 'network-error'.
+ * Probe com retry para blips de rede: probeOnce retorna { error: true } em
+ * falha de transporte (ECONNREFUSED, timeout abortado, contenção da máquina).
+ * Retenta com backoff linear: o transitório é absorvido; erro persistente
+ * continua { error: true } → 'network-error' → BLOCKED (fail-closed
+ * preservado — retry NÃO transforma falha real em aprovação).
  * Respostas HTTP (qualquer status) nunca são retentadas — não é erro de rede.
+ *
+ * Medido em 2026-09-26 (concorrência 8, 846 rotas): um retry único com 250ms
+ * ainda deixava 5 itens em network-error; as mesmas rotas respondem 401 em
+ * 20-40ms quando sondadas em sequência. Retry triplo com backoff 300/600/900ms.
  */
 async function probeWithRetry(method, routePath, headers, options = {}) {
   const probeFn = options.probeFn || probeOnce;
-  const retries = Number.isFinite(options.retries) ? options.retries : 1;
-  const delayMs = Number.isFinite(options.delayMs) ? options.delayMs : 250;
+  const retries = Number.isFinite(options.retries) ? options.retries : 3;
+  const delayMs = Number.isFinite(options.delayMs) ? options.delayMs : 300;
 
   let result = await probeFn(method, routePath, headers);
   for (let attempt = 0; result && result.error && attempt < retries; attempt += 1) {
-    if (delayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    const wait = delayMs * (attempt + 1);
+    if (wait > 0) {
+      await new Promise((resolve) => setTimeout(resolve, wait));
     }
     result = await probeFn(method, routePath, headers);
   }

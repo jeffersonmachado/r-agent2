@@ -14,9 +14,68 @@ const { writeJsonAtomic } = require('../../../api/utils/atomicJsonFile');
 const DEFAULT_THRESHOLD = 95;
 const DEFAULT_SCHEDULED_MAX_AGE_HOURS = 48;
 
+/**
+ * Memoização de I/O e do relatório (correção de performance medida em 2026-09-26).
+ *
+ * MEDIÇÃO (o defeito real): `buildQaWavesEnterpriseGovernance` levava 13,6-17,9s
+ * por chamada e a rota `GET /api/qa-waves/enterprise-governance` devolvia 11.618
+ * bytes. O custo era redundância de I/O sobre a MESMA evidência de 141,42MB
+ * (`qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json`):
+ *   - lida 4x            → 565,7MB de leitura (4,1s)
+ *   - sha256 2x          → 282,8MB de hash (2,1s)
+ *   - JSON.parse 2x      → 282,8MB de parse (3,1s)
+ *   - `stable()+stringify` por entrada (4,3s)
+ * Tudo SÍNCRONO no handler do Express. Como o event loop fica bloqueado 13-18s
+ * por requisição, qualquer outra requisição concorrente (inclusive `GET /auth/me`,
+ * o bootstrap de toda página) estoura o timeout — foi assim que a Page Surface
+ * Wave reprovou `/dev/qa-waves/enterprise-governance` com
+ * `AbortError: Request timed out after 30000ms | path: /auth/me`, e é a mesma
+ * família dos abortos de 28-30s e `ECONNRESET` observados na API Surface Wave.
+ *
+ * Correção: (1) memo de TEXTO/JSON/HASH chaveado por `(path, size, mtimeMs)` —
+ * invalidação é exata (arquivo mudou ⇒ mtime muda ⇒ cache miss) e o valor devolvido
+ * é idêntico byte a byte, então nenhum veredito/hash muda; (2) memo do RELATÓRIO
+ * montado, revalidado contra a assinatura dos arquivos efetivamente lidos no build
+ * anterior, com TTL como backstop (os campos derivados de idade dependem do relógio,
+ * não só dos arquivos). Só é usado quando o chamador NÃO injeta entradas próprias
+ * (`prodLike`/`scheduled`/`now`) — testes com fixture continuam exercitando o
+ * caminho real sem cache.
+ */
+const REPORT_CACHE_TTL_MS = Number(process.env.QA_WAVES_ENTERPRISE_REPORT_CACHE_MS || 60000);
+const textCache = new Map();
+const jsonCache = new Map();
+const hashCache = new Map();
+let touchedFiles = null;
+let reportCache = null;
+
+function statOrNull(filePath) {
+  try {
+    return fs.statSync(filePath);
+  } catch {
+    return null;
+  }
+}
+
+function recordTouched(filePath, stat) {
+  if (!touchedFiles || !stat) return;
+  touchedFiles.push(`${filePath}\u0000${stat.size}\u0000${stat.mtimeMs}`);
+}
+
+function readTextFile(filePath) {
+  const stat = statOrNull(filePath);
+  recordTouched(filePath, stat);
+  if (stat) {
+    const hit = textCache.get(filePath);
+    if (hit && hit.size === stat.size && hit.mtimeMs === stat.mtimeMs) return hit.text;
+  }
+  const text = fs.readFileSync(filePath, 'utf8');
+  if (stat) textCache.set(filePath, { size: stat.size, mtimeMs: stat.mtimeMs, text });
+  return text;
+}
+
 function readCurrentRunLineage() {
   try {
-    const run = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'governance', '.current-run.json'), 'utf8'));
+    const run = JSON.parse(readTextFile(path.join(process.cwd(), 'governance', '.current-run.json')));
     return {
       runId: run?.runId || null,
       sourceFingerprint: run?.sourceFingerprint || null,
@@ -36,8 +95,16 @@ const DEFAULT_REQUIRED_SCHEDULED_JOURNEYS = Object.freeze([
 
 function readJson(filePath) {
   if (!filePath || !fs.existsSync(filePath)) return null;
+  const stat = statOrNull(filePath);
+  recordTouched(filePath, stat);
+  if (stat) {
+    const hit = jsonCache.get(filePath);
+    if (hit && hit.size === stat.size && hit.mtimeMs === stat.mtimeMs) return hit.value;
+  }
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const value = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (stat) jsonCache.set(filePath, { size: stat.size, mtimeMs: stat.mtimeMs, value });
+    return value;
   } catch {
     return null;
   }
@@ -48,7 +115,15 @@ function sha256(value) {
 }
 
 function sha256File(filePath) {
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  const stat = statOrNull(filePath);
+  recordTouched(filePath, stat);
+  if (stat) {
+    const hit = hashCache.get(filePath);
+    if (hit && hit.size === stat.size && hit.mtimeMs === stat.mtimeMs) return hit.value;
+  }
+  const value = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  if (stat) hashCache.set(filePath, { size: stat.size, mtimeMs: stat.mtimeMs, value });
+  return value;
 }
 
 function stable(value) {
@@ -345,7 +420,7 @@ function calculateOperationalConfidence({
   return Number(Math.max(0, Math.min(100, weighted)).toFixed(1));
 }
 
-function buildQaWavesEnterpriseGovernance(options = {}) {
+function buildQaWavesEnterpriseGovernanceUncached(options = {}) {
   const root = options.root || process.cwd();
   const prodLikePath = options.prodLikePath || path.join(root, 'qa', 'smoke', 'prod-like', 'qa-waves-operational-prod-like-smoke.json');
   const scheduledPath = options.scheduledPath || path.join(root, 'qa', 'smoke', 'qa-waves-scheduled-operational-smoke.json');
@@ -540,6 +615,48 @@ function buildQaWavesEnterpriseGovernance(options = {}) {
   return report;
 }
 
+/**
+ * Fachada com memo do relatório. A chave é a assinatura dos arquivos REALMENTE
+ * lidos no build anterior (`(path, size, mtimeMs)`) + TTL; qualquer mudança de
+ * arquivo invalida na hora. O objeto devolvido é o MESMO relatório já assinado
+ * (por isso `generatedAt`/`reportHash` permanecem coerentes entre si — recarimbar
+ * `generatedAt` quebraria `reportHash`).
+ *
+ * Não é usado quando o chamador injeta entradas (`prodLike`/`scheduled`/`now`),
+ * então testes com fixture seguem exercitando o caminho sem cache.
+ */
+function buildQaWavesEnterpriseGovernance(options = {}) {
+  const cacheable = !options.prodLike && !options.scheduled && options.now === undefined;
+  const key = [
+    options.root || process.cwd(),
+    options.threshold === undefined ? '' : String(options.threshold),
+    options.scheduledMaxAgeHours === undefined ? '' : String(options.scheduledMaxAgeHours),
+    asArray(options.requiredScheduledJourneys).join(','),
+  ].join('|');
+
+  if (cacheable && reportCache && reportCache.key === key && Date.now() < reportCache.expiresAt) {
+    const unchanged = reportCache.touched.every((entry) => {
+      const [filePath, size, mtimeMs] = entry.split('\u0000');
+      const stat = statOrNull(filePath);
+      return Boolean(stat) && String(stat.size) === size && String(stat.mtimeMs) === mtimeMs;
+    });
+    if (unchanged) return reportCache.report;
+  }
+
+  touchedFiles = [];
+  let report;
+  try {
+    report = buildQaWavesEnterpriseGovernanceUncached(options);
+  } finally {
+    const touched = touchedFiles ? [...new Set(touchedFiles)] : [];
+    touchedFiles = null;
+    if (cacheable) {
+      reportCache = { key, expiresAt: Date.now() + REPORT_CACHE_TTL_MS, touched, report };
+    }
+  }
+  return report;
+}
+
 function validateQaWavesEnterpriseGovernance(report = {}, options = {}) {
   const threshold = Number(options.threshold || report.threshold || DEFAULT_THRESHOLD);
   const reasons = [];
@@ -593,7 +710,7 @@ function verifyGovernanceAuditTrail(auditPath) {
   }
 
   const reasons = [];
-  const lines = fs.readFileSync(auditPath, 'utf8').split('\n').filter((line) => line.trim());
+  const lines = readTextFile(auditPath).split('\n').filter((line) => line.trim());
   let previousEntryHash = null;
   for (let index = 0; index < lines.length; index += 1) {
     let entry;

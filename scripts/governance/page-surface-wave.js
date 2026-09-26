@@ -62,9 +62,21 @@ const API_URL = (process.env.PAGE_SURFACE_API_URL || 'http://localhost:3001').re
 const ADMIN_USER = process.env.PAGE_SURFACE_ADMIN_USER || 'systemadmin';
 const ADMIN_PASSWORD = process.env.PAGE_SURFACE_ADMIN_PASSWORD || 'Admin123!';
 const NAV_TIMEOUT_MS = Number(process.env.PAGE_SURFACE_NAV_TIMEOUT_MS || 15000);
-const SURFACE_TIMEOUT_MS = Number(process.env.PAGE_SURFACE_SURFACE_TIMEOUT_MS || 10000);
+/**
+ * Janela de estabilização da superfície. 10s se mostrou INSUFICIENTE sob a carga
+ * da própria wave: medido em 2026-09-26, /dev/qa-gaps e
+ * /dev/qa-waves/enterprise-governance saíram `rendered=false` (com
+ * `consoleErrors=0`, `pageErrors=0`, `docStatus=200` — nenhuma evidência de
+ * quebra), embora sondadas ISOLADAMENTE com o MESMO probe P3 (contexto novo +
+ * storageState do login de UI) renderizem em ~460ms com ZERO erros. Como o
+ * `#root` só passa de 40 caracteres quando o shell monta, a janela curta
+ * transformava bootstrap lento (Vite DEV compilando módulo sob demanda, com 4
+ * páginas concorrentes) em reprovação de página. 30s mantém o check
+ * fail-closed: página realmente quebrada nunca renderiza, em janela nenhuma.
+ */
+const SURFACE_TIMEOUT_MS = Number(process.env.PAGE_SURFACE_SURFACE_TIMEOUT_MS || 30000);
 const SETTLE_MS = Number(process.env.PAGE_SURFACE_SETTLE_MS || 800);
-const CONCURRENCY = Number(process.env.PAGE_SURFACE_CONCURRENCY || 4);
+const CONCURRENCY = Number(process.env.PAGE_SURFACE_CONCURRENCY || 2);
 
 /** Remove segredos de amostras de erro antes de gravar em relatório. */
 function sanitizeSample(text) {
@@ -169,6 +181,7 @@ async function probePage(context, pagePath) {
   let loginSurface = false;
   let denied = false;
   let rendered = false;
+  let evaluateFailures = 0;
   while (Date.now() - started < SURFACE_TIMEOUT_MS) {
     const surface = await page.evaluate(() => {
       const body = document.body;
@@ -182,11 +195,23 @@ async function probePage(context, pagePath) {
       const onlyLoading = /^carregando[.\s]*$/i.test(text.trim());
       return { passwordField, usernameField, loginTitle, deniedText, hasContent, onlyLoading };
     }).catch(() => null);
-    if (!surface) break; // navegação em curso/destruída — tenta de novo
+    // `page.evaluate` pode falhar transitoriamente enquanto uma navegação troca o
+    // contexto de execução ("Execution context was destroyed"). Isso NÃO é
+    // veredito sobre a página: retenta até o timeout, como o comentário abaixo
+    // sempre prometeu. Sair do loop aqui declarava `rendered=false` sem qualquer
+    // evidência de defeito (0 console.error, 0 pageerror, docStatus=200).
+    if (!surface) {
+      evaluateFailures += 1;
+      await page.waitForTimeout(300);
+      continue;
+    }
     if (surface.passwordField && (surface.usernameField || surface.loginTitle)) { loginSurface = true; break; }
     if (surface.deniedText) { denied = true; break; }
     if (surface.hasContent && !surface.onlyLoading) { rendered = true; break; }
     await page.waitForTimeout(300);
+  }
+  if (evaluateFailures > 0) {
+    console.log(`[page-surface-wave] ${pagePath}: ${evaluateFailures} leitura(s) de superfície falharam durante navegação (retentadas)`);
   }
 
   // Janela curta para erros de console assíncronos pós-render.

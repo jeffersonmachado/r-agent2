@@ -1,21 +1,20 @@
 {
-  "generatedAt": "2026-09-26T02:50:09.117Z",
-  "commit": "c16f48cd7ae0b20fcfc2281bbf82a02d74625f42",
-  "baseUrl": "http://localhost:3001",
+  "generatedAt": "2026-09-26T11:08:58.569Z",
+  "commit": "614714368781b434dddedc213c53b38a304bfe75",
+  "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 846,
+    "items": 879,
     "byState": {
-      "VALIDATED": 794,
-      "VISITED": 17,
-      "BLOCKED": 14,
-      "NOT_APPLICABLE": 21
+      "VALIDATED": 851,
+      "NOT_APPLICABLE": 21,
+      "VISITED": 7
     }
   },
-  "status": "FAIL",
+  "status": "PASS",
   "exemptions": [
     {
       "item": "api:GET:/api/qa-waves/health",
@@ -4714,7 +4713,7 @@
     },
     {
       "id": "api:GET:/api/ops/event-ledger/metrics",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -4734,8 +4733,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -4747,7 +4745,10 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": "network-error"
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
       }
     },
     {
@@ -5037,7 +5038,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "network-error",
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -6070,7 +6074,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/enterprise-governance",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6090,8 +6094,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -6103,12 +6106,15 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": "network-error"
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
       }
     },
     {
       "id": "api:GET:/api/qa-waves/executions",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6123,14 +6129,12 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -6138,81 +6142,19 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "network-error",
-        "p3": "network-error"
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
       }
     },
     {
       "id": "api:GET:/api/qa-waves/executions/:executionId",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/executions/history",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/governance",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6227,14 +6169,12 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (404)"
         }
       ],
       "probes": {
@@ -6242,37 +6182,120 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "network-error",
-        "p3": "network-error"
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 404,
+          "notFoundFallback": false
+        }
       }
     },
     {
-      "id": "api:GET:/api/qa-waves/health",
-      "state": "BLOCKED",
+      "id": "api:GET:/api/qa-waves/executions/history",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
+          "passed": true,
+          "detail": "rota respondeu no runtime"
         },
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         },
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 com erro de rede | NOT_APPLICABLE — isenção justificada: Health check público intencional do módulo QA Waves (probe de infraestrutura, payload mínimo sem dados de negócio nem de evidência). Comportamento coberto por api/server.test.js ('GET /api/qa-waves/health deve retornar status ok do modulo'). Demais endpoints do módulo exigem DEVELOPMENT normalmente. (aprovada por jeffersonmachado em 2026-07-28)",
-          "notEvaluated": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/governance",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/health",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT | NOT_APPLICABLE — isenção justificada: Health check público intencional do módulo QA Waves (probe de infraestrutura, payload mínimo sem dados de negócio nem de evidência). Comportamento coberto por api/server.test.js ('GET /api/qa-waves/health deve retornar status ok do modulo'). Demais endpoints do módulo exigem DEVELOPMENT normalmente. (aprovada por jeffersonmachado em 2026-07-28)",
           "notApplicable": true
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "exemption": {
@@ -6283,388 +6306,23 @@
         "date": "2026-07-28"
       },
       "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
       }
     },
     {
       "id": "api:GET:/api/qa-waves/intelligence/business-gaps",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/intelligence/coverage",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/intelligence/drafts",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/journey-status",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/journeys",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/operational/gaps",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/operational/summary",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/replays",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/replays/:id",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/scenarios",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/step-status",
-      "state": "BLOCKED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": false,
-          "detail": "todos os probes falharam com erro de rede (servidor inalcançável)"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
-        "p3": "network-error"
-      }
-    },
-    {
-      "id": "api:GET:/api/qa-waves/waves",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6674,14 +6332,12 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         },
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 com erro de rede",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
@@ -6690,8 +6346,14 @@
         }
       ],
       "probes": {
-        "p1": "network-error",
-        "p2": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": {
           "status": 200,
           "notFoundFallback": false
@@ -6699,8 +6361,8 @@
       }
     },
     {
-      "id": "api:GET:/api/rap-learn/records",
-      "state": "VISITED",
+      "id": "api:GET:/api/qa-waves/intelligence/coverage",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6710,12 +6372,454 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/intelligence/drafts",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/journey-status",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/journeys",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/operational/gaps",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/operational/summary",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/replays",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/replays/:id",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (404)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 404,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/scenarios",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/step-status",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/waves",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/rap-learn/records",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 200,
           "notFoundFallback": false
@@ -6725,7 +6829,7 @@
     },
     {
       "id": "api:GET:/api/rap-learn/regressions",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6735,12 +6839,14 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 200,
           "notFoundFallback": false
@@ -6750,7 +6856,7 @@
     },
     {
       "id": "api:GET:/api/schedule-purposes",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6760,12 +6866,14 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 200,
           "notFoundFallback": false
@@ -6775,7 +6883,7 @@
     },
     {
       "id": "api:GET:/api/schedules",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6785,12 +6893,14 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 200,
           "notFoundFallback": false
@@ -7257,7 +7367,7 @@
     },
     {
       "id": "api:GET:/api/test-executions/artifacts",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -7277,8 +7387,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -7290,7 +7399,10 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": "network-error"
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
       }
     },
     {
@@ -8499,6 +8611,806 @@
           "notFoundFallback": false
         },
         "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/:id",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/:id/approvals",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/:id/preview",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/:id/report",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/:id/review",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/:id/versions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/overview",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/policy",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/self-assessment",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/models",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/overview",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/release-closure",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/router/decision/:taskId",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/tasks",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/tasks/:id",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/tasks/:id/attempts",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/tasks/:id/reviews",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/tasks/:id/telemetry",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/tasks/:id/tests",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (500)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 500,
+          "notFoundFallback": false
+        }
       }
     },
     {
@@ -19406,6 +20318,424 @@
       }
     },
     {
+      "id": "api:POST:/engineering/missions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/missions/:id/approve",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/missions/:id/edit",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/missions/:id/enrich",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/missions/:id/execute",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/missions/:id/reject",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/missions/:id/review",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/missions/resume-interrupted",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/tasks",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/tasks/:id/cancel",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/engineering/tasks/:id/run",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/flow-templates",
       "state": "VALIDATED",
       "assertions": [
@@ -23041,6 +24371,44 @@
       }
     },
     {
+      "id": "api:PUT:/engineering/missions/policy",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:PUT:/flows/:id",
       "state": "VALIDATED",
       "assertions": [
@@ -23209,6 +24577,30 @@
       }
     },
     {
+      "id": "api:PUT:/tenants/:tenantId/ai-credentials",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:PUT:/tenants/:tenantId/context",
       "state": "VALIDATED",
       "assertions": [
@@ -23352,9 +24744,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20260926072813403-5371bb50",
-  "sourceFingerprint": "e75575e2e889eba455a4fe4b7cb6f586f4c49d0d54791c3a02611f486b12f664",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }

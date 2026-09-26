@@ -56,6 +56,10 @@ function getEngineeringTaskModel() {
       lease_acquired_at: { type: DataTypes.DATE, allowNull: true },
       lease_expires_at: { type: DataTypes.DATE, allowNull: true },
       lease_heartbeat_at: { type: DataTypes.DATE, allowNull: true },
+      // PROGRESSO SIGNIFICATIVO — separado de LIVENESS (ver EngineeringMission).
+      last_progress_at: { type: DataTypes.DATE, allowNull: true },
+      last_progress_signal: { type: DataTypes.STRING(48), allowNull: true },
+      progress_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       // Vínculo verificável com a versão da MissionSpec que originou esta task (missão V2,
       // §22/§23 — stale mission spec). Sem estes campos, uma task criada para a v1 seguia
       // executando fases materiais (com efeito real no git) depois da v2 aprovada, sem que

@@ -11,6 +11,7 @@ const { emitEvent } = require('./websocketService');
 const qaWavesLogger = require('../utils/qaWavesLogger');
 const logger = require('../utils/logger');
 const { belongsToTenant, normalizeTenantKey } = require('../../lib/rpaSecurity');
+const meshLease = require('../../qa-mesh/meshLease');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const MESH_RUNNING_LOCK_PATH = path.join(ROOT_DIR, 'qa-mesh', 'mesh-running.lock');
@@ -24,22 +25,41 @@ const QA_MESH_GO_NO_GO_PATH = path.join(ROOT_DIR, 'qa-mesh', 'go-no-go-report.js
 const QA_MESH_RELEASE_GATE_PATH = path.join(ROOT_DIR, 'qa-mesh', 'release-gate-report.json');
 
 // ── Proteção contra execuções simultâneas ──
+//
+// A AUTORIDADE de posse é o LEASE COM HEARTBEAT (`qa-mesh/meshLease.js`), nunca
+// o PID nem a idade do mtime do arquivo. Defeitos reais corrigidos (2026-09-26):
+//   - PID reciclado por processo não relacionado mantinha o lock ATIVO para
+//     sempre (mesh wedged);
+//   - `cleanStaleLocks` do runner apagava por mtime o lock de um mesh SAUDÁVEL e
+//     em andamento, permitindo duas execuções concorrentes na mesma malha.
+let meshLeaseInstanceId = null;
 
 function isMeshAlreadyRunning() {
-  if (fs.existsSync(MESH_RUNNING_LOCK_PATH)) {
-    try {
-      const lockData = JSON.parse(fs.readFileSync(MESH_RUNNING_LOCK_PATH, 'utf8'));
-      try {
-        process.kill(lockData.pid, 0);
-        return { running: true, reason: 'lock_active', details: lockData };
-      } catch (_) {
-        fs.unlinkSync(MESH_RUNNING_LOCK_PATH);
-        return { running: false, reason: 'stale_lock_cleared' };
-      }
-    } catch (_) {
-      try { fs.unlinkSync(MESH_RUNNING_LOCK_PATH); } catch (__) {}
-      return { running: false, reason: 'corrupt_lock_cleared' };
+  const lock = meshLease.readLease(MESH_RUNNING_LOCK_PATH);
+  if (lock) {
+    const decision = meshLease.decideMeshLease(lock, {
+      nowMs: Date.now(),
+      // corroboração de diagnóstico: NÃO decide a posse
+      pidAlive: meshLease.isPidAlive(lock.pid),
+    });
+    if (decision.running) {
+      return {
+        running: true,
+        reason: decision.reason,
+        details: lock,
+        leaseState: decision.state,
+        heartbeatAgeMs: decision.heartbeatAgeMs,
+      };
     }
+    // Posse expirada por ausência de heartbeat (mesmo com PID vivo — pode ser
+    // reciclado): libera o lease. Quem decide é o LEASE.
+    meshLease.releaseLease(MESH_RUNNING_LOCK_PATH);
+    return {
+      running: false,
+      reason: decision.reason,
+      pidAlive: decision.pidAlive,
+      heartbeatAgeMs: decision.heartbeatAgeMs,
+    };
   }
 
   try {
@@ -57,15 +77,20 @@ function isMeshAlreadyRunning() {
 }
 
 function acquireMeshLock() {
-  fs.writeFileSync(MESH_RUNNING_LOCK_PATH, JSON.stringify({
-    pid: process.pid,
-    startedAt: new Date().toISOString(),
-    host: os.hostname(),
-  }, null, 2), 'utf8');
+  meshLeaseInstanceId = meshLease.newInstanceId();
+  return meshLease.acquireLease(MESH_RUNNING_LOCK_PATH, meshLease.buildLeasePayload({ instanceId: meshLeaseInstanceId }));
+}
+
+/** Renova a posse. Sem heartbeat, o lease expira e outro run pode assumir. */
+function heartbeatMeshLock() {
+  if (!meshLeaseInstanceId) return false;
+  return meshLease.heartbeatLease(MESH_RUNNING_LOCK_PATH, { instanceId: meshLeaseInstanceId });
 }
 
 function releaseMeshLock() {
-  try { fs.unlinkSync(MESH_RUNNING_LOCK_PATH); } catch (_) {}
+  const released = meshLease.releaseLease(MESH_RUNNING_LOCK_PATH, { instanceId: meshLeaseInstanceId });
+  meshLeaseInstanceId = null;
+  return released;
 }
 
 if (process.env.RUNNING_IN_PIPELINE !== '1' && process.env.QA_MESH_DISABLE_SCHEDULER !== '1') {

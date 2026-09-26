@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const meshLease = require('./meshLease');
 const { SCREEN_SCENARIOS, FLOW_SCENARIOS, JOURNEY_SCENARIOS } = require('../tests/rpa/business/catalog');
 const { getChangedFiles, determineAffectedScopes } = require('../qa/qaRunner');
 const { evaluateGoNoGo, evaluateWaveResult } = require('./governance');
@@ -1926,21 +1927,37 @@ function pruneOldEvidence({ evidenceDir = EVIDENCE_DIR, maxDirs = MAX_EVIDENCE_D
 }
 
 function cleanStaleLocks() {
-  const locks = [
-    QA_MESH_CANONICAL_LOCK_PATH,
-    path.join(__dirname, 'mesh-running.lock'),
-  ];
   const now = Date.now();
   const staleThreshold = STALE_LOCK_MINUTES * 60 * 1000;
-  for (const lockPath of locks) {
-    try {
-      const stat = fs.statSync(lockPath);
-      if (now - stat.mtimeMs > staleThreshold) {
-        fs.unlinkSync(lockPath);
-        console.log(`[mesh:cleanup] Lock stale removido: ${path.basename(lockPath)} (${Math.round((now - stat.mtimeMs) / 60000)}min)`);
-      }
-    } catch (_) { /* lock nao existe, ok */ }
+
+  // `mesh-running.lock`: a validade é do LEASE (heartbeat), NUNCA do mtime.
+  // O lock não é reescrito durante a execução, então num mesh longo o mtime
+  // envelhecia e este cleanup APAGAVA o lock de um mesh saudável e em
+  // andamento — permitindo duas execuções simultâneas sobre a mesma malha.
+  const runningLockPath = path.join(__dirname, 'mesh-running.lock');
+  const runningLock = meshLease.readLease(runningLockPath);
+  if (runningLock) {
+    const decision = meshLease.decideMeshLease(runningLock, {
+      nowMs: now,
+      pidAlive: meshLease.isPidAlive(runningLock.pid),
+    });
+    if (decision.takeoverAllowed) {
+      fs.unlinkSync(runningLockPath);
+      console.log(`[mesh:cleanup] Lease expirado removido: mesh-running.lock (${decision.reason}`
+        + `${decision.heartbeatAgeMs !== null ? `, heartbeat ${Math.round(decision.heartbeatAgeMs / 1000)}s` : ''})`);
+    } else {
+      console.log(`[mesh:cleanup] mesh-running.lock MANTIDO: lease ativo (heartbeat ${Math.round((decision.heartbeatAgeMs || 0) / 1000)}s)`);
+    }
   }
+
+  // Locks legados sem sinal de heartbeat continuam limpos por idade.
+  try {
+    const stat = fs.statSync(QA_MESH_CANONICAL_LOCK_PATH);
+    if (now - stat.mtimeMs > staleThreshold) {
+      fs.unlinkSync(QA_MESH_CANONICAL_LOCK_PATH);
+      console.log(`[mesh:cleanup] Lock stale removido: ${path.basename(QA_MESH_CANONICAL_LOCK_PATH)} (${Math.round((now - stat.mtimeMs) / 60000)}min)`);
+    }
+  } catch (_) { /* lock nao existe, ok */ }
 }
 
 function loadHistory(limit = MAX_HISTORY_FILES) {

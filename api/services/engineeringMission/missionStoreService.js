@@ -23,8 +23,10 @@ const {
   normalizeLease,
   resolveLeaseState,
   assertWriterAuthorized,
+  canAcquire,
 } = require('../../../engine/engineeringMission/leasePolicy');
 const { RESUMABLE_MISSION_STATES } = require('../../../engine/engineeringMission/constants');
+const progressPolicy = require('../../../engine/engineeringMission/progressPolicy');
 const logger = require('../../utils/logger');
 
 const LOCK_STALE_MS = Number(process.env.ENGINEERING_MISSION_LOCK_STALE_MS || 15 * 60 * 1000);
@@ -236,23 +238,61 @@ function lockOwnerIsDead(lockedBy) {
 async function lockMission(id, workerId) {
   const { Mission } = models();
   const staleBefore = new Date(Date.now() - LOCK_STALE_MS);
+  // O UPDATE atômico precisa carregar a AUTORIDADE DO LEASE, não só a idade do
+  // lock. Defeito real medido em 2026-09-26 pelo E2E: com `locked_at` envelhecido
+  // além de LOCK_STALE_MS, este UPDATE assumia a missão ANTES de qualquer
+  // consulta ao lease — takeover por IDADE pura, exatamente o padrão
+  // STALE_BY_AGE_ONLY que a missão proíbe. Agora as duas condições são exigidas:
+  // (lock livre/do próprio/stale-por-idade) E (lease livre/expirado/do próprio).
+  const lockFreeOrMine = {
+    [Op.or]: [
+      { locked_at: null },
+      { locked_at: { [Op.lt]: staleBefore } },
+      { locked_by: workerId },
+    ],
+  };
+  const leaseFreeOrMine = {
+    [Op.or]: [
+      { lease_token: null },
+      { lease_expires_at: null },
+      { lease_expires_at: { [Op.lte]: new Date() } },
+      ...(workerId ? [{ lease_worker_instance_id: workerId }] : []),
+    ],
+  };
   const [affected] = await Mission.update(
     { locked_at: new Date(), locked_by: workerId },
-    {
-      where: {
-        id,
-        [Op.or]: [
-          { locked_at: null },
-          { locked_at: { [Op.lt]: staleBefore } },
-          { locked_by: workerId },
-        ],
-      },
-    },
+    { where: { id, [Op.and]: [lockFreeOrMine, leaseFreeOrMine] } },
   );
   if (affected > 0) return getMission(id);
 
   const current = await getMission(id);
   if (!current) return null;
+
+  // ── AUTORIDADE DE OWNERSHIP É O LEASE, NUNCA O PID ────────────────────────────────────
+  // `canAcquire` é o núcleo puro de `leasePolicy`: um worker VIVO e dentro da validade
+  // não pode ser roubado, independentemente de PID. Sem esta guarda, a decisão de
+  // takeover era tomada por `process.kill(pid, 0)` — proibido por arquitetura: PID não
+  // é identidade distribuída (dois containers compartilham PID; a mesma instância em
+  // outro host tem PID sem significado local).
+  //
+  // `lockOwnerIsDead` permanece apenas como corroboracao LOCAL: ele ACELERA o takeover
+  // de um lock órfão (crash recente não espera o stale inteiro), mas só quando o lease
+  // não está ativo para outra instância. Missão sem coluna de lease (linha legada) tem
+  // `canAcquire === true`, preservando o comportamento de recuperação de crash.
+  const nowMs = Date.now();
+  const normalized = normalizeLease(current);
+  const leaseState = resolveLeaseState(normalized, nowMs);
+  const leaseAllowsTakeover = canAcquire(normalized, nowMs, { workerInstanceId: workerId });
+
+  if (!leaseAllowsTakeover) {
+    // Lease ATIVO de outra instância: fail-closed imediato, sem consultar PID.
+    const blocked = new Error(`mission ${id} está travada por outro worker (${current.locked_by}) — lease ${leaseState} de ${normalized?.workerInstanceId || 'outra instância'}`);
+    blocked.code = 'MISSION_LOCKED_BY_OTHER_WORKER';
+    blocked.lockedBy = current.locked_by;
+    blocked.leaseState = leaseState;
+    blocked.leaseWorkerInstanceId = normalized?.workerInstanceId || null;
+    throw blocked;
+  }
 
   if (lockOwnerIsDead(current.locked_by)) {
     // Takeover CAS: só assume se o dono ainda for o processo morto (nunca rouba de um worker
@@ -767,6 +807,80 @@ async function supersedeApprovalsForOlderVersions(missionId, keepVersion) {
   );
 }
 
+// ── PROGRESSO SIGNIFICATIVO (separado de LIVENESS) ────────────────────────────
+//
+// A ausência desta camada forçava toda decisão para o único sinal disponível:
+// TEMPO DECORRIDO. Com `last_progress_at` persistido, os três estados ficam
+// distinguíveis: SLOW (vivo e avançando), STUCK (vivo sem avançar → DIAGNOSE),
+// DEAD (heartbeat parou → lease expira → takeover por fence). O coração e o
+// cérebro desta separação vivem em `progressPolicy` (puro, testável).
+
+/**
+ * Adaptador de NOMES entre a linha do banco (snake_case, `last_progress_at`) e o
+ * contrato do núcleo puro (`lastMeaningfulProgressAt`).
+ *
+ * Defeito real medido em 2026-09-26 pelo E2E: sem este adaptador,
+ * `evaluateMissionProgress` lia `row.lastMeaningfulProgressAt` (inexistente),
+ * concluía "sem marco registrado" e devolvia UNKNOWN — o detector nunca
+ * disparava NO_PROGRESS contra dados REAIS, apesar de passar nos testes puros.
+ */
+function progressRecordFromRow(row) {
+  if (!row) return {};
+  return {
+    lastMeaningfulProgressAt: row.last_progress_at ?? row.lastMeaningfulProgressAt ?? null,
+    lastProgressSignal: row.last_progress_signal ?? row.lastProgressSignal ?? null,
+    progressCount: Number(row.progress_count ?? row.progressCount ?? 0) || 0,
+  };
+}
+
+/**
+ * Registra progresso SIGNIFICATIVO. Sinais de liveness (`heartbeat`,
+ * `lease_renewal`, `poll_tick`) são RECUSADOS pelo núcleo: aceitá-los apagaria a
+ * distinção entre estar vivo e estar avançando.
+ *
+ * @returns {{ok:boolean, accepted:boolean, reason:string, lastProgressAt?:string, signal?:string}}
+ */
+async function recordMissionProgress(missionId, { signal, detail = null, atMs = null } = {}) {
+  const current = await getMission(missionId);
+  if (!current) return { ok: false, accepted: false, reason: 'not_found' };
+  const decided = progressPolicy.recordProgress(progressRecordFromRow(current), {
+    signal,
+    atMs: Number.isFinite(atMs) ? atMs : Date.now(),
+    detail,
+  });
+  if (!decided.accepted) return { ok: false, accepted: false, reason: decided.reason };
+  await updateMission(missionId, {
+    last_progress_at: new Date(decided.record.lastMeaningfulProgressAt),
+    last_progress_signal: decided.record.lastProgressSignal,
+    progress_count: decided.record.progressCount,
+  });
+  return {
+    ok: true,
+    accepted: true,
+    reason: decided.reason,
+    lastProgressAt: decided.record.lastMeaningfulProgressAt,
+    signal: decided.record.lastProgressSignal,
+  };
+}
+
+/**
+ * Avalia o progresso cruzando LIVENESS (lease/heartbeat) com AVANÇO (marco
+ * persistido). NÃO decide morte: devolve estado + o que investigar, para o
+ * chamador escolher entre esperar/cancelar a operação/trocar provider/replanejar.
+ */
+async function evaluateMissionProgress(missionId, { phase = null, nowMs = Date.now(), policy = null } = {}) {
+  const current = await getMission(missionId);
+  if (!current) return null;
+  const lease = current.lease_token ? normalizeLease(current) : null;
+  const heartbeatAgeMs = lease && Number.isFinite(lease.heartbeatAt) ? nowMs - lease.heartbeatAt : null;
+  return progressPolicy.evaluateProgress(progressRecordFromRow(current), {
+    nowMs,
+    phase: phase || current.phase || null,
+    policy,
+    heartbeatAgeMs,
+  });
+}
+
 module.exports = {
   LOCK_STALE_MS,
   lockOwnerIsDead,
@@ -775,6 +889,9 @@ module.exports = {
   renewMissionLease,
   releaseMissionLease,
   getMissionLease,
+  // Progresso significativo (separado de liveness)
+  recordMissionProgress,
+  evaluateMissionProgress,
   updateMissionGuarded,
   findMissionsWithExpiredLease,
   findMissionsWithoutLease,

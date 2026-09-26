@@ -539,6 +539,18 @@ async function computeOverview() {
   // ERV1-CLOSE-005: usa TERMINAL_STATES (fonte única) em vez de uma lista hardcoded — quando
   // READY_FOR_PROMOTION foi adicionado como terminal, uma lista solta aqui teria continuado
   // contando essas tasks como "em execução" para sempre.
+  //
+  // A declaração local do model estava AUSENTE: `computeOverview` referenciava `Model` sem
+  // jamais atribuí-lo (todas as demais funções deste arquivo declaram o seu), então a função
+  // lançava `ReferenceError: Model is not defined` em 100% das chamadas. Efeito real medido em
+  // 2026-09-26: `GET /engineering/release-closure` devolvia HTTP 500 (`internal_error`) — a
+  // página /dev/engineering/release-closure não carregava. Nenhum teste pegava porque
+  // tests/unit/engineeringRouterRoutes.test.js injeta um `engineeringTaskService` MOCKADO, então
+  // a implementação real de `computeOverview` nunca era exercitada.
+  const Model = getEngineeringTaskModel();
+  if (!Model || typeof Model.count !== 'function') {
+    throw persistenceRequiredError('EngineeringTask model indisponível');
+  }
   const [total, green, red, running, blocked, releaseBlockers] = await Promise.all([
     Model.count(),
     Model.count({ where: { status: 'GREEN' } }),

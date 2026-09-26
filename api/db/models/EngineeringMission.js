@@ -77,6 +77,14 @@ function getEngineeringMissionModel() {
       lease_acquired_at: { type: DataTypes.DATE, allowNull: true },
       lease_expires_at: { type: DataTypes.DATE, allowNull: true },
       lease_heartbeat_at: { type: DataTypes.DATE, allowNull: true },
+      // PROGRESSO SIGNIFICATIVO — separado de LIVENESS de propósito.
+      // `lease_heartbeat_at` prova que o worker está VIVO; `last_progress_at`
+      // prova que está AVANÇANDO. Sem esta separação só resta o TEMPO DECORRIDO
+      // como sinal, e é exatamente assim que uma task saudável (lenta) acaba
+      // derrubada por um timeout fixo — o defeito que esta arquitetura elimina.
+      last_progress_at: { type: DataTypes.DATE, allowNull: true },
+      last_progress_signal: { type: DataTypes.STRING(48), allowNull: true },
+      progress_count: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       started_at: { type: DataTypes.DATE, allowNull: true },
       completed_at: { type: DataTypes.DATE, allowNull: true },
     }, {

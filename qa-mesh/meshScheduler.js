@@ -7,6 +7,13 @@ const cron = require('./nodeCronCompat');
 const { loadRegistry, runMesh } = require('./meshRunner');
 
 const dbStateStore = require('../qa/state/dbStateStore');
+const meshLease = require('./meshLease');
+
+/**
+ * Instância do lease em vigor neste processo (identidade de INSTÂNCIA, não PID).
+ * @type {string|null}
+ */
+let meshLeaseInstanceId = null;
 const SCHEDULER_STATE_KEY = 'qa-mesh/scheduler-state.json';
 const SCHEDULER_STATE_PATH = path.join(__dirname, 'scheduler-state.json');
 const PIPELINE_ACTIVE_LOCK_PATH = path.join(__dirname, '..', 'pipeline', '.active-validation.lock');
@@ -39,28 +46,29 @@ let schedulerEnabled = false;
 let criticalFrequencyKey = DEFAULT_FREQUENCY_KEY;
 
 function isMeshAlreadyRunning() {
-  // Verifica lock persistente em disco
-  if (fs.existsSync(MESH_RUNNING_LOCK_PATH)) {
-    try {
-      const lockData = JSON.parse(fs.readFileSync(MESH_RUNNING_LOCK_PATH, 'utf8'));
-      const pid = lockData.pid;
-      // Verifica se o PID ainda está vivo
-      try {
-        process.kill(pid, 0);
-        return { running: true, reason: `lock_pid_${pid}_alive`, pid };
-      } catch (_) {
-        // PID morto - lock stale, podemos limpar
-        fs.unlinkSync(MESH_RUNNING_LOCK_PATH);
-        return { running: false, reason: 'stale_lock_cleaned', pid };
-      }
-    } catch (_) {
-      // Lock corrompido, limpa
-      try { fs.unlinkSync(MESH_RUNNING_LOCK_PATH); } catch (__) {}
-      return { running: false, reason: 'corrupt_lock_cleaned' };
+  // A AUTORIDADE é o LEASE COM HEARTBEAT, nunca o PID nem o mtime do arquivo.
+  // PID reciclado por outro processo mantinha o lock ativo para sempre; e o
+  // lock não é reescrito durante a execução, então idade de mtime não mede posse.
+  const lock = meshLease.readLease(MESH_RUNNING_LOCK_PATH);
+  if (lock) {
+    const decision = meshLease.decideMeshLease(lock, {
+      nowMs: Date.now(),
+      pidAlive: meshLease.isPidAlive(lock.pid),
+    });
+    if (decision.running) {
+      return {
+        running: true,
+        reason: decision.reason,
+        pid: lock.pid,
+        leaseState: decision.state,
+        heartbeatAgeMs: decision.heartbeatAgeMs,
+      };
     }
+    meshLease.releaseLease(MESH_RUNNING_LOCK_PATH);
+    return { running: false, reason: decision.reason, pid: lock.pid, heartbeatAgeMs: decision.heartbeatAgeMs };
   }
 
-  // Verifica processos meshRunner vivos
+  // Verifica processos meshRunner vivos (sem lock em disco)
   try {
     const procs = execSync('ps aux | grep "meshRunner\\.js" | grep -v grep | grep -v meshScheduler', {
       encoding: 'utf8',
@@ -78,15 +86,23 @@ function isMeshAlreadyRunning() {
 }
 
 function acquireMeshLock(pid) {
-  fs.writeFileSync(MESH_RUNNING_LOCK_PATH, JSON.stringify({
+  meshLeaseInstanceId = meshLease.newInstanceId();
+  return meshLease.acquireLease(MESH_RUNNING_LOCK_PATH, meshLease.buildLeasePayload({
+    instanceId: meshLeaseInstanceId,
     pid: pid || process.pid,
-    startedAt: new Date().toISOString(),
-    host: require('os').hostname(),
-  }, null, 2), 'utf8');
+  }));
+}
+
+/** Renova a posse do lock (heartbeat). */
+function heartbeatMeshLock() {
+  if (!meshLeaseInstanceId) return false;
+  return meshLease.heartbeatLease(MESH_RUNNING_LOCK_PATH, { instanceId: meshLeaseInstanceId });
 }
 
 function releaseMeshLock() {
-  try { fs.unlinkSync(MESH_RUNNING_LOCK_PATH); } catch (_) {}
+  const released = meshLease.releaseLease(MESH_RUNNING_LOCK_PATH, { instanceId: meshLeaseInstanceId });
+  meshLeaseInstanceId = null;
+  return released;
 }
 
 function logSchedulerSkip(reason, details = {}) {
