@@ -306,3 +306,50 @@ describe('QA Waves enterprise governance bridge', () => {
     expect(report.deploymentSafety.deployAllowed).toBe(false);
   });
 });
+
+describe('QA Waves enterprise governance bridge — cooldown de rebuild (burst)', () => {
+  const BRIDGE_MODULE = '../../../tools/system/lib/qa-waves-enterprise-governance-bridge';
+
+  function loadBridgeWithCooldown(ms) {
+    const previous = process.env.QA_WAVES_ENTERPRISE_REBUILD_COOLDOWN_MS;
+    process.env.QA_WAVES_ENTERPRISE_REBUILD_COOLDOWN_MS = String(ms);
+    let api = null;
+    jest.isolateModules(() => {
+      // eslint-disable-next-line global-require, import/no-dynamic-require
+      api = require(BRIDGE_MODULE);
+    });
+    if (previous === undefined) delete process.env.QA_WAVES_ENTERPRISE_REBUILD_COOLDOWN_MS;
+    else process.env.QA_WAVES_ENTERPRISE_REBUILD_COOLDOWN_MS = previous;
+    return api;
+  }
+
+  test('burst dentro do cooldown reconstrói UMA vez; fora do cooldown, atualiza', () => {
+    const fixture = writeFixture();
+    // Sem `now`/`prodLike`/`scheduled` injetados: exercita o caminho CACHEÁVEL,
+    // que é o usado pelo endpoint real `/qa-waves/enterprise-governance`.
+    const options = { root: fixture.root, prodLikePath: fixture.prodLikePath };
+
+    // 1) Cooldown alto: o burst inteiro devolve o MESMO relatório (um único
+    //    build) mesmo depois de um arquivo de entrada mudar de assinatura.
+    //    Antes do cooldown, cada requisição concorrente refazia o build síncrono
+    //    (~7 s medidos) e um burst de 12 estourava o timeout de 90 s do client.
+    const comCooldown = loadBridgeWithCooldown(300000);
+    const primeira = comCooldown.buildQaWavesEnterpriseGovernance(options);
+    const alterado = { ...fixture.prodLike, generatedAt: '2026-08-14T13:00:00.000Z' };
+    fs.writeFileSync(fixture.prodLikePath, `${JSON.stringify(alterado, null, 2)}\n`);
+    for (let i = 0; i < 5; i += 1) {
+      expect(comCooldown.buildQaWavesEnterpriseGovernance(options)).toBe(primeira);
+    }
+
+    // 2) Cooldown zero: o cooldown limita a FREQUÊNCIA, nunca a frescura — fora
+    //    da janela a reconstrução acontece e enxerga a mudança.
+    const semCooldown = loadBridgeWithCooldown(0);
+    const antes = semCooldown.buildQaWavesEnterpriseGovernance(options);
+    fs.writeFileSync(
+      fixture.prodLikePath,
+      `${JSON.stringify({ ...alterado, generatedAt: '2026-08-14T14:00:00.000Z' }, null, 2)}\n`
+    );
+    const depois = semCooldown.buildQaWavesEnterpriseGovernance(options);
+    expect(depois).not.toBe(antes);
+  });
+});

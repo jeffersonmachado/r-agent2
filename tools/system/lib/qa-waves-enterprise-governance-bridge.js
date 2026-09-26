@@ -42,6 +42,25 @@ const DEFAULT_SCHEDULED_MAX_AGE_HOURS = 48;
  * caminho real sem cache.
  */
 const REPORT_CACHE_TTL_MS = Number(process.env.QA_WAVES_ENTERPRISE_REPORT_CACHE_MS || 60000);
+
+/**
+ * Cooldown de rebuild (stale-while-revalidate) do relatório.
+ *
+ * O build é SÍNCRONO e custa ~7 s (medido em 2026-09-26: 5,3-8,2 s por rebuild,
+ * 9,2 s no primeiro com caches de I/O frios). Requisições concorrentes NÃO
+ * coalescem — cada uma refaz o build em série no event loop — então um burst de
+ * 12 pedidos num momento em que algum arquivo de entrada mudou custava ~85 s.
+ * Foi exatamente assim que o timeout de 90 s do client em DEV estourou no mesh
+ * canônico (`fitness-matricula-leads` → `infra_error` →
+ * `CRITICAL_DOMAIN_FAILED:omnichannel` → mesh NO_GO → selo bloqueado).
+ *
+ * Dentro do cooldown, um pedido recebe o relatório JÁ ASSINADO (o `generatedAt`
+ * do próprio relatório declara a idade) e o primeiro pedido fora da janela
+ * reconstrói: o burst inteiro passa a custar UM build em vez de N. A assinatura
+ * dos arquivos continua sendo verificada — o cooldown só limita a FREQUÊNCIA da
+ * reconstrução, nunca o conteúdo do que é devolvido.
+ */
+const REBUILD_COOLDOWN_MS = Number(process.env.QA_WAVES_ENTERPRISE_REBUILD_COOLDOWN_MS || 5000);
 const textCache = new Map();
 const jsonCache = new Map();
 const hashCache = new Map();
@@ -641,6 +660,10 @@ function buildQaWavesEnterpriseGovernance(options = {}) {
       return Boolean(stat) && String(stat.size) === size && String(stat.mtimeMs) === mtimeMs;
     });
     if (unchanged) return reportCache.report;
+    // Assinatura mudou: reconstrói somente se o cooldown já passou. Sem isso, N
+    // requisições concorrentes num burst = N builds síncronos (~7 s cada) no
+    // mesmo event loop, o que estoura o timeout de 90 s do client em DEV.
+    if (Date.now() - (reportCache.builtAt || 0) < REBUILD_COOLDOWN_MS) return reportCache.report;
   }
 
   touchedFiles = [];
@@ -651,7 +674,7 @@ function buildQaWavesEnterpriseGovernance(options = {}) {
     const touched = touchedFiles ? [...new Set(touchedFiles)] : [];
     touchedFiles = null;
     if (cacheable) {
-      reportCache = { key, expiresAt: Date.now() + REPORT_CACHE_TTL_MS, touched, report };
+      reportCache = { key, builtAt: Date.now(), expiresAt: Date.now() + REPORT_CACHE_TTL_MS, touched, report };
     }
   }
   return report;
