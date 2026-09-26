@@ -14,7 +14,7 @@
       "scenarios": [
         "business-core-biz-rag-segregation"
       ],
-      "sampleError": "Documento operacional não encontrado no escopo OPERATIONAL: [\"doc-1790379439802-8kup1uidj\",\"doc-1790379441478-ym8sdfcsp\",\"doc-1790379431512-m9fowpke7\",\"src-docs-roteiros-jornada-food-food-customer-journey-md\",\"src-docs-guia-manutencao-filas-md\",\"src-docs-roteiros-jornada-services-services-default-journey-md\",\"doc-1790379512736-pumfkw00r\",\"doc-1790379443504-6jxnyehd3\",\"src-docs-roteiros-jornada-food-food-order-flow-md\",\"src-docs-manual-index-html\"]"
+      "sampleError": "Documento operacional não encontrado no escopo OPERATIONAL: [\"src-docs-guia-manutencao-filas-md\",\"src-docs-roteiros-jornada-food-food-customer-journey-md\",\"src-docs-manual-journeys-fitness-html\",\"src-docs-roteiros-jornada-services-services-default-journey-md\",\"src-docs-roteiros-jornada-fitness-checkout-md\",\"src-docs-roteiros-manual-central-atendimento-support-md\",\"src-docs-casos-de-uso-md\",\"src-docs-roteiros-jornada-fitness-fitness-active-customer-md\",\"src-docs-roteiros-jornada-beauty-beauty-new-customer-md\",\"src-docs-manual-sobre-a-plataforma-md\"]"
     },
     "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
   },
