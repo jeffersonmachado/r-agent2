@@ -1,26 +1,26 @@
 {
   "artifactType": "final-proof-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-26T10:53:01.561Z",
-  "runId": "rap-governed-20260926072813403-5371bb50",
-  "sourceFingerprint": "e75575e2e889eba455a4fe4b7cb6f586f4c49d0d54791c3a02611f486b12f664",
+  "generatedAt": "2026-09-23T22:01:14.560Z",
+  "runId": "rap-governed-20260923191944590-02980291",
+  "sourceFingerprint": "04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-  "finalDecision": "NO_GO",
+  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "autonomousReady": false,
-  "blockerCount": 45,
+  "blockerCount": 0,
   "missingArtifacts": [],
   "fingerprintStatus": "FRESH",
   "fingerprintChain": {
     "status": "FRESH",
-    "sourceFingerprint": "e75575e2e889eba455a4fe4b7cb6f586f4c49d0d54791c3a02611f486b12f664",
+    "sourceFingerprint": "04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344",
     "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-    "scenarioRegistryFingerprint": "45e8b677a20341c11b561e58e38c6693453651ae10dc9535dfc1c0fb02801b3a",
+    "scenarioRegistryFingerprint": "40d522db4033b17c6770206283dd9080170094217f0ef355e6f236c73c16c623",
     "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-    "chainFingerprint": "161c29d4f77c8b58a190b7f34b8a5fc347078e8b7f60a5e54c4e78db5f3f21cb"
+    "chainFingerprint": "58e0b6339bef66e62d1d47d6469731dda2d7385dcdc9d455a7b33e0c35661b7c"
   },
   "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-  "scenarioFingerprint": "45e8b677a20341c11b561e58e38c6693453651ae10dc9535dfc1c0fb02801b3a",
-  "chainFingerprint": "161c29d4f77c8b58a190b7f34b8a5fc347078e8b7f60a5e54c4e78db5f3f21cb"
+  "scenarioFingerprint": "40d522db4033b17c6770206283dd9080170094217f0ef355e6f236c73c16c623",
+  "chainFingerprint": "58e0b6339bef66e62d1d47d6469731dda2d7385dcdc9d455a7b33e0c35661b7c"
 }
