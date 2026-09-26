@@ -74,3 +74,46 @@ Regras estruturais:
 
 `npm run zip:release` (`scripts/release-package.sh` → `generate-zip.sh`) writes the audited ZIP + sidecar manifest (`r-agent2-YYYYMMDD-HHMMSS.zip` / `.manifest.json`) at the **root of `dist/` by design**. AGENTS.md allows this: "dist/ deve permanecer limpo, exceto ZIPs/manifestos de release aprovados". `scripts/check-dist-clean.sh` step 5 whitelists exactly that naming pattern; the governed envelope flow (`scripts/two-pass-release.sh`) lives in `dist/release/` and is verified separately. Custom `--name` ZIPs are NOT whitelisted. Reconciled after `validate:dist` failed on a legitimately produced release ZIP (contradiction between packaging and the cleanliness gate).
 
+## Aprovação de deploy do artefato selado (2026-09-26)
+
+**Passo obrigatório depois de qualquer selagem** — sem ele o deploy documentado
+(`npm run system:deploy`) fica bloqueado, mesmo com o release selado, publicado e
+verificado.
+
+```bash
+npm run system:go-no-go           # emite a decisão (qa/go-no-go-report.json)
+npm run system:release-manifest   # escreve <release>.approval.json em dist/release/
+npm run system:deploy             # dry-run (SYSTEM_DEPLOY_EXECUTE=1 para valer)
+```
+
+**Por que existe um sidecar separado.** Metadados de aprovação (goNoGo,
+releaseGate, approvedForDeploy) **não podem** ser gravados no manifest do payload:
+o hash desse manifest é selado no self-proving-report e o verifier rígido exige
+igualdade. A aprovação vive em `<release>.approval.json`
+(`tools/system/lib/release-artifact.js` — `updateArtifactManifest`), e
+`listArtifacts` faz o merge na leitura.
+
+**Sintoma quando falta** (verificado 2026-09-26):
+
+```
+[system:deploy] FAIL: artifact_missing:no_zip_with_audit_passed_and_go_no_go_go
+```
+
+`system:deploy` procura um ZIP cujo manifest (ou sidecar de aprovação) tenha
+`audit === 'passed'` **e** `goNoGo === 'GO'`. O release publicado
+`r-agent2-20260926-114417` não tinha sidecar porque **o fluxo canônico de
+selagem (`release:seal`/`two-pass-release.sh`) não executa
+`system:release-manifest`** — um selo bem-sucedido não aprovava o artefato para
+deploy. O `qa/release-manifest.json` vigente ainda apontava para
+`r-agent2-20260908-105354.zip`.
+
+**Gap de processo em aberto:** `scripts/governance/seal-release.sh` deveria rodar
+`system:go-no-go` + `system:release-manifest` na fase `consolidate`. Enquanto isso
+não for uma mudança governada (exige ciclo de selagem completo para validar),
+trate os dois comandos como passos obrigatórios pós-selo. Efeito colateral
+esperado: eles regeneram artefatos derivados (`governance/final-*`,
+`qa-waves/journey-coverage/*`, projeções de status) — commit depois, e confira que
+as decisões continuam `AUTONOMOUS_READY_GO` + `validate:final-status-projection`
+PASS. O sidecar em si é gitignored (`dist/`).
+
+
