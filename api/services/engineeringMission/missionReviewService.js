@@ -28,6 +28,9 @@ const missionStore = require('./missionStoreService');
 const compiler = require('./missionCompilerService');
 const logger = require('../../utils/logger');
 
+/** Tenant de plataforma — mesmo padrão de `DEFAULT_TENANT_ID` em engineeringRouter/*. */
+const PLATFORM_TENANT_ID = 'system';
+
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const MAX_FILE_BYTES = 512 * 1024;
 const READABLE_EXT = /\.(js|cjs|mjs|jsx|json)$/;
@@ -310,7 +313,7 @@ async function runReviews(missionId, { actor = null, kinds = ['META', 'ADVERSARI
   const missionNow = await missionStore.getMission(missionId);
   if (anyBlocking || missionNow?.status === 'GREEN') {
     const orchestrator = require('./missionOrchestratorService');
-    await orchestrator.refreshMissionState(missionId, { tenantId: mission.tenant_id || 'system' });
+    await orchestrator.refreshMissionState(missionId, { tenantId: mission.tenant_id || PLATFORM_TENANT_ID });
     out.missionStateReevaluated = true;
   } else {
     out.missionStateReevaluated = false;

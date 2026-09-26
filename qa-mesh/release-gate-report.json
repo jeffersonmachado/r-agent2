@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-24T06-55-00-751Z",
+  "executionId": "mesh-2026-09-26T06-29-34-043Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "NO_GO",
+  "gate": "GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-09-24T06-55-00-751Z",
+    "executionId": "mesh-2026-09-26T06-29-34-043Z",
     "tenantId": "system",
-    "timestamp": "2026-09-24T06:55:00.751Z",
+    "timestamp": "2026-09-26T06:29:34.043Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,13 +31,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 132,
+    "passed": 144,
     "fallbackPassed": 0,
-    "failed": 4,
+    "failed": 0,
     "skipped": 0,
-    "infraErrors": 7,
+    "infraErrors": 0,
     "environmentMissing": 0,
-    "flaky": 1,
+    "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -51,9 +51,9 @@
     "executionQuality": "valid",
     "domains": {
       "beauty": {
-        "passed": 11,
+        "passed": 12,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -81,23 +81,23 @@
         "total": 2
       },
       "core": {
-        "passed": 84,
+        "passed": 90,
         "fallbackPassed": 0,
-        "failed": 3,
+        "failed": 0,
         "skipped": 0,
-        "infra_error": 3,
+        "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
         "total": 90
       },
       "fitness": {
-        "passed": 13,
+        "passed": 15,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 1,
+        "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 1,
+        "flaky": 0,
         "total": 15
       },
       "food": {
@@ -131,21 +131,21 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 2,
+        "passed": 4,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 2,
+        "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
         "total": 4
       },
       "bpmn": {
-        "passed": 0,
+        "passed": 1,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 1,
+        "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
         "total": 1
@@ -171,57 +171,15 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "CRITICAL_DOMAIN_FAILED:core",
-      "CRITICAL_DOMAIN_FAILED:omnichannel",
-      "BASELINE_PASS_RATE_REGRESSION",
-      "BASELINE_BLOCKING_REGRESSION",
-      "BASELINE_INFRA_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
       "beauty": {
-        "total": 1,
+        "total": 0,
         "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.9166666666666666
-      },
-      "core": {
-        "total": 6,
-        "blocking": 1,
-        "byType": {
-          "functional_failure": 3,
-          "infra_error": 3
-        },
-        "successRate": 0.9333333333333333
-      },
-      "fitness": {
-        "total": 2,
-        "blocking": 0,
-        "byType": {
-          "flaky": 1,
-          "infra_error": 1
-        },
-        "successRate": 0.8666666666666667
-      },
-      "bpmn": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "infra_error": 1
-        },
-        "successRate": 0
-      },
-      "omnichannel": {
-        "total": 2,
-        "blocking": 1,
-        "byType": {
-          "infra_error": 2
-        },
-        "successRate": 0.5
+        "byType": {},
+        "successRate": 1
       },
       "bakery": {
         "total": 0,
@@ -230,6 +188,18 @@
         "successRate": 1
       },
       "clinic": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "fitness": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -253,6 +223,18 @@
         "byType": {},
         "successRate": 1
       },
+      "omnichannel": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "bpmn": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "pbx": {
         "total": 0,
         "blocking": 0,
@@ -266,85 +248,35 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "functional_failure": 4,
-      "flaky": 1,
-      "infra_error": 7
-    },
-    "topErrors": [
-      {
-        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
-        "count": 4
-      },
-      {
-        "message": "Nenhum alvo semântico encontrado: [data-testid=\"refresh-button\"], button:has-text(\"Atualizar\"), button:has-text(\"Recarregar\"), button[aria-label*=\"Atualizar\" i]",
-        "count": 1
-      },
-      {
-        "message": "Tutor não respondeu com conteúdo disponível",
-        "count": 1
-      },
-      {
-        "message": "500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker aberto).",
-        "count": 1
-      },
-      {
-        "message": "Documento não foi indexado dentro do tempo esperado",
-        "count": 1
-      },
-      {
-        "message": "Navegador fechado pelo usuário",
-        "count": 1
-      },
-      {
-        "message": "[bpmn-smoke] FAIL: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/bpmn-editor",
-        "count": 1
-      },
-      {
-        "message": "❌ Erro no teste RPA: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login",
-        "count": 1
-      },
-      {
-        "message": "Tenant Intelligence smoke failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/tenant-intelligence",
-        "count": 1
-      }
-    ],
-    "blockingDomains": [
-      "core",
-      "omnichannel"
-    ],
+    "failuresByType": {},
+    "topErrors": [],
+    "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-24T06-55-00-751Z",
-      "startedAt": "2026-09-24T06:55:00.751Z",
+      "executionId": "mesh-2026-09-26T06-29-34-043Z",
+      "startedAt": "2026-09-26T06:29:34.043Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-24T07:25:50.234Z",
+      "promotedAt": "2026-09-26T07:14:04.989Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [
-    "CRITICAL_DOMAIN_FAILED:core",
-    "CRITICAL_DOMAIN_FAILED:omnichannel",
-    "BASELINE_PASS_RATE_REGRESSION",
-    "BASELINE_BLOCKING_REGRESSION",
-    "BASELINE_INFRA_REGRESSION"
-  ],
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-24T06-55-00-751Z",
-    "startedAt": "2026-09-24T06:55:00.751Z",
+    "executionId": "mesh-2026-09-26T06-29-34-043Z",
+    "startedAt": "2026-09-26T06:29:34.043Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-24T07:25:50.234Z",
+    "promotedAt": "2026-09-26T07:14:04.989Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
-  "runId": "rap-governed-20260924064228071-5bdacdaa",
-  "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
-  "sourceCommit": "e85d36b706f2add8c7f0d7f0596ac451990aa21d",
-  "sourceTree": "ead87919f0d3cf8eaca2500a273cede2acd91ba8",
-  "generatedAt": "2026-09-24T07:25:50.238Z"
+  "runId": "rap-governed-20260926052238368-d81fb1f5",
+  "sourceFingerprint": "e75575e2e889eba455a4fe4b7cb6f586f4c49d0d54791c3a02611f486b12f664",
+  "sourceCommit": "c16f48cd7ae0b20fcfc2281bbf82a02d74625f42",
+  "sourceTree": "ff43c54d8e0fa9a4177ba2bd90dde353a4e5d729",
+  "generatedAt": "2026-09-26T07:14:04.991Z"
 }

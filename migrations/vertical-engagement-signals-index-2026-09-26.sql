@@ -1,0 +1,67 @@
+-- ============================================================================
+-- Performance: índice correto para a varredura incremental de engagement signals
+-- RAP/r-agent2 — 2026-09-26
+-- ============================================================================
+-- Execute: psql -U <user> -d <db> -f migrations/vertical-engagement-signals-index-2026-09-26.sql
+-- ============================================================================
+--
+-- DEFEITO (medido no host de QA, 2026-09-26)
+-- -----------------------------------------
+-- O índice original é:
+--     ves_tenant_vertical_signal_date_idx
+--         (tenant_key, vertical, signal_type, computed_at)
+--
+-- `signal_type` fica ENTRE `vertical` e `computed_at`. Toda consulta que filtra
+-- por (tenant_key, vertical, computed_at) SEM `signal_type` — que é exatamente a
+-- varredura incremental de `handleFitnessInactivityScan` e companhia — não
+-- consegue usar a faixa de `computed_at`, e o planner cai em varredura sequencial.
+--
+-- Medição em `vertical_engagement_signals` com 8.411.897 linhas:
+--     EXPLAIN (ANALYZE) SELECT subject_id ... WHERE tenant_key/vertical/computed_at
+--     ANTES: Parallel Seq Scan — "Rows Removed by Filter: 2.803.865",
+--            shared read=368.392 buffers (~2,9 GB)  →  Execution Time: 3141 ms
+--     DEPOIS: Index Scan using ves_tenant_vertical_computed_idx
+--                                              →  Execution Time: 0,945 ms
+--     (ANALYZE na tabela NÃO mudava o plano ⇒ é a definição do índice, não
+--      estatística obsoleta.)
+--
+-- IMPACTO
+-- -------
+-- Os `vertical_*_journey_tick` rodam a cada 60s por vertical e chamam essa
+-- consulta. Com 3,1s por varredura, o tick estourava o orçamento:
+--     "[VerticalJourney] fitness inactivity scan truncado por orçamento"
+--     { "processed": 2, "total": 500, "elapsedMs": 79371 }   ← 79s para 2 itens
+-- e o job era abandonado pelo timeout de 30s (12 ocorrências medidas, de 30,7s
+-- a 55,5s). O processo ficava saturado e requisições de cliente estouravam o
+-- timeout — foi a causa de flake intermitente do QA Mesh
+-- (`fitness-matricula-leads`, `Request timed out after 90000ms`).
+-- Este é o mesmo padrão do incidente de 2026-09-11 registrado em
+-- `api/services/vertical/verticalJourneyJobHandler.js` (fila de ~280k pendências
+-- + saturação do Postgres).
+--
+-- OPERABILIDADE
+-- -------------
+-- `CREATE INDEX CONCURRENTLY` não pode rodar dentro de bloco de transação —
+-- execute este arquivo em autocommit (o `psql -f` padrão já faz isso).
+-- Se ele for interrompido, o índice fica INVALID e deve ser removido antes de
+-- repetir:  DROP INDEX IF EXISTS ves_tenant_vertical_computed_idx;
+-- Em tabela menor, um `CREATE INDEX` comum (com lock de escrita) é aceitável.
+--
+-- NOTA (retention)
+-- --------------
+-- A tabela crescia sem limite: 8.412.206 linhas / ~4,1 GB cobrindo 6 meses, com
+-- 96,5% das linhas acima de 30 dias. Este arquivo resolve a PERFORMANCE (índice);
+-- a RETENÇÃO foi implementada no padrão canônico já existente para tabelas
+-- derivadas:
+--   api/services/pruneVerticalEngagementSignalsService.js
+--   api/db/migrations/20260926060000-prune-vertical-engagement-signals-schedule.js
+--   dispatch em api/services/executionQueueService.js (kind
+--   'prune_vertical_engagement_signals', default 90 dias via
+--   VERTICAL_ENGAGEMENT_SIGNAL_RETENTION_DAYS)
+-- Auditoria (2026-09-26): todos os leitores consultam janela RECENTE
+-- (`computed_at >= since`, default de 30 dias) ou os N últimos — nenhum lê
+-- "todos os sinais já calculados".
+-- ============================================================================
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS ves_tenant_vertical_computed_idx
+    ON vertical_engagement_signals (tenant_key, vertical, computed_at DESC);

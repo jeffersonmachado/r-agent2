@@ -24,6 +24,22 @@ const express = require('express');
 const { checkClassification } = require('../../middleware/requireClassification');
 
 /**
+ * Fail-closed: o tenant do request é OBRIGATÓRIO. Sem ele, lança TENANT_REQUIRED
+ * em vez de operar no tenant de plataforma por fallback silencioso.
+ *
+ * `api/middleware/auth.js` já devolve `req.tenantId = null` de propósito para
+ * super-admin sem o header `X-Tenant-Id` ("evita operar silenciosamente no tenant
+ * do usuário"); um fallback para o tenant de plataforma aqui anularia esse
+ * hardening e criaria missões no tenant ADMINISTRATIVO. Mesmo padrão de
+ * vertical-templates/rap-learn/knowledge-graph/ai-governance.
+ */
+function requireTenantId(tenantId) {
+  const tid = typeof tenantId === 'string' ? tenantId.trim() : tenantId;
+  if (!tid) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  return tid;
+}
+
+/**
  * Mapa rota→ação do RBAC. `pattern` casa o pathname RELATIVO ao prefixo `/engineering/missions`;
  * os padrões de sufixo primeiro (aprovar/rejeitar/executar) e os genéricos por último.
  */
@@ -120,6 +136,8 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       ENRICHMENT_FAILED: 422,
       // Escalação de política é NEGADA, não "ajustada": 403 com os eixos recusados.
       POLICY_ESCALATION_DENIED: 403,
+      // Tenant ausente no boundary HTTP é erro do CLIENTE, não do servidor.
+      TENANT_REQUIRED: 400,
     };
     const status = statusByCode[code] || 500;
     if (status >= 500) deps.logger.error(`[engineering-missions] ${context}`, err);
@@ -250,7 +268,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
         constraints: body.constraints,
         contextHints: body.contextHints,
         createdBy: req.agent?.id || req.agent?.email || null,
-        tenantId: req.tenantId || 'system',
+        tenantId: requireTenantId(req.tenantId),
         idempotencyKey: req.headers['idempotency-key'] || body.idempotencyKey || null,
         // §20: a autorização de escalação vem da PERMISSÃO do agente (`engineering.policy_admin`),
         // nunca do corpo da requisição. Sem ela, pedir política mais ampla que a instalação falha
@@ -332,7 +350,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       const body = (await readBody(req, res, deps)) || {};
       const mission = await deps.missionApprovalService.reEnrich(req.params.id, {
         actor: req.agent?.id || req.agent?.email || null,
-        tenantId: req.tenantId || 'system',
+        tenantId: requireTenantId(req.tenantId),
         contextHints: body.contextHints || {},
       });
       deps.sendJson(res, 200, { mission, preview: mission.preview });
@@ -350,7 +368,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       const result = await deps.missionApprovalService.approve(req.params.id, {
         actor: req.agent?.id || req.agent?.email || null,
         reason: body.reason || null,
-        tenantId: req.tenantId || 'system',
+        tenantId: requireTenantId(req.tenantId),
         idempotencyKey: req.headers['idempotency-key'] || body.idempotencyKey || null,
       });
       deps.sendJson(res, result.created ? 201 : 200, result);
@@ -368,7 +386,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       const result = await deps.missionApprovalService.reject(req.params.id, {
         actor: req.agent?.id || req.agent?.email || null,
         reason: body.reason || null,
-        tenantId: req.tenantId || 'system',
+        tenantId: requireTenantId(req.tenantId),
       });
       deps.sendJson(res, 200, result);
     } catch (err) {
@@ -388,7 +406,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
         actor: req.agent?.id || req.agent?.email || null,
         reason: body.reason || null,
         approveEdited: body.approveEdited !== false,
-        tenantId: req.tenantId || 'system',
+        tenantId: requireTenantId(req.tenantId),
         // §20: mesma origem de autorização da rota de enriquecimento — a PERMISSÃO do agente
         // (`engineering.policy_admin`), nunca o corpo. Sem ela, editar uma missão cuja política
         // declarada amplia a da instalação falha com POLICY_ESCALATION_DENIED (403) em vez de
@@ -409,7 +427,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
     if (!auth) return;
     try {
       const body = (await readBody(req, res, deps)) || {};
-      const tenantId = req.tenantId || 'system';
+      const tenantId = requireTenantId(req.tenantId);
       const started = await deps.missionOrchestratorService.startExecution(req.params.id, {
         actor: req.agent?.id || req.agent?.email || null,
         tenantId,
@@ -452,7 +470,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
     if (!auth) return;
     try {
       const summary = await deps.missionOrchestratorService.resumeInterruptedMissions({
-        tenantId: req.tenantId || 'system',
+        tenantId: requireTenantId(req.tenantId),
       });
       deps.sendJson(res, 200, summary);
     } catch (err) {
@@ -485,7 +503,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       let mission = null;
       const blocking = await deps.missionReviewService.getBlockingReview(result.missionId, result.missionVersion);
       if (blocking) {
-        mission = await deps.missionOrchestratorService.refreshMissionState(req.params.id, { tenantId: req.tenantId || 'system' });
+        mission = await deps.missionOrchestratorService.refreshMissionState(req.params.id, { tenantId: requireTenantId(req.tenantId) });
       }
       deps.sendJson(res, 200, { ...result, blocking, mission });
     } catch (err) {

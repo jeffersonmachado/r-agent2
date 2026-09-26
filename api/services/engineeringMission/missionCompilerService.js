@@ -34,6 +34,14 @@ const { MISSION_FAILURE_CODES } = require('../../../engine/engineeringMission/co
 const { parseStructuredJson } = require('../../../engine/engineeringRouter/responseParsing');
 const { selectForRole } = require('../../../engine/engineeringRouter/modelSelector');
 
+/**
+ * Tenant de PLATAFORMA — mesmo padrão de `DEFAULT_TENANT_ID` em
+ * `api/services/engineeringRouter/*`. O caller pode (e deve) passar um tenant
+ * explícito; ausente, o default é o tenant da PRÓPRIA plataforma, nunca um
+ * tenant de negócio arbitrário.
+ */
+const PLATFORM_TENANT_ID = 'system';
+
 const missionStore = require('./missionStoreService');
 const missionContext = require('./missionContextService');
 const policyAuthority = require('./missionPolicyAuthority');
@@ -408,7 +416,7 @@ async function compileMission(rawMission, options = {}) {
 
   const detail = await enrichMission(mission.id, {
     actor: options.createdBy || null,
-    tenantId: options.tenantId || 'system',
+    tenantId: options.tenantId || PLATFORM_TENANT_ID,
     contextHints: options.contextHints || {},
     // Propagação OBRIGATÓRIA: sem isto, `compileMission` (que cria E enriquece) recusaria toda
     // missão com política mais ampla mesmo quando a borda HTTP já autorizou a escalação.

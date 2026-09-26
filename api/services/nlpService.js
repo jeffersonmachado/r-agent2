@@ -24,7 +24,11 @@ function safeErrorMessage(err, fallback = '') {
 }
 
 // URL padrão do serviço Python RAG (sem /rag no final, será adicionado no endpoint)
-const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
+// IP literal de propósito (igual a services/rag/ragRuntime.js): o getaddrinfo roda
+// no libuv threadpool e enfileira atrás do fs/crypto do processo; com o hostname,
+// uma resolução lenta estoura o connect timeout do undici mesmo com o rag-service
+// saudável. Ver a nota completa em api/services/rag/ragRuntime.js.
+const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://127.0.0.1:8001');
 
 /**
  * Analisa texto com NLP.

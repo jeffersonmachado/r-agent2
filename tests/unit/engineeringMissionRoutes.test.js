@@ -31,7 +31,14 @@ function buildDepsFactory(overrides = {}) {
     enrichment: {},
   };
   const base = {
-    requireAuth: () => ({ valid: true }),
+    // Dublê fiel ao produtor real: `api/middleware/auth.js` define `req.agent` E `req.tenantId`
+    // (null de propósito para super-admin sem header). Um dublê que só devolve `{ valid: true }`
+    // não representa request autenticado e faz as rotas fail-closed responderem 400.
+    requireAuth: (req) => {
+      req.tenantId = 'system';
+      req.agent = { id: 'test-agent', email: 'test-agent@local' };
+      return { valid: true };
+    },
     // Stub do RBAC real (§19). O default permite para que os testes de auth/validação/ordem de
     // rota continuem medindo o que se propõem a medir; a MATRIZ de permissão tem testes próprios
     // (que negam explicitamente) mais abaixo neste arquivo.
@@ -92,7 +99,13 @@ function startServer(deps) {
 }
 
 const baseUrl = (server) => `http://127.0.0.1:${server.address().port}`;
-const asDevelopment = (req) => { req.agent = { platformClassification: 'DEVELOPMENT' }; return { valid: true }; };
+// Dublê fiel ao produtor real: o middleware de produção define `req.agent` E `req.tenantId`.
+// Sem `tenantId`, as rotas fail-closed devolvem 400 e o teste mede o dublê, não a rota.
+const asDevelopment = (req) => {
+  req.agent = { platformClassification: 'DEVELOPMENT' };
+  req.tenantId = 'system';
+  return { valid: true };
+};
 
 describe('engineering-missions routes', () => {
   let server;

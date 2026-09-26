@@ -454,14 +454,19 @@ async function updateMissionGuarded(missionId, patch, { leaseToken, fence = null
  * Missões não terminais cujo lease EXPIROU: trabalho abandonado por worker morto (crash, kill -9,
  * container removido). É a entrada do recovery automático — nunca depende de chamada manual.
  */
-async function findMissionsWithExpiredLease({ limit = 50 } = {}) {
+async function findMissionsWithExpiredLease({ limit = 50, excludeIds = [] } = {}) {
   const { Mission } = models();
+  const where = {
+    status: { [Op.in]: RESUMABLE_MISSION_STATES },
+    lease_token: { [Op.ne]: null },
+    lease_expires_at: { [Op.lte]: new Date() },
+  };
+  // `NOT IN ()` é inválido em SQL — a exclusão só é aplicada quando há ids. O caller usa isto para
+  // DRENAR o backlog em páginas: sem excluir o que já foi visto, o `ORDER BY ... ASC` devolveria
+  // para sempre os mesmos mais antigos.
+  if (excludeIds.length > 0) where.id = { [Op.notIn]: excludeIds };
   const rows = await Mission.findAll({
-    where: {
-      status: { [Op.in]: RESUMABLE_MISSION_STATES },
-      lease_token: { [Op.ne]: null },
-      lease_expires_at: { [Op.lte]: new Date() },
-    },
+    where,
     order: [['lease_expires_at', 'ASC']],
     limit,
   });
@@ -469,13 +474,15 @@ async function findMissionsWithExpiredLease({ limit = 50 } = {}) {
 }
 
 /** Missões não terminais SEM lease (crash antes de adquirir, ou linhas legadas). */
-async function findMissionsWithoutLease({ limit = 50 } = {}) {
+async function findMissionsWithoutLease({ limit = 50, excludeIds = [] } = {}) {
   const { Mission } = models();
+  const where = {
+    status: { [Op.in]: RESUMABLE_MISSION_STATES },
+    lease_token: null,
+  };
+  if (excludeIds.length > 0) where.id = { [Op.notIn]: excludeIds };
   const rows = await Mission.findAll({
-    where: {
-      status: { [Op.in]: RESUMABLE_MISSION_STATES },
-      lease_token: null,
-    },
+    where,
     order: [['updated_at', 'ASC']],
     limit,
   });

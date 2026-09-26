@@ -30,6 +30,9 @@ const { TERMINAL_STATES } = require('../../../engine/engineeringRouter/constants
 const { SPEC_STRATEGIES } = require('../../../engine/engineeringMission/missionSpecFreshness');
 const logger = require('../../utils/logger');
 
+/** Tenant de plataforma — mesmo padrão de `DEFAULT_TENANT_ID` em engineeringRouter/*. */
+const PLATFORM_TENANT_ID = 'system';
+
 const DISPLAY_TO_MISSION_STATE = Object.freeze({
   RUNNING: 'EXECUTING',
   GREEN: 'GREEN',
@@ -207,7 +210,7 @@ async function refreshMissionState(missionId, { tenantId = null } = {}) {
   }
 
   if (nextStatus !== mission.status) {
-    emitMissionStage(tenantId || 'system', missionId, {
+    emitMissionStage(tenantId || PLATFORM_TENANT_ID, missionId, {
       stage: nextStatus,
       status: nextStatus === 'GREEN' ? 'success' : (nextStatus === 'EXECUTING' ? 'running' : 'error'),
       phase: 'EXECUTION',

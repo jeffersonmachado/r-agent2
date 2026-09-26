@@ -93,7 +93,13 @@ export function BeautySchedulePage() {
       <div className="support-controls" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <input className="support-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <input className="support-input" placeholder="professionalId opcional" value={professionalId} onChange={(e) => setProfessionalId(e.target.value)} />
-        <button className="support-button" onClick={loadAgenda} disabled={loading}>{loading ? 'Atualizando...' : 'Atualizar'}</button>
+        <button
+          className="support-button"
+          data-testid="refresh-button"
+          aria-label="Atualizar agenda"
+          onClick={loadAgenda}
+          disabled={loading}
+        >{loading ? 'Atualizando...' : 'Atualizar'}</button>
       </div>
 
       <div className="support-grid" style={{ gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>

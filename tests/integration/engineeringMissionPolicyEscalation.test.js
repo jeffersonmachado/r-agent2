@@ -52,7 +52,9 @@ function narrowerRisk() {
 
 async function compileExpectingDenial(rawMission, options) {
   try {
-    const compiled = await compiler.compileMission(rawMission, options);
+    // `tenantId` explícito: o contrato do compiler é fail-closed (missão é dado
+    // de negócio; sem tenant ele lança TENANT_REQUIRED em vez de assumir 'system').
+    const compiled = await compiler.compileMission(rawMission, { tenantId: 'system', ...options });
     created.push(compiled.mission.id);
     return { denied: false, compiled };
   } catch (error) {

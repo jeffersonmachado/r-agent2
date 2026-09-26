@@ -22,6 +22,18 @@ const path = require('path');
 const { sha256 } = require('../../../engine/engineeringMission/missionSpec');
 const logger = require('../../utils/logger');
 
+/**
+ * Tenant de PLATAFORMA onde vive o corpus de engenharia (§14–§18), domínio SYSTEM.
+ *
+ * Mesma classe de `DEFAULT_TENANT_ID` em `api/services/engineeringRouter/*`: é o
+ * tenant da PRÓPRIA plataforma (como qawaves/testexecution), nunca escopo de
+ * dados de negócio de um tenant. `ENGINEERING_MISSION_KNOWLEDGE_TENANT` permite
+ * apontar o corpus para outro tenant sem alterar código.
+ */
+const PLATFORM_TENANT_ID = 'system';
+const ENGINEERING_KNOWLEDGE_TENANT =
+  process.env.ENGINEERING_MISSION_KNOWLEDGE_TENANT || PLATFORM_TENANT_ID;
+
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 // `tests` entrou aqui por achado real: uma missão sobre uma fixture/especificação de teste não
 // encontrava NENHUMA evidência de repositório, porque a varredura simplesmente não olhava para os
@@ -516,7 +528,7 @@ async function collectContextFacts({
   // com orçamento e proveniência: alimenta o compiler, sem geração de texto.
   const knowledge = await retrieveEngineeringKnowledge({
     query: originalMission,
-    tenantId: process.env.ENGINEERING_MISSION_KNOWLEDGE_TENANT || 'system',
+    tenantId: ENGINEERING_KNOWLEDGE_TENANT,
     actorClassification,
     actorRoles,
   });

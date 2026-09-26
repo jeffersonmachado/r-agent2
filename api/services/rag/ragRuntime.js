@@ -9,7 +9,16 @@ const {
   safeErrorMessage,
 } = require('../../utils/defensiveCoercion');
 
-const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://localhost:8001');
+// IP literal em vez de 'localhost' de propósito: o getaddrinfo roda no libuv
+// threadpool (4 threads por padrão, disputadas com o fs/crypto do processo) e o
+// undici conta a resolução de nome DENTRO do connect timeout de 10s. Medido em
+// 2026-09-25 sob saturação do pool: dns.lookup('localhost') passou de 0-15ms
+// para 3015ms (201x), gerando UND_ERR_CONNECT_TIMEOUT no caminho do RAG mesmo
+// com o rag-service saudável (0 falhas de conexão em 240 requisições dirigidas).
+// Com o literal, o caminho crítico do RAG não depende de DNS. Em produção o
+// RAG_SERVICE_URL é sempre declarado nos composes, então o hostname de serviço
+// (rag-service) continua sendo usado lá sem alteração.
+const DEFAULT_RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || config.get('rag.serviceUrl', 'http://127.0.0.1:8001');
 const DEFAULT_RAG_TIMEOUT = parseInt(process.env.RAG_TIMEOUT || config.get('rag.timeout', '5000'), 10);
 // Timeout dedicado do caminho /rag/query: precisa acomodar a geração LLM no
 // serviço Python (que desiste da OpenAI em ~25s). Demais chamadas (health,
@@ -355,7 +364,23 @@ async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_RAG_TIMEOUT
       throw new Error(`RAG service timeout após ${timeout}ms ao acessar ${url}`);
     }
     if (safeErrorMessage(error).includes('fetch failed')) {
-      throw new Error(`Falha ao conectar com serviço RAG em ${url}. Verifique se o serviço está rodando e acessível.`);
+      // O undici popula `cause` com a razão de transporte real (ECONNREFUSED,
+      // ECONNRESET, UND_ERR_CONNECT_TIMEOUT, EAI_AGAIN, ...). Descartá-la tornava
+      // a falha indistinguível e a mensagem passava a afirmar a causa errada:
+      // "verifique se o serviço está rodando" era exibido mesmo com o serviço
+      // saudável — medido em 2026-09-25, 0 falhas de conexão em 240 requisições
+      // concorrentes contra o rag-service. Preservar a causa é o que permite
+      // apontar para o transporte correto em vez de reiniciar o serviço à toa.
+      const cause = error.cause || null;
+      const causeCode = (cause && (cause.code || cause.errno)) || (cause && cause.name) || 'desconhecida';
+      const causeMessage = safeErrorMessage(cause, '');
+      logger.warn('[RAGService] Falha de conexão com o rag-service', {
+        url,
+        causeCode,
+        causeMessage,
+        error: safeErrorMessage(error),
+      });
+      throw new Error(`Falha ao conectar com serviço RAG em ${url} (causa=${causeCode}${causeMessage ? `: ${causeMessage}` : ''}). Verifique se o serviço está rodando e acessível.`);
     }
     throw error;
   }

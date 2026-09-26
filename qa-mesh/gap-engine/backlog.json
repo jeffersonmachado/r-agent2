@@ -6,84 +6,7 @@
       "assertions": [],
       "replayEnrichments": []
     },
-    "id": "gap-mesh-fitness-infra_error-fitness-matricula-renovacao",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio fitness",
-    "evidence": {
-      "scenarios": [
-        "fitness-matricula-renovacao"
-      ],
-      "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-omnichannel-infra_error-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio omnichannel",
-    "evidence": {
-      "scenarios": [
-        "rpa-whatsapp-connections-rpa",
-        "support-inbox-nota-ui"
-      ],
-      "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-functional_failure-business-core-biz-academy",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "business-core-biz-academy"
-      ],
-      "sampleError": "Tutor não respondeu com conteúdo disponível"
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "business-core-biz-flows-editor"
-      ],
-      "sampleError": "500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker aberto)."
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
+    "id": "gap-mesh-core-flaky-business-core-biz-rag-segregation",
     "severity": "high",
     "area": "qa-mesh",
     "title": "Falha aberta no dominio core",
@@ -91,141 +14,21 @@
       "scenarios": [
         "business-core-biz-rag-segregation"
       ],
-      "sampleError": "Documento não foi indexado dentro do tempo esperado"
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio bpmn",
-    "evidence": {
-      "scenarios": [
-        "qa-bpmn-editor-smoke"
-      ],
-      "sampleError": "[bpmn-smoke] FAIL: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/bpmn-editor"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-infra_error-qa-core-auth-login",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "qa-core-auth-login"
-      ],
-      "sampleError": "❌ Erro no teste RPA: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "qa-core-config-tenant-intelligence"
-      ],
-      "sampleError": "Tenant Intelligence smoke failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/tenant-intelligence"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-infra_error-rpa-example-test",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "rpa-example-test"
-      ],
-      "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-beauty-functional_failure-business-beauty-scr-06",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio beauty",
-    "evidence": {
-      "scenarios": [
-        "business-beauty-scr-06"
-      ],
-      "sampleError": "Nenhum alvo semântico encontrado: [data-testid=\"refresh-button\"], button:has-text(\"Atualizar\"), button:has-text(\"Recarregar\"), button[aria-label*=\"Atualizar\" i]"
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-fitness-flaky-fitness-matricula-checkout",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio fitness",
-    "evidence": {
-      "scenarios": [
-        "fitness-matricula-checkout"
-      ],
-      "sampleError": "Navegador fechado pelo usuário"
+      "sampleError": "Documento operacional não encontrado no escopo OPERATIONAL: [\"doc-1790379439802-8kup1uidj\",\"doc-1790379441478-ym8sdfcsp\",\"doc-1790379431512-m9fowpke7\",\"src-docs-roteiros-jornada-food-food-customer-journey-md\",\"src-docs-guia-manutencao-filas-md\",\"src-docs-roteiros-jornada-services-services-default-journey-md\",\"doc-1790379512736-pumfkw00r\",\"doc-1790379443504-6jxnyehd3\",\"src-docs-roteiros-jornada-food-food-order-flow-md\",\"src-docs-manual-index-html\"]"
     },
     "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
   },
   {
-    "id": "gap-proof-invalid-artifact-semantics",
+    "id": "gap-proof-stale-fingerprints",
     "severity": "critical",
     "area": "proof-governance",
-    "title": "Proof artifacts presentes mas semanticamente invalidos (presenca != validade)",
+    "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
     "evidence": {
-      "count": 1,
-      "artifacts": [
-        {
-          "id": "qa_waves_governance",
-          "path": "qa/qa-waves-enterprise-governance.json",
-          "violations": [
-            "status_no_go"
-          ]
-        }
+      "diverged": [
+        "scenarioRegistryFingerprint",
+        "chainFingerprint"
       ]
     },
-    "suggestedFix": "Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias."
+    "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
   }
 ]

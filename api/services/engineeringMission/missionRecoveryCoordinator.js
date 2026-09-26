@@ -36,6 +36,9 @@ const logger = require('../../utils/logger');
 
 const DEFAULT_SWEEP_INTERVAL_MS = Number(process.env.ENGINEERING_MISSION_RECOVERY_INTERVAL_MS || 5 * 60 * 1000);
 const DEFAULT_LIMIT = Number(process.env.ENGINEERING_MISSION_RECOVERY_LIMIT || 25);
+// Teto de itens por varredura: a drenagem do backlog é limitada para manter o custo do boot
+// previsível (o excedente é retomado na varredura periódica seguinte).
+const MAX_SWEEP_ITEMS = Number(process.env.ENGINEERING_MISSION_RECOVERY_MAX_ITEMS || 500);
 
 let sweepTimer = null;
 let sweeping = false;
@@ -82,10 +85,34 @@ function planRecovery(missions) {
  * (nunca "sumiu do relatório").
  */
 async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanceId = INSTANCE_ID, host = os.hostname(), autoStart = true } = {}) {
-  const expired = await missionStore.findMissionsWithExpiredLease({ limit });
-  const neverLeased = await missionStore.findMissionsWithoutLease({ limit });
+  // DRENAGEM DO BACKLOG — defeito real corrigido em 2026-09-25.
+  //
+  // Antes, cada fonte era consultada UMA vez com `limit` (default 25) e a varredura parava aí.
+  // Como as consultas ordenam por tempo ASC, o corte ficava SEMPRE com os mais antigos: quando o
+  // backlog passava do limite, uma missão recém-abandonada NUNCA entrava no corte e o boot
+  // recovery reportava "varredura concluída" sem recuperar o trabalho mais novo (fail-open de
+  // recovery). Medido no banco real: 196 missões, ~152 candidatos, corte de 25 — a missão criada
+  // pelo teste jamais era alcançada.
+  //
+  // A drenagem repete a consulta EXCLUINDO o que já foi visto. Exclusão por ID é obrigatória (não
+  // `offset`): os itens processados SAEM do filtro ao ganhar lease/status, então `offset` pularia
+  // registros; e os que permanecem (SKIP por lease de worker vivo) fariam o laço nunca terminar.
+  // `MAX_SWEEP_ITEMS` limita o custo de uma varredura.
+  const seenIds = new Set();
+  const drained = [];
+  while (seenIds.size < MAX_SWEEP_ITEMS) {
+    const excludeIds = [...seenIds];
+    const [expiredPage, neverLeasedPage] = await Promise.all([
+      missionStore.findMissionsWithExpiredLease({ limit, excludeIds }),
+      missionStore.findMissionsWithoutLease({ limit, excludeIds }),
+    ]);
+    for (const mission of [...expiredPage, ...neverLeasedPage]) seenIds.add(mission.id);
+    drained.push(...expiredPage, ...neverLeasedPage);
+    // Ambas as fontes vieram incompletas ⇒ backlog esgotado nesta fonte (ou teto atingido).
+    if (expiredPage.length < limit && neverLeasedPage.length < limit) break;
+  }
   const byId = new Map();
-  for (const mission of [...expired, ...neverLeased]) byId.set(mission.id, mission);
+  for (const mission of drained) byId.set(mission.id, mission);
   const candidates = [...byId.values()];
 
   const summary = {

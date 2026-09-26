@@ -184,17 +184,87 @@
         "confidence": 0.6794685839775303,
         "chunksFound": 8,
         "timestamp": "2026-09-24T07:19:24.538597"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-25T15:37:46.461211"
+      },
+      {
+        "query": "QASEG20260925161146 horário de atendimento penhasco hortela zimbro sereia horário atendimento penhasco",
+        "success": true,
+        "confidence": 0.6393452234805299,
+        "chunksFound": 8,
+        "timestamp": "2026-09-25T16:11:49.123479"
+      },
+      {
+        "query": "QASEG20260925161146 horário de atendimento penhasco hortela zimbro sereia horário atendimento penhasco",
+        "success": true,
+        "confidence": 0.618736314177368,
+        "chunksFound": 9,
+        "timestamp": "2026-09-25T16:11:51.992311"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-25T16:38:08.108862"
+      },
+      {
+        "query": "QASEG20260925171015 horário de atendimento cacto kilim bussola cacto horário atendimento cacto",
+        "success": true,
+        "confidence": 0.7310221482508082,
+        "chunksFound": 9,
+        "timestamp": "2026-09-25T17:10:17.738048"
+      },
+      {
+        "query": "QASEG20260925171015 horário de atendimento cacto kilim bussola cacto horário atendimento cacto",
+        "success": true,
+        "confidence": 0.6084371405301839,
+        "chunksFound": 8,
+        "timestamp": "2026-09-25T17:10:19.390831"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-25T18:00:14.381964"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-25T19:00:48.388814"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-25T20:34:32.749299"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-25T21:32:40.428845"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 26,
-    "successfulQueries": 26,
+    "totalQueries": 36,
+    "successfulQueries": 36,
     "failedQueries": 0,
-    "avgConfidence": 0.6227015994047524,
-    "lastUpdated": "2026-09-24T07:19:24.538567"
+    "avgConfidence": 0.6119331239978765,
+    "lastUpdated": "2026-09-25T21:32:40.428802"
   },
   "config": {
     "minScore": 0.45,
@@ -207,5 +277,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-24T07:19:24.538875"
+  "updatedAt": "2026-09-25T21:32:40.429287"
 }

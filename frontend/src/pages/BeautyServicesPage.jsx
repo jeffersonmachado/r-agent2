@@ -30,7 +30,13 @@ export function BeautyServicesPage() {
         <p className="text-sm text-text-secondary">Catálogo operacional de serviços usados em campanhas, agenda e cobrança.</p>
       </div>
       <div className="support-controls">
-        <button className="support-button" onClick={loadData} disabled={loading}>{loading ? 'Atualizando...' : 'Atualizar'}</button>
+        <button
+          className="support-button"
+          data-testid="refresh-button"
+          aria-label="Atualizar serviços"
+          onClick={loadData}
+          disabled={loading}
+        >{loading ? 'Atualizando...' : 'Atualizar'}</button>
       </div>
       <div className="support-details-panel" style={{ marginTop: '1rem' }}>
         {!items.length ? <p className="text-sm text-text-secondary">Nenhum serviço cadastrado.</p> : (

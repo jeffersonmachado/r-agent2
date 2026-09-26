@@ -24,7 +24,12 @@ const MISSION_ID = '11111111-2222-3333-4444-555555555555';
 
 /** Agente real de cada papel, do jeito que o middleware entrega (req.agent). */
 const agentFor = (role, platformClassification = 'DEVELOPMENT') => ({ id: `u-${role}`, role, platformClassification });
-const asAgent = (role) => (req) => { req.agent = agentFor(role); return { valid: true }; };
+// Dublê fiel ao produtor real: o middleware de produção define `req.agent` E `req.tenantId`.
+const asAgent = (role) => (req) => {
+  req.agent = agentFor(role);
+  req.tenantId = 'system';
+  return { valid: true };
+};
 
 function buildDeps(overrides = {}) {
   const mission = {
@@ -43,7 +48,12 @@ function buildDeps(overrides = {}) {
   const compileCalls = [];
   const loggerErrors = [];
   const base = {
-    requireAuth: () => ({ valid: true }),
+    // Fiel ao middleware real (define agent E tenantId); sem isso as rotas respondem 400.
+    requireAuth: (req) => {
+      req.tenantId = 'system';
+      req.agent = { id: 'test-agent', email: 'test-agent@local' };
+      return { valid: true };
+    },
     // O MESMO checker usado em produção — a matriz abaixo é medida contra ele.
     requirePermission,
     sendJson: (res, status, body) => { res.status(status).json(body); },

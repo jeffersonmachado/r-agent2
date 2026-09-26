@@ -136,5 +136,9 @@
   ],
   "governanceSignature": "hmac-sha256:8dcaee45d66f077775db3ce15ede4dfd2fdd8c02d01c7623e33057ac3d3e63b9",
   "summary": "Todos os 9 replays têm integridade verificada.",
-  "reboundAt": "2026-09-24T01:12:13.675Z"
+  "reboundAt": "2026-09-24T01:12:13.675Z",
+  "runId": "rap-governed-20260926052238368-d81fb1f5",
+  "sourceFingerprint": "e75575e2e889eba455a4fe4b7cb6f586f4c49d0d54791c3a02611f486b12f664",
+  "artifactType": "replay-integrity-report",
+  "artifactVersion": "1.0.0"
 }

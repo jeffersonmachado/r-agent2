@@ -54,10 +54,26 @@ const ADMIN_PASSWORD = process.env.API_SURFACE_ADMIN_PASSWORD || 'Admin123!';
 const PROBE_TIMEOUT_MS = Number(process.env.API_SURFACE_PROBE_TIMEOUT_MS || 8000);
 const CONCURRENCY = Number(process.env.API_SURFACE_CONCURRENCY || 8);
 
-/** Substitui parâmetros de rota (:id, *) por valor de probe inócuo. */
+/**
+ * Substitui parâmetros de rota (:id, *) por valor de probe inócuo.
+ *
+ * Grupos de alternância do Express (`(a|b)`) também precisam virar caminho
+ * concreto. Mantidos literais, o caminho NUNCA casa com a rota: o Express cai no
+ * fallback 404 e o item é reportado como "rota não registrada" + "endpoint
+ * protegido respondeu sem credencial" — um falso alarme de segurança.
+ * Medido em 2026-09-25 com `POST /mcp/connections/:id/(enable|disable)`: sondando
+ * o literal vinha 404 `{error:not_found}`, enquanto `/enable` e `/disable` reais
+ * respondem 403 `classification_forbidden` (rota registrada e com enforcement).
+ * Usa a PRIMEIRA alternativa: as demais compartilham o mesmo handler e os mesmos
+ * middlewares, então presença e enforcement são provados igualmente.
+ */
 function concretePath(routePath) {
   return String(routePath)
     .replace(/:[^/]+/g, 'probe')
+    .replace(/\(([^)]+)\)/g, (_, group) => {
+      const first = String(group).split('|').map((part) => part.trim()).filter(Boolean)[0];
+      return first || '';
+    })
     .replace(/\*/g, 'probe');
 }
 

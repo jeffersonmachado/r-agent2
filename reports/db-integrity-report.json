@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-17T19:52:39.130Z",
+  "generatedAt": "2026-09-26T02:41:27.407Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "268cff18fc645cb91492b0881d2e2647398cc795",
+  "commit": "c16f48cd7ae0b20fcfc2281bbf82a02d74625f42",
   "dbAvailable": true,
   "totals": {
     "models": 197,
@@ -8578,7 +8578,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20250111000006-create-tenant-ai-credentials.js"
+          "detail": "migrations: api/db/migrations/20250111000006-create-tenant-ai-credentials.js, api/db/migrations/20260921012917-add-status-to-tenant-ai-credentials.js"
         },
         {
           "name": "tenantScope",
@@ -8598,7 +8598,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "4 colunas do model presentes"
+          "detail": "8 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -10660,6 +10660,6 @@
       ]
     }
   ],
-  "runId": "rap-governed-20260923220508741-cd53886e",
-  "sourceFingerprint": "89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884"
+  "runId": "rap-governed-20260926052238368-d81fb1f5",
+  "sourceFingerprint": "e75575e2e889eba455a4fe4b7cb6f586f4c49d0d54791c3a02611f486b12f664"
 }

@@ -511,6 +511,12 @@ async function processJob(job) {
     await pruneExecutionJobs({ retentionDays: days });
     return;
   }
+  if (kind === 'prune_vertical_engagement_signals') {
+    const { pruneVerticalEngagementSignals } = require('./pruneVerticalEngagementSignalsService');
+    const days = intEnv('VERTICAL_ENGAGEMENT_SIGNAL_RETENTION_DAYS', 90);
+    await pruneVerticalEngagementSignals({ retentionDays: days });
+    return;
+  }
   if (kind === 'scan_event_triggers') {
     const { scanAndEnqueue } = require('./eventLedgerTriggerDispatcher');
     const consumer = safeGet(job, 'payload.consumer', 'webhooks_v1');

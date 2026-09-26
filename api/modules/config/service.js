@@ -373,7 +373,10 @@ function createConfigService({ deps }) {
     },
 
     async reloadRagConfig(logger) {
-      const ragServiceUrl = process.env.RAG_SERVICE_URL || appConfig.get('rag.serviceUrl', 'http://localhost:8001');
+      // IP literal de propósito: evita getaddrinfo no libuv threadpool (ver
+      // api/services/rag/ragRuntime.js). Em produção o RAG_SERVICE_URL é sempre
+      // declarado, então o hostname de serviço continua sendo usado lá.
+      const ragServiceUrl = process.env.RAG_SERVICE_URL || appConfig.get('rag.serviceUrl', 'http://127.0.0.1:8001');
       const url = `${ragServiceUrl}/rag/reload-config`;
       const token = process.env.RAG_INTERNAL_TOKEN;
       const headers = { 'Content-Type': 'application/json' };

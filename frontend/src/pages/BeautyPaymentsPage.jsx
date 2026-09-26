@@ -54,7 +54,13 @@ export function BeautyPaymentsPage() {
         <p className="text-sm text-text-secondary">Acompanhamento de cobrancas, status e confirmacao controlada de pagamento.</p>
       </div>
       <div className="support-controls">
-        <button className="support-button" onClick={loadData} disabled={loading}>{loading ? 'Atualizando...' : 'Atualizar'}</button>
+        <button
+          className="support-button"
+          data-testid="refresh-button"
+          aria-label="Atualizar pagamentos"
+          onClick={loadData}
+          disabled={loading}
+        >{loading ? 'Atualizando...' : 'Atualizar'}</button>
       </div>
       <div className="support-details-panel" style={{ marginTop: '1rem' }}>
         {!items.length ? <p className="text-sm text-text-secondary">Nenhuma cobranca beauty encontrada.</p> : (

@@ -88,7 +88,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
 
   test('boot retoma a TASK de missão EXECUTING abandonada, sem endpoint manual', async () => {
     if (skipIfNoDatabase()) return;
-    const { mission } = await compiler.compileMission('Recovery deve retomar execução interrompida por crash.', { createdBy: 'jest-recovery' });
+    const { mission } = await compiler.compileMission('Recovery deve retomar execução interrompida por crash.', { createdBy: 'jest-recovery', tenantId: 'system' });
     created.push(mission.id);
     await approvalService.approve(mission.id, { actor: 'jest-recovery' });
     const orchestrator = require('../../api/services/engineeringMission/missionOrchestratorService');
@@ -115,12 +115,12 @@ describe('Mission Recovery Coordinator — boot automático', () => {
 
   test('boot NÃO retoma missão aguardando aprovação (decisão é humana) nem missão bloqueada', async () => {
     if (skipIfNoDatabase()) return;
-    const { mission } = await compiler.compileMission('Missão aguardando decisão humana não deve ser retomada.', { createdBy: 'jest-recovery' });
+    const { mission } = await compiler.compileMission('Missão aguardando decisão humana não deve ser retomada.', { createdBy: 'jest-recovery', tenantId: 'system' });
     created.push(mission.id);
     const detail = await compiler.getMissionDetail(mission.id);
     expect(['AWAITING_APPROVAL', 'APPROVED']).toContain(detail.status);
 
-    const blocked = await compiler.compileMission('Missão bloqueada por revisão não deve ser retomada.', { createdBy: 'jest-recovery' });
+    const blocked = await compiler.compileMission('Missão bloqueada por revisão não deve ser retomada.', { createdBy: 'jest-recovery', tenantId: 'system' });
     created.push(blocked.id);
     await store.updateMission(blocked.id, { status: 'BLOCKED', failure: { code: 'META_REVIEW_BLOCKED' } });
 
@@ -134,7 +134,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
 
   test('dois coordenadores concorrentes: o perdedor NÃO retoma a mesma missão (lease)', async () => {
     if (skipIfNoDatabase()) return;
-    const { mission } = await compiler.compileMission('Lease impede retomada duplicada por dois coordenadores.', { createdBy: 'jest-recovery' });
+    const { mission } = await compiler.compileMission('Lease impede retomada duplicada por dois coordenadores.', { createdBy: 'jest-recovery', tenantId: 'system' });
     created.push(mission.id);
     await approvalService.approve(mission.id, { actor: 'jest-recovery' });
     const orchestrator = require('../../api/services/engineeringMission/missionOrchestratorService');
@@ -154,7 +154,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
 
   test('recovery é idempotente: duas varreduras seguidas não duplicam task nem efeito', async () => {
     if (skipIfNoDatabase()) return;
-    const { mission } = await compiler.compileMission('Duas varreduras de recovery não podem duplicar task.', { createdBy: 'jest-recovery' });
+    const { mission } = await compiler.compileMission('Duas varreduras de recovery não podem duplicar task.', { createdBy: 'jest-recovery', tenantId: 'system' });
     created.push(mission.id);
     await approvalService.approve(mission.id, { actor: 'jest-recovery' });
     const orchestrator = require('../../api/services/engineeringMission/missionOrchestratorService');
@@ -186,7 +186,7 @@ describe('Mission Recovery Coordinator — boot automático', () => {
 
   test('lease é liberado ao final da varredura (missão não fica presa a um coordenador que saiu)', async () => {
     if (skipIfNoDatabase()) return;
-    const { mission } = await compiler.compileMission('Lease deve ser liberado ao fim da varredura.', { createdBy: 'jest-recovery' });
+    const { mission } = await compiler.compileMission('Lease deve ser liberado ao fim da varredura.', { createdBy: 'jest-recovery', tenantId: 'system' });
     created.push(mission.id);
     await approvalService.approve(mission.id, { actor: 'jest-recovery' });
     const orchestrator = require('../../api/services/engineeringMission/missionOrchestratorService');

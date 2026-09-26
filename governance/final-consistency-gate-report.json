@@ -1,14 +1,19 @@
 {
   "artifactType": "final-consistency-gate-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-24T01:09:56.584Z",
-  "runId": "rap-governed-20260923220508741-cd53886e",
-  "sourceFingerprint": "89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884",
+  "generatedAt": "2026-09-26T07:15:00.138Z",
+  "runId": "rap-governed-20260926052238368-d81fb1f5",
+  "sourceFingerprint": "e75575e2e889eba455a4fe4b7cb6f586f4c49d0d54791c3a02611f486b12f664",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
   "phase": "PRE_PACKAGE",
   "transitional": true,
-  "decision": "FINAL_CONSISTENCY_GO",
-  "failures": []
+  "decision": "FINAL_CONSISTENCY_NO_GO",
+  "failures": [
+    {
+      "id": "master_scorecard",
+      "reason": "dimensionsBelow10=35 (real failures: RAP-008,RAP-020,RAP-052,RAP-053,RAP-061,RAP-069,RAP-071)"
+    }
+  ]
 }
