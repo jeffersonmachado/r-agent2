@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-26T18:07:04.445Z",
+  "generatedAt": "2026-09-26T18:13:39.273Z",
   "engine": "final-consistency-gate/v1",
   "artifactType": "final-consistency-report",
   "artifactVersion": "2.0.0",
@@ -30,7 +30,7 @@
         "sourceCommit": "f485eb7c4685a660a598a143e50c7cd52e0e6714",
         "sourceTree": "35ad833278e640ac7d86b564ab144e1a4d7b1ee0",
         "startedAt": "2026-09-26T13:15:12.433Z",
-        "generatedAt": "2026-09-26T18:07:04.272Z",
+        "generatedAt": "2026-09-26T18:13:39.147Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -38,7 +38,7 @@
         "policyVersion": "1.0.4",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
         "lastGovernedStage": "final-consistency",
-        "lastSourceVerificationAt": "2026-09-26T18:07:04.272Z",
+        "lastSourceVerificationAt": "2026-09-26T18:13:39.147Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -119,6 +119,11 @@
             "stage": "final-consistency",
             "sourceFingerprint": "c9ae35e023a1a3f90dbac749df6e17371ea44352979ff1a30b63cd6944fce595",
             "verifiedAt": "2026-09-26T18:07:04.272Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "c9ae35e023a1a3f90dbac749df6e17371ea44352979ff1a30b63cd6944fce595",
+            "verifiedAt": "2026-09-26T18:13:39.147Z"
           }
         ]
       }

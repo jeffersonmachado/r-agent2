@@ -373,7 +373,7 @@ phase_publish() {
 # lineage de experience-segregation e invalida a projeção de jornada — as duas
 # reparações rodam imediatamente em seguida, na mesma fase.
 phase_consolidate() {
-  step consolidate "varredura agregada + reparos (journey/stamp) + verificação final"
+  step consolidate "varredura agregada + aprovação de deploy + reparos (journey/stamp) + verificação final"
 
   local alog="$LOG_DIR/aggregate.log"
   timeout 3000 npm run validate:governance-enforcement > "$alog" 2>&1
@@ -406,6 +406,37 @@ phase_consolidate() {
       fail "gate agregado ainda EXIT $rc após reparos — seal ABORTADO (evidência same-run/lineage exige reexecução real, não carimbo)" "$alog" consolidate
     fi
     ok "gate agregado após reparo: EXIT 0"
+  fi
+
+  # ── Aprovação de deploy do artefato selado ───────────────────────────────
+  # `system:deploy` exige um sidecar `<release>.approval.json` com goNoGo=GO.
+  # Metadados de aprovação NÃO podem ir no manifest do payload: o hash desse
+  # manifest é selado no self-proving-report e o verifier rígido exige
+  # igualdade. Sem este passo o artefato selado fica NÃO-DEPLOYÁVEL — foi o que
+  # aconteceu em 2026-09-26: o selo passou, a publicação passou e
+  # `system:deploy` falhava com
+  # `artifact_missing:no_zip_with_audit_passed_and_go_no_go_go`, porque o
+  # `qa/release-manifest.json` vigente ainda era de 2026-09-08.
+  # Roda DEPOIS das reparações de projeção/lineage (acima) porque go/no-go
+  # regenera artefatos derivados; o `commit_and_push` logo abaixo persiste o
+  # resultado e o `verify:delivered-release` (último) é o juiz fail-closed de
+  # que o estado final continua íntegro.
+  step consolidate "aprovação de deploy do artefato selado"
+  if timeout 900 npm run system:go-no-go > "$LOG_DIR/go-no-go.log" 2>&1 \
+    && timeout 900 npm run system:release-manifest > "$LOG_DIR/release-manifest.log" 2>&1; then
+    local release_name=""
+    [ -f "$LOG_DIR/release.env" ] && release_name="$(sed -n 1p "$LOG_DIR/release.env")"
+    local approval="dist/release/${release_name}.approval.json"
+    if [ -n "$release_name" ] && [ -f "$approval" ] && node -e "
+      const a = require('./$approval');
+      process.exit(a.goNoGo === 'GO' && a.approvedForDeploy === true ? 0 : 1);
+    " 2>/dev/null; then
+      ok "aprovação de deploy: $(basename "$approval") (goNoGo=GO, approvedForDeploy=true)"
+    else
+      fail "artefato selado sem aprovação de deploy válida — system:deploy ficaria bloqueado (artifact_missing:no_zip_with_audit_passed_and_go_no_go_go)" "$LOG_DIR/release-manifest.log" consolidate
+    fi
+  else
+    fail "falha ao gerar a aprovação de deploy (system:go-no-go / system:release-manifest)" "$LOG_DIR/release-manifest.log" consolidate
   fi
 
   # MCP_RESEARCH_DOCKER_E2E: no agregado o gate sai 0 com REQUIRES_DOCKER_RUNTIME
@@ -465,6 +496,7 @@ if [ "$DRY_RUN" = "1" ]; then
   echo "  3. final        zip:release (exit 0) -> release/commit/H_final do MANIFEST -> commit no remote"
   echo "  4. publish      create-release-tag -> verify-remote-provenance --manifest -> recibo -> publication"
   echo "  5. consolidate  gate agregado (BLOQUEANTE: exit != 0 após reparos ABORTA o seal)"
+  echo "                 -> aprovação de deploy: go-no-go + release-manifest (sidecar com goNoGo=GO)"
   echo "                 -> MCP_RESEARCH_DOCKER_E2E exige relatório PASS fresco (BLOQUEANTE)"
   echo "                 -> journey:projections -> stamp-report-lineage -> commit+push"
   echo "                 -> verify:delivered-release (ÚLTIMO)"
