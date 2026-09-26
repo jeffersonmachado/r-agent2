@@ -22,6 +22,20 @@
 
 Canonical sources: `docs/release-contract.md`, `docs/runtime-governance.md`, `docs/runtime-paths.md`, `scripts/check-dist-clean.sh`, `scripts/release-payload-blocklist.sh`, `scripts/governance/validate-cleanup.js`.
 
+## Timeout Architecture (SLOW != STUCK != DEAD)
+
+- Lento não é travado; travado não é morto. **Tempo decorrido nunca é autoridade** para declarar morte de missão, perda de trabalho ou invasão de ownership.
+- Nenhum número de timeout solto: a fonte única é `config/timeout-policy.json` (`resolveTimeoutPolicy`, clamp em `[min,max]` com clamp reportado).
+- Liveness = **heartbeat + lease + fencing** (`qa-mesh/meshLease.js`): heartbeat fresco ⇒ `ACTIVE` mesmo com PID morto; heartbeat obsoleto ⇒ `EXPIRED` mesmo com PID vivo. **PID é apenas corroborativo**.
+- Takeover **incrementa o fence**; dois donos nunca escrevem. `lockMission` exige `lockFreeOrMine` E `leaseFreeOrMine` — takeover por idade é proibido.
+- Avanço = **progresso significativo** (`engine/engineeringMission/progressPolicy.js`); `heartbeat`/`poll`/`keepalive` **não** contam. Sem milestone registrado o veredito é `UNKNOWN`, nunca "travado".
+- Ausência de progresso dispara **diagnóstico** (`DIAGNOSE`), nunca kill/takeover.
+- Expiração é da **operação** (cancelar/retry/fallback/replan), não da missão. `buildExpiryRecord` só marca `killsMission` para `USER_DEADLINE_EXCEEDED`/`MISSION_BUDGET_EXCEEDED`; `killsWorker` é sempre `false`.
+- Proibido no caminho crítico: `MISSION_WALL_CLOCK`, `STALE_BY_AGE_ONLY`, `PID_AS_LIVENESS_AUTHORITY`. `TIMEOUT != PASS`.
+- Validar antes de concluir: `npm run validate:timeout-architecture` (bloqueante, no agregado `validate:governance-enforcement`) e `npm run verify:timeout-architecture-e2e` (runtime real).
+
+Canonical source: `docs/architecture/timeout-architecture.md`, `config/timeout-policy.json`, `engine/shared/executionDeadline.js`, `engine/engineeringMission/progressPolicy.js`, `qa-mesh/meshLease.js`.
+
 ## Stack Versions
 
 - `AI_MEMORY/stack-versions.md` is the canonical declared-stack reference (Node, npm, package version, RAG pins, embedding model, compose images). The "Versões da Stack" page (`/dev/stack-versions`) mirrors it plus live runtime versions from `/version` and `/system/status`.

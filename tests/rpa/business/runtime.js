@@ -4331,17 +4331,32 @@ async function runFlowScenario(definition, ctx) {
       }
 
       // Query operacional: deve encontrar o documento e reportar o escopo aplicado.
-      let opQuery;
-      try {
-        opQuery = await api.post('/rag/query', {
-          query: queryText,
-          options: { topK: 10, minScore: 0.0 },
-        });
-      } catch (err) {
-        if (err.status === 500 && /rag/i.test(String(err.body?.message || err.message))) {
-          return { detail: 'rag-service indisponível (ambiente)', ids: { documentId }, evidence: { queryOutcome: 'rag_service_unavailable' } };
+      //
+      // Espera-se o SINAL (documento recuperável neste escopo), não o PROXY
+      // (`indexed`). Os chunks entram numa transação única junto com o flag, mas
+      // a recuperação só se torna observável algum tempo depois — sob carga
+      // concorrente (mesh) essa janela cresce e produzia falso vermelho: o
+      // cenário era marcado `flaky` e a mensagem antiga não trazia nenhum estado
+      // do documento. Poll da condição real com deadline limitado — o conserto
+      // correto é esperar pelo sinal, nunca "aumentar o timeout".
+      const operationalQueryOptions = { topK: 10, minScore: 0.0 };
+      const visibilityDeadlineMs = 30000;
+      const visibilityStartedAt = Date.now();
+      let opQuery = null;
+      let visibilityPolls = 0;
+      for (;;) {
+        visibilityPolls += 1;
+        try {
+          opQuery = await api.post('/rag/query', { query: queryText, options: operationalQueryOptions });
+        } catch (err) {
+          if (err.status === 500 && /rag/i.test(String(err.body?.message || err.message))) {
+            return { detail: 'rag-service indisponível (ambiente)', ids: { documentId }, evidence: { queryOutcome: 'rag_service_unavailable' } };
+          }
+          throw err;
         }
-        throw err;
+        if ((opQuery?.sources || []).some((s) => s.documentId === documentId)) break;
+        if (Date.now() - visibilityStartedAt >= visibilityDeadlineMs) break;
+        await new Promise((resolve) => setTimeout(resolve, 750));
       }
       if (typeof opQuery?.success !== 'boolean') {
         throw new Error(`rag/query sem contrato: ${JSON.stringify(opQuery)}`);
@@ -4354,7 +4369,19 @@ async function runFlowScenario(definition, ctx) {
       }
       const opDocIds = (opQuery.sources || []).map((s) => s.documentId);
       if (!opDocIds.includes(documentId)) {
-        throw new Error(`Documento operacional não encontrado no escopo OPERATIONAL: ${JSON.stringify(opDocIds)}`);
+        // Diagnóstico completo: o `finally` faz cleanup e apaga o documento logo
+        // depois, então sem capturar o estado aqui a evidência desaparece antes
+        // de qualquer inspeção. Mesmo padrão usado na falha de indexação acima.
+        const last = await api.get(`/rag/documents/${encodeURIComponent(documentId)}`).catch(() => null);
+        const d = last?.document || last;
+        const docState = d
+          ? `indexStatus=${d.indexStatus} chunks=${d.chunksCount} indexed=${d.indexed}`
+          : 'estado indisponível (GET final falhou)';
+        const topScores = (opQuery.sources || []).slice(0, 10).map((s) => {
+          const sc = s.score ?? s.similarity ?? s.relevance;
+          return `${s.documentId}@${typeof sc === 'number' ? sc.toFixed(3) : 'n/a'}`;
+        });
+        throw new Error(`Documento operacional não encontrado no escopo OPERATIONAL após ${visibilityPolls} consulta(s) em ${Date.now() - visibilityStartedAt}ms (doc=${documentId} ${docState}; top=${JSON.stringify(topScores)})`);
       }
 
       // Query no domínio SYSTEM (super_admin pode): NÃO deve encontrar o
