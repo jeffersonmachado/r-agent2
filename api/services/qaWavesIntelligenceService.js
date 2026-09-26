@@ -96,14 +96,60 @@ function getCoverageMapForVertical(vertical) {
 
 const REPLAY_FRESHNESS_DAYS = 7;
 
+// ── Cache do índice de replays (2026-09-26) ─────────────────────────────────
+// `buildReplayIndex` varre TODOS os diretórios de replay e faz
+// `JSON.parse(readFileSync())` arquivo a arquivo, de forma SÍNCRONA. Medido no
+// runtime real: `GET /api/qa-waves/intelligence/coverage` custava ~25 s por
+// requisição com a máquina ociosa e, num burst de 4 concorrentes (o cenário de
+// browser da malha carrega a página de QA Waves em vários contextos), os tempos
+// foram 30/50/77/105,7 s — estourando o timeout de 90 s do client em DEV
+// (`frontend/src/api/client.js:46`) e derrubando `fitness-matricula-leads` como
+// `infra_error` → `CRITICAL_DOMAIN_FAILED:omnichannel` → mesh NO_GO → selo
+// bloqueado na fase prepare.
+// O índice é SOMENTE LEITURA (nenhum consumidor muta o objeto devolvido) e só
+// muda quando um replay novo aparece, então:
+//  - `signature` = (dir, nº de entradas, mtime do diretório): replay é
+//    write-once, então adicionar/remover arquivo muda a assinatura — é ESTA a
+//    invalidação de precisão;
+//  - `TTL` é apenas o backstop temporal (5 min): a frescura do índice é dado
+//    operacional que muda quando a malha/ondas rodam, não a cada segundo;
+//  - `cooldown` limita a FREQUÊNCIA do rebuild — sem ele, N requisições
+//    concorrentes num momento de mudança fazem N varreduras síncronas em série
+//    no mesmo event loop, que é a amplificação medida acima.
+const REPLAY_INDEX_TTL_MS = Number(process.env.QA_WAVES_REPLAY_INDEX_TTL_MS || 300000);
+const REPLAY_INDEX_REBUILD_COOLDOWN_MS = Number(process.env.QA_WAVES_REPLAY_INDEX_COOLDOWN_MS || 5000);
+const replayIndexCache = new Map();
+
+function replayDirsSignature(dirs) {
+  // Só `stat` do diretório: a mtime do diretório muda quando entradas são
+  // criadas/removidas (replay é write-once). NÃO usar `readdirSync(dir).length`
+  // aqui: em diretório com milhares de arquivos ele lê a listagem inteira a
+  // CADA requisição e vira o novo gargalo (medido: burst de 8 custava 11,4 s só
+  // por causa disso, com o índice já em cache).
+  return dirs.map((dir) => {
+    try {
+      return `${dir}\u0000${fs.statSync(dir).mtimeMs}`;
+    } catch (_) {
+      return `${dir}\u0000missing`;
+    }
+  }).join('|');
+}
+
 /**
  * Lê todos os arquivos de replay disponíveis e retorna um índice
  * {scenarioId -> { latestAt, hasFailure, count }}
  */
 function buildReplayIndex(tenantId = 'system') {
   const scopedTenantId = normalizeTenantKey(tenantId);
-  const index = {};
   const dirs = getAllReplayReadDirs(scopedTenantId).filter((d) => fs.existsSync(d));
+  const signature = replayDirsSignature(dirs);
+  const cached = replayIndexCache.get(scopedTenantId);
+  if (cached && Date.now() < cached.expiresAt) {
+    if (cached.signature === signature) return cached.index;
+    if (Date.now() - cached.builtAt < REPLAY_INDEX_REBUILD_COOLDOWN_MS) return cached.index;
+  }
+
+  const index = {};
   const now = Date.now();
   const freshnessMs = REPLAY_FRESHNESS_DAYS * 24 * 60 * 60 * 1000;
 
@@ -144,6 +190,13 @@ function buildReplayIndex(tenantId = 'system') {
       }
     }
   }
+
+  replayIndexCache.set(scopedTenantId, {
+    builtAt: Date.now(),
+    expiresAt: Date.now() + REPLAY_INDEX_TTL_MS,
+    signature,
+    index,
+  });
 
   return index;
 }
