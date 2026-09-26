@@ -107,13 +107,23 @@ selagem (`release:seal`/`two-pass-release.sh`) não executa
 deploy. O `qa/release-manifest.json` vigente ainda apontava para
 `r-agent2-20260908-105354.zip`.
 
-**Gap de processo em aberto:** `scripts/governance/seal-release.sh` deveria rodar
-`system:go-no-go` + `system:release-manifest` na fase `consolidate`. Enquanto isso
-não for uma mudança governada (exige ciclo de selagem completo para validar),
-trate os dois comandos como passos obrigatórios pós-selo. Efeito colateral
-esperado: eles regeneram artefatos derivados (`governance/final-*`,
-`qa-waves/journey-coverage/*`, projeções de status) — commit depois, e confira que
-as decisões continuam `AUTONOMOUS_READY_GO` + `validate:final-status-projection`
-PASS. O sidecar em si é gitignored (`dist/`).
+**Gap de processo FECHADO (commit `da1873fe`, 2026-09-26):**
+`scripts/governance/seal-release.sh` (`phase_consolidate`) agora roda
+`system:go-no-go` + `system:release-manifest` depois dos reparos de
+projeção/lineage e antes do `commit_and_push`, **verifica** o sidecar
+(`goNoGo=GO` E `approvedForDeploy=true`) e **aborta o selo (fail-closed)** se ele
+não existir ou estiver inválido — um selo que termine sem aprovação de deploy é
+um release que não pode ser implantado, e isso não pode passar silenciosamente.
+
+Efeito colateral esperado dos dois comandos: regeneram 18 artefatos derivados
+(`governance/final-*`, `qa-waves/journey-coverage/*`, projeções de status,
+`docs/governance/PLATFORM_STATUS.md`) — o `commit_and_push` da própria fase os
+persiste. Eles **não** clobberam lineage (`final-consistency-gate` =
+`FINAL_CONSISTENCY_GO failed=0`; `validate:journey-projections` EXIT 0). O
+sidecar em si é gitignored (`dist/`).
+
+Para releases selados **antes** de `da1873fe`, os dois comandos continuam sendo
+passos manuais obrigatórios (foi assim que `r-agent2-20260926-114417` passou a
+ser deployável).
 
 
