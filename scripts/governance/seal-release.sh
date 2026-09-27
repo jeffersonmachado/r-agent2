@@ -135,6 +135,50 @@ preflight() {
   else
     warn "psql/.env ausentes — gates que exigem lineage persistido podem falhar"
   fi
+
+  # Pré-requisito BLOQUEANTE da fase `consolidate`: evidência de smoke contínuo
+  # das QA Waves dentro da validade (TTL, default 48 h).
+  #
+  # `validate:qa-governance` (dentro do gate agregado) NÃO lê o JSON commitado:
+  # reconstrói o veredito pelo bridge e marca a evidência como vencida quando o
+  # `generatedAt` é mais antigo que `QA_WAVES_SCHEDULED_MAX_AGE_HOURS`. Como o
+  # agregado roda na ÚLTIMA fase, descobrir isso lá custa um ciclo inteiro
+  # (~1,5-2 h) para abortar no fim — medido em 2026-09-27 (evidência com 35 h no
+  # selo, 49,6 h ~13 h depois). Aqui roda a MESMA avaliação do próprio bridge
+  # (sem duplicar o threshold) ANTES de qualquer trabalho: falha rápida com o
+  # remédio explícito.
+  #
+  # Renovar é trabalho do produtor canônico agendado (cron diário):
+  #   ./scripts/smoke/run-scheduled-production-health-smoke.sh
+  # Ele exige stack prod-like em Docker e DERRUBA os serviços de dev (API node,
+  # Vite, RAG) para liberar :3001/:5173/:8001 — por isso NÃO pode ser chamado
+  # daqui: o preflight do converge exige esses três serviços vivos.
+  local qa_state
+  qa_state="$(node -e '
+    const fs = require("fs");
+    const { assessScheduledEvidence } = require("./tools/system/lib/qa-waves-enterprise-governance-bridge");
+    const p = "qa/smoke/qa-waves-scheduled-operational-smoke.json";
+    let scheduled = null;
+    try { scheduled = JSON.parse(fs.readFileSync(p, "utf8")); } catch (_) { scheduled = null; }
+    const r = assessScheduledEvidence(scheduled, { root: process.cwd() }) || {};
+    if (r.healthy === true) process.stdout.write("OK");
+    else process.stdout.write(`INVALIDO motivos=${(r.reasons || []).join(",") || "desconhecido"} maxAgeHours=${r.maxAgeHours}`);
+  ' 2>/dev/null)"
+
+  if [ "$qa_state" = "OK" ]; then
+    ok "evidência de smoke contínuo das QA Waves dentro da validade"
+  else
+    bad "evidência de smoke contínuo das QA Waves vencida/inválida — o agregado ABORTA na fase consolidate"
+    echo "      avaliação: ${qa_state:-indisponível}"
+    echo "      renove com o produtor canônico (cron diário):"
+    echo "        ./scripts/smoke/run-scheduled-production-health-smoke.sh"
+    echo "      (exige stack prod-like em Docker; derruba os serviços de dev)"
+    if [ "$DRY_RUN" = "1" ]; then
+      warn "dry-run: seguindo só para imprimir o plano (um ciclo real abortaria aqui)"
+    else
+      exit 1
+    fi
+  fi
 }
 
 # ── Fase 1: prepare ---------------------------------------------------------
@@ -489,6 +533,8 @@ preflight
 if [ "$DRY_RUN" = "1" ]; then
   echo
   cyan "PLANO (dry-run)"
+  echo "  pré-requisito   evidência de smoke contínuo das QA Waves dentro do TTL"
+  echo "                  (vencida => validate:qa-governance ABORTA o agregado na fase 5)"
   echo "  1. prepare      create-governed-run (se drift) -> converge -> QA Mesh REAL no run (canônico, ~35min;"
   echo "                 falha do mesh ABORTA) -> exige SEAL_PENDING|SEAL_GO -> commit+push"
   echo "  2. candidate    zip:release (exit 1 esperado) -> verify:delivered-release -> scorecard below10=0"
