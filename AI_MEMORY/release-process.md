@@ -161,5 +161,30 @@ ele registra SKIP e sai 0 — por política **nunca** gera evidência falsa. Ant
 um ciclo de selagem, confira a idade da evidência; se estiver > 48 h, agende a
 renovação (cron `23 4 * * *`) em vez de descobrir na fase `consolidate`.
 
+### Detecção antecipada (fail-fast) no preflight do selo
+
+Desde 2026-09-27 o `preflight()` de `scripts/governance/seal-release.sh` roda a
+**mesma** avaliação do gate (reusa `assessScheduledEvidence` do bridge — o
+threshold de 48 h não é duplicado) **antes de qualquer trabalho**:
+
+- evidência vencida => aborta em ~8 s com o remédio explícito acima (em vez de
+  abortar no fim de um ciclo de 1,5–2 h);
+- `--dry-run` apenas avisa e segue imprimindo o plano.
+
+Armadilha medida ao implementar: a checagem **precisa** de
+`node --env-file-if-exists=.env`. Sem a chave de assinatura, o
+`validateReplayIntegrity` reprova todos os fluxos e o bridge emite
+`scheduled_flow_source_mismatch:<jornada>:integrityValid` para cada um (8 falsos
+mismatches em 2026-09-27); com `.env`, os motivos se reduzem a
+`scheduled_evidence_stale` + `scheduled_source_evidence_stale`. Qualquer
+avaliação do bridge fora do runtime do gate deve carregar o `.env`, sob risco de
+bloquear selo válido.
+
+O produtor de smoke **não** é chamado de dentro do selo, de propósito: ele derruba
+API/Vite/RAG, exatamente os três serviços que o preflight do converge exige. Por
+isso a evidência não pode ser renovada same-run dentro do selo neste host — o TTL
+continua sendo o instrumento (o objeto validado é uma **stack viva**, não só o
+código).
+
 
 
