@@ -186,5 +186,41 @@ isso a evidência não pode ser renovada same-run dentro do selo neste host — 
 continua sendo o instrumento (o objeto validado é uma **stack viva**, não só o
 código).
 
+### Renovação verificada (2026-09-27)
+
+```bash
+# 1) stack prod-like. A API do STACK precisa estar no ar: o SPA em :8080 só
+#    autentica se o proxy interno (nginx → api:3000) alcançar a API.
+export ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria
+export ENGINEERING_ROUTER_WORKSPACE_ROOT=/tmp/engineering-router-workspaces
+export ENGINEERING_RUNNER_TOKEN="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
+docker compose -f docker-compose.yml up -d --no-deps --no-build api rag-service
+
+# 2) produtor canônico (derruba API/Vite/RAG de dev para liberar as portas)
+QA_MESH_SCHEDULER_ENABLED=true ./scripts/smoke/run-scheduled-production-health-smoke.sh
+
+# 3) voltar ao dev
+docker stop chatbot-api chatbot-rag-service   # e subir API node + Vite 5173 + RAG 8001
+```
+
+`--no-deps` evita o `engineering-runner` (DEVELOPMENT ONLY; a imagem `:latest`
+pode não existir localmente). `ENGINEERING_ROUTER_*` e `ENGINEERING_RUNNER_TOKEN`
+são obrigatórias no compose e **não** são geradas pelo `system:bootstrap` (drift
+bootstrap↔compose). Resultado esperado: `status=GO`, as duas evidências com
+`generatedAt` novo e `validate:qa-governance` EXIT 0.
+
+### Causa raiz das falhas do cron (2026-09-25/26/27)
+
+`page.waitForFunction: Timeout 30000ms` em `ensureAuthenticated`: o container
+`chatbot-api` estava **parado desde 2026-09-22 22:42** (stop manual —
+`restart: unless-stopped` não ressuscita container parado à mão), enquanto `:3001`
+era atendida por outro processo, e o `pkill -f "node api/server\.js"` do wrapper
+não casa cmdlines com flags (`node --env-file-if-exists=.env api/server.js`). A
+checagem `reachable "$API_URL/"` passava, o smoke começava e o SPA ficava sem
+backend. Guard novo no wrapper: sonda `${FRONTEND_URL}/r-agent2/api/health`
+exigindo 200, senão `SKIP prod_like_api_unreachable_through_frontend code=502` —
+detecta em ~6 s em vez de morrer em 30 s. O log de cada execução fica em
+`logs/qa/scheduled-production-health-smoke.log`.
+
 
 

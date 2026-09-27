@@ -106,6 +106,24 @@ if ! reachable "$FRONTEND_URL/"; then
   exit 0
 fi
 
+# O smoke autentica pelo SPA servido em FRONTEND_URL, cujo proxy interno
+# (nginx → api:3000) exige a API do STACK no ar. Se essa API estiver fora,
+# :3001 pode estar ocupada por outro processo (ex.: API de dev que o pkill
+# acima não casa, por caminho absoluto ou supervisor), a checagem
+# `reachable "$API_URL/"` passa e o smoke morre em `ensureAuthenticated` com
+# `page.waitForFunction: Timeout 30000ms` — foi exatamente o que aconteceu no
+# cron de 2026-09-25/26/27 (API do stack parada desde 2026-09-22 22:42), com a
+# evidência decaindo em silêncio. Falha rápida, explícita e sem evidência falsa.
+prod_like_proxy_code() {
+  curl -s -o /dev/null --max-time 10 -w '%{http_code}' \
+    "${FRONTEND_URL%/}/r-agent2/api/health" 2>/dev/null
+}
+proxy_code="$(prod_like_proxy_code)"
+if [[ "$proxy_code" != "200" ]]; then
+  log "SKIP prod_like_api_unreachable_through_frontend code=${proxy_code:-000} frontend=$FRONTEND_URL — suba o stack (docker compose -f docker-compose.yml up -d --no-deps api rag-service)"
+  exit 0
+fi
+
 log "START mode=production_health api=$API_URL frontend=$FRONTEND_URL"
 
 # ── Observação de estado host-side ──
