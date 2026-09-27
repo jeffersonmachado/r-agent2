@@ -153,8 +153,14 @@ preflight() {
   # Ele exige stack prod-like em Docker e DERRUBA os serviços de dev (API node,
   # Vite, RAG) para liberar :3001/:5173/:8001 — por isso NÃO pode ser chamado
   # daqui: o preflight do converge exige esses três serviços vivos.
+  #
+  # `--env-file-if-exists=.env` é OBRIGATÓRIO para reproduzir o gate: sem a
+  # chave de assinatura (`validateReplayIntegrity` a usa) TODOS os fluxos
+  # passam a divergir da evidência-fonte com
+  # `scheduled_flow_source_mismatch:<jornada>:integrityValid` (medido em
+  # 2026-09-27) — ou seja, sem `.env` esta checagem bloquearia selo válido.
   local qa_state
-  qa_state="$(node -e '
+  qa_state="$(node --env-file-if-exists=.env -e '
     const fs = require("fs");
     const { assessScheduledEvidence } = require("./tools/system/lib/qa-waves-enterprise-governance-bridge");
     const p = "qa/smoke/qa-waves-scheduled-operational-smoke.json";
@@ -167,9 +173,13 @@ preflight() {
 
   if [ "$qa_state" = "OK" ]; then
     ok "evidência de smoke contínuo das QA Waves dentro da validade"
+  elif [ -z "$qa_state" ]; then
+    bad "não foi possível avaliar a evidência de smoke contínuo das QA Waves"
+    echo "      (falha ao carregar .env/bridge — verifique .env e node_modules antes do ciclo)"
+    [ "$DRY_RUN" = "1" ] || exit 1
   else
     bad "evidência de smoke contínuo das QA Waves vencida/inválida — o agregado ABORTA na fase consolidate"
-    echo "      avaliação: ${qa_state:-indisponível}"
+    echo "      avaliação: ${qa_state}"
     echo "      renove com o produtor canônico (cron diário):"
     echo "        ./scripts/smoke/run-scheduled-production-health-smoke.sh"
     echo "      (exige stack prod-like em Docker; derruba os serviços de dev)"
