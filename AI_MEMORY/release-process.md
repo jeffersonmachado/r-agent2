@@ -126,4 +126,40 @@ Para releases selados **antes** de `da1873fe`, os dois comandos continuam sendo
 passos manuais obrigatórios (foi assim que `r-agent2-20260926-114417` passou a
 ser deployável).
 
+## Pré-requisito de selagem: evidência de smoke contínuo das QA Waves (< 48 h)
+
+A fase `consolidate` roda o gate agregado (bloqueante) e ele inclui
+`validate:qa-governance`. Esse gate **reconstrói** o veredito via
+`tools/system/lib/qa-waves-enterprise-governance-bridge.js` (não lê o JSON
+commitado) e considera **vencida** a evidência de smoke contínuo com
+`generatedAt` mais antigo que `maxAgeHours = 48`:
+
+```
+qa_waves_enterprise_governance_no_go: qa_waves_status_not_go,
+qa_waves_active_blockers, qa_waves_continuous_smoke_degraded
+  ⟵ activeBlockers[0].evidenceReasons = [scheduled_evidence_stale,
+                                          scheduled_source_evidence_stale]
+```
+
+**Não é regressão de código — é decaimento por tempo.** Medido no release
+`r-agent2-20260926-215718`: no selo a evidência tinha 35,0 h (agregado EXIT 0);
+~13 h depois tinha 49,6 h e o gate passou a FAIL, sem nenhuma mudança de fonte.
+`mtime` não conta (só `generatedAt`), então `touch` não renova.
+
+**Remédio (produtor canônico):**
+
+```bash
+./scripts/smoke/run-scheduled-production-health-smoke.sh   # feito para cron diário
+```
+
+Regenera `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` e
+`qa/smoke/qa-waves-scheduled-operational-smoke.json`. Condições: exige opt-in do
+scheduler (`enabled:true` persistido ou `QA_MESH_SCHEDULER_ENABLED=true`), exige a
+stack prod-like em Docker (frontend 8080, API 3001, Postgres/Redis) e **derruba os
+serviços de dev** (API node, Vite, RAG) para liberar as portas. Sem a stack no ar
+ele registra SKIP e sai 0 — por política **nunca** gera evidência falsa. Antes de
+um ciclo de selagem, confira a idade da evidência; se estiver > 48 h, agende a
+renovação (cron `23 4 * * *`) em vez de descobrir na fase `consolidate`.
+
+
 
