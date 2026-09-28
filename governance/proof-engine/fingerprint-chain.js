@@ -164,6 +164,42 @@ const SCENARIO_REGISTRY_FILES = [
   'qa/qa-waves/scenario-store.json',
 ];
 
+/**
+ * Campos VOLÁTEIS do scenario-store: metadados de runtime que o serviço de QA
+ * Waves reescreve a cada execução/leitura, sem nenhuma mudança de política.
+ *
+ * Sem projeção, o fingerprint de cenários muda no MEIO de um ciclo de selagem:
+ * medido em 2026-09-27, o store (rastreado) foi commitado duas vezes dentro do
+ * mesmo ciclo (`ba85f0e8` 17:34 e `fe9beac4` 18:25) e o passe `final` do
+ * `release:seal` abortou com `platform-readiness` = NO_GO e o gap crítico
+ * `gap-proof-stale-fingerprints` (`scenarioRegistryFingerprint` divergente do
+ * proof recém-materializado). É a MESMA armadilha já documentada para
+ * `meshRegistry.json` e `config/journey-contracts.json`: artefato derivado
+ * rastreado como política = STALE perpétuo/auto-infligido.
+ *
+ * A projeção é uma DENYLIST de propósito: só removemos ruído de runtime, de modo
+ * que QUALQUER campo de política (inclusive campos novos) continue alterando o
+ * fingerprint. `history` (histórico de execuções) é descartado inteiro.
+ */
+const SCENARIO_VOLATILE_FIELDS = Object.freeze(['createdAt', 'updatedAt', 'executionStatus']);
+
+const SCENARIO_FILE_PROJECTIONS = Object.freeze({
+  'qa/qa-waves/scenario-store.json': (doc) => ({
+    version: (doc && doc.version) ?? null,
+    scenarios: (Array.isArray(doc && doc.scenarios)
+      ? doc.scenarios
+      : Object.values((doc && doc.scenarios) || {}))
+      .map((scenario) => {
+        const projected = {};
+        for (const [key, value] of Object.entries(scenario || {})) {
+          if (SCENARIO_VOLATILE_FIELDS.includes(key)) continue;
+          projected[key] = value;
+        }
+        return projected;
+      }),
+  }),
+});
+
 const INVENTORY_FILE = 'config/system-inventory.json';
 
 /**
@@ -283,7 +319,7 @@ function computeFileSetFingerprint(rootDir, relPaths, label, projections = {}) {
 }
 
 function computeScenarioRegistryFingerprint(rootDir) {
-  return computeFileSetFingerprint(rootDir, SCENARIO_REGISTRY_FILES, 'scenarioRegistries');
+  return computeFileSetFingerprint(rootDir, SCENARIO_REGISTRY_FILES, 'scenarioRegistries', SCENARIO_FILE_PROJECTIONS);
 }
 
 function computePolicyFingerprint(rootDir) {
@@ -353,5 +389,7 @@ module.exports = {
   POLICY_FILES,
   POLICY_FILE_PROJECTIONS,
   SCENARIO_REGISTRY_FILES,
+  SCENARIO_FILE_PROJECTIONS,
+  SCENARIO_VOLATILE_FIELDS,
   INVENTORY_FILE,
 };
