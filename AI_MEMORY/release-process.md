@@ -222,5 +222,24 @@ exigindo 200, senão `SKIP prod_like_api_unreachable_through_frontend code=502` 
 detecta em ~6 s em vez de morrer em 30 s. O log de cada execução fica em
 `logs/qa/scheduled-production-health-smoke.log`.
 
+**Ordem do teardown corrigida (2026-09-28).** O `stop_dev_services()` era a
+primeira coisa executada: matava Vite/RAG de dev mesmo quando o wrapper ia
+SKIPar. Medição: às 07:23Z o cron derrubou os dois **no meio da fase `final`** de
+um `release:seal`, e o ciclo abortou com `NO_GO:MANDATORY_GATE_BLOCKED
+[qa-mesh=NO_GO | release-gate=NO_GO]` e 11 gaps de infra
+(`page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173`,
+`RAG_INDEX_FAILED::Falha ao conectar`). Agora o wrapper checa **antes**:
+
+1. `docker inspect chatbot-api` → só segue com `running`/`restarting` (um
+   container em crash-loop por porta ocupada continua sendo atendido);
+2. sonda do proxy interno pelo frontend (fala só com o nginx do container);
+3. **só então** `stop_dev_services()` e as checagens de alvo.
+
+Consequência operacional: enquanto o stack prod-like não estiver no ar, o cron não
+destrói mais o runtime de desenvolvimento — verificado (SKIP em 0 s com Vite/RAG
+vivos). Ainda assim, um ciclo longo pode cruzar as 04:23: para selar com margem,
+neutralize a linha do cron (`crontab -l > /tmp/crontab-backup-<data>.txt`,
+remova a linha, rode o ciclo e restaure com `crontab /tmp/crontab-backup-<data>.txt`).
+
 
 

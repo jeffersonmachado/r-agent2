@@ -94,17 +94,33 @@ if [ "$scheduler_enabled" != "true" ] && [ "${QA_MESH_SCHEDULER_ENABLED:-}" != "
   exit 0
 fi
 
-# ── Derruba os serviços de dev antes do prod-like (evita conflito de porta) ──
-stop_dev_services
-
-if ! reachable "$API_URL/"; then
-  log "SKIP api=$API_URL indisponível — smoke não executado"
-  exit 0
-fi
-if ! reachable "$FRONTEND_URL/"; then
-  log "SKIP frontend=$FRONTEND_URL indisponível — smoke não executado"
-  exit 0
-fi
+# ── O stack prod-like VAI rodar? Checar ANTES de derrubar os serviços de dev ──
+#
+# Medido em 2026-09-28 07:23Z (cron `23 4 * * *`): `stop_dev_services()` era a
+# PRIMEIRA coisa executada e o wrapper terminava em SKIP — mas Vite e RAG de dev
+# já estavam mortos, o que abortou a fase `final` de um `release:seal` em
+# andamento com 11 gaps de infra (`net::ERR_CONNECTION_REFUSED at
+# http://localhost:5173`, `RAG_INDEX_FAILED::Falha ao conectar`). Derrubar
+# runtime de desenvolvimento só se justifica quando o stack do Docker realmente
+# vai executar o smoke; sem ele não há evidência a produzir de qualquer forma.
+#
+# `restarting` conta como "vai rodar": um container em crash-loop por porta
+# ocupada precisa que o teardown libere :3001 na próxima tentativa.
+prod_like_api_container_state() {
+  if ! command -v docker >/dev/null 2>&1; then
+    printf 'no-docker'
+    return
+  fi
+  docker inspect --format '{{.State.Status}}' chatbot-api 2>/dev/null || printf 'absent'
+}
+container_state="$(prod_like_api_container_state)"
+case "$container_state" in
+  running|restarting) ;;
+  *)
+    log "SKIP prod_like_api_container_${container_state} — API do stack não está no ar; serviços de dev PRESERVADOS. Suba o stack: docker compose -f docker-compose.yml up -d --no-deps api rag-service"
+    exit 0
+    ;;
+esac
 
 # O smoke autentica pelo SPA servido em FRONTEND_URL, cujo proxy interno
 # (nginx → api:3000) exige a API do STACK no ar. Se essa API estiver fora,
@@ -114,13 +130,27 @@ fi
 # `page.waitForFunction: Timeout 30000ms` — foi exatamente o que aconteceu no
 # cron de 2026-09-25/26/27 (API do stack parada desde 2026-09-22 22:42), com a
 # evidência decaindo em silêncio. Falha rápida, explícita e sem evidência falsa.
+# A sonda roda ANTES do teardown porque só fala com o nginx do container (:8080)
+# — assim um SKIP aqui também não custa o runtime de dev.
 prod_like_proxy_code() {
   curl -s -o /dev/null --max-time 10 -w '%{http_code}' \
     "${FRONTEND_URL%/}/r-agent2/api/health" 2>/dev/null
 }
 proxy_code="$(prod_like_proxy_code)"
 if [[ "$proxy_code" != "200" ]]; then
-  log "SKIP prod_like_api_unreachable_through_frontend code=${proxy_code:-000} frontend=$FRONTEND_URL — suba o stack (docker compose -f docker-compose.yml up -d --no-deps api rag-service)"
+  log "SKIP prod_like_api_unreachable_through_frontend code=${proxy_code:-000} frontend=$FRONTEND_URL — serviços de dev PRESERVADOS; suba o stack (docker compose -f docker-compose.yml up -d --no-deps api rag-service)"
+  exit 0
+fi
+
+# ── Stack confirmado: agora sim libera as portas para o prod-like ──
+stop_dev_services
+
+if ! reachable "$API_URL/"; then
+  log "SKIP api=$API_URL indisponível — smoke não executado"
+  exit 0
+fi
+if ! reachable "$FRONTEND_URL/"; then
+  log "SKIP frontend=$FRONTEND_URL indisponível — smoke não executado"
   exit 0
 fi
 
