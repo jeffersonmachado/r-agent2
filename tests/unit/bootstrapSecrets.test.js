@@ -33,6 +33,9 @@ describe('bootstrap local secrets', () => {
     const replaySigningKey = readEnvValue(rootContent, 'REPLAY_SIGNING_KEY');
     const amiSecret = readEnvValue(rootContent, 'AMI_SECRET');
     const postgresPassword = readEnvValue(rootContent, 'POSTGRES_PASSWORD');
+    const runnerToken = readEnvValue(rootContent, 'ENGINEERING_RUNNER_TOKEN');
+    const hostRepoRoot = readEnvValue(rootContent, 'ENGINEERING_ROUTER_HOST_REPO_ROOT');
+    const workspaceRoot = readEnvValue(rootContent, 'ENGINEERING_ROUTER_WORKSPACE_ROOT');
 
     expect(result).toEqual({
       encryptionGenerated: true,
@@ -41,6 +44,8 @@ describe('bootstrap local secrets', () => {
       replaySigningKeyGenerated: true,
       amiSecretGenerated: true,
       postgresPasswordGenerated: true,
+      engineeringRunnerTokenGenerated: true,
+      engineeringRouterPathsProvisioned: true,
     });
     expect(isValidEncryptionKey(encryptionKey)).toBe(true);
     expect(isValidInternalToken(ragToken)).toBe(true);
@@ -55,11 +60,47 @@ describe('bootstrap local secrets', () => {
     expect(postgresPassword).not.toBe(encryptionKey);
     expect(postgresPassword).not.toBe(amiSecret);
     expect(readEnvValue(ragContent, 'RAG_INTERNAL_TOKEN')).toBe(ragToken);
+    // Drift bootstrap↔compose: as três variáveis exigidas por
+    // `docker-compose.yml` (`:?`) precisam nascer no `.env` do bootstrap — o
+    // teste com o `toEqual` acima é o contrato; aqui garantimos o conteúdo.
+    expect(isValidInternalToken(runnerToken)).toBe(true);
+    expect(runnerToken).not.toBe(encryptionKey);
+    expect(runnerToken).not.toBe(ragToken);
+    expect(hostRepoRoot && hostRepoRoot.length > 0).toBe(true);
+    expect(workspaceRoot && workspaceRoot.length > 0).toBe(true);
+    expect(JSON.stringify(result)).not.toContain(runnerToken);
     expect(JSON.stringify(result)).not.toContain(encryptionKey);
     expect(JSON.stringify(result)).not.toContain(ragToken);
     expect(JSON.stringify(result)).not.toContain(replaySigningKey);
     expect(JSON.stringify(result)).not.toContain(amiSecret);
     expect(JSON.stringify(result)).not.toContain(postgresPassword);
+  });
+
+  test('é idempotente para os caminhos do Engineering Router e preserva valor explícito do operador', () => {
+    fs.writeFileSync(
+      path.join(root, '.env'),
+      'ENCRYPTION_KEY=\nENGINEERING_ROUTER_HOST_REPO_ROOT=/caminho/do/operador\n',
+    );
+
+    const first = ensureLocalSecrets(root);
+    const afterFirst = fs.readFileSync(path.join(root, '.env'), 'utf8');
+    const workspaceRoot = readEnvValue(afterFirst, 'ENGINEERING_ROUTER_WORKSPACE_ROOT');
+
+    // valor explícito do operador NUNCA é sobrescrito
+    expect(readEnvValue(afterFirst, 'ENGINEERING_ROUTER_HOST_REPO_ROOT')).toBe(
+      '/caminho/do/operador',
+    );
+    expect(first.engineeringRouterPathsProvisioned).toBe(true);
+    expect(workspaceRoot && workspaceRoot.length > 0).toBe(true);
+
+    const second = ensureLocalSecrets(root);
+    const afterSecond = fs.readFileSync(path.join(root, '.env'), 'utf8');
+    expect(second.engineeringRouterPathsProvisioned).toBe(false);
+    expect(second.engineeringRunnerTokenGenerated).toBe(false);
+    expect(readEnvValue(afterSecond, 'ENGINEERING_ROUTER_WORKSPACE_ROOT')).toBe(workspaceRoot);
+    expect(readEnvValue(afterSecond, 'ENGINEERING_RUNNER_TOKEN')).toBe(
+      readEnvValue(afterFirst, 'ENGINEERING_RUNNER_TOKEN'),
+    );
   });
 
   test('rotaciona AMI_SECRET legado vazado (ragent2) e preserva um forte já definido', () => {
@@ -110,6 +151,20 @@ describe('bootstrap local secrets', () => {
       replaySigningKeyGenerated: false,
       amiSecretGenerated: false,
       postgresPasswordGenerated: false,
+      // ausentes no fixture deste teste: o bootstrap provisiona as duas na
+      // primeira passada (drift bootstrap↔compose) e não repete na segunda
+      engineeringRunnerTokenGenerated: true,
+      engineeringRouterPathsProvisioned: true,
+    });
+    expect(ensureLocalSecrets(root)).toEqual({
+      encryptionGenerated: false,
+      ragTokenGenerated: false,
+      ragTokenSynchronized: false,
+      replaySigningKeyGenerated: false,
+      amiSecretGenerated: false,
+      postgresPasswordGenerated: false,
+      engineeringRunnerTokenGenerated: false,
+      engineeringRouterPathsProvisioned: false,
     });
     expect(readEnvValue(fs.readFileSync(path.join(root, '.env'), 'utf8'), 'ENCRYPTION_KEY')).toBe(encryptionKey);
     expect(readEnvValue(fs.readFileSync(path.join(root, '.env'), 'utf8'), 'RAG_INTERNAL_TOKEN')).toBe(ragToken);

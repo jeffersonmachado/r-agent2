@@ -3,6 +3,7 @@
 
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 function escapeRegExp(value) {
@@ -127,6 +128,43 @@ function ensureLocalSecrets(rootDir) {
     postgresPassword = crypto.randomBytes(32).toString('hex');
     rootContent = upsertEnvValue(rootContent, 'POSTGRES_PASSWORD', postgresPassword);
   }
+
+  // Token do Engineering Runner: o compose é fail-closed com ele
+  // (`${ENGINEERING_RUNNER_TOKEN:?}`), então sem este valor o stack prod-like
+  // local (`docker compose -f docker-compose.yml up -d --no-deps api rag-service`)
+  // nem interpola — e é desse stack que o smoke contínuo das QA Waves depende
+  // (evidência de 48 h do `validate:qa-governance`). Drift bootstrap↔compose
+  // medido em 2026-09-28: as três variáveis abaixo eram exigidas pelo compose e
+  // não existiam no `.env` gerado, derrubando três tentativas de subir o stack.
+  let engineeringRunnerToken = readEnvValue(rootContent, 'ENGINEERING_RUNNER_TOKEN');
+  const engineeringRunnerTokenGenerated = !isValidInternalToken(engineeringRunnerToken);
+  if (engineeringRunnerTokenGenerated) {
+    engineeringRunnerToken = crypto.randomBytes(32).toString('hex');
+    rootContent = upsertEnvValue(rootContent, 'ENGINEERING_RUNNER_TOKEN', engineeringRunnerToken);
+  }
+
+  // Caminhos REAIS do host exigidos pelo compose (ER-V1-SEALFIX-002): o compose
+  // faz bind-mount literal `${ROOT}:${ROOT}` porque o daemon precisa enxergar os
+  // mesmos bytes. Derivados do checkout local e NUNCA sobrescritos quando já
+  // definidos (um valor explícito do operador sempre vence).
+  let engineeringRouterPathsProvisioned = false;
+  if (!readEnvValue(rootContent, 'ENGINEERING_ROUTER_HOST_REPO_ROOT')) {
+    // O layout esperado é `<monorepo>/r-agent2` (o pacote @results/auth é
+    // resolvido a partir daqui). Fora desse layout, o próprio root do checkout.
+    const hostRepoRoot = path.basename(root) === 'r-agent2' ? path.dirname(root) : root;
+    rootContent = upsertEnvValue(rootContent, 'ENGINEERING_ROUTER_HOST_REPO_ROOT', hostRepoRoot);
+    engineeringRouterPathsProvisioned = true;
+  }
+  if (!readEnvValue(rootContent, 'ENGINEERING_ROUTER_WORKSPACE_ROOT')) {
+    // Default documentado em docs/architecture/ENGINEERING_MODEL_ROUTER_OPERATIONS.md.
+    rootContent = upsertEnvValue(
+      rootContent,
+      'ENGINEERING_ROUTER_WORKSPACE_ROOT',
+      path.join(os.tmpdir(), 'engineering-router-workspaces'),
+    );
+    engineeringRouterPathsProvisioned = true;
+  }
+
   writeAtomic(rootEnvPath, rootContent);
 
   let ragContent = fs.existsSync(ragEnvPath) ? fs.readFileSync(ragEnvPath, 'utf8') : '';
@@ -136,7 +174,16 @@ function ensureLocalSecrets(rootDir) {
   }
   writeAtomic(ragEnvPath, ragContent);
 
-  return { encryptionGenerated, ragTokenGenerated, ragTokenSynchronized, replaySigningKeyGenerated, amiSecretGenerated, postgresPasswordGenerated };
+  return {
+    encryptionGenerated,
+    ragTokenGenerated,
+    ragTokenSynchronized,
+    replaySigningKeyGenerated,
+    amiSecretGenerated,
+    postgresPasswordGenerated,
+    engineeringRunnerTokenGenerated,
+    engineeringRouterPathsProvisioned,
+  };
 }
 
 if (require.main === module) {
