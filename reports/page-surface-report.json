@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-26T12:10:35.731Z",
-  "commit": "614714368781b434dddedc213c53b38a304bfe75",
+  "generatedAt": "2026-09-29T17:06:43.317Z",
+  "commit": "bc552e9af5877a49596085ece2856a8f7af44901",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 147,
+    "items": 148,
     "byState": {
-      "VALIDATED": 147
+      "VALIDATED": 148
     }
   },
   "status": "PASS",
@@ -1830,6 +1830,53 @@
     },
     {
       "id": "page:/dev/engineering",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/engineering/findings",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -5540,9 +5587,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20260929064626810-a379b254",
-  "sourceFingerprint": "a83e8b2c4bcda9138c55ba00bd730aea22d669e42348fc35d9f75b21882231ee",
-  "artifactType": "page-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }
