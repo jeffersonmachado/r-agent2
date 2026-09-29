@@ -347,6 +347,7 @@ function buildCertificationAuthorityChecks({
   tamper,
   proof,
   readiness,
+  gateDirection = null,
 } = {}) {
   return [
     evaluateMasterScorecard(scorecard, runContext),
@@ -354,7 +355,7 @@ function buildCertificationAuthorityChecks({
     evaluateTamperDetection(tamper, runContext),
     evaluateFinalProof(proof, runContext),
     evaluateFinalReadiness(readiness, runContext),
-    checkChildGateDirection(),
+    checkChildGateDirection(gateDirection),
   ];
 }
 
@@ -372,18 +373,26 @@ function buildCertificationAuthorityChecks({
  * Fail-closed: cadeia ilegível ⇒ check CRÍTICO reprovado (não é possível afirmar consistência do
  * que não se consegue ler).
  */
-function checkChildGateDirection() {
+function checkChildGateDirection(options = {}) {
   // Borda ÚNICA da regra (`governance/child-gate-guard.js`): mesma leitura de cadeia usada pelo
   // gate bloqueante `validate:gate-direction` e pelos demais produtores.
   const { guardDecision } = require('./child-gate-guard');
+
+  // INJEÇÃO (defeito real corrigido em 2026-09-29): este check lê a cadeia REAL do disco. Testes
+  // unitários que exercitam a autoridade de certificação passavam a depender do estado de
+  // governança do momento — quando qualquer artefato caía para NO_GO, o teste de autoridade
+  // FALHAVA, o `master-scorecard-test-report` marcava as dimensões de teste como FAIL e o ciclo se
+  // retroalimentava (scorecard NO_GO → proof NO_GO → teste FAIL → scorecard NO_GO). Com `root` e
+  // `readJson` injetáveis, o teste passa uma cadeia de fixture e volta a medir a LÓGICA.
+  const { root = ROOT, readJson = null } = options || {};
 
   // O PAI é avaliado como se estivesse aprovado: é exatamente esse o estado que a invariante
   // precisa impedir (se algum filho obrigatório não estiver GO, a aprovação é impossível).
   const guard = guardDecision({
     selfId: 'FINAL_GOVERNANCE',
     decision: 'AUTONOMOUS_READY_GO',
-    root: ROOT,
-    readJson: (rel) => readJsonSafe(rel),
+    root,
+    readJson: typeof readJson === 'function' ? readJson : (rel) => readJsonSafe(rel),
   });
 
   return {

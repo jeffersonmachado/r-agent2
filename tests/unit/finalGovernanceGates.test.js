@@ -1,5 +1,9 @@
 'use strict';
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 /**
  * Testes obrigatórios para os blockers FINAL-001, FINAL-002, FINAL-004, FINAL-009.
  *
@@ -197,7 +201,7 @@ describe('FINAL-002 — autoridade final exige scorecard/self-proof/tamper do me
   });
 
   test('all authority artifacts PASS only when their lineage and semantics pass', () => {
-    const checks = buildCertificationAuthorityChecks({ runContext, ...documents() });
+    const checks = buildCertificationAuthorityChecks({ runContext, ...documents(), gateDirection: gateDirectionFixture() });
     // 5 artefatos de autoridade + o check de DIREÇÃO entre gates (invariante child→parent,
     // adicionado em 2026-09-28: um gate pai não pode certificar GO enquanto um filho obrigatório
     // diz NO_GO). O número é afirmado para que a inclusão de novos checks seja deliberada.
@@ -216,9 +220,71 @@ describe('FINAL-002 — autoridade final exige scorecard/self-proof/tamper do me
   ])('%s blocks authority', (_label, mutate) => {
     const docs = documents();
     mutate(docs);
-    const checks = buildCertificationAuthorityChecks({ runContext, ...docs });
+    const checks = buildCertificationAuthorityChecks({ runContext, ...docs, gateDirection: gateDirectionFixture() });
     expect(checks.some((check) => !check.pass)).toBe(true);
   });
+
+  // ÂNCORA DO CONTRATO (regressão do ciclo de 2026-09-29): a injeção é a FONTE, não o disco.
+  // Sentido 1 (cadeia injetada GO com disco possivelmente NO_GO) → pass. Enquanto não houver
+  // injeção, este sentido falha sempre que a governança real estiver NO_GO — que era o ciclo.
+  // Sentido 2 (cadeia injetada NO_GO) → fail. Enquanto o disco for NO_GO este sentido passa por
+  // acidente; o valor probatório está na COMBINAÇÃO dos dois sentidos.
+  test('child_gate_direction lê a cadeia INJETADA, nunca o estado real de governança', () => {
+    const goChecks = buildCertificationAuthorityChecks({
+      runContext,
+      ...documents(),
+      gateDirection: gateDirectionFixture(),
+    });
+    const goDirection = goChecks.find((check) => check.id === 'child_gate_direction');
+    expect(goDirection).toBeDefined();
+    expect(goDirection.pass).toBe(true);
+
+    const badFixture = gateDirectionFixture();
+    const noGoChecks = buildCertificationAuthorityChecks({
+      runContext,
+      ...documents(),
+      gateDirection: { root: badFixture.root, readJson: () => ({ status: 'NO_GO', finalDecision: 'NO_GO' }) },
+    });
+    const noGoDirection = noGoChecks.find((check) => check.id === 'child_gate_direction');
+    expect(noGoDirection.pass).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cadeia de gates INJETADA no check de direção (isolamento do teste)
+// ─────────────────────────────────────────────────────────────────────────────
+// DEFEITO REAL medido em 2026-09-29: `checkChildGateDirection` lê a cadeia REAL do disco. Sem
+// injeção, este teste de autoridade passava a FALHAR sempre que os artefatos de governança reais
+// estavam em NO_GO — e essa falha RETROALIMENTAVA o ciclo:
+//   artefato NO_GO → teste de autoridade FAIL → master-scorecard-test-report FAIL →
+//   scorecard NO_GO (dimensões TESTED/REGRESSION_PROTECTED) → proof NO_GO → artefato NO_GO.
+// O teste deve medir a LÓGICA de certificação, nunca o estado de governança do momento.
+const GATE_DIRECTION_DIRS = [];
+
+function gateDirectionFixture() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'final-gov-gates-'));
+  fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'config', 'mandatory-gate-dependencies.json'),
+    `${JSON.stringify({
+      schema: 'mandatory-gate-dependencies/v1',
+      gates: [
+        {
+          id: 'FINAL_GOVERNANCE',
+          report: 'governance/final-governance-report.json',
+          decisionPath: 'finalDecision',
+          children: [{ id: 'FIXTURE_CHILD', report: 'fixture/child.json', decisionPath: 'status' }],
+        },
+      ],
+    }, null, 2)}\n`,
+  );
+  GATE_DIRECTION_DIRS.push(dir);
+  // Filhos da fixture respondem GO: a invariante de direção fica satisfeita por construção.
+  return { root: dir, readJson: () => ({ status: 'GO', finalDecision: 'AUTONOMOUS_READY_GO' }) };
+}
+
+afterAll(() => {
+  for (const dir of GATE_DIRECTION_DIRS) fs.rmSync(dir, { recursive: true, force: true });
 });
 
 describe('FINAL-002 — _computeMandatoryDecision: invariante agregador fail-closed', () => {
