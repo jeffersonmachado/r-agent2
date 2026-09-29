@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T07:30:21.930Z",
+  "generatedAt": "2026-09-29T08:26:16.606Z",
   "engine": "replay-hardening-engine/v2",
   "pass": true,
   "decision": "REPLAY_HARDENING_GO",
@@ -151,5 +151,5 @@
   "sourceFingerprint": "a83e8b2c4bcda9138c55ba00bd730aea22d669e42348fc35d9f75b21882231ee",
   "artifactType": "replay-hardening-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-09-29T08:22:21.894Z"
+  "reboundAt": "2026-09-29T09:17:21.186Z"
 }
