@@ -114,3 +114,40 @@ describe('a maturidade nunca é derivada da CAUSA do bloqueio', () => {
     expect(_computeMandatoryDecision({ proofDecision: 'ENTERPRISE_READY_GO' })).toBe('ENTERPRISE_READY_GO');
   });
 });
+
+/**
+ * INVARIANTE DE DIREÇÃO (missão 2026-09-28): o readiness não pode publicar aprovação enquanto um
+ * gate FILHO obrigatório estiver NO_GO/BLOQUEADO/ausente. Estado real encontrado:
+ * `governance/final-readiness-report.json` = `AUTONOMOUS_READY_GO` com
+ * `reports/engineering-router-v2-seal-report.json` = `NO_GO`.
+ */
+describe('§P2 readiness não promove com gate FILHO vermelho', () => {
+  test('violação de direção ⇒ decisão bloqueada com a CAUSA NOMEADA', () => {
+    const result = _computeFinalDecisionSemantics({
+      proofDecision: 'ENTERPRISE_READY_GO',
+      childGateViolations: [
+        { code: 'PARENT_GO_WITH_CHILD_NO_GO', parent: 'PLATFORM_READINESS', child: 'ENGINEERING_ROUTER_V2_SEAL' },
+      ],
+    });
+    expect(DECISION_IS_BLOCKED(result.finalDecision)).toBe(true);
+    expect(result.finalDecision).toMatch(/MANDATORY_GATE_BLOCKED/);
+    expect(result.mandatoryBlockReasons.join(' ')).toMatch(/ENGINEERING_ROUTER_V2_SEAL/);
+  });
+
+  test('sem violação de direção nada é rebaixado por precaução', () => {
+    const result = _computeFinalDecisionSemantics({
+      proofDecision: 'ENTERPRISE_READY_GO',
+      childGateViolations: [],
+    });
+    expect(result.finalDecision).toBe('ENTERPRISE_READY_GO');
+    expect(result.mandatoryBlockReasons).toEqual([]);
+  });
+
+  test('a decisão bloqueada por filho NÃO carrega rótulo da família GO', () => {
+    const result = _computeFinalDecisionSemantics({
+      proofDecision: 'AUTONOMOUS_READY_GO',
+      childGateViolations: [{ code: 'PARENT_GO_WITH_CHILD_BLOCKED', parent: 'PLATFORM_READINESS', child: 'CAPACITY' }],
+    });
+    expect(result.finalDecision).not.toContain('AUTONOMOUS_READY');
+  });
+});

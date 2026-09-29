@@ -31,7 +31,11 @@ function write(name, payload) {
 
 const AXES = {
   matrixVersion: 'test',
-  unmappedRequirementIds: { range: 'V2-01..V2-42', status: 'NOT_MAPPED_BY_REPOSITORY' },
+  requiredTests: {
+    range: 'V2-01..V2-42',
+    status: 'MAPPED_FROM_MISSION_PROMPT',
+    manifest: 'config/engineering-router-v2-required-tests.json',
+  },
   axes: {
     ALPHA: { requirement: 'requisito alpha', suites: ['a.test.js', 'b.test.js'], evidence: ['reports/x.json'], gate: 'npm run a' },
     BETA: { requirement: 'requisito beta', suites: ['c.test.js'], evidence: ['reports/y.json'], gate: 'npm run b' },
@@ -49,12 +53,13 @@ afterAll(() => {
   fs.rmSync(TMP, { recursive: true, force: true });
 });
 
-function matrix({ execution = null, antiGreenwashing = null, seal = null } = {}) {
+function matrix({ execution = null, antiGreenwashing = null, seal = null, requiredTests = null } = {}) {
   return buildMatrix({
     axesConfigPath: write('axes.json', AXES),
     suiteExecutionPath: execution ? write('exec.json', execution) : path.join(TMP, 'inexistente-exec.json'),
     antiGreenwashingPath: antiGreenwashing ? write('agw.json', antiGreenwashing) : path.join(TMP, 'inexistente-agw.json'),
     sealReportPath: seal ? write('seal.json', seal) : path.join(TMP, 'inexistente-seal.json'),
+    requiredTestsReportPath: requiredTests ? write('req.json', requiredTests) : path.join(TMP, 'inexistente-req.json'),
   });
 }
 
@@ -145,12 +150,26 @@ describe('matriz V2 — status derivado', () => {
     expect(outra.axes.ALPHA.testsExecuted).toBe(42);
   });
 
-  it('declara a lacuna V2-01..V2-42 em vez de inventar identificadores', () => {
+  it('declara o manifesto dos 42 testes obrigatórios sem inventar identificadores', () => {
     const result = matrix({ antiGreenwashing: { status: 'PASS' }, execution: { suites: {} } });
-    expect(result.unmappedRequirementIds.status).toBe('NOT_MAPPED_BY_REPOSITORY');
-    expect(result.unmappedRequirementIds.range).toBe('V2-01..V2-42');
-    // Um eixo chamado "V2-01" NÃO existe: nada foi fabricado para preencher a numeração.
+    expect(result.requiredTests.status).toBe('MAPPED_FROM_MISSION_PROMPT');
+    expect(result.requiredTests.range).toBe('V2-01..V2-42');
+    expect(result.requiredTests.manifest).toBe('config/engineering-router-v2-required-tests.json');
+    // Um eixo chamado "V2-01" NÃO existe: a matriz não fabrica eixos para preencher a numeração.
     expect(Object.keys(result.axes).some((k) => /^V2-\d+$/.test(k))).toBe(false);
+    // Sem o relatório do gate, o estado dos 42 fica AUSENTE — nunca presumido como coberto.
+    expect(result.requiredTestsStatus).toBeNull();
+  });
+
+  it('estado dos 42 vem da MEDIÇÃO do gate, não de campo declarado no config', () => {
+    const result = matrix({
+      antiGreenwashing: { status: 'PASS' },
+      execution: { suites: {} },
+      requiredTests: { status: 'FAIL', total: 42, counts: { PROVEN: 40, GAP: 2 }, unresolvedIds: ['V2-03', 'V2-08'] },
+    });
+    expect(result.requiredTestsStatus.status).toBe('FAIL');
+    expect(result.requiredTestsStatus.total).toBe(42);
+    expect(result.requiredTestsStatus.unresolvedIds).toEqual(['V2-03', 'V2-08']);
   });
 
   it('config de eixos ausente é erro explícito (nunca matriz vazia silenciosa)', () => {

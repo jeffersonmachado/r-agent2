@@ -112,23 +112,28 @@ describe('ERV1-CLOSE-009 — concorrência real (lockForRun com Postgres real)',
     await engineeringTaskService.unlockTask(task.id);
   });
 
-  test('lock órfão (mais velho que o TTL de stale lock) é recuperado por um runner diferente — restart-safe', async () => {
+  test('lease órfão (heartbeat parou → lease expirado) é recuperado por um runner diferente — idade de locked_at NÃO concede posse', async () => {
     if (skipIfNoDatabase()) return;
     const task = await makeTask('restart-safe-real-test');
 
-    // Simula um processo anterior que travou a task e morreu sem chamar unlockTask —
+    // Simula um processo anterior que travou a task e morreu sem liberar —
     // exatamente o cenário de "process dies during CODING/TESTING/REVIEWING" da missão.
-    await engineeringTaskService.lockForRun(task.id, 'runner-crashed');
+    const crashed = await engineeringTaskService.lockForRun(task.id, 'runner-crashed');
 
     const getModels = require('../../api/db/models');
     const Task = getModels.getEngineeringTask();
     const row = await Task.findByPk(task.id);
-    const staleTimestamp = new Date(Date.now() - 20 * 60 * 1000); // 20min atrás > LOCK_STALE_MS padrão (15min)
-    await row.update({ locked_at: staleTimestamp });
+    // 20min atrás: muito além do antigo LOCK_STALE_MS (15min). Com lease válido, NÃO é órfão.
+    await row.update({ locked_at: new Date(Date.now() - 20 * 60 * 1000) });
+    await expect(engineeringTaskService.lockForRun(task.id, 'runner-restarted')).rejects.toMatchObject({ code: 'TASK_ALREADY_RUNNING' });
 
-    // Um runner diferente (o processo reiniciado) consegue retomar sem intervenção manual.
+    // Heartbeat parou ⇒ lease expira (aceleração de relógio declarada) ⇒ o processo reiniciado
+    // assume sem intervenção manual, com fence maior.
+    await row.update({ lease_expires_at: new Date(Date.now() - 1000) });
     const recovered = await engineeringTaskService.lockForRun(task.id, 'runner-restarted');
     expect(recovered.locked_by).toBe('runner-restarted');
+    expect(recovered.lease.fence).toBeGreaterThan(crashed.lease.fence);
+    expect(recovered.leaseTakeover.previousWorker).toBe('runner-crashed');
 
     await engineeringTaskService.unlockTask(task.id);
   });

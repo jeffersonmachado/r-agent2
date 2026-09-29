@@ -25,6 +25,10 @@ const {
 
 describe('provider outage — failover e fail-closed', () => {
   beforeEach(() => {
+    // O limiar do breaker vem do AMBIENTE (`AI_CP_BREAKER_FAILURE_THRESHOLD`, default 3) e o
+    // `.env` desta máquina define 6 — o caso "provider único cai → circuito abre" faz 3 falhas e
+    // falhava por CONFIGURAÇÃO, não por comportamento. O teste DECLARA o limiar que exercita.
+    process.env.AI_CP_BREAKER_FAILURE_THRESHOLD = '3';
     // resetMocks: true apaga a implementação de jest.fn(() => true) a cada teste.
     config.get.mockReturnValue(true);
     aiControlPlaneStatus.resetAiControlPlaneState();

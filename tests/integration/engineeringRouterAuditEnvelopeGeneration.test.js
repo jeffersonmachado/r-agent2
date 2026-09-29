@@ -8,9 +8,13 @@
  * `reports/engineering-router-v1-report.json` frescos (mesmo sourceFingerprint da working tree
  * atual, status RUNTIME_PASS/PASS) — produzidos por
  * `node scripts/governance/collect-engineering-router-runtime-evidence.js` seguido de
- * `node scripts/governance/validate-engineering-router-v1.js --runtime`. Se ausentes/obsoletos,
- * pula explicitamente (nunca finge verde) — mesma convenção de `skipIfNoDatabase` usada em
- * outros testes de integração do Engineering Router.
+ * `node scripts/governance/validate-engineering-router-v1.js --runtime`.
+ *
+ * Evidência ausente/obsoleta passa pela PORTA ÚNICA `tests/helpers/infraGate`: em
+ * `RELEASE_AUTHORITATIVE=1` isso é INFRA_ERROR (fail-closed, nunca verde por ausência de sinal);
+ * em desenvolvimento é NOT_EXECUTED registrado. Antes disto o arquivo pulava com `console.warn`
+ * e o gate anti-greenwashing o reprovou — corretamente, porque "passou" e "não rodou" ficavam
+ * indistinguíveis no relatório agregado.
  */
 
 const fs = require('fs');
@@ -36,9 +40,15 @@ function freshEvidenceAvailable() {
 
 function skipIfNoFreshEvidence() {
   if (freshEvidenceAvailable()) return false;
-  // eslint-disable-next-line no-console
-  console.warn('[audit-envelope-generation] PULADO: evidência de runtime/estrutural ausente ou obsoleta — rode o coletor e o gate --runtime antes deste teste para um sinal real.');
-  return true;
+  // Porta ÚNICA de infraestrutura: em RELEASE_AUTHORITATIVE=1 lança INFRA_ERROR (o gate não pode
+  // passar sem sinal real); em dev registra NOT_EXECUTED com motivo.
+  // eslint-disable-next-line global-require
+  return require('../helpers/infraGate').skipOrFail({
+    suite: 'engineering-router-audit-envelope-generation',
+    available: false,
+    reason: 'evidência de runtime/estrutural ausente ou obsoleta para o sourceFingerprint atual (rode collect-engineering-router-runtime-evidence + validate-engineering-router-v1 --runtime)',
+    requirement: 'runtime-evidence',
+  });
 }
 
 describe('ER-V1-FINAL-010 — geração real do envelope + verificação offline real', () => {

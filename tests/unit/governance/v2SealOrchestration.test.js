@@ -13,7 +13,7 @@
  *   - RAP_FINAL_RELEASE nunca é promovido por este sealer (estados independentes).
  */
 
-const { STEPS, PHASES, validateOrder, SEAL_STATUS } = require('../../../scripts/governance/engineering-router-v2-seal');
+const { STEPS, PHASES, validateOrder, SEAL_STATUS, deriveSealStatus } = require('../../../scripts/governance/engineering-router-v2-seal');
 
 describe('seal V2 — orquestração', () => {
   describe('sequência real', () => {
@@ -42,11 +42,24 @@ describe('seal V2 — orquestração', () => {
       expect(verify.command).not.toContain('generate-engineering-router-v2-audit-envelope');
     });
 
-    it('a decisão do selo é o ÚLTIMO passo e depende da evidência', () => {
+    it('nada depois da DECISÃO tem poder de decisão (não a reescreve nem rebaixa o selo)', () => {
       const decision = STEPS.find((s) => s.id === 'V2_DECISION');
-      expect(STEPS[STEPS.length - 1].id).toBe('V2_DECISION');
       expect(decision.dependsOn).toContain('ENVELOPE_VERIFY');
       expect(decision.dependsOn).toContain('REQUIREMENTS_MATRIX');
+      expect(decision.dependsOn).toContain('TIMEOUT_ARCHITECTURE');
+      expect(decision.dependsOn).toContain('REQUIRED_TESTS_V2');
+
+      const after = STEPS.slice(STEPS.indexOf(decision) + 1);
+      // Passos posteriores à decisão existem SOMENTE como evidência pós-decisão:
+      //   - nunca obrigatórios ⇒ não podem rebaixar o selo (deriveSealStatus ignora required:false);
+      //   - nunca escrevem no relatório da decisão ⇒ não podem reescrever o veredito já publicado.
+      for (const step of after) {
+        expect(step.required).toBe(false);
+        expect(step.produces || []).not.toContain('reports/engineering-router-v2-seal-report.json');
+      }
+      // A confirmação item a item roda DEPOIS da decisão porque consome o selo JÁ PUBLICADO
+      // (na posição anterior ela avaliava a geração anterior e falhava de forma sistemática).
+      expect(after.map((s) => s.id)).toContain('AUDIT_ITEMS_CONFIRMATION');
     });
 
     it('existe um passo que exercita o CRASH REAL da task (não só a decisão de recuperação)', () => {
@@ -95,6 +108,40 @@ describe('seal V2 — orquestração', () => {
       expect(SEAL_STATUS.NOT_APPLICABLE).toBe('NOT_APPLICABLE_CREDENTIAL_MISSING');
       expect(Object.values(SEAL_STATUS)).not.toContain('SKIPPED');
       expect(SEAL_STATUS.PENDING).toBe('PENDING');
+    });
+  });
+
+  describe('derivação do STATUS GLOBAL', () => {
+    const pass = (id, required = true) => ({ id, required, status: SEAL_STATUS.PASS, detail: 'exit=0' });
+    const fail = (id, required = true) => ({ id, required, status: SEAL_STATUS.FAIL, detail: 'exit=1' });
+
+    it('todos os passos obrigatórios PASS ⇒ GO', () => {
+      const derived = deriveSealStatus([pass('A'), pass('B')]);
+      expect(derived.status).toBe('GO');
+      expect(derived.failedRequired).toEqual([]);
+    });
+
+    it('passo OBRIGATÓRIO em FAIL ⇒ NO_GO (fail-closed, com o ID nomeado)', () => {
+      const derived = deriveSealStatus([pass('A'), fail('B')]);
+      expect(derived.status).toBe('NO_GO');
+      expect(derived.failedRequired).toEqual(['B']);
+    });
+
+    it('passo NÃO obrigatório em FAIL ⇒ GO, com a falha DECLARADA como pendência de evidência', () => {
+      // Defeito real corrigido: a declaração `required: false` não tinha efeito nenhum sobre a
+      // decisão final — um passo de EVIDÊNCIA que consome o resultado do próprio selo rebaixava o
+      // selo inteiro para NO_GO. O correto: fail-closed no obrigatório, DECLARADO no opcional.
+      const derived = deriveSealStatus([pass('A'), fail('EVIDENCIA', false)]);
+      expect(derived.status).toBe('GO');
+      expect(derived.failedRequired).toEqual([]);
+      expect(derived.failedOptionalEvidence).toEqual(['EVIDENCIA']);
+      expect(derived.evidencePendencies).toEqual([{ id: 'EVIDENCIA', detail: 'exit=1' }]);
+    });
+
+    it('passo não executado (retomada com --from) ⇒ NO_GO (não se presume o que não rodou)', () => {
+      const derived = deriveSealStatus([pass('A'), { id: 'B', required: true, status: 'SKIPPED_BY_FROM', detail: 'retomada' }]);
+      expect(derived.status).toBe('NO_GO');
+      expect(derived.notRun).toEqual(['B']);
     });
   });
 });

@@ -94,12 +94,18 @@ describe('Engineering Mission — durable resume e idempotência', () => {
     createdMissionIds.push(mission.id);
 
     // Simula um processo que morreu no meio do enriquecimento: status ENRICHING persistido e
-    // lock pertencente ao worker que morreu (PID que não existe — é o que sobra no banco quando
-    // o processo é morto com kill -9).
+    // LEASE pertencente ao worker que morreu (kill -9 não libera nada).
     await missionStore.updateMission(mission.id, { status: 'ENRICHING' });
     await missionStore.mergeMissionJson(mission.id, { resume: { phase: 'ENRICHING', workerId: DEAD_WORKER_ID, startedAt: new Date().toISOString() } });
     await missionStore.lockMission(mission.id, DEAD_WORKER_ID);
+    // PID morto NÃO é autoridade de posse (2026-09-28): enquanto o lease do worker estiver dentro
+    // da validade, ninguém assume — a retomada recusa em vez de tomar por diagnóstico local de PID.
     expect(missionStore.lockOwnerIsDead(DEAD_WORKER_ID)).toBe(true);
+    const whileLeaseActive = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
+    expect(whileLeaseActive.items.some((i) => i.missionId === mission.id && i.action === 'SKIPPED_LOCKED')).toBe(true);
+
+    // Heartbeat parou ⇒ o lease EXPIRA (aceleração de relógio declarada: o TTL é o detector real).
+    await missionStore.updateMission(mission.id, { lease_expires_at: new Date(Date.now() - 1000) });
 
     const versionsBefore = await missionStore.listVersions(mission.id);
     const summary = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
@@ -114,7 +120,7 @@ describe('Engineering Mission — durable resume e idempotência', () => {
     expect(after.current_version).toBe(1);
   }, 60000);
 
-  test('§17 lock órfão expira e outro worker assume (sem deadlock após crash)', async () => {
+  test('§17 lease órfão expira e outro worker assume (idade de locked_at NÃO concede posse)', async () => {
     if (skipIfNoDatabase()) return;
     const { mission } = await compiler.compileMission(RAW_MISSION, { createdBy: 'jest-resume' });
     createdMissionIds.push(mission.id);
@@ -123,10 +129,18 @@ describe('Engineering Mission — durable resume e idempotência', () => {
     await expect(missionStore.lockMission(mission.id, 'worker-B'))
       .rejects.toMatchObject({ code: 'MISSION_LOCKED_BY_OTHER_WORKER' });
 
-    // Lock obsoleto (processo morto) — o stale timeout precisa permitir a tomada.
-    await missionStore.updateMission(mission.id, { locked_at: new Date(Date.now() - (missionStore.LOCK_STALE_MS + 60000)) });
+    // IDADE NÃO É AUTORIDADE (2026-09-28): envelhecer `locked_at` muito além do antigo stale
+    // threshold (15min) NÃO concede posse enquanto o lease do dono estiver válido.
+    await missionStore.updateMission(mission.id, { locked_at: new Date(Date.now() - 16 * 60 * 1000) });
+    await expect(missionStore.lockMission(mission.id, 'worker-B'))
+      .rejects.toMatchObject({ code: 'MISSION_LOCKED_BY_OTHER_WORKER' });
+
+    // Processo morto ⇒ heartbeat para ⇒ lease expira ⇒ outro worker assume com fence maior.
+    const fenceBefore = (await missionStore.getMissionLease(mission.id)).fence;
+    await missionStore.updateMission(mission.id, { lease_expires_at: new Date(Date.now() - 1000) });
     const taken = await missionStore.lockMission(mission.id, 'worker-B');
-    expect(taken.locked_by).toBe('worker-B');
+    expect(taken.lease_worker_instance_id).toBe('worker-B');
+    expect(taken.lease.fence).toBeGreaterThan(fenceBefore);
   }, 30000);
 
   test('TEST 43 crash em AWAITING_APPROVAL preserva estado, preview e decisão pendente', async () => {

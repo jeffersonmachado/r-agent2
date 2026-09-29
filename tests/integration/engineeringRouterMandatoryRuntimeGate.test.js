@@ -57,11 +57,13 @@ describe('ER-V1-FINAL-004 — Mandatory Runtime Gate', () => {
       path.join(ROOT, 'api', 'services', 'engineeringRouter', 'regressionGovernanceService.js'),
       'utf8',
     );
-    // checkGovernance invoca o script diretamente via execFile(node, [scriptPath]) — nunca
-    // "npm run", nunca "--runtime". Prova de que o caminho ao vivo é imune à mudança desta
-    // correção (que só afeta o npm script agregado).
-    expect(src).toMatch(/execFileAsync\(process\.execPath, \[scriptPath\]/);
+    // checkGovernance invoca o script diretamente com o binário do node (hoje via
+    // `runChildWithDeadline`, sob o Deadline Manager com terminação graciosa) — nunca "npm run",
+    // nunca "--runtime". Prova de que o caminho ao vivo é imune à mudança desta correção (que só
+    // afeta o npm script agregado).
+    expect(src).toMatch(/runChildWithDeadline\(\{\s*command:\s*process\.execPath,\s*args:\s*\[scriptPath\]/);
     expect(src).not.toMatch(/--runtime/);
+    expect(src).not.toMatch(/['"]npm['"]/);
   });
 
   describe('gate real com evidência manipulada (nunca mockado)', () => {

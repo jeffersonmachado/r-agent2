@@ -135,6 +135,30 @@ describe('bootstrap local secrets', () => {
     expect(readEnvValue(fs.readFileSync(path.join(root, '.env'), 'utf8'), 'POSTGRES_PASSWORD')).toBe(strong);
   });
 
+  test('checkout chamado `r-agent2` ⇒ HOST_REPO_ROOT é o PRÓPRIO checkout (não o monorepo pai)', () => {
+    // REGRESSÃO REAL (medida 2026-09-28): o bootstrap gravava `path.dirname(root)` para
+    // checkouts chamados `r-agent2`. O consumidor usa essa variável como ROOT onde roda git
+    // (`git rev-parse HEAD`, `git worktree add` em patchApplyService), então o valor errado
+    // fazia TODA task do Engineering Router falhar com "fatal: not a git repository"
+    // (medido: suíte engineeringRouterModelRerouteE2E quebrava em createWorkspace).
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-monorepo-'));
+    const checkout = path.join(parent, 'r-agent2');
+    fs.mkdirSync(path.join(checkout, 'rag-service'), { recursive: true });
+    fs.writeFileSync(path.join(checkout, '.env'), 'ENCRYPTION_KEY=\n');
+
+    ensureLocalSecrets(checkout);
+
+    const hostRepoRoot = readEnvValue(
+      fs.readFileSync(path.join(checkout, '.env'), 'utf8'),
+      'ENGINEERING_ROUTER_HOST_REPO_ROOT',
+    );
+    expect(hostRepoRoot).toBe(checkout);
+    expect(hostRepoRoot).not.toBe(parent);
+    expect(path.basename(hostRepoRoot)).toBe('r-agent2');
+
+    fs.rmSync(parent, { recursive: true, force: true });
+  });
+
   test('preserva valores válidos e é idempotente', () => {
     const encryptionKey = 'a'.repeat(64);
     const ragToken = 'b'.repeat(64);

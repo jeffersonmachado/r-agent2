@@ -198,8 +198,13 @@ describe('FINAL-002 — autoridade final exige scorecard/self-proof/tamper do me
 
   test('all authority artifacts PASS only when their lineage and semantics pass', () => {
     const checks = buildCertificationAuthorityChecks({ runContext, ...documents() });
-    expect(checks).toHaveLength(5);
+    // 5 artefatos de autoridade + o check de DIREÇÃO entre gates (invariante child→parent,
+    // adicionado em 2026-09-28: um gate pai não pode certificar GO enquanto um filho obrigatório
+    // diz NO_GO). O número é afirmado para que a inclusão de novos checks seja deliberada.
+    expect(checks).toHaveLength(6);
     expect(checks.every((check) => check.pass)).toBe(true);
+    // O check de direção é OBRIGATÓRIO na certificação — não é informativo.
+    expect(checks.map((check) => check.id)).toContain('child_gate_direction');
   });
 
   test.each([

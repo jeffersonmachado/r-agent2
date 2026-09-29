@@ -94,9 +94,13 @@ describe('Engineering Mission — lease distribuído (§30–§32)', () => {
   test('dois workers NUNCA seguram o mesmo lease; segundo recebe motivo explícito', async () => {
     if (skipIfNoDatabase()) return;
     const mission = await newMission();
+    // A compilação REAL já passou pelo MissionLease (2026-09-28): o fence deixado por ela é ≥ 1 e
+    // o lease foi LIBERADO ao fim. O fence é monotônico: cada aquisição seguinte é base+1.
+    const base = (await store.getMissionLease(mission.id)).fence;
+    expect(base).toBeGreaterThanOrEqual(1);
     const first = await store.acquireMissionLease(mission.id, { workerInstanceId: 'worker-A', workerType: 'COMPILER', ttlMs: 60000 });
     expect(first.acquired).toBe(true);
-    expect(first.lease.fence).toBe(1);
+    expect(first.lease.fence).toBe(base + 1);
     expect(first.lease.token).toBeTruthy();
 
     const second = await store.acquireMissionLease(mission.id, { workerInstanceId: 'worker-B', workerType: 'ORCHESTRATOR', ttlMs: 60000 });
@@ -106,7 +110,7 @@ describe('Engineering Mission — lease distribuído (§30–§32)', () => {
     // O mesmo worker pode reentrar (renovação de identidade), sem roubar de outro.
     const again = await store.acquireMissionLease(mission.id, { workerInstanceId: 'worker-A', workerType: 'COMPILER', ttlMs: 60000 });
     expect(again.acquired).toBe(true);
-    expect(again.lease.fence).toBe(2);
+    expect(again.lease.fence).toBe(base + 2);
   }, 60000);
 
   test('heartbeat renova; perder o lease é falha explícita (MISSION_LEASE_LOST)', async () => {
@@ -127,15 +131,16 @@ describe('Engineering Mission — lease distribuído (§30–§32)', () => {
   test('lease expirado é reassumido com fence NOVO, e o worker antigo não escreve mais (§32)', async () => {
     if (skipIfNoDatabase()) return;
     const mission = await newMission();
+    const base = (await store.getMissionLease(mission.id)).fence;
     const stale = await store.acquireMissionLease(mission.id, { workerInstanceId: 'worker-velho', workerType: 'COMPILER', ttlMs: 60000 });
-    expect(stale.lease.fence).toBe(1);
+    expect(stale.lease.fence).toBe(base + 1);
 
     // Crash do worker antigo: o lease vence (sem esperar TTL real, para o teste ser determinístico).
     await expireLease(mission.id);
 
     const takeover = await store.acquireMissionLease(mission.id, { workerInstanceId: 'worker-novo', workerType: 'RECOVERY', ttlMs: 60000 });
     expect(takeover.acquired).toBe(true);
-    expect(takeover.lease.fence).toBe(2);
+    expect(takeover.lease.fence).toBe(base + 2);
     expect(takeover.lease.token).not.toBe(stale.lease.token);
 
     // O worker antigo volta tarde: escreve com o token/fence antigos e PRECISA ser recusado.
@@ -147,7 +152,7 @@ describe('Engineering Mission — lease distribuído (§30–§32)', () => {
     expect(written.status).toBe('ENRICHING');
 
     // Mesmo token com fence antigo (takeover no meio) também é recusado.
-    await expect(store.updateMissionGuarded(mission.id, { status: 'EXECUTING' }, { leaseToken: takeover.lease.token, fence: 1 }))
+    await expect(store.updateMissionGuarded(mission.id, { status: 'EXECUTING' }, { leaseToken: takeover.lease.token, fence: stale.lease.fence }))
       .rejects.toMatchObject({ code: 'MISSION_STALE_WORKER_WRITE' });
   }, 60000);
 

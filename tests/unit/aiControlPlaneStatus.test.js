@@ -9,9 +9,23 @@
 const svc = require('../../api/services/aiControlPlaneStatus');
 const { EVENT_PRIORITY } = require('../../engine/aiControlPlaneResilience');
 
+// O serviço lê o limiar do AMBIENTE (`AI_CP_BREAKER_FAILURE_THRESHOLD`, default 3). Este arquivo
+// exercita "N falhas abrem o circuito" e precisa DECLARAR esse N: um `.env` de máquina com valor
+// maior (neste ambiente, 6) fazia 3 falhas não abrirem o circuito e a suíte falhava por
+// CONFIGURAÇÃO, não por comportamento do produto — ou seja, o teste media a máquina. No CI, sem
+// `.env`, ele passava; aqui, com as variáveis exportadas na sessão, falhava.
+const TEST_FAILURE_THRESHOLD = 3;
+const ORIGINAL_FAILURE_THRESHOLD = process.env.AI_CP_BREAKER_FAILURE_THRESHOLD;
+
 describe('aiControlPlaneStatus — circuit breaker por provider', () => {
   beforeEach(() => {
+    process.env.AI_CP_BREAKER_FAILURE_THRESHOLD = String(TEST_FAILURE_THRESHOLD);
     svc.resetAiControlPlaneState();
+  });
+
+  afterAll(() => {
+    if (ORIGINAL_FAILURE_THRESHOLD === undefined) delete process.env.AI_CP_BREAKER_FAILURE_THRESHOLD;
+    else process.env.AI_CP_BREAKER_FAILURE_THRESHOLD = ORIGINAL_FAILURE_THRESHOLD;
   });
 
   test('fail closed: circuito aberto bloqueia sem chamar o provider', async () => {
