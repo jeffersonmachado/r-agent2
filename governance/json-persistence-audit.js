@@ -256,6 +256,13 @@ function classifyByPattern(norm, writer) {
   if (/^pipeline\//.test(writer)) return 'DB_CANONICAL_JSON_EXPORT';
   if (/scripts\/smoke\//.test(writer) || /workspace-core-smoke/.test(writer)) return 'ARTIFACT_STORAGE';
   if (base === 'package.json' || base === 'known_errors.json' || base === 'internal-flow.json') return 'STATIC_VERSIONED_CONFIG';
+  // Cadeia DECLARATIVA de dependências entre gates (estrutura de governança, não estado):
+  // `config/mandatory-gate-dependencies.json` é lido por `governance/child-gate-guard.js`, que
+  // recebe o `root` e monta o caminho em RUNTIME (`path.join(root, 'config', ...)`). O scanner
+  // estático não resolve esse caminho e sobrava o basename, que caía em UNKNOWN e derrubava o
+  // `audit:json-persistence` inteiro. Não é estado de banco nem cache: é configuração versionada,
+  // imutável em runtime — mesma classe dos demais arquivos de `config/`.
+  if (base === 'mandatory-gate-dependencies.json') return 'STATIC_VERSIONED_CONFIG';
   if (base === 'latest.json' || base === 'index.json' || /learning-routine|cenario2|demo/.test(base) || /demo/.test(writer)) return 'DB_CANONICAL_JSON_EXPORT';
   return null;
 }

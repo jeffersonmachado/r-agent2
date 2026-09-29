@@ -157,7 +157,19 @@ step "5. Verificando dist/ raiz sem artefatos inesperados..."
 # CORRETO e era bloqueado aqui por `CHECK-DIST-CLEAN`, tornando o requisito de
 # artefato self-proving impossível de satisfazer). Não é sujeira: é artefato
 # governado de release, content-addressed (hashes.json) e auditável offline.
-UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs|candidate|archive|engineering-router-v1-audit-envelope)$' | grep -Ev '^r-agent2-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.(zip|manifest\.json)$' || true)"
+# `engineering-router-v2-audit-envelope/` (missão 2026-09-28) é o MESMO tipo de
+# artefato governado, um nível acima: o envelope de auditoria do ENGINEERING
+# ROUTER V2, produzido pelos passos SEAL do pipeline oficial
+# (`npm run engineering-router:v2-seal` → ENVELOPE_GENERATE) e consumido por
+# ENVELOPE_VERIFY no passo seguinte do MESMO pipeline — "verificar o envelope já
+# existente, nunca regenerar". É a prova física de que o selo V2 foi decidido
+# sobre evidência verificável. Sem esta entrada, rodar o selo oficial deixava o
+# `dist/` "sujo" (medido 2026-09-28: `validate:dist` FAIL com
+# `Arquivos/dirs inesperados na raiz de dist/: engineering-router-v2-audit-envelope`),
+# ou seja, o gate de higiene acusava o PRÓPRIO artefato governado de sujeira.
+# Não é sujeira: é artefato de release content-addressed, com verificação
+# offline própria.
+UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs|candidate|archive|engineering-router-v1-audit-envelope|engineering-router-v2-audit-envelope)$' | grep -Ev '^r-agent2-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.(zip|manifest\.json)$' || true)"
 if [[ -n "$UNEXPECTED" ]]; then
   fail "Arquivos/dirs inesperados na raiz de dist/: $(echo "$UNEXPECTED" | tr '\n' ' ')"
 else

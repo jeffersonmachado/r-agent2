@@ -149,9 +149,17 @@ function ensureLocalSecrets(rootDir) {
   // definidos (um valor explícito do operador sempre vence).
   let engineeringRouterPathsProvisioned = false;
   if (!readEnvValue(rootContent, 'ENGINEERING_ROUTER_HOST_REPO_ROOT')) {
-    // O layout esperado é `<monorepo>/r-agent2` (o pacote @results/auth é
-    // resolvido a partir daqui). Fora desse layout, o próprio root do checkout.
-    const hostRepoRoot = path.basename(root) === 'r-agent2' ? path.dirname(root) : root;
+    // REGRESSÃO CORRIGIDA (2026-09-28, medida): este campo gravava `path.dirname(root)`
+    // quando o checkout se chama `r-agent2`, com a justificativa de que o pacote
+    // `@results/auth` seria resolvido "a partir daqui". Mas o CONSUMIDOR usa esta variável
+    // como ROOT onde roda `git` (`contextBuilderService.js`, `executionSandbox.js`, e o
+    // `patchApplyService` que faz `git rev-parse HEAD` + `git worktree add`): com o diretório
+    // PAI, o git falha com "fatal: not a git repository" e NENHUMA task do Engineering Router
+    // consegue aplicar patch (medido: suíte `engineeringRouterModelRerouteE2E` quebrava em
+    // `createWorkspace`). O fallback do próprio código é o checkout
+    // (`path.resolve(__dirname,'..','..','..')`), então o valor correto é o checkout.
+    // A resolução do pacote irmão é um assunto de npm/build, não desta variável.
+    const hostRepoRoot = root;
     rootContent = upsertEnvValue(rootContent, 'ENGINEERING_ROUTER_HOST_REPO_ROOT', hostRepoRoot);
     engineeringRouterPathsProvisioned = true;
   }

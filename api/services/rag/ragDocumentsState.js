@@ -96,11 +96,48 @@ function setIndexState(doc, state, opts = {}) {
     doc.chunksCount = 0;
     doc.indexErrorCode = opts.errorCode || 'RAG_INDEX_FAILED';
     doc.indexErrorMessage = opts.errorMessage || 'Falha ao indexar no vector store';
+    return;
   }
+
+  if (state === 'not_indexed_duplicate') {
+    // ESTADO PRÓPRIO para "0 chunks por DEDUPLICAÇÃO" (missão 2026-09-28).
+    //
+    // Defeito real medido: o rag-service descarta chunks com similaridade > 0.97 (deduplicação
+    // intencional) e o resultado era registrado como `failed` com
+    // `RAG_INDEX_FAILED: "Indexação retornou 0 chunks"`. Isso fazia (a) o operador caçar um erro
+    // que não existe, (b) o cenário de QA parecer defeito de produto e (c) o corpus acumular
+    // "falhas" que nunca são falhas. Descartar quase-duplicado é COMPORTAMENTO CORRETO: o estado
+    // correto é declarar que o documento não foi ingerido DUPLICADO, não que falhou.
+    //
+    // Não é sucesso (nada foi ingerido, `indexed=false`) e não é falha: é terminal e não conta
+    // como problema de saúde do índice (`isIndexFailure` devolve false).
+    doc.indexed = false;
+    doc.indexedAt = null;
+    doc.chunksCount = 0;
+    doc.indexErrorCode = opts.errorCode || 'RAG_NOT_INDEXED_DUPLICATE';
+    doc.indexErrorMessage = opts.errorMessage
+      || 'Conteúdo descartado por deduplicação (similaridade acima do limiar); não foi ingerido no vector store';
+    doc.inconsistent = false;
+    doc.inconsistentReason = null;
+  }
+}
+
+/** Estados possíveis da máquina de indexação (fonte única para consumidores). */
+const INDEX_STATES = Object.freeze(['pending', 'indexing', 'indexed', 'failed', 'not_indexed_duplicate']);
+
+/**
+ * O estado representa PROBLEMA de indexação? `not_indexed_duplicate` NÃO representa: é descarte
+ * intencional por deduplicação. Usado por health/consistência para não transformar deduplicação em
+ * falha (o defeito que originou este estado).
+ */
+function isIndexFailure(state) {
+  return String(state || '') === 'failed';
 }
 
 module.exports = {
   toDbPayload,
   fromDbRow,
   setIndexState,
+  INDEX_STATES,
+  isIndexFailure,
 };

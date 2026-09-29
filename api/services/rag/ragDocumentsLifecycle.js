@@ -97,12 +97,22 @@ async function autoIndexDocument(document, persistDocument) {
       return;
     }
 
+    if (chunksCreated === 0 && indexResult.isDuplicate) {
+      // DEDUPLICAÇÃO NÃO É FALHA (missão 2026-09-28) — mesmo estado próprio do caminho de
+      // indexação: descarte intencional do rag-service, não erro.
+      setIndexState(document, 'not_indexed_duplicate');
+      await persistDocument(document);
+      logger.info('[RAGDocuments] Documento não ingerido por DEDUPLICAÇÃO (estado próprio)', {
+        documentId: document.id,
+        tenantId: document.tenantId,
+      });
+      return;
+    }
+
     setIndexState(document, 'failed', {
       errorCode: 'RAG_INDEX_FAILED',
       errorMessage: chunksCreated === 0
-        ? (indexResult.isDuplicate
-          ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)'
-          : 'Indexação retornou 0 chunks (não persistido no vector store)')
+        ? 'Indexação retornou 0 chunks (não persistido no vector store)'
         : (indexResult.error || 'Indexação retornou success=false'),
     });
     await persistDocument(document);

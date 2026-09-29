@@ -79,18 +79,30 @@ async function reindexDocument(documentId, documentsCache, persistFn, loadConten
     } else {
       const rawErrMsg = safeToString(indexResult.error || '');
       const derivedCode = rawErrMsg.includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED';
-      setIndexState(document, 'failed', {
-        errorCode: derivedCode,
-        errorMessage: chunksCreated === 0
-          ? (indexResult.isDuplicate ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)' : 'Indexação retornou 0 chunks (não persistido no vector store)')
-          : (indexResult.error || 'Falha ao indexar documento'),
-      });
-      if (persistFn) await persistFn(document);
-      logger.error('[RAGDocuments] Falha ao indexar documento', {
-        documentId: document.id,
-        error: indexResult.error,
-        tenantId: document.tenantId
-      });
+      // DEDUPLICAÇÃO NÃO É FALHA (missão 2026-09-28): 0 chunks com `isDuplicate` é descarte
+      // intencional do rag-service (similaridade > 0.97), não erro de indexação. Registrar como
+      // `failed` fazia o operador caçar defeito inexistente e poluía a saúde do índice.
+      if (chunksCreated === 0 && indexResult.isDuplicate) {
+        setIndexState(document, 'not_indexed_duplicate');
+        if (persistFn) await persistFn(document);
+        logger.info('[RAGDocuments] Documento não ingerido por DEDUPLICAÇÃO (estado próprio)', {
+          documentId: document.id,
+          tenantId: document.tenantId,
+        });
+      } else {
+        setIndexState(document, 'failed', {
+          errorCode: derivedCode,
+          errorMessage: chunksCreated === 0
+            ? 'Indexação retornou 0 chunks (não persistido no vector store)'
+            : (indexResult.error || 'Falha ao indexar documento'),
+        });
+        if (persistFn) await persistFn(document);
+        logger.error('[RAGDocuments] Falha ao indexar documento', {
+          documentId: document.id,
+          error: indexResult.error,
+          tenantId: document.tenantId
+        });
+      }
     }
 
     const finalChunks = indexResult.chunksCreated || 0;
