@@ -25,7 +25,11 @@ const {
   computeSpecHash,
   sha256,
 } = require('../../../engine/engineeringMission/missionSpec');
-const { buildEnrichment } = require('../../../engine/engineeringMission/enrichmentBuilder');
+const {
+  buildEnrichment,
+  selectKnowledgeForEnrichment,
+  resolveKnowledgeDerivedRequirements,
+} = require('../../../engine/engineeringMission/enrichmentBuilder');
 const { classifyMateriality } = require('../../../engine/engineeringMission/materiality');
 const { buildEnrichmentPreview } = require('../../../engine/engineeringMission/missionPreview');
 const { evaluateAutoApproval } = require('../../../engine/engineeringMission/autoApprovalPolicy');
@@ -49,8 +53,19 @@ const { emitMissionStage } = require('./missionEvents');
 const { invokeModel } = require('../engineeringRouter/engineeringAiInvoker');
 const availabilityService = require('../engineeringRouter/engineeringModelAvailabilityService');
 const logger = require('../../utils/logger');
+const os = require('os');
+const crypto = require('crypto');
+const { startLeaseHeartbeat } = require('../engineeringRouter/leaseHeartbeat');
 
-const WORKER_ID = `mission-compiler-${process.pid}`;
+/**
+ * Identidade DISTRIBUÍDA do compiler: UUID de instância (ou a identidade declarada pela
+ * implantação). O PID NÃO é identidade — fica só como metadado de diagnóstico. A autoridade de
+ * posse é o MissionLease (workerInstanceId + token + fence + expiração + heartbeat).
+ */
+const WORKER_INSTANCE_ID = process.env.ENGINEERING_MISSION_COMPILER_INSTANCE_ID
+  || `compiler-${os.hostname()}-${crypto.randomUUID()}`;
+/** Compatibilidade de leitura (logs/relatórios antigos): mesmo valor, nunca autoridade. */
+const WORKER_ID = WORKER_INSTANCE_ID;
 
 const INTENT_CONTRACT = `Você é o MISSION_ENRICHER de uma plataforma de engenharia automatizada.
 Sua função é INTERPRETAR a intenção do usuário, nunca inventar fatos e nunca alterar a missão original.
@@ -63,12 +78,24 @@ Responda SOMENTE com um objeto JSON válido, sem texto antes ou depois, no forma
   "confidence": <número entre 0 e 1>,
   "ambiguities": ["<ambiguidade material, se houver>"]
 }
+Campo OPCIONAL adicional, quando houver CONHECIMENTO DE ENGENHARIA no contexto:
+  "knowledgeDerivedRequirements": [{ "text": "<requisito que o conhecimento torna obrigatório para ESTA missão>", "chunkRef": "<K1..Kn>" }]
 Regras:
+- Requisito derivado de conhecimento DEVE citar o chunkRef de onde veio; sem citação ele é descartado.
 - NÃO invente nomes de arquivo, tabela, serviço ou política que não estejam no contexto fornecido.
 - Se a intenção for ambígua, liste a ambiguidade em "ambiguities" em vez de adivinhar.
 - Nunca proponha remover autenticação, autorização ou validação de tenant.`;
 
-function buildIntentPrompt({ originalMission, facts }) {
+function buildIntentPrompt({ originalMission, facts, knowledge = null }) {
+  // CONTEÚDO do conhecimento (não só metadados): o Enricher recebe o trecho selecionado dentro do
+  // orçamento, cada um com a referência que ele deve citar.
+  const knowledgeSection = knowledge && knowledge.chunks && knowledge.chunks.length > 0
+    ? [
+      '',
+      '=== CONHECIMENTO DE ENGENHARIA (Knowledge Plane SYSTEM — cite o chunkRef) ===',
+      ...knowledge.chunks.map((c) => `[${c.ref}] (fonte: ${c.title || c.sourceId || 'desconhecida'}; score ${Number(c.score).toFixed(3)})\n${c.text}`),
+    ]
+    : [];
   return [
     INTENT_CONTRACT,
     '',
@@ -92,6 +119,7 @@ function buildIntentPrompt({ originalMission, facts }) {
       previousOccurrences: facts.previousOccurrences || 0,
       evidenceSample: (facts.evidenceRefs || []).slice(0, 10).map((e) => e.path),
     }, null, 2),
+    ...knowledgeSection,
   ].join('\n');
 }
 
@@ -100,7 +128,8 @@ function buildIntentPrompt({ originalMission, facts }) {
  * credencial, com erro, timeout ou resposta malformada: retorna `{intent: null, degradation}`.
  * Nenhuma dessas situações é erro fatal do compilador.
  */
-async function proposeIntent({ originalMission, facts, tenantId }) {
+async function proposeIntent({ originalMission, facts, tenantId, signal = null, deadlineMeta = {} }) {
+  const knowledge = selectKnowledgeForEnrichment(facts.knowledgeChunks || []);
   let candidates = [];
   try {
     candidates = await availabilityService.buildAvailableModels({ tenantId });
@@ -126,9 +155,12 @@ async function proposeIntent({ originalMission, facts, tenantId }) {
     const result = await invokeModel({
       providerId: selection.selected.providerId,
       modelId: selection.selected.modelId,
-      prompt: buildIntentPrompt({ originalMission, facts }),
+      prompt: buildIntentPrompt({ originalMission, facts, knowledge }),
       tenantId,
       extraContext: { purpose: 'engineering_mission_enrichment' },
+      // Deadline do provider pela política PROVIDER_REQUEST; perda do MissionLease cancela.
+      signal,
+      deadlineMeta: { ...deadlineMeta, phase: 'ENRICHING' },
     });
 
     // CONTRATO REAL do parser: `parseStructuredJson` devolve um ENVELOPE `{ok, value}` (ou
@@ -138,7 +170,7 @@ async function proposeIntent({ originalMission, facts, tenantId }) {
     // nenhuma. Detecção agora é: envelope ok + payload objeto + pelo menos um campo reconhecido.
     const parsed = parseStructuredJson(result.text);
     const payload = parsed && parsed.ok === true ? parsed.value : null;
-    const RECOGNIZED_FIELDS = ['missionType', 'objective', 'subsystems', 'risk', 'confidence', 'ambiguities'];
+    const RECOGNIZED_FIELDS = ['missionType', 'objective', 'subsystems', 'risk', 'confidence', 'ambiguities', 'knowledgeDerivedRequirements'];
     const hasRecognizedField = payload && typeof payload === 'object'
       && RECOGNIZED_FIELDS.some((field) => Object.prototype.hasOwnProperty.call(payload, field));
 
@@ -151,6 +183,7 @@ async function proposeIntent({ originalMission, facts, tenantId }) {
       };
     }
 
+    const knowledgeResolution = resolveKnowledgeDerivedRequirements(payload.knowledgeDerivedRequirements, knowledge.chunks);
     return {
       intent: {
         missionType: payload.missionType || null,
@@ -159,10 +192,12 @@ async function proposeIntent({ originalMission, facts, tenantId }) {
         risk: payload.risk || null,
         confidence: typeof payload.confidence === 'number' ? payload.confidence : null,
         ambiguities: Array.isArray(payload.ambiguities) ? payload.ambiguities : [],
+        knowledgeDerivedRequirements: knowledgeResolution.accepted,
         source: 'model',
       },
+      knowledgeContext: { refs: knowledge.chunks.map((c) => ({ ref: c.ref, sourceId: c.sourceId, hash: c.hash, score: c.score, truncated: c.truncated })), budget: knowledge.budget, rejectedDerivations: knowledgeResolution.rejected.length },
       modelSelection: { selected: selection.selected, reasonCodes: selection.reasonCodes },
-      degradation: null,
+      degradation: knowledgeResolution.rejected.length > 0 ? `KNOWLEDGE_DERIVATION_REJECTED:${knowledgeResolution.rejected.length}` : null,
       latencyMs: result.latencyMs,
       usage: result.usage || null,
     };
@@ -219,6 +254,8 @@ async function enrichMission(missionId, {
   // devolve 0 itens — por AUTORIZAÇÃO, não por ausência de conteúdo.
   actorRoles = null,
   actorClassification = 'DEVELOPMENT',
+  // Lease JÁ detido pelo chamador (recovery/orquestrador) — propagado, nunca readquirido.
+  lease: providedLease = null,
 } = {}) {
   const mission = await missionStore.getMission(missionId);
   if (!mission) {
@@ -228,14 +265,56 @@ async function enrichMission(missionId, {
   }
   if (mission.status === 'REJECTED' || mission.status === 'GREEN') return getMissionDetail(missionId);
 
-  await missionStore.lockMission(missionId, WORKER_ID);
+  // POSSE: MissionLease (§10-§12). Um chamador que já detém o lease (recovery) o PROPAGA — mesma
+  // identidade, mesmo token, mesmo fence; caso contrário o compiler adquire o seu com a identidade
+  // de instância (UUID), nunca `mission-compiler-<pid>`.
+  let lease = null;
+  let ownsLease = false;
+  if (providedLease && providedLease.token) {
+    const current = await missionStore.getMissionLease(missionId);
+    if (!current || current.token !== providedLease.token) {
+      const err = new Error(`lease propagado para a missão ${missionId} não é mais o vigente`);
+      err.code = 'MISSION_LEASE_LOST';
+      throw err;
+    }
+    lease = current;
+  } else {
+    // Compilação concorrente da MESMA missão serializa (espera o dono vivo, LEASE_ACQUIRE_WAIT) e
+    // converge idempotente — nunca toma a posse de quem está enriquecendo.
+    const acquired = await missionStore.acquireMissionLeaseWaiting(missionId, {
+      // Identidade por EXECUÇÃO (instância + id da chamada): duas compilações concorrentes no mesmo
+      // processo nunca se tratam como "o mesmo dono".
+      workerInstanceId: `${WORKER_INSTANCE_ID}#${crypto.randomUUID().slice(0, 8)}`,
+      workerType: 'COMPILER',
+      host: os.hostname(),
+    });
+    if (!acquired.acquired) {
+      const err = new Error(`mission ${missionId} está com outro worker (${acquired.lease?.workerInstanceId || 'desconhecido'}) — ${acquired.reason}`);
+      err.code = 'MISSION_LOCKED_BY_OTHER_WORKER';
+      err.lockedBy = acquired.lease?.workerInstanceId || null;
+      err.leaseState = acquired.reason;
+      throw err;
+    }
+    lease = acquired.lease;
+    ownsLease = true;
+  }
+  const guard = { leaseToken: lease.token, fence: lease.fence };
+  const heartbeat = startLeaseHeartbeat({
+    name: `mission-compiler:${missionId}`,
+    renew: () => missionStore.renewMissionLease(missionId, { leaseToken: guard.leaseToken }),
+    meta: { missionId, workerInstanceId: lease.workerInstanceId, fence: lease.fence },
+  });
+  const write = (patch) => missionStore.updateMissionGuarded(missionId, patch, guard);
+  const merge = (patch) => missionStore.mergeMissionJson(missionId, patch, guard);
+  const held = () => missionStore.assertMissionLeaseHeld(missionId, guard);
+  const progress = (signal, detail) => missionStore.recordMissionProgress(missionId, { signal, detail }, guard);
   try {
-    await missionStore.updateMission(missionId, {
+    await write({
       status: 'ENRICHING',
       approval_mode: mission.approval_mode || 'MANUAL',
     });
-    await missionStore.mergeMissionJson(missionId, {
-      resume: { phase: 'ENRICHING', startedAt: new Date().toISOString(), workerId: WORKER_ID },
+    await merge({
+      resume: { phase: 'ENRICHING', startedAt: new Date().toISOString(), workerId: lease.workerInstanceId, leaseFence: lease.fence, pid: process.pid },
     });
     emitMissionStage(tenantId, missionId, { stage: 'ENRICHING', status: 'running', phase: 'ENRICHING' });
 
@@ -249,7 +328,21 @@ async function enrichMission(missionId, {
       actorClassification,
     });
 
-    const proposal = await proposeIntent({ originalMission: mission.original_mission, facts, tenantId });
+    await progress('evidence_produced', `contexto inspecionado (${(facts.knowledgeChunks || []).length} chunk(s) de conhecimento)`);
+
+    const proposal = await proposeIntent({
+      originalMission: mission.original_mission,
+      facts,
+      tenantId,
+      signal: heartbeat.signal,
+      deadlineMeta: { missionId, leaseOwner: lease.workerInstanceId, fence: lease.fence },
+    });
+    if (heartbeat.state.lost) {
+      const err = new Error('MissionLease perdido durante o enriquecimento — worker para de escrever');
+      err.code = 'MISSION_LEASE_LOST';
+      throw err;
+    }
+    if (proposal.intent) await progress('provider_response', proposal.modelSelection?.selected ? `${proposal.modelSelection.selected.providerId}:${proposal.modelSelection.selected.modelId}` : null);
     const intent = proposal.intent || {};
     if (proposal.degradation) degraded.push(proposal.degradation);
 
@@ -264,6 +357,7 @@ async function enrichMission(missionId, {
     enrichment.keywords = keywords;
     enrichment.degraded = degraded;
     enrichment.modelSelection = proposal.modelSelection;
+    if (proposal.knowledgeContext) enrichment.knowledgeContext = proposal.knowledgeContext;
 
     const previousSpec = forceNewVersion ? (await missionStore.getCurrentVersion(missionId))?.spec || null : null;
     const spec = buildSpecFromEnrichment({ mission, enrichment, contextFacts: facts, previousSpec });
@@ -309,6 +403,7 @@ async function enrichMission(missionId, {
     // diferenças, escalações e a decisão com motivo) — não um cálculo que se perde na memória.
     preview.policyResolution = policyResolution;
 
+    await held();
     const versionRow = await missionStore.saveVersion({
       missionId,
       spec,
@@ -324,7 +419,9 @@ async function enrichMission(missionId, {
     let approvalState = 'PENDING';
     let approvalMode = effectivePolicy.mode;
     let approval = null;
+    await progress('mission_enriched', `v${spec.version} (${materiality.level})`);
     if (autoApproval.eligible && materiality.level !== 'CRITICAL') {
+      await held();
       const saved = await missionStore.saveApproval({
         missionId,
         specVersion: spec.version,
@@ -343,6 +440,7 @@ async function enrichMission(missionId, {
       approval = saved.approval;
       approvalState = 'AUTO_APPROVED';
     } else {
+      await held();
       const saved = await missionStore.saveApproval({
         missionId,
         specVersion: spec.version,
@@ -364,15 +462,16 @@ async function enrichMission(missionId, {
       approvalState = 'PENDING';
     }
 
+    await held();
     await missionStore.supersedeApprovalsForOlderVersions(missionId, spec.version);
-    await missionStore.updateMission(missionId, {
+    await write({
       status: approvalState === 'AUTO_APPROVED' ? 'APPROVED' : 'AWAITING_APPROVAL',
       approval_state: approvalState,
       approval_mode: approvalMode,
       preview,
       enrichment,
     });
-    await missionStore.mergeMissionJson(missionId, {
+    await merge({
       resume: { phase: approvalState === 'AUTO_APPROVED' ? 'APPROVED' : 'AWAITING_APPROVAL', enrichedAt: new Date().toISOString() },
       // §21: guarda a resolução de política também no resume metadata, para que a evidência
       // sobreviva mesmo se o preview for regerado por um re-enriquecimento.
@@ -392,7 +491,10 @@ async function enrichMission(missionId, {
     });
     return detail;
   } finally {
-    await missionStore.unlockMission(missionId, WORKER_ID).catch(() => {});
+    heartbeat.stop();
+    // Só libera o que é seu: lease propagado pertence ao chamador (que o libera); lease próprio é
+    // liberado por TOKEN — nunca apaga o lease de um novo dono.
+    if (ownsLease) await missionStore.releaseMissionLease(missionId, { leaseToken: guard.leaseToken }).catch(() => {});
   }
 }
 
@@ -479,6 +581,7 @@ async function getMissionDetail(missionId) {
 
 module.exports = {
   WORKER_ID,
+  WORKER_INSTANCE_ID,
   INTENT_CONTRACT,
   buildIntentPrompt,
   proposeIntent,

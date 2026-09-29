@@ -20,10 +20,10 @@
 
 const crypto = require('crypto');
 const logger = require('../../utils/logger');
+const { policyMs } = require('../../utils/operationDeadline');
 
 const RUNNER_URL = process.env.ENGINEERING_RUNNER_URL || null;
 const RUNNER_TOKEN = process.env.ENGINEERING_RUNNER_TOKEN || null;
-const RUNNER_REQUEST_TIMEOUT_SLACK_MS = 10000;
 
 function sandboxUnavailable(detail) {
   const error = new Error(`SANDBOX_UNAVAILABLE: ${detail} (fail-closed, nunca cai de volta para spawn sem sandbox)`);
@@ -45,15 +45,32 @@ function isRunnerConfigured() {
  * network})` — retorna `{exitCode, stdout, stderr, timedOut, signal}` ou lança com `.code`
  * `SANDBOX_UNAVAILABLE`/`SANDBOX_INVALID_WORKSPACE`.
  */
-async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = 'none' }) {
+async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = 'none', signal = null }) {
   if (!isRunnerConfigured()) {
     throw sandboxUnavailable('ENGINEERING_RUNNER_URL/ENGINEERING_RUNNER_TOKEN não configurados — nenhum runner dedicado disponível');
   }
 
   const executionId = crypto.randomUUID();
+  // Deadlines do Timeout Policy Registry (nunca magic number): o request HTTP espera o comando
+  // (`timeoutMs`, já resolvido pela política do chamador) + a janela de terminação graciosa do
+  // container + a folga de resposta do runner. Assim o runner sempre tem tempo de encerrar o child
+  // e devolver TIMEOUT estruturado antes de o cliente desistir.
+  // Clamp no teto do runner (RUNNER_MAX_COMMAND — o MESMO valor que o runner aceita): deadline
+  // adaptativo nunca vira contrato recusado.
+  const requestedMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : policyMs('INTEGRATION_TEST');
+  const commandMs = Math.min(requestedMs, policyMs('RUNNER_MAX_COMMAND'));
+  const graceMs = policyMs('REGRESSION_CHILD_TERMINATION_GRACE');
+  const requestTimeoutMs = commandMs + graceMs + policyMs('RUNNER_REQUEST_SLACK');
   const controller = new AbortController();
-  const requestTimeoutMs = (timeoutMs || 120000) + RUNNER_REQUEST_TIMEOUT_SLACK_MS;
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  if (typeof timer.unref === 'function') timer.unref();
+  // Cancelamento cooperativo do chamador (lease perdido / NO_PROGRESS) fecha a conexão: o runner
+  // detecta e encerra o container graciosamente.
+  const onCallerAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) onCallerAbort();
+    else signal.addEventListener('abort', onCallerAbort, { once: true });
+  }
 
   let response;
   try {
@@ -63,14 +80,20 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
         'Content-Type': 'application/json',
         Authorization: `Bearer ${RUNNER_TOKEN}`,
       },
-      body: JSON.stringify({ executionId, executable, args, cwd, env, timeoutMs, network }),
+      body: JSON.stringify({ executionId, executable, args, cwd, env, timeoutMs: commandMs, network, graceMs }),
       signal: controller.signal,
     });
   } catch (err) {
+    if (signal && signal.aborted) {
+      const cancelled = new Error('execução cancelada cooperativamente pelo chamador');
+      cancelled.code = 'OPERATION_CANCELLED';
+      throw cancelled;
+    }
     logger.warn('[engineeringRunnerClient] falha ao alcançar o Engineering Runner', { executionId, error: err.message });
     throw sandboxUnavailable(`falha ao alcançar o Engineering Runner em ${RUNNER_URL}: ${err.message}`);
   } finally {
     clearTimeout(timer);
+    if (signal) signal.removeEventListener('abort', onCallerAbort);
   }
 
   let body;
@@ -94,6 +117,8 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
     stderr: body.stderr,
     timedOut: body.timedOut,
     signal: body.signal,
+    ...(body.terminatedBy ? { terminatedBy: body.terminatedBy } : {}),
+    ...(body.cancelled ? { cancelled: true } : {}),
   };
 }
 

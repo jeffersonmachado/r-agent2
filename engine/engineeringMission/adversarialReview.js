@@ -180,9 +180,9 @@ const ADVERSARIAL_CASES = Object.freeze([
     id: 'ADV-19',
     attack: 'dois workers concorrentes na mesma missão (lock roubado)',
     target: 'exclusão mútua por missão',
-    defense: 'lock atômico + MISSION_LOCKED_BY_OTHER_WORKER para worker vivo',
+    defense: 'lease atômico (CAS + fence) + MISSION_LOCKED_BY_OTHER_WORKER para worker vivo; idade de locked_at não concede posse',
     severity: 'BLOCKER',
-    permanentTest: { path: 'tests/integration/engineeringMissionDurableResume.test.js', namePattern: 'lock órfão expira' },
+    permanentTest: { path: 'tests/integration/engineeringMissionDurableResume.test.js', namePattern: 'lease órfão expira' },
   },
   {
     id: 'ADV-20',

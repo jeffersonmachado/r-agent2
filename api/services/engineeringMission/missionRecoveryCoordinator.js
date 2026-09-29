@@ -152,7 +152,9 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
 
     try {
       if (step.action === 'RE_ENRICH') {
-        await compiler.enrichMission(step.missionId, { tenantId, actor: `RECOVERY:${workerInstanceId}` });
+        // A posse tomada pelo recovery é PROPAGADA ao compiler (mesmo token/fence) — nunca um
+        // segundo worker com outra identidade disputando a mesma missão.
+        await compiler.enrichMission(step.missionId, { tenantId, actor: `RECOVERY:${workerInstanceId}`, lease: acquired.lease });
         summary.recovered += 1;
         summary.items.push({ ...step, action: 'RE_ENRICHED', leaseFence: acquired.lease.fence });
         continue;
@@ -160,7 +162,7 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
 
       const orchestrator = require('./missionOrchestratorService');
       if (step.action === 'START_EXECUTION' && autoStart) {
-        await orchestrator.startExecution(step.missionId, { actor: `RECOVERY:${workerInstanceId}`, tenantId });
+        await orchestrator.startExecution(step.missionId, { actor: `RECOVERY:${workerInstanceId}`, tenantId, lease: acquired.lease });
         summary.items.push({ ...step, action: 'EXECUTION_STARTED', leaseFence: acquired.lease.fence });
       }
 
@@ -196,10 +198,17 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
           });
           continue;
         }
-        // O MESMO identificador do lease é passado como runnerId: as duas primitivas (lease e lock
-        // de execução) precisam concordar sobre quem é o dono, senão o dono recém-empossado é
-        // recusado por si mesmo (`TASK_ALREADY_RUNNING`).
-        await orchestrator.runMissionTask(step.missionId, { tenantId, runnerId: `${workerInstanceId}-mission` });
+        // O MESMO dono (workerInstanceId + token + fence) é PROPAGADO: o Router executa com o lease
+        // que o recovery acabou de tomar — runtime normal e recovery usam o mesmo modelo de posse.
+        if (taskLease.takeover) {
+          summary.items.push({ ...step, action: 'TASK_LEASE_TAKEOVER', taskId: current.linked_task_id, previousWorker: taskLease.takeover.previousWorker, previousFence: taskLease.takeover.previousFence, leaseFence: taskLease.lease.fence });
+        }
+        const runOutcome = await orchestrator.runMissionTask(step.missionId, {
+          tenantId,
+          runnerId: `${workerInstanceId}-mission`,
+          missionLease: acquired.lease,
+          taskLease: taskLease.lease,
+        });
         tasksResumedByMission.add(current.linked_task_id);
         summary.recovered += 1;
         summary.items.push({
@@ -207,7 +216,9 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
           action: 'TASK_RESUMED',
           taskId: current.linked_task_id,
           leaseFence: taskLease.lease.fence,
-          previousWorker: taskLease.lease.workerInstanceId || null,
+          previousWorker: taskLease.takeover ? taskLease.takeover.previousWorker : null,
+          finalTaskStatus: runOutcome?.result?.status || null,
+          finalReasonCode: runOutcome?.result?.reasonCode || null,
         });
       } else {
         summary.items.push({ ...step, action: 'NO_TASK_TO_RESUME' });
@@ -245,28 +256,38 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
         continue;
       }
       // A task está sob posse de um worker vivo (o deste recovery) com fence avançado: a execução
-      // pode continuar do ponto onde parou. Se ela veio de uma missão, o caminho é o Router.
-      let resumed = false;
-      if (task.missionId || task.mission_id) {
-        const orchestrator = require('./missionOrchestratorService');
-        try {
-          await orchestrator.runMissionTask(task.missionId || task.mission_id, { tenantId });
-          resumed = true;
-        } catch (error) {
-          summary.taskItems.push({ taskId: task.id, action: 'RESUME_FAILED', reason: error.code || error.message, leaseFence: acquired.lease.fence });
-          continue;
+      // continua do ponto onde parou COM ESTA MESMA POSSE (defeito real corrigido em 2026-09-28:
+      // antes o `runMissionTask` era chamado sem runnerId/lease, criava um "Runner B" com outra
+      // identidade e era recusado pelo próprio lease recém-tomado — TASK_ALREADY_RUNNING). Task sem
+      // missão também é retomada pelo Router (antes o lease ficava tomado e nada executava).
+      const runnerId = `${workerInstanceId}-task`;
+      let outcome = null;
+      try {
+        if (task.missionId || task.mission_id) {
+          const orchestrator = require('./missionOrchestratorService');
+          const out = await orchestrator.runMissionTask(task.missionId || task.mission_id, { tenantId, runnerId, taskLease: acquired.lease });
+          outcome = out?.result || null;
+        } else {
+          const router = require('../engineeringRouter/engineeringRouterService');
+          outcome = await router.runTask(task.id, { runnerId, lease: acquired.lease, eventAudienceTenantId: tenantId });
         }
+      } catch (error) {
+        summary.taskItems.push({ taskId: task.id, action: 'RESUME_FAILED', reason: error.code || error.message, leaseFence: acquired.lease.fence });
+        await taskService.releaseTaskLease(task.id, { leaseToken: acquired.lease.token }).catch(() => {});
+        continue;
       }
       summary.taskItems.push({
         taskId: task.id,
-        action: resumed ? 'TASK_RESUMED' : 'TASK_LEASE_TAKEN',
-        previousWorker: task.leaseWorkerInstanceId || null,
+        action: 'TASK_RESUMED',
+        previousWorker: acquired.takeover ? acquired.takeover.previousWorker : (task.lease_worker_instance_id || null),
         leaseFence: acquired.lease.fence,
-        resumed,
+        resumed: true,
+        finalTaskStatus: outcome?.status || null,
+        finalReasonCode: outcome?.reasonCode || null,
       });
     }
     summary.tasksScanned = orphanTasks.length;
-    summary.tasksRecovered = summary.taskItems.filter((i) => i.action === 'TASK_RESUMED' || i.action === 'TASK_LEASE_TAKEN').length;
+    summary.tasksRecovered = summary.taskItems.filter((i) => i.action === 'TASK_RESUMED').length;
   } catch (error) {
     summary.taskItems.push({ action: 'TASK_SWEEP_FAILED', reason: error.code || error.message });
   }

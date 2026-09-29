@@ -412,10 +412,19 @@ function clearAiProviderConfig() {
   tenantProviderCache.clear();
 }
 
-function getProviderInstance(providerId) {
+/**
+ * @param {string} providerId
+ * @param {{deadlineManaged?: boolean}} [options] — `deadlineManaged: true` quando o chamador já
+ *   governa a chamada pelo Execution Deadline Manager (política PROVIDER_REQUEST, AbortSignal real,
+ *   classificação PROVIDER_TIMEOUT). Nesse caso o wrapper genérico `ENGINE_AI_TIMEOUT_MS` não é
+ *   empilhado: dois timers concorrentes com valores diferentes tornariam o deadline efetivo
+ *   imprevisível e o erro, genérico (`ai_timeout`).
+ */
+function getProviderInstance(providerId, { deadlineManaged = false } = {}) {
   const normalized = normalizeId(providerId);
   const provider = providerRegistry.get(normalized);
   if (!provider) return null;
+  if (deadlineManaged) return { id: normalized, generate: provider.generate.bind(provider) };
   const timeoutMs = resolveAiTimeoutMs();
   return { id: normalized, generate: withAiTimeout(provider.generate.bind(provider), timeoutMs) };
 }

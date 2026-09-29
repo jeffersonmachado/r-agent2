@@ -41,7 +41,30 @@ async function requireMission(missionId) {
  * Aprova a versão CORRENTE. Aprovar uma versão antiga é impossível por construção: a aprovação
  * referencia sempre `mission.current_version` no momento da decisão.
  */
-async function approve(missionId, { actor = null, reason = null, tenantId = 'system', idempotencyKey = null } = {}) {
+/**
+ * Decisão humana sob POSSE da missão: approve/reject/edit adquirem o MissionLease pelo tempo da
+ * decisão. Se um worker vivo está enriquecendo/executando, a decisão é recusada
+ * (MISSION_LOCKED_BY_OTHER_WORKER) em vez de ser silenciosamente sobrescrita pela escrita guardada
+ * dele logo depois. Estados terminais (nenhum lease possível) seguem sem guard.
+ */
+const APPROVAL_INSTANCE_ID = `approval-${require('os').hostname()}-${require('crypto').randomUUID()}`;
+function withApprovalLease(missionId, fn) {
+  return missionStore.withMissionLease(missionId, null, fn, {
+    workerInstanceId: APPROVAL_INSTANCE_ID,
+    workerType: 'APPROVAL',
+    allowTerminalWithoutLease: true,
+    waitForLease: true,
+  });
+}
+function writeMission(missionId, patch, guard) {
+  return guard ? missionStore.updateMissionGuarded(missionId, patch, guard) : missionStore.updateMission(missionId, patch);
+}
+
+async function approve(missionId, options = {}) {
+  return withApprovalLease(missionId, ({ guard }) => approveHeld(missionId, { ...options, guard }));
+}
+
+async function approveHeld(missionId, { actor = null, reason = null, tenantId = 'system', idempotencyKey = null, guard = null } = {}) {
   const mission = await requireMission(missionId);
   if (mission.status === 'REJECTED') throw fail(MISSION_FAILURE_CODES.MISSION_REJECTED, 'mission rejeitada não pode ser aprovada — crie uma nova missão ou re-enriqueça');
   const current = await missionStore.getCurrentVersion(missionId);
@@ -68,8 +91,8 @@ async function approve(missionId, { actor = null, reason = null, tenantId = 'sys
     idempotencyKey: idempotencyKey || `approve:${missionId}:v${current.version}`,
   });
 
-  await missionStore.updateMission(missionId, { status: 'APPROVED', approval_state: 'APPROVED', approval_mode: 'MANUAL' });
-  await missionStore.mergeMissionJson(missionId, { resume: { phase: 'APPROVED', approvedAt: new Date().toISOString(), approvedBy: actor } });
+  await writeMission(missionId, { status: 'APPROVED', approval_state: 'APPROVED', approval_mode: 'MANUAL' }, guard);
+  await missionStore.mergeMissionJson(missionId, { resume: { phase: 'APPROVED', approvedAt: new Date().toISOString(), approvedBy: actor } }, guard);
 
   const detail = await compiler.getMissionDetail(missionId);
   emitMissionStage(tenantId, missionId, {
@@ -84,7 +107,11 @@ async function approve(missionId, { actor = null, reason = null, tenantId = 'sys
   return { approval, mission: detail, created };
 }
 
-async function reject(missionId, { actor = null, reason = null, tenantId = 'system' } = {}) {
+async function reject(missionId, options = {}) {
+  return withApprovalLease(missionId, ({ guard }) => rejectHeld(missionId, { ...options, guard }));
+}
+
+async function rejectHeld(missionId, { actor = null, reason = null, tenantId = 'system', guard = null } = {}) {
   const mission = await requireMission(missionId);
   const current = await missionStore.getCurrentVersion(missionId);
   if (!current) throw fail(MISSION_FAILURE_CODES.MISSION_SPEC_NOT_APPROVED, 'mission ainda não foi enriquecida');
@@ -104,7 +131,7 @@ async function reject(missionId, { actor = null, reason = null, tenantId = 'syst
     actor,
     idempotencyKey: `reject:${missionId}:v${current.version}`,
   });
-  await missionStore.updateMission(missionId, { status: 'REJECTED', approval_state: 'REJECTED' });
+  await writeMission(missionId, { status: 'REJECTED', approval_state: 'REJECTED' }, guard);
   const detail = await compiler.getMissionDetail(missionId);
   emitMissionStage(tenantId, missionId, {
     stage: 'REJECTED',
@@ -122,7 +149,11 @@ async function reject(missionId, { actor = null, reason = null, tenantId = 'syst
  * por decisão explícita do operador, aprova a versão resultante.
  * `originalMission` continua intocável (o patch que tente alterá-la falha alto).
  */
-async function editAndApprove(missionId, { patch = {}, actor = null, reason = null, tenantId = 'system', approveEdited = true, policyEscalationAuthorized = false } = {}) {
+async function editAndApprove(missionId, options = {}) {
+  return withApprovalLease(missionId, ({ guard }) => editAndApproveHeld(missionId, { ...options, guard }));
+}
+
+async function editAndApproveHeld(missionId, { patch = {}, actor = null, reason = null, tenantId = 'system', approveEdited = true, policyEscalationAuthorized = false, guard = null } = {}) {
   const mission = await requireMission(missionId);
   const current = await missionStore.getCurrentVersion(missionId);
   if (!current) throw fail(MISSION_FAILURE_CODES.MISSION_SPEC_NOT_APPROVED, 'mission ainda não foi enriquecida');
@@ -175,7 +206,7 @@ async function editAndApprove(missionId, { patch = {}, actor = null, reason = nu
     createdBy: actor,
   });
   await missionStore.supersedeApprovalsForOlderVersions(missionId, nextSpec.version);
-  await missionStore.updateMission(missionId, {
+  await writeMission(missionId, {
     status: approveEdited ? 'APPROVED' : 'AWAITING_APPROVAL',
     approval_state: approveEdited ? 'APPROVED' : 'PENDING',
     preview,

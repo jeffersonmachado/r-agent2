@@ -303,6 +303,21 @@ async function runReviews(missionId, { actor = null, kinds = ['META', 'ADVERSARI
     });
   }
 
+  // PROGRESSO SIGNIFICATIVO (§18): parecer do reviewer / adversarial review persistido é avanço
+  // verificável da missão. Só é gravado quando nenhum OUTRO worker detém lease ativo da missão —
+  // o dono vivo registra o próprio progresso; esta porta nunca escreve por cima dele sem fence.
+  try {
+    const { resolveLeaseState } = require('../../../engine/engineeringMission/leasePolicy');
+    const lease = await missionStore.getMissionLease(missionId);
+    const ownedByOther = lease && lease.token && resolveLeaseState(lease, Date.now()) === 'ACTIVE';
+    if (!ownedByOther) {
+      if (out.meta) await missionStore.recordMissionProgress(missionId, { signal: 'reviewer_result', detail: `meta review: ${out.meta.status || 'done'}` });
+      if (out.adversarial) await missionStore.recordMissionProgress(missionId, { signal: 'reviewer_result', detail: `adversarial review: ${out.adversarial.status || 'done'}` });
+    }
+  } catch (error) {
+    logger.warn('[missionReview] progresso do review não registrado', { missionId, message: error.message });
+  }
+
   // Enforcement de GREEN em AMBOS os sentidos. O orquestrador recusa GREEN quando a revisão da
   // versão corrente bloqueia — mas ele só é consultado quando o estado é RECALCULADO. Uma revisão
   // rodada DEPOIS de a missão já estar GREEN (ou seja: execução primeiro, revisão depois) deixava

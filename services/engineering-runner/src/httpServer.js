@@ -92,7 +92,7 @@ function sendJson(res, status, body) {
  */
 function validateExecuteRequest(body, { maxTimeoutMs }) {
   if (!body || typeof body !== 'object') return { ok: false, reason: 'corpo da requisição ausente ou inválido' };
-  const { executionId, executable, args, cwd, env, timeoutMs, network } = body;
+  const { executionId, executable, args, cwd, env, timeoutMs, network, graceMs } = body;
 
   if (typeof executionId !== 'string' || !executionId) return { ok: false, reason: 'executionId (string) é obrigatório' };
   if (typeof executable !== 'string' || !executable) return { ok: false, reason: 'executable (string) é obrigatório' };
@@ -104,8 +104,13 @@ function validateExecuteRequest(body, { maxTimeoutMs }) {
     return { ok: false, reason: `timeoutMs deve ser inteiro positivo até ${maxTimeoutMs}` };
   }
   if (network !== undefined && typeof network !== 'string') return { ok: false, reason: 'network, quando presente, deve ser string' };
+  // Janela SIGTERM→SIGKILL do container expirado (política REGRESSION_CHILD_TERMINATION_GRACE do
+  // chamador). Teto fixo aqui: o runner nunca aceita segurar um container indefinidamente.
+  if (graceMs !== undefined && (!Number.isInteger(graceMs) || graceMs <= 0 || graceMs > 120000)) {
+    return { ok: false, reason: 'graceMs deve ser inteiro positivo até 120000' };
+  }
 
-  return { ok: true, value: { executionId, executable, args, cwd, env: env || {}, timeoutMs, network } };
+  return { ok: true, value: { executionId, executable, args, cwd, env: env || {}, timeoutMs, network, graceMs } };
 }
 
 /**
@@ -198,7 +203,7 @@ function createHttpServer({ config, logger = console } = {}) {
         return;
       }
 
-      const { executionId, executable, args, cwd, env, timeoutMs, network } = validation.value;
+      const { executionId, executable, args, cwd, env, timeoutMs, network, graceMs } = validation.value;
 
       // ER-V1-SEALFIX-003 — fronteira de segurança do runner: TUDO abaixo é revalidado de forma
       // independente, nunca confiando que a API (chamador) já validou. Cada rejeição é 400
@@ -228,8 +233,12 @@ function createHttpServer({ config, logger = console } = {}) {
 
       inFlight += 1;
       const startedAt = Date.now();
+      // Cliente desistiu (deadline/cancelamento do lado da API): o container é encerrado de forma
+      // graciosa em vez de continuar rodando órfão consumindo o runner.
+      const clientGone = new AbortController();
+      res.on('close', () => { if (!res.writableEnded) clientGone.abort(); });
       try {
-        const result = await runInSandbox({ executable, args, cwd: cwdValidation.value, env: safeEnv, timeoutMs, network: networkValidation.value });
+        const result = await runInSandbox({ executable, args, cwd: cwdValidation.value, env: safeEnv, timeoutMs, network: networkValidation.value, graceMs, signal: clientGone.signal });
         sendJson(res, 200, {
           executionId,
           exitCode: result.exitCode,
@@ -237,6 +246,8 @@ function createHttpServer({ config, logger = console } = {}) {
           stdout: redactText(result.stdout || ''),
           stderr: redactText(result.stderr || ''),
           timedOut: result.timedOut,
+          cancelled: Boolean(result.cancelled),
+          terminatedBy: result.terminatedBy || null,
           signal: result.signal,
         });
       } catch (err) {

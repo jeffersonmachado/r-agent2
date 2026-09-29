@@ -51,9 +51,72 @@ async function runGitRevParseHead() {
 const { validatePatch } = require('../../../engine/engineeringRouter/patchValidator');
 const { getPolicy, requiresIndependentReview } = require('../../../engine/engineeringRouter/routingPolicy');
 const { selectCoderAndReviewer } = require('../../../engine/engineeringRouter/modelSelector');
-const { FAILURE_CODES, TERMINAL_STATES } = require('../../../engine/engineeringRouter/constants');
+const { FAILURE_CODES, TERMINAL_STATES, TEST_OUTCOMES } = require('../../../engine/engineeringRouter/constants');
 const { emitTaskStage } = require('./engineeringRouterEvents');
 const logger = require('../../utils/logger');
+const os = require('os');
+const crypto = require('crypto');
+const { createTaskRun, isOwnershipLoss } = require('./taskRunContext');
+const { resolvePolicy, policyMs, recordLivenessEvent } = require('../../utils/operationDeadline');
+
+/**
+ * Identidade de worker: UUID de instância. O PID NÃO entra na identidade (não é global entre
+ * containers/hosts) — fica só nos logs como diagnóstico local.
+ */
+function newRunnerId() {
+  return `engineer-${os.hostname()}-${crypto.randomUUID()}`;
+}
+
+/** Fachada de escrita: guardada por lease/fence quando há execução com posse; direta sem ela. */
+function writesFor(run) {
+  return run ? run.writes : engineeringTaskService;
+}
+
+async function recordProgress(run, signal, detail = null) {
+  if (!run) return null;
+  return run.progress(signal, detail);
+}
+
+/**
+ * Cancelamento/perda de posse no meio de uma operação:
+ *   - posse perdida ⇒ lança TASK_LEASE_LOST (o worker PARA; nada mais é escrito por ele);
+ *   - cancelamento por NO_PROGRESS ⇒ a tentativa vira RETRY com diagnóstico (worker vivo,
+ *     lease intacto — retry/replan, nunca takeover).
+ */
+async function handleOperationInterruption(run, err, attempt, ts) {
+  if (!run) return null;
+  if (isOwnershipLoss(run, err)) {
+    const lost = new Error('posse da task perdida durante a operação — worker para de escrever');
+    lost.code = FAILURE_CODES.TASK_LEASE_LOST;
+    throw lost;
+  }
+  const cancelled = err && (err.code === 'OPERATION_CANCELLED' || err.code === 'NO_PROGRESS');
+  if (cancelled && run.lastCancel && run.lastCancel.reason === 'NO_PROGRESS') {
+    const diagnostics = run.lastCancel.diagnostics;
+    run.lastCancel = null;
+    await ts.updateAttempt(attempt.id, {
+      status: 'FAILED',
+      error: { code: 'NO_PROGRESS', message: `operação ${diagnostics.operation} cancelada: worker vivo sem progresso significativo`, diagnostics },
+      completed_at: new Date(),
+    });
+    return {
+      outcome: 'RETRY',
+      failureBundle: {
+        failedCommand: diagnostics.operation,
+        failureKind: 'NO_PROGRESS',
+        stderr: `NO_PROGRESS: ${diagnostics.reason}`,
+      },
+      attempt,
+    };
+  }
+  return null;
+}
+
+/** Deadline adaptativo depois de TIMEOUT: dobra (teto 4x), sempre limitado ao `max` da política. */
+function nextTimeoutMultiplier(failureBundle) {
+  if (!failureBundle || failureBundle.failureKind !== TEST_OUTCOMES.TIMEOUT) return 1;
+  return Math.min(4, (Number(failureBundle.timeoutMultiplier) || 1) * 2);
+}
 
 /**
  * ER-V1-FINAL-005 — Durable Resume.
@@ -71,13 +134,13 @@ const logger = require('../../utils/logger');
  * Substitui o `.catch` cego: só tolera a transição quando o estado ATUAL real (relido do
  * banco, nunca a variável em memória) já é EXATAMENTE o destino pedido — todo o resto propaga.
  */
-async function tolerantTransition(taskId, toStatus) {
+async function tolerantTransition(taskId, toStatus, ts = engineeringTaskService) {
   try {
-    return await engineeringTaskService.transitionTask(taskId, toStatus);
+    return await ts.transitionTask(taskId, toStatus);
   } catch (err) {
     if (err.code !== FAILURE_CODES.INVALID_STATE_TRANSITION) throw err;
 
-    const current = await engineeringTaskService.getTask(taskId);
+    const current = await ts.getTask(taskId);
     if (!current) throw err;
 
     if (current.status === toStatus) {
@@ -123,13 +186,13 @@ const ADVANCE_PHASE_ORDER = Object.freeze(['REVIEWING', 'REGRESSION', 'GOVERNANC
  * forward-only) — só confirma e segue. Do contrário, delega para `tolerantTransition` normal
  * (mesma tolerância a re-entrada no MESMO estado já existente desde ER-V1-FINAL-005).
  */
-async function enterAdvancePhase(taskId, toStatus, currentStatusRef) {
+async function enterAdvancePhase(taskId, toStatus, currentStatusRef, ts = engineeringTaskService) {
   const curIdx = ADVANCE_PHASE_ORDER.indexOf(currentStatusRef.value);
   const targetIdx = ADVANCE_PHASE_ORDER.indexOf(toStatus);
   if (curIdx >= 0 && targetIdx >= 0 && curIdx > targetIdx) {
     return; // já passamos deste ponto numa retomada — nunca transição para trás.
   }
-  await tolerantTransition(taskId, toStatus);
+  await tolerantTransition(taskId, toStatus, ts);
   currentStatusRef.value = toStatus;
 }
 
@@ -146,8 +209,9 @@ function contractFromTask(task) {
 }
 
 /** Estágio ROUTE: seleciona CODER/REVIEWER e persiste a decisão (idempotente — não reprocessa se já ROUTED+). */
-async function ensureRouted(task, { credentialScope, eventAudienceTenantId }) {
+async function ensureRouted(task, { credentialScope, eventAudienceTenantId, run = null }) {
   if (task.status !== 'CLASSIFIED') return task;
+  const ts = writesFor(run);
 
   const policy = getPolicy(task.task_type);
   const independentRequired = requiresIndependentReview(task.task_type, task.risk);
@@ -161,8 +225,9 @@ async function ensureRouted(task, { credentialScope, eventAudienceTenantId }) {
     policyVersion: policy.policyVersion,
   });
 
-  await engineeringTaskService.saveRoutingDecision(task.id, routingDecision);
-  const routedTask = await engineeringTaskService.transitionTask(task.id, 'ROUTED');
+  await ts.saveRoutingDecision(task.id, routingDecision);
+  const routedTask = await ts.transitionTask(task.id, 'ROUTED');
+  await recordProgress(run, 'state_transition', 'ROUTED');
   emitTaskStage(eventAudienceTenantId, task.id, {
     stage: 'ROUTED',
     status: 'success',
@@ -173,15 +238,16 @@ async function ensureRouted(task, { credentialScope, eventAudienceTenantId }) {
 }
 
 /** Um attempt completo: CODE → PATCH VALIDATE → APPLY → TEST → REVIEW. */
-async function runOneAttempt({ task, routingDecision, failureBundle, previousAttempt, credentialScope, eventAudienceTenantId }) {
+async function runOneAttempt({ task, routingDecision, failureBundle, previousAttempt, credentialScope, eventAudienceTenantId, run = null }) {
+  const ts = writesFor(run);
   const coderSelection = routingDecision?.coder?.selected;
   if (!coderSelection) {
     return { outcome: 'FATAL', reasonCode: 'NO_QUALIFIED_CODER' };
   }
 
-  await tolerantTransition(task.id, 'CODING');
+  await tolerantTransition(task.id, 'CODING', ts);
 
-  const attempt = await engineeringTaskService.createAttempt(task.id, {
+  const attempt = await ts.createAttempt(task.id, {
     status: 'CODING',
     coder_provider: coderSelection.providerId,
     coder_model: coderSelection.modelId,
@@ -197,33 +263,49 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   });
 
   const context = buildContext(task, { failureBundle, previousAttempt });
-  await engineeringTaskService.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget } });
+  await ts.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget } });
 
   let patchResult;
   const telemetryBase = { task_id: task.id, attempt_id: attempt.id, role: 'CODER', provider: coderSelection.providerId, model: coderSelection.modelId };
+  // Operação de PROVIDER: deadline da política PROVIDER_REQUEST (Deadline Manager); o signal junta
+  // lease perdido + cancelamento por NO_PROGRESS. Baseline de SLOW = metade do deadline.
+  const coderOp = run ? run.beginOperation('CODER_GENERATION', { baselineMs: Math.round(policyMs('PROVIDER_REQUEST') / 2) }) : null;
   try {
-    patchResult = await generatePatch({ context, providerId: coderSelection.providerId, modelId: coderSelection.modelId, tenantId: credentialScope });
+    patchResult = await generatePatch({
+      context,
+      providerId: coderSelection.providerId,
+      modelId: coderSelection.modelId,
+      tenantId: credentialScope,
+      signal: coderOp ? coderOp.signal : null,
+      deadlineMeta: run ? run.deadlineMeta(task, 'CODING') : {},
+    });
   } catch (err) {
-    await engineeringTaskService.recordTelemetry({
+    if (run) run.endOperation(coderOp);
+    const interrupted = await handleOperationInterruption(run, err, attempt, ts);
+    if (interrupted) return interrupted;
+    const timedOut = err.failureClass === 'PROVIDER_TIMEOUT';
+    await ts.recordTelemetry({
       ...telemetryBase,
       input_tokens: err.usage?.prompt_tokens ?? null,
       output_tokens: err.usage?.completion_tokens ?? null,
       latency_ms: err.latencyMs ?? null,
-      result: 'FAILURE',
+      result: timedOut ? 'TIMEOUT' : 'FAILURE',
+      event_type: timedOut ? 'PROVIDER_TIMEOUT' : null,
+      detail: timedOut ? { ...err.expiry, fallback: 'REROUTE', outcome: 'ATTEMPT_TIMED_OUT' } : null,
     });
-    await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: err.code, message: err.message }, completed_at: new Date() });
+    await ts.updateAttempt(attempt.id, { status: 'FAILED', error: { code: err.code, message: err.message, failureClass: err.failureClass || null }, completed_at: new Date() });
     emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'CODING',
       status: 'error',
       attemptNumber: attempt.attempt_number,
-      message: `CODER falhou: ${err.message}`,
-      meta: { code: err.code },
+      message: timedOut ? `CODER expirou (PROVIDER_TIMEOUT) — tentando fallback: ${err.message}` : `CODER falhou: ${err.message}`,
+      meta: { code: err.code, failureClass: err.failureClass || null },
     });
     if (err.code === FAILURE_CODES.PROVIDER_UNAVAILABLE) {
       // ERV1-CLOSE-008: provider saudável não implica que ESTE modelo funcione (ex.: 404
       // "modelo não existe"). Marca o modelo específico e sinaliza reroute em vez de derrubar a
       // task inteira de cara — o orquestrador tenta o próximo candidato qualificado antes de
-      // desistir.
+      // desistir. PROVIDER_TIMEOUT segue o MESMO caminho (fallback), nunca mata a task.
       const classified = modelAvailabilityStore.classifyModelFailure(err);
       modelAvailabilityStore.markUnavailable(coderSelection.providerId, coderSelection.modelId, classified);
       return {
@@ -231,14 +313,18 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
         role: 'CODER',
         failedModelKey: `${coderSelection.providerId}:${coderSelection.modelId}`,
         reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE,
+        failureClass: err.failureClass || null,
+        providerElapsedMs: err.latencyMs ?? null,
         attempt,
       };
     }
     return { outcome: 'RETRY', failureBundle: { failedCommand: 'CODER_GENERATION', stderr: err.message, code: err.code }, attempt };
   }
+  if (run) run.endOperation(coderOp);
   modelAvailabilityStore.markAvailable(coderSelection.providerId, coderSelection.modelId);
+  await recordProgress(run, 'provider_response', `${coderSelection.providerId}:${coderSelection.modelId}`);
 
-  await engineeringTaskService.recordTelemetry({
+  await ts.recordTelemetry({
     ...telemetryBase,
     input_tokens: patchResult.usage?.prompt_tokens ?? null,
     output_tokens: patchResult.usage?.completion_tokens ?? null,
@@ -247,22 +333,23 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   });
 
   const validation = validatePatch(patchResult.diff, { contract: contractFromTask(task) });
-  await engineeringTaskService.updateAttempt(attempt.id, { patch_diff: patchResult.diff, patch_validation: validation });
+  await ts.updateAttempt(attempt.id, { patch_diff: patchResult.diff, patch_validation: validation });
 
   if (!validation.ok) {
-    await engineeringTaskService.updateAttempt(attempt.id, { status: 'PATCH_REJECTED', completed_at: new Date() });
+    await ts.updateAttempt(attempt.id, { status: 'PATCH_REJECTED', completed_at: new Date() });
     return { outcome: 'RETRY', failureBundle: { failedCommand: 'PATCH_VALIDATION', issues: validation.issues, code: validation.code }, attempt };
   }
+  await recordProgress(run, 'patch_produced', `attempt ${attempt.attempt_number}`);
 
   let workspace = null;
   let keepWorkspace = false;
   try {
     workspace = await createWorkspace(task.id, attempt.attempt_number);
-    await engineeringTaskService.updateAttempt(attempt.id, { workspace_path: workspace });
+    await ts.updateAttempt(attempt.id, { workspace_path: workspace });
 
     const applyResult = await applyPatch(workspace, patchResult.diff);
     if (!applyResult.ok) {
-      await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: applyResult.code, stderr: applyResult.stderr }, completed_at: new Date() });
+      await ts.updateAttempt(attempt.id, { status: 'FAILED', error: { code: applyResult.code, stderr: applyResult.stderr }, completed_at: new Date() });
       emitTaskStage(eventAudienceTenantId, task.id, {
         stage: 'PATCH_APPLY',
         status: 'error',
@@ -273,7 +360,8 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'PATCH_APPLY', stderr: applyResult.stderr, code: applyResult.code }, attempt };
     }
 
-    await engineeringTaskService.updateAttempt(attempt.id, { status: 'APPLIED' });
+    await ts.updateAttempt(attempt.id, { status: 'APPLIED' });
+    await recordProgress(run, 'patch_applied', `attempt ${attempt.attempt_number}`);
     // Achado do pilot: mostrar os arquivos realmente tocados assim que o patch aplica é o
     // equivalente, para esta UI, à lista de arquivos editados que a extensão do VSCode mostra
     // em tempo real durante uma edição assistida por IA.
@@ -286,20 +374,41 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       changedFiles,
     });
 
-    await tolerantTransition(task.id, 'TESTING');
+    await tolerantTransition(task.id, 'TESTING', ts);
 
     const testCommands = task.test_commands || [];
+    const timeoutMultiplier = nextTimeoutMultiplier(failureBundle);
     emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'TESTING',
       status: 'running',
       attemptNumber: attempt.attempt_number,
       message: testCommands.length ? `Rodando ${testCommands.length} comando(s) de teste…` : 'Nenhum testCommand definido.',
-      meta: { commands: testCommands },
+      meta: { commands: testCommands, timeoutMultiplier },
     });
-    const testResult = await runTestCommands({ taskId: task.id, attemptNumber: attempt.attempt_number, commands: testCommands, cwd: workspace });
+    const testOp = run ? run.beginOperation('TEST_COMMANDS', { baselineMs: Math.round(policyMs('INTEGRATION_TEST') / 2) }) : null;
+    let testResult;
+    try {
+      testResult = await runTestCommands({
+        taskId: task.id,
+        attemptNumber: attempt.attempt_number,
+        commands: testCommands,
+        cwd: workspace,
+        timeoutMultiplier,
+        signal: testOp ? testOp.signal : null,
+        // Cada comando concluído é PROGRESSO real: uma suíte longa com comandos terminando nunca
+        // é confundida com travamento.
+        onCommandCompleted: (r) => recordProgress(run, 'command_completed', `${r.command} → ${r.outcome || r.status}`),
+      });
+    } catch (err) {
+      if (run) run.endOperation(testOp);
+      const interrupted = await handleOperationInterruption(run, err, attempt, ts);
+      if (interrupted) return interrupted;
+      throw err;
+    }
+    if (run) run.endOperation(testOp);
 
     for (const r of testResult.results) {
-      await engineeringTaskService.createTestRun(attempt.id, {
+      await ts.createTestRun(attempt.id, {
         command: r.command,
         status: r.status,
         exit_code: r.exitCode,
@@ -314,27 +423,41 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     }
 
     if (testCommands.length === 0) {
-      await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: 'NO_TEST_COMMANDS' }, completed_at: new Date() });
+      await ts.updateAttempt(attempt.id, { status: 'FAILED', error: { code: 'NO_TEST_COMMANDS' }, completed_at: new Date() });
       emitTaskStage(eventAudienceTenantId, task.id, { stage: 'TESTING', status: 'error', attemptNumber: attempt.attempt_number, message: 'Nenhum testCommand definido — não há como validar o patch.' });
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'TEST_STAGE', stderr: 'Task Contract não define testCommands — nenhum teste determinístico para validar o patch.' }, attempt };
     }
+    await recordProgress(run, 'test_result', testResult.outcome);
 
     emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'TEST_RESULT',
       status: testResult.allPass ? 'success' : 'error',
       attemptNumber: attempt.attempt_number,
-      message: testResult.allPass ? 'Todos os testes passaram.' : 'Ao menos um teste falhou.',
-      meta: { results: testResult.results.map((r) => ({ command: r.command, status: r.status, exitCode: r.exitCode })) },
+      message: testResult.allPass ? 'Todos os testes passaram.'
+        : testResult.outcome === TEST_OUTCOMES.TIMEOUT ? 'Ao menos um teste excedeu o deadline (TIMEOUT — não é FAIL).'
+          : testResult.outcome === TEST_OUTCOMES.INFRA_ERROR ? 'Infraestrutura de teste indisponível (INFRA_ERROR).'
+            : 'Ao menos um teste falhou.',
+      meta: { outcome: testResult.outcome, results: testResult.results.map((r) => ({ command: r.command, status: r.status, outcome: r.outcome || r.status, exitCode: r.exitCode })) },
     });
 
     if (!testResult.allPass) {
       const failed = testResult.results.find((r) => r.status !== 'PASS');
-      await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', completed_at: new Date() });
+      await ts.updateAttempt(attempt.id, { status: 'FAILED', error: { code: `TEST_${testResult.outcome}`, outcome: testResult.outcome }, completed_at: new Date() });
+      // Reação DIFERENTE por semântica (§26): INFRA_ERROR não prova nada sobre o patch ⇒ a task
+      // fica BLOCKED_INFRA (nunca consome tentativas de CODER contra infraestrutura ausente);
+      // TIMEOUT ⇒ retry com deadline adaptativo; FAIL ⇒ bug, retry RED→FIX.
+      if (testResult.outcome === TEST_OUTCOMES.INFRA_ERROR) {
+        return { outcome: 'BLOCKED_INFRA', reasonCode: FAILURE_CODES.BLOCKED_INFRA, detail: { command: failed.command, status: failed.status, reason: failed.reason || null }, attempt };
+      }
       return {
         outcome: 'RETRY',
         failureBundle: {
           failedCommand: failed.command,
           exitCode: failed.exitCode,
+          failureKind: testResult.outcome,
+          timedOut: testResult.outcome === TEST_OUTCOMES.TIMEOUT,
+          timeoutMultiplier,
+          deadlineMs: failed.deadlineMs || testResult.deadlineMs || null,
           stderr: failed.stderrExcerpt || failed.reason,
           failedTests: [],
         },
@@ -342,8 +465,8 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       };
     }
 
-    await engineeringTaskService.updateAttempt(attempt.id, { status: 'TESTED' });
-    await tolerantTransition(task.id, 'REVIEWING');
+    await ts.updateAttempt(attempt.id, { status: 'TESTED' });
+    await tolerantTransition(task.id, 'REVIEWING', ts);
 
     const reviewerSelection = routingDecision?.reviewer?.selected;
     if (!reviewerSelection) {
@@ -359,6 +482,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
 
     const reviewTelemetryBase = { task_id: task.id, attempt_id: attempt.id, role: 'REVIEWER', provider: reviewerSelection.providerId, model: reviewerSelection.modelId };
     let reviewResult;
+    const reviewOp = run ? run.beginOperation('REVIEW', { baselineMs: Math.round(policyMs('PROVIDER_REQUEST') / 2) }) : null;
     try {
       reviewResult = await review({
         task: context.task,
@@ -368,15 +492,27 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
         providerId: reviewerSelection.providerId,
         modelId: reviewerSelection.modelId,
         tenantId: credentialScope,
+        signal: reviewOp ? reviewOp.signal : null,
+        deadlineMeta: run ? run.deadlineMeta(task, 'REVIEWING') : {},
       });
     } catch (err) {
-      await engineeringTaskService.recordTelemetry({ ...reviewTelemetryBase, result: 'FAILURE', test_pass: true });
+      if (run) run.endOperation(reviewOp);
+      const interrupted = await handleOperationInterruption(run, err, attempt, ts);
+      if (interrupted) return interrupted;
+      const timedOut = err.failureClass === 'PROVIDER_TIMEOUT';
+      await ts.recordTelemetry({
+        ...reviewTelemetryBase,
+        result: timedOut ? 'TIMEOUT' : 'FAILURE',
+        test_pass: true,
+        event_type: timedOut ? 'PROVIDER_TIMEOUT' : null,
+        detail: timedOut ? { ...err.expiry, fallback: 'REROUTE', outcome: 'ATTEMPT_TIMED_OUT' } : null,
+      });
       emitTaskStage(eventAudienceTenantId, task.id, {
         stage: 'REVIEWING',
         status: 'error',
         attemptNumber: attempt.attempt_number,
-        message: `Reviewer falhou: ${err.message}`,
-        meta: { code: err.code },
+        message: timedOut ? `Reviewer expirou (PROVIDER_TIMEOUT) — tentando fallback: ${err.message}` : `Reviewer falhou: ${err.message}`,
+        meta: { code: err.code, failureClass: err.failureClass || null },
       });
       if (err.code === FAILURE_CODES.PROVIDER_UNAVAILABLE) {
         const classified = modelAvailabilityStore.classifyModelFailure(err);
@@ -386,14 +522,17 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
           role: 'REVIEWER',
           failedModelKey: `${reviewerSelection.providerId}:${reviewerSelection.modelId}`,
           reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE,
+          failureClass: err.failureClass || null,
+          providerElapsedMs: err.latencyMs ?? null,
           attempt,
         };
       }
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'REVIEW_STAGE', stderr: err.message }, attempt };
     }
+    if (run) run.endOperation(reviewOp);
     modelAvailabilityStore.markAvailable(reviewerSelection.providerId, reviewerSelection.modelId);
 
-    await engineeringTaskService.recordTelemetry({
+    await ts.recordTelemetry({
       ...reviewTelemetryBase,
       input_tokens: reviewResult.usage?.prompt_tokens ?? null,
       output_tokens: reviewResult.usage?.completion_tokens ?? null,
@@ -403,13 +542,14 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       review_result: reviewResult.decision,
     });
 
-    await engineeringTaskService.createReview(attempt.id, {
+    await ts.createReview(attempt.id, {
       reviewer_provider: reviewerSelection.providerId,
       reviewer_model: reviewerSelection.modelId,
       decision: reviewResult.decision,
       findings: reviewResult.findings,
       independent_of_coder: routingDecision.independentReviewApplied,
     });
+    await recordProgress(run, 'reviewer_result', reviewResult.decision);
 
     emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'REVIEW_DECISION',
@@ -421,11 +561,11 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
 
     if (reviewResult.decision === 'REJECT') {
       const blocking = reviewResult.findings.filter((f) => f.severity === 'BLOCKER' || f.severity === 'REGRESSION');
-      await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', completed_at: new Date() });
+      await ts.updateAttempt(attempt.id, { status: 'FAILED', completed_at: new Date() });
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'REVIEW', findings: blocking }, attempt };
     }
 
-    await engineeringTaskService.updateAttempt(attempt.id, { status: 'DONE', completed_at: new Date() });
+    await ts.updateAttempt(attempt.id, { status: 'DONE', completed_at: new Date() });
     // ERV1-CLOSE-005: em caso de ADVANCE, o workspace com o patch já aplicado É o material que
     // a Promotion precisa (tree hash pós-patch) — não pode ser destruído aqui. O chamador
     // (`executeRoutedLoop`) assume a responsabilidade de destruí-lo depois que a promoção
@@ -456,7 +596,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
  * só DEPOIS de garantir o lock, para a resposta HTTP poder refletir 409 de verdade em vez de
  * sempre 202 mesmo quando a segunda chamada concorrente nunca chega a rodar).
  */
-async function acquireRunLock(taskId, runnerId) {
+async function acquireRunLock(taskId, runnerId, { lease = null } = {}) {
   const task = await engineeringTaskService.getTask(taskId);
   if (!task) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
 
@@ -469,15 +609,40 @@ async function acquireRunLock(taskId, runnerId) {
     return { task, alreadyTerminal: true };
   }
 
-  await engineeringTaskService.lockForRun(taskId, runnerId);
-  return { task, alreadyTerminal: false };
+  // PROPAGAÇÃO DE POSSE (§49): quando o chamador (recovery) já tomou o lease, a execução usa
+  // EXATAMENTE aquele workerInstanceId + token + fence — nunca cria um "Runner B" com outra
+  // identidade que seria recusado pelo próprio lease (ou, pior, reabriria o lease com fence novo
+  // invalidando a posse que o recovery acabou de provar).
+  if (lease && lease.token) {
+    const current = await engineeringTaskService.getTaskLease(taskId);
+    if (!current || current.token !== lease.token || current.workerInstanceId !== runnerId) {
+      const err = new Error('lease propagado não é mais o vigente — outro worker assumiu a task');
+      err.code = FAILURE_CODES.TASK_LEASE_LOST;
+      throw err;
+    }
+    return { task, alreadyTerminal: false, lease: current, takeover: null };
+  }
+
+  // Posse NORMAL: TaskLease (CAS, fence+1). Não existe mais caminho de execução sem lease.
+  const locked = await engineeringTaskService.lockForRun(taskId, runnerId, { host: os.hostname() });
+  return { task, alreadyTerminal: false, lease: locked.lease, takeover: locked.leaseTakeover || null };
 }
 
-async function runLockedTask(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null }) {
+async function runLockedTask(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null, lease, runnerId, onProgress = null }) {
   const taskId = task.id;
+  // TASK START → heartbeat começa → (trabalho, renovações, progresso) → fim → heartbeat para →
+  // lease é liberado. Nenhuma execução material acontece sem este contexto de posse.
+  const run = createTaskRun({ taskId, runnerId, lease, onProgress });
+  logger.info('[engineeringRouterService] execução com posse de lease', { taskId, runnerId, fence: lease.fence, pid: process.pid });
   try {
-    return await executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard });
+    return await executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard, run });
   } catch (err) {
+    // POSSE PERDIDA: outro worker assumiu (heartbeat falhou / fence maior). Este worker PARA sem
+    // escrever mais nada — o estado da task pertence ao novo dono.
+    if (isOwnershipLoss(run, err)) {
+      logger.warn('[engineeringRouterService] posse perdida — execução encerrada sem novas escritas', { taskId, runnerId, code: err.code });
+      return { taskId, status: 'LEASE_LOST', reasonCode: FAILURE_CODES.TASK_LEASE_LOST, fence: lease.fence };
+    }
     // Cancelamento concorrente (POST /tasks/:id/cancel enquanto este loop já estava rodando)
     // aparece como uma transição de estado agora inválida a partir de CANCELLED — tratado como
     // um resultado normal, nunca como exceção não tratada.
@@ -496,24 +661,36 @@ async function runLockedTask(task, { credentialScope, eventAudienceTenantId, spe
     }
     throw err;
   } finally {
-    await engineeringTaskService.unlockTask(taskId);
+    run.stop();
+    // Só libera o lease se ele ainda for DESTE worker (token): um worker que perdeu a posse nunca
+    // apaga o lease do novo dono.
+    await engineeringTaskService.releaseTaskLease(taskId, { leaseToken: lease.token }).catch(() => {});
   }
 }
 
 async function runTask(taskId, {
-  runnerId = `runner-${process.pid}-${Date.now()}`,
+  runnerId = newRunnerId(),
   credentialScope = ENGINEERING_CREDENTIAL_SCOPE,
   eventAudienceTenantId = null,
   specFreshnessGuard = null,
+  lease = null,
+  onProgress = null,
 } = {}) {
-  const { task, alreadyTerminal } = await acquireRunLock(taskId, runnerId);
-  if (alreadyTerminal) return { taskId, status: task.status, idempotent: true };
+  const acquired = await acquireRunLock(taskId, runnerId, { lease });
+  if (acquired.alreadyTerminal) return { taskId, status: acquired.task.status, idempotent: true };
 
   // Sem audiência explícita (ex.: worker de background sem requisição HTTP associada), o
   // evento cai no próprio credentialScope — mesmo default de sempre para quem não pediu uma
   // audiência específica. Nunca o inverso (nunca derivar credentialScope da audiência).
   const resolvedAudience = eventAudienceTenantId || credentialScope;
-  return runLockedTask(task, { credentialScope, eventAudienceTenantId: resolvedAudience, specFreshnessGuard });
+  return runLockedTask(acquired.task, {
+    credentialScope,
+    eventAudienceTenantId: resolvedAudience,
+    specFreshnessGuard,
+    lease: acquired.lease,
+    runnerId,
+    onProgress,
+  });
 }
 
 /**
@@ -530,39 +707,73 @@ async function assertSpecFresh(guard, phase, taskId) {
 }
 
 /**
- * ERV1-CLOSE-009: variante para a camada HTTP. Adquire o lock de forma SÍNCRONA (awaited) —
- * uma segunda chamada concorrente genuína recebe `TASK_ALREADY_RUNNING` aqui, antes de qualquer
- * resposta HTTP ser enviada — e só então dispara o loop de execução (que pode envolver várias
- * chamadas de LLM/testes reais) em background. Nunca use isto para aguardar o resultado final;
- * é só para tornar a resposta 202/409 honesta sobre se a execução realmente começou.
+ * ERV1-CLOSE-009: variante para a camada HTTP. Adquire a POSSE (lease) de forma SÍNCRONA
+ * (awaited) — uma segunda chamada concorrente genuína recebe `TASK_ALREADY_RUNNING` aqui, antes de
+ * qualquer resposta HTTP ser enviada — e só então dispara o loop de execução em background.
  *
  * @returns {Promise<{taskId:string, status:string, accepted:boolean}>}
  */
 async function beginRun(taskId, {
-  runnerId = `runner-${process.pid}-${Date.now()}`,
+  runnerId = newRunnerId(),
   credentialScope = ENGINEERING_CREDENTIAL_SCOPE,
   eventAudienceTenantId = null,
 } = {}) {
-  const { task, alreadyTerminal } = await acquireRunLock(taskId, runnerId);
-  if (alreadyTerminal) return { taskId, status: task.status, accepted: false };
+  const acquired = await acquireRunLock(taskId, runnerId);
+  if (acquired.alreadyTerminal) return { taskId, status: acquired.task.status, accepted: false };
 
   const resolvedAudience = eventAudienceTenantId || credentialScope;
-  // Fire-and-forget de propósito: o lock já foi adquirido de verdade acima (síncrono); o que
+  // Fire-and-forget de propósito: a posse já foi adquirida de verdade acima (síncrono); o que
   // resta (chamadas de LLM, testes reais) pode legitimamente exceder o timeout de uma
-  // requisição HTTP.
-  runLockedTask(task, { credentialScope, eventAudienceTenantId: resolvedAudience })
+  // requisição HTTP — e é o heartbeat que mantém a posse enquanto isso dura.
+  runLockedTask(acquired.task, { credentialScope, eventAudienceTenantId: resolvedAudience, lease: acquired.lease, runnerId })
     .catch((err) => logger.error('[engineeringRouterService] beginRun: execução em background falhou', { taskId, error: err.message, code: err.code }));
 
-  return { taskId, status: 'ACCEPTED', accepted: true };
+  return { taskId, status: 'ACCEPTED', accepted: true, fence: acquired.lease.fence };
 }
 
-async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null }) {
+/**
+ * Orçamento da cadeia de fallback de provider (§62): nunca loop infinito de reroute. Guardas do
+ * registry (`PROVIDER_FALLBACK.guards`): tentativas e tempo total gasto em chamadas de provider que
+ * falharam. Esgotar ⇒ PROVIDER_EXHAUSTED (task BLOCKED, missão replaneja) — nunca crash.
+ */
+function createProviderBudget() {
+  const policy = resolvePolicy('PROVIDER_FALLBACK');
+  const registryGuards = require('../../../engine/shared/executionDeadline').loadPolicyRegistry()?.policies?.PROVIDER_FALLBACK?.guards || {};
+  return {
+    maxAttempts: Number(registryGuards.maxProviderAttempts) || 6,
+    maxElapsedMs: Math.min(Number(registryGuards.maxProviderElapsedMs) || policy.resolved, policy.resolved),
+    failedAttempts: 0,
+    elapsedMs: 0,
+    timeouts: 0,
+    register(result) {
+      this.failedAttempts += 1;
+      this.elapsedMs += Number(result.providerElapsedMs) || 0;
+      if (result.failureClass === 'PROVIDER_TIMEOUT') this.timeouts += 1;
+    },
+    exhausted() {
+      if (this.failedAttempts >= this.maxAttempts) return `tentativas de provider esgotadas (${this.failedAttempts}/${this.maxAttempts})`;
+      if (this.elapsedMs >= this.maxElapsedMs) return `orçamento de tempo de provider esgotado (${this.elapsedMs}ms/${this.maxElapsedMs}ms)`;
+      return null;
+    },
+  };
+}
+
+async function blockTask(taskId, ts, eventAudienceTenantId, { code, message, detail = null }) {
+  logger.warn('[engineeringRouterService] task BLOCKED', { taskId, code, message });
+  await ts.saveLastError(taskId, { code, message, ...(detail ? { detail } : {}) });
+  await ts.transitionTask(taskId, 'BLOCKED');
+  emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message, meta: { code, detail } });
+  return { taskId, status: 'BLOCKED', reasonCode: code };
+}
+
+async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null, run = null }) {
   const taskId = task.id;
-  task = await ensureRouted(task, { credentialScope, eventAudienceTenantId });
+  const ts = writesFor(run);
+  task = await ensureRouted(task, { credentialScope, eventAudienceTenantId, run });
 
   if (!task.routing_decision?.coder?.selected) {
-    await engineeringTaskService.saveLastError(taskId, { code: 'NO_QUALIFIED_CODER', message: 'Nenhum CODER qualificado disponível' });
-    await engineeringTaskService.transitionTask(taskId, 'RED');
+    await ts.saveLastError(taskId, { code: 'NO_QUALIFIED_CODER', message: 'Nenhum CODER qualificado disponível' });
+    await ts.transitionTask(taskId, 'RED');
     emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
     return { taskId, status: 'RED', reasonCode: 'NO_QUALIFIED_CODER' };
   }
@@ -573,45 +784,57 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
   const lastAttempt = existingAttempts[existingAttempts.length - 1] || null;
   if (lastAttempt && lastAttempt.failure_bundle) failureBundle = lastAttempt.failure_bundle;
 
-  // ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — achado real: antes desta correção,
-  // `executeRoutedLoop` SEMPRE entrava no `while` abaixo e chamava `runOneAttempt` do zero
-  // (nova chamada de CODER, novo patch, novo workspace), não importa em qual fase a task
-  // estivesse quando o PROCESSO (não só a promise) morreu. Se o crash acontecesse depois de
-  // REGRESSION/GOVERNANCE já terem passado de verdade — ou pior, depois do candidate de
-  // PROMOTING já ter sido criado de verdade no git —, esse progresso real ficava órfão e
-  // escondido: o restart nunca sequer chegava a olhar `operationService.beginOrReconcile`
-  // (que já existe e já é seguro, ver `advanceFromCodedAttempt`) porque o loop nunca re-entrava
-  // na fase ADVANCE por conta própria. Resolvido: ANTES de decidir criar uma tentativa nova,
-  // verifica se a ÚLTIMA tentativa persistida já passou por CODING/TESTING/REVIEWING com
-  // sucesso real (`status === 'DONE'`, diff/workspace persistidos) e a TASK está numa fase
-  // pós-CODE (REGRESSION/GOVERNANCE/PROMOTING/POST_PROMOTION_VERIFY/READY_FOR_PROMOTION) — se
-  // sim, RETOMA por ali, nunca cria uma tentativa nova redundante nem arrisca reexecutar
-  // REGRESSION/GOVERNANCE/PROMOTING do zero sem checar o que já é real.
+  // ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — antes de decidir criar uma tentativa nova,
+  // verifica se a ÚLTIMA tentativa persistida já passou por CODING/TESTING/REVIEWING com sucesso
+  // real e a TASK está numa fase pós-CODE — se sim, RETOMA por ali, nunca cria uma tentativa nova
+  // redundante nem reexecuta REGRESSION/GOVERNANCE/PROMOTING do zero sem checar o que já é real.
   await assertSpecFresh(specFreshnessGuard, 'ADVANCE_RESUME', taskId);
-  const resumed = await resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTenantId });
+  const resumed = await resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTenantId, run });
   if (resumed) return resumed;
 
   // ERV1-CLOSE-008: acumula, para esta execução da task, todo modelo que já falhou por
   // indisponibilidade real — nunca reselecionar o mesmo candidato quebrado num reroute
   // seguinte dentro da mesma task.
   const excludedModelKeys = new Set();
+  const providerBudget = createProviderBudget();
 
   while (iterationsUsed < task.max_iterations) {
     // Fase CODING: consome LLM, gera patch e cria workspace. É trabalho material — não roda sobre
     // contrato obsoleto.
     await assertSpecFresh(specFreshnessGuard, 'CODING', taskId);
-    const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, credentialScope, eventAudienceTenantId });
+    if (run) await run.assertHeld();
+    const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, credentialScope, eventAudienceTenantId, run });
     iterationsUsed += 1;
 
     if (result.outcome === 'FATAL') {
-      await engineeringTaskService.saveLastError(taskId, { code: result.reasonCode, message: `Falha fatal: ${result.reasonCode}` });
-      await engineeringTaskService.transitionTask(taskId, 'RED');
+      await ts.saveLastError(taskId, { code: result.reasonCode, message: `Falha fatal: ${result.reasonCode}` });
+      await ts.transitionTask(taskId, 'RED');
       emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: `Falha fatal: ${result.reasonCode}` });
       return { taskId, status: 'RED', reasonCode: result.reasonCode };
     }
 
+    if (result.outcome === 'BLOCKED_INFRA') {
+      // INFRA_ERROR não diz nada sobre o patch: nunca RED, nunca queima tentativas de CODER.
+      return blockTask(taskId, ts, eventAudienceTenantId, {
+        code: FAILURE_CODES.BLOCKED_INFRA,
+        message: `Infraestrutura de execução indisponível (${result.detail?.status || 'INFRA_ERROR'}) — task BLOCKED_INFRA, nenhum veredito sobre o patch.`,
+        detail: result.detail,
+      });
+    }
+
     if (result.outcome === 'REROUTE') {
       excludedModelKeys.add(result.failedModelKey);
+      providerBudget.register(result);
+      if (result.failureClass === 'PROVIDER_TIMEOUT') recordLivenessEvent('TIMEOUT_FALLBACK', { taskId, failedModelKey: result.failedModelKey, role: result.role });
+      const exhaustedReason = providerBudget.exhausted();
+      if (exhaustedReason) {
+        recordLivenessEvent('PROVIDER_EXHAUSTED', { taskId, reason: exhaustedReason });
+        return blockTask(taskId, ts, eventAudienceTenantId, {
+          code: FAILURE_CODES.PROVIDER_EXHAUSTED,
+          message: `PROVIDER_EXHAUSTED: ${exhaustedReason} — a missão pode replanejar; o worker segue vivo.`,
+          detail: { failedAttempts: providerBudget.failedAttempts, elapsedMs: providerBudget.elapsedMs, timeouts: providerBudget.timeouts },
+        });
+      }
       const policy = getPolicy(task.task_type);
       const independentRequired = requiresIndependentReview(task.task_type, task.risk);
       const availableModels = await buildAvailableModels({ tenantId: credentialScope });
@@ -629,11 +852,21 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
         : !newRoutingDecision.reviewer?.selected;
 
       if (stillNoCandidate) {
-        await engineeringTaskService.saveLastError(taskId, {
+        if (providerBudget.timeouts > 0 && providerBudget.timeouts === providerBudget.failedAttempts) {
+          // Toda a cadeia caiu por TIMEOUT de provider: é dependência externa esgotada, não bug do
+          // patch nem da task — BLOCKED (replanejável), nunca RED.
+          recordLivenessEvent('PROVIDER_EXHAUSTED', { taskId, reason: 'NO_ALTERNATIVE_AFTER_TIMEOUTS' });
+          return blockTask(taskId, ts, eventAudienceTenantId, {
+            code: FAILURE_CODES.PROVIDER_EXHAUSTED,
+            message: `PROVIDER_EXHAUSTED: nenhum ${result.role} alternativo após ${providerBudget.timeouts} timeout(s) de provider.`,
+            detail: { failedAttempts: providerBudget.failedAttempts, timeouts: providerBudget.timeouts },
+          });
+        }
+        await ts.saveLastError(taskId, {
           code: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE,
           message: `Nenhum ${result.role} alternativo disponível após ${result.failedModelKey} falhar (${result.reasonCode})`,
         });
-        await engineeringTaskService.transitionTask(taskId, 'RED');
+        await ts.transitionTask(taskId, 'RED');
         emitTaskStage(eventAudienceTenantId, taskId, {
           stage: 'RED',
           status: 'error',
@@ -642,17 +875,17 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
         return { taskId, status: 'RED', reasonCode: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE };
       }
 
-      await engineeringTaskService.saveRoutingDecision(taskId, newRoutingDecision);
+      await ts.saveRoutingDecision(taskId, newRoutingDecision);
       task = { ...task, routing_decision: newRoutingDecision };
       const newSelection = result.role === 'CODER' ? newRoutingDecision.coder.selected : newRoutingDecision.reviewer.selected;
       emitTaskStage(eventAudienceTenantId, taskId, {
         stage: 'REROUTE',
         status: 'info',
-        message: `${result.failedModelKey} indisponível — reroteado para ${newSelection.providerId}:${newSelection.modelId} (${result.role}).`,
-        meta: { failedModelKey: result.failedModelKey, role: result.role, reasonCode: result.reasonCode },
+        message: `${result.failedModelKey} ${result.failureClass === 'PROVIDER_TIMEOUT' ? 'expirou (PROVIDER_TIMEOUT)' : 'indisponível'} — reroteado para ${newSelection.providerId}:${newSelection.modelId} (${result.role}).`,
+        meta: { failedModelKey: result.failedModelKey, role: result.role, reasonCode: result.reasonCode, failureClass: result.failureClass || null },
       });
-      failureBundle = { failedCommand: `${result.role}_REROUTE`, stderr: `${result.failedModelKey} indisponível (${result.reasonCode})` };
-      logger.info('[engineeringRouterService] reroute de modelo', { taskId, role: result.role, failedModelKey: result.failedModelKey });
+      failureBundle = { failedCommand: `${result.role}_REROUTE`, stderr: `${result.failedModelKey} indisponível (${result.reasonCode}${result.failureClass ? `/${result.failureClass}` : ''})` };
+      logger.info('[engineeringRouterService] reroute de modelo', { taskId, role: result.role, failedModelKey: result.failedModelKey, failureClass: result.failureClass || null });
       continue;
     }
 
@@ -660,7 +893,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
       // Fase pós-CODING: REGRESSION/GOVERNANCE e, sobretudo, PROMOTING (candidate commit + branch
       // já criados = efeito real e irreversível). Revalida ANTES de promover.
       await assertSpecFresh(specFreshnessGuard, 'ADVANCE_PROMOTION', taskId);
-      return advanceFromCodedAttempt(task, result, { eventAudienceTenantId });
+      return advanceFromCodedAttempt(task, result, { eventAudienceTenantId, run });
     }
 
     // RETRY
@@ -668,13 +901,13 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
     emitTaskStage(eventAudienceTenantId, taskId, {
       stage: 'RETRY',
       status: 'info',
-      message: `Tentativa ${iterationsUsed}/${task.max_iterations} falhou (${failureBundle?.failedCommand || 'motivo desconhecido'}) — iniciando nova tentativa.`,
+      message: `Tentativa ${iterationsUsed}/${task.max_iterations} falhou (${failureBundle?.failedCommand || 'motivo desconhecido'}${failureBundle?.failureKind ? ` — ${failureBundle.failureKind}` : ''}) — iniciando nova tentativa.`,
     });
-    logger.info('[engineeringRouterService] RED->FIX: nova tentativa', { taskId, iterationsUsed, reason: failureBundle?.failedCommand });
+    logger.info('[engineeringRouterService] RED->FIX: nova tentativa', { taskId, iterationsUsed, reason: failureBundle?.failedCommand, failureKind: failureBundle?.failureKind || null });
   }
 
-  await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED, message: `Esgotadas ${task.max_iterations} tentativas` });
-  await engineeringTaskService.transitionTask(taskId, 'RED');
+  await ts.saveLastError(taskId, { code: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED, message: `Esgotadas ${task.max_iterations} tentativas` });
+  await ts.transitionTask(taskId, 'RED');
   emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: `Esgotadas ${task.max_iterations} tentativas.` });
   return { taskId, status: 'RED', reasonCode: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED };
 }
@@ -694,8 +927,11 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
  * evidência real (ex.: `findExistingCandidate` para PROMOTING), FAIL_SAFE nunca roda
  * concorrentemente com outra execução real da MESMA fase.
  */
-async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) {
+async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId, run = null }) {
   const taskId = task.id;
+  const ts = writesFor(run);
+  // Efeitos de fase (operações de REGRESSION/GOVERNANCE/PROMOTING) só com posse comprovada.
+  const held = async () => { if (run) await run.assertHeld(); };
   // ERV1-CLOSE-005: `runOneAttempt` deliberadamente NÃO destrói o workspace num ADVANCE —
   // a Promotion precisa dele (tree pós-patch) mais abaixo. Esta função assume a
   // responsabilidade de destruí-lo, em QUALQUER saída deste bloco (RED de regressão/
@@ -707,13 +943,14 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
   // que começa várias fases à frente do valor original de `task.status`.
   const currentStatusRef = { value: task.status };
   try {
-        await enterAdvancePhase(taskId, 'REGRESSION', currentStatusRef);
+        await enterAdvancePhase(taskId, 'REGRESSION', currentStatusRef, ts);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Executando RegressionPlan real (proporcional ao risco) em workspace isolado.' });
 
         // ER-V1-SEAL-002 (Full Durable Resume): REGRESSION nunca tem efeito colateral externo
         // irreversível (só executa comandos e persiste evidência) — um RUNNING órfão (crash no
         // meio) é seguro reexecutar do zero. RESUME reusa a evidência já persistida sem rodar
         // os comandos de novo; FAIL_SAFE nunca roda concorrentemente com outra execução real.
+        await held();
         const regressionOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'REGRESSION' });
         let regressionResult;
         if (regressionOp.action === 'RESUME') {
@@ -729,34 +966,59 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
           // risco declarado (LOW: targeted; MEDIUM: +related; HIGH: +subsystem; CRITICAL:
           // +governance gate) — nunca mais uma simples releitura de evidência da fase TESTING.
           const touchedPaths = await listChangedFiles(result.workspace).catch(() => []);
-          regressionResult = await checkRegression({
-            taskId,
-            attemptId,
-            workspacePath: result.workspace,
-            touchedPaths,
-            risk: task.risk,
-            targetedCommands: task.test_commands || [],
-          });
+          const regressionLiveOp = run ? run.beginOperation('REGRESSION', { baselineMs: Math.round(policyMs('REGRESSION') / 2) }) : null;
+          try {
+            regressionResult = await checkRegression({
+              taskId,
+              attemptId,
+              workspacePath: result.workspace,
+              touchedPaths,
+              risk: task.risk,
+              targetedCommands: task.test_commands || [],
+              signal: regressionLiveOp ? regressionLiveOp.signal : null,
+              onCommandCompleted: (r) => recordProgress(run, 'command_completed', `regressão: ${r.command} → ${r.outcome || r.status}`),
+              assertHeld: run ? () => run.assertHeld() : null,
+            });
+          } catch (err) {
+            if (run) run.endOperation(regressionLiveOp);
+            if (isOwnershipLoss(run, err)) throw err;
+            if (err.code === 'OPERATION_CANCELLED' || err.code === 'NO_PROGRESS') {
+              await operationService.failOperation(regressionOp.operation.id, { error: new Error('regressão cancelada por NO_PROGRESS') });
+              return blockTask(taskId, ts, eventAudienceTenantId, { code: 'REGRESSION_NO_PROGRESS', message: 'Regressão cancelada: worker vivo sem progresso significativo (diagnóstico registrado).' });
+            }
+            throw err;
+          }
+          if (run) run.endOperation(regressionLiveOp);
           if (regressionResult.pass) {
             await operationService.completeOperation(regressionOp.operation.id, { evidenceRef: regressionResult.evidence });
           } else {
             await operationService.failOperation(regressionOp.operation.id, { error: new Error('regressão reprovou') });
           }
         }
-        await engineeringTaskService.updateAttempt(attemptId, { regression_evidence: regressionResult.evidence });
+        await ts.updateAttempt(attemptId, { regression_evidence: regressionResult.evidence });
+        await recordProgress(run, 'regression_completed', regressionResult.outcome || (regressionResult.pass ? 'PASS' : 'FAIL'));
+        if (!regressionResult.pass && (regressionResult.outcome === TEST_OUTCOMES.INFRA_ERROR || regressionResult.outcome === TEST_OUTCOMES.TIMEOUT)) {
+          // TIMEOUT/INFRA_ERROR na regressão NÃO são reprovação do patch — nunca RED por isso.
+          return blockTask(taskId, ts, eventAudienceTenantId, {
+            code: regressionResult.outcome === TEST_OUTCOMES.INFRA_ERROR ? FAILURE_CODES.BLOCKED_INFRA : 'REGRESSION_TIMEOUT',
+            message: `Regressão sem veredito (${regressionResult.outcome}) — task BLOCKED para replanejar, nunca RED por timeout/infra.`,
+            detail: regressionResult.evidence,
+          });
+        }
         if (!regressionResult.pass) {
-          await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.REGRESSION_FAILED, message: 'Regressão real reprovou após review aprovar', evidence: regressionResult.evidence });
-          await tolerantTransition(taskId, 'RED');
+          await ts.saveLastError(taskId, { code: FAILURE_CODES.REGRESSION_FAILED, message: 'Regressão real reprovou após review aprovar', evidence: regressionResult.evidence });
+          await tolerantTransition(taskId, 'RED', ts);
           emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Regressão reprovou — nunca GREEN sem evidência real.', meta: regressionResult.evidence });
           return { taskId, status: 'RED', reasonCode: FAILURE_CODES.REGRESSION_FAILED };
         }
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real: ${regressionResult.evidence.commandCount || 0} comando(s) PASS.`, meta: regressionResult.evidence });
 
-        await enterAdvancePhase(taskId, 'GOVERNANCE', currentStatusRef);
+        await enterAdvancePhase(taskId, 'GOVERNANCE', currentStatusRef, ts);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Executando gate de governança real (scripts/governance/validate-engineering-router-v1.js).' });
 
         // Mesma lógica de reconciliação de REGRESSION — GOVERNANCE também não tem efeito
         // colateral externo irreversível.
+        await held();
         const governanceOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'GOVERNANCE' });
         let governanceResult;
         if (governanceOp.action === 'RESUME') {
@@ -770,17 +1032,37 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
           }
           // ERV1-CLOSE-004: GOVERNANCE executa de verdade a autoridade canônica já existente —
           // nunca reimplementa governança, nunca finge sucesso por status.
-          governanceResult = await checkGovernance();
+          const governanceLiveOp = run ? run.beginOperation('GOVERNANCE_GATE', { baselineMs: Math.round(policyMs('REGRESSION_COMMAND') / 2) }) : null;
+          try {
+            governanceResult = await checkGovernance({ signal: governanceLiveOp ? governanceLiveOp.signal : null });
+          } catch (err) {
+            if (run) run.endOperation(governanceLiveOp);
+            if (isOwnershipLoss(run, err)) throw err;
+            if (err.code === 'OPERATION_CANCELLED') {
+              await operationService.failOperation(governanceOp.operation.id, { error: new Error('gate cancelado por NO_PROGRESS') });
+              return blockTask(taskId, ts, eventAudienceTenantId, { code: 'GOVERNANCE_NO_PROGRESS', message: 'Gate de governança cancelado: sem progresso significativo.' });
+            }
+            throw err;
+          }
+          if (run) run.endOperation(governanceLiveOp);
           if (governanceResult.pass) {
             await operationService.completeOperation(governanceOp.operation.id, { evidenceRef: governanceResult.evidence });
           } else {
             await operationService.failOperation(governanceOp.operation.id, { error: new Error('gate de governança reprovou') });
           }
         }
-        await engineeringTaskService.updateAttempt(attemptId, { governance_evidence: governanceResult.evidence });
+        await ts.updateAttempt(attemptId, { governance_evidence: governanceResult.evidence });
+        await recordProgress(run, 'gate_completed', governanceResult.outcome || (governanceResult.pass ? 'PASS' : 'FAIL'));
+        if (!governanceResult.pass && (governanceResult.outcome === TEST_OUTCOMES.TIMEOUT || governanceResult.outcome === TEST_OUTCOMES.INFRA_ERROR)) {
+          return blockTask(taskId, ts, eventAudienceTenantId, {
+            code: governanceResult.outcome === TEST_OUTCOMES.TIMEOUT ? 'GOVERNANCE_TIMEOUT' : FAILURE_CODES.BLOCKED_INFRA,
+            message: `Gate de governança sem veredito (${governanceResult.outcome}) — BLOCKED, nunca RED por timeout/infra.`,
+            detail: governanceResult.evidence,
+          });
+        }
         if (!governanceResult.pass) {
-          await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.GOVERNANCE_FAILED, message: 'Gate de governança real reprovou', evidence: governanceResult.evidence });
-          await tolerantTransition(taskId, 'RED');
+          await ts.saveLastError(taskId, { code: FAILURE_CODES.GOVERNANCE_FAILED, message: 'Gate de governança real reprovou', evidence: governanceResult.evidence });
+          await tolerantTransition(taskId, 'RED', ts);
           emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Governance reprovou — nunca GREEN sem o gate real passando.', meta: governanceResult.evidence });
           return { taskId, status: 'RED', reasonCode: FAILURE_CODES.GOVERNANCE_FAILED };
         }
@@ -790,10 +1072,11 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
         // efeito real e IRREVERSÍVEL (commit + branch reais). Um RUNNING órfão aqui NUNCA pode
         // ser tratado como "seguro repetir" sem antes checar evidência EXTERNA real (a branch
         // candidata já existe?) — nunca promover duas vezes por crash.
-        await enterAdvancePhase(taskId, 'PROMOTING', currentStatusRef);
+        await enterAdvancePhase(taskId, 'PROMOTING', currentStatusRef, ts);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'PROMOTION', status: 'running', message: 'Promovendo patch validado (commit + branch local dedicada, sem push/merge).' });
 
         const validatedPatchHashForReconcile = computeValidatedPatchHash(result.diff);
+        await held();
         const promotingOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'PROMOTING' });
         let candidateResult;
         if (promotingOp.action === 'RESUME') {
@@ -848,11 +1131,11 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
         }
 
         if (!candidateResult.created) {
-          await engineeringTaskService.updateAttempt(attemptId, {
+          await ts.updateAttempt(attemptId, {
             promotion_evidence: { ...candidateResult.evidence, code: candidateResult.code },
             promotion_status: 'READY_FOR_PROMOTION',
           });
-          await tolerantTransition(taskId, 'READY_FOR_PROMOTION');
+          await tolerantTransition(taskId, 'READY_FOR_PROMOTION', ts);
           emitTaskStage(eventAudienceTenantId, taskId, {
             stage: 'READY_FOR_PROMOTION',
             status: 'error',
@@ -871,9 +1154,10 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
 
         // ER-V1-SEAL-002: POST_PROMOTION_VERIFY — o candidate já existe de verdade (efeito
         // irreversível já aconteceu); esta fase só confirma via smoke, nunca duplica nada.
-        await enterAdvancePhase(taskId, 'POST_PROMOTION_VERIFY', currentStatusRef);
+        await enterAdvancePhase(taskId, 'POST_PROMOTION_VERIFY', currentStatusRef, ts);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'POST_PROMOTION_VERIFY', status: 'running', message: 'Confirmando smoke pós-promoção em worktree novo a partir do candidate real.' });
 
+        await held();
         const verifyOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'POST_PROMOTION_VERIFY' });
         let verifyResult;
         if (verifyOp.action === 'RESUME') {
@@ -913,7 +1197,7 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
         // Achado real ao validar a tela de detalhe da task no browser: o motivo exato de uma
         // promoção não completada só existia no evento WebSocket ao vivo e no valor de retorno
         // — nunca era persistido junto com `promotion_evidence`. Mesclado aqui.
-        await engineeringTaskService.updateAttempt(attemptId, {
+        await ts.updateAttempt(attemptId, {
           promotion_evidence: verifyResult.verified ? promotionEvidence : { ...promotionEvidence, code: verifyResult.code },
           promotion_status: verifyResult.verified ? 'PROMOTED' : 'READY_FOR_PROMOTION',
         });
@@ -922,7 +1206,7 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
           // Nunca RED: CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE passaram de verdade, e o
           // candidate JÁ EXISTE de verdade no git — só a verificação pós-promoção não
           // confirmou. READY_FOR_PROMOTION documenta exatamente por quê.
-          await tolerantTransition(taskId, 'READY_FOR_PROMOTION');
+          await tolerantTransition(taskId, 'READY_FOR_PROMOTION', ts);
           emitTaskStage(eventAudienceTenantId, taskId, {
             stage: 'READY_FOR_PROMOTION',
             status: 'error',
@@ -939,7 +1223,8 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) 
           meta: promotionEvidence,
         });
 
-        await tolerantTransition(taskId, 'GREEN');
+        await recordProgress(run, 'promotion_completed', promotionEvidence.candidateBranch);
+        await tolerantTransition(taskId, 'GREEN', ts);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso — patch promovido ao repositório real.' });
         return { taskId, status: 'GREEN', attemptId };
   } finally {
@@ -965,8 +1250,9 @@ const ATTEMPT_INFLIGHT_STATUSES = Object.freeze(['CODING', 'APPLIED', 'TESTED'])
  *   público de `executeRoutedLoop`) se uma retomada real aconteceu, ou `null` se não havia nada
  *   para retomar (fluxo normal deve prosseguir para o `while` de novas tentativas).
  */
-async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTenantId }) {
+async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTenantId, run = null }) {
   const taskId = task.id;
+  const ts = writesFor(run);
   if (!lastAttempt) return null;
 
   if (lastAttempt.status === 'DONE') {
@@ -981,8 +1267,8 @@ async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTena
       // Estado real impossível pela lógica de `runOneAttempt` (DONE só é setado depois de
       // `patch_diff` já persistido), mas nunca assume — se acontecer, é auditável, nunca uma
       // promoção silenciosa sobre dado incompleto.
-      await engineeringTaskService.saveLastError(taskId, { code: 'RESUME_MISSING_PATCH_DIFF', message: `Tentativa ${lastAttempt.id} está DONE mas sem patch_diff persistido — retomada não é segura.` });
-      await engineeringTaskService.transitionTask(taskId, 'BLOCKED');
+      await ts.saveLastError(taskId, { code: 'RESUME_MISSING_PATCH_DIFF', message: `Tentativa ${lastAttempt.id} está DONE mas sem patch_diff persistido — retomada não é segura.` });
+      await ts.transitionTask(taskId, 'BLOCKED');
       emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: 'Retomada bloqueada: tentativa concluída sem patch persistido (estado inconsistente, nunca assumido).' });
       return { taskId, status: 'BLOCKED', reasonCode: 'RESUME_MISSING_PATCH_DIFF' };
     }
@@ -994,21 +1280,21 @@ async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTena
         workspace = await createWorkspace(taskId, lastAttempt.attempt_number);
         const applyResult = await applyPatch(workspace, diff);
         if (!applyResult.ok) {
-          await engineeringTaskService.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: applyResult.stderr || applyResult.code });
-          await engineeringTaskService.transitionTask(taskId, 'BLOCKED');
+          await ts.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: applyResult.stderr || applyResult.code });
+          await ts.transitionTask(taskId, 'BLOCKED');
           emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: `Retomada bloqueada: não foi possível reconstruir o workspace a partir do patch já validado (${applyResult.code}).` });
           return { taskId, status: 'BLOCKED', reasonCode: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED' };
         }
       } catch (err) {
-        await engineeringTaskService.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: err.message });
-        await engineeringTaskService.transitionTask(taskId, 'BLOCKED');
+        await ts.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: err.message });
+        await ts.transitionTask(taskId, 'BLOCKED');
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: `Retomada bloqueada: falha real ao reconstruir workspace (${err.message}).` });
         return { taskId, status: 'BLOCKED', reasonCode: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED' };
       }
     }
     logger.info('[engineeringRouterService] retomando fase pós-CODE após reinício de processo', { taskId, attemptId: lastAttempt.id, taskStatus: task.status });
     emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RESUME', status: 'info', message: `Retomando a partir de ${task.status} após reinício — patch já validado, nunca uma nova tentativa de CODER.` });
-    return advanceFromCodedAttempt(task, { attempt: lastAttempt, diff, workspace }, { eventAudienceTenantId });
+    return advanceFromCodedAttempt(task, { attempt: lastAttempt, diff, workspace }, { eventAudienceTenantId, run });
   }
 
   if (ATTEMPT_INFLIGHT_STATUSES.includes(lastAttempt.status)) {
@@ -1016,7 +1302,7 @@ async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTena
     // colateral IRREVERSÍVEL pode ter acontecido ainda nessas fases (nenhuma promoção, nenhum
     // commit real), então nunca é inseguro simplesmente abandonar esta tentativa e deixar o
     // `while` normal criar uma nova — mas NUNCA em silêncio: marcada explicitamente, auditável.
-    await engineeringTaskService.updateAttempt(lastAttempt.id, {
+    await ts.updateAttempt(lastAttempt.id, {
       status: 'ABANDONED',
       error: { code: 'RESUME_ABANDONED_INCOMPLETE_PHASE', message: `Processo reiniciado com a tentativa presa em status=${lastAttempt.status} (task.status=${task.status}) — nenhum efeito irreversível nesta fase, tentativa marcada como abandonada e uma nova será criada.` },
       completed_at: new Date(),

@@ -29,8 +29,16 @@ const { RESUMABLE_MISSION_STATES } = require('../../../engine/engineeringMission
 const progressPolicy = require('../../../engine/engineeringMission/progressPolicy');
 const logger = require('../../utils/logger');
 
-const LOCK_STALE_MS = Number(process.env.ENGINEERING_MISSION_LOCK_STALE_MS || 15 * 60 * 1000);
-const LEASE_TTL_MS = Number(process.env.ENGINEERING_MISSION_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS);
+// TTL do lease de missão: política `LEASE` do registry (clampada), com o override histórico
+// `ENGINEERING_MISSION_LEASE_TTL_MS`. Não existe mais `LOCK_STALE_MS`: idade de `locked_at` não é
+// critério de posse.
+function resolveMissionLeaseTtlMs() {
+  const legacy = Number(process.env.ENGINEERING_MISSION_LEASE_TTL_MS);
+  // eslint-disable-next-line global-require
+  const { resolvePolicy } = require('../../utils/operationDeadline');
+  return resolvePolicy('LEASE', { override: Number.isFinite(legacy) && legacy > 0 ? legacy : null }).resolved;
+}
+const LEASE_TTL_MS = resolveMissionLeaseTtlMs();
 const SETTINGS_ID = 'default';
 
 function models() {
@@ -187,7 +195,7 @@ async function updateMission(id, patch = {}) {
  */
 const MERGE_JSON_KEYS = Object.freeze(['resume', 'enrichment', 'preview', 'policyResolution']);
 
-async function mergeMissionJson(id, patch = {}) {
+async function mergeMissionJson(id, patch = {}, guard = null) {
   const unknown = Object.keys(patch).filter((key) => !MERGE_JSON_KEYS.includes(key));
   if (unknown.length > 0) {
     const err = new Error(`mergeMissionJson recebeu chave(s) não suportada(s): ${unknown.join(', ')}`);
@@ -205,17 +213,20 @@ async function mergeMissionJson(id, patch = {}) {
   // §21: a resolução de política é EVIDÊNCIA — sobrevive a re-enriquecimento porque vive em
   // resume_metadata, não só no preview que é regerado.
   out.resume_metadata = { ...(current.resume_metadata || {}), ...(out.resume_metadata || {}), ...(policyResolution ? { policyResolution } : {}) };
+  // Worker com posse (compiler/orquestrador/recovery) grava sob fence; sem guard é escrita
+  // administrativa/leitura-reconciliação (mesma semântica de sempre).
+  if (guard && guard.leaseToken) return updateMissionGuarded(id, out, guard);
   return updateMission(id, out);
 }
 
-// ── Lock de concorrência (múltiplos workers) ───────────────────────────────────────────────────
+// ── Lock de concorrência (interface histórica sobre o LEASE) ─────────────────────────────────
 
 /**
- * O lock pertence a um processo que não existe mais? O id do worker do compilador carrega o PID
- * (`mission-compiler-<pid>`), o que permite distinguir "outro worker vivo está trabalhando"
- * (fail-closed: não mexer) de "o worker que travou morreu num crash" (lock é lixo, pode ser
- * tomado imediatamente). Sem isso, um crash recente deixava a missão bloqueada até o stale
- * timeout inteiro — e a missão só seria retomada 15 minutos depois, sem necessidade.
+ * PID NÃO é autoridade (2026-09-28). Esta função existia para "acelerar" o takeover quando o dono
+ * do lock era um processo morto na MESMA máquina (`process.kill(pid, 0)`). Isso não responde
+ * "esse worker distribuído ainda é dono da missão?" — dois containers podem ter o mesmo PID, e um
+ * worker em outro host tem PID sem significado local. Mantida apenas como DIAGNÓSTICO LOCAL
+ * (relatório/log); nenhuma decisão de posse a consulta.
  */
 function lockOwnerIsDead(lockedBy) {
   const match = /^mission-compiler-(\d+)$/.exec(String(lockedBy || ''));
@@ -224,101 +235,44 @@ function lockOwnerIsDead(lockedBy) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
     process.kill(pid, 0);
-    return false; // processo existe (ou pertence a outro usuário — tratado como vivo)
+    return false;
   } catch (err) {
     return err.code === 'ESRCH';
   }
 }
 
 /**
- * Adquire o lock da mission de forma ATÔMICA (UPDATE condicional). Dois workers nunca trabalham
- * na mesma missão: o perdedor recebe MISSION_LOCKED_BY_OTHER_WORKER em vez de executar em
- * duplicidade. Lock órfão expira por stale timeout OU é tomado na hora quando o dono morreu.
+ * Posse de missão para chamadores legados: a AUTORIDADE é o lease (CAS em `acquireMissionLease`,
+ * fence+1). Não existe mais takeover por idade de `locked_at` (STALE_BY_AGE_ONLY) nem por PID:
+ *   - lease ativo de outro worker ⇒ MISSION_LOCKED_BY_OTHER_WORKER, qualquer que seja a idade;
+ *   - lease expirado (heartbeat parou) ⇒ takeover com fence novo;
+ *   - lease do próprio worker ⇒ continua.
  */
-async function lockMission(id, workerId) {
-  const { Mission } = models();
-  const staleBefore = new Date(Date.now() - LOCK_STALE_MS);
-  // O UPDATE atômico precisa carregar a AUTORIDADE DO LEASE, não só a idade do
-  // lock. Defeito real medido em 2026-09-26 pelo E2E: com `locked_at` envelhecido
-  // além de LOCK_STALE_MS, este UPDATE assumia a missão ANTES de qualquer
-  // consulta ao lease — takeover por IDADE pura, exatamente o padrão
-  // STALE_BY_AGE_ONLY que a missão proíbe. Agora as duas condições são exigidas:
-  // (lock livre/do próprio/stale-por-idade) E (lease livre/expirado/do próprio).
-  const lockFreeOrMine = {
-    [Op.or]: [
-      { locked_at: null },
-      { locked_at: { [Op.lt]: staleBefore } },
-      { locked_by: workerId },
-    ],
-  };
-  const leaseFreeOrMine = {
-    [Op.or]: [
-      { lease_token: null },
-      { lease_expires_at: null },
-      { lease_expires_at: { [Op.lte]: new Date() } },
-      ...(workerId ? [{ lease_worker_instance_id: workerId }] : []),
-    ],
-  };
-  const [affected] = await Mission.update(
-    { locked_at: new Date(), locked_by: workerId },
-    { where: { id, [Op.and]: [lockFreeOrMine, leaseFreeOrMine] } },
-  );
-  if (affected > 0) return getMission(id);
-
+async function lockMission(id, workerId, { workerType = 'COMPILER', host = null } = {}) {
+  const acquired = await acquireMissionLease(id, { workerInstanceId: workerId, workerType, host });
+  if (acquired.acquired) {
+    const mission = await getMission(id);
+    return mission ? { ...mission, lease: acquired.lease } : null;
+  }
+  if (acquired.reason === 'MISSION_NOT_FOUND') return null;
   const current = await getMission(id);
-  if (!current) return null;
-
-  // ── AUTORIDADE DE OWNERSHIP É O LEASE, NUNCA O PID ────────────────────────────────────
-  // `canAcquire` é o núcleo puro de `leasePolicy`: um worker VIVO e dentro da validade
-  // não pode ser roubado, independentemente de PID. Sem esta guarda, a decisão de
-  // takeover era tomada por `process.kill(pid, 0)` — proibido por arquitetura: PID não
-  // é identidade distribuída (dois containers compartilham PID; a mesma instância em
-  // outro host tem PID sem significado local).
-  //
-  // `lockOwnerIsDead` permanece apenas como corroboracao LOCAL: ele ACELERA o takeover
-  // de um lock órfão (crash recente não espera o stale inteiro), mas só quando o lease
-  // não está ativo para outra instância. Missão sem coluna de lease (linha legada) tem
-  // `canAcquire === true`, preservando o comportamento de recuperação de crash.
-  const nowMs = Date.now();
-  const normalized = normalizeLease(current);
-  const leaseState = resolveLeaseState(normalized, nowMs);
-  const leaseAllowsTakeover = canAcquire(normalized, nowMs, { workerInstanceId: workerId });
-
-  if (!leaseAllowsTakeover) {
-    // Lease ATIVO de outra instância: fail-closed imediato, sem consultar PID.
-    const blocked = new Error(`mission ${id} está travada por outro worker (${current.locked_by}) — lease ${leaseState} de ${normalized?.workerInstanceId || 'outra instância'}`);
-    blocked.code = 'MISSION_LOCKED_BY_OTHER_WORKER';
-    blocked.lockedBy = current.locked_by;
-    blocked.leaseState = leaseState;
-    blocked.leaseWorkerInstanceId = normalized?.workerInstanceId || null;
-    throw blocked;
-  }
-
-  if (lockOwnerIsDead(current.locked_by)) {
-    // Takeover CAS: só assume se o dono ainda for o processo morto (nunca rouba de um worker
-    // que acabou de assumir).
-    const [takenOver] = await Mission.update(
-      { locked_at: new Date(), locked_by: workerId },
-      { where: { id, locked_by: current.locked_by } },
-    );
-    if (takenOver > 0) {
-      logger.warn('[missionStore] lock de worker morto assumido por retomada', {
-        missionId: id, deadWorker: current.locked_by, workerId,
-      });
-      return getMission(id);
-    }
-  }
-
-  const err = new Error(`mission ${id} está travada por outro worker (${current.locked_by})`);
+  const err = new Error(`mission ${id} está travada por outro worker (${current?.lease_worker_instance_id || current?.locked_by || 'desconhecido'}) — lease ${acquired.lease ? resolveLeaseState(acquired.lease, Date.now()) : 'n/d'}`);
   err.code = 'MISSION_LOCKED_BY_OTHER_WORKER';
-  err.lockedBy = current.locked_by;
+  err.lockedBy = current?.locked_by || null;
+  err.leaseWorkerInstanceId = acquired.lease?.workerInstanceId || null;
+  err.leaseState = acquired.lease ? resolveLeaseState(acquired.lease, Date.now()) : null;
   throw err;
 }
 
-async function unlockMission(id, workerId) {
+async function unlockMission(id, workerId, { leaseToken = null } = {}) {
+  if (leaseToken) return releaseMissionLease(id, { leaseToken });
   const { Mission } = models();
-  const where = workerId ? { id, locked_by: workerId } : { id };
-  await Mission.update({ locked_at: null, locked_by: null }, { where });
+  const where = workerId ? { id, [Op.or]: [{ locked_by: workerId }, { lease_worker_instance_id: workerId }] } : { id };
+  await Mission.update({
+    locked_at: null, locked_by: null, lease_token: null, lease_expires_at: null, lease_heartbeat_at: null,
+    lease_worker_instance_id: null, lease_worker_type: null, lease_host: null,
+  }, { where });
+  return true;
 }
 
 // ── LEASE DISTRIBUÍDO (§30–§32) ────────────────────────────────────────────────────────────────
@@ -456,9 +410,14 @@ async function getMissionLease(missionId) {
  * Escrita de worker com FENCING (§32). Diferente de `updateMission`, esta porta exige que o autor
  * ainda seja o dono do lease vigente: um worker antigo que voltou tarde recebe
  * `MISSION_STALE_WORKER_WRITE` e NÃO consegue sobrescrever o estado da execução atual.
+ *
+ * ATÔMICA (2026-09-28): a versão anterior fazia um CAS "vazio" (`SET updated_at`) e DEPOIS aplicava
+ * o patch com `updateMission` sem guarda — entre as duas instruções outro worker podia assumir e a
+ * escrita obsoleta passava. Agora o patch é aplicado NO MESMO UPDATE cujo WHERE prova a posse
+ * (token + fence + lease não expirado).
  */
 async function updateMissionGuarded(missionId, patch, { leaseToken, fence = null } = {}) {
-  const { sequelize } = models();
+  const { Mission } = models();
   const lease = await getMissionLease(missionId);
   if (!lease) {
     const err = new Error(`mission ${missionId} não encontrada`);
@@ -467,27 +426,69 @@ async function updateMissionGuarded(missionId, patch, { leaseToken, fence = null
   }
   const authorization = assertWriterAuthorized({ lease, nowMs: Date.now(), leaseToken, fence });
   if (!authorization.authorized) {
+    recordStaleWrite(missionId, authorization.code, lease);
     const err = new Error(`escrita recusada: ${authorization.detail}`);
     err.code = authorization.code;
     err.leaseStale = authorization.code === 'MISSION_STALE_WORKER_WRITE';
     throw err;
   }
-  // Guarda adicional no WHERE: mesmo que o lease mude entre a leitura e o UPDATE, o CAS falha.
-  // O SET toca uma coluna real sem alterar semântica — é o próprio WHERE que prova a posse.
-  const [row] = await sequelize.query(
-    `UPDATE engineering_missions
-        SET updated_at = NOW()
-      WHERE id = :missionId AND lease_token = :leaseToken AND lease_fence = :fence
-      RETURNING id`,
-    { replacements: { missionId, leaseToken, fence: lease.fence }, type: sequelize.constructor.QueryTypes.SELECT },
-  );
-  if (!row) {
+  const current = await getMission(missionId);
+  if (Object.prototype.hasOwnProperty.call(patch, 'original_mission')
+    && patch.original_mission !== current.original_mission) {
+    const err = new Error('originalMission é imutável — nenhuma fase pode reescrever a intenção do usuário');
+    err.code = 'ORIGINAL_MISSION_MUTATED';
+    throw err;
+  }
+  const safePatch = { ...patch };
+  delete safePatch.original_mission;
+  delete safePatch.original_mission_hash;
+  const [affected] = await Mission.update(safePatch, {
+    where: {
+      id: missionId,
+      lease_token: leaseToken,
+      lease_fence: fence ?? lease.fence,
+      lease_expires_at: { [Op.gt]: Mission.sequelize.fn('NOW') },
+    },
+  });
+  if (affected === 0) {
+    recordStaleWrite(missionId, 'MISSION_STALE_WORKER_WRITE', await getMissionLease(missionId));
     const err = new Error('escrita recusada: lease mudou durante a operação (CAS)');
     err.code = 'MISSION_STALE_WORKER_WRITE';
     err.leaseStale = true;
     throw err;
   }
-  return updateMission(missionId, patch);
+  return getMission(missionId);
+}
+
+function recordStaleWrite(missionId, code, lease) {
+  try {
+    // eslint-disable-next-line global-require
+    require('../../utils/operationDeadline').recordLivenessEvent('STALE_WRITE_REJECTED', {
+      scope: 'MISSION', missionId, code, currentFence: lease?.fence ?? null, currentWorker: lease?.workerInstanceId ?? null,
+    });
+  } catch (_) { /* métrica best-effort */ }
+}
+
+/**
+ * Posse vigente comprovada no banco ANTES de escrita crítica em tabela-filha (versão, aprovação,
+ * parecer). Essas linhas não carregam o fence da missão.
+ */
+async function assertMissionLeaseHeld(missionId, { leaseToken, fence } = {}) {
+  const { sequelize } = models();
+  const rows = await sequelize.query(
+    `SELECT id FROM engineering_missions
+      WHERE id = :missionId AND lease_token = :leaseToken AND lease_fence = :fence AND lease_expires_at > NOW()`,
+    { replacements: { missionId, leaseToken, fence }, type: sequelize.constructor.QueryTypes.SELECT },
+  );
+  if (rows.length === 0) {
+    const lease = await getMissionLease(missionId);
+    recordStaleWrite(missionId, 'MISSION_STALE_WORKER_WRITE', lease);
+    const err = new Error('escrita crítica recusada: este worker não é mais o dono vigente da missão');
+    err.code = 'MISSION_STALE_WORKER_WRITE';
+    err.leaseStale = true;
+    throw err;
+  }
+  return true;
 }
 
 /**
@@ -561,18 +562,109 @@ async function findMissionByLinkedTask(taskId) {
   return rows.length > 0 ? toPlain(rows[0]) : null;
 }
 
-async function linkTask({ missionId, taskId }) {
+async function linkTask({ missionId, taskId, guard = null }) {
   const current = await getMission(missionId);
   if (!current) return null;
   const ids = Array.isArray(current.linked_task_ids) ? [...current.linked_task_ids] : [];
   if (!ids.includes(taskId)) ids.push(taskId);
   const iteration = ids.length;
-  return updateMission(missionId, {
+  const patch = {
     linked_task_id: taskId,
     linked_task_ids: ids,
     iteration,
     started_at: current.started_at || new Date(),
-  });
+  };
+  if (guard && guard.leaseToken) return updateMissionGuarded(missionId, patch, guard);
+  return updateMission(missionId, patch);
+}
+
+/**
+ * Aquisição que ESPERA um dono vivo terminar (política LEASE_ACQUIRE_WAIT + backoff com jitter do
+ * RETRY_BACKOFF) — serializa trabalho curto concorrente sem jamais tomar posse de lease ativo.
+ */
+async function acquireMissionLeaseWaiting(missionId, options = {}) {
+  // eslint-disable-next-line global-require
+  const { policyMs } = require('../../utils/operationDeadline');
+  // eslint-disable-next-line global-require
+  const { computeBackoffMs } = require('../../../engine/shared/executionDeadline');
+  let acquired = await acquireMissionLease(missionId, options);
+  const waitUntil = Date.now() + policyMs('LEASE_ACQUIRE_WAIT');
+  const baseMs = Math.min(policyMs('RETRY_BACKOFF'), 250);
+  let attempt = 1;
+  while (!acquired.acquired && acquired.reason === 'MISSION_LEASE_HELD_BY_OTHER_WORKER' && Date.now() < waitUntil) {
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((resolve) => { setTimeout(resolve, Math.min(computeBackoffMs({ attempt, baseMs, maxMs: 2000 }), Math.max(0, waitUntil - Date.now()))); });
+    attempt += 1;
+    // eslint-disable-next-line no-await-in-loop
+    acquired = await acquireMissionLease(missionId, options);
+  }
+  return acquired;
+}
+
+/**
+ * Executa `fn({lease, guard, heartbeat})` sob MissionLease — a ÚNICA forma de um worker escrever
+ * estado de missão. Usa o lease PROPAGADO pelo chamador (mesmo token/fence) ou adquire um próprio
+ * e o libera no fim (por token). `heartbeat: true` renova a posse enquanto `fn` durar.
+ * `allowTerminalWithoutLease`: missão em estado no qual NENHUM worker consegue lease (terminal) —
+ * decisões humanas administrativas seguem sem guard, pois não existe dono concorrente possível.
+ */
+async function withMissionLease(missionId, providedLease, fn, {
+  workerInstanceId,
+  workerType = 'ORCHESTRATOR',
+  host = null,
+  heartbeat = false,
+  allowTerminalWithoutLease = false,
+  // Operações administrativas curtas (aprovação, início de execução) ESPERAM o dono vivo terminar,
+  // com backoff do registry, em vez de falhar na primeira colisão — serializam, nunca roubam.
+  waitForLease = false,
+} = {}) {
+  let lease = null;
+  let owns = false;
+  if (providedLease && providedLease.token) {
+    const current = await getMissionLease(missionId);
+    if (!current || current.token !== providedLease.token) {
+      const err = new Error(`lease propagado para a missão ${missionId} não é mais o vigente`);
+      err.code = 'MISSION_LEASE_LOST';
+      throw err;
+    }
+    lease = current;
+  } else {
+    // Identidade POR EXECUÇÃO: duas unidades de trabalho concorrentes no MESMO processo não podem
+    // compartilhar a identidade de posse — o CAS trataria a segunda como "o mesmo dono" e trocaria o
+    // token, invalidando a primeira no meio do trabalho.
+    const executionWorkerId = `${workerInstanceId}#${crypto.randomUUID().slice(0, 8)}`;
+    const acquired = waitForLease
+      ? await acquireMissionLeaseWaiting(missionId, { workerInstanceId: executionWorkerId, workerType, host })
+      : await acquireMissionLease(missionId, { workerInstanceId: executionWorkerId, workerType, host });
+    if (!acquired.acquired) {
+      if (allowTerminalWithoutLease && acquired.reason === 'MISSION_TERMINAL_OR_UNKNOWN') {
+        return fn({ lease: null, guard: null, heartbeat: null });
+      }
+      const err = new Error(`mission ${missionId} está com outro worker (${acquired.lease?.workerInstanceId || 'desconhecido'}) — ${acquired.reason}`);
+      err.code = acquired.reason === 'MISSION_NOT_FOUND' ? 'not_found' : 'MISSION_LOCKED_BY_OTHER_WORKER';
+      err.lockedBy = acquired.lease?.workerInstanceId || null;
+      throw err;
+    }
+    lease = acquired.lease;
+    owns = true;
+  }
+  const guard = { leaseToken: lease.token, fence: lease.fence };
+  let hb = null;
+  if (heartbeat) {
+    // eslint-disable-next-line global-require
+    const { startLeaseHeartbeat } = require('../engineeringRouter/leaseHeartbeat');
+    hb = startLeaseHeartbeat({
+      name: `mission:${missionId}`,
+      renew: () => renewMissionLease(missionId, { leaseToken: guard.leaseToken }),
+      meta: { missionId, workerInstanceId: lease.workerInstanceId, fence: lease.fence },
+    });
+  }
+  try {
+    return await fn({ lease, guard, heartbeat: hb });
+  } finally {
+    if (hb) hb.stop();
+    if (owns) await releaseMissionLease(missionId, { leaseToken: guard.leaseToken }).catch(() => {});
+  }
 }
 
 // ── Versões de MissionSpec ────────────────────────────────────────────────────────────────────
@@ -840,7 +932,7 @@ function progressRecordFromRow(row) {
  *
  * @returns {{ok:boolean, accepted:boolean, reason:string, lastProgressAt?:string, signal?:string}}
  */
-async function recordMissionProgress(missionId, { signal, detail = null, atMs = null } = {}) {
+async function recordMissionProgress(missionId, { signal, detail = null, atMs = null } = {}, guard = null) {
   const current = await getMission(missionId);
   if (!current) return { ok: false, accepted: false, reason: 'not_found' };
   const decided = progressPolicy.recordProgress(progressRecordFromRow(current), {
@@ -849,11 +941,13 @@ async function recordMissionProgress(missionId, { signal, detail = null, atMs = 
     detail,
   });
   if (!decided.accepted) return { ok: false, accepted: false, reason: decided.reason };
-  await updateMission(missionId, {
+  const progressPatch = {
     last_progress_at: new Date(decided.record.lastMeaningfulProgressAt),
     last_progress_signal: decided.record.lastProgressSignal,
     progress_count: decided.record.progressCount,
-  });
+  };
+  if (guard && guard.leaseToken) await updateMissionGuarded(missionId, progressPatch, guard);
+  else await updateMission(missionId, progressPatch);
   return {
     ok: true,
     accepted: true,
@@ -882,7 +976,7 @@ async function evaluateMissionProgress(missionId, { phase = null, nowMs = Date.n
 }
 
 module.exports = {
-  LOCK_STALE_MS,
+  LEASE_TTL_MS,
   lockOwnerIsDead,
   // Lease distribuído (§30–§32)
   acquireMissionLease,
@@ -893,6 +987,9 @@ module.exports = {
   recordMissionProgress,
   evaluateMissionProgress,
   updateMissionGuarded,
+  assertMissionLeaseHeld,
+  withMissionLease,
+  acquireMissionLeaseWaiting,
   findMissionsWithExpiredLease,
   findMissionsWithoutLease,
   getAutoApprovalPolicy,

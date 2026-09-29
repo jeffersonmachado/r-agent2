@@ -25,8 +25,20 @@ const logger = require('../../utils/logger');
 // criavam tasks sem lease (`row.lease_token` falso ⇒ a expressão nem era avaliada). Descoberto
 // pelo verificador de retomada de task real, que exercita o caminho de verdade.
 const { resolveLeaseState } = require('../../../engine/engineeringMission/leasePolicy');
+const progressPolicy = require('../../../engine/engineeringMission/progressPolicy');
+const { resolvePolicy, withDbDeadline, recordLivenessEvent } = require('../../utils/operationDeadline');
 
-const LOCK_STALE_MS = Number(process.env.ENGINEERING_ROUTER_LOCK_STALE_MS || 15 * 60 * 1000);
+// AUTORIDADE DE POSSE (2026-09-28): não existe mais `LOCK_STALE_MS`. Uma task pode legitimamente
+// durar horas; enquanto o heartbeat renovar o lease, ela continua sendo do worker que a executa.
+// Quem decide takeover é SOMENTE a expiração do lease (heartbeat parou) — nunca a idade de
+// `locked_at`. `locked_at`/`locked_by` seguem preenchidos como ESPELHO de diagnóstico.
+
+/** TTL do lease de task: política `LEASE` do registry (env declarado lá), clampada em [min,max]. */
+function resolveTaskLeaseTtlMs(ttlMs = null) {
+  const legacyEnv = Number(process.env.ENGINEERING_TASK_LEASE_TTL_MS);
+  const override = Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : (Number.isFinite(legacyEnv) && legacyEnv > 0 ? legacyEnv : null);
+  return resolvePolicy('LEASE', { override }).resolved;
+}
 
 function persistenceRequiredError(detail) {
   const err = new Error(`persistence_required: ${detail}`);
@@ -135,7 +147,18 @@ async function transitionTask(taskId, toStatus, extra = {}, guard = {}) {
   // ela passa por CAS (fence/token). Um worker antigo que volte atrasado é recusado com
   // TASK_STALE_WORKER_WRITE em vez de sobrescrever o estado do novo dono.
   if (guard && guard.leaseToken) {
-    return updateTaskGuarded(taskId, { status: toStatus, ...extra }, { leaseToken: guard.leaseToken, fence: guard.fence });
+    return updateTaskGuarded(taskId, { status: toStatus, ...extra }, { leaseToken: guard.leaseToken, fence: guard.fence, expectedStatus: row.status });
+  }
+
+  // Escrita SEM credencial de lease enquanto existe um dono VIVO é exatamente o que o fencing
+  // existe para impedir — exceto o cancelamento administrativo (operador/supersessão), que é uma
+  // decisão acima do worker: o dono descobre na próxima escrita guardada (transição inválida a
+  // partir de CANCELLED) e encerra sem sobrescrever nada.
+  if (toStatus !== 'CANCELLED' && row.lease_token && resolveLeaseState(taskLeaseToPlain(row), Date.now()) === 'ACTIVE') {
+    const err = new Error(`transição ${row.status}→${toStatus} sem credencial de lease recusada: task pertence a ${row.lease_worker_instance_id} (fence ${row.lease_fence})`);
+    err.code = 'TASK_LEASE_HELD_BY_OTHER_WORKER';
+    err.leaseWorkerInstanceId = row.lease_worker_instance_id;
+    throw err;
   }
 
   await row.update({ status: toStatus, ...extra });
@@ -145,78 +168,53 @@ async function transitionTask(taskId, toStatus, extra = {}, guard = {}) {
 /**
  * Adquire posse de execução da task (evita rodar a mesma task duas vezes simultaneamente).
  *
- * MUDANÇA DE AUTORIDADE (missão V2): antes o critério era TEMPO (`LOCK_STALE_MS` sobre `locked_at`) e
- * esse lock temporal tinha PRECEDÊNCIA sobre o lease — medido em 2026-09-25: com o lease da task
- * EXPIRADO, `lockForRun` ainda recusava com TASK_ALREADY_RUNNING, porque `locked_at` do worker morto
- * não havia "envelhecido". Ou seja, a primitiva de lease existia mas o runtime não a usava para
- * decidir posse — exatamente o gap DISTRIBUTED_LEASE_RUNTIME_INTEGRATION.
- *
- * Agora a autoridade é o LEASE (workerInstanceId + token + expiração + fence). `locked_at`/`locked_by`
- * continuam preenchidos, mas como ESPELHO de diagnóstico — nunca como critério de posse.
+ * MODELO ÚNICO DE POSSE (2026-09-28): esta função é apenas a interface histórica sobre o LEASE —
+ * delega a `acquireTaskLease` (CAS no banco, fence+1 a cada troca de dono). O caminho antigo
+ * decidia posse por TEMPO (`LOCK_STALE_MS` sobre `locked_at`): uma task saudável com 16 minutos de
+ * execução era considerada órfã e roubada. Agora:
+ *   - lease ATIVO de outro worker ⇒ TASK_ALREADY_RUNNING (independentemente da idade);
+ *   - lease EXPIRADO (heartbeat parou) ⇒ takeover com fence novo;
+ *   - lease do PRÓPRIO worker ⇒ o dono continua.
+ * `locked_at`/`locked_by` são gravados pelo próprio CAS como espelho de diagnóstico.
  */
-async function lockForRun(taskId, runnerId) {
-  const Model = getEngineeringTaskModel();
-  const sequelize = Model.sequelize;
-  const now = new Date();
-
-  return sequelize.transaction(async (t) => {
-    const row = await Model.findByPk(taskId, { transaction: t, lock: t.LOCK.UPDATE });
-    if (!row) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
-
-    if (isTerminal(row.status)) {
-      const err = new Error(`Task já está em estado terminal: ${row.status}`);
-      err.code = 'TASK_TERMINAL';
-      err.status = row.status;
-      throw err;
-    }
-
-    // ORDEM: o LEASE é consultado PRIMEIRO e é a autoridade quando existe. O lock temporal só decide
-    // quando não há lease algum (tasks criadas antes desta mudança). Assim o comportamento do fluxo
-    // legado é preservado byte a byte — a troca de autoridade acontece apenas onde o lease existe.
-    const leaseState = row.lease_token ? resolveLeaseState(taskLeaseToPlain(row), now.getTime()) : null;
-    // DEFEITO REAL corrigido em 2026-09-25: o lease ATIVO era tratado como conflito SEM olhar de
-    // quem ele é. Resultado medido na retomada real: o worker que acabara de tomar posse da task
-    // (via `acquireTaskLease`, fence+1) era RECUSADO por `lockForRun` com TASK_ALREADY_RUNNING —
-    // o próprio dono não conseguia executar o que tinha acabado de assumir. `leasePolicy` já
-    // trata o dono como escritor autorizado; aqui a regra é a mesma: lease ativo do PRÓPRIO
-    // runnerId não é conflito, é o dono continuando.
-    const leaseOwner = row.lease_worker_instance_id || null;
-    const sameOwner = Boolean(leaseOwner) && leaseOwner === runnerId;
-    if (leaseState === 'ACTIVE' && !sameOwner) {
-      const err = new Error('EngineeringTask já está em execução');
-      err.code = FAILURE_CODES.TASK_ALREADY_RUNNING;
-      err.lockedBy = row.lease_worker_instance_id;
-      err.leaseExpiresAt = row.lease_expires_at;
-      err.fence = row.lease_fence;
-      throw err;
-    }
-
-    const lockedAt = row.locked_at ? new Date(row.locked_at) : null;
-    const lockIsStale = lockedAt && (now.getTime() - lockedAt.getTime() > LOCK_STALE_MS);
-
-    if (lockedAt && !lockIsStale && leaseState === null) {
-      const err = new Error('EngineeringTask já está em execução');
-      err.code = FAILURE_CODES.TASK_ALREADY_RUNNING;
-      err.lockedBy = row.locked_by;
-      err.lockedAt = row.locked_at;
-      throw err;
-    }
-
-    if (lockIsStale) {
-      logger.warn('[engineeringTaskService] recuperando lock órfão (restart-safe)', { taskId, previousOwner: row.locked_by, lockedAt: row.locked_at });
-    }
-
-    await row.update({ locked_at: now, locked_by: runnerId }, { transaction: t });
-    return toPlain(row);
-  });
-}
-
-async function unlockTask(taskId) {
+async function lockForRun(taskId, runnerId, { host = null, ttlMs = null } = {}) {
   const Model = getEngineeringTaskModel();
   const row = await Model.findByPk(taskId);
-  if (!row) return null;
-  await row.update({ locked_at: null, locked_by: null });
-  return toPlain(row);
+  if (!row) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
+  if (isTerminal(row.status)) {
+    const err = new Error(`Task já está em estado terminal: ${row.status}`);
+    err.code = 'TASK_TERMINAL';
+    err.status = row.status;
+    throw err;
+  }
+  const acquired = await acquireTaskLease(taskId, { workerInstanceId: runnerId, host, ttlMs });
+  if (!acquired.acquired) {
+    const current = acquired.lease || {};
+    const refreshed = await Model.findByPk(taskId);
+    if (refreshed && isTerminal(refreshed.status)) {
+      const err = new Error(`Task já está em estado terminal: ${refreshed.status}`);
+      err.code = 'TASK_TERMINAL';
+      err.status = refreshed.status;
+      throw err;
+    }
+    const err = new Error('EngineeringTask já está em execução');
+    err.code = FAILURE_CODES.TASK_ALREADY_RUNNING;
+    err.lockedBy = current.workerInstanceId || null;
+    err.leaseExpiresAt = current.expiresAt ? new Date(current.expiresAt).toISOString() : null;
+    err.fence = current.fence ?? null;
+    throw err;
+  }
+  const task = await getTask(taskId);
+  return { ...task, lease: acquired.lease, leaseTakeover: acquired.takeover || null };
+}
+
+/**
+ * Libera a posse. Com `leaseToken`, só libera se o lease ainda for deste worker (um worker que
+ * perdeu o lease nunca apaga o lease do novo dono). Sem token (uso administrativo/teste), limpa.
+ */
+async function unlockTask(taskId, { leaseToken = null } = {}) {
+  await releaseTaskLease(taskId, { leaseToken });
+  return getTask(taskId);
 }
 
 /**
@@ -230,7 +228,10 @@ async function unlockTask(taskId) {
  * A semântica é a MESMA já usada por EngineeringMission (`engine/engineeringMission/leasePolicy.js`)
  * — reuso, não arquitetura paralela. `locked_at`/`locked_by` continuam preenchidos para diagnóstico.
  */
-const TASK_LEASE_TERMINAL_STATES = ['GREEN', 'FAILED', 'CANCELLED', 'REJECTED', 'PROMOTED', 'DONE'];
+// Mesma fonte única de estados terminais do Router (`constants.TERMINAL_STATES`). A lista local
+// anterior (GREEN/FAILED/CANCELLED/REJECTED/PROMOTED/DONE) não continha RED, BLOCKED nem
+// READY_FOR_PROMOTION — o recovery podia "retomar" (tomar lease de) uma task já terminada em RED.
+const TASK_LEASE_TERMINAL_STATES = TERMINAL_STATES;
 
 function taskLeaseToPlain(row) {
   const leasePolicy = require('../../../engine/engineeringMission/leasePolicy');
@@ -255,58 +256,87 @@ async function getTaskLease(taskId) {
 
 /**
  * Aquisição atômica por CAS: só grava se NINGUÉM tem lease vivo (ou se o lease é do próprio worker).
- * `lease_fence = lease_fence + 1` a cada troca de dono — é o que permite REJEITAR o worker antigo.
+ * `lease_fence = lease_fence + 1` a cada aquisição — é o que permite REJEITAR o worker antigo.
+ *
+ * O CAS roda sob `statement_timeout` da política DATABASE_QUERY: um banco travado vira DB_TIMEOUT
+ * classificado (rollback, estado intacto), nunca um worker pendurado para sempre segurando nada.
+ * `takeover` descreve o dono anterior quando a posse foi TOMADA de um lease expirado.
  */
 async function acquireTaskLease(taskId, { workerInstanceId, host = null, ttlMs } = {}) {
   if (!workerInstanceId) {
     throw Object.assign(new Error('workerInstanceId é obrigatório para adquirir lease de task'), { code: 'TASK_LEASE_WORKER_REQUIRED' });
   }
-  const leasePolicy = require('../../../engine/engineeringMission/leasePolicy');
-  const ttl = Number(ttlMs || process.env.ENGINEERING_TASK_LEASE_TTL_MS || leasePolicy.DEFAULT_LEASE_TTL_MS);
-  const ttlSeconds = Math.max(1, Math.round(ttl / 1000));
+  const ttlSeconds = Math.max(1, Math.round(resolveTaskLeaseTtlMs(ttlMs) / 1000));
   const Model = getEngineeringTaskModel();
   const sequelize = Model.sequelize;
 
-  const [rows] = await sequelize.query(
-    `UPDATE engineering_tasks
-        SET lease_token = gen_random_uuid(),
-            lease_fence = lease_fence + 1,
-            lease_worker_instance_id = :workerInstanceId,
-            lease_host = :host,
-            lease_acquired_at = NOW(),
-            lease_expires_at = NOW() + make_interval(secs => :ttlSeconds),
-            lease_heartbeat_at = NOW(),
-            locked_at = NOW(),
-            locked_by = :workerInstanceId
-      WHERE id = :id
-        AND status NOT IN (:terminalStates)
-        AND (lease_token IS NULL OR lease_expires_at IS NULL OR lease_expires_at < NOW() OR lease_worker_instance_id = :workerInstanceId)
-      RETURNING id`,
-    {
-      replacements: { id: taskId, workerInstanceId, host, ttlSeconds, terminalStates: TASK_LEASE_TERMINAL_STATES },
-    },
-  );
+  const rows = await withDbDeadline(sequelize, async (transaction) => {
+    const [result] = await sequelize.query(
+      `WITH previous AS (
+         SELECT id, lease_token AS prev_token, lease_worker_instance_id AS prev_worker,
+                lease_expires_at AS prev_expires_at, lease_fence AS prev_fence
+           FROM engineering_tasks WHERE id = :id FOR UPDATE
+       )
+       UPDATE engineering_tasks t
+          SET lease_token = gen_random_uuid(),
+              lease_fence = t.lease_fence + 1,
+              lease_worker_instance_id = :workerInstanceId,
+              lease_host = :host,
+              lease_acquired_at = NOW(),
+              lease_expires_at = NOW() + make_interval(secs => :ttlSeconds),
+              lease_heartbeat_at = NOW(),
+              locked_at = NOW(),
+              locked_by = :workerInstanceId
+         FROM previous p
+        WHERE t.id = p.id
+          AND t.status NOT IN (:terminalStates)
+          AND (t.lease_token IS NULL OR t.lease_expires_at IS NULL OR t.lease_expires_at < NOW() OR t.lease_worker_instance_id = :workerInstanceId)
+        RETURNING t.id, p.prev_token, p.prev_worker, p.prev_expires_at, p.prev_fence`,
+      {
+        replacements: { id: taskId, workerInstanceId, host, ttlSeconds, terminalStates: TASK_LEASE_TERMINAL_STATES },
+        transaction,
+      },
+    );
+    return result;
+  }, { operation: 'task_lease_acquire', meta: { taskId } });
 
   if (rows.length === 0) {
     const current = await getTaskLease(taskId);
     return { acquired: false, reason: 'TASK_LEASE_HELD_BY_OTHER_WORKER', lease: current };
   }
-  return { acquired: true, lease: await getTaskLease(taskId) };
+  const previous = rows[0];
+  let takeover = null;
+  if (previous.prev_token && previous.prev_worker && previous.prev_worker !== workerInstanceId) {
+    takeover = {
+      previousWorker: previous.prev_worker,
+      previousFence: Number(previous.prev_fence) || 0,
+      previousExpiresAt: previous.prev_expires_at,
+    };
+    recordLivenessEvent('LEASE_EXPIRED', { scope: 'TASK', taskId, previousWorker: previous.prev_worker });
+    recordLivenessEvent('LEASE_TAKEOVER', { scope: 'TASK', taskId, previousWorker: previous.prev_worker, newWorker: workerInstanceId });
+  }
+  return { acquired: true, lease: await getTaskLease(taskId), takeover };
 }
 
+/**
+ * HEARTBEAT: renova a validade do PRÓPRIO lease e marca `lease_heartbeat_at`. Nunca toca em
+ * `last_progress_at` — liveness não é avanço. Token diferente ⇒ TASK_LEASE_LOST (outro dono).
+ */
 async function renewTaskLease(taskId, { leaseToken, ttlMs } = {}) {
-  const leasePolicy = require('../../../engine/engineeringMission/leasePolicy');
-  const ttl = Number(ttlMs || process.env.ENGINEERING_TASK_LEASE_TTL_MS || leasePolicy.DEFAULT_LEASE_TTL_MS);
-  const ttlSeconds = Math.max(1, Math.round(ttl / 1000));
+  const ttlSeconds = Math.max(1, Math.round(resolveTaskLeaseTtlMs(ttlMs) / 1000));
   const Model = getEngineeringTaskModel();
-  const [rows] = await Model.sequelize.query(
-    `UPDATE engineering_tasks
-        SET lease_expires_at = NOW() + make_interval(secs => :ttlSeconds),
-            lease_heartbeat_at = NOW()
-      WHERE id = :id AND lease_token = :leaseToken
-      RETURNING id`,
-    { replacements: { id: taskId, leaseToken, ttlSeconds } },
-  );
+  const sequelize = Model.sequelize;
+  const rows = await withDbDeadline(sequelize, async (transaction) => {
+    const [result] = await sequelize.query(
+      `UPDATE engineering_tasks
+          SET lease_expires_at = NOW() + make_interval(secs => :ttlSeconds),
+              lease_heartbeat_at = NOW()
+        WHERE id = :id AND lease_token = :leaseToken
+        RETURNING id`,
+      { replacements: { id: taskId, leaseToken, ttlSeconds }, transaction },
+    );
+    return result;
+  }, { operation: 'task_lease_renew', meta: { taskId } });
   if (rows.length === 0) {
     throw Object.assign(new Error('lease da task não pertence mais a este worker'), { code: 'TASK_LEASE_LOST' });
   }
@@ -316,6 +346,7 @@ async function renewTaskLease(taskId, { leaseToken, ttlMs } = {}) {
 async function releaseTaskLease(taskId, { leaseToken } = {}) {
   const Model = getEngineeringTaskModel();
   const where = leaseToken ? { id: taskId, lease_token: leaseToken } : { id: taskId };
+  // `lease_fence` NÃO é zerado: fence monotônico é o que impede um worker antigo de reentrar.
   await Model.update(
     { lease_token: null, lease_expires_at: null, lease_worker_instance_id: null, lease_host: null, locked_at: null, locked_by: null },
     { where },
@@ -323,46 +354,137 @@ async function releaseTaskLease(taskId, { leaseToken } = {}) {
   return getTaskLease(taskId);
 }
 
+function staleWriteError(code, message, lease, taskId) {
+  recordLivenessEvent('STALE_WRITE_REJECTED', { scope: 'TASK', taskId, code, currentFence: lease?.fence ?? null, currentWorker: lease?.workerInstanceId ?? null });
+  const err = new Error(message);
+  err.code = code;
+  err.lease = lease;
+  err.staleWrite = true;
+  return err;
+}
+
 /**
  * Escrita protegida por fence: o worker ANTIGO recebe TASK_STALE_WORKER_WRITE e não sobrescreve o
- * trabalho do novo dono. É o teste obrigatório da missão (o que a primitiva de lease sozinha não
- * garante).
+ * trabalho do novo dono. O WHERE é o CAS completo — token + fence + lease não expirado (+ status
+ * esperado quando informado) — então nem uma troca de dono nem um cancelamento entre a leitura e a
+ * escrita passam despercebidos.
  */
-async function updateTaskGuarded(taskId, patch, { leaseToken, fence = null } = {}) {
+async function updateTaskGuarded(taskId, patch, { leaseToken, fence = null, expectedStatus = null } = {}) {
   const leasePolicy = require('../../../engine/engineeringMission/leasePolicy');
   const Model = getEngineeringTaskModel();
   const lease = await getTaskLease(taskId);
   if (!lease) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
 
   // `nowMs` é OBRIGATÓRIO na primitiva pura (o motor não lê relógio — determinismo de replay é
-  // verificado por teste). O DEFEITO REAL foi aqui, no call site: omitir `nowMs` faz
-  // `lease.expiresAt > undefined` ser sempre falso, e o dono LEGÍTIMO passava a ser recusado com
-  // TASK_LEASE_EXPIRED — o Router inteiro travaria. O relógio entra pela borda (api/services).
+  // verificado por teste). O relógio entra pela borda (api/services).
   const authorization = leasePolicy.assertWriterAuthorized({ lease, nowMs: Date.now(), leaseToken, fence });
   if (!authorization.authorized) {
     // `leasePolicy` é compartilhado com EngineeringMission e devolve códigos com prefixo MISSION_.
-    // A recusa aqui é de TASK e precisa ser rastreável como tal (a missão exige distinguir os dois
-    // domínios); o COMPORTAMENTO é o mesmo, só o vocabulário é traduzido.
     const taskCode = {
       MISSION_STALE_WORKER_WRITE: 'TASK_STALE_WORKER_WRITE',
       MISSION_LEASE_NOT_HELD: 'TASK_LEASE_NOT_HELD',
       MISSION_LEASE_EXPIRED: 'TASK_LEASE_EXPIRED',
     }[authorization.code] || authorization.code;
-    const err = new Error(authorization.message || 'escrita recusada por fencing');
-    err.code = taskCode;
-    err.lease = lease;
-    throw err;
+    throw staleWriteError(taskCode, authorization.detail || 'escrita recusada por fencing', lease, taskId);
   }
 
-  const [affected] = await Model.update(patch, {
-    where: { id: taskId, lease_token: leaseToken, lease_fence: fence },
-  });
+  const where = {
+    id: taskId,
+    lease_token: leaseToken,
+    lease_fence: fence ?? lease.fence,
+    lease_expires_at: { [Op.gt]: Model.sequelize.fn('NOW') },
+  };
+  if (expectedStatus) where.status = expectedStatus;
+  const [affected] = await withDbDeadline(Model.sequelize, (transaction) => Model.update(patch, { where, transaction }), { operation: 'task_guarded_update', meta: { taskId } });
   if (affected === 0) {
-    throw Object.assign(new Error('escrita recusada: fence/token não correspondem ao dono atual'), {
-      code: 'TASK_STALE_WORKER_WRITE',
-    });
+    const current = await getTask(taskId);
+    if (expectedStatus && current && current.status !== expectedStatus && current.lease_token === leaseToken) {
+      // O dono ainda é este worker, mas o STATUS mudou por fora (cancelamento administrativo):
+      // não é escrita obsoleta de worker antigo, é transição que deixou de ser válida.
+      const err = new Error(`transição recusada: status mudou para ${current.status} durante a escrita`);
+      err.code = FAILURE_CODES.INVALID_STATE_TRANSITION;
+      throw err;
+    }
+    throw staleWriteError('TASK_STALE_WORKER_WRITE', 'escrita recusada: fence/token não correspondem ao dono atual ou lease expirou', await getTaskLease(taskId), taskId);
   }
   return getTask(taskId);
+}
+
+/**
+ * Verificação de AUTORIDADE antes de escrita crítica em tabelas-filhas (attempt, test run, review,
+ * regression run, telemetria de fase). Essas linhas não carregam o fence; a guarda é conferir, no
+ * banco, que este worker ainda é o dono vigente com lease válido — e recusar ANTES do efeito.
+ */
+async function assertTaskLeaseHeld(taskId, { leaseToken, fence } = {}) {
+  const Model = getEngineeringTaskModel();
+  const [rows] = await Model.sequelize.query(
+    `SELECT id FROM engineering_tasks
+      WHERE id = :id AND lease_token = :leaseToken AND lease_fence = :fence AND lease_expires_at > NOW()`,
+    { replacements: { id: taskId, leaseToken, fence } },
+  );
+  if (rows.length === 0) {
+    throw staleWriteError('TASK_STALE_WORKER_WRITE', 'escrita crítica recusada: este worker não é mais o dono vigente da task', await getTaskLease(taskId), taskId);
+  }
+  return true;
+}
+
+function taskProgressRecord(row) {
+  if (!row) return {};
+  return {
+    lastMeaningfulProgressAt: row.last_progress_at ?? null,
+    lastProgressSignal: row.last_progress_signal ?? null,
+    progressCount: Number(row.progress_count ?? 0) || 0,
+  };
+}
+
+/**
+ * Registra PROGRESSO SIGNIFICATIVO da task (patch gerado, comando concluído, resultado de teste,
+ * review, regressão, gate, promoção...). Sinais de liveness (heartbeat/lease_renewal) são
+ * RECUSADOS pelo núcleo. Com credencial de lease, a escrita é guardada por fence: um worker antigo
+ * não "mantém viva" uma task que já não é dele.
+ */
+async function recordTaskProgress(taskId, { signal, detail = null, atMs = null } = {}, guard = null) {
+  const current = await getTask(taskId);
+  if (!current) return { ok: false, accepted: false, reason: 'not_found' };
+  const decided = progressPolicy.recordProgress(taskProgressRecord(current), {
+    signal,
+    atMs: Number.isFinite(atMs) ? atMs : Date.now(),
+    detail,
+  });
+  if (!decided.accepted) return { ok: false, accepted: false, reason: decided.reason };
+  const patch = {
+    last_progress_at: new Date(decided.record.lastMeaningfulProgressAt),
+    last_progress_signal: decided.record.lastProgressSignal,
+    progress_count: decided.record.progressCount,
+  };
+  if (guard && guard.leaseToken) {
+    await updateTaskGuarded(taskId, patch, { leaseToken: guard.leaseToken, fence: guard.fence });
+  } else {
+    const Model = getEngineeringTaskModel();
+    await Model.update(patch, { where: { id: taskId } });
+  }
+  return { ok: true, accepted: true, signal: decided.record.lastProgressSignal, lastProgressAt: decided.record.lastMeaningfulProgressAt };
+}
+
+/**
+ * SLOW ≠ STUCK ≠ DEAD para a task, a partir do estado PERSISTIDO (lease + heartbeat + progresso).
+ * A fase usada no limiar de NO_PROGRESS é o status corrente da task.
+ */
+async function evaluateTaskLiveness(taskId, { nowMs = Date.now(), policy = null, operationStartedAtMs = null, operationBaselineMs = null } = {}) {
+  const Model = getEngineeringTaskModel();
+  const row = await Model.findByPk(taskId);
+  if (!row) return null;
+  const plain = toPlain(row);
+  const phaseMap = { CODING: 'IMPLEMENTING', ROUTED: 'ANALYZING', CLASSIFIED: 'ANALYZING', TESTING: 'TESTING', REVIEWING: 'REVIEWING', REGRESSION: 'REGRESSION', GOVERNANCE: 'REGRESSION' };
+  return progressPolicy.classifyLiveness({
+    lease: plain.lease_token ? taskLeaseToPlain(plain) : null,
+    progressRecord: taskProgressRecord(plain),
+    nowMs,
+    phase: phaseMap[plain.status] || plain.status,
+    policy,
+    operationStartedAtMs,
+    operationBaselineMs,
+  });
 }
 
 async function findTasksWithExpiredLease({ limit = 50 } = {}) {
@@ -379,7 +501,10 @@ async function findTasksWithExpiredLease({ limit = 50 } = {}) {
   return rows.map(toPlain);
 }
 
-async function saveRoutingDecision(taskId, routingDecision) {
+async function saveRoutingDecision(taskId, routingDecision, guard = null) {
+  if (guard && guard.leaseToken) {
+    return updateTaskGuarded(taskId, { routing_decision: routingDecision }, guard);
+  }
   const Model = getEngineeringTaskModel();
   const row = await Model.findByPk(taskId);
   if (!row) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
@@ -387,10 +512,14 @@ async function saveRoutingDecision(taskId, routingDecision) {
   return toPlain(row);
 }
 
-async function saveLastError(taskId, error = {}) {
+async function saveLastError(taskId, error = {}, guard = null) {
   const Model = getEngineeringTaskModel();
   const row = await Model.findByPk(taskId);
   if (!row) return null;
+  if (guard && guard.leaseToken) {
+    const { message = null, code = null, ...extra } = error;
+    return updateTaskGuarded(taskId, { last_error: { message, code: code || null, at: new Date().toISOString(), ...extra } }, guard);
+  }
   // DEFEITO REAL corrigido aqui (medido em 2026-09-25): a versão anterior montava
   // `{ message, code, at }` e DESCARTAVA todo o resto que o chamador passou. Quem registrava um
   // bloqueio com contexto adicional (estado, estratégia, decisão pendente) achava que tinha
@@ -587,6 +716,10 @@ module.exports = {
   releaseTaskLease,
   getTaskLease,
   updateTaskGuarded,
+  assertTaskLeaseHeld,
+  recordTaskProgress,
+  evaluateTaskLiveness,
+  resolveTaskLeaseTtlMs,
   findTasksWithExpiredLease,
   saveRoutingDecision,
   saveLastError,

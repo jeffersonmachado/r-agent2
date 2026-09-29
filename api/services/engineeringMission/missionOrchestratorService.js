@@ -29,9 +29,35 @@ const { runTask } = require('../engineeringRouter/engineeringRouterService');
 const { TERMINAL_STATES } = require('../../../engine/engineeringRouter/constants');
 const { SPEC_STRATEGIES } = require('../../../engine/engineeringMission/missionSpecFreshness');
 const logger = require('../../utils/logger');
+const os = require('os');
+const crypto = require('crypto');
+const { resolveLeaseState } = require('../../../engine/engineeringMission/leasePolicy');
+const { policyMs } = require('../../utils/operationDeadline');
 
 /** Tenant de plataforma — mesmo padrão de `DEFAULT_TENANT_ID` em engineeringRouter/*. */
 const PLATFORM_TENANT_ID = 'system';
+
+/** Identidade de instância do orquestrador (UUID; PID nunca é identidade distribuída). */
+const ORCHESTRATOR_INSTANCE_ID = process.env.ENGINEERING_MISSION_ORCHESTRATOR_INSTANCE_ID
+  || `orchestrator-${os.hostname()}-${crypto.randomUUID()}`;
+
+/** MissionLease do orquestrador (implementação única em `missionStore.withMissionLease`). */
+function withMissionLease(missionId, providedLease, fn, { heartbeat = false, administrative = false } = {}) {
+  return missionStore.withMissionLease(missionId, providedLease, fn, {
+    workerInstanceId: ORCHESTRATOR_INSTANCE_ID,
+    workerType: 'ORCHESTRATOR',
+    host: os.hostname(),
+    heartbeat,
+    // Início de execução é curto e idempotente: espera o dono vivo e segue; estados em que nenhum
+    // lease é possível caem na validação de executabilidade (erro de negócio correto).
+    waitForLease: administrative,
+    allowTerminalWithoutLease: administrative,
+  });
+}
+
+function writeMissionState(missionId, patch, guard) {
+  return guard ? missionStore.updateMissionGuarded(missionId, patch, guard) : missionStore.updateMission(missionId, patch);
+}
 
 const DISPLAY_TO_MISSION_STATE = Object.freeze({
   RUNNING: 'EXECUTING',
@@ -97,7 +123,11 @@ async function supersedePreviousTask({ mission, newTaskId, actor = null, tenantI
   return outcome;
 }
 
-async function startExecution(missionId, { actor = null, tenantId = 'system' } = {}) {
+async function startExecution(missionId, { actor = null, tenantId = 'system', lease = null } = {}) {
+  return withMissionLease(missionId, lease, ({ guard }) => startExecutionHeld(missionId, { actor, tenantId, guard }), { administrative: true });
+}
+
+async function startExecutionHeld(missionId, { actor, tenantId, guard }) {
   const { mission, spec, approval } = await approvalService.assertMissionExecutable(missionId);
 
   const task = await engineeringTaskService.createTask(
@@ -114,11 +144,12 @@ async function startExecution(missionId, { actor = null, tenantId = 'system' } =
   // EXPLÍCITA antes do novo vínculo, para que não reste execução paralela sobre contrato antigo.
   const supersession = await supersedePreviousTask({ mission, newTaskId: task.id, actor, tenantId });
 
-  await missionStore.linkTask({ missionId, taskId: task.id });
-  await missionStore.updateMission(missionId, { status: 'EXECUTING' });
+  await missionStore.linkTask({ missionId, taskId: task.id, guard });
+  await writeMissionState(missionId, { status: 'EXECUTING' }, guard);
   await missionStore.mergeMissionJson(missionId, {
     resume: { phase: 'EXECUTING', taskId: task.id, missionVersion: spec.version, startedAt: new Date().toISOString() },
-  });
+  }, guard);
+  await missionStore.recordMissionProgress(missionId, { signal: 'task_created', detail: task.id }, guard);
 
   const detail = await compiler.getMissionDetail(missionId);
   emitMissionStage(tenantId, missionId, {
@@ -141,7 +172,14 @@ async function startExecution(missionId, { actor = null, tenantId = 'system' } =
  * `credentialScope` NUNCA vem de quem chama a API (mesma regra do Router — ERV1-CLOSE-006): é
  * parâmetro de worker/teste, com o default do próprio Router quando omitido.
  */
-async function runMissionTask(missionId, { tenantId = null, runnerId = undefined, credentialScope = undefined } = {}) {
+async function runMissionTask(missionId, {
+  tenantId = null,
+  runnerId = undefined,
+  credentialScope = undefined,
+  // Posse PROPAGADA pelo recovery (§49/§50): o mesmo modelo de ownership do runtime normal.
+  missionLease = null,
+  taskLease = null,
+} = {}) {
   const mission = await missionStore.getMission(missionId);
   if (!mission) throw Object.assign(new Error(`mission ${missionId} não encontrada`), { code: 'not_found' });
   if (!mission.linked_task_id) {
@@ -155,16 +193,22 @@ async function runMissionTask(missionId, { tenantId = null, runnerId = undefined
   // explícita (§23) em vez de deixar a task avançar sobre contrato obsoleto.
   await taskSpecBinding.assertTaskSpecFresh(mission.linked_task_id, { phase: 'EXECUTION_ENTRY', missionId });
 
-  const result = await runTask(mission.linked_task_id, {
-    // GUARD por fase: injetado aqui (o Router é genérico e não conhece missões). Revalida antes de
-    // CODING, antes de retomar fase de avanço e antes de promover.
-    specFreshnessGuard: ({ phase }) => taskSpecBinding.assertTaskSpecFresh(mission.linked_task_id, { phase, missionId }),
-    ...(runnerId ? { runnerId } : {}),
-    ...(credentialScope ? { credentialScope } : {}),
-    ...(tenantId ? { eventAudienceTenantId: tenantId } : {}),
-  });
-  const detail = await refreshMissionState(missionId, { tenantId });
-  return { result, mission: detail };
+  // A missão fica sob MissionLease com heartbeat durante TODA a execução da task: progresso da
+  // task (eventos significativos do Router) é propagado como progresso da missão, sob fence.
+  return withMissionLease(missionId, missionLease, async ({ guard }) => {
+    const result = await runTask(mission.linked_task_id, {
+      // GUARD por fase: injetado aqui (o Router é genérico e não conhece missões). Revalida antes de
+      // CODING, antes de retomar fase de avanço e antes de promover.
+      specFreshnessGuard: ({ phase }) => taskSpecBinding.assertTaskSpecFresh(mission.linked_task_id, { phase, missionId }),
+      onProgress: ({ signal, detail }) => missionStore.recordMissionProgress(missionId, { signal, detail }, guard),
+      ...(runnerId ? { runnerId } : {}),
+      ...(taskLease ? { lease: taskLease } : {}),
+      ...(credentialScope ? { credentialScope } : {}),
+      ...(tenantId ? { eventAudienceTenantId: tenantId } : {}),
+    });
+    const detail = await refreshMissionState(missionId, { tenantId, guard });
+    return { result, mission: detail };
+  }, { heartbeat: true });
 }
 
 /**
@@ -176,7 +220,7 @@ async function runMissionTask(missionId, { tenantId = null, runnerId = undefined
  * nesse caso a missão fica BLOCKED com o motivo persistido. GREEN continua dependendo dos gates
  * reais; a revisão é um gate adicional, nunca um substituto.
  */
-async function refreshMissionState(missionId, { tenantId = null } = {}) {
+async function refreshMissionState(missionId, { tenantId = null, guard = null } = {}) {
   const mission = await missionStore.getMission(missionId);
   if (!mission) return null;
   if (!mission.linked_task_id) return compiler.getMissionDetail(missionId);
@@ -206,7 +250,17 @@ async function refreshMissionState(missionId, { tenantId = null } = {}) {
 
   if (['GREEN', 'FAILED', 'DEGRADED'].includes(nextStatus) && !mission.completed_at) patch.completed_at = new Date();
   if (nextStatus !== mission.status || patch.completed_at || patch.failure !== mission.failure) {
-    await missionStore.updateMission(missionId, patch);
+    if (guard && guard.leaseToken) {
+      await missionStore.updateMissionGuarded(missionId, patch, guard);
+    } else {
+      // Reconciliação SEM posse (UI, parecer de review): se há um dono VIVO, é ele quem reconcilia —
+      // escrever por cima seria exatamente a escrita sem fence que a arquitetura proíbe.
+      const lease = missionStore.getMissionLease ? await missionStore.getMissionLease(missionId) : null;
+      if (lease && lease.token && resolveLeaseState(lease, Date.now()) === 'ACTIVE') {
+        return compiler.getMissionDetail(missionId);
+      }
+      await missionStore.updateMission(missionId, patch);
+    }
   }
 
   if (nextStatus !== mission.status) {
@@ -234,11 +288,40 @@ async function refreshMissionState(missionId, { tenantId = null } = {}) {
  *   - missão terminal é ignorada.
  * NUNCA inicia execução de missão sem aprovação válida para a versão corrente.
  */
-async function resumeInterruptedMissions({ tenantId = 'system', limit = 50, autoStart = true } = {}) {
+async function resumeInterruptedMissions({ tenantId = 'system', limit = 50, autoStart = true, budgetMs } = {}) {
   const missions = await missionStore.findResumableMissions({ limit });
-  const summary = { scanned: missions.length, enriched: 0, executed: 0, reconciled: 0, skippedLocked: 0, failed: 0, items: [] };
+
+  // ORÇAMENTO DA VARREDURA (missão 2026-09-28). Medido no banco real: cada missão resumível custa
+  // ~1,2 s (26 missões = 31,5 s por varredura), e a varredura rodava SEM limite declarado — a suíte
+  // de integração estourava o próprio timeout de 60 s e o BOOT ficava preso pelo tamanho do
+  // backlog. O valor vem do REGISTRY (`config/timeout-policy.json`, política `RECOVERY_SWEEP`),
+  // nunca de um número solto no código. `budgetMs: null` desliga o orçamento de propósito (drena a
+  // página inteira) — usado por quem precisa consumir o backlog, nunca como padrão.
+  const budget = budgetMs === null
+    ? null
+    : (Number.isFinite(budgetMs) ? budgetMs : policyMs('RECOVERY_SWEEP'));
+  const startedAt = Date.now();
+  const summary = {
+    scanned: missions.length,
+    processed: 0,
+    enriched: 0,
+    executed: 0,
+    reconciled: 0,
+    skippedLocked: 0,
+    failed: 0,
+    truncated: false,
+    budgetMs: budget,
+    remaining: 0,
+    items: [],
+  };
 
   for (const mission of missions) {
+    // Checagem ENTRE itens: a missão já iniciada TERMINA. Abandonar trabalho no meio por causa do
+    // orçamento criaria estado parcial — pior que demorar.
+    if (budget !== null && summary.processed > 0 && Date.now() - startedAt >= budget) {
+      summary.truncated = true;
+      break;
+    }
     try {
       if (mission.status === 'CREATED' || mission.status === 'ENRICHING') {
         await compiler.enrichMission(mission.id, { tenantId, actor: 'SYSTEM:RESUME' });
@@ -277,12 +360,23 @@ async function resumeInterruptedMissions({ tenantId = 'system', limit = 50, auto
       await missionStore.mergeMissionJson(mission.id, {
         resume: { lastError: { message: err.message, code: err.code || null, at: new Date().toISOString() } },
       }).catch(() => {});
+    } finally {
+      // Contabiliza o item INDEPENDENTE do desfecho (enriquecido, iniciado, reconciliado, pulado
+      // ou falho): `finally` também roda nos `continue` acima, e é o único ponto do laço que cobre
+      // TODOS os caminhos — sem isso `processed` mentiria e o orçamento pararia no lugar errado.
+      summary.processed += 1;
     }
   }
+
+  // Declaração explícita do truncamento: quem chama sabe que a página NÃO foi toda processada e
+  // pode continuar no próximo ciclo (nada é perdido — as missões continuam resumíveis).
+  summary.remaining = summary.truncated ? Math.max(0, missions.length - summary.processed) : 0;
   return summary;
 }
 
 module.exports = {
+  ORCHESTRATOR_INSTANCE_ID,
+  withMissionLease,
   DISPLAY_TO_MISSION_STATE,
   buildTaskContract,
   startExecution,

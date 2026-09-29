@@ -184,6 +184,11 @@ function wrapProviderGenerate(providerId, generateFn) {
       breaker.recordSuccess();
       return result;
     } catch (err) {
+      // Abort iniciado pelo CHAMADOR (deadline do Execution Deadline Manager, cancelamento por
+      // NO_PROGRESS, lease perdido) não é contabilizado aqui: o timeout é registrado UMA vez, com
+      // categoria, por `recordProviderTimeout` na borda do deadline; cancelamento cooperativo não é
+      // falha de saúde do provider. Sem isto, um timeout contava em dobro (AbortError + registro).
+      if (context && context.signal && context.signal.aborted) throw err;
       breaker.recordFailure();
       const { category } = classifyProviderError(err);
       providerLastFailureReason[providerId] = { category, message: err.message };
@@ -200,6 +205,24 @@ function wrapProviderGenerate(providerId, generateFn) {
       throw err;
     }
   };
+}
+
+/**
+ * Timeout de provider como SINAL DE SAÚDE (§61): a expiração decidida pelo Execution Deadline
+ * Manager alimenta o MESMO circuit breaker central do provider (não existe outro mecanismo).
+ * Timeouts repetidos abrem o circuito e o roteamento passa a evitar o provider.
+ */
+function recordProviderTimeout(providerId, detail = {}) {
+  const id = String(providerId || '').trim().toLowerCase();
+  const breaker = getProviderBreaker(id);
+  if (!breaker) return null;
+  breaker.recordFailure();
+  providerLastFailureReason[id] = { category: 'TIMEOUT', message: detail.message || 'PROVIDER_TIMEOUT' };
+  bufferEvent(
+    { type: 'model_access_failure', provider: id, category: 'TIMEOUT', at: new Date().toISOString() },
+    EVENT_PRIORITY.MODEL_ACCESS_FAILURE,
+  );
+  return breaker.getState();
 }
 
 function getBreakerStates() {
@@ -293,6 +316,7 @@ module.exports = {
   getComponents,
   getProviderBreaker,
   wrapProviderGenerate,
+  recordProviderTimeout,
   getBreakerStates,
   bufferEvent,
   drainBufferedEvents,

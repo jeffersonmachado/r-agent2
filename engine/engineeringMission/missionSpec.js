@@ -82,6 +82,18 @@ function normalizeRequirements(items) {
       enrichmentType: item.enrichmentType || null,
       confidence: item.confidence === undefined ? null : item.confidence,
       riskImpact: item.riskImpact || null,
+      // Proveniência de conhecimento (§35) só quando existe: critérios sem ela mantêm exatamente o
+      // shape (e portanto o specHash) anterior.
+      ...(item.knowledge && typeof item.knowledge === 'object' ? {
+        knowledge: {
+          knowledgeSource: item.knowledge.knowledgeSource || null,
+          sourceId: item.knowledge.sourceId || null,
+          chunkHash: item.knowledge.chunkHash || null,
+          chunkRef: item.knowledge.chunkRef || null,
+          score: item.knowledge.score ?? null,
+          derivedField: 'acceptanceCriteria',
+        },
+      } : {}),
     };
   });
 }

@@ -165,7 +165,44 @@ function buildDockerArgs({ executable, args, cwd, env, containerName, network })
  * testRunnerService.js troque a chamada sem mudar o resto do pipeline (redaction, evidence,
  * excerpting continuam no chamador).
  */
-async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = 'none' }) {
+/**
+ * Terminação GRACIOSA do container (§23): `docker kill --signal=SIGTERM` → janela de grace →
+ * `docker kill` (SIGKILL) somente se o container ainda estiver de pé. Antes era `docker kill`
+ * direto (SIGKILL imediato): o processo de teste nunca tinha chance de fechar handles, gravar
+ * relatório parcial ou liberar recursos. Só o CONTAINER (child) é sinalizado — nunca o Engineer
+ * Worker nem o runner.
+ */
+function terminateContainerGracefully(containerName, graceMs, steps, onSigkill) {
+  try {
+    execFileSync('docker', ['kill', '--signal=SIGTERM', containerName], { stdio: 'ignore', timeout: 5000 });
+    steps.push({ action: 'sigterm', at: Date.now() });
+  } catch (_) {
+    // container já pode ter terminado sozinho — sem problema.
+  }
+  const graceTimer = setTimeout(() => {
+    try {
+      execFileSync('docker', ['kill', containerName], { stdio: 'ignore', timeout: 5000 });
+      steps.push({ action: 'sigkill', at: Date.now() });
+      onSigkill();
+    } catch (_) {
+      // saiu dentro do grace: SIGKILL não foi necessário.
+    }
+  }, graceMs);
+  if (typeof graceTimer.unref === 'function') graceTimer.unref();
+  return graceTimer;
+}
+
+function resolveGraceMs(graceMs) {
+  if (Number.isFinite(graceMs) && graceMs > 0) return graceMs;
+  try {
+    // eslint-disable-next-line global-require
+    return require('../../utils/operationDeadline').policyMs('REGRESSION_CHILD_TERMINATION_GRACE');
+  } catch (_) {
+    return 10000;
+  }
+}
+
+async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = 'none', graceMs = null, signal = null }) {
   if (!isSandboxAvailable()) {
     const error = new Error('SANDBOX_UNAVAILABLE: Docker daemon inacessível — execução recusada (fail-closed, nunca cai de volta para spawn sem sandbox)');
     error.code = 'SANDBOX_UNAVAILABLE';
@@ -191,42 +228,63 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
   const containerName = `er-sandbox-${crypto.randomBytes(8).toString('hex')}`;
   const dockerArgs = buildDockerArgs({ executable, args, cwd, env, containerName, network });
 
+  const effectiveGraceMs = resolveGraceMs(graceMs);
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
     let timedOut = false;
+    let cancelled = false;
+    let terminatedBy = null;
     let settled = false;
+    let graceTimer = null;
+    const terminationSteps = [];
 
     const child = spawn('docker', dockerArgs, { shell: false });
+
+    // Mata o CONTAINER explicitamente (não só o processo cliente `docker run`): o cliente
+    // morrer não garante que o container remoto pare — um `docker run` cujo cliente é sinalizado
+    // não propaga o sinal ao container por padrão.
+    const terminate = () => {
+      terminatedBy = 'SIGTERM';
+      graceTimer = terminateContainerGracefully(containerName, effectiveGraceMs, terminationSteps, () => { terminatedBy = 'SIGKILL'; });
+    };
 
     const timer = timeoutMs
       ? setTimeout(() => {
         timedOut = true;
-        // Mata o CONTAINER explicitamente (não só o processo cliente `docker run`): o cliente
-        // morrer não garante que o container remoto pare — achado real de design, não teórico
-        // (um `docker run` cujo cliente é sinalizado não propaga o sinal ao container por
-        // padrão).
-        try {
-          execFileSync('docker', ['kill', containerName], { stdio: 'ignore', timeout: 5000 });
-        } catch (_) {
-          // container já pode ter terminado sozinho — sem problema.
-        }
+        terminate();
       }, timeoutMs)
       : null;
+
+    const onAbort = () => {
+      if (timedOut || cancelled || settled) return;
+      cancelled = true;
+      terminate();
+    };
+    if (signal) {
+      if (signal.aborted) onAbort();
+      else signal.addEventListener('abort', onAbort, { once: true });
+    }
 
     child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
     child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
 
-    child.on('close', (exitCode, signal) => {
+    child.on('close', (exitCode, exitSignal) => {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (graceTimer) clearTimeout(graceTimer);
+      if (signal) signal.removeEventListener('abort', onAbort);
       resolve({
-        exitCode: timedOut ? null : exitCode,
+        exitCode: timedOut || cancelled ? null : exitCode,
         stdout,
         stderr,
         timedOut,
-        signal: timedOut ? 'SIGKILL' : signal,
+        cancelled,
+        terminatedBy,
+        terminationSteps,
+        graceMs: effectiveGraceMs,
+        signal: terminatedBy || exitSignal,
       });
     });
 
@@ -234,6 +292,7 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (graceTimer) clearTimeout(graceTimer);
       resolve({
         exitCode: null,
         stdout,

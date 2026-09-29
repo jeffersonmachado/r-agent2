@@ -25,6 +25,17 @@ const os = require('os');
  *                                      revalida por conta própria).
  */
 
+function registryRunnerMaxMs() {
+  try {
+    // eslint-disable-next-line global-require
+    const registry = require('../../../config/timeout-policy.json');
+    const value = Number(registry?.policies?.RUNNER_MAX_COMMAND?.default);
+    return Number.isInteger(value) && value >= 1000 && value <= 600000 ? value : 300000;
+  } catch (_) {
+    return 300000;
+  }
+}
+
 function configError(message) {
   const error = new Error(`engineering_runner_config_invalid: ${message}`);
   error.code = 'engineering_runner_config_invalid';
@@ -66,7 +77,10 @@ function loadConfig(env = process.env, overrides = {}) {
       ? source.ENGINEERING_RUNNER_HOST.trim()
       : '0.0.0.0',
     authToken,
-    maxTimeoutMs: parseInteger(source.ENGINEERING_RUNNER_MAX_TIMEOUT_MS, 300000, { min: 1000, max: 600000, field: 'ENGINEERING_RUNNER_MAX_TIMEOUT_MS' }),
+    // Teto por comando alinhado ao Timeout Policy Registry (`RUNNER_MAX_COMMAND`): o cliente clampa
+    // no MESMO valor, então um deadline válido do lado da API nunca vira contrato recusado aqui
+    // (que antes aparecia como INFRA_ERROR falso para REGRESSION_COMMAND).
+    maxTimeoutMs: parseInteger(source.ENGINEERING_RUNNER_MAX_TIMEOUT_MS, registryRunnerMaxMs(), { min: 1000, max: 600000, field: 'ENGINEERING_RUNNER_MAX_TIMEOUT_MS' }),
     workspaceRoot,
     maxConcurrentExecutions: parseInteger(source.ENGINEERING_RUNNER_MAX_CONCURRENCY, 4, { min: 1, max: 64, field: 'ENGINEERING_RUNNER_MAX_CONCURRENCY' }),
   });

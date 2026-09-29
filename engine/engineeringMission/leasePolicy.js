@@ -24,7 +24,7 @@ const DEFAULT_LEASE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 60 * 1000;
 const MIN_LEASE_TTL_MS = 30 * 1000;
 
-const WORKER_TYPES = Object.freeze(['COMPILER', 'ORCHESTRATOR', 'RECOVERY', 'ROUTER_SUBAGENT']);
+const WORKER_TYPES = Object.freeze(['COMPILER', 'ORCHESTRATOR', 'RECOVERY', 'ROUTER_SUBAGENT', 'APPROVAL']);
 
 /** Estado de lease derivado (vocabulário único, usado também por evidência e relatório). */
 const LEASE_STATES = Object.freeze({

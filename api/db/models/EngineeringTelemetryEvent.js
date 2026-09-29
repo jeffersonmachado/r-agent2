@@ -35,6 +35,10 @@ function getEngineeringTelemetryEventModel() {
       result: { type: DataTypes.STRING, allowNull: false },
       test_pass: { type: DataTypes.BOOLEAN, allowNull: true },
       review_result: { type: DataTypes.STRING, allowNull: true },
+      // Eventos de liveness/deadline (TIMEOUT, NO_PROGRESS, LEASE_LOST, STALE_WRITE_REJECTED) com o
+      // registro estruturado completo — ver migration 20260928120000-engineering-telemetry-detail.
+      event_type: { type: DataTypes.STRING(48), allowNull: true },
+      detail: { type: DataTypes.JSONB, allowNull: true },
     }, {
       tableName: 'engineering_telemetry_events',
       timestamps: true,

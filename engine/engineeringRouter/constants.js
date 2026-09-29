@@ -131,6 +131,28 @@ const FAILURE_CODES = Object.freeze({
   // caminho específico fora de um escopo DECLARADO; NO_PATCH_SCOPE é sobre a AUSÊNCIA total de
   // escopo declarado).
   NO_PATCH_SCOPE: 'NO_PATCH_SCOPE',
+  // Arquitetura de timeouts (2026-09-28): expiração de OPERAÇÃO nunca vira falha genérica.
+  //   PROVIDER_EXHAUSTED  — orçamento de tentativas/tempo da cadeia de providers esgotado
+  //                          (fallback terminou sem sucesso) ⇒ BLOCKED, nunca crash;
+  //   BLOCKED_INFRA       — infraestrutura indisponível (sandbox/runner/banco) ⇒ BLOCKED;
+  //   TASK_LEASE_LOST     — o worker perdeu a posse (outro dono com fence maior) ⇒ para de
+  //                          escrever imediatamente; quem continua é o novo dono.
+  PROVIDER_EXHAUSTED: 'PROVIDER_EXHAUSTED',
+  BLOCKED_INFRA: 'BLOCKED_INFRA',
+  TASK_LEASE_LOST: 'TASK_LEASE_LOST',
+});
+
+/**
+ * Semântica de resultado de comando/teste. `timedOut=true` NUNCA é achatado em FAIL: FAIL indica
+ * bug (o código rodou e reprovou); TIMEOUT indica que a operação não terminou dentro do deadline
+ * (retry/deadline adaptativo/restart do child); INFRA_ERROR indica que nem rodou (BLOCKED_INFRA).
+ */
+const TEST_OUTCOMES = Object.freeze({
+  PASS: 'PASS',
+  FAIL: 'FAIL',
+  TIMEOUT: 'TIMEOUT',
+  BLOCKED: 'BLOCKED',
+  INFRA_ERROR: 'INFRA_ERROR',
 });
 
 const FINDING_SEVERITIES = Object.freeze(['BLOCKER', 'REGRESSION', 'POST_RELEASE']);
@@ -175,6 +197,7 @@ module.exports = {
   CONTEXT_CLASSES,
   TASK_STATES,
   TERMINAL_STATES,
+  TEST_OUTCOMES,
   REASON_CODES,
   FAILURE_CODES,
   FINDING_SEVERITIES,

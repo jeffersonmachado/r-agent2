@@ -25,17 +25,50 @@ const { ROOT } = require('./contextBuilderService');
 // SANDBOX_INVALID_WORKSPACE) que `executionSandbox.runInSandbox` já tinha.
 const { runInSandbox } = require('./engineeringRunnerClient');
 
+const { TEST_OUTCOMES } = require('../../../engine/engineeringRouter/constants');
+const { resolvePolicy } = require('../../utils/operationDeadline');
+
 const EVIDENCE_ROOT = process.env.ENGINEERING_ROUTER_EVIDENCE_ROOT
   || path.join(ROOT, 'dev', 'engineering-router-v1', 'evidence');
 
-const DEFAULT_TIMEOUT_MS = Number(process.env.ENGINEERING_ROUTER_TEST_TIMEOUT_MS || 120000);
 const EXCERPT_LIMIT = 4000;
+
+/**
+ * Deadline de UM comando de teste — Timeout Policy Registry, nunca magic number. A política padrão
+ * é `INTEGRATION_TEST` (default 120s, o mesmo valor que antes era hardcoded aqui); a regressão usa
+ * `REGRESSION_COMMAND`. `ENGINEERING_ROUTER_TEST_TIMEOUT_MS` continua aceito como override, sempre
+ * clampado em [min,max] da política. `timeoutMultiplier` é o deadline ADAPTATIVO pedido pelo Router
+ * depois de um TIMEOUT (nunca ultrapassa o `max` da política).
+ */
+function resolveCommandDeadlineMs({ policy = 'INTEGRATION_TEST', timeoutMultiplier = 1 } = {}) {
+  const legacy = Number(process.env.ENGINEERING_ROUTER_TEST_TIMEOUT_MS);
+  const base = resolvePolicy(policy, { override: policy === 'INTEGRATION_TEST' && Number.isFinite(legacy) && legacy > 0 ? legacy : null });
+  const multiplier = Number.isFinite(timeoutMultiplier) && timeoutMultiplier > 1 ? timeoutMultiplier : 1;
+  if (multiplier === 1) return base.resolved;
+  return resolvePolicy(policy, { override: Math.round(base.resolved * multiplier) }).resolved;
+}
+
+/** Compatibilidade: valor efetivo da política padrão (antes, constante hardcoded de 120000). */
+const DEFAULT_TIMEOUT_MS = resolveCommandDeadlineMs();
+
+/**
+ * Semântica explícita de resultado (TEST_OUTCOMES). `timedOut` NUNCA vira FAIL: FAIL é o código
+ * rodando e reprovando; TIMEOUT é a operação que não terminou no deadline; INFRA_ERROR é não ter
+ * conseguido rodar (sandbox/runner indisponível); BLOCKED é recusa por política (allowlist).
+ */
+function classifyCommandOutcome(run) {
+  if (run.code === 'SANDBOX_UNAVAILABLE' || run.code === 'SANDBOX_INVALID_WORKSPACE') return TEST_OUTCOMES.INFRA_ERROR;
+  if (run.timedOut) return TEST_OUTCOMES.TIMEOUT;
+  if (run.exitCode === 0) return TEST_OUTCOMES.PASS;
+  if (run.exitCode === null || run.exitCode === undefined) return TEST_OUTCOMES.INFRA_ERROR;
+  return TEST_OUTCOMES.FAIL;
+}
 
 function slugCommand(command) {
   return crypto.createHash('sha1').update(command).digest('hex').slice(0, 12);
 }
 
-async function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+async function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS, signal = null } = {}) {
   const startedAt = Date.now();
 
   // ERV1-CLOSE-001: allowlist estrutural de comando (nunca uma string interpretada por shell).
@@ -51,6 +84,7 @@ async function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOU
       cwd,
       env: buildSafeTestEnv({ cwd }),
       timeoutMs,
+      signal,
     });
     return {
       exitCode: result.exitCode,
@@ -59,8 +93,12 @@ async function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOU
       stderr: result.stderr,
       durationMs: Date.now() - startedAt,
       timedOut: result.timedOut,
+      terminatedBy: result.terminatedBy || null,
     };
   } catch (err) {
+    // Cancelamento cooperativo (lease perdido / NO_PROGRESS) não é resultado de teste: propaga
+    // para o Router decidir (retry/parar) — nunca vira INFRA_ERROR nem FAIL.
+    if (err.code === 'OPERATION_CANCELLED') throw err;
     return {
       exitCode: null,
       error: err.message,
@@ -83,7 +121,17 @@ async function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOU
  * @param {string} params.cwd - workspace isolado (patchApplyService.createWorkspace)
  * @returns {Promise<{allPass:boolean, results:Object[]}>}
  */
-async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
+async function runTestCommands({
+  taskId,
+  attemptNumber,
+  commands,
+  cwd,
+  policy = 'INTEGRATION_TEST',
+  timeoutMultiplier = 1,
+  signal = null,
+  onCommandCompleted = null,
+}) {
+  const timeoutMs = resolveCommandDeadlineMs({ policy, timeoutMultiplier });
   const evidenceDir = path.join(EVIDENCE_ROOT, String(taskId), `attempt-${attemptNumber}`);
   fs.mkdirSync(evidenceDir, { recursive: true });
 
@@ -94,6 +142,7 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
       results.push({
         command,
         status: 'REJECTED',
+        outcome: TEST_OUTCOMES.BLOCKED,
         exitCode: null,
         durationMs: 0,
         reason: policyCheck.reason,
@@ -105,8 +154,9 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
     }
 
     const startedAt = new Date();
-    const run = await runOneCommand(policyCheck.executable, policyCheck.args, { cwd });
+    const run = await runOneCommand(policyCheck.executable, policyCheck.args, { cwd, timeoutMs, signal });
     const completedAt = new Date();
+    const outcome = classifyCommandOutcome(run);
 
     // ER-V1-FINAL-001: sandbox indisponível (Docker inacessível) OU cwd inválido (repositório
     // principal em vez de um workspace isolado) são falhas de infraestrutura/uso indevido,
@@ -116,6 +166,7 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
       results.push({
         command,
         status: run.code,
+        outcome,
         exitCode: null,
         durationMs: run.durationMs,
         reason: run.error,
@@ -142,9 +193,13 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
 
     results.push({
       command,
-      status: run.exitCode === 0 ? 'PASS' : 'FAIL',
+      status: outcome,
+      outcome,
       exitCode: run.exitCode,
       durationMs: run.durationMs,
+      timedOut: Boolean(run.timedOut),
+      deadlineMs: timeoutMs,
+      terminatedBy: run.terminatedBy || null,
       stdoutRef: path.relative(ROOT, stdoutFile),
       stderrRef: path.relative(ROOT, stderrFile),
       stdoutExcerpt: safeStdout.slice(-EXCERPT_LIMIT),
@@ -152,14 +207,27 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
       startedAt: startedAt.toISOString(),
       completedAt: completedAt.toISOString(),
     });
+    if (typeof onCommandCompleted === 'function') {
+      try { await onCommandCompleted(results[results.length - 1]); } catch (_) { /* progresso é best-effort */ }
+    }
   }
 
   const allPass = results.length > 0 && results.every((r) => r.status === 'PASS');
-  return { allPass, results };
+  // Veredito agregado com a MESMA semântica: um INFRA_ERROR domina (nada foi provado), depois
+  // TIMEOUT, depois FAIL. Nunca "FAIL" genérico para o que foi timeout ou infraestrutura.
+  const outcomes = results.map((r) => r.outcome || r.status);
+  const aggregateOutcome = allPass ? TEST_OUTCOMES.PASS
+    : outcomes.includes(TEST_OUTCOMES.INFRA_ERROR) ? TEST_OUTCOMES.INFRA_ERROR
+      : outcomes.includes(TEST_OUTCOMES.TIMEOUT) ? TEST_OUTCOMES.TIMEOUT
+        : outcomes.includes(TEST_OUTCOMES.BLOCKED) ? TEST_OUTCOMES.BLOCKED
+          : TEST_OUTCOMES.FAIL;
+  return { allPass, results, outcome: aggregateOutcome, deadlineMs: timeoutMs };
 }
 
 module.exports = {
   EVIDENCE_ROOT,
   DEFAULT_TIMEOUT_MS,
+  resolveCommandDeadlineMs,
+  classifyCommandOutcome,
   runTestCommands,
 };

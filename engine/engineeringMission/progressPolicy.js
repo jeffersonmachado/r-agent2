@@ -39,6 +39,14 @@ const PROGRESS_SIGNALS = Object.freeze([
   'reviewer_result',
   'gate_completed',
   'state_transition',
+  // Eventos nomeados do runtime real (Mission Compiler / Engineering Router). Cada um é avanço
+  // VERIFICÁVEL (um artefato ou decisão persistida), nunca liveness.
+  'mission_enriched',
+  'task_created',
+  'patch_applied',
+  'command_completed',
+  'regression_completed',
+  'promotion_completed',
 ]);
 
 /** Sinais que provam apenas LIVENESS — jamais progresso funcional. */
@@ -189,7 +197,95 @@ function evaluateProgress(record, { nowMs, phase = null, policy = null, heartbea
   };
 }
 
+/** Vocabulário operacional de liveness × avanço (o princípio da arquitetura em estados nomeados). */
+const LIVENESS_STATES = Object.freeze({
+  HEALTHY: 'HEALTHY',
+  SLOW: 'SLOW',
+  STUCK: 'STUCK',
+  DEAD: 'DEAD',
+  UNKNOWN: 'UNKNOWN',
+});
+
+/**
+ * Classifica o executor de uma unidade de trabalho cruzando LEASE (posse), HEARTBEAT (liveness) e
+ * PROGRESSO (avanço). Cada estado produz um comportamento diferente — e é isso que impede que
+ * "passaram N minutos" vire decisão de morte:
+ *
+ *   DEAD  = lease expirado (heartbeat parou) ⇒ recovery/takeover é apropriado;
+ *   STUCK = lease saudável + heartbeat fresco + sem progresso além do limiar ⇒ diagnóstico,
+ *           cancelar a OPERAÇÃO, retry/fallback/replan — nunca takeover;
+ *   SLOW  = lease saudável + progredindo, porém a operação corrente já passou do baseline ⇒
+ *           nada a fazer (não takeover, não fail);
+ *   HEALTHY = lease saudável + progredindo dentro do baseline.
+ *
+ * `lease` no shape normalizado de `leasePolicy.normalizeLease`. `operationStartedAtMs` e
+ * `operationBaselineMs` são opcionais (sem eles SLOW nunca é inferido — ausência de dado não vira
+ * veredito). Heartbeat é considerado fresco enquanto o lease estiver ativo: a renovação do lease É
+ * o heartbeat persistido.
+ */
+function classifyLiveness({
+  lease = null,
+  progressRecord = null,
+  nowMs,
+  phase = null,
+  policy = null,
+  operationStartedAtMs = null,
+  operationBaselineMs = null,
+} = {}) {
+  const hasLease = Boolean(lease && lease.token);
+  const leaseActive = hasLease && lease.expiresAt !== null && lease.expiresAt > nowMs;
+  const heartbeatAgeMs = hasLease && Number.isFinite(lease.heartbeatAt) ? nowMs - lease.heartbeatAt : null;
+
+  if (hasLease && !leaseActive) {
+    return {
+      state: LIVENESS_STATES.DEAD,
+      reason: 'lease expirado: heartbeat parou de renovar a posse',
+      heartbeatAgeMs,
+      takeoverAllowed: true,
+      actions: ['recover', 'take_over'],
+      progress: null,
+    };
+  }
+  if (!hasLease) {
+    return { state: LIVENESS_STATES.UNKNOWN, reason: 'sem lease — nenhum executor declarado', heartbeatAgeMs: null, takeoverAllowed: true, actions: [], progress: null };
+  }
+
+  const progress = evaluateProgress(progressRecord || {}, { nowMs, phase, policy, heartbeatAgeMs });
+  if (progress.state === PROGRESS_STATES.NO_PROGRESS) {
+    return {
+      state: LIVENESS_STATES.STUCK,
+      reason: `worker vivo (heartbeat há ${heartbeatAgeMs}ms) e ${progress.reason}`,
+      heartbeatAgeMs,
+      takeoverAllowed: false,
+      actions: progress.actions,
+      diagnosis: progress.diagnosis,
+      progress,
+    };
+  }
+  const opElapsed = Number.isFinite(operationStartedAtMs) ? nowMs - operationStartedAtMs : null;
+  if (opElapsed !== null && Number.isFinite(operationBaselineMs) && opElapsed > operationBaselineMs) {
+    return {
+      state: LIVENESS_STATES.SLOW,
+      reason: `operação em curso há ${opElapsed}ms (baseline ${operationBaselineMs}ms), worker vivo e progredindo`,
+      heartbeatAgeMs,
+      takeoverAllowed: false,
+      actions: [],
+      progress,
+    };
+  }
+  return {
+    state: progress.state === PROGRESS_STATES.UNKNOWN ? LIVENESS_STATES.UNKNOWN : LIVENESS_STATES.HEALTHY,
+    reason: progress.reason,
+    heartbeatAgeMs,
+    takeoverAllowed: false,
+    actions: [],
+    progress,
+  };
+}
+
 module.exports = {
+  LIVENESS_STATES,
+  classifyLiveness,
   PROGRESS_SIGNALS,
   NON_PROGRESS_SIGNALS,
   DEFAULT_PHASE_THRESHOLDS_MS,

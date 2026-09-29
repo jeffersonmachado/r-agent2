@@ -21,16 +21,14 @@
  *     reimplementa governança, só invoca a autoridade que já existe.
  */
 
-const { execFile } = require('child_process');
-const util = require('util');
 const path = require('path');
 const engineeringTaskService = require('./engineeringTaskService');
 const { ROOT, expandGlobsToFiles } = require('./contextBuilderService');
 const { runTestCommands } = require('./testRunnerService');
 const { buildRegressionPlan } = require('../../../engine/engineeringRouter/regressionPlan');
 const { computeSourceFingerprint } = require('../../../governance/proof-engine/fingerprint-chain');
-
-const execFileAsync = util.promisify(execFile);
+const { TEST_OUTCOMES } = require('../../../engine/engineeringRouter/constants');
+const { runChildWithDeadline } = require('../../utils/operationDeadline');
 
 /**
  * ER-V1-FINAL-006 — Real Regression.
@@ -54,7 +52,7 @@ const execFileAsync = util.promisify(execFile);
  * @param {string[]} params.targetedCommands - testCommands do Task Contract.
  * @returns {Promise<{pass:boolean, evidence:Object}>}
  */
-async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths, risk, targetedCommands }) {
+async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths, risk, targetedCommands, signal = null, onCommandCompleted = null, assertHeld = null }) {
   const checkedAt = new Date().toISOString();
 
   // Candidatos a "teste relacionado"/"subsistema" resolvidos AQUI (I/O real, glob do
@@ -79,13 +77,21 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
 
   const sourceFingerprint = computeSourceFingerprint(ROOT);
   const startedAt = new Date();
-  const { results, allPass } = await runTestCommands({
+  // Cada comando da regressão tem o deadline da política REGRESSION_COMMAND (registry), nunca o
+  // default de teste unitário: regressão é legitimamente longa e é governada por progresso
+  // (cada comando concluído é um evento de progresso), não por wall-clock.
+  const { results, allPass, outcome } = await runTestCommands({
     taskId,
     attemptNumber: 'regression',
     commands: plan.commands,
     cwd: workspacePath,
+    policy: 'REGRESSION_COMMAND',
+    signal,
+    onCommandCompleted,
   });
   const completedAt = new Date();
+  // Fencing: a evidência de regressão só é gravada se este worker ainda é o dono da task.
+  if (typeof assertHeld === 'function') await assertHeld();
 
   const exitCodes = results.map((r) => r.exitCode);
   const evidenceRefs = results.map((r) => ({ command: r.command, stdoutRef: r.stdoutRef || null, stderrRef: r.stderrRef || null }));
@@ -95,7 +101,7 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
     commands: plan.commands,
     exit_codes: exitCodes,
     source_fingerprint: sourceFingerprint,
-    result: allPass ? 'PASS' : 'FAIL',
+    result: allPass ? 'PASS' : outcome,
     evidence_refs: evidenceRefs,
     started_at: startedAt,
     completed_at: completedAt,
@@ -104,13 +110,15 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
   const failed = results.filter((r) => r.status !== 'PASS');
   return {
     pass: allPass,
+    outcome,
     evidence: {
       checkedAt,
       planTier: plan.tier,
       sourceFingerprint,
+      outcome,
       commandCount: plan.commands.length,
-      commands: results.map((r) => ({ command: r.command, status: r.status, exitCode: r.exitCode })),
-      failed: failed.map((r) => ({ command: r.command, status: r.status, exitCode: r.exitCode })),
+      commands: results.map((r) => ({ command: r.command, status: r.status, outcome: r.outcome || r.status, exitCode: r.exitCode })),
+      failed: failed.map((r) => ({ command: r.command, status: r.status, outcome: r.outcome || r.status, exitCode: r.exitCode })),
     },
   };
 }
@@ -122,32 +130,47 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
  *
  * @returns {Promise<{pass:boolean, evidence:Object}>}
  */
-async function checkGovernance() {
+async function checkGovernance({ signal = null } = {}) {
   const scriptPath = path.join(ROOT, 'scripts', 'governance', 'validate-engineering-router-v1.js');
   const checkedAt = new Date().toISOString();
 
-  try {
-    const { stdout } = await execFileAsync(process.execPath, [scriptPath], {
-      cwd: ROOT,
-      timeout: 60000,
-      maxBuffer: 5 * 1024 * 1024,
-    });
-    return {
-      pass: true,
-      evidence: { checkedAt, gate: 'validate-engineering-router-v1', exitCode: 0, summary: stdout.trim().split('\n').slice(0, 3) },
-    };
-  } catch (err) {
-    const exitCode = typeof err.code === 'number' ? err.code : 1;
-    return {
-      pass: false,
-      evidence: {
-        checkedAt,
-        gate: 'validate-engineering-router-v1',
-        exitCode,
-        summary: String(err.stdout || err.message || '').trim().split('\n').slice(0, 10),
-      },
-    };
+  // Subprocesso governado pela política REGRESSION_COMMAND (antes: `timeout: 60000` hardcoded, e o
+  // `execFile` só mandava SIGTERM — um gate travado ignorando SIGTERM segurava o worker). Agora:
+  // deadline do registry → SIGTERM → grace (REGRESSION_CHILD_TERMINATION_GRACE) → SIGKILL, somente
+  // no CHILD. Expirar é TIMEOUT (não FAIL): o gate não reprovou, ele não terminou.
+  const run = await runChildWithDeadline({
+    command: process.execPath,
+    args: [scriptPath],
+    cwd: ROOT,
+    policy: 'REGRESSION_COMMAND',
+    gracePolicy: 'REGRESSION_CHILD_TERMINATION_GRACE',
+    parentSignal: signal,
+    meta: { operation: 'governance_gate:validate-engineering-router-v1', phase: 'GOVERNANCE' },
+  });
+  if (run.cancelled) {
+    const cancelled = new Error('gate de governança cancelado cooperativamente');
+    cancelled.code = 'OPERATION_CANCELLED';
+    throw cancelled;
   }
+  const outcome = run.timedOut ? TEST_OUTCOMES.TIMEOUT
+    : run.exitCode === 0 ? TEST_OUTCOMES.PASS
+      : run.exitCode === null ? TEST_OUTCOMES.INFRA_ERROR
+        : TEST_OUTCOMES.FAIL;
+  const summarySource = outcome === TEST_OUTCOMES.PASS ? run.stdout : (run.stdout || run.stderr);
+  return {
+    pass: outcome === TEST_OUTCOMES.PASS,
+    outcome,
+    evidence: {
+      checkedAt,
+      gate: 'validate-engineering-router-v1',
+      exitCode: run.exitCode,
+      outcome,
+      durationMs: run.durationMs,
+      deadlineMs: run.deadlineMs,
+      terminatedBy: run.terminatedBy,
+      summary: String(summarySource || '').trim().split('\n').slice(0, outcome === TEST_OUTCOMES.PASS ? 3 : 10),
+    },
+  };
 }
 
 module.exports = {

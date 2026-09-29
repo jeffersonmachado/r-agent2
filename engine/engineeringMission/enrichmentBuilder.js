@@ -293,6 +293,102 @@ function computeRisk({ contextFacts = {}, rulesApplied, missionType }) {
  * @param {Object} [params.contextFacts]
  * @param {Object} [params.memory]
  */
+/** Orçamento de contexto do conhecimento enviado ao Enricher (§34). ~4 chars por token. */
+const KNOWLEDGE_CONTEXT_BUDGET = Object.freeze({
+  maxChunks: 6,
+  maxTokens: 1800,
+  maxPerSource: 2,
+  charsPerToken: 4,
+});
+
+/**
+ * Seleção DETERMINÍSTICA do conhecimento que entra no prompt do Mission Enricher:
+ * ranking por score → deduplicação por hash de conteúdo → diversidade de fonte (no máximo
+ * `maxPerSource` trechos da mesma fonte) → teto de chunks → orçamento de tokens (trecho que não
+ * cabe inteiro é cortado no limite restante e marcado `truncated`). Cada chunk recebe uma
+ * referência estável (`K1..Kn`) para o modelo CITAR — requisito sem citação válida é descartado.
+ *
+ * @returns {{ chunks: Array, budget: object }}
+ */
+function selectKnowledgeForEnrichment(chunks = [], limits = {}) {
+  const cfg = { ...KNOWLEDGE_CONTEXT_BUDGET, ...limits };
+  const maxChars = cfg.maxTokens * cfg.charsPerToken;
+  const ranked = (Array.isArray(chunks) ? chunks : [])
+    .filter((c) => c && typeof c.text === 'string' && c.text.trim().length > 0)
+    .map((c, index) => ({ ...c, _order: index }))
+    .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0) || a._order - b._order);
+  const seenHashes = new Set();
+  const perSource = new Map();
+  const selected = [];
+  const dropped = { duplicate: 0, sourceDiversity: 0, maxChunks: 0, tokenBudget: 0 };
+  let usedChars = 0;
+  for (const chunk of ranked) {
+    const hash = chunk.hash || slug(chunk.text).slice(0, 80);
+    if (seenHashes.has(hash)) { dropped.duplicate += 1; continue; }
+    const sourceKey = chunk.sourceId || chunk.title || hash;
+    if ((perSource.get(sourceKey) || 0) >= cfg.maxPerSource) { dropped.sourceDiversity += 1; continue; }
+    if (selected.length >= cfg.maxChunks) { dropped.maxChunks += 1; continue; }
+    const remaining = maxChars - usedChars;
+    if (remaining <= 80) { dropped.tokenBudget += 1; continue; }
+    const text = chunk.text.length > remaining ? chunk.text.slice(0, remaining) : chunk.text;
+    seenHashes.add(hash);
+    perSource.set(sourceKey, (perSource.get(sourceKey) || 0) + 1);
+    usedChars += text.length;
+    selected.push({
+      ref: `K${selected.length + 1}`,
+      text,
+      truncated: chunk.truncated === true || text.length < chunk.text.length,
+      sourceId: chunk.sourceId || null,
+      title: chunk.title || null,
+      hash: chunk.hash || null,
+      score: Number(chunk.score) || 0,
+      domain: chunk.domain || 'SYSTEM',
+    });
+  }
+  return {
+    chunks: selected,
+    budget: {
+      ...cfg,
+      usedChars,
+      usedTokensApprox: Math.ceil(usedChars / cfg.charsPerToken),
+      candidates: ranked.length,
+      selected: selected.length,
+      dropped,
+    },
+  };
+}
+
+/**
+ * Requisitos que o Enricher DERIVOU do conhecimento SYSTEM. Só entram com citação válida
+ * (`chunkRef` presente na seleção enviada) — sem citação é descarte auditável, nunca "fato"
+ * inventado. Cada um carrega a proveniência do chunk (§35).
+ */
+function resolveKnowledgeDerivedRequirements(proposed = [], selectedChunks = []) {
+  const byRef = new Map((selectedChunks || []).map((c) => [c.ref, c]));
+  const accepted = [];
+  const rejected = [];
+  for (const item of Array.isArray(proposed) ? proposed : []) {
+    const text = item && typeof item.text === 'string' ? item.text.trim() : '';
+    const ref = item && typeof item.chunkRef === 'string' ? item.chunkRef.trim() : '';
+    const chunk = byRef.get(ref);
+    if (!text) { rejected.push({ reason: 'EMPTY_TEXT', item }); continue; }
+    if (!chunk) { rejected.push({ reason: 'UNKNOWN_CHUNK_REF', item }); continue; }
+    accepted.push({
+      text: text.slice(0, 500),
+      knowledge: {
+        knowledgeSource: 'ENGINEERING_SYSTEM_RAG',
+        sourceId: chunk.sourceId,
+        title: chunk.title,
+        chunkRef: chunk.ref,
+        chunkHash: chunk.hash,
+        score: chunk.score,
+        domain: chunk.domain,
+      },
+    });
+  }
+  return { accepted, rejected };
+}
+
 function buildEnrichment({ missionId, originalMission, intent = {}, contextFacts = {}, memory = {} }) {
   if (!missionId) throw new Error('enrichmentBuilder: missionId é obrigatório');
   if (!originalMission || !String(originalMission).trim()) throw new Error('enrichmentBuilder: originalMission é obrigatória');
@@ -345,13 +441,49 @@ function buildEnrichment({ missionId, originalMission, intent = {}, contextFacts
     ...rulesApplied.map((r) => r.testHint).filter(Boolean),
   ])];
 
+  // Conhecimento de engenharia (SYSTEM RAG) que o Enricher citou: vira requisito derivado COM
+  // proveniência do chunk — a origem de cada critério continua auditável.
+  const knowledgeDerived = Array.isArray(intent.knowledgeDerivedRequirements) ? intent.knowledgeDerivedRequirements : [];
+  knowledgeDerived.forEach((req, index) => {
+    const reqId = `DR-KNOWLEDGE-${index + 1}`;
+    derivedRequirements.push({
+      id: reqId,
+      text: req.text,
+      source: 'ENGINEERING_RAG',
+      enrichmentType: 'KNOWLEDGE_DERIVED',
+      confidence: intent.confidence === undefined || intent.confidence === null ? 0.7 : intent.confidence,
+      riskImpact: 'MEDIUM',
+      ruleId: null,
+      blocksAutoApproval: false,
+      knowledge: req.knowledge,
+    });
+    provenance.push({
+      field: 'acceptanceCriteria',
+      originalValue: null,
+      enrichedValue: req.text,
+      enrichmentType: 'KNOWLEDGE_DERIVED',
+      reason: 'requisito derivado do conhecimento de engenharia (Knowledge Plane SYSTEM) citado pelo Enricher',
+      source: 'ENGINEERING_RAG',
+      confidence: intent.confidence === undefined ? null : intent.confidence,
+      riskImpact: 'MEDIUM',
+      ruleId: null,
+      knowledgeSource: req.knowledge?.knowledgeSource || 'ENGINEERING_SYSTEM_RAG',
+      sourceId: req.knowledge?.sourceId || null,
+      chunkHash: req.knowledge?.chunkHash || null,
+      chunkRef: req.knowledge?.chunkRef || null,
+      score: req.knowledge?.score ?? null,
+      derivedField: 'acceptanceCriteria',
+    });
+  });
+
   const acceptanceCriteria = derivedRequirements.map((r) => ({
     id: r.id,
     text: r.text,
     source: r.source,
     enrichmentType: r.enrichmentType,
-    confidence: 1,
+    confidence: r.confidence ?? 1,
     riskImpact: r.riskImpact,
+    ...(r.knowledge ? { knowledge: r.knowledge } : {}),
   }));
 
   const assumptions = [
@@ -435,4 +567,7 @@ module.exports = {
   computeRisk,
   buildEnrichment,
   slug,
+  KNOWLEDGE_CONTEXT_BUDGET,
+  selectKnowledgeForEnrichment,
+  resolveKnowledgeDerivedRequirements,
 };

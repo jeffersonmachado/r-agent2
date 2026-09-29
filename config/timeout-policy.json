@@ -77,8 +77,18 @@
       "retry": {
         "maxAttempts": 3,
         "backoff": "RETRY_BACKOFF",
-        "retryableClasses": ["PROVIDER_TIMEOUT", "PROVIDER_5XX", "NETWORK_ERROR", "RATE_LIMITED"],
-        "nonRetryableClasses": ["AUTH_FAILURE", "INVALID_INPUT", "POLICY_VIOLATION", "CONTEXT_LENGTH_EXCEEDED"]
+        "retryableClasses": [
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_5XX",
+          "NETWORK_ERROR",
+          "RATE_LIMITED"
+        ],
+        "nonRetryableClasses": [
+          "AUTH_FAILURE",
+          "INVALID_INPUT",
+          "POLICY_VIOLATION",
+          "CONTEXT_LENGTH_EXCEEDED"
+        ]
       },
       "fallback": {
         "enabled": true,
@@ -117,7 +127,13 @@
       "retryable": false,
       "onExpiry": "KILL_CHILD_PROCESS",
       "onExpiryDetail": "cancelamento cooperativo (SIGTERM) -> grace period -> SIGKILL do CHILD. Captura stdout/stderr + diagnostico, marca o COMANDO como TIMEOUT, classifica e replaneja. NUNCA mata o Engineer Worker nem perde o estado da missao.",
-      "auxiliaryLivenessSignals": ["stdoutActivity", "stderrActivity", "testEventStream", "processCpu", "checkpointFiles"],
+      "auxiliaryLivenessSignals": [
+        "stdoutActivity",
+        "stderrActivity",
+        "testEventStream",
+        "processCpu",
+        "checkpointFiles"
+      ],
       "sigkillOnlyAfter": {
         "cancelRequested": true,
         "gracePeriodMs": "SHUTDOWN"
@@ -134,8 +150,15 @@
       "retryable": true,
       "retry": {
         "maxAttempts": 2,
-        "retryableClasses": ["DB_CONNECTION", "DB_DEADLOCK", "DB_SERIALIZATION_FAILURE"],
-        "nonRetryableClasses": ["INVALID_INPUT", "POLICY_VIOLATION"]
+        "retryableClasses": [
+          "DB_CONNECTION",
+          "DB_DEADLOCK",
+          "DB_SERIALIZATION_FAILURE"
+        ],
+        "nonRetryableClasses": [
+          "INVALID_INPUT",
+          "POLICY_VIOLATION"
+        ]
       },
       "onExpiry": "CANCEL_OPERATION",
       "onExpiryDetail": "rollback da transacao (estado conhecido), classificacao por operacao (query/connection/transaction), retry seguro quando idempotente, senao BLOCKED_INFRA. Nao mata worker.",
@@ -149,7 +172,10 @@
       "max": 300000,
       "unit": "ms",
       "retryable": true,
-      "retry": { "maxAttempts": 3, "backoff": "RETRY_BACKOFF" },
+      "retry": {
+        "maxAttempts": 3,
+        "backoff": "RETRY_BACKOFF"
+      },
       "onExpiry": "BLOCKED",
       "onExpiryDetail": "indisponibilidade de infraestrutura -> BLOCKED_INFRA + circuit breaker compartilhado. Nao gera retry storm.",
       "envOverride": "DB_POOL_ACQUIRE"
@@ -162,7 +188,10 @@
       "max": 300000,
       "unit": "ms",
       "retryable": true,
-      "retry": { "maxAttempts": 2, "backoff": "RETRY_BACKOFF" },
+      "retry": {
+        "maxAttempts": 2,
+        "backoff": "RETRY_BACKOFF"
+      },
       "onExpiry": "CANCEL_OPERATION",
       "onExpiryDetail": "afeta APENAS a requisicao (AbortSignal local). Caller decide retry/fallback.",
       "scope": "internal service-to-service"
@@ -175,7 +204,11 @@
       "max": 600000,
       "unit": "ms",
       "retryable": true,
-      "retry": { "maxAttempts": 3, "backoff": "RETRY_BACKOFF", "jitter": true },
+      "retry": {
+        "maxAttempts": 3,
+        "backoff": "RETRY_BACKOFF",
+        "jitter": true
+      },
       "onExpiry": "CANCEL_OPERATION",
       "onExpiryDetail": "health update + circuit breaker do provedor externo.",
       "scope": "external provider/webhook"
@@ -189,7 +222,14 @@
       "unit": "ms",
       "onExpiry": "FAIL_TASK",
       "onExpiryDetail": "estado TIMEOUT (nunca PASS). TIMEOUT != PASS.",
-      "outcomes": ["PASS", "FAIL", "TIMEOUT", "BLOCKED", "INFRA_ERROR", "NOT_EXECUTED"]
+      "outcomes": [
+        "PASS",
+        "FAIL",
+        "TIMEOUT",
+        "BLOCKED",
+        "INFRA_ERROR",
+        "NOT_EXECUTED"
+      ]
     },
     "INTEGRATION_TEST": {
       "category": "TEST_TIMEOUT",
@@ -199,7 +239,14 @@
       "max": 900000,
       "unit": "ms",
       "onExpiry": "FAIL_TASK",
-      "outcomes": ["PASS", "FAIL", "TIMEOUT", "BLOCKED", "INFRA_ERROR", "NOT_EXECUTED"]
+      "outcomes": [
+        "PASS",
+        "FAIL",
+        "TIMEOUT",
+        "BLOCKED",
+        "INFRA_ERROR",
+        "NOT_EXECUTED"
+      ]
     },
     "E2E_TEST": {
       "category": "TEST_TIMEOUT",
@@ -209,7 +256,14 @@
       "max": 3600000,
       "unit": "ms",
       "onExpiry": "FAIL_TASK",
-      "outcomes": ["PASS", "FAIL", "TIMEOUT", "BLOCKED", "INFRA_ERROR", "NOT_EXECUTED"]
+      "outcomes": [
+        "PASS",
+        "FAIL",
+        "TIMEOUT",
+        "BLOCKED",
+        "INFRA_ERROR",
+        "NOT_EXECUTED"
+      ]
     },
     "REGRESSION": {
       "category": "TEST_TIMEOUT",
@@ -220,7 +274,14 @@
       "unit": "ms",
       "onExpiry": "DIAGNOSE",
       "onExpiryDetail": "regressao longa NAO deve ser morta enquanto houver progresso observavel (eventos de teste). Apenas ausencia de progresso dispara NO_PROGRESS.",
-      "outcomes": ["PASS", "FAIL", "TIMEOUT", "BLOCKED", "INFRA_ERROR", "NOT_EXECUTED"]
+      "outcomes": [
+        "PASS",
+        "FAIL",
+        "TIMEOUT",
+        "BLOCKED",
+        "INFRA_ERROR",
+        "NOT_EXECUTED"
+      ]
     },
     "SHUTDOWN": {
       "category": "SHUTDOWN_GRACE_PERIOD",
@@ -231,7 +292,12 @@
       "unit": "ms",
       "onExpiry": "KILL_PARENT_PROCESS",
       "onExpiryDetail": "unico caso em que SIGKILL do processo pai e legitimo: shutdown gracioso esgotado. Nao se aplica a operacoes de trabalho.",
-      "sequence": ["requestCancel", "SIGTERM", "gracePeriod", "SIGKILL"]
+      "sequence": [
+        "requestCancel",
+        "SIGTERM",
+        "gracePeriod",
+        "SIGKILL"
+      ]
     },
     "RETRY_BACKOFF": {
       "category": "RETRY_BACKOFF",
@@ -247,7 +313,11 @@
       "onExpiry": "NONE",
       "stormProtection": {
         "circuitBreaker": true,
-        "states": ["CLOSED", "OPEN", "HALF_OPEN"],
+        "states": [
+          "CLOSED",
+          "OPEN",
+          "HALF_OPEN"
+        ],
         "openAfterConsecutiveTimeouts": 5,
         "halfOpenProbeIntervalMs": 30000,
         "sharedHealthState": true
@@ -262,21 +332,137 @@
       "unit": "ms",
       "onExpiry": "NONE",
       "onExpiryDetail": "nao e deadline: e cadencia de verificacao. Nunca decide morte."
+    },
+    "REGRESSION_COMMAND": {
+      "category": "COMMAND_DEADLINE",
+      "configClass": "engineeringSpecific",
+      "default": 300000,
+      "min": 5000,
+      "max": 600000,
+      "unit": "ms",
+      "retryable": false,
+      "onExpiry": "KILL_CHILD_PROCESS",
+      "onExpiryDetail": "deadline de UM subprocesso de regressao/governanca (ex.: validate-engineering-router-v1). Expirar termina o CHILD (SIGTERM -> grace -> SIGKILL) e classifica o resultado como TIMEOUT; o Engineer Worker continua.",
+      "terminationGracePolicy": "REGRESSION_CHILD_TERMINATION_GRACE",
+      "envOverride": "ENGINEERING_REGRESSION_COMMAND_MS"
+    },
+    "REGRESSION_NO_PROGRESS": {
+      "category": "NO_PROGRESS_TIMEOUT",
+      "configClass": "engineeringSpecific",
+      "default": 2700000,
+      "min": 60000,
+      "max": 21600000,
+      "unit": "ms",
+      "onExpiry": "DIAGNOSE",
+      "onExpiryDetail": "regressao sem nenhum evento de progresso (comando concluido/resultado de teste) por este intervalo -> STUCK: diagnostico + cancelamento cooperativo da OPERACAO corrente. Nunca takeover, nunca kill do worker.",
+      "envOverride": "ENGINEERING_REGRESSION_NO_PROGRESS_MS"
+    },
+    "REGRESSION_CHILD_TERMINATION_GRACE": {
+      "category": "SHUTDOWN_GRACE_PERIOD",
+      "configClass": "engineeringSpecific",
+      "default": 10000,
+      "min": 1000,
+      "max": 120000,
+      "unit": "ms",
+      "onExpiry": "KILL_CHILD_PROCESS",
+      "onExpiryDetail": "janela entre SIGTERM e SIGKILL do CHILD expirado. Nao se aplica ao processo pai.",
+      "envOverride": "ENGINEERING_CHILD_TERMINATION_GRACE_MS"
+    },
+    "LEASE_ACQUIRE_WAIT": {
+      "category": "OPERATION_DEADLINE",
+      "configClass": "runtimeConfigurable",
+      "default": 15000,
+      "min": 0,
+      "max": 120000,
+      "unit": "ms",
+      "retryable": true,
+      "retry": {
+        "backoff": "RETRY_BACKOFF"
+      },
+      "onExpiry": "CANCEL_OPERATION",
+      "onExpiryDetail": "quanto uma operacao ADMINISTRATIVA curta (aprovacao humana, inicio de execucao) espera um lease ATIVO de outro worker antes de recusar com MISSION_LOCKED_BY_OTHER_WORKER. Nunca toma a posse de um dono vivo; apenas serializa.",
+      "envOverride": "ENGINEERING_LEASE_ACQUIRE_WAIT_MS"
+    },
+    "RECOVERY_SWEEP": {
+      "category": "OPERATION_DEADLINE",
+      "configClass": "runtimeConfigurable",
+      "default": 20000,
+      "min": 1000,
+      "max": 300000,
+      "unit": "ms",
+      "retryable": false,
+      "onExpiry": "TRUNCATE_AND_CONTINUE",
+      "onExpiryDetail": "orcamento de UMA varredura de retomada (recovery sweep). Expirar NAO e erro e NAO descarta trabalho: a varredura para entre itens, declara truncated/processed/remaining e o chamador continua no proximo ciclo. Existe porque a varredura custa ~1,2s por missao resumivel (medido) e rodava sem limite declarado, tanto em teste quanto no BOOT.",
+      "envOverride": "ENGINEERING_MISSION_RECOVERY_SWEEP_BUDGET_MS"
+    },
+    "RUNNER_MAX_COMMAND": {
+      "category": "COMMAND_DEADLINE",
+      "configClass": "runtimeConfigurable",
+      "default": 600000,
+      "min": 1000,
+      "max": 600000,
+      "unit": "ms",
+      "retryable": false,
+      "onExpiry": "KILL_CHILD_PROCESS",
+      "onExpiryDetail": "teto ABSOLUTO de um comando no Engineering Runner (fronteira de confianca: o runner recusa contrato acima disto). Toda politica de comando/teste enviada ao runner e clampada neste teto e o validador de hierarquia recusa default acima dele.",
+      "envOverride": "ENGINEERING_RUNNER_MAX_TIMEOUT_MS"
+    },
+    "RUNNER_REQUEST_SLACK": {
+      "category": "REQUEST_TIMEOUT",
+      "configClass": "staticDefault",
+      "default": 15000,
+      "min": 1000,
+      "max": 120000,
+      "unit": "ms",
+      "retryable": false,
+      "onExpiry": "CANCEL_OPERATION",
+      "onExpiryDetail": "folga do request HTTP ao Engineering Runner ALEM do deadline do comando + grace de terminacao: o runner precisa de tempo para encerrar o container graciosamente e responder TIMEOUT."
     }
   },
   "missionPolicy": {
     "_note": "Substitui MISSION_TIMEOUT por limites significativos. Missao continua enquanto houver PROGRESSO VERIFICAVEL.",
     "wallClockMissionTimeout": null,
-    "prohibited": ["MISSION_TIMEOUT", "TASK_TIMEOUT", "STALE_BY_AGE_ONLY", "PID_AS_LIVENESS_AUTHORITY"],
+    "prohibited": [
+      "MISSION_TIMEOUT",
+      "TASK_TIMEOUT",
+      "STALE_BY_AGE_ONLY",
+      "PID_AS_LIVENESS_AUTHORITY"
+    ],
     "budgets": {
-      "maxCostUsd": { "default": 50, "configClass": "tenantSpecific" },
-      "maxIterations": { "default": 50, "configClass": "engineeringSpecific" },
-      "maxConsecutiveFailures": { "default": 5, "configClass": "engineeringSpecific" },
-      "maxRetries": { "default": 20, "configClass": "engineeringSpecific" },
-      "maxNoProgressDuration": { "default": 1800000, "unit": "ms", "configClass": "engineeringSpecific" },
-      "userDeadline": { "default": null, "configClass": "tenantSpecific", "note": "opcional; ausente = missao sem wall-clock" },
-      "policyDeadline": { "default": null, "configClass": "engineeringSpecific" },
-      "manualAbort": { "default": null, "configClass": "runtimeConfigurable" }
+      "maxCostUsd": {
+        "default": 50,
+        "configClass": "tenantSpecific"
+      },
+      "maxIterations": {
+        "default": 50,
+        "configClass": "engineeringSpecific"
+      },
+      "maxConsecutiveFailures": {
+        "default": 5,
+        "configClass": "engineeringSpecific"
+      },
+      "maxRetries": {
+        "default": 20,
+        "configClass": "engineeringSpecific"
+      },
+      "maxNoProgressDuration": {
+        "default": 1800000,
+        "unit": "ms",
+        "configClass": "engineeringSpecific"
+      },
+      "userDeadline": {
+        "default": null,
+        "configClass": "tenantSpecific",
+        "note": "opcional; ausente = missao sem wall-clock"
+      },
+      "policyDeadline": {
+        "default": null,
+        "configClass": "engineeringSpecific"
+      },
+      "manualAbort": {
+        "default": null,
+        "configClass": "runtimeConfigurable"
+      }
     },
     "progressSignals": [
       "phase_change",
@@ -288,17 +474,39 @@
       "evidence_produced",
       "reviewer_result",
       "gate_completed",
-      "state_transition"
+      "state_transition",
+      "mission_enriched",
+      "task_created",
+      "patch_applied",
+      "command_completed",
+      "regression_completed",
+      "promotion_completed"
     ],
-    "notProgress": ["heartbeat", "lease_renewal", "poll_tick"]
+    "notProgress": [
+      "heartbeat",
+      "lease_renewal",
+      "poll_tick"
+    ]
   },
   "hierarchy": {
     "_note": "Ordem de autoridade. Um timeout interno NUNCA destroi niveis superiores.",
     "levels": [
-      { "level": "MISSION", "limit": "budget/policy (sem wall-clock)" },
-      { "level": "TASK", "limit": "deadline opcional + lease/heartbeat" },
-      { "level": "PHASE", "limit": "no-progress policy por fase" },
-      { "level": "OPERATION", "limit": "deadline concreta (provider/command/db/http)" }
+      {
+        "level": "MISSION",
+        "limit": "budget/policy (sem wall-clock)"
+      },
+      {
+        "level": "TASK",
+        "limit": "deadline opcional + lease/heartbeat"
+      },
+      {
+        "level": "PHASE",
+        "limit": "no-progress policy por fase"
+      },
+      {
+        "level": "OPERATION",
+        "limit": "deadline concreta (provider/command/db/http)"
+      }
     ],
     "budgetPropagation": {
       "enabled": true,
@@ -316,9 +524,25 @@
     }
   },
   "disallowedPatternsForValidator": [
-    { "id": "MISSION_KILL_BY_WALL_CLOCK", "forbiddenIn": "critical", "reason": "decisao de morte por tempo decorrido" },
-    { "id": "STALE_BY_AGE_ONLY", "forbiddenIn": "critical", "reason": "stale/takeover por idade, sem heartbeat/lease" },
-    { "id": "PID_AS_LIVENESS_AUTHORITY", "forbiddenIn": "critical", "reason": "PID nao e identidade distribuida autoritativa; usar lease+fence" },
-    { "id": "UNCLASSIFIED_TIMER_IN_CRITICAL_COMPONENT", "forbiddenIn": "critical", "reason": "timeout sem categoria semantica definida" }
+    {
+      "id": "MISSION_KILL_BY_WALL_CLOCK",
+      "forbiddenIn": "critical",
+      "reason": "decisao de morte por tempo decorrido"
+    },
+    {
+      "id": "STALE_BY_AGE_ONLY",
+      "forbiddenIn": "critical",
+      "reason": "stale/takeover por idade, sem heartbeat/lease"
+    },
+    {
+      "id": "PID_AS_LIVENESS_AUTHORITY",
+      "forbiddenIn": "critical",
+      "reason": "PID nao e identidade distribuida autoritativa; usar lease+fence"
+    },
+    {
+      "id": "UNCLASSIFIED_TIMER_IN_CRITICAL_COMPONENT",
+      "forbiddenIn": "critical",
+      "reason": "timeout sem categoria semantica definida"
+    }
   ]
 }

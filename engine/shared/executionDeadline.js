@@ -276,11 +276,85 @@ function buildChildTerminationPlan({ gracePeriodMs = 10000 } = {}) {
   ];
 }
 
+/**
+ * Coerência da HIERARQUIA de orçamentos (Mission → Task → Phase → Operation).
+ *
+ * Configuração impossível é NO_GO de configuração, não algo a descobrir em runtime: se o orçamento
+ * da task é 60s e a cadeia de retry do provider pode consumir 5min, a task SEMPRE estoura antes de o
+ * fallback terminar — o timeout de operação passaria a decidir a morte da task, que é o defeito que
+ * esta arquitetura existe para impedir.
+ *
+ * `budgets` (todos opcionais, em ms): { missionBudgetMs, taskBudgetMs, phaseBudgetMs }.
+ * Sem orçamento declarado em um nível, aquele nível não impõe teto (missão sem wall-clock é o
+ * default correto). Retorna `{ ok, violations[] }` — nunca lança.
+ */
+function validatePolicyHierarchy(registry = null, { missionBudgetMs = null, taskBudgetMs = null, phaseBudgetMs = null } = {}) {
+  const reg = registry || loadPolicyRegistry();
+  const violations = [];
+  const p = (name) => reg?.policies?.[name] || null;
+  const lease = p('LEASE');
+  const heartbeat = p('HEARTBEAT');
+  const provider = p('PROVIDER_REQUEST');
+  const fallback = p('PROVIDER_FALLBACK');
+  const noProgress = p('NO_PROGRESS');
+
+  if (!reg || !reg.policies) {
+    return { ok: false, violations: [{ code: 'TIMEOUT_REGISTRY_UNAVAILABLE', detail: 'config/timeout-policy.json ausente ou ilegível' }] };
+  }
+  if (lease && heartbeat && !(heartbeat.default < lease.default / 2)) {
+    violations.push({ code: 'HEARTBEAT_NOT_BELOW_HALF_LEASE', detail: `heartbeat ${heartbeat.default}ms deve ser < lease/2 (${lease.default / 2}ms)` });
+  }
+  const providerChainMs = provider
+    ? provider.default * Math.max(1, Number(provider.retry?.maxAttempts || 1))
+    : null;
+  const providerBudgetMs = fallback?.guards?.maxProviderElapsedMs ?? fallback?.default ?? providerChainMs;
+  const check = (levelName, budget) => {
+    if (!Number.isFinite(budget)) return;
+    if (Number.isFinite(providerBudgetMs) && providerBudgetMs > budget) {
+      violations.push({ code: 'PROVIDER_BUDGET_EXCEEDS_PARENT', level: levelName, detail: `orçamento de provider/fallback ${providerBudgetMs}ms > orçamento de ${levelName} ${budget}ms` });
+    }
+    if (provider && provider.default > budget) {
+      violations.push({ code: 'OPERATION_DEADLINE_EXCEEDS_PARENT', level: levelName, detail: `PROVIDER_REQUEST ${provider.default}ms > orçamento de ${levelName} ${budget}ms` });
+    }
+  };
+  check('MISSION', missionBudgetMs);
+  check('TASK', taskBudgetMs);
+  check('PHASE', phaseBudgetMs);
+  if (Number.isFinite(missionBudgetMs) && Number.isFinite(taskBudgetMs) && taskBudgetMs > missionBudgetMs) {
+    violations.push({ code: 'TASK_BUDGET_EXCEEDS_MISSION', detail: `task ${taskBudgetMs}ms > missão ${missionBudgetMs}ms` });
+  }
+  if (Number.isFinite(taskBudgetMs) && Number.isFinite(phaseBudgetMs) && phaseBudgetMs > taskBudgetMs) {
+    violations.push({ code: 'PHASE_BUDGET_EXCEEDS_TASK', detail: `fase ${phaseBudgetMs}ms > task ${taskBudgetMs}ms` });
+  }
+  // Toda política de comando/teste que roda no Engineering Runner precisa caber no teto do runner:
+  // senão o contrato é recusado lá e a expiração aparece como INFRA_ERROR falso.
+  const runnerMax = p('RUNNER_MAX_COMMAND');
+  if (runnerMax) {
+    for (const name of ['INTEGRATION_TEST', 'REGRESSION_COMMAND', 'UNIT_TEST']) {
+      const pol = p(name);
+      if (pol && pol.default > runnerMax.default) {
+        violations.push({ code: 'COMMAND_DEADLINE_EXCEEDS_RUNNER_MAX', policy: name, detail: `${name} ${pol.default}ms > RUNNER_MAX_COMMAND ${runnerMax.default}ms` });
+      }
+    }
+  }
+  // NO_PROGRESS de uma fase precisa comportar a maior operação daquela fase — senão uma única
+  // chamada legítima (provider lento, comando longo) seria diagnosticada como travamento.
+  if (noProgress?.perPhase && provider) {
+    for (const [phase, ms] of Object.entries(noProgress.perPhase)) {
+      if (ms < provider.default) {
+        violations.push({ code: 'NO_PROGRESS_BELOW_OPERATION_DEADLINE', phase, detail: `NO_PROGRESS[${phase}] ${ms}ms < PROVIDER_REQUEST ${provider.default}ms` });
+      }
+    }
+  }
+  return { ok: violations.length === 0, violations };
+}
+
 module.exports = {
   EXPIRY_CATEGORIES,
   EXPIRY_ON_ACTION,
   loadPolicyRegistry,
   resolveTimeoutPolicy,
+  validatePolicyHierarchy,
   computeEffectiveDeadline,
   buildExpiryRecord,
   classifyOperationError,

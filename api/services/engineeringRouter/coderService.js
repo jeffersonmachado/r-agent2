@@ -70,7 +70,7 @@ function buildCoderPrompt(context) {
  * @param {string} [params.tenantId]
  * @returns {Promise<{summary:string, diff:string, raw:string, usage:Object|null, latencyMs:number}>}
  */
-async function generatePatch({ context, providerId, modelId, tenantId }) {
+async function generatePatch({ context, providerId, modelId, tenantId, signal = null, deadlineMeta = {} }) {
   const prompt = buildCoderPrompt(context);
   const result = await invokeModel({
     providerId,
@@ -78,6 +78,9 @@ async function generatePatch({ context, providerId, modelId, tenantId }) {
     prompt,
     tenantId,
     extraContext: { purpose: 'engineering_coder' },
+    // Cancelamento cooperativo da TASK (lease perdido / NO_PROGRESS) chega até o transporte.
+    signal,
+    deadlineMeta,
   });
 
   const parsed = parseStructuredJson(result.text);

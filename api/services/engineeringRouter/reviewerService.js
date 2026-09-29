@@ -83,7 +83,7 @@ function validateReviewShape(value) {
  * @param {string} params.modelId
  * @param {string} [params.tenantId]
  */
-async function review({ task, diff, testEvidence, contextFiles, providerId, modelId, tenantId }) {
+async function review({ task, diff, testEvidence, contextFiles, providerId, modelId, tenantId, signal = null, deadlineMeta = {} }) {
   const prompt = buildReviewerPrompt({ task, diff, testEvidence, contextFiles });
   const result = await invokeModel({
     providerId,
@@ -91,6 +91,9 @@ async function review({ task, diff, testEvidence, contextFiles, providerId, mode
     prompt,
     tenantId,
     extraContext: { purpose: 'engineering_reviewer' },
+    // Cancelamento cooperativo da TASK (lease perdido / NO_PROGRESS) chega até o transporte.
+    signal,
+    deadlineMeta,
   });
 
   const parsed = parseStructuredJson(result.text);
