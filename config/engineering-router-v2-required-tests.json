@@ -236,8 +236,11 @@
       "requirement": "Qwen live executa realmente quando credencial estiver presente.",
       "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
       "reports": [],
-      "externalBlocker": {
-        "reason": "MEDIDO em 2026-09-28: credencial FOI fornecida e gravada no ambiente nao versionado (.env, 600), mas o provider a REJEITA. Probe direto contra os DOIS endpoints do DashScope com o defaultModel do registry: dashscope-intl.aliyuncs.com -> HTTP 401 invalid_api_key; dashscope.aliyuncs.com (domestico) -> HTTP 401 invalid_api_key. Nao e questao de regiao. O caminho live ESTA exercitado (com credencial presente o teste faz a chamada REAL de rede e classifica o desfecho; sem ela o estado e NOT_EXECUTED_NO_CREDENTIAL), mas a prova de execucao BEM-SUCEDIDA exige credencial valida, que nao existe neste ambiente. Impedimento EXTERNO real e declarado — nunca convertido em PASS, e nunca mascarado como 'sem credencial'."
+      "evidence": {
+        "path": "reports/qwen-live-evidence.json",
+        "statePath": "state",
+        "producedBy": "tests/unit/engineeringRouterQwenProvider.test.js (teste QWEN_LIVE) sob RELEASE_AUTHORITATIVE=1",
+        "note": "Classificacao DERIVADA do desfecho MEDIDO do probe live (governance/required-tests-derivation.js). O teste resolve a credencial pelo caminho do PRODUTO (tenantAIService.getDecryptedAPIKey em tenant_ai_credentials) e persiste o estado observado. Nao existe mais texto declarado com precedencia sobre a medicao: FAIL_AUTH/PROVIDER_ERROR/RATE_LIMITED/sem credencial vira BLOCKED_EXTERNAL com o motivo REAL do provider; qualquer outro estado nao-aprovado e defeito NOSSO (UNPROVEN, bloqueante)."
       }
     },
     {

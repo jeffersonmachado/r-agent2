@@ -133,6 +133,11 @@ reports/*
 # Exceção: baseline de segregação dos domínios do RAG, consumido pelo Coverage
 # Gate como fonte bloqueante (gerado por report:rag-domain-segregation).
 !reports/rag-domain-segregation-report.json
+# Exceção: evidência MEDIDA do probe live do Qwen (V2-35), consumida por
+# validate:required-tests como fonte de classificação do requisito. Emitida
+# apenas sob RELEASE_AUTHORITATIVE=1 pelo teste QWEN_LIVE, que resolve a
+# credencial pelo caminho do produto (tenant_ai_credentials).
+!reports/qwen-live-evidence.json
 
 # Artefatos locais de checkpoints e inteligência de QA
 qa/checkpoints/state/*.json

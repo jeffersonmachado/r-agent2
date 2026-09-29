@@ -22,6 +22,20 @@ const DEFAULT_STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 /** Estados terminais negativos (bloqueiam o gate) — mantidos explícitos, não inferidos. */
 const BLOCKING_CLASSIFICATIONS = ['GAP', 'FAILED', 'NOT_EXECUTED', 'UNPROVEN', 'STALE', 'NOT_IN_MANIFEST'];
 
+/**
+ * Estados de evidência MEDIDA que representam falha do PROVEDOR EXTERNO (não do nosso código).
+ * Um probe live que observa `FAIL_AUTH` prova que o impedimento existe e qual é — não é defeito de
+ * implementação e não pode virar PASS. Qualquer outro estado medido não-aprovado (`FAIL_UNEXPECTED`,
+ * `FAIL_INVALID_RESPONSE`, `FAIL_NORMALIZATION`) é falha NOSSA e continua bloqueante via UNPROVEN.
+ */
+const EXTERNAL_FAILURE_STATES = [
+  'FAIL_AUTH',
+  'PROVIDER_ERROR',
+  'RATE_LIMITED',
+  'TIMEOUT_OR_INFRA_ERROR',
+  'NOT_EXECUTED_NO_CREDENTIAL',
+];
+
 function normalizeValue(value) {
   if (value === null || value === undefined) return null;
   return String(value).trim().toUpperCase();
@@ -48,6 +62,7 @@ function classifyRequiredTest(item, ctx = {}) {
   const nowMs = Number.isFinite(ctx.nowMs) ? ctx.nowMs : Date.now();
   const suiteState = typeof ctx.suiteState === 'function' ? ctx.suiteState : () => null;
   const reportState = typeof ctx.reportState === 'function' ? ctx.reportState : () => ({ exists: false });
+  const evidenceState = typeof ctx.evidenceState === 'function' ? ctx.evidenceState : () => ({ exists: false });
 
   const suiteRows = suites.map((suite) => {
     const observed = suiteState(suite);
@@ -87,13 +102,11 @@ function classifyRequiredTest(item, ctx = {}) {
     detail,
   });
 
-  // Impedimento externo DECLARADO tem precedência: nunca vira PASS, mas também não é defeito de código.
-  if (item && item.externalBlocker && item.externalBlocker.reason) {
-    return finish('BLOCKED_EXTERNAL', item.externalBlocker.reason);
-  }
-
-  // Gap declarado: requisito sem prova alguma. Não é silenciado.
-  if (suiteRows.length === 0 && reportRows.length === 0) {
+  // Gap declarado: requisito sem prova alguma (nenhuma suíte, nenhum relatório, nenhuma evidência
+  // medida e nenhum impedimento declarado). Não é silenciado.
+  const hasMeasuredEvidence = !!(item && item.evidence && item.evidence.path);
+  const hasDeclaredBlocker = !!(item && item.externalBlocker && item.externalBlocker.reason);
+  if (suiteRows.length === 0 && reportRows.length === 0 && !hasMeasuredEvidence && !hasDeclaredBlocker) {
     return finish('GAP', item.gapReason || 'requisito sem prova declarada');
   }
 
@@ -108,6 +121,47 @@ function classifyRequiredTest(item, ctx = {}) {
       'NOT_EXECUTED',
       `suíte(s) sem execução autoritativa registrada: ${notExecuted.map((row) => row.suite).join(', ')}`
     );
+  }
+
+  // EVIDÊNCIA MEDIDA — vem DEPOIS de "suíte falhou" e "suíte não executou" de propósito.
+  //
+  // DEFEITO REAL corrigido em 2026-09-29 (medido): o requisito V2-35 era classificado por um campo
+  // `externalBlocker.reason` escrito à mão, com precedência sobre QUALQUER medição. O teste que
+  // deveria produzir a prova lia a credencial de `process.env` — caminho que o produto NÃO usa — e,
+  // como o Jest não carrega o `.env`, ele caía sempre no ramo "sem credencial": a suíte dava PASS
+  // independentemente do desfecho, e o resultado mudava conforme quem invocava o Jest. Nada disso
+  // era registrado (`reports: []`), então o gate não distinguia "executou" de "não executou".
+  // Agora o teste persiste o desfecho OBSERVADO e a classificação vem dele.
+  //
+  // A ordem importa: se a suíte que produz a evidência FALHOU ou não executou, isso já retornou
+  // acima. Sem essa precedência, uma evidência antiga mascararia uma suíte quebrada — o exato
+  // mascaramento que este arquivo existe para impedir.
+  if (item && item.evidence && item.evidence.path) {
+    const measured = evidenceState(item.evidence.path) || {};
+    if (measured.exists !== true) {
+      return finish(
+        'UNPROVEN',
+        `evidência medida ausente (${item.evidence.path}): o regime autoritativo precisa executá-la`,
+      );
+    }
+    const measuredState = normalizeValue(measured.state);
+    if (measuredState !== null && provenValues.includes(measuredState)) {
+      return finish('PROVEN', `probe live MEDIDO: state=${measuredState} (${measured.generatedAt || 'sem carimbo'})`);
+    }
+    if (EXTERNAL_FAILURE_STATES.includes(measuredState)) {
+      return finish(
+        'BLOCKED_EXTERNAL',
+        `MEDIDO em ${measured.generatedAt || 'sem carimbo'}: state=${measuredState}` +
+          (measured.httpStatus ? ` http=${measured.httpStatus}` : '') +
+          (measured.providerError ? ` — ${measured.providerError}` : ''),
+      );
+    }
+    return finish('UNPROVEN', `probe live medido com estado NÃO-aprovado: ${measuredState || '(ausente)'}`);
+  }
+
+  // Impedimento externo DECLARADO: nunca vira PASS, mas também não é defeito de código.
+  if (item && item.externalBlocker && item.externalBlocker.reason) {
+    return finish('BLOCKED_EXTERNAL', item.externalBlocker.reason);
   }
 
   const missingReports = reportRows.filter((row) => !row.exists);
@@ -146,9 +200,9 @@ function classifyRequiredTest(item, ctx = {}) {
  *
  * @returns {{status: string, total: number, counts: object, unresolvedIds: string[], items: object[]}}
  */
-function deriveRequiredTests({ items, suiteState, reportState, provenValues, staleAfterMs, nowMs } = {}) {
+function deriveRequiredTests({ items, suiteState, reportState, evidenceState, provenValues, staleAfterMs, nowMs } = {}) {
   const list = Array.isArray(items) ? items : [];
-  const ctx = { suiteState, reportState, provenValues, staleAfterMs, nowMs };
+  const ctx = { suiteState, reportState, evidenceState, provenValues, staleAfterMs, nowMs };
   const derived = list.map((item) => classifyRequiredTest(item, ctx));
 
   const counts = {};
@@ -169,4 +223,5 @@ module.exports = {
   DEFAULT_PROVEN_VALUES,
   DEFAULT_STALE_AFTER_MS,
   BLOCKING_CLASSIFICATIONS,
+  EXTERNAL_FAILURE_STATES,
 };

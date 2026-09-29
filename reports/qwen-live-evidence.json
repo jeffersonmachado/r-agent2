@@ -1,0 +1,15 @@
+{
+  "artifactType": "qwen-live-evidence",
+  "artifactVersion": "1.0.0",
+  "generatedAt": "2026-09-29T14:18:44.749Z",
+  "requirement": "V2-35",
+  "source": "tenant_ai_credentials",
+  "tenant": "system",
+  "provider": "qwen",
+  "model": "qwen3-max",
+  "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+  "state": "FAIL_AUTH",
+  "httpStatus": 401,
+  "providerError": "Incorrect API key provided. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#apikey-error",
+  "credentialLength": 114
+}

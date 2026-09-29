@@ -135,6 +135,107 @@ describe('núcleo puro da derivação', () => {
     expect(result.blocking).toBe(false);
   });
 
+  // ── EVIDÊNCIA MEDIDA (defeito real corrigido em 2026-09-29) ─────────────────────────────────
+  // O requisito V2-35 era classificado por `externalBlocker.reason` — um TEXTO escrito à mão, com
+  // precedência sobre QUALQUER medição. O teste que deveria produzir a prova lia a credencial de
+  // `process.env` (caminho que o produto não usa) e, como o Jest não carrega o `.env`, caía sempre
+  // no ramo "sem credencial": a suíte dava PASS com qualquer desfecho e o gate não distinguia
+  // "executou" de "não executou". Agora o desfecho vem de evidência MEDIDA pelo probe live.
+  const MEASURED_ITEM = {
+    id: 'V2-99',
+    requirement: 'x',
+    suites: ['a.test.js'],
+    reports: [],
+    evidence: { path: 'reports/x-evidence.json', statePath: 'state' },
+  };
+  const measured = (state, extra = {}) => () => ({
+    exists: true,
+    state,
+    generatedAt: '2026-09-29T00:00:00.000Z',
+    ...extra,
+  });
+  const NO_REPORTS = () => ({ exists: false });
+
+  test('EVIDÊNCIA MEDIDA: state PASS vira PROVEN (medido, nunca declarado)', () => {
+    const result = classifyRequiredTest(MEASURED_ITEM, {
+      suiteState: ALL_PASS,
+      reportState: NO_REPORTS,
+      evidenceState: measured('PASS'),
+    });
+    expect(result.classification).toBe('PROVEN');
+    expect(result.blocking).toBe(false);
+    expect(result.detail).toMatch(/MEDIDO/);
+  });
+
+  test('EVIDÊNCIA MEDIDA: falha do PROVEDOR externo vira BLOCKED_EXTERNAL com o motivo REAL', () => {
+    const result = classifyRequiredTest(MEASURED_ITEM, {
+      suiteState: ALL_PASS,
+      reportState: NO_REPORTS,
+      evidenceState: measured('FAIL_AUTH', { httpStatus: 401, providerError: 'Incorrect API key provided' }),
+    });
+    expect(result.classification).toBe('BLOCKED_EXTERNAL');
+    // Impedimento do provedor não é defeito de código: não bloqueia, mas JAMAIS vira PASS.
+    expect(result.blocking).toBe(false);
+    expect(result.detail).toContain('FAIL_AUTH');
+    expect(result.detail).toContain('401');
+    expect(result.detail).toContain('Incorrect API key provided');
+  });
+
+  test('EVIDÊNCIA MEDIDA: credencial não cadastrada é impedimento externo declarado PELA MEDIÇÃO', () => {
+    const result = classifyRequiredTest(MEASURED_ITEM, {
+      suiteState: ALL_PASS,
+      reportState: NO_REPORTS,
+      evidenceState: measured('NOT_EXECUTED_NO_CREDENTIAL'),
+    });
+    expect(result.classification).toBe('BLOCKED_EXTERNAL');
+    expect(result.blocking).toBe(false);
+  });
+
+  test('EVIDÊNCIA MEDIDA: desfecho que NÃO é falha do provedor é defeito NOSSO (bloqueia)', () => {
+    for (const state of ['FAIL_UNEXPECTED', 'FAIL_INVALID_RESPONSE', 'FAIL_NORMALIZATION']) {
+      const result = classifyRequiredTest(MEASURED_ITEM, {
+        suiteState: ALL_PASS,
+        reportState: NO_REPORTS,
+        evidenceState: measured(state),
+      });
+      expect(result.classification).toBe('UNPROVEN');
+      expect(result.blocking).toBe(true);
+    }
+  });
+
+  test('EVIDÊNCIA MEDIDA ausente ⇒ UNPROVEN: fail-closed, nunca assume sucesso', () => {
+    const result = classifyRequiredTest(MEASURED_ITEM, {
+      suiteState: ALL_PASS,
+      reportState: NO_REPORTS,
+      evidenceState: () => ({ exists: false }),
+    });
+    expect(result.classification).toBe('UNPROVEN');
+    expect(result.blocking).toBe(true);
+  });
+
+  // Os dois testes abaixo são a proteção central: uma evidência ANTIGA não pode mascarar uma suíte
+  // que quebrou nem uma suíte que não executou. Sem esta precedência, bastaria uma medição PASS de
+  // um ciclo anterior para um gate ficar verde sobre execução inexistente.
+  test('EVIDÊNCIA MEDIDA nunca mascara suíte FALHA (precedência de execução)', () => {
+    const result = classifyRequiredTest(MEASURED_ITEM, {
+      suiteState: () => ({ state: 'FAIL' }),
+      reportState: NO_REPORTS,
+      evidenceState: measured('PASS'),
+    });
+    expect(result.classification).toBe('FAILED');
+    expect(result.blocking).toBe(true);
+  });
+
+  test('EVIDÊNCIA MEDIDA nunca mascara suíte NÃO EXECUTADA (precedência de execução)', () => {
+    const result = classifyRequiredTest(MEASURED_ITEM, {
+      suiteState: () => ({ state: 'NOT_EXECUTED' }),
+      reportState: NO_REPORTS,
+      evidenceState: measured('PASS'),
+    });
+    expect(result.classification).toBe('NOT_EXECUTED');
+    expect(result.blocking).toBe(true);
+  });
+
   test('agregado: um único item não provado mantém o gate em FAIL', () => {
     const derived = deriveRequiredTests({
       items: [

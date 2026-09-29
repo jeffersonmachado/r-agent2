@@ -30,6 +30,36 @@ const { resolveManifest, evaluateExecution, MANIFEST_VIOLATION_CODES } = require
 
 const JEST_JSON = path.join(ROOT, 'reports', '.release-suite-jest.json');
 
+/**
+ * Carrega o `.env` do repositório (se existir) SEM sobrescrever o que já veio do ambiente.
+ *
+ * DEFEITO REAL medido em 2026-09-29: o regime autoritativo não era determinístico. O
+ * `seal-release.sh` exporta o `.env` no shell antes de chamar o runner; um
+ * `node scripts/governance/run-release-suites.js` manual, não. Como o spawn do Jest herda
+ * `process.env`, o RESULTADO das suítes dependia de quem invocava o runner — e nada registrava
+ * qual dos dois regimes rodou. O caso concreto: o probe live do Qwen resolvia credencial pelo
+ * ambiente (ou não) conforme a invocação, e a classificação do requisito acabava sendo um texto
+ * declarado em vez de medição.
+ *
+ * Os scripts de governança do projeto usam `--env-file-if-exists=.env` pelo mesmo motivo. Aqui a
+ * leitura é explícita para que o runner seja o mesmo objeto independentemente da invocação.
+ */
+function loadEnvFile() {
+  const envPath = path.join(ROOT, '.env');
+  if (!fs.existsSync(envPath)) return { loaded: false, keys: 0, reason: '.env ausente' };
+  let keys = 0;
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!match) continue;
+    const key = match[1];
+    // Ambiente explícito vence sempre: o operador pode sobrescrever sem editar o arquivo.
+    if (process.env[key] !== undefined) continue;
+    process.env[key] = match[2].trim().replace(/^["']|["']$/g, '');
+    keys += 1;
+  }
+  return { loaded: true, keys, reason: null };
+}
+
 /** Traduz o resultado do Jest para os estados canônicos do manifesto. */
 function mapSuiteResult(testResult) {
   // DEFEITO REAL medido em 2026-09-25: a primeira versão lia `numTotalTests` NO NÍVEL DA SUÍTE.
@@ -189,6 +219,8 @@ function collectBatchResults(batchRuns) {
 
 function main() {
   const manifest = resolveManifest();
+  // Determinismo do ambiente: o `.env` é carregado ANTES de qualquer suíte (ver `loadEnvFile`).
+  const envFile = loadEnvFile();
   const report = {
     artifactType: 'release-suite-execution-report',
     artifactVersion: '1.0.0',
@@ -196,6 +228,7 @@ function main() {
     manifestVersion: manifest.manifestVersion,
     manifestConfig: 'config/canonical-release-suites.json',
     authoritativeMode: process.env.RELEASE_AUTHORITATIVE === '1' || process.env.RELEASE_AUTHORITATIVE === 'true',
+    environment: { envFileLoaded: envFile.loaded, envFileKeys: envFile.keys, envFileNote: envFile.reason },
     status: 'FAIL',
     manifestViolations: manifest.violations,
     manifestViolationCount: manifest.violations.length,

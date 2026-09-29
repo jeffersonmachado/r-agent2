@@ -69,6 +69,27 @@ function reportStateReader(reportRelPath) {
   return { exists: true, value, generatedAt };
 }
 
+/**
+ * Desfecho MEDIDO de uma evidência de probe live (`item.evidence.path`).
+ *
+ * Diferente de `reportStateReader`, que extrai um veredito de aprovação, aqui interessa o ESTADO
+ * observado do desfecho — porque um probe live pode legitimamente terminar em falha do PROVEDOR
+ * (`FAIL_AUTH`) sem que isso seja defeito de código. O estado e o motivo real do provider viajam
+ * junto, para a classificação ser derivada da medição e não de texto escrito à mão.
+ */
+function evidenceStateReader(relPath) {
+  const abs = path.join(ROOT, String(relPath || ''));
+  const json = readJsonAbs(abs);
+  if (!json) return { exists: false, state: null, generatedAt: null };
+  return {
+    exists: true,
+    state: json.state || json.status || json.decision || null,
+    generatedAt: json.generatedAt || null,
+    httpStatus: json.httpStatus || null,
+    providerError: json.providerError || null,
+  };
+}
+
 function main() {
   if (!fs.existsSync(CONFIG_PATH)) {
     console.error(`[required-tests] configuração ausente: ${path.relative(ROOT, CONFIG_PATH)}`);
@@ -81,6 +102,7 @@ function main() {
     items: config.requiredTests || [],
     suiteState: suiteReader.reader,
     reportState: reportStateReader,
+    evidenceState: evidenceStateReader,
     nowMs: Date.now(),
   });
 

@@ -38,6 +38,7 @@ const { listCapabilityEntries, getModelCapability, isModelMapped } = require('..
 const { selectForRole, selectCoderAndReviewer } = require('../../engine/engineeringRouter/modelSelector');
 const { invokeModel } = require('../../api/services/engineeringRouter/engineeringAiInvoker');
 const { registerAiProvider, clearAiProviderConfig, getRegisteredProviderIds } = require('../../api/services/aiProviderManager');
+const infraGate = require('../helpers/infraGate');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const QWEN = 'qwen';
@@ -457,32 +458,92 @@ describe('Qwen — taxonomia de estados (nada de "live" sem execução ao vivo)'
     expect(classifyQwenLive({ status: 200, body: { choices: [{ message: { content: 'resposta' } }] } })).toBe('PASS');
   });
 
-  test('QWEN_LIVE: sem credencial real ⇒ NOT_EXECUTED_NO_CREDENTIAL (nunca PASS)', async () => {
-    const liveKey = process.env.QWEN_LIVE_API_KEY || process.env.DASHSCOPE_API_KEY || '';
-    if (!liveKey) {
-      const state = 'NOT_EXECUTED_NO_CREDENTIAL';
-      expect(state).not.toBe('PASS');
-      expect(state).not.toBe('GO');
-      expect({ axis: 'QWEN_LIVE', state, reason: 'no_provider_credential_in_environment' }).toMatchObject({
-        axis: 'QWEN_LIVE',
-        state: 'NOT_EXECUTED_NO_CREDENTIAL',
-      });
+  test('QWEN_LIVE: credencial resolvida pelo PRODUTO e desfecho OBSERVADO (nunca PASS por omissão)', async () => {
+    const { connect, close } = require('../../api/db/sequelize');
+    const realTenantAIService = jest.requireActual('../../api/services/tenantAIService');
+
+    let liveKey = null;
+    let resolveError = null;
+    try {
+      await connect();
+      liveKey = await realTenantAIService.getDecryptedAPIKey('system', QWEN);
+    } catch (error) {
+      resolveError = error;
+    } finally {
+      await close().catch(() => {});
+    }
+
+    // Infra indisponível (Postgres fora do ar, ou ENCRYPTION_KEY diferente da que cifrou a
+    // credencial). Registrado explicitamente; em RELEASE_AUTHORITATIVE a porta LANÇA em vez de pular.
+    if (infraGate.skipOrFail({
+      suite: 'QWEN_LIVE',
+      available: !resolveError,
+      requirement: 'postgres+encryption_key',
+      reason: resolveError ? resolveError.message : null,
+    })) {
+      expect(true).toBe(true);
       return;
     }
+
+    let emitted = null;
+    const emitEvidence = (state, extra = {}) => {
+      emitted = {
+        artifactType: 'qwen-live-evidence',
+        artifactVersion: '1.0.0',
+        generatedAt: new Date().toISOString(),
+        requirement: 'V2-35',
+        source: 'tenant_ai_credentials',
+        tenant: 'system',
+        provider: QWEN,
+        model: QWEN_DEF.defaultModel,
+        baseUrl: QWEN_DEF.baseUrl,
+        state,
+        ...extra,
+      };
+      // Só no regime AUTORITATIVO: em `npm run test:unit` a evidência não é emitida (não reescreve
+      // artefato governado a cada execução de desenvolvimento).
+      if (infraGate.isAuthoritative()) {
+        const target = path.join(ROOT, 'reports', 'qwen-live-evidence.json');
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, `${JSON.stringify(emitted, null, 2)}\n`, 'utf8');
+      }
+      return emitted;
+    };
+
+    // Sem credencial cadastrada no PRODUTO: estado próprio, nunca PASS.
+    if (!liveKey) {
+      const payload = emitEvidence('NOT_EXECUTED_NO_CREDENTIAL', { reason: 'no_tenant_credential_for_provider' });
+      expect(payload.state).not.toBe('PASS');
+      expect(payload.state).not.toBe('GO');
+      return;
+    }
+
     // Credencial presente: a chamada é REAL e o ESTADO reflete o desfecho observado.
     let outcome;
+    let httpStatus = null;
+    let providerError = null;
     try {
       const response = await fetch(`${QWEN_DEF.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${liveKey}` },
         body: JSON.stringify({ model: QWEN_DEF.defaultModel, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8 }),
       });
+      httpStatus = response.status;
       const body = await response.json().catch(() => null);
+      providerError = body && body.error ? (body.error.message || body.error.code) : null;
       outcome = classifyQwenLive({ status: response.status, body });
     } catch (error) {
+      providerError = error.message;
       outcome = classifyQwenLive({ networkError: error });
     }
+
     // O estado é OBSERVADO e não pode ser mascarado: 401 vira FAIL_AUTH, 429 vira RATE_LIMITED, etc.
     expect(['PASS', 'FAIL_AUTH', 'RATE_LIMITED', 'PROVIDER_ERROR', 'FAIL_INVALID_RESPONSE', 'FAIL_NORMALIZATION', 'TIMEOUT_OR_INFRA_ERROR', 'FAIL_UNEXPECTED']).toContain(outcome);
-  }, 30000);
+
+    // BINDING: a evidência publicada carrega EXATAMENTE o desfecho medido — é por ela que o gate
+    // classifica o requisito; nenhum texto declarado decide mais este item.
+    const payload = emitEvidence(outcome, { httpStatus, providerError, credentialLength: liveKey.length });
+    expect(payload.state).toBe(outcome);
+    expect(payload.httpStatus).toBe(httpStatus);
+  }, 60000);
 });
