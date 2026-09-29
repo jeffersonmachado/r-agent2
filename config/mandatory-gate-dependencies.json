@@ -1,0 +1,76 @@
+{
+  "schema": "mandatory-gate-dependencies/v1",
+  "$comment": "CADEIA DE DEPENDÊNCIA DOS GATES (missão 2026-09-28). Declara, em dados, qual gate PAI depende de qual gate FILHO obrigatório. Enforcement: scripts/governance/validate-gate-direction.js (npm run validate:gate-direction), que aplica o invariante `child NO_GO → parent NO_GO` e reprova pai GO com filho bloqueado/ausente. A direção é sempre runtime → gate → selo → readiness → governança final: nenhum relatório narrativo é autoridade.",
+  "decisionTokens": {
+    "go": ["GO", "GREEN", "PASS", "APROVADO", "AUTONOMOUS_READY_GO", "VERIFIED", "COMPLETE"],
+    "blocked": ["BLOCKED", "BLOCKED_EXTERNAL", "INCONCLUSIVO", "PENDENTE", "PENDENTE_APROVACAO_NEGOCIO", "PENDING", "NOT_EXECUTED", "NOT_EXECUTED_NO_CREDENTIAL", "REQUIRES_DOCKER_RUNTIME"]
+  },
+  "gates": [
+    {
+      "id": "ENGINEERING_ROUTER_V2_SEAL",
+      "report": "reports/engineering-router-v2-seal-report.json",
+      "decisionPath": "status",
+      "children": [
+        {
+          "id": "TIMEOUT_ARCHITECTURE",
+          "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json",
+          "decisionPath": "verdicts.TIMEOUT_ARCHITECTURE"
+        },
+        {
+          "id": "ANTI_GREENWASHING",
+          "report": "reports/anti-greenwashing-report.json",
+          "decisionPath": "status"
+        },
+        {
+          "id": "MISSION_CRASH_RECOVERY",
+          "report": "reports/mission-crash-recovery-report.json",
+          "decisionPath": "status"
+        },
+        {
+          "id": "REAL_TASK_RECOVERY",
+          "report": "reports/real-task-recovery-report.json",
+          "decisionPath": "status"
+        }
+      ]
+    },
+    {
+      "id": "PLATFORM_READINESS",
+      "report": "governance/final-readiness-report.json",
+      "decisionPath": "finalDecision",
+      "children": [
+        {
+          "id": "ENGINEERING_ROUTER_V2_SEAL",
+          "report": "reports/engineering-router-v2-seal-report.json",
+          "decisionPath": "status"
+        },
+        {
+          "id": "TIMEOUT_ARCHITECTURE",
+          "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json",
+          "decisionPath": "verdicts.TIMEOUT_ARCHITECTURE"
+        }
+      ]
+    },
+    {
+      "id": "FINAL_GOVERNANCE",
+      "report": "governance/final-governance-report.json",
+      "decisionPath": "finalDecision",
+      "children": [
+        {
+          "id": "ENGINEERING_ROUTER_V2_SEAL",
+          "report": "reports/engineering-router-v2-seal-report.json",
+          "decisionPath": "status"
+        },
+        {
+          "id": "TIMEOUT_ARCHITECTURE",
+          "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json",
+          "decisionPath": "verdicts.TIMEOUT_ARCHITECTURE"
+        },
+        {
+          "id": "PLATFORM_READINESS",
+          "report": "governance/final-readiness-report.json",
+          "decisionPath": "finalDecision"
+        }
+      ]
+    }
+  ]
+}

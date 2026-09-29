@@ -111,6 +111,27 @@ function loadJson(relativePath, fallback = null) {
   return fallback;
 }
 
+/**
+ * INVARIANTE DE DIREÇÃO ENTRE GATES (missão 2026-09-28).
+ *
+ * Defeito real: este readiness e `governance/final-governance-report.json` declaravam
+ * `AUTONOMOUS_READY_GO` enquanto gates filhos obrigatórios (`ENGINEERING_ROUTER_V2_SEAL`,
+ * `TIMEOUT_ARCHITECTURE`) declaravam `NO_GO`. A regra é aplicada pelo MESMO núcleo puro usado pelo
+ * gate `npm run validate:gate-direction` (`governance/gate-direction.js`) — este arquivo não
+ * reimplementa a semântica nem inventa uma segunda lista de dependências: a cadeia está declarada
+ * em `config/mandatory-gate-dependencies.json`.
+ *
+ * Fail-closed: configuração ilegível vira VIOLAÇÃO NOMEADA (um pai que não consegue ler a própria
+ * cadeia não pode declarar aprovação), nunca uma lista vazia silenciosa.
+ */
+function loadChildGateViolations(selfId, selfDecision) {
+  // Borda ÚNICA da regra (`governance/child-gate-guard.js`): a mesma leitura de cadeia usada pelo
+  // gate bloqueante e pelos outros produtores. Este arquivo não reimplementa a leitura.
+  const { guardDecision } = require('../../governance/child-gate-guard');
+  const guard = guardDecision({ selfId, decision: selfDecision, root: ROOT, readJson: (rel) => loadJson(rel, null) });
+  return guard.violations;
+}
+
 function loadEnterpriseEvidence() {
   const report = loadJson('qa/enterprise/enterprise-proof-report.json', null);
   if (report && typeof report === 'object') {
@@ -1416,7 +1437,10 @@ function buildReport() {
     ...(hardeningBlock ? [`replay-hardening=REPLAY_HARDENING_NO_GO`] : []),
   ];
 
-  const finalDecision = _computeFinalDecisionSemantics({
+  // Duas passagens: (1) a decisão candidata do readiness; (2) confronto com os gates filhos
+  // obrigatórios — a invariante `child NO_GO ⇒ parent NO_GO` rebaixa a candidata. Sem a segunda
+  // passagem, este relatório publicaria AUTONOMOUS_READY_GO com o selo V2 em NO_GO.
+  const candidateFinalDecision = _computeFinalDecisionSemantics({
     meshHardBlock,
     gateHardBlock,
     govDecision,
@@ -1425,7 +1449,20 @@ function buildReport() {
     proofDecision,
     // Estágio REAL do proof engine — nunca derivado do rótulo da decisão.
     candidateMaturity: proofReport?.candidateMaturityLevel || proofReport?.decisionMatrix?.currentLevel || null,
-  }).finalDecision;
+  });
+  const childGateViolations = loadChildGateViolations('PLATFORM_READINESS', candidateFinalDecision.finalDecision);
+  const finalDecision = childGateViolations.length > 0
+    ? _computeFinalDecisionSemantics({
+      meshHardBlock,
+      gateHardBlock,
+      govDecision,
+      hardeningDecision: hardeningReport?.decision || null,
+      blockingGapIds: blockingGaps,
+      proofDecision,
+      candidateMaturity: proofReport?.candidateMaturityLevel || proofReport?.decisionMatrix?.currentLevel || null,
+      childGateViolations,
+    }).finalDecision
+    : candidateFinalDecision.finalDecision;
   const platformMaturity = classifyPlatformMaturity({
     qaWavesGovernance,
     prodLikeSummary,
@@ -1703,15 +1740,23 @@ function _computeFinalDecisionSemantics({
   blockingGapIds = [],
   proofDecision = 'NO_GO:UNKNOWN',
   candidateMaturity = null,
+  childGateViolations = [],
 } = {}) {
   const govHardBlock = govDecision != null && String(govDecision).startsWith('NO_GO');
   const hardeningBlock = hardeningDecision === 'REPLAY_HARDENING_NO_GO';
-  const mandatoryGateBlocked = meshHardBlock || gateHardBlock || govHardBlock || hardeningBlock;
+  // Violação de direção (`child NO_GO → parent GO`) é um gate obrigatório bloqueado: o pai NÃO
+  // pode declarar GO quando um filho obrigatório está NO_GO/BLOQUEADO/ausente.
+  const childGateBlock = Array.isArray(childGateViolations) && childGateViolations.length > 0;
+  const childGateReasons = childGateBlock
+    ? childGateViolations.slice(0, 5).map((violation) => `${violation.parent}<-${violation.child}:${violation.code}`)
+    : [];
+  const mandatoryGateBlocked = meshHardBlock || gateHardBlock || govHardBlock || hardeningBlock || childGateBlock;
   const mandatoryBlockReasons = [
     ...(meshHardBlock ? ['qa-mesh=NO_GO'] : []),
     ...(gateHardBlock ? ['release-gate=NO_GO'] : []),
     ...(govHardBlock ? [`governance=${govDecision}`] : []),
     ...(hardeningBlock ? ['replay-hardening=REPLAY_HARDENING_NO_GO'] : []),
+    ...childGateReasons,
   ];
   const gapIds = (Array.isArray(blockingGapIds) ? blockingGapIds : [])
     .map((gap) => (typeof gap === 'string' ? gap : (gap?.id || gap?.code || gap?.reason || gap?.title || 'unnamed_blocking_gap')))

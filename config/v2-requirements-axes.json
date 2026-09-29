@@ -1,11 +1,13 @@
 {
-  "$comment": "Mapeamento dos EIXOS verificáveis do Engineering Router V2 (os que existem de fato no repositório) para as suítes do manifesto canônico e para a evidência que comprova cada um. É a base da matriz machine-readable gerada por scripts/governance/generate-v2-requirements-matrix.js. O STATUS de cada eixo NÃO é escrito aqui: é derivado do relatório de execução real (reports/release-suite-execution.json) e dos relatórios de governança. NOTA DE HONESTIDADE: a numeração V2-01..V2-42 citada no prompt original da missão NÃO está mapeada — os 42 identificadores não existem em nenhum artefato do repositório, e inventá-los seria fabricar conteúdo. Os 17 eixos abaixo são os requisitos reais e verificáveis hoje; `unmappedRequirementIds` registra a lacuna explicitamente.",
+  "$comment": "Mapeamento dos EIXOS verificáveis do Engineering Router V2 (os que existem de fato no repositório) para as suítes do manifesto canônico e para a evidência que comprova cada um. É a base da matriz machine-readable gerada por scripts/governance/generate-v2-requirements-matrix.js. O STATUS de cada eixo NÃO é escrito aqui: é derivado do relatório de execução real (reports/release-suite-execution.json) e dos relatórios de governança. ATUALIZAÇÃO 2026-09-28: a numeração V2-01..V2-42 TEM fonte agora — é a seção '38. TESTES OBRIGATÓRIOS V2' do prompt original da missão, recuperada do histórico da sessão 3ca8a6ba (extraída para /tmp/v2-missao-original.txt). Os 42 enunciados estão em config/engineering-router-v2-required-tests.json e o estado de cada um é DERIVADO por `npm run validate:required-tests`; `requiredTests` abaixo registra o vínculo, não uma lacuna.",
   "matrixVersion": "1.0.0",
-  "unmappedRequirementIds": {
+  "requiredTests": {
     "range": "V2-01..V2-42",
-    "status": "NOT_MAPPED_BY_REPOSITORY",
-    "reason": "Nenhum artefato do repositório define os 42 identificadores individualmente (nem o catálogo de requisitos, nem o prompt versionado). O validador V2 já registrava esta pendência. Mapear por suposição produziria uma matriz que parece completa e não é.",
-    "whereDeclared": "scripts/governance/validate-engineering-router-v2.js"
+    "status": "MAPPED_FROM_MISSION_PROMPT",
+    "manifest": "config/engineering-router-v2-required-tests.json",
+    "gate": "npm run validate:required-tests",
+    "source": "seção '38. TESTES OBRIGATÓRIOS V2' do prompt original da missão (recuperada do histórico da sessão 3ca8a6ba; extraída para /tmp/v2-missao-original.txt, linhas 994-1117)",
+    "reason": "Antes desta data o repositório não tinha os 42 identificadores e a lacuna era declarada como NOT_MAPPED_BY_REPOSITORY. O prompt original existe e foi recuperado: os enunciados entraram verbatim no manifesto dos 42, sem inventar nenhum identificador."
   },
   "axes": {
     "ANTI_GREENWASHING": {

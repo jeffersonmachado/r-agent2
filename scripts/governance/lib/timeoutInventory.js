@@ -55,22 +55,41 @@ const EXPIRY_ACTIONS = Object.freeze({
  */
 const CLASSIFICATION_RULES = Object.freeze([
   // --- liveness / ownership: nunca podem ser confundidos com deadline --------
-  { id: 'lease', re: /lease/i, category: 'LEASE_DURATION' },
-  { id: 'heartbeat', re: /heartbeat|heart_beat|hb_ms|_hb\b/i, category: 'HEARTBEAT_INTERVAL' },
-  { id: 'no-progress', re: /no_?progress|maxNoProgress|stalenessProgress/i, category: 'NO_PROGRESS_TIMEOUT' },
+  // `\blease\b` (e não `/lease/i`): o haystack é TOKENIZADO, então "release" é UM token e não
+  // casa com a fronteira — era exatamente assim que `RELEASE_ARTIFACTS` virava `LEASE_DURATION`.
+  { id: 'lease', re: /\blease\b|\bleasing\b/, category: 'LEASE_DURATION' },
+  { id: 'heartbeat', re: /heartbeat|\bheart\b\s+\bbeat\b|\bhb\b/, category: 'HEARTBEAT_INTERVAL' },
+  { id: 'no-progress', re: /no[_ ]?progress|stalenessprogress/i, category: 'NO_PROGRESS_TIMEOUT' },
 
   // --- infraestrutura ------------------------------------------------------
-  { id: 'shutdown', re: /shutdown|graceful|grace_?period|sigterm|force_exit|forceExit/i, category: 'SHUTDOWN_GRACE_PERIOD' },
-  { id: 'retry-backoff', re: /backoff|jitter|retryDelay|retry_delay|RETRY_MS|waitBeforeRetry/i, category: 'RETRY_BACKOFF' },
-  { id: 'poll', re: /poll|interval_sec|intervalMs|tick|sweep|watchdogCheck/i, category: 'POLL_INTERVAL' },
-  { id: 'test', re: /jest|vitest|testTimeout|TEST_TIMEOUT|suiteTimeout|hookTimeout/i, category: 'TEST_TIMEOUT' },
-  { id: 'command', re: /command|spawn|exec|child|shell|npm_?test|regression/i, category: 'COMMAND_DEADLINE' },
-  { id: 'database', re: /db|database|query|postgres|sequelize|pool|pg_|transaction|lock_timeout|statement_timeout|acquire/i, category: 'DATABASE_TIMEOUT' },
-  { id: 'provider', re: /provider|openai|anthropic|claude|deepseek|kimi|qwen|gemini|llm|completion|chat_?model|ai_?timeout/i, category: 'PROVIDER_TIMEOUT' },
-  { id: 'user-deadline', re: /user_?deadline|deadline_?at|dueAt|userDeadline|expiresAtUser/i, category: 'USER_DEFINED_DEADLINE' },
-  { id: 'operation', re: /task|mission|phase|operation|run_?timeout|deadline|process|runtime|engine|job|node|flow/i, category: 'OPERATION_DEADLINE' },
-  { id: 'request', re: /fetch|request|http|axios|undici|signal|client|webhook|probe/i, category: 'REQUEST_TIMEOUT' },
+  { id: 'shutdown', re: /shutdown|graceful|grace[_ ]?period|sigterm|forceexit/i, category: 'SHUTDOWN_GRACE_PERIOD' },
+  { id: 'retry-backoff', re: /backoff|jitter|retrydelay|retry[_ ]?delay|\bretry\b|waitbeforeretry/i, category: 'RETRY_BACKOFF' },
+  { id: 'poll', re: /\bpoll\b|\binterval\b|\btick\b|\bsweep\b|\bwatchdog\b/i, category: 'POLL_INTERVAL' },
+  { id: 'test', re: /\bjest\b|\bvitest\b|testtimeout|suitetimeout|hooktimeout/i, category: 'TEST_TIMEOUT' },
+  { id: 'command', re: /\bcommand\b|\bspawn\b|\bexec\b|\bchild\b|\bshell\b|\bregression\b/i, category: 'COMMAND_DEADLINE' },
+  { id: 'database', re: /\bdb\b|\bdatabase\b|\bquery\b|\bpostgres\b|\bsequelize\b|\bpool\b|\bpg\b|\btransaction\b|lock[_ ]?timeout|statement[_ ]?timeout|\bacquire\b/i, category: 'DATABASE_TIMEOUT' },
+  { id: 'provider', re: /\bprovider\b|\bopenai\b|\banthropic\b|\bclaude\b|\bdeepseek\b|\bkimi\b|\bqwen\b|\bgemini\b|\bllm\b|\bcompletion\b|ai[_ ]?timeout/i, category: 'PROVIDER_TIMEOUT' },
+  { id: 'user-deadline', re: /user[_ ]?deadline|deadline[_ ]?at|\bdueat\b|expiresatuser/i, category: 'USER_DEFINED_DEADLINE' },
+  { id: 'operation', re: /\btask\b|\bmission\b|\bphase\b|\boperation\b|\bdeadline\b|\bprocess\b|\bruntime\b|\bengine\b|\bjob\b|\bflow\b|\bnode\b/i, category: 'OPERATION_DEADLINE' },
+  { id: 'request', re: /\bfetch\b|\brequest\b|\bhttp\b|\baxios\b|\bundici\b|\bsignal\b|\bclient\b|\bwebhook\b|\bprobe\b/i, category: 'REQUEST_TIMEOUT' },
 ]);
+
+/**
+ * Tokeniza identificador/caminho em partes comparáveis (`ENGINEERING_LEASE_TTL_MS` →
+ * [engineering, lease, ttl, ms]; `releaseArtifacts` → [release, artifacts]).
+ *
+ * É o que impede um nome de casar por SUBSTRING de outro nome — o defeito real medido: `/lease/i`
+ * sobre o texto cru casava dentro de `RELEASE`, e o inventário acusava LEASE_DURATION em
+ * `RELEASE_ARTIFACTS` (e em qualquer linha que mencionasse "release").
+ */
+function tokensOf(text) {
+  return String(text || '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .map((token) => token.toLowerCase())
+    .filter(Boolean);
+}
 
 /**
  * Classificação por KIND quando nenhuma regra nomeada casou. É uma DECISÃO
@@ -208,8 +227,15 @@ function isSleepHelper(code, index, kind) {
   }
 
   // Forma 2: arrow de expressão trivial — `setTimeout(() => resolve(), ms)`
-  const exprArrow = /^set(?:Timeout|Interval)\(\s*\([^)]*\)\s*=>\s*[A-Za-z0-9_$.]+(\([^()]{0,60}\))?\s*,/.exec(head);
-  if (exprArrow) return true;
+  const exprArrow = /^set(?:Timeout|Interval)\(\)?\s*(?:\([^)]*\))?\s*=>\s*([A-Za-z0-9_$.]+)(\([^()]{0,60}\))?\s*,/.exec(head);
+  if (exprArrow) {
+    // NÃO é sleep quando o timer existe para CANCELAR/ABORTAR/REJEITAR: isso é o DISPARO de um
+    // deadline (`setTimeout(() => controller.abort(), requestTimeoutMs)`), que precisa ser
+    // classificado pela POLÍTICA (REQUEST_TIMEOUT), não como pausa. Defeito medido: DELAY_SLEEP
+    // ganhava da classificação por nome e escondia um timeout de requisição.
+    if (isCancellationCallee(exprArrow[1])) return false;
+    return true;
+  }
 
   // Forma 3: arrow com bloco trivial — `setTimeout(() => { resolve(); }, ms)`
   const open = code.indexOf('{', index);
@@ -217,7 +243,19 @@ function isSleepHelper(code, index, kind) {
   const body = braceBody(code, open);
   const compact = body.replace(/\s+/g, ' ').trim();
   if (compact.length === 0 || compact.length > 120) return false;
-  return /^(return )?[A-Za-z0-9_$.]+(\([^()]{0,80}\))?;?$/.test(compact);
+  const simple = /^(return )?([A-Za-z0-9_$.]+)(\([^()]{0,80}\))?;?$/.exec(compact);
+  if (!simple) return false;
+  if (isCancellationCallee(simple[2])) return false;
+  return true;
+}
+
+/**
+ * O callback do timer CANCELA/ABORTA/REJEITA algo? Então o timer é o disparo de um DEADLINE, não
+ * uma pausa. `controller.abort()`, `abortController.abort()`, `cancel()`, `reject()`...
+ */
+function isCancellationCallee(callee) {
+  const name = String(callee || '').split('.').pop();
+  return /^(abort|cancel|stop|kill|destroy|close|shutdown|terminate|reject)$/i.test(name);
 }
 
 /**
@@ -344,13 +382,28 @@ const DESTRUCTIVE_PATTERNS = Object.freeze([
 const MAX_SITES_PER_FILE = 4000;
 
 function classify(entry) {
-  const hay = `${entry.name} ${entry.file} ${entry.context}`;
+  // HAYSTACK EM DUAS CAMADAS, SEM O CAMINHO DO ARQUIVO (missão 2026-09-28).
+  //
+  // Defeitos medidos que isto elimina:
+  //   - `/lease/i` casava dentro de `RELEASE` (RE-LEASE) → `RELEASE_ARTIFACTS` virava LEASE_DURATION;
+  //   - o CAMINHO entrava no haystack, então TODO site dentro de `leasePolicy.js` virava
+  //     LEASE_DURATION — inclusive um `DEFAULT_HEARTBEAT_INTERVAL_MS`, cujo NOME diz o contrário.
+  //
+  // Precedência correta: (1) o NOME, que o autor escreveu de propósito; (2) a LINHA de código.
+  // O arquivo NÃO classifica: ele não é o timer. Quando nada casa, a decisão cai no KIND_DEFAULTS
+  // (explícita e auditável), nunca numa categoria emprestada do nome do módulo.
+  const nameHay = ` ${tokensOf(entry.name).join(' ')} `;
+  const lineHay = ` ${tokensOf(entry.context).join(' ')} `;
+
   for (const rule of CLASSIFICATION_RULES) {
-    if (rule.re.test(hay)) return { category: rule.category, ruleId: rule.id, byDefault: false };
+    if (rule.re.test(nameHay)) return { category: rule.category, ruleId: rule.id, byDefault: false, matchedOn: 'name' };
+  }
+  for (const rule of CLASSIFICATION_RULES) {
+    if (rule.re.test(lineHay)) return { category: rule.category, ruleId: rule.id, byDefault: false, matchedOn: 'line' };
   }
   const fallback = KIND_DEFAULTS[entry.kind];
-  if (fallback) return { category: fallback.category, ruleId: fallback.ruleId, byDefault: true };
-  return { category: TIMEOUT_CATEGORIES.LEGACY_UNKNOWN_TIMEOUT, ruleId: null, byDefault: false };
+  if (fallback) return { category: fallback.category, ruleId: fallback.ruleId, byDefault: true, matchedOn: 'kind' };
+  return { category: TIMEOUT_CATEGORIES.LEGACY_UNKNOWN_TIMEOUT, ruleId: null, byDefault: false, matchedOn: null };
 }
 
 /** Componentes críticos: onde um timeout errado mata trabalho legítimo. */
@@ -361,9 +414,26 @@ const SITE_PATTERNS = [
   { kind: 'setInterval', re: /\bsetInterval\s*\(/g },
   { kind: 'abortSignalTimeout', re: /AbortSignal\.timeout\s*\(\s*([^)]*)\)/g },
   { kind: 'promiseRace', re: /Promise\.race\s*\(/g },
-  { kind: 'declaration', re: /\b(?:const|let|var)\s+([A-Za-z0-9_$]*(?:TIMEOUT|Timeout|timeout|DEADLINE|Deadline|BACKOFF|Backoff|LEASE|LEASE_MS|HEARTBEAT|INTERVAL|ttlMs|TtlMs|ttlSec|TtlSec|ttlSeconds|TtlSeconds)[A-Za-z0-9_$]*)\s*=\s*([^;\n]+)/g },
-  { kind: 'optionKey', re: /\b([A-Za-z0-9_$]*(?:timeout|Timeout|TIMEOUT|deadline|Deadline|ttlMs|TtlMs|ttlSec|TtlSec|ttlSeconds|TtlSeconds|backoff|Backoff)[A-Za-z0-9_$]*)\s*:\s*([^,\n}]+)/g },
+  // DETECÇÃO ampla + filtro por TOKEN: o nome é capturado por qualquer token e a decisão de
+  // "é um timer?" passa por `isTimerName` (tokens), nunca por substring. A versão anterior exigia
+  // `LEASE` por SUBSTRING no nome, e por isso `RELEASE_ARTIFACTS` entrava no inventário.
+  { kind: 'declaration', re: /\b(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=\s*([^;\n]+)/g },
+  { kind: 'optionKey', re: /\b([A-Za-z0-9_$]+)\s*:\s*([^,\n}]+)/g },
 ];
+
+/** Tokens que caracterizam uma DURAÇÃO/timer declarada por nome. */
+const TIMER_NAME_TOKENS = Object.freeze(new Set([
+  'timeout', 'timeouts', 'deadline', 'deadlines', 'ttl', 'backoff', 'interval', 'heartbeat', 'lease', 'hb',
+  'grace',
+]));
+
+/**
+ * O nome declarado é uma duração/timer? Avaliado por TOKENS: `RELEASE_ARTIFACTS`
+ * ({release, artifacts}) NÃO é; `ENGINEERING_LEASE_TTL_MS` ({engineering, lease, ttl, ms}) é.
+ */
+function isTimerName(name) {
+  return tokensOf(name).some((token) => TIMER_NAME_TOKENS.has(token));
+}
 
 /** Extrai o valor numérico bruto quando evidente (constante literal). */
 function literalValue(raw) {
@@ -401,6 +471,9 @@ function scanFile({ file, source }) {
         ? (m[1] || '(anônimo)')
         : pattern.kind;
       if (isNonDurationName(name)) continue;
+      // Declarações/chaves só entram se o NOME tiver token de timer (não substring):
+      // `RELEASE_ARTIFACTS` não é timer, `LEASE_TTL_MS` e `POLL_INTERVAL_MS` são.
+      if ((pattern.kind === 'declaration' || pattern.kind === 'optionKey') && !isTimerName(name)) continue;
       const rawArg = pattern.kind === 'declaration' || pattern.kind === 'optionKey'
         ? (m[2] || '')
         : (m[1] || '');
@@ -520,6 +593,10 @@ module.exports = {
   buildInventory,
   stripCommentsAndStrings,
   isSleepHelper,
+  isCancellationCallee,
+  isTimerName,
+  TIMER_NAME_TOKENS,
+  tokensOf,
   classify,
   literalValue,
   buildLineIndex,

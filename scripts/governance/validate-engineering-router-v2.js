@@ -24,7 +24,27 @@ const path = require('path');
 
 const envelopeLib = require('./lib/engineeringV2Envelope');
 const ROOT = path.resolve(__dirname, '..', '..');
-const REPORT = path.join(ROOT, 'reports', 'engineering-router-v2-seal-report.json');
+
+// DIRETÓRIO DE RELATÓRIOS INJETÁVEL (missão 2026-09-28).
+//
+// DEFEITO REAL medido: este validador LÊ evidências e PUBLICA o relatório canônico do selo.
+// O teste unitário de dependência do timeout exercitava estes caminhos com fixtures mutadas —
+// escrevendo e apagando `reports/TIMEOUT_ARCHITECTURE_REPORT.json` e republicando
+// `reports/engineering-router-v2-seal-report.json`. Consequência observada: DEPOIS de rodar
+// `npm run test:unit`, o selo canônico ficava publicado como `NO_GO` ("evidência vencida") por
+// artefato de teste. Teste NUNCA pode publicar veredito de governança nem alterar evidência real:
+// com `ENGINEERING_V2_REPORTS_DIR` o validador opera inteiramente dentro do diretório injetado.
+const REPORTS_DIR_OVERRIDE = process.env.ENGINEERING_V2_REPORTS_DIR
+  ? path.resolve(process.env.ENGINEERING_V2_REPORTS_DIR)
+  : null;
+
+/** Resolve o caminho absoluto de um relatório (honrando o diretório injetado). */
+function resolveReportPath(rel) {
+  if (!REPORTS_DIR_OVERRIDE) return path.join(ROOT, rel);
+  return path.join(REPORTS_DIR_OVERRIDE, path.basename(rel));
+}
+
+const REPORT = resolveReportPath('reports/engineering-router-v2-seal-report.json');
 const AUTHORITATIVE = process.env.RELEASE_AUTHORITATIVE === '1';
 
 function sha256(text) {
@@ -43,7 +63,7 @@ function readJsonRel(rel) {
 }
 
 function read(rel) {
-  const abs = path.join(ROOT, rel);
+  const abs = resolveReportPath(rel);
   return fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : null;
 }
 
@@ -204,6 +224,19 @@ const RUNTIME_ITEMS = [
     if (!Number.isFinite(finished) || Date.now() - finished > FRESH_MS) return 'evidência vencida (>7 dias)';
     return true;
   }),
+  // TIMEOUT_ARCHITECTURE é REQUISITO DO SELO (missão 2026-09-28). Antes desta correção este
+  // arquivo não tinha UMA ÚNICA menção a timeout: o selo V2 podia ser GO com lease/heartbeat/
+  // fence/deadline/progresso NO_GO ou nem executados. O veredito é LIDO do relatório real
+  // (nunca copiado de uma constante) e a dependência é fail-closed: sem relatório, sem selo.
+  runtimeItem('V2_TIMEOUT_ARCHITECTURE_GREEN', 'reports/TIMEOUT_ARCHITECTURE_REPORT.json', (report) => {
+    const verdict = report?.verdicts?.TIMEOUT_ARCHITECTURE;
+    if (!verdict) return 'relatório sem verdicts.TIMEOUT_ARCHITECTURE';
+    if (verdict !== 'GREEN') return `TIMEOUT_ARCHITECTURE=${verdict}`;
+    if (report.verdicts.TIMEOUT_INVENTORY !== 'COMPLETE') return `TIMEOUT_INVENTORY=${report.verdicts.TIMEOUT_INVENTORY}`;
+    const generatedAt = Date.parse(report.generatedAt || '');
+    if (!Number.isFinite(generatedAt) || Date.now() - generatedAt > FRESH_MS) return 'evidência vencida (>7 dias)';
+    return true;
+  }),
 ];
 
 /**
@@ -277,11 +310,22 @@ function main() {
     const matrix = readJsonRel('reports/engineering-router-v2-requirements-matrix.json');
     if (!matrix) {
       pending.push({ id: 'V2_REQUIREMENTS_MATRIX', status: 'PENDING', detail: 'matriz de requisitos ausente (rode npm run validate:v2-requirements-matrix)' });
-    } else if (matrix.unmappedRequirementIds?.status === 'NOT_MAPPED_BY_REPOSITORY') {
+    }
+
+    // TESTES OBRIGATÓRIOS V2 (V2-01..V2-42): a numeração TEM fonte (seção '38. TESTES
+    // OBRIGATÓRIOS V2' do prompt original, recuperada do histórico da sessão em 2026-09-28 e
+    // versionada em config/engineering-router-v2-required-tests.json). O estado de cada ID é
+    // derivado por `npm run validate:required-tests`; aqui só se lê a MEDIÇÃO. Antes disto a
+    // pendência era um texto fixo afirmando que a numeração não existia em lugar nenhum — o que
+    // passou a ser falso assim que a fonte foi encontrada.
+    const requiredTests = readJsonRel('reports/engineering-router-v2-required-tests-report.json');
+    if (!requiredTests) {
+      pending.push({ id: 'V2_REQUIRED_TESTS', status: 'PENDING', detail: 'medição dos 42 testes obrigatórios ausente (rode npm run validate:required-tests)' });
+    } else if (requiredTests.status !== 'PASS') {
       pending.push({
-        id: 'V2_REQUIREMENTS_MATRIX',
+        id: 'V2_REQUIRED_TESTS',
         status: 'PENDING',
-        detail: `matriz derivada cobrindo ${matrix.totals.axesGo}/${matrix.totals.axes} eixos; a numeração ${matrix.unmappedRequirementIds.range} continua sem fonte no repositório — não foi inventada`,
+        detail: `42 testes obrigatórios em ${requiredTests.status}: ${(requiredTests.unresolvedIds || []).length} não provado(s) — ${(requiredTests.unresolvedIds || []).slice(0, 8).join(', ')}`,
       });
     }
     if (matrix && matrix.status !== 'GO') {
@@ -289,9 +333,15 @@ function main() {
     }
 
     const statusReport = readJsonRel('reports/engineering-router-v2-status-report.json') || readJsonRel('ENGINEERING_ROUTER_V2_STATUS_REPORT.json');
-    const ragAxis = statusReport?.axes?.RAG_INDEX_HEALTH;
-    if (ragAxis && /REPAIRED_WITH_RESIDUAL|NO_GO|FAIL/i.test(String(ragAxis.status || ''))) {
-      pending.push({ id: 'ENGINEERING_RAG_ENRICHMENT', status: 'PENDING', detail: `eixo RAG_INDEX_HEALTH=${ragAxis.status}: o caminho de retrieval ainda depende de geração, então o enriquecimento não recebe conteúdo` });
+    // RAG_INDEX_HEALTH é LIDO DA MEDIÇÃO, não do status report (missão 2026-09-28). O status é
+    // SAÍDA: usá-lo como entrada permitia que um arquivo narrativo de 24/09 (com
+    // `REPAIRED_WITH_RESIDUAL`) governasse a decisão de hoje — para mais ou para menos. A fonte
+    // agora é o banco real, medido por `npm run validate:rag-index-health`.
+    const ragHealth = readJsonRel('reports/rag-index-health-report.json');
+    if (!ragHealth) {
+      pending.push({ id: 'ENGINEERING_RAG_ENRICHMENT', status: 'PENDING', detail: 'sem medição do corpus RAG (rode npm run validate:rag-index-health)' });
+    } else if (String(ragHealth.status) !== 'HEALTHY') {
+      pending.push({ id: 'ENGINEERING_RAG_ENRICHMENT', status: 'PENDING', detail: `RAG_INDEX_HEALTH=${ragHealth.status} (${(ragHealth.violations || []).map((v) => v.code).join(', ') || 'sem detalhe'})` });
     }
     if (statusReport?.axes?.QWEN_LIVE && /NOT_EXECUTED/.test(String(statusReport.axes.QWEN_LIVE.status))) {
       pending.push({ id: 'QWEN_LIVE', status: 'PENDING', detail: `QWEN_LIVE=${statusReport.axes.QWEN_LIVE.status}: prova ao vivo não executada neste ambiente (sem credencial)` });

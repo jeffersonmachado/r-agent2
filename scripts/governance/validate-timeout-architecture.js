@@ -248,11 +248,17 @@ function main() {
     REAL_DEAD_WORKER_RECOVERY: ev('REAL_DEAD_WORKER_RECOVERY'),
     NO_PROGRESS_E2E: ev('NO_PROGRESS_E2E'),
     PROVIDER_FALLBACK_E2E: ev('PROVIDER_FALLBACK_E2E'),
-    ENGINEERING_ROUTER_V2_SEAL: 'NO_GO',
-    RAP_FINAL_RELEASE: 'NO_GO',
   };
-  verdicts.ENGINEERING_ROUTER_V2_SEAL = verdicts.TIMEOUT_ARCHITECTURE === 'GREEN' ? 'GO' : 'NO_GO';
-  verdicts.RAP_FINAL_RELEASE = verdicts.TIMEOUT_ARCHITECTURE === 'GREEN' ? 'GO' : 'NO_GO';
+
+  // DIREÇÃO DA CADEIA (correção 2026-09-28). Este artefato é FILHO: ele prova a arquitetura de
+  // timeouts e NÃO afirma o veredito de gate PAI. Antes desta correção o relatório FABRICAVA
+  // `ENGINEERING_ROUTER_V2_SEAL = TIMEOUT_ARCHITECTURE==='GREEN' ? 'GO' : 'NO_GO'` (e o mesmo para
+  // `RAP_FINAL_RELEASE`), sem ler o relatório real do selo — era possível o filho declarar GO
+  // enquanto `reports/engineering-router-v2-seal-report.json` declarava NO_GO. A direção correta é
+  // runtime → gate → selo → readiness → governança final: quem consome este relatório (o selo V2)
+  // deriva o próprio veredito; o filho nunca o antecipa.
+  verdicts.downstreamGatesAssertedHere = false;
+  verdicts.downstreamGatesNote = 'veredito de gate pai não é afirmado por artefato filho (runtime → gate → selo → readiness → governança final)';
 
   const report = {
     artifactType: 'TIMEOUT_ARCHITECTURE_REPORT',

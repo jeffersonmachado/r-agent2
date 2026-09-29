@@ -67,9 +67,19 @@ function runChildAndKill(taskId, workerInstanceId, missionId) {
         buffer = buffer.slice(nl + 1);
         nl = buffer.indexOf('\n');
         if (!line.startsWith('{') || settled) continue;
+        // O filho agora roda o CAMINHO REAL do produto, que LOGA objetos JSON multi-linha no stdout.
+        // Uma linha iniciada por `{` pode ser log, não handshake: só é handshake o que faz parse E
+        // traz `state`. Sem isso o harness morria com `SyntaxError` ao ler o log (medido 2026-09-28).
+        let parsed = null;
+        try {
+          parsed = JSON.parse(line);
+        } catch (_) {
+          continue;
+        }
+        if (!parsed || typeof parsed.state !== 'string') continue;
         settled = true;
         clearTimeout(timer);
-        const handshake = JSON.parse(line);
+        const handshake = parsed;
         const pid = child.pid;
         child.kill('SIGKILL');
         child.on('exit', (code, signal) => resolve({ handshake, pid, code, signal }));
@@ -175,17 +185,32 @@ async function main() {
       refused = error.code;
     }
     check('ESCRITA_DO_WORKER_MORTO_RECUSADA', ['TASK_STALE_WORKER_WRITE', 'TASK_LEASE_NOT_HELD', 'TASK_LEASE_EXPIRED'].includes(refused), `code=${refused}`);
-    // 10. A task continua: o novo dono consegue avançar de fase (a execução não está congelada).
-    let advanced = null;
-    if (newLease && newLease.token) {
-      try {
-        const moved = await taskService.updateTaskGuarded(taskId, { status: 'TESTING' }, { leaseToken: newLease.token, fence: newLease.fence });
-        advanced = moved.status;
-      } catch (error) {
-        advanced = `ERRO:${error.code || error.message}`;
-      }
-    }
-    check('TASK_CONTINUA_APOS_RECOVERY', advanced === 'TESTING', `status=${advanced}`);
+    // 10. A task CONTINUA: o run retomado pelo novo dono executou TRABALHO MATERIAL?
+    //
+    // DEFEITO DO PRÓPRIO E2E corrigido (2026-09-28, medido): a versão anterior tentava tomar o lease
+    // e avançar a task para TESTING depois da retomada. Isso é IMPOSSÍVEL por construção quando o run
+    // retomado TERMINA — estado terminal libera o lease, então `newLease.token` é null e a checagem
+    // falhava mesmo com a retomada correta (medido: `status=null`). Um teste que reprova o sucesso
+    // não mede nada.
+    //
+    // A evidência agora é o TRABALHO FEITO PELO NOVO DONO: tentativa com `attempt_number >= 2`
+    // (a #1 pertenceu ao worker morto). Isso falha alto quando a retomada morre antes de executar
+    // (ex.: NO_QUALIFIED_CODER) — não é enfraquecimento, é medição do que a missão pede: "o Router
+    // CONTINUA execução", não "o lease ficou livre".
+    const taskAfterRecovery = await taskService.getTask(taskId);
+    const attemptsAfterRecovery = await taskService.listAttempts(taskId);
+    const attemptsByNewOwner = attemptsAfterRecovery.filter((attempt) => {
+      const number = Number(attempt.attempt_number ?? attempt.attemptNumber ?? 0);
+      return number >= 2;
+    });
+    const lastErrorCode = (taskAfterRecovery && taskAfterRecovery.last_error && taskAfterRecovery.last_error.code)
+      || (taskAfterRecovery && taskAfterRecovery.lastError && taskAfterRecovery.lastError.code)
+      || '';
+    check(
+      'TASK_CONTINUA_APOS_RECOVERY',
+      attemptsByNewOwner.length > 0,
+      `status=${taskAfterRecovery && taskAfterRecovery.status} tentativas_do_novo_dono=${attemptsByNewOwner.length} (total=${attemptsAfterRecovery.length}) desfecho=${lastErrorCode}`,
+    );
 
     await Model.update({ status: 'CANCELLED', lease_token: null, lease_expires_at: null }, { where: { id: taskId } });
   } catch (error) {

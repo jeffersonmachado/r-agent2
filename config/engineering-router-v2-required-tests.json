@@ -1,0 +1,290 @@
+{
+  "$comment": "TESTES OBRIGATÓRIOS V2 (V2-01..V2-42) — seção 38 do prompt original da missão. Enunciados VERBATIM, recuperados do histórico da sessão 3ca8a6ba-b18f-4252-8597-45e79eca8f69 e extraídos para /tmp/v2-missao-original.txt (linhas 994-1117). Este arquivo NÃO declara status: cada item aponta para a suíte e/ou relatório que o comprova e o estado é DERIVADO por scripts/governance/validate-engineering-router-v2-required-tests.js, que lê a execução autoritativa real (reports/release-suite-execution.json) e o relatório de governança indicado. Item sem prova aponta para [] e entra como GAP — nunca é marcado como coberto por suposição.",
+  "manifestVersion": "1.0.0",
+  "source": {
+    "kind": "MISSION_PROMPT_SECTION",
+    "section": "38. TESTES OBRIGATÓRIOS V2",
+    "extractedTo": "/tmp/v2-missao-original.txt",
+    "idsRange": "V2-01..V2-42",
+    "note": "A numeração existe no prompt original da missão. Não existia no repositório até este arquivo; nada foi inventado."
+  },
+  "requiredTests": [
+    {
+      "id": "V2-01",
+      "requirement": "Legacy Router continua funcional.",
+      "suites": ["tests/integration/engineeringMissionFullE2E.test.js"],
+      "reports": ["reports/engineering-router-v1-report.json"]
+    },
+    {
+      "id": "V2-02",
+      "requirement": "Mission Compiler produz MissionSpec.",
+      "suites": ["tests/unit/engineeringMissionCompiler.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-03",
+      "requirement": "originalMission é imutável.",
+      "suites": [
+        "tests/integration/engineeringMissionOriginalMissionImmutability.test.js",
+        "tests/unit/engineeringMissionCompiler.test.js"
+      ],
+      "reports": []
+    },
+    {
+      "id": "V2-04",
+      "requirement": "Enrichment usa conteúdo real do repositório.",
+      "suites": ["tests/unit/engineeringMissionDeepScan.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-05",
+      "requirement": "Context collector encontra símbolo relevante que não aparece no filename.",
+      "suites": [
+        "tests/unit/engineeringMissionDeepScan.test.js",
+        "tests/unit/engineeringMissionContextKnowledge.test.js"
+      ],
+      "reports": []
+    },
+    {
+      "id": "V2-06",
+      "requirement": "Engineering RAG participa do enrichment quando relevante.",
+      "suites": [
+        "tests/unit/engineeringMissionContextKnowledge.test.js",
+        "tests/integration/engineeringMissionEnrichmentDegradation.test.js"
+      ],
+      "reports": []
+    },
+    {
+      "id": "V2-07",
+      "requirement": "Provenance identifica fontes.",
+      "suites": ["tests/unit/engineeringMissionContextKnowledge.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-08",
+      "requirement": "Preview apresenta diff.",
+      "suites": ["tests/integration/engineeringMissionPreviewDiff.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-09",
+      "requirement": "Manual approval bloqueia execução antes de aprovação.",
+      "suites": ["tests/integration/engineeringMissionGovernanceAndConcurrency.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-10",
+      "requirement": "Approval referencia hash/version corretos.",
+      "suites": [
+        "tests/integration/engineeringMissionGovernanceAndConcurrency.test.js",
+        "tests/unit/engineeringMissionSpecFreshness.test.js"
+      ],
+      "reports": []
+    },
+    {
+      "id": "V2-11",
+      "requirement": "Mission policy não consegue enfraquecer global policy sem autorização.",
+      "suites": ["tests/unit/engineeringMissionPolicyAuthority.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-12",
+      "requirement": "SAFE_ONLY bloqueia risco elevado.",
+      "suites": ["tests/unit/engineeringMissionPolicyResolver.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-13",
+      "requirement": "Continuous enrichment NON_MATERIAL segue policy.",
+      "suites": ["tests/integration/engineeringMissionPolicyEscalation.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-14",
+      "requirement": "Continuous enrichment MATERIAL aplica policy.",
+      "suites": ["tests/integration/engineeringMissionPolicyEscalation.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-15",
+      "requirement": "CRITICAL exige aprovação humana por padrão.",
+      "suites": ["tests/integration/engineeringMissionPolicyEscalation.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-16",
+      "requirement": "Versão antiga não executa após nova versão aprovada.",
+      "suites": ["tests/integration/engineeringMissionStaleSpec.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-17",
+      "requirement": "Crash em ENRICHING + process restart real.",
+      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
+      "reports": ["reports/mission-crash-recovery-report.json"]
+    },
+    {
+      "id": "V2-18",
+      "requirement": "Crash em IMPLEMENTING + process restart real.",
+      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
+      "reports": ["reports/mission-crash-recovery-report.json"]
+    },
+    {
+      "id": "V2-19",
+      "requirement": "Crash em TESTING + process restart real.",
+      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
+      "reports": ["reports/mission-crash-recovery-report.json"]
+    },
+    {
+      "id": "V2-20",
+      "requirement": "Crash em REVIEWING + process restart real.",
+      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
+      "reports": ["reports/mission-crash-recovery-report.json"]
+    },
+    {
+      "id": "V2-21",
+      "requirement": "Crash em REGRESSION + process restart real.",
+      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
+      "reports": ["reports/mission-crash-recovery-report.json"]
+    },
+    {
+      "id": "V2-22",
+      "requirement": "Boot recovery ocorre sem chamada manual.",
+      "suites": ["tests/integration/engineeringMissionBootRecovery.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-23",
+      "requirement": "Task é retomada, não apenas mission status.",
+      "suites": ["tests/integration/engineeringMissionDurableResume.test.js"],
+      "reports": ["reports/real-task-recovery-report.json"]
+    },
+    {
+      "id": "V2-24",
+      "requirement": "Crash depois de side effect não duplica resultado.",
+      "suites": ["tests/integration/engineeringTaskConcurrencyAndRestart.test.js"],
+      "reports": ["reports/real-task-recovery-report.json"]
+    },
+    {
+      "id": "V2-25",
+      "requirement": "Dois workers não executam mesma task simultaneamente.",
+      "suites": [
+        "tests/integration/engineeringMissionDistributedLease.test.js",
+        "tests/integration/engineeringTaskFencing.test.js"
+      ],
+      "reports": []
+    },
+    {
+      "id": "V2-26",
+      "requirement": "Lease expira e segundo worker assume.",
+      "suites": ["tests/integration/engineeringMissionDistributedLease.test.js"],
+      "reports": ["reports/real-task-recovery-report.json"]
+    },
+    {
+      "id": "V2-27",
+      "requirement": "Worker antigo não grava depois de perder lease.",
+      "suites": [
+        "tests/integration/engineeringTaskFencing.test.js",
+        "tests/unit/engineeringMissionLeasePolicy.test.js"
+      ],
+      "reports": ["reports/real-task-recovery-report.json"]
+    },
+    {
+      "id": "V2-28",
+      "requirement": "PostgreSQL ausente não vira PASS em release-authoritative.",
+      "suites": ["tests/unit/governance/releaseAuthoritativePersistenceGuard.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-29",
+      "requirement": "Anti-skip detecta bypass.",
+      "suites": ["tests/unit/governance/releaseSuiteRunner.test.js"],
+      "reports": ["reports/anti-greenwashing-report.json"]
+    },
+    {
+      "id": "V2-30",
+      "requirement": "Qwen structural = PASS.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-31",
+      "requirement": "Qwen contract = PASS.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-32",
+      "requirement": "Qwen routing = PASS.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-33",
+      "requirement": "Qwen fallback = PASS.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-34",
+      "requirement": "Qwen live não pode ser simulado por mock.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-35",
+      "requirement": "Qwen live executa realmente quando credencial estiver presente.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "reports": [],
+      "externalBlocker": {
+        "reason": "MEDIDO em 2026-09-28: zero credenciais Qwen no ambiente (0 ocorrencias de QWEN no .env e no env). O provider esta registrado e habilitado, e o proprio relatorio da entrega declara: 'Credencial Qwen ausente neste ambiente: a prova de rede real contra dashscope-intl depende de credencial - declarado como pendente, nao como executado'. O requisito e condicional ('quando credencial estiver presente'): sem credencial o caminho live e substituido por estado explicito (V2-36, provado). Impedimento EXTERNO real e declarado, nunca convertido em PASS."
+      }
+    },
+    {
+      "id": "V2-36",
+      "requirement": "Qwen live sem credencial retorna estado explícito.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-37",
+      "requirement": "Audit envelope inclui Mission Compiler.",
+      "suites": ["tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-38",
+      "requirement": "Audit envelope inclui approval/autoapproval.",
+      "suites": ["tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-39",
+      "requirement": "Audit envelope inclui Qwen status correto.",
+      "suites": ["tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-40",
+      "requirement": "Audit verifier detecta evidence adulterada.",
+      "suites": [
+        "tests/unit/engineeringRouterAuditEnvelopeVerifier.test.js",
+        "tests/integration/engineeringV2EnvelopeTamper.test.js"
+      ],
+      "reports": []
+    },
+    {
+      "id": "V2-41",
+      "requirement": "Engineer Router V2 Seal falha quando qualquer gate obrigatório falha.",
+      "suites": ["tests/unit/governance/v2SealOrchestration.test.js"],
+      "reports": []
+    },
+    {
+      "id": "V2-42",
+      "requirement": "Engineer Router V2 Seal passa apenas com evidence completa.",
+      "suites": ["tests/unit/governance/v2SealOrchestration.test.js"],
+      "reports": [],
+      "note": "O relatorio do proprio selo NAO e usado como prova deste item: seria auto-referencial (o selo nao pode ser evidencia de si mesmo antes de passar). A prova e o teste de orquestracao, que exige evidencia completa para o selo passar."
+    }
+  ]
+}

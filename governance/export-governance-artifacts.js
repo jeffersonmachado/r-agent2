@@ -217,6 +217,30 @@ async function exportGovernanceArtifacts() {
       source: verticalImplementationSource.source,
     },
   };
+  // INVARIANTE DE DIREÇÃO (missão 2026-09-28): uma projeção DB-derivada NÃO pode publicar
+  // aprovação acima do que os gates filhos provam. Borda única: governance/child-gate-guard.js
+  // (mesma regra do gate bloqueante validate:gate-direction e do motor de governança final).
+  const { guardDecision } = require('./child-gate-guard');
+  const directionGuard = (selfId, decision) => guardDecision({
+    selfId,
+    decision,
+    root: process.cwd(),
+    readJson: (rel) => {
+      try {
+        return JSON.parse(fs.readFileSync(path.join(process.cwd(), rel), 'utf8'));
+      } catch (_) {
+        return null;
+      }
+    },
+  });
+
+  const readinessDirection = directionGuard('PLATFORM_READINESS', proofDecision);
+  if (readinessDirection.downgraded) {
+    readiness.finalDecision = readinessDirection.decision;
+    readiness.status = readinessDirection.decision;
+    readiness.childGateViolations = readinessDirection.violations;
+  }
+
   write('governance/final-readiness-report.json', readiness);
 
   const governance = {
@@ -226,6 +250,22 @@ async function exportGovernanceArtifacts() {
     allChecksPass: autonomousReady,
     checks: gates.map((gate) => ({ id: gate.gate_key, pass: gate.status === 'PASS', status: gate.status, reason: gate.reason })),
   };
+  const governanceDirection = directionGuard('FINAL_GOVERNANCE', proofDecision);
+  if (governanceDirection.downgraded) {
+    governance.finalDecision = governanceDirection.decision;
+    governance.autonomousReady = false;
+    governance.allChecksPass = false;
+    governance.childGateViolations = governanceDirection.violations;
+    governance.checks = [
+      ...(governance.checks || []),
+      {
+        id: 'child_gate_direction',
+        pass: false,
+        status: 'FAIL',
+        reason: governanceDirection.violations.map((violation) => violation.detail).join(' | '),
+      },
+    ];
+  }
   write('governance/final-governance-report.json', governance);
 
   const consistency = {

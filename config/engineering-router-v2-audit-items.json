@@ -1,0 +1,208 @@
+{
+  "schema": "engineering-router-v2-audit-items/v1",
+  "$comment": "ITENS DA AUDITORIA DA MISSÃO (2026-09-28) mapeados para PROVA REAL. Substitui a faixa numérica 'V2-01..V2-42' como fonte de requisitos: aquela numeração não existe em nenhum artefato do repositório (nem no prompt desta missão) e inventá-la é proibido. Cada item abaixo aponta para o relatório/suíte que o comprova; o STATUS ATUAL NÃO é escrito à mão — é derivado por scripts/governance/validate-engineering-router-v2-audit-items.js, que lê o valor real e classifica (ALREADY_FIXED / CONFIRMED / REGRESSED / STILL_PROVEN / BLOCKED_EXTERNAL / UNPROVABLE).",
+  "source": "auditoria externa citada no prompt da missão de integração runtime do Enginee Router V2",
+  "provenValuesDefault": ["GO", "GREEN", "PASS", "HEALTHY", "COMPLETE", "PASS_CORE", "VERIFIED"],
+  "items": [
+    {
+      "id": "ENGINEERING_ROUTER_LEGACY",
+      "auditState": "PASS",
+      "proof": { "kind": "report", "report": "reports/engineering-router-v1-report.json", "decisionPath": "status" },
+      "note": "validador V1 estrutural+runtime"
+    },
+    {
+      "id": "ENGINEERING_ROUTER_V2",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/engineering-router-v2-seal-report.json", "decisionPath": "status" },
+      "note": "selo V2: 11 itens + pendências derivadas de relatórios reais"
+    },
+    {
+      "id": "TIMEOUT_ARCHITECTURE",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.TIMEOUT_ARCHITECTURE" },
+      "note": "veredito derivado de inventário semântico + evidência de runtime"
+    },
+    {
+      "id": "TIMEOUT_POLICY_MODEL",
+      "auditState": "PASS",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.TASK_DEADLINE_POLICY" },
+      "note": "registry de políticas (config/timeout-policy.json) resolvido pela borda api/utils/operationDeadline"
+    },
+    {
+      "id": "TIMEOUT_INVENTORY_ENGINE",
+      "auditState": "PARTIAL",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.TIMEOUT_INVENTORY" },
+      "note": "inventário completo = nenhum construto de timer sem categoria"
+    },
+    {
+      "id": "TIMEOUT_INVENTORY_SEMANTICS",
+      "auditState": "NO_GO",
+      "proof": { "kind": "suite", "suite": "tests/unit/governance/timeoutInventorySemantics.test.js" },
+      "note": "semântica: RELEASE != LEASE, HEARTBEAT != LEASE_DURATION, abort => REQUEST_TIMEOUT, sleep => DELAY_SLEEP"
+    },
+    {
+      "id": "EXECUTION_DEADLINE_MANAGER",
+      "auditState": "IMPLEMENTED_NOT_INTEGRATED",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.TASK_DEADLINE_POLICY" },
+      "note": "borda runtime (api/utils/operationDeadline) usada por invoker/runner/testRunner/sandbox/regression/missionStore"
+    },
+    {
+      "id": "MISSION_WALL_CLOCK_POLICY",
+      "auditState": "PASS",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.MISSION_TIMEOUT_POLICY" },
+      "note": "sem deadline de usuário, a missão não tem wall-clock que a mate"
+    },
+    {
+      "id": "TASK_LEASE_PRIMITIVES",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringMissionLeasePolicy.test.js" },
+      "note": "política de lease pura (sem relógio/random/env)"
+    },
+    {
+      "id": "TASK_LEASE_NORMAL_RUNTIME",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/timeout-architecture-evidence.json", "decisionPath": "LONG_RUNNING_TASK" },
+      "note": "task longa saudável sobrevive além do antigo critério de idade; runTask adquire lease no caminho normal"
+    },
+    {
+      "id": "TASK_LEASE_HEARTBEAT_RUNTIME",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.HEARTBEAT" },
+      "note": "heartbeat agendado durante a execução real (leaseHeartbeat.js) e renovação provada no E2E"
+    },
+    {
+      "id": "MISSION_LEASE_PRIMITIVES",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/integration/engineeringMissionDistributedLease.test.js" },
+      "note": "dois workers nunca seguram o mesmo lease; fence monotônico"
+    },
+    {
+      "id": "MISSION_COMPILER_LEASE_RUNTIME",
+      "auditState": "PARTIAL",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.LEASE" },
+      "note": "compilador roda sob mission lease com heartbeat"
+    },
+    {
+      "id": "FENCING_PRIMITIVES",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/integration/engineeringTaskFencing.test.js" },
+      "note": "token+fence com CAS"
+    },
+    {
+      "id": "FENCING_NORMAL_RUNTIME",
+      "auditState": "PARTIAL",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.FENCING" },
+      "note": "escritas críticas da execução normal passam por assertTaskLeaseHeld"
+    },
+    {
+      "id": "NO_PROGRESS_MODEL",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringMissionProgressPolicy.test.js" },
+      "note": "heartbeat != progresso; STUCK é ausência de progresso significativo"
+    },
+    {
+      "id": "NO_PROGRESS_RUNTIME_INTEGRATION",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/timeout-architecture-evidence.json", "decisionPath": "NO_PROGRESS_E2E" },
+      "note": "worker vivo sem avanço é diagnosticado NO_PROGRESS (nunca lease expirado/kill)"
+    },
+    {
+      "id": "COMMAND_TIMEOUT_ISOLATION",
+      "auditState": "PARTIAL",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.COMMAND_TIMEOUT_ISOLATION" },
+      "note": "subprocesso tem deadline próprio e política REGRESSION_CHILD_TERMINATION_GRACE"
+    },
+    {
+      "id": "COMMAND_GRACEFUL_TERMINATION",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/TIMEOUT_ARCHITECTURE_REPORT.json", "decisionPath": "verdicts.COMMAND_TIMEOUT_ISOLATION" },
+      "note": "cancelamento cooperativo -> SIGTERM -> grace -> SIGKILL (runChildWithDeadline)"
+    },
+    {
+      "id": "TEST_TIMEOUT_SEMANTICS",
+      "auditState": "NO_GO",
+      "proof": { "kind": "suite", "suite": "tests/unit/timeoutArchitectureMatrix.test.js" },
+      "note": "estados separados (PASS/FAIL/TIMEOUT/BLOCKED/INFRA_ERROR) e política de expiração classificada"
+    },
+    {
+      "id": "REAL_TASK_RECOVERY_PRIMITIVES",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringMissionRecoveryPlan.test.js" },
+      "note": "plano de recuperação puro"
+    },
+    {
+      "id": "REAL_TASK_FULL_EXECUTION_RESUME",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/real-task-recovery-report.json", "decisionPath": "status" },
+      "note": "SIGKILL real no MEIO da execução material; takeover com fence+1 e trabalho material do novo dono provado"
+    },
+    {
+      "id": "MISSION_CONTEXT_CODE_AWARE",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringMissionDeepScan.test.js" },
+      "note": "enriquecimento encontra símbolo por conteúdo, não por nome de arquivo"
+    },
+    {
+      "id": "ENGINEERING_RAG_RETRIEVAL",
+      "auditState": "PASS",
+      "proof": { "kind": "report", "report": "reports/rag-index-health-report.json", "decisionPath": "status" },
+      "note": "corpus medido no banco real (substitui o eixo estático do status report)"
+    },
+    {
+      "id": "ENGINEERING_RAG_TO_ENRICHER",
+      "auditState": "NO_GO",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringMissionContextKnowledge.test.js" },
+      "note": "chunk com CONTEÚDO chega ao enricher, com orçamento/ranking/proveniência"
+    },
+    {
+      "id": "MISSION_APPROVAL",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringMissionRbac.test.js" },
+      "note": "aprovação congela versão+hash; RBAC fail-closed"
+    },
+    {
+      "id": "POLICY_RESOLVER",
+      "auditState": "PASS_CORE",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringMissionPolicyResolver.test.js" },
+      "note": "sem merge ingênuo; escalação exige autorização"
+    },
+    {
+      "id": "QWEN_STRUCTURAL",
+      "auditState": "PASS",
+      "proof": { "kind": "suite", "suite": "tests/unit/engineeringRouterQwenProvider.test.js" },
+      "note": "provider qwen estrutural; uso ao vivo é estado separado (NOT_EXECUTED_NO_CREDENTIAL)"
+    },
+    {
+      "id": "AUDIT_ENVELOPE_ARCHITECTURE",
+      "auditState": "PASS_CORE",
+      "proof": { "kind": "report", "report": "reports/engineering-router-v2-seal-report.json", "decisionPath": "envelopeVerification.status" },
+      "note": "envelope físico verificado (nunca gerado na hora da verificação)"
+    },
+    {
+      "id": "ANTI_GREENWASHING",
+      "auditState": "IMPROVED",
+      "proof": { "kind": "report", "report": "reports/anti-greenwashing-report.json", "decisionPath": "status" },
+      "note": "nenhuma suíte autoritativa com mecanismo de pulo silencioso"
+    },
+    {
+      "id": "TIMEOUT_GATE_IN_V2_SEAL",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "reports/engineering-router-v2-seal-report.json", "itemsPath": "items", "itemId": "V2_TIMEOUT_ARCHITECTURE_GREEN", "decisionPath": "status" },
+      "note": "item obrigatório do selo (antes: zero menções a timeout no validador)"
+    },
+    {
+      "id": "FINAL_GOVERNANCE_CONSISTENCY",
+      "scope": "PLATFORM_RELEASE",
+      "auditState": "FAIL",
+      "proof": { "kind": "report", "report": "reports/gate-direction-report.json", "decisionPath": "status" },
+      "note": "invariante child NO_GO => parent NO_GO aplicado (nenhum pai GO com filho vermelho)"
+    },
+    {
+      "id": "RAP_FINAL_RELEASE",
+      "scope": "PLATFORM_RELEASE",
+      "auditState": "NO_GO",
+      "proof": { "kind": "report", "report": "governance/final-governance-report.json", "decisionPath": "finalDecision" },
+      "note": "release da plataforma: só GO se TODOS os gates globais permitirem (hoje: bloqueado)"
+    }
+  ]
+}

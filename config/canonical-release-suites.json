@@ -13,8 +13,20 @@
       "tests/unit/governance/releaseSuiteRunner.test.js",
       "tests/unit/governance/v2RequirementsMatrix.test.js",
       "tests/integration/engineeringV2EnvelopeTamper.test.js",
-      "tests/unit/governance/v2SealOrchestration.test.js"
-    ]
+      "tests/unit/governance/v2SealOrchestration.test.js",
+      "tests/unit/governance/v2TimeoutGateDependency.test.js",
+      "tests/unit/governance/gateDirectionInvariant.test.js",
+      "tests/unit/governance/timeoutInventorySemantics.test.js",
+      "tests/unit/governance/migrationsAppliedGate.test.js",
+      "tests/unit/timeoutArchitectureMatrix.test.js",
+      "tests/unit/governance/v2AuditItemsMapping.test.js",
+      "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js",
+      "tests/unit/engineeringRouterAuditEnvelopeVerifier.test.js",
+      "tests/unit/governance/v2RequiredTestsCoverage.test.js",
+      "tests/unit/governance/releaseAuthoritativePersistenceGuard.test.js",
+      "tests/unit/governance/runtimeEvidenceBinding.test.js"
+    ],
+    "$comment_suites_missao_2026_09_28": "Suítes dos EIXOS da missão de integração runtime: dependência do selo V2 em relação a TIMEOUT_ARCHITECTURE, invariante de direção entre gates, semântica do inventário de timeouts e gate de migrations. Entraram no manifesto porque são requisitos de selo (não testes auxiliares): a execução autoritativa precisa prová-los."
   },
   "exclusions": [
     {

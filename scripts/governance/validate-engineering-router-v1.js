@@ -346,10 +346,19 @@ function main() {
   // à requisição HTTP — nunca fire-and-forget do lock em si (só a execução longa pode ser
   // fire-and-forget). Achado real: routes.js chamava runTask sem await, então uma segunda
   // chamada concorrente sempre recebia 202 mesmo quando TASK_ALREADY_RUNNING acontecia.
-  checks.push({
-    id: 'RESTART_SAFE_LOCK',
-    ...checkFileContains('api/services/engineeringRouter/engineeringTaskService.js', [/LOCK_STALE_MS/, /TASK_ALREADY_RUNNING/, /lock:\s*t\.LOCK\.UPDATE/]),
-  });
+  // Modelo de posse (2026-09-28): restart-safe por LEASE (CAS com fence monotônico, linha travada
+  // FOR UPDATE), nunca por idade de `locked_at`. A presença de `LOCK_STALE_MS` (takeover por tempo
+  // decorrido) passa a ser FALHA — é exatamente o STALE_BY_AGE_ONLY que a arquitetura proíbe.
+  checks.push((() => {
+    const src = readText('api/services/engineeringRouter/engineeringTaskService.js');
+    const contains = checkFileContains('api/services/engineeringRouter/engineeringTaskService.js', [/TASK_ALREADY_RUNNING/, /lease_fence\s*\+\s*1/, /FOR UPDATE/, /acquireTaskLease\(/]);
+    const staleByAge = /\bconst\s+LOCK_STALE_MS\b/.test(src);
+    return {
+      id: 'RESTART_SAFE_LOCK',
+      ok: contains.ok && !staleByAge,
+      reason: staleByAge ? 'LOCK_STALE_MS ainda decide posse por idade (STALE_BY_AGE_ONLY)' : contains.reason,
+    };
+  })());
   checks.push({
     id: 'CONCURRENCY_SAFE_ROUTE',
     ok: exists('api/services/engineeringRouter/engineeringRouterService.js')
@@ -692,7 +701,11 @@ function main() {
     id: 'LIVE_GOVERNANCE_CHECK_NEVER_REQUIRES_RUNTIME',
     ok: (() => {
       const src = readText('api/services/engineeringRouter/regressionGovernanceService.js');
-      return /execFileAsync\(process\.execPath, \[scriptPath\]/.test(src) && !/--runtime/.test(src);
+      // Subprocesso real do gate (hoje sob o Deadline Manager: `runChildWithDeadline`, com
+      // terminação graciosa) — nunca com --runtime.
+      const spawnsGate = /execFileAsync\(process\.execPath, \[scriptPath\]/.test(src)
+        || /runChildWithDeadline\(\{\s*command:\s*process\.execPath,\s*args:\s*\[scriptPath\]/.test(src);
+      return spawnsGate && !/--runtime/.test(src);
     })(),
     reason: 'checkGovernance() (loop ao vivo, por-task) nunca pode passar --runtime — reintroduziria o deadlock de bootstrap documentado em ERV1-CLOSE-010',
   });
@@ -966,7 +979,7 @@ function main() {
   checks.push({
     id: 'ADVANCE_FROM_CODED_ATTEMPT_IS_REENTRANT',
     ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
-      /async function advanceFromCodedAttempt\(task, result, \{ eventAudienceTenantId \}\)/,
+      /async function advanceFromCodedAttempt\(task, result, \{ eventAudienceTenantId(, run = null)? \}\)/,
       /function enterAdvancePhase/, /ADVANCE_PHASE_ORDER/,
     ]),
   });

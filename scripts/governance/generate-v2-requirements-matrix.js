@@ -33,6 +33,7 @@ const AXES_CONFIG = path.join(ROOT, 'config', 'v2-requirements-axes.json');
 const SUITE_EXECUTION_REPORT = path.join(ROOT, 'reports', 'release-suite-execution.json');
 const ANTI_GREENWASHING_REPORT = path.join(ROOT, 'reports', 'anti-greenwashing-report.json');
 const SEAL_REPORT = path.join(ROOT, 'reports', 'engineering-router-v2-seal-report.json');
+const REQUIRED_TESTS_REPORT = path.join(ROOT, 'reports', 'engineering-router-v2-required-tests-report.json');
 
 function readJsonSafe(filePath) {
   try {
@@ -113,6 +114,7 @@ function buildMatrix({
   suiteExecutionPath = SUITE_EXECUTION_REPORT,
   antiGreenwashingPath = ANTI_GREENWASHING_REPORT,
   sealReportPath = SEAL_REPORT,
+  requiredTestsReportPath = REQUIRED_TESTS_REPORT,
 } = {}) {
   const config = readJsonSafe(axesConfigPath);
   if (!config || !config.axes) {
@@ -122,6 +124,17 @@ function buildMatrix({
   const suiteExecution = readJsonSafe(suiteExecutionPath);
   const antiGreenwashing = readJsonSafe(antiGreenwashingPath);
   const sealReport = readJsonSafe(sealReportPath);
+  const requiredTestsReport = readJsonSafe(requiredTestsReportPath);
+  // Estado dos 42 TESTES OBRIGATÓRIOS: lido da MEDIÇÃO (o relatório do gate), nunca declarado.
+  const requiredTestsStatus = requiredTestsReport
+    ? {
+      status: requiredTestsReport.status || null,
+      total: requiredTestsReport.total || null,
+      counts: requiredTestsReport.counts || null,
+      unresolvedIds: requiredTestsReport.unresolvedIds || [],
+      report: path.relative(ROOT, requiredTestsReportPath),
+    }
+    : null;
 
   const axes = {};
   const violations = [];
@@ -198,7 +211,11 @@ function buildMatrix({
       suitesPass: suitesPassed.size,
       testsExecuted: totalTestsExecuted,
     },
-    unmappedRequirementIds: config.unmappedRequirementIds || null,
+    // Manifesto dos 42 TESTES OBRIGATÓRIOS (V2-01..V2-42): a matriz apenas DECLARA o vínculo com o
+    // manifesto; quem deriva o estado de cada ID é `npm run validate:required-tests`. Antes desta
+    // data o campo era `unmappedRequirementIds` (a numeração não tinha fonte); agora tem.
+    requiredTests: config.requiredTests || null,
+    requiredTestsStatus: requiredTestsStatus || null,
     axes,
     violations,
     violationCount: violations.length,

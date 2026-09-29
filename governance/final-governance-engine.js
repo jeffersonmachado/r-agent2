@@ -354,7 +354,45 @@ function buildCertificationAuthorityChecks({
     evaluateTamperDetection(tamper, runContext),
     evaluateFinalProof(proof, runContext),
     evaluateFinalReadiness(readiness, runContext),
+    checkChildGateDirection(),
   ];
+}
+
+/**
+ * INVARIANTE DE DIREÇÃO ENTRE GATES (missão 2026-09-28).
+ *
+ * Estado real encontrado na auditoria: este relatório declarava `AUTONOMOUS_READY_GO` enquanto
+ * `reports/engineering-router-v2-seal-report.json` declarava `NO_GO` (e `TIMEOUT_ARCHITECTURE`
+ * também). A governança final é o ÚLTIMO elo: ela não pode afirmar mais do que os filhos provam.
+ *
+ * Usa o MESMO núcleo puro do gate bloqueante `npm run validate:gate-direction`
+ * (`governance/gate-direction.js`) e a cadeia declarada em
+ * `config/mandatory-gate-dependencies.json` — nunca uma segunda lista nem uma segunda regra.
+ *
+ * Fail-closed: cadeia ilegível ⇒ check CRÍTICO reprovado (não é possível afirmar consistência do
+ * que não se consegue ler).
+ */
+function checkChildGateDirection() {
+  // Borda ÚNICA da regra (`governance/child-gate-guard.js`): mesma leitura de cadeia usada pelo
+  // gate bloqueante `validate:gate-direction` e pelos demais produtores.
+  const { guardDecision } = require('./child-gate-guard');
+
+  // O PAI é avaliado como se estivesse aprovado: é exatamente esse o estado que a invariante
+  // precisa impedir (se algum filho obrigatório não estiver GO, a aprovação é impossível).
+  const guard = guardDecision({
+    selfId: 'FINAL_GOVERNANCE',
+    decision: 'AUTONOMOUS_READY_GO',
+    root: ROOT,
+    readJson: (rel) => readJsonSafe(rel),
+  });
+
+  return {
+    id: 'child_gate_direction',
+    pass: guard.violations.length === 0,
+    severity: guard.violations.length === 0 ? 'OK' : 'CRITICAL',
+    reason: guard.violations.length === 0 ? null : guard.violations.map((v) => v.detail).join(' | '),
+    violations: guard.violations,
+  };
 }
 
 function checkGovernanceSignature() {
