@@ -237,7 +237,7 @@
       "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
       "reports": [],
       "externalBlocker": {
-        "reason": "MEDIDO em 2026-09-28: zero credenciais Qwen no ambiente (0 ocorrencias de QWEN no .env e no env). O provider esta registrado e habilitado, e o proprio relatorio da entrega declara: 'Credencial Qwen ausente neste ambiente: a prova de rede real contra dashscope-intl depende de credencial - declarado como pendente, nao como executado'. O requisito e condicional ('quando credencial estiver presente'): sem credencial o caminho live e substituido por estado explicito (V2-36, provado). Impedimento EXTERNO real e declarado, nunca convertido em PASS."
+        "reason": "MEDIDO em 2026-09-28: credencial FOI fornecida e gravada no ambiente nao versionado (.env, 600), mas o provider a REJEITA. Probe direto contra os DOIS endpoints do DashScope com o defaultModel do registry: dashscope-intl.aliyuncs.com -> HTTP 401 invalid_api_key; dashscope.aliyuncs.com (domestico) -> HTTP 401 invalid_api_key. Nao e questao de regiao. O caminho live ESTA exercitado (com credencial presente o teste faz a chamada REAL de rede e classifica o desfecho; sem ela o estado e NOT_EXECUTED_NO_CREDENTIAL), mas a prova de execucao BEM-SUCEDIDA exige credencial valida, que nao existe neste ambiente. Impedimento EXTERNO real e declarado — nunca convertido em PASS, e nunca mascarado como 'sem credencial'."
       }
     },
     {
