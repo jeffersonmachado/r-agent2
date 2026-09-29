@@ -16,10 +16,10 @@ function ensureDataDir() {
 }
 
 // Fonte única de validação real (chamada HTTP de verdade ao provider) + classificação de
-// status (valid/invalid_token/no_credit/error) e busca de saldo real quando o provider expõe
-// isso — ver api/services/aiCredentialValidation.js. Reutilizado também por
+// status (valid/invalid_token/no_credit/error) e consulta de saldo para TODOS os providers —
+// ver api/services/aiCredentialValidation.js. Reutilizado também por
 // api/modules/tenant/aiWorkflows.js (testa a credencial já salva de um tenant).
-const { validateProviderCredentials, fetchProviderBalance } = require('../../services/aiCredentialValidation');
+const { validateProviderCredentials, fetchProviderBalance, fetchProviderBalanceInfo } = require('../../services/aiCredentialValidation');
 
 function parseTenantKey(req, authResult) {
   let tenantId = authResult.agent.tenantId;
@@ -397,6 +397,7 @@ function createConfigService({ deps }) {
 
     validateProviderToken: validateProviderCredentials,
     fetchProviderBalance,
+    fetchProviderBalanceInfo,
     validateRedisUrl,
     validateRedisConnection,
 

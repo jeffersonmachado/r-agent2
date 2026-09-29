@@ -498,7 +498,7 @@ async function getCredentialDetailsMap(tenantKey, resolvedTenant = null) {
  *
  * @param {string} tenantKey
  * @param {string} provider
- * @param {{status:string, lastError?:string|null, balance?:{amount:number,currency:string}|null}} result
+ * @param {{status:string, lastError?:string|null, balance?:{status?:string, amount:number|null, currency:string|null, note?:string|null}|null}} result
  * @returns {Promise<boolean>} true se atualizou uma linha existente
  */
 async function recordCredentialTestResult(tenantKey, provider, { status, lastError = null, balance = null } = {}) {
@@ -519,8 +519,15 @@ async function recordCredentialTestResult(tenantKey, provider, { status, lastErr
     if (!credential) return false;
 
     const nextMetadata = { ...(credential.metadata || {}) };
-    if (balance) {
+    // O resultado da consulta de saldo é gravado SEMPRE que houve consulta — inclusive quando o
+    // provider não expõe saldo (`status: not_supported`/`requires_admin_key`) — para que a UI
+    // saiba dizer "saldo não consultável" em vez de não dizer nada. Quando o teste não trouxe
+    // resultado de saldo (chave inválida, falha de rede antes da consulta), o valor anterior é
+    // REMOVIDO: saldo velho exibido como se fosse atual é pior do que ausência de saldo.
+    if (balance && typeof balance === 'object') {
       nextMetadata.balance = { ...balance, checkedAt: new Date().toISOString() };
+    } else {
+      delete nextMetadata.balance;
     }
 
     await credential.update({

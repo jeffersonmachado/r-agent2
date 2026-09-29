@@ -1,5 +1,5 @@
 const { validateInput, schemas } = require('../../utils/inputValidator');
-const { generateTenantByAi, getTenantAiProviderStatus, validateProviderCredentials, fetchProviderBalance } = require('./aiWorkflows');
+const { generateTenantByAi, getTenantAiProviderStatus, validateProviderCredentials, fetchProviderBalanceInfo } = require('./aiWorkflows');
 const aiProviderRegistryService = require('../../services/aiProviderRegistryService');
 
 function createHttpError(message, httpStatus, code, payload) {
@@ -488,9 +488,9 @@ function createTenantService({
       const validation = await validateProviderCredentials(providerToTest, apiKey);
       const isValid = validation.valid;
       const error = validation.error;
-      // Saldo real só é buscado quando a chave é válida e o provider expõe uma API de billing
-      // consultável com a mesma chave (hoje só DeepSeek) — best-effort, nunca lança.
-      const balance = isValid ? await fetchProviderBalance(providerToTest, apiKey) : null;
+      // Saldo real consultado para TODOS os providers quando a chave é válida — best-effort,
+      // nunca lança. O retorno é o RESULTADO da consulta (status/amount/note), não só o número.
+      const balance = isValid ? await fetchProviderBalanceInfo(providerToTest, apiKey) : null;
 
       // Registra o resultado na credencial JÁ SALVA — nunca a apaga quando o teste falha (ex.:
       // sem saldo). É essa persistência que faz o badge de status sobreviver a um reload da
@@ -525,6 +525,8 @@ function createTenantService({
         error: error || null,
         status: validation.status || null,
         balance,
+        balanceStatus: balance?.status || null,
+        balanceNote: balance?.note || null,
       };
     },
   };

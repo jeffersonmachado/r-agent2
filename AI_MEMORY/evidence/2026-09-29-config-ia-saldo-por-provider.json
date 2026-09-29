@@ -1,0 +1,115 @@
+{
+  "startedAt": "2026-09-29T22:07:51.160Z",
+  "baseUrl": "http://127.0.0.1:5173",
+  "journey": "config-ia-saldo-por-provider",
+  "steps": [
+    {
+      "name": "login com seleção de tenant",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-29T22:08:03.531Z"
+    },
+    {
+      "name": "tela de configuração acessível",
+      "status": "PASS",
+      "detail": "http://127.0.0.1:5173/config",
+      "at": "2026-09-29T22:08:04.260Z"
+    },
+    {
+      "name": "aba IA acessível",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-29T22:08:04.333Z"
+    },
+    {
+      "name": "provedor com saldo consultável (Kimi) exibe o valor na tela",
+      "status": "PASS",
+      "detail": "Válida · saldo US$ 24,77 · há 3 min",
+      "at": "2026-09-29T22:08:04.634Z"
+    },
+    {
+      "name": "provedor com saldo consultável (DeepSeek) exibe o valor na tela",
+      "status": "PASS",
+      "detail": "Válida · saldo US$ 2,67 · há 3 min",
+      "at": "2026-09-29T22:08:04.634Z"
+    },
+    {
+      "name": "provedor que não expõe saldo (OpenAI) não inventa número e explica o motivo",
+      "status": "PASS",
+      "detail": "Válida · saldo não consultável · há 3 min | title=Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made fr",
+      "at": "2026-09-29T22:08:04.634Z"
+    },
+    {
+      "name": "tooltip traz a razão real do provedor (não apenas \"sem saldo\")",
+      "status": "PASS",
+      "detail": "Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made from the browser). You",
+      "at": "2026-09-29T22:08:04.634Z"
+    },
+    {
+      "name": "credencial inválida (Qwen) não exibe saldo nenhum",
+      "status": "PASS",
+      "detail": "Token inválido/expirado · há 3 min",
+      "at": "2026-09-29T22:08:04.635Z"
+    },
+    {
+      "name": "sem erros de console",
+      "status": "PASS",
+      "detail": "0",
+      "at": "2026-09-29T22:08:05.047Z"
+    },
+    {
+      "name": "sem falhas de rede",
+      "status": "PASS",
+      "detail": "0",
+      "at": "2026-09-29T22:08:05.047Z"
+    }
+  ],
+  "consoleErrors": [],
+  "networkFailures": [],
+  "providerBadges": [
+    {
+      "provider": "OpenAI",
+      "text": "Válida · saldo não consultável · há 3 min",
+      "title": "Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made from the browser). You made it with the following key type: secret. — Testado há 3 min"
+    },
+    {
+      "provider": "Anthropic (Claude)",
+      "text": "Sem chave",
+      "title": null
+    },
+    {
+      "provider": "DeepSeek",
+      "text": "Válida · saldo US$ 2,67 · há 3 min",
+      "title": "Testado há 3 min"
+    },
+    {
+      "provider": "Kimi (Moonshot)",
+      "text": "Válida · saldo US$ 24,77 · há 3 min",
+      "title": "Testado há 3 min"
+    },
+    {
+      "provider": "Mistral",
+      "text": "Sem chave",
+      "title": null
+    },
+    {
+      "provider": "Groq",
+      "text": "Sem chave",
+      "title": null
+    },
+    {
+      "provider": "Qwen (Alibaba Cloud)",
+      "text": "Token inválido/expirado · há 3 min",
+      "title": "Token inválido ou expirado — Testado há 3 min"
+    },
+    {
+      "provider": "ℹ️ Tenant: system",
+      "text": "Informe e teste",
+      "title": null
+    }
+  ],
+  "passed": 10,
+  "failed": 0,
+  "finishedAt": "2026-09-29T22:08:05.047Z",
+  "status": "PASS"
+}

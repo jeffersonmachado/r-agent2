@@ -1,10 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 // Fonte única de validação real + classificação de status (valid/invalid_token/no_credit/error)
-// e busca de saldo real quando o provider expõe isso — ver
-// api/services/aiCredentialValidation.js. Reutilizado também por api/modules/config/service.js
-// (testa uma chave ainda não salva, digitada no formulário).
-const { validateProviderCredentials, fetchProviderBalance } = require('../../services/aiCredentialValidation');
+// e consulta de saldo para TODOS os providers — ver api/services/aiCredentialValidation.js.
+// Reutilizado também por api/modules/config/service.js (testa uma chave ainda não salva,
+// digitada no formulário).
+const { validateProviderCredentials, fetchProviderBalance, fetchProviderBalanceInfo } = require('../../services/aiCredentialValidation');
 
 async function generateTenantByAi({
   description,
@@ -285,4 +285,5 @@ module.exports = {
   getTenantAiProviderStatus,
   validateProviderCredentials,
   fetchProviderBalance,
+  fetchProviderBalanceInfo,
 };

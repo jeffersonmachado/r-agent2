@@ -130,41 +130,266 @@ async function validateProviderCredentials(provider, apiKey) {
   }
 }
 
+// ── Saldo por provider ───────────────────────────────────────────────────────────────────────
+//
+// Consulta de saldo é feita para TODOS os providers, sem exceção: cada id tem uma entrada no
+// probe abaixo (e provedores custom caem no fallback `NOT_SUPPORTED`), e o resultado é SEMPRE um
+// dos status de `BALANCE_STATUS` — nunca silêncio. Antes desta mudança só a DeepSeek era
+// consultada e os demais retornavam `null` sem sequer tentar, o que a UI exibia como ausência de
+// informação indistinguível de "sem endpoint".
+//
+// Medições reais (2026-09-29, chaves do tenant `system` + probe com chave inválida para separar
+// `404 rota inexistente` de `401 rota existe`):
+//
+//   deepseek   GET  https://api.deepseek.com/user/balance            → 200  saldo real
+//   kimi       GET  https://api.moonshot.ai/v1/users/me/balance      → 200  saldo real
+//   mistral    GET  https://api.mistral.ai/v1/users/me/balance       → rota EXISTE (401 na
+//                                                                      chave inválida); shape
+//                                                                      não verificável sem chave
+//   openai     GET  /v1/dashboard/billing/credit_grants              → 403 "must be made with a
+//                                                                      session key" (a chave de
+//                                                                      uso não lê créditos)
+//   openai     GET  /v1/organization/costs                           → 403 "Missing scopes:
+//                                                                      api.usage.read" (e devolve
+//                                                                      custo, não saldo)
+//   anthropic  GET  /v1/organizations/cost_report                    → rota EXISTE, exige Admin
+//                                                                      API key (sk-ant-admin...)
+//   groq       /balance, /users/me/balance, /usage                   → 404  não existe
+//   qwen       /api/v1/users/me/balance, /compatible-mode/v1/...     → 404  não existe
+//
+// O probe nunca lança e nunca inventa número: quando não há saldo consultável, o `note` carrega a
+// razão exata (inclusive a mensagem do próprio provider quando ela existe).
+const BALANCE_STATUS = {
+  // Valor de saldo real obtido do provider.
+  AVAILABLE: 'available',
+  // O endpoint de billing existe, mas a chave de uso não tem permissão/escopo (ex.: Admin API key).
+  REQUIRES_ADMIN_KEY: 'requires_admin_key',
+  // O provider não expõe saldo por API (console-only ou rota inexistente).
+  NOT_SUPPORTED: 'not_supported',
+  // Falha de rede/timeout/resposta inesperada.
+  ERROR: 'error',
+};
+
+const BALANCE_TIMEOUT_MS = 8000;
+
+function toAmount(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const parsed = Number.parseFloat(value.replace(/[^0-9.+-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function pickAmount(candidates) {
+  for (const candidate of candidates) {
+    const amount = toAmount(candidate);
+    if (amount !== null) return amount;
+  }
+  return null;
+}
+
 /**
- * Busca o saldo real do provider, quando ele expõe uma API de billing consultável com a mesma
- * API key de uso. Hoje só a DeepSeek documenta publicamente esse endpoint
- * (`GET /user/balance`); para os demais providers (OpenAI, Anthropic, Kimi/Moonshot) não existe
- * endpoint de saldo utilizável com a chave padrão — retorna `null` sem tentar nada.
+ * Probe declarativo por provider (`kind`: native | console_only | admin_only | none).
+ * `url(ctx)` recebe `{ baseUrl, origin }` do registry — nunca uma URL hardcoded fora daqui, para
+ * que um provider custom com baseUrl própria continue funcionando.
+ */
+const BALANCE_PROBES = {
+  deepseek: {
+    kind: 'native',
+    url: (ctx) => `${ctx.origin}/user/balance`,
+    parse: (body) => {
+      const infos = Array.isArray(body?.balance_infos) ? body.balance_infos : [];
+      if (!infos.length) return null;
+      const info = infos.find((i) => String(i?.currency || '').toUpperCase() === 'USD') || infos[0];
+      const amount = toAmount(info?.total_balance);
+      if (amount === null) return null;
+      return { amount, currency: String(info?.currency || 'USD').toUpperCase() };
+    },
+  },
+  kimi: {
+    kind: 'native',
+    url: (ctx) => `${ctx.baseUrl}/users/me/balance`,
+    parse: (body) => {
+      const amount = toAmount(body?.data?.available_balance);
+      if (amount === null) return null;
+      return { amount, currency: 'USD' };
+    },
+  },
+  mistral: {
+    kind: 'native',
+    // Rota confirmada por probe com chave inválida (401); o NOME DOS CAMPOS não pôde ser
+    // confirmado porque não há credencial Mistral neste ambiente — por isso o parser aceita os
+    // nomes plausíveis em vez de fixar um que talvez não exista.
+    url: (ctx) => `${ctx.baseUrl}/users/me/balance`,
+    parse: (body) => {
+      const source = body?.data && typeof body.data === 'object' ? body.data : body;
+      const amount = pickAmount([
+        source?.available_balance,
+        source?.total_balance,
+        source?.remaining_balance,
+        source?.balance,
+        source?.credits,
+        source?.amount,
+      ]);
+      if (amount === null) return null;
+      const currency = source?.currency || source?.currency_code || source?.unit;
+      return { amount, currency: currency ? String(currency).toUpperCase() : 'USD' };
+    },
+    note: 'A rota de saldo da Mistral respondeu, mas sem valor numérico reconhecido.',
+  },
+  openai: {
+    kind: 'console_only',
+    url: (ctx) => `${ctx.origin}/v1/dashboard/billing/credit_grants`,
+    // Endpoint legado: se algum dia voltar a responder para chave de uso, o valor é aproveitado.
+    parse: (body) => {
+      const amount = pickAmount([body?.total_available, body?.total_available_beta, body?.total_granted]);
+      if (amount === null) return null;
+      return { amount, currency: 'USD' };
+    },
+    note:
+      'A OpenAI não expõe créditos/saldo para chave de uso: /v1/dashboard/billing/* exige chave de sessão do console e /v1/organization/costs exige o escopo api.usage.read (e devolve custo, não saldo). Consulte o saldo no console da OpenAI.',
+  },
+  anthropic: {
+    kind: 'admin_only',
+    url: (ctx) => `${ctx.origin}/v1/organizations/cost_report`,
+    note:
+      'A Anthropic só expõe billing pela Admin API (chave sk-ant-admin...); a chave de uso não lê saldo/créditos.',
+  },
+  groq: {
+    kind: 'none',
+    note:
+      'A Groq não possui endpoint de saldo/créditos na API pública — o probe em /balance, /users/me/balance e /usage respondeu 404. O consumo é visto no console da Groq.',
+  },
+  qwen: {
+    kind: 'none',
+    note:
+      'O Model Studio (DashScope) não possui endpoint de saldo para a API key — o probe em /api/v1/users/me/balance e /compatible-mode/v1/users/me/balance respondeu 404. O consumo é visto no console da Alibaba Cloud.',
+  },
+};
+
+/**
+ * Consulta o saldo do provider e devolve o RESULTADO da consulta, não só um número: para todo
+ * provider sempre existe um `status` (available/requires_admin_key/not_supported/error) e, quando
+ * indisponível, um `note` explicando a razão real.
  *
- * Nunca lança: best-effort, chamado depois de uma validação já bem-sucedida, timeout curto.
+ * Nunca lança: best-effort, chamado depois de uma validação já bem-sucedida, com timeout curto.
+ *
+ * @param {string} provider
+ * @param {string} apiKey
+ * @returns {Promise<{provider:string, status:string, amount:number|null, currency:string|null, note:string|null}>}
+ */
+async function fetchProviderBalanceInfo(provider, apiKey) {
+  const normalized = String(provider || '').trim().toLowerCase();
+  const cleanApiKey = String(apiKey || '').trim();
+
+  const unavailable = (status, note) => ({
+    provider: normalized,
+    status,
+    amount: null,
+    currency: null,
+    note: note || null,
+  });
+
+  if (!cleanApiKey) return unavailable(BALANCE_STATUS.ERROR, 'Credencial vazia: não há como consultar saldo.');
+
+  const probe = BALANCE_PROBES[normalized];
+  if (!probe) {
+    return unavailable(
+      BALANCE_STATUS.NOT_SUPPORTED,
+      `${normalized || 'Provider desconhecido'} não declara endpoint de saldo consultável — confira o consumo no console do provedor.`,
+    );
+  }
+  if (probe.kind === 'none') return unavailable(BALANCE_STATUS.NOT_SUPPORTED, probe.note);
+
+  let ctx = null;
+  try {
+    // eslint-disable-next-line global-require
+    const aiProviderRegistryService = require('./aiProviderRegistryService');
+    const def = await aiProviderRegistryService.getProviderDef(normalized);
+    const baseUrl = String(def?.baseUrl || '').replace(/\/$/, '');
+    ctx = baseUrl ? { baseUrl, origin: new URL(baseUrl).origin } : null;
+  } catch {
+    ctx = null;
+  }
+  if (!ctx) return unavailable(BALANCE_STATUS.ERROR, 'Base URL do provider não resolvida — não foi possível montar a consulta de saldo.');
+
+  try {
+    const response = await fetch(probe.url(ctx), {
+      method: 'GET',
+      headers: probe.kind === 'admin_only'
+        ? { 'x-api-key': cleanApiKey, 'anthropic-version': '2023-06-01' }
+        : { Authorization: `Bearer ${cleanApiKey}` },
+      signal: AbortSignal.timeout(BALANCE_TIMEOUT_MS),
+    });
+
+    if (response.ok) {
+      const body = await response.json().catch(() => null);
+      const parsed = typeof probe.parse === 'function' ? probe.parse(body) : null;
+      if (parsed && Number.isFinite(parsed.amount)) {
+        return {
+          provider: normalized,
+          status: BALANCE_STATUS.AVAILABLE,
+          amount: parsed.amount,
+          currency: parsed.currency || 'USD',
+          note: null,
+        };
+      }
+      return unavailable(
+        BALANCE_STATUS.NOT_SUPPORTED,
+        probe.note || 'A resposta do provider não trouxe um valor de saldo reconhecido.',
+      );
+    }
+
+    const errorBody = await response.json().catch(() => null);
+    const providerMessage = errorBody?.error?.message
+      || (typeof errorBody?.error === 'string' ? errorBody.error : null)
+      || errorBody?.message
+      || (typeof errorBody?.detail === 'string' ? errorBody.detail : null)
+      || null;
+
+    if (response.status === 404) {
+      return unavailable(BALANCE_STATUS.NOT_SUPPORTED, probe.note || 'Provider não expõe endpoint de saldo.');
+    }
+    if (response.status === 403) {
+      // Chave de sessão/console (OpenAI) não é "falta de permissão recuperável": é o provider
+      // dizendo que aquele dado não sai por API key.
+      return unavailable(
+        probe.kind === 'console_only' ? BALANCE_STATUS.NOT_SUPPORTED : BALANCE_STATUS.REQUIRES_ADMIN_KEY,
+        providerMessage || probe.note || 'A chave configurada não tem permissão para consultar saldo.',
+      );
+    }
+    if (response.status === 401) {
+      return unavailable(
+        probe.kind === 'native' ? BALANCE_STATUS.ERROR : BALANCE_STATUS.REQUIRES_ADMIN_KEY,
+        providerMessage || probe.note || 'Credencial não autorizada a consultar saldo.',
+      );
+    }
+    return unavailable(
+      BALANCE_STATUS.ERROR,
+      providerMessage || `Erro ${response.status}: ${response.statusText}`,
+    );
+  } catch (balanceError) {
+    const timedOut = balanceError?.name === 'TimeoutError' || balanceError?.name === 'AbortError';
+    return unavailable(
+      BALANCE_STATUS.ERROR,
+      timedOut
+        ? 'Timeout ao consultar saldo do provider.'
+        : (balanceError?.message || 'Falha ao consultar saldo do provider.'),
+    );
+  }
+}
+
+/**
+ * Compatibilidade: devolve só `{ amount, currency }` — e `null` quando não há saldo consultável.
+ * Prefira `fetchProviderBalanceInfo` quando o chamador precisar distinguir "provider não expõe
+ * saldo" de "falha ao consultar".
  *
  * @returns {Promise<{amount:number, currency:string}|null>}
  */
 async function fetchProviderBalance(provider, apiKey) {
-  const normalized = String(provider || '').trim().toLowerCase();
-  const cleanApiKey = String(apiKey || '').trim();
-  if (!cleanApiKey) return null;
-
-  if (normalized === 'deepseek') {
-    try {
-      const response = await fetch('https://api.deepseek.com/user/balance', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${cleanApiKey}` },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!response.ok) return null;
-      const data = await response.json().catch(() => null);
-      const info = Array.isArray(data?.balance_infos) ? data.balance_infos[0] : null;
-      if (!info) return null;
-      const amount = Number.parseFloat(info.total_balance);
-      if (!Number.isFinite(amount)) return null;
-      return { amount, currency: info.currency || 'USD' };
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
+  const info = await fetchProviderBalanceInfo(provider, apiKey);
+  return info.status === BALANCE_STATUS.AVAILABLE
+    ? { amount: info.amount, currency: info.currency }
+    : null;
 }
 
 /**
@@ -214,8 +439,10 @@ async function listAvailableModelIds(provider, apiKey) {
 
 module.exports = {
   STATUS,
+  BALANCE_STATUS,
   classifyStatus,
   validateProviderCredentials,
+  fetchProviderBalanceInfo,
   fetchProviderBalance,
   listAvailableModelIds,
 };

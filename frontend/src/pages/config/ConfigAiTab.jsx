@@ -17,6 +17,42 @@ function formatBalance(balance) {
   }
 }
 
+/**
+ * Traduz o resultado da consulta de saldo feita pelo backend. O backend consulta saldo para TODOS
+ * os providers e grava o resultado, não só o número: `available` traz `amount`/`currency`; os
+ * demais status explicam por que não há saldo — `requires_admin_key` (o provider exige chave de
+ * administrador) e `not_supported` (provider não expõe saldo por API: console-only ou rota
+ * inexistente). Registros gravados antes desta mudança têm apenas `{ amount, currency }` e são
+ * tratados como disponíveis.
+ */
+function describeBalance(balance) {
+  if (!balance || typeof balance !== 'object') return { text: null, note: null, short: null };
+  const status = balance.status || (typeof balance.amount === 'number' ? 'available' : null);
+  if (status === 'available') return { text: formatBalance(balance), note: null, short: null };
+  if (status === 'requires_admin_key') {
+    return {
+      text: null,
+      short: 'saldo só via chave de admin',
+      note: balance.note || 'O provedor exige uma chave de administrador para consultar o saldo.',
+    };
+  }
+  if (status === 'not_supported') {
+    return {
+      text: null,
+      short: 'saldo não consultável',
+      note: balance.note || 'O provedor não expõe saldo por API — consulte no console.',
+    };
+  }
+  if (status === 'error') {
+    return {
+      text: null,
+      short: 'saldo indisponível',
+      note: balance.note || 'Não foi possível consultar o saldo agora.',
+    };
+  }
+  return { text: null, note: null, short: null };
+}
+
 function formatRelativeTime(iso) {
   if (!iso) return null;
   const date = new Date(iso);
@@ -43,14 +79,19 @@ function CredentialStatusBadge({ providerStatus }) {
     return <span className="shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-bg-secondary text-text-secondary">Sem chave</span>;
   }
 
-  const balanceText = formatBalance(balance);
+  const { text: balanceText, note: balanceNote, short: balanceShort } = describeBalance(balance);
   const relativeTime = formatRelativeTime(lastTestedAt);
 
   const byStatus = {
     no_credit: { label: 'Sem saldo', tone: 'bg-status-error/20 text-status-error' },
     invalid_token: { label: 'Token inválido/expirado', tone: 'bg-status-error/20 text-status-error' },
     error: { label: 'Erro ao testar', tone: 'bg-status-warning/20 text-status-warning' },
-    valid: { label: balanceText ? `Válida · saldo ${balanceText}` : 'Válida', tone: 'bg-status-success/20 text-status-success' },
+    valid: {
+      label: balanceText
+        ? `Válida · saldo ${balanceText}`
+        : (balanceShort ? `Válida · ${balanceShort}` : 'Válida'),
+      tone: 'bg-status-success/20 text-status-success',
+    },
     unknown: { label: 'Configurada (não testada)', tone: 'bg-bg-secondary text-text-secondary' },
   };
   const info = byStatus[status] || byStatus.unknown;
@@ -58,7 +99,7 @@ function CredentialStatusBadge({ providerStatus }) {
   return (
     <span
       className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${info.tone}`}
-      title={[lastError, relativeTime ? `Testado ${relativeTime}` : null].filter(Boolean).join(' — ') || undefined}
+      title={[lastError, balanceNote, relativeTime ? `Testado ${relativeTime}` : null].filter(Boolean).join(' — ') || undefined}
     >
       {info.label}
       {relativeTime && status !== 'unknown' && <span className="opacity-60">· {relativeTime}</span>}
@@ -438,6 +479,7 @@ export function ConfigAiTab({
                         setApiKeyValidationStatus({
                           valid: result.valid,
                           error: result.error || null,
+                          balance: result.balance || null,
                         });
 
                         if (result.valid) {
@@ -480,6 +522,16 @@ export function ConfigAiTab({
                 {apiKeyValidationStatus && apiKeyValidationStatus.valid && (
                   <p className="mt-1 text-xs text-status-success">✓ API Key válida e funcionando corretamente</p>
                 )}
+                {apiKeyValidationStatus && apiKeyValidationStatus.valid && (() => {
+                  const info = describeBalance(apiKeyValidationStatus.balance);
+                  if (info.text) {
+                    return <p className="mt-1 text-xs text-text-secondary">Saldo consultado no provedor: <strong>{info.text}</strong></p>;
+                  }
+                  if (info.note) {
+                    return <p className="mt-1 text-xs text-text-secondary">Saldo não exibido — {info.note}</p>;
+                  }
+                  return null;
+                })()}
                 <p className="text-xs text-text-secondary mt-1">
                   A chave atual nunca é exibida por segurança. Informe uma nova chave para atualizar.
                 </p>

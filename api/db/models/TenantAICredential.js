@@ -65,7 +65,7 @@ function getTenantAICredentialModel() {
         type: DataTypes.JSONB,
         allowNull: false,
         defaultValue: {},
-        comment: 'Ex.: { balance: { amount, currency, checkedAt } } quando o provider expõe saldo real',
+        comment: 'Ex.: { balance: { status, amount, currency, note, checkedAt } } — status em available/requires_admin_key/not_supported/error (consulta feita para TODOS os providers)',
       },
     }, {
       tableName: 'tenant_ai_credentials',

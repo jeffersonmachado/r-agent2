@@ -29,6 +29,19 @@ const engineeringTaskService = require('../../api/services/engineeringRouter/eng
 
 let dbAvailable = false;
 let dbReason = null;
+
+// Timeout da suíte: o global é 10s (jest.config.cjs) e é insuficiente aqui. Defeito MEDIDO no selo
+// autoritativo (2026-09-29): rodando em lote com o E2E do Router REAL
+// (`engineeringBugAutonomousLoopE2E.test.js`, que sobe sandbox Docker no MESMO processo Jest), a
+// criação de finding/DB estourou 10s e o `bail: 1` abortou o lote inteiro sem sequer produzir o
+// relatório do Jest — o selo saiu NO_GO em SUITE_EXECUTION. Mesma convenção das suítes vizinhas
+// (DurableResume, DistributedLease, BootRecovery: 30-60s), que já declaram o próprio timeout por
+// causa da contenção de recursos na execução agregada.
+//
+// Colocado no ESCOPO DO MÓDULO de propósito: dentro de `beforeAll` o valor NÃO é aplicado
+// (medido — a falha continuou marcando 10000 ms); no topo do arquivo vale para todas as suítes.
+jest.setTimeout(60000);
+
 const created = { findings: [], tasks: [], missions: [], testRuns: [], reviews: [], regressionRuns: [] };
 
 const SUITE_NAME = 'engineering-bug-loop';

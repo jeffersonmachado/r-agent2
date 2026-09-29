@@ -308,15 +308,20 @@ function createConfigController({ service, deps }) {
           return;
         }
         const validation = await service.validateProviderToken(provider, String(apiKey).trim());
-        // Saldo real só é buscado quando a chave é válida e o provider expõe uma API de
-        // billing consultável com a mesma chave (hoje só DeepSeek) — best-effort, nunca lança.
-        const balance = validation.valid ? await service.fetchProviderBalance(provider, String(apiKey).trim()) : null;
+        // Saldo real consultado para TODOS os providers quando a chave é válida — best-effort,
+        // nunca lança. O retorno é o RESULTADO da consulta (status/amount/note), não só o número:
+        // quando o provider não expõe saldo por API a UI mostra a razão, em vez de nada.
+        const balance = validation.valid
+          ? await service.fetchProviderBalanceInfo(provider, String(apiKey).trim())
+          : null;
         deps.sendJson(res, 200, {
           success: true,
           valid: validation.valid,
           error: validation.error || null,
           status: validation.status || null,
           balance,
+          balanceStatus: balance?.status || null,
+          balanceNote: balance?.note || null,
         });
       } catch (err) {
         deps.logger.error('Erro ao validar token de provedor', err);
