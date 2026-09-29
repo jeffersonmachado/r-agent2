@@ -7,6 +7,7 @@
     "evidence": {
       "diverged": [
         "sourceFingerprint",
+        "scenarioRegistryFingerprint",
         "chainFingerprint"
       ]
     },

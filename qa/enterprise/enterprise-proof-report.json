@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-29T04:47:54.806Z",
+  "generatedAt": "2026-09-29T06:47:31.862Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "rpa",
@@ -11,21 +11,21 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1790657252038 callId=call-voice-tts-asr-1790657252038 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1790664437608 callId=call-voice-tts-asr-1790664437608 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
       "name": "l04",
-      "ok": false,
-      "status": 1,
-      "stdout": "",
-      "stderr": "[pbx-call-events-runtime-smoke] FAIL direct_mode_requires_explicit_db_intent:set_TEST_DATABASE_URL_or_PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK=1"
+      "ok": true,
+      "status": 0,
+      "stdout": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json\n[Config] Configuração do Redis válida: redis://localhost:6379\n[2026-09-29T06:47:23.709Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-09-29T06:47:23.816Z] [INFO] [Sequelize] Conexão fechada\n[2026-09-29T06:47:23.846Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-09-29T06:47:23.859Z] [INFO] [Sequelize] Conexão fechada\n[2026-09-29T06:47:24.446Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-09-29T06:47:24.505Z] [INFO] [PBX CallEvents] scan concluído\n{\n  \"consumer\": \"pbx_cdr_l04_1790664444446\",\n  \"scanned\": 1,\n  \"emitted\": 3,\n  \"cursor\": {\n    \"calldate\": \"2026-09-29T06:48:23.817Z\",\n    \"cdrId\": \"cdr-l04-1790664443264\"\n  }\n}\n[2026-09-29T06:47:24.667Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)\n[2026-09-29T06:47:24.673Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)\n{\n  \"totalTickets\": 0,\n  \"byStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"byQueue\": 0,\n  \"queueDetails\": {}\n}\n[2026-09-29T06:47:24.674Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:\n{\n  \"totalTickets\": 0,\n  \"ticketsByStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"ticketsByQueue\": {}\n}\n[2026-09-29T06:47:24.962Z] [DEBUG] 🔍 getAiProviderForTenant: Buscando provider\n{\n  \"tenantId\": \"debug-e2e-engineering-router\"\n}\n[2026-09-29T06:47:25.005Z] [INFO] [Sequelize] Conexão fechada\n[2026-09-29T06:47:25.042Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-09-29T06:47:25.053Z] [INFO] [Sequelize] Conexão fechada\n[pbx-call-events-runtime-smoke] OK auth=rpa_scoped flowId=flow-pbx-call-events-runtime-smoke-1790664443264 executionId=fx-1790664444954-7c2c703b88ef latencyMs=5 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+      "stderr": "[2026-09-29T06:47:24.962Z] [WARN] ⚠️ getAiProviderForTenant: Nenhum provider registrado\n{\n  \"tenantId\": \"debug-e2e-engineering-router\"\n}"
     },
     {
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1790657269415-f1taapc conversation=conv-1790657269506-0d0ca11c88a9 queue=ux1_smoke_1790657269120 quickReply=qr-1790657272312-j29d8fxws phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1790664445252-mt4wc4k conversation=conv-1790664445276-922d15176565 queue=ux1_smoke_1790664445239 quickReply=qr-1790664450489-eo9ixzcgr phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
@@ -78,8 +78,8 @@
     },
     "warnings": []
   },
-  "runId": "rap-governed-20260929035335825-3711763d",
-  "sourceFingerprint": "f21b4f645a2cdbd9b66be837f2028a9f60f83d703eb9c1b50729b89c0d8e459b",
-  "sourceCommit": "524538810e83f6827e91cb57a2c4bd399a8089bf",
-  "sourceTree": "960d43607580451df2fbdef35a09f7ef33d7e87a"
+  "runId": "rap-governed-20260929064626810-a379b254",
+  "sourceFingerprint": "a83e8b2c4bcda9138c55ba00bd730aea22d669e42348fc35d9f75b21882231ee",
+  "sourceCommit": "11b473362de05b0c32175f65a39ea9af66cadd09",
+  "sourceTree": "e82af69ec2bf0058aa332236479c5bcc61134b73"
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T04:48:00.338Z",
+  "generatedAt": "2026-09-29T06:47:36.449Z",
   "status": "NO_GO:BLOCKING_GAPS",
   "platformMaturity": "enterprise-partial",
   "backlog": [
@@ -11,6 +11,7 @@
       "evidence": {
         "diverged": [
           "sourceFingerprint",
+          "scenarioRegistryFingerprint",
           "chainFingerprint"
         ]
       },
