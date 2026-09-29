@@ -396,6 +396,9 @@ export const navigationMenu = [
               { id: 'dev-engineering-overview', label: 'Overview', path: '/dev/engineering', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
               { id: 'dev-engineering-tasks', label: 'Tasks', path: '/dev/engineering/tasks', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
               { id: 'dev-engineering-missions', label: 'Missions / Enriquecimento', path: '/dev/engineering/missions', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+              // Ciclo de bug (finding → reprodução → task → correção → regressão). DEVELOPMENT-only:
+              // é superfície interna de engenharia, nunca do Workspace operacional.
+              { id: 'dev-engineering-findings', label: 'Findings / Ciclo de Bug', path: '/dev/engineering/findings', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
               { id: 'dev-engineering-models', label: 'Models / Router', path: '/dev/engineering/models', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
               { id: 'dev-engineering-release-closure', label: 'Release Closure', path: '/dev/engineering/release-closure', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
             ],

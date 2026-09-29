@@ -21,6 +21,12 @@ const missionOrchestratorService = require('../../services/engineeringMission/mi
 const missionReportService = require('../../services/engineeringMission/missionReportService');
 const missionReviewService = require('../../services/engineeringMission/missionReviewService');
 const missionSelfAssessmentService = require('../../services/engineeringMission/missionSelfAssessmentService');
+// CICLO DE BUG (detecção → reprodução → confirmação → task → correção → regressão): mesmos serviços
+// do domínio de missão — nenhum subsistema paralelo, nenhum transporte novo.
+const bugFindingService = require('../../services/engineeringMission/bugFindingService');
+const bugReproductionService = require('../../services/engineeringMission/bugReproductionService');
+const bugTriageService = require('../../services/engineeringMission/bugTriageService');
+const bugLoopCoordinatorService = require('../../services/engineeringMission/bugLoopCoordinatorService');
 const { createEngineeringMissionRoutes } = require('../../modules/engineering-missions/routes');
 
 function buildEngineeringMissionRouteDeps() {
@@ -42,6 +48,10 @@ function buildEngineeringMissionRouteDeps() {
     missionReportService,
     missionReviewService,
     missionSelfAssessmentService,
+    bugFindingService,
+    bugReproductionService,
+    bugTriageService,
+    bugLoopCoordinatorService,
   };
 }
 

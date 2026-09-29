@@ -23,6 +23,7 @@ const compiler = require('./missionCompilerService');
 const approvalService = require('./missionApprovalService');
 const missionReviewService = require('./missionReviewService');
 const taskSpecBinding = require('./taskSpecBindingService');
+const bugLoopCoordinator = require('./bugLoopCoordinatorService');
 const { emitMissionStage } = require('./missionEvents');
 const engineeringTaskService = require('../engineeringRouter/engineeringTaskService');
 const { runTask } = require('../engineeringRouter/engineeringRouterService');
@@ -207,6 +208,22 @@ async function runMissionTask(missionId, {
       ...(tenantId ? { eventAudienceTenantId: tenantId } : {}),
     });
     const detail = await refreshMissionState(missionId, { tenantId, guard });
+    // DETECÇÃO DENTRO DA MISSÃO (loop de bugs). Uma execução que NÃO termina em GREEN é uma anomalia
+    // da missão: vira finding da PRÓPRIA missão, automaticamente, sem exigir novo ZIP/prompt/missão.
+    // Best-effort e DB-only: registrar o finding nunca pode derrubar a execução da missão — e a
+    // reprodução/triagem/correção seguem no laço (`runBugLoopSweep`), nunca inline.
+    if (result && result.status && result.status !== 'GREEN') {
+      try {
+        await bugLoopCoordinator.hookMissionFailure(
+          { missionId, taskId: mission.linked_task_id, result },
+          { actor: 'SYSTEM:MISSION', tenantId },
+        );
+      } catch (hookError) {
+        logger.warn('[missionOrchestrator] falha ao registrar finding de execução (best-effort)', {
+          missionId, taskId: mission.linked_task_id, error: hookError.message,
+        });
+      }
+    }
     return { result, mission: detail };
   }, { heartbeat: true });
 }

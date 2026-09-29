@@ -237,6 +237,22 @@ const RUNTIME_ITEMS = [
     if (!Number.isFinite(generatedAt) || Date.now() - generatedAt > FRESH_MS) return 'evidência vencida (>7 dias)';
     return true;
   }),
+  // CICLO AUTÔNOMO DE BUG (missão 2026-09-29) — REQUISITO DO SELO. O veredito é LIDO do relatório
+  // real produzido por `validate:bug-autonomous-loop`, que por sua vez deriva da execução
+  // autoritativa das suítes BUG-01..BUG-20. Sem relatório, o selo não é GO: um ciclo de correção
+  // de bugs que ninguém mede é exatamente a dependência humana que esta missão existe para
+  // eliminar. Os demais vereditos do relatório (triagem, reprodução, regressão, self-modification)
+  // são checados individualmente para que um GREEN global não esconda um eixo NO_GO.
+  runtimeItem('V2_BUG_AUTONOMOUS_LOOP_GREEN', 'reports/bug-autonomous-loop-report.json', (report) => {
+    if (report.status !== 'GREEN' || report.BUG_AUTONOMOUS_LOOP !== 'GREEN') return `BUG_AUTONOMOUS_LOOP=${report.BUG_AUTONOMOUS_LOOP || report.status}`;
+    const verdicts = report.verdicts || {};
+    const notGreen = Object.keys(verdicts).filter((key) => verdicts[key] !== 'GREEN');
+    if (notGreen.length > 0) return `veredito(s) não-GREEN: ${notGreen.join(', ')}`;
+    const structuralFailures = (report.structuralChecks || []).filter((c) => c.status !== 'PASS');
+    if (structuralFailures.length > 0) return `checagem estrutural falhando: ${structuralFailures.map((c) => c.id).join(', ')}`;
+    if ((report.runtimeProofs || []).some((p) => p.status !== 'PASS')) return 'prova de runtime do ciclo não passou';
+    return true;
+  }),
 ];
 
 /**
@@ -345,6 +361,19 @@ function main() {
     }
     if (statusReport?.axes?.QWEN_LIVE && /NOT_EXECUTED/.test(String(statusReport.axes.QWEN_LIVE.status))) {
       pending.push({ id: 'QWEN_LIVE', status: 'PENDING', detail: `QWEN_LIVE=${statusReport.axes.QWEN_LIVE.status}: prova ao vivo não executada neste ambiente (sem credencial)` });
+    }
+
+    // CICLO AUTÔNOMO DE BUG: pendência DERIVADA do relatório do gate, nunca texto fixo.
+    const bugLoop = readJsonRel('reports/bug-autonomous-loop-report.json');
+    if (!bugLoop) {
+      pending.push({ id: 'BUG_AUTONOMOUS_LOOP', status: 'PENDING', detail: 'sem medição do ciclo de bug (rode npm run validate:bug-autonomous-loop após a execução autoritativa das suítes)' });
+    } else if (bugLoop.status !== 'GREEN') {
+      const failures = (bugLoop.itemFailures || []).map((f) => f.id);
+      pending.push({
+        id: 'BUG_AUTONOMOUS_LOOP',
+        status: 'PENDING',
+        detail: `ciclo de bug em ${bugLoop.status}: ${failures.length} item(ns) obrigatório(s) sem prova (${failures.slice(0, 8).join(', ') || 'veredito não-GREEN'})`,
+      });
     }
     return pending;
   };

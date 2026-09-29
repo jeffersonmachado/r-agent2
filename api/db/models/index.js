@@ -213,6 +213,8 @@ const getEngineeringMissionVersion = require('./EngineeringMissionVersion');
 const getEngineeringMissionApproval = require('./EngineeringMissionApproval');
 const getEngineeringMissionSettings = require('./EngineeringMissionSettings');
 const getEngineeringMissionReview = require('./EngineeringMissionReview');
+const getEngineeringBugFinding = require('./EngineeringBugFinding');
+const getEngineeringBugFindingEvent = require('./EngineeringBugFindingEvent');
 const getIntegrationConnection = require('./IntegrationConnection');
 const getIntegrationObjectLink = require('./IntegrationObjectLink');
 const getIntegrationSyncState = require('./IntegrationSyncState');
@@ -426,6 +428,8 @@ const EngineeringMissionVersion = () => getEngineeringMissionVersion();
 const EngineeringMissionApproval = () => getEngineeringMissionApproval();
 const EngineeringMissionSettings = () => getEngineeringMissionSettings();
 const EngineeringMissionReview = () => getEngineeringMissionReview();
+const EngineeringBugFinding = () => getEngineeringBugFinding();
+const EngineeringBugFindingEvent = () => getEngineeringBugFindingEvent();
 const IntegrationConnection = () => getIntegrationConnection();
 const IntegrationObjectLink = () => getIntegrationObjectLink();
 const IntegrationSyncState = () => getIntegrationSyncState();
@@ -1330,7 +1334,11 @@ module.exports = {
   EngineeringMissionSettings,
   getEngineeringMissionSettings,
   EngineeringMissionReview,
+  EngineeringBugFinding,
+  EngineeringBugFindingEvent,
   getEngineeringMissionReview,
+  getEngineeringBugFinding,
+  getEngineeringBugFindingEvent,
   getEngineeringTask,
   getEngineeringAttempt,
   getEngineeringTestRun,

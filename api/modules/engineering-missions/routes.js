@@ -40,36 +40,60 @@ function requireTenantId(tenantId) {
 }
 
 /**
- * Mapa rota→ação do RBAC. `pattern` casa o pathname RELATIVO ao prefixo `/engineering/missions`;
- * os padrões de sufixo primeiro (aprovar/rejeitar/executar) e os genéricos por último.
+ * Mapa rota→ação do RBAC. `pattern` casa o pathname RELATIVO ao prefixo do GRUPO da rota
+ * (`/engineering/missions` ou `/engineering/findings`); os padrões de sufixo primeiro
+ * (aprovar/rejeitar/executar) e os genéricos por último.
+ *
+ * O ciclo de BUG vive no MESMO módulo/router das missões de propósito: um finding é trabalho
+ * interno da missão, não um domínio paralelo. `group` mantém o mapa explícito e fail-closed.
  */
 const ROUTE_ACTIONS = Object.freeze([
-  { method: 'GET', pattern: /^\/overview\/?$/, action: 'read' },
-  { method: 'GET', pattern: /^\/self-assessment\/?$/, action: 'read' },
-  { method: 'GET', pattern: /^\/policy\/?$/, action: 'read' },
-  { method: 'PUT', pattern: /^\/policy\/?$/, action: 'policy_admin' },
-  { method: 'POST', pattern: /^\/resume-interrupted\/?$/, action: 'execute' },
-  { method: 'GET', pattern: /^\/?$/, action: 'read' },
-  { method: 'POST', pattern: /^\/?$/, action: 'create' },
-  { method: 'GET', pattern: /^\/[^/]+\/preview\/?$/, action: 'read' },
-  { method: 'GET', pattern: /^\/[^/]+\/versions\/?$/, action: 'read' },
-  { method: 'GET', pattern: /^\/[^/]+\/approvals\/?$/, action: 'read' },
-  { method: 'GET', pattern: /^\/[^/]+\/report\/?$/, action: 'read' },
-  { method: 'GET', pattern: /^\/[^/]+\/review\/?$/, action: 'read' },
-  { method: 'POST', pattern: /^\/[^/]+\/enrich\/?$/, action: 'enrich' },
-  { method: 'POST', pattern: /^\/[^/]+\/approve\/?$/, action: 'approve' },
-  { method: 'POST', pattern: /^\/[^/]+\/reject\/?$/, action: 'reject' },
-  { method: 'POST', pattern: /^\/[^/]+\/edit\/?$/, action: 'approve' },
-  { method: 'POST', pattern: /^\/[^/]+\/execute\/?$/, action: 'execute' },
-  { method: 'POST', pattern: /^\/[^/]+\/review\/?$/, action: 'execute' },
-  { method: 'GET', pattern: /^\/[^/]+\/?$/, action: 'read' },
+  { group: 'missions', method: 'GET', pattern: /^\/overview\/?$/, action: 'read' },
+  { group: 'missions', method: 'GET', pattern: /^\/self-assessment\/?$/, action: 'read' },
+  { group: 'missions', method: 'GET', pattern: /^\/policy\/?$/, action: 'read' },
+  { group: 'missions', method: 'PUT', pattern: /^\/policy\/?$/, action: 'policy_admin' },
+  { group: 'missions', method: 'POST', pattern: /^\/resume-interrupted\/?$/, action: 'execute' },
+  { group: 'missions', method: 'GET', pattern: /^\/?$/, action: 'read' },
+  { group: 'missions', method: 'POST', pattern: /^\/?$/, action: 'create' },
+  { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/preview\/?$/, action: 'read' },
+  { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/versions\/?$/, action: 'read' },
+  { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/approvals\/?$/, action: 'read' },
+  { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/report\/?$/, action: 'read' },
+  { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/review\/?$/, action: 'read' },
+  { group: 'missions', method: 'POST', pattern: /^\/[^/]+\/enrich\/?$/, action: 'enrich' },
+  { group: 'missions', method: 'POST', pattern: /^\/[^/]+\/approve\/?$/, action: 'approve' },
+  { group: 'missions', method: 'POST', pattern: /^\/[^/]+\/reject\/?$/, action: 'reject' },
+  { group: 'missions', method: 'POST', pattern: /^\/[^/]+\/edit\/?$/, action: 'approve' },
+  { group: 'missions', method: 'POST', pattern: /^\/[^/]+\/execute\/?$/, action: 'execute' },
+  { group: 'missions', method: 'POST', pattern: /^\/[^/]+\/review\/?$/, action: 'execute' },
+  { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/?$/, action: 'read' },
+  // ── Findings do ciclo de bug (mesma classificação DEVELOPMENT) ──────────────────────────────
+  // Estáticas ANTES das parametrizadas: `/summary`, `/sweep` e `/telemetry` casariam com `/:id`.
+  { group: 'findings', method: 'GET', pattern: /^\/summary\/?$/, action: 'read' },
+  { group: 'findings', method: 'POST', pattern: /^\/sweep\/?$/, action: 'execute' },
+  { group: 'findings', method: 'POST', pattern: /^\/telemetry\/?$/, action: 'execute' },
+  { group: 'findings', method: 'GET', pattern: /^\/?$/, action: 'read' },
+  { group: 'findings', method: 'POST', pattern: /^\/?$/, action: 'create' },
+  { group: 'findings', method: 'GET', pattern: /^\/[^/]+\/history\/?$/, action: 'read' },
+  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/reproduce\/?$/, action: 'execute' },
+  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/confirm\/?$/, action: 'execute' },
+  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/triage\/?$/, action: 'execute' },
+  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/fix\/?$/, action: 'execute' },
+  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/evidence\/?$/, action: 'execute' },
+  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/approve-self-modification\/?$/, action: 'approve' },
+  { group: 'findings', method: 'GET', pattern: /^\/[^/]+\/?$/, action: 'read' },
 ]);
 
 /** Descobre a ação exigida por (método, pathname). Sem match ⇒ null ⇒ negação. */
 function resolveRequiredAction(method, pathname) {
-  const relative = String(pathname || '').replace(/^\/engineering\/missions/, '') || '/';
+  const url = String(pathname || '');
+  const group = url.startsWith('/engineering/findings') ? 'findings' : 'missions';
+  const stripped = group === 'findings'
+    ? url.replace(/^\/engineering\/findings/, '')
+    : url.replace(/^\/engineering\/missions/, '');
+  const relative = stripped || '/';
   const upper = String(method || '').toUpperCase();
-  const match = ROUTE_ACTIONS.find((entry) => entry.method === upper && entry.pattern.test(relative));
+  const match = ROUTE_ACTIONS.find((entry) => entry.group === group && entry.method === upper && entry.pattern.test(relative));
   return match ? match.action : null;
 }
 
@@ -138,6 +162,31 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       POLICY_ESCALATION_DENIED: 403,
       // Tenant ausente no boundary HTTP é erro do CLIENTE, não do servidor.
       TENANT_REQUIRED: 400,
+      // ── Ciclo de bug: TODAS as recusas de honestidade são 409 (conflito com o estado real) ──
+      // INSUFFICIENT_CONFIRMATION_BASIS: tentar confirmar sem base objetiva (suspeita de LLM).
+      // FIX_WITHOUT_REPRODUCTION/FIX_WITHOUT_REVIEW: declarar FIXED sem as provas exigidas.
+      // REGRESSION_WITHOUT_FIX/REGRESSION_EVIDENCE_MISSING: validar regressão sem fix/execução.
+      // FINDING_GREENWASHING_BLOCKED: fechar finding escondendo o ciclo.
+      // SELF_MODIFICATION_HUMAN_APPROVAL_REQUIRED: self-modification sem aprovação humana.
+      INSUFFICIENT_CONFIRMATION_BASIS: 409,
+      FIX_WITHOUT_REPRODUCTION: 409,
+      FIX_WITHOUT_REVIEW: 409,
+      REGRESSION_WITHOUT_FIX: 409,
+      REGRESSION_EVIDENCE_MISSING: 409,
+      FINDING_GREENWASHING_BLOCKED: 409,
+      FINDING_NOT_CONFIRMED: 409,
+      FINDING_TASK_ALREADY_LINKED: 409,
+      SELF_MODIFICATION_HUMAN_APPROVAL_REQUIRED: 409,
+      INVALID_FINDING_TRANSITION: 409,
+      REPRODUCTION_PLAN_MISSING: 422,
+      REPRODUCTION_INCONCLUSIVE: 422,
+      INVALID_FINDING: 422,
+      INVALID_FINDING_SOURCE: 422,
+      INVALID_EVIDENCE_TYPE: 422,
+      INVALID_EVIDENCE: 422,
+      FINDING_FINGERPRINT_UNAVAILABLE: 422,
+      FINDING_BLOCKED_EXTERNAL_DEPENDENCY: 409,
+      ACTOR_REQUIRED: 400,
     };
     const status = statusByCode[code] || 500;
     if (status >= 500) deps.logger.error(`[engineering-missions] ${context}`, err);
@@ -531,6 +580,241 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       });
     } catch (err) {
       handleError(res, deps, err, 'get mission review');
+    }
+  });
+
+  // ── CICLO DE BUG (detecção → reprodução → confirmação → task → correção → regressão) ────────
+  //
+  // Relato HUMANO é uma fonte de finding entre as outras (`HUMAN_REPORT`), nunca um caminho
+  // especial: o mesmo endpoint registra, e o Mission Compiler/Bug Triage enriquece depois com
+  // contexto, logs, rotas, código, testes, RAG e histórico.
+  router.get('/engineering/findings/summary', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!guard(req, res, deps)) return;
+    try {
+      const summary = await deps.bugFindingService.summarizeFindings({ missionId: req.query.missionId || null });
+      deps.sendJson(res, 200, summary);
+    } catch (err) {
+      handleError(res, deps, err, 'summarize findings');
+    }
+  });
+
+  router.post('/engineering/findings/sweep', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const summary = await deps.bugLoopCoordinatorService.runBugLoopSweep({
+        actor: req.agent?.id || req.agent?.email || null,
+        tenantId: requireTenantId(req.tenantId),
+        limit: Number(body.limit) || 10,
+        autoFix: body.autoFix !== false,
+        allowedPaths: Array.isArray(body.allowedPaths) ? body.allowedPaths : null,
+      });
+      deps.sendJson(res, 200, summary);
+    } catch (err) {
+      handleError(res, deps, err, 'bug loop sweep');
+    }
+  });
+
+  router.post('/engineering/findings/telemetry', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      if (!body.metrics || typeof body.metrics !== 'object') {
+        deps.sendJson(res, 400, { error: 'invalid_body', message: 'metrics (objeto) é obrigatório' });
+        return;
+      }
+      if (body.metrics.noProgress === true) {
+        const result = await deps.bugLoopCoordinatorService.diagnoseNoProgress({
+          missionId: body.missionId || null,
+          taskId: body.taskId || null,
+          phase: body.metrics.phase || null,
+          operation: body.metrics.operation || null,
+          metadata: body.metrics,
+        }, { actor: 'SYSTEM:TELEMETRY', tenantId: requireTenantId(req.tenantId) });
+        deps.sendJson(res, 200, result);
+        return;
+      }
+      const result = await deps.bugLoopCoordinatorService.ingestTelemetry({
+        metrics: body.metrics,
+        context: body.context || {},
+        missionId: body.missionId || null,
+        taskId: body.taskId || null,
+      }, { actor: 'SYSTEM:TELEMETRY', tenantId: requireTenantId(req.tenantId) });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      handleError(res, deps, err, 'ingest telemetry');
+    }
+  });
+
+  router.get('/engineering/findings', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!guard(req, res, deps)) return;
+    try {
+      const findings = await deps.bugFindingService.listFindings({
+        missionId: req.query.missionId || null,
+        status: req.query.status ? String(req.query.status).split(',') : null,
+        severity: req.query.severity ? String(req.query.severity).split(',') : null,
+        category: req.query.category || null,
+        selfModification: req.query.selfModification === undefined ? null : req.query.selfModification === 'true',
+        limit: Number(req.query.limit) || 50,
+        offset: Number(req.query.offset) || 0,
+      });
+      deps.sendJson(res, 200, { findings });
+    } catch (err) {
+      handleError(res, deps, err, 'list findings');
+    }
+  });
+
+  router.post('/engineering/findings', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const result = await deps.bugFindingService.registerFinding(body, {
+        actor: req.agent?.id || req.agent?.email || null,
+        tenantId: requireTenantId(req.tenantId),
+      });
+      deps.sendJson(res, result.deduplicated ? 200 : 201, result);
+    } catch (err) {
+      handleError(res, deps, err, 'register finding');
+    }
+  });
+
+  router.get('/engineering/findings/:id', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!guard(req, res, deps)) return;
+    try {
+      const finding = await deps.bugFindingService.getFinding(req.params.id);
+      if (!finding) { deps.sendJson(res, 404, { error: 'not_found' }); return; }
+      deps.sendJson(res, 200, finding);
+    } catch (err) {
+      handleError(res, deps, err, 'get finding');
+    }
+  });
+
+  router.get('/engineering/findings/:id/history', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!guard(req, res, deps)) return;
+    try {
+      const finding = await deps.bugFindingService.getFinding(req.params.id);
+      if (!finding) { deps.sendJson(res, 404, { error: 'not_found' }); return; }
+      const history = await deps.bugFindingService.getFindingHistory(req.params.id);
+      deps.sendJson(res, 200, { findingId: req.params.id, status: finding.status, history });
+    } catch (err) {
+      handleError(res, deps, err, 'get finding history');
+    }
+  });
+
+  router.post('/engineering/findings/:id/evidence', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const result = await deps.bugFindingService.addEvidence(req.params.id, body, {
+        actor: req.agent?.id || req.agent?.email || null,
+        tenantId: requireTenantId(req.tenantId),
+      });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      handleError(res, deps, err, 'add finding evidence');
+    }
+  });
+
+  router.post('/engineering/findings/:id/reproduce', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const result = await deps.bugReproductionService.reproduce(req.params.id, {
+        actor: req.agent?.id || req.agent?.email || null,
+        tenantId: requireTenantId(req.tenantId),
+        invariantResults: Array.isArray(body.invariantResults) ? body.invariantResults : null,
+      });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      handleError(res, deps, err, 'reproduce finding');
+    }
+  });
+
+  router.post('/engineering/findings/:id/confirm', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const result = await deps.bugFindingService.confirmFinding(req.params.id, {
+        basis: body.basis,
+        evidence: Array.isArray(body.evidence) ? body.evidence : [],
+        rootCause: body.rootCause || null,
+        actor: req.agent?.id || req.agent?.email || null,
+        tenantId: requireTenantId(req.tenantId),
+      });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      handleError(res, deps, err, 'confirm finding');
+    }
+  });
+
+  router.post('/engineering/findings/:id/triage', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const result = await deps.bugTriageService.triage(req.params.id, {
+        actor: req.agent?.id || req.agent?.email || null,
+        tenantId: requireTenantId(req.tenantId),
+        allowedPaths: Array.isArray(body.allowedPaths) ? body.allowedPaths : null,
+        forbiddenPaths: Array.isArray(body.forbiddenPaths) ? body.forbiddenPaths : [],
+        explicitPolicyAuthorization: body.explicitPolicyAuthorization === true,
+      });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      handleError(res, deps, err, 'triage finding');
+    }
+  });
+
+  router.post('/engineering/findings/:id/fix', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const result = await deps.bugLoopCoordinatorService.runFixLoop(req.params.id, {
+        actor: req.agent?.id || req.agent?.email || null,
+        tenantId: requireTenantId(req.tenantId),
+        maxAttempts: Number(body.maxAttempts) || undefined,
+        secondaryFindings: Array.isArray(body.secondaryFindings) ? body.secondaryFindings : [],
+      });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      handleError(res, deps, err, 'run fix loop');
+    }
+  });
+
+  router.post('/engineering/findings/:id/approve-self-modification', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = guard(req, res, deps);
+    if (!auth) return;
+    try {
+      const body = (await readBody(req, res, deps)) || {};
+      const result = await deps.bugTriageService.approveSelfModification(req.params.id, {
+        actor: req.agent?.id || req.agent?.email || null,
+        approvalRef: body.approvalRef || null,
+        note: body.note || null,
+        tenantId: requireTenantId(req.tenantId),
+      });
+      deps.sendJson(res, 200, result);
+    } catch (err) {
+      handleError(res, deps, err, 'approve self modification');
     }
   });
 

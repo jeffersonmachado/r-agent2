@@ -1,0 +1,134 @@
+{
+  "$comment": "TESTES OBRIGATÓRIOS DO CICLO AUTÔNOMO DE BUG (BUG-01..BUG-20) — enunciados copiados da missão 'Bug detector' (2026-09-29). Este arquivo NÃO declara status: cada item aponta para as suítes que o provam e para o veredito que ele alimenta, e o estado é DERIVADO por scripts/governance/validate-bug-autonomous-loop.js a partir da execução autoritativa real (reports/release-suite-execution.json). Item sem prova é GAP declarado — nunca coberto por suposição.",
+  "manifestVersion": "1.0.0",
+  "source": {
+    "kind": "MISSION_PROMPT_SECTION",
+    "section": "TESTES OBRIGATÓRIOS (BUG-01..BUG-20)",
+    "idsRange": "BUG-01..BUG-20",
+    "note": "Os 20 enunciados existem literalmente na missão de 2026-09-29; nada foi inventado. `suites` lista TODAS as suítes que contêm a prova do ID e todas precisam estar PASS na execução autoritativa."
+  },
+  "runtimeProofs": [
+    "tests/integration/engineeringBugAutonomousLoopE2E.test.js"
+  ],
+  "verdicts": {
+    "BUG_DETECTION": ["BUG-01"],
+    "BUG_TRIAGE": ["BUG-05", "BUG-13", "BUG-15", "BUG-16"],
+    "BUG_REPRODUCTION": ["BUG-03", "BUG-04"],
+    "BUG_CONFIRMATION": ["BUG-02", "BUG-12", "BUG-14"],
+    "BUG_TASK_GENERATION": ["BUG-06", "BUG-07"],
+    "AUTONOMOUS_FIX_LOOP": ["BUG-08", "BUG-10"],
+    "REGRESSION_VALIDATION": ["BUG-09"],
+    "MISSION_CONTINUATION": ["BUG-11"],
+    "SELF_MODIFICATION_GUARD": ["BUG-19", "BUG-20"],
+    "BUG_AUTONOMOUS_LOOP": ["BUG-01", "BUG-02", "BUG-03", "BUG-04", "BUG-05", "BUG-06", "BUG-07", "BUG-08", "BUG-09", "BUG-10", "BUG-11", "BUG-12", "BUG-13", "BUG-14", "BUG-15", "BUG-16", "BUG-17", "BUG-18", "BUG-19", "BUG-20"]
+  },
+  "verdictsRequiringRuntimeProof": [
+    "AUTONOMOUS_FIX_LOOP",
+    "REGRESSION_VALIDATION",
+    "MISSION_CONTINUATION",
+    "SELF_MODIFICATION_GUARD",
+    "BUG_AUTONOMOUS_LOOP"
+  ],
+  "requiredTests": [
+    {
+      "id": "BUG-01",
+      "requirement": "Unit failure gera finding.",
+      "suites": ["tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-02",
+      "requirement": "LLM suspicion gera SUSPECTED, não CONFIRMED.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js"]
+    },
+    {
+      "id": "BUG-03",
+      "requirement": "Reproduction falha → CONFIRMED.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-04",
+      "requirement": "Não reproduzível → NOT_REPRODUCED.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-05",
+      "requirement": "Finding duplicado é deduplicado.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-06",
+      "requirement": "Confirmed bug gera EngineeringTask.",
+      "suites": ["tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-07",
+      "requirement": "Task referencia finding.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-08",
+      "requirement": "Fix torna reproduction test verde.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-09",
+      "requirement": "Regression roda depois do fix.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-10",
+      "requirement": "Bug secundário encontrado durante fix entra no loop.",
+      "suites": ["tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-11",
+      "requirement": "Missão original continua depois do bug.",
+      "suites": ["tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-12",
+      "requirement": "Timeout transitório não vira bug automaticamente.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-13",
+      "requirement": "NO_PROGRESS gera diagnóstico.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-14",
+      "requirement": "Governance invariant gera bug determinístico.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-15",
+      "requirement": "Stale writer gera concurrency finding.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-16",
+      "requirement": "Security finding HIGH/CRITICAL exige reviewer apropriado.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-17",
+      "requirement": "Bug recorrente é reconhecido.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-18",
+      "requirement": "Engineering Memory recupera ocorrência anterior.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-19",
+      "requirement": "Self-modification eleva risco.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "BUG-20",
+      "requirement": "Self-modification não pode autoaprovar quando policy proíbe.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    }
+  ]
+}

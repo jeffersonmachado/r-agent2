@@ -84,12 +84,19 @@ const STEPS = Object.freeze([
   // veredito dessa evidência + inventário. O V2_DECISION depende do veredito.
   { id: 'TIMEOUT_ARCHITECTURE_E2E', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node --env-file-if-exists=.env scripts/governance/verify-timeout-architecture-e2e.js', detail: 'prova em runtime real: task longa sobrevive, worker morto é recuperado, NO_PROGRESS ≠ DEAD, provider cai para fallback', produces: ['reports/timeout-architecture-evidence.json'] },
   { id: 'TIMEOUT_ARCHITECTURE', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/validate-timeout-architecture.js', detail: 'veredito da arquitetura de timeouts (inventário semântico + evidência de runtime)', produces: ['reports/TIMEOUT_ARCHITECTURE_REPORT.json'], dependsOn: ['TIMEOUT_ARCHITECTURE_E2E'] },
+  // CICLO AUTÔNOMO DE BUG (missão 2026-09-29). Um bug descoberto durante a missão precisa voltar ao
+  // loop de engenharia SOZINHO — sem ZIP novo, sem prompt novo, sem missão nova. O gate deriva o
+  // veredito `BUG_AUTONOMOUS_LOOP` da execução AUTORITATIVA das suítes BUG-01..BUG-20 (declaradas em
+  // config/engineering-bug-loop-required-tests.json) e recusa qualquer prova enfraquecida
+  // (skip/only/xit, suíte removida, suíte fora do manifesto). Fica DEPOIS de SUITE_EXECUTION porque
+  // consome o estado real dela — nunca presume.
+  { id: 'BUG_AUTONOMOUS_LOOP', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/validate-bug-autonomous-loop.js', detail: 'ciclo detecta→reproduz→confirma→tarefa→corrige→regressão→retoma missão, provado em runtime', produces: ['reports/bug-autonomous-loop-report.json'], dependsOn: ['SUITE_EXECUTION'] },
   // MISSION_RAG (missão 2026-09-28): a saúde do corpus é MEDIDA no banco e publicada como relatório;
   // o selo consome essa medição (nunca o eixo estático do status report, que é saída).
   { id: 'RAG_INDEX_HEALTH', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node --env-file-if-exists=.env scripts/governance/validate-rag-index-health.js', detail: 'corpus RAG medido no banco: nenhum indexed sem chunks, failed declarado', produces: ['reports/rag-index-health-report.json'] },
   { id: 'ENVELOPE_GENERATE', phase: 'SEAL', required: true, kind: 'command', command: `node scripts/governance/generate-engineering-router-v2-audit-envelope.js ${ENVELOPE_DIR}`, detail: 'GERA o envelope físico de auditoria', produces: [ENVELOPE_DIR] },
   { id: 'ENVELOPE_VERIFY', phase: 'SEAL', required: true, kind: 'command', command: `node scripts/governance/verify-engineering-router-v2-audit-envelope.js ${ENVELOPE_DIR}`, detail: 'VERIFICA o envelope JÁ EXISTENTE (nunca regenera)', dependsOn: ['ENVELOPE_GENERATE'] },
-  { id: 'V2_DECISION', phase: 'DECIDE', required: true, kind: 'command', command: 'node scripts/governance/validate-engineering-router-v2.js', detail: 'decisão do selo V2 (deriva os eixos e as pendências de relatórios reais)', produces: ['reports/engineering-router-v2-seal-report.json'], dependsOn: ['ENVELOPE_VERIFY', 'REQUIREMENTS_MATRIX', 'TIMEOUT_ARCHITECTURE', 'REQUIRED_TESTS_V2'] },
+  { id: 'V2_DECISION', phase: 'DECIDE', required: true, kind: 'command', command: 'node scripts/governance/validate-engineering-router-v2.js', detail: 'decisão do selo V2 (deriva os eixos e as pendências de relatórios reais)', produces: ['reports/engineering-router-v2-seal-report.json'], dependsOn: ['ENVELOPE_VERIFY', 'REQUIREMENTS_MATRIX', 'TIMEOUT_ARCHITECTURE', 'REQUIRED_TESTS_V2', 'BUG_AUTONOMOUS_LOOP'] },
   // CONFIRMAÇÃO ITEM A ITEM da auditoria (missão 2026-09-28): cada item citado pela auditoria é
   // confirmado contra a prova real e classificado (ALREADY_FIXED/CONFIRMED/REGRESSED/...).
   //

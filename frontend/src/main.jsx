@@ -87,6 +87,7 @@ const EngineeringTaskDetailPage = lazyPage(() => import('./pages/EngineeringTask
 const EngineeringModelsPage = lazyPage(() => import('./pages/EngineeringModelsPage'), 'EngineeringModelsPage');
 const EngineeringReleaseClosurePage = lazyPage(() => import('./pages/EngineeringReleaseClosurePage'), 'EngineeringReleaseClosurePage');
 const EngineeringMissionsPage = lazyPage(() => import('./pages/engineering-missions/EngineeringMissionsPage'), 'EngineeringMissionsPage');
+const EngineeringFindingsPage = lazyPage(() => import('./pages/engineering-findings/EngineeringFindingsPage'), 'EngineeringFindingsPage');
 const EngineeringMissionDetailPage = lazyPage(() => import('./pages/engineering-missions/EngineeringMissionDetailPage'), 'EngineeringMissionDetailPage');
 const QaGapsPage = lazyPage(() => import('./pages/QaGapsPage'), 'QaGapsPage');
 const BenchmarkResearchGovernancePage = lazyPage(() => import('./pages/BenchmarkResearchGovernancePage'), 'BenchmarkResearchGovernancePage');
@@ -507,10 +508,11 @@ function AppWithAuth() {
   const isEngineeringModels = isRoute('/dev/engineering/models');
   const isEngineeringMissionDetail = /^\/dev\/engineering\/missions\/[^/]+\/?$/.test(currentPath);
   const isEngineeringMissions = isRoute('/dev/engineering/missions') && !isEngineeringMissionDetail;
+  const isEngineeringFindings = isRoute('/dev/engineering/findings');
   const isEngineeringReleaseClosure = isRoute('/dev/engineering/release-closure');
   const isEngineeringOverview = isRoute('/dev/engineering')
     && !isEngineeringTasks && !isEngineeringTaskDetail && !isEngineeringModels && !isEngineeringReleaseClosure
-    && !isEngineeringMissions && !isEngineeringMissionDetail;
+    && !isEngineeringMissions && !isEngineeringMissionDetail && !isEngineeringFindings;
   const isBenchmarkResearch = isRoute('/dev/benchmark-research');
   const isQaWavesOperationalHealth = isRoute('/dev/qa-waves/operational-health');
   const isQaWavesEnterpriseGovernance = isRoute('/dev/qa-waves/enterprise-governance');
@@ -597,7 +599,7 @@ function AppWithAuth() {
       isOrders, isKitchen, isDispatch,
       isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isBenchmarkResearch,
       isEngineeringOverview, isEngineeringTasks, isEngineeringTaskDetail, isEngineeringModels, isEngineeringReleaseClosure,
-      isEngineeringMissions, isEngineeringMissionDetail,
+      isEngineeringMissions, isEngineeringMissionDetail, isEngineeringFindings,
       isAgentOsHub,
       isQaAudit,
       isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup,
@@ -741,6 +743,7 @@ function AppWithAuth() {
       '/vertical/dashboard': '📊 Painel Vertical',
       '/dev/engineering/tasks': '⚙️ Engineering • Tasks',
       '/dev/engineering/missions': '⚙️ Engineering • Missions',
+      '/dev/engineering/findings': '⚙️ Engineering • Findings',
       '/dev/engineering/models': '⚙️ Engineering • Models',
       '/dev/engineering/release-closure': '⚙️ Engineering • Release Closure',
       '/dev/engineering': '⚙️ Engineering Model Router',
@@ -1061,6 +1064,8 @@ function AppWithAuth() {
     pageContent = <EngineeringMissionDetailPage missionId={currentPath.replace(/^\/dev\/engineering\/missions\//, '').replace(/\/$/, '')} />;
   } else if (isEngineeringMissions) {
     pageContent = <EngineeringMissionsPage />;
+  } else if (isEngineeringFindings) {
+    pageContent = <EngineeringFindingsPage />;
   } else if (isEngineeringTaskDetail) {
     pageContent = <EngineeringTaskDetailPage />;
   } else if (isEngineeringTasks) {
