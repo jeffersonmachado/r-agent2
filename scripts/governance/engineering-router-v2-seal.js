@@ -30,10 +30,38 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawnSync, execFileSync } = require('child_process');
 const { ROOT, writeReport } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 const { applyOriginLineage, resolveRunLineage } = require('./lib/resolve-run-lineage');
+const { captureFreeze, compareFreeze, assessInitialFreeze } = require('./lib/sourceFreezeGuard');
+
+/**
+ * Snapshot do source que o selo está certificando. Lido do disco/git no momento da chamada.
+ *
+ * DEFEITO REAL (2026-09-30): sem este congelamento, o selo falhava em um passo DIFERENTE a cada
+ * execução (`RUNTIME-EVIDENCE_UNAVAILABLE`, `BATCH_REPORT_MISSING`) porque outra sessão estava
+ * commitando/editando o mesmo worktree durante o pipeline — mensagens que apontavam para o
+ * subsistema errado e só se resolviam por repetição e sorte.
+ */
+function captureSourceFreeze() {
+  let commit = null;
+  let dirtyFiles = [];
+  try {
+    commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim() || null;
+  } catch (_) { commit = null; }
+  try {
+    dirtyFiles = execFileSync('git', ['status', '--porcelain'], { cwd: ROOT, encoding: 'utf8' })
+      .split('\n')
+      .map((line) => line.slice(3).trim())
+      .filter(Boolean);
+  } catch (_) { dirtyFiles = []; }
+  let fingerprint = null;
+  try {
+    fingerprint = computeSourceFingerprint(ROOT);
+  } catch (_) { fingerprint = null; }
+  return captureFreeze({ fingerprint, commit, dirtyFiles });
+}
 
 const ENVELOPE_DIR = path.join(ROOT, 'dist', 'engineering-router-v2-audit-envelope');
 const REPORT = 'engineering-router-v2-seal-execution.json';
@@ -214,7 +242,26 @@ function main() {
   }
 
   let started = !fromId;
+  const initialFreeze = captureSourceFreeze();
+  const initialFreezeAssessment = assessInitialFreeze(initialFreeze);
+  report.sourceFreeze = { initial: initialFreeze, initialDirty: initialFreezeAssessment.declared ? initialFreezeAssessment.detail : null, changes: null };
+  if (initialFreezeAssessment.declared) {
+    console.warn(`[seal-v2] ${initialFreezeAssessment.code}: ${initialFreezeAssessment.detail}`);
+  }
+
   for (const step of STEPS) {
+    // CONGELAMENTO: se o source se moveu desde o início, a certificação é inválida por construção —
+    // abortar AGORA (com o motivo nomeado) em vez de deixar a falha aparecer como defeito do
+    // subsistema que estiver rodando.
+    const currentFreeze = captureSourceFreeze();
+    const drift = compareFreeze(initialFreeze, currentFreeze);
+    if (!drift.ok) {
+      report.sourceFreeze.changes = drift.changes;
+      report.sourceDrift = { code: drift.code, detail: drift.detail, atStep: step.id };
+      console.error(`[seal-v2] ${drift.code}: ${drift.detail}`);
+      console.error(`[seal-v2] ABORTADO antes de ${step.id} — a certificação exige o source congelado`);
+      break;
+    }
     if (!started) {
       if (step.id === fromId) started = true;
       else {
@@ -239,13 +286,16 @@ function main() {
   }
 
   const derived = deriveSealStatus(report.steps);
-  report.status = derived.status;
+  report.status = report.sourceDrift ? 'NO_GO' : derived.status;
   report.failedRequired = derived.failedRequired;
   report.failedOptionalEvidence = derived.failedOptionalEvidence;
   report.evidencePendencies = derived.evidencePendencies;
   report.decisions.ENGINEERING_ROUTER_V2 = report.status;
 
   writeReport(REPORT, report);
+  if (report.sourceDrift) {
+    console.log(`[seal-v2] ${report.sourceDrift.code} em ${report.sourceDrift.atStep}`);
+  }
   for (const entry of derived.evidencePendencies) {
     console.log(`[seal-v2] EVIDÊNCIA não obrigatória em FAIL: ${entry.id} — ${entry.detail}`);
   }
