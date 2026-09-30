@@ -126,6 +126,65 @@ function getConnectedAgentsByTenant(tenantId) {
 }
 
 /**
+ * Rate limit de handshakes WebSocket por cliente.
+ *
+ * Protege o servidor contra clientes que reconectam em loop (ex.: token
+ * inválido retentando indefinidamente). Caso real de 2026-09-30: cliente em
+ * Electron/VS Code abrindo ~12 conexões/min durante horas, pressionando a API e
+ * o Postgres.
+ */
+const WS_RATE_LIMIT_POINTS = Number.parseInt(process.env.RATE_LIMIT_WS_POINTS ?? '12', 10);
+const WS_RATE_LIMIT_WINDOW_MS =
+  Number.parseInt(process.env.RATE_LIMIT_WS_DURATION ?? '60', 10) * 1000;
+const wsConnectAttempts = new Map(); // ip -> [timestamps]
+
+/**
+ * Resolve o IP do cliente considerando proxies reversos (X-Forwarded-For).
+ *
+ * @param {import('http').IncomingMessage} req
+ * @returns {string}
+ */
+function resolveClientIp(req) {
+  const forwarded = safeTrim(req?.headers?.['x-forwarded-for']);
+  if (forwarded) {
+    return safeTrim(forwarded.split(',')[0]) || 'unknown';
+  }
+  return safeTrim(req?.socket?.remoteAddress) || 'unknown';
+}
+
+/**
+ * Verifica (e registra) a taxa de handshakes WS do IP informado.
+ *
+ * @param {string} ip
+ * @returns {boolean} true quando o limite foi excedido
+ */
+function isWsConnectRateLimited(ip) {
+  if (!Number.isFinite(WS_RATE_LIMIT_POINTS) || WS_RATE_LIMIT_POINTS <= 0) {
+    return false;
+  }
+
+  const now = Date.now();
+  const windowStart = now - WS_RATE_LIMIT_WINDOW_MS;
+  const recent = (wsConnectAttempts.get(ip) || []).filter((ts) => ts > windowStart);
+  recent.push(now);
+  wsConnectAttempts.set(ip, recent);
+
+  // Limpeza oportunista: evita crescimento indefinido do mapa.
+  if (wsConnectAttempts.size > 5000) {
+    for (const [key, attempts] of wsConnectAttempts.entries()) {
+      const alive = attempts.filter((ts) => ts > windowStart);
+      if (alive.length === 0) {
+        wsConnectAttempts.delete(key);
+      } else {
+        wsConnectAttempts.set(key, alive);
+      }
+    }
+  }
+
+  return recent.length > WS_RATE_LIMIT_POINTS;
+}
+
+/**
  * Inicializa o servidor WebSocket.
  * 
  * @param {http.Server} httpServer - Servidor HTTP
@@ -140,6 +199,21 @@ function initializeWebSocket(httpServer) {
     server: httpServer,
     path: '/ws',
     clientTracking: true,
+    // Rejeita o upgrade (429) quando o cliente excede o limite de conexões por
+    // janela — evita que um cliente em loop consuma o servidor inteiro.
+    verifyClient: (info, callback) => {
+      const clientIp = resolveClientIp(info.req);
+      if (isWsConnectRateLimited(clientIp)) {
+        logger.warn('[WebSocketService] Handshake bloqueado por rate limit', {
+          clientIp,
+          points: WS_RATE_LIMIT_POINTS,
+          windowMs: WS_RATE_LIMIT_WINDOW_MS,
+        });
+        callback(false, 429, 'Too Many Requests');
+        return;
+      }
+      callback(true);
+    },
   });
 
   wss.on('error', (err) => {
@@ -666,5 +740,8 @@ module.exports = {
     clients,
     tenantClients,
     removeClient,
+    resolveClientIp,
+    isWsConnectRateLimited,
+    wsConnectAttempts,
   },
 };

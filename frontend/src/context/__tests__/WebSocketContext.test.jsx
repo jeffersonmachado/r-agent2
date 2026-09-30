@@ -79,7 +79,7 @@ global.WebSocket = MockWebSocket;
 
 // Componente de teste
 function TestComponent({ enabled = true, onEvent, subscribeEvents = [] }) {
-  const { connected, authenticated, send, reconnect } = useWebSocketContext({
+  const { connected, authenticated, authFailed, send, reconnect } = useWebSocketContext({
     enabled,
     onEvent,
     subscribeEvents,
@@ -89,6 +89,7 @@ function TestComponent({ enabled = true, onEvent, subscribeEvents = [] }) {
     <div data-testid="test-component">
       <div data-testid="connected">{connected ? 'connected' : 'disconnected'}</div>
       <div data-testid="authenticated">{authenticated ? 'authenticated' : 'not-authenticated'}</div>
+      <div data-testid="auth-failed">{authFailed ? 'auth-failed' : 'auth-ok'}</div>
       <button
         data-testid="send-button"
         onClick={() => send({ type: 'test', data: 'test-data' })}
@@ -382,6 +383,40 @@ describe('WebSocketContext', () => {
       });
       expect(testMessage).toBeTruthy();
     }, { timeout: 2000 });
+  });
+
+  it('não reconecta em loop após fechamento por falha de autenticação (4401/4403)', async () => {
+    render(
+      <WebSocketProvider>
+        <TestComponent />
+      </WebSocketProvider>
+    );
+
+    await act(async () => {
+      mockWs._simulateOpen();
+    });
+
+    const firstSocket = mockWs;
+
+    // O servidor aceita o upgrade (101) e fecha a conexão sem token válido com
+    // 4401/4403. Reconectar com o mesmo token nunca funcionaria: antes da
+    // correção isso gerava reconexão perpétua (loop de 5s observado em produção
+    // em 2026-09-30, 12 conexões/min).
+    await act(async () => {
+      firstSocket._simulateClose(4401, 'invalid_token');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-failed').textContent).toBe('auth-failed');
+    }, { timeout: 2000 });
+
+    // Aguarda além dos intervalos de reconexão (1s de backoff e o watchdog)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+    });
+
+    // Nenhuma nova conexão deve ter sido criada
+    expect(mockWs).toBe(firstSocket);
   });
 
   it('permite reconectar via reconnect', async () => {

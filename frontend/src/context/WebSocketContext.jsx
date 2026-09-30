@@ -30,6 +30,8 @@ export function WebSocketProvider({ children }) {
   const isIntentionalCloseRef = useRef(false); // Flag para evitar reconexão quando fechamos intencionalmente
   const isConnectingRef = useRef(false); // Flag para evitar múltiplas conexões simultâneas
   const authenticatedRef = useRef(false);
+  const authFailedRef = useRef(false); // Evita retentar conexão com token inválido
+  const connectedRef = useRef(false);
   const checkServerHealthRef = useRef(null);
   const isTestRuntime = Boolean(
     (typeof process !== 'undefined' && process.env && process.env.VITEST)
@@ -39,6 +41,14 @@ export function WebSocketProvider({ children }) {
   useEffect(() => {
     authenticatedRef.current = authenticated;
   }, [authenticated]);
+
+  useEffect(() => {
+    authFailedRef.current = authFailed;
+  }, [authFailed]);
+
+  useEffect(() => {
+    connectedRef.current = connected;
+  }, [connected]);
 
   const logReconnectConsole = useCallback((message, data = null) => {
     if (isTestRuntime) {
@@ -57,6 +67,13 @@ export function WebSocketProvider({ children }) {
 
   const scheduleReconnect = useCallback((reason, extra = {}) => {
     if (isIntentionalCloseRef.current) {
+      return;
+    }
+
+    // Falha de autenticação (token inválido/sem tenant): reconectar com o mesmo
+    // token nunca vai funcionar. Sem esta guarda o cliente ficava em loop
+    // perpétuo de reconexão (incidente de 2026-09-30).
+    if (authFailedRef.current) {
       return;
     }
 
@@ -291,8 +308,10 @@ export function WebSocketProvider({ children }) {
         isConnectingRef.current = false;
         setConnected(true);
         setAuthenticated(false);
-        setAuthFailed(false);
-        reconnectAttemptsRef.current = 0;
+        // NÃO zera reconnectAttemptsRef nem authFailed aqui: o servidor aceita o
+        // upgrade (101) e só depois fecha conexões sem token válido (4401/4403).
+        // Zerar no onopen anulava o backoff exponencial e produzia reconexão
+        // perpétua. O contador é zerado quando a autenticação tem sucesso.
 
         // Tenta autenticar se houver token disponível
         // Se não houver token, será autenticado quando o usuário fizer login
@@ -342,6 +361,7 @@ export function WebSocketProvider({ children }) {
               logger.info('[WebSocketContext] Autenticado com sucesso', data.agent);
               setAuthenticated(true);
               setAuthFailed(false);
+              reconnectAttemptsRef.current = 0;
               // As subscriptions serão atualizadas pelo useEffect que observa 'authenticated'
             } else {
               // Se não há token, é esperado (usuário ainda não fez login)
@@ -491,6 +511,23 @@ export function WebSocketProvider({ children }) {
           return;
         }
 
+        // Fechamento por falha de autenticação (token inválido ou sem tenant):
+        // reconectar com o mesmo token é inútil — suspende a reconexão e expõe
+        // authFailed para a UI pedir novo login.
+        if (event.code === 4401 || event.code === 4403) {
+          logger.warn('[WebSocketContext] Fechado por falha de autenticação; reconexão automática suspensa', {
+            code: event.code,
+            reason: event.reason,
+          });
+          logReconnectConsole('Falha de autenticação: reconexão automática suspensa', {
+            code: event.code,
+            reason: event.reason,
+          });
+          authFailedRef.current = true;
+          setAuthFailed(true);
+          return;
+        }
+
         // Reconecta para qualquer fechamento não intencional (inclusive código 1000)
         scheduleReconnect('onclose', {
           code: event.code,
@@ -579,16 +616,23 @@ export function WebSocketProvider({ children }) {
     window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Watchdog: rede de segurança para quando nenhuma reconexão ficou agendada.
+    // Antes rodava a cada 5s e comparava `connected` capturado na montagem
+    // (sempre false), forçando reconexão perpétua e anulando o backoff
+    // exponencial (incidente de 2026-09-30). Agora usa refs, respeita a falha de
+    // autenticação e tem intervalo folgado.
     reconnectWatchdogRef.current = setInterval(() => {
       if (isIntentionalCloseRef.current || isConnectingRef.current) return;
+      if (authFailedRef.current) return;
+      if (connectedRef.current && authenticatedRef.current) return;
       const wsState = wsRef.current?.readyState;
       const hasPendingReconnect = !!reconnectTimeoutRef.current;
 
-      if (!connected && !hasPendingReconnect && (wsState == null || wsState === WebSocket.CLOSED)) {
+      if (!connectedRef.current && !hasPendingReconnect && (wsState == null || wsState === WebSocket.CLOSED)) {
         logger.info('[WebSocketContext] Watchdog: forçando nova tentativa de conexão');
         connectRef.current();
       }
-    }, 5000);
+    }, 15000);
 
     return () => {
       // Limpa ao desmontar
@@ -670,6 +714,12 @@ export function WebSocketProvider({ children }) {
         if (currentToken && authFailed) {
           logger.debug('[WebSocketContext] Token mudou, resetando authFailed para permitir nova tentativa');
           setAuthFailed(false);
+          // Libera imediatamente as guardas e reabre o socket: o watchdog só
+          // agiria em até 15s (antes era 5s, causando o loop).
+          authFailedRef.current = false;
+          if (connectRef.current) {
+            connectRef.current();
+          }
         }
       }
     }, 500);
@@ -705,13 +755,18 @@ export function WebSocketProvider({ children }) {
       if (!connected || authenticated) {
         return;
       }
-      
+
+      // Token já reprovado pelo servidor: não insiste até haver novo login.
+      if (authFailedRef.current) {
+        return;
+      }
+
       const token = getToken();
       if (token) {
         logger.debug('[WebSocketContext] Token detectado (mesma aba), tentando autenticar...');
         authenticateWebSocket();
       }
-    }, 500); // Verifica a cada 500ms (mais frequente para detectar login rápido)
+    }, 2000); // Verifica a cada 2s (detecta login rápido sem martelar o servidor)
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
