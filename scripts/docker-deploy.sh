@@ -96,12 +96,14 @@ run_ssh_script() {
 
 for arg in "$@"; do
     if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
-        echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--force] [--pull] [--frontend-only] [--api-only] [--rag-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
+        echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--force] [--pull] [--frontend-only] [--api-only] [--rag-only] [--asterisk-only] [--redis-only] [--mcp-research-only] [--engineering-runner-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
         echo "  --force        Força a reconstrução de todas as imagens locais (ignora detecção de delta)"
         echo "  --auto|--diff  Modo diferencial explícito (detecta e constrói apenas serviços com código alterado)"
         echo "  --frontend-only Reconstrói/recria apenas o container do frontend"
         echo "  --api-only      Reconstrói/recria apenas o container da API"
         echo "  --rag-only      Reconstrói/recria apenas o container do RAG"
+        echo "  --mcp-research-only        Reconstrói/recria apenas o container do mcp-research"
+        echo "  --engineering-runner-only  Reconstrói/recria apenas o container do engineering-runner"
         echo "  --no-build     Pula o build local e reaplica os containers no servidor remoto"
         echo ""
         echo "Padrão em produção: Deploy diferencial inteligente (detecta e constrói apenas o que mudou)."
@@ -239,6 +241,18 @@ while [[ $# -gt 0 ]]; do
             AUTO_DETECT=false
             shift
             ;;
+        --mcp-research-only)
+            BUILD_SERVICES=("mcp-research")
+            EXPLICIT_SERVICE=true
+            AUTO_DETECT=false
+            shift
+            ;;
+        --engineering-runner-only)
+            BUILD_SERVICES=("engineering-runner")
+            EXPLICIT_SERVICE=true
+            AUTO_DETECT=false
+            shift
+            ;;
         --host)
             REMOTE_HOST="$2"
             shift 2
@@ -260,7 +274,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             error "Argumento desconhecido: $1"
-            echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--force] [--pull] [--frontend-only] [--api-only] [--rag-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
+            echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--force] [--pull] [--frontend-only] [--api-only] [--rag-only] [--asterisk-only] [--redis-only] [--mcp-research-only] [--engineering-runner-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
             exit 1
             ;;
     esac
@@ -467,6 +481,9 @@ SYNC_PATHS=(
     "vendor"
     # Contexto de build do serviço asterisk (docker-compose.prod.yml)
     "pbx"
+    # Contexto de build dos serviços auxiliares (Dockerfiles em services/*):
+    # mcp-research e engineering-runner são construídos a partir da raiz do repo.
+    "services"
 )
 
 info "  Diretórios/arquivos que serão sincronizados:"
@@ -696,7 +713,7 @@ detect_outdated_services() {
     if [ -z "$remote_sha" ] || [ "$remote_sha" = "sem-git" ]; then
         warn "⚠️  Nenhuma release anterior com SHA identificada em ${REMOTE_DIR}/releases/latest.txt."
         info "Primeiro deploy ou histórico ausente. Reconstruindo todas as imagens (ou use flags seletivas)."
-        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis")
+        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis" "mcp-research" "engineering-runner")
         return 0
     fi
 
@@ -706,7 +723,7 @@ detect_outdated_services() {
     if ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
         warn "⚠️  Commit $remote_sha não encontrado no histórico Git local (histórico divergiu)."
         warn "Para garantir consistência, todas as imagens serão reconstruídas (ou use --force)."
-        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis")
+        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis" "mcp-research" "engineering-runner")
         return 0
     fi
 
@@ -753,6 +770,12 @@ detect_outdated_services() {
     if echo "$all_changed" | grep -qE '^redis/'; then
         detected+=("redis")
     fi
+    if echo "$all_changed" | grep -qE '^services/mcp-research/'; then
+        detected+=("mcp-research")
+    fi
+    if echo "$all_changed" | grep -qE '^services/engineering-runner/'; then
+        detected+=("engineering-runner")
+    fi
     if echo "$all_changed" | grep -qE '^(package\.json|package-lock\.json)'; then
         [[ ! " ${detected[*]} " =~ " api " ]] && detected+=("api")
         [[ ! " ${detected[*]} " =~ " frontend " ]] && detected+=("frontend")
@@ -778,7 +801,7 @@ if [ "$MODE" = "prod" ] && [ "$BUILD" = true ]; then
     elif [ "$FORCE_BUILD" = true ]; then
         section "Forçar Rebuild Ativado (--force)"
         info "Flag --force informada: reconstruindo todas as imagens do stack..."
-        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis")
+        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis" "mcp-research" "engineering-runner")
     else
         detect_outdated_services
         if [ "$NO_CHANGES_DETECTED" = true ]; then
@@ -849,6 +872,14 @@ if [ "$BUILD" = true ]; then
                 redis)
                     build_local_image r-agent2-redis:latest redis/Dockerfile redis/
                     TRANSFER_IMAGES+=(r-agent2-redis:latest)
+                    ;;
+                mcp-research)
+                    build_local_image r-agent2-mcp-research:latest services/mcp-research/Dockerfile .
+                    TRANSFER_IMAGES+=(r-agent2-mcp-research:latest)
+                    ;;
+                engineering-runner)
+                    build_local_image r-agent2-engineering-runner:latest services/engineering-runner/Dockerfile .
+                    TRANSFER_IMAGES+=(r-agent2-engineering-runner:latest)
                     ;;
                 *)
                     error "❌ Serviço desconhecido para build local: $srv"
@@ -981,7 +1012,7 @@ else
     CHECK_IMAGES_CMD="cd ${REMOTE_DIR} && docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'r-agent2-(api|frontend|rag-service|redis):latest' || echo 'Imagens faltando'"
     IMAGES_CHECK=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "$CHECK_IMAGES_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true)
     MISSING_IMAGES=""
-    for img in r-agent2-api:latest r-agent2-frontend:latest r-agent2-rag-service:latest r-agent2-redis:latest; do
+    for img in r-agent2-api:latest r-agent2-frontend:latest r-agent2-rag-service:latest r-agent2-redis:latest r-agent2-mcp-research:latest r-agent2-engineering-runner:latest; do
         if ! echo "$IMAGES_CHECK" | grep -q "$img"; then
             MISSING_IMAGES="$MISSING_IMAGES $img"
         fi
