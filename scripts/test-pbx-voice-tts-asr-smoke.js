@@ -347,9 +347,29 @@ async function applyDialplan(baseUrl, token) {
   return String(out.payload?.signature || '');
 }
 
+// Seleciona o CDR que pertence a ESTA chamada.
+// Um CDR com o mesmo `dst` mas anterior ao originate — inclusive de uma execucao
+// anterior do proprio smoke — nao prova nada sobre a chamada atual. Aceitar
+// qualquer um foi um FALSO POSITIVO medido em 2026-09-30 (evidencia gerada
+// 23:28:10 para chamada originada 23:28:04 reportou o CDR de 23:27:09).
+// Criterio: mesmo dst, calldate >= originate - tolerancia, o mais antigo.
+function selectCorrelatedCdr(items, { extension, originatedAtMs, toleranceMs = 5000 } = {}) {
+  const limit = Number(originatedAtMs) - Number(toleranceMs);
+  return (Array.isArray(items) ? items : [])
+    .filter((it) => String(it?.dst || '') === String(extension))
+    .filter((it) => {
+      const calledAt = Date.parse(String(it?.calldate || ''));
+      return Number.isFinite(calledAt) && calledAt >= limit;
+    })
+    .sort((a, b) => Date.parse(String(a?.calldate || '')) - Date.parse(String(b?.calldate || '')))[0] || null;
+}
+
 async function originateRealCall({ baseUrl, token, tenantId, extension, callId }) {
   const syntheticOriginateAllowed = String(process.env.L03_ALLOW_SYNTHETIC_ORIGINATE || 'true').toLowerCase() !== 'false';
   const originateEnabled = String(process.env.AMI_ORIGINATE_ENABLED || '').toLowerCase() === 'true';
+  // Ancoro temporal da prova de CDR: capturado ANTES do originate para que o
+  // registro gerado por esta chamada nunca fique fora da janela aceita.
+  const originatedAtMs = Date.now();
   const create = await reqJson(`${baseUrl}/api/cc/click2call`, {
     method: 'POST',
     token,
@@ -398,15 +418,28 @@ async function originateRealCall({ baseUrl, token, tenantId, extension, callId }
   }
   expect(click2callStatus === 'originated', `click2call_not_originated:${click2callStatus || 'unknown'}`);
 
+  // A prova exige o CDR DESTA chamada. Sem ancorar no instante do originate,
+  // qualquer CDR anterior com o mesmo dst satisfazia a busca — medido em
+  // 2026-09-30: evidencia gerada 23:28:10 para chamada originada 23:28:04
+  // reportou o CDR de 23:27:09 (pertencente a execucao anterior; falso
+  // positivo de prova) e, quando so havia CDR antigo fora da janela, o mesmo
+  // codigo devolvia cdrFound=false (falso negativo). Ancorar em originatedAtMs
+  // e escolher o registro mais antigo >= originatedAtMs - tolerancia torna o
+  // sinal rastreavel a execucao.
+  const cdrToleranceMs = 5000;
+  const fromIso = new Date(originatedAtMs - 5 * 60_000).toISOString();
   let cdrItem = null;
-  const fromIso = new Date(Date.now() - 5 * 60_000).toISOString();
   for (let i = 0; i < 90; i += 1) {
     const cdr = await reqJson(
       `${baseUrl}/api/pbx/cdr?limit=80&from=${encodeURIComponent(fromIso)}&dst=${encodeURIComponent(extension)}`,
       { method: 'GET', token },
     );
     expect(cdr.ok && Array.isArray(cdr.payload?.items), `pbx_cdr_list_failed:${cdr.status}`);
-    cdrItem = cdr.payload.items.find((it) => String(it?.dst || '') === extension) || null;
+    cdrItem = selectCorrelatedCdr(cdr.payload.items, {
+      extension,
+      originatedAtMs,
+      toleranceMs: cdrToleranceMs,
+    });
     if (cdrItem) break;
     await sleep(1000);
   }
@@ -637,4 +670,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main };
+module.exports = { main, selectCorrelatedCdr };

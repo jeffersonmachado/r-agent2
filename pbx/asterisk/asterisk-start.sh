@@ -72,4 +72,28 @@ else
   echo "asterisk[odbc]: PBX_ODBC_* ausente/parcial; usando /etc/odbc.ini montado (default canonico)"
 fi
 
+# Preflight de conectividade do DSN antes de subir o Asterisk.
+# res_odbc resolve o DSN no load (pre-connect => yes) e, se o Postgres ainda nao
+# estiver acessivel nesse instante, o backend de CDR (cdr_adaptive_odbc) fica
+# sem conexao e PARA de gravar CDR em silencio — nenhuma retentativa o recupera,
+# so um `module reload` manual. Medido em 2026-09-30: falha de conexao gravada
+# no boot (13:22) e ~10h de chamadas atendidas sem nenhum CDR real, zerando o
+# sinal `cdr` da prova PBX prod-like e travando o converge de governanca.
+# Esperar a porta aqui elimina o race de boot.
+if [ -n "${PBX_ODBC_HOST:-}" ] && [ -n "${PBX_ODBC_PORT:-}" ] && command -v bash >/dev/null 2>&1; then
+  _odbc_wait="${PBX_ODBC_WAIT_ATTEMPTS:-60}"
+  _odbc_try=0
+  while [ "$_odbc_try" -lt "$_odbc_wait" ]; do
+    if bash -c "exec 3<>/dev/tcp/${PBX_ODBC_HOST}/${PBX_ODBC_PORT}" 2>/dev/null; then
+      echo "asterisk[odbc]: Postgres acessivel em ${PBX_ODBC_HOST}:${PBX_ODBC_PORT} (tentativa $((_odbc_try + 1)))"
+      break
+    fi
+    _odbc_try=$((_odbc_try + 1))
+    sleep 1
+  done
+  if [ "$_odbc_try" -ge "$_odbc_wait" ]; then
+    echo "asterisk[odbc]: AVISO Postgres inacessivel em ${PBX_ODBC_HOST}:${PBX_ODBC_PORT} apos ${_odbc_wait}s; CDR nao gravara ate o banco responder" >&2
+  fi
+fi
+
 exec asterisk -f -vvvvv -d
