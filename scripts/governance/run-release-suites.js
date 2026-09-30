@@ -225,7 +225,8 @@ function main() {
   // Sem runId/sourceFingerprint gravados AQUI, um relatório de outro run (ou de outro código) era
   // aceito como prova deste — gap medido em 2026-09-30 pelo binding do ciclo de bug
   // (EVIDENCE_LINEAGE_MISSING em reports/release-suite-execution.json).
-  const { applyOriginLineage } = require('./lib/resolve-run-lineage');
+  const { applyOriginLineage, resolveRunLineage } = require('./lib/resolve-run-lineage');
+  const lineage = resolveRunLineage({ rootDir: ROOT });
   const report = applyOriginLineage({
     artifactType: 'release-suite-execution-report',
     artifactVersion: '1.0.0',
@@ -243,7 +244,7 @@ function main() {
     results: [],
     violations: [],
     violationCount: 0,
-  });
+  }, lineage);
 
   if (!manifest.ok) {
     // Manifesto inconsistente = nada a executar com confiança. Fail-closed.
