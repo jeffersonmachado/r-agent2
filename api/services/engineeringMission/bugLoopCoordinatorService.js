@@ -23,12 +23,31 @@ const bugReproductionService = require('./bugReproductionService');
 const bugTriageService = require('./bugTriageService');
 const engineeringTaskService = require('../engineeringRouter/engineeringTaskService');
 const { runTask } = require('../engineeringRouter/engineeringRouterService');
-const missionOrchestratorService = require('./missionOrchestratorService');
 const missionStore = require('./missionStoreService');
 const logger = require('../../utils/logger');
 
+/**
+ * Lazy require do orquestrador: existe DEPENDÊNCIA CIRCULAR (orquestrador → coordinator para o hook
+ * de falha; coordinator → orquestrador para retomar a missão). Com o require no topo, um dos lados
+ * recebe um objeto PARCIAL — medido em 2026-09-30: `startExecution is not a function`, o que
+ * silenciava a retomada da missão (`replacementTaskId` nulo). Mesmo padrão já usado por
+ * `missionRecoveryCoordinator` e `missionReviewService`.
+ */
+function orchestratorService() {
+  return require('./missionOrchestratorService');
+}
+
 const PLATFORM_TENANT_ID = 'system';
 const DEFAULT_MAX_FIX_ATTEMPTS = 2;
+/**
+ * GUARDA DE RECURSÃO (§policy de proteção contra explosão recursiva). Um finding que reincide mais
+ * que este limite indica correção que NÃO resolve — insistir vira laço infinito. Não é timeout
+ * global: é limite por finding, com evidência persistida.
+ */
+const MAX_FINDING_RECURRENCE = (() => {
+  const raw = Number(process.env.ENGINEERING_BUG_LOOP_MAX_RECURRENCE);
+  return Number.isFinite(raw) && raw > 0 ? raw : 3;
+})();
 
 function models() {
   const index = require('../../db/models');
@@ -265,16 +284,164 @@ async function runFixLoop(findingId, {
 }
 
 /**
+ * RETOMADA REAL DA MISSÃO ORIGINAL (BUG-11 / §"continuar de onde deve").
+ *
+ * Não basta mudar status: o caminho normal precisa VOLTAR a executar. O mecanismo canônico de
+ * continuação já existe no orquestrador (`startExecution` → cria a task substituta a partir da
+ * MissionSpec aprovada e supersede a task que falhou, sob lease). Aqui apenas se decide e se
+ * registra a linhagem exigida pela missão:
+ *   originalTaskId, findingId, fixTaskId, replacementTaskId, missionId, MissionSpec version/hash.
+ *
+ * A decisão é explícita e persistida (`decision`), nunca implícita:
+ *   - REPLACE_TASK_RESUME_PHASE — task original falhou e a missão retoma por task substituta;
+ *   - RESUME_CHECKPOINT        — task original está GREEN (o fix resolveu sem nova execução);
+ *   - NOT_EXECUTABLE           — missão não está executável (policy/approval) e o motivo é gravado.
+ */
+async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = null, actor = null, tenantId = null, execute = true } = {}) {
+  if (!missionId) return { resumed: false, reason: 'mission_id_ausente' };
+  const mission = await missionStore.getMission(missionId);
+  if (!mission) return { resumed: false, reason: 'mission_not_found', missionId };
+
+  const originalTaskId = mission.linked_task_id || null;
+  const originalTask = originalTaskId ? await engineeringTaskService.getTask(originalTaskId).catch(() => null) : null;
+  const decision = originalTask && originalTask.status === 'GREEN'
+    ? 'RESUME_CHECKPOINT'
+    : 'REPLACE_TASK_RESUME_PHASE';
+
+  const lineage = {
+    missionId,
+    originalTaskId,
+    findingId,
+    fixTaskId,
+    replacementTaskId: null,
+    missionSpecVersion: mission.spec_version ?? mission.specVersion ?? null,
+    missionSpecHash: mission.spec_hash ?? mission.specHash ?? null,
+    decision,
+    decidedAt: new Date().toISOString(),
+    actor,
+  };
+
+  if (!execute) {
+    return { resumed: false, reason: 'execute=false', decision, lineage };
+  }
+
+  try {
+    const orch = orchestratorService();
+    // REABERTURA CONTROLADA. Uma falha técnica deixa a missão em FAILED (estado TERMINAL) e o CAS
+    // de lease RECUSA estado terminal — sem reabrir, a missão nunca voltaria a executar (medido:
+    // `MISSION_TERMINAL_OR_UNKNOWN`). A reabertura é decisão REGISTRADA e vale apenas para falha
+    // técnica (FAILED). BLOCKED/DEGRADED/REJECTED/CANCELLED continuam exigindo decisão HUMANA:
+    // o laço NUNCA auto-aprova o que a policy reserva a gente.
+    const AUTO_REOPENABLE = ['FAILED'];
+    const HUMAN_ONLY = ['BLOCKED', 'DEGRADED', 'REJECTED', 'CANCELLED'];
+    const missionStatus = String(mission.status || '');
+    let reopenedFrom = null;
+    if (AUTO_REOPENABLE.includes(missionStatus)) {
+      await missionStore.updateMission(missionId, { status: 'EXECUTING' });
+      reopenedFrom = missionStatus;
+      lineage.reopenedFrom = reopenedFrom;
+      lineage.decision = 'MISSION_REOPENED_AFTER_FIX';
+    } else if (HUMAN_ONLY.includes(missionStatus)) {
+      lineage.decision = 'NOT_EXECUTABLE';
+      lineage.reason = `missão em ${missionStatus} exige decisão humana`;
+      await missionStore.mergeMissionJson(missionId, {
+        resume: { bugLoop: { lastResumeAt: new Date().toISOString(), findingId, lineage } },
+      }).catch(() => {});
+      logger.warn('[bugLoopCoordinator] retomada não é automática para este estado', { missionId, status: missionStatus, findingId });
+      return { resumed: false, decision: 'NOT_EXECUTABLE', missionId, reason: lineage.reason, lineage };
+    }
+    // POSSE DA MISSÃO na retomada. Sem posse administrativa (que ESPERA o dono vivo e tolera
+    // estado terminal sem lease), a execução falhava com MISSION_LOCKED_BY_OTHER_WORKER — medido
+    // em 2026-09-30: a missão ficava vinculada mas nunca voltava a executar. O lease é PROPAGADO
+    // ao orquestrador (mesmo token/fence), nunca disputado com outra identidade.
+    const outcome = await orch.withMissionLease(missionId, null, async ({ lease }) => {
+      const TERMINAL_TASK_STATUSES = ['RED', 'GREEN', 'FAILED', 'CANCELLED', 'READY_FOR_PROMOTION'];
+      let replacementTaskId = null;
+      if (originalTask && TERMINAL_TASK_STATUSES.includes(String(originalTask.status))) {
+        // A task original está em estado TERMINAL. O Router é idempotente por design: `runTask`
+        // numa task terminal devolve o estado atual SEM reexecutar, e retomar task terminal é
+        // proibido (`TASK_ALREADY_TERMINAL_DURING_RESUME`). A continuação canônica da missão é
+        // uma TASK SUBSTITUTA sob o MESMO contrato de spec, criada pelos serviços existentes
+        // (`buildTaskContract` + `createTask` + binding + `linkTask`) — sem duplicar o orquestrador.
+        const approvalService = require('./missionApprovalService');
+        const taskSpecBinding = require('./taskSpecBindingService');
+        const { spec, approval } = await approvalService.assertMissionExecutable(missionId);
+        const contract = orch.buildTaskContract(spec, { createdBy: actor });
+        const created = await engineeringTaskService.createTask(contract, {
+          createdBy: actor,
+          idempotencyKey: `mission:${missionId}:postbug:${findingId || 'na'}`,
+        });
+        replacementTaskId = created.id;
+        await taskSpecBinding.bindTaskToSpec({ taskId: created.id, missionId, spec, approval })
+          .catch((err) => logger.warn('[bugLoopCoordinator] falha ao vincular spec na task substituta', { missionId, taskId: created.id, error: err.message }));
+        await missionStore.linkTask({ missionId, taskId: created.id });
+        lineage.decision = 'REPLACE_TASK_RESUME_PHASE';
+        lineage.supersededTaskId = originalTaskId;
+      } else {
+        // Sem task (ou task ainda executável): o próprio orquestrador inicia/retoma, com a
+        // idempotência dele (missionId + versão da spec) e o lease já adquirido.
+        const execution = await orch.startExecution(missionId, { actor, tenantId, ...(lease ? { lease } : {}) });
+        replacementTaskId = execution?.task?.id || null;
+      }
+      lineage.replacementTaskId = replacementTaskId;
+      // A retomada precisa ser OBSERVÁVEL: vincular/criar a task não basta — a missão volta a
+      // EXECUTAR pelo caminho canônico. Sem isto, ficaria "EXECUTING" sem atividade subsequente.
+      const resumedRun = await orch.runMissionTask(missionId, { tenantId, ...(lease ? { missionLease: lease } : {}) })
+        .then((run) => ({ status: run?.result?.status || null }))
+        .catch((err) => ({ error: { code: err.code || null, message: err.message } }));
+      return { replacementTaskId, resumedRun };
+    }, { administrative: true, heartbeat: true });
+
+    lineage.replacementTaskId = outcome?.replacementTaskId || null;
+    lineage.resumedRun = outcome?.resumedRun || null;
+    if (!reopenedFrom && lineage.decision !== 'REPLACE_TASK_RESUME_PHASE' && lineage.replacementTaskId === originalTaskId) {
+      lineage.decision = 'RETRY_ORIGINAL_TASK';
+    }
+    await missionStore.mergeMissionJson(missionId, {
+      resume: { bugLoop: { lastResumeAt: lineage.decidedAt, findingId, lineage } },
+    }).catch((err) => logger.warn('[bugLoopCoordinator] falha ao persistir linhagem de retomada', { missionId, error: err.message }));
+    logger.info('[bugLoopCoordinator] missão original retomada', {
+      missionId,
+      originalTaskId,
+      replacementTaskId: lineage.replacementTaskId,
+      decision: lineage.decision,
+      findingId,
+      resumedStatus: lineage.resumedRun?.status || null,
+    });
+    return {
+      resumed: true,
+      decision: lineage.decision,
+      missionId,
+      originalTaskId,
+      replacementTaskId: lineage.replacementTaskId,
+      resumedRun: lineage.resumedRun,
+      status: lineage.resumedRun?.status || null,
+      lineage,
+    };
+  } catch (err) {
+    // Guard de policy/approval (missão não executável) NÃO é falha do laço: é motivo declarado.
+    const blocked = /APPROVAL|POLICY|NOT_EXECUTABLE|SPEC/i.test(String(err.code || err.message || ''));
+    lineage.decision = blocked ? 'NOT_EXECUTABLE' : decision;
+    lineage.error = { code: err.code || null, message: err.message };
+    await missionStore.mergeMissionJson(missionId, {
+      resume: { bugLoop: { lastResumeAt: lineage.decidedAt, findingId, lineage } },
+    }).catch(() => {});
+    logger.warn('[bugLoopCoordinator] retomada da missão não executou', { missionId, code: err.code || null, message: err.message });
+    return { resumed: false, decision: lineage.decision, missionId, originalTaskId, reason: err.message, code: err.code || null, lineage };
+  }
+}
+
+/**
  * Retoma a MISSÃO ORIGINAL (BUG-11). Não reinicia nada nem cria missão nova: reconcilia o estado da
  * missão existente com a task real e registra que o ponto de retorno foi atingido.
  */
 async function continueMission(missionId, { actor = null, tenantId = null, findingId = null } = {}) {
   const mission = await missionStore.getMission(missionId);
   if (!mission) return { resumed: false, reason: 'mission_not_found', missionId };
-  const detail = await missionOrchestratorService.refreshMissionState(missionId, { tenantId });
+  const detail = await orchestratorService().refreshMissionState(missionId, { tenantId });
   await missionStore.mergeMissionJson(missionId, {
-    bugLoop: { lastResumeAt: new Date().toISOString(), findingId, actor },
-  }).catch(() => {});
+    resume: { bugLoop: { lastResumeAt: new Date().toISOString(), findingId, actor } },
+  }).catch((err) => logger.warn('[bugLoopCoordinator] falha ao persistir retomada', { missionId, error: err.message }));
   const refreshed = await missionStore.getMission(missionId);
   return {
     resumed: true,
@@ -424,17 +591,65 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
   const status = String(result.status || 'UNKNOWN');
   const title = `Missão ${missionId}: task ${taskId} terminou em ${status}${result.reasonCode ? ` (${result.reasonCode})` : ''}`;
 
+  // DERIVAÇÃO AUTOMÁTICA DA REPRODUÇÃO (§ caminho normal). A falha já carrega contexto real
+  // (TestRun que falhou, RegressionRun, `test_commands` da task, reasonCode determinístico):
+  // sem isto o finding nasceria sem plano, o laço pararia em NO_REPRODUCTION_PLAN e o ciclo
+  // autônomo nunca sairia de SUSPECTED. Nada é inventado — só se deriva de dado real.
+  const providedReproduction = (extra.reproduction && Object.keys(extra.reproduction).length > 0) ? extra.reproduction : null;
+  // CONTEXTO REAL DA TASK que falhou: é dele que saem o comando de reprodução e os paths afetados.
+  // Sem os paths, a triagem nasce sem `allowedPaths` e a correção nunca consegue aplicar patch
+  // (medido 2026-09-30 no E2E do caminho natural: finding CONFIRMED → FIXING e preso, porque
+  // `affected_files` ia vazio e a spec da missão não é a fonte do contrato da task).
+  const failingTask = await engineeringTaskService.getTask(taskId).catch(() => null);
+  const derivedAffectedFiles = (Array.isArray(extra.affectedFiles) && extra.affectedFiles.length > 0)
+    ? extra.affectedFiles
+    : (Array.isArray(failingTask?.allowed_paths) ? failingTask.allowed_paths : []);
+  let derivation = null;
+  if (!providedReproduction) {
+    try {
+      const attemptId = result.attemptId
+        || (await engineeringTaskService.listAttempts(taskId).catch(() => []))?.slice(-1)?.[0]?.id
+        || null;
+      const testRuns = attemptId ? await readTestRuns(attemptId) : [];
+      derivation = engine.deriveReproductionPlan({
+        task: failingTask,
+        result,
+        testRuns,
+        source: extra.source || 'EXCEPTION',
+        reasonCode: result.reasonCode || null,
+      });
+    } catch (err) {
+      logger.warn('[bugLoopCoordinator] falha ao derivar plano de reprodução', { missionId, taskId, error: err.message });
+    }
+  }
+
+  const reproduction = providedReproduction || (derivation && derivation.derived
+    ? {
+      ...(derivation.command ? { command: derivation.command, expect: derivation.expect } : {}),
+      ...(derivation.invariants ? { invariants: derivation.invariants } : {}),
+      derivation: { available: true, strategy: derivation.strategy, reason: derivation.reason },
+    }
+    : { derivation: { available: false, strategy: derivation?.strategy || 'NONE', reason: derivation?.reason || 'sem contexto de execução disponível no hook' } });
+
+  const derivationEvidence = (derivation?.evidence || []).map((item) => ({ ...item, source: 'bugLoopCoordinatorService.hookMissionFailure' }));
+
   // PROCEDÊNCIA (§ não confundir trabalho real com verificação). Uma missão criada por um script de
-  // VERIFICAÇÃO/gate (`verify-real-task-recovery`, `verify-mission-crash-recovery`) ou por suíte Jest
-  // produz falhas REAIS, mas não é trabalho de engenharia: o finding continua sendo REGISTRADO
-  // (visível, auditável, com occorrências) e não é silenciado — apenas não vira item de correção no
-  // laço, porque "consertar" uma missão de verificação seria trabalho sobre um artefato de prova.
-  // Nenhuma detecção é enfraquecida: a classificação continua igual; muda só a ROTEABILIDADE.
+  // VERIFICAÇÃO/gate (`verify-real-task-recovery`, `verify-mission-crash-recovery`) produz falhas
+  // REAIS, mas não é trabalho de engenharia: o finding continua sendo REGISTRADO (visível,
+  // auditável, com occorrências) e não é silenciado — apenas não vira item de correção no laço,
+  // porque "consertar" uma missão de verificação seria trabalho sobre um artefato de prova.
+  //
+  // DEFEITO CORRIGIDO (medido 2026-09-30 pelo E2E do caminho natural): a classificação também
+  // capturava qualquer `created_by` que começasse com `jest`/`test`/`e2e`. Isso silenciava
+  // findings LEGÍTIMOS de missões reais criadas por suíte de teste (o finding confirmava e ficava
+  // preso em CONFIRMED com `SKIPPED_VERIFICATION_PROVENANCE`). A marcação agora é PRECISA: apenas
+  // criadores de verificação (`verify-*`) são artefato de prova; suíte que exercita o caminho real
+  // é trabalho normal e DEVE ser corrigida.
   let provenance = extra.provenance || 'WORK';
   try {
     const mission = await missionStore.getMission(missionId);
     const createdBy = String(mission?.created_by || '');
-    if (/^(verify[-_]|jest|test\b|e2e)/i.test(createdBy)) provenance = 'VERIFICATION';
+    if (/^verify[-_]/i.test(createdBy)) provenance = 'VERIFICATION';
   } catch (err) {
     logger.warn('[bugLoopCoordinator] falha ao resolver proveniência da missão', { missionId, error: err.message });
   }
@@ -453,14 +668,14 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
     symbol: `mission_task:${status}`,
     signals: [],
     affectedSubsystems: extra.affectedSubsystems || [],
-    affectedFiles: extra.affectedFiles || [],
-    reproduction: extra.reproduction || {},
+    affectedFiles: derivedAffectedFiles,
+    reproduction,
     evidenceRefs: [{
       type: 'ARTIFACT',
       ref: `engineering_task:${taskId}`,
       detail: `task ${taskId} terminal em ${status}`,
       source: 'bugLoopCoordinatorService.hookMissionFailure',
-    }],
+    }, ...derivationEvidence],
   }, { actor, tenantId });
 }
 
@@ -471,24 +686,65 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
  *   - com task e sem correção executada → executa o fix loop pelo Router.
  * Idempotente: nunca duplica task e nunca reabre ciclo já fechado.
  */
+/**
+ * POSSE DURÁVEL de um finding durante o processamento (§“dois workers não corrigem o mesmo
+ * finding”). Lease adquirido por CAS no banco + heartbeat enquanto o trabalho roda + fence
+ * monotônico; se o processo morrer, o lease EXPIRA e o próximo worker assume — sem lease vitalício
+ * e sem posse por PID/tempo local.
+ *
+ * `workerInstanceId` ausente (chamadas administrativas/testes) mantém o comportamento sem posse,
+ * explicitamente, em vez de fingir exclusividade.
+ */
+async function withFindingLease(findingId, workerInstanceId, fn, { ttlMs = null } = {}) {
+  if (!workerInstanceId) return fn({ lease: null });
+  let lease;
+  try {
+    lease = await bugFindingService.acquireFindingLease(findingId, { workerInstanceId, ...(ttlMs ? { ttlMs } : {}) });
+  } catch (err) {
+    if (err.code === 'FINDING_LEASE_HELD_BY_OTHER_WORKER') return { skipped: true, code: err.code, lease: err.lease };
+    throw err;
+  }
+  const ttl = ttlMs || bugFindingService.DEFAULT_LEASE_TTL_MS;
+  const heartbeat = setInterval(() => {
+    bugFindingService.heartbeatFindingLease(findingId, { token: lease.token, ttlMs: ttl }).catch((err) => {
+      logger.warn('[bugLoopCoordinator] heartbeat do lease do finding falhou', { findingId, code: err.code || null });
+    });
+  }, Math.max(5000, Math.floor(ttl / 3)));
+  if (typeof heartbeat.unref === 'function') heartbeat.unref();
+  try {
+    return await fn({ lease });
+  } finally {
+    clearInterval(heartbeat);
+    await bugFindingService.releaseFindingLease(findingId, { token: lease.token }).catch(() => {});
+  }
+}
+
 async function runBugLoopSweep({
   limit = 10, actor = 'SYSTEM:BUG_LOOP', tenantId = null, autoFix = true,
   runner = bugReproductionService.defaultRunner, invariantResults = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
-  allowedPaths = null, policy = null,
+  allowedPaths = null, policy = null, resumeMission = true, workerInstanceId = null,
 } = {}) {
-  const summary = { scanned: 0, confirmed: 0, triaged: 0, fixed: 0, awaitedApproval: 0, items: [] };
+  const summary = { scanned: 0, confirmed: 0, triaged: 0, fixed: 0, awaitedApproval: 0, resumed: 0, blockedRecursive: 0, leaseSkipped: 0, items: [] };
 
   const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit });
   for (const finding of pending) {
     summary.scanned += 1;
-    const plan = bugReproductionService.buildPlan(finding);
-    if (plan.kind === 'UNAVAILABLE') {
-      summary.items.push({ findingId: finding.id, action: 'NO_REPRODUCTION_PLAN' });
+    const owned = await withFindingLease(finding.id, workerInstanceId, async () => {
+      const plan = bugReproductionService.buildPlan(finding);
+      if (plan.kind === 'UNAVAILABLE') {
+        // Motivo EXPLÍCITO persistido na derivação: nunca um silêncio que finge ausência de plano.
+        return { action: 'NO_REPRODUCTION_PLAN', detail: finding.reproduction?.derivation?.reason || plan.rationale || null };
+      }
+      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
+      if (reproduction.outcome === 'REPRODUCED') summary.confirmed += 1;
+      return { action: 'REPRODUCED', outcome: reproduction.outcome };
+    });
+    if (owned?.skipped) {
+      summary.leaseSkipped += 1;
+      summary.items.push({ findingId: finding.id, action: 'SKIPPED_LEASE_HELD', leaseWorker: owned.lease?.worker || null });
       continue;
     }
-    const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
-    summary.items.push({ findingId: finding.id, action: 'REPRODUCED', outcome: reproduction.outcome });
-    if (reproduction.outcome === 'REPRODUCED') summary.confirmed += 1;
+    summary.items.push({ findingId: finding.id, ...owned });
   }
 
   const confirmed = await bugFindingService.listFindings({ status: ['CONFIRMED', 'FIXING'], limit });
@@ -499,33 +755,112 @@ async function runBugLoopSweep({
       summary.items.push({ findingId: finding.id, action: 'SKIPPED_VERIFICATION_PROVENANCE' });
       continue;
     }
+    // GUARDA DE RECURSÃO: correção que reincide além do limite para de tentar e fica BLOCKED com
+    // evidência (nunca laço infinito, nunca silêncio).
+    if ((finding.recurrence_count || 0) >= MAX_FINDING_RECURRENCE) {
+      await bugFindingService.blockFinding(finding.id, {
+        actor,
+        dependency: 'BUG_RECURSION_GUARD',
+        evidence: [bugFindingService.makeEvidence({
+          type: 'LOG_CORRELATION',
+          ref: `recurrence:${finding.recurrence_count}`,
+          detail: `finding reincidiu ${finding.recurrence_count}x (limite ${MAX_FINDING_RECURRENCE}) — a correção anterior não resolveu`,
+          source: 'bugLoopCoordinatorService.runBugLoopSweep',
+        })],
+        minimumHumanAction: 'revisar por que a correção não resolveu: o bug voltou acima do limite de política',
+        tenantId,
+      });
+      summary.blockedRecursive += 1;
+      summary.items.push({ findingId: finding.id, action: 'BLOCKED_RECURSIVE_FAILURE', recurrenceCount: finding.recurrence_count });
+      continue;
+    }
     if (!finding.fix_task_id) {
-      const triage = await bugTriageService.triage(finding.id, { actor, tenantId, allowedPaths, policy });
-      summary.triaged += 1;
-      summary.items.push({ findingId: finding.id, action: 'TRIAGED', taskId: triage.fixTask?.id || null });
-      if (triage.requiresHumanApproval || triage.requiresNonApplicationAction) {
-        if (triage.requiresHumanApproval) summary.awaitedApproval += 1;
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
+        const triage = await bugTriageService.triage(finding.id, { actor, tenantId, allowedPaths, policy });
+        if (triage.requiresHumanApproval || triage.requiresNonApplicationAction) {
+          return {
+            triaged: true,
+            action: triage.requiresHumanApproval ? 'AWAITING_HUMAN_APPROVAL' : 'CONFIRMED_NON_APPLICATION_ACTION',
+            taskId: triage.fixTask?.id || null,
+            requiresHumanApproval: triage.requiresHumanApproval === true,
+          };
+        }
+        if (!autoFix) return { triaged: true, action: 'TRIAGED', taskId: triage.fixTask?.id || null };
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+        if (fix.blocked) return { action: 'AWAITING_HUMAN_APPROVAL', code: fix.code, requiresHumanApproval: true };
+        return { action: 'FIX_LOOP', status: fix.finding?.status || null, closed: Boolean(fix.closed) };
+      });
+      if (outcome?.skipped) {
+        summary.leaseSkipped += 1;
+        summary.items.push({ findingId: finding.id, action: 'SKIPPED_LEASE_HELD', leaseWorker: outcome.lease?.worker || null });
         continue;
       }
-      if (!autoFix) continue;
-      const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
-      if (fix.blocked) {
-        summary.awaitedApproval += 1;
-        summary.items.push({ findingId: finding.id, action: 'AWAITING_HUMAN_APPROVAL', code: fix.code });
-        continue;
-      }
-      if (fix.closed) summary.fixed += 1;
-      summary.items.push({ findingId: finding.id, action: 'FIX_LOOP', status: fix.finding?.status || null, closed: Boolean(fix.closed) });
+      if (outcome.triaged) summary.triaged += 1;
+      if (outcome.requiresHumanApproval) summary.awaitedApproval += 1;
+      if (outcome.closed) summary.fixed += 1;
+      summary.items.push({ findingId: finding.id, ...outcome });
       continue;
     }
     if (finding.status === 'FIXING' && autoFix) {
-      const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
-      if (fix.executed && fix.closed) summary.fixed += 1;
-      summary.items.push({ findingId: finding.id, action: 'FIX_LOOP_RESUME', status: fix.finding?.status || null });
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+        return { action: 'FIX_LOOP_RESUME', status: fix.finding?.status || null, closed: Boolean(fix.executed && fix.closed) };
+      });
+      if (outcome?.skipped) {
+        summary.leaseSkipped += 1;
+        summary.items.push({ findingId: finding.id, action: 'SKIPPED_LEASE_HELD', leaseWorker: outcome.lease?.worker || null });
+        continue;
+      }
+      if (outcome.closed) summary.fixed += 1;
+      summary.items.push({ findingId: finding.id, ...outcome });
+    }
+  }
+
+  // ── RETOMADA DA MISSÃO ORIGINAL (caminho normal, sem chamada manual). Finding CLOSED com missão
+  // vinculada faz a missão VOLTAR a executar pelo caminho canônico (`startExecution` → task
+  // substituta sob lease). Idempotente pela linhagem persistida e resiliente a crash: se o processo
+  // morreu entre o fechamento e o resume, o próximo worker assume e conclui.
+  if (resumeMission) {
+    const closedFindings = await bugFindingService.listFindings({ status: ['CLOSED'], limit });
+    for (const finding of closedFindings) {
+      if (!finding.mission_id) continue;
+      const recorded = await isMissionResumeRecorded(finding.mission_id, finding.id);
+      if (recorded) {
+        summary.items.push({ findingId: finding.id, action: 'MISSION_RESUME_ALREADY_DONE' });
+        continue;
+      }
+      const resume = await resumeOriginalMission({
+        missionId: finding.mission_id,
+        findingId: finding.id,
+        fixTaskId: finding.fix_task_id || null,
+        actor,
+        tenantId,
+      });
+      if (resume.resumed) summary.resumed += 1;
+      summary.items.push({
+        findingId: finding.id,
+        action: 'MISSION_RESUME',
+        resumed: Boolean(resume.resumed),
+        decision: resume.decision || null,
+        replacementTaskId: resume.replacementTaskId || null,
+        reason: resume.reason || null,
+      });
     }
   }
 
   return summary;
+}
+
+/** Linhagem já registra a retomada deste finding? (idempotência do resume) */
+async function isMissionResumeRecorded(missionId, findingId) {
+  try {
+    const mission = await missionStore.getMission(missionId);
+    const recorded = mission?.resume_metadata?.bugLoop?.lineage?.findingId || null;
+    return Boolean(recorded && recorded === findingId);
+  } catch (err) {
+    logger.warn('[bugLoopCoordinator] falha ao checar linhagem de retomada', { missionId, error: err.message });
+    return false;
+  }
 }
 
 module.exports = {
@@ -536,6 +871,8 @@ module.exports = {
   readTestRuns,
   runFixLoop,
   continueMission,
+  resumeOriginalMission,
+  withFindingLease,
   handleAnomaly,
   ingestTelemetry,
   diagnoseNoProgress,

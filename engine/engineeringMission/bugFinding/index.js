@@ -13,6 +13,7 @@ const fingerprint = require('./fingerprint');
 const classification = require('./classification');
 const lifecycle = require('./lifecycle');
 const reproductionPlan = require('./reproductionPlan');
+const reproductionDerivation = require('./reproductionDerivation');
 const selfModification = require('./selfModification');
 const anomalyDetection = require('./anomalyDetection');
 const routing = require('./routing');
@@ -23,6 +24,7 @@ module.exports = {
   ...classification,
   ...lifecycle,
   ...reproductionPlan,
+  ...reproductionDerivation,
   ...selfModification,
   ...anomalyDetection,
   ...routing,

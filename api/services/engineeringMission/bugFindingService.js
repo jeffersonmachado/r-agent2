@@ -145,6 +145,108 @@ function emitFindingStage(tenantId, finding, stage, { status = 'info', message, 
  * REINCIDÊNCIA (BUG-17/18): finding já FIXED/REGRESSION_VALIDATED/CLOSED que reaparece volta para
  * CONFIRMED com `recurrence_count` incrementado e severidade escalada.
  */
+/** Busca o finding NÃO terminal do mesmo escopo (fingerprint + missão quando declarada). */
+async function findNonTerminalFinding({ fingerprint, missionId = null }) {
+  const rows = await model().findAll({
+    where: { fingerprint, ...(missionId ? { mission_id: missionId } : {}) },
+    order: [['last_seen_at', 'DESC']],
+    limit: 5,
+  });
+  return rows.map(toPlain).find((row) => row.status !== 'DUPLICATE') || null;
+}
+
+/** Violação de unicidade do Postgres/Sequelize (a corrida de deduplicação). */
+function isUniqueViolation(err) {
+  return err?.name === 'SequelizeUniqueConstraintError'
+    || err?.parent?.code === '23505'
+    || /duplicate key value violates unique constraint/i.test(String(err?.message || ''));
+}
+
+/**
+ * Agrega uma NOVA entrega ao finding existente do mesmo escopo.
+ *
+ * Duas saídas, nunca achatadas:
+ *   - REINCIDÊNCIA: a falha já havia sido resolvida e voltou ⇒ reabre o MESMO registro, escalando
+ *     severidade e incrementando `recurrence_count` (a base objetiva da confirmação anterior fica);
+ *   - OCORRÊNCIA: o ciclo ainda está em andamento ⇒ só acumula ocorrências/evidência.
+ */
+async function applyToExisting(existing, { evidence = [], assessment = {}, actor = null, tenantId = null } = {}) {
+  if (engine.isRecurrence(existing.status)) {
+    const previousStatus = existing.status;
+    const recurrence = engine.applyRecurrence({
+      previousStatus,
+      severity: existing.severity,
+      recurrenceCount: existing.recurrence_count,
+      now: nowIso(),
+    });
+    const updated = await model().update({
+      status: recurrence.status,
+      severity: recurrence.severity,
+      recurrence_count: recurrence.recurrenceCount,
+      occurrences: existing.occurrences + 1,
+      last_seen_at: nowIso(),
+      resolved_at: null,
+      version: Number(existing.version || 0) + 1,
+      // A base objetiva da confirmação anterior permanece: é a MESMA falha, já confirmada com
+      // evidência; a reincidência acrescenta a ocorrência nova e o histórico (BUG-18).
+      confirmation_basis: existing.confirmation_basis,
+      evidence_refs: appendEvidence(existing.evidence_refs, evidence),
+      severity_signals: Array.from(new Set([...(existing.severity_signals || []), ...(assessment.signals || [])])),
+    }, { where: { id: existing.id, version: Number(existing.version || 0) } });
+    void updated;
+    const refreshed = await getFinding(existing.id);
+    await recordEvent(existing.id, 'RECURRENCE', {
+      previousStatus,
+      recurrenceCount: recurrence.recurrenceCount,
+      severityFrom: existing.severity,
+      severityTo: recurrence.severity,
+      evidenceCount: evidence.length,
+    }, { actor });
+    logger.warn('[bugFindingService] reincidência de finding', { findingId: existing.id, previousStatus, recurrenceCount: recurrence.recurrenceCount });
+    emitFindingStage(tenantId, refreshed, 'BUG_RECURRENCE', {
+      status: 'error',
+      message: `reincidência #${recurrence.recurrenceCount} do finding ${existing.id} (severidade ${existing.severity} → ${recurrence.severity})`,
+    });
+    return { finding: refreshed, deduplicated: false, recurrence: true, previousStatus };
+  }
+
+  // OCORRÊNCIA: incremento ATÔMICO no banco. Ler `occurrences` e regravar (o padrão anterior)
+  // perdia atualizações sob concorrência — medido: 7 entregas simultâneas agregadas deixavam
+  // `occurrences = 2`. Aqui o contador e o append de evidência/sinais são feitos pelo próprio SQL.
+  const [occurrenceRows] = await model().sequelize.query(
+    `UPDATE engineering_bug_findings
+        SET occurrences = occurrences + 1,
+            last_seen_at = :now,
+            evidence_refs = CASE
+              WHEN jsonb_typeof(evidence_refs) = 'array' THEN evidence_refs || :evidence::jsonb
+              ELSE evidence_refs
+            END,
+            severity_signals = CASE
+              WHEN jsonb_typeof(severity_signals) = 'array'
+                THEN COALESCE((SELECT jsonb_agg(DISTINCT value) FROM jsonb_array_elements_text(severity_signals || :signals::jsonb)), '[]'::jsonb)
+              ELSE severity_signals
+            END,
+            updated_at = :now
+      WHERE id = :id
+      RETURNING occurrences`,
+    {
+      replacements: {
+        id: existing.id,
+        now: nowIso(),
+        evidence: JSON.stringify(evidence || []),
+        signals: JSON.stringify(assessment.signals || []),
+      },
+    },
+  );
+  const occurrenceRow = Array.isArray(occurrenceRows) ? occurrenceRows[0] : occurrenceRows;
+  const refreshed = await getFinding(existing.id);
+  await recordEvent(existing.id, 'OCCURRENCE', {
+    occurrences: occurrenceRow?.occurrences ?? refreshed?.occurrences ?? null,
+    evidenceCount: (evidence || []).length,
+  }, { actor });
+  return { finding: refreshed, deduplicated: true, recurrence: false };
+}
+
 async function registerFinding(input = {}, { actor = null, tenantId = null } = {}) {
   const title = String(input.title || '').trim();
   if (title === '') throw Object.assign(new Error('finding exige `title`'), { code: 'INVALID_FINDING' });
@@ -165,65 +267,12 @@ async function registerFinding(input = {}, { actor = null, tenantId = null } = {
   // ESCOPO DA DEDUPLICAÇÃO: mesmo fingerprint; mesma missão quando declarada (uma falha idêntica em
   // missões distintas é rastreada por missão); nunca reaproveitar um finding já CLOSED como
   // "ocorrência" — esse caso é REINCIDÊNCIA e tem caminho próprio.
-  const existingRows = await model().findAll({
-    where: { fingerprint, ...(missionId ? { mission_id: missionId } : {}) },
-    order: [['last_seen_at', 'DESC']],
-    limit: 5,
-  });
-  const existing = existingRows.map(toPlain).find((row) => row.status !== 'DUPLICATE') || null;
+  const existing = await findNonTerminalFinding({ fingerprint, missionId });
+  if (existing) return applyToExisting(existing, { evidence, assessment, actor, tenantId });
 
-  if (existing) {
-    if (engine.isRecurrence(existing.status)) {
-      const previousStatus = existing.status;
-      const recurrence = engine.applyRecurrence({
-        previousStatus,
-        severity: existing.severity,
-        recurrenceCount: existing.recurrence_count,
-        now: nowIso(),
-      });
-      const updated = await model().update({
-        status: recurrence.status,
-        severity: recurrence.severity,
-        recurrence_count: recurrence.recurrenceCount,
-        occurrences: existing.occurrences + 1,
-        last_seen_at: nowIso(),
-        resolved_at: null,
-        // A base objetiva da confirmação anterior permanece: é a MESMA falha, já confirmada com
-        // evidência; a reincidência acrescenta a ocorrência nova e o histórico (BUG-18).
-        confirmation_basis: existing.confirmation_basis,
-        evidence_refs: appendEvidence(existing.evidence_refs, evidence),
-        severity_signals: Array.from(new Set([...(existing.severity_signals || []), ...(assessment.signals || [])])),
-      }, { where: { id: existing.id } });
-      void updated;
-      const refreshed = await getFinding(existing.id);
-      await recordEvent(existing.id, 'RECURRENCE', {
-        previousStatus,
-        recurrenceCount: recurrence.recurrenceCount,
-        severityFrom: existing.severity,
-        severityTo: recurrence.severity,
-        evidenceCount: evidence.length,
-      }, { actor });
-      logger.warn('[bugFindingService] reincidência de finding', { findingId: existing.id, previousStatus, recurrenceCount: recurrence.recurrenceCount });
-      emitFindingStage(tenantId, refreshed, 'BUG_RECURRENCE', {
-        status: 'error',
-        message: `reincidência #${recurrence.recurrenceCount} do finding ${existing.id} (severidade ${existing.severity} → ${recurrence.severity})`,
-      });
-      return { finding: refreshed, deduplicated: false, recurrence: true, previousStatus };
-    }
-
-    const updatedRows = await model().update({
-      occurrences: existing.occurrences + 1,
-      last_seen_at: nowIso(),
-      evidence_refs: appendEvidence(existing.evidence_refs, evidence),
-      severity_signals: Array.from(new Set([...(existing.severity_signals || []), ...(assessment.signals || [])])),
-    }, { where: { id: existing.id } });
-    void updatedRows;
-    const refreshed = await getFinding(existing.id);
-    await recordEvent(existing.id, 'OCCURRENCE', { occurrences: refreshed.occurrences, evidenceCount: evidence.length }, { actor });
-    return { finding: refreshed, deduplicated: true, recurrence: false };
-  }
-
-  const created = await model().create({
+  let created = null;
+  try {
+    created = await model().create({
     mission_id: missionId,
     mission_version: input.missionVersion ?? null,
     mission_spec_hash: input.missionSpecHash ?? null,
@@ -263,7 +312,20 @@ async function registerFinding(input = {}, { actor = null, tenantId = null } = {
     idempotency_key: input.idempotencyKey || null,
     first_seen_at: nowIso(),
     last_seen_at: nowIso(),
-  });
+    });
+  } catch (err) {
+    // DEDUPLICAÇÃO ATÔMICA: o índice único parcial do banco é a AUTORIDADE. Perder a corrida não
+    // é erro — é a MESMA entrega chegando duas vezes (dois workers/duas retentativas): a ocorrência
+    // é agregada ao finding canônico em vez de nascer um segundo registro.
+    if (isUniqueViolation(err)) {
+      const raced = await findNonTerminalFinding({ fingerprint, missionId });
+      if (raced) {
+        logger.info('[bugFindingService] deduplicação atômica: corrida resolvida pelo banco', { findingId: raced.id, fingerprint });
+        return applyToExisting(raced, { evidence, assessment, actor, tenantId });
+      }
+    }
+    throw err;
+  }
 
   const finding = toPlain(created);
   await recordEvent(finding.id, 'REGISTERED', { source, category: finding.category, severity: finding.severity, fingerprint }, { actor });
@@ -309,7 +371,35 @@ async function transitionFinding(findingId, toStatus, { actor = null, reason = n
   const check = engine.assertTransition(finding.status, toStatus);
   if (check.idempotent) return { finding, idempotent: true };
 
-  await model().update({ status: toStatus, ...patch }, { where: { id: findingId } });
+  // ── CAS OTIMISTA (§ concorrência de estado) ────────────────────────────────────────────────
+  // A versão lida é a CONDIÇÃO da escrita: se outra transição venceu no meio, `affected = 0` e o
+  // estado atual é reexaminado em vez de sobrescrever. Sem isto, Worker A (CONFIRMED→FIXING) e
+  // Worker B (CONFIRMED→BLOCKED, com a mesma leitura antiga) escreviam as duas — a última vencia
+  // sem detecção.
+  const expectedVersion = Number(finding.version || 0);
+  const [affected] = await model().update(
+    { status: toStatus, ...patch, version: expectedVersion + 1 },
+    { where: { id: findingId, version: expectedVersion } },
+  );
+
+  if (!affected) {
+    const current = await getFinding(findingId);
+    // Concorrência convergente: outra transação já levou o finding ao MESMO destino ⇒ idempotente.
+    if (current && current.status === toStatus) return { finding: current, idempotent: true, concurrent: true };
+    const err = new Error(`transição concorrente rejeitada: finding ${findingId} está em ${current?.status || 'desconhecido'} (tentativa ${finding.status} → ${toStatus})`);
+    err.code = 'FINDING_STATE_CONFLICT';
+    err.detail = {
+      findingId,
+      from: finding.status,
+      to: toStatus,
+      currentStatus: current?.status || null,
+      expectedVersion,
+      currentVersion: current?.version ?? null,
+    };
+    logger.warn('[bugFindingService] conflito de versão na transição', err.detail);
+    throw err;
+  }
+
   await recordEvent(findingId, 'STATUS_CHANGED', { from: finding.status, to: toStatus, reason }, { actor });
   const refreshed = await getFinding(findingId);
   logFinding(refreshed, `→ ${toStatus}`);
@@ -560,6 +650,90 @@ async function getFindingMemory(fingerprint, { excludeId = null } = {}) {
   };
 }
 
+/* ─────────────────────────────── POSSE DURÁVEL (LEASE/FENCE) ─────────────────────────────── */
+
+const DEFAULT_LEASE_TTL_MS = (() => {
+  const raw = Number(process.env.ENGINEERING_BUG_LOOP_LEASE_TTL_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : 120000;
+})();
+
+/**
+ * Adquire a posse do finding para um worker, por CAS no banco (não no código).
+ * Só vence quem encontra: sem lease, lease EXPIRADO (o worker anterior morreu) ou lease próprio.
+ * O `lease_fence` é monotônico — é o que permite REJEITAR a escrita de um worker antigo depois do
+ * takeover, exatamente como mission/task já fazem.
+ */
+async function acquireFindingLease(findingId, { workerInstanceId, ttlMs = DEFAULT_LEASE_TTL_MS } = {}) {
+  if (!workerInstanceId) throw Object.assign(new Error('lease exige `workerInstanceId`'), { code: 'INVALID_LEASE' });
+  const token = crypto.randomUUID();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ttlMs);
+  const [rows] = await model().sequelize.query(
+    `UPDATE engineering_bug_findings
+        SET lease_token = :token,
+            lease_fence = lease_fence + 1,
+            lease_worker_instance_id = :worker,
+            lease_acquired_at = :now,
+            lease_expires_at = :expiresAt,
+            lease_heartbeat_at = :now,
+            updated_at = :now
+      WHERE id = :id
+        AND (lease_token IS NULL OR lease_expires_at < :now OR lease_worker_instance_id = :worker)
+      RETURNING id, lease_token, lease_fence, lease_worker_instance_id, lease_expires_at`,
+    { replacements: { id: findingId, token, worker: workerInstanceId, now, expiresAt } },
+  );
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  if (!row) {
+    const current = await getFinding(findingId).catch(() => null);
+    const err = new Error(`finding ${findingId} está sob lease de outro worker`);
+    err.code = 'FINDING_LEASE_HELD_BY_OTHER_WORKER';
+    err.lease = {
+      worker: current?.lease_worker_instance_id || null,
+      expiresAt: current?.lease_expires_at || null,
+    };
+    throw err;
+  }
+  return { token: row.lease_token, fence: row.lease_fence, workerInstanceId, expiresAt: row.lease_expires_at };
+}
+
+/** Renova a posse (heartbeat). Exige o token: quem perdeu o lease não renova. */
+async function heartbeatFindingLease(findingId, { token, ttlMs = DEFAULT_LEASE_TTL_MS } = {}) {
+  if (!token) throw Object.assign(new Error('heartbeat exige `token`'), { code: 'INVALID_LEASE' });
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ttlMs);
+  const [rows] = await model().sequelize.query(
+    `UPDATE engineering_bug_findings
+        SET lease_heartbeat_at = :now, lease_expires_at = :expiresAt, updated_at = :now
+      WHERE id = :id AND lease_token = :token
+      RETURNING lease_fence, lease_expires_at`,
+    { replacements: { id: findingId, token, now, expiresAt } },
+  );
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  if (!row) {
+    const err = new Error(`lease do finding ${findingId} não pertence mais a este worker`);
+    err.code = 'FINDING_LEASE_LOST';
+    throw err;
+  }
+  return { fence: row.lease_fence, expiresAt: row.lease_expires_at };
+}
+
+/** Libera a posse (idempotente). Só o dono do token libera. */
+async function releaseFindingLease(findingId, { token } = {}) {
+  if (!token) return { released: false, reason: 'sem_token' };
+  const [rows] = await model().sequelize.query(
+    `UPDATE engineering_bug_findings
+        SET lease_token = NULL,
+            lease_worker_instance_id = NULL,
+            lease_expires_at = NULL,
+            lease_heartbeat_at = NULL,
+            updated_at = NOW()
+      WHERE id = :id AND lease_token = :token`,
+    { replacements: { id: findingId, token } },
+  );
+  const affected = Array.isArray(rows) ? rows : rows?.rowCount;
+  return { released: Boolean(affected), findingId };
+}
+
 module.exports = {
   PLATFORM_TENANT_ID,
   makeEvidence,
@@ -583,4 +757,10 @@ module.exports = {
   blockFinding,
   getFindingMemory,
   summarizeFindings,
+  // Posse durável + dedup consultável (worker do laço)
+  findNonTerminalFinding,
+  acquireFindingLease,
+  heartbeatFindingLease,
+  releaseFindingLease,
+  DEFAULT_LEASE_TTL_MS,
 };

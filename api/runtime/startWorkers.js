@@ -137,6 +137,19 @@ function startWorkers({
       logger.warn('[MarketingGoogleAdsScheduler] Falha ao iniciar (ignorado)', { error: err.message });
     }
   }
+
+  // Bug Loop Worker (laço autônomo de bugs do Engineering Router) - best-effort.
+  // Sem ele, um finding criado pelo hook de falha da missão só seria processado por chamada manual.
+  if (processRef.env.ENABLE_BUG_LOOP_WORKER !== 'false') {
+    try {
+      const { startBugLoopWorker } = require('../services/engineeringMission/bugLoopWorker');
+      const bugLoopIntervalMs = parseInt(processRef.env.ENGINEERING_BUG_LOOP_INTERVAL_MS || '15000', 10);
+      const bugLoopBatch = parseInt(processRef.env.ENGINEERING_BUG_LOOP_BATCH || '10', 10);
+      startBugLoopWorker({ intervalMs: bugLoopIntervalMs, limit: bugLoopBatch });
+    } catch (err) {
+      logger.warn('[bugLoopWorker] Falha ao iniciar worker (ignorado)', { error: err.message });
+    }
+  }
 }
 
 /**
@@ -163,6 +176,7 @@ function stopWorkers() {
     () => require('../services/vertical/verticalSchedulerService').stopVerticalScheduler(),
     () => require('../services/channelHealthService').stopChannelHealthMonitor(),
     () => require('../services/marketing/googleAdsRecommendationSchedulerService').stopMarketingGoogleAdsScheduler(),
+    () => require('../services/engineeringMission/bugLoopWorker').stopBugLoopWorker(),
   ];
 
   for (const stopFn of stopFns) {

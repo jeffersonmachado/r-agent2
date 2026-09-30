@@ -82,6 +82,22 @@ function getEngineeringBugFindingModel() {
       classification: { type: DataTypes.STRING(24), allowNull: false, defaultValue: 'DEVELOPMENT' },
       created_by: { type: DataTypes.STRING, allowNull: true },
       idempotency_key: { type: DataTypes.STRING, allowNull: true },
+
+      // CAS OTIMISTA de transição (§ concorrência de estado). Toda mudança de status incrementa
+      // `version` sob condição da versão lida — duas transições concorrentes não podem vencer.
+      version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+      // LINHAGEM / proteção contra explosão recursiva (finding que gera finding que falha…).
+      parent_finding_id: { type: DataTypes.UUID, allowNull: true },
+      origin: { type: DataTypes.STRING(40), allowNull: true },
+      depth: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+      // POSSE DURÁVEL do worker do laço: lease + fence monotônico + heartbeat.
+      lease_token: { type: DataTypes.UUID, allowNull: true },
+      lease_fence: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+      lease_worker_instance_id: { type: DataTypes.STRING(160), allowNull: true },
+      lease_acquired_at: { type: DataTypes.DATE, allowNull: true },
+      lease_expires_at: { type: DataTypes.DATE, allowNull: true },
+      lease_heartbeat_at: { type: DataTypes.DATE, allowNull: true },
+      last_progress_at: { type: DataTypes.DATE, allowNull: true },
     }, {
       tableName: 'engineering_bug_findings',
       timestamps: true,
@@ -93,6 +109,9 @@ function getEngineeringBugFindingModel() {
         { fields: ['severity'], name: 'engineering_bug_findings_severity_idx' },
         { fields: ['self_modification'], name: 'engineering_bug_findings_self_mod_idx' },
         { fields: ['fix_task_id'], name: 'engineering_bug_findings_fix_task_idx' },
+        { fields: ['lease_expires_at'], name: 'engineering_bug_findings_lease_expires_idx' },
+        { fields: ['lease_worker_instance_id'], name: 'engineering_bug_findings_lease_worker_idx' },
+        { fields: ['parent_finding_id'], name: 'engineering_bug_findings_parent_idx' },
       ],
     });
   }
