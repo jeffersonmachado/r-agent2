@@ -85,6 +85,16 @@ fi
 # worktree limpo (`git status --porcelain` vazio) ANTES de qualquer geração.
 # NUNCA commit automático: worktree sujo = NO_GO DIRTY_WORKTREE.
 if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
+  # ── PRÉ-CONDIÇÃO OBRIGATÓRIA: SELO V2 FRESCO ────────────────────────────────
+  # DEFEITO REAL (2026-09-30): o pacote era gerado SEM nenhuma checagem do selo do Engineering
+  # Router V2 — um selo NO_GO, de outro source ou de dias antes autorizava o ZIP por omissão.
+  # O selo passa a ser pré-condição: sem selo GO do MESMO source (fingerprint) e dentro da janela
+  # de validade, não há pacote. (Bypass só da JANELA: V2_SEAL_MAX_AGE_MS.)
+  step "PRÉ-CONDIÇÃO: selo V2 fresco (GO + mesmo source + dentro da janela)..."
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-v2-seal-freshness.js" \
+    || fail "V2_SEAL_NOT_FRESH — pacote bloqueado: rode o selo do source atual (npm run engineering-router:v2-seal); selo de outro código/run ou vencido não autoriza este pacote (reports/v2-seal-freshness-report.json)"
+  ok "Selo V2 fresco deste source (reports/v2-seal-freshness-report.json)"
+
   step "GATE DIRTY_WORKTREE: snapshot do worktree no início do pipeline..."
   if [[ "${RAP_WORKTREE_SNAPSHOT_VALIDATED:-}" == "1" ]]; then
     # Snapshot já validado no início do pipeline chamador (ex.: system:release):

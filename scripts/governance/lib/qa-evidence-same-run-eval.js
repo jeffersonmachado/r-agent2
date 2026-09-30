@@ -78,12 +78,21 @@ function evaluateArtifact(relPath, doc, run) {
   }
   if (isNonEmptyString(fingerprint) && isNonEmptyString(run.source_fingerprint)
     && fingerprint !== run.source_fingerprint) {
+    sameRun = false;
     violations.push({
       code: CODES.SOURCE_MISMATCH,
       artifact: relPath,
       artifactFingerprint: fingerprint,
       runFingerprint: run.source_fingerprint,
     });
+  }
+
+  // DEFEITO CORRIGIDO (2026-09-30): sem `runId`/`sourceFingerprint` o artefato NÃO é prova deste
+  // run — antes o campo `sameRun` continuava `true` só porque o carimbo de tempo caía na janela,
+  // contradizendo a violação `QA_EVIDENCE_LINEAGE_MISSING` registrada no mesmo retorno. Quem lê a
+  // métrica (`sameRunOk`) enxergava evidência sem identidade como evidência same-run.
+  if (!isNonEmptyString(runId) || !isNonEmptyString(fingerprint)) {
+    sameRun = false;
   }
 
   return {

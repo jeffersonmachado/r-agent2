@@ -221,7 +221,12 @@ function main() {
   const manifest = resolveManifest();
   // Determinismo do ambiente: o `.env` é carregado ANTES de qualquer suíte (ver `loadEnvFile`).
   const envFile = loadEnvFile();
-  const report = {
+  // LINEAGE NA ORIGEM: a execução autoritativa é a prova de RUNTIME que os demais gates consomem.
+  // Sem runId/sourceFingerprint gravados AQUI, um relatório de outro run (ou de outro código) era
+  // aceito como prova deste — gap medido em 2026-09-30 pelo binding do ciclo de bug
+  // (EVIDENCE_LINEAGE_MISSING em reports/release-suite-execution.json).
+  const { applyOriginLineage } = require('./lib/resolve-run-lineage');
+  const report = applyOriginLineage({
     artifactType: 'release-suite-execution-report',
     artifactVersion: '1.0.0',
     generatedAt: new Date().toISOString(),
@@ -238,7 +243,7 @@ function main() {
     results: [],
     violations: [],
     violationCount: 0,
-  };
+  });
 
   if (!manifest.ok) {
     // Manifesto inconsistente = nada a executar com confiança. Fail-closed.

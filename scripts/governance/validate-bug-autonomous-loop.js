@@ -39,6 +39,9 @@ const REPORT_PATH = path.join(ROOT, 'reports', 'bug-autonomous-loop-report.json'
 const ENGINE_DIR = path.join(ROOT, 'engine', 'engineeringMission', 'bugFinding');
 const GATE_SELF = path.join(__dirname, 'validate-bug-autonomous-loop.js');
 
+/** Versão do GATE, para que a evidência diga QUAL critério a julgou (e não só quando). */
+const GATE_VERSION = '1.1.0';
+
 /** Atalhos de enfraquecimento: qualquer um deles invalida a prova do ID. */
 const WEAKENING_PATTERNS = Object.freeze([
   { pattern: /(?:^|\s)(?:it|test|describe)\.skip\s*\(/m, code: 'SKIPPED_TEST' },
@@ -166,9 +169,62 @@ function structuralChecks(config) {
 }
 
 /**
- * Prova de um ID: arquivo existe, contém o ID, não foi enfraquecido, está no manifesto autoritativo
- * e a suíte passou na execução real.
+ * RELEASE EVIDENCE BINDING.
+ *
+ * A evidência que este gate COMPÕE precisa ser do MESMO run governado que o está executando. Sem
+ * isso, um relatório de execução de OUTRO run é aceito como prova deste — exatamente a adoção
+ * retroativa de lineage que já causou defeito medido no repositório (2026-09-19).
+ *
+ * A identidade do run vem da AUTORIDADE ÚNICA (`scripts/governance/lib/resolve-run-lineage.js`) —
+ * nada de descobrir "o run mais recente" por conta própria.
  */
+function bindEvidenceToRun() {
+  const { resolveRunLineage } = require('./lib/resolve-run-lineage');
+  const lineage = resolveRunLineage({ rootDir: ROOT });
+  const execution = readJsonAbs(SUITE_REPORT_PATH);
+
+  const violations = [];
+  const evidence = {
+    artifact: path.relative(ROOT, SUITE_REPORT_PATH),
+    present: Boolean(execution),
+    runId: (execution && execution.runId) || null,
+    sourceFingerprint: (execution && execution.sourceFingerprint) || null,
+    generatedAt: (execution && execution.generatedAt) || null,
+  };
+
+  // Fora de run governado não existe identidade a exigir: o estado é DECLARADO (nunca PASS mudo e
+  // nunca FAIL por motivo errado).
+  if (!lineage.runId || !lineage.sourceFingerprint) {
+    return { status: 'PENDING_NO_GOVERNED_RUN', lineage, evidence, violations };
+  }
+
+  if (!execution) {
+    return { status: 'PENDING_NO_EVIDENCE', lineage, evidence, violations };
+  }
+
+  if (!evidence.runId || !evidence.sourceFingerprint) {
+    violations.push({
+      code: 'EVIDENCE_LINEAGE_MISSING',
+      detail: `${evidence.artifact} não carrega runId/sourceFingerprint: dentro de run governado não há como provar que a execução usada é deste run`,
+    });
+    return { status: 'FAIL', lineage, evidence, violations };
+  }
+
+  if (evidence.runId !== lineage.runId) {
+    violations.push({
+      code: 'FOREIGN_RUN_EVIDENCE',
+      detail: `execução de OUTRO run (${evidence.runId}) usada como prova do run ${lineage.runId}`,
+    });
+  }
+  if (evidence.sourceFingerprint !== lineage.sourceFingerprint) {
+    violations.push({
+      code: 'SOURCE_FINGERPRINT_MISMATCH',
+      detail: `sourceFingerprint da evidência (${String(evidence.sourceFingerprint).slice(0, 12)}…) difere do run corrente (${String(lineage.sourceFingerprint).slice(0, 12)}…): a prova não é do código deste run`,
+    });
+  }
+
+  return { status: violations.length === 0 ? 'PASS' : 'FAIL', lineage, evidence, violations };
+}
 function assessItem(item, { suiteReader, authoritative }) {
   const problems = [];
   const proofs = [];
@@ -223,6 +279,7 @@ function main() {
   const structural = structuralChecks(config);
   const items = (config.requiredTests || []).map((item) => assessItem(item, { suiteReader, authoritative }));
   const failedItems = items.filter((i) => i.status !== 'PASS');
+  const evidenceBinding = bindEvidenceToRun();
 
   // Provas de RUNTIME específicas do ciclo (o E2E que exercita Router real + sandbox real).
   const runtimeProofs = (config.runtimeProofs || []).map((suite) => {
@@ -245,16 +302,25 @@ function main() {
   }
 
   const structuralFailures = structural.filter((c) => c.status !== 'PASS');
-  const status = structuralFailures.length === 0 && failedItems.length === 0 && runtimeOk && verdicts.BUG_AUTONOMOUS_LOOP === 'GREEN'
+  const status = structuralFailures.length === 0
+    && failedItems.length === 0
+    && runtimeOk
+    && evidenceBinding.status !== 'FAIL'
+    && verdicts.BUG_AUTONOMOUS_LOOP === 'GREEN'
     ? 'GREEN'
     : 'NO_GO';
 
-  const report = {
+  // LINEAGE NA ORIGEM (autoridade única): o relatório nasce dentro do run governado que o produziu,
+  // com gateVersion — a evidência passa a dizer QUAL critério e QUAL run a julgaram.
+  const { applyOriginLineage } = require('./lib/resolve-run-lineage');
+  const report = applyOriginLineage({
     report: 'BUG_AUTONOMOUS_LOOP',
+    gateVersion: GATE_VERSION,
     generatedAt: new Date().toISOString(),
     authoritativeMode: process.env.RELEASE_AUTHORITATIVE === '1',
     config: path.relative(ROOT, CONFIG_PATH),
     engineAuthority: path.relative(ROOT, ENGINE_DIR),
+    evidenceBinding,
     suiteExecution: {
       report: path.relative(ROOT, SUITE_REPORT_PATH),
       status: suiteReader.status,
@@ -269,7 +335,7 @@ function main() {
     BUG_AUTONOMOUS_LOOP: verdicts.BUG_AUTONOMOUS_LOOP,
     status,
     note: 'Este gate COMPÕE provas reais (execução autoritativa + estrutura). Ele não roda testes, não gera evidência de runtime e nunca declara GREEN sem prova executada.',
-  };
+  }, evidenceBinding.lineage);
 
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
@@ -282,6 +348,7 @@ function main() {
       process.stdout.write(`  [${item.status}] ${item.id} — ${item.requirement}${item.problems.length ? ` :: ${item.problems.join(' | ')}` : ''}\n`);
     }
     for (const proof of runtimeProofs) process.stdout.write(`  [${proof.status}] RUNTIME ${proof.suite} — state=${proof.state}\n`);
+    process.stdout.write(`  [${evidenceBinding.status}] EVIDENCE_BINDING — run=${evidenceBinding.lineage.runId || 'nenhum'} evidência=${evidenceBinding.evidence.runId || 'sem lineage'}${evidenceBinding.violations.length ? ` :: ${evidenceBinding.violations.map((v) => v.code).join(', ')}` : ''}\n`);
     for (const [verdict, value] of Object.entries(verdicts)) process.stdout.write(`  ${verdict} = ${value}\n`);
     process.stdout.write(`[bug-loop] status=${status} itens=${items.length} falhas=${failedItems.length} runtime=${runtimeOk ? 'PROVEN' : 'NOT_PROVEN'}\n`);
   }
@@ -290,4 +357,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { WEAKENING_PATTERNS, structuralChecks, assessItem };
+module.exports = { WEAKENING_PATTERNS, structuralChecks, assessItem, bindEvidenceToRun, GATE_VERSION };

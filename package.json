@@ -384,7 +384,8 @@
     "validate:v2-requirements-matrix": "node scripts/governance/generate-v2-requirements-matrix.js",
     "validate:recovery": "node scripts/governance/verify-real-task-recovery.js",
     "engineering-router:v2-seal": "node scripts/governance/engineering-router-v2-seal.js",
-    "engineering-router:v2-seal:plan": "node scripts/governance/engineering-router-v2-seal.js --plan"
+    "engineering-router:v2-seal:plan": "node scripts/governance/engineering-router-v2-seal.js --plan",
+    "validate:v2-seal-freshness": "node scripts/governance/verify-v2-seal-freshness.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",

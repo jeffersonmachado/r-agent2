@@ -32,6 +32,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { ROOT, writeReport } = require('./common');
+const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
+const { applyOriginLineage, resolveRunLineage } = require('./lib/resolve-run-lineage');
 
 const ENVELOPE_DIR = path.join(ROOT, 'dist', 'engineering-router-v2-audit-envelope');
 const REPORT = 'engineering-router-v2-seal-execution.json';
@@ -186,10 +188,13 @@ function main() {
     process.exit(orderViolations.length === 0 ? 0 : 1);
   }
 
-  const report = {
+  const report = applyOriginLineage({
     artifactType: 'engineering-router-v2-seal-execution',
     artifactVersion: '1.0.0',
     generatedAt: new Date().toISOString(),
+    // BINDING AO SOURCE: o selo autoriza UM código específico. Sem o fingerprint do source, um selo
+    // antigo autorizaria qualquer pacote — e o pipeline de ZIP não teria como recusar.
+    sourceFingerprint: computeSourceFingerprint(ROOT),
     authoritativeMode: process.env.RELEASE_AUTHORITATIVE === '1',
     phases: PHASES,
     orderViolations,
@@ -197,7 +202,7 @@ function main() {
     steps: [],
     status: 'NO_GO',
     decisions: { ENGINEERING_ROUTER_V2: 'NO_GO', RAP_FINAL_RELEASE: 'NO_GO_INDEPENDENTE' },
-  };
+  }, resolveRunLineage({ rootDir: ROOT }));
 
   if (orderViolations.length > 0) {
     // Ordem inválida = não se executa nada: um plano inconsistente produziria evidência que não
