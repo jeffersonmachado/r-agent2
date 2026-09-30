@@ -216,13 +216,25 @@ function main() {
     process.exit(orderViolations.length === 0 ? 0 : 1);
   }
 
+  // BINDING DE RUN + BINDING DE SOURCE (dois conceitos, dois campos).
+  //
+  // DEFEITO DE CONTRATO medido em 2026-09-30: `applyOriginLineage` grava
+  // `sourceFingerprint` com o valor do RUN GOVERNADO (`governance/.current-run.json`), enquanto o
+  // gate de frescor (`verify-v2-seal-freshness`) compara esse mesmo campo com o fingerprint de
+  // CONTEÚDO do source atual (`computeSourceFingerprint`). São duas identidades distintas com o
+  // mesmo nome — e quando o run governado é mais antigo que o código, o selo saía GO carimbando a
+  // identidade de um source que não é o certificado (o gate de frescor recusou, corretamente:
+  // `STALE_SEAL_SOURCE`).
+  //
+  // Aqui a separação é explícita:
+  //   sourceFingerprint      → identidade do CÓDIGO certificado (conteúdo dos arquivos-fonte);
+  //   runId/runSourceFingerprint/sourceCommit/sourceTree → identidade do RUN governado que executou
+  //                                                        a certificação (auditoria da execução).
+  const contentFingerprint = computeSourceFingerprint(ROOT);
   const report = applyOriginLineage({
     artifactType: 'engineering-router-v2-seal-execution',
     artifactVersion: '1.0.0',
     generatedAt: new Date().toISOString(),
-    // BINDING AO SOURCE: o selo autoriza UM código específico. Sem o fingerprint do source, um selo
-    // antigo autorizaria qualquer pacote — e o pipeline de ZIP não teria como recusar.
-    sourceFingerprint: computeSourceFingerprint(ROOT),
     authoritativeMode: process.env.RELEASE_AUTHORITATIVE === '1',
     phases: PHASES,
     orderViolations,
@@ -231,6 +243,8 @@ function main() {
     status: 'NO_GO',
     decisions: { ENGINEERING_ROUTER_V2: 'NO_GO', RAP_FINAL_RELEASE: 'NO_GO_INDEPENDENTE' },
   }, resolveRunLineage({ rootDir: ROOT }));
+  report.runSourceFingerprint = report.sourceFingerprint;
+  report.sourceFingerprint = contentFingerprint;
 
   if (orderViolations.length > 0) {
     // Ordem inválida = não se executa nada: um plano inconsistente produziria evidência que não
@@ -243,6 +257,10 @@ function main() {
 
   let started = !fromId;
   const initialFreeze = captureSourceFreeze();
+  // O commit certificado é o do source que ESTÁ sendo executado — não o do run governado (que pode
+  // ser anterior, como no defeito acima). A identidade do run fica em `runId`/`runSourceFingerprint`.
+  report.sourceCommit = initialFreeze.commit;
+  report.sourceTree = null;
   const initialFreezeAssessment = assessInitialFreeze(initialFreeze);
   report.sourceFreeze = { initial: initialFreeze, initialDirty: initialFreezeAssessment.declared ? initialFreezeAssessment.detail : null, changes: null };
   if (initialFreezeAssessment.declared) {

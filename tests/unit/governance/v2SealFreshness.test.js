@@ -20,7 +20,10 @@ function seal(overrides = {}) {
     artifactType: 'engineering-router-v2-seal-execution',
     status: 'GO',
     generatedAt: '2026-09-30T17:30:00.000Z',
+    // IDENTIDADE DO CÓDIGO CERTIFICADO (conteúdo dos arquivos-fonte) — é ESTE o campo comparado com
+    // o source atual. A identidade do RUN governado vive em `runSourceFingerprint`/`runId`.
     sourceFingerprint: FP,
+    runSourceFingerprint: OTHER_FP,
     runId: RUN,
     ...overrides,
   };
@@ -48,10 +51,18 @@ describe('v2 seal freshness — o selo vale para ESTE source, ESTE run e por tem
   });
 
   test('STALE_SEAL_SOURCE: código mudou depois de selado → selo não é deste código', () => {
+    // Aqui o selo carrega a identidade do RUN (não a do conteúdo) — é exatamente o defeito de
+    // contrato medido: dois conceitos com o mesmo nome.
     const result = evaluateSealFreshness({ seal: seal({ sourceFingerprint: OTHER_FP }), sourceFingerprint: FP, now: NOW });
     expect(result.ok).toBe(false);
     expect(result.codes).toContain(CODES.STALE_SEAL_SOURCE);
     expect(result.violations[0].detail).toContain('código mudou depois de selado');
+  });
+
+  test('o selo separa identidade do CONTEÚDO da identidade do RUN (runSourceFingerprint não confunde o frescor)', () => {
+    const result = evaluateSealFreshness({ seal: seal(), sourceFingerprint: FP, lineage: { runId: RUN }, now: NOW });
+    expect(result.ok).toBe(true);
+    expect(result.sealFingerprint).toBe(FP);
   });
 
   test('SEAL_FOREIGN_RUN: selo de OUTRO run governado não é prova deste', () => {
