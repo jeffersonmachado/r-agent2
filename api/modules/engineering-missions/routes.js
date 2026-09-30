@@ -177,6 +177,12 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       FINDING_NOT_CONFIRMED: 409,
       FINDING_TASK_ALREADY_LINKED: 409,
       SELF_MODIFICATION_HUMAN_APPROVAL_REQUIRED: 409,
+      // GOVERNANCE_BASELINE_*: o próprio fix alterou as regras de julgamento (ou não há como provar
+      // que não alterou). É conflito com o estado real das regras — nunca erro de servidor.
+      GOVERNANCE_BASELINE_VIOLATION: 409,
+      GOVERNANCE_BASELINE_UNVERIFIED: 409,
+      // Quem tenta aprovar não tem autoridade para isso (não é humano autenticado).
+      SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN: 403,
       INVALID_FINDING_TRANSITION: 409,
       REPRODUCTION_PLAN_MISSING: 422,
       REPRODUCTION_INCONCLUSIVE: 422,
@@ -808,6 +814,8 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       const body = (await readBody(req, res, deps)) || {};
       const result = await deps.bugTriageService.approveSelfModification(req.params.id, {
         actor: req.agent?.id || req.agent?.email || null,
+        actorType: body.actorType || null,
+        authenticatedActorType: req.agent?.actorType || req.agent?.type || null,
         approvalRef: body.approvalRef || null,
         note: body.note || null,
         tenantId: requireTenantId(req.tenantId),

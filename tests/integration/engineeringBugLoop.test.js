@@ -574,8 +574,8 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     expect(blocked.code).toBe('SELF_MODIFICATION_HUMAN_APPROVAL_REQUIRED');
     expect(runTask).not.toHaveBeenCalled();
 
-    // Aprovação HUMANA explícita é a única coisa que destrava.
-    const approval = await bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results', approvalRef: 'ticket-123' });
+    // Aprovação HUMANA explícita é a única coisa que destrava (tipo do ator faz parte do contrato).
+    const approval = await bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results', actorType: 'HUMAN', approvalRef: 'ticket-123' });
     expect(approval.approved).toBe(true);
     const after = await bugFindingService.getFinding(finding.id);
     expect(after.human_approval_required).toBe(false);
@@ -587,5 +587,122 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     expect(runTask).toHaveBeenCalled();
     // Mesmo autorizado, o ciclo NÃO inventa FIXED sem as provas.
     expect(allowed.fixed).toBe(false);
+  });
+
+  test('HUMAN_SELF_MODIFICATION_APPROVAL: service account, worker e modelo NÃO têm autoridade de aval', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({
+      title: 'HUMAN_SELF_MODIFICATION_APPROVAL aval de automação',
+      source: 'GOVERNANCE_INCONSISTENCY',
+      category: 'GOVERNANCE',
+      affectedFiles: ['scripts/governance/validate-bug-autonomous-loop.js'],
+    });
+    await bugFindingService.confirmFinding(finding.id, { basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'gate:bug-loop' }], actor: 'TEST' });
+    const triage = await bugTriageService.triage(finding.id, { actor: 'TEST' });
+    created.tasks.push(triage.fixTask.id);
+    expect(triage.requiresHumanApproval).toBe(true);
+
+    const refuses = { code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN' };
+
+    // 1. TIPO AUSENTE: ausência de dado não vira permissão (fail-closed).
+    await expect(bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results' })).rejects.toMatchObject(refuses);
+    // 2. CONTA DE SERVIÇO autenticada: não é autoridade, mesmo se declarar HUMAN no corpo.
+    await expect(bugTriageService.approveSelfModification(finding.id, {
+      actor: 'svc-bug-worker@results', actorType: 'HUMAN', authenticatedActorType: 'SERVICE_ACCOUNT',
+    })).rejects.toMatchObject(refuses);
+    // 3. WORKER AUTOMÁTICO que se declara humano: a identidade denuncia a automação.
+    await expect(bugTriageService.approveSelfModification(finding.id, {
+      actor: 'SYSTEM:bug-loop-worker', actorType: 'HUMAN',
+    })).rejects.toMatchObject(refuses);
+    // 4. MODELO/LLM: parecer de modelo nunca é aval de governança.
+    await expect(bugTriageService.approveSelfModification(finding.id, {
+      actor: 'llm-reviewer@results', actorType: 'LLM',
+    })).rejects.toMatchObject(refuses);
+
+    // O finding continua EXIGINDO aval humano — nenhuma das recusas destravou nada.
+    const stillBlocked = await bugFindingService.getFinding(finding.id);
+    expect(stillBlocked.human_approval_required).toBe(true);
+    expect(stillBlocked.triage.selfModificationApproval).toBeFalsy();
+    expect((await bugLoop.runFixLoop(finding.id, { actor: 'TEST' })).code).toBe('SELF_MODIFICATION_HUMAN_APPROVAL_REQUIRED');
+
+    // 5. HUMANO autenticado: única autoridade aceita, e a identidade fica auditada.
+    const approval = await bugTriageService.approveSelfModification(finding.id, {
+      actor: 'humano@results', actorType: 'HUMAN', authenticatedActorType: 'HUMAN', approvalRef: 'TICKET-4242',
+    });
+    expect(approval.approved).toBe(true);
+    expect(approval.authority).toMatchObject({ allowed: true, actorType: 'HUMAN', policy: 'HUMAN_ONLY' });
+    const freed = await bugFindingService.getFinding(finding.id);
+    expect(freed.human_approval_required).toBe(false);
+    expect(freed.triage.selfModificationApproval).toMatchObject({ actor: 'humano@results', actorType: 'HUMAN', approvalRef: 'TICKET-4242' });
+  });
+
+  test('PROTECTED_GOVERNANCE_BASELINE: fix autônomo que afrouxa o próprio critério não fecha o finding', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({
+      title: 'PROTECTED_GOVERNANCE_BASELINE fix no próprio gate',
+      source: 'GOVERNANCE_INCONSISTENCY',
+      category: 'GOVERNANCE',
+      affectedFiles: ['scripts/governance/validate-bug-autonomous-loop.js'],
+    });
+    await bugFindingService.confirmFinding(finding.id, { basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'gate:bug-loop' }], actor: 'TEST' });
+    await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('FAIL'), actor: 'TEST' });
+    const triage = await bugTriageService.triage(finding.id, { actor: 'TEST' });
+    created.tasks.push(triage.fixTask.id);
+    await bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results', actorType: 'HUMAN', approvalRef: 'TICKET-99' });
+
+    const persisted = await bugFindingService.getFinding(finding.id);
+    expect(persisted.self_modification).toBe(true);
+    // O baseline foi capturado do DISCO antes da correção: gates reais + hashes dos arquivos de regra.
+    expect(persisted.triage.ruleBaseline.mandatoryGates.length).toBeGreaterThan(0);
+    expect(persisted.triage.ruleBaseline.files['jest.config.cjs']).toMatch(/^[a-f0-9]{64}$/);
+    expect(persisted.triage.ruleBaseline.testManifest).toContain('BUG-01');
+
+    // FIX verde de verdade (reprodução + testes + parecer + regressão reais).
+    const attempt = await engineeringTaskService.createAttempt(triage.fixTask.id, { attempt_number: 1, status: 'REVIEWED' });
+    const testRun = await models.getEngineeringTestRun().create({
+      attempt_id: attempt.id, command: REPRODUCTION_COMMAND, status: 'PASS', exit_code: 0,
+      stdout_ref: 'reports/fake.stdout.log', started_at: new Date(), completed_at: new Date(),
+    });
+    const review = await models.getEngineeringReview().create({
+      attempt_id: attempt.id, reviewer_provider: 'qdrant-fake', reviewer_model: 'reviewer-model',
+      decision: 'APPROVE', findings: [], independent_of_coder: true,
+    });
+    const regression = await models.getEngineeringRegressionRun().create({
+      task_id: triage.fixTask.id, attempt_id: attempt.id, plan_tier: 'MEDIUM', commands: [FIX_COMMAND],
+      exit_codes: [0], source_fingerprint: 'e'.repeat(64), result: 'PASS',
+      evidence_refs: [{ command: FIX_COMMAND, stdoutRef: 'reports/fake.stdout.log' }],
+      started_at: new Date(), completed_at: new Date(),
+    });
+    created.testRuns.push(testRun.id);
+    created.reviews.push(review.id);
+    created.regressionRuns.push(regression.id);
+    runTask.mockResolvedValue({ taskId: triage.fixTask.id, status: 'GREEN', attemptId: attempt.id });
+    await simulateTaskStatus(triage.fixTask.id, 'GREEN');
+
+    // 1. O FECHAMENTO é recusado enquanto não houver verificação de baseline — e o próprio ciclo
+    //    de correção recusa fechar quando a verificação aponta violação.
+    await expect(bugFindingService.closeFinding(finding.id, { actor: 'TEST' })).rejects.toMatchObject({ code: 'GOVERNANCE_BASELINE_UNVERIFIED' });
+
+    const tampered = await bugTriageService.verifySelfModificationBaseline(finding.id, {
+      actor: 'TEST',
+      currentRules: { ...persisted.triage.ruleBaseline, mandatoryGates: persisted.triage.ruleBaseline.mandatoryGates.slice(1) },
+    });
+    expect(tampered.ok).toBe(false);
+    expect(tampered.code).toBe('GOVERNANCE_BASELINE_VIOLATION');
+    await expect(bugFindingService.closeFinding(finding.id, { actor: 'TEST' })).rejects.toMatchObject({ code: 'GOVERNANCE_BASELINE_VIOLATION' });
+
+    // 2. Com as regras ÍNTEGRAS (snapshot real do disco), a verificação passa e o ciclo fecha.
+    const verified = await bugTriageService.verifySelfModificationBaseline(finding.id, { actor: 'TEST' });
+    expect(verified.ok).toBe(true);
+    const result = await bugLoop.runFixLoop(finding.id, { actor: 'TEST' });
+    expect(result.fixed).toBe(true);
+    expect(result.closed).toBe(true);
+    expect(result.baselineVerified).toBe(true);
+    expect(result.code).toBeUndefined();
+    const closed = await bugFindingService.getFinding(finding.id);
+    expect(closed.status).toBe('CLOSED');
+    expect(closed.triage.ruleBaselineVerification).toMatchObject({ ok: true, checked: true });
+    const history = await bugFindingService.getFindingHistory(finding.id);
+    expect(history.filter((e) => e.payload && e.payload.kind === 'GOVERNANCE_BASELINE_CHECK').length).toBeGreaterThanOrEqual(2);
   });
 });

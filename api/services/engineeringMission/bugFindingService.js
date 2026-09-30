@@ -297,6 +297,11 @@ async function registerFinding(input = {}, { actor = null, tenantId = null } = {
     affected_files: input.affectedFiles || [],
     related_findings: input.relatedFindings || [],
     self_modification: input.selfModification === true,
+    // ORIGEM: qual porta do sistema entregou a observação (review, telemetria, hook de missão...).
+    // É o que permite auditar de onde o ciclo de bug tirou cada item, sem inferência.
+    origin: input.origin || null,
+    depth: Number.isFinite(input.depth) ? input.depth : 0,
+    parent_finding_id: input.parentFindingId || null,
     triage: {
       advisorySeverity: assessment.advisorySeverity,
       advisoryOnly: assessment.advisoryOnly,
@@ -563,6 +568,28 @@ async function closeFinding(findingId, { actor = null, reason = null, tenantId =
       code: 'FINDING_GREENWASHING_BLOCKED',
       detail: { findingId, violations },
     });
+  }
+  // SELF-MODIFICATION: fechar exige PROVAR que o próprio critério de julgamento não foi afrouxado.
+  // A verificação é a comparação baseline (capturado antes da correção) × estado atual do disco,
+  // produzida por bugTriageService.verifySelfModificationBaseline e persistida no finding. Sem
+  // verificação, ou com violação, o fechamento é recusado — nunca "fecha e depois vê".
+  if (finding.self_modification) {
+    const verification = (finding.triage && finding.triage.ruleBaselineVerification) || null;
+    if (!verification || verification.checked !== true) {
+      throw Object.assign(new Error('fechamento recusado: verificação de baseline de governança ausente para finding de self-modification'), {
+        code: engine.BUG_FAILURE_CODES.GOVERNANCE_BASELINE_UNVERIFIED,
+        detail: {
+          findingId,
+          minimumHumanAction: 'executar a verificação de baseline (bugTriageService.verifySelfModificationBaseline) ou aprovar explicitamente a alteração das regras',
+        },
+      });
+    }
+    if (verification.ok !== true) {
+      throw Object.assign(new Error(`fechamento recusado: ${verification.code || engine.BUG_FAILURE_CODES.GOVERNANCE_BASELINE_VIOLATION}`), {
+        code: engine.BUG_FAILURE_CODES.GOVERNANCE_BASELINE_VIOLATION,
+        detail: { findingId, diff: verification.diff || null, reason: verification.reason || null },
+      });
+    }
   }
   return transitionFinding(findingId, 'CLOSED', { actor, reason: reason || 'ciclo concluído', patch: { resolved_at: finding.resolved_at || nowIso() }, tenantId });
 }

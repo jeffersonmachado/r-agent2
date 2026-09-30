@@ -246,6 +246,39 @@ async function runFixLoop(findingId, {
     return { finding: await bugFindingService.getFinding(findingId), executed: true, fixed: false, stage: 'FIXED_REFUSED', taskStatus, attempts, fixError: fixedError };
   }
 
+  // ── SELF-MODIFICATION: o fix afrouxou o PRÓPRIO critério que o reprovava? ──────────────────
+  // Se afetou as regras de julgamento, a comparação baseline×atual precisa acontecer ANTES de
+  // qualquer fechamento: um sistema não pode consertar-se afrouxando o teste que o reprova. A
+  // violação bloqueia o fechamento e o finding fica aguardando aval HUMANO — sem exceção.
+  let baselineVerdict = null;
+  if (finding.self_modification) {
+    baselineVerdict = await bugTriageService.verifySelfModificationBaseline(findingId, { actor });
+    if (!baselineVerdict.ok) {
+      await bugFindingService.recordEvent(findingId, 'COMMENT', {
+        kind: 'AUTONOMOUS_FIX_BLOCKED',
+        reason: 'governance_baseline',
+        code: baselineVerdict.code,
+        changed: Boolean(baselineVerdict.diff && baselineVerdict.diff.changed),
+        minimumHumanAction: 'aprovar explicitamente a alteração das regras de julgamento (POST /engineering/findings/:id/approve-self-modification com actorType=HUMAN)',
+      }, { actor });
+      logger.warn('[bugLoopCoordinator] fix de self-modification afrouxa o próprio critério — fechamento bloqueado', {
+        findingId, code: baselineVerdict.code,
+      });
+      return {
+        finding: await bugFindingService.getFinding(findingId),
+        executed: true,
+        fixed: true,
+        closed: false,
+        blocked: true,
+        stage: 'AWAITING_HUMAN_APPROVAL',
+        code: baselineVerdict.code,
+        baseline: baselineVerdict,
+        taskStatus,
+        attempts,
+      };
+    }
+  }
+
   // ── REGRESSÃO: só com execuções REAIS do fix task ────────────────────────────────────────────
   const runs = await readRegressionRuns(finding.fix_task_id);
   let regressionValidated = false;
@@ -278,6 +311,7 @@ async function runFixLoop(findingId, {
     taskStatus,
     attempts,
     evidence: { reproductionPassed, targetedTestsPassed, reviewPassed, regressionRuns: runs.length },
+    baselineVerified: finding.self_modification ? Boolean(baselineVerdict && baselineVerdict.ok) : null,
     fixError: fixedError,
     regressionError,
   };

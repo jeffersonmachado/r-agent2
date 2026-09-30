@@ -243,7 +243,10 @@ async function persistReview({ missionId, missionVersion, specHash, result, acto
     return toPlain(row);
   } catch (err) {
     if (idempotencyKey && (err.name === 'SequelizeUniqueConstraintError' || /unique/i.test(err.message || ''))) {
-      const existing = await Review.findOne({ where: { idempotency_key: idempotencyKey } });
+      // ESCOPO DA IDEMPOTÊNCIA: a mesma chave só é "a mesma review" DENTRO da mesma missão. Sem
+      // `mission_id` aqui, uma colisão de chave com uma review de OUTRA missão devolvia aquela
+      // review (e a atual simplesmente não existia) — defeito medido em 2026-09-30.
+      const existing = await Review.findOne({ where: { idempotency_key: idempotencyKey, mission_id: missionId } });
       if (existing) return toPlain(existing);
     }
     const wrapped = new Error(`persistence_required: falha ao gravar review: ${err.message}`);
@@ -276,7 +279,7 @@ async function runReviews(missionId, { actor = null, kinds = ['META', 'ADVERSARI
       specHash: mission.current_spec_hash,
       result,
       actor,
-      idempotencyKey: idempotencyKey ? `${idempotencyKey}:META` : null,
+      idempotencyKey: idempotencyKey ? `${missionId}:${idempotencyKey}:META` : null,
     });
     out.meta = { ...result, persistedId: row.id, persistedAt: row.created_at };
     logger.info('[missionReview] meta review executado', {
@@ -295,7 +298,7 @@ async function runReviews(missionId, { actor = null, kinds = ['META', 'ADVERSARI
       specHash: mission.current_spec_hash,
       result,
       actor,
-      idempotencyKey: idempotencyKey ? `${idempotencyKey}:ADVERSARIAL` : null,
+      idempotencyKey: idempotencyKey ? `${missionId}:${idempotencyKey}:ADVERSARIAL` : null,
     });
     out.adversarial = { ...result, persistedId: row.id, persistedAt: row.created_at };
     logger.info('[missionReview] adversarial review executado', {
@@ -325,6 +328,19 @@ async function runReviews(missionId, { actor = null, kinds = ['META', 'ADVERSARI
   // esse vetor, independentemente de quem chamou a revisão (rota, resume ou teste).
   // Require preguiçoso: o orquestrador já depende deste serviço (§ ciclo de módulos).
   const anyBlocking = Boolean(out.meta?.blocksGreen || out.adversarial?.blocksGreen);
+  // Um parecer bloqueante é TRABALHO: entrega o item ao ciclo de bug (MESMO modelo de finding) antes
+  // de reavaliar o estado. Idempotente por fingerprint+missão: rodar a revisão duas vezes agrega
+  // ocorrência ao finding canônico, nunca cria um segundo.
+  if (anyBlocking) {
+    try {
+      const blockingNow = await getBlockingReview(missionId, mission.current_version);
+      out.bugFindings = await intakeBlockingFindings(missionId, blockingNow, { actor });
+    } catch (error) {
+      out.bugFindingError = { code: error.code || null, message: error.message };
+      logger.error('[missionReview] falha ao entregar blocker de revisão ao ciclo de bug', { missionId, message: error.message });
+      throw error;
+    }
+  }
   const missionNow = await missionStore.getMission(missionId);
   if (anyBlocking || missionNow?.status === 'GREEN') {
     const orchestrator = require('./missionOrchestratorService');
@@ -363,12 +379,12 @@ async function getBlockingReview(missionId, missionVersion) {
   const plain = toPlain(row);
   const blockingFindings = (Array.isArray(plain.findings) ? plain.findings : [])
     .filter((f) => f && f.status === 'FAIL' && (f.severity === 'BLOCKER' || f.severity === 'REGRESSION') && f.blocksGreen !== false)
-    .map((f) => ({ id: f.id, checkId: f.checkId, severity: f.severity, title: f.title }))
+    .map((f) => ({ id: f.id, checkId: f.checkId, severity: f.severity, title: f.title, detail: f.detail || null }))
     .filter((f) => f.id);
   // A review ADVERSARIAL registra `uncovered` (ataques sem teste) em vez de `findings`.
   const uncovered = plain.kind === 'ADVERSARIAL'
     ? (Array.isArray(plain.findings) ? plain.findings.filter((c) => c && c.status === 'UNCOVERED') : [])
-      .map((c) => ({ id: c.id, checkId: 'ADVERSARIAL_CASE_UNCOVERED', severity: c.severity, title: c.attack }))
+      .map((c) => ({ id: c.id, checkId: 'ADVERSARIAL_CASE_UNCOVERED', severity: c.severity, title: c.attack, detail: c.attack, permanentTest: c.permanentTest || null }))
     : [];
   return {
     id: plain.id,
@@ -377,6 +393,90 @@ async function getBlockingReview(missionId, missionVersion) {
     engineVersion: plain.engine_version,
     createdAt: plain.created_at,
     blockingFindings: [...blockingFindings, ...uncovered],
+  };
+}
+
+/**
+ * META_REVIEW_TO_BUG_LOOP / ADVERSARIAL_TO_BUG_LOOP.
+ *
+ * Um parecer BLOQUEANTE não pode ficar só no relatório: se a revisão reprova a missão, o resultado é
+ * um DEFEITO que o ciclo de bug precisa corrigir — no MESMO modelo de finding, com a MESMA triagem,
+ * correção, regressão e governança. Sem esta porta, o gate recusava o GREEN e ninguém era acionado
+ * (a reprovação existia e não produzia trabalho).
+ *
+ * O caso ADVERSARIAL traz o TESTE PERMANENTE que deveria cobrir o ataque: quando existe caminho
+ * declarado, a reprodução é derivada dele (rodar o teste e ver falhar) — nada é inventado. Um caso
+ * sem teste permanente entra como lacuna declarada, sem comando fabricado.
+ */
+async function intakeBlockingFindings(missionId, blocking, { actor = null } = {}) {
+  if (!blocking || !Array.isArray(blocking.blockingFindings) || blocking.blockingFindings.length === 0) return [];
+  // Require preguiçoso: o serviço de findings e este compartilham o orquestrador (§ ciclo).
+  const bugFindingService = require('./bugFindingService');
+  const engine = require('../../../engine/engineeringMission/bugFinding');
+  const mission = await missionStore.getMission(missionId);
+  const registered = [];
+
+  for (const item of blocking.blockingFindings) {
+    const isAdversarial = blocking.kind === 'ADVERSARIAL';
+    const permanentTest = isAdversarial && item.permanentTest ? item.permanentTest : null;
+    const reproduction = permanentTest && permanentTest.path
+      ? {
+        command: `npx jest ${permanentTest.path}${permanentTest.namePattern ? ` -t "${permanentTest.namePattern}"` : ''}`,
+        expect: 'FAIL',
+        strategy: 'DECLARED_TEST_COMMAND',
+        source: 'ADVERSARIAL_CASE',
+      }
+      : {};
+
+    // O título carrega o ID DO CASO (ADV-01, MR-03...) além do checkId: é o identificador que o
+    // catálogo e o relatório usam, e sem ele a fila de bugs não permitiria rastrear o item de volta.
+    const caseId = item.id || item.checkId;
+    const title = `[${blocking.kind}] ${caseId}${item.checkId && item.checkId !== caseId ? ` (${item.checkId})` : ''}: ${item.title || caseId}`;
+    const { finding, deduplicated } = await bugFindingService.registerFinding({
+      missionId,
+      missionVersion: mission?.current_version ?? null,
+      missionSpecHash: mission?.current_spec_hash ?? null,
+      source: isAdversarial ? 'ADVERSARIAL_REVIEW' : 'META_REVIEW',
+      origin: isAdversarial ? 'ADVERSARIAL_REVIEW' : 'META_REVIEW',
+      fingerprint: engine.computeFingerprint({
+        source: isAdversarial ? 'ADVERSARIAL_REVIEW' : 'META_REVIEW',
+        // A IDENTIDADE inclui o ID DO CASO: dois blockers diferentes do mesmo tipo (ex.: 20 ataques
+        // não cobertos) têm que gerar 20 findings — usar só o checkId os colapsaria em um único
+        // registro e 19 defeitos desapareceriam da fila.
+        invariant: `${blocking.kind}:${item.checkId}:${item.id}`,
+        title,
+      }),
+      title,
+      description: `Parecer ${blocking.kind} (review ${blocking.id}) reprovou a missão neste item; o bloqueio de GREEN é tratado como defeito do sistema, não como observação.`,
+      expectedBehavior: 'nenhum item bloqueante em aberto na revisão de referência da missão',
+      observedBehavior: item.detail || item.title || item.id,
+      affectedFiles: permanentTest && permanentTest.path ? [permanentTest.path] : [],
+      // SEVERIDADE OBJETIVA do parecer: o motor aceita impacto objetivo declarado e nunca o deixa
+      // abaixo disso. Um BLOCKER de revisão que entrasse como MEDIUM subestimaria o risco do próprio
+      // bloqueio — e `severityHint`/sinais textuais não seriam autoridade para isso.
+      objectiveSeverity: item.severity === 'BLOCKER' ? 'CRITICAL' : 'HIGH',
+      reproduction,
+      evidenceRefs: [
+        messengerEvidence(blocking, item),
+      ],
+      provenance: 'WORK',
+    }, { actor: actor || `REVIEW:${blocking.kind}` });
+
+    registered.push({ findingId: finding.id, checkId: item.checkId, created: deduplicated !== true, kind: blocking.kind });
+    logger.info('[missionReview] blocker de revisão entregue ao ciclo de bug', {
+      missionId, reviewId: blocking.id, kind: blocking.kind, checkId: item.checkId, findingId: finding.id, created: deduplicated !== true,
+    });
+  }
+  return registered;
+}
+
+/** Evidência de review no formato do modelo de finding (a review é a prova da observação). */
+function messengerEvidence(blocking, item) {
+  return {
+    type: 'REVIEW_VERDICT',
+    ref: `review:${blocking.id}:${item.checkId}`,
+    detail: `${blocking.kind} ${blocking.status} · ${item.severity || 'n/d'} · ${item.title || item.id}`,
+    source: 'missionReviewService',
   };
 }
 
@@ -389,6 +489,7 @@ module.exports = {
   buildClaims,
   collectReviewBundle,
   runReviews,
+  intakeBlockingFindings,
   getLatestReview,
   listReviews,
   getBlockingReview,

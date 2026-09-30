@@ -16,11 +16,85 @@
  *      ativo para HIGH/CRITICAL (BUG-19/20).
  */
 
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
 const engine = require('../../../engine/engineeringMission/bugFinding');
 const bugFindingService = require('./bugFindingService');
 const engineeringTaskService = require('../engineeringRouter/engineeringTaskService');
 const missionStore = require('./missionStoreService');
 const logger = require('../../utils/logger');
+
+const REPO_ROOT = path.join(__dirname, '..', '..', '..');
+
+/**
+ * ARQUIVOS QUE SÃO AS REGRAS DE JULGAMENTO. O baseline guarda o HASH do conteúdo de cada um: o
+ * enfraquecimento mais discreto não é remover o gate da lista (isso a lista pega) — é editar o
+ * limiar DENTRO do arquivo que continua existindo. Sem o hash, a alteração passaria em silêncio.
+ */
+const GOVERNANCE_RULE_FILES = Object.freeze([
+  'config/engineering-bug-loop-required-tests.json',
+  'config/engineering-router-v2-required-tests.json',
+  'config/journey-criticality.json',
+  'config/timeout-policy.json',
+  'jest.config.cjs',
+]);
+const GOVERNANCE_GATES_DIR = 'scripts/governance';
+
+function sha256OrAbsent(relPath) {
+  try {
+    const abs = path.join(REPO_ROOT, relPath);
+    if (!fs.existsSync(abs)) return 'ABSENT';
+    return crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+  } catch (err) {
+    logger.warn('[bugTriageService] regra de governança ilegível', { file: relPath, error: err.message });
+    return 'UNREADABLE';
+  }
+}
+
+function readJsonOrNull(relPath) {
+  try {
+    const abs = path.join(REPO_ROOT, relPath);
+    return fs.existsSync(abs) ? JSON.parse(fs.readFileSync(abs, 'utf8')) : null;
+  } catch (err) {
+    logger.warn('[bugTriageService] manifesto de regras ilegível', { file: relPath, error: err.message });
+    return null;
+  }
+}
+
+/**
+ * SNAPSHOT DAS REGRAS DE JULGAMENTO, derivado do DISCO (nunca de uma cópia em código). É o que se
+ * captura antes de um fix de self-modification e o que se compara depois: se o fix afrouxou o
+ * próprio critério, a diferença aparece aqui de forma auditável.
+ */
+function captureGovernanceRuleSnapshot() {
+  const files = {};
+  for (const relPath of GOVERNANCE_RULE_FILES) files[relPath] = sha256OrAbsent(relPath);
+
+  let gates = [];
+  try {
+    gates = fs.readdirSync(path.join(REPO_ROOT, GOVERNANCE_GATES_DIR))
+      .filter((file) => file.endsWith('.js'))
+      .sort();
+  } catch (err) {
+    logger.warn('[bugTriageService] diretório de gates ilegível', { error: err.message });
+  }
+
+  const bugLoopManifest = readJsonOrNull('config/engineering-bug-loop-required-tests.json');
+  const routerV2Manifest = readJsonOrNull('config/engineering-router-v2-required-tests.json');
+  const testManifest = ((bugLoopManifest && bugLoopManifest.requiredTests) || []).map((t) => t.id).sort();
+  const requirements = ((routerV2Manifest && routerV2Manifest.requiredTests) || []).map((t) => t.id).sort();
+
+  return engine.captureRuleBaseline({
+    mandatoryGates: gates,
+    testManifest,
+    requirements,
+    thresholds: { bugLoopRequiredTests: testManifest.length, routerV2RequiredTests: requirements.length },
+    policies: { selfModificationAutoApproval: 'FORBIDDEN_ON_HIGH_CRITICAL' },
+    files,
+  });
+}
 
 /** Resolve o escopo de caminhos permitidos: arquivos do finding OU o escopo da MissionSpec. */
 async function resolveAllowedPaths(finding, explicitPaths = null) {
@@ -103,11 +177,15 @@ async function triage(findingId, {
   };
   if (selfModification.selfModification) {
     // BASELINE das regras ANTES de qualquer correção de self-engineering: se o fix alterar o próprio
-    // critério que o reprova, a alteração precisa ser explícita e comparável.
-    triagePatch.triage.ruleBaseline = engine.captureRuleBaseline({
-      mandatoryGates: engine.SELF_MODIFICATION_PATH_PREFIXES,
-      policies: { autoApprovalForbidden: selfModification.autoApprovalForbidden },
-    });
+    // critério que o reprova, a alteração precisa ser explícita e comparável. O snapshot vem do
+    // DISCO (gates existentes, IDs obrigatórios, hashes dos arquivos de regra) e é verificado no
+    // fechamento — capturar e nunca comparar seria teatro.
+    triagePatch.triage.ruleBaseline = {
+      ...captureGovernanceRuleSnapshot(),
+      capturedAt: new Date().toISOString(),
+      capturedBy: actor || null,
+      autoApprovalForbidden: selfModification.autoApprovalForbidden,
+    };
   }
   await Model.update(triagePatch, { where: { id: findingId } });
   const triaged = await bugFindingService.getFinding(findingId);
@@ -189,25 +267,103 @@ async function canRunFixAutonomously(findingId) {
  * APROVAÇÃO HUMANA explícita de um fix de self-modification. É a ação mínima que a policy exige —
  * nunca substituível por um parecer de modelo.
  */
-async function approveSelfModification(findingId, { actor, approvalRef = null, note = null, tenantId = null } = {}) {
-  if (!actor) throw Object.assign(new Error('aprovação exige `actor` identificado'), { code: 'ACTOR_REQUIRED' });
+async function approveSelfModification(findingId, { actor, actorType = null, authenticatedActorType = null, approvalRef = null, note = null, tenantId = null } = {}) {
+  // AUTORIDADE DO AVAL: HUMANO, e só humano. Um `actor` string qualquer não basta — a aprovação
+  // que libera alteração nas próprias regras de julgamento não pode vir de service account, de
+  // worker automático nem de um modelo. A decisão é do motor puro (autoridade única).
+  //
+  // O tipo AUTENTICADO (do agente da requisição) prevalece sobre o declarado no corpo: declarar
+  // "HUMAN" não transforma uma identidade automática em humana. Divergência entre os dois é
+  // recusada explicitamente, nunca resolvida em favor do texto enviado.
+  const declared = String(actorType || '').trim();
+  const authenticated = String(authenticatedActorType || '').trim();
+  if (authenticated !== '' && declared !== '' && authenticated.toUpperCase() !== declared.toUpperCase()) {
+    const denied = Object.assign(
+      new Error(`tipo de ator divergente: autenticado="${authenticated}" vs declarado="${declared}" — a identidade autenticada prevalece`),
+      { code: engine.BUG_FAILURE_CODES.SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN, actorType: authenticated, policy: 'HUMAN_ONLY' },
+    );
+    logger.warn('[bugTriageService] aval de self-modification recusado por divergência de identidade', { findingId, actor, authenticated, declared });
+    throw denied;
+  }
+  const authority = engine.assessApprovalAuthority({ actor, actorType: authenticated || declared });
+  if (!authority.allowed) {
+    const denied = Object.assign(new Error(authority.reason), {
+      code: authority.code,
+      actorType: authority.actorType,
+      policy: authority.policy,
+    });
+    logger.warn('[bugTriageService] aval de self-modification recusado', {
+      findingId, actor, actorType, code: denied.code,
+    });
+    throw denied;
+  }
+
   const finding = await bugFindingService.getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
   if (!finding.self_modification) {
     return { finding, approved: false, reason: 'finding não é de self-modification — nenhuma aprovação adicional é exigida' };
   }
   const Model = require('../../db/models/EngineeringBugFinding')();
+  const approval = {
+    actor,
+    actorType: authority.actorType,
+    policy: authority.policy,
+    approvalRef,
+    note,
+    tenantId,
+    at: new Date().toISOString(),
+  };
   await Model.update({
     human_approval_required: false,
     triage: {
       ...(finding.triage || {}),
-      selfModificationApproval: { actor, approvalRef, note, at: new Date().toISOString() },
+      selfModificationApproval: approval,
     },
   }, { where: { id: findingId } });
-  await bugFindingService.recordEvent(findingId, 'UNBLOCKED', { actor, approvalRef, note, kind: 'SELF_MODIFICATION_APPROVAL' }, { actor });
+  await bugFindingService.recordEvent(findingId, 'UNBLOCKED', { ...approval, kind: 'SELF_MODIFICATION_APPROVAL' }, { actor });
   const refreshed = await bugFindingService.getFinding(findingId);
-  void tenantId;
-  return { finding: refreshed, approved: true };
+  return { finding: refreshed, approved: true, authority };
+}
+
+/**
+ * O fix de self-modification afrouxou o próprio critério? Compara o baseline capturado ANTES da
+ * correção com o estado atual do disco e PERSISTE o veredito no finding — o fechamento consulta
+ * esse veredito, e um finding sem verificação registrada não fecha (fail-closed).
+ */
+async function verifySelfModificationBaseline(findingId, { actor = null, currentRules = null } = {}) {
+  const finding = await bugFindingService.getFinding(findingId);
+  if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+
+  const baseline = (finding.triage && finding.triage.ruleBaseline) || null;
+  const current = currentRules || captureGovernanceRuleSnapshot();
+  const verdict = engine.verifyRuleBaseline({ baseline, current });
+  const checkedAt = new Date().toISOString();
+
+  await bugFindingService.recordEvent(findingId, 'COMMENT', {
+    kind: 'GOVERNANCE_BASELINE_CHECK',
+    ok: verdict.ok,
+    checked: verdict.checked,
+    code: verdict.code,
+    reason: verdict.reason,
+    diff: verdict.diff,
+    checkedAt,
+    actor,
+  }, { actor });
+
+  const Model = require('../../db/models/EngineeringBugFinding')();
+  await Model.update({
+    triage: {
+      ...(finding.triage || {}),
+      ruleBaselineVerification: { ok: verdict.ok, checked: verdict.checked, code: verdict.code, reason: verdict.reason, diff: verdict.diff, checkedAt, actor },
+    },
+  }, { where: { id: findingId } });
+
+  if (!verdict.ok) {
+    logger.warn('[bugTriageService] baseline de governança violado pelo próprio fix', {
+      findingId, code: verdict.code, checked: verdict.checked,
+    });
+  }
+  return verdict;
 }
 
 module.exports = {
@@ -215,4 +371,7 @@ module.exports = {
   triage,
   canRunFixAutonomously,
   approveSelfModification,
+  verifySelfModificationBaseline,
+  captureGovernanceRuleSnapshot,
+  GOVERNANCE_RULE_FILES,
 };

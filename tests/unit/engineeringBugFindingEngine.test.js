@@ -351,6 +351,49 @@ describe('bugFinding engine — self-modification (BUG-19, BUG-20)', () => {
     });
     expect(unchanged.changed).toBe(false);
   });
+
+  test('PROTECTED_GOVERNANCE_BASELINE: arquivo de regra MODIFICADO (hash diferente) é violação', () => {
+    const baseline = engine.captureRuleBaseline({
+      files: { 'jest.config.cjs': 'aaa', 'config/journey-criticality.json': 'bbb' },
+    });
+    // Apagar o arquivo do baseline não muda hashes — o que muda é o hash do arquivo vivo.
+    const tampered = engine.verifyRuleBaseline({
+      baseline,
+      current: { files: { 'jest.config.cjs': 'aaa', 'config/journey-criticality.json': 'CCC' } },
+    });
+    expect(tampered.ok).toBe(false);
+    expect(tampered.code).toBe('GOVERNANCE_BASELINE_VIOLATION');
+    expect(tampered.diff.files.modified).toEqual(['config/journey-criticality.json']);
+
+    const intact = engine.verifyRuleBaseline({ baseline, current: { files: { 'jest.config.cjs': 'aaa', 'config/journey-criticality.json': 'bbb' } } });
+    expect(intact.ok).toBe(true);
+    expect(intact.code).toBeNull();
+
+    // Remover o arquivo de regra também é violação (não só editar).
+    const removed = engine.verifyRuleBaseline({ baseline, current: { files: { 'jest.config.cjs': 'aaa' } } });
+    expect(removed.ok).toBe(false);
+    expect(removed.diff.files.removed).toEqual(['config/journey-criticality.json']);
+
+    // Sem baseline não há prova de integridade: fail-closed, nunca "assume que está ok".
+    const unverified = engine.verifyRuleBaseline({ baseline: null, current: { files: {} } });
+    expect(unverified.ok).toBe(false);
+    expect(unverified.checked).toBe(false);
+    expect(unverified.code).toBe('GOVERNANCE_BASELINE_UNVERIFIED');
+  });
+
+  test('HUMAN_SELF_MODIFICATION_APPROVAL: só humano autenticado tem autoridade de aval', () => {
+    expect(engine.assessApprovalAuthority({ actor: 'humano@results', actorType: 'HUMAN' }).allowed).toBe(true);
+    // Tipo ausente NÃO vira permissão (ausência de dado é ausência de autoridade).
+    expect(engine.assessApprovalAuthority({ actor: 'humano@results' })).toMatchObject({ allowed: false, code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN' });
+    // Conta de serviço / worker / modelo nunca libera alteração das próprias regras.
+    for (const actorType of ['SERVICE_ACCOUNT', 'SYSTEM', 'AUTOMATION', 'AGENT', 'WORKER', 'MODEL', 'LLM']) {
+      expect(engine.assessApprovalAuthority({ actor: 'x@results', actorType })).toMatchObject({ allowed: false, code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN' });
+    }
+    // Declarar-se HUMANO não basta quando a identidade se anuncia como automação.
+    expect(engine.assessApprovalAuthority({ actor: 'SYSTEM:bug-worker', actorType: 'HUMAN' })).toMatchObject({ allowed: false, code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN' });
+    // Sem ator não há aval (nada de aprovação anônima).
+    expect(engine.assessApprovalAuthority({ actor: null, actorType: 'HUMAN' })).toMatchObject({ allowed: false, code: 'ACTOR_REQUIRED' });
+  });
 });
 
 describe('bugFinding engine — vocabulário único', () => {

@@ -113,10 +113,77 @@ function assessSelfModification({ paths = [], subsystems = [], category = null, 
 }
 
 /**
+ * POLÍTICA DE AVAL DE SELF-MODIFICATION: HUMAN-ONLY.
+ *
+ * Um parecer de modelo, um worker automático ou uma conta de serviço NÃO são autoridade para
+ * liberar uma alteração nas próprias regras que julgam o sistema — se fossem, a máquina poderia
+ * afrouxar o critério que a reprovou, que é exatamente o que esta proteção existe para impedir.
+ * A política é DECLARADA aqui (não inferida do ator) e o chamador não pode substituí-la por
+ * omissão: `assessApprovalAuthority` é fail-closed.
+ */
+const HUMAN_ONLY_APPROVAL_POLICY = Object.freeze({
+  allowedActorTypes: Object.freeze(['HUMAN']),
+  forbiddenActorTypes: Object.freeze(['SERVICE', 'SERVICE_ACCOUNT', 'SYSTEM', 'AUTOMATION', 'AGENT', 'ROUTER', 'WORKER', 'CRON', 'MODEL', 'LLM', 'BOT']),
+});
+
+/** Prefixos de identificador que denunciam automação mesmo quando o ator se declara humano. */
+const AUTOMATION_IDENTITY_PATTERN = /^(?:SYSTEM|SERVICE|SVC|AUTOMATION|AUTO|ROBOT|AGENT|ROUTER|WORKER|CRON|SCHEDULER|MODEL|LLM|BOT|CI|JEST|TEST)[:_-]/i;
+
+/**
+ * Quem pode aprovar a execução de um fix de self-modification? Fail-closed em três frentes:
+ * tipo ausente, tipo não-humano e identidade que se anuncia como automação (defesa em
+ * profundidade contra um ator que se declare HUMANO mas se apresente como `SYSTEM:*`).
+ *
+ * Módulo PURO: a decisão é determinística e auditável, nunca dependente de I/O.
+ */
+function assessApprovalAuthority({ actor = null, actorType = null, policy = null } = {}) {
+  const effective = policy || HUMAN_ONLY_APPROVAL_POLICY;
+  const allowed = (effective.allowedActorTypes || ['HUMAN']).map((t) => String(t).toUpperCase());
+  const type = String(actorType || '').trim().toUpperCase();
+  const identity = String(actor || '').trim();
+
+  if (identity === '') {
+    return { allowed: false, actorType: type || null, policy: 'HUMAN_ONLY', code: 'ACTOR_REQUIRED', reason: 'aprovação exige `actor` identificado — aval anônimo não é aval' };
+  }
+  if (type === '') {
+    return {
+      allowed: false,
+      actorType: null,
+      policy: 'HUMAN_ONLY',
+      code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN',
+      reason: 'tipo de ator AUSENTE: aprovação de self-modification exige um HUMANO identificado (`actorType`) — ausência de dado não vira permissão',
+    };
+  }
+  if (!allowed.includes(type)) {
+    return {
+      allowed: false,
+      actorType: type,
+      policy: 'HUMAN_ONLY',
+      code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN',
+      reason: `tipo de ator "${type}" não é autoridade legítima para liberar alteração nas regras de julgamento (permitido: ${allowed.join(', ')})`,
+    };
+  }
+  if (AUTOMATION_IDENTITY_PATTERN.test(identity)) {
+    return {
+      allowed: false,
+      actorType: type,
+      policy: 'HUMAN_ONLY',
+      code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN',
+      reason: `identidade "${identity}" se anuncia como automação — um ator automático não pode se declarar humano para liberar o próprio critério`,
+    };
+  }
+  return { allowed: true, actorType: type, policy: 'HUMAN_ONLY', code: null, reason: `aval humano explícito de ${identity}` };
+}
+
+/**
  * Baseline de REGRAS antes de uma missão de self-engineering. Se o fix alterar o próprio critério,
  * a alteração precisa ser EXPLÍCITA e comparável — nunca silenciosa.
+ *
+ * `files` é o mapa path → hash do CONTEÚDO dos arquivos de regra (calculado pelo chamador, que tem
+ * I/O): cobre o caso em que o enfraquecimento acontece DENTRO de um arquivo que continua existindo
+ * — remover o gate da lista é visível na lista, mas editar o limiar dentro dele não seria.
  */
-function captureRuleBaseline({ mandatoryGates = [], testManifest = [], thresholds = {}, policies = {}, requirements = [] } = {}) {
+function captureRuleBaseline({ mandatoryGates = [], testManifest = [], thresholds = {}, policies = {}, requirements = [], files = {} } = {}) {
   return {
     capturedAt: null, // preenchido pelo chamador (engine é puro)
     mandatoryGates: [...mandatoryGates].sort(),
@@ -124,6 +191,7 @@ function captureRuleBaseline({ mandatoryGates = [], testManifest = [], threshold
     thresholds: { ...thresholds },
     policies: { ...policies },
     requirements: [...requirements].sort(),
+    files: { ...files },
   };
 }
 
@@ -139,17 +207,58 @@ function diffRuleBaseline(baseline = {}, current = {}) {
   for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
     if (before[key] !== after[key]) thresholdChanges.push({ key, from: before[key], to: after[key] });
   }
+  // ARQUIVOS DE REGRA: removido, acrescentado ou MODIFICADO (hash diferente). Modificação é a
+  // forma mais discreta de enfraquecer um critério (editar o limiar dentro do arquivo), então ela
+  // conta como violação do mesmo jeito.
+  const filesBefore = baseline.files || {};
+  const filesAfter = current.files || {};
+  const files = {
+    removed: Object.keys(filesBefore).filter((k) => !(k in filesAfter)),
+    added: Object.keys(filesAfter).filter((k) => !(k in filesBefore)),
+    modified: Object.keys(filesBefore).filter((k) => k in filesAfter && filesBefore[k] !== filesAfter[k]),
+  };
   return {
     mandatoryGates: diffList(baseline.mandatoryGates, current.mandatoryGates),
     testManifest: diffList(baseline.testManifest, current.testManifest),
     requirements: diffList(baseline.requirements, current.requirements),
     thresholdChanges,
+    files,
     changed: Boolean(
       diffList(baseline.mandatoryGates, current.mandatoryGates).removed.length
       || diffList(baseline.testManifest, current.testManifest).removed.length
       || diffList(baseline.requirements, current.requirements).removed.length
+      || files.removed.length
+      || files.modified.length
       || thresholdChanges.some((c) => typeof c.to === 'number' && typeof c.from === 'number' && c.to < c.from),
     ),
+  };
+}
+
+/**
+ * O fix alterou o próprio critério que o reprovava? Compara o baseline CAPTURADO antes da correção
+ * com o estado atual e devolve um veredito explícito — nunca um booleano solto, porque a decisão do
+ * chamador (bloquear o fechamento) depende do MOTIVO e do que mudou.
+ */
+function verifyRuleBaseline({ baseline = null, current = null } = {}) {
+  if (!baseline || typeof baseline !== 'object') {
+    return {
+      ok: false,
+      checked: false,
+      code: 'GOVERNANCE_BASELINE_UNVERIFIED',
+      reason: 'finding de self-modification sem baseline de regras capturado antes da correção — não há como provar que o critério não foi afrouxado',
+      diff: null,
+    };
+  }
+  const diff = diffRuleBaseline(baseline, current || {});
+  if (!diff.changed) {
+    return { ok: true, checked: true, code: null, reason: 'regras de julgamento inalteradas em relação ao baseline capturado antes da correção', diff };
+  }
+  return {
+    ok: false,
+    checked: true,
+    code: 'GOVERNANCE_BASELINE_VIOLATION',
+    reason: 'o fix alterou as PRÓPRIAS regras de julgamento (gate/limiar/manifesto/requisito removido ou modificado) — alteração exige aval humano explícito, nunca fechamento autônomo',
+    diff,
   };
 }
 
@@ -159,4 +268,7 @@ module.exports = {
   assessSelfModification,
   captureRuleBaseline,
   diffRuleBaseline,
+  verifyRuleBaseline,
+  assessApprovalAuthority,
+  HUMAN_ONLY_APPROVAL_POLICY,
 };

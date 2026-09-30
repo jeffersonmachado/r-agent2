@@ -52,6 +52,8 @@ function models() {
     Attempt: index.EngineeringAttempt(),
     TestRun: index.EngineeringTestRun(),
     ReviewRow: index.EngineeringReview(),
+    BugFinding: index.EngineeringBugFinding(),
+    BugFindingEvent: index.EngineeringBugFindingEvent(),
   };
 }
 
@@ -126,6 +128,14 @@ afterAll(async () => {
       await m.Approval.destroy({ where: { mission_id: missionId } });
       await m.Version.destroy({ where: { mission_id: missionId } });
       await m.Mission.destroy({ where: { id: missionId } });
+      // Findings do ciclo de bug criados pela porta review→bug (META_REVIEW_TO_BUG_LOOP /
+      // ADVERSARIAL_TO_BUG_LOOP): apagados junto da missão para não contaminar a varredura do laço.
+      const findings = await m.BugFinding.findAll({ where: { mission_id: missionId } });
+      if (findings.length > 0) {
+        const ids = findings.map((f) => f.id);
+        await m.BugFindingEvent.destroy({ where: { finding_id: ids } });
+        await m.BugFinding.destroy({ where: { id: ids } });
+      }
     }
   } catch (_) { /* best-effort */ }
   await sequelizeModule.close().catch(() => {});
@@ -181,6 +191,28 @@ describe('Engineering Mission — Meta/Adversarial review e enforcement de GREEN
     expect(blocking.kind).toBe('META');
     expect(blocking.blockingFindings.map((f) => f.checkId)).toContain('NO_SECRETS_IN_PATCH');
 
+    // META_REVIEW_TO_BUG_LOOP: o blocker não fica só no relatório — ele entra no MESMO modelo de
+    // finding que o ciclo de bug corrige, com a missão de origem e o item exato que reprovou.
+    const m = models();
+    const bugFindings = await m.BugFinding.findAll({ where: { mission_id: missionId } });
+    const secretFinding = bugFindings.find((f) => String(f.title).includes('NO_SECRETS_IN_PATCH'));
+    expect(secretFinding).toBeTruthy();
+    expect(secretFinding.source).toBe('META_REVIEW');
+    expect(secretFinding.origin).toBe('META_REVIEW');
+    expect(['CRITICAL', 'HIGH']).toContain(secretFinding.severity);
+    expect(String(secretFinding.description)).toContain('bloqueio de GREEN');
+    const events = await m.BugFindingEvent.findAll({ where: { finding_id: secretFinding.id } });
+    expect(events.length).toBeGreaterThan(0);
+
+    // IDEMPOTENTE: rodar a revisão outra vez agrega ocorrência ao finding canônico — nunca cria um
+    // segundo registro para o mesmo blocker (inclusive por chave de idempotência da review).
+    await reviewService.runReviews(missionId, { actor: 'jest-review', kinds: ['META'], idempotencyKey: 'rev-secret-1' });
+    await reviewService.runReviews(missionId, { actor: 'jest-review', kinds: ['META'], idempotencyKey: 'rev-secret-1' });
+    const again = await m.BugFinding.findAll({ where: { mission_id: missionId, source: 'META_REVIEW' } });
+    const secretAgain = again.filter((f) => String(f.title).includes('NO_SECRETS_IN_PATCH'));
+    expect(secretAgain).toHaveLength(1);
+    expect(secretAgain[0].occurrences).toBeGreaterThan(1);
+
     // O ENFORCEMENT: a task está GREEN (o Router atestou), mas a missão NÃO pode ser GREEN.
     const detail = await orchestrator.refreshMissionState(missionId, { tenantId: 'system' });
     expect(detail.status).toBe('BLOCKED');
@@ -224,6 +256,61 @@ describe('Engineering Mission — Meta/Adversarial review e enforcement de GREEN
     await reviewService.runReviews(missionId, { actor: 'jest-review', kinds: ['META'], idempotencyKey: 'rev-1' });
     const all = await reviewService.listReviews(missionId);
     expect(all.filter((r) => r.kind === 'META')).toHaveLength(1);
+  }, 90000);
+
+  test('ADVERSARIAL_TO_BUG_LOOP: caso descoberto vira finding com reprodução derivada do teste permanente', async () => {
+    if (skipIfNoDatabase()) return;
+    const { missionId } = await buildMission();
+    const m = models();
+
+    // O motor ADVERSARIAL REAL avalia o catálogo contra um mundo onde nenhum teste permanente
+    // existe: todos os 20 ataques ficam UNCOVERED. Nada é fabricado — o resultado é do motor que
+    // roda em produção, só a existência dos arquivos é parametrizada.
+    const { evaluateAdversarialCoverage } = require('../../engine/engineeringMission/adversarialReview');
+    const result = evaluateAdversarialCoverage(() => false, () => '');
+    expect(result.uncovered.length).toBeGreaterThan(0);
+
+    const mission = await missionStore.getMission(missionId);
+    await m.Review.create({
+      mission_id: missionId,
+      mission_version: mission.current_version,
+      spec_hash: mission.current_spec_hash,
+      kind: result.kind,
+      status: result.status,
+      blocks_green: true,
+      counts: { total: result.total, covered: result.covered, uncovered: result.uncovered.length },
+      findings: result.cases,
+      summary: { notAutomatable: 0 },
+      engine_version: result.engineVersion,
+      actor: 'jest-review',
+    });
+
+    const blocking = await reviewService.getBlockingReview(missionId, mission.current_version);
+    expect(blocking.kind).toBe('ADVERSARIAL');
+    expect(blocking.blockingFindings.length).toBe(result.uncovered.length);
+    expect(blocking.blockingFindings[0].permanentTest).toBeTruthy();
+
+    const registered = await reviewService.intakeBlockingFindings(missionId, blocking, { actor: 'jest-review' });
+    expect(registered).toHaveLength(result.uncovered.length);
+    expect(registered.every((r) => r.created)).toBe(true);
+
+    const stored = await m.BugFinding.findAll({ where: { mission_id: missionId, source: 'ADVERSARIAL_REVIEW' } });
+    expect(stored).toHaveLength(result.uncovered.length);
+    const first = stored.find((f) => String(f.title).includes(result.uncovered[0].id));
+    expect(first).toBeTruthy();
+    expect(first.origin).toBe('ADVERSARIAL_REVIEW');
+    // A reprodução NÃO foi inventada: é o teste permanente declarado pelo próprio catálogo.
+    expect(first.reproduction.command).toContain(result.uncovered[0].permanentTest.path);
+    expect(first.reproduction.command).toContain(result.uncovered[0].permanentTest.namePattern);
+    expect(first.reproduction.expect).toBe('FAIL');
+    expect(first.reproduction.strategy).toBe('DECLARED_TEST_COMMAND');
+
+    // Reentrega do MESMO parecer: agrega ocorrência, não duplica (dedup por fingerprint+missão).
+    const second = await reviewService.intakeBlockingFindings(missionId, blocking, { actor: 'jest-review' });
+    expect(second.every((r) => r.created === false)).toBe(true);
+    expect(second.map((r) => r.findingId).sort()).toEqual(registered.map((r) => r.findingId).sort());
+    const after = await m.BugFinding.findAll({ where: { mission_id: missionId, source: 'ADVERSARIAL_REVIEW' } });
+    expect(after).toHaveLength(result.uncovered.length);
   }, 90000);
 
   test('§45 autoavaliação: taxas calculadas de dados reais e null quando não há medição', async () => {
