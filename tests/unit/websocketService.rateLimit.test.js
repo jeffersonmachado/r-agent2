@@ -14,9 +14,12 @@ jest.mock('../../api/utils/logger', () => ({
   error: jest.fn(),
 }));
 
+// O limite é opt-in (padrão 0 = desligado); aqui habilitamos para testar.
+process.env.RATE_LIMIT_WS_POINTS = '6';
+
 const websocketService = require('../../api/services/websocketService');
 
-const DEFAULT_POINTS = Number.parseInt(process.env.RATE_LIMIT_WS_POINTS ?? '12', 10);
+const DEFAULT_POINTS = Number.parseInt(process.env.RATE_LIMIT_WS_POINTS ?? '6', 10);
 
 describe('websocketService - rate limit de handshakes', () => {
   const { resolveClientIp, isWsConnectRateLimited, wsConnectAttempts } = websocketService._internal;

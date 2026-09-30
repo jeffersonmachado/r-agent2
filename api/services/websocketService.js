@@ -132,8 +132,17 @@ function getConnectedAgentsByTenant(tenantId) {
  * inválido retentando indefinidamente). Caso real de 2026-09-30: cliente em
  * Electron/VS Code abrindo ~12 conexões/min durante horas, pressionando a API e
  * o Postgres.
+ *
+ * DESLIGADO POR PADRÃO (RATE_LIMIT_WS_POINTS=0). Motivo medido em produção: o
+ * Apache fala com a API por um salto de rede que sofre SNAT para o IP do host
+ * (10.10.2.30) e o X-Forwarded-For não chega no upgrade do WebSocket, então
+ * todos os clientes caem no mesmo balde e o limite bloqueia a todos (o teste em
+ * produção zerou as conexões aceitas). Para habilitar com segurança é preciso
+ * antes propagar o IP real do cliente (PROXY protocol + mod_remoteip no Apache)
+ * ou identificar o cliente por outro atributo (ex.: id de instância enviado pela
+ * própria aplicação).
  */
-const WS_RATE_LIMIT_POINTS = Number.parseInt(process.env.RATE_LIMIT_WS_POINTS ?? '12', 10);
+const WS_RATE_LIMIT_POINTS = Number.parseInt(process.env.RATE_LIMIT_WS_POINTS ?? '0', 10);
 const WS_RATE_LIMIT_WINDOW_MS =
   Number.parseInt(process.env.RATE_LIMIT_WS_DURATION ?? '60', 10) * 1000;
 const wsConnectAttempts = new Map(); // ip -> [timestamps]
