@@ -67,7 +67,10 @@ Constituição canônica obrigatória: `governance/RAP_AGENT_CONSTITUTION.md`. E
 - Padrão .impl.js em andamento (rpaService, flowGeneratorService, generationOrchestrator)
   → sempre editar o .impl.js, nunca o wrapper.
 - Vite config canônico: frontend/vite.config.mjs (o .cjs foi removido).
-- Config Apache canônico: apache-r-agent2.conf (rede Docker interna; os demais foram para docs/history/).
+- Config Apache do rap.results.com.br: o canônico está no repo infra
+  (/opt/results/infra/apache/vhosts-templates/85-rap.conf.template). O arquivo
+  apache-r-agent2.conf deste repo é histórico (desenho sob /r-agent2/, nunca
+  publicado); ver /opt/results/infra/docs/R_AGENT2_EDGE_VHOST.md.
 - .token.env: não commitar, confirmar cobertura no .gitignore.
 
 ## Regras de trabalho

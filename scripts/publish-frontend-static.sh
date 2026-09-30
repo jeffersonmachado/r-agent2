@@ -6,7 +6,8 @@
 # Por que este script existe (medido em 2026-09-30):
 #   - Em produção o site NÃO é servido pelo container `frontend` (nginx :8086) e
 #     sim ESTATICAMENTE pelo container `secure-httpd`, a partir de /var/www/r-agent2
-#     (camada de escrita do container — não há volume; ver RISCO abaixo).
+#     (volume nomeado infra_r-agent2-www desde 2026-09-30; antes era a camada de
+#     escrita do container e o recreate apagava o site — ver infra/docs/R_AGENT2_EDGE_VHOST.md).
 #   - O build do container (`frontend/Dockerfile`) usa VITE_BASE_PATH=/r-agent2/ e
 #     NÃO serve para este vhost, que publica na RAIZ: o index.html gerado pede
 #     /r-agent2/assets/... e cada asset volta como HTML (tela em branco).
@@ -14,9 +15,10 @@
 #   - O config.json do ambiente (basePath/apiBaseUrl/wsUrl) vive no DocumentRoot e
 #     NÃO pode ser sobrescrito pelo do build — este script o preserva.
 #
-# RISCO conhecido: /var/www/r-agent2 não é volume/bind. Recriar o container
-# `secure-httpd` (compose do projeto infra) apaga o site publicado; por isso todo
-# publish gera backup no host antes de escrever.
+# PERSISTÊNCIA: /var/www/r-agent2 é o volume nomeado infra_r-agent2-www (montado
+# pelo compose do projeto infra desde 2026-09-30), então recriar o container
+# `secure-httpd` não apaga mais o site. O backup pré-publish no host permanece
+# como rede de segurança contra publish parcial/bad build.
 #
 # Uso:
 #   scripts/publish-frontend-static.sh [--host HOST] [--user USER] [--dir DIR]
@@ -36,6 +38,7 @@ DOCROOT="${DOCROOT:-/var/www/r-agent2}"
 # O container do Apache publica as portas 80/18443 em um IP dedicado do host
 # (medido: 10.10.2.60), não em 127.0.0.1 — as verificações usam este alvo.
 PUBLIC_HOST="${PUBLIC_HOST:-10.10.2.60}"
+HTTPS_PORT="${HTTPS_PORT:-18443}"
 STAGE_DIR="${STAGE_DIR:-/tmp/r-agent2-frontend-stage}"
 BACKUP_DIR="${BACKUP_DIR:-/root/backups-www}"
 API_PREFIX="/r-agent2/api"
@@ -200,6 +203,20 @@ check "/config" "200 text/html" "página SPA (deep-link)"
 ASSET_PATH="${INDEX_REMOTE#src=\"}"; ASSET_PATH="${ASSET_PATH%\"}"
 if [[ -n "$ASSET_PATH" ]]; then
     check "$ASSET_PATH" "200" "asset do index"
+fi
+
+# WebSocket do SPA: o bundle conecta em VITE_API_BASE_URL + /ws, isto é
+# /r-agent2/api/ws. Sem a regra ws:// dedicada no vhost o upgrade cai no proxy
+# HTTP e falha com 401 ("HTTP Authentication failed" no console) — foi o que
+# aconteceu até 2026-09-30. Falha aqui é AVISO, não FAIL: não justifica
+# restaurar o backup do build.
+WS_CODE="$(remote "curl -sk -o /dev/null -w '%{http_code}' --http1.1 --max-time 12 -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' --resolve '${VHOST_NAME}:${HTTPS_PORT}:${PUBLIC_HOST}' 'https://${VHOST_NAME}:${HTTPS_PORT}${API_PREFIX}/ws'" | tr -d '\r' || true)"
+if [[ "$WS_CODE" == "101" ]]; then
+    info "OK   WebSocket ${API_PREFIX}/ws -> 101"
+else
+    echo "  AVISO WebSocket ${API_PREFIX}/ws -> ${WS_CODE} (esperado 101): realtime do SPA quebrado." >&2
+    echo "        Confira o vhost em /opt/results/infra/apache/vhosts-templates/85-rap.conf.template" >&2
+    echo "        e a rede do container (r-agent2_r-agent2-network)." >&2
 fi
 
 remote "rm -rf '${STAGE_DIR}'" >/dev/null 2>&1 || true
