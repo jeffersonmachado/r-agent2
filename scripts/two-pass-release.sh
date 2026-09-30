@@ -555,6 +555,17 @@ node_with_workspace_env -e "
   || fail "Chave de attestation ausente — rode: node governance/release-attestation.js keygen (ou provisione RAP_RELEASE_ATTESTATION_PRIVATE_KEY)"
 ok "Pré-condições verificadas"
 
+# ── PRÉ-CONDIÇÃO OBRIGATÓRIA: SELO V2 FRESCO ────────────────────────────────
+# DEFEITO REAL (2026-09-30): este é o FLUXO PADRÃO de release (`npm run zip:release` faz `exec`
+# para cá), e a checagem do selo tinha sido colocada apenas no caminho legado `--audit-only` do
+# `release-package.sh` — depois do ponto onde o `exec` já transferiu o controle para este script.
+# Resultado: no caminho que a operação realmente usa, o selo V2 não era pré-condição nenhuma.
+# Sem selo GO do MESMO source (fingerprint de conteúdo) e dentro da janela, não há pacote.
+step "PRÉ-CONDIÇÃO: selo V2 fresco (GO + mesmo source + dentro da janela)..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-v2-seal-freshness.js" \
+  || fail "V2_SEAL_NOT_FRESH — pacote bloqueado: rode o selo do source atual (npm run engineering-router:v2-seal); selo de outro código/run ou vencido não autoriza este pacote (reports/v2-seal-freshness-report.json)"
+ok "Selo V2 fresco deste source (reports/v2-seal-freshness-report.json)"
+
 # ── GATE DE PROVENIÊNCIA: worktree limpo no INÍCIO do pipeline ───────────────
 # RELEASE OFICIAL exige `git status --porcelain` vazio ANTES de qualquer
 # geração: o pacote precisa corresponder exatamente ao gitCommit declarado no

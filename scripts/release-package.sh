@@ -63,6 +63,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# ── PRÉ-CONDIÇÃO OBRIGATÓRIA: SELO V2 FRESCO (antes da delegação) ────────────
+# DEFEITO REAL (2026-09-30): a checagem estava DEPOIS do `exec` para o two-pass, então no caminho
+# padrão ela nunca rodava. Aqui ela vale para os DOIS caminhos (padrão e legado).
+if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
+  step "PRÉ-CONDIÇÃO: selo V2 fresco (GO + mesmo source + dentro da janela)..."
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-v2-seal-freshness.js" \
+    || fail "V2_SEAL_NOT_FRESH — pacote bloqueado: rode o selo do source atual (npm run engineering-router:v2-seal); selo de outro código/run ou vencido não autoriza este pacote (reports/v2-seal-freshness-report.json)"
+  ok "Selo V2 fresco deste source (reports/v2-seal-freshness-report.json)"
+fi
+
 # ── Delegação ao pipeline de dois passos (fluxo padrão de release) ─────────────
 # O pipeline two-pass resolve a dependência circular ZIP → governança → ZIP,
 # garantindo que os artefatos DENTRO do ZIP referenciam o release correto.
@@ -86,10 +96,9 @@ fi
 # NUNCA commit automático: worktree sujo = NO_GO DIRTY_WORKTREE.
 if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
   # ── PRÉ-CONDIÇÃO OBRIGATÓRIA: SELO V2 FRESCO ────────────────────────────────
-  # DEFEITO REAL (2026-09-30): o pacote era gerado SEM nenhuma checagem do selo do Engineering
-  # Router V2 — um selo NO_GO, de outro source ou de dias antes autorizava o ZIP por omissão.
-  # O selo passa a ser pré-condição: sem selo GO do MESMO source (fingerprint) e dentro da janela
-  # de validade, não há pacote. (Bypass só da JANELA: V2_SEAL_MAX_AGE_MS.)
+  # (no caminho LEGADO `--audit-only`, que não delega ao two-pass.) No fluxo padrão a mesma
+  # checagem roda antes da delegação e no início do two-pass — nunca duplicando trabalho pesado,
+  # apenas garantindo que nenhum caminho de empacotamento escape dela.
   step "PRÉ-CONDIÇÃO: selo V2 fresco (GO + mesmo source + dentro da janela)..."
   node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-v2-seal-freshness.js" \
     || fail "V2_SEAL_NOT_FRESH — pacote bloqueado: rode o selo do source atual (npm run engineering-router:v2-seal); selo de outro código/run ou vencido não autoriza este pacote (reports/v2-seal-freshness-report.json)"
