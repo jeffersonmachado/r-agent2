@@ -103,6 +103,10 @@ beforeAll(async () => {
   try {
     await sequelizeModule.connect(2, 250);
     dbAvailable = true;
+    // Resíduo de execução interrompida: findings de teste abertos entrariam na varredura GLOBAL do
+    // laço de bugs (que existe para achar todo bug pendente) e degradariam esta suíte.
+    const { purgeTestFindings } = require('../helpers/purgeTestFindings');
+    await purgeTestFindings();
   } catch (error) {
     dbAvailable = false;
     dbReason = error.message;

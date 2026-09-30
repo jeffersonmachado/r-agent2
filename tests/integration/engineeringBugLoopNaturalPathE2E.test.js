@@ -18,6 +18,14 @@
  *
  * Infra ausente (Postgres/sandbox Docker) ⇒ pulo EXPLÍCITO; com RELEASE_AUTHORITATIVE=1 a ausência
  * lança INFRA_ERROR — nunca PASS silencioso.
+ *
+ * REQUISITOS QUE ESTA SUÍTE PROVA (declarados em config/engineering-bug-loop-required-tests.json):
+ *   - AUTOMATIC_BUG_WORKER — a missão real que falha acorda o worker sozinho; nenhum `sweep` manual
+ *     é chamado neste arquivo (é a diferença essencial em relação ao E2E antigo);
+ *   - AUTOMATIC_REPRODUCTION_DERIVATION — o plano de reprodução do finding é DERIVADO do contexto
+ *     real da falha (comando declarado no contrato da task), não fornecido pelo teste;
+ *   - REAL_MISSION_CONTINUATION — a missão ORIGINAL volta a executar depois do bug corrigido;
+ *   - REAL_ORIGINAL_TASK_RESUME — a retomada é EXECUÇÃO: existe task substituta com tentativa real.
  */
 
 const path = require('path');

@@ -27,7 +27,8 @@
       "tests/unit/governance/runtimeEvidenceBinding.test.js",
       "tests/unit/engineeringBugFindingEngine.test.js",
       "tests/integration/engineeringBugLoop.test.js",
-      "tests/integration/engineeringBugAutonomousLoopE2E.test.js"
+      "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+      "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
     ],
     "$comment_ciclo_de_bug_2026_09_29": "Suítes do CICLO AUTÔNOMO DE BUG (BUG-01..BUG-20). Entraram em `explicit` porque não casam com os globs de descoberta (`engineeringMission*`/`engineeringTask*`) e NÃO podem ficar fora: o gate `validate:bug-autonomous-loop` deriva o veredito BUG_AUTONOMOUS_LOOP do estado REAL destas suítes na execução autoritativa. Os nomes NÃO foram adicionados aos globs de propósito — um glob `engineeringBug*` capturaria também suítes auxiliares futuras sem decisão explícita, que é o 'verde falso' que o manifesto existe para impedir.",
     "$comment_suites_missao_2026_09_28": "Suítes dos EIXOS da missão de integração runtime: dependência do selo V2 em relação a TIMEOUT_ARCHITECTURE, invariante de direção entre gates, semântica do inventário de timeouts e gate de migrations. Entraram no manifesto porque são requisitos de selo (não testes auxiliares): a execução autoritativa precisa prová-los."

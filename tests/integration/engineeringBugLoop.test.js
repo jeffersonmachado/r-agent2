@@ -109,6 +109,12 @@ beforeAll(async () => {
   try {
     await sequelizeModule.connect(2, 250);
     dbAvailable = true;
+    // RESÍDUO DE EXECUÇÃO INTERROMPIDA: se uma execução anterior morreu (timeout/kill), o `afterAll`
+    // não rodou e os findings de teste ficaram no banco. A varredura do laço é GLOBAL — ela existe
+    // para achar todo bug pendente — e tentaria reproduzir cada resíduo (execuções reais),
+    // degradando esta própria suíte. Purgar o resíduo de ATORES DE TESTE é pré-condição medida.
+    const { purgeTestFindings } = require('../helpers/purgeTestFindings');
+    await purgeTestFindings();
   } catch (error) {
     dbAvailable = false;
     dbReason = error.message;
@@ -704,5 +710,85 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     expect(closed.triage.ruleBaselineVerification).toMatchObject({ ok: true, checked: true });
     const history = await bugFindingService.getFindingHistory(finding.id);
     expect(history.filter((e) => e.payload && e.payload.kind === 'GOVERNANCE_BASELINE_CHECK').length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('BUG_DURABLE_EXECUTION: posse do finding por lease/fence impede dois workers no mesmo bug', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'BUG_DURABLE_EXECUTION posse do finding' });
+
+    const first = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-A' });
+    expect(first.token).toBeTruthy();
+    expect(first.fence).toBeGreaterThan(0);
+
+    // Segundo worker no MESMO finding: recusado enquanto o lease do primeiro estiver vivo.
+    await expect(bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-B' }))
+      .rejects.toMatchObject({ code: 'FINDING_LEASE_HELD_BY_OTHER_WORKER' });
+
+    // Token que não é o dono não renova posse (worker zumbi não mantém o item travado).
+    await expect(bugFindingService.heartbeatFindingLease(finding.id, { token: 'token-de-outro-worker' }))
+      .rejects.toMatchObject({ code: 'FINDING_LEASE_LOST' });
+    const beat = await bugFindingService.heartbeatFindingLease(finding.id, { token: first.token });
+    expect(beat.fence).toBe(first.fence);
+
+    // Liberar é do DONO, e o fence é MONOTÔNICO: a posse seguinte nunca reusa a autoridade anterior.
+    const released = await bugFindingService.releaseFindingLease(finding.id, { token: first.token });
+    expect(released.released).toBe(true);
+    const second = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-B' });
+    expect(second.fence).toBeGreaterThan(first.fence);
+    expect(second.token).not.toBe(first.token);
+    await bugFindingService.releaseFindingLease(finding.id, { token: second.token });
+  });
+
+  test('CONCURRENT_FINDING_DEDUPLICATION: entregas simultâneas da mesma falha agregam em UM finding canônico', async () => {
+    if (skipIfNoDatabase()) return;
+    const title = `CONCURRENT_FINDING_DEDUPLICATION mesma falha ${Date.now()}`;
+    const deliveries = await Promise.all(Array.from({ length: 8 }, (_, index) => bugFindingService.registerFinding({
+      source: 'UNIT_TEST',
+      title,
+      description: 'oito entregas simultâneas do mesmo sintoma',
+      symbol: title,
+      affectedFiles: ['api/services/demo.js'],
+      affectedSubsystems: ['ENGINEERING_MISSION'],
+      evidenceRefs: [{ type: 'TEST_REPORT', ref: `jest:concurrent:${index}`, detail: 'suite reprovada' }],
+    }, { actor: 'CONCURRENT' })));
+
+    const ids = new Set(deliveries.map((d) => d.finding.id));
+    expect(ids.size).toBe(1); // UMA linha canônica, nunca oito
+    const canonicalId = deliveries[0].finding.id;
+    created.findings.push(canonicalId);
+
+    const { EngineeringBugFinding } = { EngineeringBugFinding: models.getEngineeringBugFinding() };
+    const rows = await EngineeringBugFinding.findAll({ where: { fingerprint: deliveries[0].finding.fingerprint } });
+    expect(rows.length).toBe(1);
+    // A contagem de ocorrências não perde atualização sob concorrência (contador atômico no banco).
+    expect(rows[0].occurrences).toBe(8);
+  });
+
+  test('FINDING_STATE_CONCURRENCY: transições concorrentes são serializadas por CAS, nunca vencem as duas', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'FINDING_STATE_CONCURRENCY transições rivais' });
+
+    const attempts = await Promise.allSettled([
+      ...Array.from({ length: 3 }, () => bugFindingService.transitionFinding(finding.id, 'CONFIRMED', {
+        actor: 'WORKER-A', patch: { confirmation_basis: 'UNIT_FAILURE', confirmed_at: new Date().toISOString() },
+      })),
+      ...Array.from({ length: 3 }, () => bugFindingService.transitionFinding(finding.id, 'NOT_REPRODUCED', {
+        actor: 'WORKER-B', patch: { non_reproduction_reason: 'corrida entre workers' },
+      })),
+    ]);
+
+    const fulfilled = attempts.filter((a) => a.status === 'fulfilled');
+    const rejected = attempts.filter((a) => a.status === 'rejected');
+    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    expect(rejected.length).toBeGreaterThanOrEqual(1); // o CAS recusou quem perdeu a corrida
+
+    // Um único destino sobrevive: CONFIRMED e NOT_REPRODUCED são mutuamente exclusivos.
+    const winners = new Set(fulfilled.map((a) => a.value.finding.status));
+    expect(winners.size).toBe(1);
+    const final = await bugFindingService.getFinding(finding.id);
+    expect(final.status).toBe(Array.from(winners)[0]);
+    for (const failure of rejected) {
+      expect(['FINDING_STATE_CONFLICT', 'INVALID_FINDING_TRANSITION']).toContain(failure.reason.code);
+    }
   });
 });

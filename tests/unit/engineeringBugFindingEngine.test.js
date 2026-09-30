@@ -396,6 +396,65 @@ describe('bugFinding engine — self-modification (BUG-19, BUG-20)', () => {
   });
 });
 
+describe('bugFinding engine — derivação automática de reprodução (AUTOMATIC_REPRODUCTION_DERIVATION)', () => {
+  test('AUTOMATIC_REPRODUCTION_DERIVATION: deriva do TestRun que falhou na execução real', () => {
+    const plan = engine.deriveReproductionPlan({
+      task: { id: 'task-1', test_commands: [] },
+      result: { status: 'FAILED' },
+      testRuns: [{ command: 'npx jest tests/unit/y.test.js', outcome: 'FAIL', exitCode: 1, stdoutRef: 'reports/y.log' }],
+      source: 'UNIT_TEST',
+    });
+    expect(plan.derived).toBe(true);
+    expect(plan.strategy).toBe('TEST_FAILURE');
+    expect(plan.command).toBe('npx jest tests/unit/y.test.js');
+    expect(plan.expect).toBe('FAIL');
+    expect(plan.evidence[0].type).toBe('TEST_REPORT');
+  });
+
+  test('AUTOMATIC_REPRODUCTION_DERIVATION: deriva do comando DECLARADO no contrato da task', () => {
+    const plan = engine.deriveReproductionPlan({
+      task: { id: 'task-2', test_commands: ['npx jest tests/unit/x.test.js'] },
+      result: { status: 'FAILED' },
+      source: 'UNIT_TEST',
+    });
+    expect(plan.derived).toBe(true);
+    expect(plan.strategy).toBe('DECLARED_TEST_COMMAND');
+    expect(plan.command).toBe('npx jest tests/unit/x.test.js');
+  });
+
+  test('AUTOMATIC_REPRODUCTION_DERIVATION: invariante de governança vira reprodução determinística', () => {
+    const plan = engine.deriveReproductionPlan({ source: 'RELEASE_GATE', reasonCode: 'COVERAGE_GATE_FAILED' });
+    expect(plan.derived).toBe(true);
+    expect(plan.strategy).toBe('GOVERNANCE_INVARIANT');
+    expect(plan.invariants).toEqual([{ id: 'COVERAGE_GATE_FAILED' }]);
+  });
+
+  test('AUTOMATIC_REPRODUCTION_DERIVATION: sem contexto, o MOTIVO é explícito — nada é inventado', () => {
+    // Fonte de TESTE sem comando é DEFEITO do laço e o motivo diz exatamente isso...
+    const fromTestSource = engine.deriveReproductionPlan({ source: 'UNIT_TEST', reasonCode: 'ALGO_INDETERMINADO' });
+    expect(fromTestSource.derived).toBe(false);
+    expect(fromTestSource.strategy).toBe('NONE');
+    expect(fromTestSource.command).toBeNull();
+    expect(fromTestSource.reason).toContain('falha de teste');
+    expect(fromTestSource.reason).toMatch(/contexto de execução/i);
+
+    // ...e fora de fonte de teste o motivo é a insuficiência de contexto geral.
+    const fromOtherSource = engine.deriveReproductionPlan({ source: 'TELEMETRY_ANOMALY', reasonCode: 'ALGO_INDETERMINADO' });
+    expect(fromOtherSource.derived).toBe(false);
+    expect(fromOtherSource.command).toBeNull();
+    expect(fromOtherSource.reason).toContain('contexto insuficiente');
+  });
+
+  test('AUTOMATIC_REPRODUCTION_DERIVATION: entradas nulas NÃO derrubam o observador de falhas', () => {
+    // Regressão medida em 2026-09-30: `result: null` causava TypeError — o hook de detecção quebraria
+    // exatamente quando há falha. A derivação é pura e precisa tolerar o que a execução não produziu.
+    expect(() => engine.deriveReproductionPlan({ task: null, result: null, testRuns: null, regressionRuns: null })).not.toThrow();
+    const plan = engine.deriveReproductionPlan({ task: null, result: null, testRuns: null, regressionRuns: null, source: 'UNIT_TEST' });
+    expect(plan.derived).toBe(false);
+    expect(plan.reason).toBeTruthy();
+  });
+});
+
 describe('bugFinding engine — vocabulário único', () => {
   test('todos os estados declarados têm transições definidas e terminais coerentes', () => {
     for (const status of engine.FINDING_STATUSES) {

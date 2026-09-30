@@ -685,6 +685,14 @@ const DEFAULT_LEASE_TTL_MS = (() => {
 })();
 
 /**
+ * Formato do token de posse (uuid gerado por `crypto.randomUUID`). Um token fora deste formato é
+ * recusado ANTES de chegar ao banco — o UPDATE parametrizado em coluna `uuid` estoura
+ * `invalid input syntax for type uuid`, transformando "posse perdida" (condição normal de corrida)
+ * em erro de banco.
+ */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
  * Adquire a posse do finding para um worker, por CAS no banco (não no código).
  * Só vence quem encontra: sem lease, lease EXPIRADO (o worker anterior morreu) ou lease próprio.
  * O `lease_fence` é monotônico — é o que permite REJEITAR a escrita de um worker antigo depois do
@@ -726,6 +734,16 @@ async function acquireFindingLease(findingId, { workerInstanceId, ttlMs = DEFAUL
 /** Renova a posse (heartbeat). Exige o token: quem perdeu o lease não renova. */
 async function heartbeatFindingLease(findingId, { token, ttlMs = DEFAULT_LEASE_TTL_MS } = {}) {
   if (!token) throw Object.assign(new Error('heartbeat exige `token`'), { code: 'INVALID_LEASE' });
+  // DEFEITO MEDIDO (2026-09-30): um token que não é UUID chegava ao banco e estourava
+  // `invalid input syntax for type uuid` — o heartbeat de um worker com token corrompido/forjado
+  // falhava com erro de banco em vez de declarar POSSE PERDIDA. Recusar antes de consultar mantém
+  // a semântica (`FINDING_LEASE_LOST`) e não transforma uma condição de corrida legítima em 500.
+  if (!UUID_PATTERN.test(String(token))) {
+    const invalid = new Error(`lease do finding ${findingId} não pertence mais a este worker`);
+    invalid.code = 'FINDING_LEASE_LOST';
+    invalid.detail = { reason: 'token_invalido' };
+    throw invalid;
+  }
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlMs);
   const [rows] = await model().sequelize.query(
@@ -747,6 +765,9 @@ async function heartbeatFindingLease(findingId, { token, ttlMs = DEFAULT_LEASE_T
 /** Libera a posse (idempotente). Só o dono do token libera. */
 async function releaseFindingLease(findingId, { token } = {}) {
   if (!token) return { released: false, reason: 'sem_token' };
+  // Mesma razão do heartbeat: token fora do formato vai direto ao banco como uuid. Liberar posse é
+  // idempotente, então um token inválido simplesmente não libera nada (nunca um erro de banco).
+  if (!UUID_PATTERN.test(String(token))) return { released: false, reason: 'token_invalido', findingId };
   const [rows] = await model().sequelize.query(
     `UPDATE engineering_bug_findings
         SET lease_token = NULL,

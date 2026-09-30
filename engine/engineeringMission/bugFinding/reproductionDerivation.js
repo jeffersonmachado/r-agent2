@@ -80,8 +80,13 @@ function isFailedRun(run = {}) {
 function deriveReproductionPlan({
   task = null, result = {}, testRuns = [], regressionRuns = [], source = null, reasonCode = null,
 } = {}) {
+  // ENTRADA DEFENSIVA: `task`/`result` vêm de execuções reais e chegam nulos quando a execução morre
+  // antes de produzir resultado. Um TypeError aqui derrubaria o próprio hook de detecção — ou seja,
+  // o observador de falhas quebraria exatamente quando há uma falha. Normalizar é obrigatório.
+  const taskInput = task && typeof task === 'object' ? task : null;
+  const input = result && typeof result === 'object' ? result : {};
   const evidence = [];
-  const effectiveReason = reasonCode || result.reasonCode || null;
+  const effectiveReason = reasonCode || input.reasonCode || null;
   const effectiveSource = String(source || '').toUpperCase();
 
   // 1) TestRun REAL que falhou — a reprodução é exatamente o comando que já falhou.
@@ -124,9 +129,9 @@ function deriveReproductionPlan({
   }
 
   // 3) Comando de teste DECLARADO na própria EngineeringTask (contrato da task).
-  const declared = firstCommandOf(task && task.test_commands);
+  const declared = firstCommandOf(taskInput && taskInput.test_commands);
   if (declared) {
-    evidence.push({ type: 'ARTIFACT', ref: `engineering_task:${task.id || 'n/d'}:test_commands`, detail: `comando declarado no contrato da task: "${declared}"` });
+    evidence.push({ type: 'ARTIFACT', ref: `engineering_task:${taskInput.id || 'n/d'}:test_commands`, detail: `comando declarado no contrato da task: "${declared}"` });
     return {
       derived: true,
       strategy: DERIVATION_STRATEGIES.DECLARED_TEST_COMMAND,
@@ -139,7 +144,7 @@ function deriveReproductionPlan({
   }
 
   // 4) Comando carregado pelo próprio resultado da execução.
-  const fromResult = toCommand(result.command) || toCommand(result.testCommand) || toCommand(result.suite);
+  const fromResult = toCommand(input.command) || toCommand(input.testCommand) || toCommand(input.suite);
   if (fromResult) {
     evidence.push({ type: 'ARTIFACT', ref: `task_result:${fromResult}`, detail: `comando informado pelo resultado da execução: "${fromResult}"` });
     return {

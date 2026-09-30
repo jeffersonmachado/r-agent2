@@ -8,7 +8,8 @@
     "note": "Os 20 enunciados existem literalmente na missão de 2026-09-29; nada foi inventado. `suites` lista TODAS as suítes que contêm a prova do ID e todas precisam estar PASS na execução autoritativa."
   },
   "runtimeProofs": [
-    "tests/integration/engineeringBugAutonomousLoopE2E.test.js"
+    "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
+    "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
   ],
   "verdicts": {
     "BUG_DETECTION": ["BUG-01"],
@@ -19,14 +20,30 @@
     "AUTONOMOUS_FIX_LOOP": ["BUG-08", "BUG-10"],
     "REGRESSION_VALIDATION": ["BUG-09"],
     "MISSION_CONTINUATION": ["BUG-11"],
-    "SELF_MODIFICATION_GUARD": ["BUG-19", "BUG-20"],
-    "BUG_AUTONOMOUS_LOOP": ["BUG-01", "BUG-02", "BUG-03", "BUG-04", "BUG-05", "BUG-06", "BUG-07", "BUG-08", "BUG-09", "BUG-10", "BUG-11", "BUG-12", "BUG-13", "BUG-14", "BUG-15", "BUG-16", "BUG-17", "BUG-18", "BUG-19", "BUG-20"]
+    "SELF_MODIFICATION_GUARD": ["BUG-19", "BUG-20", "HUMAN_SELF_MODIFICATION_APPROVAL", "PROTECTED_GOVERNANCE_BASELINE"],
+    "AUTOMATIC_BUG_WORKER": ["AUTOMATIC_BUG_WORKER"],
+    "BUG_DURABLE_EXECUTION": ["BUG_DURABLE_EXECUTION"],
+    "AUTOMATIC_REPRODUCTION_DERIVATION": ["AUTOMATIC_REPRODUCTION_DERIVATION"],
+    "REAL_MISSION_CONTINUATION": ["REAL_MISSION_CONTINUATION"],
+    "REAL_ORIGINAL_TASK_RESUME": ["REAL_ORIGINAL_TASK_RESUME"],
+    "CONCURRENT_FINDING_DEDUPLICATION": ["CONCURRENT_FINDING_DEDUPLICATION"],
+    "FINDING_STATE_CONCURRENCY": ["FINDING_STATE_CONCURRENCY"],
+    "META_REVIEW_TO_BUG_LOOP": ["META_REVIEW_TO_BUG_LOOP"],
+    "ADVERSARIAL_TO_BUG_LOOP": ["ADVERSARIAL_TO_BUG_LOOP"],
+    "BUG_AUTONOMOUS_LOOP": ["BUG-01", "BUG-02", "BUG-03", "BUG-04", "BUG-05", "BUG-06", "BUG-07", "BUG-08", "BUG-09", "BUG-10", "BUG-11", "BUG-12", "BUG-13", "BUG-14", "BUG-15", "BUG-16", "BUG-17", "BUG-18", "BUG-19", "BUG-20", "AUTOMATIC_BUG_WORKER", "BUG_DURABLE_EXECUTION", "AUTOMATIC_REPRODUCTION_DERIVATION", "REAL_MISSION_CONTINUATION", "REAL_ORIGINAL_TASK_RESUME", "HUMAN_SELF_MODIFICATION_APPROVAL", "PROTECTED_GOVERNANCE_BASELINE", "CONCURRENT_FINDING_DEDUPLICATION", "FINDING_STATE_CONCURRENCY", "META_REVIEW_TO_BUG_LOOP", "ADVERSARIAL_TO_BUG_LOOP"]
   },
   "verdictsRequiringRuntimeProof": [
     "AUTONOMOUS_FIX_LOOP",
     "REGRESSION_VALIDATION",
     "MISSION_CONTINUATION",
     "SELF_MODIFICATION_GUARD",
+    "AUTOMATIC_BUG_WORKER",
+    "BUG_DURABLE_EXECUTION",
+    "AUTOMATIC_REPRODUCTION_DERIVATION",
+    "REAL_MISSION_CONTINUATION",
+    "REAL_ORIGINAL_TASK_RESUME",
+    "META_REVIEW_TO_BUG_LOOP",
+    "ADVERSARIAL_TO_BUG_LOOP",
     "BUG_AUTONOMOUS_LOOP"
   ],
   "requiredTests": [
@@ -129,6 +146,61 @@
       "id": "BUG-20",
       "requirement": "Self-modification não pode autoaprovar quando policy proíbe.",
       "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "AUTOMATIC_BUG_WORKER",
+      "requirement": "Missão real que falha acorda o bug worker SOZINHO: o caminho natural fecha detecção→reprodução→correção→regressão sem nenhuma chamada manual ao laço (sweep).",
+      "suites": ["tests/integration/engineeringBugLoopNaturalPathE2E.test.js"]
+    },
+    {
+      "id": "BUG_DURABLE_EXECUTION",
+      "requirement": "A execução do laço é DURÁVEL: posse com lease/fence/heartbeat no finding impede que dois workers corrijam o mesmo bug e que um worker morto trave o item.",
+      "suites": ["tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "AUTOMATIC_REPRODUCTION_DERIVATION",
+      "requirement": "O plano de reprodução é DERIVADO da evidência real da falha (teste que falhou, regressão, comando declarado da task) — nunca inventado nem deixado sem motivo explícito.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"]
+    },
+    {
+      "id": "REAL_MISSION_CONTINUATION",
+      "requirement": "Depois do bug corrigido a MISSÃO ORIGINAL volta a executar pelo caminho canônico, com linhagem auditável (finding, task original, task de correção, task substituta).",
+      "suites": ["tests/integration/engineeringBugLoopNaturalPathE2E.test.js"]
+    },
+    {
+      "id": "REAL_ORIGINAL_TASK_RESUME",
+      "requirement": "A retomada é EXECUÇÃO, não mudança de status: a task substituta é criada sob o mesmo contrato e registra tentativa real de execução.",
+      "suites": ["tests/integration/engineeringBugLoopNaturalPathE2E.test.js"]
+    },
+    {
+      "id": "HUMAN_SELF_MODIFICATION_APPROVAL",
+      "requirement": "Aval de self-modification é HUMAN-ONLY: service account, worker automático e modelo não têm autoridade, e ausência de tipo de ator é recusa (fail-closed).",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "PROTECTED_GOVERNANCE_BASELINE",
+      "requirement": "Baseline das regras de julgamento capturado ANTES da correção e verificado no fechamento: gate/limiar/manifesto removido ou modificado bloqueia o fechamento autônomo.",
+      "suites": ["tests/unit/engineeringBugFindingEngine.test.js", "tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "CONCURRENT_FINDING_DEDUPLICATION",
+      "requirement": "Deduplicação é ATÔMICA: entregas simultâneas da mesma falha agregam ocorrência em um único finding canônico, sem erro nem linha duplicada.",
+      "suites": ["tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "FINDING_STATE_CONCURRENCY",
+      "requirement": "Transições de estado do finding são serializadas por CAS: duas transições concorrentes com a mesma leitura não vencem as duas.",
+      "suites": ["tests/integration/engineeringBugLoop.test.js"]
+    },
+    {
+      "id": "META_REVIEW_TO_BUG_LOOP",
+      "requirement": "Blocker do Meta Reviewer entra no ciclo de bug como finding do MESMO modelo, com missão/versão/origem e evidência da review, de forma idempotente.",
+      "suites": ["tests/integration/engineeringMissionReviewEnforcement.test.js"]
+    },
+    {
+      "id": "ADVERSARIAL_TO_BUG_LOOP",
+      "requirement": "Caso não coberto do Adversarial Review vira finding com reprodução derivada do teste permanente declarado pelo catálogo, preservando a identidade de cada caso.",
+      "suites": ["tests/integration/engineeringMissionReviewEnforcement.test.js"]
     }
   ]
 }
