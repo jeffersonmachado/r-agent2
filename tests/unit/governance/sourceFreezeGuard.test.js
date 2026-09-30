@@ -45,9 +45,20 @@ describe('source freeze guard — certificação exige source congelado', () => 
     const before = captureFreeze({ fingerprint: 'a'.repeat(64), commit: '1'.repeat(40), dirtyFiles: [] });
     const after = captureFreeze({ fingerprint: 'a'.repeat(64), commit: '1'.repeat(40), dirtyFiles: ['api/services/websocketService.js', 'tests/unit/websocketService.rateLimit.test.js'] });
     const result = compareFreeze(before, after);
+    // Sujeira de artefato de evidência NÃO bloqueia (reports/ não participa do fingerprint): é
+    // declarada. DEFEITO do próprio guard, medido no mesmo dia: a primeira versão abortava aqui e
+    // travaria o selo por um motivo que não é mudança de código.
+    expect(result.ok).toBe(true);
+    expect(result.changes).toBeNull();
+    expect(result.dirtyDelta.newDirtyFiles).toEqual(['api/services/websocketService.js', 'tests/unit/websocketService.rateLimit.test.js']);
+  });
+
+  test('código-fonte alterado SEM mudar commit é deriva material (fingerprint é a autoridade)', () => {
+    const before = captureFreeze({ fingerprint: 'a'.repeat(64), commit: '1'.repeat(40), dirtyFiles: [] });
+    const after = captureFreeze({ fingerprint: 'c'.repeat(64), commit: '1'.repeat(40), dirtyFiles: [] });
+    const result = compareFreeze(before, after);
     expect(result.ok).toBe(false);
-    expect(result.changes.newDirtyFiles).toEqual(['api/services/websocketService.js', 'tests/unit/websocketService.rateLimit.test.js']);
-    expect(result.detail).toContain('websocketService.js');
+    expect(result.changes.fingerprintChanged).toBe(true);
   });
 
   test('selo iniciado com fonte suja é DECLARADO (não invalidado por si só)', () => {

@@ -16,6 +16,14 @@
  * saída é repetir e torcer, que é exatamente o comportamento que a governança do repositório proíbe.
  *
  * Este módulo só COMPARA snapshots (sem I/O): quem lê git/fingerprint é o chamador.
+ *
+ * CORREÇÃO do próprio guard (mesmo dia, medida): a primeira versão tratava "arquivo que passou a
+ * estar sujo" como deriva e BLOQUEAVA. Isso produzia FALSO POSITIVO: testes autoritativos regeneram
+ * artefatos de evidência versionados (`reports/qwen-live-evidence.json`, escrito por
+ * `engineeringRouterQwenProvider.test.js` em regime autoritativo) e `reports/` NÃO participa do
+ * `sourceFingerprint` (medido: tocar aquele arquivo deixa o fingerprint idêntico). Bloquear por isso
+ * travaria o selo para sempre por um motivo que não é mudança de código. A autoridade sobre "o código
+ * mudou" é o `sourceFingerprint` + o commit; a lista de arquivos sujos é CONTEXTO para o operador.
  */
 
 const CODES = Object.freeze({
@@ -42,9 +50,13 @@ function captureFreeze({ fingerprint = null, commit = null, dirtyFiles = [] } = 
  * decisão do chamador (abortar o selo) depende de O QUE mudou, e a mensagem precisa levar o operador
  * ao trabalho concorrente em vez de ao subsistema errado.
  *
+ * BLOQUEIAM: `sourceFingerprint` alterado (o código-fonte mudou) e commit alterado (história mudou).
+ * NÃO BLOQUEIA (declarado em `dirtyDelta`): mudança apenas na lista de arquivos modificados —
+ * artefatos de evidência são regenerados pela própria execução e não fazem parte do source.
+ *
  * @param {object} before
  * @param {object} after
- * @returns {{ok:boolean, code:string|null, detail:string|null, changes:object|null}}
+ * @returns {{ok:boolean, code:string|null, detail:string|null, changes:object|null, dirtyDelta:object|null}}
  */
 function compareFreeze(before = {}, after = {}) {
   const fpChanged = Boolean(before.fingerprint && after.fingerprint && before.fingerprint !== after.fingerprint);
@@ -54,9 +66,14 @@ function compareFreeze(before = {}, after = {}) {
   const afterDirty = new Set(Array.isArray(after.dirtyFiles) ? after.dirtyFiles : []);
   const newDirtyFiles = [...afterDirty].filter((f) => !beforeDirty.has(f)).sort();
   const cleanedFiles = [...beforeDirty].filter((f) => !afterDirty.has(f)).sort();
+  const dirtyDelta = (newDirtyFiles.length > 0 || cleanedFiles.length > 0)
+    ? { newDirtyFiles, cleanedFiles }
+    : null;
 
-  const changed = fpChanged || commitChanged || newDirtyFiles.length > 0 || cleanedFiles.length > 0;
-  if (!changed) return { ok: true, code: null, detail: null, changes: null };
+  // DERIVA MATERIAL: só o que muda a identidade do código/da história invalida a certificação.
+  if (!fpChanged && !commitChanged) {
+    return { ok: true, code: null, detail: null, changes: null, dirtyDelta };
+  }
 
   const parts = [];
   if (fpChanged) parts.push(`sourceFingerprint mudou (${String(before.fingerprint).slice(0, 12)}… → ${String(after.fingerprint).slice(0, 12)}…)`);
@@ -69,6 +86,7 @@ function compareFreeze(before = {}, after = {}) {
     code: CODES.SOURCE_CHANGED_DURING_CERTIFICATION,
     detail: `${parts.join(' | ')} — a certificação exige o source CONGELADO: outra sessão/processo mexeu no mesmo worktree durante o selo`,
     changes: { fingerprintChanged: fpChanged, commitChanged, newDirtyFiles, cleanedFiles },
+    dirtyDelta,
   };
 }
 
