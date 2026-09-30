@@ -1,14 +1,14 @@
 {
   "artifactType": "final-readiness-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-30T02:15:22.162Z",
+  "generatedAt": "2026-09-30T03:17:36.195Z",
   "runId": "rap-governed-20260930011544805-3f8876d9",
   "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "status": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "status": "AUTONOMOUS_READY_GO",
   "blockingGaps": [],
   "certificationStates": {
     "corePlatformReadiness": {
