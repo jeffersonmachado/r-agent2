@@ -10031,3 +10031,56 @@ body.flow-editor-active .user-menu-dropdown {
   padding: 8px;
   border-bottom: 1px solid var(--color-border-default);
 }
+
+/* ── Ajustes responsivos medidos (2026-09-29, viewport 390px) ────────────────────────────────
+ * Auditoria automatizada em 20 páginas × 3 viewports: NÃO há overflow horizontal de página nem
+ * conteúdo inalcançável (tudo que passa da borda está dentro de um container com rolagem própria).
+ * Dois defeitos reais foram medidos e são corrigidos aqui.
+ */
+
+/* 1) A barra de filtros (`.support-controls`, usada por Caixa de Entrada, Chamados e outras)
+ *    contém filtros (label + input/select) MAS a media query de 900px a converte num grid de
+ *    5 colunas FIXAS de 40px — template pensado para os botões-ícone do cabeçalho de atendimento
+ *    (status/atualizar/notificações/nova conversa), não para filtros. Resultado medido a 390px:
+ *    input de 18px de largura sobre outro input (53%) e select de 18px sob o botão "Atualizar"
+ *    (82%) — controles inutilizáveis. Abaixo de 640px, a barra QUE TEM FILTROS passa a uma coluna,
+ *    com cada filtro em sua linha; barras só com botões-ícone (cabeçalho de atendimento) não mudam. */
+@media (max-width: 640px) {
+  .support-controls:has(> label) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .support-controls:has(> label) > label {
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .support-controls:has(> label) > label:has(.support-form-input),
+  .support-controls:has(> label) > label:has(.support-form-select) {
+    justify-content: space-between;
+  }
+
+  .support-controls:has(> label) > label > .support-form-input,
+  .support-controls:has(> label) > label > .support-form-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 60%;
+  }
+
+  .support-controls:has(> label) > button,
+  .support-controls:has(> label) > .support-button {
+    width: 100%;
+  }
+
+  /* 2) O widget flutuante "Perguntar à IA" (fixo em bottom-6 left-6) cobria a última linha de
+   *    conteúdo — inclusive uma faixa de abas da tela de configuração (69% de sobreposição) e o
+   *    botão "Ver detalhes" do analytics (95%). O espaço extra deixa o fim da página sair de trás
+   *    do widget; o widget em si nasce recolhido em telas estreitas (AskAiWidget.jsx). Medido: com
+   *    o padding, rolar até o fim deixa o conteúdo livre (o que resta coberto é o próprio widget). */
+  .rap-page {
+    padding-bottom: 84px;
+  }
+}
+

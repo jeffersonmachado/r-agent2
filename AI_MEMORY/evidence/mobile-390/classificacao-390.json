@@ -1,0 +1,259 @@
+[
+  {
+    "route": "/workspace",
+    "clipped": 0,
+    "reachable": 97,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 0,
+      "totalButtons": 92
+    },
+    "topClipped": [],
+    "topReachable": [
+      {
+        "tag": "header",
+        "cls": "workspace-header",
+        "width": 375,
+        "right": 422,
+        "text": "ENTIDADE 360 5511992822699 Saudável · 100 Telefone",
+        "scrollerCls": "workspace-shell",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "div",
+        "cls": "workspace-header-actions",
+        "width": 160,
+        "right": 418,
+        "text": "Próxima melhor ação Insights e ações são calculado",
+        "scrollerCls": "workspace-shell",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "div",
+        "cls": "workspace-card workspace-header-card max-w-sm",
+        "width": 160,
+        "right": 418,
+        "text": "Próxima melhor ação Insights e ações são calculado",
+        "scrollerCls": "workspace-shell",
+        "hiddenCls": "rap-enterprise-main"
+      }
+    ],
+    "screenshot": "mobile_workspace.png"
+  },
+  {
+    "route": "/analytics",
+    "clipped": 0,
+    "reachable": 69,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 6,
+      "totalButtons": 26
+    },
+    "topClipped": [],
+    "topReachable": [
+      {
+        "tag": "table",
+        "cls": "",
+        "width": 449,
+        "right": 494,
+        "text": "Canal Pedidos Receita Custo marketing Custo operac",
+        "scrollerCls": "overflow-auto mb-6",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "thead",
+        "cls": "",
+        "width": 449,
+        "right": 494,
+        "text": "Canal Pedidos Receita Custo marketing Custo operac",
+        "scrollerCls": "overflow-auto mb-6",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "tr",
+        "cls": "",
+        "width": 449,
+        "right": 494,
+        "text": "Canal Pedidos Receita Custo marketing Custo operac",
+        "scrollerCls": "overflow-auto mb-6",
+        "hiddenCls": "rap-enterprise-main"
+      }
+    ],
+    "screenshot": "mobile_analytics.png"
+  },
+  {
+    "route": "/crm/contacts",
+    "clipped": 0,
+    "reachable": 45,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 8,
+      "totalButtons": 20
+    },
+    "topClipped": [],
+    "topReachable": [
+      {
+        "tag": "table",
+        "cls": "w-full text-sm",
+        "width": 789,
+        "right": 834,
+        "text": "Nome Email Telefone Cargo Departamento Ações Lead ",
+        "scrollerCls": "overflow-x-auto",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "thead",
+        "cls": "bg-bg-secondary border-b border-border-default",
+        "width": 789,
+        "right": 834,
+        "text": "Nome Email Telefone Cargo Departamento Ações",
+        "scrollerCls": "overflow-x-auto",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "tr",
+        "cls": "",
+        "width": 789,
+        "right": 834,
+        "text": "Nome Email Telefone Cargo Departamento Ações",
+        "scrollerCls": "overflow-x-auto",
+        "hiddenCls": "rap-enterprise-main"
+      }
+    ],
+    "screenshot": "mobile_crm_contacts.png"
+  },
+  {
+    "route": "/chat",
+    "clipped": 0,
+    "reachable": 3,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 1,
+      "totalButtons": 18
+    },
+    "topClipped": [],
+    "topReachable": [
+      {
+        "tag": "label",
+        "cls": "",
+        "width": 423,
+        "right": 451,
+        "text": "Fluxo: Selecione um fluxo... Fluxo inicial (auto) ",
+        "scrollerCls": "rap-page",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "select",
+        "cls": "border border-solid [border-color:var(--color-border-default)] rounded",
+        "width": 377,
+        "right": 451,
+        "text": "Selecione um fluxo... Fluxo inicial (auto) Voice T",
+        "scrollerCls": "rap-page",
+        "hiddenCls": "rap-enterprise-main"
+      },
+      {
+        "tag": "h1",
+        "cls": "",
+        "width": 51,
+        "right": 534,
+        "text": "💬 Chat de Teste",
+        "scrollerCls": "rap-page",
+        "hiddenCls": "rap-enterprise-main"
+      }
+    ],
+    "screenshot": "mobile_chat.png"
+  },
+  {
+    "route": "/audit",
+    "clipped": 0,
+    "reachable": 5,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 2,
+      "totalButtons": 19
+    },
+    "topClipped": [],
+    "topReachable": [
+      {
+        "tag": "table",
+        "cls": "w-full border-collapse",
+        "width": 465,
+        "right": 486,
+        "text": "Data/Hora Agente Ação Recurso ID do Recurso IP",
+        "scrollerCls": "overflow-x-auto",
+        "hiddenCls": "bg-bg-elevated rounded-xl border border-border-def"
+      },
+      {
+        "tag": "thead",
+        "cls": "",
+        "width": 465,
+        "right": 486,
+        "text": "Data/Hora Agente Ação Recurso ID do Recurso IP",
+        "scrollerCls": "overflow-x-auto",
+        "hiddenCls": "bg-bg-elevated rounded-xl border border-border-def"
+      },
+      {
+        "tag": "tr",
+        "cls": "bg-bg-secondary border-b border-border-default",
+        "width": 465,
+        "right": 486,
+        "text": "Data/Hora Agente Ação Recurso ID do Recurso IP",
+        "scrollerCls": "overflow-x-auto",
+        "hiddenCls": "bg-bg-elevated rounded-xl border border-border-def"
+      }
+    ],
+    "screenshot": "mobile_audit.png"
+  },
+  {
+    "route": "/inbox",
+    "clipped": 0,
+    "reachable": 0,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 0,
+      "totalButtons": 10
+    },
+    "topClipped": [],
+    "topReachable": [],
+    "screenshot": "mobile_inbox.png"
+  },
+  {
+    "route": "/config",
+    "clipped": 0,
+    "reachable": 0,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 0,
+      "totalButtons": 32
+    },
+    "topClipped": [],
+    "topReachable": [],
+    "screenshot": "mobile_config.png"
+  },
+  {
+    "route": "/cases",
+    "clipped": 0,
+    "reachable": 0,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 0,
+      "totalButtons": 10
+    },
+    "topClipped": [],
+    "topReachable": [],
+    "screenshot": "mobile_cases.png"
+  },
+  {
+    "route": "/dashboard",
+    "clipped": 0,
+    "reachable": 0,
+    "nav": {
+      "hamburger": false,
+      "smallButtons": 0,
+      "totalButtons": 8
+    },
+    "topClipped": [],
+    "topReachable": [],
+    "screenshot": "mobile_dashboard.png"
+  }
+]

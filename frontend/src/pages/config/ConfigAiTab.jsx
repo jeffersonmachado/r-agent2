@@ -120,6 +120,7 @@ export function ConfigAiTab({
   const [showAddForm, setShowAddForm] = useState(false);
   const [savingProvider, setSavingProvider] = useState(false);
   const [deletingProviderKey, setDeletingProviderKey] = useState(null);
+  const [retestingProviderKey, setRetestingProviderKey] = useState(null);
   const [newProvider, setNewProvider] = useState({ key: '', label: '', kind: 'openai-compatible', baseUrl: '', defaultModel: '', models: '' });
 
   const loadProviders = useCallback(async () => {
@@ -137,6 +138,46 @@ export function ConfigAiTab({
   useEffect(() => {
     loadProviders();
   }, [loadProviders]);
+
+  /**
+   * Retesta a credencial JÁ SALVA de um provedor — usa a chave do banco, sem exigir que o
+   * operador redigite nada (a chave atual nunca é exibida na tela). O endpoint faz a chamada REAL
+   * ao provedor, reconsulta o saldo e persiste status/erro/saldo na própria credencial; o badge lê
+   * esse estado, então a tela é recarregada em seguida. Antes deste botão, a única forma de
+   * atualizar o badge era redigitar a chave e salvar de novo.
+   */
+  const handleRetestProvider = useCallback(async (providerKey) => {
+    if (!providerKey) return;
+    const label = providerLabel(providers, providerKey);
+    setRetestingProviderKey(providerKey);
+    try {
+      const result = await validateTenantAiCredentials({ tenantId: targetTenantId || undefined, provider: providerKey });
+      if (result?.valid) {
+        const balanceText = formatBalance(result?.balance);
+        showToast(
+          balanceText ? `${label}: credencial válida — saldo ${balanceText}` : `${label}: credencial válida`,
+          'success',
+        );
+      } else {
+        showToast(`${label}: ${result?.error || 'credencial inválida'}`, 'error');
+      }
+
+      try {
+        const refreshed = await getTenantAiConfig(targetTenantId || undefined);
+        if (refreshed?.providers) {
+          setTenantAiConfig((prev) => ({ ...(prev || {}), providers: refreshed.providers }));
+        }
+      } catch (refreshErr) {
+        logger.warn('Não foi possível atualizar o status de credenciais após o reteste', refreshErr);
+      }
+    } catch (error) {
+      logger.error('Erro ao retestar credencial de IA', error);
+      const errorMessage = error.body?.message || error.message || 'erro desconhecido';
+      showToast(`Erro ao retestar ${label}: ${errorMessage}`, 'error');
+    } finally {
+      setRetestingProviderKey(null);
+    }
+  }, [providers, targetTenantId, setTenantAiConfig, showToast]);
 
   return (
 <div className="space-y-6">
@@ -326,6 +367,20 @@ export function ConfigAiTab({
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <CredentialStatusBadge providerStatus={providerStatus} />
+                        <button
+                          type="button"
+                          onClick={() => handleRetestProvider(key)}
+                          disabled={!providerStatus?.hasCredential || retestingProviderKey === key}
+                          title={
+                            providerStatus?.hasCredential
+                              ? 'Testar novamente a chave salva do provedor (reconsulta o saldo)'
+                              : 'Nenhuma chave salva para este provedor'
+                          }
+                          data-testid={`retest-provider-${key}`}
+                          className="px-2 py-1 rounded text-xs font-medium bg-bg-secondary text-text-primary hover:bg-accent-primary/10 border border-border-default disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {retestingProviderKey === key ? 'Testando…' : 'Retestar'}
+                        </button>
                         <button
                           type="button"
                           onClick={() => {

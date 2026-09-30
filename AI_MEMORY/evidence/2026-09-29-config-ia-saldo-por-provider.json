@@ -1,115 +1,159 @@
 {
-  "startedAt": "2026-09-29T22:07:51.160Z",
+  "startedAt": "2026-09-29T23:44:35.412Z",
   "baseUrl": "http://127.0.0.1:5173",
-  "journey": "config-ia-saldo-por-provider",
+  "journey": "config-ia-saldo-e-reteste-por-provider",
   "steps": [
     {
       "name": "login com seleção de tenant",
       "status": "PASS",
       "detail": "",
-      "at": "2026-09-29T22:08:03.531Z"
+      "at": "2026-09-29T23:44:48.158Z"
     },
     {
       "name": "tela de configuração acessível",
       "status": "PASS",
       "detail": "http://127.0.0.1:5173/config",
-      "at": "2026-09-29T22:08:04.260Z"
+      "at": "2026-09-29T23:44:48.882Z"
     },
     {
       "name": "aba IA acessível",
       "status": "PASS",
       "detail": "",
-      "at": "2026-09-29T22:08:04.333Z"
+      "at": "2026-09-29T23:44:48.914Z"
     },
     {
-      "name": "provedor com saldo consultável (Kimi) exibe o valor na tela",
+      "name": "ao menos um provedor exibe o saldo real consultado na tela",
       "status": "PASS",
-      "detail": "Válida · saldo US$ 24,77 · há 3 min",
-      "at": "2026-09-29T22:08:04.634Z"
+      "detail": "DeepSeek: Válida · saldo US$ 2,51 · há 1 min",
+      "at": "2026-09-29T23:44:49.132Z"
     },
     {
-      "name": "provedor com saldo consultável (DeepSeek) exibe o valor na tela",
+      "name": "provedor sem saldo consultável (OpenAI) não inventa número e explica o motivo",
       "status": "PASS",
-      "detail": "Válida · saldo US$ 2,67 · há 3 min",
-      "at": "2026-09-29T22:08:04.634Z"
-    },
-    {
-      "name": "provedor que não expõe saldo (OpenAI) não inventa número e explica o motivo",
-      "status": "PASS",
-      "detail": "Válida · saldo não consultável · há 3 min | title=Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made fr",
-      "at": "2026-09-29T22:08:04.634Z"
+      "detail": "Válida · saldo não consultável · há 2h | title=Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made fr",
+      "at": "2026-09-29T23:44:49.133Z"
     },
     {
       "name": "tooltip traz a razão real do provedor (não apenas \"sem saldo\")",
       "status": "PASS",
       "detail": "Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made from the browser). You",
-      "at": "2026-09-29T22:08:04.634Z"
+      "at": "2026-09-29T23:44:49.133Z"
     },
     {
-      "name": "credencial inválida (Qwen) não exibe saldo nenhum",
+      "name": "credencial em erro/inválida não exibe saldo (nunca valor velho na tela)",
       "status": "PASS",
-      "detail": "Token inválido/expirado · há 3 min",
-      "at": "2026-09-29T22:08:04.635Z"
+      "detail": "Kimi (Moonshot): Erro ao testar · há 2 min | Qwen (Alibaba Cloud): Token inválido/expirado · há 2h",
+      "at": "2026-09-29T23:44:49.133Z"
     },
     {
-      "name": "sem erros de console",
+      "name": "provedor sem chave salva tem o reteste indisponível",
+      "status": "PASS",
+      "detail": "anthropic=true, mistral=true, groq=true",
+      "at": "2026-09-29T23:44:49.133Z"
+    },
+    {
+      "name": "botão Retestar habilitado nos provedores COM chave salva",
+      "status": "PASS",
+      "detail": "4 provedor(es): openai, deepseek, kimi, qwen",
+      "at": "2026-09-29T23:44:49.134Z"
+    },
+    {
+      "name": "Retestar dispara o teste da credencial SALVA (sem redigitar a chave)",
+      "status": "PASS",
+      "detail": "deepseek: http=200 valid=true balanceStatus=available",
+      "at": "2026-09-29T23:44:51.223Z"
+    },
+    {
+      "name": "badge reflete o resultado MEDIDO do reteste",
+      "status": "PASS",
+      "detail": "deepseek -> Válida · saldo US$ 2,51 · agora mesmo (medido: valid=true balanceStatus=available)",
+      "at": "2026-09-29T23:44:51.241Z"
+    },
+    {
+      "name": "reteste que falha coloca a credencial em erro na tela (sem saldo velho)",
+      "status": "PASS",
+      "detail": "Válida · saldo US$ 2,51 · agora mesmo",
+      "at": "2026-09-29T23:44:51.241Z"
+    },
+    {
+      "name": "sem erros de JavaScript no console",
       "status": "PASS",
       "detail": "0",
-      "at": "2026-09-29T22:08:05.047Z"
+      "at": "2026-09-29T23:44:51.242Z"
     },
     {
       "name": "sem falhas de rede",
       "status": "PASS",
       "detail": "0",
-      "at": "2026-09-29T22:08:05.047Z"
+      "at": "2026-09-29T23:44:51.242Z"
     }
   ],
   "consoleErrors": [],
+  "toastErrors": [],
   "networkFailures": [],
-  "providerBadges": [
+  "providerRows": [
     {
-      "provider": "OpenAI",
-      "text": "Válida · saldo não consultável · há 3 min",
-      "title": "Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made from the browser). You made it with the following key type: secret. — Testado há 3 min"
+      "key": "openai",
+      "label": "OpenAI",
+      "badgeText": "Válida · saldo não consultável · há 2h",
+      "badgeTitle": "Your request to GET /v1/dashboard/billing/credit_grants must be made with a session key (that is, it can only be made from the browser). You made it with the following key type: secret. — Testado há 2h",
+      "retestDisabled": false
     },
     {
-      "provider": "Anthropic (Claude)",
-      "text": "Sem chave",
-      "title": null
+      "key": "anthropic",
+      "label": "Anthropic (Claude)",
+      "badgeText": "Sem chave",
+      "badgeTitle": null,
+      "retestDisabled": true
     },
     {
-      "provider": "DeepSeek",
-      "text": "Válida · saldo US$ 2,67 · há 3 min",
-      "title": "Testado há 3 min"
+      "key": "deepseek",
+      "label": "DeepSeek",
+      "badgeText": "Válida · saldo US$ 2,51 · há 1 min",
+      "badgeTitle": "Testado há 1 min",
+      "retestDisabled": false
     },
     {
-      "provider": "Kimi (Moonshot)",
-      "text": "Válida · saldo US$ 24,77 · há 3 min",
-      "title": "Testado há 3 min"
+      "key": "kimi",
+      "label": "Kimi (Moonshot)",
+      "badgeText": "Erro ao testar · há 2 min",
+      "badgeTitle": "Erro 521: <none> — Testado há 2 min",
+      "retestDisabled": false
     },
     {
-      "provider": "Mistral",
-      "text": "Sem chave",
-      "title": null
+      "key": "mistral",
+      "label": "Mistral",
+      "badgeText": "Sem chave",
+      "badgeTitle": null,
+      "retestDisabled": true
     },
     {
-      "provider": "Groq",
-      "text": "Sem chave",
-      "title": null
+      "key": "groq",
+      "label": "Groq",
+      "badgeText": "Sem chave",
+      "badgeTitle": null,
+      "retestDisabled": true
     },
     {
-      "provider": "Qwen (Alibaba Cloud)",
-      "text": "Token inválido/expirado · há 3 min",
-      "title": "Token inválido ou expirado — Testado há 3 min"
-    },
-    {
-      "provider": "ℹ️ Tenant: system",
-      "text": "Informe e teste",
-      "title": null
+      "key": "qwen",
+      "label": "Qwen (Alibaba Cloud)",
+      "badgeText": "Token inválido/expirado · há 2h",
+      "badgeTitle": "Token inválido ou expirado — Testado há 2h",
+      "retestDisabled": false
     }
   ],
-  "passed": 10,
+  "retestCalls": [
+    {
+      "method": "POST",
+      "status": 200,
+      "valid": true,
+      "balanceStatus": "available"
+    }
+  ],
+  "retestTarget": "deepseek",
+  "retestBadgeAfter": "Válida · saldo US$ 2,51 · agora mesmo",
+  "passed": 14,
   "failed": 0,
-  "finishedAt": "2026-09-29T22:08:05.047Z",
+  "finishedAt": "2026-09-29T23:44:51.242Z",
   "status": "PASS"
 }

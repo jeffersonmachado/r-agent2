@@ -1,0 +1,864 @@
+{
+  "startedAt": "2026-09-30T00:08:43.584Z",
+  "base": "http://127.0.0.1:5173",
+  "routes": 20,
+  "results": [
+    {
+      "viewport": "mobile-390",
+      "url": "/workspace",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 97,
+      "offenders": [
+        {
+          "tag": "header",
+          "cls": "workspace-header",
+          "left": 47,
+          "right": 422,
+          "width": 375,
+          "text": "ENTIDADE 360 5511992822699 Saudável · 100 Telefone 551199282"
+        },
+        {
+          "tag": "div",
+          "cls": "workspace-header-actions",
+          "left": 258,
+          "right": 418,
+          "width": 160,
+          "text": "Próxima melhor ação Insights e ações são calculados a partir"
+        },
+        {
+          "tag": "div",
+          "cls": "workspace-card workspace-header-card max-w-sm",
+          "left": 258,
+          "right": 418,
+          "width": 160,
+          "text": "Próxima melhor ação Insights e ações são calculados a partir"
+        },
+        {
+          "tag": "p",
+          "cls": "workspace-muted text-sm mt-1",
+          "left": 275,
+          "right": 401,
+          "width": 126,
+          "text": "Insights e ações são calculados a partir da timeline unifica"
+        },
+        {
+          "tag": "div",
+          "cls": "workspace-header-button-row",
+          "left": 258,
+          "right": 418,
+          "width": 160,
+          "text": "Criar tarefa Criar follow-up Registrar pagamento Agendar"
+        },
+        {
+          "tag": "button",
+          "cls": "workspace-secondary-button",
+          "left": 258,
+          "right": 407,
+          "width": 149,
+          "text": "Registrar pagamento"
+        },
+        {
+          "tag": "nav",
+          "cls": "workspace-tabs",
+          "left": 47,
+          "right": 422,
+          "width": 375,
+          "text": "Resumo Timeline Conversas Tickets Tarefas Agenda Projetos Do"
+        },
+        {
+          "tag": "button",
+          "cls": "workspace-tab ",
+          "left": 393,
+          "right": 464,
+          "width": 71,
+          "text": "Tarefas"
+        }
+      ],
+      "route": "/workspace",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/dashboard",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/dashboard",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/inbox",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/inbox",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/cases",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/cases",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/crm",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/crm/pipelines",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/pipelines",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/crm/contacts",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 45,
+      "offenders": [
+        {
+          "tag": "table",
+          "cls": "w-full text-sm",
+          "left": 45,
+          "right": 834,
+          "width": 789,
+          "text": "Nome Email Telefone Cargo Departamento Ações Lead QA Baselin"
+        },
+        {
+          "tag": "thead",
+          "cls": "bg-bg-secondary border-b border-border-default",
+          "left": 45,
+          "right": 834,
+          "width": 789,
+          "text": "Nome Email Telefone Cargo Departamento Ações"
+        },
+        {
+          "tag": "tr",
+          "cls": "",
+          "left": 45,
+          "right": 834,
+          "width": 789,
+          "text": "Nome Email Telefone Cargo Departamento Ações"
+        },
+        {
+          "tag": "th",
+          "cls": "px-4 py-2 text-left font-semibold text-text-primary",
+          "left": 191,
+          "right": 421,
+          "width": 231,
+          "text": "Email"
+        },
+        {
+          "tag": "th",
+          "cls": "px-4 py-2 text-left font-semibold text-text-primary",
+          "left": 421,
+          "right": 562,
+          "width": 140,
+          "text": "Telefone"
+        },
+        {
+          "tag": "th",
+          "cls": "px-4 py-2 text-left font-semibold text-text-primary",
+          "left": 562,
+          "right": 634,
+          "width": 72,
+          "text": "Cargo"
+        },
+        {
+          "tag": "th",
+          "cls": "px-4 py-2 text-left font-semibold text-text-primary",
+          "left": 634,
+          "right": 760,
+          "width": 126,
+          "text": "Departamento"
+        },
+        {
+          "tag": "th",
+          "cls": "px-4 py-2 text-center font-semibold text-text-primary",
+          "left": 760,
+          "right": 834,
+          "width": 74,
+          "text": "Ações"
+        }
+      ],
+      "route": "/crm/contacts",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/crm/opportunities",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/opportunities",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/crm/leads",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/leads",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/agenda",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/agenda",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/analytics",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/analytics",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/config",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/config",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/chat",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 3,
+      "offenders": [
+        {
+          "tag": "label",
+          "cls": "",
+          "left": 28,
+          "right": 451,
+          "width": 423,
+          "text": "Fluxo: Selecione um fluxo... Fluxo inicial (auto) Voice TTS+"
+        },
+        {
+          "tag": "select",
+          "cls": "border border-solid [border-color:var(--color-border-default)] rounded-md outline-none hov",
+          "left": 74,
+          "right": 451,
+          "width": 377,
+          "text": "Selecione um fluxo... Fluxo inicial (auto) Voice TTS+ASR Smo"
+        },
+        {
+          "tag": "h1",
+          "cls": "",
+          "left": 483,
+          "right": 534,
+          "width": 51,
+          "text": "💬 Chat de Teste"
+        }
+      ],
+      "route": "/chat",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/bulk-messaging",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/bulk-messaging",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/access-control",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/access-control",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/admin/agents",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/admin/agents",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/audit",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 5,
+      "offenders": [
+        {
+          "tag": "table",
+          "cls": "w-full border-collapse",
+          "left": 21,
+          "right": 486,
+          "width": 465,
+          "text": "Data/Hora Agente Ação Recurso ID do Recurso IP"
+        },
+        {
+          "tag": "thead",
+          "cls": "",
+          "left": 21,
+          "right": 486,
+          "width": 465,
+          "text": "Data/Hora Agente Ação Recurso ID do Recurso IP"
+        },
+        {
+          "tag": "tr",
+          "cls": "bg-bg-secondary border-b border-border-default",
+          "left": 21,
+          "right": 486,
+          "width": 465,
+          "text": "Data/Hora Agente Ação Recurso ID do Recurso IP"
+        },
+        {
+          "tag": "th",
+          "cls": "px-4 py-3 text-left text-sm font-semibold text-text-primary",
+          "left": 353,
+          "right": 441,
+          "width": 88,
+          "text": "ID do Recurso"
+        },
+        {
+          "tag": "th",
+          "cls": "px-4 py-3 text-left text-sm font-semibold text-text-primary",
+          "left": 441,
+          "right": 486,
+          "width": 45,
+          "text": "IP"
+        }
+      ],
+      "route": "/audit",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/channel-health",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/channel-health",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/departments",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/departments",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "mobile-390",
+      "url": "/dev/engineering/findings",
+      "viewportWidth": 390,
+      "scrollWidth": 390,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/dev/engineering/findings",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/workspace",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/workspace",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/dashboard",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/dashboard",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/inbox",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/inbox",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/cases",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/cases",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/crm",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/crm/pipelines",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/pipelines",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/crm/contacts",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/contacts",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/crm/opportunities",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/opportunities",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/crm/leads",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/leads",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/agenda",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/agenda",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/analytics",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/analytics",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/config",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/config",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/chat",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/chat",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/bulk-messaging",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/bulk-messaging",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/access-control",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/access-control",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/admin/agents",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/admin/agents",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/audit",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/audit",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/channel-health",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/channel-health",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/departments",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/departments",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "tablet-768",
+      "url": "/dev/engineering/findings",
+      "viewportWidth": 768,
+      "scrollWidth": 768,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/dev/engineering/findings",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/workspace",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/workspace",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/dashboard",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/dashboard",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/inbox",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/inbox",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/cases",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/cases",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/crm",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/crm/pipelines",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/pipelines",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/crm/contacts",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/contacts",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/crm/opportunities",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/opportunities",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/crm/leads",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/crm/leads",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/agenda",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/agenda",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/analytics",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/analytics",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/config",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/config",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/chat",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/chat",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/bulk-messaging",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/bulk-messaging",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/access-control",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/access-control",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/admin/agents",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/admin/agents",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/audit",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/audit",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/channel-health",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/channel-health",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/departments",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/departments",
+      "consoleErrors": 0
+    },
+    {
+      "viewport": "laptop-1366",
+      "url": "/dev/engineering/findings",
+      "viewportWidth": 1366,
+      "scrollWidth": 1366,
+      "overflowX": 0,
+      "offenderCount": 0,
+      "offenders": [],
+      "route": "/dev/engineering/findings",
+      "consoleErrors": 0
+    }
+  ],
+  "finishedAt": "2026-09-30T00:10:50.942Z"
+}

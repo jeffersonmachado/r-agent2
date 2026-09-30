@@ -22,7 +22,14 @@ const WELCOME_MESSAGE = {
 
 export function AskAiWidget() {
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  // Em telas estreitas o widget NASCE RECOLHIDO (círculo de 48px). Medido a 390px: com o rótulo
+  // expandido (155x44) ele cobria controles do conteúdo — 69% de uma aba da tela de configuração e
+  // 95% do botão "Ver detalhes" do analytics. O usuário expande com um toque quando quiser.
+  const [collapsed, setCollapsed] = useState(() => (
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 640px)').matches
+  ));
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);

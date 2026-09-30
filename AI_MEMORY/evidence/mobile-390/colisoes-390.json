@@ -1,0 +1,222 @@
+[
+  {
+    "route": "/workspace",
+    "interativos": 25,
+    "pequenos": 1,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Painel",
+        "h": 19,
+        "w": 37
+      }
+    ],
+    "colisoes": 0,
+    "exemplosColisoes": [],
+    "foraDaViewport": 8
+  },
+  {
+    "route": "/inbox",
+    "interativos": 16,
+    "pequenos": 3,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Relacionamento",
+        "h": 19,
+        "w": 90
+      },
+      {
+        "tag": "a",
+        "text": "Caixa de Entrada",
+        "h": 19,
+        "w": 101
+      },
+      {
+        "tag": "input",
+        "text": "on",
+        "h": 13,
+        "w": 13
+      }
+    ],
+    "colisoes": 0,
+    "exemplosColisoes": [],
+    "foraDaViewport": 0
+  },
+  {
+    "route": "/cases",
+    "interativos": 10,
+    "pequenos": 2,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Relacionamento",
+        "h": 19,
+        "w": 90
+      },
+      {
+        "tag": "a",
+        "text": "Chamados",
+        "h": 19,
+        "w": 64
+      }
+    ],
+    "colisoes": 0,
+    "exemplosColisoes": [],
+    "foraDaViewport": 0
+  },
+  {
+    "route": "/crm/contacts",
+    "interativos": 14,
+    "pequenos": 2,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Relacionamento",
+        "h": 19,
+        "w": 90
+      },
+      {
+        "tag": "a",
+        "text": "Painel CRM",
+        "h": 19,
+        "w": 69
+      }
+    ],
+    "colisoes": 0,
+    "exemplosColisoes": [],
+    "foraDaViewport": 0
+  },
+  {
+    "route": "/analytics",
+    "interativos": 9,
+    "pequenos": 2,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Operação",
+        "h": 19,
+        "w": 55
+      },
+      {
+        "tag": "a",
+        "text": "Análises",
+        "h": 19,
+        "w": 51
+      }
+    ],
+    "colisoes": 0,
+    "exemplosColisoes": [],
+    "foraDaViewport": 0
+  },
+  {
+    "route": "/config",
+    "interativos": 20,
+    "pequenos": 2,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Plataforma",
+        "h": 19,
+        "w": 64
+      },
+      {
+        "tag": "a",
+        "text": "Configuração",
+        "h": 19,
+        "w": 80
+      }
+    ],
+    "colisoes": 2,
+    "exemplosColisoes": [
+      {
+        "a": "button\"📧Email SMTP\"",
+        "b": "button\"🤖\"",
+        "ratio": 0.57
+      },
+      {
+        "a": "button\"📧Email SMTP\"",
+        "b": "button\"›\"",
+        "ratio": 0.85
+      }
+    ],
+    "foraDaViewport": 0
+  },
+  {
+    "route": "/chat",
+    "interativos": 9,
+    "pequenos": 2,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Plataforma",
+        "h": 19,
+        "w": 60
+      },
+      {
+        "tag": "a",
+        "text": "Chat de Teste",
+        "h": 19,
+        "w": 81
+      }
+    ],
+    "colisoes": 0,
+    "exemplosColisoes": [],
+    "foraDaViewport": 0
+  },
+  {
+    "route": "/audit",
+    "interativos": 14,
+    "pequenos": 2,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Plataforma",
+        "h": 19,
+        "w": 60
+      },
+      {
+        "tag": "a",
+        "text": "Auditoria",
+        "h": 19,
+        "w": 55
+      }
+    ],
+    "colisoes": 2,
+    "exemplosColisoes": [
+      {
+        "a": "select\"Todos Autenticação Agente \"",
+        "b": "button\"🤖\"",
+        "ratio": 0.41
+      },
+      {
+        "a": "select\"Todos Autenticação Agente \"",
+        "b": "button\"›\"",
+        "ratio": 0.8
+      }
+    ],
+    "foraDaViewport": 0
+  },
+  {
+    "route": "/crm/pipelines",
+    "interativos": 11,
+    "pequenos": 2,
+    "exemplosPequenos": [
+      {
+        "tag": "a",
+        "text": "Relacionamento",
+        "h": 19,
+        "w": 90
+      },
+      {
+        "tag": "a",
+        "text": "Painel CRM",
+        "h": 19,
+        "w": 69
+      }
+    ],
+    "colisoes": 0,
+    "exemplosColisoes": [],
+    "foraDaViewport": 0
+  }
+]
