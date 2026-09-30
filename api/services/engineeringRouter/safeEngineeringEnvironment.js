@@ -23,15 +23,20 @@
 
 // Variáveis do processo pai que podem passar para o subprocess de teste — nenhuma delas é um
 // segredo, todas são necessárias para `npm`/`npx`/`node`/`git`/`jest` funcionarem normalmente.
+//
+// FORA DA LISTA DE PROPÓSITO: `TMPDIR`/`TEMP`/`TMP` (defeito REAL medido em 2026-09-30). O
+// container do sandbox tem o PRÓPRIO scratch space (`TMPDIR=/sandbox-tmp`, definido em
+// `executionSandbox.js`); repassar o TMPDIR do HOST faz o `npx jest` aninhado tentar criar o
+// diretório de temporada em um caminho do host que NÃO existe dentro do container e morrer com
+// `ENOENT: mkdir '/.../jest_XXXX'` ANTES de rodar qualquer teste — transformando toda correção em
+// RED->FIX perpétuo (medido: a task do ciclo de bug nunca chegava a GREEN, 3 tentativas, mesmo
+// com o patch correto aplicado). Scratch space é do CONTAINER, nunca do host.
 const SAFE_ENV_PASSTHROUGH_KEYS = Object.freeze([
   'PATH',
   'NODE_ENV',
   'CI',
   'LANG',
   'LC_ALL',
-  'TMPDIR',
-  'TEMP',
-  'TMP',
   // Necessário no Windows para localizar node/npm; inofensivo em outros SOs (undefined).
   'SystemRoot',
   'APPDATA',

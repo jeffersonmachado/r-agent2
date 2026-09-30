@@ -55,7 +55,13 @@ describe('ERV1-CLOSE-002 — environment seguro + redação de output', () => {
   const previousEnv = {};
 
   beforeEach(() => {
-    workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'erv1-close-002-'));
+    // CONTRATO DO RUNNER: o cwd da execução precisa estar sob `ENGINEERING_ROUTER_WORKSPACE_ROOT`
+    // (o runner recusa qualquer outro com `cwd_not_allowed`). Criar o workspace no TMPDIR do host
+    // funcionava enquanto o sandbox rodava in-process; com o runner dedicado (o modo real), o
+    // workspace tem de nascer no diretório que o runner autoriza.
+    const workspaceRoot = process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT || os.tmpdir();
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    workspace = fs.mkdtempSync(path.join(workspaceRoot, 'erv1-close-002-'));
     // Reproduz o que um workspace real de tentativa (git worktree, patchApplyService) teria:
     // os arquivos de fixture versionados materializados dentro do workspace isolado — sem
     // depender do repo real como cwd, mantendo o teste isolado de verdade.
