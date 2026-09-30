@@ -88,7 +88,11 @@ for f in \
   package-integrity-report.json \
   governance-attestation.json \
   governance-chain.json \
-  final-governance-report.json
+  final-governance-report.json \
+  engineering-router-v2-seal-execution.json \
+  engineering-router-v2-seal-decision.json \
+  bug-autonomous-loop-report.json \
+  v2-seal-freshness-report.json
 
 do
   [[ -f "$DIST_DIR/governance/$f" ]] && ok "dist/governance/$f" || fail "dist/governance/$f AUSENTE"

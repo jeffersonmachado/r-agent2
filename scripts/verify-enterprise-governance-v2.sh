@@ -394,6 +394,37 @@ else
   fail "Governança canônica do payload NO_GO — verificação reprovada"
 fi
 
+step "7.6. Certificação OFFLINE do selo V2 e do ciclo autônomo de bug (fail-closed)"
+# O pacote governado precisa carregar a CERTIFICAÇÃO dos eixos que o autorizaram — verificável SEM
+# rede, sem banco e sem o repositório. DEFEITO MEDIDO (2026-09-30): o envelope saía com 11 relatórios
+# e NENHUM do selo V2/ciclo de bug; a verificação offline do V2 não tinha o que verificar.
+CERT_MISSING=0
+for req in engineering-router-v2-seal-execution.json engineering-router-v2-seal-decision.json bug-autonomous-loop-report.json v2-seal-freshness-report.json; do
+  [[ -f "$DIST_GOV/$req" ]] || { fail "certification bundle: falta $req no envelope governado"; CERT_MISSING=1; }
+done
+if [[ "$CERT_MISSING" == "0" ]]; then
+  CERT_OK="$(node -e "
+    const fs=require('fs');
+    const read=(n)=>JSON.parse(fs.readFileSync('$DIST_GOV/'+n,'utf8'));
+    const problems=[];
+    try {
+      const seal=read('engineering-router-v2-seal-execution.json');
+      const decision=read('engineering-router-v2-seal-decision.json');
+      const bugLoop=read('bug-autonomous-loop-report.json');
+      const freshness=read('v2-seal-freshness-report.json');
+      if(seal.status!=='GO') problems.push('SEAL_NOT_GO');
+      if(!seal.sourceFingerprint) problems.push('SEAL_NO_SOURCE_BINDING');
+      if(decision.status!=='GO') problems.push('SEAL_DECISION_NOT_GO');
+      if(bugLoop.status!=='GREEN') problems.push('BUG_LOOP_NOT_GREEN');
+      if(bugLoop.verdicts && bugLoop.verdicts.BUG_AUTONOMOUS_LOOP!=='GREEN') problems.push('BUG_AUTONOMOUS_LOOP_NO_GO');
+      if(freshness.status!=='PASS') problems.push('SEAL_NOT_FRESH');
+    } catch (error) { problems.push('CERTIFICATION_UNREADABLE:'+error.message); }
+    process.stdout.write(problems.length===0 ? 'OK' : problems.join(','));
+  " 2>/dev/null || echo 'CERTIFICATION_UNREADABLE')"
+  [[ "$CERT_OK" == "OK" ]] || fail "certification bundle não-verde: $CERT_OK"
+  [[ "$CERT_OK" == "OK" ]] && ok "selo V2 GO com binding de source, ciclo autônomo GREEN e frescor PASS (offline)"
+fi
+
 step "8. Verificando referências antigas proibidas"
 VERIFY_STALE_LOG="$(mktemp -t verify-v2-stale.XXXXXX)"
 check_banned_hashes "$VERIFY_STALE_LOG" "$DIST_GOV" "$DIST_SIG" "$MANIFEST_PATH"

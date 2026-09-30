@@ -297,6 +297,39 @@ cat > "$DIST_GOV/self-proving-report.json" <<EOF
 EOF
 ok "self-proving-report.json gerado (final)"
 
+# ── CERTIFICATION BUNDLE (selo V2 + ciclo autônomo de bug) ───────────────────────────────────────
+# O envelope governado precisa carregar a CERTIFICAÇÃO dos eixos que autorizam o release, com o
+# veredito REAL. Sem isso, "verificação offline" do V2 não tinha o que verificar: o selo e o ciclo
+# autônomo existiam no workspace e NÃO viajavam no pacote (defeito medido em 2026-09-30).
+# Fail-closed: certificação ausente ou não-verde BLOQUEIA o envelope — nunca entra um placeholder.
+step "Certification bundle: selo V2 + ciclo autônomo de bug"
+for pair in \
+  "reports/engineering-router-v2-seal-execution.json:engineering-router-v2-seal-execution.json" \
+  "reports/engineering-router-v2-seal-report.json:engineering-router-v2-seal-decision.json" \
+  "reports/bug-autonomous-loop-report.json:bug-autonomous-loop-report.json" \
+  "reports/v2-seal-freshness-report.json:v2-seal-freshness-report.json"; do
+  cert_src="${pair%%:*}"; cert_dst="${pair##*:}"
+  [[ -f "$PROJECT_ROOT/$cert_src" ]] || fail "certification bundle: ausente $cert_src (rode o selo V2 e o gate do ciclo autônomo antes do release)"
+  cp "$PROJECT_ROOT/$cert_src" "$DIST_GOV/$cert_dst"
+done
+node -e "
+  const fs=require('fs');
+  const read=(n)=>JSON.parse(fs.readFileSync('$DIST_GOV/'+n,'utf8'));
+  const problems=[];
+  const seal=read('engineering-router-v2-seal-execution.json');
+  const decision=read('engineering-router-v2-seal-decision.json');
+  const bugLoop=read('bug-autonomous-loop-report.json');
+  const freshness=read('v2-seal-freshness-report.json');
+  if(seal.status!=='GO') problems.push('selo V2 executado com status '+seal.status);
+  if(!seal.sourceFingerprint) problems.push('selo V2 sem sourceFingerprint (não prova qual código foi selado)');
+  if(decision.status!=='GO') problems.push('decisão do selo V2 = '+(decision.status||'ausente'));
+  if(bugLoop.status!=='GREEN') problems.push('ciclo autônomo de bug = '+(bugLoop.status||'ausente'));
+  if(bugLoop.verdicts && bugLoop.verdicts.BUG_AUTONOMOUS_LOOP!=='GREEN') problems.push('veredito BUG_AUTONOMOUS_LOOP = '+bugLoop.verdicts.BUG_AUTONOMOUS_LOOP);
+  if(freshness.status!=='PASS') problems.push('frescor do selo V2 = '+(freshness.status||'ausente'));
+  if(problems.length){ console.error(problems.join(' | ')); process.exit(1); }
+" || fail "certification bundle NÃO está verde (ver saída acima) — pacote bloqueado"
+ok "certification bundle verde (selo V2 GO + ciclo autônomo GREEN + frescor PASS)"
+
 cat > "$DIST_GOV/package-validation-report.json" <<EOF
 {
   "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
