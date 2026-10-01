@@ -11,6 +11,7 @@ import { ExecutionProgress } from '../components/qa-waves/ExecutionProgress';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
+import logger from '../utils/logger';
 import '../components/qa-waves/qaWaves.css';
 
 function toScenarioId(scenario) {
@@ -430,7 +431,16 @@ export function QaWavesPage() {
 
   useEffect(() => {
     if (selectedJourneyId) {
-      loadStepStatus();
+      // DEFEITO REAL medido em 2026-10-01: sem `.catch`, uma falha transitoria de rede no
+      // `loadStepStatus` virava REJEIÇÃO NÃO TRATADA (`page_error: Failed to fetch`) no console.
+      // O RPA classifica erro crítico de página como falha do cenário e isolou
+      // `fitness-matricula-leads` como `infra_error` => `CRITICAL_DOMAIN_FAILED:omnichannel`.
+      // Este dado é AUXILIAR (status dos steps na sidebar): falhar nele não pode quebrar a
+      // página nem alarmar o usuário com toast — mantém o último estado e registra um aviso
+      // (`logger.warn` => `console.warn`, nunca `console.error`).
+      loadStepStatus().catch((err) => {
+        logger.warn('Falha ao carregar status dos steps (dado auxiliar, mantendo estado):', err);
+      });
     }
   }, [selectedJourneyId]);
 
