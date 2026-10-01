@@ -52592,6 +52592,184 @@
       "platform": {
         "platformScenarioIds": []
       }
+    },
+    {
+      "id": "agent-validation-qa-agent-20261001115214",
+      "waveId": "agent-os-qa-agent-20261001115214",
+      "vertical": "agent-os",
+      "journeyId": "agent-validation-qa-agent-20261001115214",
+      "name": "Agent Validation: QA Factory Agent 20261001115214",
+      "description": "Validação automatizada do agente qa-agent-20261001115214",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "tenantId": "system",
+      "journey": "agent-validation-qa-agent-20261001115214",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-10-01T11:54:53.632Z",
+      "updatedAt": "2026-10-01T11:54:53.632Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
+    },
+    {
+      "id": "agent-validation-qa-agent-20261001125020",
+      "waveId": "agent-os-qa-agent-20261001125020",
+      "vertical": "agent-os",
+      "journeyId": "agent-validation-qa-agent-20261001125020",
+      "name": "Agent Validation: QA Factory Agent 20261001125020",
+      "description": "Validação automatizada do agente qa-agent-20261001125020",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "tenantId": "system",
+      "journey": "agent-validation-qa-agent-20261001125020",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-10-01T12:53:01.831Z",
+      "updatedAt": "2026-10-01T12:53:01.831Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     }
   ],
   "history": {
@@ -58289,7 +58467,27 @@
           "scenario upserted"
         ]
       }
+    ],
+    "system::agent-validation-qa-agent-20261001115214": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-10-01T11:54:53.633Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
+    ],
+    "system::agent-validation-qa-agent-20261001125020": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-10-01T12:53:01.832Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
     ]
   },
-  "updatedAt": "2026-10-01T08:40:16.551Z"
+  "updatedAt": "2026-10-01T12:53:01.937Z"
 }

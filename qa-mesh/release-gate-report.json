@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-01T08-36-44-411Z",
+  "executionId": "mesh-2026-10-01T12-48-54-376Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "GO",
+  "gate": "NO_GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-01T08-36-44-411Z",
+    "executionId": "mesh-2026-10-01T12-48-54-376Z",
     "tenantId": "system",
-    "timestamp": "2026-10-01T08:36:44.411Z",
+    "timestamp": "2026-10-01T12:48:54.377Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,13 +31,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 144,
+    "passed": 143,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
-    "flaky": 0,
+    "flaky": 1,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -81,13 +81,13 @@
         "total": 2
       },
       "core": {
-        "passed": 90,
+        "passed": 89,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 0,
+        "flaky": 1,
         "total": 90
       },
       "fitness": {
@@ -171,10 +171,21 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "CRITICAL_DOMAIN_FAILED:core",
+      "BASELINE_PASS_RATE_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "core": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "flaky": 1
+        },
+        "successRate": 0.9888888888888889
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -188,12 +199,6 @@
         "successRate": 1
       },
       "clinic": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -248,35 +253,45 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "flaky": 1
+    },
+    "topErrors": [
+      {
+        "message": "Pagina /editor renderizou vazia",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-01T08-36-44-411Z",
-      "startedAt": "2026-10-01T08:36:44.411Z",
+      "executionId": "mesh-2026-10-01T12-48-54-376Z",
+      "startedAt": "2026-10-01T12:48:54.377Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-01T09:28:37.361Z",
+      "promotedAt": "2026-10-01T13:40:59.778Z",
       "registryTotal": 144,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [],
+  "reasons": [
+    "CRITICAL_DOMAIN_FAILED:core",
+    "BASELINE_PASS_RATE_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-01T08-36-44-411Z",
-    "startedAt": "2026-10-01T08:36:44.411Z",
+    "executionId": "mesh-2026-10-01T12-48-54-376Z",
+    "startedAt": "2026-10-01T12:48:54.377Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-01T09:28:37.361Z",
+    "promotedAt": "2026-10-01T13:40:59.778Z",
     "registryTotal": 144,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
-  "runId": "rap-governed-20261001081410689-191c2593",
-  "sourceFingerprint": "60e43a947fb312c54095dc385153cf4c48c338b597a4a42a33699ba707d9b3bb",
-  "sourceCommit": "b9f376af03bd285217474df258bb1052d8c7b429",
-  "sourceTree": "0bc5836f50bc179e2eb477f22868a29ed9092668",
-  "generatedAt": "2026-10-01T09:28:37.363Z"
+  "runId": "rap-governed-20261001124046403-d9496bc2",
+  "sourceFingerprint": "5d0d1cd6418745525bc20a16e08667170d7c5a68b94adf818cc113d13e4b9aa7",
+  "sourceCommit": "4d52187a9e23a434941d889118bf5b3677999101",
+  "sourceTree": "9a821557af8b415c3ec089aa39be1bede90dc1f8",
+  "generatedAt": "2026-10-01T13:40:59.778Z"
 }

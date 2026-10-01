@@ -1,13 +1,12 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:BLOCKING_GAPS
-- Canonical mesh execution: mesh-2026-10-01T08-36-44-411Z
+- Decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]
+- Canonical mesh execution: mesh-2026-10-01T12-48-54-376Z
 - Enterprise readiness: enterprise-ready
 - Production readiness: NO_GO:BLOCKING_GAPS
-- Blocking gaps: 3
-- Blocking domains: none
+- Blocking gaps: 2
+- Blocking domains: core
 
 ## Hard blockers
-- gap-proof-package-validation: ZIP de release nao contem todos os proofs obrigatorios (critical)
+- gap-mesh-core-flaky-business-core-biz-flows-editor: Falha aberta no dominio core (high)
 - gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
-- gap-cross-report-package_validation_failed: Contradição cross-report: package_validation_failed (critical)

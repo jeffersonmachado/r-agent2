@@ -721,7 +721,27 @@ async function assertBusinessPage(page, pageDef, definition) {
   page.on('pageerror', onPageError);
   try {
     await page.goto(`${FRONTEND_URL}${pageDef.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(1500);
+    // Sincronização SEMÂNTICA, não sleep fixo. O `waitForTimeout(1500)` anterior
+    // era um wait IMPLÍCITO: sob a carga concorrente do mesh o Vite (DEV) demora
+    // mais para servir os módulos e a página ficava legitimamente ainda montando
+    // ao fim do sleep — falhando com "Pagina X renderizou vazia". Medido
+    // 2026-10-01: `business-core-biz-flows-editor` (/editor) intermitente
+    // (`CRITICAL_DOMAIN_FAILED:core`), com o gap engine apontando exatamente
+    // "transformar waits implícitos em sincronização semântica".
+    // Continua FALHANDO se a página realmente não renderizar: a espera tem teto
+    // de 30 s e, esgotada, a checagem de vazio abaixo reprova normalmente.
+    await page
+      .waitForFunction(
+        () => {
+          const root = document.querySelector('#root');
+          const text = (root && root.innerText) || (document.body && document.body.innerText) || '';
+          return String(text).trim().length > 0;
+        },
+        null,
+        { timeout: 30000 },
+      )
+      .catch(() => {});
+    await page.waitForTimeout(300);
     const bodyText = await page.locator('body').innerText();
     const accessDenied = /Acesso Negado/i.test(bodyText);
     if (pageDef.expectDenied) {

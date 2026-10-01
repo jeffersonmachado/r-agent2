@@ -310,17 +310,73 @@
         "confidence": 0.5881041335866488,
         "chunksFound": 8,
         "timestamp": "2026-10-01T09:05:57.527409"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-01T11:53:24.988061"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-01T12:05:36.586355"
+      },
+      {
+        "query": "QASEG20261001122033 horário de atendimento neblina veludo granito bussola horário atendimento neblina",
+        "success": true,
+        "confidence": 0.704052555088688,
+        "chunksFound": 8,
+        "timestamp": "2026-10-01T12:20:35.077081"
+      },
+      {
+        "query": "QASEG20261001122033 horário de atendimento neblina veludo granito bussola horário atendimento neblina",
+        "success": true,
+        "confidence": 0.6951829006631083,
+        "chunksFound": 9,
+        "timestamp": "2026-10-01T12:20:37.099584"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-01T12:51:43.764865"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-01T13:03:39.456955"
+      },
+      {
+        "query": "QASEG20261001131941 horário de atendimento hortela rafia lagoa zimbro horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6850012642314456,
+        "chunksFound": 8,
+        "timestamp": "2026-10-01T13:19:43.879047"
+      },
+      {
+        "query": "QASEG20261001131941 horário de atendimento hortela rafia lagoa zimbro horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6665866230805426,
+        "chunksFound": 10,
+        "timestamp": "2026-10-01T13:19:45.902547"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 44,
-    "successfulQueries": 44,
+    "totalQueries": 52,
+    "successfulQueries": 52,
     "failedQueries": 0,
-    "avgConfidence": 0.6483004445135634,
-    "lastUpdated": "2026-10-01T09:05:57.527392"
+    "avgConfidence": 0.670251021831156,
+    "lastUpdated": "2026-10-01T13:19:45.902508"
   },
   "config": {
     "minScore": 0.45,
@@ -333,5 +389,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-01T09:05:57.527558"
+  "updatedAt": "2026-10-01T13:19:45.903002"
 }
