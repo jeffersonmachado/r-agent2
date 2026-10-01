@@ -1,37 +1,69 @@
 {
-  "generatedAt": "2026-09-30T04:35:09.426Z",
-  "runId": "rap-governed-20260930011544805-3f8876d9",
-  "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
-  "finalDecision": "AUTONOMOUS_READY_GO",
-  "candidateMaturityLevel": "AUTONOMOUS_READY_GO",
-  "stageReadiness": "AUTONOMOUS_READY_GO",
-  "blockingReasons": [],
-  "mandatoryBlockReasons": [],
-  "platformMaturity": "autonomous-ready",
-  "canonicalMeshExecutionId": "mesh-2026-09-30T03-24-27-310Z",
+  "generatedAt": "2026-10-01T03:00:47.208Z",
+  "runId": "rap-governed-20260930234913925-347e2175",
+  "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
+  "finalDecision": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
+  "candidateMaturityLevel": "PRODLIKE_GO",
+  "stageReadiness": "PRODLIKE_GO",
+  "blockingReasons": [
+    "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-flows-editor-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenant-config-business-core-biz-tenants-business-core-biz-web-scraping",
+    "gap-mesh-beauty-infra_error-business-beauty-scr-04-business-beauty-scr-05-business-beauty-scr-06",
+    "gap-mesh-fitness-infra_error-business-fit-scr-02-business-fit-scr-03",
+    "gap-mesh-omnichannel-functional_failure-fitness-matricula-leads-support-inbox-nota-ui",
+    "gap-mesh-beauty-infra_error-business-beauty-scr-01",
+    "gap-mesh-beauty-infra_error-business-beauty-scr-02",
+    "gap-mesh-beauty-infra_error-business-beauty-scr-03",
+    "gap-mesh-clinic-infra_error-business-clinic-scr-01",
+    "gap-mesh-core-functional_failure-business-core-biz-login",
+    "gap-mesh-fitness-infra_error-business-fit-scr-01",
+    "gap-mesh-food-infra_error-business-food-scr-01",
+    "gap-mesh-market-infra_error-business-market-scr-01",
+    "gap-mesh-services-infra_error-business-serv-scr-01",
+    "gap-mesh-fitness-functional_failure-fitness-matricula-agendamento-ui",
+    "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
+    "gap-mesh-core-infra_error-qa-core-auth-login",
+    "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
+    "gap-proof-stale-fingerprints"
+  ],
+  "mandatoryBlockReasons": [
+    "qa-mesh=NO_GO",
+    "release-gate=NO_GO"
+  ],
+  "platformMaturity": "enterprise-partial",
+  "canonicalMeshExecutionId": "mesh-2026-09-30T23-57-54-068Z",
   "canonicalMeshArtifacts": {
-    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-30T03-24-27-310Z.json",
+    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-30T23-57-54-068Z.json",
     "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
     "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
     "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json"
   },
   "readiness": {
     "docsScore": 100,
-    "meshScore": 100,
+    "meshScore": 88.19,
     "qaWavesScore": 100,
     "replayScore": 100,
     "verticalScore": 100,
     "productionScore": 100,
-    "readinessScore": 100
+    "readinessScore": 97.05
   },
   "qaCoverage": {
-    "executionId": "mesh-2026-09-30T03-24-27-310Z",
-    "percent": 100,
-    "observedFailureFreePercent": 100,
+    "executionId": "mesh-2026-09-30T23-57-54-068Z",
+    "percent": 88.19,
+    "observedFailureFreePercent": 88.19,
     "registryDeclaredTotal": 144,
     "canonicalRegistryTotal": 144,
-    "blockingDomains": [],
-    "status": "GO"
+    "blockingDomains": [
+      "beauty",
+      "bpmn",
+      "clinic",
+      "core",
+      "fitness",
+      "food",
+      "market",
+      "omnichannel",
+      "services"
+    ],
+    "status": "NO_GO"
   },
   "replayCoverage": {
     "percent": 100,
@@ -91,7 +123,7 @@
   "certificationStates": {
     "corePlatformReadiness": {
       "state": "CORE_GO",
-      "score": 100,
+      "score": 97.05,
       "scope": "plataforma (docs, QA mesh, QA waves, replay, verticais implementadas, validação production-like)",
       "doesNotInclude": [
         "market research",
@@ -214,7 +246,7 @@
     }
   },
   "docsValidation": {
-    "generatedAt": "2026-09-30T04:35:09.426Z",
+    "generatedAt": "2026-10-01T03:00:47.208Z",
     "filesScanned": 417,
     "totalMarkdownLinks": 269,
     "brokenMarkdownLinks": [],
@@ -237,17 +269,70 @@
       "backendAssertions": 13,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
-      "enterpriseReady": true,
-      "sellable": true,
-      "blockers": [],
-      "qaFailures": [],
+      "enterpriseReady": false,
+      "sellable": false,
+      "blockers": [
+        "qa_mesh_failures_open"
+      ],
+      "qaFailures": [
+        {
+          "fingerprint": "beauty::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-",
+          "domain": "beauty",
+          "failureType": "infra_error",
+          "count": 3,
+          "scenarios": [
+            "business-beauty-scr-04",
+            "business-beauty-scr-05",
+            "business-beauty-scr-06"
+          ],
+          "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-button\" data-testid=\"refresh-button\" aria-label=\"Atualizar agenda\">Atualizar</button> - attempting click action - waiting for element to be visible, enabled and stable",
+          "recurringCount": 3,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        },
+        {
+          "fingerprint": "beauty::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar campanha\")').first() - locator resolved to <button class=\"suppo",
+          "domain": "beauty",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-beauty-scr-01"
+          ],
+          "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar campanha\")').first() - locator resolved to <button class=\"support-button\">Criar campanha</button> - attempting click action - waiting for element to be visible, enabled and stable",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        },
+        {
+          "fingerprint": "beauty::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar lead\")').first() - locator resolved to <button class=\"support-b",
+          "domain": "beauty",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-beauty-scr-02"
+          ],
+          "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar lead\")').first() - locator resolved to <button class=\"support-button\">Criar lead</button> - attempting click action - waiting for element to be visible, enabled and stable",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        },
+        {
+          "fingerprint": "beauty::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-butto",
+          "domain": "beauty",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-beauty-scr-03"
+          ],
+          "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-button\">Buscar</button> - attempting click action - waiting for element to be visible, enabled and stable",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        }
+      ],
       "journeys": [
         "beauty_booking",
         "beauty_new_customer"
       ],
-      "classification": "production-like"
+      "classification": "validated"
     },
     {
       "vertical": "fitness",
@@ -265,12 +350,52 @@
       "backendAssertions": 62,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
-      "enterpriseReady": true,
-      "sellable": true,
-      "blockers": [],
-      "qaFailures": [],
+      "enterpriseReady": false,
+      "sellable": false,
+      "blockers": [
+        "qa_mesh_failures_open"
+      ],
+      "qaFailures": [
+        {
+          "fingerprint": "fitness::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-",
+          "domain": "fitness",
+          "failureType": "infra_error",
+          "count": 2,
+          "scenarios": [
+            "business-fit-scr-02",
+            "business-fit-scr-03"
+          ],
+          "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-button\" data-testid=\"refresh-button\" aria-label=\"Atualizar memberships\">Atualizar</button> - attempting click action - waiting for element to be visible, enabled and stable",
+          "recurringCount": 2,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        },
+        {
+          "fingerprint": "fitness::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-butto",
+          "domain": "fitness",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-fit-scr-01"
+          ],
+          "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-button\">Buscar</button> - attempting click action - waiting for element to be visible, enabled and stable",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        },
+        {
+          "fingerprint": "fitness::functional_failure::rpa_execution_stagnation",
+          "domain": "fitness",
+          "failureType": "functional_failure",
+          "count": 1,
+          "scenarios": [
+            "fitness-matricula-agendamento-ui"
+          ],
+          "sampleError": "rpa_execution_stagnation",
+          "recurringCount": 1,
+          "suggestion": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+        }
+      ],
       "journeys": [
         "agendamento",
         "cancelamento",
@@ -283,7 +408,7 @@
         "onboarding",
         "renovacao"
       ],
-      "classification": "production-like"
+      "classification": "validated"
     },
     {
       "vertical": "food",
@@ -300,17 +425,32 @@
       "backendAssertions": 9,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
-      "enterpriseReady": true,
-      "sellable": true,
-      "blockers": [],
-      "qaFailures": [],
+      "enterpriseReady": false,
+      "sellable": false,
+      "blockers": [
+        "qa_mesh_failures_open"
+      ],
+      "qaFailures": [
+        {
+          "fingerprint": "food::infra_error::page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "domain": "food",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-food-scr-01"
+          ],
+          "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        }
+      ],
       "journeys": [
         "food_customer_journey",
         "food_order_flow"
       ],
-      "classification": "production-like"
+      "classification": "validated"
     },
     {
       "vertical": "services",
@@ -327,16 +467,31 @@
       "backendAssertions": 5,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
       "enterpriseReady": false,
-      "sellable": true,
-      "blockers": [],
-      "qaFailures": [],
+      "sellable": false,
+      "blockers": [
+        "qa_mesh_failures_open"
+      ],
+      "qaFailures": [
+        {
+          "fingerprint": "services::infra_error::page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "domain": "services",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-serv-scr-01"
+          ],
+          "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        }
+      ],
       "journeys": [
         "services_default_journey"
       ],
-      "classification": "production-like"
+      "classification": "validated"
     },
     {
       "vertical": "clinic",
@@ -354,16 +509,31 @@
       "backendAssertions": 4,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
       "enterpriseReady": false,
-      "sellable": true,
-      "blockers": [],
-      "qaFailures": [],
+      "sellable": false,
+      "blockers": [
+        "qa_mesh_failures_open"
+      ],
+      "qaFailures": [
+        {
+          "fingerprint": "clinic::infra_error::page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "domain": "clinic",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-clinic-scr-01"
+          ],
+          "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        }
+      ],
       "journeys": [
         "clinic_default_journey"
       ],
-      "classification": "production-like"
+      "classification": "validated"
     },
     {
       "vertical": "market",
@@ -380,16 +550,31 @@
       "backendAssertions": 5,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
       "enterpriseReady": false,
-      "sellable": true,
-      "blockers": [],
-      "qaFailures": [],
+      "sellable": false,
+      "blockers": [
+        "qa_mesh_failures_open"
+      ],
+      "qaFailures": [
+        {
+          "fingerprint": "market::infra_error::page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "domain": "market",
+          "failureType": "infra_error",
+          "count": 1,
+          "scenarios": [
+            "business-market-scr-01"
+          ],
+          "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "recurringCount": 1,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        }
+      ],
       "journeys": [
         "market_default_journey"
       ],
-      "classification": "production-like"
+      "classification": "validated"
     },
     {
       "vertical": "bakery",
@@ -471,7 +656,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 151,
+      "scenarioCount": 152,
       "blocker": false
     },
     {
@@ -525,7 +710,369 @@
       "blocker": false
     }
   ],
-  "blockingGaps": [],
+  "blockingGaps": [
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-flows-editor-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenant-config-business-core-biz-tenants-business-core-biz-web-scraping",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-agenda",
+          "business-core-biz-agents",
+          "business-core-biz-ai-tools",
+          "business-core-biz-backup-restore",
+          "business-core-biz-bulk-messaging",
+          "business-core-biz-channel-accounts",
+          "business-core-biz-conversations-chat",
+          "business-core-biz-failed-messages",
+          "business-core-biz-faq",
+          "business-core-biz-flows-editor",
+          "business-core-biz-kitchen-dispatch",
+          "business-core-biz-knowledge-base",
+          "business-core-biz-maintenance",
+          "business-core-biz-mfa",
+          "business-core-biz-plan-usage",
+          "business-core-biz-product-docs",
+          "business-core-biz-rag-documents",
+          "business-core-biz-segmentation",
+          "business-core-biz-sso-scim",
+          "business-core-biz-tenant-config",
+          "business-core-biz-tenants",
+          "business-core-biz-web-scraping"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-04-business-beauty-scr-05-business-beauty-scr-06",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-04",
+          "business-beauty-scr-05",
+          "business-beauty-scr-06"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-button\" data-testid=\"refresh-button\" aria-label=\"Atualizar agenda\">Atualizar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-infra_error-business-fit-scr-02-business-fit-scr-03",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "business-fit-scr-02",
+          "business-fit-scr-03"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-button\" data-testid=\"refresh-button\" aria-label=\"Atualizar memberships\">Atualizar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-functional_failure-fitness-matricula-leads-support-inbox-nota-ui",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-leads",
+          "support-inbox-nota-ui"
+        ],
+        "sampleError": "rpa_execution_stagnation"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-01"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar campanha\")').first() - locator resolved to <button class=\"support-button\">Criar campanha</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-02",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-02"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar lead\")').first() - locator resolved to <button class=\"support-button\">Criar lead</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-03",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-03"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-button\">Buscar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-clinic-infra_error-business-clinic-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio clinic",
+      "evidence": {
+        "scenarios": [
+          "business-clinic-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-functional_failure-business-core-biz-login",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-login"
+        ],
+        "sampleError": "Login UI falhou: Não foi possível encontrar o botão de login"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-infra_error-business-fit-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "business-fit-scr-01"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-button\">Buscar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-food-infra_error-business-food-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio food",
+      "evidence": {
+        "scenarios": [
+          "business-food-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-market-infra_error-business-market-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio market",
+      "evidence": {
+        "scenarios": [
+          "business-market-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-services-infra_error-business-serv-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio services",
+      "evidence": {
+        "scenarios": [
+          "business-serv-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-functional_failure-fitness-matricula-agendamento-ui",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-agendamento-ui"
+        ],
+        "sampleError": "rpa_execution_stagnation"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio bpmn",
+      "evidence": {
+        "scenarios": [
+          "qa-bpmn-editor-smoke"
+        ],
+        "sampleError": "[bpmn-smoke] FAIL: locator.click: Timeout 12000ms exceeded."
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-auth-login",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-auth-login"
+        ],
+        "sampleError": "❌ Erro no teste RPA: page.$: Target page, context or browser has been closed"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-config-tenant-intelligence"
+        ],
+        "sampleError": "Tenant Intelligence smoke failed: locator.click: Timeout 12000ms exceeded."
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "scenarioRegistryFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
   "nonBlockingGaps": [],
   "enterpriseProofs": {
     "proofs": {
@@ -534,29 +1081,31 @@
       "pbx_prod_like": true,
       "omnichannel_unified_replay": true,
       "replay_universalization": true,
-      "vertical_prod_like_coverage": true,
+      "vertical_prod_like_coverage": false,
       "proof_based_governance": true,
-      "enterprise_ready": true,
-      "autonomous_ready": true
+      "enterprise_ready": false,
+      "autonomous_ready": false
     },
     "foundationProdLikeCount": 4,
-    "verticalProdLikeCount": 7,
+    "verticalProdLikeCount": 1,
     "omnichannelScenarioCount": 7,
-    "missingProofs": []
+    "missingProofs": [
+      "vertical_prod_like_coverage"
+    ]
   },
   "proofReport": {
-    "generatedAt": "2026-09-30T04:35:25.617Z",
-    "runId": "rap-governed-20260930011544805-3f8876d9",
+    "generatedAt": "2026-10-01T03:01:19.357Z",
+    "runId": "rap-governed-20260930234913925-347e2175",
     "artifactType": "final-proof-report",
     "artifactVersion": "2.0.0",
-    "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
+    "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
     "inventoryFingerprint": "43bf9b290d51722f260cac613a0bfaebbc147cbae51441b971ccd2dd96592c32",
-    "scenarioFingerprint": "95cab706ca7f7d56edf92c4b55545ec984e272c3f845a7f97f91e28b979746d4",
+    "scenarioFingerprint": "8e023e38aa057c4694ec26357c7e9815a583053e976af1a78d4ff5ada9c2ad3c",
     "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-    "evidenceFingerprint": "d00ae7c02c43246b3bbc7804325a43be843f2935755e6b0137d0171233f74d71",
-    "chainFingerprint": "d00ae7c02c43246b3bbc7804325a43be843f2935755e6b0137d0171233f74d71",
-    "fingerprintGeneratedAt": "2026-09-30T04:35:25.617Z",
-    "fingerprintStatus": "FRESH",
+    "evidenceFingerprint": "43cc31a85c41c831741ed99f70277665abb9bb4d89b8efecffb69c5ba3b32e4f",
+    "chainFingerprint": "43cc31a85c41c831741ed99f70277665abb9bb4d89b8efecffb69c5ba3b32e4f",
+    "fingerprintGeneratedAt": "2026-10-01T03:01:19.357Z",
+    "fingerprintStatus": "STALE",
     "proofCoverage": {
       "total": 24,
       "valid": 24,
@@ -564,7 +1113,7 @@
     },
     "missingArtifacts": [],
     "invalidReferences": [],
-    "blockerCount": 0,
+    "blockerCount": 17,
     "replayCoverage": {
       "required": 8,
       "found": 8,
@@ -586,14 +1135,14 @@
     },
     "prodLikeCoverage": {
       "required": 7,
-      "found": 7,
-      "percent": 100
+      "found": 1,
+      "percent": 14.29
     },
     "verticalCoverage": {
-      "status": "VALIDATED",
-      "validated": 7,
+      "status": "PARTIAL",
+      "validated": 1,
       "required": 7,
-      "percent": 100,
+      "percent": 14.29,
       "invalidClaims": []
     },
     "omnichannelCoverage": {
@@ -2952,12 +3501,33 @@
     "intelligenceStability": {
       "status": "STABLE",
       "unstableDomains": [],
-      "recurringFailures": [],
+      "recurringFailures": [
+        {
+          "domain": "core",
+          "fingerprint": "core::infra_error::page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded",
+          "recurringCount": 22
+        },
+        {
+          "domain": "beauty",
+          "fingerprint": "beauty::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-",
+          "recurringCount": 3
+        },
+        {
+          "domain": "fitness",
+          "fingerprint": "fitness::infra_error::locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-",
+          "recurringCount": 2
+        },
+        {
+          "domain": "omnichannel",
+          "fingerprint": "omnichannel::functional_failure::rpa_execution_stagnation",
+          "recurringCount": 2
+        }
+      ],
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-09-30T04:35:25.617Z",
-      "expectedZipName": "r-agent2-20260930-001739.payload.zip",
+      "generatedAt": "2026-10-01T03:01:19.356Z",
+      "expectedZipName": null,
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
       "blockers": [],
@@ -2969,26 +3539,11 @@
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-09-30T04:35:25.441Z",
-      "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260930-001739.payload.zip",
-      "zipName": "r-agent2-20260930-001739.payload.zip",
-      "zipSha256": "67b32be36d0e4614e9c4dc91bd9ad5aab35e27a0bc263568f2e47914959886a8",
-      "payloadCentric": true,
-      "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260930-001739.zip",
-      "selectionMode": "audited",
-      "candidateFallbackUsed": false,
-      "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260930-001739.manifest.json",
-      "manifestAudit": "passed",
-      "auditSatisfied": true,
-      "selfContainmentCheck": {
-        "passed": true,
-        "missing": []
-      },
+      "generatedAt": "2026-10-01T03:01:19.335Z",
+      "ok": false,
+      "zipPath": null,
+      "zipName": null,
       "requiredEntries": [
-        "governance/final-proof-report.json",
-        "governance/evidence-manifest.json",
-        "governance/blocker-engine.js",
-        "governance/final-consistency-report.json",
         "qa/smoke-evidence.json",
         "qa/l01-physical-queue-evidence.json",
         "qa/l02-ura-publish-rollback-evidence.json",
@@ -3014,30 +3569,23 @@
         "governance/outbound-reliability-report.json",
         "governance/source-remote-provenance-report.json"
       ],
-      "entryCount": 12449,
       "missingEntries": [],
-      "missingEntryCodes": [],
-      "ok": true,
-      "error": null,
-      "packageBinding": {
-        "boundTo": "r-agent2-20260930-001739.payload.zip",
-        "sha256": "67b32be36d0e4614e9c4dc91bd9ad5aab35e27a0bc263568f2e47914959886a8",
-        "immutable": true,
-        "selfProving": true,
-        "offlineAuditable": true
-      },
+      "error": "artifact_missing:none_found_in_dist",
+      "deferred": true,
+      "phase": "PRE_PACKAGE",
+      "status": "DEFERRED",
       "artifactType": "package-validation-report",
       "artifactVersion": "1.0.0",
-      "runId": "rap-governed-20260930011544805-3f8876d9",
-      "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
-      "gitCommit": "783f139b49254d97875ebebce8008840a3ac272b",
-      "gitTree": "8d63b967944cd9d8cb2ef4f785bd4e69bae51018"
+      "runId": "rap-governed-20260930234913925-347e2175",
+      "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
+      "gitCommit": "d5fe8992a667412b39e9e31fb169af2c7cd449a6",
+      "gitTree": "40bab120998d66c765dd2bdf3d7541f27685f968"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-09-30T04:35:24.763Z",
+      "generatedAt": "2026-10-01T03:01:18.622Z",
       "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
-      "runId": "rap-governed-20260930011544805-3f8876d9",
-      "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
+      "runId": "rap-governed-20260930234913925-347e2175",
+      "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
       "artifactType": "evidence-manifest",
       "artifactVersion": "1.0.0",
       "status": "PASS",
@@ -3069,9 +3617,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b64440ec37576186f539142440ae1bdaa58177848cc8255a4ac55a2c5622ea02",
-          "checksum": "b64440ec37576186f539142440ae1bdaa58177848cc8255a4ac55a2c5622ea02",
-          "timestamp": "2026-09-30T04:11:42.514Z",
+          "hash": "3ae82bdc4bad021d3c2af6de2cb5aad902b9486f8ad16d49d8bb6f64255c0de3",
+          "checksum": "3ae82bdc4bad021d3c2af6de2cb5aad902b9486f8ad16d49d8bb6f64255c0de3",
+          "timestamp": "2026-10-01T01:37:13.282Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3088,9 +3636,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "980685b11d208395b863b076d4877a7ebd4b27d551f816d3cfc1a23225304fa7",
-          "checksum": "980685b11d208395b863b076d4877a7ebd4b27d551f816d3cfc1a23225304fa7",
-          "timestamp": "2026-09-30T04:11:50.990Z",
+          "hash": "d7fc256b35d6a980ab96457662f913ba64133582c0a944877a6fae5444b1c811",
+          "checksum": "d7fc256b35d6a980ab96457662f913ba64133582c0a944877a6fae5444b1c811",
+          "timestamp": "2026-10-01T01:37:23.755Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3107,9 +3655,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "eed947212046c843989fcd249c20b0a4a156228580822a46866d5af46da678df",
-          "checksum": "eed947212046c843989fcd249c20b0a4a156228580822a46866d5af46da678df",
-          "timestamp": "2026-09-30T04:11:39.112Z",
+          "hash": "d773024cb5e36aa911da9e76b42367602e1fe648208f223c4f896388cd817d64",
+          "checksum": "d773024cb5e36aa911da9e76b42367602e1fe648208f223c4f896388cd817d64",
+          "timestamp": "2026-10-01T03:00:16.905Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3126,9 +3674,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "1d091c9cc796df4ab97b16a58e6c9702fd0995a2678218fa07c7bf11b856ba44",
-          "checksum": "1d091c9cc796df4ab97b16a58e6c9702fd0995a2678218fa07c7bf11b856ba44",
-          "timestamp": "2026-09-30T04:11:32.990Z",
+          "hash": "56f08a437e88aff7424f2abc1bbcd68689517fdc8d607f46c44dfb573c6b7aae",
+          "checksum": "56f08a437e88aff7424f2abc1bbcd68689517fdc8d607f46c44dfb573c6b7aae",
+          "timestamp": "2026-10-01T03:00:22.896Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3145,9 +3693,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "be439a3c02779127bbde67e359adc4d975f34ab0e9625097b8a8e2d69d32a473",
-          "checksum": "be439a3c02779127bbde67e359adc4d975f34ab0e9625097b8a8e2d69d32a473",
-          "timestamp": "2026-09-30T04:10:22.447Z",
+          "hash": "6d22d2af944fce45cf505974b81c851483ab8b53bc80e8267c97ba3c78a0c7ea",
+          "checksum": "6d22d2af944fce45cf505974b81c851483ab8b53bc80e8267c97ba3c78a0c7ea",
+          "timestamp": "2026-10-01T03:00:32.393Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3183,9 +3731,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-full-validation.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "3a6f1143ca0d48d997fef59bf97ea613fb47a8c82fa5bd84f71c57f5b189fa7e",
-          "checksum": "3a6f1143ca0d48d997fef59bf97ea613fb47a8c82fa5bd84f71c57f5b189fa7e",
-          "timestamp": "2026-09-30T03:18:12.994Z",
+          "hash": "36b2decd78ad991ea40fabbc4625c4caed279c4191e30bed40e5c20d4d537872",
+          "checksum": "36b2decd78ad991ea40fabbc4625c4caed279c4191e30bed40e5c20d4d537872",
+          "timestamp": "2026-10-01T03:00:09.443Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3206,9 +3754,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f42d1f837b54c5c204b865d14eaa85f89cfddd4d0c959048cab5aa89871b7625",
-          "checksum": "f42d1f837b54c5c204b865d14eaa85f89cfddd4d0c959048cab5aa89871b7625",
-          "timestamp": "2026-09-30T04:26:50.999Z",
+          "hash": "06887dfa745c6cc1cc33835c0419f25884e4066dce889b097f9734c0167b9904",
+          "checksum": "06887dfa745c6cc1cc33835c0419f25884e4066dce889b097f9734c0167b9904",
+          "timestamp": "2026-10-01T03:00:47.359Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3229,9 +3777,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-voice-flow-prod-like.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ea51897e1e9ed64cbb2997c9503fe76faa76873598cab44fb07f14b5dbb7c9c4",
-          "checksum": "ea51897e1e9ed64cbb2997c9503fe76faa76873598cab44fb07f14b5dbb7c9c4",
-          "timestamp": "2026-09-30T03:18:23.743Z",
+          "hash": "f6e21f986f9388b9507c7f1546803f12ed393f208b6b288102740b8fb8dc0b62",
+          "checksum": "f6e21f986f9388b9507c7f1546803f12ed393f208b6b288102740b8fb8dc0b62",
+          "timestamp": "2026-10-01T03:00:36.376Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3252,9 +3800,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "99d3c05501bf74df99195291304ff5a562841cfd4c45bdbceba8b1c6cd9ae596",
-          "checksum": "99d3c05501bf74df99195291304ff5a562841cfd4c45bdbceba8b1c6cd9ae596",
-          "timestamp": "2026-09-30T04:26:50.780Z",
+          "hash": "5aba646eb6132bff649c975c9d2f13240437547ea6a78a20ed36ec74fa5acf52",
+          "checksum": "5aba646eb6132bff649c975c9d2f13240437547ea6a78a20ed36ec74fa5acf52",
+          "timestamp": "2026-10-01T03:00:47.284Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3275,9 +3823,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b960bdfbf256d3d39c4d9ce82960d0487acd14ae6d82bb92a77dec791b304223",
-          "checksum": "b960bdfbf256d3d39c4d9ce82960d0487acd14ae6d82bb92a77dec791b304223",
-          "timestamp": "2026-09-30T04:26:50.781Z",
+          "hash": "f9376071d5c7f119c2f60ddf6bb9fee3f387d8eb82cb1dbeda424316dff54842",
+          "checksum": "f9376071d5c7f119c2f60ddf6bb9fee3f387d8eb82cb1dbeda424316dff54842",
+          "timestamp": "2026-10-01T03:00:47.284Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3298,9 +3846,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f77ca36f04e74195263c1f725896c5fd763212af09b15150bd617df89a6f4706",
-          "checksum": "f77ca36f04e74195263c1f725896c5fd763212af09b15150bd617df89a6f4706",
-          "timestamp": "2026-09-30T04:26:50.782Z",
+          "hash": "e6362910065f821438e397843cc44d54afd9b3daec175272a016966cac6ec6bd",
+          "checksum": "e6362910065f821438e397843cc44d54afd9b3daec175272a016966cac6ec6bd",
+          "timestamp": "2026-10-01T03:00:47.284Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3321,9 +3869,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-unified-replay.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "2a3794c5955c2db4c3224474853a6e0ad8f5825f9b8d495e39f24d1e9bf84de2",
-          "checksum": "2a3794c5955c2db4c3224474853a6e0ad8f5825f9b8d495e39f24d1e9bf84de2",
-          "timestamp": "2026-09-30T03:18:23.744Z",
+          "hash": "dfbe4a0d1c286bc38fdfc7dd74f69dc6d4b73dbbc2f0ea01dcb39590f88f07c6",
+          "checksum": "dfbe4a0d1c286bc38fdfc7dd74f69dc6d4b73dbbc2f0ea01dcb39590f88f07c6",
+          "timestamp": "2026-10-01T03:00:36.389Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3344,9 +3892,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "6cb5522065ec06c7234e5bd0fbd53cf0e9a814ff033a2a77e9c29ac3fabd2ea8",
-          "checksum": "6cb5522065ec06c7234e5bd0fbd53cf0e9a814ff033a2a77e9c29ac3fabd2ea8",
-          "timestamp": "2026-09-30T04:26:50.827Z",
+          "hash": "dd9c6c485af584b1f0455b61e3c0525bf8f2f2041fa5154ebcb568496d6e1c68",
+          "checksum": "dd9c6c485af584b1f0455b61e3c0525bf8f2f2041fa5154ebcb568496d6e1c68",
+          "timestamp": "2026-10-01T03:00:47.299Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3367,9 +3915,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b5696ba03d628936d92733f0021ce1fd343bd4ed2b0f0ee716af4412689ec95b",
-          "checksum": "b5696ba03d628936d92733f0021ce1fd343bd4ed2b0f0ee716af4412689ec95b",
-          "timestamp": "2026-09-30T04:26:50.878Z",
+          "hash": "069a1270d5eb462f3ab63128e794abf20eace9b122026f603db49d0edd90f8d0",
+          "checksum": "069a1270d5eb462f3ab63128e794abf20eace9b122026f603db49d0edd90f8d0",
+          "timestamp": "2026-10-01T03:00:47.317Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3386,9 +3934,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/qa-waves-enterprise-governance.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ecb0de41ec295f69941d37da90fb2dbe01b553a2929297d8e5cf0ece60566425",
-          "checksum": "ecb0de41ec295f69941d37da90fb2dbe01b553a2929297d8e5cf0ece60566425",
-          "timestamp": "2026-09-30T03:18:27.284Z",
+          "hash": "0cbd7310ee40e88804d79823b0acaa51253ad61ed1b647799c5664abbfae55b9",
+          "checksum": "0cbd7310ee40e88804d79823b0acaa51253ad61ed1b647799c5664abbfae55b9",
+          "timestamp": "2026-10-01T03:00:46.831Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3405,9 +3953,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "fab1be251e2aba2a149758b469960eca896f2cf3d830663e2c4a1c912e4abd5f",
-          "checksum": "fab1be251e2aba2a149758b469960eca896f2cf3d830663e2c4a1c912e4abd5f",
-          "timestamp": "2026-09-30T04:26:51.010Z",
+          "hash": "c86c6c950f390395f5b7ec01e39a748fd91087d4f8b966b034ff57a3688854e0",
+          "checksum": "c86c6c950f390395f5b7ec01e39a748fd91087d4f8b966b034ff57a3688854e0",
+          "timestamp": "2026-10-01T03:00:47.363Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3424,9 +3972,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "405c38e2656c4d27c2b7a5ef4d8a6727a68a0fddd8d295c29d7f9763344e8f82",
-          "checksum": "405c38e2656c4d27c2b7a5ef4d8a6727a68a0fddd8d295c29d7f9763344e8f82",
-          "timestamp": "2026-09-30T04:26:51.290Z",
+          "hash": "1b98d71e62854a8ce708b3674ae2e8f743aaf4065ff2ab6fd12adb2e06a2ba9c",
+          "checksum": "1b98d71e62854a8ce708b3674ae2e8f743aaf4065ff2ab6fd12adb2e06a2ba9c",
+          "timestamp": "2026-10-01T03:00:47.530Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3443,9 +3991,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ec175df6a5d5f088b473f9a6fa270d0583d07cb598c1f20054fb63166cb38e87",
-          "checksum": "ec175df6a5d5f088b473f9a6fa270d0583d07cb598c1f20054fb63166cb38e87",
-          "timestamp": "2026-09-30T04:35:09.120Z",
+          "hash": "a42178787b8a649d053209c058627e93fb07005aa5fcf37c099906ff709fa785",
+          "checksum": "a42178787b8a649d053209c058627e93fb07005aa5fcf37c099906ff709fa785",
+          "timestamp": "2026-09-30T23:50:28.689Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3462,9 +4010,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/experience-segregation-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "cede8533c5ee5767a1521a63369597f2947c38c9611cd868acd1acae2e35f259",
-          "checksum": "cede8533c5ee5767a1521a63369597f2947c38c9611cd868acd1acae2e35f259",
-          "timestamp": "2026-09-30T04:35:09.144Z",
+          "hash": "065a58d619dab366ec5c9e82e7e0f87c76fc3fe59be29268a5f6d49908231c12",
+          "checksum": "065a58d619dab366ec5c9e82e7e0f87c76fc3fe59be29268a5f6d49908231c12",
+          "timestamp": "2026-09-30T22:33:30.277Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3481,9 +4029,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/experience-api-segregation-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f7dae458440c856928979899573b2362826f30625292af1f068785cf0b9a8cb5",
-          "checksum": "f7dae458440c856928979899573b2362826f30625292af1f068785cf0b9a8cb5",
-          "timestamp": "2026-09-30T04:35:09.144Z",
+          "hash": "e233de898f311a5793da36a375ec2d008cf26d05161d36a642d6c5e448d2931a",
+          "checksum": "e233de898f311a5793da36a375ec2d008cf26d05161d36a642d6c5e448d2931a",
+          "timestamp": "2026-09-30T22:33:30.278Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3500,9 +4048,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/outbound-reliability-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "91e7a221fe8dd0252b8250f070f2eb78ff037a228547d32a2e31ff44f75c7e52",
-          "checksum": "91e7a221fe8dd0252b8250f070f2eb78ff037a228547d32a2e31ff44f75c7e52",
-          "timestamp": "2026-09-30T04:35:09.145Z",
+          "hash": "e4916dff4ec8fd10eca34c9316bee1f3f0bfb3c9d08e7939a20d46f93f18efa9",
+          "checksum": "e4916dff4ec8fd10eca34c9316bee1f3f0bfb3c9d08e7939a20d46f93f18efa9",
+          "timestamp": "2026-09-30T22:33:30.280Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3519,9 +4067,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/source-remote-provenance-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "82bf16eba1402e734c3de9bc279521ced0faa704bec66dbdf118d63ba4d306ef",
-          "checksum": "82bf16eba1402e734c3de9bc279521ced0faa704bec66dbdf118d63ba4d306ef",
-          "timestamp": "2026-09-30T04:35:09.144Z",
+          "hash": "83df4b81f65586e0015b5f0977bea5202f4bf2dbc75cb3ac74da9b8a7c2b0dd3",
+          "checksum": "83df4b81f65586e0015b5f0977bea5202f4bf2dbc75cb3ac74da9b8a7c2b0dd3",
+          "timestamp": "2026-09-30T22:33:30.279Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3532,32 +4080,35 @@
         }
       ],
       "fingerprints": {
-        "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
+        "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
         "inventoryFingerprint": "43bf9b290d51722f260cac613a0bfaebbc147cbae51441b971ccd2dd96592c32",
-        "scenarioRegistryFingerprint": "95cab706ca7f7d56edf92c4b55545ec984e272c3f845a7f97f91e28b979746d4",
+        "scenarioRegistryFingerprint": "8e023e38aa057c4694ec26357c7e9815a583053e976af1a78d4ff5ada9c2ad3c",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "d00ae7c02c43246b3bbc7804325a43be843f2935755e6b0137d0171233f74d71"
+        "chainFingerprint": "43cc31a85c41c831741ed99f70277665abb9bb4d89b8efecffb69c5ba3b32e4f"
       }
     },
     "fingerprintChain": {
-      "status": "FRESH",
-      "diverged": [],
+      "status": "STALE",
+      "diverged": [
+        "scenarioRegistryFingerprint",
+        "chainFingerprint"
+      ],
       "registered": {
-        "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
+        "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
         "inventoryFingerprint": "43bf9b290d51722f260cac613a0bfaebbc147cbae51441b971ccd2dd96592c32",
         "scenarioRegistryFingerprint": "95cab706ca7f7d56edf92c4b55545ec984e272c3f845a7f97f91e28b979746d4",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "d00ae7c02c43246b3bbc7804325a43be843f2935755e6b0137d0171233f74d71"
+        "chainFingerprint": "aa337fa74fd4c138ebf112f979e568662dc49b673b6c4e12856c51d371e00cec"
       },
       "current": {
-        "sourceFingerprint": "82e38621c64572decb0fe65901cba31ddb8af33cd94e1314cdf0d29b3edad372",
+        "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
         "inventoryFingerprint": "43bf9b290d51722f260cac613a0bfaebbc147cbae51441b971ccd2dd96592c32",
-        "scenarioRegistryFingerprint": "95cab706ca7f7d56edf92c4b55545ec984e272c3f845a7f97f91e28b979746d4",
+        "scenarioRegistryFingerprint": "8e023e38aa057c4694ec26357c7e9815a583053e976af1a78d4ff5ada9c2ad3c",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "d00ae7c02c43246b3bbc7804325a43be843f2935755e6b0137d0171233f74d71"
+        "chainFingerprint": "43cc31a85c41c831741ed99f70277665abb9bb4d89b8efecffb69c5ba3b32e4f"
       }
     },
-    "proofStatus": "FRESH",
+    "proofStatus": "STALE",
     "proofQualityScore": {
       "score": 100,
       "raw": 120,
@@ -3655,13 +4206,13 @@
         "enterprise-ready": "ENTERPRISE_READY_GO",
         "autonomous-ready": "AUTONOMOUS_READY_GO"
       },
-      "currentLevel": "autonomous-ready",
-      "blockersClear": true,
+      "currentLevel": "prod-like",
+      "blockersClear": false,
       "gateChecks": {
-        "blockersClear": true,
+        "blockersClear": false,
         "proofsComplete": true,
         "replayCoverageOk": true,
-        "prodLikeCoverageOk": true,
+        "prodLikeCoverageOk": false,
         "omnichannelCoverageOk": true,
         "PBXCoverageOk": true,
         "pbxFullyReal": true,
@@ -3669,9 +4220,9 @@
         "handoffFullyNormalized": true,
         "digitalTwinCoverageOk": true,
         "governanceCoverageOk": true,
-        "packageValidationOk": true,
+        "packageValidationOk": false,
         "evidenceManifestValid": true,
-        "fingerprintsFresh": true,
+        "fingerprintsFresh": false,
         "intelligenceStable": true,
         "crossReportConsistent": true,
         "verticalCoverageValid": true
@@ -3684,18 +4235,42 @@
         "intelligenceStable": true,
         "crossReportConsistent": true,
         "verticalCoverageValid": true,
-        "allPassed": true
+        "allPassed": false
       }
     },
-    "finalDecision": "AUTONOMOUS_READY_GO",
-    "deferredGates": [],
-    "blockingGaps": [],
-    "candidateMaturityLevel": "AUTONOMOUS_READY_GO",
-    "stageReadiness": "AUTONOMOUS_READY_GO",
-    "blockingReasons": []
+    "finalDecision": "NO_GO:BLOCKING_GAPS",
+    "deferredGates": [
+      {
+        "id": "package-validation",
+        "phase": "PRE_PACKAGE",
+        "status": "DEFERRED",
+        "reason": "PACKAGE_NOT_CREATED_YET",
+        "title": "Package validation ainda não avaliável (pacote ainda não criado)"
+      }
+    ],
+    "blockingGaps": [
+      {
+        "id": "gap-proof-stale-fingerprints",
+        "severity": "critical",
+        "area": "proof-governance",
+        "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+        "evidence": {
+          "diverged": [
+            "scenarioRegistryFingerprint",
+            "chainFingerprint"
+          ]
+        },
+        "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+      }
+    ],
+    "candidateMaturityLevel": "PRODLIKE_GO",
+    "stageReadiness": "PRODLIKE_GO",
+    "blockingReasons": [
+      "gap-proof-stale-fingerprints"
+    ]
   },
   "operationalDigitalTwin": {
-    "status": "complete",
+    "status": "partial",
     "description": "Operational Digital Twin representa o trace viewer operacional enterprise com replay, decisoes de IA, acoes humanas e estados internos.",
     "observedSignals": [
       "chronological_replays",
@@ -3721,8 +4296,8 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 557,
-    "executableScenarioCount": 523,
+    "scenarioCount": 558,
+    "executableScenarioCount": 524,
     "executableJourneyIds": [
       "0cf4b599-167e-419a-907d-20104fa295c8",
       "0e4ca104-adfe-473d-89ad-785c5e8f24d7",
@@ -3846,6 +4421,7 @@
       "agent-validation-qa-agent-20260930012706",
       "agent-validation-qa-agent-20260930022307",
       "agent-validation-qa-agent-20260930032542",
+      "agent-validation-qa-agent-20261001000535",
       "agent_factory",
       "agent_marketplace",
       "agent_orchestrator",
@@ -3959,7 +4535,7 @@
     "Governance policies versioned under governance/."
   ],
   "nowItems": [
-    "Preserve the current zero-blocking mesh state and monitor regressions in the canonical run.",
+    "Close Beauty, Bpmn, Clinic, Core, Fitness, Food, Market, Omnichannel and Services failures reported by qa-mesh/intelligence/latest.json.",
     "Produce a full omnichannel replay proving WhatsApp -> AI -> handoff -> human -> backend mutation chronology.",
     "Eliminate broken document references and retire legacy docs as non-canonical."
   ],
@@ -3976,10 +4552,29 @@
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
   ],
-  "noGoReasons": [],
+  "noGoReasons": [
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-flows-editor-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenant-config-business-core-biz-tenants-business-core-biz-web-scraping]",
+    "Falha aberta no dominio beauty [gap-mesh-beauty-infra_error-business-beauty-scr-04-business-beauty-scr-05-business-beauty-scr-06]",
+    "Falha aberta no dominio fitness [gap-mesh-fitness-infra_error-business-fit-scr-02-business-fit-scr-03]",
+    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-functional_failure-fitness-matricula-leads-support-inbox-nota-ui]",
+    "Falha aberta no dominio beauty [gap-mesh-beauty-infra_error-business-beauty-scr-01]",
+    "Falha aberta no dominio beauty [gap-mesh-beauty-infra_error-business-beauty-scr-02]",
+    "Falha aberta no dominio beauty [gap-mesh-beauty-infra_error-business-beauty-scr-03]",
+    "Falha aberta no dominio clinic [gap-mesh-clinic-infra_error-business-clinic-scr-01]",
+    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-login]",
+    "Falha aberta no dominio fitness [gap-mesh-fitness-infra_error-business-fit-scr-01]",
+    "Falha aberta no dominio food [gap-mesh-food-infra_error-business-food-scr-01]",
+    "Falha aberta no dominio market [gap-mesh-market-infra_error-business-market-scr-01]",
+    "Falha aberta no dominio services [gap-mesh-services-infra_error-business-serv-scr-01]",
+    "Falha aberta no dominio fitness [gap-mesh-fitness-functional_failure-fitness-matricula-agendamento-ui]",
+    "Falha aberta no dominio bpmn [gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke]",
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-qa-core-auth-login]",
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-qa-core-config-tenant-intelligence]",
+    "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]"
+  ],
   "productionReadiness": {
-    "status": "AUTONOMOUS_READY_GO",
-    "classification": "autonomous-ready",
+    "status": "NO_GO:BLOCKING_GAPS",
+    "classification": "enterprise-partial",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -3994,16 +4589,380 @@
     ]
   },
   "enterpriseReadiness": {
-    "status": "autonomous-ready",
+    "status": "prod-like",
     "evidenceBased": true,
-    "missingProofs": []
+    "missingProofs": [
+      "vertical_prod_like_coverage"
+    ]
   },
-  "automaticGapBacklog": [],
+  "automaticGapBacklog": [
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-flows-editor-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenant-config-business-core-biz-tenants-business-core-biz-web-scraping",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-agenda",
+          "business-core-biz-agents",
+          "business-core-biz-ai-tools",
+          "business-core-biz-backup-restore",
+          "business-core-biz-bulk-messaging",
+          "business-core-biz-channel-accounts",
+          "business-core-biz-conversations-chat",
+          "business-core-biz-failed-messages",
+          "business-core-biz-faq",
+          "business-core-biz-flows-editor",
+          "business-core-biz-kitchen-dispatch",
+          "business-core-biz-knowledge-base",
+          "business-core-biz-maintenance",
+          "business-core-biz-mfa",
+          "business-core-biz-plan-usage",
+          "business-core-biz-product-docs",
+          "business-core-biz-rag-documents",
+          "business-core-biz-segmentation",
+          "business-core-biz-sso-scim",
+          "business-core-biz-tenant-config",
+          "business-core-biz-tenants",
+          "business-core-biz-web-scraping"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-04-business-beauty-scr-05-business-beauty-scr-06",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-04",
+          "business-beauty-scr-05",
+          "business-beauty-scr-06"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-button\" data-testid=\"refresh-button\" aria-label=\"Atualizar agenda\">Atualizar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-infra_error-business-fit-scr-02-business-fit-scr-03",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "business-fit-scr-02",
+          "business-fit-scr-03"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('[data-testid=\"refresh-button\"]').first() - locator resolved to <button class=\"support-button\" data-testid=\"refresh-button\" aria-label=\"Atualizar memberships\">Atualizar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-functional_failure-fitness-matricula-leads-support-inbox-nota-ui",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-leads",
+          "support-inbox-nota-ui"
+        ],
+        "sampleError": "rpa_execution_stagnation"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-01"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar campanha\")').first() - locator resolved to <button class=\"support-button\">Criar campanha</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-02",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-02"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Criar lead\")').first() - locator resolved to <button class=\"support-button\">Criar lead</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-infra_error-business-beauty-scr-03",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-03"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-button\">Buscar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-clinic-infra_error-business-clinic-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio clinic",
+      "evidence": {
+        "scenarios": [
+          "business-clinic-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-functional_failure-business-core-biz-login",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-login"
+        ],
+        "sampleError": "Login UI falhou: Não foi possível encontrar o botão de login"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-infra_error-business-fit-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "business-fit-scr-01"
+        ],
+        "sampleError": "locator.click: Timeout 30000ms exceeded. Call log: - waiting for locator('button:has-text(\"Buscar\")').first() - locator resolved to <button class=\"support-button\">Buscar</button> - attempting click action - waiting for element to be visible, enabled and stable"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-food-infra_error-business-food-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio food",
+      "evidence": {
+        "scenarios": [
+          "business-food-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-market-infra_error-business-market-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio market",
+      "evidence": {
+        "scenarios": [
+          "business-market-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-services-infra_error-business-serv-scr-01",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio services",
+      "evidence": {
+        "scenarios": [
+          "business-serv-scr-01"
+        ],
+        "sampleError": "page.screenshot: Timeout 30000ms exceeded. Call log: - taking page screenshot - waiting for fonts to load... - fonts loaded"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-functional_failure-fitness-matricula-agendamento-ui",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-agendamento-ui"
+        ],
+        "sampleError": "rpa_execution_stagnation"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio bpmn",
+      "evidence": {
+        "scenarios": [
+          "qa-bpmn-editor-smoke"
+        ],
+        "sampleError": "[bpmn-smoke] FAIL: locator.click: Timeout 12000ms exceeded."
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-auth-login",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-auth-login"
+        ],
+        "sampleError": "❌ Erro no teste RPA: page.$: Target page, context or browser has been closed"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-config-tenant-intelligence"
+        ],
+        "sampleError": "Tenant Intelligence smoke failed: locator.click: Timeout 12000ms exceeded."
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "scenarioRegistryFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
   "journeyCoverage": {
     "beauty": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "beauty",
-      "maturity": "production-like",
+      "maturity": "validated",
       "replaySupported": true,
       "journeys": [
         {
@@ -4465,9 +5424,9 @@
       ]
     },
     "fitness": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "fitness",
-      "maturity": "production-like",
+      "maturity": "validated",
       "replaySupported": true,
       "journeys": [
         {
@@ -7315,9 +8274,9 @@
       ]
     },
     "food": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "food",
-      "maturity": "production-like",
+      "maturity": "validated",
       "replaySupported": true,
       "journeys": [
         {
@@ -7605,9 +8564,9 @@
       ]
     },
     "services": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "services",
-      "maturity": "production-like",
+      "maturity": "validated",
       "replaySupported": true,
       "journeys": [
         {
@@ -7763,9 +8722,9 @@
       ]
     },
     "clinic": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "clinic",
-      "maturity": "production-like",
+      "maturity": "validated",
       "replaySupported": true,
       "journeys": [
         {
@@ -7905,9 +8864,9 @@
       ]
     },
     "market": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "market",
-      "maturity": "production-like",
+      "maturity": "validated",
       "replaySupported": true,
       "journeys": [
         {
@@ -8073,7 +9032,7 @@
       ]
     },
     "bakery": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "bakery",
       "maturity": "production-like",
       "replaySupported": true,
@@ -8789,7 +9748,7 @@
       ]
     },
     "core": {
-      "generatedAt": "2026-09-30T04:35:09.426Z",
+      "generatedAt": "2026-10-01T03:00:47.208Z",
       "vertical": "core",
       "kind": "system",
       "maturity": "system",

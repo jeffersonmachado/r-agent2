@@ -254,17 +254,45 @@
         "confidence": 0.5842524667968161,
         "chunksFound": 5,
         "timestamp": "2026-09-25T21:32:40.428845"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-01T03:14:17.947652"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-01T03:15:36.368784"
+      },
+      {
+        "query": "QASEG20261001032206 horário de atendimento veludo cacto orquidea dunas horário atendimento veludo",
+        "success": true,
+        "confidence": 0.6805198868573044,
+        "chunksFound": 10,
+        "timestamp": "2026-10-01T03:22:09.179636"
+      },
+      {
+        "query": "QASEG20261001032206 horário de atendimento veludo cacto orquidea dunas horário atendimento veludo",
+        "success": true,
+        "confidence": 0.6479568591186482,
+        "chunksFound": 8,
+        "timestamp": "2026-10-01T03:22:10.655857"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 36,
-    "successfulQueries": 36,
+    "totalQueries": 40,
+    "successfulQueries": 40,
     "failedQueries": 0,
-    "avgConfidence": 0.6119331239978765,
-    "lastUpdated": "2026-09-25T21:32:40.428802"
+    "avgConfidence": 0.6336157381900912,
+    "lastUpdated": "2026-10-01T03:22:10.655835"
   },
   "config": {
     "minScore": 0.45,
@@ -277,5 +305,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-25T21:32:40.429287"
+  "updatedAt": "2026-10-01T03:22:10.656058"
 }
