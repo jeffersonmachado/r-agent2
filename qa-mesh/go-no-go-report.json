@@ -1,28 +1,25 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-01T12-48-54-376Z",
+  "executionId": "mesh-2026-10-01T14-02-04-734Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "NO_GO",
-  "reasons": [
-    "CRITICAL_DOMAIN_FAILED:core",
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "status": "GO",
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-01T12-48-54-376Z",
-    "startedAt": "2026-10-01T12:48:54.377Z",
+    "executionId": "mesh-2026-10-01T14-02-04-734Z",
+    "startedAt": "2026-10-01T14:02:04.735Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-01T13:40:59.778Z",
+    "promotedAt": "2026-10-01T14:49:28.823Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-01T12-48-54-376Z",
+    "executionId": "mesh-2026-10-01T14-02-04-734Z",
     "tenantId": "system",
-    "timestamp": "2026-10-01T12:48:54.377Z",
+    "timestamp": "2026-10-01T14:02:04.735Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -30,13 +27,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 143,
+    "passed": 144,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
-    "flaky": 1,
+    "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -80,13 +77,13 @@
         "total": 2
       },
       "core": {
-        "passed": 89,
+        "passed": 90,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 1,
+        "flaky": 0,
         "total": 90
       },
       "fitness": {
@@ -170,21 +167,10 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "CRITICAL_DOMAIN_FAILED:core",
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "core": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "flaky": 1
-        },
-        "successRate": 0.9888888888888889
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -198,6 +184,12 @@
         "successRate": 1
       },
       "clinic": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -252,33 +244,26 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "flaky": 1
-    },
-    "topErrors": [
-      {
-        "message": "Pagina /editor renderizou vazia",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-01T12-48-54-376Z",
-      "startedAt": "2026-10-01T12:48:54.377Z",
+      "executionId": "mesh-2026-10-01T14-02-04-734Z",
+      "startedAt": "2026-10-01T14:02:04.735Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-01T13:40:59.778Z",
+      "promotedAt": "2026-10-01T14:49:28.823Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261001124046403-d9496bc2",
+  "runId": "rap-governed-20261001134605866-183f721f",
   "sourceFingerprint": "5d0d1cd6418745525bc20a16e08667170d7c5a68b94adf818cc113d13e4b9aa7",
-  "sourceCommit": "4d52187a9e23a434941d889118bf5b3677999101",
-  "sourceTree": "9a821557af8b415c3ec089aa39be1bede90dc1f8",
-  "generatedAt": "2026-10-01T13:40:59.778Z"
+  "sourceCommit": "619077151d00a4cb2f0e0041a23f018d3ec88163",
+  "sourceTree": "5c49d69b27434ec19271e3cefa5e67c3a5ff83db",
+  "generatedAt": "2026-10-01T14:49:28.823Z"
 }
