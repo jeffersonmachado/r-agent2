@@ -1,19 +1,19 @@
 # Platform Status
 
-- Generated at: 2026-10-01T13:56:03.375Z
-- Canonical mesh execution: mesh-2026-10-01T12-48-54-376Z
-- Canonical mesh decision: NO_GO
-- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]
-- Readiness score: 99.83
-- QA coverage: 99.31%
+- Generated at: 2026-10-01T15:49:36.358Z
+- Canonical mesh execution: mesh-2026-10-01T14-55-22-977Z
+- Canonical mesh decision: GO
+- Readiness decision: AUTONOMOUS_READY_GO
+- Readiness score: 100
+- QA coverage: 100%
 - Replay coverage: 100%
 - Vertical coverage: 100%
 
 ## Blocking domains
-- core
+- none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-01T12-48-54-376Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-01T14-55-22-977Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Falha aberta no dominio core [gap-mesh-core-flaky-business-core-biz-flows-editor]
+- Sem bloqueadores ativos.

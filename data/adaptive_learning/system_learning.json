@@ -394,17 +394,45 @@
         "confidence": 0.6720256495266346,
         "chunksFound": 9,
         "timestamp": "2026-10-01T14:30:18.124221"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-01T14:57:33.457134"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-01T15:09:18.920927"
+      },
+      {
+        "query": "QASEG20261001152359 horário de atendimento kilim ancora granito mandala horário atendimento kilim",
+        "success": true,
+        "confidence": 0.6390855186251794,
+        "chunksFound": 8,
+        "timestamp": "2026-10-01T15:24:02.564564"
+      },
+      {
+        "query": "QASEG20261001152359 horário de atendimento kilim ancora granito mandala horário atendimento kilim",
+        "success": true,
+        "confidence": 0.5936850988415678,
+        "chunksFound": 10,
+        "timestamp": "2026-10-01T15:24:04.850371"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 56,
-    "successfulQueries": 56,
+    "totalQueries": 60,
+    "successfulQueries": 60,
     "failedQueries": 0,
-    "avgConfidence": 0.6749161345332602,
-    "lastUpdated": "2026-10-01T14:30:18.124211"
+    "avgConfidence": 0.6657826222337572,
+    "lastUpdated": "2026-10-01T15:24:04.850326"
   },
   "config": {
     "minScore": 0.45,
@@ -417,5 +445,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-01T14:30:18.124312"
+  "updatedAt": "2026-10-01T15:24:04.850831"
 }
