@@ -40,7 +40,10 @@ function readJson(absPath) {
 }
 
 function listZipEntries(zipPath) {
-  const output = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  // maxBuffer: o pacote real traz dezenas de milhares de entradas e `unzip -Z1`
+  // devolve a lista completa; o default de 1 MiB do execFileSync estoura com
+  // `ENOBUFS`, reprovando por erro de LEITOR (medido no release de 2026-10-01).
+  const output = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
   return output.split(/\r?\n/g).map((e) => e.trim()).filter(Boolean);
 }
 

@@ -78,10 +78,19 @@ function normalizeEntry(entry) {
 }
 
 function listZipEntries(zipPath) {
+  // `maxBuffer` do execFileSync tem default de 1 MiB — e `unzip -Z1` devolve a
+  // LISTA COMPLETA de caminhos do pacote (dezenas de milhares de entradas, ~4 MiB
+  // neste repo). O estouro derrubava a validacao com `spawnSync unzip ENOBUFS`,
+  // reprovando o pacote por um erro de LEITOR e nao do artefato. Medido em
+  // 2026-10-01 no release real (56 MB, r-agent2-20261001-040650.zip):
+  //   [package-validator] error=spawnSync unzip ENOBUFS
+  //   → PACKAGE_INTEGRITY_NO_GO → "candidato nao selou" → selagem abortada.
+  // 64 MiB da margem folgada para o pacote crescer sem repetir o defeito.
   const output = execFileSync('unzip', ['-Z1', zipPath], {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 64 * 1024 * 1024,
   });
 
   return output

@@ -176,7 +176,11 @@ function resolveInputs(args) {
 
 function extractPayload(payloadPath) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rap-payload-verify-'));
-  execFileSync('unzip', ['-qq', payloadPath, '-d', tmpDir], { stdio: 'pipe' });
+  // maxBuffer: `unzip -Z1` devolve TODOS os caminhos do pacote (~4 MiB aqui) e o
+  // default de 1 MiB do execFileSync derruba a verificacao com `ENOBUFS` — erro de
+  // LEITOR reprovando por engano. Mesmo defeito medido em governance/package-validator.js
+  // (release real de 2026-10-01).
+  execFileSync('unzip', ['-qq', payloadPath, '-d', tmpDir], { stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 });
   return tmpDir;
 }
 
@@ -865,7 +869,7 @@ function runVerification(args, options) {
     let envelopeEntries = null;
     if (inputs.envelopePath && fs.existsSync(inputs.envelopePath)) {
       try {
-        const listing = execFileSync('unzip', ['-Z1', inputs.envelopePath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+        const listing = execFileSync('unzip', ['-Z1', inputs.envelopePath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
         envelopeEntries = listing.split(/\r?\n/g).map((e) => e.trim()).filter(Boolean);
       } catch (error) {
         hygieneIssues.push(`ENVELOPE_UNREADABLE — ${error.message}`);

@@ -432,7 +432,7 @@ function verifyEnvelope(envelopeDir, options = {}) {
 function extractPackageFromZip(zipPath) {
   const os = require('os');
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'engineering-router-v1-package-zip-'));
-  execFileSync('unzip', ['-q', '-o', zipPath, '-d', tmpDir]);
+  execFileSync('unzip', ['-q', '-o', zipPath, '-d', tmpDir], { maxBuffer: 64 * 1024 * 1024 });
   const rootEntries = fs.readdirSync(tmpDir).filter((name) => fs.statSync(path.join(tmpDir, name)).isDirectory());
   const packageRoot = rootEntries.length === 1 ? path.join(tmpDir, rootEntries[0]) : tmpDir;
   return resolvePackageLayout(packageRoot);
