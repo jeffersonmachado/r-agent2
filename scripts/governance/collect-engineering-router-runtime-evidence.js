@@ -33,6 +33,15 @@ const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const { ROOT, writeReport } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
+const { loadEnvFile } = require('./lib/loadEnvFile');
+
+// DEFEITO REAL medido em 2026-10-01: as suítes daqui exercitam serviços REAIS configurados pelo
+// `.env` (ex.: o Engineering Runner dedicado, que só aceita cwd sob
+// `ENGINEERING_ROUTER_WORKSPACE_ROOT`). Sem carregá-lo, o veredito dependia de QUEM invocava o
+// processo: o item `SAFE_ENVIRONMENT` reprovava com `exitCode: null` / "saída do Jest não pôde
+// ser parseada como JSON" — reprovação por CONFIGURAÇÃO, não por defeito do sandbox (com a
+// chave presente: 3/3 PASS). Mesmo padrão já aplicado em `run-release-suites.js`.
+loadEnvFile(ROOT);
 
 function currentCommit() {
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
@@ -93,6 +102,9 @@ function runTargetedTest(testPath, testId) {
       stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 50 * 1024 * 1024,
       timeout: 120000,
+      // Ambiente explícito e completo: o `.env` já foi carregado acima (loadEnvFile) e o filho
+      // precisa do MESMO ambiente do coletor — sem isto o veredito depende de quem invoca.
+      env: process.env,
     });
   } catch (err) {
     processExitCode = typeof err.status === 'number' ? err.status : 1;

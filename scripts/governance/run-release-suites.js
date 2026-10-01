@@ -27,6 +27,10 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { ROOT, writeReport } = require('./common');
 const { resolveManifest, evaluateExecution, MANIFEST_VIOLATION_CODES } = require('./lib/releaseSuiteManifest');
+// Fonte única da carga do `.env` (mesmo módulo usado por
+// `collect-engineering-router-runtime-evidence.js`, que tinha o MESMO defeito: o veredito
+// dependia de quem invocava o coletor).
+const { loadEnvFile: loadEnvFileFromLib } = require('./lib/loadEnvFile');
 
 const JEST_JSON = path.join(ROOT, 'reports', '.release-suite-jest.json');
 
@@ -45,19 +49,7 @@ const JEST_JSON = path.join(ROOT, 'reports', '.release-suite-jest.json');
  * leitura é explícita para que o runner seja o mesmo objeto independentemente da invocação.
  */
 function loadEnvFile() {
-  const envPath = path.join(ROOT, '.env');
-  if (!fs.existsSync(envPath)) return { loaded: false, keys: 0, reason: '.env ausente' };
-  let keys = 0;
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
-    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-    if (!match) continue;
-    const key = match[1];
-    // Ambiente explícito vence sempre: o operador pode sobrescrever sem editar o arquivo.
-    if (process.env[key] !== undefined) continue;
-    process.env[key] = match[2].trim().replace(/^["']|["']$/g, '');
-    keys += 1;
-  }
-  return { loaded: true, keys, reason: null };
+  return loadEnvFileFromLib(ROOT);
 }
 
 /** Traduz o resultado do Jest para os estados canônicos do manifesto. */
