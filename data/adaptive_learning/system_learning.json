@@ -422,17 +422,45 @@
         "confidence": 0.5936850988415678,
         "chunksFound": 10,
         "timestamp": "2026-10-01T15:24:04.850371"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-01T15:57:14.161149"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-01T16:08:57.370125"
+      },
+      {
+        "query": "QASEG20261001162336 horário de atendimento hortela yuca fagulha lagoa horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6836091811893281,
+        "chunksFound": 7,
+        "timestamp": "2026-10-01T16:23:38.654637"
+      },
+      {
+        "query": "QASEG20261001162336 horário de atendimento hortela yuca fagulha lagoa horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6741138165931393,
+        "chunksFound": 10,
+        "timestamp": "2026-10-01T16:23:40.346299"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 60,
-    "successfulQueries": 60,
+    "totalQueries": 64,
+    "successfulQueries": 64,
     "failedQueries": 0,
-    "avgConfidence": 0.6657826222337572,
-    "lastUpdated": "2026-10-01T15:24:04.850326"
+    "avgConfidence": 0.6718401262199839,
+    "lastUpdated": "2026-10-01T16:23:40.346272"
   },
   "config": {
     "minScore": 0.45,
@@ -445,5 +473,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-01T15:24:04.850831"
+  "updatedAt": "2026-10-01T16:23:40.346475"
 }

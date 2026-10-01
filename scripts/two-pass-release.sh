@@ -1347,6 +1347,31 @@ for identity_file in \
     warn "lineage offline: $(basename "$identity_file") ausente — não incluído"
   fi
 done
+
+# ── CERTIFICATION BUNDLE (selo V2 + ciclo autônomo de bug) ──────────────────
+# A etapa equivalente existia em `scripts/envelope-release.sh`, que está
+# DEPRECADO desde 2026-09-03 ("fabricava GO sintético sobre NO_GO") — logo a
+# certificação NUNCA entrava no pacote pelo fluxo vivo. Consequência medida em
+# 2026-10-01: o passe CANDIDATO selava (a fase adiada trata os 4 como
+# informativos) e o passe FINAL reprovava em `check-dist-clean` com os 4
+# `AUSENTE` → `✗ BLOQUEADO: check-dist-clean detectou problemas` → exit 1
+# ("zip:release final retornou exit 1 (esperado 0)").
+# O envelope governado precisa carregar a CERTIFICAÇÃO dos eixos que autorizam
+# o release, com o veredito REAL — sem ela não há o que a verificação offline
+# verifique. Fail-closed: ausente BLOQUEIA o envelope; nunca entra placeholder.
+step "Certification bundle: selo V2 + ciclo autônomo de bug..."
+for pair in \
+  "reports/engineering-router-v2-seal-execution.json:engineering-router-v2-seal-execution.json" \
+  "reports/engineering-router-v2-seal-report.json:engineering-router-v2-seal-decision.json" \
+  "reports/bug-autonomous-loop-report.json:bug-autonomous-loop-report.json" \
+  "reports/v2-seal-freshness-report.json:v2-seal-freshness-report.json"; do
+  cert_src="${pair%%:*}"; cert_dst="${pair##*:}"
+  [[ -f "$PROJECT_ROOT/$cert_src" ]] \
+    || fail "certification bundle: ausente $cert_src (rode o selo V2 e o gate do ciclo autônomo antes do release)"
+  cp "$PROJECT_ROOT/$cert_src" "$GOV_DIR/$cert_dst"
+done
+ok "certification bundle verde (selo V2 + ciclo autônomo + frescor) no envelope"
+
 cp "$GOV_DIR"/*.json "$TMP_ENVELOPE/r-agent2/dist/governance/"
 cp "$SIG_DIR"/*.sig "$TMP_ENVELOPE/r-agent2/dist/signatures/"
 cp "$VER_DIR"/* "$TMP_ENVELOPE/r-agent2/dist/verifier/"
