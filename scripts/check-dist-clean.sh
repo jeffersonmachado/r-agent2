@@ -88,14 +88,33 @@ for f in \
   package-integrity-report.json \
   governance-attestation.json \
   governance-chain.json \
-  final-governance-report.json \
+  final-governance-report.json
+
+do
+  [[ -f "$DIST_DIR/governance/$f" ]] && ok "dist/governance/$f" || fail "dist/governance/$f AUSENTE"
+done
+
+# Os 4 artefatos de CERTIFICAÇÃO (selo V2 + ciclo autônomo) só entram em
+# dist/governance/ pelo `envelope-release.sh`, que roda no PASS 2 (payload
+# entregue). Exigi-los no PASS 1 reprovava o candidato por artefato que ainda
+# não existia — medido 2026-10-01: as 4 linhas AUSENTE abortavam o candidato
+# ("✗ BLOQUEADO: check-dist-clean detectou problemas"). Com a fase adiada
+# (CHECK_DIST_CLEAN_DEFERRED_CANDIDATE=1) eles são informativos e continuam
+# BLOQUEANTES na verificação final.
+for f in \
   engineering-router-v2-seal-execution.json \
   engineering-router-v2-seal-decision.json \
   bug-autonomous-loop-report.json \
   v2-seal-freshness-report.json
 
 do
-  [[ -f "$DIST_DIR/governance/$f" ]] && ok "dist/governance/$f" || fail "dist/governance/$f AUSENTE"
+  if [[ -f "$DIST_DIR/governance/$f" ]]; then
+    ok "dist/governance/$f"
+  elif [[ "${CHECK_DIST_CLEAN_DEFERRED_CANDIDATE:-0}" == "1" ]]; then
+    warn "dist/governance/$f adiado (entra no PASS 2 pelo envelope)"
+  else
+    fail "dist/governance/$f AUSENTE"
+  fi
 done
 
 for f in package.manifest.sig governance.sig release.sig replay.sig release-attestation.sig; do

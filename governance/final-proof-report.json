@@ -1,26 +1,26 @@
 {
   "artifactType": "final-proof-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-01T03:43:34.999Z",
-  "runId": "rap-governed-20260930234913925-347e2175",
-  "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
+  "generatedAt": "2026-10-01T09:34:29.421Z",
+  "runId": "rap-governed-20261001081410689-191c2593",
+  "sourceFingerprint": "60e43a947fb312c54095dc385153cf4c48c338b597a4a42a33699ba707d9b3bb",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
   "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "autonomousReady": false,
-  "blockerCount": 2,
+  "blockerCount": 0,
   "missingArtifacts": [],
   "fingerprintStatus": "FRESH",
   "fingerprintChain": {
     "status": "FRESH",
-    "sourceFingerprint": "afd190938aea6b25194c417bfa92bcfd90ce79886a1928528f5f97126515b3b7",
+    "sourceFingerprint": "60e43a947fb312c54095dc385153cf4c48c338b597a4a42a33699ba707d9b3bb",
     "inventoryFingerprint": "43bf9b290d51722f260cac613a0bfaebbc147cbae51441b971ccd2dd96592c32",
-    "scenarioRegistryFingerprint": "b329bed2340de313f34a968f59df845639c2df76bc9c45732df99d8ea94354d8",
+    "scenarioRegistryFingerprint": "9614e5baab1090e6ae439eddd9d3b16e9ec8163899003753e05857a495c2f57a",
     "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-    "chainFingerprint": "2b4bee23eb8a54f134a43453bf2f44335f395bfc9e4edcc11fe2580025ad377d"
+    "chainFingerprint": "11c41070314b50b2fbd71bdea0f0fe9461dcc9ea86e890ed0fac40060a510e18"
   },
   "inventoryFingerprint": "43bf9b290d51722f260cac613a0bfaebbc147cbae51441b971ccd2dd96592c32",
-  "scenarioFingerprint": "b329bed2340de313f34a968f59df845639c2df76bc9c45732df99d8ea94354d8",
-  "chainFingerprint": "2b4bee23eb8a54f134a43453bf2f44335f395bfc9e4edcc11fe2580025ad377d"
+  "scenarioFingerprint": "9614e5baab1090e6ae439eddd9d3b16e9ec8163899003753e05857a495c2f57a",
+  "chainFingerprint": "11c41070314b50b2fbd71bdea0f0fe9461dcc9ea86e890ed0fac40060a510e18"
 }

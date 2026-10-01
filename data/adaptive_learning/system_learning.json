@@ -282,17 +282,45 @@
         "confidence": 0.6479568591186482,
         "chunksFound": 8,
         "timestamp": "2026-10-01T03:22:10.655857"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-01T08:39:01.305192"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-01T08:50:51.638707"
+      },
+      {
+        "query": "QASEG20261001090553 horário de atendimento kilim bussola fagulha irvore horário atendimento kilim",
+        "success": true,
+        "confidence": 0.7521200613590826,
+        "chunksFound": 8,
+        "timestamp": "2026-10-01T09:05:55.527715"
+      },
+      {
+        "query": "QASEG20261001090553 horário de atendimento kilim bussola fagulha irvore horário atendimento kilim",
+        "success": true,
+        "confidence": 0.5881041335866488,
+        "chunksFound": 8,
+        "timestamp": "2026-10-01T09:05:57.527409"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 40,
-    "successfulQueries": 40,
+    "totalQueries": 44,
+    "successfulQueries": 44,
     "failedQueries": 0,
-    "avgConfidence": 0.6336157381900912,
-    "lastUpdated": "2026-10-01T03:22:10.655835"
+    "avgConfidence": 0.6483004445135634,
+    "lastUpdated": "2026-10-01T09:05:57.527392"
   },
   "config": {
     "minScore": 0.45,
@@ -305,5 +333,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-01T03:22:10.656058"
+  "updatedAt": "2026-10-01T09:05:57.527558"
 }
