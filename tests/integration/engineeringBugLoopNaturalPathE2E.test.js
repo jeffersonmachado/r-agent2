@@ -116,6 +116,15 @@ beforeAll(async () => {
     return;
   }
 
+  // RESÍDUO DE EXECUÇÃO INTERROMPIDA: o sweep do laço é GLOBAL por natureza —
+  // findings deixados por execuções anteriores (timeout/kill, sem `afterAll`)
+  // são reprocessados e competem com o finding DESTA suíte, e o ciclo não fecha
+  // dentro do tempo (`fixed=0`, `closed=false`). Medido 2026-10-01 no lote
+  // autoritativo: a suíte levou 447 s (64 s isolada) e a asserção de fechamento
+  // falhou. Mesmo remédio já aplicado em `engineeringBugLoop.test.js`.
+  const { purgeTestFindings } = require('../helpers/purgeTestFindings');
+  await purgeTestFindings();
+
   const { isSandboxAvailable } = require('../../api/services/engineeringRouter/executionSandbox');
   sandboxAvailable = isSandboxAvailable();
 
