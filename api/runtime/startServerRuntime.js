@@ -10,6 +10,46 @@ function startServerRuntime({
   workerDeps,
   processRef = process,
 }) {
+  // ── Isolamento de falhas de processo ──────────────────────────────────────
+  // Uma promise rejeitada SEM catch dentro de cliente de terceiro derrubava a
+  // API INTEIRA (Node >= 15 aborta por default). Medido em 2026-10-01, duas
+  // vezes: `whatsapp-web.js/src/Client.js` (~linha 1324) faz `await res.text()`
+  // DENTRO de um handler de evento `async` sem catch — quando a página CDP
+  // fecha, a rejeição sobe e o processo morre. Consequência: todos os tenants
+  // caem junto e o converge/mesh de ~40 min aborta no meio (o mesh do
+  // release-package ficou 1h pendurado esperando a API que já não existia).
+  // A API é multi-tenant e hospeda integrações OPCIONAIS: rejeição não tratada
+  // é registrada com stack e o processo segue servindo. Falhar explícito é
+  // diferente de morrer em silêncio.
+  let unhandledRejectionCount = 0;
+  processRef.on('unhandledRejection', (reason) => {
+    unhandledRejectionCount += 1;
+    const isError = reason instanceof Error;
+    try {
+      logger.error('[Server] unhandledRejection (processo mantido vivo)', {
+        count: unhandledRejectionCount,
+        message: isError ? reason.message : String(reason),
+        stack: isError ? reason.stack : undefined,
+      });
+    } catch {
+      // logger indisponível nunca pode derrubar o processo
+    }
+  });
+
+  // Estado após exceção não capturada é indefinido: registra e encerra (mesmo
+  // desfecho default do Node, porém com evidência no log).
+  processRef.on('uncaughtException', (error) => {
+    try {
+      logger.error('[Server] uncaughtException — encerrando processo', {
+        message: error && error.message,
+        stack: error && error.stack,
+      });
+    } catch {
+      // ignora falha do logger: o processo encerra de qualquer forma
+    }
+    processRef.exit(1);
+  });
+
   clearLimitersCache();
 
   logger.info('[Server] Iniciando servidor...');
