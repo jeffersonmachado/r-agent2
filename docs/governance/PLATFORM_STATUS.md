@@ -1,19 +1,19 @@
 # Platform Status
 
-- Generated at: 2026-10-02T14:34:40.167Z
-- Canonical mesh execution: mesh-2026-10-02T04-42-22-869Z
-- Canonical mesh decision: GO
-- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
-- Readiness score: 100
-- QA coverage: 100%
+- Generated at: 2026-10-02T16:55:39.124Z
+- Canonical mesh execution: mesh-2026-10-02T16-07-58-698Z
+- Canonical mesh decision: NO_GO
+- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO]
+- Readiness score: 99.83
+- QA coverage: 99.31%
 - Replay coverage: 100%
 - Vertical coverage: 100%
 
 ## Blocking domains
-- none
+- fitness
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-02T04-42-22-869Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-02T16-07-58-698Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json
@@ -23,4 +23,5 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Sem bloqueadores ativos.
+- Falha aberta no dominio fitness [gap-mesh-fitness-functional_failure-fitness-matricula-cancelamento]
+- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]

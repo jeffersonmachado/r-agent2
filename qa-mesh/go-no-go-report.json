@@ -1,25 +1,27 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-02T04-42-22-869Z",
+  "executionId": "mesh-2026-10-02T16-07-58-698Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "GO",
-  "reasons": [],
+  "status": "NO_GO",
+  "reasons": [
+    "BASELINE_PASS_RATE_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-02T04-42-22-869Z",
-    "startedAt": "2026-10-02T04:42:22.869Z",
+    "executionId": "mesh-2026-10-02T16-07-58-698Z",
+    "startedAt": "2026-10-02T16:07:58.698Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-02T05:32:37.604Z",
+    "promotedAt": "2026-10-02T16:55:27.303Z",
     "registryTotal": 144,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-02T04-42-22-869Z",
+    "executionId": "mesh-2026-10-02T16-07-58-698Z",
     "tenantId": "system",
-    "timestamp": "2026-10-02T04:42:22.869Z",
+    "timestamp": "2026-10-02T16:07:58.698Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -27,9 +29,9 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 144,
+    "passed": 143,
     "fallbackPassed": 0,
-    "failed": 0,
+    "failed": 1,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -87,9 +89,9 @@
         "total": 90
       },
       "fitness": {
-        "passed": 15,
+        "passed": 14,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -167,10 +169,20 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "BASELINE_PASS_RATE_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "fitness": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "functional_failure": 1
+        },
+        "successRate": 0.9333333333333333
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -190,12 +202,6 @@
         "successRate": 1
       },
       "core": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "fitness": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -244,26 +250,33 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "functional_failure": 1
+    },
+    "topErrors": [
+      {
+        "message": "1 erro(s) de console detectados",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-02T04-42-22-869Z",
-      "startedAt": "2026-10-02T04:42:22.869Z",
+      "executionId": "mesh-2026-10-02T16-07-58-698Z",
+      "startedAt": "2026-10-02T16:07:58.698Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-02T05:32:37.604Z",
+      "promotedAt": "2026-10-02T16:55:27.303Z",
       "registryTotal": 144,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261002021741216-6a8080a5",
-  "sourceFingerprint": "363e17dfc1c1a2e796bcbac8f19330fadb8b18a37456e65a10f7ac0e56bdd40c",
-  "sourceCommit": "0ec3d5ac9dfb1156fba3431c76d575704ce83843",
-  "sourceTree": "c317e9d991b38647cb07b0341c042768e39122a4",
-  "generatedAt": "2026-10-02T05:32:37.606Z"
+  "runId": "rap-governed-20261002153059353-499a664a",
+  "sourceFingerprint": "f523f63b8b823cb0ecbe80d05337d4456b1152c14274f2d5263afadf04cc51b6",
+  "sourceCommit": "eb913f80b062535c6ef2ffeaf59c49eeb8c6de44",
+  "sourceTree": "2fe7631f43653b8d7d5569def232497b64d77a8d",
+  "generatedAt": "2026-10-02T16:55:27.304Z"
 }

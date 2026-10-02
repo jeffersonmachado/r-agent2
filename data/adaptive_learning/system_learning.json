@@ -8,20 +8,6 @@
         "success": true,
         "confidence": 0.7986548840598731,
         "chunksFound": 1,
-        "timestamp": "2026-09-23T20:00:58.527970"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-23T20:02:46.532529"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
         "timestamp": "2026-09-23T20:48:16.027369"
       },
       {
@@ -667,17 +653,66 @@
         "confidence": 0.7986548840598731,
         "chunksFound": 1,
         "timestamp": "2026-10-02T14:45:06.821419"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T14:57:01.921702"
+      },
+      {
+        "query": "QASEG20261002151131 horário de atendimento hortela quartzo granito yuca horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6701726664720067,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T15:11:35.743175"
+      },
+      {
+        "query": "QASEG20261002151131 horário de atendimento hortela quartzo granito yuca horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6527933294531165,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T15:11:38.360800"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-02T16:10:04.828867"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T16:21:48.574216"
+      },
+      {
+        "query": "QASEG20261002163632 horário de atendimento dunas sereia rafia tundra horário atendimento dunas",
+        "success": true,
+        "confidence": 0.6774298580767638,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T16:36:36.227301"
+      },
+      {
+        "query": "QASEG20261002163632 horário de atendimento dunas sereia rafia tundra horário atendimento dunas",
+        "success": true,
+        "confidence": 0.6473902791615509,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T16:36:38.187431"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 95,
-    "successfulQueries": 95,
+    "totalQueries": 102,
+    "successfulQueries": 102,
     "failedQueries": 0,
-    "avgConfidence": 0.6809340369207071,
-    "lastUpdated": "2026-10-02T14:45:06.821407"
+    "avgConfidence": 0.671285347425898,
+    "lastUpdated": "2026-10-02T16:36:38.187421"
   },
   "config": {
     "minScore": 0.45,
@@ -690,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-02T14:45:06.821508"
+  "updatedAt": "2026-10-02T16:36:38.187519"
 }
