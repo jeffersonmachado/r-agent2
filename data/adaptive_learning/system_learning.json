@@ -618,17 +618,45 @@
         "confidence": 0.5913352098875941,
         "chunksFound": 10,
         "timestamp": "2026-10-02T03:04:00.653375"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-02T03:36:16.229732"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T03:48:05.882299"
+      },
+      {
+        "query": "QASEG20261002040220 horário de atendimento xadrez dunas fagulha cacto horário atendimento xadrez",
+        "success": true,
+        "confidence": 0.678042568633757,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T04:02:23.690530"
+      },
+      {
+        "query": "QASEG20261002040220 horário de atendimento xadrez dunas fagulha cacto horário atendimento xadrez",
+        "success": true,
+        "confidence": 0.6539113805972281,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T04:02:25.500117"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 88,
-    "successfulQueries": 88,
+    "totalQueries": 92,
+    "successfulQueries": 92,
     "failedQueries": 0,
-    "avgConfidence": 0.6558808965593205,
-    "lastUpdated": "2026-10-02T03:04:00.653364"
+    "avgConfidence": 0.6628223652753934,
+    "lastUpdated": "2026-10-02T04:02:25.500099"
   },
   "config": {
     "minScore": 0.45,
@@ -641,5 +669,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-02T03:04:00.653461"
+  "updatedAt": "2026-10-02T04:02:25.500281"
 }
