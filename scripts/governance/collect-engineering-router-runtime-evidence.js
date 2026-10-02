@@ -92,6 +92,8 @@ function runTargetedTest(testPath, testId) {
   const args = ['jest', '--config', 'jest.config.cjs', testPath, '--testNamePattern', testId, '--json'];
   let raw = '';
   let processExitCode = 0;
+  let stderrTail = '';
+  let terminationDetail = null;
   try {
     // Achado real: testes E2E reais (git real, subprocess real) produzem saída --json que
     // ultrapassa o maxBuffer default do execFileSync (1MB) — o processo era morto e o stdout
@@ -109,6 +111,14 @@ function runTargetedTest(testPath, testId) {
   } catch (err) {
     processExitCode = typeof err.status === 'number' ? err.status : 1;
     raw = err.stdout || '';
+    // O stderr do filho é a ÚNICA fonte da causa quando o reporter do Jest não chega a rodar
+    // (globalSetup quebrado, runner que não sobe, timeout/morte do processo). DEFEITO REAL medido
+    // em 2026-10-02: descartá-lo produziu 25 falhas IDÊNTICAS e indistinguíveis ("crash antes do
+    // reporter") sem nenhum caminho para o diagnóstico — o Jest tinha impresso a causa e ela foi
+    // jogada fora. Mesmo tratamento dado aos lotes em `run-release-suites.js` (stdoutTail/stderrTail).
+    stderrTail = (err.stderr || '').split('\n').map((line) => line.trimEnd()).filter(Boolean).slice(-15).join('\n');
+    if (err.signal) terminationDetail = `morto por sinal ${err.signal}`;
+    else if (err.code === 'ETIMEDOUT') terminationDetail = 'timeout do execFileSync (120000ms)';
   }
 
   let parsed = null;
@@ -127,7 +137,8 @@ function runTargetedTest(testPath, testId) {
       numFailedTests: 0,
       numPendingTests: 0,
       matchedTestNames: [],
-      reason: 'saída do Jest não pôde ser parseada como JSON (crash antes do reporter)',
+      reason: `saída do Jest não pôde ser parseada como JSON (crash antes do reporter)${terminationDetail ? ` — ${terminationDetail}` : ''} — stderr: ${stderrTail ? stderrTail.split('\n')[0].slice(0, 300) : '(vazio)'}`,
+      stderrTail: stderrTail || null,
       startedAt,
       finishedAt,
     };
@@ -196,6 +207,7 @@ function main() {
       numFailedTests: result.numFailedTests,
       numPendingTests: result.numPendingTests,
       reason: result.reason || null,
+      stderrTail: result.stderrTail || null,
       startedAt: result.startedAt,
       finishedAt: result.finishedAt,
       sourceFingerprint,
@@ -205,6 +217,11 @@ function main() {
   }
 
   const failed = items.filter((i) => !i.pass);
+  // O progresso vai para stdout (convenção já existente neste coletor); a CAUSA da falha vai para
+  // stderr, para que o diagnóstico seja separável do fluxo de progresso e do relatório em disco.
+  for (const item of failed) {
+    if (item.stderrTail) process.stderr.write(`[runtime-evidence] ${item.id} — stderr do filho:\n${item.stderrTail}\n`);
+  }
   const report = {
     artifactType: 'engineering-router-v1-runtime-evidence',
     artifactVersion: '2.0.0',

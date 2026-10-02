@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-10-02T05:46:01.828Z
+- Generated at: 2026-10-02T13:50:32.707Z
 - Canonical mesh execution: mesh-2026-10-02T04-42-22-869Z
 - Canonical mesh decision: GO
-- Readiness decision: AUTONOMOUS_READY_GO
+- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [PLATFORM_READINESS<-ENGINEERING_ROUTER_V2_SEAL:PARENT_GO_WITH_CHILD_NO_GO]
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%

@@ -179,7 +179,12 @@ function createHttpServer({ config, logger = console } = {}) {
 
   const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/health') {
-      sendJson(res, 200, { status: 'ok', sandboxAvailable: isSandboxAvailable() });
+      // `pid` é ESTADO DO PROCESSO (a mesma classe de dado que `status`), nunca dado de negócio nem
+      // capability — e é o que permite a um cliente/observador saber QUAL processo respondeu na
+      // porta. Sem ele, um runner ÓRFÃO de sessão anterior, preso na porta, responde o health
+      // check no lugar do processo que acabou de subir, e o chamador segue falando com uma
+      // configuração alheia sem nenhum sinal (defeito real medido no ciclo de selagem 2026-10-02).
+      sendJson(res, 200, { status: 'ok', sandboxAvailable: isSandboxAvailable(), pid: process.pid });
       return;
     }
 

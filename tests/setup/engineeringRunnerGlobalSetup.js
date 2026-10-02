@@ -40,7 +40,14 @@ const ROOT = path.resolve(__dirname, '..', '..');
  */
 const { loadEnvFile } = require(path.join(ROOT, 'scripts', 'governance', 'lib', 'loadEnvFile'));
 const envLoad = loadEnvFile(ROOT);
-process.stdout.write(`[jest-global-setup] .env ${envLoad.loaded ? `carregado (${envLoad.keys} chave(s) aplicada(s); ambiente explícito vence)` : `não aplicado: ${envLoad.reason}`}\n`);
+// stderr, NUNCA stdout — a mesma regra documentada logo abaixo para o banner do runner. O
+// globalSetup roda no MESMO processo CLI que produz a saída de `--json` do Jest, e é esse stdout
+// que `collect-engineering-router-runtime-evidence.js` parseia: uma linha em stdout ANTES do JSON
+// faz o `JSON.parse` falhar e os 25 itens de runtime irem a RUNTIME_FAIL com
+// "saída do Jest não pôde ser parseada como JSON". DEFEITO PRÓPRIO, medido em 2026-10-02: esta
+// linha nasceu em stdout e derrubou exatamente os 25 itens que o comentário abaixo descreve como
+// já resolvidos — o alerta existia, e foi ignorado na linha de cima.
+process.stderr.write(`[jest-global-setup] .env ${envLoad.loaded ? `carregado (${envLoad.keys} chave(s) aplicada(s); ambiente explícito vence)` : `não aplicado: ${envLoad.reason}`}\n`);
 
 const PID_FILE = path.join(ROOT, '.jest-engineering-runner.pid');
 const RUNNER_PORT = Number(process.env.ENGINEERING_RUNNER_TEST_PORT || 8097);
@@ -52,9 +59,13 @@ function waitForHealth(url, timeoutMs) {
   return new Promise((resolve, reject) => {
     const attempt = () => {
       const req = http.get(url, (res) => {
-        res.resume();
-        if (res.statusCode === 200) { resolve(); return; }
-        retry();
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => {
+          if (res.statusCode !== 200) { retry(); return; }
+          try { resolve(JSON.parse(body)); } catch (_) { resolve(null); }
+        });
       });
       req.on('error', retry);
     };
@@ -116,7 +127,31 @@ module.exports = async function engineeringRunnerGlobalSetup() {
 
   fs.writeFileSync(PID_FILE, String(child.pid));
 
-  await waitForHealth(`http://127.0.0.1:${RUNNER_PORT}/health`, READY_TIMEOUT_MS);
+  const health = await waitForHealth(`http://127.0.0.1:${RUNNER_PORT}/health`, READY_TIMEOUT_MS);
+
+  // GUARDA DE IDENTIDADE — quem respondeu na porta tem de ser o processo que NÓS subimos.
+  //
+  // DEFEITO REAL medido em 2026-10-02: um runner ÓRFÃO de 01/out ficou preso na porta 8097 (deixado
+  // por um terminal encerrado no meio do ciclo de vida do Jest). O filho novo morria em
+  // `EADDRINUSE`, mas o health check era respondido pelo ORFÃO — e os testes passavam a falar com um
+  // runner de configuração desconhecida (workspace root, token e estado alheios), produzindo falhas
+  // INTERMITENTES como `exitCode: null` / `stdoutExcerpt: undefined`, sem nenhuma pista da causa
+  // real. Verificado por medição: com a porta ocupada, o runner morre com
+  // `EADDRINUSE: address already in use 0.0.0.0:8097`.
+  //
+  // A comparação por `pid` é DETERMINÍSTICA (sem corrida com a morte assíncrona do filho): se o
+  // nosso filho morreu, nenhuma resposta pode trazer o pid dele. Fail-closed: falhar aqui nomeia o
+  // remédio; degradar em silêncio falando com runner alheio não é opção.
+  const answeringPid = Number(health && health.pid);
+  if (answeringPid !== child.pid) {
+    throw new Error(
+      `Engineering Runner na porta ${RUNNER_PORT} respondeu como pid ${Number.isFinite(answeringPid) ? answeringPid : 'desconhecido'} ` +
+      `mas o runner que subimos é pid ${child.pid} (exit=${child.exitCode}, signal=${child.signalCode}) — ` +
+      `a porta está ocupada por um processo ESTRANGEIRO (runner órfão de sessão anterior). ` +
+      `Encerre quem segura a porta (ss -ltnp | grep ${RUNNER_PORT}) e rode de novo; ` +
+      'nunca prosseguir falando com um runner de identidade desconhecida.',
+    );
+  }
 
   process.env.ENGINEERING_RUNNER_URL = `http://127.0.0.1:${RUNNER_PORT}`;
   process.env.ENGINEERING_RUNNER_TOKEN = RUNNER_TOKEN;
