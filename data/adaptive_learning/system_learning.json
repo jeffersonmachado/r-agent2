@@ -660,17 +660,24 @@
         "confidence": 0.5908888735567581,
         "chunksFound": 6,
         "timestamp": "2026-10-02T04:56:31.035445"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-02T14:45:06.821419"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 94,
-    "successfulQueries": 94,
+    "totalQueries": 95,
+    "successfulQueries": 95,
     "failedQueries": 0,
-    "avgConfidence": 0.6678539427941331,
-    "lastUpdated": "2026-10-02T04:56:31.035423"
+    "avgConfidence": 0.6809340369207071,
+    "lastUpdated": "2026-10-02T14:45:06.821407"
   },
   "config": {
     "minScore": 0.45,
@@ -683,5 +690,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-02T04:56:31.035675"
+  "updatedAt": "2026-10-02T14:45:06.821508"
 }
