@@ -17,9 +17,11 @@
 
 const {
   DEFAULT_THRESHOLD_BYTES_PER_ROW,
+  DEFAULT_SCREEN_MIN_INDEX_BYTES,
   indexBytesPerRow,
   isBloated,
   isEligible,
+  needsRealCount,
   parseArgs,
   resolvePositiveNumber,
 } = require('../../scripts/db-reindex-bloated');
@@ -125,5 +127,41 @@ describe('db-reindex-bloated — decisao', () => {
     expect(() => resolvePositiveNumber('0', 300, 'threshold')).toThrow(/threshold_invalido/);
     expect(() => resolvePositiveNumber('-1', 300, 'threshold')).toThrow(/threshold_invalido/);
     expect(() => resolvePositiveNumber('abc', 300, 'threshold')).toThrow(/threshold_invalido/);
+  });
+
+  it('so paga contagem real nas tabelas com indice relevante', () => {
+    expect(needsRealCount({ indexBytes: 100 * MB })).toBe(true);
+    expect(needsRealCount({ indexBytes: DEFAULT_SCREEN_MIN_INDEX_BYTES })).toBe(true);
+    expect(needsRealCount({ indexBytes: 1 * MB })).toBe(false);
+    expect(needsRealCount({ indexBytes: Number.NaN })).toBe(false);
+    expect(needsRealCount({ indexBytes: 100 * MB, screenMinIndexBytes: 0 })).toBe(false);
+  });
+});
+
+describe('db-reindex-bloated — ARMADILHA da contagem de linhas (medida, nao teorica)', () => {
+  /**
+   * `n_live_tup` é ESTIMATIVA do autovacuum e fica MUITO defasada justamente
+   * nas tabelas que mais sofrem expurgo — as que esta rotina existe para
+   * vigiar. Medição no banco real (2026-10-02):
+   *
+   *   scorecard_requirement_results  real 2.040.240  estimativa 77.220  (26x menor)
+   *   vertical_engagement_signals    real   447.934  estimativa 24.592  (18x menor)
+   *   scorecard_dimension_results    real   185.504  estimativa  7.020  (26x menor)
+   *
+   * Com a estimativa as três apareciam como inchadas (1074/719/1077 B/linha);
+   * com a contagem real são SAUDÁVEIS (41/39/41). Este teste fixa a razão pela
+   * qual o detector NÃO pode usar a estimativa: o erro é sempre no sentido de
+   * contar MENOS linhas, o que infla a métrica e gera falso positivo.
+   */
+  it('a estimativa defasada produz falso positivo; a contagem real corrige', () => {
+    const indexBytes = 158 * MB;
+    const indexCount = 2;
+
+    const comEstimativa = indexBytesPerRow({ indexBytes, liveRows: 77220, indexCount });
+    const comContagemReal = indexBytesPerRow({ indexBytes, liveRows: 2040240, indexCount });
+
+    expect(isBloated({ bytesPerRow: comEstimativa })).toBe(true); // falso positivo
+    expect(isBloated({ bytesPerRow: comContagemReal })).toBe(false); // verdadeiro
+    expect(comEstimativa / comContagemReal).toBeCloseTo(2040240 / 77220, 0);
   });
 });

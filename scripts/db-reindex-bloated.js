@@ -126,19 +126,45 @@ function formatBytes(bytes) {
   return `${(value / 1073741824).toFixed(2)} GB`;
 }
 
+/**
+ * Varredura BARATA: só tamanhos. A decisão NUNCA usa `n_live_tup`.
+ *
+ * ARMADILHA MEDIDA (2026-10-02): `n_live_tup` é ESTIMATIVA do autovacuum e fica
+ * sistematicamente defasada nas tabelas que mais sofrem expurgo — exatamente as
+ * que esta rotina existe para vigiar. Medido no banco real:
+ *   scorecard_requirement_results  real 2.040.240  estimativa 77.220   (26x menor)
+ *   vertical_engagement_signals    real   447.934  estimativa 24.592   (18x menor)
+ *   scorecard_dimension_results    real   185.504  estimativa  7.020   (26x menor)
+ *   event_ledger                   real   872.366  estimativa 874.119 (exata)
+ * Usar a estimativa produzia FALSO POSITIVO nas três primeiras (1074, 719 e
+ * 1077 B/linha/indice "inchados") quando a contagem real dá 41, 39 e 41 B/linha
+ * — ou seja, índices saudáveis.
+ */
 const SURVEY_SQL = `
   SELECT c.relname AS table_name,
-         s.n_live_tup AS live_rows,
          pg_relation_size(c.oid) AS heap_bytes,
          pg_indexes_size(c.oid) AS index_bytes,
-         (SELECT count(*) FROM pg_index i WHERE i.indrelid = c.oid) AS index_count,
-         (SELECT count(*) FROM pg_index i WHERE i.indrelid = c.oid AND NOT i.indisvalid) AS invalid_indexes
+         (SELECT count(*) FROM pg_index c2 WHERE c2.indrelid = c.oid) AS index_count,
+         (SELECT count(*) FROM pg_index c2 WHERE c2.indrelid = c.oid AND NOT c2.indisvalid) AS invalid_indexes
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
-  JOIN pg_stat_user_tables s ON s.relid = c.oid
   WHERE c.relkind = 'r' AND n.nspname = 'public'
   ORDER BY pg_indexes_size(c.oid) DESC
 `;
+
+/**
+ * Piso de índice (bytes) para uma tabela valer a contagem real. Contar linhas
+ * exige varredura, então só contamos o que tem tamanho para importar.
+ */
+const DEFAULT_SCREEN_MIN_INDEX_BYTES = 20 * 1024 * 1024;
+
+/** Extraído para teste puro: vale gastar a contagem real nesta tabela? */
+function needsRealCount({ indexBytes, screenMinIndexBytes = DEFAULT_SCREEN_MIN_INDEX_BYTES }) {
+  const size = Number(indexBytes);
+  const floor = Number(screenMinIndexBytes);
+  if (!Number.isFinite(size) || !Number.isFinite(floor) || floor <= 0) return false;
+  return size >= floor;
+}
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -177,17 +203,30 @@ async function main() {
   const rows = await sequelize.query(SURVEY_SQL, { type: QueryTypes.SELECT });
 
   console.log(`[db-reindex-bloated] ${args.execute ? 'MODO: EXECUTAR' : 'MODO: DRY-RUN (use --execute)'}`);
-  console.log(`  limite   : ${threshold} B/linha/indice`);
+  console.log(`  limite    : ${threshold} B/linha/indice`);
   console.log(`  min linhas: ${minRows}`);
 
+  // Só as tabelas com índice relevante pagam o custo de uma contagem real.
+  const candidates = rows.filter((row) => needsRealCount({ indexBytes: row.index_bytes }));
+  const realRows = new Map();
+  for (const row of candidates) {
+    const counted = await sequelize.query(`SELECT count(*) AS total FROM "${row.table_name}"`, {
+      type: QueryTypes.SELECT,
+    });
+    realRows.set(row.table_name, Number(counted?.[0]?.total) || 0);
+  }
+
   const evaluated = rows.map((row) => {
-    const liveRows = Number(row.live_rows) || 0;
     const indexBytes = Number(row.index_bytes) || 0;
     const indexCount = Number(row.index_count) || 0;
+    // Contagem REAL quando disponível; para tabelas abaixo do piso de índice o
+    // tamanho é irrelevante e `liveRows: 0` as torna inelegíveis (fail-closed).
+    const liveRows = realRows.has(row.table_name) ? realRows.get(row.table_name) : 0;
     const bytesPerRow = indexBytesPerRow({ indexBytes, liveRows, indexCount });
     return {
       table: row.table_name,
       liveRows,
+      counted: realRows.has(row.table_name),
       indexBytes,
       heapBytes: Number(row.heap_bytes) || 0,
       indexCount,
@@ -271,10 +310,12 @@ if (require.main === module) {
 module.exports = {
   DEFAULT_THRESHOLD_BYTES_PER_ROW,
   DEFAULT_MIN_ROWS,
+  DEFAULT_SCREEN_MIN_INDEX_BYTES,
   SURVEY_SQL,
   indexBytesPerRow,
   isBloated,
   isEligible,
+  needsRealCount,
   parseArgs,
   resolvePositiveNumber,
 };
