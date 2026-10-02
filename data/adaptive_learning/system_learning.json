@@ -4,62 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-09-23T20:48:16.027369"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-23T20:49:46.664622"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-09-23T21:27:45.999996"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-23T21:29:52.289238"
-      },
-      {
-        "query": "QASEG20260923213227 horário de atendimento jabuti xadrez lagoa sereia horário atendimento jabuti",
-        "success": true,
-        "confidence": 0.6624793369746946,
-        "chunksFound": 10,
-        "timestamp": "2026-09-23T21:32:30.954615"
-      },
-      {
-        "query": "QASEG20260923213227 horário de atendimento jabuti xadrez lagoa sereia horário atendimento jabuti",
-        "success": true,
-        "confidence": 0.6457200012298041,
-        "chunksFound": 10,
-        "timestamp": "2026-09-23T21:32:32.544604"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-09-23T22:16:55.056754"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-23T22:18:03.251378"
-      },
-      {
         "query": "QASEG20260923222032 horário de atendimento yuca penhasco neblina fagulha horário atendimento yuca",
         "success": true,
         "confidence": 0.7100502055649693,
@@ -702,17 +646,73 @@
         "confidence": 0.6473902791615509,
         "chunksFound": 9,
         "timestamp": "2026-10-02T16:36:38.187431"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-02T17:08:56.729098"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T17:21:07.716547"
+      },
+      {
+        "query": "QASEG20261002173720 horário de atendimento lagoa sereia orquidea neblina horário atendimento lagoa",
+        "success": true,
+        "confidence": 0.6864459132500996,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T17:37:22.921752"
+      },
+      {
+        "query": "QASEG20261002173720 horário de atendimento lagoa sereia orquidea neblina horário atendimento lagoa",
+        "success": true,
+        "confidence": 0.6887353568690908,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T17:37:25.218276"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-02T18:13:09.445995"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T18:25:12.172998"
+      },
+      {
+        "query": "QASEG20261002183916 horário de atendimento bussola quartzo zimbro dunas horário atendimento bussola",
+        "success": true,
+        "confidence": 0.7049295157778506,
+        "chunksFound": 10,
+        "timestamp": "2026-10-02T18:39:18.767572"
+      },
+      {
+        "query": "QASEG20261002183916 horário de atendimento bussola quartzo zimbro dunas horário atendimento bussola",
+        "success": true,
+        "confidence": 0.713294502898937,
+        "chunksFound": 7,
+        "timestamp": "2026-10-02T18:39:21.017352"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 102,
-    "successfulQueries": 102,
+    "totalQueries": 110,
+    "successfulQueries": 110,
     "failedQueries": 0,
-    "avgConfidence": 0.671285347425898,
-    "lastUpdated": "2026-10-02T16:36:38.187421"
+    "avgConfidence": 0.685146921538713,
+    "lastUpdated": "2026-10-02T18:39:21.017339"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-02T16:36:38.187519"
+  "updatedAt": "2026-10-02T18:39:21.017453"
 }

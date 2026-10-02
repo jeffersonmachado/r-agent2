@@ -1,6 +1,6 @@
 # Known Gaps
 
-## gap-mesh-fitness-functional_failure-fitness-matricula-cancelamento
+## gap-mesh-fitness-functional_failure-fitness-matricula-onboarding
 - Severity: high
 - Area: qa-mesh
 - Title: Falha aberta no dominio fitness

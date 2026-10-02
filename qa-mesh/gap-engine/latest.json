@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T16:55:39.124Z",
+  "generatedAt": "2026-10-02T19:00:20.360Z",
   "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO]",
   "platformMaturity": "enterprise-partial",
   "backlog": [
@@ -10,13 +10,13 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-fitness-functional_failure-fitness-matricula-cancelamento",
+      "id": "gap-mesh-fitness-functional_failure-fitness-matricula-onboarding",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio fitness",
       "evidence": {
         "scenarios": [
-          "fitness-matricula-cancelamento"
+          "fitness-matricula-onboarding"
         ],
         "sampleError": "1 erro(s) de console detectados"
       },

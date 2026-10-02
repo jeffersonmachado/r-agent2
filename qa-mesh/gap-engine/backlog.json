@@ -6,13 +6,13 @@
       "assertions": [],
       "replayEnrichments": []
     },
-    "id": "gap-mesh-fitness-functional_failure-fitness-matricula-cancelamento",
+    "id": "gap-mesh-fitness-functional_failure-fitness-matricula-onboarding",
     "severity": "high",
     "area": "qa-mesh",
     "title": "Falha aberta no dominio fitness",
     "evidence": {
       "scenarios": [
-        "fitness-matricula-cancelamento"
+        "fitness-matricula-onboarding"
       ],
       "sampleError": "1 erro(s) de console detectados"
     },
