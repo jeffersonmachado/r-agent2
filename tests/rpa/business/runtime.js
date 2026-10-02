@@ -590,13 +590,24 @@ function materializeActionValue(template, definition) {
 }
 
 async function waitForScreenReady(page, definition) {
+  // Teto ALINHADO com `assertBusinessPage` (30 s). O valor anterior (10 s) era curto
+  // para o runtime de DEV: o Vite transforma/serve os módulos sob demanda e, com o
+  // mesh inteiro concorrente (dezenas de browsers), o chunk lazy da página demora a
+  // montar. Medido 2026-10-02: `business-beauty-scr-05` reprovava de forma
+  // DETERMINÍSTICA com
+  //   `locator.waitFor: Timeout 10000ms exceeded ... heading "Serviços de Beleza"`
+  // — num heading ESTÁTICO (`BeautyServicesPage.jsx:29`, sem gate de loading), ou
+  // seja: a página nem chegou a montar. O gap engine classifica como `infra_error` e
+  // recomenda "correção de browser/runtime/rede antes de investigar regra de
+  // negócio". O teto maior NÃO afrouxa a asserção: o elemento continua obrigatório.
+  const screenReadyTimeoutMs = 30000;
   if (definition.readySelector) {
-    await page.locator(definition.readySelector).first().waitFor({ timeout: 10000 });
+    await page.locator(definition.readySelector).first().waitFor({ timeout: screenReadyTimeoutMs });
     return;
   }
 
   if (definition.pageTitle) {
-    await page.getByRole('heading', { name: new RegExp(definition.pageTitle, 'i') }).first().waitFor({ timeout: 10000 });
+    await page.getByRole('heading', { name: new RegExp(definition.pageTitle, 'i') }).first().waitFor({ timeout: screenReadyTimeoutMs });
     return;
   }
 
