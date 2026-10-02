@@ -285,6 +285,45 @@ async function listExecutionManifests(tenantKey = null) {
   }
 }
 
+/**
+ * Lista em lote apenas os manifestos de execução VÁLIDOS, com UMA leitura no
+ * store.
+ *
+ * Equivale a chamar `getExecutionManifest(refId)` para cada manifesto, mas sem
+ * N+1: o payload vem na mesma query e o hash é conferido em memória. Mesma
+ * semântica de descarte do caminho individual — não afrouxa nenhuma verificação:
+ *   - sem payload recuperável (ex.: artefato em blob)  → descartado
+ *   - hash real diferente do registrado               → descartado
+ *   - JSON inválido                                   → descartado
+ *   - integridade de replay inválida                  → descartado
+ * Ordenação: mais recentes primeiro (igual a `listExecutionManifests`).
+ */
+async function listValidExecutionManifests(tenantKey = 'system') {
+  try {
+    const store = await ensureStore();
+    const scopedTenantKey = normalizeTenantKey(tenantKey);
+    const rows = await store.listWithContent({ kind: KIND_EXECUTION, tenantKey: scopedTenantKey });
+    const valid = [];
+    for (const row of rows) {
+      if (!row.payload) continue;
+      if (typeof row.actualSha256 !== 'string' || row.actualSha256 !== row.sha256) continue;
+      let manifest;
+      try {
+        manifest = JSON.parse(row.payload.toString('utf8'));
+      } catch (_) {
+        continue;
+      }
+      if (!manifest) continue;
+      const integrity = validateReplayIntegrity(manifest, manifest.governance || {}, { maxAgeMs: -1 });
+      if (!integrity.valid) continue;
+      valid.push({ refId: row.refId, createdAt: row.createdAt, manifest });
+    }
+    return valid.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  } catch (_) {
+    return [];
+  }
+}
+
 /** Recupera o roteiro (recording) persistido. */
 async function getRecording(recordingId, tenantKey = 'system') {
   try {
@@ -693,6 +732,7 @@ module.exports = {
   persistExecutionArtifacts,
   getExecutionManifest,
   listExecutionManifests,
+  listValidExecutionManifests,
   getRecording,
   getReplay,
   getTraceBuffer,

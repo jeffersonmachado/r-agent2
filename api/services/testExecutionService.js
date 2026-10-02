@@ -27,7 +27,7 @@ const {
 } = require('../../lib/rpaPathResolver');
 const {
   getExecutionManifest,
-  listExecutionManifests,
+  listValidExecutionManifests,
   getRecording: getPersistedRecording,
   getReplay: getPersistedReplay,
   getTraceBuffer,
@@ -998,16 +998,18 @@ async function getExecutionArtifact(executionId, kind, index = null, tenantId = 
  */
 async function listExecutionArtifacts(tenantId = 'system') {
   const scopedTenantId = normalizeTenantKey(tenantId);
-  const manifests = await listExecutionManifests(scopedTenantId);
+  // Uma única leitura traz os manifestos válidos. Antes era um N+1 de 2 SELECTs
+  // por manifesto (~2.450 idas ao banco com o corpus atual): 11,8 s medidos para
+  // 1.225 itens, contra 17 ms do endpoint irmão de replays.
+  const manifests = await listValidExecutionManifests(scopedTenantId);
   // Disponibilidade de binários (trace/screenshot) derivada das linhas reais
   // do store — o manifesto pode ficar desatualizado se os binários forem
   // removidos depois da persistência (sweep de metadados órfãos).
   const reality = await getExecutionArtifactReality(scopedTenantId);
   const items = [];
-  for (const meta of manifests) {
-    const manifest = await getExecutionManifest(meta.refId, scopedTenantId);
-    if (!manifest) continue;
-    const executionId = manifest.executionId || meta.refId;
+  for (const entry of manifests) {
+    const manifest = entry.manifest;
+    const executionId = manifest.executionId || entry.refId;
     items.push({
       executionId,
       recordingId: manifest.recordingId || null,
@@ -1018,7 +1020,7 @@ async function listExecutionArtifacts(tenantId = 'system') {
       screenshots: reality.screenshots.get(executionId) || 0,
       startedAt: manifest.startedAt || null,
       finishedAt: manifest.finishedAt || null,
-      persistedAt: manifest.persistedAt || meta.createdAt || null,
+      persistedAt: manifest.persistedAt || entry.createdAt || null,
     });
   }
   return items;
