@@ -275,6 +275,8 @@
     "artifacts:sweep-orphans:execute": "node scripts/sweep-orphan-blobs.js --execute",
     "artifacts:sweep-orphan-metadata": "node scripts/sweep-orphan-artifact-metadata.js",
     "artifacts:sweep-orphan-metadata:execute": "node scripts/sweep-orphan-artifact-metadata.js --execute",
+    "rpa-reports:prune": "node scripts/prune-rpa-reports.js",
+    "rpa-reports:prune:execute": "node scripts/prune-rpa-reports.js --execute",
     "zip": "./scripts/generate-zip.sh",
     "zip:all": "./scripts/generate-zip.sh --include-node-modules --include-coverage --include-dist",
     "zip:api": "./scripts/generate-zip.sh -i 'api/**' -i 'package.json' -i 'package-lock.json' -n api-only.zip",
