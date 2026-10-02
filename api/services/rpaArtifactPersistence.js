@@ -286,7 +286,54 @@ async function listExecutionManifests(tenantKey = null) {
 }
 
 /**
- * Lista em lote apenas os manifestos de execução VÁLIDOS, com UMA leitura no
+ * Impressão digital BARATA do conjunto de artefatos de um tenant.
+ *
+ * Serve para validar cache de listagem sem reler os payloads: uma única query
+ * por índice devolve contagem + instante da última escrita. Medido 2026-10-02:
+ *   - validação: 5,7 ms (Bitmap Index Scan em runtime_artifacts_tenant_kind_created_idx)
+ *   - leitura completa que ela substitui: ~555 ms para ~1.227 manifestos
+ *
+ * Cobre as três mudanças possíveis:
+ *   - INSERT novo      -> muda `count` e `max(created_at)`
+ *   - DELETE           -> muda `count`
+ *   - UPDATE in-place  -> muda `max(updated_at)` (ex.: reconcileExecutionManifests
+ *     re-assina o manifesto com o MESMO refId, sem alterar count nem created_at)
+ * Por isso `updated_at` NÃO pode ser omitido — ele é o único sinal da terceira
+ * classe, que é justamente a que a reconciliação produz.
+ *
+ * Devolve `null` quando não há banco ou a consulta falha: o chamador deve então
+ * NÃO usar cache (fail-closed) e seguir pelo caminho real.
+ */
+async function getExecutionArtifactsFingerprint(tenantKey = 'system') {
+  try {
+    const sequelize = getSequelize();
+    if (!sequelize) return null;
+    const { QueryTypes } = require('sequelize');
+    const rows = await sequelize.query(
+      `SELECT count(*)::bigint AS n, max(created_at) AS c, max(updated_at) AS u
+         FROM runtime_artifacts
+        WHERE tenant_key = :tenantKey
+          AND kind IN (:kinds)`,
+      {
+        replacements: {
+          tenantKey: normalizeTenantKey(tenantKey),
+          kinds: [KIND_EXECUTION, KIND_TRACE, KIND_SCREENSHOT],
+        },
+        type: QueryTypes.SELECT,
+      }
+    );
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row) return null;
+    const count = Number(row.n) || 0;
+    const maxCreatedAt = row.c ? new Date(row.c).toISOString() : '';
+    const maxUpdatedAt = row.u ? new Date(row.u).toISOString() : '';
+    return { count, maxCreatedAt, maxUpdatedAt, key: `${count}|${maxCreatedAt}|${maxUpdatedAt}` };
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Lista em lote apenas os manifestos de execução VÁLIDOS, com UMA leitura no
  * store.
  *
  * Equivale a chamar `getExecutionManifest(refId)` para cada manifesto, mas sem
@@ -733,6 +780,7 @@ module.exports = {
   getExecutionManifest,
   listExecutionManifests,
   listValidExecutionManifests,
+  getExecutionArtifactsFingerprint,
   getRecording,
   getReplay,
   getTraceBuffer,

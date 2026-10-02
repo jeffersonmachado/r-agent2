@@ -28,6 +28,7 @@ const {
 const {
   getExecutionManifest,
   listValidExecutionManifests,
+  getExecutionArtifactsFingerprint,
   getRecording: getPersistedRecording,
   getReplay: getPersistedReplay,
   getTraceBuffer,
@@ -996,11 +997,60 @@ async function getExecutionArtifact(executionId, kind, index = null, tenantId = 
  * Lista as execuções RPA persistidas no banco (roteiro + trace + replay),
  * com os campos necessários para a UI de consulta.
  */
+/**
+ * Cache da listagem de artefatos de execução, validado por impressão digital
+ * BARATA do store (ver getExecutionArtifactsFingerprint).
+ *
+ * MOTIVAÇÃO MEDIDA (2026-10-02): uma requisição custava ~555 ms e o endpoint
+ * degradava 25x sob concorrência — 30 requisições simultâneas levavam ~14 s
+ * CADA (parede 14,3 s), porque 57% do custo é trabalho SÍNCRONO no event loop
+ * (deserialize + sha256 + JSON.parse de ~1.227 manifestos) e portanto serializa.
+ * A validação por impressão digital custa 5,7 ms, ou seja ~97x menos.
+ *
+ * GARANTIAS:
+ *  - ESCOPO DE TENANT: chave do mapa é o tenant normalizado. Nunca há
+ *    compartilhamento entre tenants (regra de anti-patterns: bypass de
+ *    isolamento é proibido).
+ *  - SEM FALLBACK: se a impressão digital estiver indisponível (sem banco ou
+ *    consulta falhou) o cache NÃO é usado e a leitura real acontece — falha de
+ *    banco continua gerando erro real, nunca dado servido de memória.
+ *  - FRESCOR: a impressão digital muda em INSERT (count/created_at), DELETE
+ *    (count) e UPDATE in-place (updated_at), então uma execução recém-persistida
+ *    aparece imediatamente.
+ *  - BACKSTOP: `EXECUTION_ARTIFACTS_CACHE_TTL_MS` (default 60000) limita o
+ *    tempo de vida mesmo com impressão digital igual, para que uma cegueira
+ *    imprevista do fingerprint não vire staleness ilimitada.
+ */
+const EXECUTION_ARTIFACTS_CACHE_TTL_MS = (() => {
+  const raw = Number(process.env.EXECUTION_ARTIFACTS_CACHE_TTL_MS);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 60000;
+})();
+
+/** tenantKey -> { fingerprintKey, items, cachedAt } */
+const executionArtifactsCache = new Map();
+
+/**
+ * Lista as execuções RPA persistidas no banco (roteiro + trace + replay),
+ * com os campos necessários para a UI de consulta.
+ * O array devolvido é COMPARTILHADO com o cache — trate como somente leitura.
+ */
 async function listExecutionArtifacts(tenantId = 'system') {
   const scopedTenantId = normalizeTenantKey(tenantId);
   // Uma única leitura traz os manifestos válidos. Antes era um N+1 de 2 SELECTs
   // por manifesto (~2.450 idas ao banco com o corpus atual): 11,8 s medidos para
   // 1.225 itens, contra 17 ms do endpoint irmão de replays.
+  const fingerprint = await getExecutionArtifactsFingerprint(scopedTenantId);
+  if (fingerprint) {
+    const cached = executionArtifactsCache.get(scopedTenantId);
+    if (
+      cached &&
+      cached.fingerprintKey === fingerprint.key &&
+      Date.now() - cached.cachedAt <= EXECUTION_ARTIFACTS_CACHE_TTL_MS
+    ) {
+      return cached.items;
+    }
+  }
+
   const manifests = await listValidExecutionManifests(scopedTenantId);
   // Disponibilidade de binários (trace/screenshot) derivada das linhas reais
   // do store — o manifesto pode ficar desatualizado se os binários forem
@@ -1023,8 +1073,22 @@ async function listExecutionArtifacts(tenantId = 'system') {
       persistedAt: manifest.persistedAt || entry.createdAt || null,
     });
   }
+
+  if (fingerprint) {
+    executionArtifactsCache.set(scopedTenantId, {
+      fingerprintKey: fingerprint.key,
+      items,
+      cachedAt: Date.now(),
+    });
+  }
   return items;
 }
+
+/** Exposto para teste: limpa o cache (não usado em runtime). */
+function __resetExecutionArtifactsCache() {
+  executionArtifactsCache.clear();
+}
+
 
 function listReplayFiles({
   limit = 50,
@@ -1311,6 +1375,7 @@ module.exports = {
   getExecutionArtifacts,
   getExecutionArtifact,
   listExecutionArtifacts,
+  __resetExecutionArtifactsCache,
   listRecordings,
   startManualRecording,
   stopManualRecording,
