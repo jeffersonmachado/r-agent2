@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-02T02:15:45.053Z",
-  "runId": "rap-governed-20261002012045291-140dca9e",
+  "generatedAt": "2026-10-02T03:25:28.232Z",
+  "runId": "rap-governed-20261002021741216-6a8080a5",
   "sourceFingerprint": "363e17dfc1c1a2e796bcbac8f19330fadb8b18a37456e65a10f7ac0e56bdd40c",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
@@ -13,7 +13,7 @@
   "totalContaminations": 0,
   "criticalCount": 0,
   "highCount": 0,
-  "currentRunId": "rap-governed-20261002012045291-140dca9e",
+  "currentRunId": "rap-governed-20261002021741216-6a8080a5",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",

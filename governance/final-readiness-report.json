@@ -1,8 +1,8 @@
 {
   "artifactType": "final-readiness-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-02T02:15:48.598Z",
-  "runId": "rap-governed-20261002012045291-140dca9e",
+  "generatedAt": "2026-10-02T03:25:30.496Z",
+  "runId": "rap-governed-20261002021741216-6a8080a5",
   "sourceFingerprint": "363e17dfc1c1a2e796bcbac8f19330fadb8b18a37456e65a10f7ac0e56bdd40c",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
@@ -13,7 +13,7 @@
   "certificationStates": {
     "corePlatformReadiness": {
       "state": "CORE_GO",
-      "score": 99.83,
+      "score": 100,
       "scope": "plataforma (docs, QA mesh, QA waves, replay, verticais implementadas, validação production-like)",
       "doesNotInclude": [
         "market research",
