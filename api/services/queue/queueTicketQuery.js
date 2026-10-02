@@ -48,7 +48,29 @@ function buildListAllTicketsResponse(ticketSource = [], options = {}) {
     });
   }
 
-  ticketList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // ORDENAÇÃO SEM ALOCAÇÃO POR COMPARAÇÃO.
+  //
+  // DEFEITO REAL medido em 2026-10-02: a versão anterior era
+  // `ticketList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))`, que constrói DOIS
+  // objetos `Date` em CADA comparação — ~2·n·log n alocações por chamada (~70 mil com os 2963
+  // tickets em `waiting` deste runtime). Como `listAllTickets` é chamado pelos dashboards
+  // (`analyticsService`, `supervisorService`), pelo worker de assignment (`setInterval`) e pela
+  // trilha de evidência, o custo saturava o event loop da API e requisições HTTP passavam a falhar
+  // em nível de rede durante as waves do mesh — o mesmo efeito já documentado em
+  // `tests/unit/assignmentWorkerEfficiency.test.js` ("~174 listAllTickets/s contínuos e requests
+  // HTTP falhando em nível de rede durante waves RPA"). Sintoma observado: a página /support
+  // falhava ao carregar tickets sob carga e o mesh reprovava 1 cenário por execução, em cenários
+  // DIFERENTES a cada rodada (o que estivesse executando no instante da falha).
+  //
+  // A chave é calculada UMA vez por item. A ordem resultante é idêntica: `getTime()` devolve `NaN`
+  // para data inválida e `NaN` subtraído propaga `NaN`, exatamente como a subtração de `Date`
+  // fazia — sem alterar o critério nem o desempate.
+  const decorated = ticketList.map((ticket) => ({
+    ticket,
+    ts: new Date(ticket.createdAt).getTime(),
+  }));
+  decorated.sort((a, b) => b.ts - a.ts);
+  ticketList = decorated.map((entry) => entry.ticket);
 
   const total = ticketList.length;
   const limit = Math.min(
