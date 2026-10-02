@@ -53,6 +53,36 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# ── CARGA ÚNICA DO .env (mesmo contrato de scripts/governance/lib/loadEnvFile.js: o ambiente já
+#    presente VENCE) ──────────────────────────────────────────────────────────────────────────
+# DEFEITO REAL medido em 2026-10-02: o PREFLIGHT abaixo lê variáveis de SHELL
+# (PBX_CALL_EVENTS_RUNTIME_INSERT_MODE, entre outras) e NADA as populava. O `.env` tinha
+# `PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct` e o preflight reprovava com "!= direct" (o smoke
+# L-04 tentaria um serviço de compose inexistente neste runtime e a etapa 1/12 abortaria), então a
+# fase `prepare` do `release:seal` ABORTAVA SEMPRE que o selo era invocado de um shell comum: o
+# veredito dependia de QUEM INVOCA — o mesmo defeito que `loadEnvFile.js` já documenta para os
+# coletores Node. Os comandos Node aqui já usavam `--env-file-if-exists=.env`; agora a camada bash
+# vê o MESMO ambiente.
+# `set -a` NÃO é usado de propósito: exportar tudo sobrescreveria o que o operador exportou de
+# forma explícita, que é justamente o que o contrato promete preservar.
+if [ -f .env ]; then
+  while IFS= read -r _env_line || [ -n "$_env_line" ]; do
+    case "$_env_line" in ''|'#'*) continue ;; esac
+    _env_key="${_env_line%%=*}"
+    case "$_env_key" in ''|*[!A-Za-z0-9_]*) continue ;; esac
+    _env_val="${_env_line#*=}"
+    # espelha o strip de quotes do loadEnvFile.js
+    case "$_env_val" in
+      \"*\") _env_val="${_env_val#\"}"; _env_val="${_env_val%\"}" ;;
+      \'*\') _env_val="${_env_val#\'}"; _env_val="${_env_val%\'}" ;;
+    esac
+    if [ -z "${!_env_key+x}" ]; then
+      export "$_env_key=$_env_val"
+    fi
+  done < .env
+  unset _env_line _env_key _env_val
+fi
+
 NODE="node --env-file-if-exists=.env"
 
 # ── PREFLIGHT (fail-fast de ambiente) ────────────────────────────────────────
