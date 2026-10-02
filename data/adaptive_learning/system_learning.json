@@ -534,17 +534,73 @@
         "confidence": 0.5763243695486621,
         "chunksFound": 7,
         "timestamp": "2026-10-01T19:20:49.983059"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-02T00:34:59.374434"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T00:46:40.568478"
+      },
+      {
+        "query": "QASEG20261002010135 horário de atendimento urutu tundra lagoa rafia horário atendimento urutu",
+        "success": true,
+        "confidence": 0.6636193918530255,
+        "chunksFound": 8,
+        "timestamp": "2026-10-02T01:01:37.732209"
+      },
+      {
+        "query": "QASEG20261002010135 horário de atendimento urutu tundra lagoa rafia horário atendimento urutu",
+        "success": true,
+        "confidence": 0.6509868600279161,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T01:01:39.245634"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-02T01:28:27.964805"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-02T01:40:19.852281"
+      },
+      {
+        "query": "QASEG20261002015441 horário de atendimento quartzo mandala quartzo dunas horário atendimento quartzo",
+        "success": true,
+        "confidence": 0.6323755370309898,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T01:54:44.323913"
+      },
+      {
+        "query": "QASEG20261002015441 horário de atendimento quartzo mandala quartzo dunas horário atendimento quartzo",
+        "success": true,
+        "confidence": 0.6108068317885625,
+        "chunksFound": 9,
+        "timestamp": "2026-10-02T01:54:45.737408"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 76,
-    "successfulQueries": 76,
+    "totalQueries": 84,
+    "successfulQueries": 84,
     "failedQueries": 0,
-    "avgConfidence": 0.6610380673537907,
-    "lastUpdated": "2026-10-01T19:20:49.983010"
+    "avgConfidence": 0.6601326161380043,
+    "lastUpdated": "2026-10-02T01:54:45.737390"
   },
   "config": {
     "minScore": 0.45,
@@ -557,5 +613,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-01T19:20:49.983507"
+  "updatedAt": "2026-10-02T01:54:45.737544"
 }
