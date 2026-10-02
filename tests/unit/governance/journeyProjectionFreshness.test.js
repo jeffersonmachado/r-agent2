@@ -15,13 +15,32 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
-const generator = require('../../../scripts/generate-journey-projections');
-
 const REPO_ROOT = path.join(__dirname, '..', '..', '..');
-const ARTIFACT = path.join(REPO_ROOT, 'reports', 'business-journey-projections.json');
 const GATE_SOURCE = path.join(REPO_ROOT, 'scripts', 'governance', 'validate-ask-ai-copilot.js');
+
+/**
+ * ISOLAMENTO OBRIGATÓRIO — defeito corrigido em 2026-10-02.
+ *
+ * Este arquivo MUTA o artefato de projeção (apaga, grava conteúdo corrompido,
+ * grava fingerprint divergente). Enquanto apontava para
+ * `reports/business-journey-projections.json`, o Jest — que executa ARQUIVOS de
+ * teste em PARALELO — fazia `businessJourneyProjection.test.js` ler o arquivo no
+ * exato instante em que este o removia: a suíte ficava dependente de timing
+ * (passa 9/9 sozinho, falha quando os dois arquivos rodam em paralelo).
+ *
+ * O gerador já expõe `JOURNEY_PROJECTIONS_OUTPUT_PATH`; este teste passa a
+ * operar num arquivo TEMPORÁRIO e o artefato real do repositório nunca é tocado.
+ */
+const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'journey-projections-test-'));
+const ARTIFACT = path.join(TMP_DIR, 'business-journey-projections.json');
+
+// Definido ANTES do require: OUTPUT_PATH é resolvido no carregamento do módulo.
+process.env.JOURNEY_PROJECTIONS_OUTPUT_PATH = ARTIFACT;
+
+const generator = require('../../../scripts/generate-journey-projections');
 
 describe('P — projeção de jornada determinística no pacote', () => {
   describe('P1 — o gate não depende de comando manual oculto', () => {
@@ -44,23 +63,21 @@ describe('P — projeção de jornada determinística no pacote', () => {
     });
 
     it('o build não escreve em disco (separação build/escrita)', () => {
-      const before = fs.existsSync(ARTIFACT) ? fs.readFileSync(ARTIFACT, 'utf8') : null;
+      // Garante arquivo presente: sem isso a checagem seria vacuosa (null === null).
+      generator.ensureProjectionsFresh();
+      const before = fs.readFileSync(ARTIFACT, 'utf8');
       generator.buildProjections();
-      const after = fs.existsSync(ARTIFACT) ? fs.readFileSync(ARTIFACT, 'utf8') : null;
+      const after = fs.readFileSync(ARTIFACT, 'utf8');
       expect(after).toBe(before);
     });
   });
 
   describe('P3/T11 — checkout limpo: artefato ausente é REGERADO, nunca erro manual', () => {
-    let backup = null;
-
+    // Estado de partida conhecido: artefato TEMPORÁRIO presente e fresco.
+    // (O antigo backup/restore do artefato real não isolava nada entre arquivos
+    //  de teste rodando em paralelo — por isso a corrida existia.)
     beforeEach(() => {
-      backup = fs.existsSync(ARTIFACT) ? fs.readFileSync(ARTIFACT, 'utf8') : null;
-    });
-
-    afterEach(() => {
-      if (backup !== null) fs.writeFileSync(ARTIFACT, backup);
-      else if (fs.existsSync(ARTIFACT)) fs.unlinkSync(ARTIFACT);
+      generator.ensureProjectionsFresh();
     });
 
     it('artefato ausente é regenerado deterministicamente', () => {
@@ -90,6 +107,10 @@ describe('P — projeção de jornada determinística no pacote', () => {
   });
 
   describe('P4 — frescor provado por fingerprint das ENTRADAS', () => {
+    beforeEach(() => {
+      generator.ensureProjectionsFresh();
+    });
+
     it('o fingerprint é um SHA-256 estável', () => {
       const a = generator.computeInputFingerprint();
       const b = generator.computeInputFingerprint();
@@ -123,5 +144,9 @@ describe('P — projeção de jornada determinística no pacote', () => {
       expect(result.generated).toBe(false);
       expect(result.reason).toBe('fresh');
     });
+  });
+
+  afterAll(() => {
+    fs.rmSync(TMP_DIR, { recursive: true, force: true });
   });
 });
