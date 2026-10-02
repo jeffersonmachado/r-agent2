@@ -93,9 +93,18 @@ const STEPS = Object.freeze([
   // O binding entre cada item e o teste que o prova é validado por
   // tests/unit/governance/runtimeEvidenceBinding.test.js (achado real: um testId stale deixava um
   // item sem prova e o gate acusava RUNTIME_FAIL).
-  { id: 'V1_RUNTIME_EVIDENCE', phase: 'VERIFY', required: true, kind: 'command', command: 'node --env-file-if-exists=.env scripts/governance/collect-engineering-router-runtime-evidence.js && node --env-file-if-exists=.env scripts/governance/validate-engineering-router-v1.js --runtime', detail: 'coleta executando os 25 testes reais de runtime do Router V1 e deriva o veredito', produces: ['reports/engineering-router-v1-runtime-evidence.json'], dependsOn: ['MIGRATIONS'] },
+  // DEFEITO REAL medido em 2026-10-02: este passo declarava DOIS comandos unidos por `&&`, mas o
+  // runner abaixo faz `step.command.split(' ')` e `spawnSync` SEM shell — então `&&` era apenas
+  // mais um argumento e o SEGUNDO comando NUNCA executava. Consequência: o validador estrutural
+  // (`validate-engineering-router-v1.js --runtime`), que deriva o veredito STRUCTURAL/RUNTIME_PASS
+  // dos 25 itens, nunca rodava dentro do selo — que ainda assim reportava PASS sempre que o
+  // coletor saía 0. O selo certificava um veredito que não havia derivado.
+  // Correção: um comando por passo (o modelo do runner), sem shell. Além de correto, atribui a
+  // falha ao passo certo: antes, coletor e validador eram indistinguíveis no relatório.
+  { id: 'V1_RUNTIME_EVIDENCE', phase: 'VERIFY', required: true, kind: 'command', command: 'node --env-file-if-exists=.env scripts/governance/collect-engineering-router-runtime-evidence.js', detail: 'coleta executando os 25 testes reais de runtime do Router V1', produces: ['reports/engineering-router-v1-runtime-evidence.json'], dependsOn: ['MIGRATIONS'] },
+  { id: 'V1_RUNTIME_VERDICT', phase: 'VERIFY', required: true, kind: 'command', command: 'node --env-file-if-exists=.env scripts/governance/validate-engineering-router-v1.js --runtime', detail: 'deriva o veredito estrutural+runtime do Router V1 a partir da evidência coletada', produces: ['reports/engineering-router-v1-report.json'], dependsOn: ['V1_RUNTIME_EVIDENCE'] },
   { id: 'ANTI_GREENWASHING', phase: 'VERIFY', required: true, kind: 'command', command: 'node scripts/governance/validate-anti-greenwashing.js', detail: 'nenhuma suíte autoritativa com mecanismo de pulo silencioso', produces: ['reports/anti-greenwashing-report.json'] },
-  { id: 'SUITE_EXECUTION', phase: 'VERIFY', required: true, kind: 'command', command: 'node scripts/governance/run-release-suites.js', env: { RELEASE_AUTHORITATIVE: '1' }, detail: 'execução canônica das suítes do manifesto', produces: ['reports/release-suite-execution.json'], dependsOn: ['V1_RUNTIME_EVIDENCE'] },
+  { id: 'SUITE_EXECUTION', phase: 'VERIFY', required: true, kind: 'command', command: 'node scripts/governance/run-release-suites.js', env: { RELEASE_AUTHORITATIVE: '1' }, detail: 'execução canônica das suítes do manifesto', produces: ['reports/release-suite-execution.json'], dependsOn: ['V1_RUNTIME_EVIDENCE', 'V1_RUNTIME_VERDICT'] },
   { id: 'REQUIREMENTS_MATRIX', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/generate-v2-requirements-matrix.js', detail: 'matriz derivada dos eixos verificáveis', produces: ['reports/engineering-router-v2-requirements-matrix.json'], dependsOn: ['SUITE_EXECUTION', 'ANTI_GREENWASHING'] },
   // TESTES OBRIGATÓRIOS V2 (missão 2026-09-28): a seção "38. TESTES OBRIGATÓRIOS V2" do prompt
   // original exige provar individualmente V2-01..V2-42. O manifesto versionado

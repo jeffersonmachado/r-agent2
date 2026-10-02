@@ -54,6 +54,26 @@ const RUNNER_PORT = Number(process.env.ENGINEERING_RUNNER_TEST_PORT || 8097);
 const RUNNER_TOKEN = 'jest-test-engineering-runner-token';
 const READY_TIMEOUT_MS = 15000;
 
+/**
+ * Sonda `/health` UMA vez, com timeout curto. Usada ANTES do spawn: se algo já responde na porta,
+ * não subimos runner nenhum — ver a explicação do vazamento auto-amplificante no corpo do setup.
+ * Devolve o corpo parseado, ou `null` quando não há ninguém atendendo.
+ */
+function probeHealthOnce(url, timeoutMs = 1000) {
+  return new Promise((resolve) => {
+    const req = http.get(url, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(body)); } catch (_) { resolve({}); }
+      });
+    });
+    req.setTimeout(timeoutMs, () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+  });
+}
+
 function waitForHealth(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   return new Promise((resolve, reject) => {
@@ -114,6 +134,26 @@ module.exports = async function engineeringRunnerGlobalSetup() {
     return;
   }
 
+  // PRÉ-CHECAGEM DA PORTA — antes de subir qualquer coisa.
+  //
+  // VAZAMENTO AUTO-AMPLIFICANTE, medido em 2026-10-02: a checagem de identidade abaixo roda DEPOIS
+  // do spawn. Se um runner órfão já ocupa a porta, o filho novo AINDA É SUBIDO, a checagem lança…
+  // e o filho fica VIVO (medido: os dois processos coexistem ouvindo na mesma porta). A execução
+  // seguinte encontra DOIS órfãos, e cada falha daí em diante adiciona mais um — foi assim que uma
+  // falha isolada virou cascata de falhas em todas as 25 suítes de runtime e depois no selo V2.
+  //
+  // Aqui o ocupante é detectado antes do spawn: nada é criado, nada precisa ser limpo depois, e o
+  // erro nomeia o remédio em vez de se acumular.
+  const occupant = await probeHealthOnce(`http://127.0.0.1:${RUNNER_PORT}/health`);
+  if (occupant) {
+    throw new Error(
+      `a porta ${RUNNER_PORT} já tem um processo respondendo em /health ANTES de subirmos o runner ` +
+      `(pid reportado ${Number(occupant.pid) || 'desconhecido'}) — runner ÓRFÃO de sessão anterior. ` +
+      `Encerre quem segura a porta (ss -ltnp | grep ${RUNNER_PORT}) e rode de novo. ` +
+      'Nenhum runner foi subido para não deixar mais um órfão.',
+    );
+  }
+
   const child = spawn(process.execPath, [path.join(ROOT, 'services', 'engineering-runner', 'src', 'index.js')], {
     cwd: ROOT,
     env: {
@@ -144,12 +184,17 @@ module.exports = async function engineeringRunnerGlobalSetup() {
   // remédio; degradar em silêncio falando com runner alheio não é opção.
   const answeringPid = Number(health && health.pid);
   if (answeringPid !== child.pid) {
+    // Abortar SEM deixar o filho para trás: matar e remover o PID file é o que impede o vazamento
+    // auto-amplificante descrito na pré-checagem acima (o globalTeardown não roda quando o
+    // globalSetup lança, então a limpeza precisa acontecer aqui).
+    try { child.kill('SIGKILL'); } catch (_) { /* já morto */ }
+    try { fs.rmSync(PID_FILE, { force: true }); } catch (_) { /* sem arquivo */ }
     throw new Error(
       `Engineering Runner na porta ${RUNNER_PORT} respondeu como pid ${Number.isFinite(answeringPid) ? answeringPid : 'desconhecido'} ` +
       `mas o runner que subimos é pid ${child.pid} (exit=${child.exitCode}, signal=${child.signalCode}) — ` +
       `a porta está ocupada por um processo ESTRANGEIRO (runner órfão de sessão anterior). ` +
-      `Encerre quem segura a porta (ss -ltnp | grep ${RUNNER_PORT}) e rode de novo; ` +
-      'nunca prosseguir falando com um runner de identidade desconhecida.',
+      `O filho que subimos foi encerrado e nenhum runner ficou para trás. ` +
+      `Encerre o estrangeiro (ss -ltnp | grep ${RUNNER_PORT}) e rode de novo.`,
     );
   }
 
