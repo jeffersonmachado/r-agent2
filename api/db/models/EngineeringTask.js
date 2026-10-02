@@ -70,6 +70,15 @@ function getEngineeringTaskModel() {
       mission_spec_state: { type: DataTypes.STRING(20), allowNull: true },
       superseded_by_task_id: { type: DataTypes.UUID, allowNull: true },
       mission_spec_checked_at: { type: DataTypes.DATE, allowNull: true },
+      // ---------------------------------------------------------------- HERANÇA DE FONTE
+      // De QUAL commit da fonte da missão esta task nasceu. É a autoridade que substitui o
+      // `git rev-parse HEAD` do ROOT em `patchApplyService.createWorkspace`: a tentativa é
+      // materializada a partir DESTE commit, então a task enxerga os patches que as tasks
+      // anteriores da mesma missão já integraram. `source_mission_fence` registra sob qual fence da
+      // fonte a task foi criada — uma task nascida sob fence antigo é detectável como obsoleta.
+      source_commit: { type: DataTypes.STRING(64), allowNull: true },
+      source_ref: { type: DataTypes.STRING(255), allowNull: true },
+      source_mission_fence: { type: DataTypes.INTEGER, allowNull: true },
       last_error: { type: DataTypes.JSONB, allowNull: true },
     }, {
       tableName: 'engineering_tasks',
@@ -84,6 +93,7 @@ function getEngineeringTaskModel() {
         { fields: ['lease_worker_instance_id'], name: 'engineering_tasks_lease_worker_idx' },
         { fields: ['mission_id'], name: 'engineering_tasks_mission_id_idx' },
         { fields: ['mission_spec_state'], name: 'engineering_tasks_mission_spec_state_idx' },
+        { fields: ['source_commit'], name: 'engineering_tasks_source_commit_idx' },
       ],
     });
   }

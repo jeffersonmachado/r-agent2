@@ -176,6 +176,84 @@ function assessApprovalAuthority({ actor = null, actorType = null, policy = null
 }
 
 /**
+ * PERMISSÃO ESPECÍFICA DE SELF-MODIFICATION (RBAC GRANULAR).
+ *
+ * GAP QUE ISTO FECHA (confirmado no código em 2026-10-02): a aprovação de self-modification era
+ * gated por `requirePermission(req, 'engineering', 'approve')` — a MESMA permissão genérica usada
+ * para aprovar uma missão comum. Quem podia "aprovar engenharia" podia, sem nenhuma distinção,
+ * liberar uma alteração nas REGRAS QUE JULGAM o sistema. Privilégio genérico não é autoridade para
+ * reescrever o critério.
+ *
+ * A permissão é um par (resource, action) compatível com o RBAC existente:
+ *   resource: 'engineering'
+ *   action:   'approve_self_modification'     (equivalente a `engineering:self-modification`)
+ *
+ * DUAS CONDIÇÕES, AMBAS OBRIGATÓRIAS:
+ *   1. principal HUMANO autenticado (regra já existente, fail-closed);
+ *   2. a permissão ESPECÍFICA concedida.
+ *
+ * Os três casos que a política precisa distinguir, e que este módulo distingue:
+ *   - service account com permissão de engenharia, sem principal humano   ⇒ DENIED
+ *   - humano com permissão genérica de engenharia, sem a específica       ⇒ DENIED
+ *   - humano COM a permissão específica                                   ⇒ ALLOWED
+ *
+ * FAIL-CLOSED: permissão ausente/indefinida NÃO é permissão concedida. Se o chamador não souber
+ * dizer se a permissão existe, a resposta é NÃO.
+ */
+const SELF_MODIFICATION_APPROVAL_PERMISSION = Object.freeze({
+  resource: 'engineering',
+  action: 'approve_self_modification',
+  label: 'engineering:self-modification',
+});
+
+function assessGranularApprovalAuthority({
+  actor = null,
+  actorType = null,
+  hasSpecificPermission = false,
+  policy = null,
+  permission = null,
+} = {}) {
+  const required = permission || SELF_MODIFICATION_APPROVAL_PERMISSION;
+
+  // 1. Autoridade humana (reaproveita a política única — nunca reimplementada aqui).
+  const human = assessApprovalAuthority({ actor, actorType, policy });
+  if (!human.allowed) {
+    return {
+      allowed: false,
+      code: human.code,
+      stage: 'HUMAN_PRINCIPAL',
+      actorType: human.actorType,
+      permission: required.label,
+      reason: human.reason,
+      human,
+    };
+  }
+
+  // 2. Permissão ESPECÍFICA. `true` estrito: qualquer outro valor é ausência de permissão.
+  if (hasSpecificPermission !== true) {
+    return {
+      allowed: false,
+      code: 'SELF_MODIFICATION_APPROVAL_PERMISSION_REQUIRED',
+      stage: 'SPECIFIC_PERMISSION',
+      actorType: human.actorType,
+      permission: required.label,
+      reason: `aval de self-modification exige a permissão específica ${required.label} — permissão genérica de engenharia não é autoridade para alterar as regras que julgam o sistema`,
+      human,
+    };
+  }
+
+  return {
+    allowed: true,
+    code: null,
+    stage: null,
+    actorType: human.actorType,
+    permission: required.label,
+    reason: `aval humano (${actor}) com a permissão específica ${required.label}`,
+    human,
+  };
+}
+
+/**
  * Baseline de REGRAS antes de uma missão de self-engineering. Se o fix alterar o próprio critério,
  * a alteração precisa ser EXPLÍCITA e comparável — nunca silenciosa.
  *
@@ -183,7 +261,7 @@ function assessApprovalAuthority({ actor = null, actorType = null, policy = null
  * I/O): cobre o caso em que o enfraquecimento acontece DENTRO de um arquivo que continua existindo
  * — remover o gate da lista é visível na lista, mas editar o limiar dentro dele não seria.
  */
-function captureRuleBaseline({ mandatoryGates = [], testManifest = [], thresholds = {}, policies = {}, requirements = [], files = {} } = {}) {
+function captureRuleBaseline({ mandatoryGates = [], testManifest = [], thresholds = {}, policies = {}, requirements = [], files = {}, contentManifest = null } = {}) {
   return {
     capturedAt: null, // preenchido pelo chamador (engine é puro)
     mandatoryGates: [...mandatoryGates].sort(),
@@ -192,6 +270,11 @@ function captureRuleBaseline({ mandatoryGates = [], testManifest = [], threshold
     policies: { ...policies },
     requirements: [...requirements].sort(),
     files: { ...files },
+    // MANIFESTO DE CONTEÚDO da autoridade de governança (path + sha256 + size + classification).
+    // `files` responde "este arquivo mudou?"; o manifesto responde "QUAIS artefatos autoritativos
+    // existem agora, e com que conteúdo" — é o que pega um gate NOVO entrando na cadeia de decisão
+    // e um gate REMOVIDO, casos que um mapa de hashes de uma lista fixa não cobre.
+    contentManifest,
   };
 }
 
@@ -271,4 +354,6 @@ module.exports = {
   verifyRuleBaseline,
   assessApprovalAuthority,
   HUMAN_ONLY_APPROVAL_POLICY,
+  SELF_MODIFICATION_APPROVAL_PERMISSION,
+  assessGranularApprovalAuthority,
 };

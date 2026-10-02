@@ -80,7 +80,7 @@ const ROUTE_ACTIONS = Object.freeze([
   { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/triage\/?$/, action: 'execute' },
   { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/fix\/?$/, action: 'execute' },
   { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/evidence\/?$/, action: 'execute' },
-  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/approve-self-modification\/?$/, action: 'approve' },
+  { group: 'findings', method: 'POST', pattern: /^\/[^/]+\/approve-self-modification\/?$/, action: 'approve_self_modification' },
   { group: 'findings', method: 'GET', pattern: /^\/[^/]+\/?$/, action: 'read' },
 ]);
 
@@ -811,6 +811,20 @@ function createEngineeringMissionRoutes({ buildDeps }) {
     const auth = guard(req, res, deps);
     if (!auth) return;
     try {
+      // RBAC GRANULAR: a permissão é checada EXPLICITAMENTE aqui e o resultado é PROPAGADO ao
+      // serviço. Não se assume que o guard genérico já cobriu: a autoridade para alterar as regras
+      // que julgam o sistema precisa ser verificada no ponto em que o efeito acontece, e o serviço
+      // recusa fail-closed quando a permissão não chega como `true` estrito.
+      const permission = deps.requirePermission(req, 'engineering', 'approve_self_modification');
+      if (!permission.allowed) {
+        deps.sendJson(res, 403, {
+          error: 'forbidden',
+          required: { resource: 'engineering', action: 'approve_self_modification', label: 'engineering:self-modification' },
+          message: permission.error,
+        });
+        return;
+      }
+
       const body = (await readBody(req, res, deps)) || {};
       const result = await deps.bugTriageService.approveSelfModification(req.params.id, {
         actor: req.agent?.id || req.agent?.email || null,
@@ -819,6 +833,7 @@ function createEngineeringMissionRoutes({ buildDeps }) {
         approvalRef: body.approvalRef || null,
         note: body.note || null,
         tenantId: requireTenantId(req.tenantId),
+        hasSelfModificationPermission: permission.allowed === true,
       });
       deps.sendJson(res, 200, result);
     } catch (err) {

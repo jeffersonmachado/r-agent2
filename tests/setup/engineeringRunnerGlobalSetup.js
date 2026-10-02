@@ -19,6 +19,29 @@ const path = require('path');
 const http = require('http');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+
+/**
+ * REGIME ÚNICO DE AMBIENTE — o `.env` é carregado UMA vez aqui, antes de o runner subir e antes
+ * de os workers do Jest serem criados (eles herdam este `process.env`).
+ *
+ * DEFEITO REAL, medido em 2026-10-02: `npm run test:unit` falhava 3/3 em
+ * `tests/unit/engineeringRouterSafeEnvironment.test.js` com `exitCode: null` e excerpts
+ * `undefined`, enquanto a MESMA suíte passava no runner autoritativo. A causa não era a suíte: o
+ * contrato do Engineering Runner exige que o cwd da execução esteja sob
+ * `ENGINEERING_ROUTER_WORKSPACE_ROOT`, chave que vive no `.env`. Sem `.env` carregado o teste
+ * cria o workspace no TMPDIR do host, o runner recusa com `cwd_not_allowed` e o veredito passa a
+ * depender de QUEM INVOCA — medido: sem a chave 0/3, com a chave 3/3.
+ *
+ * O mesmo defeito já tinha sido diagnosticado (e corrigido) em
+ * `scripts/governance/lib/loadEnvFile.js` — mas apenas nos COLETORES de governança. A origem do
+ * regime é a sessão de teste: corrigir aqui faz `npm run test:unit`, `npx jest`, o runner do
+ * manifesto e o selo verem o MESMO ambiente, em vez de cada invocador produzir um veredito
+ * próprio. O ambiente já presente VENCE (o operador pode sobrescrever sem editar o arquivo).
+ */
+const { loadEnvFile } = require(path.join(ROOT, 'scripts', 'governance', 'lib', 'loadEnvFile'));
+const envLoad = loadEnvFile(ROOT);
+process.stdout.write(`[jest-global-setup] .env ${envLoad.loaded ? `carregado (${envLoad.keys} chave(s) aplicada(s); ambiente explícito vence)` : `não aplicado: ${envLoad.reason}`}\n`);
+
 const PID_FILE = path.join(ROOT, '.jest-engineering-runner.pid');
 const RUNNER_PORT = Number(process.env.ENGINEERING_RUNNER_TEST_PORT || 8097);
 const RUNNER_TOKEN = 'jest-test-engineering-runner-token';

@@ -87,6 +87,18 @@ async function createTask(input = {}, { createdBy = null, idempotencyKey = null 
       idempotency_key: idempotencyKey,
       classifier_result: classification,
       routing_decision: {},
+      // MISSION SOURCE AUTHORITY — HERANÇA DA FONTE DA MISSÃO.
+      // O commit de onde esta task nasce é gravado AQUI, no momento da criação, e passa a ser a
+      // autoridade de materialização do worktree (`patchApplyService.resolveTaskBaseCommit`). Sem
+      // esta coluna, a task de uma missão voltaria a nascer do HEAD da main e um fix já integrado na
+      // fonte da missão simplesmente não existiria para ela — o defeito do "bug que reaparece".
+      source_commit: input.sourceCommit || null,
+      source_ref: input.sourceRef || null,
+      source_mission_fence: Number.isInteger(input.sourceMissionFence) ? input.sourceMissionFence : null,
+      // Vínculo com a missão no MOMENTO da criação. Sem isto, uma fix task criada pelo Bug Loop
+      // ficava "avulsa" (`mission_id` nulo) e nem herdava a fonte da missão nem integrava nela —
+      // exatamente o elo em que o fix se perdia.
+      mission_id: input.missionId || null,
     });
   } catch (err) {
     // Corrida em idempotência: outra chamada concorrente já criou com a mesma chave.
@@ -639,6 +651,12 @@ const TASK_METADATA_FIELDS = Object.freeze([
   'mission_spec_state',
   'mission_spec_checked_at',
   'superseded_by_task_id',
+  // MISSION SOURCE AUTHORITY: reapontar a task para a fonte corrente da missão é uma escrita de
+  // METADADO (não muda status, resultado nem evidência de trabalho) — exatamente a categoria desta
+  // função. É o que permite a uma task criada antes de uma integração passar a enxergar o patch.
+  'source_commit',
+  'source_ref',
+  'source_mission_fence',
 ]);
 
 /**

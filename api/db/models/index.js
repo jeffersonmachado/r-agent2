@@ -213,6 +213,7 @@ const getEngineeringMissionVersion = require('./EngineeringMissionVersion');
 const getEngineeringMissionApproval = require('./EngineeringMissionApproval');
 const getEngineeringMissionSettings = require('./EngineeringMissionSettings');
 const getEngineeringMissionReview = require('./EngineeringMissionReview');
+const getEngineeringMissionIntegration = require('./EngineeringMissionIntegration');
 const getEngineeringBugFinding = require('./EngineeringBugFinding');
 const getEngineeringBugFindingEvent = require('./EngineeringBugFindingEvent');
 const getIntegrationConnection = require('./IntegrationConnection');
@@ -428,6 +429,7 @@ const EngineeringMissionVersion = () => getEngineeringMissionVersion();
 const EngineeringMissionApproval = () => getEngineeringMissionApproval();
 const EngineeringMissionSettings = () => getEngineeringMissionSettings();
 const EngineeringMissionReview = () => getEngineeringMissionReview();
+const EngineeringMissionIntegration = () => getEngineeringMissionIntegration();
 const EngineeringBugFinding = () => getEngineeringBugFinding();
 const EngineeringBugFindingEvent = () => getEngineeringBugFindingEvent();
 const IntegrationConnection = () => getIntegrationConnection();
@@ -1334,9 +1336,11 @@ module.exports = {
   EngineeringMissionSettings,
   getEngineeringMissionSettings,
   EngineeringMissionReview,
+  EngineeringMissionIntegration,
   EngineeringBugFinding,
   EngineeringBugFindingEvent,
   getEngineeringMissionReview,
+  getEngineeringMissionIntegration,
   getEngineeringBugFinding,
   getEngineeringBugFindingEvent,
   getEngineeringTask,

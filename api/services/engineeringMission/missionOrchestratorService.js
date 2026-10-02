@@ -23,6 +23,7 @@ const compiler = require('./missionCompilerService');
 const approvalService = require('./missionApprovalService');
 const missionReviewService = require('./missionReviewService');
 const taskSpecBinding = require('./taskSpecBindingService');
+const missionSourceService = require('./missionSourceService');
 const bugLoopCoordinator = require('./bugLoopCoordinatorService');
 const { emitMissionStage } = require('./missionEvents');
 const engineeringTaskService = require('../engineeringRouter/engineeringTaskService');
@@ -69,7 +70,7 @@ const DISPLAY_TO_MISSION_STATE = Object.freeze({
 });
 
 /** Constrói o Task Contract a partir da MissionSpec aprovada — tradução de vocabulário apenas. */
-function buildTaskContract(spec, { createdBy = null } = {}) {
+function buildTaskContract(spec, { createdBy = null, sourceCommit = null, sourceRef = null, sourceMissionFence = null } = {}) {
   return {
     title: spec.objective || spec.originalMission.slice(0, 120),
     objective: spec.objective || spec.originalMission,
@@ -84,6 +85,12 @@ function buildTaskContract(spec, { createdBy = null } = {}) {
     maxIterations: spec.maxIterations || undefined,
     releaseBlocker: spec.releaseBlocker === true,
     createdBy,
+    // HERANÇA DA FONTE DA MISSÃO: a task declara de qual commit da fonte ela nasce. O worktree da
+    // tentativa é materializado DESTE commit, então a task enxerga os patches que as tasks
+    // anteriores da mesma missão já integraram.
+    sourceCommit,
+    sourceRef,
+    sourceMissionFence,
   };
 }
 
@@ -131,8 +138,19 @@ async function startExecution(missionId, { actor = null, tenantId = 'system', le
 async function startExecutionHeld(missionId, { actor, tenantId, guard }) {
   const { mission, spec, approval } = await approvalService.assertMissionExecutable(missionId);
 
+  // MISSION SOURCE AUTHORITY — antes de criar a task, a missão precisa de uma fonte de código
+  // PRÓPRIA. `main` é apenas a ORIGEM (M0) gravada como base; a execução acontece em
+  // `engineering/missions/<missionId>`, que é o que as tasks leem e o que os fixes integram.
+  await missionSourceService.ensureMissionSource(missionId, { actor });
+  const missionSource = await missionSourceService.resolveTaskSource(missionId);
+
   const task = await engineeringTaskService.createTask(
-    buildTaskContract(spec, { createdBy: actor }),
+    buildTaskContract(spec, {
+      createdBy: actor,
+      sourceCommit: missionSource.currentCommit,
+      sourceRef: missionSource.integrationBranch,
+      sourceMissionFence: missionSource.fence,
+    }),
     { createdBy: actor, idempotencyKey: `mission:${missionId}:v${spec.version}` },
   );
 
@@ -161,9 +179,15 @@ async function startExecutionHeld(missionId, { actor, tenantId, guard }) {
     approvalMode: approval.state,
     displayStatus: detail.displayStatus,
     message: `EngineeringTask ${task.id} vinculada à missão`,
-    meta: { taskId: task.id, taskType: task.task_type, risk: task.risk },
+    meta: {
+      taskId: task.id,
+      taskType: task.task_type,
+      risk: task.risk,
+      sourceBranch: missionSource.integrationBranch,
+      sourceCommit: String(missionSource.currentCommit || '').slice(0, 12),
+    },
   });
-  return { mission: detail, task, approval };
+  return { mission: detail, task, approval, missionSource };
 }
 
 /**

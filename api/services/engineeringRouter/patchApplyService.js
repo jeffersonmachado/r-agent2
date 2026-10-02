@@ -92,17 +92,88 @@ async function materializeWorktree(commitHash, dirLabel) {
  * trabalho) para uma tentativa. ER-V1-SEAL-001: nunca um snapshot fabricado a partir do estado
  * mutável do ROOT — sempre um commit já existente, resolvido por `git rev-parse HEAD` (leitura
  * pontual, sem scan de diretório, sem TOCTOU possível).
+ *
+ * MISSION SOURCE AUTHORITY — a base NÃO é mais "o HEAD do ROOT". Uma task que pertence a uma
+ * Engineering Mission carrega `source_commit`: o commit DA FONTE DA MISSÃO de onde ela nasceu
+ * (`engineering/missions/<missionId>`). Materializar daí é o que faz a task enxergar os patches que
+ * as tasks anteriores da MESMA missão já integraram.
+ *
+ * Sem isso, o fluxo real era: task A falha → Bug Loop corrige → fix GREEN numa branch candidate
+ * isolada → missão retoma → replacement task materializada da `main` → o bug "reaparece". A
+ * recorrência era artefato de o fix nunca ter entrado na source usada pela missão — não de o bug ter
+ * voltado.
+ *
+ * Task SEM `source_commit` (fora de missão) mantém o comportamento anterior: HEAD do ROOT. Não é um
+ * default silencioso para tasks de missão — para essas, `resolveTaskBaseCommit` exige o vínculo e
+ * falha com código estável se ele estiver ausente, em vez de cair na main sem avisar.
+ *
  * @returns {Promise<string>} caminho absoluto do workspace
  */
 async function createWorkspace(taskId, attemptNumber) {
+  const base = await resolveTaskBaseCommit(taskId);
+  return materializeWorktree(base.commit, `task-${taskId}-attempt-${attemptNumber}`);
+}
+
+/**
+ * Resolve o commit de base de uma task.
+ *
+ * `missionId` presente ⇒ o commit da fonte da missão é OBRIGATÓRIO (herança explícita). Ausente ⇒
+ * cai no HEAD do ROOT, que é o comportamento legado para tasks avulsas.
+ *
+ * @returns {Promise<{commit:string, origin:'MISSION_SOURCE'|'ROOT_HEAD', sourceRef:string|null}>}
+ */
+async function resolveTaskBaseCommit(taskId) {
+  // WORKSPACES DE RASCUNHO NÃO SÃO TASKS. `bugReproductionService` cria um worktree descartável com
+  // o id sintético `bug-<findingId>` (não é UUID): consultar a tabela de tasks com ele estouraria o
+  // tipo da coluna. Reconhecer isso ANTES da consulta evita um erro pelo caminho e mantém o
+  // comportamento correto — um rascunho não tem fonte de missão, então nasce do HEAD.
+  const taskIdText = String(taskId || '').trim();
+  const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(taskIdText);
+
+  let task = null;
+  if (looksLikeUuid) {
+    // Require lazy: `engineeringTaskService` é um consumidor deste módulo; no topo haveria ciclo.
+    const { getTask } = require('./engineeringTaskService');
+    try {
+      task = await getTask(taskId);
+    } catch (err) {
+      logger.warn('[patchApplyService] task ilegível ao resolver base — caindo no HEAD do ROOT', {
+        taskId, error: err.message,
+      });
+    }
+  }
+
+  if (task && task.mission_id) {
+    const sourceCommit = String(task.source_commit || '').trim();
+    if (sourceCommit === '') {
+      const err = new Error(
+        `task ${taskId} pertence à missão ${task.mission_id} mas não declara \`source_commit\` — `
+        + 'materializar da main reintroduziria o defeito do fix que nunca entra na source da missão',
+      );
+      err.code = FAILURE_CODES.PATCH_APPLY_FAILED;
+      err.reason = 'MISSION_SOURCE_NOT_INHERITED';
+      throw err;
+    }
+    const verify = await runGit(['cat-file', '-e', `${sourceCommit}^{commit}`]);
+    if (!verify.ok) {
+      const err = new Error(
+        `commit da fonte da missão ${sourceCommit.slice(0, 12)} (task ${taskId}) não existe no repositório — `
+        + 'a fonte foi removida ou o registro aponta para um commit de outro clone',
+      );
+      err.code = FAILURE_CODES.PATCH_APPLY_FAILED;
+      err.reason = 'MISSION_SOURCE_COMMIT_UNRESOLVABLE';
+      throw err;
+    }
+    return { commit: sourceCommit, origin: 'MISSION_SOURCE', sourceRef: task.source_ref || null };
+  }
+
   const headResult = await runGit(['rev-parse', 'HEAD']);
   if (!headResult.ok) {
     const err = new Error(`Falha ao resolver HEAD real do branch de trabalho: ${headResult.stderr}`);
     err.code = FAILURE_CODES.PATCH_APPLY_FAILED;
     throw err;
   }
-
-  return materializeWorktree(headResult.stdout.trim(), `task-${taskId}-attempt-${attemptNumber}`);
+  return { commit: headResult.stdout.trim(), origin: 'ROOT_HEAD', sourceRef: null };
 }
 
 /**
@@ -226,6 +297,7 @@ async function pruneOrphanedWorkspaces({ olderThanMs = DEFAULT_ORPHAN_WORKSPACE_
 module.exports = {
   WORKSPACE_ROOT,
   createWorkspace,
+  resolveTaskBaseCommit,
   materializeWorktree,
   applyPatch,
   listChangedFiles,

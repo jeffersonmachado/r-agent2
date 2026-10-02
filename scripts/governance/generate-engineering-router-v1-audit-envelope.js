@@ -138,14 +138,29 @@ function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
 }
 
-function requireFreshRuntimeEvidence() {
-  const evidence = readJson('reports/engineering-router-v1-runtime-evidence.json');
+const RUNTIME_EVIDENCE_REL = 'reports/engineering-router-v1-runtime-evidence.json';
+const STRUCTURAL_REPORT_REL = 'reports/engineering-router-v1-report.json';
+
+/**
+ * DECISÃO (PURA) DE FRESCOR DA EVIDÊNCIA — o mecanismo que `generate()` usa, exercitável sem disco.
+ *
+ * DEFEITO REAL medido em 2026-10-02: o teste que provava "gerar sem evidência fresca falha
+ * explicitamente" CORROMPIA o arquivo REAL `reports/engineering-router-v1-runtime-evidence.json`
+ * (gravava `status: RUNTIME_FAIL`) e o restaurava num `finally`. Dois problemas: um teste escrevia
+ * num artefato GOVERNADO; e uma morte do processo entre a corrupção e a restauração deixaria a
+ * evidência autoritativa falsificada no disco — todo gate a jusante passaria a falhar por um motivo
+ * que o próprio teste fabricou. Reproduzir essa checagem não exigia escrever em lugar nenhum: basta
+ * que a DECISÃO seja uma função de suas entradas.
+ *
+ * O wrapper de I/O (`requireFreshRuntimeEvidence`) continua lendo o caminho canônico e chamando
+ * EXATAMENTE esta função — a garantia verificada é a que roda em produção, não uma cópia.
+ */
+function assertEvidenceFresh(evidence, { currentFingerprint, relPath = RUNTIME_EVIDENCE_REL } = {}) {
   if (!evidence) {
-    throw new Error('reports/engineering-router-v1-runtime-evidence.json ausente — rode `node scripts/governance/collect-engineering-router-runtime-evidence.js` antes de gerar o envelope (nunca gerar um envelope self-proving sem evidência de runtime real).');
+    throw new Error(`${relPath} ausente — rode \`node scripts/governance/collect-engineering-router-runtime-evidence.js\` antes de gerar o envelope (nunca gerar um envelope self-proving sem evidência de runtime real).`);
   }
-  const currentFingerprint = computeSourceFingerprint(ROOT);
   if (evidence.sourceFingerprint !== currentFingerprint) {
-    throw new Error(`evidência de runtime obsoleta (sourceFingerprint da evidência: ${evidence.sourceFingerprint?.slice(0, 16)}…, atual: ${currentFingerprint.slice(0, 16)}…) — rode o coletor de novo com a árvore no estado que você quer certificar.`);
+    throw new Error(`evidência de runtime obsoleta (sourceFingerprint da evidência: ${String(evidence.sourceFingerprint || 'ausente').slice(0, 16)}…, atual: ${String(currentFingerprint).slice(0, 16)}…) — rode o coletor de novo com a árvore no estado que você quer certificar.`);
   }
   if (evidence.status !== 'RUNTIME_PASS') {
     throw new Error(`evidência de runtime não é RUNTIME_PASS (status atual: ${evidence.status}) — o envelope self-proving nunca certifica um estado RED/FAIL como se fosse prova de fechamento.`);
@@ -153,10 +168,14 @@ function requireFreshRuntimeEvidence() {
   return evidence;
 }
 
+function requireFreshRuntimeEvidence() {
+  return assertEvidenceFresh(readJson(RUNTIME_EVIDENCE_REL), { currentFingerprint: computeSourceFingerprint(ROOT) });
+}
+
 function requireStructuralReport() {
-  const report = readJson('reports/engineering-router-v1-report.json');
+  const report = readJson(STRUCTURAL_REPORT_REL);
   if (!report) {
-    throw new Error('reports/engineering-router-v1-report.json ausente — rode `node scripts/governance/validate-engineering-router-v1.js --runtime` antes de gerar o envelope.');
+    throw new Error(`${STRUCTURAL_REPORT_REL} ausente — rode \`node scripts/governance/validate-engineering-router-v1.js --runtime\` antes de gerar o envelope.`);
   }
   if (report.status !== 'PASS') {
     throw new Error(`gate estrutural+runtime não é PASS (status atual: ${report.status}) — o envelope self-proving nunca certifica um estado FAIL como se fosse prova de fechamento.`);
@@ -406,5 +425,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-  generate, CLOSURE_BACKLOG, SEAL_BACKLOG, SEALFIX_BACKLOG, CATEGORY_BY_ID, SCHEMA_VERSION,
+  generate, assertEvidenceFresh, CLOSURE_BACKLOG, SEAL_BACKLOG, SEALFIX_BACKLOG, CATEGORY_BY_ID, SCHEMA_VERSION,
 };

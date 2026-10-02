@@ -22,8 +22,10 @@ const bugFindingService = require('./bugFindingService');
 const bugReproductionService = require('./bugReproductionService');
 const bugTriageService = require('./bugTriageService');
 const engineeringTaskService = require('../engineeringRouter/engineeringTaskService');
+const { parseCommand } = require('../../../engine/engineeringRouter/commandPolicy');
 const { runTask } = require('../engineeringRouter/engineeringRouterService');
 const missionStore = require('./missionStoreService');
+const missionSourceService = require('./missionSourceService');
 const logger = require('../../utils/logger');
 
 /**
@@ -217,6 +219,42 @@ async function runFixLoop(findingId, {
   let fixed = false;
   let fixedError = null;
   try {
+    // REGRESSÕES DECLARADAS SÓ PODEM SER COMANDOS.
+    //
+    // DEFEITO REAL (primeira ocorrência medida em 2026-09-30, silenciosa por dois dias): esta lista
+    // alimenta `regressionCommands`, que o `markFixed` persiste em `regression_test_refs` do finding.
+    // Essa memória é RECUPERADA depois (`getFindingMemory`) e INJETADA em `test_commands` da próxima
+    // fix task. Um valor que não é comando (medido: um UUID) entrava aqui, era persistido, e voltava
+    // como "regressão a rodar" — e `parseCommand` rejeitava, produzindo `TEST_BLOCKED` ⇒ 3 tentativas
+    // esgotadas ⇒ task RED. Sem GREEN não há promoção, integração nem retomada da missão: o laço
+    // simplesmente não fechava, e o sintoma ("tentativas esgotadas") ficava longe da causa (um id no
+    // lugar de um comando).
+    //
+    // A validação aqui é na ENTRADA, e o descarte é RUIDOSO de propósito: filtrar em silêncio
+    // esconderia o produtor defeituoso. A memória é persistente, então um dado ruim de hoje
+    // contaminaria o fix de amanhã.
+    const toCommands = (values) => {
+      const kept = [];
+      const rejected = [];
+      for (const value of values) {
+        const candidate = String(value || '').trim();
+        if (candidate === '') continue;
+        const policy = parseCommand(candidate);
+        if (policy.allowed) kept.push(candidate);
+        else rejected.push({ value: candidate, code: policy.code || null, reason: policy.reason || null });
+      }
+      return { kept, rejected };
+    };
+
+    const regressionScan = toCommands(testRuns.map((r) => r.command));
+    if (regressionScan.rejected.length > 0) {
+      logger.warn('[bugLoopCoordinator] valores descartados de regressionCommands — não são comandos executáveis', {
+        findingId,
+        rejected: regressionScan.rejected,
+        detail: 'a memória de regressão é persistida e reutilizada no contrato da próxima correção; um id no lugar de um comando faz a próxima fix task falhar com TEST_BLOCKED',
+      });
+    }
+
     await bugFindingService.markFixed(findingId, {
       actor,
       reproductionPassed,
@@ -232,7 +270,7 @@ async function runFixLoop(findingId, {
       review: {
         decision: reviews.some((r) => r.decision === 'APPROVE') ? 'APPROVE' : 'REJECT',
         reviewedBy: reviews.map((r) => r.reviewerModel).filter(Boolean),
-        regressionCommands: testRuns.map((r) => r.command),
+        regressionCommands: regressionScan.kept,
       },
       tenantId,
     });
@@ -400,12 +438,44 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
         const approvalService = require('./missionApprovalService');
         const taskSpecBinding = require('./taskSpecBindingService');
         const { spec, approval } = await approvalService.assertMissionExecutable(missionId);
-        const contract = orch.buildTaskContract(spec, { createdBy: actor });
+
+        // MISSION SOURCE AUTHORITY — A RETOMADA PRECISA USAR A FONTE JÁ CORRIGIDA.
+        //
+        // DEFEITO MEDIDO AQUI (2026-10-02): a task substituta era criada SEM herança de fonte
+        // (`buildTaskContract(spec, { createdBy: actor })`), então ela nascia do HEAD da `main` —
+        // não da fonte da missão. O fix que o Bug Loop acabara de produzir e integrar simplesmente
+        // não existia para ela, e a reprodução original voltava a falhar. A recorrência observada
+        // era ARTEFATO disso: o bug não voltou, o fix nunca esteve na source usada.
+        //
+        // Agora a retomada resolve o commit CORRENTE da fonte da missão — que já contém o fix
+        // integrado — e a task substituta nasce dele. É literalmente o que prova
+        // MISSION_RESUME_USES_FIXED_SOURCE: o `source_commit` da task nova == `missionCurrentCommit`
+        // pós-integração, verificável por hash.
+        await missionSourceService.ensureMissionSource(missionId, { actor });
+        const missionSource = await missionSourceService.resolveTaskSource(missionId);
+
+        const contract = orch.buildTaskContract(spec, {
+          createdBy: actor,
+          sourceCommit: missionSource.currentCommit,
+          sourceRef: missionSource.integrationBranch,
+          sourceMissionFence: missionSource.fence,
+        });
         const created = await engineeringTaskService.createTask(contract, {
           createdBy: actor,
           idempotencyKey: `mission:${missionId}:postbug:${findingId || 'na'}`,
         });
         replacementTaskId = created.id;
+        // UMA TASK CRIADA ANTES DA INTEGRAÇÃO PRECISA SER REANCORADA. A idempotência da chave acima
+        // pode devolver uma task substituta de uma retomada ANTERIOR (criada sob um commit antigo):
+        // reapontar para o commit corrente é o que garante que ela enxergue TODO o histórico
+        // integrado da missão (fix A, fix B, ...), não só o que existia quando ela nasceu.
+        await missionSourceService.reanchorTaskToCurrentSource(created.id, { actor }).catch((err) => {
+          logger.warn('[bugLoopCoordinator] falha ao reancorar task substituta na fonte corrente', {
+            missionId, taskId: created.id, error: err.message,
+          });
+        });
+        lineage.sourceCommit = missionSource.currentCommit;
+        lineage.sourceBranch = missionSource.integrationBranch;
         await taskSpecBinding.bindTaskToSpec({ taskId: created.id, missionId, spec, approval })
           .catch((err) => logger.warn('[bugLoopCoordinator] falha ao vincular spec na task substituta', { missionId, taskId: created.id, error: err.message }));
         await missionStore.linkTask({ missionId, taskId: created.id });

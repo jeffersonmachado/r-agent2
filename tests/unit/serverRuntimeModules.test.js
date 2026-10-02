@@ -68,25 +68,46 @@ describe('server runtime modules', () => {
 
   test('startServerRuntime starts server after initialization and workers', async () => {
     const messages = [];
+    const loggerError = jest.fn();
     const server = { listen: jest.fn((port, cb) => cb()) };
 
+    // DEFEITO PRÉ-EXISTENTE NA TRUNK (medido 2026-10-02): este mock era `{ exit: jest.fn() }` —
+    // um objeto que NÃO é um process — enquanto `startServerRuntime` registra
+    // `processRef.on('unhandledRejection')`. Resultado: `TypeError: processRef.on is not a
+    // function` e o gate oficial de pré-commit (`npm run test:unit`) vermelho na trunk.
+    //
+    // O `on` do fonte não é acidente: veio do fix de um incidente real (commit 9c4e5945) em que
+    // uma rejeição não tratada de integração OPCIONAL derrubava a API multi-tenant, levando junto
+    // o converge/mesh de ~40 min que ficou pendurado esperando um processo morto. O mock passa a
+    // ser fiel ao contrato e, em vez de apenas tolerar o hardening, o teste VERIFICA que a
+    // rejeição é registrada e que o processo NÃO morre — a garantia que o fix existe para dar.
+    const handlers = {};
+    const processRef = { exit: jest.fn(), on: jest.fn((event, fn) => { handlers[event] = fn; }) };
+
     const result = await startServerRuntime({
-      logger: { info: (...args) => messages.push(args), error: jest.fn() },
+      logger: { info: (...args) => messages.push(args), error: loggerError },
       clearLimitersCache: jest.fn(),
       startInitialization: jest.fn().mockResolvedValue(undefined),
       getOrCreateServer: jest.fn(() => server),
       port: 3030,
       startWorkers: jest.fn(),
       workerDeps: { logger: true },
-      processRef: { exit: jest.fn() },
+      processRef,
     });
 
     expect(result).toBe(server);
     expect(server.listen).toHaveBeenCalledWith(3030, expect.any(Function));
+
+    expect(typeof handlers.unhandledRejection).toBe('function');
+    handlers.unhandledRejection(new Error('rejeição de integração opcional'));
+    expect(loggerError).toHaveBeenCalled();
+    expect(processRef.exit).not.toHaveBeenCalled();
   });
 
   test('startServerRuntime exits process when initialization fails', async () => {
-    const processRef = { exit: jest.fn() };
+    // Mesmo contrato do teste anterior: o processRef precisa ter `on` porque
+    // `startServerRuntime` registra o handler de `unhandledRejection` ANTES de inicializar.
+    const processRef = { exit: jest.fn(), on: jest.fn() };
 
     const result = await startServerRuntime({
       logger: { info: jest.fn(), error: jest.fn() },

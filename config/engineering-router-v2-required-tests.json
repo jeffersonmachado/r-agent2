@@ -12,13 +12,19 @@
     {
       "id": "V2-01",
       "requirement": "Legacy Router continua funcional.",
-      "suites": ["tests/integration/engineeringMissionFullE2E.test.js"],
-      "reports": ["reports/engineering-router-v1-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionFullE2E.test.js"
+      ],
+      "reports": [
+        "reports/engineering-router-v1-report.json"
+      ]
     },
     {
       "id": "V2-02",
       "requirement": "Mission Compiler produz MissionSpec.",
-      "suites": ["tests/unit/engineeringMissionCompiler.test.js"],
+      "suites": [
+        "tests/unit/engineeringMissionCompiler.test.js"
+      ],
       "reports": []
     },
     {
@@ -33,7 +39,9 @@
     {
       "id": "V2-04",
       "requirement": "Enrichment usa conteúdo real do repositório.",
-      "suites": ["tests/unit/engineeringMissionDeepScan.test.js"],
+      "suites": [
+        "tests/unit/engineeringMissionDeepScan.test.js"
+      ],
       "reports": []
     },
     {
@@ -57,19 +65,25 @@
     {
       "id": "V2-07",
       "requirement": "Provenance identifica fontes.",
-      "suites": ["tests/unit/engineeringMissionContextKnowledge.test.js"],
+      "suites": [
+        "tests/unit/engineeringMissionContextKnowledge.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-08",
       "requirement": "Preview apresenta diff.",
-      "suites": ["tests/integration/engineeringMissionPreviewDiff.test.js"],
+      "suites": [
+        "tests/integration/engineeringMissionPreviewDiff.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-09",
       "requirement": "Manual approval bloqueia execução antes de aprovação.",
-      "suites": ["tests/integration/engineeringMissionGovernanceAndConcurrency.test.js"],
+      "suites": [
+        "tests/integration/engineeringMissionGovernanceAndConcurrency.test.js"
+      ],
       "reports": []
     },
     {
@@ -84,86 +98,128 @@
     {
       "id": "V2-11",
       "requirement": "Mission policy não consegue enfraquecer global policy sem autorização.",
-      "suites": ["tests/unit/engineeringMissionPolicyAuthority.test.js"],
+      "suites": [
+        "tests/unit/engineeringMissionPolicyAuthority.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-12",
       "requirement": "SAFE_ONLY bloqueia risco elevado.",
-      "suites": ["tests/unit/engineeringMissionPolicyResolver.test.js"],
+      "suites": [
+        "tests/unit/engineeringMissionPolicyResolver.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-13",
       "requirement": "Continuous enrichment NON_MATERIAL segue policy.",
-      "suites": ["tests/integration/engineeringMissionPolicyEscalation.test.js"],
+      "suites": [
+        "tests/integration/engineeringMissionPolicyEscalation.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-14",
       "requirement": "Continuous enrichment MATERIAL aplica policy.",
-      "suites": ["tests/integration/engineeringMissionPolicyEscalation.test.js"],
+      "suites": [
+        "tests/integration/engineeringMissionPolicyEscalation.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-15",
       "requirement": "CRITICAL exige aprovação humana por padrão.",
-      "suites": ["tests/integration/engineeringMissionPolicyEscalation.test.js"],
+      "suites": [
+        "tests/integration/engineeringMissionPolicyEscalation.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-16",
       "requirement": "Versão antiga não executa após nova versão aprovada.",
-      "suites": ["tests/integration/engineeringMissionStaleSpec.test.js"],
+      "suites": [
+        "tests/integration/engineeringMissionStaleSpec.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-17",
       "requirement": "Crash em ENRICHING + process restart real.",
-      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
-      "reports": ["reports/mission-crash-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionCrashRecoveryE2E.test.js"
+      ],
+      "reports": [
+        "reports/mission-crash-recovery-report.json"
+      ]
     },
     {
       "id": "V2-18",
       "requirement": "Crash em IMPLEMENTING + process restart real.",
-      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
-      "reports": ["reports/mission-crash-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionCrashRecoveryE2E.test.js"
+      ],
+      "reports": [
+        "reports/mission-crash-recovery-report.json"
+      ]
     },
     {
       "id": "V2-19",
       "requirement": "Crash em TESTING + process restart real.",
-      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
-      "reports": ["reports/mission-crash-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionCrashRecoveryE2E.test.js"
+      ],
+      "reports": [
+        "reports/mission-crash-recovery-report.json"
+      ]
     },
     {
       "id": "V2-20",
       "requirement": "Crash em REVIEWING + process restart real.",
-      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
-      "reports": ["reports/mission-crash-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionCrashRecoveryE2E.test.js"
+      ],
+      "reports": [
+        "reports/mission-crash-recovery-report.json"
+      ]
     },
     {
       "id": "V2-21",
       "requirement": "Crash em REGRESSION + process restart real.",
-      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
-      "reports": ["reports/mission-crash-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionCrashRecoveryE2E.test.js"
+      ],
+      "reports": [
+        "reports/mission-crash-recovery-report.json"
+      ]
     },
     {
       "id": "V2-22",
       "requirement": "Boot recovery ocorre sem chamada manual.",
-      "suites": ["tests/integration/engineeringMissionBootRecovery.test.js"],
+      "suites": [
+        "tests/integration/engineeringMissionBootRecovery.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-23",
       "requirement": "Task é retomada, não apenas mission status.",
-      "suites": ["tests/integration/engineeringMissionDurableResume.test.js"],
-      "reports": ["reports/real-task-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionDurableResume.test.js"
+      ],
+      "reports": [
+        "reports/real-task-recovery-report.json"
+      ]
     },
     {
       "id": "V2-24",
       "requirement": "Crash depois de side effect não duplica resultado.",
-      "suites": ["tests/integration/engineeringTaskConcurrencyAndRestart.test.js"],
-      "reports": ["reports/real-task-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringTaskConcurrencyAndRestart.test.js"
+      ],
+      "reports": [
+        "reports/real-task-recovery-report.json"
+      ]
     },
     {
       "id": "V2-25",
@@ -177,8 +233,12 @@
     {
       "id": "V2-26",
       "requirement": "Lease expira e segundo worker assume.",
-      "suites": ["tests/integration/engineeringMissionDistributedLease.test.js"],
-      "reports": ["reports/real-task-recovery-report.json"]
+      "suites": [
+        "tests/integration/engineeringMissionDistributedLease.test.js"
+      ],
+      "reports": [
+        "reports/real-task-recovery-report.json"
+      ]
     },
     {
       "id": "V2-27",
@@ -187,54 +247,74 @@
         "tests/integration/engineeringTaskFencing.test.js",
         "tests/unit/engineeringMissionLeasePolicy.test.js"
       ],
-      "reports": ["reports/real-task-recovery-report.json"]
+      "reports": [
+        "reports/real-task-recovery-report.json"
+      ]
     },
     {
       "id": "V2-28",
       "requirement": "PostgreSQL ausente não vira PASS em release-authoritative.",
-      "suites": ["tests/unit/governance/releaseAuthoritativePersistenceGuard.test.js"],
+      "suites": [
+        "tests/unit/governance/releaseAuthoritativePersistenceGuard.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-29",
       "requirement": "Anti-skip detecta bypass.",
-      "suites": ["tests/unit/governance/releaseSuiteRunner.test.js"],
-      "reports": ["reports/anti-greenwashing-report.json"]
+      "suites": [
+        "tests/unit/governance/releaseSuiteRunner.test.js"
+      ],
+      "reports": [
+        "reports/anti-greenwashing-report.json"
+      ]
     },
     {
       "id": "V2-30",
       "requirement": "Qwen structural = PASS.",
-      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "suites": [
+        "tests/unit/engineeringRouterQwenProvider.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-31",
       "requirement": "Qwen contract = PASS.",
-      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "suites": [
+        "tests/unit/engineeringRouterQwenProvider.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-32",
       "requirement": "Qwen routing = PASS.",
-      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "suites": [
+        "tests/unit/engineeringRouterQwenProvider.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-33",
       "requirement": "Qwen fallback = PASS.",
-      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "suites": [
+        "tests/unit/engineeringRouterQwenProvider.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-34",
       "requirement": "Qwen live não pode ser simulado por mock.",
-      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "suites": [
+        "tests/unit/engineeringRouterQwenProvider.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-35",
       "requirement": "Qwen live executa realmente quando credencial estiver presente.",
-      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "suites": [
+        "tests/unit/engineeringRouterQwenProvider.test.js"
+      ],
       "reports": [],
       "evidence": {
         "path": "reports/qwen-live-evidence.json",
@@ -246,25 +326,33 @@
     {
       "id": "V2-36",
       "requirement": "Qwen live sem credencial retorna estado explícito.",
-      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "suites": [
+        "tests/unit/engineeringRouterQwenProvider.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-37",
       "requirement": "Audit envelope inclui Mission Compiler.",
-      "suites": ["tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"],
+      "suites": [
+        "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-38",
       "requirement": "Audit envelope inclui approval/autoapproval.",
-      "suites": ["tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"],
+      "suites": [
+        "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-39",
       "requirement": "Audit envelope inclui Qwen status correto.",
-      "suites": ["tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"],
+      "suites": [
+        "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"
+      ],
       "reports": []
     },
     {
@@ -279,15 +367,124 @@
     {
       "id": "V2-41",
       "requirement": "Engineer Router V2 Seal falha quando qualquer gate obrigatório falha.",
-      "suites": ["tests/unit/governance/v2SealOrchestration.test.js"],
+      "suites": [
+        "tests/unit/governance/v2SealOrchestration.test.js"
+      ],
       "reports": []
     },
     {
       "id": "V2-42",
       "requirement": "Engineer Router V2 Seal passa apenas com evidence completa.",
-      "suites": ["tests/unit/governance/v2SealOrchestration.test.js"],
+      "suites": [
+        "tests/unit/governance/v2SealOrchestration.test.js"
+      ],
       "reports": [],
       "note": "O relatorio do proprio selo NAO e usado como prova deste item: seria auto-referencial (o selo nao pode ser evidencia de si mesmo antes de passar). A prova e o teste de orquestracao, que exige evidencia completa para o selo passar."
+    },
+    {
+      "id": "MISSION-SRC-01",
+      "requirement": "A missão executa sobre uma fonte ISOLADA (engineering/missions/<missionId>) derivada da origem, nunca sobre a main.",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-02",
+      "requirement": "Toda EngineeringTask da missão declara o commit da fonte de onde nasceu e o worktree é materializado DELE.",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-03",
+      "requirement": "O candidate de uma task que chegou a GREEN é INTEGRADO na fonte da missão, exigindo pré-condições objetivas (testes, review aprovado, regressão PASS, posse, integridade).",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-04",
+      "requirement": "A task seguinte da missão ENXERGA o patch integrado (lido do git real no commit de origem da task).",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-05",
+      "requirement": "A main permanece INTOCADA durante toda a missão (commit e branch de trabalho inalterados).",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-06",
+      "requirement": "Candidate derivado de base antiga é recusado como STALE_CANDIDATE e nunca aplicado cegamente.",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-07",
+      "requirement": "Integrações concorrentes são serializadas por CAS: exatamente uma vence, a fonte fica no commit do vencedor e o perdedor não deixa código.",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-08",
+      "requirement": "A integração é CRASH-SAFE: a mesma tríade (missionId, taskId, candidateCommit) não aplica o patch duas vezes e o estado é reconciliado após crash.",
+      "suites": [
+        "tests/integration/engineeringMissionSourceE2E.test.js"
+      ]
+    },
+    {
+      "id": "BUG-WORKER-01",
+      "requirement": "O worker automático do laço de bugs é provado com o worker REAL do runtime: o teste sobe startBugLoopWorker e apenas OBSERVA o banco — nunca chama runBugLoopCycle/runBugLoopSweep/handleAnomaly para conduzir o cenário.",
+      "suites": [
+        "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
+      ]
+    },
+    {
+      "id": "BUG-WORKER-02",
+      "requirement": "A saúde do worker obrigatório é explícita (RUNNING/DEGRADED/DOWN/STOPPED/DISABLED_BY_POLICY) e uma falha de start torna a prontidão de engenharia DEGRADED/NO_GO em vez de aviso silencioso.",
+      "suites": [
+        "tests/unit/engineeringMission/workerHealth.test.js"
+      ]
+    },
+    {
+      "id": "GOV-BASE-01",
+      "requirement": "A autoridade de governança é protegida por HASH DE CONTEÚDO: alterar o corpo de um gate sem mudar o nome, remover um artefato autoritativo ou trocar um manifesto de testes obrigatórios é detectado.",
+      "suites": [
+        "tests/unit/engineeringMission/governanceBaseline.test.js"
+      ]
+    },
+    {
+      "id": "SELF-RBAC-01",
+      "requirement": "Aprovar self-modification exige permissão ESPECÍFICA (engineering:approve_self_modification) além de principal HUMANO autenticado: permissão genérica de engenharia é recusada e ator automático é recusado mesmo com a permissão.",
+      "suites": [
+        "tests/unit/engineeringMission/selfModificationRbac.test.js"
+      ]
+    },
+    {
+      "id": "RELEASE-COHERENCE-01",
+      "requirement": "Artefatos finais entregues no MESMO run não podem ter decisões incompatíveis sem que o não-corrente declare explicitamente que não é a autoridade (TRANSITIONAL/SUPERSEDED/INTERMEDIATE + supersededBy + motivo); runStatus desfavorável convivendo com indicadores de sucesso total exige explicação semântica.",
+      "suites": [
+        "tests/unit/governance/certificationCoherence.test.js"
+      ]
+    },
+    {
+      "id": "RELEASE-V2-01",
+      "requirement": "O pipeline de release OFICIAL executa o selo V2 ele mesmo (não exige que o operador rode antes), continua bloqueando quando o selo não alcança GO, captura o fingerprint do source selado com a MESMA autoridade do verificador de frescor e reconfere antes dos bytes do pacote, abortando com RERUN REQUIRED se o source mudou entre o selo e o empacotamento.",
+      "suites": [
+        "tests/unit/governance/releasePipelineV2Orchestration.test.js"
+      ]
+    },
+    {
+      "id": "BUG-MEMORY-01",
+      "requirement": "A memoria de regressao nao pode injetar um nao-comando no contrato da proxima correcao: a barreira na ESCRITA descarta (com aviso) valores que parseCommand rejeita, e a barreira na LEITURA impede que historico contaminado continue se propagando. Sem isso a fix task falha com TEST_BLOCKED e o laco nunca fecha.",
+      "suites": [
+        "tests/integration/bugRegressionCommandContamination.test.js"
+      ]
     }
   ]
 }

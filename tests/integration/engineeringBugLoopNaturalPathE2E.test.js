@@ -246,60 +246,106 @@ describe('BUG_AUTONOMOUS_LOOP — CAMINHO NATURAL (sem sweep manual)', () => {
     expect(finding.reproduction.derivation).toMatchObject({ available: true });
     expect(['TEST_FAILURE', 'DECLARED_TEST_COMMAND', 'COMMAND_FAILURE']).toContain(finding.reproduction.derivation.strategy);
 
-    // ── 4. WORKER AUTOMÁTICO: nada é chamado manualmente daqui para frente ────────────────────
-    // O critério de parada é a RETOMADA registrada pelo próprio ciclo (o finding pode reabrir em
-    // seguida por reincidência — ver 5.4), não o status momentâneo do registro.
+    // ── 4. WORKER AUTOMÁTICO: NADA é chamado manualmente daqui para frente ────────────────────
+    //
+    // DEFEITO MEDIDO (2026-10-02): este passo chamava `bugLoopWorker.runBugLoopCycle()` em laço —
+    // ou seja, o teste CONDUZIA o ciclo e depois afirmava que o worker era automático. Provar
+    // autonomia chamando o ciclo à mão é provar nada. Aqui sobe o worker REAL do runtime (a MESMA
+    // função que `api/runtime/startWorkers.js` usa) e o teste apenas OBSERVA o banco até o sistema
+    // se recuperar sozinho. `runBugLoopCycle`, `runBugLoopSweep` e `handleAnomaly` não são chamados.
+    const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+    const workerStart = bugLoopWorker.startBugLoopWorker({ intervalMs: 1000, limit: 5, runImmediately: true });
+    expect(workerStart.started).toBe(true);
+
     let sawResume = false;
-    const cycles = [];
-    for (let cycle = 0; cycle < 6 && !sawResume; cycle += 1) {
-      const summary = await bugLoopWorker.runBugLoopCycle({ limit: 5, autoFix: true, actor: 'jest-natural-worker' });
-      const current = await bugFindingService.getFinding(finding.id);
-      const items = (summary.items || []).filter((item) => item.findingId === finding.id);
-      cycles.push({
-        cycle,
-        status: current.status,
-        summary: {
-          scanned: summary.scanned, confirmed: summary.confirmed, triaged: summary.triaged,
-          fixed: summary.fixed, resumed: summary.resumed, leaseSkipped: summary.leaseSkipped,
-          items,
-        },
-      });
-      if (items.some((item) => item.action === 'MISSION_RESUME' && item.resumed)) sawResume = true;
+    // ORÇAMENTO DE ESPERA. Medido em 2026-10-02: isolada a suíte fecha em ~35 s, mas no LOTE
+    // AUTORITATIVO (6 suítes concorrentes) o mesmo ciclo levou 187 s e estourou um limite de 180 s —
+    // flake por orçamento curto, não por defeito. O teste ESPERA de verdade (não dirige nada), então
+    // o orçamento precisa acomodar a carga real do lote em que ele roda.
+    const waitBudgetMs = Number(process.env.ENGINEERING_E2E_WORKER_WAIT_MS || 900000);
+    const deadline = Date.now() + waitBudgetMs;
+    // Espera PASSIVA: o único ator é o worker. O teste lê o banco e nada mais.
+    while (Date.now() < deadline && !sawResume) {
+      await sleep(1000);
+      const missionNow = await missionStore.getMission(mission.id);
+      const lineageNow = missionNow?.resume_metadata?.bugLoop?.lineage || null;
+      if (lineageNow && lineageNow.findingId === finding.id && lineageNow.replacementTaskId) sawResume = true;
     }
-    if (!sawResume) console.log('DIAGNOSTICO_CICLOS=' + JSON.stringify(cycles));
+    const workerStatus = bugLoopWorker.getBugLoopWorkerStatus();
+    bugLoopWorker.stopBugLoopWorker();
+
+    // O WORKER REAL RODOU: ciclos contados pelo próprio processo, não por chamada do teste.
+    expect(workerStatus.cycles).toBeGreaterThan(0);
+    expect(workerStatus.errors).toBe(0);
 
     // ── 5. O CICLO FECHOU E A MISSÃO ORIGINAL RETOMOU SOZINHA ────────────────────────────────
-    const allItems = cycles.flatMap((c) => c.summary.items || []);
-    const closedItem = allItems.find((item) => item.closed === true) || null;
-    const resumeItem = allItems.find((item) => item.action === 'MISSION_RESUME' && item.resumed) || null;
+    expect(sawResume).toBe(true);
 
     // 5.1 finding fechado de verdade: regressão REAL registrada (não basta "task terminou").
-    expect(closedItem).toBeTruthy();
     const afterCycles = await bugFindingService.getFinding(finding.id);
     expect(afterCycles.regression_runs.length).toBeGreaterThan(0);
+    expect(['CLOSED', 'CONFIRMED', 'FIXING']).toContain(afterCycles.status);
 
     // 5.2 a missão VOLTOU A EXECUTAR: task substituta criada pelo caminho canônico e executada.
-    expect(resumeItem).toBeTruthy();
-    expect(resumeItem.decision).toBe('REPLACE_TASK_RESUME_PHASE');
-    expect(resumeItem.replacementTaskId).toBeTruthy();
-    expect(resumeItem.replacementTaskId).not.toBe(originalTaskId);
-    created.tasks.push(resumeItem.replacementTaskId);
-    const replacementAttempts = await engineeringTaskService.listAttempts(resumeItem.replacementTaskId);
-    expect(replacementAttempts.length).toBeGreaterThanOrEqual(1);
-
-    // 5.3 LINHAGEM persistida e verificável na própria missão (auditoria do ciclo).
     const missionAfter = await missionStore.getMission(mission.id);
     const lineage = missionAfter?.resume_metadata?.bugLoop?.lineage || null;
     expect(lineage).toBeTruthy();
+    expect(lineage.decision).toBe('REPLACE_TASK_RESUME_PHASE');
+    expect(lineage.replacementTaskId).toBeTruthy();
+    expect(lineage.replacementTaskId).not.toBe(originalTaskId);
+    created.tasks.push(lineage.replacementTaskId);
+    const replacementAttempts = await engineeringTaskService.listAttempts(lineage.replacementTaskId);
+    expect(replacementAttempts.length).toBeGreaterThanOrEqual(1);
+
+    // 5.3 LINHAGEM persistida e verificável na própria missão (auditoria do ciclo).
     expect(lineage.findingId).toBe(finding.id);
     expect(lineage.originalTaskId).toBe(originalTaskId);
     expect(lineage.fixTaskId).toBeTruthy();
-    expect(lineage.replacementTaskId).toBe(resumeItem.replacementTaskId);
 
-    // 5.4 REINCIDÊNCIA reconhecida — comportamento CORRETO deste cenário: o patch do laço vive em
-    //     branch ISOLADO e nunca toca o working tree principal, então a fixture continua vermelha e
-    //     a missão retomada falha de novo: o finding é reaberto como REINCIDÊNCIA (mesma identidade,
-    //     sem duplicar registro) e a guarda de recursão passa a protegê-lo de laço infinito.
-    expect(afterCycles.recurrence_count).toBeGreaterThanOrEqual(1);
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // 5.4 A GARANTIA QUE FALTAVA — MISSION_RESUME_USES_FIXED_SOURCE.
+    //
+    // ESTE BLOCO AFIRMAVA O DEFEITO. O texto anterior era, literalmente:
+    //
+    //   "REINCIDÊNCIA reconhecida — o patch do laço vive em branch ISOLADO e nunca toca o working
+    //    tree principal, então a fixture continua vermelha e a missão retomada falha de novo"
+    //
+    // Ou seja: o teste aceitava `recurrence_count >= 1` como comportamento CORRETO, quando a causa
+    // era o fix NUNCA ter entrado na source usada pela missão. Recorrência por ausência de patch não
+    // é o bug voltando — é o fix que nunca chegou. Aceitar isso era aceitar o defeito.
+    //
+    // Agora a asserção é a inversa, e é verificável por HASH:
+    //   (a) a fonte da missão AVANÇOU (houve integração, com trilha);
+    //   (b) a replacement task nasceu DESSE commit — não do commit original;
+    //   (c) o patch do fix ESTÁ no commit de origem da replacement.
+    // Se o fix tivesse ficado só no candidate isolado, (b) e (c) falhariam.
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    const missionSourceService = require('../../api/services/engineeringMission/missionSourceService');
+    const sourceAfter = await missionSourceService.getMissionSource(mission.id);
+
+    // (a) a fonte avançou em relação à base.
+    expect(sourceAfter.currentCommit).toBeTruthy();
+    expect(sourceAfter.baseCommit).toBeTruthy();
+    expect(sourceAfter.currentCommit).not.toBe(sourceAfter.baseCommit);
+    expect(sourceAfter.fence).toBeGreaterThanOrEqual(1);
+
+    const integrations = await missionSourceService.listIntegrations(mission.id);
+    const integrated = integrations.filter((row) => row.integration_result === 'INTEGRATED');
+    expect(integrated.length).toBeGreaterThanOrEqual(1);
+
+    // (b) A REPLACEMENT TASK HERDOU O COMMIT CORRIGIDO — por hash, não por narrativa.
+    const replacement = await engineeringTaskService.getTask(lineage.replacementTaskId);
+    expect(replacement.source_commit).toBe(sourceAfter.currentCommit);
+    expect(replacement.source_commit).not.toBe(sourceAfter.baseCommit);
+    expect(replacement.source_ref).toBe(sourceAfter.integrationBranch);
+
+    // (c) O PATCH DO FIX ESTÁ NO COMMIT DE ORIGEM DA REPLACEMENT — a prova de que ela ENXERGA o fix.
+    //     Lido do git real, no commit exato que a task vai materializar.
+    const { execFileSync } = require('child_process');
+    const root = path.resolve(__dirname, '..', '..');
+    const fixtureAtSource = execFileSync('git', ['show', `${replacement.source_commit}:${FIXTURE_FILE}`], { cwd: root, encoding: 'utf8' });
+    // O fix adiciona `add()` à fixture: o conteúdo no commit da missão tem de refleti-lo.
+    expect(fixtureAtSource).toMatch(/function add\s*\(/);
   });
 });

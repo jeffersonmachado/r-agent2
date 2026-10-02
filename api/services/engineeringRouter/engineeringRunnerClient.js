@@ -25,6 +25,26 @@ const { policyMs } = require('../../utils/operationDeadline');
 const RUNNER_URL = process.env.ENGINEERING_RUNNER_URL || null;
 const RUNNER_TOKEN = process.env.ENGINEERING_RUNNER_TOKEN || null;
 
+/**
+ * Vocabulário de recusa do RUNNER → vocabulário de erro da API.
+ *
+ * DEFEITO REAL medido em 2026-10-02 (`tests/unit/engineeringRouterExecutionSandboxSecurity.test.js`
+ * vermelho na trunk): o runner recusa um cwd fora de `ENGINEERING_ROUTER_WORKSPACE_ROOT` servindo
+ * `400 {error: 'cwd_not_allowed', message: ...}` — a recusa estruturada vive no campo `error`
+ * (`services/engineering-runner/src/httpServer.js::validateWorkspaceCwd`). Este cliente lia
+ * `body.code`, campo que o runner NUNCA envia, então TODA recusa estruturada caía no default
+ * `SANDBOX_UNAVAILABLE`. "Esse cwd não é um workspace isolado conhecido" chegava ao chamador como
+ * "sandbox indisponível" — diagnóstico DIFERENTE e enganoso: manda o operador procurar um Docker
+ * caído em vez do caminho recusado. O comentário abaixo já prometia "preserva o código real,
+ * nunca mascara"; a promessa existia, o mecanismo não.
+ *
+ * Mapeia-se apenas o que tem contraparte semântica exata em `executionSandbox.js`; recusas sem
+ * contraparte mantêm o vocabulário do runner em `error.runnerError`, nunca um código inventado.
+ */
+const RUNNER_ERROR_CODE_MAP = Object.freeze({
+  cwd_not_allowed: 'SANDBOX_INVALID_WORKSPACE',
+});
+
 function sandboxUnavailable(detail) {
   const error = new Error(`SANDBOX_UNAVAILABLE: ${detail} (fail-closed, nunca cai de volta para spawn sem sandbox)`);
   error.code = 'SANDBOX_UNAVAILABLE';
@@ -106,8 +126,13 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
   if (!response.ok) {
     // O runner propaga o mesmo `.code` que `executionSandbox.js` lançaria in-process
     // (SANDBOX_UNAVAILABLE/SANDBOX_INVALID_WORKSPACE) — preserva o código real, nunca mascara.
-    const error = new Error(body?.error || `Engineering Runner respondeu ${response.status}`);
-    error.code = body?.code || 'SANDBOX_UNAVAILABLE';
+    // A recusa estruturada do runner vive em `error` (nunca em `code`): o código da API é
+    // RESOLVIDO a partir dela, e o valor original do runner é preservado em `runnerError` para
+    // que o detalhe nunca se perca na tradução.
+    const runnerError = typeof body?.error === 'string' ? body.error : null;
+    const error = new Error(body?.message || runnerError || `Engineering Runner respondeu ${response.status}`);
+    error.code = body?.code || RUNNER_ERROR_CODE_MAP[runnerError] || 'SANDBOX_UNAVAILABLE';
+    if (runnerError) error.runnerError = runnerError;
     throw error;
   }
 

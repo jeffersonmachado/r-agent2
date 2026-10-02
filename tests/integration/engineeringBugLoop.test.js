@@ -581,7 +581,10 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     expect(runTask).not.toHaveBeenCalled();
 
     // Aprovação HUMANA explícita é a única coisa que destrava (tipo do ator faz parte do contrato).
-    const approval = await bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results', actorType: 'HUMAN', approvalRef: 'ticket-123' });
+    const approval = await bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results', actorType: 'HUMAN', approvalRef: 'ticket-123',
+      // RBAC GRANULAR: o aval de self-modification exige a permissão ESPECÍFICA além do principal
+      // humano — a permissão genérica de engenharia não é autoridade para reescrever a régua.
+      hasSelfModificationPermission: true });
     expect(approval.approved).toBe(true);
     const after = await bugFindingService.getFinding(finding.id);
     expect(after.human_approval_required).toBe(false);
@@ -634,6 +637,7 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     // 5. HUMANO autenticado: única autoridade aceita, e a identidade fica auditada.
     const approval = await bugTriageService.approveSelfModification(finding.id, {
       actor: 'humano@results', actorType: 'HUMAN', authenticatedActorType: 'HUMAN', approvalRef: 'TICKET-4242',
+      hasSelfModificationPermission: true,
     });
     expect(approval.approved).toBe(true);
     expect(approval.authority).toMatchObject({ allowed: true, actorType: 'HUMAN', policy: 'HUMAN_ONLY' });
@@ -654,7 +658,7 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('FAIL'), actor: 'TEST' });
     const triage = await bugTriageService.triage(finding.id, { actor: 'TEST' });
     created.tasks.push(triage.fixTask.id);
-    await bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results', actorType: 'HUMAN', approvalRef: 'TICKET-99' });
+    await bugTriageService.approveSelfModification(finding.id, { actor: 'humano@results', actorType: 'HUMAN', approvalRef: 'TICKET-99', hasSelfModificationPermission: true });
 
     const persisted = await bugFindingService.getFinding(finding.id);
     expect(persisted.self_modification).toBe(true);

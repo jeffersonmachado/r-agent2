@@ -22,7 +22,7 @@ const os = require('os');
 const path = require('path');
 const { readJson } = require('../../scripts/governance/common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
-const { generate } = require('../../scripts/governance/generate-engineering-router-v1-audit-envelope');
+const { generate, assertEvidenceFresh } = require('../../scripts/governance/generate-engineering-router-v1-audit-envelope');
 const { verifyEnvelope, computeActualPackageSourceFingerprint } = require('../../scripts/governance/verify-engineering-router-v1-audit-envelope');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -103,31 +103,29 @@ describe('ER-V1-FINAL-010 — geração real do envelope + verificação offline
   });
 
   test('gerar sem evidência de runtime fresca falha explicitamente (nunca certifica silenciosamente)', () => {
-    const missingReportsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'engineering-router-audit-envelope-no-evidence-'));
-    try {
-      // Simula ausência de evidência: aponta para um ROOT vazio via override não é trivial sem
-      // reescrever o módulo — em vez disso, prova a mesma garantia indiretamente: o gerador real
-      // (contra o ROOT real) só chega a `RUNTIME_PASS`/`PASS` quando os dois reports existem E
-      // estão frescos; corromper deliberadamente esse pré-requisito e chamar generate() deve
-      // lançar, nunca produzir um envelope "otimista".
-      if (skipIfNoFreshEvidence()) return;
-      const reportPath = path.join(ROOT, 'reports', 'engineering-router-v1-runtime-evidence.json');
-      const backup = fs.readFileSync(reportPath, 'utf8');
-      try {
-        const corrupted = JSON.parse(backup);
-        corrupted.status = 'RUNTIME_FAIL';
-        fs.writeFileSync(reportPath, JSON.stringify(corrupted));
-        // Sob a suíte ampla rodando em paralelo, outro teste pode legitimamente alterar um
-        // arquivo real dentro de um SOURCE_ROOT do fingerprint (ex.: api/services/**) entre o
-        // corromper acima e a chamada abaixo — nesse caso o gerador falha por
-        // "sourceFingerprint obsoleto" em vez de "status != RUNTIME_PASS". Ambas são resultados
-        // corretos de fail-closed (nunca produz um envelope otimista); a asserção aceita as duas.
-        expect(() => generate({ outDir: missingReportsDir })).toThrow(/RUNTIME_PASS|obsoleta/);
-      } finally {
-        fs.writeFileSync(reportPath, backup);
-      }
-    } finally {
-      fs.rmSync(missingReportsDir, { recursive: true, force: true });
-    }
+    // HERMETICIDADE — a versão anterior deste teste CORROMPIA o arquivo de evidência REAL
+    // (`reports/engineering-router-v1-runtime-evidence.json`, gravando `status: RUNTIME_FAIL`) e o
+    // restaurava num `finally`. Era um teste escrevendo num artefato GOVERNADO, e uma morte do
+    // processo entre a corrupção e a restauração deixaria a evidência autoritativa FALSIFICADA no
+    // disco — todos os gates a jusante passariam a falhar por um motivo fabricado pelo próprio
+    // teste. Nada da garantia dependia daquela escrita: a decisão de frescor é uma função de suas
+    // entradas (`assertEvidenceFresh`) e é ELA que o gerador real chama. As três condições de
+    // fail-closed são exercitadas abaixo com entradas fabricadas, sem tocar em arquivo algum, e
+    // nenhuma asserção foi enfraquecida.
+    if (skipIfNoFreshEvidence()) return;
+
+    const real = readJson('reports/engineering-router-v1-runtime-evidence.json');
+    expect(real).toBeTruthy();
+    const currentFingerprint = computeSourceFingerprint(ROOT);
+
+    // 1) ausente
+    expect(() => assertEvidenceFresh(null, { currentFingerprint })).toThrow(/ausente/);
+    // 2) obsoleta — fingerprint de outra árvore
+    expect(() => assertEvidenceFresh({ ...real, sourceFingerprint: 'deadbeef'.repeat(8) }, { currentFingerprint })).toThrow(/obsoleta/);
+    // 3) presente e fresca, mas não RUNTIME_PASS
+    expect(() => assertEvidenceFresh({ ...real, status: 'RUNTIME_FAIL' }, { currentFingerprint })).toThrow(/RUNTIME_PASS/);
+    // 4) a evidência real, fresca, ATRAVESSA a mesma função que o gerador usa — o caminho feliz do
+    //    gate é o mesmo objeto, não uma reimplementação paralela.
+    expect(() => assertEvidenceFresh(real, { currentFingerprint })).not.toThrow();
   });
 });

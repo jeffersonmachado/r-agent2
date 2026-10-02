@@ -37,6 +37,7 @@ const { buildAvailableModels, DEFAULT_TENANT_ID } = require('./engineeringModelA
 const modelAvailabilityStore = require('./modelAvailabilityStore');
 const { checkRegression, checkGovernance } = require('./regressionGovernanceService');
 const { createPromotionCandidate, verifyPromotedCandidate, findExistingCandidate, computeValidatedPatchHash } = require('./promotionService');
+const missionSourceService = require('../engineeringMission/missionSourceService');
 const operationService = require('./engineeringOperationService');
 const { execFile } = require('child_process');
 const util = require('util');
@@ -1224,6 +1225,65 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId, ru
         });
 
         await recordProgress(run, 'promotion_completed', promotionEvidence.candidateBranch);
+
+        // ==================================================================================
+        // MISSION SOURCE AUTHORITY — INTEGRAÇÃO NA FONTE DA MISSÃO (o gap central)
+        // ==================================================================================
+        // O candidate existe e passou pelos gates. MAS ele nasceu numa branch isolada cujo pai é o
+        // commit da FONTE DA MISSÃO. Enquanto esse commit não for integrado de volta à fonte, a
+        // próxima task da missão não enxerga o patch — e o bug corrigido "reaparece" na replacement
+        // task, não por ter voltado, mas por o fix nunca ter entrado no caminho de execução.
+        //
+        // Por isso a integração acontece ANTES do GREEN: a task só é declarada GREEN quando o seu
+        // trabalho passou a fazer parte da realidade da missão. Integração recusada (stale,
+        // pré-condição, concorrência, conflito) ⇒ a task fica READY_FOR_PROMOTION, com o código
+        // exato da recusa persistido — nunca GREEN sobre trabalho que a missão não consegue usar.
+        let missionIntegration = null;
+        if (task.mission_id) {
+          missionIntegration = await missionSourceService.integrateTaskCandidate({
+            taskId,
+            attemptId,
+            candidateCommit: candidateResult.evidence.candidateCommit,
+            integrationType: 'TASK_CANDIDATE',
+            // Posse vigente: quem integra é o dono do lease (o mesmo worker que promoveu).
+            ownershipValid: Boolean(run && run.lease),
+            // Integridade: o smoke pós-promoção confirmou que a árvore promovida é a árvore testada.
+            candidateIntegrityOk: verifyResult.verified === true,
+            candidateGreen: true,
+            evidence: {
+              candidateBranch: candidateResult.evidence.candidateBranch,
+              validatedPatchHash: candidateResult.evidence.validatedPatchHash,
+              postPromotionTestPass: verifyResult.postPromotionTestPass === true,
+              promotionStatus: promotionEvidence.promotionStatus,
+            },
+          });
+
+          if (!missionIntegration.integrated) {
+            await ts.updateAttempt(attemptId, {
+              promotion_evidence: { ...promotionEvidence, missionIntegration },
+            });
+            emitTaskStage(eventAudienceTenantId, taskId, {
+              stage: 'READY_FOR_PROMOTION',
+              status: 'error',
+              message: `Candidate promovido, mas NÃO integrado na fonte da missão (${missionIntegration.code}): ${missionIntegration.reason}`,
+              meta: { ...promotionEvidence, missionIntegration },
+            });
+            await tolerantTransition(taskId, 'READY_FOR_PROMOTION', ts);
+            return { taskId, status: 'READY_FOR_PROMOTION', reasonCode: missionIntegration.code, missionIntegration };
+          }
+
+          await ts.updateAttempt(attemptId, {
+            promotion_evidence: { ...promotionEvidence, missionIntegration },
+          });
+          emitTaskStage(eventAudienceTenantId, taskId, {
+            stage: 'MISSION_SOURCE_INTEGRATION',
+            status: 'success',
+            message: `Fix integrado na fonte da missão ${missionIntegration.integrationBranch}: ${String(missionIntegration.missionCommitBefore).slice(0, 12)} → ${String(missionIntegration.missionCommitAfter).slice(0, 12)}. A próxima task nasce deste commit.`,
+            meta: missionIntegration,
+          });
+          await recordProgress(run, 'mission_source_integrated', missionIntegration.missionCommitAfter);
+        }
+
         await tolerantTransition(taskId, 'GREEN', ts);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso — patch promovido ao repositório real.' });
         return { taskId, status: 'GREEN', attemptId };

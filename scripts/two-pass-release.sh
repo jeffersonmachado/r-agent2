@@ -560,11 +560,40 @@ ok "Pré-condições verificadas"
 # para cá), e a checagem do selo tinha sido colocada apenas no caminho legado `--audit-only` do
 # `release-package.sh` — depois do ponto onde o `exec` já transferiu o controle para este script.
 # Resultado: no caminho que a operação realmente usa, o selo V2 não era pré-condição nenhuma.
-# Sem selo GO do MESMO source (fingerprint de conteúdo) e dentro da janela, não há pacote.
+#
+# RELEASE-V2-01 (2026-10-02) — O PIPELINE EXECUTA O SELO, NÃO TERCEIRIZA A ORDEM.
+# Antes, o release EXIGIA que o operador tivesse rodado antes `npm run engineering-router:v2-seal`:
+# sem isso, o pacote era bloqueado com V2_SEAL_NOT_FRESH. Isso transforma uma etapa do release numa
+# tarefa manual de quem opera — e uma etapa manual é uma etapa que se esquece, se faz com o source
+# errado, ou se faz "no release anterior" e passa. Agora o release OFICIAL orquestra: se o selo não
+# estiver fresco deste source, ele RODA o selo aqui e só então segue. O bloqueio permanece para o
+# caso em que o selo não consegue alcançar GO — que é o único caso em que não há pacote a produzir.
 step "PRÉ-CONDIÇÃO: selo V2 fresco (GO + mesmo source + dentro da janela)..."
-node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-v2-seal-freshness.js" \
-  || fail "V2_SEAL_NOT_FRESH — pacote bloqueado: rode o selo do source atual (npm run engineering-router:v2-seal); selo de outro código/run ou vencido não autoriza este pacote (reports/v2-seal-freshness-report.json)"
+if ! node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-v2-seal-freshness.js" >/dev/null 2>&1; then
+  step "Selo V2 ausente/vencido para este source — o pipeline EXECUTA o selo agora..."
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/engineering-router-v2-seal.js" \
+    || fail "V2_SEAL_FAILED — o pipeline executou o selo e ele não alcançou GO; sem selo GO deste source não há pacote (reports/engineering-router-v2-seal-execution.json)"
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-v2-seal-freshness.js" \
+    || fail "V2_SEAL_NOT_FRESH — selo executado pelo pipeline mas não reconhecido como fresco deste source (reports/v2-seal-freshness-report.json)"
+fi
 ok "Selo V2 fresco deste source (reports/v2-seal-freshness-report.json)"
+
+# ── SOURCE FREEZE: do selo até o pacote, o source NÃO PODE MUDAR ─────────────
+# RELEASE-SOURCE-FREEZE. O selo certifica um FINGERPRINT de conteúdo. Se o source mudar depois do
+# selo e antes do empacotamento, o pacote entregue é OUTRO código — certificado por um selo que não
+# fala dele. A janela é curta mas real (o two-pass gera e regenera artefatos de governança), e o
+# modo de falha é silencioso: tudo "passa", só que o selo não corresponde ao que saiu.
+#
+# Captura-se o fingerprint AGORA (o que o selo certificou) e ele é reconferido imediatamente antes
+# do empacotamento. Divergência ⇒ ABORT, nunca "segue com o que tem".
+SEAL_SOURCE_FINGERPRINT="$(node_with_workspace_env -e "
+  const { computeSourceFingerprint } = require('$PROJECT_ROOT/governance/proof-engine/fingerprint-chain');
+  process.stdout.write(computeSourceFingerprint('$PROJECT_ROOT'));
+" 2>/dev/null || true)"
+if [[ -z "$SEAL_SOURCE_FINGERPRINT" ]]; then
+  fail "RELEASE_SOURCE_FREEZE_UNRESOLVABLE — não foi possível resolver o fingerprint do source selado; sem ele não há como provar que o pacote corresponde ao selo"
+fi
+ok "Source congelado no selo: ${SEAL_SOURCE_FINGERPRINT:0:16}…"
 
 # ── GATE DE PROVENIÊNCIA: worktree limpo no INÍCIO do pipeline ───────────────
 # RELEASE OFICIAL exige `git status --porcelain` vazio ANTES de qualquer
@@ -1375,6 +1404,21 @@ ok "certification bundle verde (selo V2 + ciclo autônomo + frescor) no envelope
 cp "$GOV_DIR"/*.json "$TMP_ENVELOPE/r-agent2/dist/governance/"
 cp "$SIG_DIR"/*.sig "$TMP_ENVELOPE/r-agent2/dist/signatures/"
 cp "$VER_DIR"/* "$TMP_ENVELOPE/r-agent2/dist/verifier/"
+
+# ── RELEASE-SOURCE-FREEZE: última porta antes dos BYTES do pacote ───────────────────────────────
+# O pacote está a um comando de existir. Se o source mudou desde o selo, tudo o que foi verificado
+# acima refere-se a OUTRO código — e o modo de falha é silencioso, porque cada gate individual
+# continua verde. Comparar aqui é o que impede "selo do source X, pacote do source Y".
+step "RELEASE-SOURCE-FREEZE: conferindo que o source não mudou desde o selo..."
+FINAL_SOURCE_FINGERPRINT="$(node_with_workspace_env -e "
+  const { computeSourceFingerprint } = require('$PROJECT_ROOT/governance/proof-engine/fingerprint-chain');
+  process.stdout.write(computeSourceFingerprint('$PROJECT_ROOT'));
+" 2>/dev/null || true)"
+if [[ "$FINAL_SOURCE_FINGERPRINT" != "$SEAL_SOURCE_FINGERPRINT" ]]; then
+  fail "RELEASE_SOURCE_CHANGED_AFTER_SEAL (RERUN REQUIRED) — o source mudou entre o selo e o empacotamento (${SEAL_SOURCE_FINGERPRINT:0:16}… → ${FINAL_SOURCE_FINGERPRINT:0:16}…). O selo certifica o código do selo, não este; rode o ciclo novamente para selar e empacotar o MESMO source"
+fi
+ok "Source inalterado desde o selo (${FINAL_SOURCE_FINGERPRINT:0:16}…) — o pacote corresponde ao que foi certificado"
+
 rm -f "$ENVELOPE_PATH"
 (cd "$TMP_ENVELOPE" && zip -qr "$ENVELOPE_PATH" r-agent2/)
 rm -rf "$TMP_ENVELOPE"

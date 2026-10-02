@@ -21,9 +21,11 @@ const fs = require('fs');
 const path = require('path');
 
 const engine = require('../../../engine/engineeringMission/bugFinding');
+const governanceBaseline = require('../../../engine/engineeringMission/governanceBaseline');
 const bugFindingService = require('./bugFindingService');
 const engineeringTaskService = require('../engineeringRouter/engineeringTaskService');
 const missionStore = require('./missionStoreService');
+const missionSourceService = require('./missionSourceService');
 const logger = require('../../utils/logger');
 
 const REPO_ROOT = path.join(__dirname, '..', '..', '..');
@@ -53,6 +55,53 @@ function sha256OrAbsent(relPath) {
   }
 }
 
+/** Hash + tamanho de um arquivo, para o manifesto de conteúdo da autoridade. */
+function contentEntry(relPath) {
+  try {
+    const abs = path.join(REPO_ROOT, relPath);
+    if (!fs.existsSync(abs)) return { path: relPath, sha256: 'ABSENT', size: null };
+    const buf = fs.readFileSync(abs);
+    return { path: relPath, sha256: crypto.createHash('sha256').update(buf).digest('hex'), size: buf.length };
+  } catch (err) {
+    logger.warn('[bugTriageService] arquivo de autoridade ilegível', { file: relPath, error: err.message });
+    return { path: relPath, sha256: 'UNREADABLE', size: null };
+  }
+}
+
+/**
+ * DESCOBERTA DOS ARTEFATOS AUTORITATIVOS.
+ *
+ * O CONJUNTO NÃO É UMA LISTA MANUAL. O diretório `scripts/governance/` É a lista: todo `.js`/`.sh`
+ * ali — inclusive em subdiretórios como `lib/` — participa da cadeia de decisão, então todo ele entra
+ * no manifesto com o HASH DO CONTEÚDO. Consequências deliberadas:
+ *
+ *   - um gate NOVO passa a ser protegido automaticamente (não depende de alguém lembrar de listá-lo);
+ *   - um gate REMOVIDO aparece como remoção;
+ *   - `validate-x.js` que continua existindo mas teve o corpo alterado (ex.: `if (failure) return
+ *     'NO_GO'` virando `'GO'`) é detectado — que é exatamente o que proteção por NOME não pega.
+ *
+ * Caminhada determinística (ordenada) para que o manifesto seja reprodutível.
+ */
+function listGovernanceGateFiles(dirRel = GOVERNANCE_GATES_DIR, acc = []) {
+  const abs = path.join(REPO_ROOT, dirRel);
+  let entries = [];
+  try {
+    entries = fs.readdirSync(abs, { withFileTypes: true });
+  } catch (err) {
+    logger.warn('[bugTriageService] diretório de gates ilegível', { dir: dirRel, error: err.message });
+    return acc;
+  }
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const childRel = `${dirRel}/${entry.name}`;
+    if (entry.isDirectory()) {
+      listGovernanceGateFiles(childRel, acc);
+    } else if (entry.isFile() && (entry.name.endsWith('.js') || entry.name.endsWith('.sh'))) {
+      acc.push(childRel);
+    }
+  }
+  return acc;
+}
+
 function readJsonOrNull(relPath) {
   try {
     const abs = path.join(REPO_ROOT, relPath);
@@ -72,14 +121,19 @@ function captureGovernanceRuleSnapshot() {
   const files = {};
   for (const relPath of GOVERNANCE_RULE_FILES) files[relPath] = sha256OrAbsent(relPath);
 
-  let gates = [];
-  try {
-    gates = fs.readdirSync(path.join(REPO_ROOT, GOVERNANCE_GATES_DIR))
-      .filter((file) => file.endsWith('.js'))
-      .sort();
-  } catch (err) {
-    logger.warn('[bugTriageService] diretório de gates ilegível', { error: err.message });
-  }
+  // GATES AUTORITATIVOS POR CONTEÚDO. Antes, `gates` era apenas a LISTA de nomes vinda de
+  // `readdirSync` — e um gate cujo corpo mudou (`if (failure) return 'GO'`) continuava passando,
+  // porque o nome não mudou. Agora cada arquivo entra com o sha256 do CONTEÚDO, e o manifesto é
+  // montado pela classificação (o diretório é a lista, não uma tabela mantida à mão).
+  const gatePaths = listGovernanceGateFiles();
+  const gateEntries = gatePaths.map((relPath) => contentEntry(relPath));
+  const contentManifest = governanceBaseline.buildContentManifest([
+    ...gateEntries,
+    ...GOVERNANCE_RULE_FILES.map((relPath) => contentEntry(relPath)),
+  ]);
+  // Mapa path→hash com TODOS os autoritativos (gates + configs): é o que `diffRuleBaseline` compara.
+  const contentHashes = {};
+  for (const [relPath, meta] of Object.entries(contentManifest.files)) contentHashes[relPath] = meta.sha256;
 
   const bugLoopManifest = readJsonOrNull('config/engineering-bug-loop-required-tests.json');
   const routerV2Manifest = readJsonOrNull('config/engineering-router-v2-required-tests.json');
@@ -87,12 +141,14 @@ function captureGovernanceRuleSnapshot() {
   const requirements = ((routerV2Manifest && routerV2Manifest.requiredTests) || []).map((t) => t.id).sort();
 
   return engine.captureRuleBaseline({
-    mandatoryGates: gates,
+    mandatoryGates: gatePaths.sort(),
     testManifest,
     requirements,
     thresholds: { bugLoopRequiredTests: testManifest.length, routerV2RequiredTests: requirements.length },
     policies: { selfModificationAutoApproval: 'FORBIDDEN_ON_HIGH_CRITICAL' },
-    files,
+    // `files` carrega o CONTEÚDO de cada artefato autoritativo (gates incluídos).
+    files: { ...files, ...contentHashes },
+    contentManifest,
   });
 }
 
@@ -223,11 +279,41 @@ async function triage(findingId, {
     contract.objective = `${contract.objective}\nPista (ocorrência anterior desta mesma falha, a CONFIRMAR): ${memory.lastKnownRootCause}`;
   }
 
-  const task = await engineeringTaskService.createTask(contract, {
+  // MISSION SOURCE AUTHORITY — A FIX TASK PERTENCE À MISSÃO E NASCE DA FONTE DELA.
+  //
+  // Sem estes dois vínculos, a correção era um trabalho AVULSO: (a) `mission_id` nulo ⇒ a task não
+  // herdava a fonte da missão e `patchApplyService` materializava o worktree do HEAD da `main`, onde
+  // o problema pode nem existir (ou existir de outra forma); (b) sem `source_commit`, o candidate do
+  // fix nascia com pai na `main` e não tinha como voltar para a fonte da missão. Era aqui que o fix
+  // se perdia.
+  const missionId = triaged.mission_id || null;
+  let sourceCommit = null;
+  let sourceRef = null;
+  let sourceMissionFence = null;
+  if (missionId) {
+    try {
+      await missionSourceService.ensureMissionSource(missionId, { actor });
+      const missionSource = await missionSourceService.resolveTaskSource(missionId);
+      sourceCommit = missionSource.currentCommit;
+      sourceRef = missionSource.integrationBranch;
+      sourceMissionFence = missionSource.fence;
+    } catch (err) {
+      logger.warn('[bugTriageService] falha ao resolver a fonte da missão para a fix task', {
+        findingId, missionId, error: err.message,
+      });
+    }
+  }
+
+  const task = await engineeringTaskService.createTask({
+    ...contract,
+    missionId,
+    sourceCommit,
+    sourceRef,
+    sourceMissionFence,
+  }, {
     createdBy: actor,
     idempotencyKey: `bugfix:${findingId}`,
-  });
-  const linked = await bugFindingService.linkFixTask(findingId, task.id, { actor, taskContract: contract, tenantId });
+  });  const linked = await bugFindingService.linkFixTask(findingId, task.id, { actor, taskContract: contract, tenantId });
 
   logger.info('[bugTriageService] task de correção criada', {
     findingId, taskId: task.id, category, severity,
@@ -267,7 +353,7 @@ async function canRunFixAutonomously(findingId) {
  * APROVAÇÃO HUMANA explícita de um fix de self-modification. É a ação mínima que a policy exige —
  * nunca substituível por um parecer de modelo.
  */
-async function approveSelfModification(findingId, { actor, actorType = null, authenticatedActorType = null, approvalRef = null, note = null, tenantId = null } = {}) {
+async function approveSelfModification(findingId, { actor, actorType = null, authenticatedActorType = null, approvalRef = null, note = null, tenantId = null, hasSelfModificationPermission = false } = {}) {
   // AUTORIDADE DO AVAL: HUMANO, e só humano. Um `actor` string qualquer não basta — a aprovação
   // que libera alteração nas próprias regras de julgamento não pode vir de service account, de
   // worker automático nem de um modelo. A decisão é do motor puro (autoridade única).
@@ -294,6 +380,28 @@ async function approveSelfModification(findingId, { actor, actorType = null, aut
     });
     logger.warn('[bugTriageService] aval de self-modification recusado', {
       findingId, actor, actorType, code: denied.code,
+    });
+    throw denied;
+  }
+
+  // RBAC GRANULAR: ser humano não basta. A alteração nas REGRAS QUE JULGAM o sistema exige a
+  // permissão ESPECÍFICA (`engineering:approve_self_modification`) — a permissão genérica de
+  // engenharia que aprova uma missão comum NÃO é autoridade para reescrever o critério. Fail-closed:
+  // `hasSpecificPermission` só vale `true` estrito.
+  const granular = engine.assessGranularApprovalAuthority({
+    actor,
+    actorType: authenticated || declared,
+    hasSpecificPermission: hasSelfModificationPermission === true,
+  });
+  if (!granular.allowed) {
+    const denied = Object.assign(new Error(granular.reason), {
+      code: granular.code,
+      stage: granular.stage,
+      requiredPermission: granular.permission,
+      actorType: granular.actorType,
+    });
+    logger.warn('[bugTriageService] aval de self-modification recusado por RBAC granular', {
+      findingId, actor, actorType, stage: granular.stage, code: denied.code,
     });
     throw denied;
   }

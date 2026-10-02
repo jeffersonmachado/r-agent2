@@ -24,6 +24,7 @@ const getEngineeringBugFindingEventModel = require('../../db/models/EngineeringB
 const { Op } = require('sequelize');
 const crypto = require('crypto');
 const engine = require('../../../engine/engineeringMission/bugFinding');
+const { parseCommand } = require('../../../engine/engineeringRouter/commandPolicy');
 const { emitMissionStage } = require('./missionEvents');
 const logger = require('../../utils/logger');
 
@@ -624,11 +625,30 @@ async function getFindingMemory(fingerprint, { excludeId = null } = {}) {
 
   const confirmed = priorFindings.filter((row) => row.confirmation_basis);
   const withFix = priorFindings.filter((row) => row.fix_task_id);
+  // SEGUNDA BARREIRA (a primeira é na ESCRITA, em `bugLoopCoordinatorService`).
+  //
+  // Esta memória é PERSISTENTE: um registro ruim gravado ontem volta hoje. Como ela é injetada em
+  // `test_commands` do contrato de correção, um valor que não é comando (medido: um UUID gravado em
+  // 2026-09-30) faz `parseCommand` rejeitar ⇒ `TEST_BLOCKED` ⇒ task RED ⇒ o laço nunca fecha, com o
+  // sintoma longe da causa.
+  //
+  // A barreira na escrita já impede a entrada de novos valores ruins; esta garante que o HISTÓRICO
+  // ruim não continue se propagando enquanto não é limpo. Descarte aqui é silencioso de propósito:
+  // o registro antigo não é um produtor ativo, é dado legado — quem precisa gritar é a escrita.
+  const isExecutableCommand = (value) => {
+    const candidate = String(value || '').trim();
+    if (candidate === '') return false;
+    try {
+      return parseCommand(candidate).allowed === true;
+    } catch (_) {
+      return false;
+    }
+  };
   const regressionCommands = Array.from(new Set(
     priorFindings.flatMap((row) => [
       ...(Array.isArray(row.regression_test_refs) ? row.regression_test_refs : []),
       ...(Array.isArray(row.regression_runs) ? row.regression_runs.flatMap((run) => (Array.isArray(run.commands) ? run.commands : [])) : []),
-    ]).filter(Boolean),
+    ]).filter(Boolean).filter(isExecutableCommand),
   ));
 
   return {

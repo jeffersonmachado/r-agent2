@@ -22,7 +22,7 @@ const { execFile } = require('child_process');
 const util = require('util');
 const crypto = require('crypto');
 const { ROOT } = require('./contextBuilderService');
-const { materializeWorktree, destroyWorkspace, applyPatch } = require('./patchApplyService');
+const { materializeWorktree, destroyWorkspace, applyPatch, resolveTaskBaseCommit } = require('./patchApplyService');
 const { runTestCommands } = require('./testRunnerService');
 const logger = require('../../utils/logger');
 
@@ -190,11 +190,15 @@ async function createPromotionCandidate({ taskId, attemptId, attemptNumber, work
   //    próprio `targetCommit` — sem indireção de "snapshot com pai real". Comparar com o HEAD
   //    real ATUAL do branch de trabalho prova se algo mudou em main enquanto a tentativa rodava
   //    — nunca promove sobre um alvo que já divergiu (TARGET_BASELINE_DIVERGED).
-  const targetHeadResult = await runGit(['rev-parse', 'HEAD']);
-  if (!targetHeadResult.ok) {
-    return { created: false, code: 'PROMOTION_HEAD_UNRESOLVABLE', evidence: { promotionAttemptedAt, error: targetHeadResult.stderr, validatedPatchHash } };
-  }
-  const targetHead = targetHeadResult.stdout;
+  //
+  //    MISSION SOURCE AUTHORITY: para uma task de MISSÃO, o "target" NÃO é o HEAD do ROOT — é o
+  //    commit da FONTE DA MISSÃO (`task.source_commit`), exatamente o mesmo de onde o workspace foi
+  //    materializado. Consequência deliberada: o PAI do candidate commit passa a ser o commit da
+  //    fonte da missão, então integrá-lo de volta é um FAST-FORWARD (`git update-ref`), não um merge
+  //    — e a próxima task da missão nasce já vendo o patch. Antes, o pai era sempre a `main`, e o
+  //    fix ficava numa branch cujo ancestral nunca entrava no caminho de execução da missão.
+  const baseResolution = await resolveTaskBaseCommit(taskId);
+  const targetHead = baseResolution.commit;
 
   const baselineHeadResult = await runGit(['rev-parse', 'HEAD'], { cwd: workspacePath });
   if (!baselineHeadResult.ok) {

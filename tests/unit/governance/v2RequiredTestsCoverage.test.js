@@ -30,7 +30,25 @@ describe('config dos 42 testes obrigatórios V2', () => {
 
   test('cobre exatamente os 42 IDs do prompt original (V2-01..V2-42)', () => {
     const expected = Array.from({ length: 42 }, (_, i) => `V2-${String(i + 1).padStart(2, '0')}`);
-    expect(items.map((item) => item.id)).toEqual(expected);
+    // Os 42 IDs ORIGINAIS precisam estar presentes, completos e na ordem canônica. A filtragem é
+    // deliberada: o config passou a conter requisitos ADICIONAIS de outras famílias (MISSION-SRC,
+    // BUG-WORKER, GOV-BASE, SELF-RBAC, RELEASE-*), declarados no MESMO selo — criar outro selo para
+    // eles seria exatamente o que a missão proíbe ("adicionar requisitos sem criar outro seal").
+    // A garantia de cobertura dos 42 originais continua intacta e é verificada abaixo.
+    const v2Ids = items.map((item) => item.id).filter((id) => /^V2-\d+$/.test(id));
+    expect(v2Ids).toEqual(expected);
+  });
+
+  test('requisitos ADICIONAIS são declarados, únicos e não colidem com a família V2', () => {
+    const extra = items.filter((item) => !/^V2-\d+$/.test(item.id));
+    // A extensão é real (o selo passou a cobrir o self-engineering), não um resíduo.
+    expect(extra.length).toBeGreaterThan(0);
+    // Sem duplicata em NENHUMA família: um ID repetido tornaria o gate ambíguo.
+    expect(new Set(items.map((item) => item.id)).size).toBe(items.length);
+    for (const item of extra) {
+      expect(item.id).toMatch(/^[A-Z][A-Z0-9]*(-[A-Z0-9]+)*$/);
+      expect(Array.isArray(item.suites) ? item.suites.length : 0).toBeGreaterThan(0);
+    }
   });
 
   test('todo requisito tem enunciado não vazio (nada de placeholder)', () => {

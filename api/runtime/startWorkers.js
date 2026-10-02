@@ -140,16 +140,73 @@ function startWorkers({
 
   // Bug Loop Worker (laço autônomo de bugs do Engineering Router) - best-effort.
   // Sem ele, um finding criado pelo hook de falha da missão só seria processado por chamada manual.
+  //
+  // NÃO É "IGNORADO SE FALHAR". O restante do RAP continua tolerante (o processo não cai), mas o
+  // subsistema de ENGENHARIA passa a se declarar DEGRADED/NO_GO quando este worker — que é
+  // OBRIGATÓRIO para ele — não sobe. Antes, uma falha aqui virava um `logger.warn` e a plataforma
+  // exibia saúde normal sem a capacidade que processa findings: um silêncio que esconde indisponível.
   if (processRef.env.ENABLE_BUG_LOOP_WORKER !== 'false') {
+    const { startBugLoopWorker, getBugLoopWorkerStatus } = require('../services/engineeringMission/bugLoopWorker');
     try {
-      const { startBugLoopWorker } = require('../services/engineeringMission/bugLoopWorker');
       const bugLoopIntervalMs = parseInt(processRef.env.ENGINEERING_BUG_LOOP_INTERVAL_MS || '15000', 10);
       const bugLoopBatch = parseInt(processRef.env.ENGINEERING_BUG_LOOP_BATCH || '10', 10);
-      startBugLoopWorker({ intervalMs: bugLoopIntervalMs, limit: bugLoopBatch });
+      const startResult = startBugLoopWorker({ intervalMs: bugLoopIntervalMs, limit: bugLoopBatch });
+      if (startResult && startResult.started === false && startResult.reason === 'start_failed') {
+        logger.error('[bugLoopWorker] worker OBRIGATÓRIO do subsistema de engenharia NÃO iniciou — engenharia marcada como DOWN', {
+          error: startResult.error,
+        });
+      }
     } catch (err) {
-      logger.warn('[bugLoopWorker] Falha ao iniciar worker (ignorado)', { error: err.message });
+      // Exceção NÃO tratada dentro do próprio start é o mesmo caso: o worker não está no ar. O erro
+      // é registrado no módulo (estado DOWN) e aqui em nível de erro, nunca como aviso silencioso.
+      logger.error('[bugLoopWorker] worker OBRIGATÓRIO do subsistema de engenharia FALHOU ao iniciar', {
+        error: err.message, code: err.code || null,
+      });
+      // Garante que o estado DOWN fique registrado mesmo quando a exceção escapou do worker.
+      try {
+        const status = getBugLoopWorkerStatus();
+        if (status.health !== 'DOWN') {
+          logger.warn('[bugLoopWorker] estado após falha de start', { health: status.health, code: status.code });
+        }
+      } catch (_) { /* diagnóstico best-effort */ }
     }
   }
+}
+
+/**
+ * SAÚDE DO SUBSISTEMA DE ENGENHARIA — exposta para health/observability.
+ *
+ * Regra: com o Engineer Router ATIVO, o worker do laço de bugs é OBRIGATÓRIO. Se ele estiver DOWN, a
+ * engenharia é NO_GO; DEGRADED/STOPPED, DEGRADED. A tolerância do resto do RAP permanece — o que
+ * muda é que a capacidade ausente deixa de ser invisível.
+ *
+ * Classificação DEVELOPMENT: este é diagnóstico de engenharia, não superfície de cliente.
+ */
+function getEngineeringWorkerHealth({ engineerRouterEnabled = null } = {}) {
+  const { assessEngineeringReadiness } = require('../../engine/engineeringMission/workerHealth');
+  const enabled = engineerRouterEnabled === null
+    ? process.env.ENABLE_BUG_LOOP_WORKER !== 'false'
+    : Boolean(engineerRouterEnabled);
+
+  let worker = null;
+  try {
+    worker = require('../services/engineeringMission/bugLoopWorker').getBugLoopWorkerStatus();
+  } catch (err) {
+    worker = {
+      type: 'BUG_LOOP', health: 'DOWN', state: 'DOWN', healthy: false,
+      code: 'WORKER_NOT_LOADABLE', reason: `não foi possível carregar o worker: ${err.message}`,
+    };
+  }
+
+  const readiness = assessEngineeringReadiness({ requiredWorkers: [worker], engineerRouterEnabled: enabled });
+  return {
+    engineeringReadiness: readiness.readiness,
+    code: readiness.code,
+    reason: readiness.reason,
+    blocking: readiness.blocking,
+    degraded: readiness.degraded,
+    workers: { bugLoop: worker },
+  };
 }
 
 /**
@@ -191,4 +248,5 @@ function stopWorkers() {
 module.exports = {
   startWorkers,
   stopWorkers,
+  getEngineeringWorkerHealth,
 };
