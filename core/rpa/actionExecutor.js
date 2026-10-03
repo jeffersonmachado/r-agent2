@@ -125,10 +125,71 @@ class ActionExecutor {
     }
   }
 
+  /**
+   * Divide uma lista de seletores por vírgula respeitando ASPAS, COLCHETES e
+   * PARÊNTESES.
+   *
+   * Defeito corrigido em 2026-10-02: o `split(',')` ingênuo desta função quebrava
+   * qualquer seletor com vírgula DENTRO do valor de um atributo ou de uma
+   * pseudo-classe. Caso real reproduzido:
+   *   `input[placeholder="Nome, documento, telefone ou código"]`
+   * era cortado em `input[placeholder="Nome` e o Playwright falhava com
+   * `Unexpected token "" while parsing css selector`. Como o passo era
+   * não-crítico, a falha cascateava silenciosamente até derrubar o assert final
+   * e o cenário era classificado como `infra_error` (mislabel: era falha FUNCIONAL).
+   *
+   * Vírgulas dentro de aspas, `[...]` ou `(...)` NÃO separam seletores.
+   */
   _splitSelectors(selector) {
     if (!selector || typeof selector !== 'string') return [];
-    return selector
-      .split(',')
+
+    const parts = [];
+    let current = '';
+    let quote = null;
+    let depth = 0;
+    let escaped = false;
+
+    for (const char of selector) {
+      if (escaped) {
+        current += char;
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        current += char;
+        escaped = true;
+        continue;
+      }
+      if (quote) {
+        current += char;
+        if (char === quote) quote = null;
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        quote = char;
+        current += char;
+        continue;
+      }
+      if (char === '(' || char === '[') {
+        depth += 1;
+        current += char;
+        continue;
+      }
+      if (char === ')' || char === ']') {
+        if (depth > 0) depth -= 1;
+        current += char;
+        continue;
+      }
+      if (char === ',' && depth === 0) {
+        parts.push(current);
+        current = '';
+        continue;
+      }
+      current += char;
+    }
+    parts.push(current);
+
+    return parts
       .map((s) => String(s).trim())
       .filter(Boolean);
   }
@@ -1330,8 +1391,10 @@ class ActionExecutor {
 
       if (action.waitFor) {
         const selector = this.replaceVariables(action.waitFor, data);
-        // Tenta múltiplos seletores se for uma lista separada por vírgula
-        const selectors = selector.split(',').map(s => s.trim());
+        // Tenta múltiplos seletores se for uma lista separada por vírgula.
+        // _splitSelectors respeita aspas/parênteses: vírgula dentro de
+        // `[attr="a, b"]` ou `:has-text("a, b")` NÃO é separador.
+        const selectors = this._splitSelectors(selector);
         let found = false;
         
         for (const sel of selectors) {
@@ -1424,7 +1487,7 @@ class ActionExecutor {
       }
       
       // Tenta múltiplos seletores se for uma lista separada por vírgula
-      const selectors = selector.split(',').map(s => s.trim());
+      const selectors = this._splitSelectors(selector);
       let foundSelector = null;
       let lastError = null;
       
@@ -1565,8 +1628,8 @@ class ActionExecutor {
 
       if (action.waitFor) {
         const waitSelector = this.replaceVariables(action.waitFor, data);
-        // Tenta múltiplos seletores para waitFor também
-        const waitSelectors = waitSelector.split(',').map(s => s.trim());
+        // Tenta múltiplos seletores para waitFor também (split respeita aspas)
+        const waitSelectors = this._splitSelectors(waitSelector);
         let foundWait = false;
         
         for (const sel of waitSelectors) {
@@ -1626,7 +1689,7 @@ class ActionExecutor {
       }
 
       // Tenta múltiplos seletores se for uma lista separada por vírgula
-      const selectors = selector.split(',').map(s => s.trim());
+      const selectors = this._splitSelectors(selector);
       let foundSelector = null;
       let lastError = null;
       
