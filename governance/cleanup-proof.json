@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-03T15:21:41.138Z",
+  "generatedAt": "2026-10-03T16:23:16.092Z",
   "runtimeClean": true,
   "workspaceClean": true,
-  "runtimeCheck": "\u001b[0;34m[runtime-clean] Inspecionando resíduos operacionais no workspace\u001b[0m\n\u001b[0;32m  ✓ removido: qa-mesh/meshEvidence\u001b[0m\n\u001b[0;32m  ✓ removido: replays\u001b[0m\n\u001b[0;32m  ✓ limpeza concluída; resíduos removidos: 2\u001b[0m\n",
+  "runtimeCheck": "\u001b[0;34m[runtime-clean] Inspecionando resíduos operacionais no workspace\u001b[0m\n\u001b[0;32m  ✓ removido: recordings\u001b[0m\n\u001b[0;32m  ✓ removido: replays\u001b[0m\n\u001b[0;32m  ✓ limpeza concluída; resíduos removidos: 2\u001b[0m\n",
   "workspaceArtifacts": []
 }

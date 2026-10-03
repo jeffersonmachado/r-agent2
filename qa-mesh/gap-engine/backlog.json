@@ -17,7 +17,7 @@
     "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
     "evidence": {
       "diverged": [
-        "scenarioRegistryFingerprint",
+        "sourceFingerprint",
         "chainFingerprint"
       ]
     },
