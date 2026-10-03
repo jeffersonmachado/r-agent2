@@ -128,6 +128,36 @@ function isInsideLinkedGitWorktree() {
   }
 }
 
+/**
+ * O ocupante da porta é o runner DESTE repositório? Identidade pela LINHA DE COMANDO.
+ *
+ * É o que permite limpar o próprio resíduo sem nunca tocar em processo alheio: qualquer coisa que
+ * não seja comprovadamente `services/engineering-runner/src/index.js` mantém o aborto fail-closed.
+ */
+function isOwnEngineeringRunnerProcess(pid) {
+  try {
+    // eslint-disable-next-line global-require
+    const { execFileSync } = require('child_process');
+    const args = execFileSync('ps', ['-o', 'args=', '-p', String(pid)], { encoding: 'utf8' }).trim();
+    return args.includes('services/engineering-runner/src/index.js');
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Espera a porta parar de responder (usado APÓS encerrar um resíduo nosso). */
+async function waitForPortFree(url, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    // eslint-disable-next-line no-await-in-loop
+    const occupant = await probeHealthOnce(url);
+    if (!occupant) return true;
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((resolve) => { setTimeout(resolve, 100); });
+  }
+  return false;
+}
+
 module.exports = async function engineeringRunnerGlobalSetup() {
   if (isInsideLinkedGitWorktree()) {
     process.stderr.write('[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).\n');
@@ -146,9 +176,35 @@ module.exports = async function engineeringRunnerGlobalSetup() {
   // erro nomeia o remédio em vez de se acumular.
   const occupant = await probeHealthOnce(`http://127.0.0.1:${RUNNER_PORT}/health`);
   if (occupant) {
+    // AUTO-CURA CIRCUNSCRITA AO PRÓPRIO RESÍDUO.
+    //
+    // O aborto abaixo é fail-closed e evita ACUMULAR órfãos, mas tem um efeito colateral medido
+    // (2026-10-03): quando um lote morre de forma ANORMAL (kill/timeout do runner de suítes), o
+    // globalTeardown não roda, o filho fica VIVO e o lote SEGUINTE aborta aqui. Como o Jest também
+    // não roda o teardown quando o globalSetup lança, o órfão nunca é limpo e a cascata é
+    // IRREVERSÍVEL — medido: batches 2..10 abortados e a execução autoritativa parando em 12 de 63
+    // suítes, o que bloqueia permanentemente os gates que dependem dela.
+    //
+    // Aqui só o resíduo COMPROVADAMENTE nosso (linha de comando) é encerrado. Processo estranho
+    // mantém o aborto: a guarda não é enfraquecida — ela deixa de punir o próprio lixo.
+    const leftoverPid = Number(occupant.pid);
+    if (Number.isFinite(leftoverPid) && leftoverPid > 0 && leftoverPid !== process.pid
+      && isOwnEngineeringRunnerProcess(leftoverPid)) {
+      try {
+        process.kill(leftoverPid, 'SIGKILL');
+        await waitForPortFree(`http://127.0.0.1:${RUNNER_PORT}/health`, 3000);
+        process.stderr.write(`[jest-global-setup] resíduo do próprio Engineering Runner (pid ${leftoverPid}) encerrado; subindo um novo.\n`);
+      } catch (_) {
+        // se a limpeza não funcionar, o aborto abaixo continua valendo (fail-closed preservado)
+      }
+    }
+  }
+
+  const stillOccupied = await probeHealthOnce(`http://127.0.0.1:${RUNNER_PORT}/health`);
+  if (stillOccupied) {
     throw new Error(
       `a porta ${RUNNER_PORT} já tem um processo respondendo em /health ANTES de subirmos o runner ` +
-      `(pid reportado ${Number(occupant.pid) || 'desconhecido'}) — runner ÓRFÃO de sessão anterior. ` +
+      `(pid reportado ${Number(stillOccupied.pid) || 'desconhecido'}) — runner ÓRFÃO de sessão anterior. ` +
       `Encerre quem segura a porta (ss -ltnp | grep ${RUNNER_PORT}) e rode de novo. ` +
       'Nenhum runner foi subido para não deixar mais um órfão.',
     );
