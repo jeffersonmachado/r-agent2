@@ -1,6 +1,6 @@
 # Operational Digital Twin
 
-- Status: partial
+- Status: complete
 - Platform maturity: enterprise-partial
 
 ## Observed signals

@@ -1,9 +1,24 @@
 {
-  "generatedAt": "2026-10-03T01:05:20.937Z",
-  "ok": false,
-  "zipPath": null,
-  "zipName": null,
+  "generatedAt": "2026-10-03T13:47:27.365Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20261003-012427.zip",
+  "zipName": "r-agent2-20261003-012427.zip",
+  "zipSha256": "342098846c7a554f1f4942da827ccb1def07d8dcdcb1aa0d058f7a8d64bfff1b",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "audited",
+  "candidateFallbackUsed": false,
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20261003-012427.manifest.json",
+  "manifestAudit": null,
+  "auditSatisfied": false,
+  "selfContainmentCheck": {
+    "passed": true,
+    "missing": []
+  },
   "requiredEntries": [
+    "governance/final-proof-report.json",
+    "governance/evidence-manifest.json",
+    "governance/blocker-engine.js",
+    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -29,15 +44,22 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
+  "entryCount": 18995,
   "missingEntries": [],
-  "error": "artifact_missing:none_found_in_dist",
-  "deferred": true,
-  "phase": "PRE_PACKAGE",
-  "status": "DEFERRED",
+  "missingEntryCodes": [],
+  "ok": false,
+  "error": "artifact_candidate_without_audit_passed",
+  "packageBinding": {
+    "boundTo": "r-agent2-20261003-012427.zip",
+    "sha256": "342098846c7a554f1f4942da827ccb1def07d8dcdcb1aa0d058f7a8d64bfff1b",
+    "immutable": true,
+    "selfProving": true,
+    "offlineAuditable": true
+  },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20261003010401462-d69dd8c5",
   "sourceFingerprint": "8b7145af13d79675b5525c32952e76bd04c615b990936f92b7622e29facdd57b",
-  "gitCommit": "398c63ec03af2a5db77a1f3b1973bb58b9e52a20",
-  "gitTree": "39f239adbded79e3f61093c9b76859ed9e91e49b"
+  "gitCommit": "98e003a9066c62cbbb3e1e97a5839e892c252d6a",
+  "gitTree": "bf79a5064bb4af34327d2d36f930bdfaee63e392"
 }

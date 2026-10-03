@@ -7,10 +7,10 @@
 - Blockers: none
 
 ## fitness
-- Classification: validated
+- Classification: production-like
 - Journeys: 10
 - Scenarios: 77
-- Blockers: qa_mesh_failures_open
+- Blockers: none
 
 ## food
 - Classification: production-like
