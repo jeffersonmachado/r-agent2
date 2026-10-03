@@ -100,6 +100,19 @@ async function getFinding(findingId) {
   return row ? toPlain(row) : null;
 }
 
+/**
+ * PROVENIÊNCIA REVERSA: dada uma task, qual finding ela existe para corrigir.
+ *
+ * O vínculo vive em `fix_task_id`, gravado por `linkFixTask` no momento da triagem. Sem esta
+ * consulta o runtime de integração não tinha como saber que um candidate era um BUG FIX — e a
+ * proveniência finding → task → candidate → integração ficava implícita e irrecuperável.
+ */
+async function findByFixTaskId(taskId) {
+  if (!taskId) return null;
+  const row = await model().findOne({ where: { fix_task_id: taskId } });
+  return row ? toPlain(row) : null;
+}
+
 async function getFindingHistory(findingId) {
   const Event = eventModel();
   const rows = await Event.findAll({ where: { finding_id: findingId }, order: [['created_at', 'ASC']] });
@@ -809,6 +822,7 @@ module.exports = {
   recordEvent,
   registerFinding,
   getFinding,
+  findByFixTaskId,
   getFindingHistory,
   listFindings,
   addEvidence,

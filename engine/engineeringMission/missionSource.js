@@ -514,6 +514,45 @@ function classifyStaleCandidateDisposition({
   };
 }
 
+/**
+ * PROVENIÊNCIA DA INTEGRAÇÃO — um candidate nasce de uma task GENÉRICA ou de uma task criada
+ * para corrigir um finding da Bug Autonomous Loop.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): o runtime de promoção chamava a integração com o tipo FIXO
+ * `TASK_CANDIDATE` e sem `findingId`, embora `integrateTaskCandidate` já aceitasse o parâmetro e a
+ * tabela já tivesse as colunas `finding_id`/`integration_type`. Um candidate nascido de um bug
+ * encontrado autonomamente era assim integrado como trabalho genérico: a cadeia
+ * finding → task → candidate → integração ficava IRRECUPERÁVEL depois, e não havia como responder
+ * "que bug este commit corrige?". O tipo tem de ser HONESTO, nunca presumido.
+ *
+ * Função pura: recebe o finding (ou null) e devolve exatamente o que o runtime deve persistir.
+ */
+function resolveIntegrationProvenance(finding = null) {
+  const hasFinding = Boolean(finding && finding.id);
+  if (!hasFinding) {
+    return {
+      integrationType: INTEGRATION_TYPES[0],
+      findingId: null,
+      isBugFix: false,
+      evidence: {},
+    };
+  }
+  return {
+    integrationType: INTEGRATION_TYPES[1],
+    findingId: finding.id,
+    isBugFix: true,
+    // Contexto do finding vai para a EVIDÊNCIA da integração: severidade/categoria explicam POR QUE
+    // o candidate foi aceito, e o fingerprint liga a integração ao defeito canônico observado.
+    evidence: {
+      findingId: finding.id,
+      findingSeverity: finding.severity || null,
+      findingCategory: finding.category || null,
+      findingFingerprint: finding.fingerprint || null,
+      findingStatus: finding.status || null,
+    },
+  };
+}
+
 module.exports = {
   MISSION_SOURCE_STATES,
   INTEGRATION_RESULTS,
@@ -526,6 +565,7 @@ module.exports = {
   classifyBranchAdoption,
   classifyIntegrationReconciliation,
   classifyStaleCandidateDisposition,
+  resolveIntegrationProvenance,
   MISSION_BRANCH_PREFIX,
   buildIntegrationBranchName,
   isMissionBranch,

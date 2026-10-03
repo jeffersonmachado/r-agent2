@@ -1240,11 +1240,31 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId, ru
         // exato da recusa persistido — nunca GREEN sobre trabalho que a missão não consegue usar.
         let missionIntegration = null;
         if (task.mission_id) {
+          // PROVENIÊNCIA DO BUG FIX (finding → task → candidate → integração).
+          // `integrateTaskCandidate` já aceitava `findingId` e a tabela já tinha `finding_id` /
+          // `integration_type`, mas aqui o tipo era FIXO 'TASK_CANDIDATE' e o finding nunca era
+          // passado: um candidate nascido de um bug encontrado autonomamente era integrado como
+          // trabalho genérico, e a cadeia de causa ficava irrecuperável depois. O vínculo vive em
+          // `fix_task_id` (gravado na triagem), então basta consultá-lo. A DECISÃO do que persistir
+          // é pura e vive em `missionSource.resolveIntegrationProvenance`.
+          let bugFinding = null;
+          try {
+            const bugFindingService = require('../engineeringMission/bugFindingService');
+            bugFinding = await bugFindingService.findByFixTaskId(taskId);
+          } catch (err) {
+            // Fail-soft DELIBERADO: não achar o vínculo não pode impedir a integração (o trabalho é
+            // real e passou pelos gates). O tipo apenas permanece o genérico, que é a verdade.
+            bugFinding = null;
+          }
+          const { resolveIntegrationProvenance } = require('../../../engine/engineeringMission/missionSource');
+          const provenance = resolveIntegrationProvenance(bugFinding);
+
           missionIntegration = await missionSourceService.integrateTaskCandidate({
             taskId,
             attemptId,
             candidateCommit: candidateResult.evidence.candidateCommit,
-            integrationType: 'TASK_CANDIDATE',
+            findingId: provenance.findingId,
+            integrationType: provenance.integrationType,
             // Posse vigente: quem integra é o dono do lease (o mesmo worker que promoveu).
             ownershipValid: Boolean(run && run.lease),
             // Integridade: o smoke pós-promoção confirmou que a árvore promovida é a árvore testada.
@@ -1255,6 +1275,8 @@ async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId, ru
               validatedPatchHash: candidateResult.evidence.validatedPatchHash,
               postPromotionTestPass: verifyResult.postPromotionTestPass === true,
               promotionStatus: promotionEvidence.promotionStatus,
+              isBugFix: provenance.isBugFix === true,
+              ...provenance.evidence,
             },
           });
 
