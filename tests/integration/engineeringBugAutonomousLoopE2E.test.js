@@ -293,8 +293,21 @@ describe('BUG_AUTONOMOUS_LOOP — missão → bug → finding → reprodução �
     expect(resumable.some((m) => m.id === mission.id)).toBe(true);
 
     // Nenhuma missão nova foi criada para o bug (o ciclo voltou para a MESMA missão).
+    //
+    // ESCOPO POR EXECUÇÃO, nunca pelo banco inteiro. O banco é COMPARTILHADO e pode conter missões
+    // RESIDUAIS do mesmo fixture, deixadas por execuções interrompidas — medido em 2026-10-03: uma
+    // missão órfã (mission_source_state=PENDING, base de commit nula) de um run anterior fez um
+    // `toHaveLength(1)` global falhar; como `jest.config.cjs` tem `bail: 1`, essa única falha
+    // abortou o lote e deixou mais 5 suítes NOT_EXECUTED, o que por sua vez marcou a execução
+    // autoritativa como FAIL. Asserção que depende de estado global acumulado transforma resíduo
+    // de uma execução em falha de outra.
+    //
+    // A propriedade que importa continua sendo provada, e mais precisamente: o ciclo NÃO criou
+    // missão nova. Qualquer missão criada a partir desta execução faria a contagem passar de 1.
     const missions = await index.getEngineeringMission().findAll({ where: { original_mission: 'validar o pipeline de engenharia com o fixture controlado' } });
-    expect(missions).toHaveLength(1);
+    const createdFromThisRun = missions.filter((m) => m.id === mission.id || m.createdAt >= mission.createdAt);
+    expect(createdFromThisRun).toHaveLength(1);
+    expect(createdFromThisRun[0].id).toBe(mission.id);
   });
 
   test('o patch do ciclo de bug NUNCA altera o working tree principal (isolamento real)', () => {
