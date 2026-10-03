@@ -1077,6 +1077,11 @@ module.exports = {
   listIntegrations,
   recordIntegration,
   // IntegrationIntent durável (fase de crash-safety da fonte da missão).
+  // EXPORTADO PARA A PROVA DE CRASH — não é API pública de negócio. O E2E precisa matar um processo
+  // EXATAMENTE entre o `git update-ref` e o CAS do banco, e essa é a única função que possui essa
+  // janela. Sem este seam, o ponto mais crítico da autoridade de fonte era impossível de provar por
+  // processo real (o failpoint existia documentado para um E2E que não conseguia alcançá-lo).
+  advanceMissionSource,
   prepareIntegrationIntent,
   transitionIntegrationIntent,
   reconcileMissionSourceIntents,
