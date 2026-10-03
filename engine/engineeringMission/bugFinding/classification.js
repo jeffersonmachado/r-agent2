@@ -77,12 +77,19 @@ const BASE_SEVERITY_BY_CATEGORY = Object.freeze({
   TIMEOUT: 'LOW',
   PERFORMANCE: 'MEDIUM',
   CONFIGURATION: 'MEDIUM',
+  MISSION_SOURCE: 'MEDIUM',
   TEST_DEFECT: 'LOW',
   UNKNOWN: 'MEDIUM',
 });
 
-/** Categorias que NÃO podem ser resolvidas por patch de código de aplicação. */
-const NON_APPLICATION_CATEGORIES = Object.freeze(['INFRA', 'PROVIDER', 'CONFIGURATION']);
+/**
+ * Categorias que NÃO podem ser resolvidas por patch de código de aplicação.
+ *
+ * `MISSION_SOURCE` entra aqui pelo mesmo motivo que INFRA/PROVIDER/CONFIGURATION: a causa está
+ * FORA do código do produto. Sem isto, "a fonte da missão avançou enquanto a task codava" abria
+ * uma fix task de aplicação e gastava um ciclo autônomo inteiro de coder+review+regressão.
+ */
+const NON_APPLICATION_CATEGORIES = Object.freeze(['INFRA', 'PROVIDER', 'CONFIGURATION', 'MISSION_SOURCE']);
 
 /** Categorias cujo fix exige revisor de segurança dedicado. */
 const SECURITY_REVIEW_CATEGORIES = Object.freeze(['SECURITY']);
@@ -130,6 +137,9 @@ function inferCategory(input = {}) {
 
   // Mapeamentos de origem com prioridade (a origem é um fato, não uma opinião).
   if (source === 'GOVERNANCE_INCONSISTENCY') return 'GOVERNANCE';
+  // Origem de FONTE: por definição não é defeito do produto — classificar pelo texto aqui deixaria
+  // um código `MISSION_SOURCE_*` cair em BUG e virar fix task de aplicação.
+  if (source === 'MISSION_SOURCE') return 'MISSION_SOURCE';
   if (source === 'STALE_WRITE' || source === 'LEASE_FENCING') return 'CONCURRENCY';
   if (source === 'PROCESS_CRASH' && /crash loop|restart loop/i.test(text)) return 'RECOVERY';
   if (source === 'PROVIDER_ERROR') return 'PROVIDER';

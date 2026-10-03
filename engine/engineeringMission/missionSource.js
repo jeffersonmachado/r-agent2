@@ -553,6 +553,96 @@ function resolveIntegrationProvenance(finding = null) {
   };
 }
 
+/**
+ * FALHA DA CAMADA DE FONTE ≠ BUG DE APLICAÇÃO.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): o hook de falha de missão abria finding com `source:'EXCEPTION'`
+ * para QUALQUER não-GREEN. `inferCategory` mapeia EXCEPTION → BUG e `requiresApplicationFix('BUG')`
+ * é verdadeiro, então "a fonte da missão avançou enquanto a task codava" virava fix task de
+ * APLICAÇÃO — um ciclo inteiro de coder+review+regressão gasto em algo que não é defeito do produto.
+ * `classifyStaleCandidateDisposition` já descrevia exatamente isto e nunca foi ligada ao hook.
+ *
+ * O prefixo `MISSION_SOURCE_` é, por construção, vocabulário da própria camada de fonte: nenhum
+ * código com esse prefixo significa "o produto tem defeito". Os dois códigos sem prefixo são
+ * igualmente de fonte, e não de produto.
+ *
+ * CONSERVADOR DE PROPÓSITO: `PRECONDITION_FAILED` fica FORA. É um wrapper que também carrega
+ * condições de QUALIDADE do trabalho (sem test run, sem review, sem regressão) — tratá-lo como
+ * "não é problema de código" silenciaria trabalho que precisa acontecer de verdade.
+ */
+const SOURCE_FAILURE_CODES = Object.freeze([
+  'STALE_CANDIDATE',
+  'CONCURRENT_MISSION_SOURCE_UPDATE',
+]);
+
+/** Códigos com prefixo de fonte que NÃO são falha (no-op/duplicidade) — não podem pedir replan. */
+const SOURCE_NON_FAILURE_CODES = Object.freeze([
+  'MISSION_SOURCE_UNCHANGED',
+  'ALREADY_INTEGRATED',
+]);
+
+function classifySourceFailure({
+  reasonCode = null,
+  candidateBaseCommit = null,
+  missionCurrentCommit = null,
+  reapplyConflicts = false,
+} = {}) {
+  const code = typeof reasonCode === 'string' ? reasonCode.trim() : '';
+  const isSourceFailure = code !== ''
+    && !SOURCE_NON_FAILURE_CODES.includes(code)
+    && (code.startsWith('MISSION_SOURCE_') || SOURCE_FAILURE_CODES.includes(code));
+
+  if (!isSourceFailure) {
+    return {
+      isSourceFailure: false,
+      disposition: null,
+      requiresReplan: false,
+      createsApplicationBug: true,
+      strategy: null,
+      category: null,
+      code: code || null,
+      reason: code
+        ? `código ${code} não é falha da camada de fonte — segue o caminho normal`
+        : 'sem código de falha declarado — não é possível afirmar que a origem é a fonte da missão',
+    };
+  }
+
+  // Commits conhecidos ⇒ a decisão de stale é DELEGADA à função pura que já existe, nunca a um
+  // segundo classificador em paralelo.
+  if (candidateBaseCommit || missionCurrentCommit) {
+    const stale = classifyStaleCandidateDisposition({
+      candidateBaseCommit,
+      missionCurrentCommit,
+      reapplyConflicts,
+    });
+    if (stale.requiresReplan) {
+      return { ...stale, isSourceFailure: true, category: 'MISSION_SOURCE', code: stale.code || code };
+    }
+  }
+
+  // Sem commits conhecidos, o PRÓPRIO CÓDIGO é a autoridade sobre qual condição ocorreu — ele foi
+  // emitido por quem tinha o dado em mãos. `STALE_CANDIDATE` significa stale (reancorar e
+  // reaplicar); conflito na reaplicação e replan explícito escalam para task de replan. Nos dois
+  // casos `requiresReplan` é verdadeiro: nenhuma das duas condições se resolve com código de produto.
+  const disposition = (code === 'STALE_CANDIDATE' && reapplyConflicts !== true)
+    ? 'SOURCE_STALE'
+    : 'REPLAN_REQUIRED';
+  const strategy = disposition === 'SOURCE_STALE' ? 'REANCHOR_AND_REAPPLY' : 'CREATE_REPLAN_TASK';
+
+  return {
+    isSourceFailure: true,
+    disposition,
+    requiresReplan: true,
+    createsApplicationBug: false,
+    strategy,
+    category: 'MISSION_SOURCE',
+    code,
+    reason: disposition === 'SOURCE_STALE'
+      ? `a fonte da missão avançou desde a base do candidate (${code}) — reancorar e reaplicar o patch; NÃO é bug de aplicação`
+      : `a fonte da missão não aceitou o candidate (${code}) — exige replan/reancoragem, não correção de código de aplicação`,
+  };
+}
+
 module.exports = {
   MISSION_SOURCE_STATES,
   INTEGRATION_RESULTS,
@@ -566,6 +656,8 @@ module.exports = {
   classifyIntegrationReconciliation,
   classifyStaleCandidateDisposition,
   resolveIntegrationProvenance,
+  classifySourceFailure,
+  SOURCE_FAILURE_CODES,
   MISSION_BRANCH_PREFIX,
   buildIntegrationBranchName,
   isMissionBranch,

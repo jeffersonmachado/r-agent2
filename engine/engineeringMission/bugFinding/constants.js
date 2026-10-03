@@ -92,6 +92,9 @@ const FINDING_CATEGORIES = Object.freeze([
   'CONCURRENCY',
   'RECOVERY',
   'GOVERNANCE',
+  // O problema está na FONTE da missão (candidate stale, fonte divergente, conflict), não no
+  // produto. Categoria própria para que o laço NUNCA abra fix task de aplicação para isto.
+  'MISSION_SOURCE',
   'TEST_DEFECT',
   'UNKNOWN',
 ]);

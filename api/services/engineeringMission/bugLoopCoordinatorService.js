@@ -758,16 +758,41 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
     logger.warn('[bugLoopCoordinator] falha ao resolver proveniência da missão', { missionId, error: err.message });
   }
 
+  // ------------------------------------------------------- FALHA DE FONTE ≠ BUG DE APLICAÇÃO
+  // DEFEITO ELIMINADO (2026-10-03): qualquer não-GREEN abria finding com `source:'EXCEPTION'`, que
+  // `inferCategory` mapeia para BUG e `requiresApplicationFix(true)` aceita. Assim um candidate
+  // STALE — "a fonte da missão avançou enquanto a task codava" — virava fix task de APLICAÇÃO e
+  // gastava um ciclo autônomo inteiro de coder+review+regressão perseguindo um defeito inexistente
+  // no produto. `classifySourceFailure` é pura e decide a origem; `classifyStaleCandidateDisposition`
+  // já descrevia exatamente este caso e nunca estava ligada ao hook.
+  const { classifySourceFailure } = require('../../../engine/engineeringMission/missionSource');
+  const sourceFailure = classifySourceFailure({
+    reasonCode: result.reasonCode || null,
+    candidateBaseCommit: extra.candidateBaseCommit || null,
+    missionCurrentCommit: extra.missionCurrentCommit || null,
+    reapplyConflicts: extra.reapplyConflicts === true,
+  });
+  if (sourceFailure.isSourceFailure) {
+    logger.warn('[bugLoopCoordinator] falha da camada de FONTE — não abre correção de aplicação', {
+      missionId,
+      taskId,
+      code: sourceFailure.code,
+      disposition: sourceFailure.disposition,
+    });
+  }
+
   return bugFindingService.registerFinding({
     missionId,
     taskId,
     provenance,
-    source: extra.source || 'EXCEPTION',
+    source: sourceFailure.isSourceFailure ? 'MISSION_SOURCE' : (extra.source || 'EXCEPTION'),
     title,
-    description: extra.description || `resultado real da execução: ${status}`,
+    description: sourceFailure.isSourceFailure
+      ? `${sourceFailure.reason} (código ${sourceFailure.code}; disposição ${sourceFailure.disposition})`
+      : (extra.description || `resultado real da execução: ${status}`),
     expectedBehavior: 'a task da missão conclui em GREEN pelos seus próprios gates',
     observedBehavior: `status=${status}${result.reasonCode ? ` reasonCode=${result.reasonCode}` : ''}`,
-    category: extra.category || undefined,
+    category: sourceFailure.isSourceFailure ? 'MISSION_SOURCE' : (extra.category || undefined),
     subsystem: extra.subsystem || 'ENGINEERING_MISSION',
     symbol: `mission_task:${status}`,
     signals: [],
