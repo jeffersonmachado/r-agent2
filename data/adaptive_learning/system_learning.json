@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20260924055903 horário de atendimento hortela penhasco mandala cacto horário atendimento hortela",
-        "success": true,
-        "confidence": 0.6680430452070911,
-        "chunksFound": 10,
-        "timestamp": "2026-09-24T06:00:59.709196"
-      },
-      {
-        "query": "QASEG20260924055903 horário de atendimento hortela penhasco mandala cacto horário atendimento hortela",
-        "success": true,
-        "confidence": 0.6486121592691991,
-        "chunksFound": 10,
-        "timestamp": "2026-09-24T06:01:04.481364"
-      },
-      {
-        "query": "QASEG20260924071559 horário de atendimento neblina penhasco bussola orquidea horário atendimento neblina",
-        "success": true,
-        "confidence": 0.6918977714626284,
-        "chunksFound": 9,
-        "timestamp": "2026-09-24T07:19:22.903761"
-      },
-      {
-        "query": "QASEG20260924071559 horário de atendimento neblina penhasco bussola orquidea horário atendimento neblina",
-        "success": true,
-        "confidence": 0.6794685839775303,
-        "chunksFound": 8,
-        "timestamp": "2026-09-24T07:19:24.538597"
-      },
-      {
         "query": "QA jornada rag_documents jornada",
         "success": true,
         "confidence": 0.5842524667968161,
@@ -702,17 +674,45 @@
         "confidence": 0.6756230311790663,
         "chunksFound": 9,
         "timestamp": "2026-10-03T14:14:24.335139"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-03T14:55:13.869983"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-03T15:01:51.457474"
+      },
+      {
+        "query": "QASEG20261003150537 horário de atendimento lagoa fagulha jabuti sereia horário atendimento lagoa",
+        "success": true,
+        "confidence": 0.696582343395187,
+        "chunksFound": 8,
+        "timestamp": "2026-10-03T15:05:40.563735"
+      },
+      {
+        "query": "QASEG20261003150537 horário de atendimento lagoa fagulha jabuti sereia horário atendimento lagoa",
+        "success": true,
+        "confidence": 0.6695119454293837,
+        "chunksFound": 10,
+        "timestamp": "2026-10-03T15:05:42.687758"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 122,
-    "successfulQueries": 122,
+    "totalQueries": 126,
+    "successfulQueries": 126,
     "failedQueries": 0,
-    "avgConfidence": 0.6753892762741164,
-    "lastUpdated": "2026-10-03T14:14:24.335070"
+    "avgConfidence": 0.6788504494180152,
+    "lastUpdated": "2026-10-03T15:05:42.687683"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-03T14:14:24.335921"
+  "updatedAt": "2026-10-03T15:05:42.688575"
 }
