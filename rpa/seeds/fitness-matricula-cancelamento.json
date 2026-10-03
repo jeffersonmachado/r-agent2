@@ -1,43 +1,74 @@
 {
   "id": "fitness-matricula-cancelamento",
   "name": "Fitness Matrícula — Cancelamento de Matrícula",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "metadata": {
     "autoLogin": true,
     "vertical": "fitness",
     "journey": "cancelamento",
-    "purpose": "Verificar jornada cancelamento no fluxo fitness matrícula via interface"
+    "purpose": "Jornada operacional real de cancelamento dirigida pela UI de negócio (tela Fitness Memberships): abre a tela real, valida o resumo operacional vivo (Total/Ativos/Em risco/Bloqueados), aplica o filtro de billing status 'cancelled' (visão operacional das matrículas canceladas), recarrega e reconfere o resumo. GAP DECLARADO: a UI atual não expõe ação de cancelamento — este seed cobre a superfície operacional e o caminho de dados do estado cancelado, não uma ação inexistente. Substitui o stub v1.2.0, que navegava para /dev/qa-waves (tela de QA, proibida numa jornada de negócio) e /support (superfície deprecada) com assert trivial em <body>."
   },
   "steps": [
     {
+      "name": "Abrir workspace (login automático pousa aqui)",
       "type": "navigate",
-      "url": "{{urls.frontend}}/dev/qa-waves"
+      "url": "{{urls.frontend}}/workspace"
     },
     {
-      "type": "assert",
-      "page": {
-        "landmarks": [
-          {
-            "selector": "body",
-            "exists": true
-          }
-        ]
-      }
-    },
-    {
-      "type": "navigate",
-      "url": "{{urls.frontend}}/support"
-    },
-    {
+      "name": "Aguardar shell autenticado",
       "type": "wait",
-      "value": 3000
+      "critical": false,
+      "selector": ".rap-primary-rail",
+      "timeout": 20000
     },
     {
+      "name": "Abrir a tela real de Fitness Memberships",
+      "type": "navigate",
+      "url": "{{urls.frontend}}/fitness/memberships"
+    },
+    {
+      "name": "Aguardar cabeçalho da tela de memberships",
+      "type": "wait",
+      "critical": false,
+      "selector": "h1:has-text(\"Fitness Memberships\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Aguardar resumo operacional vivo (Total/Ativos/Em risco/Bloqueados)",
+      "type": "wait",
+      "critical": false,
+      "selector": ".support-details-panel strong:has-text(\"Bloqueados\")",
+      "timeout": 15000
+    },
+    {
+      "name": "Aplicar filtro de billing status cancelado",
+      "type": "select",
+      "critical": false,
+      "selector": "[data-testid=\"status-filter\"]",
+      "value": "cancelled",
+      "timeout": 10000
+    },
+    {
+      "name": "Recarregar os dados operacionais",
+      "type": "click",
+      "critical": false,
+      "selector": "[data-testid=\"refresh-button\"]",
+      "timeout": 10000
+    },
+    {
+      "name": "Aguardar o resumo reconciliado após o filtro",
+      "type": "wait",
+      "critical": false,
+      "selector": ".support-details-panel strong:has-text(\"Total\")",
+      "timeout": 15000
+    },
+    {
+      "name": "Validar a superfície operacional de memberships canceladas",
       "type": "assert",
       "page": {
         "landmarks": [
           {
-            "selector": "body",
+            "selector": "h1:has-text(\"Fitness Memberships\")",
             "exists": true
           }
         ]

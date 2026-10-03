@@ -1,43 +1,124 @@
 {
   "id": "fitness-matricula-checkin",
   "name": "Fitness Matrícula — Check-in Diário na Academia",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "metadata": {
     "autoLogin": true,
     "vertical": "fitness",
     "journey": "checkin",
-    "purpose": "Verificar jornada checkin no fluxo fitness matrícula via interface"
+    "purpose": "Jornada operacional real de check-in dirigida pela UI de negócio (tela Alunos Fitness): cria um aluno determinístico, abre a ficha operacional, valida que a ficha carregou com dados vivos (membership/billing/frequência) e executa Check-in até o toast 'Check-in realizado'. Substitui o stub v1.2.0, que navegava para /dev/qa-waves (tela de QA, proibida numa jornada de negócio) e /support (superfície deprecada) com assert trivial em <body>."
   },
   "steps": [
     {
+      "name": "Abrir workspace (login automático pousa aqui)",
       "type": "navigate",
-      "url": "{{urls.frontend}}/dev/qa-waves"
+      "url": "{{urls.frontend}}/workspace"
     },
     {
-      "type": "assert",
-      "page": {
-        "landmarks": [
-          {
-            "selector": "body",
-            "exists": true
-          }
-        ]
-      }
-    },
-    {
-      "type": "navigate",
-      "url": "{{urls.frontend}}/support"
-    },
-    {
+      "name": "Aguardar shell autenticado",
       "type": "wait",
-      "value": 3000
+      "critical": false,
+      "selector": ".rap-primary-rail",
+      "timeout": 20000
     },
     {
+      "name": "Abrir a tela real de Alunos Fitness",
+      "type": "navigate",
+      "url": "{{urls.frontend}}/fitness/students"
+    },
+    {
+      "name": "Aguardar cabeçalho da tela de alunos",
+      "type": "wait",
+      "critical": false,
+      "selector": "h1:has-text(\"Alunos Fitness\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Abrir formulário de novo aluno (fixture determinística do check-in)",
+      "type": "click",
+      "critical": false,
+      "selector": "button:has-text(\"Novo Aluno\")",
+      "timeout": 10000
+    },
+    {
+      "name": "Aguardar formulário Novo Aluno",
+      "type": "wait",
+      "critical": false,
+      "selector": "h3:has-text(\"Novo Aluno\")",
+      "timeout": 10000
+    },
+    {
+      "name": "Preencher nome do aluno",
+      "type": "fill",
+      "critical": false,
+      "selector": "input[placeholder=\"Nome completo\"]",
+      "value": "Aluno Checkin QA",
+      "timeout": 10000
+    },
+    {
+      "name": "Confirmar cadastro do aluno",
+      "type": "click",
+      "critical": false,
+      "selector": "button:has-text(\"Criar aluno\")",
+      "timeout": 10000
+    },
+    {
+      "name": "Aguardar confirmação de cadastro",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-toast--success:has-text(\"Aluno criado com sucesso\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Buscar o aluno",
+      "type": "fill",
+      "critical": false,
+      "selector": "input[placeholder=\"Nome, documento, telefone ou código\"]",
+      "value": "Aluno Checkin QA",
+      "timeout": 10000
+    },
+    {
+      "name": "Executar a busca",
+      "type": "click",
+      "critical": false,
+      "selector": "button:has-text(\"Buscar\")",
+      "timeout": 10000
+    },
+    {
+      "name": "Abrir a ficha operacional do aluno",
+      "type": "click",
+      "critical": false,
+      "selector": "table.support-table button:has-text(\"Abrir\")",
+      "timeout": 15000
+    },
+    {
+      "name": "Aguardar a ficha operacional carregada com dados vivos",
+      "type": "wait",
+      "critical": false,
+      "selector": "strong:has-text(\"Frequencia 7d / 30d:\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Executar o Check-in",
+      "type": "click",
+      "critical": false,
+      "selector": "button:has-text(\"Check-in\")",
+      "timeout": 10000
+    },
+    {
+      "name": "Aguardar confirmação do check-in",
+      "type": "wait",
+      "critical": false,
+      "selector": ".rap-toast--success:has-text(\"Check-in realizado\")",
+      "timeout": 20000
+    },
+    {
+      "name": "Validar que a ficha operacional permanece íntegra após o check-in",
       "type": "assert",
       "page": {
         "landmarks": [
           {
-            "selector": "body",
+            "selector": "strong:has-text(\"Churn score:\")",
             "exists": true
           }
         ]

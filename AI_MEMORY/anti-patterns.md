@@ -13,4 +13,14 @@ Forbidden or dangerous practices:
 - Using synthetic fallback as proof of real runtime.
 - Editing `.impl.js` wrappers incorrectly when local convention says implementation lives in `.impl.js`.
 - Adding direct DB or in-memory bypasses that weaken tenant isolation.
+- Declarar cobertura de jornada de negócio com passo vacuoso: navegar para tela de QA
+  (`/dev/*`), RPA técnico ou `/support` (superfície deprecada) e assertar apenas
+  `<body>` exists. É cobertura declarada que não exercita o negócio — e ainda viola a
+  segregação de experiência (tela DEVELOPMENT dentro de jornada PRODUCTION).
+- Teste que MUTA artefato gerado e compartilhado do repositório (ex.: apagar/reescrever
+  `reports/*.json` que outro teste lê): o Jest executa ARQUIVOS de teste em PARALELO, então
+  a suíte passa com o arquivo isolado e FALHA no agregado, sem relação com código de
+  produção. Backup/restore em `afterEach` NÃO isola entre arquivos. Teste que muta deve
+  operar em caminho TEMPORÁRIO via override do produtor (ex.: `JOURNEY_PROJECTIONS_OUTPUT_PATH`
+  definido antes do `require`), nunca no artefato real.
 
