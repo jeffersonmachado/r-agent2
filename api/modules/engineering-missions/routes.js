@@ -55,6 +55,7 @@ const ROUTE_ACTIONS = Object.freeze([
   { group: 'missions', method: 'POST', pattern: /^\/resume-interrupted\/?$/, action: 'execute' },
   { group: 'missions', method: 'GET', pattern: /^\/?$/, action: 'read' },
   { group: 'missions', method: 'POST', pattern: /^\/?$/, action: 'create' },
+  { group: 'missions', method: 'GET', pattern: /^\/workers\/health\/?$/, action: 'read' },
   { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/preview\/?$/, action: 'read' },
   { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/versions\/?$/, action: 'read' },
   { group: 'missions', method: 'GET', pattern: /^\/[^/]+\/approvals\/?$/, action: 'read' },
@@ -213,6 +214,37 @@ function createEngineeringMissionRoutes({ buildDeps }) {
   }
 
   // ── Overview e listagem ────────────────────────────────────────────────────────────────────
+
+  /**
+   * SAÚDE DOS WORKERS DE ENGENHARIA — o consumidor REAL que faltava (DEVELOPMENT).
+   *
+   * DEFEITO ELIMINADO (2026-10-03): `getEngineeringWorkerHealth()` já existia e sabia classificar
+   * worker DOWN como NO_GO, mas NENHUMA superfície o consumia — com o laço de bugs morto, a
+   * prontidão de engenharia seguia invisível: não havia onde observar nem o que bloquear. Existir
+   * em código e não ser consumido é indistinguível de não existir.
+   *
+   * A guarda mantém a segregação: classificação DEVELOPMENT e permissão `engineering:read`, de modo
+   * que diagnóstico de engenharia não vaza para a superfície PRODUCTION do cliente.
+   */
+  router.get('/engineering/missions/workers/health', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!guard(req, res, deps)) return;
+    try {
+      const { getEngineeringWorkerHealth } = require('../../runtime/startWorkers');
+      const health = getEngineeringWorkerHealth();
+      deps.sendJson(res, 200, {
+        engineeringReadiness: health.engineeringReadiness,
+        code: health.code,
+        reason: health.reason,
+        blocking: health.blocking,
+        degraded: health.degraded,
+        worker: health.workers ? health.workers.bugLoop : null,
+        boundedBy: 'DEVELOPMENT',
+      });
+    } catch (err) {
+      handleError(res, deps, err, 'worker-health');
+    }
+  });
 
   router.get('/engineering/missions/overview', async (req, res) => {
     const deps = buildDeps(req, res);
