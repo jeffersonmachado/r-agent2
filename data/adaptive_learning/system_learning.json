@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-25T15:37:46.461211"
-      },
-      {
-        "query": "QASEG20260925161146 horário de atendimento penhasco hortela zimbro sereia horário atendimento penhasco",
-        "success": true,
-        "confidence": 0.6393452234805299,
-        "chunksFound": 8,
-        "timestamp": "2026-09-25T16:11:49.123479"
-      },
-      {
-        "query": "QASEG20260925161146 horário de atendimento penhasco hortela zimbro sereia horário atendimento penhasco",
-        "success": true,
-        "confidence": 0.618736314177368,
-        "chunksFound": 9,
-        "timestamp": "2026-09-25T16:11:51.992311"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-25T16:38:08.108862"
-      },
-      {
         "query": "QASEG20260925171015 horário de atendimento cacto kilim bussola cacto horário atendimento cacto",
         "success": true,
         "confidence": 0.7310221482508082,
@@ -702,17 +674,45 @@
         "confidence": 0.6695119454293837,
         "chunksFound": 10,
         "timestamp": "2026-10-03T15:05:42.687758"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-03T23:03:44.522282"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-03T23:10:55.109463"
+      },
+      {
+        "query": "QASEG20261003231357 horário de atendimento sereia tundra neblina yuca horário atendimento sereia",
+        "success": true,
+        "confidence": 0.655318429661143,
+        "chunksFound": 9,
+        "timestamp": "2026-10-03T23:13:59.797478"
+      },
+      {
+        "query": "QASEG20261003231357 horário de atendimento sereia tundra neblina yuca horário atendimento sereia",
+        "success": true,
+        "confidence": 0.6483815382579312,
+        "chunksFound": 10,
+        "timestamp": "2026-10-03T23:14:01.646059"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 126,
-    "successfulQueries": 126,
+    "totalQueries": 130,
+    "successfulQueries": 130,
     "failedQueries": 0,
-    "avgConfidence": 0.6788504494180152,
-    "lastUpdated": "2026-10-03T15:05:42.687683"
+    "avgConfidence": 0.6752945321645181,
+    "lastUpdated": "2026-10-03T23:14:01.646047"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-03T15:05:42.688575"
+  "updatedAt": "2026-10-03T23:14:01.646155"
 }

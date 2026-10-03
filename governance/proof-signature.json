@@ -1,62 +1,62 @@
 {
-  "generatedAt": "2026-10-03T16:23:15.951Z",
+  "generatedAt": "2026-10-03T22:52:19.855Z",
   "sourceArtifact": "qa/qa-waves-enterprise-governance.json",
-  "signature": "hmac-sha256:545b744256937b800facf89bbde890a080e5a43121e9cfe4058513c7c63f8777",
-  "reportHash": "6c2faa99cda0e37c1111667d5121c7f2f8b7d7d26c6788eeb7f85d985ca66021",
+  "signature": "hmac-sha256:552a5ee34af7dfd1bc007c9c84db5835ab700b2edf73f99fe5544781185b0976",
+  "reportHash": "7569adcedea999730edfe1abd895cd6f80788bdd239eb50b77e648faf6d4d75d",
   "subjectHashes": [
     {
       "journeyId": "support_ticket_flow",
-      "replayHash": "92142906d3694a55d2f938e41a13a0c95514f4f7699622b7db83113b69a90161",
-      "replayChecksum": "sha256:92142906d3694a55d2f938e41a13a0c95514f4f7699622b7db83113b69a90161",
-      "governanceSignature": "hmac-sha256:bb883834375c2ec70d6571474db0f61190b980038b51c8c08738613cc3835238"
+      "replayHash": "0f1e7af0f7256457531c776ed7877a69da49d4f3377825159080792db8ce778e",
+      "replayChecksum": "sha256:0f1e7af0f7256457531c776ed7877a69da49d4f3377825159080792db8ce778e",
+      "governanceSignature": "hmac-sha256:9d5134b3651dfef975c7ea1970838dbf70b5bde2411bf193e138cef89fe8bc03"
     },
     {
       "journeyId": "fitness_customer_checkin",
-      "replayHash": "3d7a937c24245c30895a0389808f8e15b9d6cdf8bfd76b2886d30969ab4226ca",
-      "replayChecksum": "sha256:3d7a937c24245c30895a0389808f8e15b9d6cdf8bfd76b2886d30969ab4226ca",
-      "governanceSignature": "hmac-sha256:0a8daf3464cc087bd05d67ec5c118a96cb422a43b47a99c6bae0eba9af6fd609"
+      "replayHash": "6fd18d6dcd50e13d0d30fab078427285009834f68df49b556e00bc42b5c4cae7",
+      "replayChecksum": "sha256:6fd18d6dcd50e13d0d30fab078427285009834f68df49b556e00bc42b5c4cae7",
+      "governanceSignature": "hmac-sha256:ab37bc0cecb2ddec7e57ce77193dd7b2862612476e705c90c07efa36a26828f6"
     },
     {
       "journeyId": "booking_flow",
-      "replayHash": "9ffa1357fafbc354a87db8640957413d65a14c30e4a924091738ab5c1095d1a9",
-      "replayChecksum": "sha256:9ffa1357fafbc354a87db8640957413d65a14c30e4a924091738ab5c1095d1a9",
-      "governanceSignature": "hmac-sha256:5ef6ed1ce6967e301bdfe855ce711837c0aa6ae747fa90233b30c1d384c3f02c"
+      "replayHash": "7a50e2c4d36da845ed80626f7c1684e96c3f4ab9e832f1f60361c9e206ebbdc0",
+      "replayChecksum": "sha256:7a50e2c4d36da845ed80626f7c1684e96c3f4ab9e832f1f60361c9e206ebbdc0",
+      "governanceSignature": "hmac-sha256:2c3dfcb5e4c5e3ecdc6d4c28a9f4d9a0f53a817858608c333162f737598894d7"
     },
     {
       "journeyId": "payment_charge_flow",
-      "replayHash": "d7dfaddf8b936fa836d4fa570c79dc299f4636cf3cac5b2c20b01ecfaea0927c",
-      "replayChecksum": "sha256:d7dfaddf8b936fa836d4fa570c79dc299f4636cf3cac5b2c20b01ecfaea0927c",
-      "governanceSignature": "hmac-sha256:38212a92e38d75ca28f66a743e7d3df20cb9c4d69d64e744e83e48715a31edb3"
+      "replayHash": "adb325b10c109cb12fd266945d56861a04aec0af8996c6e607168b7ed26e5720",
+      "replayChecksum": "sha256:adb325b10c109cb12fd266945d56861a04aec0af8996c6e607168b7ed26e5720",
+      "governanceSignature": "hmac-sha256:9ebce778a081a60b1ca6e1e4640ea50e82ae14e750fca442e1c172b7d93c1d43"
     },
     {
       "journeyId": "food_order_status_flow",
-      "replayHash": "30fd3c8ebbcc9d2a7b304fb3dfdb9e9433268cb40b5605ab92cd2f26f1723c0f",
-      "replayChecksum": "sha256:30fd3c8ebbcc9d2a7b304fb3dfdb9e9433268cb40b5605ab92cd2f26f1723c0f",
-      "governanceSignature": "hmac-sha256:1a028b05879d5734ac28e021aabd61122d46e408d7ab01abe7336b0a801bd693"
+      "replayHash": "d975651699fbe62f0d77b55636a50135181c273d7789cad4e209b350e887e4b5",
+      "replayChecksum": "sha256:d975651699fbe62f0d77b55636a50135181c273d7789cad4e209b350e887e4b5",
+      "governanceSignature": "hmac-sha256:062b8a6916d001cb4e9036e39673a1760bf333c4625dd48fa9e44b3f6bf3f24c"
     },
     {
       "journeyId": "bakery_encomenda_flow",
-      "replayHash": "f9e903b9c8d17c03118ae8cb818ff4fafc9678eaca50050212c08fd4ecc9cd99",
-      "replayChecksum": "sha256:f9e903b9c8d17c03118ae8cb818ff4fafc9678eaca50050212c08fd4ecc9cd99",
-      "governanceSignature": "hmac-sha256:bb7ce2ef62cbfeaad58ef7435291eb0e7f9eba792daca3e7070c01657c90bfd7"
+      "replayHash": "5c66edd705e83cab3d9a85f787a5906c73e5eaf8ea48e9d7d754791310847cba",
+      "replayChecksum": "sha256:5c66edd705e83cab3d9a85f787a5906c73e5eaf8ea48e9d7d754791310847cba",
+      "governanceSignature": "hmac-sha256:aaf6c2916acb4d6703afa637856319fc21fcf3b14fa8211f30e0224f5253857c"
     },
     {
       "journeyId": "market_node_publish_flow",
-      "replayHash": "122cc125852e6d9b7d6d42130d54491e0c1e4a39591d916b11cc10a565491f2e",
-      "replayChecksum": "sha256:122cc125852e6d9b7d6d42130d54491e0c1e4a39591d916b11cc10a565491f2e",
-      "governanceSignature": "hmac-sha256:b5527ffb92f9f1c2d3917dc581e16199bd9c27d6f950a7d69d2edbbb94d05dca"
+      "replayHash": "1b58df7bf68c1b8339310f0a6e95efb6c4560f4363dca5a1b3c453bc3f18b368",
+      "replayChecksum": "sha256:1b58df7bf68c1b8339310f0a6e95efb6c4560f4363dca5a1b3c453bc3f18b368",
+      "governanceSignature": "hmac-sha256:2306c00fff4c4e0b9e4df22db97dc50d7f09d1299f016fc136b596da5501e54d"
     },
     {
       "journeyId": "clinic_calendar_block_flow",
-      "replayHash": "52ba3fabe665ac5b74a2a114e507e0054a721f068af99e786dd5b00824241f76",
-      "replayChecksum": "sha256:52ba3fabe665ac5b74a2a114e507e0054a721f068af99e786dd5b00824241f76",
-      "governanceSignature": "hmac-sha256:415f00560fbed78552b1637e8ae04b40b0991711e8aacb983ff698caee1832a3"
+      "replayHash": "365e27e4364a8cca2d7d02a6d815182ffe4f64b7f3559b907c51230b5fd3a306",
+      "replayChecksum": "sha256:365e27e4364a8cca2d7d02a6d815182ffe4f64b7f3559b907c51230b5fd3a306",
+      "governanceSignature": "hmac-sha256:7c71f8f4a9925f7640dd21b00f9576f31d05808a8fcf5f04688c783309a6510f"
     },
     {
       "journeyId": "agendamento",
-      "replayHash": "81de7e0b0f158ea1f6be995f0491602c1c86f834ca04e74b5d91af968e8dbd54",
-      "replayChecksum": "sha256:81de7e0b0f158ea1f6be995f0491602c1c86f834ca04e74b5d91af968e8dbd54",
-      "governanceSignature": "hmac-sha256:b9d9a33d86dca48e123ba50ba63debf6cad98e0ccba9c44f2052545c776ed770"
+      "replayHash": "10691e890ec861ab92f8d765a4c7b0d511c9091984cd3d0c64fe3cc005359bea",
+      "replayChecksum": "sha256:10691e890ec861ab92f8d765a4c7b0d511c9091984cd3d0c64fe3cc005359bea",
+      "governanceSignature": "hmac-sha256:5f15c0c209313c9a43fdbc7cc7501bb448463210104ef7b625688c60c353b6c0"
     }
   ],
   "signatureAudit": {
@@ -65,56 +65,56 @@
       {
         "journeyId": "support_ticket_flow",
         "valid": true,
-        "expected": "hmac-sha256:bb883834375c2ec70d6571474db0f61190b980038b51c8c08738613cc3835238",
-        "actual": "hmac-sha256:bb883834375c2ec70d6571474db0f61190b980038b51c8c08738613cc3835238"
+        "expected": "hmac-sha256:9d5134b3651dfef975c7ea1970838dbf70b5bde2411bf193e138cef89fe8bc03",
+        "actual": "hmac-sha256:9d5134b3651dfef975c7ea1970838dbf70b5bde2411bf193e138cef89fe8bc03"
       },
       {
         "journeyId": "fitness_customer_checkin",
         "valid": true,
-        "expected": "hmac-sha256:0a8daf3464cc087bd05d67ec5c118a96cb422a43b47a99c6bae0eba9af6fd609",
-        "actual": "hmac-sha256:0a8daf3464cc087bd05d67ec5c118a96cb422a43b47a99c6bae0eba9af6fd609"
+        "expected": "hmac-sha256:ab37bc0cecb2ddec7e57ce77193dd7b2862612476e705c90c07efa36a26828f6",
+        "actual": "hmac-sha256:ab37bc0cecb2ddec7e57ce77193dd7b2862612476e705c90c07efa36a26828f6"
       },
       {
         "journeyId": "booking_flow",
         "valid": true,
-        "expected": "hmac-sha256:5ef6ed1ce6967e301bdfe855ce711837c0aa6ae747fa90233b30c1d384c3f02c",
-        "actual": "hmac-sha256:5ef6ed1ce6967e301bdfe855ce711837c0aa6ae747fa90233b30c1d384c3f02c"
+        "expected": "hmac-sha256:2c3dfcb5e4c5e3ecdc6d4c28a9f4d9a0f53a817858608c333162f737598894d7",
+        "actual": "hmac-sha256:2c3dfcb5e4c5e3ecdc6d4c28a9f4d9a0f53a817858608c333162f737598894d7"
       },
       {
         "journeyId": "payment_charge_flow",
         "valid": true,
-        "expected": "hmac-sha256:38212a92e38d75ca28f66a743e7d3df20cb9c4d69d64e744e83e48715a31edb3",
-        "actual": "hmac-sha256:38212a92e38d75ca28f66a743e7d3df20cb9c4d69d64e744e83e48715a31edb3"
+        "expected": "hmac-sha256:9ebce778a081a60b1ca6e1e4640ea50e82ae14e750fca442e1c172b7d93c1d43",
+        "actual": "hmac-sha256:9ebce778a081a60b1ca6e1e4640ea50e82ae14e750fca442e1c172b7d93c1d43"
       },
       {
         "journeyId": "food_order_status_flow",
         "valid": true,
-        "expected": "hmac-sha256:1a028b05879d5734ac28e021aabd61122d46e408d7ab01abe7336b0a801bd693",
-        "actual": "hmac-sha256:1a028b05879d5734ac28e021aabd61122d46e408d7ab01abe7336b0a801bd693"
+        "expected": "hmac-sha256:062b8a6916d001cb4e9036e39673a1760bf333c4625dd48fa9e44b3f6bf3f24c",
+        "actual": "hmac-sha256:062b8a6916d001cb4e9036e39673a1760bf333c4625dd48fa9e44b3f6bf3f24c"
       },
       {
         "journeyId": "bakery_encomenda_flow",
         "valid": true,
-        "expected": "hmac-sha256:bb7ce2ef62cbfeaad58ef7435291eb0e7f9eba792daca3e7070c01657c90bfd7",
-        "actual": "hmac-sha256:bb7ce2ef62cbfeaad58ef7435291eb0e7f9eba792daca3e7070c01657c90bfd7"
+        "expected": "hmac-sha256:aaf6c2916acb4d6703afa637856319fc21fcf3b14fa8211f30e0224f5253857c",
+        "actual": "hmac-sha256:aaf6c2916acb4d6703afa637856319fc21fcf3b14fa8211f30e0224f5253857c"
       },
       {
         "journeyId": "market_node_publish_flow",
         "valid": true,
-        "expected": "hmac-sha256:b5527ffb92f9f1c2d3917dc581e16199bd9c27d6f950a7d69d2edbbb94d05dca",
-        "actual": "hmac-sha256:b5527ffb92f9f1c2d3917dc581e16199bd9c27d6f950a7d69d2edbbb94d05dca"
+        "expected": "hmac-sha256:2306c00fff4c4e0b9e4df22db97dc50d7f09d1299f016fc136b596da5501e54d",
+        "actual": "hmac-sha256:2306c00fff4c4e0b9e4df22db97dc50d7f09d1299f016fc136b596da5501e54d"
       },
       {
         "journeyId": "clinic_calendar_block_flow",
         "valid": true,
-        "expected": "hmac-sha256:415f00560fbed78552b1637e8ae04b40b0991711e8aacb983ff698caee1832a3",
-        "actual": "hmac-sha256:415f00560fbed78552b1637e8ae04b40b0991711e8aacb983ff698caee1832a3"
+        "expected": "hmac-sha256:7c71f8f4a9925f7640dd21b00f9576f31d05808a8fcf5f04688c783309a6510f",
+        "actual": "hmac-sha256:7c71f8f4a9925f7640dd21b00f9576f31d05808a8fcf5f04688c783309a6510f"
       },
       {
         "journeyId": "agendamento",
         "valid": true,
-        "expected": "hmac-sha256:b9d9a33d86dca48e123ba50ba63debf6cad98e0ccba9c44f2052545c776ed770",
-        "actual": "hmac-sha256:b9d9a33d86dca48e123ba50ba63debf6cad98e0ccba9c44f2052545c776ed770"
+        "expected": "hmac-sha256:5f15c0c209313c9a43fdbc7cc7501bb448463210104ef7b625688c60c353b6c0",
+        "actual": "hmac-sha256:5f15c0c209313c9a43fdbc7cc7501bb448463210104ef7b625688c60c353b6c0"
       }
     ]
   }
