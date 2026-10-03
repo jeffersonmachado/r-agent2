@@ -309,7 +309,8 @@ function main() {
   //
   // DEFEITO REAL corrigido em 2026-09-25: esta lista era um array de STRINGS escrita à mão. Duas
   // das três frases já estavam FALSAS — "retomada de TASK real" havia sido implementada e provada
-  // (reports/real-task-recovery-report.json = GO, 16/16) e a pendência dos 42 requisitos havia
+  // (reports/real-task-recovery-report.json = GO, 16/16) e a pendência dos "42 requisitos" (número
+  // do texto fixo da época; o manifesto corrente tem outra contagem) havia
   // mudado de natureza (existe matriz derivada de 17 eixos; o que falta é a numeração do prompt).
   // Uma pendência desatualizada mente no mesmo grau que um PASS falso: ela afirma que falta algo
   // que já existe. Agora cada pendência é lida do relatório que a comprova.
@@ -328,20 +329,28 @@ function main() {
       pending.push({ id: 'V2_REQUIREMENTS_MATRIX', status: 'PENDING', detail: 'matriz de requisitos ausente (rode npm run validate:v2-requirements-matrix)' });
     }
 
-    // TESTES OBRIGATÓRIOS V2 (V2-01..V2-42): a numeração TEM fonte (seção '38. TESTES
+    // TESTES OBRIGATÓRIOS V2: o prompt ORIGINAL numerava V2-01..V2-42, mas o manifesto versionado
+    // tem 57 itens com IDs heterogêneos — a contagem corrente é SEMPRE derivada do manifesto.
+    // A numeração TEM fonte (seção '38. TESTES
     // OBRIGATÓRIOS V2' do prompt original, recuperada do histórico da sessão em 2026-09-28 e
     // versionada em config/engineering-router-v2-required-tests.json). O estado de cada ID é
     // derivado por `npm run validate:required-tests`; aqui só se lê a MEDIÇÃO. Antes disto a
     // pendência era um texto fixo afirmando que a numeração não existia em lugar nenhum — o que
     // passou a ser falso assim que a fonte foi encontrada.
     const requiredTests = readJsonRel('reports/engineering-router-v2-required-tests-report.json');
+    // CONTAGEM DERIVADA DA FONTE (manifesto versionado), nunca escrita à mão: o texto fixo "42"
+    // passou a mentir quando o manifesto chegou a 57 itens.
+    const requiredTestsSource = readJsonRel('config/engineering-router-v2-required-tests.json');
+    const requiredTestsTotal = Array.isArray(requiredTestsSource?.requiredTests)
+      ? requiredTestsSource.requiredTests.length
+      : null;
     if (!requiredTests) {
-      pending.push({ id: 'V2_REQUIRED_TESTS', status: 'PENDING', detail: 'medição dos 42 testes obrigatórios ausente (rode npm run validate:required-tests)' });
+      pending.push({ id: 'V2_REQUIRED_TESTS', status: 'PENDING', detail: `medição dos ${requiredTestsTotal ? `${requiredTestsTotal} ` : ''}testes obrigatórios ausente (rode npm run validate:required-tests)` });
     } else if (requiredTests.status !== 'PASS') {
       pending.push({
         id: 'V2_REQUIRED_TESTS',
         status: 'PENDING',
-        detail: `42 testes obrigatórios em ${requiredTests.status}: ${(requiredTests.unresolvedIds || []).length} não provado(s) — ${(requiredTests.unresolvedIds || []).slice(0, 8).join(', ')}`,
+        detail: `${requiredTestsTotal ?? requiredTests.total ?? '?'} testes obrigatórios em ${requiredTests.status}: ${(requiredTests.unresolvedIds || []).length} não provado(s) — ${(requiredTests.unresolvedIds || []).slice(0, 8).join(', ')}`,
       });
     }
     if (matrix && matrix.status !== 'GO') {

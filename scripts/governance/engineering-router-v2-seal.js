@@ -36,6 +36,19 @@ const { computeSourceFingerprint } = require('../../governance/proof-engine/fing
 const { applyOriginLineage, resolveRunLineage } = require('./lib/resolve-run-lineage');
 const { captureFreeze, compareFreeze, assessInitialFreeze } = require('./lib/sourceFreezeGuard');
 
+// CONTAGEM DE TESTES OBRIGATÓRIOS V2 — DERIVADA DA FONTE, NUNCA ESCRITA À MÃO.
+// O manifesto versionado é a autoridade. Um número fixo no texto ("42") ficou ERRADO quando o
+// manifesto passou a ter 57 itens, e um gate que descreve a si mesmo com um número falso é pior do
+// que não descrever: quem lê a evidência não pode confiar na contagem. Aqui ela é lida do manifesto
+// no momento em que o plano é construído, então acompanha o manifesto automaticamente.
+const REQUIRED_TESTS_SOURCE = require('../../config/engineering-router-v2-required-tests.json');
+const REQUIRED_TESTS_IDS = Array.isArray(REQUIRED_TESTS_SOURCE.requiredTests)
+  ? REQUIRED_TESTS_SOURCE.requiredTests
+    .map((item) => (typeof item === 'string' ? item : (item && item.id)))
+    .filter(Boolean)
+  : [];
+const REQUIRED_TESTS_TOTAL = REQUIRED_TESTS_IDS.length;
+
 /**
  * Snapshot do source que o selo está certificando. Lido do disco/git no momento da chamada.
  *
@@ -107,12 +120,14 @@ const STEPS = Object.freeze([
   { id: 'SUITE_EXECUTION', phase: 'VERIFY', required: true, kind: 'command', command: 'node scripts/governance/run-release-suites.js', env: { RELEASE_AUTHORITATIVE: '1' }, detail: 'execução canônica das suítes do manifesto', produces: ['reports/release-suite-execution.json'], dependsOn: ['V1_RUNTIME_EVIDENCE', 'V1_RUNTIME_VERDICT'] },
   { id: 'REQUIREMENTS_MATRIX', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/generate-v2-requirements-matrix.js', detail: 'matriz derivada dos eixos verificáveis', produces: ['reports/engineering-router-v2-requirements-matrix.json'], dependsOn: ['SUITE_EXECUTION', 'ANTI_GREENWASHING'] },
   // TESTES OBRIGATÓRIOS V2 (missão 2026-09-28): a seção "38. TESTES OBRIGATÓRIOS V2" do prompt
-  // original exige provar individualmente V2-01..V2-42. O manifesto versionado
+  // original exige provar individualmente cada ID listado. A contagem e o intervalo são DERIVADOS
+  // do manifesto, nunca escritos à mão: o número fixo "42" ficou errado quando o manifesto passou a
+  // 57 itens. O manifesto versionado
   // (config/engineering-router-v2-required-tests.json) traz os enunciados verbatim e a prova de
   // cada ID; este passo deriva o estado do valor REAL (suíte na execução autoritativa + relatório
   // declarado, com TTL) e FALHA se qualquer ID ficar sem prova. Não ficar fora do selo era
   // justamente o defeito: um requisito obrigatório que o pipeline não enxerga não governa nada.
-  { id: 'REQUIRED_TESTS_V2', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/validate-engineering-router-v2-required-tests.js', detail: 'os 42 testes obrigatórios provados individualmente (V2-01..V2-42)', produces: ['reports/engineering-router-v2-required-tests-report.json'], dependsOn: ['SUITE_EXECUTION'] },
+  { id: 'REQUIRED_TESTS_V2', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/validate-engineering-router-v2-required-tests.js', detail: `os ${REQUIRED_TESTS_TOTAL} testes obrigatórios provados individualmente (IDs do manifesto versionado)`, produces: ['reports/engineering-router-v2-required-tests-report.json'], dependsOn: ['SUITE_EXECUTION'] },
   { id: 'MISSION_CRASH_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/verify-mission-crash-recovery.js', detail: 'crash real do worker (SIGKILL) retomado por varredura automática', produces: ['reports/mission-crash-recovery-report.json'] },
   { id: 'REAL_TASK_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/verify-real-task-recovery.js', detail: 'crash real no MEIO da execução da TASK, retomada sem comando humano', produces: ['reports/real-task-recovery-report.json'] },
   // TIMEOUT_ARCHITECTURE entra no PIPELINE do selo (missão 2026-09-28). Antes, a arquitetura de
