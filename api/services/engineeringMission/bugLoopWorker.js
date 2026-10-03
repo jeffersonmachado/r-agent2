@@ -39,6 +39,16 @@ let instanceSeq = 0;
 let startError = null;
 let startedAtMs = null;
 
+/**
+ * Identidade ESTÁVEL da instância em execução (lease/fence). Fica vazia quando o worker NÃO roda.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): `buildWorkerInstanceId()` era chamado DENTRO de cada ciclo, então
+ * a identidade do worker mudava a cada passagem e o estado observável não a expunha de forma
+ * alguma. Sem identidade estável não há como responder "qual worker está segurando o lease?" — e
+ * a saúde publicada não permitia distinguir duas instâncias vivas do mesmo processo lógico.
+ */
+let runningWorkerInstanceId = null;
+
 /** Quantos findings este processo já processou (contador de trabalho REAL, não de ticks). */
 let processedFindings = 0;
 
@@ -73,7 +83,9 @@ async function runBugLoopCycle({
   if (cycleRunning) return { skipped: true, reason: 'cycle_in_progress' };
   cycleRunning = true;
   const startedAt = Date.now();
-  const instance = workerInstanceId || buildWorkerInstanceId();
+  // Identidade ESTÁVEL enquanto este worker roda: os ciclos do próprio worker compartilham a
+  // instância (o id por ciclo existe só para execuções avulsas, sem worker vivo).
+  const instance = workerInstanceId || runningWorkerInstanceId || buildWorkerInstanceId();
   try {
     const summary = await coordinator.runBugLoopSweep({ limit, actor, autoFix, workerInstanceId: instance });
     stats.cycles += 1;
@@ -133,6 +145,7 @@ function startBugLoopWorker({
   try {
     timer = setInterval(() => { void runBugLoopCycle({ limit, autoFix }); }, intervalMs);
     if (typeof timer.unref === 'function') timer.unref();
+    runningWorkerInstanceId = buildWorkerInstanceId();
     if (runImmediately) setTimeout(() => { void runBugLoopCycle({ limit, autoFix }); }, 25).unref?.();
   } catch (err) {
     // O START em si falhou (ex.: recurso indisponível no boot). Registrar é obrigatório: sem isto o
@@ -156,6 +169,7 @@ function stopBugLoopWorker() {
   if (!timer) return { stopped: false, reason: 'not_running' };
   clearInterval(timer);
   timer = null;
+  runningWorkerInstanceId = null;
   logger.info('[bugLoopWorker] parado', { cycles: stats.cycles });
   return { stopped: true };
 }
@@ -193,6 +207,9 @@ function getBugLoopWorkerStatus({
     code: health.code,
     reason: health.reason,
     startedAt: startedAtMs ? new Date(startedAtMs).toISOString() : null,
+    // Identidade da instância VIVA (null quando não há worker rodando): é o que permite ligar a
+    // saúde publicada a um worker real, e não a um processo anônimo.
+    workerInstanceId: runningWorkerInstanceId,
     lastError: stats.lastError,
     processedFindings,
     ...stats,
