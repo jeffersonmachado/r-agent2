@@ -69,6 +69,156 @@ const INTEGRATION_RESULTS = Object.freeze([
 /** Tipos de integração (bug fix usa o MESMO caminho da task — não há caminho privilegiado). */
 const INTEGRATION_TYPES = Object.freeze(['TASK_CANDIDATE', 'BUG_FIX_CANDIDATE']);
 
+/**
+ * FASES DURÁVEIS de uma integração (IntegrationIntent).
+ *
+ * DEFEITO QUE ESTE VOCABULÁRIO ELIMINA (confirmado no código em 2026-10-03): o avanço da fonte
+ * executava `git update-ref` ANTES de persistir qualquer coisa, e o registro da trilha era escrito
+ * só no fim. A janela real era:
+ *
+ *   git update-ref OK  →  PROCESSO MORRE  →  DB ainda no commit anterior  →  receipt inexistente
+ *
+ * Nessa janela não havia NADA no banco que explicasse a branch ter avançado: a retomada caía em
+ * `CONCURRENT_SOURCE_UPDATE` ou `STALE_CANDIDATE`, e a mesma operação podia ou travar ou ser
+ * reaplicada. Agora a intenção é persistida ANTES de tocar na ref git, e cada efeito é confirmado
+ * numa transição de fase. A janela deixa de existir: qualquer morte é reconciliável a partir do
+ * intent que já está no banco.
+ */
+const INTEGRATION_STATUSES = Object.freeze([
+  'PREPARED',          // intent persistido; a ref git ainda NÃO foi tocada
+  'GIT_APPLIED',       // `git update-ref` confirmado; o DB ainda não foi atualizado
+  'DB_APPLIED',        // CAS do banco confirmado; o receipt/evidência final ainda não foi gravado
+  'COMMITTED',         // estado terminal de sucesso: git + banco + receipt coerentes
+  'CONFLICT',          // estado terminal: conflito explícito, exige resolução humana/task própria
+  'ABORTED',           // estado terminal: operação abandonada de forma deliberada e auditável
+  'RECOVERY_REQUIRED', // não terminal: estado divergente que exige reconciliação determinística
+]);
+
+/** Estados terminais: não são varridos pela reconciliação de boot. */
+const TERMINAL_INTEGRATION_STATUSES = Object.freeze(['COMMITTED', 'CONFLICT', 'ABORTED']);
+
+/** A fase é terminal (nenhum efeito futuro pendente)? */
+function isTerminalIntegrationStatus(status) {
+  return TERMINAL_INTEGRATION_STATUSES.includes(String(status || '').trim());
+}
+
+/**
+ * Desfechos possíveis de uma reconciliação de intent.
+ *
+ * Vocabulário FECHADO: o chamador decide por código, nunca por texto. `PROCEED` é o único desfecho
+ * que autoriza reaplicar o efeito; todos os outros são estados seguros que NÃO reaplicam nada.
+ */
+const INTEGRATION_RECONCILIATIONS = Object.freeze([
+  'PROCEED',                // nada foi aplicado ainda: a operação pode seguir (retry seguro)
+  'FINISH_DB',              // o git já está no candidate; falta só o CAS do banco
+  'COMMIT_RECEIPT',         // git e banco já no candidate; falta só finalizar metadata/receipt
+  'NOOP_ALREADY_COMMITTED', // já terminal: repetir a operação é proibido (idempotência)
+  'DIVERGENCE',             // branch não explicada por nenhum intent/receipt: NÃO adotar
+  'DB_AHEAD_OF_GIT',        // banco à frente da ref: estado impossível por construção → recovery
+  'BLOCKED_REQUIRES_REPAIR',// não terminal e não reconciliável automaticamente
+]);
+
+/**
+ * Uma branch commit é EXPLICADA quando existe um intent autoritativo que a justifica.
+ *
+ * `commits explicados` = o commit esperado (base) + todos os `mission_commit_after` já registrados
+ * como INTEGRATED na trilha. Um commit da branch que não esteja nessa lista foi escrito por fora do
+ * caminho auditável (push manual, rebase, force, outro worktree) e NÃO pode ser adotado.
+ */
+function isBranchCommitExplained({ branchCommit, expectedMissionCommit = null, explainedCommits = [] } = {}) {
+  const commit = String(branchCommit || '').trim();
+  if (commit === '') return false;
+  const expected = String(expectedMissionCommit || '').trim();
+  if (expected !== '' && commit === expected) return true;
+  return (Array.isArray(explainedCommits) ? explainedCommits : [])
+    .map((c) => String(c || '').trim())
+    .filter(Boolean)
+    .includes(commit);
+}
+
+/**
+ * Decide se o HEAD da branch de missão pode ser ADOTADO como commit corrente da fonte.
+ *
+ * REGRA (elimina o defeito "branch existe → adotar HEAD"): a adoção só é permitida quando o commit
+ * é explicado — é o próprio commit esperado, ou é o `mission_commit_after` de uma integração
+ * registrada. Qualquer outro commit produz `MISSION_SOURCE_DIVERGENCE`, e o serviço NÃO adota,
+ * NÃO continua tasks e NÃO promove.
+ */
+function classifyBranchAdoption({ branchCommit, expectedMissionCommit = null, explainedCommits = [] } = {}) {
+  const commit = String(branchCommit || '').trim();
+  const expected = String(expectedMissionCommit || '').trim();
+
+  if (commit === '') {
+    return { adopt: true, code: null, reason: 'branch ainda não existe: nada a adotar, materializar a partir da base', divergence: false };
+  }
+  if (commit === expected) {
+    return { adopt: true, code: null, reason: 'branch no commit esperado pela missão', divergence: false };
+  }
+  if (isBranchCommitExplained({ branchCommit: commit, expectedMissionCommit: expected, explainedCommits })) {
+    return { adopt: true, code: null, reason: `branch no commit ${commit.slice(0, 12)} explicado por uma integração registrada`, divergence: false };
+  }
+  return {
+    adopt: false,
+    code: 'MISSION_SOURCE_DIVERGENCE',
+    divergence: true,
+    reason: `branch em ${commit.slice(0, 12)} sem intent/receipt que explique o avanço (esperado ${expected === '' ? '(ausente)' : expected.slice(0, 12)}) — adoção recusada`,
+  };
+}
+
+/**
+ * Matriz DETERMINÍSTICA de reconciliação (fase do intent × ref git × commit do banco).
+ *
+ * Sem improviso e sem heurística: cada combinação tem exatamente um desfecho. É esta função — pura,
+ * sem I/O — que o serviço consulta ao retomar após um crash, de modo que a decisão possa ser
+ * provada por teste sem tocar em git nem em banco.
+ */
+function classifyIntegrationReconciliation({
+  status,
+  branchCommit = null,
+  dbCommit = null,
+  expectedMissionCommit = null,
+  candidateCommit = null,
+} = {}) {
+  const phase = String(status || '').trim();
+  const branch = String(branchCommit || '').trim();
+  const db = String(dbCommit || '').trim();
+  const expected = String(expectedMissionCommit || '').trim();
+  const candidate = String(candidateCommit || '').trim();
+
+  if (isTerminalIntegrationStatus(phase)) {
+    return { outcome: 'NOOP_ALREADY_COMMITTED', code: null, reason: `intent já terminal em ${phase} — repetir o efeito é proibido`, reapply: false };
+  }
+
+  // Banco à frente do git: por construção o git é aplicado ANTES do banco, então isto só ocorre com
+  // mutação externa do banco. Não é reconciliável em silêncio.
+  if (db !== '' && db === candidate && branch !== candidate) {
+    return { outcome: 'DB_AHEAD_OF_GIT', code: 'MISSION_SOURCE_DB_AHEAD_OF_GIT', reason: 'banco aponta para o candidate mas a ref git não — estado impossível por construção, exige reparo', reapply: false };
+  }
+
+  // Nada aplicado: intent PREPARED, branch na base esperada, banco na base esperada → retry seguro.
+  if (branch === expected && (db === expected || db === '')) {
+    return { outcome: 'PROCEED', code: null, reason: 'intent persistido e nenhum efeito aplicado — retry seguro', reapply: true };
+  }
+
+  // Git aplicado, banco atrás: completar o CAS do banco de forma determinística (sem reaplicar git).
+  if (branch === candidate && (db === expected || db === '')) {
+    return { outcome: 'FINISH_DB', code: null, reason: 'git já no candidate (efeito autorizado pelo intent) — completar o CAS do banco', reapply: false };
+  }
+
+  // Git e banco no candidate: só falta o receipt/evidência final.
+  if (branch === candidate && db === candidate) {
+    return { outcome: 'COMMIT_RECEIPT', code: null, reason: 'git e banco já no candidate — finalizar metadata/receipt sem reaplicar git', reapply: false };
+  }
+
+  // Branch em commit que nenhum intent explica: divergência.
+  if (branch !== '' && branch !== expected && branch !== candidate) {
+    return { outcome: 'DIVERGENCE', code: 'MISSION_SOURCE_DIVERGENCE', reason: `branch em ${branch.slice(0, 12)} não explicada pelo intent (esperado ${expected.slice(0, 12) || '(ausente)'} / candidate ${candidate.slice(0, 12) || '(ausente)'})`, reapply: false };
+  }
+
+  return { outcome: 'BLOCKED_REQUIRES_REPAIR', code: 'MISSION_SOURCE_RECOVERY_REQUIRED', reason: `combinação não reconciliável automaticamente (fase=${phase}, branch=${branch.slice(0, 12) || '-'}, db=${db.slice(0, 12) || '-'})`, reapply: false };
+}
+
+
 /** Prefixo canônico das branches de missão. NUNCA uma ref global compartilhada. */
 const MISSION_BRANCH_PREFIX = 'engineering/missions';
 
@@ -310,10 +460,70 @@ function assessMissionCandidateExport({ sourceState = null, currentCommit = null
   return { exportable: true, code: null, reason: 'fonte da missão íntegra e isolada — candidate exportável para promoção', commit };
 }
 
+/**
+ * Disposição determinística de um candidate STALE.
+ *
+ * DEFEITO QUE ESTA POLÍTICA ELIMINA (confirmado no código em 2026-10-03): um stale candidate — que é
+ * um problema de COORDENAÇÃO DE FONTE — caía em `hookMissionFailure` com `source=EXCEPTION`, era
+ * classificado como `BUG` por `inferCategory` e `requiresApplicationFix(true)` abria uma fix task
+ * de aplicação. Ou seja: o sistema tratava "a fonte avançou enquanto você codava" como "existe um
+ * bug no produto", e ainda gastava um ciclo autônomo inteiro de coder+review+regressão nisso.
+ *
+ * Stale por padrão NÃO é bug de aplicação: é `SOURCE_STALE` com replan obrigatório.
+ *
+ * @returns {{disposition:string, requiresReplan:boolean, createsApplicationBug:boolean, strategy:string, code:string, reason:string}}
+ */
+function classifyStaleCandidateDisposition({
+  candidateBaseCommit = null,
+  missionCurrentCommit = null,
+  reapplyConflicts = false,
+} = {}) {
+  const staleness = classifyCandidateStaleness({ candidateBaseCommit, missionCurrentCommit });
+  if (!staleness.stale) {
+    return {
+      disposition: 'APPLICABLE',
+      requiresReplan: false,
+      createsApplicationBug: false,
+      strategy: 'INTEGRATE_DIRECTLY',
+      code: null,
+      reason: 'candidate derivado do commit corrente — segue o caminho normal de integração',
+    };
+  }
+
+  // Reaplicação conflitou: não mascarar. Vira trabalho EXPLÍCITO de replan/reanchor.
+  if (reapplyConflicts) {
+    return {
+      disposition: 'REPLAN_REQUIRED',
+      requiresReplan: true,
+      createsApplicationBug: false,
+      strategy: 'CREATE_REPLAN_TASK',
+      code: 'MISSION_SOURCE_REPLAN_REQUIRED',
+      reason: 'reaplicação automática do patch sobre a fonte atual conflitou — exige task de replan/reanchor explícita (nunca resolver em silêncio)',
+    };
+  }
+
+  return {
+    disposition: 'SOURCE_STALE',
+    requiresReplan: true,
+    createsApplicationBug: false,
+    strategy: 'REANCHOR_AND_REAPPLY',
+    code: 'STALE_CANDIDATE',
+    reason: 'a fonte da missão avançou desde a base do candidate — reancorar na fonte corrente e reaplicar o patch; NÃO é bug de aplicação',
+  };
+}
+
 module.exports = {
   MISSION_SOURCE_STATES,
   INTEGRATION_RESULTS,
   INTEGRATION_TYPES,
+  INTEGRATION_STATUSES,
+  TERMINAL_INTEGRATION_STATUSES,
+  INTEGRATION_RECONCILIATIONS,
+  isTerminalIntegrationStatus,
+  isBranchCommitExplained,
+  classifyBranchAdoption,
+  classifyIntegrationReconciliation,
+  classifyStaleCandidateDisposition,
   MISSION_BRANCH_PREFIX,
   buildIntegrationBranchName,
   isMissionBranch,

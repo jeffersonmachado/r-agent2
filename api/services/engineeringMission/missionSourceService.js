@@ -228,12 +228,47 @@ async function recordIntegration(entry = {}) {
   });
 
   try {
+    // Se esta tríade JÁ tem um intent durável (criado antes do efeito no git), o desfecho é
+    // gravado EVOLUINDO essa linha — nunca criando uma segunda. Sem isto, a `integration_key`
+    // única colidiria e o desfecho se perderia em silêncio (o `duplicate:true` abaixo engoliria
+    // um resultado real).
+    const existing = await Integration.findOne({ where: { integration_key: integrationKey } });
+    if (existing) {
+      const row = existing.get ? existing.get({ plain: true }) : existing;
+      if (source.isTerminalIntegrationStatus(row.integration_status)) {
+        return { recorded: false, id: row.id, duplicate: true };
+      }
+      const terminalStatus = entry.integrationResult === 'INTEGRATED'
+        ? 'COMMITTED'
+        : (entry.integrationResult === 'CONFLICT' ? 'CONFLICT' : 'ABORTED');
+      await Integration.update({
+        finding_id: entry.findingId || row.finding_id || null,
+        integration_type: entry.integrationType || row.integration_type,
+        integration_result: entry.integrationResult,
+        integration_status: terminalStatus,
+        candidate_base_commit: entry.candidateBaseCommit || row.candidate_base_commit || null,
+        mission_commit_before: entry.missionCommitBefore || row.mission_commit_before || null,
+        mission_commit_after: entry.missionCommitAfter || row.mission_commit_after || null,
+        integration_branch: entry.integrationBranch || row.integration_branch || null,
+        source_fence: Number(entry.sourceFence || row.source_fence || 0),
+        tests: entry.tests || [],
+        review: entry.review || {},
+        regression: entry.regression || {},
+        evidence: entry.evidence || {},
+        conflict: entry.conflict || null,
+        error: entry.error || null,
+        committed_at: terminalStatus === 'COMMITTED' ? new Date() : row.committed_at,
+      }, { where: { id: row.id } });
+      return { recorded: true, id: row.id, duplicate: false, evolvedIntent: true };
+    }
+
     const row = await Integration.create({
       mission_id: entry.missionId,
       task_id: entry.taskId || null,
       finding_id: entry.findingId || null,
       integration_type: entry.integrationType,
       integration_result: entry.integrationResult,
+      integration_status: entry.integrationResult === 'INTEGRATED' ? 'COMMITTED' : 'ABORTED',
       candidate_commit: entry.candidateCommit,
       candidate_base_commit: entry.candidateBaseCommit || null,
       mission_commit_before: entry.missionCommitBefore || null,
@@ -247,6 +282,7 @@ async function recordIntegration(entry = {}) {
       evidence: entry.evidence || {},
       conflict: entry.conflict || null,
       error: entry.error || null,
+      committed_at: entry.integrationResult === 'INTEGRATED' ? new Date() : null,
     });
     return { recorded: true, id: row.id, duplicate: false };
   } catch (err) {
@@ -286,6 +322,167 @@ async function listIntegrations(missionId, { limit = 200 } = {}) {
 }
 
 /**
+ * PREPARA O INTEGRATIONINTENT — o registro DURÁVEL que autoriza tocar na ref git.
+ *
+ * Tem de ser chamada ANTES de `advanceMissionSource`. É o que fecha a janela de crash: depois dela,
+ * a intenção de avançar a branch está no banco mesmo que o processo morra no instante seguinte ao
+ * `git update-ref`. Sem este registro, o avanço da ref seria um efeito sem causa auditável.
+ *
+ * IDEMPOTENTE pela `integration_key` (mesma tríade): duas tentativas da MESMA operação devolvem o
+ * MESMO intent — nunca criam dois efeitos. A colisão na chave única é o mecanismo de idempotência
+ * funcionando (vive no banco), não um erro.
+ */
+async function prepareIntegrationIntent({
+  missionId,
+  taskId,
+  findingId = null,
+  integrationType = 'TASK_CANDIDATE',
+  candidateCommit,
+  candidateBaseCommit = null,
+  expectedMissionCommit = null,
+  expectedFence = null,
+  integrationBranch = null,
+  workerInstanceId = null,
+} = {}) {
+  const { EngineeringMissionIntegration } = models();
+  const Integration = EngineeringMissionIntegration();
+  const integrationKey = source.buildIntegrationKey({ missionId, taskId, candidateCommit });
+  const worker = workerInstanceId || process.env.ENGINEERING_WORKER_INSTANCE_ID || `pid-${process.pid}`;
+
+  const existing = await Integration.findOne({ where: { integration_key: integrationKey } });
+  if (existing) {
+    const row = existing.get ? existing.get({ plain: true }) : existing;
+    if (source.isTerminalIntegrationStatus(row.integration_status)) {
+      return { intent: row, created: false, terminal: true, integrationKey };
+    }
+    return { intent: row, created: false, terminal: false, integrationKey };
+  }
+
+  try {
+    const row = await Integration.create({
+      mission_id: missionId,
+      task_id: taskId || null,
+      finding_id: findingId || null,
+      integration_type: integrationType,
+      // Sem desfecho ainda: o resultado só existe quando a operação termina. É justamente por isso
+      // que `integration_result` deixou de ser NOT NULL.
+      integration_result: null,
+      integration_status: 'PREPARED',
+      candidate_commit: candidateCommit,
+      candidate_base_commit: candidateBaseCommit,
+      mission_commit_before: expectedMissionCommit,
+      mission_commit_after: null,
+      integration_branch: integrationBranch,
+      integration_key: integrationKey,
+      source_fence: Number(expectedFence || 0),
+      expected_mission_commit: expectedMissionCommit,
+      expected_fence: expectedFence === null || expectedFence === undefined ? null : Number(expectedFence),
+      worker_instance_id: worker,
+      tests: [],
+      review: {},
+      regression: {},
+      evidence: { phase: 'PREPARED' },
+    });
+    const plain = row.get ? row.get({ plain: true }) : row;
+    logger.info('[missionSource] IntegrationIntent PREPARED persistido antes do efeito no git', {
+      missionId, taskId, candidateCommit: String(candidateCommit).slice(0, 12), worker,
+    });
+    return { intent: plain, created: true, terminal: false, integrationKey };
+  } catch (err) {
+    if (err && (err.name === 'SequelizeUniqueConstraintError' || /unique/i.test(String(err.message)))) {
+      const race = await Integration.findOne({ where: { integration_key: integrationKey } });
+      const row = race && race.get ? race.get({ plain: true }) : race;
+      return { intent: row, created: false, terminal: row ? source.isTerminalIntegrationStatus(row.integration_status) : false, integrationKey };
+    }
+    logger.error('[missionSource] falha ao persistir IntegrationIntent (o avanço da ref NÃO pode prosseguir)', {
+      missionId, taskId, errorName: err && err.name, errorMessage: err && err.message,
+    });
+    throw err;
+  }
+}
+
+/**
+ * Transiciona a fase do intent. Só avança (PREPARED→GIT_APPLIED→DB_APPLIED→COMMITTED); uma
+ * transição para fase já atingida é idempotente e não reescreve o carimbo original.
+ */
+async function transitionIntegrationIntent(intentId, status, { missionCommitAfter = null, result = null, extra = {} } = {}) {
+  const { EngineeringMissionIntegration } = models();
+  const Integration = EngineeringMissionIntegration();
+  const now = new Date();
+  const patch = { integration_status: status };
+  if (status === 'GIT_APPLIED') patch.git_applied_at = now;
+  if (status === 'DB_APPLIED') patch.db_applied_at = now;
+  if (status === 'COMMITTED') patch.committed_at = now;
+  if (missionCommitAfter) patch.mission_commit_after = missionCommitAfter;
+  if (result) patch.integration_result = result;
+  if (Object.keys(extra).length > 0) patch.evidence = extra;
+
+  await Integration.update(patch, { where: { id: intentId } });
+  return { id: intentId, status };
+}
+
+/**
+ * Reconciliação determinística dos intents NÃO terminais de uma missão.
+ *
+ * É o que a retomada (inclusive no boot) chama: para cada intent que ficou no meio do caminho, lê o
+ * estado REAL (ref git + commit do banco) e aplica a matriz pura — nunca improvisa e nunca reaplica
+ * um efeito já aplicado.
+ */
+async function reconcileMissionSourceIntents({ missionId } = {}) {
+  const { EngineeringMissionIntegration, EngineeringMission } = models();
+  const Integration = EngineeringMissionIntegration();
+  const Mission = EngineeringMission();
+
+  const rows = await Integration.findAll({
+    where: { mission_id: missionId, integration_status: ['PREPARED', 'GIT_APPLIED', 'DB_APPLIED', 'RECOVERY_REQUIRED'] },
+    order: [['created_at', 'ASC']],
+  });
+  const intents = (rows || []).map((r) => (r.get ? r.get({ plain: true }) : r));
+  if (intents.length === 0) return { reconciled: 0, outcomes: [] };
+
+  const mission = await Mission.findByPk(missionId);
+  const dbCommit = mission ? mission.mission_current_commit : null;
+  const outcomes = [];
+
+  for (const intent of intents) {
+    const branch = intent.integration_branch;
+    const branchCommit = branch ? await branchExists(branch) : null;
+    const decision = source.classifyIntegrationReconciliation({
+      status: intent.integration_status,
+      branchCommit,
+      dbCommit,
+      expectedMissionCommit: intent.expected_mission_commit || intent.mission_commit_before,
+      candidateCommit: intent.candidate_commit,
+    });
+
+    if (decision.outcome === 'FINISH_DB' || decision.outcome === 'COMMIT_RECEIPT') {
+      // O git JÁ está no candidate: o efeito foi autorizado por este intent. Completa-se o banco /
+      // receita de forma determinística, SEM tocar na ref de novo.
+      await Mission.update(
+        { mission_current_commit: intent.candidate_commit, mission_source_state: 'READY' },
+        { where: { id: missionId } },
+      );
+      await transitionIntegrationIntent(intent.id, decision.outcome === 'FINISH_DB' ? 'DB_APPLIED' : 'COMMITTED', {
+        missionCommitAfter: intent.candidate_commit,
+        result: 'INTEGRATED',
+        extra: { phase: decision.outcome, reconciledBy: 'boot_reconciliation', reconciledAt: new Date().toISOString() },
+      });
+      if (decision.outcome === 'FINISH_DB') {
+        await transitionIntegrationIntent(intent.id, 'COMMITTED', { result: 'INTEGRATED' });
+      }
+    } else if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT') {
+      await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
+        extra: { phase: decision.outcome, code: decision.code, reason: decision.reason, reconciledAt: new Date().toISOString() },
+      });
+    }
+
+    outcomes.push({ intentId: intent.id, candidateCommit: String(intent.candidate_commit).slice(0, 12), ...decision });
+  }
+
+  return { reconciled: outcomes.filter((o) => o.outcome === 'FINISH_DB' || o.outcome === 'COMMIT_RECEIPT').length, outcomes };
+}
+
+/**
  * Avança a fonte da missão — CAS em duas camadas.
  *
  * Camada 1 (banco): `UPDATE ... WHERE mission_current_commit = <esperado> AND mission_source_fence =
@@ -299,7 +496,56 @@ async function listIntegrations(missionId, { limit = 200 } = {}) {
  * corrige SEM reaplicar o patch. A ordem inversa deixaria o banco mentindo sobre código que não
  * existe, que é o pior dos dois.
  */
-async function advanceMissionSource({ missionId, expectedCommit, newCommit, expectedFence, branch }) {
+/**
+ * FAILPOINT de crash controlado.
+ *
+ * Existe para o E2E matar o processo EXATAMENTE na janela crítica (depois do `git update-ref` e
+ * antes do CAS do banco), que é o modo de falha real encontrado. Sem um ponto de parada explícito,
+ * reproduzir essa janela dependeria de sorte de timing e o teste não provaria nada.
+ */
+function maybeCrashAtFailpoint(name) {
+  const configured = String(process.env.ENGINEERING_MISSION_FAILPOINT || '').trim();
+  if (configured === '' || configured !== name) return;
+  logger.error('[missionSource] FAILPOINT atingido — encerrando o processo para reproduzir a janela de crash', {
+    failpoint: name, pid: process.pid,
+  });
+  // Saída SÍNCRONA e imediata: simula morte abrupta (o processo não completa o passo seguinte).
+  process.exit(97);
+}
+
+async function advanceMissionSource({ missionId, expectedCommit, newCommit, expectedFence, branch, intentId = null }) {
+  // ---- 0. GATE: ref git NÃO avança sem IntegrationIntent persistido ---------------------------------
+  // Este gate é a proibição explícita do enunciado. Antes dele, `git update-ref` era um efeito sem
+  // causa auditável: se o processo morresse logo depois, nada no banco explicava a branch ter andado.
+  if (!intentId) {
+    return {
+      advanced: false,
+      code: 'INTEGRATION_INTENT_REQUIRED',
+      reason: 'recusado: avançar a ref da fonte exige um IntegrationIntent persistido (PREPARED) para este candidate/commit esperado',
+    };
+  }
+  const { EngineeringMissionIntegration } = models();
+  const Integration = EngineeringMissionIntegration();
+  const intentRow = await Integration.findByPk(intentId);
+  const intent = intentRow && intentRow.get ? intentRow.get({ plain: true }) : intentRow;
+  if (!intent) {
+    return { advanced: false, code: 'INTEGRATION_INTENT_REQUIRED', reason: `intent ${intentId} não encontrado — avanço recusado` };
+  }
+  if (intent.integration_status !== 'PREPARED') {
+    return {
+      advanced: false,
+      code: 'INTEGRATION_INTENT_NOT_PREPARED',
+      reason: `intent em fase ${intent.integration_status} não autoriza novo avanço (só PREPARED autoriza)`,
+    };
+  }
+  if (String(intent.candidate_commit) !== String(newCommit)) {
+    return { advanced: false, code: 'INTEGRATION_INTENT_MISMATCH', reason: 'o candidateCommit do intent não é o commit que se pretende aplicar' };
+  }
+  const intentExpected = String(intent.expected_mission_commit || '').trim();
+  if (intentExpected !== '' && intentExpected !== String(expectedCommit)) {
+    return { advanced: false, code: 'INTEGRATION_INTENT_MISMATCH', reason: 'o expectedMissionCommit do intent não é o commit corrente esperado — recusado' };
+  }
+
   const refResult = await runGit(['update-ref', `refs/heads/${branch}`, newCommit, expectedCommit]);
   if (!refResult.ok) {
     return {
@@ -309,6 +555,14 @@ async function advanceMissionSource({ missionId, expectedCommit, newCommit, expe
       stderr: refResult.stderr,
     };
   }
+
+  // O git efetivou o avanço: a ref JÁ está no candidate. Registra-se a fase imediatamente — a
+  // partir daqui qualquer morte é reconciliável (branch=candidate + db=esperado → FINISH_DB).
+  await transitionIntegrationIntent(intentId, 'GIT_APPLIED');
+
+  // JANELA CRÍTICA: entre a ref git avançada e o CAS do banco. É exatamente aqui que o
+  // failpoint existe, porque era aqui que o processo podia morrer sem deixar rastro.
+  maybeCrashAtFailpoint('after_git_update_ref_before_db_cas');
 
   const { EngineeringMission } = models();
   const Mission = EngineeringMission();
@@ -345,6 +599,8 @@ async function advanceMissionSource({ missionId, expectedCommit, newCommit, expe
       reason: 'a fonte avançou no git mas o registro da missão mudou de dono — reconciliação necessária',
     };
   }
+
+  await transitionIntegrationIntent(intentId, 'DB_APPLIED', { missionCommitAfter: newCommit });
 
   return { advanced: true, code: null };
 }
@@ -474,18 +730,47 @@ async function integrateCandidate({
     });
   }
 
-  // ---- 5. AVANÇO CAS ----------------------------------------------------------------------
+  // ---- 5. INTENT DURÁVEL ANTES DE QUALQUER EFEITO NO GIT ----------------------------------
+  // Ordem obrigatória: persistir a intenção ANTES do `git update-ref`, marcar GIT_APPLIED depois
+  // dele, e só então o CAS do banco. Qualquer morte de processo passa a ser reconciliável a partir
+  // do intent que já está no banco.
+  const intent = await prepareIntegrationIntent({
+    missionId: missionIdValue,
+    taskId: taskIdValue,
+    findingId,
+    integrationType: integrationTypeResolved,
+    candidateCommit,
+    candidateBaseCommit: candidateParent,
+    expectedMissionCommit: current.currentCommit,
+    expectedFence: expectedFence === null ? current.fence : expectedFence,
+    integrationBranch: current.integrationBranch,
+    workerInstanceId: process.env.ENGINEERING_WORKER_INSTANCE_ID || null,
+  });
+  if (intent.terminal) {
+    return {
+      integrated: true, reconciled: false, result: 'ALREADY_INTEGRATED', code: null, integrationKey,
+      missionCommitAfter: intent.intent.mission_commit_after || current.currentCommit,
+      reason: 'idempotência: intent já terminal para esta tríade',
+    };
+  }
+
+  // ---- 6. AVANÇO CAS ----------------------------------------------------------------------
   const advance = await advanceMissionSource({
     missionId: missionIdValue,
     expectedCommit: current.currentCommit,
     newCommit: candidateCommit,
     expectedFence: expectedFence === null ? current.fence : expectedFence,
     branch: current.integrationBranch,
+    intentId: intent.intent.id,
   });
 
   if (!advance.advanced) {
     // O git recusou o avanço: a fonte mudou de posição. NÃO aplicar cegamente — recusa explícita.
-    // O candidato é revalidável: com o novo commit corrente, o pai do candidate deixa de bater.
+    // O intent é encerrado como ABORTED (terminal) para não ser varrido como pendência eterna.
+    await transitionIntegrationIntent(intent.intent.id, 'ABORTED', {
+      result: 'CONCURRENT_SOURCE_UPDATE',
+      extra: { phase: 'ABORTED', code: advance.code, reason: advance.reason },
+    });
     return baseFailure(advance.code, 'CONCURRENT_SOURCE_UPDATE', advance.reason, {
       candidateBaseCommit: candidateParent, error: { stderr: advance.stderr || null },
     });
@@ -499,7 +784,7 @@ async function integrateCandidate({
     missionCommitAfter: candidateCommit,
     integrationBranch: current.integrationBranch,
     integrationKey, sourceFence: current.fence,
-    tests, review, regression, evidence,
+    tests, review, regression, evidence: { ...evidence, phase: 'COMMITTED' },
   });
 
   logger.info('[missionSource] candidate integrado na fonte da missão', {
@@ -751,6 +1036,10 @@ module.exports = {
   exportMissionCandidate,
   listIntegrations,
   recordIntegration,
+  // IntegrationIntent durável (fase de crash-safety da fonte da missão).
+  prepareIntegrationIntent,
+  transitionIntegrationIntent,
+  reconcileMissionSourceIntents,
   readMainCommit,
   readCommitParent,
   branchExists,

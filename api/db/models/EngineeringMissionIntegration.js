@@ -45,7 +45,30 @@ function getEngineeringMissionIntegrationModel() {
       integration_type: { type: DataTypes.STRING(32), allowNull: false },
       // INTEGRATED | ALREADY_INTEGRATED | PRECONDITION_FAILED | STALE_CANDIDATE |
       // CONCURRENT_SOURCE_UPDATE | CONFLICT | INTEGRITY_FAILED
-      integration_result: { type: DataTypes.STRING(32), allowNull: false },
+      //
+      // Opcional desde 2026-10-03: a linha nasce como INTENT (PREPARED) antes de tocar na ref git,
+      // e nessa fase ainda NÃO existe desfecho a declarar. Exigi-lo aqui era o que empurrava a
+      // gravação do registro para o FIM da operação — abrindo a janela de crash git↔DB.
+      integration_result: { type: DataTypes.STRING(32), allowNull: true },
+
+      // PREPARED | GIT_APPLIED | DB_APPLIED | COMMITTED | CONFLICT | ABORTED | RECOVERY_REQUIRED
+      // É a fase DURÁVEL da integração: persistida antes do `git update-ref`, ela é o que permite
+      // reconciliar qualquer morte de processo sem reaplicar efeito. Linhas anteriores a esta
+      // migração são pós-fato e valem como COMMITTED (default da coluna).
+      integration_status: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'COMMITTED' },
+
+      // Carimbos por fase: tornam a janela de crash observável (não há como inferir "quando" de
+      // um estado, e sem isso um intent travado é indistinguível de um intent recém-criado).
+      git_applied_at: { type: DataTypes.DATE, allowNull: true },
+      db_applied_at: { type: DataTypes.DATE, allowNull: true },
+      committed_at: { type: DataTypes.DATE, allowNull: true },
+
+      // Contexto do intent: instância que preparou o efeito, commit/fence esperados no momento da
+      // preparação. `expected_mission_commit` é o CAS esperado — sem ele a reconciliação teria de
+      // adivinhar de onde a branch partiu.
+      worker_instance_id: { type: DataTypes.STRING(64), allowNull: true },
+      expected_mission_commit: { type: DataTypes.STRING(64), allowNull: true },
+      expected_fence: { type: DataTypes.INTEGER, allowNull: true },
 
       candidate_commit: { type: DataTypes.STRING(64), allowNull: false },
       candidate_base_commit: { type: DataTypes.STRING(64), allowNull: true },
@@ -73,6 +96,8 @@ function getEngineeringMissionIntegrationModel() {
         { fields: ['mission_id', 'created_at'], name: 'engineering_mission_integrations_mission_idx' },
         { fields: ['task_id'], name: 'engineering_mission_integrations_task_idx' },
         { fields: ['integration_result'], name: 'engineering_mission_integrations_result_idx' },
+        // Varredura de boot por intents NÃO terminais (PREPARED/GIT_APPLIED/DB_APPLIED/RECOVERY_REQUIRED).
+        { fields: ['integration_status'], name: 'engineering_mission_integrations_status_idx' },
       ],
     });
   }
