@@ -322,7 +322,24 @@ function diffRuleBaseline(baseline = {}, current = {}) {
  * com o estado atual e devolve um veredito explícito — nunca um booleano solto, porque a decisão do
  * chamador (bloquear o fechamento) depende do MOTIVO e do que mudou.
  */
-function verifyRuleBaseline({ baseline = null, current = null } = {}) {
+/**
+ * Diferencia os TRÊS desfechos possíveis do baseline de governança:
+ *
+ *   1. inalterado                          → ok (regras intactas);
+ *   2. alterado SEM autorização legítima   → bloqueio (afrouxamento silencioso);
+ *   3. alterado COM aval humano explícito  → PERMITIDO, declarado e auditável.
+ *
+ * DEFEITO QUE A CONTRAMEDIDA (3) ELIMINA (confirmado no código em 2026-10-03): esta função ignorava
+ * qualquer autorização. `api/services/engineeringMission/bugTriageService.js` chamava
+ * `verifyRuleBaseline({ baseline, current })` sem `humanAuthorization`, então um fix que mudava
+ * legitimamente um gate — inclusive com aprovação humana explícita e reviewer independente —
+ * recebia `ok:false` e o fechamento do finding recusava SEMPRE. O caminho "mudança de governança
+ * legítima" existia só no motor e em teste, nunca no runtime: o finding travava para sempre.
+ *
+ * A autorização NÃO é aceita em silêncio: o veredito sai com `authorized: true` e o registro da
+ * autorização anexado, para que o fechamento possa exigir e persistir a evidência.
+ */
+function verifyRuleBaseline({ baseline = null, current = null, humanAuthorization = null } = {}) {
   if (!baseline || typeof baseline !== 'object') {
     return {
       ok: false,
@@ -336,12 +353,118 @@ function verifyRuleBaseline({ baseline = null, current = null } = {}) {
   if (!diff.changed) {
     return { ok: true, checked: true, code: null, reason: 'regras de julgamento inalteradas em relação ao baseline capturado antes da correção', diff };
   }
+
+  // (3) Mudança DECLARADA e autorizada por humano — permitida, nunca silenciosa.
+  if (humanAuthorization && humanAuthorization.allowed === true) {
+    return {
+      ok: true,
+      checked: true,
+      authorized: true,
+      code: 'GOVERNANCE_BASELINE_HUMAN_AUTHORIZED',
+      reason: `alteração das regras de julgamento autorizada explicitamente por humano (${humanAuthorization.actor || 'humano'}) — declarada, com evidência anexada`,
+      diff,
+      authorization: humanAuthorization,
+    };
+  }
+
+  // (2) Mudança sem autorização legítima: bloqueio.
   return {
     ok: false,
     checked: true,
     code: 'GOVERNANCE_BASELINE_VIOLATION',
     reason: 'o fix alterou as PRÓPRIAS regras de julgamento (gate/limiar/manifesto/requisito removido ou modificado) — alteração exige aval humano explícito, nunca fechamento autônomo',
     diff,
+  };
+}
+
+/**
+ * AVALIA se uma alteração de GOVERNANÇA pode ser aceita como legítima.
+ *
+ * Regra dura, na camada pura: aprovar a MISSÃO não é aprovar a GOVERNANÇA. São consentimentos
+ * diferentes e o sistema não pode confundi-los — daí exigir um campo PRÓPRIO
+ * (`governanceChangeApproved`), além de motivo, principal humano (nunca service account) e, quando
+ * a política exigir, reviewer INDEPENDENTE.
+ *
+ * Reusa `assessGranularApprovalAuthority` (autoridade humana + permissão específica): a política de
+ * quem pode aprovar existe num lugar só.
+ *
+ * @returns {{allowed:boolean, code:string|null, reason:string, authorization:object, stages:object}}
+ */
+function assessGovernanceChangeAuthorization({
+  actor = null,
+  actorType = null,
+  hasSpecificPermission = false,
+  policy = null,
+  governanceChangeApproved = false,
+  reason = null,
+  reviewer = null,
+  requiresIndependentReviewer = false,
+  filesChanged = [],
+  beforeHash = null,
+  afterHash = null,
+  missionId = null,
+  findingId = null,
+} = {}) {
+  const authority = assessGranularApprovalAuthority({ actor, actorType, hasSpecificPermission, policy });
+
+  const deny = (code, stage, detail) => ({
+    allowed: false,
+    code,
+    stage,
+    reason: detail,
+    stages: { humanPrincipal: authority.stages ? authority.stages.humanPrincipal : authority.human, granular: authority },
+  });
+
+  // 1. Autoridade humana + permissão específica (delegado — não reimplementado).
+  if (!authority.allowed) {
+    return deny(authority.code, authority.stage || 'HUMAN_PRINCIPAL', authority.reason);
+  }
+
+  // 2. Consentimento ESPECÍFICO para mudar governança. Aprovação genérica da missão NÃO serve.
+  if (governanceChangeApproved !== true) {
+    return deny(
+      'GOVERNANCE_CHANGE_APPROVAL_REQUIRED',
+      'EXPLICIT_GOVERNANCE_APPROVAL',
+      'aprovação da missão não equivale a aprovação de MUDANÇA DE GOVERNANÇA: exige consentimento explícito (governanceChangeApproved) para alterar as próprias regras de julgamento',
+    );
+  }
+
+  // 3. Motivo declarado. Mudança de regra de julgamento sem justificativa não é auditável.
+  if (typeof reason !== 'string' || reason.trim() === '') {
+    return deny('GOVERNANCE_CHANGE_REASON_REQUIRED', 'REASON', 'mudança de governança exige motivo declarado (reason)');
+  }
+
+  // 4. Reviewer independente quando a política exigir: autor NÃO pode ser o próprio revisor.
+  if (requiresIndependentReviewer === true) {
+    const reviewerId = reviewer ? String(reviewer).trim() : '';
+    if (reviewerId === '') {
+      return deny('GOVERNANCE_CHANGE_REVIEWER_REQUIRED', 'INDEPENDENT_REVIEW', 'a política exige reviewer independente e nenhum foi informado');
+    }
+    if (reviewerId === String(actor || '').trim()) {
+      return deny('GOVERNANCE_CHANGE_REVIEWER_NOT_INDEPENDENT', 'INDEPENDENT_REVIEW', 'o autor da mudança não pode ser o revisor da própria mudança de governança');
+    }
+  }
+
+  return {
+    allowed: true,
+    code: null,
+    stage: null,
+    reason: 'mudança de governança com aval humano explícito, motivo declarado e revisão conforme a política',
+    authorization: {
+      actor: actor || null,
+      principalType: authority.actorType || actorType || null,
+      permission: SELF_MODIFICATION_APPROVAL_PERMISSION.label,
+      reason: String(reason).trim(),
+      reviewer: reviewer || null,
+      independentReviewer: requiresIndependentReviewer === true,
+      governanceChangeApproved: true,
+      filesChanged: Array.isArray(filesChanged) ? filesChanged : [],
+      beforeHash: beforeHash || null,
+      afterHash: afterHash || null,
+      missionId: missionId || null,
+      findingId: findingId || null,
+      timestamp: new Date().toISOString(),
+    },
   };
 }
 
@@ -353,6 +476,7 @@ module.exports = {
   diffRuleBaseline,
   verifyRuleBaseline,
   assessApprovalAuthority,
+  assessGovernanceChangeAuthorization,
   HUMAN_ONLY_APPROVAL_POLICY,
   SELF_MODIFICATION_APPROVAL_PERMISSION,
   assessGranularApprovalAuthority,

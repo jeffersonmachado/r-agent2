@@ -353,7 +353,7 @@ async function canRunFixAutonomously(findingId) {
  * APROVAÇÃO HUMANA explícita de um fix de self-modification. É a ação mínima que a policy exige —
  * nunca substituível por um parecer de modelo.
  */
-async function approveSelfModification(findingId, { actor, actorType = null, authenticatedActorType = null, approvalRef = null, note = null, tenantId = null, hasSelfModificationPermission = false } = {}) {
+async function approveSelfModification(findingId, { actor, actorType = null, authenticatedActorType = null, approvalRef = null, note = null, tenantId = null, hasSelfModificationPermission = false, governanceChangeApproved = false, governanceChangeReason = null, reviewer = null, requiresIndependentReviewer = false } = {}) {
   // AUTORIDADE DO AVAL: HUMANO, e só humano. Um `actor` string qualquer não basta — a aprovação
   // que libera alteração nas próprias regras de julgamento não pode vir de service account, de
   // worker automático nem de um modelo. A decisão é do motor puro (autoridade única).
@@ -420,6 +420,18 @@ async function approveSelfModification(findingId, { actor, actorType = null, aut
     note,
     tenantId,
     at: new Date().toISOString(),
+    // Consentimento ESPECÍFICO de mudança de governança. Aprovar a missão não é aprovar a
+    // governança: sem estes campos o runtime de fechamento não tem como distinguir "mudança
+    // legítima declarada" de "afrouxamento silencioso" e recusa as duas (finding travaria para
+    // sempre). Persistir no ato da aprovação é o que torna o consentimento auditável depois.
+    governanceChangeApproved: governanceChangeApproved === true,
+    governanceChangeReason: typeof governanceChangeReason === 'string' ? governanceChangeReason.trim() : null,
+    reviewer: reviewer || null,
+    requiresIndependentReviewer: requiresIndependentReviewer === true,
+    // Forma de checagem do RBAC granular no momento do aval: o fechamento reavalia a autoridade a
+    // partir do que foi REALMENTE verificado aqui — nunca de um `true` presumido.
+    hasSpecificPermission: hasSelfModificationPermission === true,
+    actorTypeVerified: authenticated || declared,
   };
   await Model.update({
     human_approval_required: false,
@@ -444,7 +456,49 @@ async function verifySelfModificationBaseline(findingId, { actor = null, current
 
   const baseline = (finding.triage && finding.triage.ruleBaseline) || null;
   const current = currentRules || captureGovernanceRuleSnapshot();
-  const verdict = engine.verifyRuleBaseline({ baseline, current });
+
+  // ---- AUTORIZAÇÃO HUMANA DE MUDANÇA DE GOVERNANÇA (o elo que faltava no runtime) --------------
+  // DEFEITO ELIMINADO (2026-10-03): esta função chamava `verifyRuleBaseline({ baseline, current })`
+  // SEM autorização. Como o motor devolve `ok:false` sempre que o baseline muda, um fix que alterava
+  // legitimamente um gate — mesmo com aval humano explícito e reviewer independente — era recusado
+  // e o finding NUNCA fechava. O caminho de mudança legítima existia só no motor e em teste.
+  const approval = (finding.triage && finding.triage.selfModificationApproval) || null;
+  const hashOf = (value) => crypto.createHash('sha256').update(JSON.stringify(value || {})).digest('hex');
+  const authorization = engine.assessGovernanceChangeAuthorization({
+    actor: approval && approval.actor,
+    actorType: approval && (approval.actorTypeVerified || approval.actorType),
+    hasSpecificPermission: Boolean(approval && approval.hasSpecificPermission),
+    policy: approval && approval.policy,
+    governanceChangeApproved: Boolean(approval && approval.governanceChangeApproved),
+    reason: approval && approval.governanceChangeReason,
+    reviewer: approval && approval.reviewer,
+    requiresIndependentReviewer: Boolean(approval && approval.requiresIndependentReviewer),
+    // `diffRuleBaseline` devolve alterações ANINHADAS por classe (`files.modified`), não um
+    // `modified` no topo: ler o campo errado devolvia lista vazia silenciosamente e a evidência
+    // da autorização perdia QUAIS arquivos de regra foram enfraquecidos.
+    filesChanged: (((engine.diffRuleBaseline(baseline, current) || {}).files) || {}).modified || [],
+    beforeHash: hashOf(baseline),
+    afterHash: hashOf(current),
+    missionId: finding.mission_id || null,
+    findingId,
+  });
+
+  // CONTRATO ENTRE AS DUAS FUNÇÕES (era aqui que o elo quebrava):
+  // `assessGovernanceChangeAuthorization` devolve `{ allowed, code, stage, reason, authorization }`
+  // onde `authorization` é a EVIDÊNCIA (principal, permissão, motivo, reviewer, hashes antes/depois)
+  // — NÃO contém `allowed`. Já `verifyRuleBaseline` exige uma CONCESSÃO com `allowed === true`
+  // explícito. Entregar a evidência crua faz o motor classificar a mudança legítima como
+  // `GOVERNANCE_BASELINE_VIOLATION` e o finding voltaria a nunca fechar (medido, não suposto).
+  // A concessão é montada AQUI, explicitamente, e só existe se `allowed` for verdadeiro.
+  const humanAuthorization = authorization.allowed
+    ? { allowed: true, code: authorization.code, ...(authorization.authorization || {}) }
+    : null;
+
+  const verdict = engine.verifyRuleBaseline({
+    baseline,
+    current,
+    humanAuthorization,
+  });
   const checkedAt = new Date().toISOString();
 
   await bugFindingService.recordEvent(findingId, 'COMMENT', {
@@ -462,7 +516,24 @@ async function verifySelfModificationBaseline(findingId, { actor = null, current
   await Model.update({
     triage: {
       ...(finding.triage || {}),
-      ruleBaselineVerification: { ok: verdict.ok, checked: verdict.checked, code: verdict.code, reason: verdict.reason, diff: verdict.diff, checkedAt, actor },
+      ruleBaselineVerification: {
+        ok: verdict.ok,
+        checked: verdict.checked,
+        code: verdict.code,
+        reason: verdict.reason,
+        diff: verdict.diff,
+        checkedAt,
+        actor,
+        // Veredito de autorização persistido: o fechamento NÃO precisa reavaliar política — e a
+        // evidência (principal, permissão, motivo, reviewer, hashes antes/depois) fica auditável
+        // sem reconstrução por joins.
+        authorized: verdict.authorized === true,
+        authorizationAllowed: authorization.allowed,
+        authorizationCode: authorization.code || null,
+        authorizationStage: authorization.stage || null,
+        authorizationReason: authorization.reason || null,
+        authorization: authorization.authorization || null,
+      },
     },
   }, { where: { id: findingId } });
 
