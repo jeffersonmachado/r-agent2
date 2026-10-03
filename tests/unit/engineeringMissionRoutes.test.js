@@ -299,3 +299,178 @@ describe('engineering-missions routes', () => {
     expect(body.blocking.blockingFindings[0].checkId).toBe('NO_SECRETS_IN_PATCH');
   });
 });
+
+/**
+ * GOVERNANCE_CHANGE_HTTP_FLOW — o contrato de aprovação de self-modification atravessa o boundary
+ * HTTP REAL (express + fetch), com a identidade vinda da AUTENTICAÇÃO.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): a rota encaminhava apenas `actorType`, `approvalRef` e `note`.
+ * `governanceChangeApproved`, `governanceChangeReason`, `reviewer` e `requiresIndependentReviewer`
+ * eram DESCARTADOS — o caminho de mudança legítima de governança existia no serviço e no motor, mas
+ * era INALCANÇÁVEL por HTTP: um humano autorizado jamais conseguia autorizar uma alteração de gate.
+ */
+describe('engineering-missions routes — aprovação de self-modification (HTTP real)', () => {
+  const FINDING_ID = 'f1111111-2222-3333-4444-555555555555';
+  let server;
+  let captured;
+
+  afterEach((done) => {
+    if (server) server.close(done);
+    else done();
+  });
+
+  function depsWithApproval({ allowed = true, impl } = {}) {
+    captured = null;
+    return buildDepsFactory({
+      requireAuth: asDevelopment,
+      requirePermission: () => ({ allowed }),
+      bugTriageService: {
+        approveSelfModification: async (findingId, payload) => {
+          captured = { findingId, payload };
+          if (impl) return impl(findingId, payload);
+          return { approved: true, finding: { id: findingId, status: 'FIXING' } };
+        },
+      },
+    });
+  }
+
+  test('GOV_HTTP_01 a rota ENCAMINHA o consentimento explícito de governança ao serviço', async () => {
+    server = await startServer(depsWithApproval());
+    const res = await fetch(`${baseUrl(server)}/engineering/findings/${FINDING_ID}/approve-self-modification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        governanceChangeApproved: true,
+        governanceChangeReason: 'o limiar antigo media outro conjunto de testes',
+        reviewer: 'auditor-independente',
+        requiresIndependentReviewer: true,
+        approvalRef: 'CHG-42',
+        note: 'aval registrado no change request',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(captured).not.toBeNull();
+    expect(captured.payload.governanceChangeApproved).toBe(true);
+    expect(captured.payload.governanceChangeReason).toContain('limiar antigo');
+    expect(captured.payload.reviewer).toBe('auditor-independente');
+    expect(captured.payload.requiresIndependentReviewer).toBe(true);
+    expect(captured.payload.approvalRef).toBe('CHG-42');
+    expect(captured.payload.note).toContain('change request');
+  });
+
+  test('GOV_HTTP_02 ausência de consentimento explícito NÃO vira true (nunca presumido)', async () => {
+    server = await startServer(depsWithApproval());
+    const res = await fetch(`${baseUrl(server)}/engineering/findings/${FINDING_ID}/approve-self-modification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: 'aprovação genérica' }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(captured.payload.governanceChangeApproved).toBe(false);
+    expect(captured.payload.requiresIndependentReviewer).toBe(false);
+  });
+
+  test('GOV_HTTP_03 a identidade do aprovador vem da AUTENTICAÇÃO — `actor` do corpo é ignorado', async () => {
+    // Principal autenticado REAL: id + classificação (o produtor `asDevelopment` só classifica).
+    const deps = depsWithApproval();
+    deps.requireAuth = (req) => {
+      req.tenantId = 'system';
+      req.agent = { id: 'test-agent', username: 'test-agent', platformClassification: 'DEVELOPMENT' };
+      return { valid: true };
+    };
+    server = await startServer(deps);
+    await fetch(`${baseUrl(server)}/engineering/findings/${FINDING_ID}/approve-self-modification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // `actor`/`permissions` injetados pelo corpo NÃO podem virar autoridade.
+      body: JSON.stringify({ actor: 'SYSTEM:fake-admin', actorType: 'HUMAN', permissions: ['engineering:approve_self_modification'] }),
+    });
+
+    expect(captured.payload.actor).toBe('test-agent');
+    expect(captured.payload.actor).not.toBe('SYSTEM:fake-admin');
+    // O tipo autenticado é derivado do principal (sessão de usuário ⇒ HUMAN), nunca do corpo.
+    expect(captured.payload.authenticatedActorType).toBe('HUMAN');
+  });
+
+  test('GOV_HTTP_04 conta de serviço é recusada com 403 (identidade autenticada, não declarada)', async () => {
+    const denial = Object.assign(new Error('tipo de ator "SERVICE" não é autoridade legítima'), {
+      code: 'SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN',
+    });
+    // O principal autenticado é uma conta de SERVIÇO — mesmo enviando actorType=HUMAN no corpo.
+    const deps = depsWithApproval({ impl: async () => { throw denial; } });
+    deps.requireAuth = (req) => {
+      req.tenantId = 'system';
+      req.agent = { platformClassification: 'DEVELOPMENT', id: 'svc-1', type: 'service_account' };
+      return { valid: true };
+    };
+    server = await startServer(deps);
+
+    const res = await fetch(`${baseUrl(server)}/engineering/findings/${FINDING_ID}/approve-self-modification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actorType: 'HUMAN', governanceChangeApproved: true, governanceChangeReason: 'tentativa' }),
+    });
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe('SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN');
+    // A autoridade NÃO veio do corpo: o tipo autenticado era SERVICE.
+    expect(captured.payload.authenticatedActorType).toBe('SERVICE');
+  });
+
+  test('GOV_HTTP_05 recusa de governança tem causa de CLIENTE e código estável (nunca 500)', async () => {
+    const denial = Object.assign(new Error('aprovação da missão não equivale a aprovação de MUDANÇA DE GOVERNANÇA'), {
+      code: 'GOVERNANCE_CHANGE_APPROVAL_REQUIRED',
+      stage: 'EXPLICIT_GOVERNANCE_APPROVAL',
+    });
+    server = await startServer(depsWithApproval({ impl: async () => { throw denial; } }));
+
+    const res = await fetch(`${baseUrl(server)}/engineering/findings/${FINDING_ID}/approve-self-modification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ governanceChangeApproved: false }),
+    });
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe('GOVERNANCE_CHANGE_APPROVAL_REQUIRED');
+  });
+
+  test('GOV_HTTP_06 sem a permissão ESPECÍFICA o boundary responde 403 antes de chamar o serviço', async () => {
+    server = await startServer(depsWithApproval({ allowed: false }));
+    const res = await fetch(`${baseUrl(server)}/engineering/findings/${FINDING_ID}/approve-self-modification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ governanceChangeApproved: true, governanceChangeReason: 'x' }),
+    });
+
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe('forbidden');
+    expect(captured).toBeNull();
+  });
+});
+
+describe('resolveAuthenticatedActorType', () => {
+  const { resolveAuthenticatedActorType } = require('../../api/modules/engineering-missions/routes');
+
+  test('sessão de usuário autenticado ⇒ HUMAN', () => {
+    expect(resolveAuthenticatedActorType({ id: 'u1', username: 'ana' })).toBe('HUMAN');
+  });
+
+  test('conta de serviço ⇒ SERVICE (nunca HUMAN)', () => {
+    expect(resolveAuthenticatedActorType({ id: 'svc', type: 'service_account' })).toBe('SERVICE');
+    expect(resolveAuthenticatedActorType({ id: 'svc', isServiceAccount: true })).toBe('SERVICE');
+  });
+
+  test('tipo explícito do principal autenticado prevalece', () => {
+    expect(resolveAuthenticatedActorType({ actorType: 'service', id: 'x' })).toBe('service');
+  });
+
+  test('principal ausente ⇒ null (fail-closed no serviço)', () => {
+    expect(resolveAuthenticatedActorType(null)).toBeNull();
+    expect(resolveAuthenticatedActorType({})).toBeNull();
+  });
+});

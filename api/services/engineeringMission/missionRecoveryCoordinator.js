@@ -379,18 +379,30 @@ async function runBootRecovery(options = {}) {
   return summary;
 }
 
-/** Varredura periódica (o boot cobre o restart; o timer cobre worker que morre com o app vivo). */
+/**
+ * Varredura periódica (o boot cobre o restart; o timer cobre worker que morre com o app vivo).
+ *
+ * A RECONCILIAÇÃO DE INTENTS roda AQUI TAMBÉM — não apenas no boot. DEFEITO ELIMINADO (2026-10-03):
+ * `reconcilePendingIntents` só era chamada em `runBootRecovery`. Uma integração que morresse entre o
+ * `git update-ref` e o CAS do banco com a aplicação VIVA (crash do worker, não do processo) ficava
+ * com a fonte mentindo indefinidamente: nenhum boot acontece, e nada mais varria os intents
+ * pendentes. A varredura periódica é idempotente e determinística, então repeti-la é seguro — e
+ * reconciliar ANTES do sweep garante que a retomada nunca trabalhe sobre estado inconsistente.
+ */
 function startRecoveryLoop({ intervalMs = DEFAULT_SWEEP_INTERVAL_MS } = {}) {
   if (!recoveryEnabled()) return { started: false, reason: 'RECOVERY_DISABLED' };
   if (sweepTimer) return { started: false, reason: 'ALREADY_RUNNING' };
   sweepTimer = setInterval(() => {
     if (sweeping) return;
     sweeping = true;
-    sweep().catch((error) => logger.warn('[missionRecovery] varredura periódica falhou', { message: error.message }))
+    reconcilePendingIntents()
+      .catch((error) => logger.warn('[missionRecovery] reconciliação periódica de intents falhou', { message: error.message }))
+      .then(() => sweep())
+      .catch((error) => logger.warn('[missionRecovery] varredura periódica falhou', { message: error.message }))
       .finally(() => { sweeping = false; });
   }, intervalMs);
   if (typeof sweepTimer.unref === 'function') sweepTimer.unref();
-  return { started: true, intervalMs, workerInstanceId: INSTANCE_ID };
+  return { started: true, intervalMs, workerInstanceId: INSTANCE_ID, reconcilesIntents: true };
 }
 
 function stopRecoveryLoop() {

@@ -216,6 +216,59 @@ async function runFixLoop(findingId, {
     promotion: { taskStatus, testRuns: testRuns.length, reviewCount: reviews.length },
   });
 
+  // ── GOVERNANÇA ANTES DE DECLARAR FIXED ──────────────────────────────────────────────────────
+  // ORDEM CORRETA (a missão de 2026-10-03 exige explicitamente): patch/testes/review GREEN ⇒
+  // verificar o baseline de governança ⇒ SÓ ENTÃO declarar FIXED ⇒ regressão ⇒ close.
+  //
+  // DEFEITO ELIMINADO: a verificação vinha DEPOIS de `markFixed`. Um fix que legitimamente alterava
+  // uma regra de julgamento deixava o finding em `FIXED` aguardando aval humano — um estado que
+  // mente (FIXED afirma ciclo concluído) e que deixava o finding ÓRFÃO: `runBugLoopSweep` só varre
+  // CONFIRMED/FIXING, então nenhum aval humano posterior voltava a ser visto pelo worker.
+  //
+  // Agora o finding PERMANECE `FIXING` com motivo de bloqueio persistido (`GOVERNANCE_APPROVAL_
+  // REQUIRED`) e o checkpoint do que já foi feito. O worker o re-seleciona sozinho e, após o aval,
+  // continua daqui — sem reexecutar o coder, porque o patch/testes/review continuam registrados.
+  let baselineVerdict = null;
+  if (finding.self_modification) {
+    baselineVerdict = await bugTriageService.verifySelfModificationBaseline(findingId, { actor });
+    if (!baselineVerdict.ok) {
+      const blockedFinding = await bugFindingService.markPendingGovernanceApproval(findingId, {
+        actor,
+        code: baselineVerdict.code || 'GOVERNANCE_APPROVAL_REQUIRED',
+        reason: baselineVerdict.reason,
+        verification: {
+          ok: baselineVerdict.ok,
+          checked: baselineVerdict.checked,
+          code: baselineVerdict.code,
+          diff: baselineVerdict.diff || null,
+        },
+        evidence: [bugFindingService.makeEvidence({
+          type: 'LOG_CORRELATION',
+          ref: `governance-approval:${findingId}`,
+          detail: `fix GREEN (task ${finding.fix_task_id}) bloqueado por governança: ${baselineVerdict.code || 'GOVERNANCE_APPROVAL_REQUIRED'}`,
+          source: 'bugLoopCoordinatorService.runFixLoop',
+        })],
+      });
+      logger.warn('[bugLoopCoordinator] fix de self-modification afrouxa o próprio critério — aguardando aval humano (finding permanece FIXING)', {
+        findingId, code: baselineVerdict.code,
+      });
+      return {
+        finding: blockedFinding,
+        executed: true,
+        fixed: false,
+        closed: false,
+        blocked: true,
+        stage: 'AWAITING_GOVERNANCE_APPROVAL',
+        blockingReason: 'GOVERNANCE_APPROVAL_REQUIRED',
+        code: baselineVerdict.code,
+        baseline: baselineVerdict,
+        checkpoint: { status: blockedFinding?.status || 'FIXING', fixTaskId: finding.fix_task_id, fixApplied: true },
+        taskStatus,
+        attempts,
+      };
+    }
+  }
+
   let fixed = false;
   let fixedError = null;
   try {
@@ -284,38 +337,9 @@ async function runFixLoop(findingId, {
     return { finding: await bugFindingService.getFinding(findingId), executed: true, fixed: false, stage: 'FIXED_REFUSED', taskStatus, attempts, fixError: fixedError };
   }
 
-  // ── SELF-MODIFICATION: o fix afrouxou o PRÓPRIO critério que o reprovava? ──────────────────
-  // Se afetou as regras de julgamento, a comparação baseline×atual precisa acontecer ANTES de
-  // qualquer fechamento: um sistema não pode consertar-se afrouxando o teste que o reprova. A
-  // violação bloqueia o fechamento e o finding fica aguardando aval HUMANO — sem exceção.
-  let baselineVerdict = null;
-  if (finding.self_modification) {
-    baselineVerdict = await bugTriageService.verifySelfModificationBaseline(findingId, { actor });
-    if (!baselineVerdict.ok) {
-      await bugFindingService.recordEvent(findingId, 'COMMENT', {
-        kind: 'AUTONOMOUS_FIX_BLOCKED',
-        reason: 'governance_baseline',
-        code: baselineVerdict.code,
-        changed: Boolean(baselineVerdict.diff && baselineVerdict.diff.changed),
-        minimumHumanAction: 'aprovar explicitamente a alteração das regras de julgamento (POST /engineering/findings/:id/approve-self-modification com actorType=HUMAN)',
-      }, { actor });
-      logger.warn('[bugLoopCoordinator] fix de self-modification afrouxa o próprio critério — fechamento bloqueado', {
-        findingId, code: baselineVerdict.code,
-      });
-      return {
-        finding: await bugFindingService.getFinding(findingId),
-        executed: true,
-        fixed: true,
-        closed: false,
-        blocked: true,
-        stage: 'AWAITING_HUMAN_APPROVAL',
-        code: baselineVerdict.code,
-        baseline: baselineVerdict,
-        taskStatus,
-        attempts,
-      };
-    }
-  }
+  // ── SELF-MODIFICATION: a verificação de baseline de governança ACONTECEU ACIMA, ANTES de
+  // declarar FIXED (é a ordem correta). Aqui o finding já está autorizado: se o baseline tivesse
+  // sido violado sem aval, o fluxo teria retornado em AWAITING_GOVERNANCE_APPROVAL sem marcar FIXED.
 
   // ── REGRESSÃO: só com execuções REAIS do fix task ────────────────────────────────────────────
   const runs = await readRegressionRuns(finding.fix_task_id);
@@ -916,7 +940,14 @@ async function runBugLoopSweep({
         }
         if (!autoFix) return { triaged: true, action: 'TRIAGED', taskId: triage.fixTask?.id || null };
         const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
-        if (fix.blocked) return { action: 'AWAITING_HUMAN_APPROVAL', code: fix.code, requiresHumanApproval: true };
+        if (fix.blocked) {
+          return {
+            action: fix.stage === 'AWAITING_GOVERNANCE_APPROVAL' ? 'AWAITING_GOVERNANCE_APPROVAL' : 'AWAITING_HUMAN_APPROVAL',
+            code: fix.code,
+            blockingReason: fix.blockingReason || null,
+            requiresHumanApproval: true,
+          };
+        }
         return { action: 'FIX_LOOP', status: fix.finding?.status || null, closed: Boolean(fix.closed) };
       });
       if (outcome?.skipped) {

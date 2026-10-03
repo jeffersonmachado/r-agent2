@@ -114,12 +114,133 @@ async function branchExists(ref) {
 }
 
 /**
+ * PERSISTE O INTENT QUE AUTORIZA A CRIAÇÃO DA BRANCH DE FONTE.
+ *
+ * Ordem obrigatória (a mesma do avanço): o registro durável da intenção existe ANTES do efeito no
+ * git. Sem ele, um processo morto logo após `git branch` deixaria uma branch de missão que nenhum
+ * registro explica — e o boot seguinte a trataria como tamper (ou pior, a adotaria).
+ *
+ * Idempotente pela chave única (`mission-source-init:<missionId>`): dois workers concorrentes
+ * produzem UM único intent; o perdedor recebe o existente. Esta é a trava que impede duas
+ * inicializações concorrentes para a mesma missão.
+ */
+async function prepareInitializationIntent({
+  missionId, baseCommit, integrationBranch, sourceRef = null, workerInstanceId = null,
+} = {}) {
+  const { EngineeringMissionIntegration } = models();
+  const Integration = EngineeringMissionIntegration();
+  const integrationKey = source.buildInitializationKey({ missionId });
+  const worker = workerInstanceId || process.env.ENGINEERING_WORKER_INSTANCE_ID || `pid-${process.pid}`;
+
+  const existing = await Integration.findOne({ where: { integration_key: integrationKey } });
+  if (existing) {
+    const row = existing.get ? existing.get({ plain: true }) : existing;
+    if (source.isTerminalIntegrationStatus(row.integration_status)) {
+      return { intent: row, created: false, terminal: true, integrationKey };
+    }
+    return { intent: row, created: false, terminal: false, integrationKey };
+  }
+
+  try {
+    const row = await Integration.create({
+      mission_id: missionId,
+      task_id: null,
+      finding_id: null,
+      integration_type: source.INITIALIZATION_INTEGRATION_TYPE,
+      integration_result: null,
+      integration_status: 'PREPARED',
+      candidate_commit: baseCommit,
+      candidate_base_commit: null,
+      mission_commit_before: null,
+      mission_commit_after: null,
+      integration_branch: integrationBranch,
+      integration_key: integrationKey,
+      source_fence: 0,
+      expected_mission_commit: null,
+      expected_fence: null,
+      worker_instance_id: worker,
+      tests: [],
+      review: {},
+      regression: {},
+      evidence: { phase: 'PREPARED', kind: 'MISSION_SOURCE_INITIALIZATION', sourceRef },
+    });
+    const plain = row.get ? row.get({ plain: true }) : row;
+    logger.info('[missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte', {
+      missionId, branch: integrationBranch, baseCommit: String(baseCommit).slice(0, 12), worker,
+    });
+    return { intent: plain, created: true, terminal: false, integrationKey };
+  } catch (err) {
+    if (err && (err.name === 'SequelizeUniqueConstraintError' || /unique/i.test(String(err.message)))) {
+      const race = await Integration.findOne({ where: { integration_key: integrationKey } });
+      const row = race && race.get ? race.get({ plain: true }) : race;
+      return { intent: row, created: false, terminal: row ? source.isTerminalIntegrationStatus(row.integration_status) : false, integrationKey };
+    }
+    logger.error('[missionSource] falha ao persistir InitializationIntent (a branch NÃO pode ser criada)', {
+      missionId, errorName: err && err.name, errorMessage: err && err.message,
+    });
+    throw err;
+  }
+}
+
+/**
+ * FECHA a inicialização da fonte: grava o estado no banco e marca o intent COMMITTED.
+ *
+ * É o passo que a janela de crash pode ter perdido (branch criada, banco ainda sem source). Chamado
+ * tanto pelo caminho normal quanto pela reconciliação — o efeito é o MESMO nos dois, e é idempotente
+ * porque a branch e o `mission_current_commit` já convergem para `baseCommit`.
+ */
+async function finishMissionSourceInitialization({ missionId, baseCommit, branch, sourceRef = 'main', intentId = null, actor = null } = {}) {
+  const { EngineeringMission } = models();
+  const Mission = EngineeringMission();
+  const mission = await Mission.findByPk(missionId);
+  if (!mission) throw sourceError('MISSION_NOT_FOUND', `mission ${missionId} não encontrada`);
+
+  const alreadyPersisted = mission.mission_current_commit
+    && mission.mission_current_commit === baseCommit
+    && mission.mission_integration_branch === branch;
+
+  if (!alreadyPersisted) {
+    await mission.update({
+      mission_source_ref: mission.mission_source_ref || sourceRef,
+      mission_base_commit: mission.mission_base_commit || baseCommit,
+      mission_integration_branch: branch,
+      mission_current_commit: baseCommit,
+      mission_source_fence: Number(mission.mission_source_fence || 0),
+      mission_source_state: 'READY',
+      mission_workspace_id: mission.mission_workspace_id || `mission-ws-${String(missionId).slice(0, 8)}`,
+    });
+  }
+  if (intentId) {
+    await transitionIntegrationIntent(intentId, 'COMMITTED', {
+      missionCommitAfter: baseCommit,
+      result: 'INTEGRATED',
+      extra: { phase: 'COMMITTED', kind: 'MISSION_SOURCE_INITIALIZATION', initializedAt: new Date().toISOString() },
+    });
+  }
+  logger.info('[missionSource] fonte da missão inicializada', {
+    missionId, branch, baseCommit: String(baseCommit).slice(0, 12), actor, alreadyPersisted,
+  });
+  return getMissionSource(missionId);
+}
+
+/**
  * Materializa (ou reaproveita) a fonte isolada de uma missão.
  *
- * Idempotente por natureza: se a branch já existe, o commit dela é ADOTADO como commit corrente —
- * a missão pode ser retomada depois de um restart sem perder o que já integrou e sem criar uma
- * segunda branch. A `mission_base_commit` (M0) é gravada UMA vez e nunca muda: é a prova de qual era
- * a main quando a missão começou.
+ * ORDEM DE PRECEDÊNCIA (crash-safe, nesta ordem e por este motivo):
+ *   1. RECONCILIAR os intents não-terminais da PRÓPRIA missão — antes de julgar qualquer coisa. Um
+ *      intent pendente compatível com o estado real (branch=candidate, DB=esperado) NÃO é tamper:
+ *      é uma operação a meio caminho que a matriz determinística sabe fechar. Julgar antes de
+ *      reconciliar classificava a janela de crash como divergência.
+ *   2. Se a branch EXISTE e a missão ainda não tem source no banco: só é legítimo se houver
+ *      InitializationIntent; sem ele, `UNTRUSTED_MISSION_SOURCE_INITIALIZATION` (nunca adotar).
+ *   3. Se a branch existe e há source: gate de ADOÇÃO (commit tem de ser explicado).
+ *   4. Se a branch NÃO existe e a missão TEM commit corrente: RECRIAÇÃO no commit autoritativo
+ *      (nunca na origem/main) — desde que a proveniência prove o commit; senão
+ *      `MISSION_SOURCE_RECOVERY_REQUIRED`.
+ *   5. Caso contrário: INICIALIZAÇÃO, com intent persistido ANTES do `git branch`.
+ *
+ * Idempotente por natureza em todos os caminhos: rodar duas vezes não cria uma segunda branch, não
+ * move o commit e não avança o fence (o fence só avança quando o COMMIT muda).
  */
 async function ensureMissionSource(missionId, { actor = null, sourceRef = null } = {}) {
   if (!missionId) throw sourceError('MISSION_SOURCE_ID_REQUIRED', 'missionId é obrigatório');
@@ -127,16 +248,79 @@ async function ensureMissionSource(missionId, { actor = null, sourceRef = null }
   const branch = source.buildIntegrationBranchName(missionId);
   const { EngineeringMission } = models();
   const Mission = EngineeringMission();
-  const mission = await Mission.findByPk(missionId);
+  let mission = await Mission.findByPk(missionId);
   if (!mission) throw sourceError('MISSION_NOT_FOUND', `mission ${missionId} não encontrada`);
 
+  // ---- 1. RECONCILIAÇÃO ANTES DE JULGAR ------------------------------------------------------
+  // Fechar o estado dos intents pendentes desta missão primeiro. Sem isto, a janela legítima de
+  // crash (branch à frente do banco, intent GIT_APPLIED) seria lida como divergência e a missão
+  // seria marcada DIVERGENCE por um estado que a própria matriz sabe curar.
+  try {
+    const reconciled = await reconcileMissionSourceIntents({ missionId });
+    if (reconciled.reconciled > 0) {
+      mission = await Mission.findByPk(missionId);
+    }
+  } catch (err) {
+    logger.error('[missionSource] reconciliação prévia de intents falhou; seguindo com o estado persistido', {
+      missionId, errorName: err && err.name, errorMessage: err && err.message,
+    });
+  }
+
   const existingBranchCommit = await branchExists(branch);
+
+  // ---- 2. BRANCH EXISTE SEM SOURCE NO BANCO ⇒ inicialização a meio caminho -------------------
+  if (existingBranchCommit && !mission.mission_current_commit) {
+    const { EngineeringMissionIntegration } = models();
+    const Integration = EngineeringMissionIntegration();
+    const initIntent = await Integration.findOne({
+      where: {
+        mission_id: missionId,
+        integration_type: source.INITIALIZATION_INTEGRATION_TYPE,
+        integration_key: source.buildInitializationKey({ missionId }),
+      },
+    });
+    const initRow = initIntent && initIntent.get ? initIntent.get({ plain: true }) : initIntent;
+
+    if (!initRow) {
+      const evidence = {
+        code: 'UNTRUSTED_MISSION_SOURCE_INITIALIZATION',
+        reason: 'a branch de fonte existe mas não há InitializationIntent que a autorize — adoção recusada (pode ser push/rebase/worktree externo)',
+        detectedAt: new Date().toISOString(),
+        branch,
+        branchCommit: existingBranchCommit,
+        detectedBy: 'ensureMissionSource',
+        actor,
+      };
+      await mission.update({
+        mission_source_state: 'DIVERGENCE',
+        failure: { ...(mission.failure || {}), missionSourceDivergence: evidence },
+      });
+      logger.error('[missionSource] UNTRUSTED_MISSION_SOURCE_INITIALIZATION — branch inicial sem intent recuperável; adoção recusada', evidence);
+      throw sourceError('UNTRUSTED_MISSION_SOURCE_INITIALIZATION', `
+[missionSource] a branch ${branch} existe em ${String(existingBranchCommit).slice(0, 12)} sem InitializationIntent — a missão foi marcada DIVERGENCE.`, evidence);
+    }
+
+    const initializedBase = String(initRow.candidate_commit || '').trim();
+    if (initializedBase === '' || String(existingBranchCommit) !== initializedBase) {
+      await transitionIntegrationIntent(initRow.id, 'RECOVERY_REQUIRED', {
+        extra: { phase: 'INITIALIZATION_DIVERGENCE', branchCommit: existingBranchCommit, expectedBase: initializedBase || null, at: new Date().toISOString() },
+      });
+      await mission.update({ mission_source_state: 'RECOVERY_REQUIRED' });
+      throw sourceError('MISSION_SOURCE_RECOVERY_REQUIRED',
+        `[missionSource] branch ${branch} em ${String(existingBranchCommit).slice(0, 12)} diverge da base autorizada ${initializedBase.slice(0, 12) || '(ausente)'} — recuperação controlada exigida`,
+        { branch, branchCommit: existingBranchCommit, expectedBase: initializedBase || null });
+    }
+
+    // Crash entre o `git branch` e a persistência: o intent existe e a branch está na base
+    // autorizada ⇒ termina a inicialização sem recriar nada e SEM avançar o fence.
+    return finishMissionSourceInitialization({
+      missionId, baseCommit: initializedBase, branch, sourceRef: mission.mission_source_ref || sourceRef || 'main',
+      intentId: initRow.id, actor,
+    });
+  }
+
   if (existingBranchCommit) {
-    // ---- GATE: a branch NÃO pode ser adotada só porque existe --------------------------------
-    // DEFEITO ELIMINADO (2026-10-03): o caminho era `branch existe → adotar HEAD`, sem perguntar de
-    // onde veio aquele commit. Um push manual, um rebase ou outro worktree podiam mover a ref e o
-    // sistema simplesmente passava a executar sobre um código que nenhuma integração autorizou —
-    // adotando (`DB := M666`) em vez de recusar.
+    // ---- 3. GATE: a branch NÃO pode ser adotada só porque existe --------------------------------
     const trail = await listIntegrations(missionId);
     const explainedCommits = [
       mission.mission_base_commit,
@@ -185,6 +369,69 @@ async function ensureMissionSource(missionId, { actor = null, sourceRef = null }
     return getMissionSource(missionId);
   }
 
+  // ---- 4. BRANCH AUSENTE COM SOURCE PERSISTIDA ⇒ RECRIAÇÃO NO COMMIT AUTORITATIVO -------------
+  // DEFEITO ELIMINADO: antes, este caso caía no caminho de criação a partir da ORIGEM e a missão
+  // voltava para a main (M0), perdendo todas as integrações em silêncio.
+  if (mission.mission_current_commit) {
+    const trail = await listIntegrations(missionId);
+    const provenanceCommits = trail
+      .filter((row) => row.integration_result === 'INTEGRATED')
+      .map((row) => row.mission_commit_after)
+      .filter(Boolean);
+    const recovery = source.classifyBranchDeletionRecovery({
+      missionCurrentCommit: mission.mission_current_commit,
+      missionBaseCommit: mission.mission_base_commit,
+      provenanceCommits,
+    });
+
+    if (!recovery.recoverable) {
+      const evidence = {
+        code: recovery.code,
+        reason: recovery.reason,
+        detectedAt: new Date().toISOString(),
+        branch,
+        missionCurrentCommit: mission.mission_current_commit,
+        missionBaseCommit: mission.mission_base_commit || null,
+        provenanceCommits,
+        detectedBy: 'ensureMissionSource',
+        actor: actor || null,
+      };
+      await mission.update({
+        mission_source_state: 'RECOVERY_REQUIRED',
+        failure: { ...(mission.failure || {}), missionSourceRecoveryRequired: evidence },
+      });
+      logger.error('[missionSource] MISSION_SOURCE_RECOVERY_REQUIRED — branch apagada sem proveniência que prove o commit corrente', evidence);
+      throw sourceError('MISSION_SOURCE_RECOVERY_REQUIRED', recovery.reason, evidence);
+    }
+
+    if (!(await commitExists(recovery.commit))) {
+      await mission.update({
+        mission_source_state: 'RECOVERY_REQUIRED',
+        failure: {
+          ...(mission.failure || {}),
+          missionSourceRecoveryRequired: {
+            code: 'MISSION_SOURCE_COMMIT_UNRESOLVABLE', reason: recovery.reason,
+            commit: recovery.commit, detectedAt: new Date().toISOString(), detectedBy: 'ensureMissionSource',
+          },
+        },
+      });
+      throw sourceError('MISSION_SOURCE_RECOVERY_REQUIRED',
+        `[missionSource] o commit autoritativo ${String(recovery.commit).slice(0, 12)} não existe mais no repositório — recuperação controlada exigida`,
+        { commit: recovery.commit });
+    }
+
+    const createResult = await runGit(['branch', branch, recovery.commit]);
+    if (!createResult.ok) {
+      throw sourceError('MISSION_SOURCE_BRANCH_RECREATE_FAILED', `falha ao recriar a fonte da missão ${branch} em ${String(recovery.commit).slice(0, 12)}: ${createResult.stderr}`);
+    }
+    await mission.update({ mission_integration_branch: branch, mission_source_state: 'READY' });
+    logger.warn('[missionSource] branch de fonte RECRIADA no commit autoritativo (nunca na main)', {
+      missionId, branch, commit: String(recovery.commit).slice(0, 12), code: recovery.code || 'PROVEN_BY_RECEIPT', actor,
+    });
+    return getMissionSource(missionId);
+  }
+
+  // ---- 5. INICIALIZAÇÃO (comportamento novo: intent ANTES do git) ------------------------------
   const origin = sourceRef || mission.mission_source_ref || mission.branch || 'main';
   if (source.isForbiddenSourceRef(origin) === false && source.isMissionBranch(origin)) {
     throw sourceError('MISSION_SOURCE_REF_INVALID', `ref de origem "${origin}" é uma branch de missão — a origem deve ser a linha principal`);
@@ -195,25 +442,36 @@ async function ensureMissionSource(missionId, { actor = null, sourceRef = null }
     throw sourceError('MISSION_SOURCE_ORIGIN_UNRESOLVABLE', `não foi possível resolver o commit de origem "${origin}"`);
   }
 
-  const createResult = await runGit(['branch', branch, baseCommit]);
-  if (!createResult.ok) {
-    throw sourceError('MISSION_SOURCE_BRANCH_CREATE_FAILED', `falha ao criar a fonte da missão ${branch}: ${createResult.stderr}`);
+  // (a) INTENT DURÁVEL — a intenção é gravada ANTES de qualquer efeito no git. Dois workers
+  // concorrentes colidem aqui na chave única: apenas um cria, e ambos usam o MESMO intent.
+  const init = await prepareInitializationIntent({
+    missionId, baseCommit, integrationBranch: branch, sourceRef: origin,
+    workerInstanceId: process.env.ENGINEERING_WORKER_INSTANCE_ID || null,
+  });
+  if (init.terminal) {
+    // Já houve inicialização terminal: nada a criar; adota o que estiver persistido.
+    return getMissionSource(missionId);
   }
 
-  await mission.update({
-    mission_source_ref: origin,
-    mission_base_commit: baseCommit,
-    mission_integration_branch: branch,
-    mission_current_commit: baseCommit,
-    mission_source_state: 'READY',
-    mission_workspace_id: mission.mission_workspace_id || `mission-ws-${String(missionId).slice(0, 8)}`,
-  });
+  // (b) EFEITO no git. Idempotente: se outro worker já criou a branch na MESMA base, isso é
+  // convergência legítima (mesmo intent), não erro.
+  const createResult = await runGit(['branch', branch, baseCommit]);
+  if (!createResult.ok) {
+    const now = await branchExists(branch);
+    if (now !== baseCommit) {
+      await transitionIntegrationIntent(init.intent.id, 'RECOVERY_REQUIRED', {
+        extra: { phase: 'INITIALIZATION_FAILED', branchCommit: now, expectedBase: baseCommit, stderr: createResult.stderr },
+      });
+      throw sourceError('MISSION_SOURCE_BRANCH_CREATE_FAILED',
+        `falha ao criar a fonte da missão ${branch}: ${createResult.stderr}`,
+        { branch, branchCommit: now, expectedBase: baseCommit });
+    }
+  }
 
-  logger.info('[missionSource] fonte da missão materializada', {
-    missionId, branch, sourceRef: origin, baseCommit: baseCommit.slice(0, 12), actor,
+  // (c) PERSISTÊNCIA do estado da missão + (d) COMMITTED no intent.
+  return finishMissionSourceInitialization({
+    missionId, baseCommit, branch, sourceRef: origin, intentId: init.intent.id, actor,
   });
-
-  return getMissionSource(missionId);
 }
 
 /** Leitura da fonte persistida (sem efeito colateral). */
@@ -462,11 +720,75 @@ async function transitionIntegrationIntent(intentId, status, { missionCommitAfte
 }
 
 /**
+ * CAS DO COMMIT CORRENTE DA FONTE + AVANÇO DO FENCE — autoridade ÚNICA da mudança de posição.
+ *
+ * REGRA INVIOLÁVEL (enunciada na missão de 2026-10-03): TODA mudança autoritativa de
+ * `mission_current_commit` (M2 → M3) avança `mission_source_fence` (N → N+1) — no caminho normal,
+ * em retry, em recovery de boot e em reconciliação. O estado final tem de ser SEMANTICAMENTE
+ * IDÊNTICO nos quatro caminhos, senão o fence deixa de ser prova de posse e um worker morto com o
+ * fence antigo continua autorizado a escrever.
+ *
+ * DEFEITO QUE ESTA FUNÇÃO ELIMINA (confirmado no código em 2026-10-03): a reconciliação pós-crash
+ * gravava `mission_current_commit = candidate` SEM tocar no fence e SEM CAS. Resultado:
+ *   normal  M2/N → M3/N+1
+ *   recovery M2/N → M3/N          ← fence vencido continuava válido
+ * A branch avançava e o fence não, então `Worker A` (fence N) voltava e a escrita protegida dele era
+ * ACEITA sobre uma fonte que ele não possuía mais.
+ *
+ * O CAS usa `expectedCommit` + `expectedFence` (nunca só o commit): um avanço concorrente que já
+ * mudou a linha — ou cujo fence avançou — perde aqui e é reportado, nunca sobrescrito.
+ */
+async function applySourceAdvanceCommit({
+  missionId, expectedCommit = null, expectedFence = null, candidateCommit, state = 'READY',
+} = {}) {
+  const { EngineeringMission } = models();
+  const Mission = EngineeringMission();
+
+  // Sem fence esperado declarado não há CAS de posse: lê-se o valor corrente AGORA (nunca um valor
+  // capturado antes, que ficaria obsoleto depois de outro intent aplicado).
+  let fence = expectedFence;
+  if (fence === null || fence === undefined) {
+    const current = await Mission.findByPk(missionId);
+    fence = Number(current && current.mission_source_fence ? current.mission_source_fence : 0);
+  }
+
+  const where = { id: missionId, mission_source_fence: Number(fence) };
+  if (expectedCommit !== null && expectedCommit !== undefined && String(expectedCommit).trim() !== '') {
+    where.mission_current_commit = expectedCommit;
+  }
+
+  const [updated] = await Mission.update(
+    {
+      mission_current_commit: candidateCommit,
+      mission_source_fence: Number(fence) + 1,
+      mission_source_state: state,
+    },
+    { where },
+  );
+  return { advanced: updated === 1, fenceBefore: Number(fence), fenceAfter: Number(fence) + 1 };
+}
+
+/**
  * Reconciliação determinística dos intents NÃO terminais de uma missão.
  *
- * É o que a retomada (inclusive no boot) chama: para cada intent que ficou no meio do caminho, lê o
- * estado REAL (ref git + commit do banco) e aplica a matriz pura — nunca improvisa e nunca reaplica
- * um efeito já aplicado.
+ * É o que a retomada (boot, loop periódico e `ensureMissionSource`) chama: para cada intent que
+ * ficou no meio do caminho, lê o estado REAL (ref git + commit do banco) e aplica a matriz pura —
+ * nunca improvisa e nunca reaplica um efeito já aplicado.
+ *
+ * DUAS CORREÇÕES ESTRUTURAIS (2026-10-03, ambas confirmadas no código):
+ *
+ *   1. ESTADO FRESCO POR INTENT. Antes, `dbCommit` era capturado UMA vez antes do laço e reutilizado
+ *      para todos os intents. Com dois intents pendentes, o segundo era avaliado contra o commit
+ *      ANTERIOR ao primeiro — e a matriz, que decide por igualdade exata de commit, classificava o
+ *      segundo como divergência. Agora a missão é relida (e a branch reexaminada) ANTES de cada
+ *      intent: `reload → read branch → evaluate → apply → reload next`.
+ *
+ *   2. FENCE AVANÇA JUNTO COM O COMMIT. Antes, o caminho FINISH_DB/COMMIT_RECEIPT gravava
+ *      `mission_current_commit = candidate` sem CAS e SEM tocar no fence. O commit avançava e o
+ *      fence não, então um worker morto com o fence antigo continuava autorizado a escrever sobre
+ *      uma fonte que não possuía. Agora o avanço passa por `applySourceAdvanceCommit`, que faz CAS
+ *      em `(expectedCommit, expectedFence)` e grava `fence + 1` — o MESMO resultado do caminho
+ *      normal. Recovery e caminho normal convergem para o mesmo estado.
  */
 async function reconcileMissionSourceIntents({ missionId } = {}) {
   const { EngineeringMissionIntegration, EngineeringMission } = models();
@@ -480,11 +802,21 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
   const intents = (rows || []).map((r) => (r.get ? r.get({ plain: true }) : r));
   if (intents.length === 0) return { reconciled: 0, outcomes: [] };
 
-  const mission = await Mission.findByPk(missionId);
-  const dbCommit = mission ? mission.mission_current_commit : null;
   const outcomes = [];
 
   for (const intent of intents) {
+    // ---- ESTADO FRESCO: relê a missão e a branch a CADA intent (nunca um snapshot reutilizado) ----
+    const mission = await Mission.findByPk(missionId);
+    const dbCommit = mission ? mission.mission_current_commit : null;
+    const dbFence = mission ? Number(mission.mission_source_fence || 0) : 0;
+
+    // ---- INICIALIZAÇÃO da fonte (não tem task/candidate de integração) -------------------------
+    if (intent.integration_type === source.INITIALIZATION_INTEGRATION_TYPE) {
+      const initOutcome = await reconcileInitializationIntent({ intent, mission, branchExists });
+      outcomes.push({ intentId: intent.id, kind: 'INITIALIZATION', candidateCommit: String(intent.candidate_commit).slice(0, 12), ...initOutcome });
+      continue;
+    }
+
     const branch = intent.integration_branch;
     const branchCommit = branch ? await branchExists(branch) : null;
     const decision = source.classifyIntegrationReconciliation({
@@ -497,11 +829,42 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
 
     if (decision.outcome === 'FINISH_DB' || decision.outcome === 'COMMIT_RECEIPT') {
       // O git JÁ está no candidate: o efeito foi autorizado por este intent. Completa-se o banco /
-      // receita de forma determinística, SEM tocar na ref de novo.
-      await Mission.update(
-        { mission_current_commit: intent.candidate_commit, mission_source_state: 'READY' },
-        { where: { id: missionId } },
-      );
+      // receita de forma determinística, SEM tocar na ref de novo — e com o MESMO avanço de fence
+      // do caminho normal.
+      const expectedCommit = intent.expected_mission_commit || intent.mission_commit_before || null;
+      const expectedFence = intent.expected_fence === null || intent.expected_fence === undefined
+        ? dbFence
+        : Number(intent.expected_fence);
+
+      // DB já no candidate (COMMIT_RECEIPT): nada a avançar; só finaliza o receipt. Caso contrário,
+      // aplica o CAS que a morte do processo interrompeu.
+      let applied = { advanced: true, fenceBefore: expectedFence, fenceAfter: Number(expectedFence) + 1 };
+      if (decision.outcome === 'FINISH_DB') {
+        applied = await applySourceAdvanceCommit({
+          missionId,
+          expectedCommit,
+          expectedFence,
+          candidateCommit: intent.candidate_commit,
+        });
+      }
+
+      if (!applied.advanced) {
+        // O CAS perdeu: outro dono já moveu/avançou a linha depois do git. NÃO se sobrescreve —
+        // exige-se reparo controlado (e o fence NÃO é forçado para cima).
+        await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
+          extra: {
+            phase: 'CONCURRENT_SOURCE_UPDATE', code: 'CONCURRENT_MISSION_SOURCE_UPDATE',
+            reason: `CAS do banco perdeu na reconciliação (fence esperado ${applied.fenceBefore}, corrente ${dbFence})`,
+            reconciledAt: new Date().toISOString(),
+          },
+        });
+        outcomes.push({
+          intentId: intent.id, candidateCommit: String(intent.candidate_commit).slice(0, 12),
+          outcome: 'CONCURRENT_SOURCE_UPDATE', code: 'CONCURRENT_MISSION_SOURCE_UPDATE', reapply: false,
+        });
+        continue;
+      }
+
       await transitionIntegrationIntent(intent.id, decision.outcome === 'FINISH_DB' ? 'DB_APPLIED' : 'COMMITTED', {
         missionCommitAfter: intent.candidate_commit,
         result: 'INTEGRATED',
@@ -510,7 +873,14 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
       if (decision.outcome === 'FINISH_DB') {
         await transitionIntegrationIntent(intent.id, 'COMMITTED', { result: 'INTEGRATED' });
       }
-    } else if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT') {
+      outcomes.push({
+        intentId: intent.id, candidateCommit: String(intent.candidate_commit).slice(0, 12),
+        ...decision, fenceBefore: applied.fenceBefore, fenceAfter: applied.fenceAfter,
+      });
+      continue;
+    }
+
+    if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT') {
       await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
         extra: { phase: decision.outcome, code: decision.code, reason: decision.reason, reconciledAt: new Date().toISOString() },
       });
@@ -520,6 +890,59 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
   }
 
   return { reconciled: outcomes.filter((o) => o.outcome === 'FINISH_DB' || o.outcome === 'COMMIT_RECEIPT').length, outcomes };
+}
+
+/**
+ * Reconciliação de um InitializationIntent (a branch de fonte pode nunca ter sido criada, ou ter
+ * sido criada e o banco não).
+ *
+ * Três estados possíveis, cada um com UM desfecho determinístico:
+ *   intent + branch ausente            → recria a branch na base autorizada (retry da criação);
+ *   intent + branch na base esperada   → finaliza o banco (o efeito git já estava autorizado);
+ *   intent + branch em outro commit    → RECOVERY_REQUIRED (nunca adotar commit não autorizado).
+ */
+async function reconcileInitializationIntent({ intent, mission, branchExists: branchExistsFn }) {
+  const branch = intent.integration_branch || (mission ? source.buildIntegrationBranchName(mission.id) : null);
+  const baseCommit = String(intent.candidate_commit || '').trim();
+  const existing = branch ? await branchExistsFn(branch) : null;
+
+  if (mission && mission.mission_current_commit) {
+    // O banco já tem source (a inicialização terminou ou foi reconciliada antes). Nada a fazer além
+    // de fechar o intent; qualquer divergência real é tratada pelo gate de adoção.
+    await transitionIntegrationIntent(intent.id, 'COMMITTED', {
+      missionCommitAfter: mission.mission_current_commit,
+      result: 'INTEGRATED',
+      extra: { phase: 'COMMITTED', kind: 'MISSION_SOURCE_INITIALIZATION', reconciledBy: 'init_reconciliation' },
+    });
+    return { outcome: 'COMMIT_RECEIPT', code: null, reapply: false };
+  }
+
+  if (!existing) {
+    if (!baseCommit) {
+      await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', { extra: { phase: 'INITIALIZATION_NO_BASE' } });
+      return { outcome: 'BLOCKED_REQUIRES_REPAIR', code: 'MISSION_SOURCE_RECOVERY_REQUIRED', reapply: false };
+    }
+    const createResult = await runGit(['branch', branch, baseCommit]);
+    if (!createResult.ok) {
+      const now = await branchExistsFn(branch);
+      if (now !== baseCommit) {
+        await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
+          extra: { phase: 'INITIALIZATION_RETRY_FAILED', stderr: createResult.stderr, branchCommit: now },
+        });
+        return { outcome: 'BLOCKED_REQUIRES_REPAIR', code: 'MISSION_SOURCE_RECOVERY_REQUIRED', reapply: false };
+      }
+    }
+  } else if (String(existing) !== baseCommit) {
+    await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
+      extra: { phase: 'INITIALIZATION_DIVERGENCE', branchCommit: existing, expectedBase: baseCommit },
+    });
+    return { outcome: 'DIVERGENCE', code: 'UNTRUSTED_MISSION_SOURCE_INITIALIZATION', reapply: false };
+  }
+
+  await finishMissionSourceInitialization({
+    missionId: mission.id, baseCommit, branch, sourceRef: (mission && mission.mission_source_ref) || 'main', intentId: intent.id,
+  });
+  return { outcome: 'FINISH_DB', code: null, reapply: false, fenceBefore: 0, fenceAfter: 0 };
 }
 
 /**
@@ -586,6 +1009,38 @@ async function advanceMissionSource({ missionId, expectedCommit, newCommit, expe
     return { advanced: false, code: 'INTEGRATION_INTENT_MISMATCH', reason: 'o expectedMissionCommit do intent não é o commit corrente esperado — recusado' };
   }
 
+  // ---- 0.1 GATE DE POSSE — ANTES de tocar na ref git -------------------------------------------
+  // DEFEITO ELIMINADO (2026-10-03): o `git update-ref` não conhece fence. Quem recusava uma posse
+  // vencida era o CAS do BANCO, que acontece DEPOIS do efeito no git. Um worker morto que voltasse
+  // com o fence antigo conseguia MOVER A REF e só então perdia o CAS — deixando a branch da missão
+  // avançada por uma escrita que não era dele (e o estado caía em "concorrência" em vez de
+  // STALE_FENCE_REJECTED). A posse é verificada AQUI, contra o estado VIVO, antes de qualquer efeito.
+  {
+    const { EngineeringMission } = models();
+    const MissionProbe = EngineeringMission();
+    const live = await MissionProbe.findByPk(missionId);
+    const liveFence = Number((live && live.mission_source_fence) || 0);
+    const liveCommit = live ? live.mission_current_commit : null;
+
+    if (expectedFence !== null && expectedFence !== undefined && Number(expectedFence) !== liveFence) {
+      return {
+        advanced: false,
+        code: 'STALE_FENCE_REJECTED',
+        fenceBefore: liveFence,
+        expectedFence: Number(expectedFence),
+        reason: `posse vencida (STALE_FENCE_REJECTED): o worker esperava o fence ${expectedFence} mas a missão está no fence ${liveFence} — escrita recusada ANTES de tocar na ref git (o fence aponta para uma geração de posse que não existe mais)`,
+      };
+    }
+    if (String(liveCommit || '') !== String(expectedCommit || '')) {
+      return {
+        advanced: false,
+        code: 'CONCURRENT_MISSION_SOURCE_UPDATE',
+        currentCommit: liveCommit,
+        reason: `a fonte já está em ${String(liveCommit).slice(0, 12)}, não em ${String(expectedCommit).slice(0, 12)} — avanço recusado antes do git`,
+      };
+    }
+  }
+
   const refResult = await runGit(['update-ref', `refs/heads/${branch}`, newCommit, expectedCommit]);
   if (!refResult.ok) {
     return {
@@ -606,23 +1061,17 @@ async function advanceMissionSource({ missionId, expectedCommit, newCommit, expe
 
   const { EngineeringMission } = models();
   const Mission = EngineeringMission();
-  const { Op } = require('sequelize');
 
-  const where = { id: missionId, mission_current_commit: expectedCommit };
-  if (expectedFence !== null && expectedFence !== undefined) {
-    where.mission_source_fence = expectedFence;
-  }
+  // CAS em (expectedCommit, expectedFence) + avanço do fence — a MESMA função usada pela
+  // reconciliação. Caminho normal e caminho de recovery convergem para o mesmo estado final.
+  const applied = await applySourceAdvanceCommit({
+    missionId,
+    expectedCommit,
+    expectedFence: expectedFence === null || expectedFence === undefined ? null : Number(expectedFence),
+    candidateCommit: newCommit,
+  });
 
-  const [updated] = await Mission.update(
-    {
-      mission_current_commit: newCommit,
-      mission_source_fence: Number(expectedFence || 0) + 1,
-      mission_source_state: 'READY',
-    },
-    { where: { ...where, [Op.and]: [] } },
-  );
-
-  if (updated !== 1) {
+  if (!applied.advanced) {
     // O git já avançou, mas o CAS do banco perdeu: houve concorrência. O commit está na branch (o
     // código é real), então reconcilia-se o banco para o MESMO commit em vez de reverter o git —
     // a fonte da missão é o que as tasks vão ler, e ela está correta.
@@ -642,7 +1091,7 @@ async function advanceMissionSource({ missionId, expectedCommit, newCommit, expe
 
   await transitionIntegrationIntent(intentId, 'DB_APPLIED', { missionCommitAfter: newCommit });
 
-  return { advanced: true, code: null };
+  return { advanced: true, code: null, fenceBefore: applied.fenceBefore, fenceAfter: applied.fenceAfter };
 }
 
 /**
@@ -710,15 +1159,22 @@ async function integrateCandidate({
     if (recordedAfter && current.currentCommit !== recordedAfter) {
       const branchCommit = await branchExists(current.integrationBranch);
       if (branchCommit === recordedAfter) {
-        const { EngineeringMission } = models();
-        const Mission = EngineeringMission();
-        await Mission.update({ mission_current_commit: recordedAfter, mission_source_state: 'READY' }, { where: { id: missionIdValue } });
+        // O MESMO CAS do caminho normal: commit E fence avançam juntos. Antes, este caminho
+        // gravava só o commit e o fence ficava no valor antigo — um worker morto continuava
+        // autorizado a escrever sobre a fonte que ele já não possuía.
+        const applied = await applySourceAdvanceCommit({
+          missionId: missionIdValue,
+          expectedCommit: current.currentCommit,
+          expectedFence: current.fence,
+          candidateCommit: recordedAfter,
+        });
         logger.warn('[missionSource] reconciliação pós-crash: commit corrente alinhado com a branch', {
           missionIdValue, commit: String(recordedAfter).slice(0, 12),
+          fenceBefore: applied.fenceBefore, fenceAfter: applied.fenceAfter, advanced: applied.advanced,
         });
         return {
           integrated: true, reconciled: true, result: 'ALREADY_INTEGRATED', code: null,
-          integrationKey, missionCommitAfter: recordedAfter,
+          integrationKey, missionCommitAfter: recordedAfter, fenceAfter: applied.fenceAfter,
           reason: 'a integração já havia sido efetuada no git; o registro da missão foi reconciliado sem reaplicar o patch',
         };
       }
@@ -1082,9 +1538,13 @@ module.exports = {
   // janela. Sem este seam, o ponto mais crítico da autoridade de fonte era impossível de provar por
   // processo real (o failpoint existia documentado para um E2E que não conseguia alcançá-lo).
   advanceMissionSource,
+  applySourceAdvanceCommit,
   prepareIntegrationIntent,
+  prepareInitializationIntent,
+  finishMissionSourceInitialization,
   transitionIntegrationIntent,
   reconcileMissionSourceIntents,
+  reconcileInitializationIntent,
   readMainCommit,
   readCommitParent,
   branchExists,

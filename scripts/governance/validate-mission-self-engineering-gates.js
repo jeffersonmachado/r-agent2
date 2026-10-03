@@ -41,6 +41,9 @@ const EXECUTION_REL = 'reports/release-suite-execution.json';
 
 const SERVICE = 'api/services/engineeringMission/missionSourceService.js';
 const MISSION_SOURCE_ENGINE = 'engine/engineeringMission/missionSource.js';
+const RECOVERY_COORDINATOR = 'api/services/engineeringMission/missionRecoveryCoordinator.js';
+const BUG_LOOP_COORDINATOR = 'api/services/engineeringMission/bugLoopCoordinatorService.js';
+const BUG_FINDING = 'api/services/engineeringMission/bugFindingService.js';
 const START_WORKERS = 'api/runtime/startWorkers.js';
 const BUG_LOOP_WORKER = 'api/services/engineeringMission/bugLoopWorker.js';
 const WORKER_HEALTH_ENGINE = 'engine/engineeringMission/workerHealth.js';
@@ -51,7 +54,7 @@ const BUG_TRIAGE = 'api/services/engineeringMission/bugTriageService.js';
 const AXES = [
   {
     id: 'MISSION_SOURCE_INTEGRITY',
-    requirement: 'nenhum avanço da fonte sem IntegrationIntent durável; branch não explicada é recusada',
+    requirement: 'nenhum avanço da fonte sem IntegrationIntent durável; branch não explicada é recusada; fence avança em TODO caminho; branch apagada é recriada no commit autoritativo',
     contracts: [
       { name: 'gate_exige_intent', file: SERVICE, needle: 'INTEGRATION_INTENT_REQUIRED' },
       { name: 'intent_persistido_antes_do_git', file: SERVICE, needle: 'prepareIntegrationIntent' },
@@ -60,8 +63,26 @@ const AXES = [
       { name: 'codigo_de_divergencia', file: MISSION_SOURCE_ENGINE, needle: 'MISSION_SOURCE_DIVERGENCE' },
       { name: 'seam_de_prova_exportado', file: SERVICE, needle: 'advanceMissionSource,' },
       { name: 'reconciliacao_de_intents', file: SERVICE, needle: 'reconcileMissionSourceIntents' },
+      // ── FENCE: toda mudança de commit avança o fence, por UM único caminho (CAS) ──
+      { name: 'cas_unico_commit_e_fence', file: SERVICE, needle: 'async function applySourceAdvanceCommit' },
+      { name: 'fence_avanca_no_avanco', file: SERVICE, needle: 'mission_source_fence: Number(fence) + 1' },
+      { name: 'posse_verificada_antes_do_git', file: SERVICE, needle: 'STALE_FENCE_REJECTED' },
+      // ── INICIALIZAÇÃO crash-safe (intent antes do `git branch`) ──
+      { name: 'tipo_de_intent_de_inicializacao', file: MISSION_SOURCE_ENGINE, needle: 'MISSION_SOURCE_INITIALIZATION' },
+      { name: 'chave_unica_de_inicializacao', file: MISSION_SOURCE_ENGINE, needle: 'buildInitializationKey' },
+      { name: 'intent_de_inicializacao_persistido', file: SERVICE, needle: 'prepareInitializationIntent' },
+      { name: 'branch_inicial_sem_intent_recusada', file: SERVICE, needle: 'UNTRUSTED_MISSION_SOURCE_INITIALIZATION' },
+      // ── BRANCH APAGADA: recriação no commit autoritativo (nunca na main) ──
+      { name: 'decisao_de_recriacao_no_engine', file: MISSION_SOURCE_ENGINE, needle: 'classifyBranchDeletionRecovery' },
+      { name: 'recuperacao_exige_proveniencia', file: SERVICE, needle: 'MISSION_SOURCE_RECOVERY_REQUIRED' },
+      // ── RECONCILIAÇÃO PERIÓDICA (não só no boot) ──
+      { name: 'reconciliacao_no_loop_periodico', file: RECOVERY_COORDINATOR, needle: 'reconcilePendingIntents' },
     ],
-    suites: ['tests/integration/missionSourceCrashWindowE2E.test.js', 'tests/unit/engineeringMission/missionSource.test.js'],
+    suites: [
+      'tests/integration/missionSourceCrashWindowE2E.test.js',
+      'tests/integration/missionSourceLifecycleE2E.test.js',
+      'tests/unit/engineeringMission/missionSource.test.js',
+    ],
   },
   {
     id: 'BUG_WORKER_RUNTIME_HEALTH',
@@ -77,18 +98,35 @@ const AXES = [
       { name: 'identidade_do_worker_produzida', file: BUG_LOOP_WORKER, needle: 'workerInstanceId: runningWorkerInstanceId' },
       { name: 'identidade_chega_ao_endpoint', file: START_WORKERS, needle: 'workers: { bugLoop: worker }' },
     ],
-    suites: ['tests/unit/engineeringMission/workerHealthRuntimeEnforcement.test.js', 'tests/unit/engineeringMission/workerHealth.test.js'],
+    suites: ['tests/unit/engineeringMission/workerHealthRuntimeEnforcement.test.js', 'tests/unit/engineeringMission/workerHealth.test.js', 'tests/integration/bugWorkerFullBootE2E.test.js'],
   },
   {
     id: 'LEGITIMATE_GOVERNANCE_CHANGE_RUNTIME',
-    requirement: 'mudança legítima de governança passa no runtime; sem aval explícito continua bloqueada',
+    requirement: 'mudança legítima de governança passa no runtime (HTTP REAL incluído); sem aval explícito continua bloqueada; o ciclo NÃO declara FIXED antes do aval e RETOMA sozinho depois dele',
     contracts: [
       { name: 'motor_decide_autorizacao', file: SELF_MODIFICATION, needle: 'assessGovernanceChangeAuthorization' },
       { name: 'concessao_explicita_montada', file: BUG_TRIAGE, needle: 'allowed: true, code: authorization.code' },
       { name: 'consentimento_persistido', file: BUG_TRIAGE, needle: 'governanceChangeApproved' },
       { name: 'baseline_aceita_autorizacao', file: SELF_MODIFICATION, needle: 'humanAuthorization' },
+      // ── CONTRATO HTTP: o boundary NÃO pode descartar o consentimento de governança ──
+      { name: 'http_encaminha_consentimento', file: MISSION_ROUTES, needle: 'governanceChangeApproved: body.governanceChangeApproved === true' },
+      { name: 'http_encaminha_motivo', file: MISSION_ROUTES, needle: 'governanceChangeReason: body.governanceChangeReason || null' },
+      { name: 'http_encaminha_reviewer', file: MISSION_ROUTES, needle: 'reviewer: body.reviewer || null' },
+      { name: 'identidade_vem_da_auth', file: MISSION_ROUTES, needle: 'resolveAuthenticatedActorType' },
+      // ── LIFECYCLE: FIXED só DEPOIS do aval; bloqueado permanece FIXING e retomável ──
+      { name: 'fix_nao_declarado_antes_do_aval', file: BUG_LOOP_COORDINATOR, needle: 'markPendingGovernanceApproval' },
+      { name: 'estado_de_bloqueio_nomeado', file: BUG_LOOP_COORDINATOR, needle: 'AWAITING_GOVERNANCE_APPROVAL' },
+      { name: 'agenda_persistida_no_finding', file: BUG_FINDING, needle: 'markPendingGovernanceApproval' },
+      { name: 'avaliacao_de_politica_no_ato', file: BUG_TRIAGE, needle: 'policyRequiresIndependentReviewer' },
+      // ── RETOMADA AUTOMÁTICA: o finding bloqueado CONTINUA sendo varrido ──
+      { name: 'finding_bloqueado_permanece_selecionavel', file: BUG_LOOP_COORDINATOR, needle: "status: ['CONFIRMED', 'FIXING']" },
     ],
-    suites: ['tests/unit/engineeringMission/governanceChangeRuntimeAuthorization.test.js', 'tests/unit/engineeringMission/governanceBaseline.test.js'],
+    suites: [
+      'tests/unit/engineeringMission/governanceChangeRuntimeAuthorization.test.js',
+      'tests/unit/engineeringMission/governanceBaseline.test.js',
+      'tests/unit/engineeringMission/governanceApprovalLifecycle.test.js',
+      'tests/unit/engineeringMissionRoutes.test.js',
+    ],
   },
 ];
 

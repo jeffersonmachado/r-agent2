@@ -40,6 +40,28 @@ function requireTenantId(tenantId) {
 }
 
 /**
+ * TIPO DO PRINCIPAL, DERIVADO DA CAMADA DE AUTENTICAÇÃO — nunca do corpo da requisição.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): a rota repassava `actorType` lido do BODY. Aprovar uma mudança nas
+ * PRÓPRIAS regras de julgamento é a ação de maior privilégio do sistema; aceitar do cliente a
+ * declaração "sou HUMANO" é entregar ao requerente a decisão sobre a própria autoridade. Aqui o
+ * tipo vem do principal AUTENTICADO (`req.agent`, populado por `requireAuth` a partir da sessão):
+ * identidade de serviço é SERVICE; identidade de sessão de usuário é HUMAN. Um `actorType` enviado
+ * no corpo só é aceito quando CONCORDA com o autenticado — divergência é recusada pelo serviço.
+ */
+function resolveAuthenticatedActorType(agent) {
+  if (!agent || typeof agent !== 'object') return null;
+  const explicit = agent.actorType || agent.actor_type || agent.principalType;
+  if (explicit) return String(explicit).trim() || null;
+  if (agent.isServiceAccount === true || agent.serviceAccount === true) return 'SERVICE';
+  const type = String(agent.type || '').trim().toUpperCase();
+  if (type === 'SERVICE' || type === 'SERVICE_ACCOUNT' || type === 'SYSTEM') return 'SERVICE';
+  // Sessão autenticada de usuário (agentSnapshot do login): a identidade existe e é humana.
+  if (agent.id || agent.username || agent.email) return 'HUMAN';
+  return null;
+}
+
+/**
  * Mapa rota→ação do RBAC. `pattern` casa o pathname RELATIVO ao prefixo do GRUPO da rota
  * (`/engineering/missions` ou `/engineering/findings`); os padrões de sufixo primeiro
  * (aprovar/rejeitar/executar) e os genéricos por último.
@@ -184,6 +206,17 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       GOVERNANCE_BASELINE_UNVERIFIED: 409,
       // Quem tenta aprovar não tem autoridade para isso (não é humano autenticado).
       SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN: 403,
+      // Permissão ESPECÍFICA ausente (permissão genérica de engenharia não é autoridade para
+      // alterar as regras que julgam o sistema).
+      SELF_MODIFICATION_APPROVAL_PERMISSION_REQUIRED: 403,
+      // ── Mudança de governança legítima: recusas têm causa de CLIENTE, nunca 500 ──────────────
+      // Sem isso, uma aprovação malformada (sem consentimento explícito, sem motivo ou sem o revisor
+      // independente exigido) viraria erro de servidor e a causa real ficaria ilegível para quem
+      // tenta aprovar. Consumo explícito do contrato de governança pelo boundary HTTP.
+      GOVERNANCE_CHANGE_APPROVAL_REQUIRED: 409,
+      GOVERNANCE_CHANGE_REVIEWER_NOT_INDEPENDENT: 409,
+      GOVERNANCE_CHANGE_REASON_REQUIRED: 422,
+      GOVERNANCE_CHANGE_REVIEWER_REQUIRED: 422,
       INVALID_FINDING_TRANSITION: 409,
       REPRODUCTION_PLAN_MISSING: 422,
       REPRODUCTION_INCONCLUSIVE: 422,
@@ -858,12 +891,31 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       }
 
       const body = (await readBody(req, res, deps)) || {};
+      // CONTRATO COMPLETO DA APROVAÇÃO DE SELF-MODIFICATION.
+      //
+      // DEFEITO ELIMINADO (2026-10-03): a rota encaminhava apenas `actorType`, `approvalRef` e
+      // `note`. Os campos que o SERVIÇO e o MOTOR DE GOVERNANÇA já exigiam para autorizar uma
+      // mudança legítima (`governanceChangeApproved`, `governanceChangeReason`, `reviewer`,
+      // `requiresIndependentReviewer`) eram DESCARTADOS no boundary — o caminho de mudança de
+      // governança existia no serviço, no motor e nos testes unitários, mas era inalcançável por
+      // HTTP. Resultado: um humano autorizado não conseguia aprovar nada que alterasse um gate, e o
+      // finding ficava em laço para sempre.
+      //
+      // A identidade NUNCA vem do corpo: `actor` é o principal autenticado e `actorType` é derivado
+      // de `req.agent`. O que o corpo pode fazer é DECLARAR o consentimento explícito de governança
+      // e a justificativa — insumos da decisão, não a decisão.
+      const authenticatedActorType = resolveAuthenticatedActorType(req.agent);
       const result = await deps.bugTriageService.approveSelfModification(req.params.id, {
-        actor: req.agent?.id || req.agent?.email || null,
+        actor: req.agent?.id || req.agent?.email || req.agent?.username || null,
         actorType: body.actorType || null,
-        authenticatedActorType: req.agent?.actorType || req.agent?.type || null,
+        authenticatedActorType,
         approvalRef: body.approvalRef || null,
         note: body.note || null,
+        // Consentimento ESPECÍFICO de mudança de governança. Ausência ⇒ false (nunca presumido).
+        governanceChangeApproved: body.governanceChangeApproved === true,
+        governanceChangeReason: body.governanceChangeReason || null,
+        reviewer: body.reviewer || null,
+        requiresIndependentReviewer: body.requiresIndependentReviewer === true,
         tenantId: requireTenantId(req.tenantId),
         hasSelfModificationPermission: permission.allowed === true,
       });
@@ -881,5 +933,8 @@ module.exports = {
   // Exportado para teste direto do mapa rota→ação: a garantia de que uma rota nova NÃO passa em
   // silêncio (fail-closed) é verificável sem subir HTTP.
   resolveRequiredAction,
+  // Exportado para teste direto: o tipo do principal é derivado da AUTENTICAÇÃO, e a derivação
+  // precisa ser provável sem subir HTTP.
+  resolveAuthenticatedActorType,
   ROUTE_ACTIONS,
 };

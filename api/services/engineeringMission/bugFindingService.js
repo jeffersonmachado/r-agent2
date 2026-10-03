@@ -523,10 +523,67 @@ async function markFixApplied(findingId, { actor = null, taskId = null, attemptI
 }
 
 /**
+ * REGISTRA que o fix está pronto mas BLOQUEADO por aprovação de governança — SEM mudar o status.
+ *
+ * DEFEITO QUE ISTO ELIMINA (2026-10-03): o coordenador chamava `markFixed` ANTES de verificar o
+ * baseline de governança. O finding virava `FIXED` ("corrigido") enquanto ainda aguardava aval
+ * humano — um estado que MENTE: `FIXED` afirma que o ciclo de correção terminou, e o fechamento
+ * então era recusado por governança. Pior: `runBugLoopSweep` só seleciona CONFIRMED/FIXING, então o
+ * finding FIXED ficava ÓRFÃO — a aprovação humana acontecia e nada nunca retomava o trabalho.
+ *
+ * A correção mantém o finding em `FIXING` (o trabalho de código está feito, o ciclo não terminou) e
+ * persiste um motivo de bloqueio auditável. Com isso o worker assíncrono volta a selecioná-lo
+ * sozinho e, após o aval, continua do CHECKPOINT (patch/testes/review já registrados em evidência)
+ * — sem reexecutar o coder.
+ */
+async function markPendingGovernanceApproval(findingId, {
+  actor = null, code = 'GOVERNANCE_APPROVAL_REQUIRED', reason = null, evidence = [], verification = null,
+} = {}) {
+  const finding = await getFinding(findingId);
+  if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+
+  const blocked = {
+    code,
+    blockingReason: code,
+    dependency: 'GOVERNANCE_APPROVAL',
+    reason: reason || 'alteração das próprias regras de julgamento aguarda aval humano explícito',
+    evidence: (Array.isArray(evidence) ? evidence : []).filter(Boolean).map(makeEvidence),
+    verification: verification || null,
+    // CHECKPOINT declarado: é o que permite continuar SEM reexecutar coder quando o aval chegar.
+    checkpoint: {
+      status: finding.status,
+      fixTaskId: finding.fix_task_id || null,
+      fixApplied: true,
+      awaiting: 'GOVERNANCE_APPROVAL',
+      at: nowIso(),
+    },
+    minimumHumanAction: 'aprovar explicitamente a alteração das regras de julgamento (POST /engineering/findings/:id/approve-self-modification com principal HUMANO, permissão engineering:approve_self_modification, governanceChangeApproved=true, reason e reviewer independente quando a política exigir)',
+    at: nowIso(),
+  };
+
+  await model().update({ blocked }, { where: { id: findingId } });
+  await recordEvent(findingId, 'COMMENT', { kind: 'PENDING_GOVERNANCE_APPROVAL', ...blocked }, { actor });
+  logger.warn('[bugFindingService] fix pronto aguardando aval de governança (finding permanece FIXING, não FIXED)', {
+    findingId, status: finding.status, code,
+  });
+  return getFinding(findingId);
+}
+
+/** Limpa o bloqueio de governança quando o aval é concedido (não deixa motivo de bloqueio obsoleto). */
+async function clearGovernanceBlock(findingId, { actor = null } = {}) {
+  const finding = await getFinding(findingId);
+  if (!finding) return null;
+  const blocked = finding.blocked || null;
+  if (!blocked || blocked.blockingReason !== 'GOVERNANCE_APPROVAL_REQUIRED') return finding;
+  await model().update({ blocked: null }, { where: { id: findingId } });
+  await recordEvent(findingId, 'COMMENT', { kind: 'GOVERNANCE_APPROVAL_GRANTED', clearedBlock: blocked.code || null }, { actor });
+  return getFinding(findingId);
+}
+
+/**
  * DECLARA FIXED. Exige as TRÊS provas (reprodução verde, testes direcionados verdes e parecer
  * aprovado). "Patch aplicado" NÃO é fix — é exatamente o que esta função recusa.
- */
-async function markFixed(findingId, {
+ */async function markFixed(findingId, {
   actor = null, reproductionPassed = false, targetedTestsPassed = false, reviewPassed = false,
   reproduction = null, review = null, tenantId = null,
 } = {}) {
@@ -833,6 +890,8 @@ module.exports = {
   markDuplicate,
   linkFixTask,
   markFixApplied,
+  markPendingGovernanceApproval,
+  clearGovernanceBlock,
   markFixed,
   markRegressionValidated,
   closeFinding,

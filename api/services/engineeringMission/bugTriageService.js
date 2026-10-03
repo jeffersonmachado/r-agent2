@@ -411,6 +411,43 @@ async function approveSelfModification(findingId, { actor, actorType = null, aut
   if (!finding.self_modification) {
     return { finding, approved: false, reason: 'finding não é de self-modification — nenhuma aprovação adicional é exigida' };
   }
+
+  // A POLÍTICA é autoridade: se o triage declarou que a política exige reviewer independente, o
+  // corpo da requisição NÃO pode relaxar isso (só ACRESCENTAR exigência). Sem esta amarração, quem
+  // aprova poderia enviar `requiresIndependentReviewer=false` e dispensar o revisor que a política
+  // exige — exatamente a autoautorização que a proteção existe para impedir.
+  const policyRequiresIndependentReviewer = Boolean(finding.triage && finding.triage.requiresIndependentReviewer);
+  const effectiveRequiresIndependentReviewer = requiresIndependentReviewer === true || policyRequiresIndependentReviewer;
+
+  // CONSENTIMENTO EXPLÍCITO DE MUDANÇA DE GOVERNANÇA É VALIDADO JÁ NO ATO DO AVAL.
+  // Antes, o aval era persistido sem validação e a autorização só era avaliada no fechamento: um
+  // aval que nunca poderia autorizar nada (sem motivo, sem reviewer exigido, ou com reviewer igual
+  // ao autor) era ACEITO e deixava o finding em laço — aprovado e ainda assim bloqueado para sempre.
+  // O motor puro é a autoridade ÚNICA, chamado aqui como pré-validação do mesmo contrato.
+  if (governanceChangeApproved === true) {
+    const preAuth = engine.assessGovernanceChangeAuthorization({
+      actor,
+      actorType: authenticated || declared,
+      hasSpecificPermission: hasSelfModificationPermission === true,
+      governanceChangeApproved: true,
+      reason: governanceChangeReason,
+      reviewer,
+      requiresIndependentReviewer: effectiveRequiresIndependentReviewer,
+    });
+    if (!preAuth.allowed) {
+      const denied = Object.assign(new Error(preAuth.reason), {
+        code: preAuth.code,
+        stage: preAuth.stage,
+        policy: 'GOVERNANCE_CHANGE',
+        minimumHumanAction: 'reprovar o aval com motivo declarado (governanceChangeReason) e reviewer independente quando a política exigir',
+      });
+      logger.warn('[bugTriageService] aval de mudança de governança recusado na origem', {
+        findingId, code: denied.code, stage: denied.stage,
+      });
+      throw denied;
+    }
+  }
+
   const Model = require('../../db/models/EngineeringBugFinding')();
   const approval = {
     actor,
@@ -427,7 +464,7 @@ async function approveSelfModification(findingId, { actor, actorType = null, aut
     governanceChangeApproved: governanceChangeApproved === true,
     governanceChangeReason: typeof governanceChangeReason === 'string' ? governanceChangeReason.trim() : null,
     reviewer: reviewer || null,
-    requiresIndependentReviewer: requiresIndependentReviewer === true,
+    requiresIndependentReviewer: effectiveRequiresIndependentReviewer,
     // Forma de checagem do RBAC granular no momento do aval: o fechamento reavalia a autoridade a
     // partir do que foi REALMENTE verificado aqui — nunca de um `true` presumido.
     hasSpecificPermission: hasSelfModificationPermission === true,
@@ -441,6 +478,12 @@ async function approveSelfModification(findingId, { actor, actorType = null, aut
     },
   }, { where: { id: findingId } });
   await bugFindingService.recordEvent(findingId, 'UNBLOCKED', { ...approval, kind: 'SELF_MODIFICATION_APPROVAL' }, { actor });
+  // O motivo de bloqueio de governança deixa de valer: mantê-lo faria a plataforma exibir um
+  // finding aprovado como se ainda aguardasse aval. Guarda de integração: dublês de teste do
+  // serviço de findings podem não implementar o limpador, e isso não pode derrubar o aval.
+  if (typeof bugFindingService.clearGovernanceBlock === 'function') {
+    await bugFindingService.clearGovernanceBlock(findingId, { actor }).catch(() => {});
+  }
   const refreshed = await bugFindingService.getFinding(findingId);
   return { finding: refreshed, approved: true, authority };
 }

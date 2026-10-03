@@ -259,6 +259,9 @@ describe('janela crítica entre o update-ref e o CAS do banco', () => {
     // (b) o banco NÃO andou
     const afterCrash = await readMissionSource(missionId);
     expect(afterCrash.currentCommit).toBe(base);
+    // (b.2) o FENCE também NÃO andou: a morte ocorreu antes do CAS, então a posse continua a mesma.
+    // Sem esta asserção, o teste provaria só o commit e deixaria o defeito de fence passar.
+    expect(afterCrash.fence).toBe(0);
     // (c) o intent conta a verdade: efeito no git aplicado, banco não
     const intentAfterCrash = await readIntent(intentId);
     expect(intentAfterCrash.status).toBe('GIT_APPLIED');
@@ -305,6 +308,10 @@ describe('janela crítica entre o update-ref e o CAS do banco', () => {
     expect(run.status).toBe(97);
     expect(git(['rev-parse', branch])).toBe(candidate);
 
+    // FENCE ANTES: capturado para exigir fenceAfter = fenceBefore + 1 (não basta o commit).
+    const beforeHeal = await readMissionSource(missionId);
+    const fenceBefore = beforeHeal.fence;
+
     // ---- RECUPERAÇÃO: outro processo varre os intents não-terminais ----
     const reconciled = await missionSourceService.reconcileMissionSourceIntents({ missionId });
     // O retorno real é `{ reconciled, outcomes }` — a varredura precisa ter visto o intent.
@@ -314,6 +321,9 @@ describe('janela crítica entre o update-ref e o CAS do banco', () => {
     // O estado converge: banco alcança o git SEM um segundo update-ref (o efeito já estava feito).
     const healed = await readMissionSource(missionId);
     expect(healed.currentCommit).toBe(candidate);
+    // O FENCE AVANÇA JUNTO COM O COMMIT — mesmo resultado do caminho normal. Antes, a recuperação
+    // gravava o commit sem tocar no fence e um worker com o fence antigo continuava autorizado.
+    expect(healed.fence).toBe(fenceBefore + 1);
 
     const intentHealed = await readIntent(intentId);
     expect(intentHealed.dbAppliedAt).toBeTruthy();
@@ -373,5 +383,50 @@ describe('janela crítica entre o update-ref e o CAS do banco', () => {
     expect(git(['rev-parse', branch])).toBe(candidate);
     const source = await readMissionSource(missionId);
     expect(source.currentCommit).toBe(candidate);
+    // IDEMPOTÊNCIA DO FENCE: reconciliar de novo NÃO avança o fence uma segunda vez.
+    expect(source.fence).toBe(1);
+  }, 120000);
+
+  test('STALE_FENCE_01 worker com o fence ANTIGO é recusado ANTES de mover a ref git', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const base = git(['rev-parse', 'main']);
+    const missionId = await createMissionAtCommit(base);
+    const branch = `mission/${missionId.slice(0, 8)}`;
+    git(['branch', branch, base]);
+    const candidateA = createCandidate({ baseCommit: base, message: 'A: fix sob fence 0' });
+    const taskA = await createTaskRow({ missionId, sourceCommit: base, title: 'STALE_FENCE_A' });
+
+    // Worker A integra legitimamente sob a posse 0 → a fonte vai a M2 e o fence a 1.
+    const intentA = await missionSourceService.prepareIntegrationIntent({
+      missionId, taskId: taskA.id, candidateCommit: candidateA, candidateBaseCommit: base,
+      expectedMissionCommit: base, expectedFence: 0, integrationBranch: branch, workerInstanceId: 'worker-A',
+    });
+    const advanced = await missionSourceService.advanceMissionSource({
+      missionId, expectedCommit: base, newCommit: candidateA, expectedFence: 0, branch, intentId: intentA.intent.id,
+    });
+    expect(advanced.advanced).toBe(true);
+    const afterA = await readMissionSource(missionId);
+    expect(afterA.currentCommit).toBe(candidateA);
+    expect(afterA.fence).toBe(1);
+
+    // Worker A "volta" (processo zumbi) com o fence ANTIGO (0) e tenta uma escrita protegida.
+    const candidateB = createCandidate({ baseCommit: candidateA, message: 'B: escrita de worker zumbi' });
+    const taskB = await createTaskRow({ missionId, sourceCommit: candidateA, title: 'STALE_FENCE_B' });
+    const intentB = await missionSourceService.prepareIntegrationIntent({
+      missionId, taskId: taskB.id, candidateCommit: candidateB, candidateBaseCommit: candidateA,
+      expectedMissionCommit: candidateA, expectedFence: 0, integrationBranch: branch, workerInstanceId: 'worker-A',
+    });
+    const staleWrite = await missionSourceService.advanceMissionSource({
+      missionId, expectedCommit: candidateA, newCommit: candidateB, expectedFence: 0, branch, intentId: intentB.intent.id,
+    });
+
+    // RESULTADO OBRIGATÓRIO: STALE_FENCE_REJECTED — e, sobretudo, a ref git NÃO se moveu.
+    expect(staleWrite.advanced).toBe(false);
+    expect(staleWrite.code).toBe('STALE_FENCE_REJECTED');
+    expect(git(['rev-parse', branch])).toBe(candidateA);
+    const finalState = await readMissionSource(missionId);
+    expect(finalState.currentCommit).toBe(candidateA);
+    expect(finalState.fence).toBe(1);
   }, 120000);
 });

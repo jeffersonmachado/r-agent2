@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-10-03T14:45:00.808Z
+- Generated at: 2026-10-03T15:21:40.885Z
 - Canonical mesh execution: mesh-2026-10-03T14-01-02-745Z
 - Canonical mesh decision: GO
-- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
+- Readiness decision: NO_GO:BLOCKING_GAPS
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -23,4 +23,6 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Sem bloqueadores ativos.
+- ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]
+- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]

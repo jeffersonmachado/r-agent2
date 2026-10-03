@@ -68,8 +68,20 @@ const INTEGRATION_RESULTS = Object.freeze([
   'INTEGRITY_FAILED',        // candidate não existe / árvore divergente do patch validado
 ]);
 
-/** Tipos de integração (bug fix usa o MESMO caminho da task — não há caminho privilegiado). */
-const INTEGRATION_TYPES = Object.freeze(['TASK_CANDIDATE', 'BUG_FIX_CANDIDATE']);
+/**
+ * Tipos de integração (bug fix usa o MESMO caminho da task — não há caminho privilegiado).
+ *
+ * `MISSION_SOURCE_INITIALIZATION` é o tipo do intent que AUTORIZA a criação da branch de fonte de
+ * uma missão. DEFEITO QUE ELE ELIMINA (2026-10-03): a inicialização fazia `git branch` e SÓ DEPOIS
+ * persistia a missão. Um processo morto entre as duas operações deixava uma branch de missão no
+ * repositório que NENHUM registro autorizava — e o boot seguinte a classificava como divergência
+ * (tamper) ou, pior, a adotava. Reutiliza o MESMO mecanismo de IntegrationIntent (tabela, fases,
+ * chave única) em vez de criar um subsistema paralelo.
+ */
+const INTEGRATION_TYPES = Object.freeze(['TASK_CANDIDATE', 'BUG_FIX_CANDIDATE', 'MISSION_SOURCE_INITIALIZATION']);
+
+/** Tipo de intent que autoriza a criação da branch de fonte (não tem task: a identidade é a missão). */
+const INITIALIZATION_INTEGRATION_TYPE = 'MISSION_SOURCE_INITIALIZATION';
 
 /**
  * FASES DURÁVEIS de uma integração (IntegrationIntent).
@@ -267,6 +279,75 @@ function buildIntegrationKey({ missionId, taskId, candidateCommit }) {
     });
   }
   return `mission-integration:${parts.join(':')}`;
+}
+
+/**
+ * Chave de idempotência da INICIALIZAÇÃO da fonte de uma missão.
+ *
+ * A identidade do efeito aqui é a MISSÃO (não há task): existe no máximo UMA inicialização
+ * autorizada por missão. A unicidade da chave no banco é o CAS que impede dois workers de criarem
+ * duas branches de fonte concorrentes para a mesma missão.
+ */
+function buildInitializationKey({ missionId }) {
+  const id = String(missionId || '').trim();
+  if (id === '') {
+    throw Object.assign(new Error('initializationKey exige missionId'), { code: 'MISSION_SOURCE_ID_REQUIRED' });
+  }
+  return `mission-source-init:${id}`;
+}
+
+/**
+ * A branch de fonte pode ser RECRIADA no commit corrente da missão?
+ *
+ * DEFEITO QUE ESTA DECISÃO ELIMINA (2026-10-03): quando a branch de fonte era apagada (gc, prune,
+ * limpeza manual), `ensureMissionSource` caía no caminho de criação e recriava a fonte a partir da
+ * ORIGEM (`main`, M0) — a missão voltava para trás e perdia TODAS as integrações, sem nenhum erro.
+ * O resultado observado era o bug "reaparecer": a source voltara a ser a main.
+ *
+ * A recriação só é legítima quando a PROVENIÊNCIA prova que o commit corrente é autoritativo:
+ *   - o commit corrente É a base (nenhuma integração aconteceu) ⇒ recriar na base;
+ *   - ou o commit corrente é o `missionCommitAfter` de uma integração INTEGRADA registrada
+ *     (receipt) ⇒ recriar nele.
+ * Nos demais casos não se inventa source: `MISSION_SOURCE_RECOVERY_REQUIRED`.
+ */
+function classifyBranchDeletionRecovery({
+  missionCurrentCommit = null,
+  missionBaseCommit = null,
+  provenanceCommits = [],
+} = {}) {
+  const current = String(missionCurrentCommit || '').trim();
+  const base = String(missionBaseCommit || '').trim();
+  const proven = (Array.isArray(provenanceCommits) ? provenanceCommits : [])
+    .map((c) => String(c || '').trim()).filter(Boolean);
+
+  if (current === '') {
+    return {
+      recoverable: false,
+      code: 'MISSION_SOURCE_RECOVERY_REQUIRED',
+      reason: 'a branch de fonte foi apagada e a missão não registra commit corrente — não há source autoritativa a recriar',
+    };
+  }
+  if (base !== '' && current === base) {
+    return {
+      recoverable: true,
+      commit: current,
+      code: 'MISSION_SOURCE_REANCHORED_TO_BASE',
+      reason: `branch apagada: nenhuma integração havia acontecido — recriada no commit base ${current.slice(0, 12)} (NUNCA a origem/main)`,
+    };
+  }
+  if (proven.includes(current)) {
+    return {
+      recoverable: true,
+      commit: current,
+      code: null,
+      reason: `branch apagada: recriada no commit autoritativo ${current.slice(0, 12)}, provado por receipt de integração registrado`,
+    };
+  }
+  return {
+    recoverable: false,
+    code: 'MISSION_SOURCE_RECOVERY_REQUIRED',
+    reason: `branch de fonte apagada e o commit corrente ${current.slice(0, 12)} não é provado por receipt/integration — recriar seria inventar source (voltar para a main é proibido)`,
+  };
 }
 
 /**
@@ -650,6 +731,9 @@ module.exports = {
   INTEGRATION_STATUSES,
   TERMINAL_INTEGRATION_STATUSES,
   INTEGRATION_RECONCILIATIONS,
+  INITIALIZATION_INTEGRATION_TYPE,
+  buildInitializationKey,
+  classifyBranchDeletionRecovery,
   isTerminalIntegrationStatus,
   isBranchCommitExplained,
   classifyBranchAdoption,
