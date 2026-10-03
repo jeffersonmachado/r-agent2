@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T19:00:20.360Z",
+  "generatedAt": "2026-10-03T01:04:55.569Z",
   "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO]",
   "platformMaturity": "enterprise-partial",
   "backlog": [
@@ -29,13 +29,42 @@
       "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
       "evidence": {
         "diverged": [
-          "scenarioRegistryFingerprint",
+          "sourceFingerprint",
           "chainFingerprint"
         ]
       },
       "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    },
+    {
+      "id": "gap-intelligence-unstable-fitness",
+      "severity": "critical",
+      "area": "qa-mesh",
+      "title": "Dominio 'fitness' instavel no QA Mesh (stability=0.4286, 3/7)",
+      "evidence": {
+        "domain": "fitness",
+        "stabilityScore": 0.4286,
+        "passed": 3,
+        "total": 7
+      },
+      "suggestedFix": "Corrigir falhas recorrentes em fitness antes de qualquer claim enterprise ou autonomous."
+    },
+    {
+      "id": "gap-cross-report-intelligence_instability",
+      "severity": "critical",
+      "area": "cross-report",
+      "title": "Contradição cross-report: intelligence_instability",
+      "evidence": {
+        "type": "intelligence_instability",
+        "domain": "fitness",
+        "stabilityScore": 0.4286,
+        "passed": 3,
+        "total": 7,
+        "blocker": true,
+        "message": "Domínio 'fitness' com estabilidade 0.4286 (3/7) — abaixo do mínimo de 0.5. autonomous-ready impossível."
+      },
+      "suggestedFix": "Domínio 'fitness' com estabilidade 0.4286 (3/7) — abaixo do mínimo de 0.5. autonomous-ready impossível."
     }
   ],
-  "blocking": 2,
+  "blocking": 4,
   "nonBlocking": 0
 }

@@ -4,62 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20260923222032 horário de atendimento yuca penhasco neblina fagulha horário atendimento yuca",
-        "success": true,
-        "confidence": 0.7100502055649693,
-        "chunksFound": 6,
-        "timestamp": "2026-09-23T22:20:34.115514"
-      },
-      {
-        "query": "QASEG20260923222032 horário de atendimento yuca penhasco neblina fagulha horário atendimento yuca",
-        "success": true,
-        "confidence": 0.6809455871951324,
-        "chunksFound": 10,
-        "timestamp": "2026-09-23T22:20:35.569628"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-09-23T23:03:07.416951"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-23T23:04:20.736930"
-      },
-      {
-        "query": "QASEG20260923230711 horário de atendimento kilim orquidea penhasco sereia horário atendimento kilim",
-        "success": true,
-        "confidence": 0.6073199283815691,
-        "chunksFound": 8,
-        "timestamp": "2026-09-23T23:07:13.956046"
-      },
-      {
-        "query": "QASEG20260923230711 horário de atendimento kilim orquidea penhasco sereia horário atendimento kilim",
-        "success": true,
-        "confidence": 0.5939115569644227,
-        "chunksFound": 7,
-        "timestamp": "2026-09-23T23:07:15.359291"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-09-23T23:48:33.903977"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-23T23:49:33.570158"
-      },
-      {
         "query": "QASEG20260923235153 horário de atendimento zimbro tundra orquidea sereia horário atendimento zimbro",
         "success": true,
         "confidence": 0.607547276650358,
@@ -702,17 +646,73 @@
         "confidence": 0.713294502898937,
         "chunksFound": 7,
         "timestamp": "2026-10-02T18:39:21.017352"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-03T01:04:59.555790"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-03T01:11:54.583174"
+      },
+      {
+        "query": "QASEG20261003011516 horário de atendimento ancora neblina zimbro mandala horário atendimento ancora",
+        "success": true,
+        "confidence": 0.6708554227747903,
+        "chunksFound": 5,
+        "timestamp": "2026-10-03T01:15:18.826698"
+      },
+      {
+        "query": "QASEG20261003011516 horário de atendimento ancora neblina zimbro mandala horário atendimento ancora",
+        "success": true,
+        "confidence": 0.6379105249704871,
+        "chunksFound": 8,
+        "timestamp": "2026-10-03T01:15:21.425162"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-03T01:15:56.446559"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-03T01:24:47.339885"
+      },
+      {
+        "query": "QASEG20261003013140 horário de atendimento quartzo ancora tundra xadrez horário atendimento quartzo",
+        "success": true,
+        "confidence": 0.6339154055210231,
+        "chunksFound": 8,
+        "timestamp": "2026-10-03T01:31:43.344394"
+      },
+      {
+        "query": "QASEG20261003013140 horário de atendimento quartzo ancora tundra xadrez horário atendimento quartzo",
+        "success": true,
+        "confidence": 0.6092607340915359,
+        "chunksFound": 9,
+        "timestamp": "2026-10-03T01:31:45.035359"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 110,
-    "successfulQueries": 110,
+    "totalQueries": 118,
+    "successfulQueries": 118,
     "failedQueries": 0,
-    "avgConfidence": 0.685146921538713,
-    "lastUpdated": "2026-10-02T18:39:21.017339"
+    "avgConfidence": 0.6700640077764661,
+    "lastUpdated": "2026-10-03T01:31:45.035335"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-02T18:39:21.017453"
+  "updatedAt": "2026-10-03T01:31:45.035500"
 }

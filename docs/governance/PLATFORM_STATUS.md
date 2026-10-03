@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-10-02T19:00:20.360Z
+- Generated at: 2026-10-03T01:04:55.569Z
 - Canonical mesh execution: mesh-2026-10-02T18-10-34-931Z
 - Canonical mesh decision: NO_GO
 - Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO]
@@ -25,3 +25,5 @@
 ## NO_GO reasons
 - Falha aberta no dominio fitness [gap-mesh-fitness-functional_failure-fitness-matricula-onboarding]
 - Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Dominio 'fitness' instavel no QA Mesh (stability=0.4286, 3/7) [gap-intelligence-unstable-fitness]
+- Contradição cross-report: intelligence_instability [gap-cross-report-intelligence_instability]

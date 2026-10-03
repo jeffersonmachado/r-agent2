@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-02T18-10-34-931Z",
+  "executionId": "mesh-2026-10-03T01-13-17-857Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "NO_GO",
+  "gate": "GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-02T18-10-34-931Z",
+    "executionId": "mesh-2026-10-03T01-13-17-857Z",
     "tenantId": "system",
-    "timestamp": "2026-10-02T18:10:34.931Z",
+    "timestamp": "2026-10-03T01:13:17.857Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,9 +31,9 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 143,
+    "passed": 144,
     "fallbackPassed": 0,
-    "failed": 1,
+    "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -93,12 +93,12 @@
       "fitness": {
         "passed": 14,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 15
+        "total": 14
       },
       "food": {
         "passed": 4,
@@ -140,6 +140,16 @@
         "flaky": 0,
         "total": 4
       },
+      "pbx": {
+        "passed": 4,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 4
+      },
       "bpmn": {
         "passed": 1,
         "fallbackPassed": 0,
@@ -149,16 +159,6 @@
         "environment_missing": 0,
         "flaky": 0,
         "total": 1
-      },
-      "pbx": {
-        "passed": 3,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 3
       },
       "workspace": {
         "passed": 1,
@@ -171,20 +171,10 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "fitness": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.9333333333333333
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -204,6 +194,12 @@
         "successRate": 1
       },
       "core": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "fitness": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -233,13 +229,13 @@
         "byType": {},
         "successRate": 1
       },
-      "bpmn": {
+      "pbx": {
         "total": 0,
         "blocking": 0,
         "byType": {},
         "successRate": 1
       },
-      "pbx": {
+      "bpmn": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -252,44 +248,35 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "functional_failure": 1
-    },
-    "topErrors": [
-      {
-        "message": "1 erro(s) de console detectados",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-02T18-10-34-931Z",
-      "startedAt": "2026-10-02T18:10:34.931Z",
+      "executionId": "mesh-2026-10-03T01-13-17-857Z",
+      "startedAt": "2026-10-03T01:13:17.857Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-02T19:00:08.721Z",
+      "promotedAt": "2026-10-03T01:51:21.390Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-02T18-10-34-931Z",
-    "startedAt": "2026-10-02T18:10:34.931Z",
+    "executionId": "mesh-2026-10-03T01-13-17-857Z",
+    "startedAt": "2026-10-03T01:13:17.857Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-02T19:00:08.721Z",
+    "promotedAt": "2026-10-03T01:51:21.390Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
-  "runId": "rap-governed-20261002180048204-dac89ac9",
-  "sourceFingerprint": "f523f63b8b823cb0ecbe80d05337d4456b1152c14274f2d5263afadf04cc51b6",
-  "sourceCommit": "e5217907d141ef4877ccc65a603eb44092f063c9",
-  "sourceTree": "7174e49ce83633a827c0d31e09f9cf74c7a68d5b",
-  "generatedAt": "2026-10-02T19:00:08.722Z"
+  "runId": "rap-governed-20261003010401462-d69dd8c5",
+  "sourceFingerprint": "8b7145af13d79675b5525c32952e76bd04c615b990936f92b7622e29facdd57b",
+  "sourceCommit": "398c63ec03af2a5db77a1f3b1973bb58b9e52a20",
+  "sourceTree": "39f239adbded79e3f61093c9b76859ed9e91e49b",
+  "generatedAt": "2026-10-03T01:51:21.391Z"
 }

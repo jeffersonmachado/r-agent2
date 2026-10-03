@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T19:00:20.360Z",
+  "generatedAt": "2026-10-03T01:04:55.569Z",
   "vertical": "core",
   "kind": "system",
   "maturity": "system",
@@ -1085,6 +1085,37 @@
           "integrations": [],
           "steps": [
             "Tenant autenticado"
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "core",
+      "journey": "onboarding",
+      "replaySupport": false,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-onboarding",
+          "scenario": "Fitness Matrícula — Onboarding do Novo Aluno",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            {
+              "id": "step_precond_onboarding_flow_active_1",
+              "order": 1,
+              "type": "validate_backend",
+              "category": "VALIDATION",
+              "adapter": "api",
+              "description": "Verificar precondição: Onboarding Flow Active",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              },
+              "timeoutMs": 10000
+            }
           ]
         }
       ]
