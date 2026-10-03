@@ -593,4 +593,137 @@ describe('Mission Source Authority — E2E com git real', () => {
       expect(err.reason).toBe('MISSION_SOURCE_NOT_INHERITED');
     });
   });
+
+  test('MISSION_SRC_12 — branch movida para commit NÃO explicado → MISSION_SOURCE_DIVERGENCE (NUNCA adota)', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const current = await missionSourceService.getMissionSource(mission.id);
+    // Commit ARBITRÁRIO: nasce da base mas NÃO passa por nenhuma integração — é o equivalente exato
+    // de um push manual / rebase / outro worktree movendo a ref por fora do caminho auditável.
+    const orphan = createCandidate({
+      baseCommit: current.currentCommit,
+      files: { 'src/nao-autorizado.js': 'module.exports = "nao-autorizado";\n' },
+      message: 'commit fora do caminho auditavel',
+    });
+    git(['update-ref', `refs/heads/${current.integrationBranch}`, orphan, current.currentCommit]);
+
+    try {
+      // A adoção era exatamente o defeito: `branch existe → adotar HEAD` aceitaria este commit.
+      await expect(missionSourceService.ensureMissionSource(mission.id, { actor: 'jest-tamper' }))
+        .rejects.toMatchObject({ code: 'MISSION_SOURCE_DIVERGENCE' });
+
+      const after = await missionSourceService.getMissionSource(mission.id);
+      expect(after.state).toBe('DIVERGENCE');
+      // O ponto central: NÃO adotou o commit estranho (o defeito fazia DB := M666).
+      expect(after.currentCommit).toBe(current.currentCommit);
+
+      // Evidência DURÁVEL na missão, não só no log.
+      const { EngineeringMission } = require('../../api/db/models');
+      const Mission = EngineeringMission();
+      const row = await Mission.findByPk(mission.id);
+      const evidence = row.failure && row.failure.missionSourceDivergence;
+      expect(evidence).toBeTruthy();
+      expect(evidence.code).toBe('MISSION_SOURCE_DIVERGENCE');
+      expect(evidence.branchCommit).toBe(orphan);
+      expect(evidence.expectedMissionCommit).toBe(current.currentCommit);
+    } finally {
+      // Devolve a ref ao lugar para não contaminar os testes seguintes.
+      git(['update-ref', `refs/heads/${current.integrationBranch}`, current.currentCommit, orphan]);
+    }
+  });
+
+  test('MISSION_SRC_13 — intent GIT_APPLIED: reconciliação completa o banco SEM reaplicar o git', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const current = await missionSourceService.getMissionSource(mission.id);
+    const candidate = createCandidate({
+      baseCommit: current.currentCommit,
+      files: { 'src/intent-resume.js': 'module.exports = "intent";\n' },
+      message: 'candidate intent resume',
+    });
+    const task = await createTaskRow({
+      missionId: mission.id, sourceCommit: current.currentCommit, sourceRef: current.integrationBranch, title: 'task-intent-resume',
+    });
+
+    await missionSourceService.integrateCandidate({
+      missionId: mission.id, taskId: task.id, candidateCommit: candidate, preconditions: PRECONDITIONS_OK, actor: 'jest',
+    });
+
+    // Reconstrói o estado EXATO deixado pela morte do processo entre o git e o banco:
+    //   ref git = candidate   ·   banco = commit anterior   ·   intent = GIT_APPLIED
+    const { EngineeringMission, EngineeringMissionIntegration } = require('../../api/db/models');
+    const Mission = EngineeringMission();
+    const Integration = EngineeringMissionIntegration();
+    await Mission.update(
+      { mission_current_commit: current.currentCommit, mission_source_fence: current.fence },
+      { where: { id: mission.id } },
+    );
+    const integrationKey = source.buildIntegrationKey({ missionId: mission.id, taskId: task.id, candidateCommit: candidate });
+    await Integration.update(
+      { integration_status: 'GIT_APPLIED', committed_at: null, integration_result: null },
+      { where: { integration_key: integrationKey } },
+    );
+
+    const before = await missionSourceService.getMissionSource(mission.id);
+    expect(before.currentCommit).toBe(current.currentCommit);           // o banco mente
+    expect(await missionSourceService.branchExists(before.integrationBranch)).toBe(candidate); // o git sabe
+
+    // A MESMA reconciliação que o boot chama. Não recebe o candidate: descobre pelo intent.
+    const rec = await missionSourceService.reconcileMissionSourceIntents({ missionId: mission.id });
+    expect(rec.reconciled).toBeGreaterThanOrEqual(1);
+    expect(rec.outcomes.some((o) => o.outcome === 'FINISH_DB')).toBe(true);
+
+    const healed = await missionSourceService.getMissionSource(mission.id);
+    expect(healed.currentCommit).toBe(candidate);
+    expect(healed.state).toBe('READY');
+
+    // O intent terminou terminal — não fica varrendo para sempre.
+    const intentRow = await Integration.findOne({ where: { integration_key: integrationKey } });
+    expect(intentRow.integration_status).toBe('COMMITTED');
+
+    // E o git NÃO foi tocado de novo: a ref continua no candidate (nada foi reaplicado).
+    expect(await missionSourceService.branchExists(healed.integrationBranch)).toBe(candidate);
+  });
+
+  test('MISSION_SRC_14 — a reconciliação acontece no BOOT, sem comando manual', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const current = await missionSourceService.getMissionSource(mission.id);
+    const candidate = createCandidate({
+      baseCommit: current.currentCommit,
+      files: { 'src/boot-reconcile.js': 'module.exports = "boot";\n' },
+      message: 'candidate boot reconcile',
+    });
+    const task = await createTaskRow({
+      missionId: mission.id, sourceCommit: current.currentCommit, sourceRef: current.integrationBranch, title: 'task-boot-reconcile',
+    });
+
+    await missionSourceService.integrateCandidate({
+      missionId: mission.id, taskId: task.id, candidateCommit: candidate, preconditions: PRECONDITIONS_OK, actor: 'jest',
+    });
+
+    // Estado deixado pela morte do processo entre o git e o banco.
+    const { EngineeringMission, EngineeringMissionIntegration } = require('../../api/db/models');
+    const Mission = EngineeringMission();
+    const Integration = EngineeringMissionIntegration();
+    await Mission.update(
+      { mission_current_commit: current.currentCommit, mission_source_fence: current.fence },
+      { where: { id: mission.id } },
+    );
+    const integrationKey = source.buildIntegrationKey({ missionId: mission.id, taskId: task.id, candidateCommit: candidate });
+    await Integration.update(
+      { integration_status: 'GIT_APPLIED', committed_at: null, integration_result: null },
+      { where: { integration_key: integrationKey } },
+    );
+
+    // O ponto do teste: NÃO há comando manual nem reenvio da tríade. Só o caminho de BOOT.
+    const recovery = require('../../api/services/engineeringMission/missionRecoveryCoordinator');
+    const result = await recovery.reconcilePendingIntents();
+    expect(result.missions).toBeGreaterThanOrEqual(1);
+    expect(result.reconciled).toBeGreaterThanOrEqual(1);
+
+    const healed = await missionSourceService.getMissionSource(mission.id);
+    expect(healed.currentCommit).toBe(candidate);
+    expect(healed.state).toBe('READY');
+  });
 });

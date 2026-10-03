@@ -303,12 +303,70 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
   return summary;
 }
 
+/**
+ * RECONCILIAÇÃO DE INTEGRATION INTENTS NÃO TERMINAIS — parte do recovery de BOOT.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): a reconciliação pós-crash existia, mas só era alcançada quando a
+ * MESMA tríade era reenviada por um chamador. Se o processo morresse entre o `git update-ref` e o
+ * CAS do banco e ninguém reenviasse aquela integração, a fonte da missão ficava permanentemente
+ * mentindo — a branch à frente do banco — e nada no boot corrigia isso. A reconciliação dependia,
+ * na prática, de um comando manual.
+ *
+ * Agora o boot varre os intents NÃO terminais (PREPARED/GIT_APPLIED/DB_APPLIED/RECOVERY_REQUIRED) e
+ * fecha o estado de cada missão afetada usando a matriz determinística: completa o banco quando o
+ * efeito git já estava autorizado, e marca RECOVERY_REQUIRED quando o estado é divergente. Nunca
+ * reaplica um efeito já aplicado.
+ */
+async function reconcilePendingIntents({ limit = 200 } = {}) {
+  const { EngineeringMissionIntegration } = require('../../db/models');
+  const missionSourceService = require('./missionSourceService');
+  const Integration = EngineeringMissionIntegration();
+
+  const rows = await Integration.findAll({
+    where: { integration_status: ['PREPARED', 'GIT_APPLIED', 'DB_APPLIED', 'RECOVERY_REQUIRED'] },
+    attributes: ['mission_id'],
+    limit,
+  });
+  const missionIds = [...new Set((rows || []).map((r) => String(r.mission_id)).filter(Boolean))];
+  if (missionIds.length === 0) return { missions: 0, reconciled: 0, outcomes: [] };
+
+  const outcomes = [];
+  let reconciled = 0;
+  for (const missionId of missionIds) {
+    try {
+      const result = await missionSourceService.reconcileMissionSourceIntents({ missionId });
+      reconciled += result.reconciled;
+      for (const outcome of result.outcomes) outcomes.push({ missionId, ...outcome });
+    } catch (err) {
+      // Falha de uma missão não pode impedir a reconciliação das outras (fail-closed por missão).
+      logger.error('[missionRecovery] falha ao reconciliar intents de uma missão', {
+        missionId, errorName: err && err.name, errorMessage: err && err.message,
+      });
+      outcomes.push({ missionId, outcome: 'ERROR', reason: err && err.message });
+    }
+  }
+  if (outcomes.length > 0) {
+    logger.warn('[missionRecovery] intents não terminais reconciliados no boot', {
+      missions: missionIds.length, reconciled, total: outcomes.length,
+    });
+  }
+  return { missions: missionIds.length, reconciled, outcomes };
+}
+
 /** Varredura de BOOT — chamada na subida da aplicação, antes de qualquer ação humana. */
 async function runBootRecovery(options = {}) {
   if (!recoveryEnabled()) {
     return { skipped: true, reason: 'RECOVERY_DISABLED' };
   }
+  // Antes de retomar missões: fecha a coerência git↔banco dos intents que ficaram no meio. Sem
+  // isto, retomar uma missão cuja fonte ficou inconsistente seria retomar sobre estado mentiroso.
+  const intentReconciliation = await reconcilePendingIntents(options).catch((err) => {
+    logger.error('[missionRecovery] reconciliação de intents falhou no boot', { errorMessage: err && err.message });
+    return { missions: 0, reconciled: 0, outcomes: [], error: err && err.message };
+  });
+
   const summary = await sweep({ ...options, workerInstanceId: options.workerInstanceId || `${INSTANCE_ID}-boot` });
+  summary.intentReconciliation = intentReconciliation;
   if (summary.scanned > 0) {
     emitMissionStage('system', null, {
       stage: 'RECOVERY_SWEEP',
@@ -350,6 +408,7 @@ module.exports = {
   planRecovery,
   sweep,
   runBootRecovery,
+  reconcilePendingIntents,
   startRecoveryLoop,
   stopRecoveryLoop,
   lastSweep: () => lastSweep,

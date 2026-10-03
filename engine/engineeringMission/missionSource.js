@@ -53,6 +53,8 @@ const MISSION_SOURCE_STATES = Object.freeze([
   'READY',     // fonte materializada, pronta para receber tasks
   'CONFLICT',  // última integração encontrou conflito — exige resolução explícita
   'STALE',     // candidate apresentado não deriva do commit corrente da fonte
+  'DIVERGENCE',        // a branch está num commit que NENHUM intent/receipt explica
+  'RECOVERY_REQUIRED', // estado inconsistente (ex.: banco à frente do git) que exige reconciliação
 ]);
 
 /** Desfechos possíveis de uma tentativa de integração (vocabulário fechado, auditável). */

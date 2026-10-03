@@ -132,7 +132,47 @@ async function ensureMissionSource(missionId, { actor = null, sourceRef = null }
 
   const existingBranchCommit = await branchExists(branch);
   if (existingBranchCommit) {
-    // A fonte já existe: adota o commit DELA. Nunca re-deriva da main — isso descartaria as
+    // ---- GATE: a branch NÃO pode ser adotada só porque existe --------------------------------
+    // DEFEITO ELIMINADO (2026-10-03): o caminho era `branch existe → adotar HEAD`, sem perguntar de
+    // onde veio aquele commit. Um push manual, um rebase ou outro worktree podiam mover a ref e o
+    // sistema simplesmente passava a executar sobre um código que nenhuma integração autorizou —
+    // adotando (`DB := M666`) em vez de recusar.
+    const trail = await listIntegrations(missionId);
+    const explainedCommits = [
+      mission.mission_base_commit,
+      ...trail.filter((row) => row.integration_result === 'INTEGRATED').map((row) => row.mission_commit_after),
+    ].filter(Boolean);
+
+    const adoption = source.classifyBranchAdoption({
+      branchCommit: existingBranchCommit,
+      expectedMissionCommit: mission.mission_current_commit || mission.mission_base_commit,
+      explainedCommits,
+    });
+
+    if (!adoption.adopt) {
+      // Não adota, não continua tasks, não promove — e a evidência fica DURÁVEL na missão.
+      const evidence = {
+        code: adoption.code,
+        reason: adoption.reason,
+        detectedAt: new Date().toISOString(),
+        branch,
+        branchCommit: existingBranchCommit,
+        expectedMissionCommit: mission.mission_current_commit || null,
+        missionBaseCommit: mission.mission_base_commit || null,
+        explainedCommits,
+        detectedBy: 'ensureMissionSource',
+        actor: actor || null,
+      };
+      await mission.update({
+        mission_source_state: 'DIVERGENCE',
+        failure: { ...(mission.failure || {}), missionSourceDivergence: evidence },
+      });
+      logger.error('[missionSource] MISSION_SOURCE_DIVERGENCE — branch não explicada por intent/receipt; adoção recusada', evidence);
+      throw sourceError('MISSION_SOURCE_DIVERGENCE', `
+[missionSource] a branch ${branch} está em ${String(existingBranchCommit).slice(0, 12)}, commit que nenhum IntegrationIntent/receipt explica (esperado ${String(mission.mission_current_commit || mission.mission_base_commit || '').slice(0, 12)}). Adoção recusada: a missão foi marcada DIVERGENCE e exige reparo controlado.`, evidence);
+    }
+
+    // A fonte já existe e o commit é EXPLICADO: adota. Nunca re-deriva da main — isso descartaria as
     // integrações que a missão já fez.
     if (mission.mission_current_commit !== existingBranchCommit || mission.mission_source_state !== 'READY') {
       await mission.update({
