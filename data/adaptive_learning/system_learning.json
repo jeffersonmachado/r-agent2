@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20260925171015 horário de atendimento cacto kilim bussola cacto horário atendimento cacto",
-        "success": true,
-        "confidence": 0.7310221482508082,
-        "chunksFound": 9,
-        "timestamp": "2026-09-25T17:10:17.738048"
-      },
-      {
-        "query": "QASEG20260925171015 horário de atendimento cacto kilim bussola cacto horário atendimento cacto",
-        "success": true,
-        "confidence": 0.6084371405301839,
-        "chunksFound": 8,
-        "timestamp": "2026-09-25T17:10:19.390831"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-25T18:00:14.381964"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-25T19:00:48.388814"
-      },
-      {
         "query": "QA jornada rag_documents jornada",
         "success": true,
         "confidence": 0.5842524667968161,
@@ -702,17 +674,45 @@
         "confidence": 0.6483815382579312,
         "chunksFound": 10,
         "timestamp": "2026-10-03T23:14:01.646059"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-04T00:09:38.654191"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-04T00:16:48.886372"
+      },
+      {
+        "query": "QASEG20261004002028 horário de atendimento ancora lagoa irvore fagulha horário atendimento ancora",
+        "success": true,
+        "confidence": 0.6915879257003097,
+        "chunksFound": 7,
+        "timestamp": "2026-10-04T00:20:30.278723"
+      },
+      {
+        "query": "QASEG20261004002028 horário de atendimento ancora lagoa irvore fagulha horário atendimento ancora",
+        "success": true,
+        "confidence": 0.6598599757201371,
+        "chunksFound": 10,
+        "timestamp": "2026-10-04T00:20:31.574002"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 130,
-    "successfulQueries": 130,
+    "totalQueries": 134,
+    "successfulQueries": 134,
     "failedQueries": 0,
-    "avgConfidence": 0.6752945321645181,
-    "lastUpdated": "2026-10-03T23:14:01.646047"
+    "avgConfidence": 0.6773735932442441,
+    "lastUpdated": "2026-10-04T00:20:31.573975"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-03T23:14:01.646155"
+  "updatedAt": "2026-10-04T00:20:31.574175"
 }
