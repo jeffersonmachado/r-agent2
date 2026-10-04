@@ -724,6 +724,87 @@ function classifySourceFailure({
   };
 }
 
+/**
+ * POLÍTICA DE REPLAN DE FONTE — LIMITADA, e a decisão é PURA.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): `classifySourceFailure` já devolvia `requiresReplan: true` e
+ * `strategy: REANCHOR_AND_REAPPLY`, mas NINGUÉM consumia isso para AGIR. Como `MISSION_SOURCE` está
+ * em `NON_APPLICATION_CATEGORIES`, nenhuma fix task de aplicação era aberta — e nada replanejava.
+ * Resultado medido: a task ficava `READY_FOR_PROMOTION` com `reasonCode=STALE_CANDIDATE`, a missão
+ * seguia `EXECUTING` e NENHUMA atividade acontecia. A classificação estava certa; o comportamento
+ * não existia.
+ *
+ * O replan REUSA o caminho canônico já provado (`resumeOriginalMission`: task substituta ancorada no
+ * `missionCurrentCommit` + execução pelo Router) — nenhum executor de rebase paralelo. O que esta
+ * função acrescenta é o CONTROLE: quantas vezes já se replanejou e quando PARAR.
+ *
+ * Sem o limite, "stale → substituta → stale → substituta" é laço infinito (um avanço de fonte que
+ * acontece a cada execução reancora para sempre). Com o limite, o esgotamento é um estado DECLARADO
+ * (`MISSION_SOURCE_REPLAN_EXHAUSTED`) que exige decisão humana — nunca silêncio.
+ *
+ * Módulo PURO: sem I/O, sem relógio. Toda decisão é determinística e auditável.
+ *
+ * @returns {{action:string, attempt:number|null, maxAttempts:number, code:string|null, reason:string}}
+ */
+const SOURCE_REPLAN_POLICY = Object.freeze({
+  // 2 = uma reaplicação automática + uma segunda tentativa após novo avanço de fonte. Além disso o
+  // problema deixou de ser coordenação e passou a ser sistemático: exige gente.
+  maxAttempts: 2,
+});
+
+function planSourceReplan({
+  requiresReplan = false,
+  disposition = null,
+  attempts = 0,
+  maxAttempts = SOURCE_REPLAN_POLICY.maxAttempts,
+  reapplyConflicts = false,
+} = {}) {
+  const limit = Number.isFinite(Number(maxAttempts)) && Number(maxAttempts) > 0
+    ? Number(maxAttempts)
+    : SOURCE_REPLAN_POLICY.maxAttempts;
+  const done = Number.isFinite(Number(attempts)) && Number(attempts) > 0 ? Number(attempts) : 0;
+
+  if (!requiresReplan) {
+    return {
+      action: 'NOT_APPLICABLE',
+      attempt: null,
+      maxAttempts: limit,
+      code: null,
+      reason: 'não é falha de fonte que exija replan — caminho normal de aplicação',
+    };
+  }
+
+  // CONFLITO não se resolve reaplicando: reaplicar de novo produziria o mesmo conflito e mascararia
+  // o problema atrás de um contador. Vira trabalho EXPLÍCITO (task de resolução), declarado.
+  if (reapplyConflicts === true || String(disposition || '') === 'REPLAN_REQUIRED') {
+    return {
+      action: 'CONFLICT_TASK',
+      attempt: done,
+      maxAttempts: limit,
+      code: 'MISSION_SOURCE_REPLAN_CONFLICT',
+      reason: 'a reaplicação do patch sobre a fonte atual conflitou — exige task de resolução explícita; reaplicar de novo só repetiria o conflito',
+    };
+  }
+
+  if (done >= limit) {
+    return {
+      action: 'BLOCKED_MAX_ATTEMPTS',
+      attempt: done,
+      maxAttempts: limit,
+      code: 'MISSION_SOURCE_REPLAN_EXHAUSTED',
+      reason: `replan de fonte esgotado após ${done} tentativa(s): a fonte continua avançando mais rápido do que a execução. Exige decisão humana — insistir seria laço infinito.`,
+    };
+  }
+
+  return {
+    action: 'REPLAN',
+    attempt: done + 1,
+    maxAttempts: limit,
+    code: null,
+    reason: `replan de fonte autorizado (tentativa ${done + 1} de ${limit}): nova task sobre o commit CORRENTE da fonte, reaplicando a mudança pretendida`,
+  };
+}
+
 module.exports = {
   MISSION_SOURCE_STATES,
   INTEGRATION_RESULTS,
@@ -741,6 +822,8 @@ module.exports = {
   classifyStaleCandidateDisposition,
   resolveIntegrationProvenance,
   classifySourceFailure,
+  SOURCE_REPLAN_POLICY,
+  planSourceReplan,
   SOURCE_FAILURE_CODES,
   MISSION_BRANCH_PREFIX,
   buildIntegrationBranchName,

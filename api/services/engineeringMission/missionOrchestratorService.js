@@ -204,6 +204,10 @@ async function runMissionTask(missionId, {
   // Posse PROPAGADA pelo recovery (§49/§50): o mesmo modelo de ownership do runtime normal.
   missionLease = null,
   taskLease = null,
+  // Quem é o DONO da decisão de replan de fonte. `true` (default): este caminho decide. `false`: quem
+  // chamou já está no controle (o laço de replan do coordenador) — sem esta trava, a execução interna
+  // chamaria o replan de novo e a recursão esconderia o contador de tentativas.
+  allowSourceReplan = true,
 } = {}) {
   const mission = await missionStore.getMission(missionId);
   if (!mission) throw Object.assign(new Error(`mission ${missionId} não encontrada`), { code: 'not_found' });
@@ -246,6 +250,36 @@ async function runMissionTask(missionId, {
         logger.warn('[missionOrchestrator] falha ao registrar finding de execução (best-effort)', {
           missionId, taskId: mission.linked_task_id, error: hookError.message,
         });
+      }
+
+      // REPLAN DE FONTE (limitado). DEFEITO ELIMINADO (2026-10-03): uma task stale terminava
+      // `READY_FOR_PROMOTION` com `STALE_CANDIDATE`, o finding era classificado como MISSION_SOURCE
+      // (correto: não é bug de aplicação) e NADA MAIS ACONTECIA — a missão ficava `EXECUTING` sem
+      // atividade, para sempre. A classificação estava certa; a ação não existia.
+      //
+      // O replan REANCORA na fonte CORRENTE e reaplica pelo caminho canônico, com limite e estado
+      // declarado (CONFLICT/EXHAUSTED). Best-effort: uma falha aqui não pode derrubar a execução —
+      // ela fica registrada e o estado persistido diz o que aconteceu.
+      if (allowSourceReplan) {
+        try {
+          const replan = await bugLoopCoordinator.maybeReplanAfterSourceFailure({
+            missionId, taskId: mission.linked_task_id, result, actor: 'SYSTEM:MISSION', tenantId,
+          });
+          if (replan && replan.replanned) {
+            logger.info('[missionOrchestrator] missão replanejada sobre a fonte corrente', {
+              missionId, attempt: replan.attempt, maxAttempts: replan.maxAttempts,
+              replacementTaskId: replan.replacementTaskId, status: replan.status,
+            });
+          } else if (replan && replan.state) {
+            logger.warn('[missionOrchestrator] replan de fonte não executou', {
+              missionId, state: replan.state, code: replan.code || null, reason: replan.reason,
+            });
+          }
+        } catch (replanError) {
+          logger.warn('[missionOrchestrator] replan de fonte falhou (best-effort, estado persistido no coordenador)', {
+            missionId, taskId: mission.linked_task_id, error: replanError.message,
+          });
+        }
       }
     }
     return { result, mission: detail };

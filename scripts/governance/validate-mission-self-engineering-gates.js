@@ -43,6 +43,7 @@ const SERVICE = 'api/services/engineeringMission/missionSourceService.js';
 const MISSION_SOURCE_ENGINE = 'engine/engineeringMission/missionSource.js';
 const RECOVERY_COORDINATOR = 'api/services/engineeringMission/missionRecoveryCoordinator.js';
 const BUG_LOOP_COORDINATOR = 'api/services/engineeringMission/bugLoopCoordinatorService.js';
+const MISSION_ORCHESTRATOR = 'api/services/engineeringMission/missionOrchestratorService.js';
 const BUG_FINDING = 'api/services/engineeringMission/bugFindingService.js';
 const START_WORKERS = 'api/runtime/startWorkers.js';
 const BUG_LOOP_WORKER = 'api/services/engineeringMission/bugLoopWorker.js';
@@ -77,11 +78,19 @@ const AXES = [
       { name: 'recuperacao_exige_proveniencia', file: SERVICE, needle: 'MISSION_SOURCE_RECOVERY_REQUIRED' },
       // ── RECONCILIAÇÃO PERIÓDICA (não só no boot) ──
       { name: 'reconciliacao_no_loop_periodico', file: RECOVERY_COORDINATOR, needle: 'reconcilePendingIntents' },
+      // ── STALE CANDIDATE: replan AUTOMÁTICO e LIMITADO (classificação sem comportamento não basta) ──
+      { name: 'politica_de_replan_no_engine', file: MISSION_SOURCE_ENGINE, needle: 'planSourceReplan' },
+      { name: 'limite_de_replan_declarado', file: MISSION_SOURCE_ENGINE, needle: 'SOURCE_REPLAN_POLICY' },
+      { name: 'esgotamento_e_conflito_declarados', file: MISSION_SOURCE_ENGINE, needle: 'MISSION_SOURCE_REPLAN_EXHAUSTED' },
+      { name: 'replan_acionado_no_runtime', file: BUG_LOOP_COORDINATOR, needle: 'maybeReplanAfterSourceFailure' },
+      { name: 'replan_nao_recursiona', file: BUG_LOOP_COORDINATOR, needle: 'allowSourceReplan: false' },
+      { name: 'hook_de_execucao_aciona_replan', file: MISSION_ORCHESTRATOR, needle: 'maybeReplanAfterSourceFailure' },
     ],
     suites: [
       'tests/integration/missionSourceCrashWindowE2E.test.js',
       'tests/integration/missionSourceLifecycleE2E.test.js',
       'tests/unit/engineeringMission/missionSource.test.js',
+      'tests/unit/engineeringMission/sourceStaleAutomaticReplan.test.js',
     ],
   },
   {

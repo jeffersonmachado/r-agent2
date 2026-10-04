@@ -438,6 +438,41 @@
       ]
     },
     {
+      "id": "MISSION-SRC-09",
+      "requirement": "TODA mudança autoritativa do commit corrente avança o FENCE, e a recuperação de crash produz o MESMO estado final do caminho normal (fenceAfter = fenceBefore + 1); worker com fence vencido é recusado ANTES de mover a ref git.",
+      "suites": [
+        "tests/integration/missionSourceCrashWindowE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-10",
+      "requirement": "A inicialização da fonte é CRASH-SAFE: o intent é persistido antes da branch, o processo morto no meio é reconciliado (retry da criação OU finalização do banco) e uma branch inicial sem intent é recusada como UNTRUSTED.",
+      "suites": [
+        "tests/integration/missionSourceLifecycleE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-11",
+      "requirement": "Branch de fonte APAGADA é recriada no commit AUTORITATIVO provado por receipt (nunca na main) e, sem proveniência, exige MISSION_SOURCE_RECOVERY_REQUIRED.",
+      "suites": [
+        "tests/integration/missionSourceLifecycleE2E.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-12",
+      "requirement": "Candidate STALE dispara REPLAN automático limitado sobre o commit CORRENTE da fonte (task substituta reancorada e reaplicada pelo caminho canônico), sem abrir bug de aplicação.",
+      "suites": [
+        "tests/unit/engineeringMission/sourceStaleAutomaticReplan.test.js"
+      ]
+    },
+    {
+      "id": "MISSION-SRC-13",
+      "requirement": "O replan de fonte é LIMITADO: conflito na reaplicação vira SOURCE_REPLAN_CONFLICT e o esgotamento vira MISSION_SOURCE_REPLAN_EXHAUSTED — nunca laço infinito e nunca sucesso falso.",
+      "suites": [
+        "tests/unit/engineeringMission/sourceStaleAutomaticReplan.test.js"
+      ]
+    },
+    {
       "id": "BUG-WORKER-01",
       "requirement": "O worker automático do laço de bugs é provado com o worker REAL do runtime: o teste sobe startBugLoopWorker e apenas OBSERVA o banco — nunca chama runBugLoopCycle/runBugLoopSweep/handleAnomaly para conduzir o cenário.",
       "suites": [

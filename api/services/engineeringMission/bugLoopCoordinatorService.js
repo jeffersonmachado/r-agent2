@@ -393,7 +393,7 @@ async function runFixLoop(findingId, {
  *   - RESUME_CHECKPOINT        — task original está GREEN (o fix resolveu sem nova execução);
  *   - NOT_EXECUTABLE           — missão não está executável (policy/approval) e o motivo é gravado.
  */
-async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = null, actor = null, tenantId = null, execute = true } = {}) {
+async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = null, actor = null, tenantId = null, execute = true, allowSourceReplan = true } = {}) {
   if (!missionId) return { resumed: false, reason: 'mission_id_ausente' };
   const mission = await missionStore.getMission(missionId);
   if (!mission) return { resumed: false, reason: 'mission_not_found', missionId };
@@ -514,7 +514,7 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
       lineage.replacementTaskId = replacementTaskId;
       // A retomada precisa ser OBSERVÁVEL: vincular/criar a task não basta — a missão volta a
       // EXECUTAR pelo caminho canônico. Sem isto, ficaria "EXECUTING" sem atividade subsequente.
-      const resumedRun = await orch.runMissionTask(missionId, { tenantId, ...(lease ? { missionLease: lease } : {}) })
+      const resumedRun = await orch.runMissionTask(missionId, { tenantId, allowSourceReplan, ...(lease ? { missionLease: lease } : {}) })
         .then((run) => ({ status: run?.result?.status || null }))
         .catch((err) => ({ error: { code: err.code || null, message: err.message } }));
       return { replacementTaskId, resumedRun };
@@ -557,6 +557,137 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
     logger.warn('[bugLoopCoordinator] retomada da missão não executou', { missionId, code: err.code || null, message: err.message });
     return { resumed: false, decision: lineage.decision, missionId, originalTaskId, reason: err.message, code: err.code || null, lineage };
   }
+}
+
+/**
+ * REPLAN DE FONTE LIMITADO — a ação que faltava quando o candidate fica STALE.
+ *
+ * DEFEITO ELIMINADO (2026-10-03): a task stale terminava `READY_FOR_PROMOTION` com
+ * `reasonCode=STALE_CANDIDATE`; `hookMissionFailure` classificava corretamente como
+ * `MISSION_SOURCE` (sem abrir bug de aplicação) — e PARAVA AÍ. Como `MISSION_SOURCE` é categoria de
+ * NÃO-aplicação, nenhuma fix task nascia e NENHUM replan acontecia: a missão seguia `EXECUTING`
+ * sem atividade nenhuma. Classificação sem comportamento.
+ *
+ * O replan REUSA o caminho canônico (`resumeOriginalMission`): cria a task substituta ANCORADA no
+ * commit CORRENTE da fonte (`missionCurrentCommit`, já contendo as integrações que causaram o
+ * avanço) e a executa pelo Router. É o "reancorar e reaplicar" da estratégia declarada — sem
+ * executor de rebase paralelo e sem merge silencioso.
+ *
+ * TRÊS FRONTEIRAS, todas declaradas:
+ *   - `REPLAN`                → reancora e reaplica (limitado por `SOURCE_REPLAN_POLICY.maxAttempts`);
+ *   - `CONFLICT_TASK`         → a reaplicação conflitou: NÃO finge sucesso (estado
+ *                               `SOURCE_REPLAN_CONFLICT`), exige task de resolução;
+ *   - `BLOCKED_MAX_ATTEMPTS`  → esgotou: para de insistir (anti-laço infinito) e exige humano.
+ *
+ * IDEMPOTENTE por task: a mesma task não dispara dois replans (o contador vive no `resume_metadata`
+ * da missão, sobrevivendo a restart — é o que torna o limite efetivo entre processos).
+ */
+async function maybeReplanAfterSourceFailure({ missionId, taskId = null, result = null, actor = null, tenantId = null } = {}) {
+  if (!missionId) return { replanned: false, reason: 'MISSION_ID_REQUIRED' };
+
+  const { classifySourceFailure, planSourceReplan, SOURCE_REPLAN_POLICY } = require('../../../engine/engineeringMission/missionSource');
+  const integration = (result && result.missionIntegration) || {};
+  const sourceFailure = classifySourceFailure({
+    reasonCode: (result && result.reasonCode) || integration.code || null,
+    candidateBaseCommit: integration.candidateBaseCommit || (result && result.candidateBaseCommit) || null,
+    missionCurrentCommit: integration.missionCommitBefore || null,
+    reapplyConflicts: integration.code === 'MISSION_SOURCE_REPLAN_CONFLICT',
+  });
+  if (!sourceFailure.requiresReplan) {
+    return { replanned: false, reason: 'NOT_SOURCE_FAILURE', code: sourceFailure.code };
+  }
+
+  const mission = await missionStore.getMission(missionId);
+  if (!mission) return { replanned: false, reason: 'mission_not_found', missionId };
+  const state = (mission.resume_metadata && mission.resume_metadata.sourceReplan) || {};
+  const attempts = Number(state.attempts || 0);
+
+  // IDEMPOTÊNCIA: o mesmo taskId não gera dois replans (o hook pode rodar mais de uma vez para a
+  // mesma falha — retomada, reconciliação, worker periódico).
+  if (state.lastTaskId && taskId && String(state.lastTaskId) === String(taskId) && state.state === 'REPLAN_SUCCEEDED') {
+    return { replanned: false, reason: 'ALREADY_REPLANNED_FOR_TASK', attempts };
+  }
+
+  const maxAttempts = Number(process.env.ENGINEERING_MISSION_MAX_SOURCE_REPLAN || 0) || SOURCE_REPLAN_POLICY.maxAttempts;
+  const replanConflicts = integration.code === 'MISSION_SOURCE_REPLAN_CONFLICT';
+  const plan = planSourceReplan({
+    requiresReplan: true,
+    disposition: sourceFailure.disposition,
+    attempts,
+    maxAttempts,
+    reapplyConflicts: replanConflicts,
+  });
+
+  const history = [
+    ...(Array.isArray(state.history) ? state.history : []),
+    { at: new Date().toISOString(), taskId, code: sourceFailure.code, disposition: sourceFailure.disposition, action: plan.action },
+  ].slice(-20);
+
+  const persist = (patch) => missionStore.mergeMissionJson(missionId, {
+    resume: { sourceReplan: { attempts, maxAttempts, history, lastTaskId: taskId, lastCode: sourceFailure.code, ...patch } },
+  }).catch((err) => logger.warn('[bugLoopCoordinator] falha ao persistir estado de replan de fonte', { missionId, error: err.message }));
+
+  const loop = [];
+  if (plan.action === 'CONFLICT_TASK') {
+    await persist({ state: 'SOURCE_REPLAN_CONFLICT', code: plan.code, reason: plan.reason, conflicts: true });
+    logger.warn('[bugLoopCoordinator] replan de fonte CONFLITOU — sem sucesso falso; exige task de resolução', {
+      missionId, taskId, code: sourceFailure.code, reason: plan.reason,
+    });
+    return { replanned: false, state: 'SOURCE_REPLAN_CONFLICT', code: plan.code, reason: plan.reason, sourceFailure, plan };
+  }
+
+  if (plan.action === 'BLOCKED_MAX_ATTEMPTS') {
+    await persist({ state: 'SOURCE_REPLAN_EXHAUSTED', code: plan.code, reason: plan.reason });
+    logger.error('[bugLoopCoordinator] replan de fonte ESGOTADO — parando de insistir (anti-laço infinito)', {
+      missionId, taskId, attempts, maxAttempts, reason: plan.reason,
+    });
+    return { replanned: false, state: 'SOURCE_REPLAN_EXHAUSTED', code: plan.code, reason: plan.reason, attempts, maxAttempts, sourceFailure, plan };
+  }
+
+  // ---- REPLAN: reancora na fonte CORRENTE e reaplica pelo caminho canônico -------------------
+  // O contador é persistido ANTES de executar: se o processo morrer no meio, a tentativa já conta
+  // (senão um crash a cada execução permitiria replan infinito).
+  const nextAttempt = plan.attempt;
+  await persist({ attempts: nextAttempt, state: 'REPLAN_RUNNING' });
+
+  let resumed = null;
+  let error = null;
+  try {
+    // `allowSourceReplan: false` — ESTE laço é o dono da decisão. Sem isso, a execução interna
+    // chamaria o replan de novo e a recursão esconderia o contador.
+    resumed = await resumeOriginalMission({ missionId, actor, tenantId, execute: true, allowSourceReplan: false });
+  } catch (err) {
+    error = { code: err.code || null, message: err.message };
+  }
+  loop.push({ attempt: nextAttempt, status: resumed && resumed.status || null, error });
+
+  const succeeded = Boolean(resumed && resumed.status === 'GREEN');
+  await persist({
+    state: succeeded ? 'REPLAN_SUCCEEDED' : (error ? 'REPLAN_ERROR' : 'REPLAN_RAN'),
+    attempts: nextAttempt,
+    lastStatus: (resumed && resumed.status) || null,
+    lastError: error,
+    replacementTaskId: (resumed && resumed.replacementTaskId) || null,
+    loop,
+  });
+
+  logger.info('[bugLoopCoordinator] replan de fonte executado', {
+    missionId, taskId, attempt: nextAttempt, maxAttempts,
+    replacementTaskId: resumed && resumed.replacementTaskId, status: resumed && resumed.status, error,
+  });
+
+  return {
+    replanned: true,
+    attempt: nextAttempt,
+    maxAttempts,
+    state: succeeded ? 'REPLAN_SUCCEEDED' : 'REPLAN_RAN',
+    status: (resumed && resumed.status) || null,
+    replacementTaskId: (resumed && resumed.replacementTaskId) || null,
+    decision: (resumed && resumed.decision) || null,
+    error,
+    sourceFailure,
+    plan,
+  };
 }
 
 /**
@@ -1032,6 +1163,7 @@ module.exports = {
   runFixLoop,
   continueMission,
   resumeOriginalMission,
+  maybeReplanAfterSourceFailure,
   withFindingLease,
   handleAnomaly,
   ingestTelemetry,
