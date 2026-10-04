@@ -4,20 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-01T11:53:24.988061"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T12:05:36.586355"
-      },
-      {
         "query": "QASEG20261001122033 horário de atendimento neblina veludo granito bussola horário atendimento neblina",
         "success": true,
         "confidence": 0.704052555088688,
@@ -702,17 +688,31 @@
         "confidence": 0.6317244035644336,
         "chunksFound": 8,
         "timestamp": "2026-10-04T04:26:47.585916"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-04T06:32:03.094751"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-04T06:39:22.515861"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 144,
-    "successfulQueries": 144,
+    "totalQueries": 146,
+    "successfulQueries": 146,
     "failedQueries": 0,
-    "avgConfidence": 0.6803306525919894,
-    "lastUpdated": "2026-10-04T04:26:47.585890"
+    "avgConfidence": 0.6820356555205759,
+    "lastUpdated": "2026-10-04T06:39:22.515811"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-04T04:26:47.586263"
+  "updatedAt": "2026-10-04T06:39:22.516468"
 }

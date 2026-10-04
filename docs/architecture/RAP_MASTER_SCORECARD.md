@@ -2,10 +2,10 @@
 
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
-- Generated at: 2026-10-04T01:37:36.663Z
-- Run ID: rap-governed-20261003225154297-1ee2de13
-- Source fingerprint: aeaea33e7faeeb1170571d7af353f596dfd0b9a774928322e24f5a7ac88a464b
-- Scorecard fingerprint: af69676b85e4442bb8e541445a05c55f1888e88058e4b1062a1694d7cdf28e1d
+- Generated at: 2026-10-04T07:15:10.988Z
+- Run ID: rap-governed-20261004055720990-a339e072
+- Source fingerprint: 641eb86b328c70e6ef7fa5c64f68dfb106628c4afc8b91da81c8512814820964
+- Scorecard fingerprint: af25e66d3e54595cc3f18c179340ab0541be6edd1173ac1df38b0a5c1dadb416
 - Overall status: **VERIFIED**
 - Dimensions: 78
 - 10/10: 78

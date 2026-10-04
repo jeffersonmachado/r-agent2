@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-04T01:38:01.588Z",
+  "generatedAt": "2026-10-04T07:14:33.539Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20261003-214704.payload.zip",
+  "artifact": "r-agent2-20261004-031851.payload.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/release/r-agent2-20261003-214704.payload.zip",
+  "packageInsideDistPath": "dist/release/r-agent2-20261004-031851.payload.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/release/r-agent2-20261003-214704.manifest.json",
+  "manifestInsideDistPath": "dist/release/r-agent2-20261004-031851.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "3206dce656420f7ddfc1de359616f32d",
+    "chainRoot": "40a0c9619a4f78c591abd082ca142a5d",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
   },
   "replayValidation": {
     "pass": true,
@@ -82,8 +82,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "15a6bbdbd33f43f05287a2597abc5f130908f62edc34926a29500f36e00b5b6c",
-    "zipName": "r-agent2-20261003-214704.payload.zip",
+    "sidecarHash": "b8bd23c71deea90558e98b75e01b46561c09586f391224c6d05529cde1e35e28",
+    "zipName": "r-agent2-20261004-031851.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -126,7 +126,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20261003-214704.payload.zip",
+    "zipName": "r-agent2-20261004-031851.payload.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -137,7 +137,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "3206dce656420f7ddfc1de359616f32d",
+    "chainRoot": "40a0c9619a4f78c591abd082ca142a5d",
     "signatures": [
       {
         "name": "governance.sig",
@@ -186,12 +186,12 @@
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
   },
   "attestationIntegrity": {
     "pass": true,
     "attestationValid": true,
-    "finalDecision": "AUTONOMOUS_READY_GO",
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "selfContained": false
   },
   "tamperDetection": {
@@ -213,16 +213,16 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "15a6bbdbd33f43f05287a2597abc5f130908f62edc34926a29500f36e00b5b6c",
-    "zipName": "r-agent2-20261003-214704.payload.zip",
+    "sidecarHash": "b8bd23c71deea90558e98b75e01b46561c09586f391224c6d05529cde1e35e28",
+    "zipName": "r-agent2-20261004-031851.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20261003-214704.payload.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20261004-031851.payload.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261004034338864-252c32ca",
-  "sourceFingerprint": "b8cf52f41250c1a9971895080aa69d49c730dc06341f98af28bdc73199c824b5",
-  "gitCommit": "fbb94fc93e395b10684cfc91775c1984014f9ccc",
-  "gitTree": "3394b2fde4ccf37531ad18b5bd3e049d7afdd141"
+  "runId": "rap-governed-20261004055720990-a339e072",
+  "sourceFingerprint": "641eb86b328c70e6ef7fa5c64f68dfb106628c4afc8b91da81c8512814820964",
+  "gitCommit": "4588ea54df863f1b37fede1100213e7ac744eb11",
+  "gitTree": "4a34847e8262e7596b0b3f7151b874bfbb6988d6"
 }
