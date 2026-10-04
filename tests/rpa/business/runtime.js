@@ -668,6 +668,14 @@ async function runScreenScenario(definition, ctx) {
 // Padrões de console error ignorados nas aberturas de página: falhas de rede
 // ("Failed to load resource") já são assertadas no nível de API pelos fluxos;
 // os demais são ruído conhecido de tooling/extensões.
+// Teto da sincronização semântica de abertura de página. O Vite (DEV) faz
+// transform a FRIO dos módulos da rota: sob a concorrência do mesh o primeiro
+// acesso a uma rota pode passar dos 30 s anteriores. Medido 2026-10-04:
+// `business-core-biz-agents` (/agents) estourou o teto antigo e reprovou o
+// domínio crítico `core`. Continua com teto (não é espera infinita) e, se
+// esgotado sem texto renderizado, a checagem de vazio abaixo reprova.
+const PAGE_RENDER_READY_TIMEOUT_MS = 60000;
+
 const IGNORED_PAGE_CONSOLE_PATTERNS = [
   /favicon/i,
   /devtools/i,
@@ -715,6 +723,27 @@ async function waitForApiReady({ timeoutMs = 180000, intervalMs = 3000, settleMs
 }
 
 /**
+ * Texto renderizado da página, lido por `textContent` — INDEPENDENTE de layout.
+ *
+ * `innerText` depende de layout/renderização e devolve '' quando o conteúdo
+ * ainda não foi pintado. Sob a carga concorrente do mesh isso reprovava páginas
+ * que ESTAVAM montando: medido 2026-10-04, `business-core-biz-agents` falhou com
+ * "Pagina /agents renderizou vazia" (`CRITICAL_DOMAIN_FAILED:core`) enquanto a
+ * MESMA página, aberta isoladamente, renderizava 757 caracteres com zero erros
+ * de console. `textContent` lê o DOM: só é vazio se a página realmente não
+ * renderizou nada — a reprovação para página vazia continua valendo.
+ */
+async function readRenderedText(page) {
+  return page
+    .evaluate(() => {
+      const root = document.querySelector('#root');
+      const text = (root && root.textContent) || (document.body && document.body.textContent) || '';
+      return String(text).replace(/\s+/g, ' ').trim();
+    })
+    .catch(() => '');
+}
+
+/**
  * Abre uma página do frontend e asserta: render não vazio, sem 'Acesso Negado',
  * URL final correta (a menos que allowRedirect) e zero console errors de página.
  * Usada pelos cenários business (campo `pages` do catálogo).
@@ -740,20 +769,21 @@ async function assertBusinessPage(page, pageDef, definition) {
     // (`CRITICAL_DOMAIN_FAILED:core`), com o gap engine apontando exatamente
     // "transformar waits implícitos em sincronização semântica".
     // Continua FALHANDO se a página realmente não renderizar: a espera tem teto
-    // de 30 s e, esgotada, a checagem de vazio abaixo reprova normalmente.
+    // (PAGE_RENDER_READY_TIMEOUT_MS) e, esgotada, a checagem de vazio abaixo
+    // reprova normalmente.
     await page
       .waitForFunction(
         () => {
           const root = document.querySelector('#root');
-          const text = (root && root.innerText) || (document.body && document.body.innerText) || '';
+          const text = (root && root.textContent) || (document.body && document.body.textContent) || '';
           return String(text).trim().length > 0;
         },
         null,
-        { timeout: 30000 },
+        { timeout: PAGE_RENDER_READY_TIMEOUT_MS },
       )
       .catch(() => {});
     await page.waitForTimeout(300);
-    const bodyText = await page.locator('body').innerText();
+    const bodyText = await readRenderedText(page);
     const accessDenied = /Acesso Negado/i.test(bodyText);
     if (pageDef.expectDenied) {
       // Assertiva RBAC negativa: a página DEVE negar acesso ao papel da
@@ -767,8 +797,8 @@ async function assertBusinessPage(page, pageDef, definition) {
     if (accessDenied) {
       throw new Error(`Pagina ${pageDef.path} apresentou 'Acesso Negado'`);
     }
-    const rootText = await page.locator('#root').innerText().catch(() => '');
-    if (!String(rootText || bodyText).trim()) {
+    const renderedText = await readRenderedText(page);
+    if (!renderedText) {
       throw new Error(`Pagina ${pageDef.path} renderizou vazia`);
     }
     const finalPath = new URL(page.url()).pathname;
@@ -5318,4 +5348,7 @@ module.exports = {
   runFlowScenario,
   runJourneyScenario,
   saveCatalogSnapshot,
+  assertBusinessPage,
+  readRenderedText,
+  PAGE_RENDER_READY_TIMEOUT_MS,
 };
