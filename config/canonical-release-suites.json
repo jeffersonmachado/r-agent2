@@ -43,6 +43,7 @@
       "tests/unit/engineeringMission/governanceApprovalLifecycle.test.js",
       "tests/unit/engineeringMission/sourceStaleAutomaticReplan.test.js",
       "tests/unit/engineeringMissionRoutes.test.js",
+      "tests/unit/qa/qaWavesRuntimeScenarioIsolation.test.js",
       "tests/unit/governance/certificationCoherence.test.js",
       "tests/unit/governance/releasePipelineV2Orchestration.test.js",
       "tests/unit/governance/releaseSuiteExclusiveGroups.test.js",

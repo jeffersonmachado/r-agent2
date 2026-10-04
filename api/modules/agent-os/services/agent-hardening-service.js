@@ -177,16 +177,20 @@ async function runQaWaveValidation({ agent, tenantId, journeyId, maxWaitMs = 300
       validations: { requireReplay: true, slaMs: 30000 },
     };
 
-    // Salva cenário no store
+    // Salva cenário no store.
+    // `nonCanonical: true` — este cenário é gerado POR EXECUÇÃO (slug do agente
+    // é timestampado) e não é política canônica: vai para o runtime store, fora
+    // do workspace, e não para o registry rastreado `qa/qa-waves/scenario-store.json`
+    // (que alimenta o `scenarioRegistryFingerprint` do proof chain).
     let savedScenario;
     try {
-      savedScenario = qaWavesScenarioService.saveScenario({ scenario });
+      savedScenario = qaWavesScenarioService.saveScenario({ scenario, nonCanonical: true });
     } catch (saveErr) {
       logger.warn('[AgentOS:Hardening] Falha ao salvar cenário no store, tentando upsert', {
         error: saveErr.message,
         scenarioId: scenario.id,
       });
-      savedScenario = qaWavesScenarioService.upsertScenarioStore(scenario);
+      savedScenario = qaWavesScenarioService.upsertScenarioStore(scenario, { nonCanonical: true });
     }
 
     // Executa QA Wave real

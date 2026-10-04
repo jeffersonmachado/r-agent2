@@ -3,7 +3,9 @@
 const logger = require('../utils/logger');
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
 const { getRpaSeedReadDirs } = require('../../lib/rpaPathResolver');
 const { belongsToTenant, normalizeTenantKey } = require('../../lib/rpaSecurity');
 const { adaptAiScenario } = require('../modules/qa-waves/aiScenarioAdapter');
@@ -22,6 +24,115 @@ const STORE_PATH = process.env.QA_WAVES_SCENARIO_STORE_PATH
   ? path.resolve(process.env.QA_WAVES_SCENARIO_STORE_PATH)
   : path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
 const STORE_DEFAULT_VERSION = 1;
+
+// --- Cenarios de RUNTIME (nao-canonical) -------------------------------------
+// `qa/qa-waves/scenario-store.json` e um artefato GOVERN.ADO e RASTREADO: ele
+// alimenta o `scenarioRegistryFingerprint` do proof chain. Cenarios criados por
+// fluxos por-execucao (agent-factory cria um agente com slug timestampado a cada
+// run e registra a validacao dele) NAO sao politica canonica: persisti-los no
+// arquivo canonico suja a arvore e muda o fingerprint NO MEIO de um ciclo de
+// selagem. Medido em 2026-10-04: o run canonico do mesh appendou
+// `agent-validation-qa-agent-<ts>` no store rastreado e o passe `candidate`
+// abortou com o gap CRITICO `gap-proof-stale-fingerprints`. Eles passam a viver
+// no runtime root (fora do workspace, ver `docs/runtime-paths.md`) e continuam
+// VISIVEIS na leitura (merge) para que a execucao real do QA Wave os resolva.
+const RUNTIME_STORE_PATH_ENV = 'QA_WAVES_RUNTIME_SCENARIO_STORE_PATH';
+const RUNTIME_ONLY_SCENARIO = Symbol.for('ragent2.qaWaves.runtimeOnlyScenario');
+
+function markRuntimeOnlyScenario(scenario) {
+  if (scenario && typeof scenario === 'object') {
+    Object.defineProperty(scenario, RUNTIME_ONLY_SCENARIO, {
+      value: true, enumerable: false, configurable: true, writable: true,
+    });
+  }
+  return scenario;
+}
+
+function isRuntimeOnlyScenario(scenario) {
+  return Boolean(scenario && typeof scenario === 'object' && scenario[RUNTIME_ONLY_SCENARIO]);
+}
+
+function resolveRuntimeScenarioStorePath() {
+  const override = String(process.env[RUNTIME_STORE_PATH_ENV] || '').trim();
+  if (override) return path.resolve(override);
+  try {
+    return path.join(resolveRuntimePath('qa-waves'), 'runtime-scenario-store.json');
+  } catch (error) {
+    logger.warn(`[qaWavesScenarioService] Runtime root indisponivel: ${error.message}`);
+    return path.join(os.tmpdir(), 'ragent2-runtime', 'qa-waves', 'runtime-scenario-store.json');
+  }
+}
+
+function emptyStoreDocument() {
+  return {
+    version: STORE_DEFAULT_VERSION,
+    scenarios: [],
+    history: {},
+    updatedAt: nowIso(),
+    format: 'object',
+  };
+}
+
+function readRuntimeScenarioStore() {
+  const targetPath = resolveRuntimeScenarioStorePath();
+  try {
+    if (!fs.existsSync(targetPath)) return emptyStoreDocument();
+    return normalizeStoreDocument(JSON.parse(fs.readFileSync(targetPath, 'utf8')));
+  } catch (error) {
+    logger.warn(`[qaWavesScenarioService] Runtime store ilegivel (${targetPath}): ${error.message}`);
+    return emptyStoreDocument();
+  }
+}
+
+function scenarioHistoryKey(scenario) {
+  return `${normalizeTenantKey(scenario && scenario.tenantId)}::${String((scenario && scenario.id) || '')}`;
+}
+
+/**
+ * Persiste APENAS os cenarios de runtime no store externo (fora do workspace),
+ * fazendo upsert pelas chaves e carregando o historico correspondente.
+ */
+function writeRuntimeScenarioStore(store, runtimeScenarios) {
+  if (!Array.isArray(runtimeScenarios) || runtimeScenarios.length === 0) return;
+  const targetPath = resolveRuntimeScenarioStorePath();
+  const existing = readRuntimeScenarioStore();
+  const keys = new Set(runtimeScenarios.map(scenarioHistoryKey));
+  const kept = existing.scenarios.filter((item) => !keys.has(scenarioHistoryKey(item)));
+  const history = { ...existing.history };
+  for (const key of keys) {
+    if (store && store.history && store.history[key]) history[key] = store.history[key];
+  }
+  ensureDir(path.dirname(targetPath));
+  writeJsonAtomic(targetPath, {
+    version: existing.version || STORE_DEFAULT_VERSION,
+    scenarios: [...kept, ...runtimeScenarios],
+    history,
+    updatedAt: nowIso(),
+  });
+}
+
+/**
+ * Mescla os cenarios de runtime na leitura. O canonico VENCE em conflito de
+ * chave (`tenantId::id`), de modo que um cenario canonico nunca e sobrescrito
+ * por residuo de runtime.
+ */
+function mergeRuntimeScenarios(store) {
+  const runtime = readRuntimeScenarioStore();
+  if (runtime.scenarios.length === 0) return store;
+  const seen = new Set(store.scenarios.map(scenarioHistoryKey));
+  const scenarios = [...store.scenarios];
+  for (const scenario of runtime.scenarios) {
+    const key = scenarioHistoryKey(scenario);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    scenarios.push(markRuntimeOnlyScenario({ ...scenario }));
+  }
+  const history = { ...store.history };
+  for (const [key, entry] of Object.entries(runtime.history)) {
+    if (!history[key]) history[key] = entry;
+  }
+  return { ...store, scenarios, history };
+}
 
 function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -112,20 +223,27 @@ function ensureStore() {
 }
 
 function saveStore(store) {
-  const normalized = normalizeStoreDocument(store);
+  // Particiona ANTES de normalizar: o flag de runtime e um simbolo
+  // nao-enumeravel e nao pode vazar para o arquivo canonico rastreado.
+  const scenarios = Array.isArray(store && store.scenarios) ? store.scenarios : [];
+  const runtimeScenarios = scenarios.filter(isRuntimeOnlyScenario);
+  const canonicalScenarios = scenarios.filter((item) => !isRuntimeOnlyScenario(item));
+
+  const normalized = normalizeStoreDocument({ ...store, scenarios: canonicalScenarios });
   normalized.updatedAt = nowIso();
 
   if (normalized.format === 'array') {
     writeJsonAtomic(STORE_PATH, normalized.scenarios);
-    return;
+  } else {
+    writeJsonAtomic(STORE_PATH, {
+      version: normalized.version,
+      scenarios: normalized.scenarios,
+      history: normalized.history,
+      updatedAt: normalized.updatedAt,
+    });
   }
 
-  writeJsonAtomic(STORE_PATH, {
-    version: normalized.version,
-    scenarios: normalized.scenarios,
-    history: normalized.history,
-    updatedAt: normalized.updatedAt,
-  });
+  writeRuntimeScenarioStore(store, runtimeScenarios);
 }
 
 function toPlatformScenarioIds(scenario) {
@@ -340,6 +458,9 @@ function dedupeStoreScenarios(store) {
       });
       continue;
     }
+    // `normalizeScenarioRecord` RECONSTRÓI o objeto: sem repor o flag, um cenário
+    // de runtime perderia a marcação no dedupe e migraria para o arquivo canônico.
+    if (isRuntimeOnlyScenario(item)) markRuntimeOnlyScenario(normalized);
 
     const storageKey = `${normalized.tenantId}\u0000${normalized.id}`;
     const existing = deduped.get(storageKey);
@@ -368,7 +489,9 @@ function loadScenarioStore() {
   if (store.scenarios.length !== beforeCount) {
     saveStore(store);
   }
-  return store;
+  // Merge DEPOIS do dedupe: `dedupeStoreScenarios` re-normaliza os objetos e
+  // descartaria o flag de runtime se ele fosse aplicado antes.
+  return mergeRuntimeScenarios(store);
 }
 
 function upsertScenarioStore(scenario, options = {}) {
@@ -376,18 +499,25 @@ function upsertScenarioStore(scenario, options = {}) {
   const normalized = normalizeScenarioRecord(scenario);
   const index = store.scenarios.findIndex((item) => item.id === normalized.id
     && belongsToTenant(item, normalized.tenantId));
+  const runtimeOnly = options.nonCanonical === true
+    || (scenario && scenario.nonCanonical === true)
+    || (index >= 0 && isRuntimeOnlyScenario(store.scenarios[index]));
 
+  let record;
   if (index >= 0) {
     const previous = store.scenarios[index];
-    store.scenarios[index] = {
+    record = {
       ...previous,
       ...normalized,
       createdAt: previous.createdAt || normalized.createdAt,
       updatedAt: nowIso(),
     };
+    store.scenarios[index] = record;
   } else {
-    store.scenarios.push(normalized);
+    record = normalized;
+    store.scenarios.push(record);
   }
+  if (runtimeOnly) markRuntimeOnlyScenario(record);
 
   const historyKey = `${normalized.tenantId}::${normalized.id}`;
   if (!Array.isArray(store.history[historyKey])) store.history[historyKey] = [];
@@ -749,6 +879,10 @@ function saveScenario(payload = {}) {
   const previousVersions = store.scenarios
     .filter((item) => item.id === scenarioId && belongsToTenant(item, scopedTenantId))
     .map((item) => item.version);
+  const runtimeOnly = payload.nonCanonical === true
+    || store.scenarios.some((item) => item.id === scenarioId
+      && belongsToTenant(item, scopedTenantId)
+      && isRuntimeOnlyScenario(item));
 
   const version = nextVersion(previousVersions);
   const effectiveVersion = previousVersions.length === 0
@@ -766,6 +900,7 @@ function saveScenario(payload = {}) {
   };
 
   store.scenarios.push(saved);
+  if (runtimeOnly) markRuntimeOnlyScenario(saved);
   const historyKey = `${scopedTenantId}::${scenarioId}`;
   if (!Array.isArray(store.history[historyKey])) store.history[historyKey] = [];
   store.history[historyKey].push({
