@@ -4,20 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-25T20:34:32.749299"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5842524667968161,
-        "chunksFound": 5,
-        "timestamp": "2026-09-25T21:32:40.428845"
-      },
-      {
         "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
         "success": true,
         "confidence": 0.7986548840598731,
@@ -702,17 +688,31 @@
         "confidence": 0.6598599757201371,
         "chunksFound": 10,
         "timestamp": "2026-10-04T00:20:31.574002"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-04T00:59:50.021780"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-04T01:07:04.459167"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 134,
-    "successfulQueries": 134,
+    "totalQueries": 136,
+    "successfulQueries": 136,
     "failedQueries": 0,
-    "avgConfidence": 0.6773735932442441,
-    "lastUpdated": "2026-10-04T00:20:31.573975"
+    "avgConfidence": 0.6796404374489021,
+    "lastUpdated": "2026-10-04T01:07:04.459150"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-04T00:20:31.574175"
+  "updatedAt": "2026-10-04T01:07:04.459315"
 }
