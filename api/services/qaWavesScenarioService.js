@@ -89,6 +89,20 @@ function scenarioHistoryKey(scenario) {
 }
 
 /**
+ * Filtra o mapa de historico pelas chaves informadas (`tenantId::scenarioId`).
+ * Usado para impedir que o historico de um cenario de runtime vaze para o
+ * arquivo canonico rastreado.
+ */
+function selectHistoryByKeys(history, keys) {
+  const source = history && typeof history === 'object' ? history : {};
+  const selected = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (keys.has(key)) selected[key] = value;
+  }
+  return selected;
+}
+
+/**
  * Persiste APENAS os cenarios de runtime no store externo (fora do workspace),
  * fazendo upsert pelas chaves e carregando o historico correspondente.
  */
@@ -229,7 +243,15 @@ function saveStore(store) {
   const runtimeScenarios = scenarios.filter(isRuntimeOnlyScenario);
   const canonicalScenarios = scenarios.filter((item) => !isRuntimeOnlyScenario(item));
 
-  const normalized = normalizeStoreDocument({ ...store, scenarios: canonicalScenarios });
+  // O `history` tambem e particionado: sem isso, o registro de alteracao de um
+  // cenario de RUNTIME era gravado no arquivo canonico RASTREADO, deixando a
+  // arvore suja a cada run do mesh (o preflight do selo exige worktree limpo).
+  const canonicalKeys = new Set(canonicalScenarios.map(scenarioHistoryKey));
+  const normalized = normalizeStoreDocument({
+    ...store,
+    scenarios: canonicalScenarios,
+    history: selectHistoryByKeys(store && store.history, canonicalKeys),
+  });
   normalized.updatedAt = nowIso();
 
   if (normalized.format === 'array') {

@@ -189,6 +189,44 @@ describe('qaWavesScenarioService — cenários de runtime fora do registry canô
     expect(runtimeEntry.description).toBe('Validação automatizada (retoque)');
   });
 
+  test('o HISTORY de um cenário de runtime não é gravado no arquivo canônico', () => {
+    const scenario = agentFactoryScenario({ id: 'agent-validation-qa-agent-20261004051001' });
+    qaWavesScenarioService.upsertScenarioStore(scenario, { nonCanonical: true });
+    const key = `${TENANT_ID}::agent-validation-qa-agent-20261004051001`;
+
+    // Nem o cenário nem o registro de alteração dele podem sujar o arquivo
+    // rastreado: sem a partição do history, cada run do mesh deixava a árvore
+    // suja e o preflight do selo ("worktree limpo") falhava.
+    const canonical = readStore(CANONICAL_STORE_PATH);
+    expect(canonical.scenarios.some((item) => item.id === scenario.id)).toBe(false);
+    expect(Object.keys(canonical.history || {})).not.toContain(key);
+
+    // O histórico acompanha o cenário no runtime store.
+    const runtime = readStore(RUNTIME_STORE_PATH);
+    expect(runtime.scenarios.some((item) => item.id === scenario.id)).toBe(true);
+    expect(Object.keys(runtime.history || {})).toContain(key);
+  });
+
+  test('o history de um cenário canônico permanece intacto no arquivo canônico', () => {
+    qaWavesScenarioService.saveScenario({
+      scenario: canonicalScenario({ id: 'qa-core-config-history-stable' }),
+    });
+    const canonicalKey = `${TENANT_ID}::qa-core-config-history-stable`;
+    const before = readStore(CANONICAL_STORE_PATH);
+    expect(Object.keys(before.history || {})).toContain(canonicalKey);
+
+    qaWavesScenarioService.upsertScenarioStore(
+      agentFactoryScenario({ id: 'agent-validation-qa-agent-20261004051002' }),
+      { nonCanonical: true },
+    );
+
+    const after = readStore(CANONICAL_STORE_PATH);
+    expect(after.history[canonicalKey]).toEqual(before.history[canonicalKey]);
+    expect(Object.keys(after.history || {})).not.toContain(
+      `${TENANT_ID}::agent-validation-qa-agent-20261004051002`,
+    );
+  });
+
   test('call site do agent-factory declara nonCanonical explicitamente nos DOIS caminhos', () => {
     const source = fs.readFileSync(
       path.join(__dirname, '..', '..', '..', 'api', 'modules', 'agent-os', 'services', 'agent-hardening-service.js'),
