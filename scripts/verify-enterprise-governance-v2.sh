@@ -120,6 +120,24 @@ check_banned_hashes() {
   [[ "$found" == false ]] && rm -f "$log_path"
 }
 
+# Padrao de referencia a um timestamp BANIDO: exige FRONTEIRA DE DIGITO.
+#
+# Os timestamps banidos identificam LIBERACOES/PACOTES anteriores (HHMMSS). Casar
+# a sequencia crua produz falso positivo quando ela aparece DENTRO de outro
+# numero — medido 2026-10-04: o run governado
+# `rap-governed-20261004112450088-07de12e3` contem `124500` (dentro de
+# `112450088`) e o envelope LEGITIMO foi reprovado com 12 ocorrencias de
+# "Referência antiga detectada: 124500", bloqueando o passe `final` do
+# release:seal (`CHECK-DIST-CLEAN: FAIL`). Referencia REAL continua detectada:
+# `r-agent2-20261003-124500.manifest.json` casa porque `124500` esta delimitado
+# por `-` e `.`.
+#
+# NAO afrouxa o gate: um identificador embutido em sequencia maior nao e
+# referencia a outro artefato.
+banned_timestamp_pattern() {
+  printf '(^|[^0-9])%s([^0-9]|$)' "$1"
+}
+
 check_banned_timestamps() {
   local log_path="$1"
   shift
@@ -132,12 +150,12 @@ check_banned_timestamps() {
       [[ -e "$target" ]] || continue
       if [[ -d "$target" ]]; then
         while IFS= read -r file; do
-          if run_with_timeout 5 grep -In "$ts" "$file" >> "$log_path" 2>/dev/null; then
+          if run_with_timeout 5 grep -InE "$(banned_timestamp_pattern "$ts")" "$file" >> "$log_path" 2>/dev/null; then
             fail "Referência antiga detectada: $ts"
             found=true
           fi
         done < <(run_with_timeout 5 find "$target" -maxdepth 1 -type f \( -name '*.json' -o -name '*.sig' \) -print 2>/dev/null || true)
-      elif run_with_timeout 5 grep -In "$ts" "$target" >> "$log_path" 2>/dev/null; then
+      elif run_with_timeout 5 grep -InE "$(banned_timestamp_pattern "$ts")" "$target" >> "$log_path" 2>/dev/null; then
         fail "Referência antiga detectada: $ts"
         found=true
       fi
