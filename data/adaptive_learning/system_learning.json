@@ -8,34 +8,6 @@
         "success": true,
         "confidence": 0.7986548840598731,
         "chunksFound": 1,
-        "timestamp": "2026-10-01T03:14:17.947652"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T03:15:36.368784"
-      },
-      {
-        "query": "QASEG20261001032206 horário de atendimento veludo cacto orquidea dunas horário atendimento veludo",
-        "success": true,
-        "confidence": 0.6805198868573044,
-        "chunksFound": 10,
-        "timestamp": "2026-10-01T03:22:09.179636"
-      },
-      {
-        "query": "QASEG20261001032206 horário de atendimento veludo cacto orquidea dunas horário atendimento veludo",
-        "success": true,
-        "confidence": 0.6479568591186482,
-        "chunksFound": 8,
-        "timestamp": "2026-10-01T03:22:10.655857"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
         "timestamp": "2026-10-01T08:39:01.305192"
       },
       {
@@ -702,17 +674,45 @@
         "confidence": 0.5908888735567581,
         "chunksFound": 6,
         "timestamp": "2026-10-04T01:07:04.459167"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-04T02:51:51.250961"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-04T02:58:52.272891"
+      },
+      {
+        "query": "QASEG20261004030158 horário de atendimento bussola granito cacto veludo horário atendimento bussola",
+        "success": true,
+        "confidence": 0.7250577078036049,
+        "chunksFound": 10,
+        "timestamp": "2026-10-04T03:01:59.926894"
+      },
+      {
+        "query": "QASEG20261004030158 horário de atendimento bussola granito cacto veludo horário atendimento bussola",
+        "success": true,
+        "confidence": 0.7158715150273287,
+        "chunksFound": 5,
+        "timestamp": "2026-10-04T03:02:01.648137"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 136,
-    "successfulQueries": 136,
+    "totalQueries": 140,
+    "successfulQueries": 140,
     "failedQueries": 0,
-    "avgConfidence": 0.6796404374489021,
-    "lastUpdated": "2026-10-04T01:07:04.459150"
+    "avgConfidence": 0.6888383760213441,
+    "lastUpdated": "2026-10-04T03:02:01.648109"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-04T01:07:04.459315"
+  "updatedAt": "2026-10-04T03:02:01.648488"
 }
