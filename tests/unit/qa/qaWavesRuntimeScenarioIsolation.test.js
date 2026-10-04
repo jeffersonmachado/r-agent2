@@ -227,6 +227,56 @@ describe('qaWavesScenarioService — cenários de runtime fora do registry canô
     );
   });
 
+  test('history LEGADO (chave de ID PURO) sobrevive à partição', () => {
+    // O store histórico carrega chaves de history em formato LEGADO (id puro,
+    // ex. `fitness-matricula-leads`). Filtrar por ALLOWLIST de chaves
+    // `tenantId::id` apagava esse audit trail — regressão real medida em
+    // 2026-10-04 (1066 linhas removidas do arquivo governado) e INVISÍVEL aos
+    // gates, porque `history` é projetado fora do fingerprint. A partição é
+    // DENYLIST: só sai o que é comprovadamente de runtime.
+    fs.writeFileSync(
+      CANONICAL_STORE_PATH,
+      JSON.stringify({
+        version: 1,
+        scenarios: [],
+        history: {
+          'fitness-matricula-leads': [
+            {
+              version: 'v3',
+              changedBy: 'manual',
+              changedAt: '2026-05-05T19:09:35.570Z',
+              changes: ['edicao manual'],
+            },
+          ],
+          'system::qa-core-config-tenant-intelligence': [
+            {
+              version: 'v1',
+              changedBy: 'ai_inferred',
+              changedAt: '2026-05-05T13:19:08.582Z',
+              changes: ['scenario atualizado'],
+            },
+          ],
+        },
+        updatedAt: '2026-05-05T00:00:00.000Z',
+      }, null, 2),
+    );
+
+    qaWavesScenarioService.upsertScenarioStore(
+      agentFactoryScenario({ id: 'agent-validation-qa-agent-20261004052001' }),
+      { nonCanonical: true },
+    );
+
+    const after = readStore(CANONICAL_STORE_PATH).history || {};
+    // Formato legado (id puro) preservado.
+    expect(Object.keys(after)).toContain('fitness-matricula-leads');
+    expect(after['fitness-matricula-leads']).toHaveLength(1);
+    // Chave `tenant::id` de cenário canônico preservada.
+    expect(Object.keys(after)).toContain('system::qa-core-config-tenant-intelligence');
+    // A chave do cenário de RUNTIME não entra.
+    expect(Object.keys(after))
+      .not.toContain('system::agent-validation-qa-agent-20261004052001');
+  });
+
   test('call site do agent-factory declara nonCanonical explicitamente nos DOIS caminhos', () => {
     const source = fs.readFileSync(
       path.join(__dirname, '..', '..', '..', 'api', 'modules', 'agent-os', 'services', 'agent-hardening-service.js'),

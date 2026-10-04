@@ -89,15 +89,21 @@ function scenarioHistoryKey(scenario) {
 }
 
 /**
- * Filtra o mapa de historico pelas chaves informadas (`tenantId::scenarioId`).
- * Usado para impedir que o historico de um cenario de runtime vaze para o
- * arquivo canonico rastreado.
+ * Remove do mapa de historico APENAS as chaves dos cenarios de RUNTIME.
+ *
+ * DENYLIST de proposito: o historico do store canonico carrega chaves em
+ * formatos LEGADOS (id puro, ex. `fitness-test-exec`) alem de `tenantId::id`.
+ * Uma allowlist de chaves canonicas APAGA o audit trail legado — medido em
+ * 2026-10-04: 1066 linhas perdidas no arquivo governado, invisiveis aos gates
+ * porque `history` e projetado FORA do fingerprint. Aqui so sai o que e
+ * comprovadamente de runtime; todo o resto e preservado.
  */
-function selectHistoryByKeys(history, keys) {
+function omitRuntimeHistoryKeys(history, runtimeKeys) {
   const source = history && typeof history === 'object' ? history : {};
   const selected = {};
   for (const [key, value] of Object.entries(source)) {
-    if (keys.has(key)) selected[key] = value;
+    if (runtimeKeys.has(key)) continue;
+    selected[key] = value;
   }
   return selected;
 }
@@ -246,11 +252,11 @@ function saveStore(store) {
   // O `history` tambem e particionado: sem isso, o registro de alteracao de um
   // cenario de RUNTIME era gravado no arquivo canonico RASTREADO, deixando a
   // arvore suja a cada run do mesh (o preflight do selo exige worktree limpo).
-  const canonicalKeys = new Set(canonicalScenarios.map(scenarioHistoryKey));
+  const runtimeHistoryKeys = new Set(runtimeScenarios.map(scenarioHistoryKey));
   const normalized = normalizeStoreDocument({
     ...store,
     scenarios: canonicalScenarios,
-    history: selectHistoryByKeys(store && store.history, canonicalKeys),
+    history: omitRuntimeHistoryKeys(store && store.history, runtimeHistoryKeys),
   });
   normalized.updatedAt = nowIso();
 
