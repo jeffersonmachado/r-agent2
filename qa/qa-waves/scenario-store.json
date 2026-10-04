@@ -60873,7 +60873,17 @@
           "scenario upserted"
         ]
       }
+    ],
+    "system::agent-validation-qa-agent-20261004072700": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-10-04T07:30:08.667Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
     ]
   },
-  "updatedAt": "2026-10-04T06:33:35.394Z"
+  "updatedAt": "2026-10-04T07:30:08.767Z"
 }
