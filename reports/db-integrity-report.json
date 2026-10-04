@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-04T04:33:25.866Z",
+  "generatedAt": "2026-10-03T14:35:22.451Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "b6256dce99fa6f4c804c2ebb86dd15f4e9022326",
+  "commit": "5c99cf668c7a31633da1df0f9dc9ec62f9b35a4b",
   "dbAvailable": true,
   "totals": {
     "models": 212,
@@ -11439,5 +11439,7 @@
         }
       ]
     }
-  ]
+  ],
+  "runId": "rap-governed-20261004034338864-252c32ca",
+  "sourceFingerprint": "b8cf52f41250c1a9971895080aa69d49c730dc06341f98af28bdc73199c824b5"
 }
