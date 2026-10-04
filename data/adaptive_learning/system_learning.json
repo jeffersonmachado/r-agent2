@@ -4,20 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261001143014 horário de atendimento veludo dunas orquidea irvore horário atendimento veludo",
-        "success": true,
-        "confidence": 0.6875326039012568,
-        "chunksFound": 9,
-        "timestamp": "2026-10-01T14:30:16.374744"
-      },
-      {
-        "query": "QASEG20261001143014 horário de atendimento veludo dunas orquidea irvore horário atendimento veludo",
-        "success": true,
-        "confidence": 0.6720256495266346,
-        "chunksFound": 9,
-        "timestamp": "2026-10-01T14:30:18.124221"
-      },
-      {
         "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
         "success": true,
         "confidence": 0.7986548840598731,
@@ -702,17 +688,31 @@
         "confidence": 0.6208209021568143,
         "chunksFound": 9,
         "timestamp": "2026-10-04T12:11:29.478423"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-04T15:24:45.308148"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-04T15:32:34.495196"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 154,
-    "successfulQueries": 154,
+    "totalQueries": 156,
+    "successfulQueries": 156,
     "failedQueries": 0,
-    "avgConfidence": 0.6753076689510843,
-    "lastUpdated": "2026-10-04T12:11:29.478342"
+    "avgConfidence": 0.6779670387714427,
+    "lastUpdated": "2026-10-04T15:32:34.495172"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-04T12:11:29.479692"
+  "updatedAt": "2026-10-04T15:32:34.495445"
 }
