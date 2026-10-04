@@ -8,34 +8,6 @@
         "success": true,
         "confidence": 0.7986548840598731,
         "chunksFound": 1,
-        "timestamp": "2026-10-01T14:57:33.457134"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T15:09:18.920927"
-      },
-      {
-        "query": "QASEG20261001152359 horário de atendimento kilim ancora granito mandala horário atendimento kilim",
-        "success": true,
-        "confidence": 0.6390855186251794,
-        "chunksFound": 8,
-        "timestamp": "2026-10-01T15:24:02.564564"
-      },
-      {
-        "query": "QASEG20261001152359 horário de atendimento kilim ancora granito mandala horário atendimento kilim",
-        "success": true,
-        "confidence": 0.5936850988415678,
-        "chunksFound": 10,
-        "timestamp": "2026-10-01T15:24:04.850371"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
         "timestamp": "2026-10-01T15:57:14.161149"
       },
       {
@@ -702,17 +674,45 @@
         "confidence": 0.5908888735567581,
         "chunksFound": 6,
         "timestamp": "2026-10-04T15:32:34.495196"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-04T16:23:44.415690"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-04T16:30:46.047493"
+      },
+      {
+        "query": "QASEG20261004163441 horário de atendimento veludo bussola mandala sereia horário atendimento veludo",
+        "success": true,
+        "confidence": 0.7160063747326224,
+        "chunksFound": 9,
+        "timestamp": "2026-10-04T16:34:44.505321"
+      },
+      {
+        "query": "QASEG20261004163441 horário de atendimento veludo bussola mandala sereia horário atendimento veludo",
+        "success": true,
+        "confidence": 0.6842749046870928,
+        "chunksFound": 9,
+        "timestamp": "2026-10-04T16:34:46.098741"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 156,
-    "successfulQueries": 156,
+    "totalQueries": 160,
+    "successfulQueries": 160,
     "failedQueries": 0,
-    "avgConfidence": 0.6779670387714427,
-    "lastUpdated": "2026-10-04T15:32:34.495172"
+    "avgConfidence": 0.6837661781386511,
+    "lastUpdated": "2026-10-04T16:34:46.098722"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-04T15:32:34.495445"
+  "updatedAt": "2026-10-04T16:34:46.098905"
 }
