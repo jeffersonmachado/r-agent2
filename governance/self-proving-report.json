@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-04T08:11:09.242Z",
+  "generatedAt": "2026-10-04T12:40:00.092Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20261004-041545.payload.zip",
+  "artifact": "r-agent2-20261004-084744.payload.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/release/r-agent2-20261004-041545.payload.zip",
+  "packageInsideDistPath": "dist/release/r-agent2-20261004-084744.payload.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/release/r-agent2-20261004-041545.manifest.json",
+  "manifestInsideDistPath": "dist/release/r-agent2-20261004-084744.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "ec3244a8a299d08d8bfae1badf01d111",
+    "chainRoot": "9832ba2d1bd8066106edcfac3f13ed06",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
   },
   "replayValidation": {
     "pass": true,
@@ -82,8 +82,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "fc4d657e39f2418a9ffa307f2f85d415f15a0b6c6798947d4f065aa289c57851",
-    "zipName": "r-agent2-20261004-041545.payload.zip",
+    "sidecarHash": "f9ab8830aab8af1379938dbbdfdf03d1b7d287fc734aca08960afef88e1eefb2",
+    "zipName": "r-agent2-20261004-084744.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -126,7 +126,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20261004-041545.payload.zip",
+    "zipName": "r-agent2-20261004-084744.payload.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -137,7 +137,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "ec3244a8a299d08d8bfae1badf01d111",
+    "chainRoot": "9832ba2d1bd8066106edcfac3f13ed06",
     "signatures": [
       {
         "name": "governance.sig",
@@ -186,12 +186,12 @@
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
   },
   "attestationIntegrity": {
     "pass": true,
     "attestationValid": true,
-    "finalDecision": "AUTONOMOUS_READY_GO",
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "selfContained": false
   },
   "tamperDetection": {
@@ -213,16 +213,16 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "fc4d657e39f2418a9ffa307f2f85d415f15a0b6c6798947d4f065aa289c57851",
-    "zipName": "r-agent2-20261004-041545.payload.zip",
+    "sidecarHash": "f9ab8830aab8af1379938dbbdfdf03d1b7d287fc734aca08960afef88e1eefb2",
+    "zipName": "r-agent2-20261004-084744.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20261004-041545.payload.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20261004-084744.payload.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261004055720990-a339e072",
-  "sourceFingerprint": "641eb86b328c70e6ef7fa5c64f68dfb106628c4afc8b91da81c8512814820964",
-  "gitCommit": "517ad2549e1e18018a169916f8290130079eb47e",
-  "gitTree": "5cd1cfc05af433440382744bb3c0297b51e379a0"
+  "runId": "rap-governed-20261004112450088-07de12e3",
+  "sourceFingerprint": "27993c3a576a6464e3b502f6ff9e8799e1395bc302e977c84ad5e8b3066cd101",
+  "gitCommit": "2c4378af007218b4dd6277a9d128733b84c62b23",
+  "gitTree": "63f83a38fc312e507a985d9d072f1ee3b3114caf"
 }
