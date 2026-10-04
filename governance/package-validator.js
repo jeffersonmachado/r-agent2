@@ -54,13 +54,37 @@ const DEFAULT_MANIFEST_PATH = path.join(ROOT, 'governance', 'evidence-manifest.j
 function loadSiblingArtifactManifest(zipPath) {
   // Convenções aceitas: <nome>.manifest.json e, para payload-centric,
   // <nome>.payload.zip cujo sidecar é <nome>.manifest.json (two-pass-release).
-  const candidates = [
-    String(zipPath || '').replace(/\.zip$/i, '.manifest.json'),
-    String(zipPath || '').replace(/\.payload\.zip$/i, '.manifest.json'),
-  ].filter((candidate, index, all) => candidate && all.indexOf(candidate) === index);
-  const manifestPath = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+  //
+  // DEFEITO CORRIGIDO (medido 2026-10-04): a lista de candidatos incluía o
+  // resultado do `replace` MESMO quando o padrão não casava — e nesse caso o
+  // `replace` devolve o PRÓPRIO caminho do ZIP, que existe no disco e era
+  // escolhido como "manifest" → `JSON.parse` dos bytes do ZIP →
+  // `artifact_manifest_invalid:<...>.zip:Unexpected token 'P', "PK"` →
+  // `package_validation_failed` (2 gaps críticos) → `candidato não selou`
+  // (`SEAL_EXIT=1` no release:seal). Sidecar AUSENTE deve ser reportado como
+  // ausente, nunca virar tentativa de parse do ZIP.
+  const raw = String(zipPath || '');
+  const candidates = [];
+  const plainSidecar = raw.replace(/\.zip$/i, '.manifest.json');
+  if (plainSidecar !== raw) candidates.push(plainSidecar);
+  if (/\.payload\.zip$/i.test(raw)) {
+    candidates.push(raw.replace(/\.payload\.zip$/i, '.manifest.json'));
+  }
+  if (candidates.length === 0 && raw) {
+    // O caminho já é um manifesto (ou não é ZIP): usa como está.
+    candidates.push(raw);
+  }
+  const uniqueCandidates = candidates.filter(
+    (candidate, index, all) => candidate && all.indexOf(candidate) === index,
+  );
+  const manifestPath = uniqueCandidates.find((candidate) => fs.existsSync(candidate))
+    || uniqueCandidates[0];
   if (!manifestPath || !fs.existsSync(manifestPath)) {
     return { manifestPath, manifest: null };
+  }
+  if (/\.zip$/i.test(manifestPath)) {
+    // Guarda defensiva: nunca interpretar um ZIP como manifesto JSON.
+    throw new Error(`artifact_manifest_not_json:${manifestPath}:sidecar ausente (caminho aponta para um ZIP)`);
   }
 
   try {
