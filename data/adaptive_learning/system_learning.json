@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261003011516 horário de atendimento ancora neblina zimbro mandala horário atendimento ancora",
-        "success": true,
-        "confidence": 0.6379105249704871,
-        "chunksFound": 8,
-        "timestamp": "2026-10-03T01:15:21.425162"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-03T01:15:56.446559"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-03T01:24:47.339885"
-      },
-      {
-        "query": "QASEG20261003013140 horário de atendimento quartzo ancora tundra xadrez horário atendimento quartzo",
-        "success": true,
-        "confidence": 0.6339154055210231,
-        "chunksFound": 8,
-        "timestamp": "2026-10-03T01:31:43.344394"
-      },
-      {
         "query": "QASEG20261003013140 horário de atendimento quartzo ancora tundra xadrez horário atendimento quartzo",
         "success": true,
         "confidence": 0.6092607340915359,
@@ -702,17 +674,45 @@
         "confidence": 0.5908888735567581,
         "chunksFound": 6,
         "timestamp": "2026-10-05T19:13:01.836097"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T19:24:12.255308"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T19:31:47.154652"
+      },
+      {
+        "query": "QASEG20261005193449 horário de atendimento tundra sereia lagoa granito horário atendimento tundra",
+        "success": true,
+        "confidence": 0.6109014726389058,
+        "chunksFound": 9,
+        "timestamp": "2026-10-05T19:34:51.766794"
+      },
+      {
+        "query": "QASEG20261005193449 horário de atendimento tundra sereia lagoa granito horário atendimento tundra",
+        "success": true,
+        "confidence": 0.5994225065886618,
+        "chunksFound": 10,
+        "timestamp": "2026-10-05T19:34:53.327790"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 213,
-    "successfulQueries": 213,
+    "totalQueries": 217,
+    "successfulQueries": 217,
     "failedQueries": 0,
-    "avgConfidence": 0.6720216740616981,
-    "lastUpdated": "2026-10-05T19:13:01.836060"
+    "avgConfidence": 0.6619207433543101,
+    "lastUpdated": "2026-10-05T19:34:53.327742"
   },
   "config": {
     "minScore": 0.55,
@@ -756,5 +756,5 @@
     ]
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T19:13:01.836361"
+  "updatedAt": "2026-10-05T19:34:53.328551"
 }

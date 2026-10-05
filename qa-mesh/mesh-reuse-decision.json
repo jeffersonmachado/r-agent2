@@ -1,17 +1,17 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-05T17:47:14.662Z",
-  "runId": "rap-governed-20261005173714482-457137a5",
+  "generatedAt": "2026-10-05T19:21:48.874Z",
+  "runId": "rap-governed-20261005191340098-3e5a369f",
   "sourceFingerprint": "5424542e672d5cb01038014b0c0880bb747d62c0c2f4e655dff8d1c7871f7efc",
-  "runStartedAt": "2026-10-05T17:37:14.794Z",
+  "runStartedAt": "2026-10-05T19:13:40.252Z",
   "decision": "RERUN",
   "code": "CANONICAL_HISTORY_MISSING",
-  "detail": "nenhuma execução de qa-mesh/meshHistory pertence a rap-governed-20261005173714482-457137a5",
+  "detail": "nenhuma execução de qa-mesh/meshHistory pertence a rap-governed-20261005191340098-3e5a369f",
   "registryScenarios": 144,
   "evidence": {
-    "goNoGoGeneratedAt": "2026-10-05T16:50:08.264Z",
-    "goNoGoStatus": "GO",
+    "goNoGoGeneratedAt": "2026-10-05T18:19:47.033Z",
+    "goNoGoStatus": "NO_GO",
     "historyEntry": null
   },
   "checks": []
