@@ -122,6 +122,37 @@ function getModeForArtifact(artifactPath) {
   return config.artifacts[normalizeArtifactPath(artifactPath)] || null;
 }
 
+/**
+ * FASE de produção da evidência — autoridade compartilhada por `ensure`, `stamp`
+ * e Master Scorecard, para que os três NUNCA divirjam (autoridade paralela é o
+ * defeito que `governance/release-phase-policy.js` já documenta).
+ *
+ * `CONVERGE` (default) = antes do empacotamento. `FINAL` = empacotando/publicando.
+ */
+function currentArtifactPhase(explicit) {
+  const raw = explicit || process.env.ARTIFACT_REFRESH_PHASE || 'CONVERGE';
+  return String(raw).trim().toUpperCase() || 'CONVERGE';
+}
+
+function producerPhase(producer) {
+  return String((producer && producer.phase) || 'ANY').toUpperCase();
+}
+
+/**
+ * O produtor JÁ PODERIA ter produzido? (fase alcançada — independe de ter comando).
+ * Artefato pré-run cujo produtor NÃO é devido ainda é "PENDING_PHASE", não prova
+ * vencida: o erro é do produtor que rodou e não produziu, ou da fase que passou.
+ */
+function producerDueNow(producer, phase) {
+  if (!producer) return false;
+  const producerStage = producerPhase(producer);
+  if (producerStage === 'ANY') return true;
+  const current = currentArtifactPhase(phase);
+  if (producerStage === 'FINAL') return current === 'FINAL' || current === 'DELIVERED';
+  if (producerStage === 'DELIVERED') return current === 'DELIVERED';
+  return producerStage === current;
+}
+
 function isRuntimeEvidenceArtifact(artifactPath) {
   return getModeForArtifact(artifactPath) === MODES.RUNTIME_EVIDENCE;
 }
@@ -314,6 +345,9 @@ module.exports = {
   listAuthoritativeArtifacts,
   listNonAuthoritativeArtifacts,
   getProducer,
+  producerPhase,
+  producerDueNow,
+  currentArtifactPhase,
   matchesGlob,
   runStartMs,
   evaluateTemporalIntegrity,

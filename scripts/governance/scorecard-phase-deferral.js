@@ -33,6 +33,29 @@ const PRE_PACKAGE_DEFERRED_ARTIFACTS = Object.freeze([
   'governance/package-validation-report.json',
 ]);
 
+// AUTORIDADE ÚNICA de fase: a própria taxonomia (`producers[].phase`). Antes
+// desta extensão só `package-validation-report.json` era reconhecido como
+// "ainda não produziu", e TODO o resto da cadeia FINAL/DELIVERED
+// (certification-snapshot, final-governance, final-consistency, self-proving,
+// tamper-detection, package/replay-integrity, delivered-verification) era
+// tratado como falha REAL no prepare — o que só passava porque o stamp lhes
+// reaplicava o runId corrente SEM que nada tivesse rodado neles. Com a regra
+// temporal da missão, esses artefatos ficam pré-run/foreign até a fase que os
+// produz, e a dimensão passa a ser PENDING_PHASE (tolerável) — na fase devida,
+// `producerDueNow` vira true e eles voltam a ser falha real, inclusive no gate
+// temporal absoluto do fim do run.
+const { getProducer, producerDueNow } = require('./lib/runtime-evidence-artifacts');
+
+/** O requisito depende de artefato cujo produtor pertence a uma fase POSTERIOR? */
+function isPhasePendingRequirement(requirement) {
+  if (!requirement || requirement.status === 'PASS') return false;
+  for (const artifactPath of requirementArtifacts(requirement)) {
+    const producer = getProducer(artifactPath);
+    if (producer && !producerDueNow(producer)) return true;
+  }
+  return false;
+}
+
 /** Categorias derivadas: por construção dependem do resultado do próprio scorecard. */
 const DERIVED_CATEGORIES = Object.freeze(['NO_KNOWN_GAP', 'NO_OPEN_BLOCKER']);
 
@@ -88,6 +111,7 @@ function substantiveFailures(dimension) {
  */
 function classifySubstantiveFailure(requirement, options = {}) {
   if (isDeferredPackageRequirement(requirement)) return 'PRE_PACKAGE_DEFERRED';
+  if (isPhasePendingRequirement(requirement)) return 'PENDING_PHASE';
   if (typeof options.isCircularRequirement === 'function' && options.isCircularRequirement(requirement)) {
     return 'CIRCULAR_PROJECTION';
   }

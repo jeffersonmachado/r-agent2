@@ -240,7 +240,16 @@ phase_prepare() {
 
   # Self-healing: se o run governado for de um fingerprint anterior, o converge
   # falha com RUN_SOURCE_DRIFT. Criamos o run do fingerprint atual e repetimos.
-  if [ "$rc" != "0" ] && grep -q 'RUN_SOURCE_DRIFT\|source drift' "$log"; then
+  #
+  # DEFEITO MEDIDO (2026-10-05, custou DOIS meshes e ~70min): o gatilho era
+  # `grep -q 'RUN_SOURCE_DRIFT\|source drift'`, e o log da converge contém NOMES
+  # DE TESTE com essa expressão — `✓ rejeita scorecard incompleto e source drift
+  # (171 ms)`. Qualquer falha da converge que executasse essa suíte disparava a
+  # "recuperação de drift": criava run novo (invalidando toda a evidência já
+  # produzida no run anterior, que passava a pré-run) e reexecutava a converge
+  # inteira, incluindo um segundo QA Mesh. O gatilho agora casa apenas a linha
+  # do PRÓPRIO drift-guard, que é o sinal real.
+  if [ "$rc" != "0" ] && grep -qE '^\[drift-guard\] RUN_SOURCE_DRIFT:' "$log"; then
     warn "RUN_SOURCE_DRIFT detectado — criando run governado do fingerprint atual"
     node scripts/governance/create-governed-run.js > "$LOG_DIR/create-run.log" 2>&1 || \
       fail "falha ao criar run governado" "$LOG_DIR/create-run.log" prepare
@@ -328,6 +337,23 @@ phase_candidate() {
     fail "candidato não selou" "$zlog" candidate
   fi
 
+  # CADEIA FINAL DENTRO DO RUN, ANTES DO SCORECARD (missão 2026-10-05).
+  #
+  # O envelope candidato já existe: agora os produtores da cadeia FINAL/DELIVERED
+  # que dependem do PACOTE podem rodar. Sem isto os 9 artefatos dessa cadeia
+  # chegam ao scorecard com o lineage do run ANTERIOR (FOREIGN_RUN_ARTIFACT) ou
+  # pré-run — o que só passava antes porque o stamp lhes reaplicava o runId atual
+  # SEM que nada tivesse rodado neles (autoridade fabricada). Aqui eles são
+  # REEXECUTADOS e depois ESTAMPADOS: o 78/78 passa a ser sustentado por
+  # evidência produzida dentro DESTE run.
+  if ! env ARTIFACT_REFRESH_PHASE=FINAL timeout 3600 npm run ensure:authoritative-artifacts-fresh > "$LOG_DIR/artifact-refresh-candidate.log" 2>&1; then
+    fail "evidência da cadeia FINAL não reparável antes do scorecard (ver o relatório do ensure)" "$LOG_DIR/artifact-refresh-candidate.log" candidate
+  fi
+  if ! env ARTIFACT_REFRESH_PHASE=FINAL node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp-candidate.log" 2>&1; then
+    fail "stamp da cadeia FINAL recusou evidência pré-run" "$LOG_DIR/stamp-candidate.log" candidate
+  fi
+  ok "cadeia FINAL reexecutada e estampada dentro do run"
+
   local vlog="$LOG_DIR/verify-delivered.log"
   timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
   if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
@@ -345,7 +371,10 @@ phase_candidate() {
   fi
 
   local slog="$LOG_DIR/scorecard.log"
-  timeout 1200 node scripts/governance/run-persisted-scorecard.js > "$slog" 2>&1
+  # ARTIFACT_REFRESH_PHASE=FINAL: a cadeia FINAL jé foi reexecutada e estampada
+  # logo acima, então ela NÃO pode mais ser tolerada como PENDING_PHASE — o
+  # 78/78 desta fase tem de estar sustentado por evidência do run corrente.
+  env ARTIFACT_REFRESH_PHASE=FINAL timeout 1200 node scripts/governance/run-persisted-scorecard.js > "$slog" 2>&1
   local below10
   below10="$(node -e "const t=require('fs').readFileSync('$slog','utf8');const l=t.split('\n').find(x=>x.includes('dimensionsBelow10'));if(l){console.log(JSON.parse(l).scorecard.dimensionsBelow10)}else{console.log('NA')}")"
   if [ "$below10" = "0" ]; then
@@ -363,7 +392,7 @@ phase_candidate() {
     fail "validação das projeções falhou" "$LOG_DIR/projections.log" candidate
   fi
 
-  timeout 1200 node scripts/governance/run-persisted-scorecard.js > "$slog" 2>&1
+  env ARTIFACT_REFRESH_PHASE=FINAL timeout 1200 node scripts/governance/run-persisted-scorecard.js > "$slog" 2>&1
   below10="$(node -e "const t=require('fs').readFileSync('$slog','utf8');const l=t.split('\n').find(x=>x.includes('dimensionsBelow10'));if(l){console.log(JSON.parse(l).scorecard.dimensionsBelow10)}else{console.log('NA')}")"
   [ "$below10" = "0" ] || fail "fixpoint instável (below10=$below10)" "$slog" candidate
   ok "fixpoint estável: below10=0"

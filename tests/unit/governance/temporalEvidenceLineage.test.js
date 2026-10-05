@@ -404,6 +404,60 @@ describe('reexecução do produtor — o que reprova e o que NÃO reprova (conve
   });
 });
 
+describe('tolerância de fase — PENDING_PHASE vs falha REAL (autoridade única da taxonomia)', () => {
+  const deferral = require('../../../scripts/governance/scorecard-phase-deferral');
+
+  // Artefato da cadeia FINAL (producer.phase = FINAL) e o caso CENTRAL da missão
+  // (RAP-078, produtor sem fase declarada = sempre devido).
+  const FINAL_CHAIN = 'governance/final-governance-report.json';
+  const ALWAYS_DUE = 'governance/mutable-json-state-validation-report.json';
+
+  function staledRequirement(artifactPath) {
+    return {
+      id: 'REQ-1',
+      category: 'GOVERNED',
+      mandatory: true,
+      status: 'STALE',
+      code: 'ARTIFACT_DID_NOT_PASS',
+      reason: 'Artifact gerado ANTES do início do run',
+      validator: [artifactPath],
+      evidence: [{ path: artifactPath, status: 'STALE', code: 'STALE_ARTIFACT', reason: 'gerado ANTES do início do run' }],
+    };
+  }
+
+  function below10Dimension(artifactPath) {
+    return { id: 'RAP-TESTE-01', score: 8, requirements: [staledRequirement(artifactPath)] };
+  }
+
+  afterEach(() => {
+    delete process.env.ARTIFACT_REFRESH_PHASE;
+  });
+
+  test('antes da fase do produtor, a dimensão é DEFERRED (não falha real)', () => {
+    process.env.ARTIFACT_REFRESH_PHASE = 'CONVERGE';
+    const out = deferral.classifyBelow10Dimensions([below10Dimension(FINAL_CHAIN)], {});
+    expect(out.status).toBe('DEFERRED');
+    expect(out.realFailures).toEqual([]);
+    expect(out.classified[0].kind).toBe('PENDING_PHASE');
+  });
+
+  test('na fase do produtor, o MESMO artefato pré-run vira falha REAL (fail-closed)', () => {
+    process.env.ARTIFACT_REFRESH_PHASE = 'FINAL';
+    const out = deferral.classifyBelow10Dimensions([below10Dimension(FINAL_CHAIN)], {});
+    expect(out.status).toBe('FAIL');
+    expect(out.realFailures.map((entry) => entry.id)).toEqual(['RAP-TESTE-01']);
+  });
+
+  test('artefato sem fase declarada (sempre devido) NUNCA é tolerado — é o caso do RAP-078', () => {
+    for (const phase of ['CONVERGE', 'FINAL', 'DELIVERED']) {
+      process.env.ARTIFACT_REFRESH_PHASE = phase;
+      const out = deferral.classifyBelow10Dimensions([below10Dimension(ALWAYS_DUE)], {});
+      expect(out.status).toBe('FAIL');
+      expect(out.realFailures.map((entry) => entry.id)).toEqual(['RAP-TESTE-01']);
+    }
+  });
+});
+
 describe('verificador offline — contrato da seção temporal (não confia só no payload)', () => {
   const VERIFIER = path.join(__dirname, '..', '..', '..', 'scripts', 'verify-enterprise-governance-v2.sh');
 

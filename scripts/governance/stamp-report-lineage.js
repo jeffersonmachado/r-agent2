@@ -37,6 +37,8 @@ const {
   isAuthoritativeArtifact,
   listAuthoritativeArtifacts,
   getProducer,
+  producerPhase,
+  producerDueNow,
   runStartMs,
 } = require('./lib/runtime-evidence-artifacts');
 
@@ -88,7 +90,29 @@ function stamp(relativePath, run) {
   // o caminho está em `producers` na taxonomia. NUNCA ajuste generatedAt.
   const generatedAtMs = report.generatedAt ? Date.parse(report.generatedAt) : NaN;
   const startedAtMs = runStartMs(run);
+  // DEFERIMENTO DE FASE (mesma autoridade do `ensure`). Um artefato cujo produtor
+  // PERTENCE a uma fase posterior (ex.: cadeia FINAL/DELIVERED, produzida no
+  // empacotamento) ainda não pode existir agora: NÃO é prova vencida, é
+  // `PENDING_PHASE`. Ele não é estampado (jamais recebe lineage do run sem ter
+  // sido produzido nele) e NÃO reprova este passo. Medido 2026-10-05: os 9
+  // artefatos da cadeia FINAL deferidos pelo passo 8.7 eram recusados aqui e
+  // abortavam a convergência logo depois de o 8.7 passar — o falso bloqueio só
+  // tinha mudado de passo.
+  const producer = getProducer(relativePath);
+  const producerStage = producerPhase(producer);
+  const deferredNow = producer ? !producerDueNow(producer) : false;
+  const deferredEntry = (detail) => ({
+    path: relativePath,
+    stamped: false,
+    deferred: true,
+    classification,
+    reason: `deferred_to_${producerStage}`,
+    detail,
+  });
   if (!Number.isFinite(generatedAtMs)) {
+    if (deferredNow) {
+      return deferredEntry('sem prova temporal e produtor de fase posterior: será produzido (e estampado) na fase da cadeia');
+    }
     return {
       path: relativePath,
       stamped: false,
@@ -98,6 +122,9 @@ function stamp(relativePath, run) {
     };
   }
   if (startedAtMs !== null && generatedAtMs < startedAtMs) {
+    if (deferredNow) {
+      return deferredEntry('produtor de fase posterior ainda não é devido: a evidência nasce no empacotamento (fase FINAL/DELIVERED)');
+    }
     return {
       path: relativePath,
       stamped: false,
@@ -105,7 +132,7 @@ function stamp(relativePath, run) {
       reason: REASONS.REJECTED_STALE_ARTIFACT,
       artifactGeneratedAt: report.generatedAt,
       runStartedAt: run.started_at,
-      producer: getProducer(relativePath),
+      producer,
       detail: 'artefato produzido ANTES do início do run: reexecute o produtor (nunca estampe)',
     };
   }
@@ -139,6 +166,7 @@ async function main() {
   const results = reports.map((relPath) => stamp(relPath, run));
   const stamped = results.filter((entry) => entry.stamped);
   const rejected = results.filter((entry) => entry.reason === REASONS.REJECTED_STALE_ARTIFACT);
+  const deferred = results.filter((entry) => entry.deferred);
   const unclassified = results.filter((entry) => entry.reason === REASONS.UNCLASSIFIED_AUTHORITATIVE_ARTIFACT);
 
   const report = {
@@ -152,9 +180,11 @@ async function main() {
       considered: results.length,
       stamped: stamped.length,
       rejectedStale: rejected.length,
+      deferredPhase: deferred.length,
       unclassified: unclassified.length,
     },
     rejected,
+    deferred,
     unclassified,
     results,
   };
@@ -166,6 +196,7 @@ async function main() {
     runId: run.run_id,
     stamped: stamped.length,
     rejectedStale: rejected.length,
+    deferredPhase: deferred.length,
     unclassified: unclassified.length,
   }));
 
