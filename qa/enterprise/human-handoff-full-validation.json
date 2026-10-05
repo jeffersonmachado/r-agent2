@@ -1,23 +1,23 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-05T15:27:09.665Z",
+  "generatedAt": "2026-10-05T15:59:26.717Z",
   "ok": true,
   "tenantId": "system",
-  "ticketId": "default-1791214028732-2agk13x",
-  "phoneNumber": "5511914028550",
-  "transferQueue": "enterprise_support_1791214028550",
+  "ticketId": "default-1791215965323-jz724l7",
+  "phoneNumber": "5511915965139",
+  "transferQueue": "enterprise_support_1791215965139",
   "warnings": [],
   "ticket": {
-    "id": "default-1791214028732-2agk13x",
-    "queue": "enterprise_support_1791214028550",
+    "id": "default-1791215965323-jz724l7",
+    "queue": "enterprise_support_1791215965139",
     "status": "closed",
     "assignedTo": "rpa_system",
-    "firstResponseAt": "2026-10-05T15:27:08.959Z",
-    "resolvedAt": "2026-10-05T15:27:09.023Z",
+    "firstResponseAt": "2026-10-05T15:59:25.640Z",
+    "resolvedAt": "2026-10-05T15:59:25.782Z",
     "waitingTimeSeconds": 0,
     "handlingTimeSeconds": 0,
-    "conversationId": "conv-1791214028595-b3a9063c47ac"
+    "conversationId": "conv-1791215965178-729bf662b6cc"
   },
   "signals": {
     "ticketCreated": true,
@@ -39,34 +39,34 @@
   },
   "replay": [
     {
-      "timestamp": "2026-10-05T15:27:08.000Z",
+      "timestamp": "2026-10-05T15:59:25.000Z",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Cliente inicia conversa enterprise 1791214028550",
+      "text": "Cliente inicia conversa enterprise 1791215965139",
       "status": null,
       "source": "ticket",
       "order": -10000
     },
     {
-      "timestamp": "2026-10-05T15:27:08.000Z",
+      "timestamp": "2026-10-05T15:59:25.000Z",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Cliente confirmou retorno enterprise 1791214028550",
+      "text": "Cliente confirmou retorno enterprise 1791215965139",
       "status": null,
       "source": "ticket",
       "order": -9996
     },
     {
-      "timestamp": "2026-10-05T15:27:08.605Z",
+      "timestamp": "2026-10-05T15:59:25.194Z",
       "kind": "channel_message",
       "actor": "customer",
-      "text": "Cliente inicia conversa enterprise 1791214028550",
+      "text": "Cliente inicia conversa enterprise 1791215965139",
       "status": "received",
       "source": "channel",
       "order": 2
     },
     {
-      "timestamp": "2026-10-05T15:27:08.935Z",
+      "timestamp": "2026-10-05T15:59:25.583Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_takeover",
@@ -76,7 +76,7 @@
       "order": 20003
     },
     {
-      "timestamp": "2026-10-05T15:27:08.939Z",
+      "timestamp": "2026-10-05T15:59:25.594Z",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket atribuido para rpa_system.",
@@ -85,7 +85,7 @@
       "order": -9999
     },
     {
-      "timestamp": "2026-10-05T15:27:08.940Z",
+      "timestamp": "2026-10-05T15:59:25.598Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_assign",
@@ -95,25 +95,25 @@
       "order": 20002
     },
     {
-      "timestamp": "2026-10-05T15:27:08.952Z",
+      "timestamp": "2026-10-05T15:59:25.623Z",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Transferencia realizada. Fila: enterprise_support_1791214028550 · Sem atendente",
+      "text": "Transferencia realizada. Fila: enterprise_support_1791215965139 · Sem atendente",
       "status": null,
       "source": "ticket",
       "order": -9998
     },
     {
-      "timestamp": "2026-10-05T15:27:08.959Z",
+      "timestamp": "2026-10-05T15:59:25.640Z",
       "kind": "ticket_message",
       "actor": "agent",
-      "text": "Humano assumiu o atendimento enterprise 1791214028550",
+      "text": "Humano assumiu o atendimento enterprise 1791215965139",
       "status": "pending",
       "source": "ticket",
       "order": -9997
     },
     {
-      "timestamp": "2026-10-05T15:27:08.970Z",
+      "timestamp": "2026-10-05T15:59:25.681Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_message",
@@ -125,16 +125,16 @@
       "order": 20001
     },
     {
-      "timestamp": "2026-10-05T15:27:08.988Z",
+      "timestamp": "2026-10-05T15:59:25.717Z",
       "kind": "channel_message",
       "actor": "customer",
-      "text": "Cliente confirmou retorno enterprise 1791214028550",
+      "text": "Cliente confirmou retorno enterprise 1791215965139",
       "status": "received",
       "source": "channel",
       "order": 6
     },
     {
-      "timestamp": "2026-10-05T15:27:09.023Z",
+      "timestamp": "2026-10-05T15:59:25.782Z",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket encerrado (Resolvido pelo enterprise proof smoke).",
@@ -143,7 +143,7 @@
       "order": -9995
     },
     {
-      "timestamp": "2026-10-05T15:27:09.027Z",
+      "timestamp": "2026-10-05T15:59:25.789Z",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_close",
@@ -151,8 +151,8 @@
       "order": 20000
     }
   ],
-  "runId": "rap-governed-20261005152701891-f5f76356",
-  "sourceFingerprint": "c07e8797752350ce524e9c82a5a152a17e41189d2c64c5d69f8d3cfb1601a5b0",
-  "sourceCommit": "438ecee5f6a90c60e9df6978a8a1576902de5493",
-  "sourceTree": "dcb95dfac275c3928b168a04699bbf60e05fdbdc"
+  "runId": "rap-governed-20261005155912964-90b91404",
+  "sourceFingerprint": "4192b4fb444281eb044ed9974277c6622f51de67f6f2a5d3d298def317057f7d",
+  "sourceCommit": "6693ce38ff900f7e4852961cb001233da3fdea25",
+  "sourceTree": "af72b600e23fc18c65514edf13988a6c6093b8ba"
 }

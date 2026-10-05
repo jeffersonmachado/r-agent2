@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261002173720 horário de atendimento lagoa sereia orquidea neblina horário atendimento lagoa",
-        "success": true,
-        "confidence": 0.6864459132500996,
-        "chunksFound": 9,
-        "timestamp": "2026-10-02T17:37:22.921752"
-      },
-      {
-        "query": "QASEG20261002173720 horário de atendimento lagoa sereia orquidea neblina horário atendimento lagoa",
-        "success": true,
-        "confidence": 0.6887353568690908,
-        "chunksFound": 9,
-        "timestamp": "2026-10-02T17:37:25.218276"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-02T18:13:09.445995"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T18:25:12.172998"
-      },
-      {
         "query": "QASEG20261002183916 horário de atendimento bussola quartzo zimbro dunas horário atendimento bussola",
         "success": true,
         "confidence": 0.7049295157778506,
@@ -702,28 +674,87 @@
         "confidence": 0.7144646675065773,
         "chunksFound": 8,
         "timestamp": "2026-10-05T15:46:45.286318"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T16:08:51.665779"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T16:16:13.855996"
+      },
+      {
+        "query": "QASEG20261005161932 horário de atendimento urutu irvore tundra yuca horário atendimento urutu",
+        "success": true,
+        "confidence": 0.628343907870373,
+        "chunksFound": 9,
+        "timestamp": "2026-10-05T16:19:34.892159"
+      },
+      {
+        "query": "QASEG20261005161932 horário de atendimento urutu irvore tundra yuca horário atendimento urutu",
+        "success": true,
+        "confidence": 0.6280800819650567,
+        "chunksFound": 9,
+        "timestamp": "2026-10-05T16:19:36.673582"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 204,
-    "successfulQueries": 204,
+    "totalQueries": 208,
+    "successfulQueries": 208,
     "failedQueries": 0,
-    "avgConfidence": 0.692312292312661,
-    "lastUpdated": "2026-10-05T15:46:45.286304"
+    "avgConfidence": 0.6796689946972383,
+    "lastUpdated": "2026-10-05T16:19:36.673539"
   },
   "config": {
-    "minScore": 0.45,
+    "minScore": 0.55,
     "topK": 6,
     "chunkOverlap": 75
   },
   "learningCycles": {
-    "total": 0,
-    "lastCycle": null,
-    "cycles": []
+    "total": 2,
+    "lastCycle": "2026-10-05T16:16:12.570912",
+    "cycles": [
+      {
+        "cycle": 1,
+        "timestamp": "2026-10-05T16:10:08.182873",
+        "type": "config_optimization",
+        "previousConfig": {
+          "minScore": 0.45,
+          "topK": 6,
+          "chunkOverlap": 75
+        },
+        "newConfig": {
+          "minScore": 0.5,
+          "topK": 6,
+          "chunkOverlap": 75
+        }
+      },
+      {
+        "cycle": 2,
+        "timestamp": "2026-10-05T16:16:12.570926",
+        "type": "config_optimization",
+        "previousConfig": {
+          "minScore": 0.5,
+          "topK": 6,
+          "chunkOverlap": 75
+        },
+        "newConfig": {
+          "minScore": 0.55,
+          "topK": 6,
+          "chunkOverlap": 75
+        }
+      }
+    ]
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T15:46:45.286473"
+  "updatedAt": "2026-10-05T16:19:36.674029"
 }

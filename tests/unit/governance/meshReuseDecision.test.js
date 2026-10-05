@@ -11,7 +11,6 @@
  */
 
 const { decideMeshReuse } = require('../../../scripts/governance/mesh-reuse-decision');
-
 const RUN = {
   runId: 'rap-governed-20261005152701891-f5f76356',
   sourceFingerprint: 'c07e879775a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b',

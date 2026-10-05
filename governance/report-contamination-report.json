@@ -1,378 +1,89 @@
 {
-  "generatedAt": "2026-10-05T13:55:27.830Z",
-  "runId": "rap-governed-20261005135513097-e088b06f",
-  "sourceFingerprint": "63b0cab7433112f5c9feda1b5cf99fbb9ca80a68e2789155863b17b89254a57d",
+  "generatedAt": "2026-10-05T17:36:56.385Z",
+  "runId": "rap-governed-20261005155912964-90b91404",
+  "sourceFingerprint": "5424542e672d5cb01038014b0c0880bb747d62c0c2f4e655dff8d1c7871f7efc",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
   "engine": "report-contamination-cleaner/v3",
-  "pass": false,
-  "decision": "GOVERNANCE_CONTAMINATION_NO_GO",
-  "currentGovernanceDecision": "AUTONOMOUS_READY_GO",
+  "phase": "CONVERGE",
+  "pass": true,
+  "decision": "NO_CONTAMINATION",
+  "currentGovernanceDecision": "NO_GO",
   "filesScanned": 50,
-  "contaminatedFiles": 22,
-  "totalContaminations": 22,
-  "criticalCount": 22,
+  "contaminatedFiles": 0,
+  "totalContaminations": 0,
+  "criticalCount": 0,
   "highCount": 0,
-  "currentRunId": "rap-governed-20261005135513097-e088b06f",
+  "pendingPhaseCount": 5,
+  "pendingPhase": [
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005023044918-48ad43cf",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/final-consistency-report.json",
+      "expected": "rap-governed-20261005155912964-90b91404",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005023044918-48ad43cf",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/package-integrity-report.json",
+      "expected": "rap-governed-20261005155912964-90b91404",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005023044918-48ad43cf",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/replay-integrity-report.json",
+      "expected": "rap-governed-20261005155912964-90b91404",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005023044918-48ad43cf",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/self-proving-report.json",
+      "expected": "rap-governed-20261005155912964-90b91404",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005023044918-48ad43cf",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/tamper-detection-report.json",
+      "expected": "rap-governed-20261005155912964-90b91404",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    }
+  ],
+  "currentRunId": "rap-governed-20261005155912964-90b91404",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",
     "ENTERPRISE_READY_GO"
   ],
-  "contaminations": [
-    {
-      "file": "governance/agent-policy-compliance-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/agent-policy-compliance-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/authoritative-artifact-refresh-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/authoritative-artifact-refresh-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/certification-snapshot.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/certification-snapshot.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/critical-journey-evidence.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/critical-journey-evidence.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/delivered-release-verification-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005121425473-928f776f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/delivered-release-verification-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/evidence-manifest.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/evidence-manifest.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/final-consistency-gate-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/final-consistency-gate-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/final-consistency-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/final-consistency-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/final-governance-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/final-governance-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/final-proof-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/final-proof-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/final-readiness-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/final-readiness-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/governance-persistence-validation-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/governance-persistence-validation-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/lineage-stamp-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/lineage-stamp-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/package-integrity-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/package-integrity-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/package-validation-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/package-validation-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/rap-master-scorecard.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/rap-master-scorecard.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/replay-integrity-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/replay-integrity-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/self-proving-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/self-proving-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/source-remote-provenance-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/source-remote-provenance-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/system-scope-audit.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/system-scope-audit.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "governance/tamper-detection-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005023044918-48ad43cf",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "governance/tamper-detection-report.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    },
-    {
-      "file": "dev/platform-readiness/latest.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20261005130146634-2f19233f",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "dev/platform-readiness/latest.json",
-          "expected": "rap-governed-20261005135513097-e088b06f"
-        }
-      ]
-    }
-  ],
+  "contaminations": [],
   "crossIssues": [],
-  "summary": "22 contaminação(ões) em 22 arquivo(s): 22 crítica(s), 0 alta(s)"
+  "summary": "Nenhuma contaminação detectada em 50 arquivos."
 }

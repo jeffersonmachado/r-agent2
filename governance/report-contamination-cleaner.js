@@ -28,6 +28,7 @@ const REPORT_PATH = path.join(ROOT, 'governance', 'report-contamination-report.j
 
 const { getCurrentRunId } = require('./shared/run-id');
 const { computeSourceFingerprint } = require('./proof-engine/fingerprint-chain');
+const { getProducer, producerDueNow, currentArtifactPhase } = require('../scripts/governance/lib/runtime-evidence-artifacts');
 
 // Termos que indicam GO — usados SOMENTE para cross-contamination quando governance=NO_GO
 const GO_TERMS = [
@@ -72,6 +73,29 @@ function checkForeignRun(data, relPath, currentRunId) {
 
   // Se o artifact tem runId e difere do atual → FOREIGN_RUN
   if (currentRunId && artifactRunId && artifactRunId !== currentRunId) {
+    // DEFERIMENTO DE FASE (mesma autoridade de ensure/stamp/gate temporal,
+    // medida em 2026-10-05): um artefato cujo PRODUTOR pertence a uma fase
+    // posterior (cadeia FINAL/DELIVERED, produzida no empacotamento) ainda NÃO
+    // PODE ter o runId corrente — ele é `PENDING_PHASE`, não contaminação. Sem
+    // isto o cleaner reprovava a governança por 5 artefatos que a própria
+    // política de fase ainda nem deixava produzir (RAP-064 fechou em NO_GO por
+    // eles). Na fase devida `producerDueNow` vira true e eles voltam a ser
+    // contaminação CRITICAL.
+    const producer = getProducer(relPath);
+    if (producer && !producerDueNow(producer)) {
+      return {
+        path:     'runId',
+        value:    artifactRunId,
+        term:     'PENDING_PHASE_FOREIGN_RUN',
+        isDecisionField: true,
+        type:     'PENDING_PHASE_FOREIGN_RUN',
+        severity: 'INFO',
+        file:     relPath,
+        expected: currentRunId,
+        producerPhase: producer.phase || 'ANY',
+        detail:   'produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)',
+      };
+    }
     return {
       path:     'runId',
       value:    artifactRunId,
@@ -120,13 +144,19 @@ function isNoGo(decision) {
 // ─── Varredura de um arquivo específico ──────────────────────────────────────
 function scanFile(relPath, currentRunId) {
   const data = readJsonSafe(relPath);
-  if (!data) return { file: relPath, scanned: false, contaminations: [] };
+  if (!data) return { file: relPath, scanned: false, contaminations: [], pendingPhase: [] };
 
   const contaminations = [];
+  const pendingPhase = [];
   const foreignRun = checkForeignRun(data, relPath, currentRunId);
-  if (foreignRun) contaminations.push(foreignRun);
+  if (foreignRun) {
+    // PENDING_PHASE é o artefato que a fase corrente ainda NÃO pode produzir:
+    // fica separado, auditável, e FORA da decisão.
+    if (foreignRun.type === 'PENDING_PHASE_FOREIGN_RUN') pendingPhase.push(foreignRun);
+    else contaminations.push(foreignRun);
+  }
 
-  return { file: relPath, scanned: true, hitCount: contaminations.length, contaminations };
+  return { file: relPath, scanned: true, hitCount: contaminations.length, contaminations, pendingPhase };
 }
 
 // ─── Lista de arquivos a varrer ───────────────────────────────────────────────
@@ -213,6 +243,9 @@ function runContaminationCleaner() {
     byFile[c.file].push(c);
   }
 
+  // Artefatos cuja FASE ainda não chegou: auditáveis, e fora da decisão.
+  const allPendingPhase = fileScanResults.flatMap((r) => r.pendingPhase || []);
+
   const contaminatedFiles = Object.keys(byFile);
   const pass = allContaminations.length === 0;
 
@@ -223,6 +256,7 @@ function runContaminationCleaner() {
     artifactType:         'report-contamination-report',
     artifactVersion:      '1.0.0',
     engine:               'report-contamination-cleaner/v3',
+    phase:                currentArtifactPhase(),
     pass,
     decision:             pass ? 'NO_CONTAMINATION' : 'GOVERNANCE_CONTAMINATION_NO_GO',
     currentGovernanceDecision: currentDecision || 'UNKNOWN',
@@ -231,6 +265,8 @@ function runContaminationCleaner() {
     totalContaminations:  allContaminations.length,
     criticalCount:        criticalContaminations.length,
     highCount:            highContaminations.length,
+    pendingPhaseCount:    allPendingPhase.length,
+    pendingPhase:         allPendingPhase,
     currentRunId:         currentRunId || null,
     goTermsMonitored:     GO_TERMS,
     contaminations:       contaminatedFiles.map((f) => ({
@@ -249,7 +285,7 @@ function runContaminationCleaner() {
   return report;
 }
 
-module.exports = { runContaminationCleaner };
+module.exports = { runContaminationCleaner, checkForeignRun, scanFile };
 
 if (require.main === module) {
   const report = runContaminationCleaner();

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-05T14:19:53.697Z",
-  "commit": "4eff012e1f9f98096d809230422294676186521c",
+  "generatedAt": "2026-10-05T16:54:25.683Z",
+  "commit": "6693ce38ff900f7e4852961cb001233da3fdea25",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
@@ -9,9 +9,9 @@
   "totals": {
     "items": 893,
     "byState": {
-      "VALIDATED": 865,
-      "NOT_APPLICABLE": 21,
-      "VISITED": 7
+      "VALIDATED": 864,
+      "VISITED": 8,
+      "NOT_APPLICABLE": 21
     }
   },
   "status": "PASS",
@@ -5038,10 +5038,7 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 200,
-          "notFoundFallback": false
-        },
+        "p2": "network-error",
         "p3": "skipped"
       }
     },
@@ -6114,7 +6111,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/executions",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6134,7 +6131,8 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "P3 com erro de rede",
+          "notEvaluated": true
         }
       ],
       "probes": {
@@ -6146,10 +6144,7 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": {
-          "status": 200,
-          "notFoundFallback": false
-        }
+        "p3": "network-error"
       }
     },
     {
@@ -25287,8 +25282,8 @@
       }
     }
   ],
-  "runId": "rap-governed-20261005135513097-e088b06f",
-  "sourceFingerprint": "63b0cab7433112f5c9feda1b5cf99fbb9ca80a68e2789155863b17b89254a57d",
+  "runId": "rap-governed-20261005155912964-90b91404",
+  "sourceFingerprint": "4192b4fb444281eb044ed9974277c6622f51de67f6f2a5d3d298def317057f7d",
   "artifactType": "api-surface-report",
   "artifactVersion": "1.0.0"
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T15:27:51.735Z",
+  "generatedAt": "2026-10-05T16:50:54.799Z",
   "engine": "replay-hardening-engine/v2",
   "pass": true,
   "decision": "REPLAY_HARDENING_GO",
@@ -146,5 +146,9 @@
     }
   ],
   "allViolations": [],
-  "summary": "Todos os 11 replays passaram no hardening."
+  "summary": "Todos os 11 replays passaram no hardening.",
+  "runId": "rap-governed-20261005155912964-90b91404",
+  "sourceFingerprint": "4192b4fb444281eb044ed9974277c6622f51de67f6f2a5d3d298def317057f7d",
+  "artifactType": "replay-hardening-report",
+  "artifactVersion": "1.0.0"
 }
