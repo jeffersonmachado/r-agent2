@@ -683,6 +683,16 @@ async function runScreenScenario(definition, ctx) {
 // fim do teto.
 const PAGE_RENDER_READY_TIMEOUT_MS = 120000;
 
+/**
+ * Teto da espera pelo VEREDITO RBAC negativo ("Acesso Negado"). Menor que o de
+ * render de propósito: a negação é decidida pelo guard em ~0,4 s (medido em
+ * /tenants, sessão RPA real) e no pior caso 1,4 s sob 6 processos concorrentes.
+ * 30 s cobre >20x o pior caso medido e mantém a reprovação de uma violação real
+ * de RBAC dentro de um orçamento curto (a assertiva continua fail-closed: sem
+ * "Acesso Negado" até o fim do teto, o cenário reprova).
+ */
+const PAGE_DENIED_TIMEOUT_MS = Number(process.env.PAGE_DENIED_TIMEOUT_MS || 30000);
+
 const IGNORED_PAGE_CONSOLE_PATTERNS = [
   /favicon/i,
   /devtools/i,
@@ -783,7 +793,16 @@ async function assertBusinessPage(page, pageDef, definition) {
         () => {
           const root = document.querySelector('#root');
           const text = (root && root.textContent) || (document.body && document.body.textContent) || '';
-          return String(text).trim().length > 0;
+          const compact = String(text).replace(/\s+/g, ' ').trim();
+          if (compact.length === 0) return false;
+          // ESTADO DE CARREGAMENTO NÃO É CONTEÚDO (medido 2026-10-05): o
+          // `trim().length > 0` aceitava "Carregando..." como página pronta —
+          // 12 de 12 amostras sob carga, medindo /tenants em 6 processos
+          // concorrentes, tinham "Carregando..." como PRIMEIRO texto não-vazio.
+          // A partir daí o guard RBAC ainda não decidiu e a assertiva seguinte
+          // media a janela errada. Mesmo critério da Page Surface Wave
+          // (`onlyLoading`), que já trata o texto de loading como não-render.
+          return !/^carregando[.\s]*$/i.test(compact);
         },
         null,
         { timeout: PAGE_RENDER_READY_TIMEOUT_MS },
@@ -796,7 +815,36 @@ async function assertBusinessPage(page, pageDef, definition) {
       // Assertiva RBAC negativa: a página DEVE negar acesso ao papel da
       // sessão (ex.: admin sem tenant:read em /tenants). Se renderizar, a
       // guarda de URL direta falhou — falha de segurança real.
-      if (!accessDenied) {
+      //
+      // SONDA SEMÂNTICA, NÃO LEITURA ÚNICA (medido 2026-10-05): ler o veredito
+      // uma vez, 300 ms depois do wait, reprovava uma tela CORRETA sob carga —
+      // 4 de 12 amostras (6 processos concorrentes, /tenants) tinham o
+      // "Acesso Negado" chegando DEPOIS da janela de leitura (tDenied > 300 ms
+      // após o primeiro texto), enquanto a medição isolada passa sempre com
+      // folga. O mesh reprovou exatamente assim
+      // (`CRITICAL_DOMAIN_FAILED:core` em business-core-biz-tenants, no ciclo
+      // do run rap-governed-20261005173714482-457137a5) enquanto o cenário
+      // passava isolado e o RBAC estava intacto.
+      // A espera tem teto PRÓPRIO (menor que o de render): a negação é decidida
+      // pelo guard em ~0,4 s em condições normais e no máximo 1,4 s medidos sob
+      // carga alta (6 processos concorrentes). Um teto de render (120 s) só
+      // atrasaria a reprovação de um cenário realmente inválido; 30 s mantém a
+      // margem (>20x o pior caso medido) e o fail-closed: uma violação REAL de
+      // RBAC nunca produz "Acesso Negado" e continua reprovando no fim do teto.
+      const denied = await page
+        .waitForFunction(
+          () => {
+            const root = document.querySelector('#root');
+            const text = (root && root.textContent) || (document.body && document.body.textContent) || '';
+            return /Acesso Negado/i.test(String(text));
+          },
+          null,
+          { timeout: PAGE_DENIED_TIMEOUT_MS },
+        )
+        .then(() => true)
+        .catch(() => false);
+      const finalText = await readRenderedText(page);
+      if (!denied || !/Acesso Negado/i.test(finalText)) {
         throw new Error(`Pagina ${pageDef.path} deveria negar acesso ao papel da sessão (RBAC), mas renderizou`);
       }
       return { path: pageDef.path, finalPath: new URL(page.url()).pathname, denied: true };
@@ -5368,4 +5416,5 @@ module.exports = {
   assertBusinessPage,
   readRenderedText,
   PAGE_RENDER_READY_TIMEOUT_MS,
+  PAGE_DENIED_TIMEOUT_MS,
 };
