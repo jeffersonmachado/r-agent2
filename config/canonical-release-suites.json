@@ -50,6 +50,7 @@
       "tests/unit/governance/sealResumeReleaseEnvResolution.test.js",
       "tests/unit/governance/releaseSuiteBatchDiagnostics.test.js",
       "tests/unit/governance/temporalEvidenceLineage.test.js",
+    "tests/unit/governance/meshReuseDecision.test.js",
       "tests/unit/governance/certificationCoherence.test.js",
       "tests/unit/governance/releasePipelineV2Orchestration.test.js",
       "tests/unit/governance/releaseSuiteExclusiveGroups.test.js",

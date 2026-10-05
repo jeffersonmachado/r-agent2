@@ -280,7 +280,24 @@ echo "[converge] 8/12 QA Mesh canônico DENTRO do run governado (~35min; evidên
 # lineage é resolvido na origem por pipeline/entrypoints/runQaMesh.js a partir
 # de governance/.current-run.json — nunca anexado depois. Exit != 0 (NO_GO ou
 # erro) aborta a convergência: sem evidência same-run não há seal.
-RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh
+#
+# IDEMPOTÊNCIA POR RUN (medido 2026-10-05): este passo é alcançado TRÊS vezes por
+# ciclo — prepare, PRE_PACKAGE do zip candidato e PRE_PACKAGE do zip final — e o
+# `ensure-governed-run.js` REUTILIZA o run quando o fingerprint congelado é o
+# mesmo ("nada é recriado"). Logo as execuções 2 e 3 provavam o MESMO
+# runId/sourceFingerprint da 1ª: ~70 min de mesh sem prova nova, e a contenção
+# extra era a causa medida da intermitência do cenário `/editor`. A decisão de
+# reutilizar é do módulo abaixo, e ele NUNCA aceita prova de outro run, de outro
+# source, de execução não-canônica (qa:mesh à mão), de veredito NO_GO, anterior ao
+# início do run, ou que não cubra o REGISTRY CORRENTE. Cada decisão fica
+# auditável em qa-mesh/mesh-reuse-decision.json (com os checks que passaram).
+if REUSE_OUT="$($NODE scripts/governance/mesh-reuse-decision.js 2>&1)" \
+  && printf '%s' "$REUSE_OUT" | grep -q 'MESH_REUSE_OK'; then
+  printf '%s\n' "$REUSE_OUT" | sed 's/^/  /'
+else
+  printf '%s\n' "$REUSE_OUT" | sed 's/^/  /'
+  RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh
+fi
 
 echo "[converge] 8.5/12 coverage gate RECOMPUTADO sobre o mesh do run corrente"
 # Os estados de jornada do coverage gate derivam dos outcomes de cenário do
