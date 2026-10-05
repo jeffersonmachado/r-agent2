@@ -8,34 +8,6 @@
         "success": true,
         "confidence": 0.7986548840598731,
         "chunksFound": 1,
-        "timestamp": "2026-10-01T17:11:12.422739"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T17:23:03.901301"
-      },
-      {
-        "query": "QASEG20261001173740 horário de atendimento granito xadrez zimbro urutu horário atendimento granito",
-        "success": true,
-        "confidence": 0.6674349188070697,
-        "chunksFound": 9,
-        "timestamp": "2026-10-01T17:37:43.259621"
-      },
-      {
-        "query": "QASEG20261001173740 horário de atendimento granito xadrez zimbro urutu horário atendimento granito",
-        "success": true,
-        "confidence": 0.6488173073892298,
-        "chunksFound": 10,
-        "timestamp": "2026-10-01T17:37:44.794365"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
         "timestamp": "2026-10-01T18:05:07.313115"
       },
       {
@@ -702,17 +674,45 @@
         "confidence": 0.5908888735567581,
         "chunksFound": 6,
         "timestamp": "2026-10-05T03:43:18.295533"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T04:21:41.164337"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T04:29:00.948426"
+      },
+      {
+        "query": "QASEG20261005043212 horário de atendimento dunas jabuti cacto hortela horário atendimento dunas",
+        "success": true,
+        "confidence": 0.6718001220348846,
+        "chunksFound": 8,
+        "timestamp": "2026-10-05T04:32:15.382411"
+      },
+      {
+        "query": "QASEG20261005043212 horário de atendimento dunas jabuti cacto hortela horário atendimento dunas",
+        "success": true,
+        "confidence": 0.6502529171760922,
+        "chunksFound": 8,
+        "timestamp": "2026-10-05T04:32:17.267503"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 164,
-    "successfulQueries": 164,
+    "totalQueries": 168,
+    "successfulQueries": 168,
     "failedQueries": 0,
-    "avgConfidence": 0.6856707562038957,
-    "lastUpdated": "2026-10-05T03:43:18.295495"
+    "avgConfidence": 0.6814398256521871,
+    "lastUpdated": "2026-10-05T04:32:17.267489"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T03:43:18.295933"
+  "updatedAt": "2026-10-05T04:32:17.267611"
 }
