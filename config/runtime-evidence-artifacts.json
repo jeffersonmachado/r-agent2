@@ -125,6 +125,9 @@
   },
   "sameRunRule": "generatedAt >= governanceRun.startedAt — evidência PRÉ-RUN nunca ganha autoridade no run atual. Estampar runId/sourceFingerprint sobre artefato antigo é PROIBIDO: reexecute o produtor.",
   "producers": {
+    "governance/system-scope-audit.json": { "command": "node scripts/governance/generate-system-scope-audit.js", "kind": "node", "phase": "CONVERGE", "note": "produtor real do converge 6/12" },
+    "governance/replay-hardening-report.json": { "command": "node governance/replay-hardening-engine.js", "kind": "node", "phase": "CONVERGE", "note": "produtor real do converge 6/12" },
+    "governance/model-driven-e2e-report.json": { "command": "npm run validate:model-driven-e2e", "kind": "npm", "phase": "CONVERGE", "note": "consome o go-no-go do mesh do run (passo 8) e o replay-hardening; por isso o ensure do passo 8.7 reexecuta DEPOIS do mesh" },
     "governance/mutable-json-state-validation-report.json": { "command": "npm run verify:no-mutable-json-state", "kind": "npm" },
     "governance/json-persistence-audit.json": { "command": "npm run audit:json-persistence", "kind": "npm" },
     "reports/release-dag-report.json": { "command": "npm run validate:release-dag", "kind": "npm" },

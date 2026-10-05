@@ -250,6 +250,17 @@ phase_prepare() {
 
   local verdict
   verdict="$(grep -oE 'SEAL_(GO|PENDING|NO_GO)' "$log" | tail -1)"
+  # DEFEITO DE DIAGNÓSTICO (medido 2026-10-05): quando o converge ABORTA antes do
+  # seal-time-gate, não existe marcador SEAL_* no log e a mensagem saía como
+  # "converge não convergiu ()" — sem dizer QUAL passo morreu, obrigando a
+  # arqueologia no log. Aqui o veredito vazio passa a nomear o último passo
+  # anunciado pelo converge e a última linha de erro que ele emitiu.
+  if [ -z "$verdict" ]; then
+    local last_step last_error
+    last_step="$(grep -oE '\[converge\] [0-9]+(\.[0-9]+)?/12 [^—]*' "$log" | tail -1 | sed -E 's/^\[converge\] //; s/[[:space:]]+$//')"
+    last_error="$(grep -E '^\[artifact-refresh\]|^\[converge\] FALHOU|ERRO|ERROR:|não convergiu|falhou' "$log" | tail -1 | cut -c1-160)"
+    verdict="abortado em ${last_step:-passo não identificado}${last_error:+ | ultima linha: $last_error}"
+  fi
 
   # QA MESH + ENTERPRISE PROOF DENTRO DO RUN (2026-09-20, T4/T15/T17): ambos são
   # RUNTIME_EVIDENCE e executam DENTRO do converge-governance.sh (passos 1/12 e

@@ -19,7 +19,12 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const { STATUS, getProducer } = require('./lib/runtime-evidence-artifacts');
+const {
+  STATUS,
+  NON_AUTHORITATIVE_MODES,
+  getModeForArtifact,
+  getProducer,
+} = require('./lib/runtime-evidence-artifacts');
 const { evaluateRunTemporalIntegrity, resolveRun } = require('./validate-current-run-temporal-integrity');
 
 const REPORT_RELATIVE = 'governance/authoritative-artifact-refresh-report.json';
@@ -47,6 +52,38 @@ function applicableNow(producer) {
 function temporallyFresh(entry, startedAtMs) {
   const ms = entry.generatedAt ? Date.parse(entry.generatedAt) : NaN;
   return Number.isFinite(ms) && Number.isFinite(startedAtMs) && ms >= startedAtMs;
+}
+
+/**
+ * Decisão do passo — PURA e testável (não executa produtor).
+ *
+ * Reprova em DOIS casos e SÓ neles:
+ *   1. artefato AUTORITATIVO que REEXECUTAMOS e continua com generatedAt <
+ *      run.startedAt (o produtor rodou e não produziu evidência do run);
+ *   2. artefato AUTORITATIVO stale SEM produtor declarado na taxonomia
+ *      (declarar é obrigatório: nunca "estampável por não conhecido").
+ *
+ * NÃO reprova:
+ *   - artefato NÃO autoritativo (HISTORICAL/TRANSITIONAL): nunca sustenta decisão
+ *     nem precisa de produtor. Medido 2026-10-05: os 6 arquivos de
+ *     `dist/archive/**` e `governance/final-snapshot-coherence-report.json`
+ *     faziam o passo abrir com `nao-resolvidos=7` — bloqueio falso de evidência
+ *     que a própria taxonomia já excluía da decisão;
+ *   - artefato DEFERIDO por fase (cadeia FINAL/DELIVERED em CONVERGE): por
+ *     construção ainda é pré-run e fica sob o juízo do gate
+ *     CURRENT_RUN_TEMPORAL_INTEGRITY no fim do pipeline.
+ */
+function summarizeRefresh({ afterEntries = [], reexecutedPaths = new Set(), startedAtMs = NaN } = {}) {
+  const unresolved = afterEntries.filter((entry) => {
+    if (temporallyFresh(entry, startedAtMs)) return false;
+    const classification = entry.classification || getModeForArtifact(entry.path);
+    if (classification && NON_AUTHORITATIVE_MODES.includes(classification)) return false;
+    const producer = entry.producer || getProducer(entry.path);
+    if (!producer) return true;
+    if (!producer.command) return false;
+    return reexecutedPaths.has(entry.path);
+  });
+  return { unresolved, status: unresolved.length === 0 ? 'PASS' : 'FAIL' };
 }
 
 function main() {
@@ -100,20 +137,11 @@ function main() {
   }
 
   const after = evaluateRunTemporalIntegrity({ root, run });
-  // FALHA FECHADA em dois casos — e SÓ neles:
-  //   1. artefato que REEXECUTAMOS e continua com generatedAt < run.startedAt
-  //      (o produtor rodou e não produziu evidência do run);
-  //   2. artefato temporalmente stale SEM NENHUM produtor declarado na taxonomia
-  //      (declarar é obrigatório: nunca "estampável por não conhecido").
-  // Os demais (cadeia final do pipeline) ficam DEFERIDOS e sob o juízo do gate
-  // CURRENT_RUN_TEMPORAL_INTEGRITY, que é fail-closed no fim do pipeline.
   const reexecutedPaths = new Set(results.filter((entry) => entry.reexecuted).map((entry) => entry.path));
-  const unresolved = after.entries.filter((entry) => {
-    if (temporallyFresh(entry, startedAtMs)) return false;
-    const producer = entry.producer || getProducer(entry.path);
-    if (!producer) return true;
-    if (!producer.command) return false;
-    return reexecutedPaths.has(entry.path);
+  const { unresolved, status } = summarizeRefresh({
+    afterEntries: after.entries,
+    reexecutedPaths,
+    startedAtMs,
   });
 
   const report = {
@@ -135,12 +163,21 @@ function main() {
     deferred,
     results,
     unresolved,
-    status: (after.status === 'PASS') ? 'PASS' : 'FAIL',
+    // CRITÉRIO DE FASE, não o status global do gate. Em CONVERGE os artefatos da
+    // cadeia FINAL/DELIVERED são, POR CONSTRUÇÃO, ainda pré-run: ficam DEFERIDOS e
+    // sob o juízo do gate CURRENT_RUN_TEMPORAL_INTEGRITY no fim do pipeline.
+    // Reprovar aqui por causa deles tornava o passo impossível de passar: medido
+    // 2026-10-05 (`seal-release --from prepare`), o converge abortou no passo 8.7
+    // com status=FAIL enquanto a lista de não-reparáveis já era só o falso
+    // bloqueio de não autoritativos.
+    status,
+    afterStatus: after.status,
+    afterTotals: after.totals,
   };
 
   fs.writeFileSync(path.join(root, REPORT_RELATIVE), `${JSON.stringify(report, null, 2)}\n`);
 
-  console.log(`[artifact-refresh] fase=${CURRENT_PHASE} reexecutados=${report.totals.reexecuted} deferidos=${report.totals.deferred} sem-produtor=${report.totals.producerMissing} nao-resolvidos=${unresolved.length} status=${report.status}`);
+  console.log(`[artifact-refresh] fase=${CURRENT_PHASE} reexecutados=${report.totals.reexecuted} deferidos=${report.totals.deferred} sem-produtor=${report.totals.producerMissing} nao-resolvidos=${unresolved.length} status=${report.status} gateGlobal=${after.status}`);
   for (const entry of deferred.slice(0, 8)) {
     console.log(`  · deferido (${entry.reason}) ${entry.path}`);
   }
@@ -152,7 +189,7 @@ function main() {
   if (report.status !== 'PASS') process.exitCode = 1;
 }
 
-module.exports = { main };
+module.exports = { main, summarizeRefresh, temporallyFresh, applicableNow };
 
 if (require.main === module) {
   main();

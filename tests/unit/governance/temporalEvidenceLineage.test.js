@@ -312,6 +312,98 @@ describe('autoridade única — taxonomia e produtores', () => {
   });
 });
 
+describe('reexecução do produtor — o que reprova e o que NÃO reprova (converge 8.7/12)', () => {
+  const ensure = require('../../../scripts/governance/ensure-authoritative-artifacts-fresh');
+
+  const RUN_START = Date.parse(RUN.started_at);
+  const HISTORICAL = 'dist/archive/r-agent2-20261004-094046/r-agent2-20261004-094046.manifest.json';
+  const TRANSITIONAL = 'governance/final-snapshot-coherence-report.json';
+  const FINAL_PHASE = 'governance/tamper-detection-report.json';
+
+  function entry(relativePath, { generatedAt = null, status = authority.STATUS.STALE_ARTIFACT } = {}) {
+    return {
+      path: relativePath,
+      classification: authority.classifyArtifact(relativePath),
+      status,
+      generatedAt,
+      producer: authority.getProducer(relativePath),
+    };
+  }
+
+  test('os três produtores que faltavam estão declarados (reexecução possível)', () => {
+    // Medido 2026-10-05 (`seal-release --from prepare`): o passo 8.7 abriu com
+    // `sem-produtor=3` — system-scope-audit, replay-hardening e model-driven-e2e
+    // eram autoritativos e SEM produtor declarado, o que é fail-closed por
+    // política. Os comandos abaixo são os produtores REAIS (o converge 6/12 roda
+    // os dois primeiros; o terceiro consome o mesh do run, por isso roda no 8.7).
+    const declarados = {
+      'governance/system-scope-audit.json': 'node scripts/governance/generate-system-scope-audit.js',
+      'governance/replay-hardening-report.json': 'node governance/replay-hardening-engine.js',
+      'governance/model-driven-e2e-report.json': 'npm run validate:model-driven-e2e',
+    };
+    for (const [artifactPath, command] of Object.entries(declarados)) {
+      const producer = authority.getProducer(artifactPath);
+      expect(producer).toBeTruthy();
+      expect(producer.command).toBe(command);
+      expect(producer.phase).toBe('CONVERGE');
+    }
+  });
+
+  test('histórico e transicional NUNCA reprovam o passo (não têm produtor por definição)', () => {
+    // Falso bloqueio medido: os 6 arquivos de dist/archive/** e o
+    // governance/final-snapshot-coherence-report.json entravam em `unresolved`
+    // (`nao-resolvidos=7`) e abortavam o converge no passo 8.7 — evidência que a
+    // própria taxonomia já havia excluído da decisão.
+    const outcome = ensure.summarizeRefresh({
+      afterEntries: [entry(HISTORICAL, { status: authority.STATUS.HISTORICAL }), entry(TRANSITIONAL, { status: authority.STATUS.TRANSITIONAL })],
+      startedAtMs: RUN_START,
+    });
+    expect(outcome.unresolved).toEqual([]);
+    expect(outcome.status).toBe('PASS');
+  });
+
+  test('autoritativo stale SEM produtor declarado continua FAIL-CLOSED', () => {
+    const outcome = ensure.summarizeRefresh({
+      afterEntries: [{
+        path: 'governance/artefato-sem-produtor.json',
+        classification: authority.MODES.CERTIFICATION_ARTIFACT,
+        status: authority.STATUS.STALE_ARTIFACT,
+        generatedAt: PRE_RUN,
+        producer: null,
+      }],
+      startedAtMs: RUN_START,
+    });
+    expect(outcome.status).toBe('FAIL');
+    expect(outcome.unresolved).toHaveLength(1);
+  });
+
+  test('artefato REEXECUTADO que continua pré-run reprova (o produtor não produziu o run)', () => {
+    const outcome = ensure.summarizeRefresh({
+      afterEntries: [entry(RAP078, { generatedAt: PRE_RUN })],
+      reexecutedPaths: new Set([RAP078]),
+      startedAtMs: RUN_START,
+    });
+    expect(outcome.status).toBe('FAIL');
+    expect(outcome.unresolved.map((e) => e.path)).toEqual([RAP078]);
+  });
+
+  test('deferido por fase (cadeia FINAL em CONVERGE) NÃO reprova o passo', () => {
+    const outcome = ensure.summarizeRefresh({
+      afterEntries: [entry(FINAL_PHASE, { generatedAt: PRE_RUN })],
+      startedAtMs: RUN_START,
+    });
+    expect(outcome.status).toBe('PASS');
+  });
+
+  test('artefato autoritativo do próprio run passa', () => {
+    const outcome = ensure.summarizeRefresh({
+      afterEntries: [entry(RAP078, { generatedAt: IN_RUN, status: authority.STATUS.SAME_RUN })],
+      startedAtMs: RUN_START,
+    });
+    expect(outcome.status).toBe('PASS');
+  });
+});
+
 describe('verificador offline — contrato da seção temporal (não confia só no payload)', () => {
   const VERIFIER = path.join(__dirname, '..', '..', '..', 'scripts', 'verify-enterprise-governance-v2.sh');
 
