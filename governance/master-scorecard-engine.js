@@ -5,6 +5,15 @@ const fs = require('fs');
 const path = require('path');
 const { fingerprintObject } = require('../qa/coverage/fingerprints');
 const { computeSourceFingerprint } = require('./proof-engine/fingerprint-chain');
+// AUTORIDADE ÚNICA da classificação temporal de artefatos. O scorecard NÃO
+// implementa freshness própria: a regra `generatedAt >= run.startedAt` tem de ser
+// a MESMA usada pelo estampador, pelo gate CURRENT_RUN_TEMPORAL_INTEGRITY e pelo
+// verificador offline — senão o score vira o ponto permissivo por onde o passado
+// volta a ter autoridade.
+const {
+  REASONS: TEMPORAL_REASONS,
+  runStartMs,
+} = require('../scripts/governance/lib/runtime-evidence-artifacts');
 const {
   MASTER_SCORECARD_REGISTRY,
   REQUIRED_CATEGORIES,
@@ -241,6 +250,23 @@ function evaluateCurrentArtifact(spec, context) {
     if (generatedAt > context.nowMs + 60_000) {
       return result('INVALID', 'ARTIFACT_FROM_FUTURE', `Artifact possui timestamp futuro: ${spec.path}`, {
         path: spec.path,
+      });
+    }
+    // REGRA TEMPORAL — generatedAt >= run.startedAt (autoridade única acima).
+    //
+    // DEFEITO REAL (medido 2026-10-05): esta checagem não existia. Um artefato
+    // produzido ANTES do início do run, estampado com o runId/sourceFingerprint
+    // atuais, passava em TODAS as checagens anteriores (runId certo, fingerprint
+    // certo, contrato completo, timestamp válido) e a dimensão recebia 10/10 —
+    // o 78/78 ficava sustentado por evidência pré-run. O tempo é a única das
+    // checagens capaz de detectar isso.
+    const runStartedAtMs = runStartMs(context.runContext);
+    if (runStartedAtMs !== null && generatedAt < runStartedAtMs) {
+      return result('STALE', 'STALE_ARTIFACT', `Artifact gerado ANTES do início do run: ${spec.path}`, {
+        path: spec.path,
+        artifactGeneratedAt: artifact.generatedAt,
+        runStartedAt: context.runContext.startedAt,
+        rule: TEMPORAL_REASONS.STALE_ARTIFACT_PRE_RUN,
       });
     }
     const maxAgeMs = Number(spec.maxAgeMs);

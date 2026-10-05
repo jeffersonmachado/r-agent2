@@ -449,6 +449,93 @@ check_banned_hashes "$VERIFY_STALE_LOG" "$DIST_GOV" "$DIST_SIG" "$MANIFEST_PATH"
 VERIFY_TS_LOG="$(mktemp -t verify-v2-stale-ts.XXXXXX)"
 check_banned_timestamps "$VERIFY_TS_LOG" "$DIST_GOV" "$DIST_SIG" "$MANIFEST_PATH"
 
+# ── 9. INTEGRIDADE TEMPORAL DA EVIDÊNCIA (offline, fail-closed) ─────────────
+#
+# DEFEITO REAL (medido 2026-10-05, no envelope r-agent2-20261005-011259):
+# `governance/mutable-json-state-validation-report.json` (generatedAt 01:20:06) e
+# `governance/json-persistence-audit.json` (01:20:05) viajaram no payload com o
+# runId/sourceFingerprint do run criado às 02:30 — evidência PRÉ-RUN sustentando
+# decisão do run. Hash, assinatura, runId e fingerprint batiam: nada disso detecta
+# isso. Só o TEMPO detecta.
+#
+# A autoridade de classificação e a regra vivem na taxonomia EMPACOTADA
+# (config/runtime-evidence-artifacts.json: `sameRunRule`), para que o verificador
+# valide o MESMO critério do pipeline — não uma cópia própria.
+step "9. Integridade temporal da evidência (generatedAt >= run.startedAt)"
+TEMPORAL_PAYLOAD_ROOT="$TMP/payload/r-agent2"
+if [[ ! -d "$TEMPORAL_PAYLOAD_ROOT" ]]; then
+  fail "payload extraído sem raiz r-agent2 — não há como validar integridade temporal"
+fi
+TEMPORAL_OUT="$(node -e "
+const fs=require('fs'),path=require('path');
+const root=process.argv[1];
+// LISTA CANÔNICA MÍNIMA EMBUTIDA NO VERIFICADOR. Não pode vir só da taxonomia do
+// payload: um payload construído com taxonomia TRUNCADA escaparia da checagem
+// (foi o que aconteceu no primeiro teste desta seção: a taxonomia empacotada era
+// a 1.0.0, não listava o par do RAP-078, e a violação real passou).
+const MINIMUM=[
+  'governance/mutable-json-state-validation-report.json',
+  'governance/json-persistence-audit.json',
+  'governance/final-governance-report.json',
+  'governance/final-consistency-report.json',
+  'governance/final-proof-report.json',
+  'governance/final-readiness-report.json',
+  'governance/self-proving-report.json',
+  'governance/tamper-detection-report.json',
+  'governance/package-integrity-report.json',
+  'governance/package-validation-report.json',
+  'governance/evidence-manifest.json',
+  'governance/certification-snapshot.json',
+  'reports/master-scorecard-test-report.json',
+  'reports/master-scorecard-regression-report.json',
+];
+const AUTHORITATIVE=['RUNTIME_EVIDENCE','DERIVED_REPORT','CERTIFICATION_ARTIFACT'];
+const taxPath=path.join(root,'config','runtime-evidence-artifacts.json');
+const declared=[];
+if(fs.existsSync(taxPath)){
+  try{const tax=JSON.parse(fs.readFileSync(taxPath,'utf8'));
+    for(const mode of AUTHORITATIVE){const entry=(tax.modes||{})[mode]||{};for(const a of entry.artifacts||[]) declared.push(a);}
+  }catch(_){}
+}else{
+  // Taxonomia ausente no payload não pode virar passe silencioso.
+  process.stdout.write('TEMPORAL_TAXONOMY_MISSING');process.exit(0);
+}
+// Caminhos de evidência declarados pelo PRÓPRIO scorecard empacotado (regex, sem
+// executar código do payload).
+const scorePaths=[];
+const regPath=path.join(root,'governance','master-scorecard-registry.js');
+if(fs.existsSync(regPath)){
+  const txt=fs.readFileSync(regPath,'utf8');const re=/path:\s*'([^']+)'/g;let m;
+  while((m=re.exec(txt))!==null)scorePaths.push(m[1]);
+}
+const manifestPath=path.join(root,'governance','evidence-manifest.json');
+let runId=null,runStartedAt=null;
+if(fs.existsSync(manifestPath)){try{const m=JSON.parse(fs.readFileSync(manifestPath,'utf8'));runId=m.runId||null;runStartedAt=m.runStartedAt||null;}catch(_){}}
+// Fallback tamper-evidente: o runId carrega o instante de criação do run
+// (rap-governed-YYYYMMDDHHMMSSmmm-<hash>).
+if(!runStartedAt&&runId){const m=/^rap-governed-(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{3})/.exec(runId);if(m){runStartedAt=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6],+m[7])).toISOString();}}
+if(!runStartedAt){process.stdout.write('TEMPORAL_RUN_START_UNKNOWN');process.exit(0);}
+const startedMs=Date.parse(runStartedAt);
+const targets=[...new Set([...MINIMUM,...declared,...scorePaths])];
+const violations=[];let scanned=0;
+for(const rel of targets){
+  const abs=path.join(root,rel);
+  if(!fs.existsSync(abs))continue;
+  let a;try{a=JSON.parse(fs.readFileSync(abs,'utf8'));}catch(_){continue;}
+  if(!a||typeof a!=='object')continue;
+  scanned++;
+  const gen=a.generatedAt?Date.parse(a.generatedAt):NaN;
+  if(!Number.isFinite(gen)){violations.push('TEMPORAL_GENERATED_AT_MISSING:'+rel);continue;}
+  if(gen<startedMs)violations.push('TEMPORAL_LINEAGE_VIOLATION:'+rel+'(generatedAt='+a.generatedAt+'<runStartedAt='+runStartedAt+')');
+}
+process.stdout.write(violations.length===0?('OK:'+scanned+' artefatos autoritativos no run'):violations.slice(0,10).join(' | '));
+" "$TEMPORAL_PAYLOAD_ROOT" 2>/dev/null || echo 'TEMPORAL_CHECK_UNREADABLE')"
+if [[ "$TEMPORAL_OUT" == OK:* ]]; then
+  ok "evidência autoritativa com integridade temporal: ${TEMPORAL_OUT#OK:}"
+else
+  fail "integridade temporal da evidência reprovada — $TEMPORAL_OUT"
+fi
+
 echo ""
 if [[ "$OVERALL_PASS" == true ]]; then
   write_verify_result "PASS" true

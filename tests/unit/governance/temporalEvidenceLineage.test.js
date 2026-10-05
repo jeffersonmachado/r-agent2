@@ -1,0 +1,313 @@
+'use strict';
+
+/**
+ * TEMPORAL EVIDENCE LINEAGE — matriz de prova (missão 2026-10-05).
+ *
+ * DEFEITO REAL MEDIDO (release r-agent2-20261005-011259, dentro do payload):
+ *   governance/mutable-json-state-validation-report.json  generatedAt=01:20:06
+ *   governance/json-persistence-audit.json                generatedAt=01:20:05
+ * enquanto o run só começou às 02:30:45 — e os dois carregavam o runId e o
+ * sourceFingerprint desse run. Todas as outras checagens passavam (runId certo,
+ * fingerprint certo, artifactType presente): só o TEMPO prova que nada rodou nele.
+ *
+ * Estes testes extraem/provocam o comportamento REAL:
+ *   - stamp-report-lineage.js contra artefato pré-run (deve RECUSAR e não escrever)
+ *   - gate CURRENT_RUN_TEMPORAL_INTEGRITY (deve contar e reprovar)
+ *   - Master Scorecard (não pode dar 10/10 com evidência pré-run)
+ *   - isolamento de histórico/transicional e fail-closed de não classificado
+ */
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const authority = require('../../../scripts/governance/lib/runtime-evidence-artifacts');
+const { stamp } = require('../../../scripts/governance/stamp-report-lineage');
+const { evaluateRunTemporalIntegrity } = require('../../../scripts/governance/validate-current-run-temporal-integrity');
+const { evaluateEvidence } = require('../../../governance/master-scorecard-engine');
+
+// Valores do caso real (não inventados): o run do release auditado e o artefato
+// do RAP-078 que ficou pré-run dentro do pacote.
+const RUN = {
+  run_id: 'rap-governed-20261005023044918-48ad43cf',
+  source_fingerprint: 'c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54',
+  started_at: '2026-10-05T02:30:45.064Z',
+};
+const PRE_RUN = '2026-10-05T01:20:06.189Z';
+const IN_RUN = '2026-10-05T03:00:00.000Z';
+const RAP078 = 'governance/mutable-json-state-validation-report.json';
+
+const originalCwd = process.cwd();
+const tempRoots = [];
+
+function workspace() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'temporal-lineage-'));
+  tempRoots.push(dir);
+  fs.mkdirSync(path.join(dir, 'governance'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'governance', '.current-run.json'),
+    JSON.stringify({ runId: RUN.run_id, sourceFingerprint: RUN.source_fingerprint, startedAt: RUN.started_at }, null, 2),
+  );
+  return dir;
+}
+
+function lineage(generatedAt, extra = {}) {
+  return {
+    artifactType: 'mutable-json-state-validation-report',
+    artifactVersion: '1.0.0',
+    runId: RUN.run_id,
+    sourceFingerprint: RUN.source_fingerprint,
+    generatedAt,
+    status: 'PASS',
+    ...extra,
+  };
+}
+
+function writeArtifact(root, relativePath, value) {
+  const abs = path.join(root, relativePath);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  const text = `${JSON.stringify(value, null, 2)}\n`;
+  fs.writeFileSync(abs, text);
+  return { abs, text };
+}
+
+afterEach(() => {
+  process.chdir(originalCwd);
+  while (tempRoots.length) {
+    const dir = tempRoots.pop();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+describe('estampagem retroativa — DERIVED/CERTIFICATION pré-run não pode ganhar lineage', () => {
+  test('RAP-078 pré-run: stamp RECUSA e o arquivo NÃO é modificado', () => {
+    const root = workspace();
+    const { abs, text } = writeArtifact(root, RAP078, lineage(PRE_RUN));
+    process.chdir(root);
+
+    const outcome = stamp(RAP078, RUN);
+
+    expect(outcome.stamped).toBe(false);
+    expect(outcome.reason).toBe(authority.REASONS.REJECTED_STALE_ARTIFACT);
+    // Prova material: bytes idênticos (nada de generatedAt reescrito nem runId injetado).
+    expect(fs.readFileSync(abs, 'utf8')).toBe(text);
+  });
+
+  test('mesmo run: stamp ACEITA e PRESERVA o generatedAt real do produtor', () => {
+    const root = workspace();
+    // artefato sem lineage, mas produzido DENTRO do run (pelo validador)
+    const { abs } = writeArtifact(root, RAP078, {
+      artifactType: 'mutable-json-state-validation-report',
+      artifactVersion: '1.0.0',
+      generatedAt: IN_RUN,
+      status: 'PASS',
+    });
+    process.chdir(root);
+
+    const outcome = stamp(RAP078, RUN);
+
+    expect(outcome.stamped).toBe(true);
+    const written = JSON.parse(fs.readFileSync(abs, 'utf8'));
+    expect(written.runId).toBe(RUN.run_id);
+    expect(written.generatedAt).toBe(IN_RUN);
+  });
+
+  test('artefato NÃO classificado não é estampado (fail-closed, nunca "por desconhecido")', () => {
+    const root = workspace();
+    writeArtifact(root, 'reports/desconhecido.json', { generatedAt: IN_RUN, status: 'PASS' });
+    process.chdir(root);
+
+    const outcome = stamp('reports/desconhecido.json', RUN);
+
+    expect(outcome.stamped).toBe(false);
+    expect(outcome.reason).toBe(authority.REASONS.UNCLASSIFIED_AUTHORITATIVE_ARTIFACT);
+  });
+
+  test('RUNTIME_EVIDENCE continua exigindo lineage na ORIGEM (não regrediu)', () => {
+    const root = workspace();
+    writeArtifact(root, 'qa-mesh/go-no-go-report.json', { generatedAt: IN_RUN, status: 'GO' });
+    process.chdir(root);
+
+    const outcome = stamp('qa-mesh/go-no-go-report.json', RUN);
+
+    expect(outcome.stamped).toBe(false);
+    expect(outcome.reason).toBe(authority.REASONS.RUNTIME_EVIDENCE_REQUIRES_ORIGIN_LINEAGE);
+  });
+});
+
+describe('gate CURRENT_RUN_TEMPORAL_INTEGRITY', () => {
+  test('artefato autoritativo pré-run reprova o run (o caso do payload)', () => {
+    const root = workspace();
+    writeArtifact(root, RAP078, lineage(PRE_RUN));
+
+    const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+    expect(evaluation.status).toBe('FAIL');
+    expect(evaluation.totals.preRunArtifacts).toBeGreaterThanOrEqual(1);
+    const violation = evaluation.violations.find((entry) => entry.path === RAP078);
+    expect(violation).toBeTruthy();
+    expect(violation.code).toBe('PRE_RUN_AUTHORITATIVE_ARTIFACT');
+    expect(violation.producer).toMatchObject({ command: 'npm run verify:no-mutable-json-state' });
+  });
+
+  test('mesma evidência produzida no run: SAME_RUN e sem violação', () => {
+    const root = workspace();
+    writeArtifact(root, RAP078, lineage(IN_RUN));
+
+    const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+    expect(evaluation.totals.preRunArtifacts).toBe(0);
+    expect(evaluation.entries.find((entry) => entry.path === RAP078).status).toBe(authority.STATUS.SAME_RUN);
+    expect(evaluation.violations.find((entry) => entry.path === RAP078)).toBeUndefined();
+  });
+
+  test('artefato consumido em decisão SEM classificação = NO_GO (fail-closed)', () => {
+    const root = workspace();
+    writeArtifact(root, 'reports/nao-classificado-consumido.json', lineage(IN_RUN));
+
+    const evaluation = evaluateRunTemporalIntegrity({
+      root,
+      run: RUN,
+      declaredPaths: ['reports/nao-classificado-consumido.json'],
+    });
+
+    expect(evaluation.status).toBe('FAIL');
+    expect(evaluation.totals.unknownClassification).toBeGreaterThanOrEqual(1);
+    expect(evaluation.violations.some((entry) => entry.code === 'UNCLASSIFIED_AUTHORITATIVE_ARTIFACT')).toBe(true);
+  });
+
+  test('run ERRADO e fonte ERRADA são distinguidos', () => {
+    const root = workspace();
+    writeArtifact(root, RAP078, lineage(IN_RUN, { runId: 'rap-governed-de-outro-run' }));
+    writeArtifact(root, 'governance/json-persistence-audit.json', lineage(IN_RUN, { sourceFingerprint: 'fingerprint-de-outra-fonte' }));
+
+    const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+    expect(evaluation.totals.wrongRunArtifacts).toBeGreaterThanOrEqual(1);
+    expect(evaluation.violations.some((entry) => entry.code === 'WRONG_RUN_AUTHORITATIVE_ARTIFACT')).toBe(true);
+    expect(evaluation.violations.some((entry) => entry.code === 'INVALID_AUTHORITATIVE_ARTIFACT')).toBe(true);
+  });
+
+  test('sem run resolvido o gate é fail-closed', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'temporal-norun-'));
+    tempRoots.push(root);
+
+    const evaluation = evaluateRunTemporalIntegrity({ root });
+
+    expect(evaluation.status).toBe('FAIL');
+    expect(evaluation.violations[0].code).toBe('CURRENT_RUN_UNRESOLVED');
+  });
+});
+
+describe('isolamento de HISTORICAL e TRANSITIONAL', () => {
+  test('histórico (dist/archive/**) é ignorado e não vira evidência', () => {
+    const root = workspace();
+    writeArtifact(root, 'dist/archive/r-agent2-20260901.zip.proof.json', { generatedAt: PRE_RUN, status: 'GREEN' });
+
+    const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+    expect(authority.classifyArtifact('dist/archive/r-agent2-20260901.zip.proof.json')).toBe(authority.MODES.HISTORICAL_REPORT);
+    expect(evaluation.totals.historicalIgnored).toBeGreaterThanOrEqual(1);
+    expect(evaluation.violations.some((entry) => entry.path.startsWith('dist/archive/'))).toBe(false);
+  });
+
+  test('snapshot transicional é reconhecido e excluído da decisão', () => {
+    const snapshot = 'governance/final-snapshot-coherence-report.json';
+    expect(authority.classifyArtifact(snapshot)).toBe(authority.MODES.TRANSITIONAL_REPORT);
+    expect(authority.isAuthoritativeArtifact(snapshot)).toBe(false);
+
+    const root = workspace();
+    writeArtifact(root, snapshot, { generatedAt: PRE_RUN, status: 'NO_GO' });
+    const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+    expect(evaluation.totals.transitionalIgnored).toBeGreaterThanOrEqual(1);
+    // Snapshot transicional NUNCA domina a decisão final.
+    expect(evaluation.violations.some((entry) => entry.path === snapshot)).toBe(false);
+  });
+
+  test('scorecard consumindo artefato histórico é violação explícita', () => {
+    const root = workspace();
+    writeArtifact(root, 'dist/archive/antigo.json', { generatedAt: PRE_RUN, status: 'PASS' });
+
+    const evaluation = evaluateRunTemporalIntegrity({
+      root,
+      run: RUN,
+      declaredPaths: ['dist/archive/antigo.json'],
+    });
+
+    expect(evaluation.violations.some((entry) => entry.code === 'SCORECARD_CONSUMES_NON_AUTHORITATIVE_ARTIFACT')).toBe(true);
+  });
+});
+
+describe('Master Scorecard — a mesma regra temporal (nada de freshness permissiva)', () => {
+  const spec = {
+    type: 'current_artifact',
+    path: RAP078,
+    statusPaths: ['status', 'decision'],
+    acceptedValues: ['PASS'],
+    requireLineage: true,
+    maxAgeMs: 7 * 24 * 60 * 60 * 1000,
+  };
+
+  function contextFor(root) {
+    return {
+      rootDir: root,
+      sourceFingerprint: RUN.source_fingerprint,
+      runContext: { runId: RUN.run_id, sourceFingerprint: RUN.source_fingerprint, startedAt: RUN.started_at, status: 'RUNNING' },
+      nowMs: Date.parse(IN_RUN) + 3_600_000,
+    };
+  }
+
+  test('evidência pré-run NÃO sustenta a dimensão (não pode 10/10)', () => {
+    const root = workspace();
+    writeArtifact(root, RAP078, lineage(PRE_RUN));
+
+    const outcome = evaluateEvidence(spec, contextFor(root));
+
+    expect(outcome.status).toBe('STALE');
+    expect(JSON.stringify(outcome)).toMatch(/STALE_ARTIFACT/);
+  });
+
+  test('mesma evidência dentro do run sustenta a dimensão (caminho feliz preservado)', () => {
+    const root = workspace();
+    writeArtifact(root, RAP078, lineage(IN_RUN));
+
+    const outcome = evaluateEvidence(spec, contextFor(root));
+
+    expect(outcome.status).toBe('PASS');
+  });
+
+  test('evidência com timestamp futuro continua reprovada', () => {
+    const root = workspace();
+    writeArtifact(root, RAP078, lineage('2027-01-01T00:00:00.000Z'));
+
+    const outcome = evaluateEvidence(spec, contextFor(root));
+
+    expect(outcome.status).toBe('INVALID');
+    expect(JSON.stringify(outcome)).toMatch(/ARTIFACT_FROM_FUTURE/);
+  });
+});
+
+describe('autoridade única — taxonomia e produtores', () => {
+  test('os cinco modos existem e os autoritativos são distintos dos não autoritativos', () => {
+    expect(Object.keys(authority.MODES).sort()).toEqual([
+      'CERTIFICATION_ARTIFACT',
+      'DERIVED_REPORT',
+      'HISTORICAL_REPORT',
+      'RUNTIME_EVIDENCE',
+      'TRANSITIONAL_REPORT',
+    ]);
+    expect(authority.AUTHORITATIVE_MODES).not.toContain(authority.MODES.HISTORICAL_REPORT);
+    expect(authority.AUTHORITATIVE_MODES).not.toContain(authority.MODES.TRANSITIONAL_REPORT);
+  });
+
+  test('RAP-078 está classificado e tem produtor declarado (reexecução possível)', () => {
+    expect(authority.classifyArtifact(RAP078)).toBe(authority.MODES.CERTIFICATION_ARTIFACT);
+    expect(authority.getProducer(RAP078)).toMatchObject({ command: 'npm run verify:no-mutable-json-state' });
+    expect(authority.getProducer('governance/json-persistence-audit.json')).toMatchObject({ command: 'npm run audit:json-persistence' });
+  });
+
+  test('a regra declarada é a mesma aplicada em código', () => {
+    expect(authority.loadConfig().sameRunRule).toMatch(/generatedAt >= governanceRun\.startedAt/);
+  });
+});

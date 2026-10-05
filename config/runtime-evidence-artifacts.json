@@ -38,8 +38,116 @@
         "reports/tenant-isolation-report.json",
         "reports/release-dag-report.json",
         "reports/release-artifact-identity-report.json",
-        "reports/route-mount-report.json"
+        "reports/route-mount-report.json",
+        "reports/rag-domain-segregation-report.json",
+        "reports/inventory-build-report.json",
+        "reports/rate-limit-validation-report.json",
+        "reports/security-validation-report.json",
+        "reports/idempotency-validation-report.json",
+        "reports/concurrency-validation-report.json",
+        "reports/external-resilience-report.json",
+        "reports/channel-security-report.json",
+        "reports/disaster-recovery-report.json",
+        "reports/deploy-validation-report.json",
+        "reports/privacy-retention-report.json",
+        "reports/billing-entitlement-report.json",
+        "reports/webhook-replay-protection-report.json",
+        "reports/master-scorecard-test-report.json",
+        "reports/master-scorecard-regression-report.json",
+        "reports/source-remote-provenance-report.json",
+        "reports/experience-api-segregation-report.json"
+      ]
+    },
+    "CERTIFICATION_ARTIFACT": {
+      "description": "Artefato que CARREGA a decisão de certificação (prova final, governança final, readiness, manifesto de evidência, validação de pacote). Autoritativo: mesma regra temporal dos demais.",
+      "requires": [
+        "runId",
+        "sourceFingerprint",
+        "generatedAt",
+        "artifactType",
+        "artifactVersion"
+      ],
+      "sameRunProof": "generatedAt >= governanceRun.startedAt",
+      "artifacts": [
+        "governance/evidence-manifest.json",
+        "governance/final-proof-report.json",
+        "governance/final-readiness-report.json",
+        "governance/final-governance-report.json",
+        "governance/final-consistency-report.json",
+        "governance/final-consistency-gate-report.json",
+        "governance/self-proving-report.json",
+        "governance/tamper-detection-report.json",
+        "governance/package-validation-report.json",
+        "governance/package-integrity-report.json",
+        "governance/certification-snapshot.json",
+        "governance/report-contamination-report.json",
+        "governance/mutable-json-state-validation-report.json",
+        "governance/json-persistence-audit.json",
+        "governance/model-driven-e2e-report.json",
+        "governance/system-scope-audit.json",
+        "governance/agent-policy-compliance-report.json",
+        "governance/governance-persistence-validation-report.json",
+        "governance/replay-integrity-report.json",
+        "governance/replay-hardening-report.json",
+        "governance/outbound-reliability-report.json",
+        "governance/experience-segregation-report.json",
+        "governance/experience-api-segregation-report.json",
+        "governance/source-remote-provenance-report.json",
+        "governance/critical-journey-evidence.json",
+        "governance/delivered-release-verification-report.json",
+        "qa/qa-waves-enterprise-governance.json"
+      ]
+    },
+    "HISTORICAL_REPORT": {
+      "description": "Relatório de ciclo/versão ANTERIOR. Pode permanecer no pacote (ex.: dist/archive/**), mas NUNCA é elegível como evidência do run atual: lifecycle HISTORICAL/SUPERSEDED e exclusão explícita do score e da decisão final.",
+      "requires": [
+        "lifecycle"
+      ],
+      "sameRunProof": "NEVER (histórico não sustenta o run atual)",
+      "lifecycle": "HISTORICAL",
+      "globs": [
+        "dist/archive/**"
+      ],
+      "artifacts": []
+    },
+    "TRANSITIONAL_REPORT": {
+      "description": "Artefato INTERMEDIÁRIO de fase (snapshot de progresso, relatório de pré-pacote). Explícita e formalmente excluído de score, decisão final e autoridade de readiness — nunca pode dominar a decisão de release.",
+      "requires": [
+        "lifecycle"
+      ],
+      "sameRunProof": "N/A (transicional não decide)",
+      "lifecycle": "TRANSITIONAL",
+      "globs": [],
+      "artifacts": [
+        "governance/final-snapshot-coherence-report.json"
       ]
     }
+  },
+  "sameRunRule": "generatedAt >= governanceRun.startedAt — evidência PRÉ-RUN nunca ganha autoridade no run atual. Estampar runId/sourceFingerprint sobre artefato antigo é PROIBIDO: reexecute o produtor.",
+  "producers": {
+    "governance/mutable-json-state-validation-report.json": { "command": "npm run verify:no-mutable-json-state", "kind": "npm" },
+    "governance/json-persistence-audit.json": { "command": "npm run audit:json-persistence", "kind": "npm" },
+    "reports/release-dag-report.json": { "command": "npm run validate:release-dag", "kind": "npm" },
+    "reports/release-artifact-identity-report.json": { "command": "npm run validate:release-artifact-identity", "kind": "npm" },
+    "reports/route-mount-report.json": { "command": "npm run validate:route-mounts", "kind": "npm" },
+    "reports/coverage-gate-report.json": { "command": "npm run validate:coverage-gate", "kind": "npm" },
+    "reports/coverage-completeness-report.json": { "command": "npm run validate:coverage-completeness", "kind": "npm" },
+    "reports/db-integrity-report.json": { "command": "npm run wave:db-integrity", "kind": "npm" },
+    "reports/tenant-isolation-report.json": { "command": "npm run report:tenant-isolation", "kind": "npm" },
+    "reports/api-surface-report.json": { "command": "npm run wave:api-surface", "kind": "npm" },
+    "reports/page-surface-report.json": { "command": "npm run wave:page-surface", "kind": "npm" },
+    "reports/visibility-policy-report.json": { "command": "npm run validate:visibility-policy", "kind": "npm" },
+    "reports/experience-segregation-report.json": { "command": "npm run validate:experience-segregation", "kind": "npm" },
+    "governance/experience-segregation-report.json": { "command": "npm run validate:experience-segregation", "kind": "npm" },
+    "reports/experience-api-segregation-report.json": { "command": "npm run validate:experience-api-segregation", "kind": "npm" },
+    "governance/experience-api-segregation-report.json": { "command": "npm run validate:experience-api-segregation", "kind": "npm" },
+    "reports/source-remote-provenance-report.json": { "command": "npm run validate:remote-provenance", "kind": "npm" },
+    "governance/source-remote-provenance-report.json": { "command": "npm run validate:remote-provenance", "kind": "npm" },
+    "governance/self-proving-report.json": { "command": "npm run validate:self-proving", "kind": "npm" },
+    "governance/report-contamination-report.json": { "command": "node governance/report-contamination-cleaner.js", "kind": "node" },
+    "reports/inventory-build-report.json": { "command": "npm run inventory:build", "kind": "npm" },
+    "reports/rag-domain-segregation-report.json": { "command": "npm run report:rag-domain-segregation", "kind": "npm" },
+    "qa/qa-waves-enterprise-governance.json": { "command": "npm run qa:waves:enterprise-governance", "kind": "npm" },
+    "governance/delivered-release-verification-report.json": { "command": "npm run verify:delivered-release", "kind": "npm", "phase": "DELIVERED" }
   }
 }

@@ -32,7 +32,12 @@ const getRun = require('../../api/db/models/GovernanceRun');
  */
 const {
   REASONS,
+  classifyArtifact,
   isRuntimeEvidenceArtifact,
+  isAuthoritativeArtifact,
+  listAuthoritativeArtifacts,
+  getProducer,
+  runStartMs,
 } = require('./lib/runtime-evidence-artifacts');
 
 function stamp(relativePath, run) {
@@ -46,6 +51,20 @@ function stamp(relativePath, run) {
       reason: REASONS.RUNTIME_EVIDENCE_REQUIRES_ORIGIN_LINEAGE,
     };
   }
+
+  const classification = classifyArtifact(relativePath);
+  // Artefato histórico/transicional NÃO sustenta decisão: lineage nele é ruído
+  // que sugere autoridade que ele não tem. Desconhecido nunca é "estampável
+  // por não conhecido" — é NO_GO (classifique na taxonomia).
+  if (!classification || !isAuthoritativeArtifact(relativePath)) {
+    return {
+      path: relativePath,
+      stamped: false,
+      classification,
+      reason: REASONS.UNCLASSIFIED_AUTHORITATIVE_ARTIFACT,
+    };
+  }
+
   const abs = path.join(process.cwd(), relativePath);
   if (!fs.existsSync(abs)) return { path: relativePath, stamped: false, reason: 'missing' };
   let report;
@@ -56,18 +75,53 @@ function stamp(relativePath, run) {
   }
   if (!report || typeof report !== 'object') return { path: relativePath, stamped: false, reason: 'invalid_object' };
 
+  // REGRA TEMPORAL (missão 2026-10-05): generatedAt >= run.startedAt.
+  //
+  // O defeito real: `governance/mutable-json-state-validation-report.json` e
+  // `governance/json-persistence-audit.json` foram gerados às 01:20 (ANTES do
+  // run criado às 02:30) e, ainda assim, receberam o runId/sourceFingerprint do
+  // run. Todas as outras checagens passavam (runId certo, fingerprint certo,
+  // artifactType presente), então a única barreira capaz de barrar é o tempo.
+  //
+  // Sem esta guarda o stamp FABRICA autoridade: o artefato passava a parecer
+  // produzido pelo run sem que nada tivesse rodado nele. Reexecute o produtor —
+  // o caminho está em `producers` na taxonomia. NUNCA ajuste generatedAt.
+  const generatedAtMs = report.generatedAt ? Date.parse(report.generatedAt) : NaN;
+  const startedAtMs = runStartMs(run);
+  if (!Number.isFinite(generatedAtMs)) {
+    return {
+      path: relativePath,
+      stamped: false,
+      classification,
+      reason: REASONS.REJECTED_STALE_ARTIFACT,
+      detail: 'sem generatedAt válido: não há prova temporal, então não há lineage',
+    };
+  }
+  if (startedAtMs !== null && generatedAtMs < startedAtMs) {
+    return {
+      path: relativePath,
+      stamped: false,
+      classification,
+      reason: REASONS.REJECTED_STALE_ARTIFACT,
+      artifactGeneratedAt: report.generatedAt,
+      runStartedAt: run.started_at,
+      producer: getProducer(relativePath),
+      detail: 'artefato produzido ANTES do início do run: reexecute o produtor (nunca estampe)',
+    };
+  }
+
   const artifactType = report.artifactType || path.basename(relativePath, '.json');
   const artifactVersion = report.artifactVersion || '1.0.0';
   const next = {
     ...report,
     runId: run.run_id,
     sourceFingerprint: run.source_fingerprint,
-    generatedAt: report.generatedAt || new Date().toISOString(),
+    generatedAt: report.generatedAt,
     artifactType,
     artifactVersion,
   };
   fs.writeFileSync(abs, `${JSON.stringify(next, null, 2)}\n`);
-  return { path: relativePath, stamped: true };
+  return { path: relativePath, stamped: true, classification };
 }
 
 async function main() {
@@ -75,85 +129,50 @@ async function main() {
   const run = await getRun().findOne({ order: [['created_at', 'DESC']] });
   if (!run) throw new Error('governance_run_missing');
 
+  // FONTE ÚNICA da lista: a taxonomia (config/runtime-evidence-artifacts.json).
+  // Manter a lista aqui criava um segundo registry, que divergia do classificado —
+  // e foi justamente por isso que artefatos fora da taxonomia podiam ser estampados.
   const reports = process.argv.slice(2).length > 0
     ? process.argv.slice(2)
-    : [
-      'governance/model-driven-e2e-report.json',
-      'governance/system-scope-audit.json',
-      'governance/agent-policy-compliance-report.json',
-      'governance/governance-persistence-validation-report.json',
-      'governance/agent-policy-compliance-report.json',
-      'governance/mutable-json-state-validation-report.json',
-      'governance/json-persistence-audit.json',
-      'governance/final-proof-report.json',
-      'governance/final-readiness-report.json',
-      'governance/final-governance-report.json',
-      'governance/final-consistency-gate-report.json',
-      'governance/evidence-manifest.json',
-      'governance/self-proving-report.json',
-      'governance/tamper-detection-report.json',
-      'governance/replay-integrity-report.json',
-      'governance/replay-hardening-report.json',
-      'reports/tenant-isolation-report.json',
-      'reports/db-integrity-report.json',
-      'reports/coverage-gate-report.json',
-      'reports/coverage-completeness-report.json',
-      'reports/api-surface-report.json',
-      'reports/page-surface-report.json',
-      'reports/visibility-policy-report.json',
-      'reports/experience-segregation-report.json',
-      // Cópia canônica empacotada no payload (packageRequired=true) — precisa
-      // do MESMO runId/sourceFingerprint da cópia em reports/.
-      'governance/experience-segregation-report.json',
-      // Prova server-side (APIs): mesma disciplina dual-write + packageRequired.
-      'reports/experience-api-segregation-report.json',
-      'governance/experience-api-segregation-report.json',
-      // Proveniência REMOTA do source: mesma disciplina dual-write + packageRequired.
-      'reports/source-remote-provenance-report.json',
-      'governance/source-remote-provenance-report.json',
-      // Confiabilidade de outbound (transactional outbox + delivery ambiguity) —
-      // evidência real gerada por generate-outbound-reliability-evidence.js.
-      'governance/outbound-reliability-report.json',
-      // Consistência PRE_PACKAGE/FINAL: lineage explícito para eliminar a
-      // ambiguidade semântica (GAP: relatório "final" com decisão DEFERRED).
-      'governance/final-consistency-report.json',
-      'reports/rag-domain-segregation-report.json',
-      'reports/inventory-build-report.json',
-      'reports/rate-limit-validation-report.json',
-      'reports/security-validation-report.json',
-      'reports/idempotency-validation-report.json',
-      'reports/concurrency-validation-report.json',
-      'reports/external-resilience-report.json',
-      'reports/channel-security-report.json',
-      'reports/disaster-recovery-report.json',
-      'reports/deploy-validation-report.json',
-      'reports/privacy-retention-report.json',
-      'reports/billing-entitlement-report.json',
-      'reports/webhook-replay-protection-report.json',
-      // NÃO incluir artefatos de RUNTIME_EVIDENCE aqui (qa-mesh/go-no-go-report.json,
-      // qa/enterprise/*): eles exigem lineage NA ORIGEM e são recusados pela
-      // guarda acima. Ver config/runtime-evidence-artifacts.json.
-      'governance/package-validation-report.json',
-      'governance/package-integrity-report.json',
-      // DAG do release, identidade do artefato entregue e montagem de routers:
-      // relatórios de auditoria que vivem SOMENTE em reports/ (fora do payload).
-      // O stamp garante que não carreguem runId estrangeiro (FOREIGN_RUN_ARTIFACT
-      // no contamination cleaner).
-      'reports/release-dag-report.json',
-      'reports/release-artifact-identity-report.json',
-      'reports/route-mount-report.json',
-      // NÃO stampar delivered-release-verification-report.json: ele é produzido
-      // EXCLUSIVAMENTE por verify-delivered-release.js em fase DELIVERED, com a
-      // decisão real. Stampar aqui re-injetaria lineage sobre conteúdo stale e
-      // fabricaria DELIVERED_RELEASE_VERIFIED fora da fase DELIVERED.
-      'governance/report-contamination-report.json',
-      'governance/certification-snapshot.json',
-      'reports/master-scorecard-test-report.json',
-      'reports/master-scorecard-regression-report.json',
-    ];
+    : listAuthoritativeArtifacts();
 
   const results = reports.map((relPath) => stamp(relPath, run));
-  console.log(JSON.stringify({ runId: run.run_id, results }));
+  const stamped = results.filter((entry) => entry.stamped);
+  const rejected = results.filter((entry) => entry.reason === REASONS.REJECTED_STALE_ARTIFACT);
+  const unclassified = results.filter((entry) => entry.reason === REASONS.UNCLASSIFIED_AUTHORITATIVE_ARTIFACT);
+
+  const report = {
+    artifactType: 'lineage-stamp-report',
+    artifactVersion: '1.0.0',
+    generatedAt: new Date().toISOString(),
+    runId: run.run_id,
+    sourceFingerprint: run.source_fingerprint,
+    runStartedAt: run.started_at,
+    totals: {
+      considered: results.length,
+      stamped: stamped.length,
+      rejectedStale: rejected.length,
+      unclassified: unclassified.length,
+    },
+    rejected,
+    unclassified,
+    results,
+  };
+  fs.writeFileSync(
+    path.join(process.cwd(), 'governance', 'lineage-stamp-report.json'),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  console.log(JSON.stringify({
+    runId: run.run_id,
+    stamped: stamped.length,
+    rejectedStale: rejected.length,
+    unclassified: unclassified.length,
+  }));
+
+  // FAIL-CLOSED: rejeição = existe evidência autoritativa produzida FORA do run
+  // (ou sem classificação). O pipeline NÃO segue: reexecute o produtor (mapa
+  // `producers` na taxonomia) — estampar aqui fabricaria a prova.
+  if (rejected.length > 0 || unclassified.length > 0) process.exitCode = 1;
 }
 
 if (require.main === module) {

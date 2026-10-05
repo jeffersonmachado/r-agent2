@@ -520,6 +520,59 @@
       "suites": [
         "tests/integration/bugRegressionCommandContamination.test.js"
       ]
+    },
+    {
+      "id": "TEMPORAL-01",
+      "requirement": "Evidencia autoritativa PRE-RUN nao sustenta o run: para todo artefato que participa de decisao vale generatedAt >= run.startedAt. O gate CURRENT_RUN_TEMPORAL_INTEGRITY varre a taxonomia E os artefatos declarados pelo Master Scorecard e so passa com preRunAuthoritativeArtifacts = 0.",
+      "suites": [
+        "tests/unit/governance/temporalEvidenceLineage.test.js"
+      ],
+      "reports": [
+        "reports/current-run-temporal-integrity-report.json"
+      ]
+    },
+    {
+      "id": "TEMPORAL-02",
+      "requirement": "DERIVED_REPORT/CERTIFICATION_ARTIFACT pre-run NAO pode ser estampado: stamp-report-lineage recusa com REJECTED_STALE_ARTIFACT e nao escreve no arquivo (prova material: bytes identicos). Estampar linha gem sobre conteudo antigo fabrica autoridade.",
+      "suites": [
+        "tests/unit/governance/temporalEvidenceLineage.test.js"
+      ]
+    },
+    {
+      "id": "TEMPORAL-03",
+      "requirement": "O Master Scorecard nao pode conceder 10/10 sustentado por evidencia pre-run: usa a MESMA autoridade temporal (generatedAt >= run.startedAt) em vez de freshness propria de 7 dias, e a dimensao cai para STALE_ARTIFACT.",
+      "suites": [
+        "tests/unit/governance/temporalEvidenceLineage.test.js"
+      ]
+    },
+    {
+      "id": "TEMPORAL-04",
+      "requirement": "O verificador offline valida integridade temporal da evidencia usada pelo scorecard (TEMPORAL_LINEAGE_VIOLATION) com lista canonica minima embutida, sem confiar cegamente no 78/78 nem na taxonomia do payload: reprova o envelope auditado r-agent2-20261005-011259.",
+      "suites": [
+        "tests/unit/governance/temporalEvidenceLineage.test.js"
+      ],
+      "reports": [
+        "reports/current-run-temporal-integrity-report.json"
+      ]
+    },
+    {
+      "id": "TEMPORAL-05",
+      "requirement": "Artefato consumido em decisao sem classificacao na taxonomia e NO_GO (fail-closed): nunca pode ser estampado por ser desconhecido. Historico/transicional permanecem no pacote com lifecycle explicito e ficam FORA do score e da decisao.",
+      "suites": [
+        "tests/unit/governance/temporalEvidenceLineage.test.js"
+      ]
+    },
+    {
+      "id": "TEMPORAL-06",
+      "requirement": "A evidencia do RAP-078 (governance/mutable-json-state-validation-report.json e governance/json-persistence-audit.json) tem de ser REGENERADA dentro do run: os produtores estao declarados na taxonomia e ensure:authoritative-artifacts-fresh reexecuta o produtor em vez de estampar lineage retroativo.",
+      "suites": [
+        "tests/unit/governance/temporalEvidenceLineage.test.js"
+      ],
+      "reports": [
+        "governance/mutable-json-state-validation-report.json",
+        "governance/json-persistence-audit.json",
+        "governance/authoritative-artifact-refresh-report.json"
+      ]
     }
   ]
 }

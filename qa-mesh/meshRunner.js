@@ -2550,6 +2550,13 @@ async function runMeshInner(options = {}, tenantId = 'system') {
       totals: summary,
       reasons: summary.reasons,
       canonicalPromotion,
+      // Contrato do artefato NA ORIGEM (mesma disciplina do go-no-go-report ao
+      // lado): sem artifactType/artifactVersion o gate
+      // CURRENT_RUN_TEMPORAL_INTEGRITY reprova o run com
+      // TEMPORAL_LINEAGE_VIOLATION, e o stamp não pode completar isso (o
+      // artefato é RUNTIME_EVIDENCE — lineage retroativo é proibido).
+      artifactType: 'release-gate-report',
+      artifactVersion: '1.0.0',
       ...resolveOriginLineage(),
       generatedAt: nowIso(),
     });
