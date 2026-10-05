@@ -199,6 +199,55 @@ describe('gate CURRENT_RUN_TEMPORAL_INTEGRITY', () => {
   });
 });
 
+describe('gate temporal — deferimento de fase (e absoluto na fase devida)', () => {
+  // Artefato da cadeia FINAL: o produtor só é devido depois do empacotamento.
+  const FINAL_CHAIN = 'governance/final-governance-report.json';
+
+  afterEach(() => {
+    delete process.env.ARTIFACT_REFRESH_PHASE;
+  });
+
+  test('em CONVERGE, pré-run de cadeia FINAL é PENDING_PHASE — não é violação', () => {
+    process.env.ARTIFACT_REFRESH_PHASE = 'CONVERGE';
+    const root = workspace();
+    writeArtifact(root, FINAL_CHAIN, lineage(PRE_RUN));
+
+    const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+    // O que importa: o pipeline NÃO pode ser abortado por evidência que ainda não
+    // pode existir — mas ela também não é aceita (não recebe lineage).
+    expect(evaluation.status).toBe('PASS');
+    expect(evaluation.totals.pendingPhaseArtifacts).toBeGreaterThanOrEqual(1);
+    expect(evaluation.violations.find((entry) => entry.path === FINAL_CHAIN)).toBeUndefined();
+    expect(evaluation.pendingPhase.find((entry) => entry.path === FINAL_CHAIN)).toBeTruthy();
+  });
+
+  test('na fase FINAL, o MESMO artefato pré-run é violação (fail-closed)', () => {
+    process.env.ARTIFACT_REFRESH_PHASE = 'FINAL';
+    const root = workspace();
+    writeArtifact(root, FINAL_CHAIN, lineage(PRE_RUN));
+
+    const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+    expect(evaluation.status).toBe('FAIL');
+    expect(evaluation.totals.preRunArtifacts).toBeGreaterThanOrEqual(1);
+    expect(evaluation.violations.some((entry) => entry.path === FINAL_CHAIN && entry.code === 'PRE_RUN_AUTHORITATIVE_ARTIFACT')).toBe(true);
+  });
+
+  test('artefato de produtor sem fase declarada NUNCA é deferido (o par do RAP-078)', () => {
+    for (const phase of ['CONVERGE', 'FINAL', 'DELIVERED']) {
+      process.env.ARTIFACT_REFRESH_PHASE = phase;
+      const root = workspace();
+      writeArtifact(root, RAP078, lineage(PRE_RUN));
+
+      const evaluation = evaluateRunTemporalIntegrity({ root, run: RUN });
+
+      expect(evaluation.status).toBe('FAIL');
+      expect(evaluation.violations.some((entry) => entry.path === RAP078)).toBe(true);
+    }
+  });
+});
+
 describe('isolamento de HISTORICAL e TRANSITIONAL', () => {
   test('histórico (dist/archive/**) é ignorado e não vira evidência', () => {
     const root = workspace();

@@ -33,6 +33,8 @@ const {
   listAuthoritativeArtifacts,
   listNonAuthoritativeArtifacts,
   getProducer,
+  producerDueNow,
+  currentArtifactPhase,
   evaluateTemporalIntegrity,
   loadConfig: loadAuthorityConfig,
 } = require('./lib/runtime-evidence-artifacts');
@@ -142,6 +144,7 @@ function evaluateRunTemporalIntegrity({ root = resolveRoot(), run = null, nowMs 
     totalAuthoritativeArtifacts: 0,
     sameRunArtifacts: 0,
     preRunArtifacts: 0,
+    pendingPhaseArtifacts: 0,
     wrongRunArtifacts: 0,
     unknownClassification: 0,
     historicalIgnored: 0,
@@ -150,6 +153,7 @@ function evaluateRunTemporalIntegrity({ root = resolveRoot(), run = null, nowMs 
     missingArtifacts: 0,
   };
   const violations = [];
+  const pendingPhase = [];
   const entries = [];
 
   if (!effectiveRun) {
@@ -219,6 +223,23 @@ function evaluateRunTemporalIntegrity({ root = resolveRoot(), run = null, nowMs 
     totals.totalAuthoritativeArtifacts += 1;
     if (evaluation.status === STATUS.SAME_RUN) totals.sameRunArtifacts += 1;
     if (evaluation.status === STATUS.STALE_ARTIFACT && evaluation.code === 'stale_artifact_pre_run') {
+      // AUTORIDADE DE FASE (missao 2026-10-05): um artefato cujo PRODUTOR pertence
+      // a uma fase posterior (cadeia FINAL/DELIVERED, produzida no empacotamento)
+      // ainda NAO PODE existir: nao e prova vencida, e PENDING_PHASE. Ele nao e
+      // violacao AGORA, mas passa a ser na fase devida — na fase DELIVERED
+      // (consolidate) tudo tem produtor devido, entao o criterio volta a ser
+      // absoluto e nenhum GO/78-78 pode se apoiar em evidencia pre-run.
+      if (!producerDueNow(entry.producer)) {
+        totals.pendingPhaseArtifacts += 1;
+        pendingPhase.push({
+          path: relativePath,
+          classification,
+          generatedAt: entry.generatedAt,
+          producerPhase: (entry.producer && entry.producer.phase) || 'ANY',
+          detail: 'produtor pertence a fase posterior: evidencia ainda nao produzivel',
+        });
+        continue;
+      }
       totals.preRunArtifacts += 1;
       violations.push({ code: 'PRE_RUN_AUTHORITATIVE_ARTIFACT', path: relativePath, classification, generatedAt: entry.generatedAt, runStartedAt: effectiveRun.started_at, producer: entry.producer, detail: 'artefato autoritativo produzido ANTES do início do run: reexecute o produtor (não estampe)' });
       continue;
@@ -236,9 +257,11 @@ function evaluateRunTemporalIntegrity({ root = resolveRoot(), run = null, nowMs 
 
   return {
     status: violations.length === 0 ? 'PASS' : 'FAIL',
+    phase: currentArtifactPhase(),
     run: effectiveRun,
     totals,
     violations,
+    pendingPhase,
     entries,
   };
 }
@@ -258,17 +281,19 @@ function main() {
     artifactVersion: '1.0.0',
     generatedAt: new Date().toISOString(),
     status: evaluation.status,
+    phase: evaluation.phase,
     runId: evaluation.run ? evaluation.run.run_id : null,
     sourceFingerprint: evaluation.run ? evaluation.run.source_fingerprint : null,
     runStartedAt: evaluation.run ? evaluation.run.started_at : null,
     totals: evaluation.totals,
     violationCount: evaluation.violations.length,
     violations: evaluation.violations,
+    pendingPhase: evaluation.pendingPhase,
     entries: evaluation.entries,
   };
   const out = writeReport(root, payload);
 
-  console.log(`[temporal-integrity] status=${payload.status} run=${payload.runId || 'n/d'} preRun=${evaluation.totals.preRunArtifacts} sameRun=${evaluation.totals.sameRunArtifacts} autoritativos=${evaluation.totals.totalAuthoritativeArtifacts} violações=${evaluation.violations.length}`);
+  console.log(`[temporal-integrity] status=${payload.status} fase=${payload.phase} run=${payload.runId || 'n/d'} preRun=${evaluation.totals.preRunArtifacts} pendingPhase=${evaluation.totals.pendingPhaseArtifacts} sameRun=${evaluation.totals.sameRunArtifacts} autoritativos=${evaluation.totals.totalAuthoritativeArtifacts} violações=${evaluation.violations.length}`);
   for (const violation of evaluation.violations.slice(0, 20)) {
     const where = violation.path ? ` ${violation.path}` : '';
     console.log(`  - ${violation.code}${where}${violation.generatedAt ? ` (generatedAt=${violation.generatedAt} < runStartedAt=${violation.runStartedAt})` : ''}`);

@@ -315,5 +315,20 @@ $NODE scripts/governance/run-persisted-scorecard.js >/dev/null
 echo "[converge] 11/12 fixpoint (pass 2 — revalidação estável)"
 $NODE scripts/governance/run-persisted-scorecard.js
 
+echo "[converge] 11.5/12 integridade temporal + projeção de readiness DENTRO do run"
+# O seal-time-gate decide por `governance/final-readiness-report.json` e
+# `governance/final-proof-report.json`. Se essas projeções não forem REGERADAS
+# dentro do run, o gate lê o veredito do run ANTERIOR — adoção retroativa de
+# decisão, exatamente o defeito que a missão elimina (medido 2026-10-05: o gate
+# devolveu FINAL_READINESS_NOT_PASS com a decisão de um run anterior enquanto o
+# gate temporal do run corrente nem havia sido executado nesta fase).
+#
+# A ORDEM é a autoridade: (1) gate temporal phase-aware — artefato de fase
+# posterior é PENDING_PHASE, não violação; (2) projeções de readiness/proof
+# regeneradas a partir dele; (3) seal-time-gate. O gate temporal sem `|| true`
+# aborta de propósito: com violação real não há selo.
+$NODE scripts/governance/validate-current-run-temporal-integrity.js
+$NODE tools/system/platform-readiness.js >/dev/null || true
+
 echo "[converge] 12/12 seal-time-gate"
 node scripts/governance/seal-time-gate.js

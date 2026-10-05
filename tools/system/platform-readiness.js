@@ -1412,9 +1412,25 @@ function buildReport() {
   const temporalPreRun = temporalIntegrityReport && temporalIntegrityReport.totals
     ? Number(temporalIntegrityReport.totals.preRunArtifacts || 0)
     : null;
+  const temporalPendingPhase = temporalIntegrityReport && temporalIntegrityReport.totals
+    ? Number(temporalIntegrityReport.totals.pendingPhaseArtifacts || 0)
+    : null;
+  // A AUTORIDADE é o GATE (phase-aware). A projeção exige três coisas: o relatório
+  // existe, está PASS, e é da FASE CORRENTE — um relatório produzido em fase
+  // anterior não prova nada sobre a fase atual. A contagem bruta de `preRun`
+  // NÃO é usada como veredito aqui: ela é o detalhe auditável (o gate já separou
+  // `preRun` de `pendingPhase`, e na fase devida do produtor a evidência pré-run
+  // é violação). Antes desta correção o gap crítico disparava com qualquer
+  // `preRun > 0` mesmo quando o gate estava correto para a fase, e a readiness
+  // virava um falso bloqueio do prepare.
+  const { currentArtifactPhase } = require('../../scripts/governance/lib/runtime-evidence-artifacts');
+  const temporalReportPhase = temporalIntegrityReport && temporalIntegrityReport.phase
+    ? String(temporalIntegrityReport.phase).toUpperCase()
+    : null;
+  const temporalPhaseMismatch = temporalReportPhase !== null && temporalReportPhase !== currentArtifactPhase();
   const temporalHardBlock = !temporalIntegrityReport
     || temporalIntegrityReport.status !== 'PASS'
-    || (temporalPreRun !== null && temporalPreRun > 0);
+    || temporalPhaseMismatch;
   if (temporalHardBlock) {
     allGaps.push({
       id: 'current_run_temporal_integrity',
@@ -1422,7 +1438,7 @@ function buildReport() {
       area: 'governance',
       title: 'Evidência autoritativa pré-run não pode sustentar a decisão do run',
       detail: temporalIntegrityReport
-        ? `preRunArtifacts=${temporalPreRun} status=${temporalIntegrityReport.status} violations=${(temporalIntegrityReport.violations || []).length}`
+        ? `status=${temporalIntegrityReport.status} fase=${temporalReportPhase || 'n/d'} preRunArtifacts=${temporalPreRun} pendingPhase=${temporalPendingPhase} violations=${(temporalIntegrityReport.violations || []).length}${temporalPhaseMismatch ? ` (relatorio de fase anterior; fase corrente=${currentArtifactPhase()})` : ''}`
         : 'reports/current-run-temporal-integrity-report.json ausente',
       suggestedFix: 'npm run ensure:authoritative-artifacts-fresh && npm run validate:current-run-temporal-integrity',
     });
