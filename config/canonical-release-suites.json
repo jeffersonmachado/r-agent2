@@ -47,6 +47,8 @@
       "tests/unit/rpa/businessPageRenderMeasurement.test.js",
       "tests/unit/governance/releaseGovernanceBlocklistBoundary.test.js",
       "tests/unit/governance/packageValidatorSidecarResolution.test.js",
+      "tests/unit/governance/sealResumeReleaseEnvResolution.test.js",
+      "tests/unit/governance/releaseSuiteBatchDiagnostics.test.js",
       "tests/unit/governance/certificationCoherence.test.js",
       "tests/unit/governance/releasePipelineV2Orchestration.test.js",
       "tests/unit/governance/releaseSuiteExclusiveGroups.test.js",

@@ -86,6 +86,24 @@ fail() {
 
 dirty_count() { git status --porcelain | wc -l | tr -d ' '; }
 
+# Nome do release usado na aprovação de deploy. Fonte primária: o estado gravado
+# pela fase `final` ($LOG_DIR/release.env, linha 1). Se esse estado foi perdido
+# (reboot limpa /tmp — medido 2026-10-05), a retomada de `--from consolidate`
+# NÃO pode culpar o artefato: o nome é derivado do MESMO modo que a fase `final`
+# deriva (basename de dist/release/<release>.manifest.json). Ambiguidade (2+
+# envelopes) é fail-closed — o script nunca escolhe um envelope por conta própria.
+resolve_release_name() {
+  if [ -f "$LOG_DIR/release.env" ]; then
+    sed -n 1p "$LOG_DIR/release.env"
+    return 0
+  fi
+  local manifests count
+  manifests="$(ls -1 dist/release/*.manifest.json 2>/dev/null || true)"
+  count="$(printf '%s\n' "$manifests" | grep -c . || true)"
+  [ "$count" = "1" ] || return 1
+  basename "$manifests" .manifest.json
+}
+
 commit_and_push() {
   local message="$1"
   if [ "$(dirty_count)" = "0" ]; then
@@ -478,8 +496,13 @@ phase_consolidate() {
   step consolidate "aprovação de deploy do artefato selado"
   if timeout 900 npm run system:go-no-go > "$LOG_DIR/go-no-go.log" 2>&1 \
     && timeout 900 npm run system:release-manifest > "$LOG_DIR/release-manifest.log" 2>&1; then
+    # Estado da fase `final` (release.env) ou, se perdido (reboot limpa /tmp), o
+    # nome derivado do envelope — falha DIAGNÓSTICA, nunca culpando o artefato.
     local release_name=""
-    [ -f "$LOG_DIR/release.env" ] && release_name="$(sed -n 1p "$LOG_DIR/release.env")"
+    release_name="$(resolve_release_name || true)"
+    if [ -z "$release_name" ]; then
+      fail "estado do release indisponível: release.env ausente e dist/release sem envelope único — rode a fase final primeiro" "$LOG_DIR/release-manifest.log" consolidate
+    fi
     local approval="dist/release/${release_name}.approval.json"
     if [ -n "$release_name" ] && [ -f "$approval" ] && node -e "
       const a = require('./$approval');

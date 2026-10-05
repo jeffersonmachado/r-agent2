@@ -356,12 +356,19 @@ function main() {
   report.batches = batchRuns.map((b) => ({ suites: b.suites.length, exitCode: b.exitCode, producedReport: Boolean(b.json), reused: Boolean(b.reused) }));
   report.reusedBatches = batchRuns.some((b) => b.reused);
 
+  // Cauda legível de uma saída de lote. MEDIDO (2026-10-05): com `--json --outputFile` o Jest manda
+  // o resumo legível para o STDERR e o stdout fica legitimamente VAZIO. Reportar só o stdout fez a
+  // violação dizer "(vazio)" enquanto a causa real (RUNTIME-EVIDENCE_UNAVAILABLE, por evidência de
+  // runtime amarrada a sourceFingerprint antigo) estava apenas no stderr — a violação escondeu o
+  // remédio. As duas caudas agora aparecem, nomeadas.
+  const outputTail = (value) => (value || '').trim().split('\n').slice(-3).join(' | ') || '(vazio)';
+
   for (const failure of collected.batchFailures) {
     report.violations.push({
       code: 'BATCH_REPORT_MISSING',
       batchIndex: failure.batchIndex,
       suites: failure.suites,
-      detail: `lote não produziu relatório do Jest (exit=${failure.exitCode}, signal=${failure.signal || 'null'}${failure.spawnError ? `, spawn=${failure.spawnError}` : ''}${failure.parseError ? `, parse=${failure.parseError}` : ''}; transporte=${failure.reportPath || 'desconhecido'}, presente=${failure.reportPresent === true}, bytes=${failure.reportBytes || 0}) — suítes marcadas NOT_EXECUTED; o stdout do Jest abaixo diz se o lote ROU ou se falhou: ${(failure.stdoutTail || '').trim().split('\n').slice(-3).join(' | ') || '(vazio)'}`,
+      detail: `lote não produziu relatório do Jest (exit=${failure.exitCode}, signal=${failure.signal || 'null'}${failure.spawnError ? `, spawn=${failure.spawnError}` : ''}${failure.parseError ? `, parse=${failure.parseError}` : ''}; transporte=${failure.reportPath || 'desconhecido'}, presente=${failure.reportPresent === true}, bytes=${failure.reportBytes || 0}) — suítes marcadas NOT_EXECUTED; as caudas abaixo dizem se o lote ROU ou se falhou (com --json --outputFile o Jest escreve o resumo legível no STDERR): stdout=${outputTail(failure.stdoutTail)} | stderr=${outputTail(failure.stderrTail)}`,
     });
   }
 
