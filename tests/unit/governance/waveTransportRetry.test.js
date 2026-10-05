@@ -41,6 +41,65 @@ describe('WaveTransportRetry — classificação de transporte', () => {
     expect(shouldRetryProbe(probe, 1, 2)).toBe(false);
   });
 
+  /**
+   * Evidência real (2026-10-05, run rap-governed-20261005155912964-90b91404): a
+   * onda reprovou `/developer-keys` (P2) com estes TRÊS samples do MESMO aborto
+   * de rede. O padrão antigo reconhecia só o primeiro, então
+   * `isTransportOnlyFailure` dava `false` e o probe NÃO era repetido.
+   */
+  test('aborto de rede do fetch é transporte mesmo sem o prefixo net::ERR_', () => {
+    const probe = {
+      rendered: true,
+      consoleErrors: 3,
+      errorSamples: [
+        'Failed to load resource: net::ERR_NETWORK_CHANGED',
+        '[ERROR] [HTTP Client] Erro capturado no catch { "name": "TypeError", "message": "Failed to fetch", "path": "/developer/usage" }',
+        '[ERROR] API não acessível - verifique se o servidor está rodando { "method": "GET", "url": "/developer/usage" }',
+      ],
+    };
+    expect(countTransportSignals(probe)).toBe(3);
+    expect(isTransportOnlyFailure(probe)).toBe(true);
+    expect(shouldRetryProbe(probe, 1, 2)).toBe(true);
+  });
+
+  /**
+   * Mesma evidência: `/dev/qa-gaps` e `/dev/qa-waves/operational-health` (P3)
+   * estouraram o timeout de 30s do cliente HTTP em `/auth/me` — que responde
+   * 200 em 1,5 ms fora da onda. O probe terminou sem veredito (`rendered=false`,
+   * `login=false`, `denied=false`) + 2 console.error de transporte.
+   */
+  test('timeout do cliente HTTP do app é transporte', () => {
+    const probe = {
+      rendered: false,
+      loginSurface: false,
+      denied: false,
+      docStatus: 200,
+      consoleErrors: 2,
+      errorSamples: [
+        '[ERROR] [HTTP Client] Erro capturado no catch { "name": "AbortError", "message": "Request timed out after 30000ms", "path": "/auth/me" }',
+        '[ERROR] Request timeout { "method": "GET", "url": "/auth/me", "path": "/auth/me", "timeout": 30000 }',
+      ],
+    };
+    expect(countTransportSignals(probe)).toBe(2);
+    expect(isTransportOnlyFailure(probe)).toBe(true);
+    expect(shouldRetryProbe(probe, 1, 2)).toBe(true);
+    expect(shouldRetryProbe(probe, 2, 2)).toBe(false);
+  });
+
+  test('transporte + falha de aplicação no MESMO probe continua reprovando', () => {
+    const probe = {
+      rendered: false,
+      consoleErrors: 2,
+      errorSamples: [
+        'Request timed out after 30000ms',
+        'TypeError: Cannot read properties of null (reading \'rows\')',
+      ],
+    };
+    expect(countTransportSignals(probe)).toBe(1);
+    expect(isTransportOnlyFailure(probe)).toBe(false);
+    expect(shouldRetryProbe(probe, 1, 2)).toBe(false);
+  });
+
   test('mix de transporte e aplicação não é "somente transporte"', () => {
     const probe = {
       errorSamples: [

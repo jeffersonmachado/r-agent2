@@ -21,8 +21,33 @@
  * reprovando.
  */
 
-/** Erros de rede/transporte que NÃO são veredito sobre a página. */
-const TRANSPORT_ERROR_PATTERN = /net::ERR_(NETWORK_CHANGED|CONNECTION_RESET|CONNECTION_CLOSED|CONNECTION_ABORTED|CONNECTION_REFUSED|EMPTY_RESPONSE|SOCKET_NOT_CONNECTED|ADDRESS_UNREACHABLE|INTERNET_DISCONNECTED|NAME_NOT_RESOLVED)|Failed to fetch dynamically imported module/i;
+/**
+ * Erros de rede/transporte que NÃO são veredito sobre a página.
+ *
+ * O padrão precisa cobrir as MESMAS causas em TODAS as formas em que aparecem,
+ * porque uma só mensagem não reconhecida transforma transporte em veredito de
+ * aplicação (e a assertiva `pageLoads` exige `consoleErrors === 0`).
+ *
+ * Evidência real (2026-10-05, Page Surface Wave do run
+ * rap-governed-20261005155912964-90b91404): 3 páginas reprovadas por transporte, com
+ * os três formatos abaixo, todos do MESMO evento de rede (NetworkChangeNotifier
+ * do host abortando requisições em voo — as bridges `br-*` estão UP nas duas
+ * medições posteriores, o que explica a intermitência: 1 FAILED numa execução,
+ * 3 na seguinte):
+ *   - `/dev/qa-gaps` (P3): `AbortError` + `Request timed out after 30000ms` em
+ *     `/auth/me` (o mesmo endpoint responde 200 em 1,5 ms fora da onda);
+ *   - `/dev/qa-waves/operational-health` (P3): idem;
+ *   - `/developer-keys` (P2): `net::ERR_NETWORK_CHANGED` + `TypeError: Failed to
+ *     fetch` + `API não acessível` em `/developer/usage` (renderizou, mas com os
+ *     console.error do abort).
+ * Reconhecer esses formatos NÃO afrouxa veredito nenhum: a assertiva continua
+ * exigindo `rendered === true`, `docStatus` válido e ZERO console.error na
+ * tentativa final; o limite de tentativas continua em `TRANSPORT_RETRY_ATTEMPTS`.
+ * Se o serviço estiver genuinamente fora do ar, a repetição também falha e a
+ * página segue FAILED — o que muda é apenas não atribuir à PÁGINA um aborto de
+ * rede ocorrido antes de qualquer veredito sobre ela.
+ */
+const TRANSPORT_ERROR_PATTERN = /net::ERR_(NETWORK_CHANGED|CONNECTION_RESET|CONNECTION_CLOSED|CONNECTION_ABORTED|CONNECTION_REFUSED|EMPTY_RESPONSE|SOCKET_NOT_CONNECTED|ADDRESS_UNREACHABLE|INTERNET_DISCONNECTED|NAME_NOT_RESOLVED)|Failed to fetch(?: dynamically imported module)?|TypeError:\s*Failed to fetch|Request timed out after \d+ms|Request timeout|AbortError|API não acessível/i;
 
 /** Quantos samples de erro do probe são de transporte. */
 function countTransportSignals(probe) {
