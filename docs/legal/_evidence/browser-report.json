@@ -1,0 +1,153 @@
+{
+  "generatedAt": "2026-10-05T21:55:12.586Z",
+  "principal": "local QA systemadmin; DEVELOPMENT; tenant system",
+  "limitations": "Não prova PRODUCTION/SUPPORT nem ausência de vulnerabilidade; navegação somente leitura, sem mocks.",
+  "pages": [
+    {
+      "requested": "/workspace",
+      "finalPath": "/workspace",
+      "dom": {
+        "rootMounted": true,
+        "loginVisible": false,
+        "navPaths": [
+          "/workspace",
+          "/support",
+          "/crm",
+          "/knowledge-base",
+          "/supervisor",
+          "/editor",
+          "/dev",
+          "/config",
+          "/dashboard-legacy",
+          "/dashboard",
+          "/academy"
+        ]
+      },
+      "consoleErrors": 0,
+      "requestFailures": [],
+      "httpErrors": []
+    },
+    {
+      "requested": "/crm/contacts",
+      "finalPath": "/crm/contacts",
+      "dom": {
+        "rootMounted": true,
+        "loginVisible": false,
+        "navPaths": [
+          "/workspace",
+          "/support",
+          "/crm",
+          "/knowledge-base",
+          "/supervisor",
+          "/editor",
+          "/dev",
+          "/config"
+        ]
+      },
+      "consoleErrors": 0,
+      "requestFailures": [],
+      "httpErrors": []
+    },
+    {
+      "requested": "/rag-documents",
+      "finalPath": "/rag-documents",
+      "dom": {
+        "rootMounted": true,
+        "loginVisible": false,
+        "navPaths": [
+          "/workspace",
+          "/support",
+          "/crm",
+          "/knowledge-base",
+          "/supervisor",
+          "/editor",
+          "/dev",
+          "/config",
+          "/faq",
+          "/product-docs",
+          "/rag-documents",
+          "/web-scraping"
+        ]
+      },
+      "consoleErrors": 0,
+      "requestFailures": [],
+      "httpErrors": []
+    },
+    {
+      "requested": "/calendar",
+      "finalPath": "/workspace",
+      "dom": {
+        "rootMounted": true,
+        "loginVisible": false,
+        "navPaths": [
+          "/workspace",
+          "/support",
+          "/crm",
+          "/knowledge-base",
+          "/supervisor",
+          "/editor",
+          "/dev",
+          "/config",
+          "/dashboard-legacy",
+          "/dashboard",
+          "/academy"
+        ]
+      },
+      "consoleErrors": 0,
+      "requestFailures": [
+        {
+          "path": "/rag/documents",
+          "failure": "net::ERR_ABORTED"
+        }
+      ],
+      "httpErrors": []
+    },
+    {
+      "requested": "/rpa-replays",
+      "finalPath": "/rpa-replays",
+      "dom": {
+        "rootMounted": true,
+        "loginVisible": false,
+        "navPaths": [
+          "/workspace",
+          "/support",
+          "/crm",
+          "/knowledge-base",
+          "/supervisor",
+          "/editor",
+          "/dev",
+          "/config",
+          "/dev/system-status",
+          "/dev/stack-versions",
+          "/export",
+          "/agents",
+          "/onboarding",
+          "/tenants",
+          "/mfa",
+          "/developer-keys",
+          "/agenda",
+          "/sla-policies",
+          "/access-control",
+          "/rbac",
+          "/audit",
+          "/sso-scim",
+          "/backup",
+          "/platform-support",
+          "/qa",
+          "/qa/stability",
+          "/qa-mesh",
+          "/super-admin",
+          "/admin/agents",
+          "/dev-dashboard",
+          "/generate-system",
+          "/chat",
+          "/rpa-replays"
+        ]
+      },
+      "consoleErrors": 0,
+      "requestFailures": [],
+      "httpErrors": []
+    }
+  ],
+  "status": "DEGRADED"
+}

@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261003013140 horário de atendimento quartzo ancora tundra xadrez horário atendimento quartzo",
-        "success": true,
-        "confidence": 0.6092607340915359,
-        "chunksFound": 9,
-        "timestamp": "2026-10-03T01:31:45.035359"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-03T14:03:54.058154"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-03T14:11:07.449352"
-      },
-      {
-        "query": "QASEG20261003141418 horário de atendimento rafia urutu granito hortela horário atendimento rafia",
-        "success": true,
-        "confidence": 0.6901559760889789,
-        "chunksFound": 7,
-        "timestamp": "2026-10-03T14:14:21.742898"
-      },
-      {
         "query": "QASEG20261003141418 horário de atendimento rafia urutu granito hortela horário atendimento rafia",
         "success": true,
         "confidence": 0.6756230311790663,
@@ -702,17 +674,45 @@
         "confidence": 0.5994225065886618,
         "chunksFound": 10,
         "timestamp": "2026-10-05T19:34:53.327790"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T21:29:59.123064"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T21:37:39.383370"
+      },
+      {
+        "query": "QASEG20261005214130 horário de atendimento fagulha xadrez yuca tundra horário atendimento fagulha",
+        "success": true,
+        "confidence": 0.6687085614303874,
+        "chunksFound": 7,
+        "timestamp": "2026-10-05T21:41:33.689318"
+      },
+      {
+        "query": "QASEG20261005214130 horário de atendimento fagulha xadrez yuca tundra horário atendimento fagulha",
+        "success": true,
+        "confidence": 0.6451232564686115,
+        "chunksFound": 8,
+        "timestamp": "2026-10-05T21:41:36.318172"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 217,
-    "successfulQueries": 217,
+    "totalQueries": 221,
+    "successfulQueries": 221,
     "failedQueries": 0,
-    "avgConfidence": 0.6619207433543101,
-    "lastUpdated": "2026-10-05T19:34:53.327742"
+    "avgConfidence": 0.6650662356964212,
+    "lastUpdated": "2026-10-05T21:41:36.318133"
   },
   "config": {
     "minScore": 0.55,
@@ -756,5 +756,5 @@
     ]
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T19:34:53.328551"
+  "updatedAt": "2026-10-05T21:41:36.318625"
 }

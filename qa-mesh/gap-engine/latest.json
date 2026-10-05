@@ -1,8 +1,162 @@
 {
-  "generatedAt": "2026-10-05T20:04:24.533Z",
+  "generatedAt": "2026-10-05T22:10:20.198Z",
   "status": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "platformMaturity": "autonomous-ready",
-  "backlog": [],
+  "backlog": [
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-AGENT-ARCHITECTURE-md--LEGAL-GAP-MATRIX-md",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_AGENT_ARCHITECTURE.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_AGENT_ARCHITECTURE.md",
+        "target": "./LEGAL_GAP_MATRIX.md"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-AGENT-ARCHITECTURE-md--evidence-validation-md",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_AGENT_ARCHITECTURE.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_AGENT_ARCHITECTURE.md",
+        "target": "./_evidence/validation.md"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-RAG-REVIEW-md--evidence-validation-md",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_RAG_REVIEW.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_RAG_REVIEW.md",
+        "target": "./_evidence/validation.md"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-REUSE-MAP-md-LEGAL-GAP-MATRIX-md",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_REUSE_MAP.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_REUSE_MAP.md",
+        "target": "LEGAL_GAP_MATRIX.md"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-REUSE-MAP-md--api-utils-tenantValidation-js",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_REUSE_MAP.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_REUSE_MAP.md",
+        "target": "../../api/utils/tenantValidation.js"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-REUSE-MAP-md--rag-service-app-services-vector-store-py",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_REUSE_MAP.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_REUSE_MAP.md",
+        "target": "../../rag-service/app/services/vector_store.py"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-SECURITY-REVIEW-md--evidence-validation-md",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_SECURITY_REVIEW.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_SECURITY_REVIEW.md",
+        "target": "./_evidence/validation.md"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-LEGAL-SECURITY-REVIEW-md--LEGAL-GAP-MATRIX-md",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/LEGAL_SECURITY_REVIEW.md",
+      "evidence": {
+        "source": "docs/legal/LEGAL_SECURITY_REVIEW.md",
+        "target": "./LEGAL_GAP_MATRIX.md"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    },
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-doc-link-docs-legal-evidence-security-findings-md--validation-md",
+      "severity": "medium",
+      "area": "documentation",
+      "title": "Link markdown quebrado em docs/legal/_evidence/security-findings.md",
+      "evidence": {
+        "source": "docs/legal/_evidence/security-findings.md",
+        "target": "./validation.md"
+      },
+      "suggestedFix": "Corrigir o link relativo ou remover a referencia obsoleta."
+    }
+  ],
   "blocking": 0,
-  "nonBlocking": 0
+  "nonBlocking": 9
 }
