@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261002163632 horário de atendimento dunas sereia rafia tundra horário atendimento dunas",
-        "success": true,
-        "confidence": 0.6774298580767638,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T16:36:36.227301"
-      },
-      {
-        "query": "QASEG20261002163632 horário de atendimento dunas sereia rafia tundra horário atendimento dunas",
-        "success": true,
-        "confidence": 0.6473902791615509,
-        "chunksFound": 9,
-        "timestamp": "2026-10-02T16:36:38.187431"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-02T17:08:56.729098"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T17:21:07.716547"
-      },
-      {
         "query": "QASEG20261002173720 horário de atendimento lagoa sereia orquidea neblina horário atendimento lagoa",
         "success": true,
         "confidence": 0.6864459132500996,
@@ -702,17 +674,45 @@
         "confidence": 0.5908888735567581,
         "chunksFound": 6,
         "timestamp": "2026-10-05T14:39:49.138951"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T15:36:16.226262"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T15:43:30.218054"
+      },
+      {
+        "query": "QASEG20261005154640 horário de atendimento lagoa bussola orquidea granito horário atendimento lagoa",
+        "success": true,
+        "confidence": 0.7330766149543473,
+        "chunksFound": 9,
+        "timestamp": "2026-10-05T15:46:43.509233"
+      },
+      {
+        "query": "QASEG20261005154640 horário de atendimento lagoa bussola orquidea granito horário atendimento lagoa",
+        "success": true,
+        "confidence": 0.7144646675065773,
+        "chunksFound": 8,
+        "timestamp": "2026-10-05T15:46:45.286318"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 200,
-    "successfulQueries": 200,
+    "totalQueries": 204,
+    "successfulQueries": 204,
     "failedQueries": 0,
-    "avgConfidence": 0.6840496729310317,
-    "lastUpdated": "2026-10-05T14:39:49.138912"
+    "avgConfidence": 0.692312292312661,
+    "lastUpdated": "2026-10-05T15:46:45.286304"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T14:39:49.139427"
+  "updatedAt": "2026-10-05T15:46:45.286473"
 }
