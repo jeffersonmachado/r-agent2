@@ -4,118 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-02T02:37:54.388957"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T02:50:04.208315"
-      },
-      {
-        "query": "QASEG20261002030356 horário de atendimento kilim mandala neblina zimbro horário atendimento kilim",
-        "success": true,
-        "confidence": 0.6394491812928236,
-        "chunksFound": 10,
-        "timestamp": "2026-10-02T03:03:58.776759"
-      },
-      {
-        "query": "QASEG20261002030356 horário de atendimento kilim mandala neblina zimbro horário atendimento kilim",
-        "success": true,
-        "confidence": 0.5913352098875941,
-        "chunksFound": 10,
-        "timestamp": "2026-10-02T03:04:00.653375"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-02T03:36:16.229732"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T03:48:05.882299"
-      },
-      {
-        "query": "QASEG20261002040220 horário de atendimento xadrez dunas fagulha cacto horário atendimento xadrez",
-        "success": true,
-        "confidence": 0.678042568633757,
-        "chunksFound": 9,
-        "timestamp": "2026-10-02T04:02:23.690530"
-      },
-      {
-        "query": "QASEG20261002040220 horário de atendimento xadrez dunas fagulha cacto horário atendimento xadrez",
-        "success": true,
-        "confidence": 0.6539113805972281,
-        "chunksFound": 9,
-        "timestamp": "2026-10-02T04:02:25.500117"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-02T04:44:38.467808"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T04:56:31.035445"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-02T14:45:06.821419"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T14:57:01.921702"
-      },
-      {
-        "query": "QASEG20261002151131 horário de atendimento hortela quartzo granito yuca horário atendimento hortela",
-        "success": true,
-        "confidence": 0.6701726664720067,
-        "chunksFound": 9,
-        "timestamp": "2026-10-02T15:11:35.743175"
-      },
-      {
-        "query": "QASEG20261002151131 horário de atendimento hortela quartzo granito yuca horário atendimento hortela",
-        "success": true,
-        "confidence": 0.6527933294531165,
-        "chunksFound": 9,
-        "timestamp": "2026-10-02T15:11:38.360800"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-02T16:10:04.828867"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-02T16:21:48.574216"
-      },
-      {
         "query": "QASEG20261002163632 horário de atendimento dunas sereia rafia tundra horário atendimento dunas",
         "success": true,
         "confidence": 0.6774298580767638,
@@ -702,17 +590,129 @@
         "confidence": 0.6396377994929561,
         "chunksFound": 10,
         "timestamp": "2026-10-05T11:30:02.653883"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T12:23:29.978620"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T12:30:46.719512"
+      },
+      {
+        "query": "QASEG20261005123359 horário de atendimento ancora orquidea kilim bussola horário atendimento ancora",
+        "success": true,
+        "confidence": 0.6799215712617346,
+        "chunksFound": 7,
+        "timestamp": "2026-10-05T12:34:01.252912"
+      },
+      {
+        "query": "QASEG20261005123359 horário de atendimento ancora orquidea kilim bussola horário atendimento ancora",
+        "success": true,
+        "confidence": 0.633261924932211,
+        "chunksFound": 9,
+        "timestamp": "2026-10-05T12:34:03.155004"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T13:09:59.037654"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T13:17:38.390022"
+      },
+      {
+        "query": "QASEG20261005132056 horário de atendimento hortela lagoa quartzo veludo horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6807534178856325,
+        "chunksFound": 8,
+        "timestamp": "2026-10-05T13:21:01.152145"
+      },
+      {
+        "query": "QASEG20261005132056 horário de atendimento hortela lagoa quartzo veludo horário atendimento hortela",
+        "success": true,
+        "confidence": 0.6525476857661685,
+        "chunksFound": 9,
+        "timestamp": "2026-10-05T13:21:03.023794"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T13:58:01.642678"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T14:05:44.853636"
+      },
+      {
+        "query": "QASEG20261005140851 horário de atendimento bussola veludo lagoa dunas horário atendimento bussola",
+        "success": true,
+        "confidence": 0.7044609035928264,
+        "chunksFound": 10,
+        "timestamp": "2026-10-05T14:08:53.887463"
+      },
+      {
+        "query": "QASEG20261005140851 horário de atendimento bussola veludo lagoa dunas horário atendimento bussola",
+        "success": true,
+        "confidence": 0.7025867228580938,
+        "chunksFound": 7,
+        "timestamp": "2026-10-05T14:08:55.576324"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T14:22:39.904400"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T14:30:10.503472"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T14:30:22.477967"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T14:39:49.138951"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 184,
-    "successfulQueries": 184,
+    "totalQueries": 200,
+    "successfulQueries": 200,
     "failedQueries": 0,
-    "avgConfidence": 0.6715696357545262,
-    "lastUpdated": "2026-10-05T11:30:02.653833"
+    "avgConfidence": 0.6840496729310317,
+    "lastUpdated": "2026-10-05T14:39:49.138912"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T11:30:02.654373"
+  "updatedAt": "2026-10-05T14:39:49.139427"
 }

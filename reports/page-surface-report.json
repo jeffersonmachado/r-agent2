@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-05T12:10:03.576Z",
-  "commit": "96f8b3aa65f9a0d4a9d9424f3e559fb3d995d3e0",
+  "generatedAt": "2026-10-05T13:49:02.074Z",
+  "commit": "4eff012e1f9f98096d809230422294676186521c",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
@@ -9,10 +9,11 @@
   "totals": {
     "items": 148,
     "byState": {
-      "VALIDATED": 148
+      "VALIDATED": 147,
+      "FAILED": 1
     }
   },
-  "status": "PASS",
+  "status": "FAIL",
   "exemptions": [
     {
       "item": "page:/audit",
@@ -4411,7 +4412,7 @@
     },
     {
       "id": "page:/qa-mesh",
-      "state": "VALIDATED",
+      "state": "FAILED",
       "assertions": [
         {
           "name": "authEnforced",
@@ -4425,8 +4426,8 @@
         },
         {
           "name": "pageLoads",
-          "passed": true,
-          "detail": "página carregou são para super_admin"
+          "passed": false,
+          "detail": "falha de carregamento para super_admin: console.error=10 pageerror=0"
         }
       ],
       "probes": {
@@ -4451,8 +4452,13 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "consoleErrors": 0,
-          "pageErrors": 0
+          "consoleErrors": 10,
+          "pageErrors": 0,
+          "errorSamples": [
+            "Failed to load resource: net::ERR_NETWORK_CHANGED",
+            "[2026-10-05T13:48:49.501Z] [ERROR] [HTTP Client] Erro capturado no catch {\n  \"name\": \"TypeError\",\n  \"message\": \"Failed to fetch\",\n  \"path\": \"/qa-mesh/official-reference\",\n  \"url\": \"/qa-mesh/official-r",
+            "[2026-10-05T13:48:49.501Z] [ERROR] API não acessível - verifique se o servidor está rodando {\n  \"method\": \"GET\",\n  \"url\": \"/qa-mesh/official-reference\",\n  \"path\": \"/qa-mesh/official-reference\",\n  \"hin"
+          ]
         }
       }
     },
@@ -5587,5 +5593,9 @@
         "p3": "skipped"
       }
     }
-  ]
+  ],
+  "runId": "rap-governed-20261005130146634-2f19233f",
+  "sourceFingerprint": "cc1800f3121f2ad5a15879d400b1f2170ec0f5641697fb6d647282286742a26c",
+  "artifactType": "page-surface-report",
+  "artifactVersion": "1.0.0"
 }
