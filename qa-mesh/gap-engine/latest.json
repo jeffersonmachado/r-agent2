@@ -1,8 +1,28 @@
 {
-  "generatedAt": "2026-10-05T17:07:10.967Z",
-  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-10-05T18:19:59.031Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO]",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-functional_failure-business-core-biz-tenants",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-tenants"
+        ],
+        "sampleError": "Pagina /tenants deveria negar acesso ao papel da sessão (RBAC), mas renderizou"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    }
+  ],
+  "blocking": 1,
   "nonBlocking": 0
 }

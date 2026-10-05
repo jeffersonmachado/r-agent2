@@ -4,41 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261002183916 horário de atendimento bussola quartzo zimbro dunas horário atendimento bussola",
-        "success": true,
-        "confidence": 0.7049295157778506,
-        "chunksFound": 10,
-        "timestamp": "2026-10-02T18:39:18.767572"
-      },
-      {
-        "query": "QASEG20261002183916 horário de atendimento bussola quartzo zimbro dunas horário atendimento bussola",
-        "success": true,
-        "confidence": 0.713294502898937,
-        "chunksFound": 7,
-        "timestamp": "2026-10-02T18:39:21.017352"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-03T01:04:59.555790"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-03T01:11:54.583174"
-      },
-      {
-        "query": "QASEG20261003011516 horário de atendimento ancora neblina zimbro mandala horário atendimento ancora",
-        "success": true,
-        "confidence": 0.6708554227747903,
-        "chunksFound": 5,
-        "timestamp": "2026-10-03T01:15:18.826698"
-      },
-      {
         "query": "QASEG20261003011516 horário de atendimento ancora neblina zimbro mandala horário atendimento ancora",
         "success": true,
         "confidence": 0.6379105249704871,
@@ -702,17 +667,52 @@
         "confidence": 0.6280800819650567,
         "chunksFound": 9,
         "timestamp": "2026-10-05T16:19:36.673582"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T17:49:36.965715"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T17:57:06.610667"
+      },
+      {
+        "query": "QASEG20261005180019 horário de atendimento rafia irvore veludo urutu horário atendimento rafia",
+        "success": true,
+        "confidence": 0.6948261954869246,
+        "chunksFound": 7,
+        "timestamp": "2026-10-05T18:00:20.945430"
+      },
+      {
+        "query": "QASEG20261005180019 horário de atendimento rafia irvore veludo urutu horário atendimento rafia",
+        "success": true,
+        "confidence": 0.6648730485261429,
+        "chunksFound": 7,
+        "timestamp": "2026-10-05T18:00:23.422034"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T19:13:01.836097"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 208,
-    "successfulQueries": 208,
+    "totalQueries": 213,
+    "successfulQueries": 213,
     "failedQueries": 0,
-    "avgConfidence": 0.6796689946972383,
-    "lastUpdated": "2026-10-05T16:19:36.673539"
+    "avgConfidence": 0.6720216740616981,
+    "lastUpdated": "2026-10-05T19:13:01.836060"
   },
   "config": {
     "minScore": 0.55,
@@ -756,5 +756,5 @@
     ]
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T16:19:36.674029"
+  "updatedAt": "2026-10-05T19:13:01.836361"
 }
