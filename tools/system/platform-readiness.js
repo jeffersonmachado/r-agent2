@@ -1399,6 +1399,35 @@ function buildReport() {
   });
   const proofBlockingGaps = Array.isArray(proofReport.blockingGaps) ? proofReport.blockingGaps : [];
   const allGaps = gapBacklog.concat(proofBlockingGaps);
+
+  // ── HARD-BLOCK: evidência autoritativa PRÉ-RUN (missão 2026-10-05) ──────────
+  //
+  // Um gate/dimensão sustentado por artefato produzido ANTES do início do run não
+  // é prova do run, mesmo com hash/assinatura/runId/fingerprint corretos. Foi essa a
+  // brecha medida no pacote r-agent2-20261005-011259: mutable-json-state-validation
+  // -report (01:20:06) e json-persistence-audit (01:20:05) com o lineage do run
+  // criado às 02:30. Sem esta regra o readiness publicava AUTONOMOUS_READY_GO com
+  // evidência pré-run.
+  const temporalIntegrityReport = loadJson('reports/current-run-temporal-integrity-report.json', null);
+  const temporalPreRun = temporalIntegrityReport && temporalIntegrityReport.totals
+    ? Number(temporalIntegrityReport.totals.preRunArtifacts || 0)
+    : null;
+  const temporalHardBlock = !temporalIntegrityReport
+    || temporalIntegrityReport.status !== 'PASS'
+    || (temporalPreRun !== null && temporalPreRun > 0);
+  if (temporalHardBlock) {
+    allGaps.push({
+      id: 'current_run_temporal_integrity',
+      severity: 'critical',
+      area: 'governance',
+      title: 'Evidência autoritativa pré-run não pode sustentar a decisão do run',
+      detail: temporalIntegrityReport
+        ? `preRunArtifacts=${temporalPreRun} status=${temporalIntegrityReport.status} violations=${(temporalIntegrityReport.violations || []).length}`
+        : 'reports/current-run-temporal-integrity-report.json ausente',
+      suggestedFix: 'npm run ensure:authoritative-artifacts-fresh && npm run validate:current-run-temporal-integrity',
+    });
+  }
+
   const blockingGaps = allGaps.filter((item) => item.severity === 'critical' || item.severity === 'high');
   const nonBlockingGaps = allGaps.filter((item) => item.severity !== 'critical' && item.severity !== 'high');
   // J. Decisão granular: o proof engine agora emite STAGE_GO ou NO_GO:STAGE_GO
@@ -1435,6 +1464,7 @@ function buildReport() {
     ...(gateHardBlock ? [`release-gate=${releaseGateReport.gate}`] : []),
     ...(govHardBlock ? [`governance=${govDecision}`] : []),
     ...(hardeningBlock ? [`replay-hardening=REPLAY_HARDENING_NO_GO`] : []),
+    ...(temporalHardBlock ? [`current-run-temporal-integrity=${temporalIntegrityReport ? temporalIntegrityReport.status : 'REPORT_MISSING'}`] : []),
   ];
 
   // Duas passagens: (1) a decisão candidata do readiness; (2) confronto com os gates filhos

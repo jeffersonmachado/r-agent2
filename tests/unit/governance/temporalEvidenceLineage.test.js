@@ -311,3 +311,69 @@ describe('autoridade única — taxonomia e produtores', () => {
     expect(authority.loadConfig().sameRunRule).toMatch(/generatedAt >= governanceRun\.startedAt/);
   });
 });
+
+describe('verificador offline — contrato da seção temporal (não confia só no payload)', () => {
+  const VERIFIER = path.join(__dirname, '..', '..', '..', 'scripts', 'verify-enterprise-governance-v2.sh');
+
+  function verifierSource() {
+    return fs.readFileSync(VERIFIER, 'utf8');
+  }
+
+  test('embute lista canônica MÍNIMA com o par do RAP-078', () => {
+    const source = verifierSource();
+    // Armadilha medida: usando só a taxonomia DO PAYLOAD, um envelope com taxonomia
+    // antiga/truncada escapa (foi o caso do envelope auditado, que trazia a 1.0.0).
+    expect(source).toMatch(/const MINIMUM=\[/);
+    expect(source).toContain('governance/mutable-json-state-validation-report.json');
+    expect(source).toContain('governance/json-persistence-audit.json');
+    expect(source).toMatch(/TEMPORAL_LINEAGE_VIOLATION/);
+  });
+
+  test('taxonomia ausente no payload não vira passe silencioso', () => {
+    expect(verifierSource()).toMatch(/TEMPORAL_TAXONOMY_MISSING/);
+  });
+
+  test('usa caminhos declarados pelo scorecard empacotado, sem executar código do payload', () => {
+    const source = verifierSource();
+    expect(source).toMatch(/master-scorecard-registry\.js/);
+    expect(source).toMatch(/scorePaths/);
+  });
+
+  test('o start do run vem do próprio runId quando o manifesto não o declara', () => {
+    expect(verifierSource()).toMatch(/rap-governed-/);
+    expect(verifierSource()).toMatch(/runStartedAt=m\.runStartedAt/);
+  });
+});
+
+describe('propagação — Readiness e Final Governance dependem do gate temporal', () => {
+  const ROOT = path.join(__dirname, '..', '..', '..');
+
+  test('final governance bloqueia sem o relatório temporal (fail-closed nos dois sentidos)', () => {
+    const source = fs.readFileSync(path.join(ROOT, 'governance', 'final-governance-engine.js'), 'utf8');
+
+    expect(source).toMatch(/function checkTemporalIntegrity/);
+    expect(source).toMatch(/checkTemporalIntegrity\(\),/);
+    expect(source).toMatch(/reports\/current-run-temporal-integrity-report\.json/);
+    expect(source).toMatch(/preRunArtifacts/);
+    // ausência do relatório NÃO é passe
+    expect(source).toMatch(/sem prova de integridade temporal/);
+  });
+
+  test('platform readiness adiciona gap CRÍTICO e motivo obrigatório', () => {
+    const source = fs.readFileSync(path.join(ROOT, 'tools', 'system', 'platform-readiness.js'), 'utf8');
+
+    expect(source).toMatch(/current_run_temporal_integrity/);
+    expect(source).toMatch(/temporalHardBlock/);
+    expect(source).toMatch(/ensure:authoritative-artifacts-fresh/);
+  });
+
+  test('o selo reexecuta a evidência ANTES de empacotar (não empacota pré-run)', () => {
+    const source = fs.readFileSync(path.join(ROOT, 'scripts', 'governance', 'seal-release.sh'), 'utf8');
+    const finalPhase = source.slice(source.indexOf('phase_final()'), source.indexOf('phase_publish()'));
+
+    expect(finalPhase).toMatch(/ensure:authoritative-artifacts-fresh/);
+    // a reexecução tem de vir antes da INVOCAÇÃO do empacotamento
+    expect(finalPhase.indexOf('npm run ensure:authoritative-artifacts-fresh'))
+      .toBeLessThan(finalPhase.indexOf('npm run zip:release'));
+  });
+});

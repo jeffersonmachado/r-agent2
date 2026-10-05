@@ -148,6 +148,8 @@
     "reports/inventory-build-report.json": { "command": "npm run inventory:build", "kind": "npm" },
     "reports/rag-domain-segregation-report.json": { "command": "npm run report:rag-domain-segregation", "kind": "npm" },
     "qa/qa-waves-enterprise-governance.json": { "command": "npm run qa:waves:enterprise-governance", "kind": "npm" },
-    "governance/delivered-release-verification-report.json": { "command": "npm run verify:delivered-release", "kind": "npm", "phase": "DELIVERED" }
+    "governance/delivered-release-verification-report.json": { "command": "npm run verify:delivered-release", "kind": "npm", "phase": "DELIVERED" },
+    "qa-mesh/release-gate-report.json": { "command": "npm run qa:mesh", "kind": "npm" },
+    "qa-mesh/go-no-go-report.json": { "command": "npm run qa:mesh", "kind": "npm" }
   }
 }

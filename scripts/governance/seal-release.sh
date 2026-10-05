@@ -366,6 +366,24 @@ phase_candidate() {
 phase_final() {
   step final "pacote final (SEAL_GO, exit 0)"
 
+  # INTEGRIDADE TEMPORAL ANTES DE EMPACOTAR (missão 2026-10-05).
+  #
+  # DEFEITO REAL: o pacote r-agent2-20261005-011259 carregou
+  # `governance/mutable-json-state-validation-report.json` (01:20:06) e
+  # `governance/json-persistence-audit.json` (01:20:05) com o lineage do run
+  # criado às 02:30 — porque os produtores rodavam na varredura agregada, que
+  # acontece DEPOIS do empacotamento (fase consolidate). O ZIP era construído
+  # com evidência de ANTES do run.
+  #
+  # Aqui o produtor de todo artefato autoritativo stale é REEXECUTADO antes do
+  # zip:release. Nada é estampado: `stamp-report-lineage` recusa pré-run, então
+  # o empacotamento é fail-closed de verdade.
+  if timeout 3600 npm run ensure:authoritative-artifacts-fresh > "$LOG_DIR/artifact-refresh.log" 2>&1; then
+    ok "evidência autoritativa reexecutada no run (0 pré-run antes do pacote)"
+  else
+    fail "existe evidência autoritativa pré-run não reparável — reexecute o produtor declarado na taxonomia antes de empacotar" "$LOG_DIR/artifact-refresh.log" final
+  fi
+
   local zlog="$LOG_DIR/zip-final.log"
   timeout 7200 npm run zip:release > "$zlog" 2>&1
   local rc=$?

@@ -1,0 +1,180 @@
+{
+  "artifactType": "authoritative-artifact-refresh-report",
+  "artifactVersion": "1.0.0",
+  "generatedAt": "2026-10-05T08:09:04.940Z",
+  "runId": "rap-governed-20261005023044918-48ad43cf",
+  "sourceFingerprint": "c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54",
+  "runStartedAt": "2026-10-05T02:30:45.064Z",
+  "totals": {
+    "before": {
+      "totalAuthoritativeArtifacts": 61,
+      "sameRunArtifacts": 55,
+      "preRunArtifacts": 5,
+      "wrongRunArtifacts": 0,
+      "unknownClassification": 0,
+      "historicalIgnored": 6,
+      "transitionalIgnored": 0,
+      "invalidArtifacts": 1,
+      "missingArtifacts": 1
+    },
+    "refreshRequested": 6,
+    "reexecuted": 5,
+    "producerMissing": 1,
+    "unresolvedAfter": 6
+  },
+  "results": [
+    {
+      "path": "qa-mesh/release-gate-report.json",
+      "status": "INVALID",
+      "reexecuted": false,
+      "reason": "producer_not_declared"
+    },
+    {
+      "path": "reports/api-surface-report.json",
+      "statusBefore": "STALE_ARTIFACT",
+      "reexecuted": true,
+      "command": "npm run wave:api-surface",
+      "exitCode": 0,
+      "startedAt": "2026-10-05T08:00:56.739Z",
+      "completedAt": "2026-10-05T08:01:51.260Z"
+    },
+    {
+      "path": "reports/db-integrity-report.json",
+      "statusBefore": "STALE_ARTIFACT",
+      "reexecuted": true,
+      "command": "npm run wave:db-integrity",
+      "exitCode": 0,
+      "startedAt": "2026-10-05T08:01:51.260Z",
+      "completedAt": "2026-10-05T08:02:22.899Z"
+    },
+    {
+      "path": "reports/inventory-build-report.json",
+      "statusBefore": "STALE_ARTIFACT",
+      "reexecuted": true,
+      "command": "npm run inventory:build",
+      "exitCode": 0,
+      "startedAt": "2026-10-05T08:02:22.899Z",
+      "completedAt": "2026-10-05T08:02:35.970Z"
+    },
+    {
+      "path": "reports/page-surface-report.json",
+      "statusBefore": "STALE_ARTIFACT",
+      "reexecuted": true,
+      "command": "npm run wave:page-surface",
+      "exitCode": 0,
+      "startedAt": "2026-10-05T08:02:35.970Z",
+      "completedAt": "2026-10-05T08:09:03.265Z"
+    },
+    {
+      "path": "reports/rag-domain-segregation-report.json",
+      "statusBefore": "STALE_ARTIFACT",
+      "reexecuted": true,
+      "command": "npm run report:rag-domain-segregation",
+      "exitCode": 0,
+      "startedAt": "2026-10-05T08:09:03.265Z",
+      "completedAt": "2026-10-05T08:09:04.879Z"
+    }
+  ],
+  "unresolved": [
+    {
+      "path": "qa-mesh/release-gate-report.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "consumedByScorecard": false,
+      "status": "INVALID",
+      "code": "TEMPORAL_LINEAGE_VIOLATION",
+      "reasons": [
+        "artifact_type_missing",
+        "artifact_version_missing"
+      ],
+      "generatedAt": "2026-10-05T04:51:18.048Z",
+      "producer": null
+    },
+    {
+      "path": "reports/api-surface-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "INVALID",
+      "code": "TEMPORAL_LINEAGE_VIOLATION",
+      "reasons": [
+        "run_id_missing",
+        "source_fingerprint_missing",
+        "artifact_type_missing",
+        "artifact_version_missing"
+      ],
+      "generatedAt": "2026-10-05T08:01:51.235Z",
+      "producer": {
+        "command": "npm run wave:api-surface",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/db-integrity-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "INVALID",
+      "code": "TEMPORAL_LINEAGE_VIOLATION",
+      "reasons": [
+        "run_id_missing",
+        "source_fingerprint_missing"
+      ],
+      "generatedAt": "2026-10-05T08:02:22.858Z",
+      "producer": {
+        "command": "npm run wave:db-integrity",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/inventory-build-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "INVALID",
+      "code": "TEMPORAL_LINEAGE_VIOLATION",
+      "reasons": [
+        "run_id_missing",
+        "source_fingerprint_missing"
+      ],
+      "generatedAt": "2026-10-05T08:02:35.942Z",
+      "producer": {
+        "command": "npm run inventory:build",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/page-surface-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "INVALID",
+      "code": "TEMPORAL_LINEAGE_VIOLATION",
+      "reasons": [
+        "run_id_missing",
+        "source_fingerprint_missing",
+        "artifact_type_missing",
+        "artifact_version_missing"
+      ],
+      "generatedAt": "2026-10-05T08:09:03.211Z",
+      "producer": {
+        "command": "npm run wave:page-surface",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/rag-domain-segregation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "INVALID",
+      "code": "TEMPORAL_LINEAGE_VIOLATION",
+      "reasons": [
+        "run_id_missing",
+        "source_fingerprint_missing",
+        "artifact_type_missing",
+        "artifact_version_missing"
+      ],
+      "generatedAt": "2026-10-05T08:09:03.446Z",
+      "producer": {
+        "command": "npm run report:rag-domain-segregation",
+        "kind": "npm"
+      }
+    }
+  ],
+  "status": "FAIL"
+}

@@ -17,6 +17,9 @@
  *   6. package hash diverge do manifesto               → BLOCK (package tampering)
  *   7. governance signature inválida                   → BLOCK (integrity failure)
  *   8. blocker severity=critical presente              → BLOCK (unresolved blocker)
+ *   9. evidência autoritativa PRÉ-RUN presente         → BLOCK (integridade temporal)
+ *      (CURRENT_RUN_TEMPORAL_INTEGRITY; medido 2026-10-05: o pacote carregou
+ *       mutable-json-state-validation-report de 01:20 com o runId do run das 02:30)
  */
 
 const fs     = require('fs');
@@ -298,6 +301,44 @@ function checkPackageIntegrity() {
   }
 }
 
+/**
+ * INTEGRIDADE TEMPORAL DA EVIDÊNCIA (missão 2026-10-05).
+ *
+ * Fail-closed em DOIS sentidos: (a) sem o relatório do gate temporal não há prova
+ * de que a evidência autoritativa nasceu DENTRO do run — ausência não é passe; e
+ * (b) qualquer artefato autoritativo pré-run (generatedAt < run.startedAt) BLOQUEIA,
+ * mesmo que o scorecard diga 78/78 e que hash/assinatura/runId estejam corretos.
+ *
+ * Foi exatamente essa a brecha: o release r-agent2-20261005-011259 entregou
+ * governance/mutable-json-state-validation-report.json (01:20:06) e
+ * governance/json-persistence-audit.json (01:20:05) com o lineage do run criado às
+ * 02:30 — passaram por todas as outras checagens.
+ */
+function checkTemporalIntegrity() {
+  const report = readJsonSafe('reports/current-run-temporal-integrity-report.json');
+  if (!report) {
+    return {
+      id: 'current_run_temporal_integrity',
+      pass: false,
+      severity: 'CRITICAL',
+      reason: 'reports/current-run-temporal-integrity-report.json ausente — sem prova de integridade temporal (rode: npm run validate:current-run-temporal-integrity)',
+    };
+  }
+  const preRun = Number(report.totals?.preRunArtifacts || 0);
+  const pass = report.status === 'PASS' && preRun === 0;
+  return {
+    id: 'current_run_temporal_integrity',
+    pass,
+    severity: pass ? 'OK' : 'CRITICAL',
+    preRunAuthoritativeArtifacts: preRun,
+    sameRunArtifacts: Number(report.totals?.sameRunArtifacts || 0),
+    temporalViolations: Array.isArray(report.violations) ? report.violations.slice(0, 6).map((v) => v.code) : [],
+    reason: pass
+      ? null
+      : `evidência autoritativa pré-run: ${preRun} artefato(s) — ${(report.violations || []).slice(0, 3).map((v) => v.path || v.code).join(', ')}`,
+  };
+}
+
 function checkCriticalBlockers() {
   const crossReport = readJsonSafe('governance/cross-report-validation.json');
   const proofReport = readJsonSafe('governance/final-proof-report.json');
@@ -483,6 +524,7 @@ function runGovernanceEngine() {
     checkVisualJourneys(),
     checkPackageIntegrity(),
     checkCriticalBlockers(),
+    checkTemporalIntegrity(),
     checkGovernanceSignature(),
   ];
 

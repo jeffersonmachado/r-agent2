@@ -1,0 +1,811 @@
+{
+  "artifactType": "current-run-temporal-integrity-report",
+  "artifactVersion": "1.0.0",
+  "generatedAt": "2026-10-05T08:09:05.678Z",
+  "status": "FAIL",
+  "runId": "rap-governed-20261005023044918-48ad43cf",
+  "sourceFingerprint": "c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54",
+  "runStartedAt": "2026-10-05T02:30:45.064Z",
+  "totals": {
+    "totalAuthoritativeArtifacts": 61,
+    "sameRunArtifacts": 60,
+    "preRunArtifacts": 0,
+    "wrongRunArtifacts": 0,
+    "unknownClassification": 0,
+    "historicalIgnored": 6,
+    "transitionalIgnored": 0,
+    "invalidArtifacts": 1,
+    "missingArtifacts": 1
+  },
+  "violationCount": 1,
+  "violations": [
+    {
+      "code": "INVALID_AUTHORITATIVE_ARTIFACT",
+      "path": "qa-mesh/release-gate-report.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "reasons": [
+        "artifact_type_missing",
+        "artifact_version_missing"
+      ],
+      "detail": "artefato autoritativo sem lineage temporal válido"
+    }
+  ],
+  "entries": [
+    {
+      "path": "dist/archive/r-agent2-20261004-094046/r-agent2-20261004-094046.delivered.identity.json",
+      "classification": "HISTORICAL_REPORT",
+      "consumedByScorecard": false,
+      "status": "HISTORICAL",
+      "code": "HISTORICAL_NOT_EVIDENCE",
+      "reasons": [
+        "historical_artifact_excluded"
+      ],
+      "generatedAt": null,
+      "producer": null
+    },
+    {
+      "path": "dist/archive/r-agent2-20261004-094046/r-agent2-20261004-094046.manifest.json",
+      "classification": "HISTORICAL_REPORT",
+      "consumedByScorecard": false,
+      "status": "HISTORICAL",
+      "code": "HISTORICAL_NOT_EVIDENCE",
+      "reasons": [
+        "historical_artifact_excluded"
+      ],
+      "generatedAt": "2026-10-04T13:30:57Z",
+      "producer": null
+    },
+    {
+      "path": "dist/archive/r-agent2-20261004-120916/r-agent2-20261004-120916.delivered.identity.json",
+      "classification": "HISTORICAL_REPORT",
+      "consumedByScorecard": false,
+      "status": "HISTORICAL",
+      "code": "HISTORICAL_NOT_EVIDENCE",
+      "reasons": [
+        "historical_artifact_excluded"
+      ],
+      "generatedAt": null,
+      "producer": null
+    },
+    {
+      "path": "dist/archive/r-agent2-20261004-120916/r-agent2-20261004-120916.manifest.json",
+      "classification": "HISTORICAL_REPORT",
+      "consumedByScorecard": false,
+      "status": "HISTORICAL",
+      "code": "HISTORICAL_NOT_EVIDENCE",
+      "reasons": [
+        "historical_artifact_excluded"
+      ],
+      "generatedAt": "2026-10-04T16:08:04Z",
+      "producer": null
+    },
+    {
+      "path": "dist/archive/r-agent2-20261005-002700/r-agent2-20261005-002700.delivered.identity.json",
+      "classification": "HISTORICAL_REPORT",
+      "consumedByScorecard": false,
+      "status": "HISTORICAL",
+      "code": "HISTORICAL_NOT_EVIDENCE",
+      "reasons": [
+        "historical_artifact_excluded"
+      ],
+      "generatedAt": null,
+      "producer": null
+    },
+    {
+      "path": "dist/archive/r-agent2-20261005-002700/r-agent2-20261005-002700.manifest.json",
+      "classification": "HISTORICAL_REPORT",
+      "consumedByScorecard": false,
+      "status": "HISTORICAL",
+      "code": "HISTORICAL_NOT_EVIDENCE",
+      "reasons": [
+        "historical_artifact_excluded"
+      ],
+      "generatedAt": "2026-10-05T04:11:57Z",
+      "producer": null
+    },
+    {
+      "path": "governance/agent-policy-compliance-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:43.686Z",
+      "producer": null
+    },
+    {
+      "path": "governance/certification-snapshot.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:54:26.671Z",
+      "producer": null
+    },
+    {
+      "path": "governance/critical-journey-evidence.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:25.670Z",
+      "producer": null
+    },
+    {
+      "path": "governance/delivered-release-verification-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:10:12.612Z",
+      "producer": {
+        "command": "npm run verify:delivered-release",
+        "kind": "npm",
+        "phase": "DELIVERED"
+      }
+    },
+    {
+      "path": "governance/evidence-manifest.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:46.969Z",
+      "producer": null
+    },
+    {
+      "path": "governance/experience-api-segregation-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:10.486Z",
+      "producer": {
+        "command": "npm run validate:experience-api-segregation",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "governance/experience-segregation-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:04.921Z",
+      "producer": {
+        "command": "npm run validate:experience-segregation",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "governance/final-consistency-gate-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:57:41.974Z",
+      "producer": null
+    },
+    {
+      "path": "governance/final-consistency-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:55:53.620Z",
+      "producer": null
+    },
+    {
+      "path": "governance/final-governance-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:57:44.278Z",
+      "producer": null
+    },
+    {
+      "path": "governance/final-proof-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:47.901Z",
+      "producer": null
+    },
+    {
+      "path": "governance/final-readiness-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:33.119Z",
+      "producer": null
+    },
+    {
+      "path": "governance/final-snapshot-coherence-report.json",
+      "classification": "TRANSITIONAL_REPORT",
+      "consumedByScorecard": false,
+      "status": "TRANSITIONAL",
+      "code": "TRANSITIONAL_NOT_EVIDENCE",
+      "reasons": [
+        "transitional_artifact_excluded"
+      ],
+      "generatedAt": null,
+      "producer": null
+    },
+    {
+      "path": "governance/governance-persistence-validation-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:19:22.465Z",
+      "producer": null
+    },
+    {
+      "path": "governance/json-persistence-audit.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:09.243Z",
+      "producer": {
+        "command": "npm run audit:json-persistence",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "governance/model-driven-e2e-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:15:37.726Z",
+      "producer": null
+    },
+    {
+      "path": "governance/mutable-json-state-validation-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:09.815Z",
+      "producer": {
+        "command": "npm run verify:no-mutable-json-state",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "governance/outbound-reliability-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:11.033Z",
+      "producer": null
+    },
+    {
+      "path": "governance/package-integrity-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:57:40.890Z",
+      "producer": null
+    },
+    {
+      "path": "governance/package-validation-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:47.730Z",
+      "producer": null
+    },
+    {
+      "path": "governance/replay-hardening-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:44.879Z",
+      "producer": null
+    },
+    {
+      "path": "governance/replay-integrity-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:55:54.356Z",
+      "producer": null
+    },
+    {
+      "path": "governance/report-contamination-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:54:26.691Z",
+      "producer": {
+        "command": "node governance/report-contamination-cleaner.js",
+        "kind": "node"
+      }
+    },
+    {
+      "path": "governance/self-proving-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:57:45.905Z",
+      "producer": {
+        "command": "npm run validate:self-proving",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "governance/source-remote-provenance-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:01:51.582Z",
+      "producer": {
+        "command": "npm run validate:remote-provenance",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "governance/system-scope-audit.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:43.285Z",
+      "producer": null
+    },
+    {
+      "path": "governance/tamper-detection-report.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:57:45.019Z",
+      "producer": null
+    },
+    {
+      "path": "qa-mesh/go-no-go-report.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:51:18.048Z",
+      "producer": {
+        "command": "npm run qa:mesh",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "qa-mesh/intelligence/latest.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:51:18.398Z",
+      "producer": null
+    },
+    {
+      "path": "qa-mesh/release-gate-report.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "consumedByScorecard": false,
+      "status": "INVALID",
+      "code": "TEMPORAL_LINEAGE_VIOLATION",
+      "reasons": [
+        "artifact_type_missing",
+        "artifact_version_missing"
+      ],
+      "generatedAt": "2026-10-05T04:51:18.048Z",
+      "producer": {
+        "command": "npm run qa:mesh",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "qa/enterprise/human-handoff-full-validation.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:16.688Z",
+      "producer": null
+    },
+    {
+      "path": "qa/enterprise/omnichannel-unified-replay.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:25.229Z",
+      "producer": null
+    },
+    {
+      "path": "qa/enterprise/pbx-voice-flow-prod-like.json",
+      "classification": "RUNTIME_EVIDENCE",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:25.228Z",
+      "producer": null
+    },
+    {
+      "path": "qa/qa-waves-enterprise-governance.json",
+      "classification": "CERTIFICATION_ARTIFACT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:51.023Z",
+      "producer": {
+        "command": "npm run qa:waves:enterprise-governance",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/api-surface-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T08:01:51.235Z",
+      "producer": {
+        "command": "npm run wave:api-surface",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/billing-entitlement-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:19:16.577Z",
+      "producer": null
+    },
+    {
+      "path": "reports/channel-security-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:19:03.447Z",
+      "producer": null
+    },
+    {
+      "path": "reports/concurrency-validation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:18:52.501Z",
+      "producer": null
+    },
+    {
+      "path": "reports/coverage-completeness-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:03.867Z",
+      "producer": {
+        "command": "npm run validate:coverage-completeness",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/coverage-gate-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:05.647Z",
+      "producer": {
+        "command": "npm run validate:coverage-gate",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/db-integrity-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T08:02:22.858Z",
+      "producer": {
+        "command": "npm run wave:db-integrity",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/deploy-validation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:19:11.316Z",
+      "producer": null
+    },
+    {
+      "path": "reports/disaster-recovery-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:19:08.630Z",
+      "producer": null
+    },
+    {
+      "path": "reports/experience-api-segregation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:10.486Z",
+      "producer": {
+        "command": "npm run validate:experience-api-segregation",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/experience-segregation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:04.921Z",
+      "producer": {
+        "command": "npm run validate:experience-segregation",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/external-resilience-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:18:59.350Z",
+      "producer": null
+    },
+    {
+      "path": "reports/idempotency-validation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:18:50.163Z",
+      "producer": null
+    },
+    {
+      "path": "reports/inventory-build-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T08:02:35.942Z",
+      "producer": {
+        "command": "npm run inventory:build",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/master-scorecard-regression-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:48.541Z",
+      "producer": null
+    },
+    {
+      "path": "reports/master-scorecard-test-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:13:48.541Z",
+      "producer": null
+    },
+    {
+      "path": "reports/page-surface-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T08:09:03.211Z",
+      "producer": {
+        "command": "npm run wave:page-surface",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/privacy-retention-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:19:13.903Z",
+      "producer": null
+    },
+    {
+      "path": "reports/rag-domain-segregation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T08:09:03.446Z",
+      "producer": {
+        "command": "npm run report:rag-domain-segregation",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/rate-limit-validation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:18:40.604Z",
+      "producer": null
+    },
+    {
+      "path": "reports/release-artifact-identity-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:02:01.644Z",
+      "producer": {
+        "command": "npm run validate:release-artifact-identity",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/release-dag-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:02:00.910Z",
+      "producer": {
+        "command": "npm run validate:release-dag",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/route-mount-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:02:01.774Z",
+      "producer": {
+        "command": "npm run validate:route-mounts",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/security-validation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:18:44.861Z",
+      "producer": null
+    },
+    {
+      "path": "reports/source-remote-provenance-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": false,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:01:51.582Z",
+      "producer": {
+        "command": "npm run validate:remote-provenance",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/tenant-isolation-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T02:36:22.703Z",
+      "producer": {
+        "command": "npm run report:tenant-isolation",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/visibility-policy-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T05:07:04.518Z",
+      "producer": {
+        "command": "npm run validate:visibility-policy",
+        "kind": "npm"
+      }
+    },
+    {
+      "path": "reports/webhook-replay-protection-report.json",
+      "classification": "DERIVED_REPORT",
+      "consumedByScorecard": true,
+      "status": "SAME_RUN",
+      "code": "SAME_RUN_OK",
+      "reasons": [],
+      "generatedAt": "2026-10-05T04:19:21.655Z",
+      "producer": null
+    }
+  ]
+}
