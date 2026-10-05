@@ -1,5 +1,24 @@
 [
   {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio core",
+    "evidence": {
+      "scenarios": [
+        "business-core-biz-flows-editor"
+      ],
+      "sampleError": "Pagina /editor renderizou vazia"
+    },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+  },
+  {
     "id": "current_run_temporal_integrity",
     "severity": "critical",
     "area": "governance",

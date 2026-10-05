@@ -4,20 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261001192043 horário de atendimento zimbro neblina sereia zimbro horário atendimento zimbro",
-        "success": true,
-        "confidence": 0.6043495880547501,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T19:20:47.505411"
-      },
-      {
-        "query": "QASEG20261001192043 horário de atendimento zimbro neblina sereia zimbro horário atendimento zimbro",
-        "success": true,
-        "confidence": 0.5763243695486621,
-        "chunksFound": 7,
-        "timestamp": "2026-10-01T19:20:49.983059"
-      },
-      {
         "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
         "success": true,
         "confidence": 0.7986548840598731,
@@ -702,17 +688,31 @@
         "confidence": 0.6533445930918953,
         "chunksFound": 9,
         "timestamp": "2026-10-05T09:10:05.536790"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T09:52:51.186611"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T10:00:16.155536"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 174,
-    "successfulQueries": 174,
+    "totalQueries": 176,
+    "successfulQueries": 176,
     "failedQueries": 0,
-    "avgConfidence": 0.678246275739418,
-    "lastUpdated": "2026-10-05T09:10:05.536780"
+    "avgConfidence": 0.680347310269993,
+    "lastUpdated": "2026-10-05T10:00:16.155492"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T09:10:05.536873"
+  "updatedAt": "2026-10-05T10:00:16.155984"
 }

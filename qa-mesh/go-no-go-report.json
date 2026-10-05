@@ -1,25 +1,28 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-05T08-56-37-566Z",
+  "executionId": "mesh-2026-10-05T09-50-32-049Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "GO",
-  "reasons": [],
+  "status": "NO_GO",
+  "reasons": [
+    "CRITICAL_DOMAIN_FAILED:core",
+    "BASELINE_PASS_RATE_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-05T08-56-37-566Z",
-    "startedAt": "2026-10-05T08:56:37.566Z",
+    "executionId": "mesh-2026-10-05T09-50-32-049Z",
+    "startedAt": "2026-10-05T09:50:32.049Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-05T09:28:49.125Z",
+    "promotedAt": "2026-10-05T10:22:24.550Z",
     "registryTotal": 144,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-05T08-56-37-566Z",
+    "executionId": "mesh-2026-10-05T09-50-32-049Z",
     "tenantId": "system",
-    "timestamp": "2026-10-05T08:56:37.566Z",
+    "timestamp": "2026-10-05T09:50:32.049Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -27,9 +30,9 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 144,
+    "passed": 143,
     "fallbackPassed": 0,
-    "failed": 0,
+    "failed": 1,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -77,9 +80,9 @@
         "total": 2
       },
       "core": {
-        "passed": 90,
+        "passed": 89,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -167,10 +170,21 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "CRITICAL_DOMAIN_FAILED:core",
+      "BASELINE_PASS_RATE_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "core": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "functional_failure": 1
+        },
+        "successRate": 0.9888888888888889
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -184,12 +198,6 @@
         "successRate": 1
       },
       "clinic": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -244,26 +252,33 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "functional_failure": 1
+    },
+    "topErrors": [
+      {
+        "message": "Pagina /editor renderizou vazia",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-05T08-56-37-566Z",
-      "startedAt": "2026-10-05T08:56:37.566Z",
+      "executionId": "mesh-2026-10-05T09-50-32-049Z",
+      "startedAt": "2026-10-05T09:50:32.049Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-05T09:28:49.125Z",
+      "promotedAt": "2026-10-05T10:22:24.550Z",
       "registryTotal": 144,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261005085022399-11ebb86b",
-  "sourceFingerprint": "f1d6584037451550850fcb2b1b2cfa09763cf8e508a5e362d3b2900f2a98e047",
-  "sourceCommit": "71c8638f3317d74edaecf092d7b75a7d8728131c",
-  "sourceTree": "2c87e46bcaf2200c87e10aa6422bef74d53d2119",
-  "generatedAt": "2026-10-05T09:28:49.127Z"
+  "runId": "rap-governed-20261005094422695-af7364dd",
+  "sourceFingerprint": "29c2c71a72c331d17e4d2e2bce1897c8837cf1e693d5ef4e0b91f5e3954581d6",
+  "sourceCommit": "05c23f430fa5e812924507ea955901274c5d540f",
+  "sourceTree": "bf82feac056fc5bcd61d3f828947ea8b7d87e4ec",
+  "generatedAt": "2026-10-05T10:22:24.552Z"
 }

@@ -674,7 +674,14 @@ async function runScreenScenario(definition, ctx) {
 // `business-core-biz-agents` (/agents) estourou o teto antigo e reprovou o
 // domínio crítico `core`. Continua com teto (não é espera infinita) e, se
 // esgotado sem texto renderizado, a checagem de vazio abaixo reprova.
-const PAGE_RENDER_READY_TIMEOUT_MS = 60000;
+//
+// Medido 2026-10-05 (`business-core-biz-flows-editor`, /editor): a MESMA página
+// rendeu 1074 caracteres em 20 s numa execução e ficou em "Carregando..." por
+// 45 s em outra, SEM erro de console — é contenção do mesh em paralelo sobre o
+// bundle do Rete, não defeito da tela. O teto é ORÇAMENTO DE MEDIÇÃO, não
+// relaxamento da assertiva: página genuinamente vazia continua reprovando ao
+// fim do teto.
+const PAGE_RENDER_READY_TIMEOUT_MS = 120000;
 
 const IGNORED_PAGE_CONSOLE_PATTERNS = [
   /favicon/i,
@@ -797,7 +804,17 @@ async function assertBusinessPage(page, pageDef, definition) {
     if (accessDenied) {
       throw new Error(`Pagina ${pageDef.path} apresentou 'Acesso Negado'`);
     }
-    const renderedText = await readRenderedText(page);
+    // CORRIDA DE MEDIÇÃO (medido 2026-10-05, `business-core-biz-flows-editor`):
+    // o wait acima passa (conteúdo não-vazio) e a leitura seguinte pode cair
+    // numa janela de REMONTAGEM da SPA — o editor renderiza "Carregando...",
+    // remonta e só depois monta o conteúdo, então uma única amostra vazia
+    // reprovava uma página que ESTAVA montando. Releitura limitada: página
+    // genuinamente vazia continua reprovando ao fim da janela.
+    let renderedText = await readRenderedText(page);
+    for (let attempt = 0; !renderedText && attempt < 20; attempt += 1) {
+      await page.waitForTimeout(250);
+      renderedText = await readRenderedText(page);
+    }
     if (!renderedText) {
       throw new Error(`Pagina ${pageDef.path} renderizou vazia`);
     }
