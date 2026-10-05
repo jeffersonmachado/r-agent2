@@ -1,28 +1,25 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-05T09-50-32-049Z",
+  "executionId": "mesh-2026-10-05T11-16-52-569Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "NO_GO",
-  "reasons": [
-    "CRITICAL_DOMAIN_FAILED:core",
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "status": "GO",
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-05T09-50-32-049Z",
-    "startedAt": "2026-10-05T09:50:32.049Z",
+    "executionId": "mesh-2026-10-05T11-16-52-569Z",
+    "startedAt": "2026-10-05T11:16:52.569Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-05T10:22:24.550Z",
+    "promotedAt": "2026-10-05T11:49:22.007Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-05T09-50-32-049Z",
+    "executionId": "mesh-2026-10-05T11-16-52-569Z",
     "tenantId": "system",
-    "timestamp": "2026-10-05T09:50:32.049Z",
+    "timestamp": "2026-10-05T11:16:52.569Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -30,9 +27,9 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 143,
+    "passed": 144,
     "fallbackPassed": 0,
-    "failed": 1,
+    "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -80,9 +77,9 @@
         "total": 2
       },
       "core": {
-        "passed": 89,
+        "passed": 90,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -170,21 +167,10 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "CRITICAL_DOMAIN_FAILED:core",
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "core": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.9888888888888889
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -198,6 +184,12 @@
         "successRate": 1
       },
       "clinic": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -252,33 +244,26 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "functional_failure": 1
-    },
-    "topErrors": [
-      {
-        "message": "Pagina /editor renderizou vazia",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-05T09-50-32-049Z",
-      "startedAt": "2026-10-05T09:50:32.049Z",
+      "executionId": "mesh-2026-10-05T11-16-52-569Z",
+      "startedAt": "2026-10-05T11:16:52.569Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-05T10:22:24.550Z",
+      "promotedAt": "2026-10-05T11:49:22.007Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261005094422695-af7364dd",
+  "runId": "rap-governed-20261005111026532-2a86ccaf",
   "sourceFingerprint": "29c2c71a72c331d17e4d2e2bce1897c8837cf1e693d5ef4e0b91f5e3954581d6",
-  "sourceCommit": "05c23f430fa5e812924507ea955901274c5d540f",
-  "sourceTree": "bf82feac056fc5bcd61d3f828947ea8b7d87e4ec",
-  "generatedAt": "2026-10-05T10:22:24.552Z"
+  "sourceCommit": "96f8b3aa65f9a0d4a9d9424f3e559fb3d995d3e0",
+  "sourceTree": "064c3ff8d67d3e5f4374268479c9814c543fe3c2",
+  "generatedAt": "2026-10-05T11:49:22.008Z"
 }

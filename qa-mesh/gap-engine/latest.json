@@ -1,27 +1,8 @@
 {
-  "generatedAt": "2026-10-05T10:22:36.184Z",
-  "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
+  "generatedAt": "2026-10-05T11:57:36.799Z",
+  "status": "NO_GO:BLOCKING_GAPS",
   "platformMaturity": "enterprise-partial",
   "backlog": [
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio core",
-      "evidence": {
-        "scenarios": [
-          "business-core-biz-flows-editor"
-        ],
-        "sampleError": "Pagina /editor renderizou vazia"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
     {
       "id": "current_run_temporal_integrity",
       "severity": "critical",
@@ -31,6 +12,6 @@
       "suggestedFix": "npm run ensure:authoritative-artifacts-fresh && npm run validate:current-run-temporal-integrity"
     }
   ],
-  "blocking": 2,
+  "blocking": 1,
   "nonBlocking": 0
 }

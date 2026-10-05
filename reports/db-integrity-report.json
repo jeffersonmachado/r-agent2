@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-05T09:40:40.243Z",
+  "generatedAt": "2026-10-05T12:03:07.210Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "71c8638f3317d74edaecf092d7b75a7d8728131c",
+  "commit": "96f8b3aa65f9a0d4a9d9424f3e559fb3d995d3e0",
   "dbAvailable": true,
   "totals": {
     "models": 213,
