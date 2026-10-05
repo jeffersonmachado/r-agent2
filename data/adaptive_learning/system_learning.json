@@ -4,20 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-01T15:57:14.161149"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T16:08:57.370125"
-      },
-      {
         "query": "QASEG20261001162336 horário de atendimento hortela yuca fagulha lagoa horário atendimento hortela",
         "success": true,
         "confidence": 0.6836091811893281,
@@ -702,17 +688,31 @@
         "confidence": 0.6842749046870928,
         "chunksFound": 9,
         "timestamp": "2026-10-04T16:34:46.098741"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T02:43:12.386698"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T02:50:23.478970"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 160,
-    "successfulQueries": 160,
+    "totalQueries": 162,
+    "successfulQueries": 162,
     "failedQueries": 0,
-    "avgConfidence": 0.6837661781386511,
-    "lastUpdated": "2026-10-04T16:34:46.098722"
+    "avgConfidence": 0.6848184312133719,
+    "lastUpdated": "2026-10-05T02:50:23.478929"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-04T16:34:46.098905"
+  "updatedAt": "2026-10-05T02:50:23.479428"
 }
