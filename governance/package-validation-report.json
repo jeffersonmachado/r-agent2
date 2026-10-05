@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T22:43:43.654Z",
+  "generatedAt": "2026-10-05T23:30:31.051Z",
   "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261005-192600.payload.zip",
   "zipName": "r-agent2-20261005-192600.payload.zip",
   "zipSha256": "33cf8d29d69b3a4ed514aeb283fd6db952f3b4644a728141361fd98a3d975c74",
@@ -60,6 +60,6 @@
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20261005204741332-4e6cda2c",
   "sourceFingerprint": "b4a8e99c54a28a705c4a8e1738d38e6581afe70554939c2fed77977d92c45d81",
-  "gitCommit": "7cd39c6a812437aeb202e728742c2f9768e5f8fb",
-  "gitTree": "46b9af209fc1f436738e32286c2b09dddb80bd62"
+  "gitCommit": "0e0132cff3c61125e7609d893082af5f2c60f274",
+  "gitTree": "15ab38f606ca5e71c01b55d2c436259ed7e265d5"
 }
