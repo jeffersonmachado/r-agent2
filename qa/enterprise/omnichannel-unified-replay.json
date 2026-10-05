@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-05T04:13:25.229Z",
+  "generatedAt": "2026-10-05T08:10:26.551Z",
   "ok": true,
   "signals": {
     "whatsapp": true,
@@ -78,105 +78,105 @@
       "text": "agendamento"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.000Z",
+      "timestamp": "2026-10-05T08:09:51.000Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Cliente inicia conversa enterprise 1791173595543"
+      "text": "Cliente inicia conversa enterprise 1791187791007"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.000Z",
-      "source": "human_handoff",
-      "kind": "ticket_message",
-      "actor": "customer",
-      "text": "Cliente confirmou retorno enterprise 1791173595543"
-    },
-    {
-      "timestamp": "2026-10-05T04:13:15.582Z",
+      "timestamp": "2026-10-05T08:09:51.210Z",
       "source": "human_handoff",
       "kind": "channel_message",
       "actor": "customer",
-      "text": "Cliente inicia conversa enterprise 1791173595543"
+      "text": "Cliente inicia conversa enterprise 1791187791007"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.872Z",
+      "timestamp": "2026-10-05T08:09:54.750Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_takeover"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.880Z",
+      "timestamp": "2026-10-05T08:09:55.294Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket atribuido para rpa_system."
     },
     {
-      "timestamp": "2026-10-05T04:13:15.883Z",
+      "timestamp": "2026-10-05T08:09:55.402Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_assign"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.910Z",
+      "timestamp": "2026-10-05T08:09:56.953Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Transferencia realizada. Fila: enterprise_support_1791173595543 · Sem atendente"
+      "text": "Transferencia realizada. Fila: enterprise_support_1791187791007 · Sem atendente"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.923Z",
+      "timestamp": "2026-10-05T08:09:56.975Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "agent",
-      "text": "Humano assumiu o atendimento enterprise 1791173595543"
+      "text": "Humano assumiu o atendimento enterprise 1791187791007"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.956Z",
+      "timestamp": "2026-10-05T08:09:56.993Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_message"
     },
     {
-      "timestamp": "2026-10-05T04:13:15.988Z",
+      "timestamp": "2026-10-05T08:09:57.000Z",
+      "source": "human_handoff",
+      "kind": "ticket_message",
+      "actor": "customer",
+      "text": "Cliente confirmou retorno enterprise 1791187791007"
+    },
+    {
+      "timestamp": "2026-10-05T08:09:57.037Z",
       "source": "human_handoff",
       "kind": "channel_message",
       "actor": "customer",
-      "text": "Cliente confirmou retorno enterprise 1791173595543"
+      "text": "Cliente confirmou retorno enterprise 1791187791007"
     },
     {
-      "timestamp": "2026-10-05T04:13:16.048Z",
+      "timestamp": "2026-10-05T08:09:57.085Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket encerrado (Resolvido pelo enterprise proof smoke)."
     },
     {
-      "timestamp": "2026-10-05T04:13:16.053Z",
+      "timestamp": "2026-10-05T08:09:57.088Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "rpa_system",
       "text": "ticket_close"
     },
     {
-      "timestamp": "2026-10-05T04:13:21.747Z",
+      "timestamp": "2026-10-05T08:10:13.891Z",
       "source": "pbx",
       "kind": "voice_runtime_smoke",
       "actor": "system",
       "text": "originate=true tts=true asr=true"
     },
     {
-      "timestamp": "2026-10-05T04:13:23.198Z",
+      "timestamp": "2026-10-05T08:10:19.397Z",
       "source": "pbx",
       "kind": "pbx_event_runtime_smoke",
       "actor": "system",
       "text": "replayTimeline=true"
     },
     {
-      "timestamp": "2026-10-05T04:13:23.529Z",
+      "timestamp": "2026-10-05T08:10:23.049Z",
       "source": "omnichannel",
       "kind": "inbox_runtime_smoke",
       "actor": "system",
@@ -189,8 +189,8 @@
     "humanHandoffReplayCount": 12
   },
   "warnings": [],
-  "runId": "rap-governed-20261005023044918-48ad43cf",
-  "sourceFingerprint": "c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54",
-  "sourceCommit": "17550c7f0dba1925871e3829e16852a4fa77900f",
-  "sourceTree": "3ed1ec028eed37e280bdbe457214a4b624e7b3af"
+  "runId": "rap-governed-20261005080949579-d362fcac",
+  "sourceFingerprint": "9b89df6b49e31e7f64f82f59f296c3bff83f08f0a46a82e9b0fb44bb15f17217",
+  "sourceCommit": "25241e23bb0513a763fdbfa60accc0e5eea9b4af",
+  "sourceTree": "b70ad87498bf8bc67af9bc8c494d50df08677e7c"
 }

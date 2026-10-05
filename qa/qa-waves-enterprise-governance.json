@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-05T05:07:51.023Z",
-  "runId": "rap-governed-20261005023044918-48ad43cf",
-  "sourceFingerprint": "c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54",
+  "generatedAt": "2026-10-05T08:10:31.793Z",
+  "runId": "rap-governed-20261005080949579-d362fcac",
+  "sourceFingerprint": "9b89df6b49e31e7f64f82f59f296c3bff83f08f0a46a82e9b0fb44bb15f17217",
   "artifactType": "qa-waves-enterprise-governance",
   "artifactVersion": "1.0.0",
   "status": "GO",
@@ -245,7 +245,7 @@
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/qa-waves-scheduled-operational-smoke.json",
     "mode": "pre_release_governance",
     "generatedAt": "2026-10-03T22:51:20.625Z",
-    "ageHours": 30.27,
+    "ageHours": 33.32,
     "maxAgeHours": 48,
     "evidenceValid": true,
     "evidenceBound": true,
@@ -281,14 +281,14 @@
     "operationalConfidence": 100,
     "blockers": []
   },
-  "enterpriseGovernanceSignature": "hmac-sha256:c7e585334cddb0670fa0e87ec416b652fa634d8c698230b26d77514fbb028a84",
-  "reportHash": "1054b5d57708f74cb62f9fc0e05b2d9144232839c38cc3d7edfcf3a2390cd9f3",
+  "enterpriseGovernanceSignature": "hmac-sha256:3f7b3766b7a6ee02144b65e5e7b8fd8ce3d4700039e6a9d5fb6ace1871e7886b",
+  "reportHash": "1057ad59bd1056310621fc1bb67b163f6704051dc194600dbe78703c6d83081f",
   "auditTrail": {
     "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
-    "latestEntryHash": "e7158862658e256ab6ecf6288197e831053dde135ea4e08b23fdbf1e239a95a5",
+    "latestEntryHash": "0a6eb1595a336863c0f46adb39f8786149986b6b4a9392b9d6b1dee658b2cb8d",
     "immutable": true,
     "valid": true,
-    "entries": 516,
+    "entries": 517,
     "reasons": []
   }
 }

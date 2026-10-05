@@ -4,20 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-01T18:05:07.313115"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T18:11:51.031559"
-      },
-      {
         "query": "QASEG20261001181726 horário de atendimento bussola jabuti tundra penhasco horário atendimento bussola",
         "success": true,
         "confidence": 0.6723552160251107,
@@ -702,17 +688,31 @@
         "confidence": 0.6502529171760922,
         "chunksFound": 8,
         "timestamp": "2026-10-05T04:32:17.267503"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T08:18:57.435389"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T08:26:34.026216"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 168,
-    "successfulQueries": 168,
+    "totalQueries": 170,
+    "successfulQueries": 170,
     "failedQueries": 0,
-    "avgConfidence": 0.6814398256521871,
-    "lastUpdated": "2026-10-05T04:32:17.267489"
+    "avgConfidence": 0.682934085699336,
+    "lastUpdated": "2026-10-05T08:26:34.026149"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T04:32:17.267611"
+  "updatedAt": "2026-10-05T08:26:34.026923"
 }

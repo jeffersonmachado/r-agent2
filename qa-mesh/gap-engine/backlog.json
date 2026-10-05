@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "current_run_temporal_integrity",
+    "severity": "critical",
+    "area": "governance",
+    "title": "Evidência autoritativa pré-run não pode sustentar a decisão do run",
+    "detail": "preRunArtifacts=0 status=FAIL violations=1",
+    "suggestedFix": "npm run ensure:authoritative-artifacts-fresh && npm run validate:current-run-temporal-integrity"
+  }
+]

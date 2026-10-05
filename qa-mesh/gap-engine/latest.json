@@ -1,8 +1,17 @@
 {
-  "generatedAt": "2026-10-05T05:07:33.119Z",
-  "status": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-10-05T08:49:02.181Z",
+  "status": "NO_GO:BLOCKING_GAPS",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "id": "current_run_temporal_integrity",
+      "severity": "critical",
+      "area": "governance",
+      "title": "Evidência autoritativa pré-run não pode sustentar a decisão do run",
+      "detail": "preRunArtifacts=0 status=FAIL violations=1",
+      "suggestedFix": "npm run ensure:authoritative-artifacts-fresh && npm run validate:current-run-temporal-integrity"
+    }
+  ],
+  "blocking": 1,
   "nonBlocking": 0
 }

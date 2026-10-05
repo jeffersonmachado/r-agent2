@@ -293,6 +293,19 @@ echo "[converge] 8.5/12 coverage gate RECOMPUTADO sobre o mesh do run corrente"
 # Exit != 0 (NO_GO) aborta a convergência — sem cobertura válida não há seal.
 $NODE scripts/governance/validate-coverage-gate.js
 
+echo "[converge] 8.7/12 reexecuta produtor de evidência autoritativa stale (nunca stamp)"
+# INTEGRIDADE TEMPORAL (missão 2026-10-05): num run NOVO toda a evidência do run
+# anterior é anterior ao startedAt, e `stamp-report-lineage` a RECUSA
+# (REJECTED_STALE_ARTIFACT, fail-closed) — foi exatamente o que abortou o conver
+# no run d362fcac: o passo 9 morria porque os produtores ainda não tinham rodado
+# dentro do run. Aqui o produtor de todo artefato autoritativo stale é
+# REEXECUTADO (mapa `producers` da taxonomia) antes do stamp. Exit != 0 aborta:
+# sem evidência temporalmente válida não há selo.
+if ! $NODE scripts/governance/ensure-authoritative-artifacts-fresh.js; then
+  _bad "evidência autoritativa pré-run não reparável — reexecute o produtor declarado na taxonomia (governance/authoritative-artifact-refresh-report.json)"
+  exit 1
+fi
+
 echo "[converge] 9/12 stamp de lineage"
 $NODE scripts/governance/stamp-report-lineage.js >/dev/null
 

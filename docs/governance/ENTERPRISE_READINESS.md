@@ -1,11 +1,11 @@
 # Enterprise Readiness
 
-- Decision: AUTONOMOUS_READY_GO
-- Canonical mesh execution: mesh-2026-10-05T04-19-24-540Z
+- Decision: NO_GO:BLOCKING_GAPS
+- Canonical mesh execution: mesh-2026-10-05T08-16-41-889Z
 - Enterprise readiness: autonomous-ready
-- Production readiness: AUTONOMOUS_READY_GO
-- Blocking gaps: 0
+- Production readiness: NO_GO:BLOCKING_GAPS
+- Blocking gaps: 1
 - Blocking domains: none
 
 ## Hard blockers
-- Nenhum
+- current_run_temporal_integrity: Evidência autoritativa pré-run não pode sustentar a decisão do run (critical)
