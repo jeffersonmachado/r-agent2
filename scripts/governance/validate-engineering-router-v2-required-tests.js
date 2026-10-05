@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { deriveRequiredTests } = require('../../governance/required-tests-derivation');
+const { reportPathCandidates } = require('./lib/report-path-resolution');
 
 const ROOT = path.join(__dirname, '..', '..');
 const CONFIG_PATH = path.join(ROOT, 'config', 'engineering-router-v2-required-tests.json');
@@ -53,9 +54,20 @@ function makeSuiteStateReader() {
 
 /** Valor de aprovação + carimbo de tempo de um relatório de governança declarado. */
 function reportStateReader(reportRelPath) {
-  const rel = String(reportRelPath || '').replace(/^reports\//, '');
-  const abs = path.join(ROOT, 'reports', rel);
-  const json = readJsonAbs(abs);
+  // Um relatório declarado pode viver na raiz do repositório (ex.: artefatos
+  // autoritativos em `governance/`) ou sob `reports/` (convenção histórica).
+  // Procurar em ambos, na ordem de precedência declarada, evita UNPROVEN por
+  // PATH — ver scripts/governance/lib/report-path-resolution.js (TEMPORAL-06).
+  const candidates = reportPathCandidates(reportRelPath);
+  let abs = candidates.length > 0 ? path.join(ROOT, candidates[0]) : null;
+  for (const rel of candidates) {
+    const candidateAbs = path.join(ROOT, rel);
+    if (fs.existsSync(candidateAbs)) {
+      abs = candidateAbs;
+      break;
+    }
+  }
+  const json = abs ? readJsonAbs(abs) : null;
   if (!json) return { exists: false, value: null, generatedAt: null };
   const value =
     json.status ||
