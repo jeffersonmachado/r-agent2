@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-05T08:09:03.211Z",
-  "commit": "2fdd49a2b70b1d7c4f176b7b2f8aa6a882db3283",
+  "generatedAt": "2026-10-05T09:36:56.406Z",
+  "commit": "71c8638f3317d74edaecf092d7b75a7d8728131c",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
@@ -5587,9 +5587,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20261005023044918-48ad43cf",
-  "sourceFingerprint": "c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54",
-  "artifactType": "page-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }

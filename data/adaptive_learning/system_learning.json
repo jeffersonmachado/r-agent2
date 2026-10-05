@@ -4,34 +4,6 @@
   "queryPatterns": {
     "successful": [
       {
-        "query": "QASEG20261001181726 horário de atendimento bussola jabuti tundra penhasco horário atendimento bussola",
-        "success": true,
-        "confidence": 0.6723552160251107,
-        "chunksFound": 10,
-        "timestamp": "2026-10-01T18:17:28.193829"
-      },
-      {
-        "query": "QASEG20261001181726 horário de atendimento bussola jabuti tundra penhasco horário atendimento bussola",
-        "success": true,
-        "confidence": 0.6771261195731444,
-        "chunksFound": 7,
-        "timestamp": "2026-10-01T18:17:30.344175"
-      },
-      {
-        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
-        "success": true,
-        "confidence": 0.7986548840598731,
-        "chunksFound": 1,
-        "timestamp": "2026-10-01T18:54:14.321975"
-      },
-      {
-        "query": "QA jornada rag_documents jornada",
-        "success": true,
-        "confidence": 0.5908888735567581,
-        "chunksFound": 6,
-        "timestamp": "2026-10-01T19:06:07.850220"
-      },
-      {
         "query": "QASEG20261001192043 horário de atendimento zimbro neblina sereia zimbro horário atendimento zimbro",
         "success": true,
         "confidence": 0.6043495880547501,
@@ -702,17 +674,45 @@
         "confidence": 0.5908888735567581,
         "chunksFound": 6,
         "timestamp": "2026-10-05T08:26:34.026216"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-10-05T08:58:52.588461"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5908888735567581,
+        "chunksFound": 6,
+        "timestamp": "2026-10-05T09:06:20.577904"
+      },
+      {
+        "query": "QASEG20261005090955 horário de atendimento sereia tundra ancora rafia horário atendimento sereia",
+        "success": true,
+        "confidence": 0.652831366631464,
+        "chunksFound": 8,
+        "timestamp": "2026-10-05T09:10:02.071948"
+      },
+      {
+        "query": "QASEG20261005090955 horário de atendimento sereia tundra ancora rafia horário atendimento sereia",
+        "success": true,
+        "confidence": 0.6533445930918953,
+        "chunksFound": 9,
+        "timestamp": "2026-10-05T09:10:05.536790"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 170,
-    "successfulQueries": 170,
+    "totalQueries": 174,
+    "successfulQueries": 174,
     "failedQueries": 0,
-    "avgConfidence": 0.682934085699336,
-    "lastUpdated": "2026-10-05T08:26:34.026149"
+    "avgConfidence": 0.678246275739418,
+    "lastUpdated": "2026-10-05T09:10:05.536780"
   },
   "config": {
     "minScore": 0.45,
@@ -725,5 +725,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-10-05T08:26:34.026923"
+  "updatedAt": "2026-10-05T09:10:05.536873"
 }

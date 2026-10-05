@@ -143,13 +143,25 @@
     "governance/experience-api-segregation-report.json": { "command": "npm run validate:experience-api-segregation", "kind": "npm" },
     "reports/source-remote-provenance-report.json": { "command": "npm run validate:remote-provenance", "kind": "npm" },
     "governance/source-remote-provenance-report.json": { "command": "npm run validate:remote-provenance", "kind": "npm" },
-    "governance/self-proving-report.json": { "command": "npm run validate:self-proving", "kind": "npm" },
-    "governance/report-contamination-report.json": { "command": "node governance/report-contamination-cleaner.js", "kind": "node" },
+    "governance/self-proving-report.json": { "command": "npm run validate:self-proving", "kind": "npm" },    "governance/report-contamination-report.json": { "command": "node governance/report-contamination-cleaner.js", "kind": "node" },
     "reports/inventory-build-report.json": { "command": "npm run inventory:build", "kind": "npm" },
     "reports/rag-domain-segregation-report.json": { "command": "npm run report:rag-domain-segregation", "kind": "npm" },
     "qa/qa-waves-enterprise-governance.json": { "command": "npm run qa:waves:enterprise-governance", "kind": "npm" },
     "governance/delivered-release-verification-report.json": { "command": "npm run verify:delivered-release", "kind": "npm", "phase": "DELIVERED" },
     "qa-mesh/release-gate-report.json": { "command": "npm run qa:mesh", "kind": "npm" },
-    "qa-mesh/go-no-go-report.json": { "command": "npm run qa:mesh", "kind": "npm" }
+    "qa-mesh/go-no-go-report.json": { "command": "npm run qa:mesh", "kind": "npm" },
+    "governance/self-proving-report.json": { "command": "npm run validate:self-proving", "kind": "npm", "phase": "FINAL" },
+    "governance/tamper-detection-report.json": { "command": "npm run validate:self-proving", "kind": "npm", "phase": "FINAL" },
+    "governance/certification-snapshot.json": { "command": "node governance/export-certification-snapshot.js", "kind": "node", "phase": "FINAL" },
+    "governance/final-consistency-report.json": { "command": "node governance/final-consistency-gate.js", "kind": "node", "phase": "FINAL" },
+    "governance/final-consistency-gate-report.json": { "command": "node governance/final-consistency-gate.js", "kind": "node", "phase": "FINAL" },
+    "governance/final-governance-report.json": { "command": "node governance/final-governance-engine.js", "kind": "node", "phase": "FINAL" },
+    "governance/final-readiness-report.json": { "command": "npm run system:platform-readiness", "kind": "npm", "phase": "FINAL" },
+    "governance/final-proof-report.json": { "command": null, "phase": "FINAL", "note": "produzido pela cadeia de proof/readiness do pipeline" },
+    "governance/evidence-manifest.json": { "command": null, "phase": "FINAL", "note": "produzido por materialize-proof-artifacts no empacotamento" },
+    "governance/package-integrity-report.json": { "command": null, "phase": "FINAL", "note": "produzido pelo two-pass-release no empacotamento" },
+    "governance/package-validation-report.json": { "command": null, "phase": "FINAL", "note": "produzido pelo package-validator" },
+    "governance/replay-integrity-report.json": { "command": null, "phase": "FINAL", "note": "produzido pelo replay-integrity no empacotamento" },
+    "governance/outbound-reliability-report.json": { "command": "node scripts/governance/generate-outbound-reliability-evidence.js", "kind": "node" }
   }
 }

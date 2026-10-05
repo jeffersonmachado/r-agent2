@@ -378,7 +378,7 @@ phase_final() {
   # Aqui o produtor de todo artefato autoritativo stale é REEXECUTADO antes do
   # zip:release. Nada é estampado: `stamp-report-lineage` recusa pré-run, então
   # o empacotamento é fail-closed de verdade.
-  if timeout 3600 npm run ensure:authoritative-artifacts-fresh > "$LOG_DIR/artifact-refresh.log" 2>&1; then
+  if timeout 3600 env ARTIFACT_REFRESH_PHASE=FINAL npm run ensure:authoritative-artifacts-fresh > "$LOG_DIR/artifact-refresh.log" 2>&1; then
     ok "evidência autoritativa reexecutada no run (0 pré-run antes do pacote)"
   else
     fail "existe evidência autoritativa pré-run não reparável — reexecute o produtor declarado na taxonomia antes de empacotar" "$LOG_DIR/artifact-refresh.log" final

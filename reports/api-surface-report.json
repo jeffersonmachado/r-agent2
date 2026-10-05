@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-10-05T08:01:51.235Z",
-  "commit": "2fdd49a2b70b1d7c4f176b7b2f8aa6a882db3283",
+  "generatedAt": "2026-10-05T09:40:05.723Z",
+  "commit": "71c8638f3317d74edaecf092d7b75a7d8728131c",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 892,
+    "items": 893,
     "byState": {
-      "VALIDATED": 864,
+      "VALIDATED": 865,
       "NOT_APPLICABLE": 21,
       "VISITED": 7
     }
@@ -9135,6 +9135,46 @@
     },
     {
       "id": "api:GET:/engineering/missions/self-assessment",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/engineering/missions/workers/health",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -25246,9 +25286,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20261005023044918-48ad43cf",
-  "sourceFingerprint": "c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }

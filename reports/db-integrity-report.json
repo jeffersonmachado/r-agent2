@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-10-05T08:02:22.858Z",
+  "generatedAt": "2026-10-05T09:40:40.243Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "2fdd49a2b70b1d7c4f176b7b2f8aa6a882db3283",
+  "commit": "71c8638f3317d74edaecf092d7b75a7d8728131c",
   "dbAvailable": true,
   "totals": {
-    "models": 212,
-    "validated": 212,
+    "models": 213,
+    "validated": 213,
     "visited": 0,
     "failed": 0,
-    "warnings": 48
+    "warnings": 49
   },
   "relationTotals": {
     "relations": 9,
@@ -2561,6 +2561,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "16 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:EngineeringMissionIntegration",
+      "table": "engineering_mission_integrations",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/EngineeringMissionIntegration.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=engineering_mission_integrations"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261002120000-engineering-mission-source-authority.js, api/db/migrations/20261003090000-engineering-mission-integration-intent.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'engineering_mission_integrations' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "26 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -11439,7 +11491,5 @@
         }
       ]
     }
-  ],
-  "runId": "rap-governed-20261005023044918-48ad43cf",
-  "sourceFingerprint": "c35b1f6ec98fa0641c8002976de114f39462e532f9883011bfd364c8da14ed54"
+  ]
 }
