@@ -48,6 +48,20 @@ const DECLARED_FAILED_EXCEPTIONS = Object.freeze([
   },
 ]);
 
+/**
+ * `indexing` ÓRFÃO é violação. PONTO CEGO MEDIDO EM 2026-10-06: o gate reportou
+ * `HEALTHY` com **11 documentos presos em `indexing`** — o estado não era olhado em
+ * absoluto, e o verde dependia de os documentos terem saído de `failed` (o reparo os
+ * moveu para `indexing` e o processo morreu antes de concluir, porque o rag-service
+ * estava rodando sem `--env-file`). Um documento que ficou em `indexing` é
+ * inalcançável pelo retrieval e não é nem "indexado" nem "falhado": é inconsistência
+ * escondida no meio de dois estados que o gate conhecia.
+ *
+ * A janela existe porque indexar LEVA TEMPO e o próprio ciclo cria documentos: um
+ * `indexing` recente é trabalho em andamento legítimo, não sujeira.
+ */
+const STUCK_INDEXING_MINUTES = Number(process.env.RAG_STUCK_INDEXING_MINUTES || 30);
+
 async function main() {
   const db = require(path.join(ROOT, 'api', 'db'));
   const { QueryTypes } = require('sequelize');
@@ -77,6 +91,19 @@ async function main() {
   const undeclaredFailed = failedDocs.filter((row) => !declaredIds.has(row.id));
   const declaredButMissing = DECLARED_FAILED_EXCEPTIONS.filter((entry) => !failedDocs.some((row) => row.id === entry.id));
 
+  // `indexing` antigo demais = processo que morreu no meio. A idade usa a última
+  // tentativa (ou a criação) e a janela evita falso positivo de indexação em curso.
+  const stuckIndexing = await sequelize.query(
+    `SELECT id, tenant_key,
+            COALESCE(last_index_attempt_at, created_at) AS since,
+            EXTRACT(EPOCH FROM (NOW() - COALESCE(last_index_attempt_at, created_at))) / 60 AS minutes
+       FROM rag_documents
+      WHERE index_status = 'indexing'
+        AND COALESCE(last_index_attempt_at, created_at) < NOW() - (:minutes * INTERVAL '1 minute')
+      ORDER BY since`,
+    { type: QueryTypes.SELECT, replacements: { minutes: STUCK_INDEXING_MINUTES } },
+  );
+
   const violations = [];
   if (indexedWithoutChunks.length > 0) {
     violations.push({
@@ -92,6 +119,13 @@ async function main() {
       ids: undeclaredFailed.slice(0, 10).map((row) => row.id),
     });
   }
+  if (stuckIndexing.length > 0) {
+    violations.push({
+      code: 'RAG_INDEXING_STUCK',
+      detail: `${stuckIndexing.length} documento(s) presos em indexing há mais de ${STUCK_INDEXING_MINUTES} min (inalcançáveis pelo retrieval; o processo que os marcou morreu) — reindexe pela rota oficial`,
+      ids: stuckIndexing.slice(0, 10).map((row) => row.id),
+    });
+  }
 
   const statusByKey = Object.fromEntries(byStatus.map((row) => [row.index_status, row.total]));
   const report = {
@@ -105,6 +139,11 @@ async function main() {
     failed: failedDocs.map((row) => ({ id: row.id, tenantKey: row.tenant_key })),
     declaredExceptions: DECLARED_FAILED_EXCEPTIONS,
     staleExceptions: declaredButMissing.map((entry) => entry.id),
+    stuckIndexing: {
+      thresholdMinutes: STUCK_INDEXING_MINUTES,
+      count: stuckIndexing.length,
+      documents: stuckIndexing.map((row) => ({ id: row.id, tenantKey: row.tenant_key, since: row.since, minutes: Math.round(Number(row.minutes)) })),
+    },
     violations,
     note: 'Medição DIRETA do banco (runtime → medição → gate). Substitui a leitura do eixo estático do status report como fonte de decisão.',
   };

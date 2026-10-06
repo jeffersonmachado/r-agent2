@@ -61,6 +61,27 @@ describe('run status e prova do scorecard — guardas de FIAÇÃO', () => {
   });
 });
 
+describe('corpus RAG — ponto cego do estado `indexing`', () => {
+  const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+  test('o gate MEDE `indexing` preso (antes ele dava HEALTHY com 11 documentos presos)', () => {
+    // MEDIDO 2026-10-06: o gate reportou HEALTHY com 11 documentos em `indexing` ORFAO
+    // (o reparo os tirou de `failed`, o processo morreu e o estado ficou no meio). O
+    // estado simplesmente não era olhado — verde por omissão.
+    const gate = read('scripts/governance/validate-rag-index-health.js');
+    expect(gate).toContain('RAG_INDEXING_STUCK');
+    expect(gate).toContain('STUCK_INDEXING_MINUTES');
+    expect(gate).toContain("index_status = 'indexing'");
+  });
+
+  test('a janela de tolerância existe (indexação em curso não vira falso positivo)', () => {
+    const gate = read('scripts/governance/validate-rag-index-health.js');
+    // Sem janela, o próprio ciclo (que cria documentos e os indexa) reprovaria o gate.
+    expect(gate).toMatch(/RAG_STUCK_INDEXING_MINUTES\s*\|\|\s*\d+/);
+    expect(gate).toContain('INTERVAL');
+  });
+});
+
 describe('gate agregado — ordem do stamp de lineage', () => {
   const chain = () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
