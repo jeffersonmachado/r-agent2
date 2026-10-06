@@ -28,12 +28,22 @@ describe('agrupamento de lotes com exclusividade declarada', () => {
   const exclusiveGroups = (config.execution && config.execution.exclusiveGroups) || [];
 
   test('o manifesto declara o grupo do runner de laço de bugs com motivo auditável', () => {
-    const group = exclusiveGroups.find((g) => g.id === 'BUG_LOOP_SHARED_RUNNER');
+    // O grupo é a UNIÃO de duas faces do mesmo estado global: o runner/lease do
+    // laço de bugs E o banco de missões que a varredura de boot recovery varre
+    // inteiro. Dois grupos separados ainda permitiam que uma suíte de cada lado
+    // caísse no MESMO lote (medido 2026-10-05: lote 3 do runner com
+    // engineeringBugLoopNaturalPathE2E + engineeringMissionBootRecovery, 82s e
+    // FAIL, com ambas PASSANDO isoladas). O id mudou para nomear as duas causas;
+    // a exigência de cobertura das suítes críticas continua igual.
+    const group = exclusiveGroups.find((g) => g.id === 'MISSION_WORKER_SHARED_RUNNER_AND_DB');
     expect(group).toBeTruthy();
     expect(group.suites).toEqual(expect.arrayContaining([
       'tests/integration/engineeringBugLoopNaturalPathE2E.test.js',
       'tests/integration/engineeringBugLoop.test.js',
       'tests/integration/engineeringBugAutonomousLoopE2E.test.js',
+      // Faces do estado de missões/worker cuja colisão foi medida em 2026-10-05.
+      'tests/integration/engineeringMissionBootRecovery.test.js',
+      'tests/integration/bugWorkerFullBootE2E.test.js',
     ]));
     // Motivo substancial: restrição de concorrência sem justificativa é decisão invisível.
     expect(String(group.reason).length).toBeGreaterThan(120);

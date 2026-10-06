@@ -79,12 +79,17 @@
     "note": "Suíte do manifesto que não for executada, ou que executar 0 testes, é violação (nunca PASS).",
     "exclusiveGroups": [
       {
-        "id": "BUG_LOOP_SHARED_RUNNER",
-        "reason": "Estas suites compartilham o MESMO runner de laco de bugs (runBugLoopSweep e GLOBAL) e a posse por finding e um LEASE. Rodando no mesmo lote, um sweep vizinho reivindica o finding e deixa o lease preso ate o TTL; a suite que ESPERA o worker automatico apenas pula (leaseSkipped) e nunca fecha. Medido 2026-10-02: 115 ciclos sem retomada em lote, contra 35-68s isolada. purgeTestFindings documentava a premissa \"nao rodam em paralelo entre si\" como comentario — aqui ela passa a ser DECLARADA e enforced.",
+        "id": "MISSION_WORKER_SHARED_RUNNER_AND_DB",
+        "reason": "Estas suites compartilham o MESMO runner de laco de bugs (runBugLoopSweep/GLOBAL, posse por finding e LEASE) E o MESMO banco de missoes (a varredura de boot recovery processa TODA missao EXECUTING abandonada). Sao duas faces do mesmo estado global, e por isso o grupo e a UNIAO: dois grupos separados ainda permitiam que uma suite de cada lado caisse no MESMO lote — foi exatamente o que derrubou o lote 3 do runner em 2026-10-05 (engineeringBugLoopNaturalPathE2E + engineeringMissionBootRecovery juntos, 82s e FAIL, com ambas PASSANDO isoladas). Evidencia acumulada: 2026-10-02 o laco de bugs fez 115 ciclos sem retomada em lote contra 35-68s isolada; 2026-10-05 bugWorkerFullBootE2E consumiu 903s no lote contra 1,4s isolada, e engineeringMissionBootRecovery falhou em :109 ('retomar A TASK DA MISSAO, nao outra qualquer') contra 5/5 isolada. Uma por lote elimina a dependencia de estado global sem afrouxar assertiva nenhuma.",
         "suites": [
+          "tests/integration/bugRegressionCommandContamination.test.js",
+          "tests/integration/bugWorkerFullBootE2E.test.js",
           "tests/integration/engineeringBugAutonomousLoopE2E.test.js",
           "tests/integration/engineeringBugLoop.test.js",
           "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+          "tests/integration/engineeringMissionBootRecovery.test.js",
+          "tests/integration/engineeringMissionCrashRecoveryE2E.test.js",
+          "tests/integration/engineeringMissionDistributedLease.test.js",
           "tests/integration/engineeringMissionSourceE2E.test.js"
         ]
       }
