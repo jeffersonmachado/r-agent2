@@ -1,12 +1,12 @@
 # QA Waves Status
 
 - Governance status: GO
-- Canonical mesh execution: mesh-2026-10-06T09-17-38-598Z
+- Canonical mesh execution: mesh-2026-10-06T14-30-33-383Z
 - Canonical mesh decision: GO
 - Operational confidence: 100
 - Replay integrity valid: true
 - Blocking domains in mesh: none
-- Mesh history artifact: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-06T09-17-38-598Z.json
+- Mesh history artifact: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-06T14-30-33-383Z.json
 
 ## Core divergence
 - QA Waves enterprise governance reports GO for the prod-like scope already validated.
