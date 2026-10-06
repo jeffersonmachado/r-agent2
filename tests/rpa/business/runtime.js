@@ -4415,7 +4415,18 @@ async function runFlowScenario(definition, ctx) {
     };
     const uniqueWords = Array.from({ length: 16 }, () => segVocab[Math.floor(segRand() * segVocab.length)]);
     const content = `${marker} horário de atendimento especial da jornada de segregação de domínios do RAG. Termos únicos desta execução: ${uniqueWords.join(' ')}.`;
-    const queryText = `${marker} horário de atendimento ${uniqueWords.slice(0, 4).join(' ')}`;
+    // A CONSULTA USA SÓ O QUE É EXCLUSIVO DESTA EXECUÇÃO (marker + os 16 termos
+    // únicos). Antes ela incluía o termo genérico "horário de atendimento", que
+    // também aparece em 48 documentos OPERATIONAL do corpus governado
+    // (`src-docs-roteiros-*/manuais-*`, medido em 2026-10-06) — então o cenário
+    // media DISPUTA DE RANKING contra o corpus, não a segregação de domínio que
+    // ele existe para provar: o documento do teste era indexado corretamente
+    // (`indexed=true`, `chunks=1`) e mesmo assim ficava fora do top-10 em ~1/3
+    // das execuções sob carga (o mesh o registrava como `flaky` e o domínio
+    // crítico `core` derrubava o go/no-go). Com termos exclusivos a recuperação
+    // é determinística e a assertiva de segregação fica mais forte, não mais fraca:
+    // continua exigindo que o escopo OPERATIONAL encontre e o SYSTEM não encontre.
+    const queryText = `${marker} ${uniqueWords.join(' ')}`;
     const created = await api.post('/rag/documents', {
       title: `QA Segregation ${marker}`,
       content,
