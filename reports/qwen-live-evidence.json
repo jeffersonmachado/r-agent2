@@ -1,7 +1,7 @@
 {
   "artifactType": "qwen-live-evidence",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-06T03:33:24.829Z",
+  "generatedAt": "2026-10-06T03:50:07.872Z",
   "requirement": "V2-35",
   "source": "tenant_ai_credentials",
   "tenant": "system",
