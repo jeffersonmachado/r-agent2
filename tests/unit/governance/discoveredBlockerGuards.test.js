@@ -104,4 +104,32 @@ describe('TTL do smoke contínuo — autoridade única de avaliação', () => {
     expect(aggregateIdx).toBeGreaterThanOrEqual(0);
     expect(ttlIdx).toBeLessThan(aggregateIdx);
   });
+
+  /**
+   * O orquestrador resolve caminhos com `$ROOT` (`scripts/governance/seal-release.sh:53`).
+   * MEDIDO 2026-10-06: um guard escrito com `$PROJECT_ROOT` (variável INEXISTENTE)
+   * apontava para `/scripts/governance/...`, o node falhava, a saída ficava vazia e
+   * o selo abortava em 'não foi possível avaliar a evidência de smoke contínuo'.
+   * A ORDEM das linhas estava certa — o guard de ordem não pegava um caminho que
+   * não existe. Este teste fecha o buraco: todo `node "$<VAR>/..."` do selo tem de
+   * (a) usar uma variável DECLARADA no script e (b) resolver para um arquivo real.
+   */
+  test('todo script invocado pelo selo existe de fato a partir da variável usada', () => {
+    const seal = fs.readFileSync(path.join(ROOT, 'scripts/governance/seal-release.sh'), 'utf8');
+    const declared = new Set(
+      [...seal.matchAll(/^\s*(?:readonly\s+|export\s+)?([A-Z_][A-Z0-9_]*)=/gm)].map((m) => m[1]),
+    );
+    const invocations = [...seal.matchAll(/node\s+"\$([A-Z_][A-Z0-9_]*)(\/[^"\s]+)"/g)];
+    expect(invocations.length).toBeGreaterThan(0);
+    const problems = [];
+    for (const [, variable, suffix] of invocations) {
+      if (!declared.has(variable)) {
+        problems.push(`$${variable} não é declarada no selo (${invocations.length} invocações verificadas)`);
+        continue;
+      }
+      const abs = path.join(ROOT, suffix);
+      if (!fs.existsSync(abs)) problems.push(`script inexistente: $${variable}${suffix}`);
+    }
+    expect(problems).toEqual([]);
+  });
 });

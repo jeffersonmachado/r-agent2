@@ -181,7 +181,7 @@ preflight() {
   # a mesma chamada é repetida no início do `consolidate`, porque o ciclo leva
   # ~1,5 h e a evidência (TTL 48 h) pode vencer no MEIO dele.
   local qa_state qa_rc
-  qa_state="$(node "$PROJECT_ROOT/scripts/governance/qa-waves-scheduled-ttl-preflight.js" 2>/dev/null)"
+  qa_state="$(node "$ROOT/scripts/governance/qa-waves-scheduled-ttl-preflight.js" 2>/dev/null)"
   qa_rc=$?
 
   if [ "$qa_rc" = "0" ] && [ "$qa_state" = "OK" ]; then
@@ -510,7 +510,7 @@ phase_consolidate() {
   # Reavaliar aqui troca 25 min de falha tardia por falha imediata com o remédio,
   # sem afrouxar nada: TTL vencido ⇒ o ciclo PARA.
   local consolidate_qa_state consolidate_qa_rc
-  consolidate_qa_state="$(node "$PROJECT_ROOT/scripts/governance/qa-waves-scheduled-ttl-preflight.js" 2>&1)"
+  consolidate_qa_state="$(node "$ROOT/scripts/governance/qa-waves-scheduled-ttl-preflight.js" 2>&1)"
   consolidate_qa_rc=$?
   if [ "$consolidate_qa_rc" != "0" ]; then
     warn "smoke contínuo das QA Waves FORA da validade no início do consolidate"
