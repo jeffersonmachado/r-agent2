@@ -248,6 +248,31 @@ phase_prepare() {
     warn "RUN_SOURCE_DRIFT detectado — criando run governado do fingerprint atual"
     node scripts/governance/create-governed-run.js > "$LOG_DIR/create-run.log" 2>&1 || \
       fail "falha ao criar run governado" "$LOG_DIR/create-run.log" prepare
+    # DEFEITO MEDIDO (2026-10-06): o refresh acima roda ANTES de o run existir.
+    # O proof set do scorecard exige evidência SAME_RUN, então o relatório
+    # renascia com generatedAt < run.startedAt e a fase `candidate` reprovava em
+    # `master_scorecard: SCORECARD_EVIDENCE_PROOF_INVALID - STALE_ARTIFACT
+    # (3 violações em 315 provas)` — o tamanho da violação é o nº de requisitos
+    # que declaram esse artefato. O relatório é meta-evidência sobre a release
+    # ENTREGUE (a anterior), mas o CARIMBO tem de estar dentro do run: por isso
+    # ele é regerado aqui, DEPOIS do run nascer, e o frescor é conferido de
+    # forma fail-closed (nunca seguir com evidência pré-run).
+    timeout 900 npm run verify:delivered-release > "$LOG_DIR/verify-post-run.log" 2>&1 || true
+    if ! node -e '
+      const fs=require("fs");
+      try{
+        const r=JSON.parse(fs.readFileSync("governance/.current-run.json","utf8"));
+        const d=JSON.parse(fs.readFileSync("governance/delivered-release-verification-report.json","utf8"));
+        const started=Date.parse(r.startedAt||""), gen=Date.parse(d.generatedAt||"");
+        process.stdout.write(String(gen)+" >= "+String(started)+"\n");
+        process.exit(Number.isFinite(started)&&Number.isFinite(gen)&&gen>=started?0:1);
+      }catch(err){process.stdout.write("erro: "+err.message+"\n");process.exit(1);}
+    ' > "$LOG_DIR/verify-post-run-freshness.log" 2>&1; then
+      warn "delivered-release-verification-report.json continuou PRÉ-RUN após o refresh"
+      cat "$LOG_DIR/verify-post-run-freshness.log" >&2 || true
+      fail "evidência pré-run no run novo (proof set exigiria STALE_ARTIFACT)" "$LOG_DIR/verify-post-run.log" prepare
+    fi
+    ok "delivered-release-verification-report.json regerado DENTRO do run (SAME_RUN)"
     timeout 7200 bash scripts/governance/converge-governance.sh > "$log" 2>&1
     rc=$?
   fi

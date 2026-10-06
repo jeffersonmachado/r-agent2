@@ -578,6 +578,26 @@ describe('verificador offline — contrato da seção temporal (não confia só 
       expect(source).toMatch(/proofCovered/);
       expect(source).toMatch(/TEMPORAL_EVIDENCE_MISSING/);
     });
+
+    test('o selo regera a meta-evidência DENTRO do run novo (nunca pré-run)', () => {
+      // DEFEITO MEDIDO (2026-10-06): o refresh do relatório de verificação rodava
+      // ANTES de o run existir; o proof set exige SAME_RUN e a fase candidate
+      // reprovava com STALE_ARTIFACT (3 violações em 315 provas). A ordem certa é
+      // criar o run e SÓ DEPOIS carimbar a meta-evidência, com frescor conferido.
+      const seal = fs.readFileSync(
+        path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'seal-release.sh'), 'utf8',
+      );
+      const branchStart = seal.indexOf('RUN_SOURCE_DRIFT detectado');
+      expect(branchStart).toBeGreaterThan(-1);
+      const branch = seal.slice(branchStart, seal.indexOf('rc=$?', branchStart));
+      const createIdx = branch.indexOf('create-governed-run.js');
+      const refreshIdx = branch.indexOf('verify:delivered-release');
+      expect(createIdx).toBeGreaterThan(-1);
+      expect(refreshIdx).toBeGreaterThan(createIdx);
+      // E o frescor não pode ser presumido: tem de haver checagem explícita.
+      expect(branch).toMatch(/verify-post-run-freshness\.log/);
+      expect(branch).toMatch(/startedAt/);
+    });
   });
 });
 
