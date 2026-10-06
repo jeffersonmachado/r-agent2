@@ -171,8 +171,21 @@ async function main() {
   // recém-calculada é que define o desfecho (COMPLETED/FAILED). Publicar o scorecard
   // no estado intermediário deixaria o artefato afirmando sucesso enquanto o run
   // registrado já tinha falhado — exatamente a contradição medida em 2026-10-05.
-  const dbStatusAfterDecision = decision.decision === 'AUTONOMOUS_READY' ? 'COMPLETED' : 'FAILED';
-  const statusSync = syncRunContextStatus({ rootDir, targetStatus: dbStatusAfterDecision });
+  //
+  // A FONTE DO DESFECHO É O PRODUTOR DA DECISÃO (`certificationService`), não uma
+  // cópia local da regra: esta linha mantinha `? 'COMPLETED' : 'FAILED'` e gravava
+  // FAILED no PONTEIRO em `PRE_PACKAGE` — onde a pendência do pacote (RAP-052/054) é
+  // esperada. Como `RUN_STATUS_NOT_CERTIFIABLE` reprova o requisito `current-run` de
+  // TODAS as dimensões, o ponteiro em FAILED derrubava o scorecard inteiro (78/78
+  // below10) e o `seal-time-gate` abortava o converge — laço fechado, medido em
+  // 2026-10-06. `decision.runStatus` já traz RUNNING (pré-pacote), FAILED (fase
+  // terminal) ou COMPLETED, decidido no lugar certo.
+  const dbStatusAfterDecision = decision.decision === 'AUTONOMOUS_READY'
+    ? 'COMPLETED'
+    : (decision.runStatus || null);
+  const statusSync = dbStatusAfterDecision
+    ? syncRunContextStatus({ rootDir, targetStatus: dbStatusAfterDecision })
+    : { applied: false, fromStatus: runContext.status, status: runContext.status, skippedReason: 'PHASE_PENDING_NOT_A_TERMINAL_OUTCOME' };
   if (!statusSync.applied && statusSync.skippedReason && statusSync.skippedReason !== 'ALREADY_AT_TARGET') {
     console.warn(`[run-status-sync] não aplicado: ${statusSync.skippedReason}`);
   }

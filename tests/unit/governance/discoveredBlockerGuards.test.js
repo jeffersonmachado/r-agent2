@@ -194,4 +194,32 @@ describe('TTL do smoke contínuo — autoridade única de avaliação', () => {
     }
     expect(problems).toEqual([]);
   });
+
+  // DEFEITO MEDIDO (2026-10-06): o desfecho do run era decidido em DOIS lugares com
+  // a MESMA regra errada (`!== AUTONOMOUS_READY ? FAILED`), e corrigir só o produtor
+  // da decisão não bastou — o ponteiro continuava indo para FAILED em PRE_PACKAGE e
+  // derrubava o scorecard inteiro. O desfecho tem UMA autoridade: o produtor da
+  // decisão expõe `runStatus`; qualquer consumidor lê dali.
+  test('o desfecho do run não é reimplementado fora do produtor da decisão', () => {
+    const consumidores = [
+      'scripts/governance/run-persisted-scorecard.js',
+      'scripts/governance/seal-release.sh',
+    ];
+    const problemas = [];
+    for (const rel of consumidores) {
+      const abs = path.join(ROOT, rel);
+      if (!fs.existsSync(abs)) continue;
+      // Comentários fora: o próprio comentário que DOCUMENTA o defeito cita a regra
+      // errada entre crases e dispararia o guard (falso positivo medido na 1ª versão).
+      const src = fs.readFileSync(abs, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^[ \t]*\/\/.*$/gm, '')
+        .replace(/^[ \t]*#.*$/gm, '');
+      // `? 'COMPLETED' : 'FAILED'` (ou o inverso) = cópia local da regra de desfecho.
+      if (/['"]COMPLETED['"]\s*:\s*['"]FAILED['"]|['"]FAILED['"]\s*:\s*['"]COMPLETED['"]/.test(src)) {
+        problemas.push(`${rel} decide o desfecho do run por conta própria`);
+      }
+    }
+    expect(problemas).toEqual([]);
+  });
 });
