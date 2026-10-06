@@ -1,59 +1,18 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-06T06:59:33.709Z",
-  "runId": "rap-governed-20261006042703759-1e20d067",
-  "sourceFingerprint": "622a00b113dd3a89e1ef985f7dd9485ab7b5ccd336dc662c3dcf779fcc4f6c63",
-  "runStartedAt": "2026-10-06T04:27:03.959Z",
-  "decision": "REUSE",
-  "code": "MESH_REUSE_OK",
-  "detail": "execução canônica GO DESTE run cobre o registry corrente: reexecução suprimida",
+  "generatedAt": "2026-10-06T09:17:37.297Z",
+  "runId": "rap-governed-20261006091118858-d39e9a69",
+  "sourceFingerprint": "8c1e397dbcdd7c8d8879f05cd4a1daabcc555014e162c87d41ad53c9da267f32",
+  "runStartedAt": "2026-10-06T09:11:19.020Z",
+  "decision": "RERUN",
+  "code": "CANONICAL_HISTORY_MISSING",
+  "detail": "nenhuma execução de qa-mesh/meshHistory pertence a rap-governed-20261006091118858-d39e9a69",
   "registryScenarios": 144,
   "evidence": {
     "goNoGoGeneratedAt": "2026-10-06T06:41:52.817Z",
     "goNoGoStatus": "GO",
-    "historyEntry": "mesh-2026-10-06T06-08-09-620Z.json"
+    "historyEntry": null
   },
-  "checks": [
-    {
-      "code": "SAME_RUN_ID",
-      "ok": true,
-      "detail": "runId=rap-governed-20261006042703759-1e20d067"
-    },
-    {
-      "code": "SAME_SOURCE",
-      "ok": true,
-      "detail": "sourceFingerprint=622a00b113dd…"
-    },
-    {
-      "code": "RELEASE_GATE_BOUND",
-      "ok": true,
-      "detail": "qa-mesh/release-gate-report.json do run corrente"
-    },
-    {
-      "code": "CANONICAL_EXECUTION",
-      "ok": true,
-      "detail": "executionOrigin=pipeline"
-    },
-    {
-      "code": "CANONICAL_HISTORY",
-      "ok": true,
-      "detail": "qa-mesh/meshHistory/mesh-2026-10-06T06-08-09-620Z.json"
-    },
-    {
-      "code": "DECISION_GO",
-      "ok": true,
-      "detail": "status=GO"
-    },
-    {
-      "code": "SAME_RUN_TIME",
-      "ok": true,
-      "detail": "generatedAt=2026-10-06T06:41:52.817Z"
-    },
-    {
-      "code": "REGISTRY_COVERED",
-      "ok": true,
-      "detail": "144 cenários cobertos pelo run"
-    }
-  ]
+  "checks": []
 }
