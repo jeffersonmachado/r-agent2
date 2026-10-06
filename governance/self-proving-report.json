@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-05T22:40:00.721Z",
+  "generatedAt": "2026-10-06T11:14:20.774Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20261005-192600.payload.zip",
+  "artifact": "r-agent2-20261006-080038.payload.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/release/r-agent2-20261005-192600.payload.zip",
+  "packageInsideDistPath": "dist/release/r-agent2-20261006-080038.payload.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/release/r-agent2-20261005-192600.manifest.json",
+  "manifestInsideDistPath": "dist/release/r-agent2-20261006-080038.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "87e785fd5d620456b188cf85860aa951",
+    "chainRoot": "1e93ac221d09abf786825097dc5b3654",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
   },
   "replayValidation": {
     "pass": true,
@@ -82,8 +82,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "33cf8d29d69b3a4ed514aeb283fd6db952f3b4644a728141361fd98a3d975c74",
-    "zipName": "r-agent2-20261005-192600.payload.zip",
+    "sidecarHash": "f936d7fbbc4f0a497e2b62a1dcdf752dbaee7e174a2a49ec893e8bc504d6693f",
+    "zipName": "r-agent2-20261006-080038.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -126,7 +126,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20261005-192600.payload.zip",
+    "zipName": "r-agent2-20261006-080038.payload.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -137,7 +137,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "87e785fd5d620456b188cf85860aa951",
+    "chainRoot": "1e93ac221d09abf786825097dc5b3654",
     "signatures": [
       {
         "name": "governance.sig",
@@ -186,12 +186,12 @@
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
   },
   "attestationIntegrity": {
     "pass": true,
     "attestationValid": true,
-    "finalDecision": "AUTONOMOUS_READY_GO",
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "selfContained": false
   },
   "tamperDetection": {
@@ -213,16 +213,16 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "33cf8d29d69b3a4ed514aeb283fd6db952f3b4644a728141361fd98a3d975c74",
-    "zipName": "r-agent2-20261005-192600.payload.zip",
+    "sidecarHash": "f936d7fbbc4f0a497e2b62a1dcdf752dbaee7e174a2a49ec893e8bc504d6693f",
+    "zipName": "r-agent2-20261006-080038.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20261005-192600.payload.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20261006-080038.payload.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261005204741332-4e6cda2c",
-  "sourceFingerprint": "b4a8e99c54a28a705c4a8e1738d38e6581afe70554939c2fed77977d92c45d81",
-  "gitCommit": "7cd39c6a812437aeb202e728742c2f9768e5f8fb",
-  "gitTree": "46b9af209fc1f436738e32286c2b09dddb80bd62"
+  "runId": "rap-governed-20261006091118858-d39e9a69",
+  "sourceFingerprint": "8c1e397dbcdd7c8d8879f05cd4a1daabcc555014e162c87d41ad53c9da267f32",
+  "gitCommit": "b31a5feb7f6c9a9f57f6c7b5ad135d922865382a",
+  "gitTree": "be2fadebb5550792810505e9d398d433c2ae7527"
 }

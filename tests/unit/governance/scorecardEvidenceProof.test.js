@@ -234,4 +234,53 @@ describe('SCORECARD_EVIDENCE_PROOF', () => {
       });
     });
   });
+
+  // DEFEITO MEDIDO (2026-10-06, ciclo do selo): o `verify:delivered-release` grava o
+  // SEU PRÓPRIO resultado em `governance/delivered-release-verification-report.json`,
+  // que é evidência de RAP-055/RAP-056. Uma verificação que falhou gravou NO_GO ali e
+  // o verifier passou a reprovar por causa do próprio resultado anterior: laço fechado,
+  // em que repetir o ciclo reproduzia o mesmo estado. Auto-referência não é prova.
+  describe('4. auto-referência: o veredito do verifier não é prova de si mesmo', () => {
+    const SELF_PATH = 'governance/delivered-release-verification-report.json';
+
+    function withSelfProducedRoot(run) {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'scorecard-self-'));
+      fs.mkdirSync(path.join(root, 'governance'), { recursive: true });
+      fs.writeFileSync(path.join(root, SELF_PATH), JSON.stringify({
+        status: 'DELIVERED_RELEASE_NO_GO',
+        finalDecision: 'NO_GO',
+        generatedAt: '2026-10-05T13:00:00.000Z',
+        runId: RUN_ID,
+        sourceFingerprint: 'b'.repeat(64),
+      }, null, 2));
+      try {
+        return run(root);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+
+    test('o próprio resultado do verifier NÃO veta — e continua auditável', () => {
+      withSelfProducedRoot((root) => {
+        const proof = build(root, { registry: fakeRegistry(SELF_PATH), scorecard: fakeScorecard('INVALID') });
+        const record = proof.records[0];
+        expect(record.selfProduced).toBe(true);
+        // Nada é apagado: o resultado real e o hash continuam no proof set.
+        expect(record.result).toBe('INVALID');
+        expect(record.sha256).toBeTruthy();
+        // O que deixa de existir é o veto circular.
+        expect(record.resultAccepted).toBe(true);
+        expect(assessScorecardEvidenceProof(proof).violations).toEqual([]);
+      });
+    });
+
+    test('qualquer OUTRO artefato com o mesmo veredito continua vetando (sem brecha)', () => {
+      withTempRoot((root) => {
+        const proof = build(root, { scorecard: fakeScorecard('INVALID') });
+        expect(proof.records[0].selfProduced).toBe(false);
+        expect(assessScorecardEvidenceProof(proof).violations.map((v) => v.code))
+          .toContain('SCORECARD_EVIDENCE_NOT_ACCEPTED');
+      });
+    });
+  });
 });

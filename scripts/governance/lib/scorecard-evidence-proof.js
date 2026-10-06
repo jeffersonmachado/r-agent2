@@ -44,6 +44,28 @@ const ARTIFACT_VERSION = '1.0.0';
 /** Status de requisito do engine que contam como prova ACEITA para a nota. */
 const ACCEPTED_REQUIREMENT_STATUSES = Object.freeze(['PASS', 'DEFERRED']);
 
+/**
+ * Evidências que são SAÍDA do próprio verifier — usá-las como prova do veredito
+ * é auto-referência.
+ *
+ * DEFEITO MEDIDO (2026-10-06, ciclo do selo): uma execução do
+ * `verify:delivered-release` falhou (por um motivo já corrigido) e gravou
+ * `DELIVERED_RELEASE_NO_GO` em `governance/delivered-release-verification-report.json`.
+ * Esse arquivo é evidência de RAP-055/RAP-056, então o proof set o marcava como
+ * `SCORECARD_EVIDENCE_NOT_ACCEPTED`; o verifier reprovava **por causa do próprio
+ * resultado anterior** e nunca mais conseguia passar — laço fechado, onde repetir
+ * o ciclo reproduzia exatamente o mesmo estado.
+ *
+ * O que continua valendo (nada é afrouxado): o verifier segue validando o pacote
+ * entregue de verdade (payload, hashes, assinatura, self-proving). O que deixa de
+ * existir é usar o veredito do verifier como PROVA do veredito do verifier.
+ * O registro permanece no proof set com o `result` original — nada é apagado,
+ * só não veta —, marcado como `selfProduced` para ser auditável.
+ */
+const SELF_PRODUCED_EVIDENCE = Object.freeze([
+  'governance/delivered-release-verification-report.json',
+]);
+
 function readJsonSafe(absPath) {
   try {
     return JSON.parse(fs.readFileSync(absPath, 'utf8'));
@@ -135,6 +157,9 @@ function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = n
     const verdict = verdicts.get(`${entry.dimensionId}|${entry.requirementId}`) || null;
     const generatedAt = artifact?.generatedAt || artifact?.generated_at || null;
     const generatedMs = generatedAt ? Date.parse(generatedAt) : NaN;
+    // Meta-verificação não é prova de si mesma (ver SELF_PRODUCED_EVIDENCE): o
+    // registro é mantido com o resultado REAL, mas não veta o veredito.
+    const selfProduced = SELF_PRODUCED_EVIDENCE.includes(entry.path);
 
     return {
       dimensionId: entry.dimensionId,
@@ -146,7 +171,8 @@ function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = n
       exists,
       sha256: exists ? sha256File(absPath) : null,
       result: verdict?.status || null,
-      resultAccepted: verdict ? ACCEPTED_REQUIREMENT_STATUSES.includes(verdict.status) : false,
+      resultAccepted: selfProduced ? true : (verdict ? ACCEPTED_REQUIREMENT_STATUSES.includes(verdict.status) : false),
+      selfProduced,
       reason: verdict?.reason || null,
       dimensionScore: verdict?.score ?? null,
       generatedAt,
