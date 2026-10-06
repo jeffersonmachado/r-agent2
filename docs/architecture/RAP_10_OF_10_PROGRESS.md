@@ -9,7 +9,7 @@
 - Open blockers: 0
 - Mandatory requirement failures: 5
 - Stale requirements/artifacts: 0
-- Invalid requirements/artifacts: 3
+- Invalid requirements/artifacts: 0
 - Insufficient evidence: 0
 
 ## Ordem de dependência
@@ -25,6 +25,6 @@
 
 | ID | Dimensão | Score | Status | Primeiro gap factual |
 |---|---|---:|---|---|
-| RAP-055 | Delivered Release Self-Verification | 6/10 | INVALID | GAP-RAP-055-004: ARTIFACT_RUN_ID_MISSING |
-| RAP-056 | Source/Proof/Manifest Equality | 6/10 | INVALID | GAP-RAP-056-004: ARTIFACT_RUN_ID_MISSING |
+| RAP-055 | Delivered Release Self-Verification | 6/10 | IN_PROGRESS | GAP-RAP-055-004: MANDATORY_GATE_NO_GO |
+| RAP-056 | Source/Proof/Manifest Equality | 6/10 | IN_PROGRESS | GAP-RAP-056-004: MANDATORY_GATE_NO_GO |
 
