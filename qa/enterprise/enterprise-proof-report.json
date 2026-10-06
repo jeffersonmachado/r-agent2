@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-06T03:35:15.945Z",
+  "generatedAt": "2026-10-06T03:52:10.112Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "rpa",
@@ -11,21 +11,21 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1791257699447 callId=call-voice-tts-asr-1791257699447 selftest=FAIL realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1791258719936 callId=call-voice-tts-asr-1791258719936 selftest=FAIL realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
       "name": "l04",
       "ok": true,
       "status": 0,
-      "stdout": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json\n[Config] Configuração do Redis válida: redis://localhost:6379\n[2026-10-06T03:35:12.446Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:35:12.577Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-06T03:35:12.619Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:35:12.635Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-06T03:35:13.258Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:35:13.322Z] [INFO] [PBX CallEvents] scan concluído\n{\n  \"consumer\": \"pbx_cdr_l04_1791257713258\",\n  \"scanned\": 1,\n  \"emitted\": 3,\n  \"cursor\": {\n    \"calldate\": \"2026-10-06T03:36:12.577Z\",\n    \"cdrId\": \"cdr-l04-1791257711727\"\n  }\n}\n[2026-10-06T03:35:13.442Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)\n[2026-10-06T03:35:13.444Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)\n{\n  \"totalTickets\": 0,\n  \"byStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"byQueue\": 0,\n  \"queueDetails\": {}\n}\n[2026-10-06T03:35:13.444Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:\n{\n  \"totalTickets\": 0,\n  \"ticketsByStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"ticketsByQueue\": {}\n}\n[2026-10-06T03:35:13.536Z] [DEBUG] 🔍 getAiProviderForTenant: Buscando provider\n{\n  \"tenantId\": \"debug-e2e-engineering-router\"\n}\n[2026-10-06T03:35:13.584Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-06T03:35:13.619Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:35:13.627Z] [INFO] [Sequelize] Conexão fechada\n[pbx-call-events-runtime-smoke] OK auth=rpa_scoped flowId=flow-pbx-call-events-runtime-smoke-1791257711727 executionId=fx-1791257713530-da8eebe0940b latencyMs=3 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
-      "stderr": "[2026-10-06T03:35:13.537Z] [WARN] ⚠️ getAiProviderForTenant: Nenhum provider registrado\n{\n  \"tenantId\": \"debug-e2e-engineering-router\"\n}"
+      "stdout": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json\n[Config] Configuração do Redis válida: redis://localhost:6379\n[2026-10-06T03:52:04.705Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:52:04.798Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-06T03:52:04.824Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:52:04.833Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-06T03:52:05.100Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:52:05.173Z] [INFO] [PBX CallEvents] scan concluído\n{\n  \"consumer\": \"pbx_cdr_l04_1791258725100\",\n  \"scanned\": 1,\n  \"emitted\": 3,\n  \"cursor\": {\n    \"calldate\": \"2026-10-06T03:53:04.798Z\",\n    \"cdrId\": \"cdr-l04-1791258724495\"\n  }\n}\n[2026-10-06T03:52:05.294Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)\n[2026-10-06T03:52:05.294Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)\n{\n  \"totalTickets\": 0,\n  \"byStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"byQueue\": 0,\n  \"queueDetails\": {}\n}\n[2026-10-06T03:52:05.295Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:\n{\n  \"totalTickets\": 0,\n  \"ticketsByStatus\": {\n    \"waiting\": 0,\n    \"in_progress\": 0,\n    \"closed\": 0\n  },\n  \"ticketsByQueue\": {}\n}\n[2026-10-06T03:52:05.346Z] [DEBUG] 🔍 getAiProviderForTenant: Buscando provider\n{\n  \"tenantId\": \"debug-e2e-engineering-router\"\n}\n[2026-10-06T03:52:05.374Z] [INFO] [Sequelize] Conexão fechada\n[2026-10-06T03:52:05.396Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-10-06T03:52:05.401Z] [INFO] [Sequelize] Conexão fechada\n[pbx-call-events-runtime-smoke] OK auth=rpa_scoped flowId=flow-pbx-call-events-runtime-smoke-1791258724495 executionId=fx-1791258725341-ae441cb3ea07 latencyMs=2 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+      "stderr": "[2026-10-06T03:52:05.346Z] [WARN] ⚠️ getAiProviderForTenant: Nenhum provider registrado\n{\n  \"tenantId\": \"debug-e2e-engineering-router\"\n}"
     },
     {
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1791257714057-xnjvrwp conversation=conv-1791257714080-2763b4e09f20 queue=ux1_smoke_1791257714048 quickReply=qr-1791257714300-lmyvkd26i phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1791258725523-4n51z5p conversation=conv-1791258725538-e3dcd7f1cbda queue=ux1_smoke_1791258725516 quickReply=qr-1791258729125-1ksu0ahe1 phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
