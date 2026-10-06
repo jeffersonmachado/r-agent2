@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-05T22:36:58.802Z",
-  "runId": "rap-governed-20261005204741332-4e6cda2c",
-  "sourceFingerprint": "b4a8e99c54a28a705c4a8e1738d38e6581afe70554939c2fed77977d92c45d81",
+  "generatedAt": "2026-10-06T06:50:37.472Z",
+  "runId": "rap-governed-20261006042703759-1e20d067",
+  "sourceFingerprint": "622a00b113dd3a89e1ef985f7dd9485ab7b5ccd336dc662c3dcf779fcc4f6c63",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
   "engine": "report-contamination-cleaner/v3",
@@ -14,9 +14,70 @@
   "totalContaminations": 0,
   "criticalCount": 0,
   "highCount": 0,
-  "pendingPhaseCount": 0,
-  "pendingPhase": [],
-  "currentRunId": "rap-governed-20261005204741332-4e6cda2c",
+  "pendingPhaseCount": 5,
+  "pendingPhase": [
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005204741332-4e6cda2c",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/final-consistency-report.json",
+      "expected": "rap-governed-20261006042703759-1e20d067",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005204741332-4e6cda2c",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/package-integrity-report.json",
+      "expected": "rap-governed-20261006042703759-1e20d067",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005204741332-4e6cda2c",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/replay-integrity-report.json",
+      "expected": "rap-governed-20261006042703759-1e20d067",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005204741332-4e6cda2c",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/self-proving-report.json",
+      "expected": "rap-governed-20261006042703759-1e20d067",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    },
+    {
+      "path": "runId",
+      "value": "rap-governed-20261005204741332-4e6cda2c",
+      "term": "PENDING_PHASE_FOREIGN_RUN",
+      "isDecisionField": true,
+      "type": "PENDING_PHASE_FOREIGN_RUN",
+      "severity": "INFO",
+      "file": "governance/tamper-detection-report.json",
+      "expected": "rap-governed-20261006042703759-1e20d067",
+      "producerPhase": "FINAL",
+      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
+    }
+  ],
+  "currentRunId": "rap-governed-20261006042703759-1e20d067",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",
@@ -24,6 +85,5 @@
   ],
   "contaminations": [],
   "crossIssues": [],
-  "summary": "Nenhuma contaminação detectada em 50 arquivos.",
-  "reboundAt": "2026-10-05T22:38:00.332Z"
+  "summary": "Nenhuma contaminação detectada em 50 arquivos."
 }
