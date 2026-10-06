@@ -1,8 +1,98 @@
 {
-  "generatedAt": "2026-10-06T01:56:16.511Z",
-  "status": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-10-06T03:35:22.635Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-environment_missing-business-core-biz-academy",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-academy"
+        ],
+        "sampleError": "Tutor não respondeu com conteúdo disponível (reason=ai_unavailable, available=false)"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-business-core-biz-flows-editor",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-flows-editor"
+        ],
+        "sampleError": "fetch failed (cause: UND_ERR_HEADERS_TIMEOUT)"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-functional_failure-business-core-biz-projects",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-projects"
+        ],
+        "sampleError": "500 Internal Server Error: Erro ao criar projeto"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-environment_missing-business-core-biz-rag-segregation",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-rag-segregation"
+        ],
+        "sampleError": "Documento não foi indexado dentro do tempo esperado (estado final: indexStatus=failed chunks=0 indexed=false erro=RAG_INDEX_FAILED::RAG service error: 503 {\"error\":\"service_misconfigured\",\"message\":\"Autenticação interna do RAG não configurada\"})"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "sourceFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
+  "blocking": 5,
   "nonBlocking": 0
 }

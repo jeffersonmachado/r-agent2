@@ -53,11 +53,11 @@
       "tests/unit/governance/sealResumeReleaseEnvResolution.test.js",
       "tests/unit/governance/releaseSuiteBatchDiagnostics.test.js",
       "tests/unit/governance/temporalEvidenceLineage.test.js",
-    "tests/unit/governance/meshReuseDecision.test.js",
-    "tests/unit/governance/contaminationPhaseAwareness.test.js",
-    "tests/unit/governance/discoveredBlockerGuards.test.js",
-    "tests/unit/governance/requiredTestReportPathResolution.test.js",
-    "tests/unit/governance/waveTransportRetry.test.js",
+      "tests/unit/governance/meshReuseDecision.test.js",
+      "tests/unit/governance/contaminationPhaseAwareness.test.js",
+      "tests/unit/governance/discoveredBlockerGuards.test.js",
+      "tests/unit/governance/requiredTestReportPathResolution.test.js",
+      "tests/unit/governance/waveTransportRetry.test.js",
       "tests/unit/governance/certificationCoherence.test.js",
       "tests/unit/governance/runStatusCertifiability.test.js",
       "tests/unit/governance/scorecardEvidenceProof.test.js",
@@ -96,6 +96,18 @@
           "tests/integration/engineeringMissionCrashRecoveryE2E.test.js",
           "tests/integration/engineeringMissionDistributedLease.test.js",
           "tests/integration/engineeringMissionSourceE2E.test.js"
+        ]
+      },
+      {
+        "id": "BUG_LOOP_NATURAL_PATH_AND_MISSION_GOVERNANCE",
+        "reason": "MEDIDO 2026-10-06 no RUN A: o lote 4 do runner autoritativo saiu com exit=1 SEM produzir relatorio do Jest (transporte ausente, bytes=0) e as 6 suites ficaram NOT_EXECUTED, abortando o V2 seal no passo SUITE_EXECUTION. As MESMAS 6 suites, executadas ISOLADAS, passam: 6/6 suites, 82 testes, 50s, exit=0. O lote contem engineeringBugLoopNaturalPathE2E, que sobe worker + banco + git reais (~46s por si so); sob concorrencia com os outros lotes o processo do Jest morre. Uma por lote remove a contencao sem afrouxar assertiva nenhuma.",
+        "suites": [
+          "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+          "tests/unit/engineeringMission/governanceApprovalLifecycle.test.js",
+          "tests/unit/engineeringMission/governanceBaseline.test.js",
+          "tests/unit/engineeringMission/governanceChangeRuntimeAuthorization.test.js",
+          "tests/unit/engineeringMission/missionSource.test.js",
+          "tests/unit/engineeringMission/selfModificationRbac.test.js"
         ]
       }
     ]
