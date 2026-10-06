@@ -598,6 +598,19 @@ describe('verificador offline — contrato da seção temporal (não confia só 
       expect(branch).toMatch(/verify-post-run-freshness\.log/);
       expect(branch).toMatch(/startedAt/);
     });
+
+    test('artefato obrigatório ILEGÍVEL reprova (nunca skip silencioso)', () => {
+      // DEFEITO MEDIDO (2026-10-06, ataque adversarial): um byte trocado num
+      // relatório declarado PRESENTE no payload deixava a seção temporal dizer
+      // 'OK:32' — ela contava um a menos e seguia, porque o parse falhava e o
+      // catch cego fazia continue. Era o mesmo skip silencioso que a seção diz
+      // ter eliminado. Agora: presente + ilegível ⇒ violação explícita.
+      const source = verifierSource();
+      expect(source).toMatch(/TEMPORAL_ARTIFACT_UNREADABLE/);
+      expect(source).toMatch(/TEMPORAL_ARTIFACT_NOT_OBJECT/);
+      // E o catch cego não pode voltar.
+      expect(source).not.toMatch(/catch\(_\)\{continue;\}/);
+    });
   });
 });
 

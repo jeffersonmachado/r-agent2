@@ -546,8 +546,14 @@ for(const rel of targets){
     if(mandatory.has(rel)&&!proofCovered.has(rel))violations.push('TEMPORAL_EVIDENCE_MISSING:'+rel);
     continue;
   }
-  let a;try{a=JSON.parse(fs.readFileSync(abs,'utf8'));}catch(_){continue;}
-  if(!a||typeof a!=='object')continue;
+  // DEFEITO MEDIDO (2026-10-06, ataque adversarial): artefato PRESENTE e ILEGÍVEL
+  // era silenciosamente pulado por um catch cego — o mesmo padrão de skip
+  // silencioso que esta seção existe para eliminar. Um byte trocado num relatório
+  // declarado deixava a seção dizer OK:32 (contava um a menos) sem reprovar.
+  let a;
+  try{a=JSON.parse(fs.readFileSync(abs,'utf8'));}
+  catch(_){violations.push('TEMPORAL_ARTIFACT_UNREADABLE:'+rel);continue;}
+  if(!a||typeof a!=='object'){violations.push('TEMPORAL_ARTIFACT_NOT_OBJECT:'+rel);continue;}
   scanned++;
   const gen=a.generatedAt?Date.parse(a.generatedAt):NaN;
   if(!Number.isFinite(gen)){violations.push('TEMPORAL_GENERATED_AT_MISSING:'+rel);continue;}
