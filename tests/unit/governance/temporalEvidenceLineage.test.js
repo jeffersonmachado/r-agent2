@@ -538,6 +538,47 @@ describe('verificador offline — contrato da seção temporal (não confia só 
     expect(verifierSource()).toMatch(/rap-governed-/);
     expect(verifierSource()).toMatch(/runStartedAt=m\.runStartedAt/);
   });
+
+  // ── DEFEITOS MEDIDOS (2026-10-06) no envelope final ────────────────────────
+  // O passo `check-dist-clean` reprovava com o verifier v2 e a seção temporal
+  // ficava inutilizável. Duas causas independentes, ambas silenciosas.
+  describe('robustez do próprio verificador (defeitos medidos 2026-10-06)', () => {
+    test('nenhum crase fora de comentário bash (bash executa o texto como comando)', () => {
+      // Regra exata e simples: crase em QUALQUER linha de código é perigosa. Em
+      // comentário bash (linha iniciada por #) ela é inerte. Fora disso o bash
+      // trata como substituição de comando MESMO entre aspas duplas — foi assim
+      // que um comentário JS com crases dentro do bloco node da seção 9 fez o
+      // bash executar 'continue' ('significativo apenas em um loop') e mutar o
+      // JS antes de o node recebê-lo, matando a checagem temporal.
+      const offenders = verifierSource()
+        .split('\n')
+        .map((line, index) => ({ line, number: index + 1 }))
+        .filter((entry) => entry.line.includes('`'))
+        .filter((entry) => !entry.line.trimStart().startsWith('#'))
+        .map((entry) => `${entry.number}: ${entry.line.trim().slice(0, 90)}`);
+      expect(offenders).toEqual([]);
+    });
+
+    test('a lista MINIMA é satisfazível: o que o pacote não carrega é provado offline', () => {
+      const source = verifierSource();
+      const minimumMatch = source.match(/const MINIMUM=\[([\s\S]*?)\];/);
+      expect(minimumMatch).not.toBeNull();
+      const minimum = [...minimumMatch[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+      expect(minimum.length).toBeGreaterThan(0);
+
+      // generate-zip.sh exclui '/reports/' da raiz por decisão de projeto (saída
+      // gerada) — exigir presença física de reports/* no payload é IMPOSSÍVEL.
+      const zipSource = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'scripts', 'generate-zip.sh'), 'utf8');
+      expect(zipSource).toContain("'/reports/'");
+
+      const notShipped = minimum.filter((rel) => rel.startsWith('reports/'));
+      expect(notShipped.length).toBeGreaterThan(0);
+      // Para cada um deles o verificador tem de exigir cobertura pelo PROOF SET —
+      // nunca aceitar em silêncio.
+      expect(source).toMatch(/proofCovered/);
+      expect(source).toMatch(/TEMPORAL_EVIDENCE_MISSING/);
+    });
+  });
 });
 
 describe('propagação — Readiness e Final Governance dependem do gate temporal', () => {

@@ -516,16 +516,34 @@ if(fs.existsSync(manifestPath)){try{const m=JSON.parse(fs.readFileSync(manifestP
 if(!runStartedAt&&runId){const m=/^rap-governed-(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{3})/.exec(runId);if(m){runStartedAt=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6],+m[7])).toISOString();}}
 if(!runStartedAt){process.stdout.write('TEMPORAL_RUN_START_UNKNOWN');process.exit(0);}
 const startedMs=Date.parse(runStartedAt);
-// Artefatos canônicos que PRECISAM existir no payload. Ausência aqui era
-// silenciada pelo `continue` abaixo — o mesmo padrão que deixava o scorecard
-// referenciar 41 evidências sem prova e ainda passar.
+// Artefatos canônicos que PRECISAM ser verificáveis no artefato entregue.
+// Ausência aqui era silenciada pelo 'continue' abaixo — o mesmo padrão que
+// deixava o scorecard referenciar 41 evidências sem prova e ainda passar.
+//
+// ATENÇÃO (defeito medido 2026-10-06): este bloco vive dentro de node -e com
+// string entre aspas duplas. NUNCA usar crase em comentário aqui: dentro da
+// substituição de comando o bash ainda trata crase como substituição, executa o
+// texto como comando (erro 'continue: significativo apenas em um loop') e MUTA o
+// código JS antes de o node recebê-lo. Foi exatamente o que aconteceu nesta linha.
 const mandatory=new Set([...MINIMUM]);
+// Cobertura alternativa para o que o PACOTE não carrega por decisão de projeto:
+// generate-zip.sh exclui '/reports/' da raiz desde 2026-08-22 (é saída gerada).
+// Exigir presença FÍSICA dos dois relatórios de reports/ era condição impossível
+// (medido: 0 entradas reports/ no ZIP entregue). Isto NÃO afrouxa: o artefato tem
+// de estar no payload OU coberto pelo proof set da seção 10 — que exige hash,
+// classificação autoritativa, temporalidade SAME_RUN e veredito aceito.
+const proofCovered=new Set(((()=>{
+  try{
+    const ps=JSON.parse(fs.readFileSync(manifestPath,'utf8')).scorecardEvidence;
+    return ((ps&&ps.records)||[]).map((r)=>r.path);
+  }catch(_){return [];}
+})()));
 const targets=[...new Set([...MINIMUM,...declared,...scorePaths])];
 const violations=[];let scanned=0;
 for(const rel of targets){
   const abs=path.join(root,rel);
   if(!fs.existsSync(abs)){
-    if(mandatory.has(rel))violations.push('TEMPORAL_EVIDENCE_MISSING:'+rel);
+    if(mandatory.has(rel)&&!proofCovered.has(rel))violations.push('TEMPORAL_EVIDENCE_MISSING:'+rel);
     continue;
   }
   let a;try{a=JSON.parse(fs.readFileSync(abs,'utf8'));}catch(_){continue;}
