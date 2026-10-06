@@ -1,10 +1,10 @@
 # Platform Status
 
-- Generated at: 2026-10-05T23:30:17.094Z
+- Generated at: 2026-10-06T00:02:52.750Z
 - Canonical mesh execution: mesh-2026-10-05T21-27-41-771Z
 - Canonical mesh decision: GO
-- Readiness decision: AUTONOMOUS_READY_GO
-- Readiness score: 91
+- Readiness decision: NO_GO:BLOCKING_GAPS
+- Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
 - Vertical coverage: 100%
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Sem bloqueadores ativos.
+- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
