@@ -43,6 +43,17 @@ const TEST_ACTORS = Object.freeze([
 const TEST_ACTOR_PREFIXES = Object.freeze(['jest']);
 
 /**
+ * Atores que criam MISSÕES de teste mas não seguem o prefixo `jest`. Nomeados um a um
+ * porque cada um é uma suíte real do repositório (medido no banco em 2026-10-06).
+ */
+const TEST_MISSION_ACTORS = Object.freeze([
+  'timeout-architecture-e2e',
+  'verify-mission-crash-recovery',
+  'verify-real-task-recovery',
+  'jest-governance',
+]);
+
+/**
  * Remove findings (e seus eventos) criados por atores de teste, MAIS os ÓRFÃOS de
  * missão de teste.
  *
@@ -86,12 +97,50 @@ async function purgeTestFindings({ actors = TEST_ACTORS, prefixes = TEST_ACTOR_P
     })
     : [];
 
+  // Findings de MISSÕES DE TESTE — a poluição maior, e a que mais degrada o sweep.
+  //
+  // MEDIDO 2026-10-06: o banco tinha 766 missões acumuladas (jest-review=279,
+  // timeout-architecture-e2e=150, jest-recovery=84, jest-crash-recovery=78, jest-natural=76,
+  // verify-*=82, ...) e 118 findings pendentes ligados a elas (111 SUSPECTED). Todas as
+  // missões de teste terminam em estado não-executável e SEM lease ativo quando o processo
+  // morre no meio, mas o finding do sistema (`SYSTEM:MISSION`, que o purge não pode apagar
+  // por ATOR) sobrevive apontando para elas. Como `runBugLoopSweep` é GLOBAL, cada suíte do
+  // laço tentava reprocessar esse resíduo — exatamente o defeito que este helper existe para
+  // impedir, agora numa camada que ele não olhava.
+  //
+  // Critério conservador: só missões AUTORADAS POR ATOR DE TESTE e SEM lease ativo. Nunca
+  // toca missão de produção, nem missão em execução (uma missão com lease vivo pode estar
+  // trabalhando agora).
+  const testMissionOwners = [...actors, ...TEST_MISSION_ACTORS];
+  const Op = require('sequelize').Op;
+  const testMissions = await Mission.findAll({
+    where: {
+      [Op.and]: [
+        {
+          [Op.or]: [
+            { created_by: testMissionOwners },
+            ...prefixes.map((prefix) => ({ created_by: { [Op.like]: `${prefix}%` } })),
+          ],
+        },
+        { [Op.or]: [{ lease_token: null }, { lease_expires_at: null }, { lease_expires_at: { [Op.lt]: new Date() } }] },
+      ],
+    },
+    attributes: ['id'],
+  });
+  const testMissionIds = testMissions.map((row) => row.get('id'));
+  const missionFindings = testMissionIds.length
+    ? await Finding.findAll({ where: { mission_id: testMissionIds }, attributes: ['id'] })
+    : [];
+
   const ids = [...new Set([
     ...byActor.map((row) => row.get('id')),
     ...prefixed.map((row) => row.get('id')),
     ...orphanIds,
+    ...missionFindings.map((row) => row.get('id')),
   ])];
-  if (ids.length === 0) return { removed: 0, eventsRemoved: 0, orphaned: 0, actors: [...actors] };
+  if (ids.length === 0) {
+    return { removed: 0, eventsRemoved: 0, orphaned: 0, testMissions: testMissionIds.length, actors: [...actors] };
+  }
 
   // LOTES + FAIL-LOUD. O código anterior fazia UM destroy de eventos com `.catch(() => 0)`,
   // que ENGOLIA a falha: com eventos demais a deleção não acontecia, o destroy dos findings
@@ -106,7 +155,7 @@ async function purgeTestFindings({ actors = TEST_ACTORS, prefixes = TEST_ACTOR_P
     eventsRemoved += await Event.destroy({ where: { finding_id: slice } });
     removed += await Finding.destroy({ where: { id: slice } });
   }
-  return { removed, eventsRemoved, orphaned: orphanIds.length, actors: [...actors] };
+  return { removed, eventsRemoved, orphaned: orphanIds.length, testMissions: testMissionIds.length, actors: [...actors] };
 }
 
-module.exports = { purgeTestFindings, TEST_ACTORS, TEST_ACTOR_PREFIXES };
+module.exports = { purgeTestFindings, TEST_ACTORS, TEST_ACTOR_PREFIXES, TEST_MISSION_ACTORS };
