@@ -41,6 +41,7 @@
       "tests/integration/missionSourceLifecycleE2E.test.js",
       "tests/integration/missionSourceStaleReplanE2E.test.js",
       "tests/integration/bugWorkerFullBootE2E.test.js",
+      "tests/integration/bugWorkerBootFindsRealWorkE2E.test.js",
       "tests/unit/engineeringMission/governanceApprovalLifecycle.test.js",
       "tests/unit/engineeringMission/sourceStaleAutomaticReplan.test.js",
       "tests/unit/engineeringMissionRoutes.test.js",
