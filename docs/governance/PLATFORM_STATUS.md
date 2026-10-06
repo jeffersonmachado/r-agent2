@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-10-06T03:59:13.523Z
+- Generated at: 2026-10-06T04:27:27.095Z
 - Canonical mesh execution: mesh-2026-10-06T02-03-46-227Z
 - Canonical mesh decision: NO_GO
 - Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]
@@ -27,3 +27,4 @@
 - Falha aberta no dominio core [gap-mesh-core-infra_error-business-core-biz-flows-editor]
 - Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-projects]
 - Falha aberta no dominio core [gap-mesh-core-environment_missing-business-core-biz-rag-segregation]
+- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
