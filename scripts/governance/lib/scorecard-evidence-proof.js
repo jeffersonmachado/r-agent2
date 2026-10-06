@@ -41,6 +41,61 @@ const { getModeForArtifact, AUTHORITATIVE_MODES } = require('./runtime-evidence-
 const ARTIFACT_TYPE = 'scorecard-evidence-proof';
 const ARTIFACT_VERSION = '1.0.0';
 
+/**
+ * ARTEFATO PORTADOR. O proof set é embutido no `evidence-manifest.json` (uma só
+ * autoridade — nada de arquivo paralelo), mas isso torna o manifest IMPOSSÍVEL de
+ * ser prova de si mesmo por hash de bytes: o sha256 gravado dentro dele nunca
+ * poderia igualar o sha256 do arquivo que o contém (medido em 2026-10-06: hash
+ * antes do write ≠ hash depois, por construção).
+ *
+ * A saída NÃO é abrir exceção silenciosa nem declarar `embedsOwnHash: true` (que
+ * `governance/release-dag.js` proíbe explicitamente como
+ * RELEASE_SELF_REFERENTIAL_ARTIFACT). A saída é uma PROJEÇÃO AUTO-EXCLUDENTE,
+ * declarada e reproduzível: para este único caminho, o que se vincula é o manifest
+ * SEM a subárvore `scorecardEvidence` — serializado pelo MESMO escritor canônico.
+ * O que sobra (runId, sourceFingerprint, fingerprints, artifacts[] com hash
+ * físico) é exatamente o que a nota precisa que seja conferível, e continua
+ * criptograficamente ligado aos bytes.
+ *
+ * A projeção é verificada pelo MESMO código nos dois lados (produtor e §10 do
+ * verifier offline, que importa este módulo do payload): a autoridade é uma só.
+ */
+const SELF_CARRIER_PATH = 'governance/evidence-manifest.json';
+const BINDING_FILE_BYTES = 'FILE_BYTES';
+const BINDING_SELF_PROJECTION = 'SELF_PROJECTION_EXCLUDING_SCORECARD_EVIDENCE';
+
+/** Serializador canônico: idêntico ao escritor canônico do manifest. */
+function serializeManifest(manifest) {
+  return Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+/** O manifest sem o próprio proof set. */
+function selfCarrierProjection(manifest) {
+  if (!manifest || typeof manifest !== 'object') return null;
+  const { scorecardEvidence: _excluded, ...rest } = manifest;
+  return serializeManifest(rest);
+}
+
+/**
+ * Liga uma evidência aos BYTES que a representam. Para o artefato portador,
+ * projeta o manifest sem o proof set; para todos os demais, o arquivo físico.
+ *
+ * @returns {{sha256:string|null, bindingKind:string|null}}
+ */
+function evidenceBinding({ rootDir, relPath, manifestForCarrier = null } = {}) {
+  if (relPath === SELF_CARRIER_PATH) {
+    const projection = selfCarrierProjection(manifestForCarrier);
+    if (!projection) return { sha256: null, bindingKind: null };
+    return {
+      sha256: crypto.createHash('sha256').update(projection).digest('hex'),
+      bindingKind: BINDING_SELF_PROJECTION,
+    };
+  }
+  const absPath = path.join(rootDir, relPath);
+  if (!fs.existsSync(absPath) || !fs.statSync(absPath).isFile()) return { sha256: null, bindingKind: null };
+  return { sha256: sha256File(absPath), bindingKind: BINDING_FILE_BYTES };
+}
+
 /** Status de requisito do engine que contam como prova ACEITA para a nota. */
 const ACCEPTED_REQUIREMENT_STATUSES = Object.freeze(['PASS', 'DEFERRED']);
 
@@ -135,7 +190,7 @@ function listScorecardEvidence(registry = MASTER_SCORECARD_REGISTRY) {
  *
  * @param {{rootDir:string, runContext?:object, scorecard?:object, registry?:Array, now?:() => Date}} input
  */
-function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = null, registry = MASTER_SCORECARD_REGISTRY, now = () => new Date() } = {}) {
+function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = null, registry = MASTER_SCORECARD_REGISTRY, now = () => new Date(), manifestForCarrier = null } = {}) {
   const runStartedAt = runContext?.startedAt || runContext?.createdAt || null;
   const runId = runContext?.runId || null;
   const sourceFingerprint = runContext?.sourceFingerprint || null;
@@ -146,6 +201,7 @@ function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = n
     const absPath = path.join(rootDir, entry.path);
     const exists = fs.existsSync(absPath) && fs.statSync(absPath).isFile();
     const artifact = exists ? readJsonSafe(absPath) : null;
+    const binding = evidenceBinding({ rootDir, relPath: entry.path, manifestForCarrier });
 
     let classification = null;
     try {
@@ -169,7 +225,8 @@ function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = n
       classification,
       classificationAuthoritative: classification ? AUTHORITATIVE_MODES.includes(classification) : false,
       exists,
-      sha256: exists ? sha256File(absPath) : null,
+      sha256: binding.sha256,
+      bindingKind: binding.bindingKind,
       result: verdict?.status || null,
       resultAccepted: selfProduced ? true : (verdict ? ACCEPTED_REQUIREMENT_STATUSES.includes(verdict.status) : false),
       selfProduced,
@@ -209,6 +266,66 @@ function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = n
 }
 
 /**
+ * MATERIALIZADOR ÚNICO do proof set.
+ *
+ * DEFEITO MEDIDO (2026-10-06, ciclo do selo): o proof set era construído por
+ * `platform-readiness` (dentro do converge) e o `evidence-manifest.json` era
+ * reescrito DEPOIS por `export-governance-artifacts` — que, sendo projeção
+ * DB→JSON, zerava o campo `scorecardEvidence`. Resultado: o verifier do artefato
+ * entregue reprovava com `SCORECARD_EVIDENCE_PROOF_MISSING` (0 provas) e a nota
+ * 78/78 voltava a ser um número a ser acreditado.
+ *
+ * Além do clobber, a ORDEM estava errada: o proof set era gerado antes de ~30
+ * evidências declaradas serem reescritas (projeções/fixpoint do scorecard), então
+ * os sha256 gravados não correspondiam aos bytes finais — o binding offline
+ * (`scripts/verify-enterprise-governance-v2.sh` §10) reprovaria por
+ * `SCORECARD_EVIDENCE_HASH_MISMATCH`. A materialização tem de acontecer quando os
+ * bytes finais já existem.
+ *
+ * Este é o único ponto de materialização: quem escreve o manifest por último
+ * chama esta função. Ela NÃO julga nada de novo — constrói os registros e anexa o
+ * veredito da MESMA autoridade (`assessScorecardEvidenceProof`).
+ *
+ * @param {{rootDir:string, runContext?:object, scorecard?:object, registry?:Array, now?:() => Date}} input
+ * @returns {object} proof set pronto para `manifest.scorecardEvidence`
+ */
+function materializeScorecardEvidence({ rootDir, runContext = null, scorecard = null, registry = MASTER_SCORECARD_REGISTRY, now = () => new Date(), manifestForCarrier = null } = {}) {
+  try {
+    const proofSet = buildScorecardEvidenceProof({ rootDir, runContext, scorecard, registry, now, manifestForCarrier });
+    const verdict = assessScorecardEvidenceProof(proofSet);
+    return {
+      ...proofSet,
+      verdict: {
+        ok: verdict.ok,
+        checked: verdict.checked,
+        violations: verdict.violations.slice(0, 50),
+        violationCount: verdict.violations.length,
+      },
+    };
+  } catch (error) {
+    // Falha de plumbing não pode virar ausência silenciosa: o proof set entra
+    // marcado como inválido e o verifier reprova por MISSING/EMPTY.
+    return {
+      artifactType: ARTIFACT_TYPE,
+      artifactVersion: ARTIFACT_VERSION,
+      generatedAt: now().toISOString(),
+      runId: runContext?.runId || null,
+      sourceFingerprint: runContext?.sourceFingerprint || null,
+      runStartedAt: runContext?.startedAt || null,
+      total: 0,
+      summary: {},
+      records: [],
+      verdict: {
+        ok: false,
+        checked: 0,
+        violations: [{ code: 'SCORECARD_EVIDENCE_PROOF_BUILD_FAILED', path: '-', detail: String((error && error.message) || error) }],
+        violationCount: 1,
+      },
+    };
+  }
+}
+
+/**
  * Julga um proof set. PURO (não toca disco) — é o MESMO critério que o verifier
  * offline aplica no payload, para que produtor e consumidor não possam divergir.
  *
@@ -239,6 +356,15 @@ function assessScorecardEvidenceProof(proof) {
     if (!record.sha256) {
       violations.push({ code: 'SCORECARD_EVIDENCE_HASH_MISSING', path: record.path, detail: 'sem sha256' });
     }
+    // Guarda adversarial: `bindingKind` diferente de FILE_BYTES só é legítimo no
+    // artefato PORTADOR (único caso em que o hash de bytes é impossível). Marcar
+    // outro caminho assim tentaria escapar do binding criptográfico.
+    if (record.bindingKind && record.bindingKind !== BINDING_FILE_BYTES && record.path !== SELF_CARRIER_PATH) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_BINDING_KIND_FORGED', path: record.path, detail: `bindingKind=${record.bindingKind}` });
+    }
+    if (record.path === SELF_CARRIER_PATH && record.bindingKind !== BINDING_SELF_PROJECTION) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_CARRIER_UNBOUND', path: record.path, detail: `bindingKind=${record.bindingKind}` });
+    }
     if (!record.classification) {
       violations.push({ code: 'SCORECARD_EVIDENCE_UNCLASSIFIED', path: record.path, detail: 'sem classificação na taxonomia canônica' });
     } else if (!record.classificationAuthoritative) {
@@ -265,7 +391,14 @@ module.exports = {
   ARTIFACT_TYPE,
   ARTIFACT_VERSION,
   ACCEPTED_REQUIREMENT_STATUSES,
+  SELF_CARRIER_PATH,
+  BINDING_FILE_BYTES,
+  BINDING_SELF_PROJECTION,
+  serializeManifest,
+  selfCarrierProjection,
+  evidenceBinding,
   listScorecardEvidence,
   buildScorecardEvidenceProof,
+  materializeScorecardEvidence,
   assessScorecardEvidenceProof,
 };

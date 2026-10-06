@@ -976,23 +976,18 @@ function buildFinalProofReport(context = {}) {
   // JÁ ATRIBUÍDO pelo engine + hash, classificação da taxonomia canônica e
   // validade temporal — o mínimo para a nota ser conferível sem confiar no número.
   try {
-    const { buildScorecardEvidenceProof, assessScorecardEvidenceProof } = require('../../scripts/governance/lib/scorecard-evidence-proof');
+    const { materializeScorecardEvidence } = require('../../scripts/governance/lib/scorecard-evidence-proof');
     const { readRunContext } = require('../shared/run-context');
     const scorecardForProof = readJsonMaybe(resolveWorkspacePath(ROOT, 'governance/rap-master-scorecard.json'));
     const proofRunContext = (() => { try { return readRunContext(ROOT); } catch (_) { return null; } })();
-    const proofSet = buildScorecardEvidenceProof({
+    evidenceManifest.scorecardEvidence = materializeScorecardEvidence({
       rootDir: ROOT,
       runContext: proofRunContext,
       scorecard: scorecardForProof,
+      // O portador do proof set é este próprio manifest: a projeção auto-excludente
+      // precisa do objeto final (sem o proof set) para vincular bytes.
+      manifestForCarrier: evidenceManifest,
     });
-    const proofVerdict = assessScorecardEvidenceProof(proofSet);
-    proofSet.verdict = {
-      ok: proofVerdict.ok,
-      checked: proofVerdict.checked,
-      violations: proofVerdict.violations.slice(0, 50),
-      violationCount: proofVerdict.violations.length,
-    };
-    evidenceManifest.scorecardEvidence = proofSet;
   } catch (error) {
     // Falha de plumbing não pode virar ausência silenciosa: o proof set entra
     // marcado como inválido e o verifier reprova por MISSING/EMPTY.

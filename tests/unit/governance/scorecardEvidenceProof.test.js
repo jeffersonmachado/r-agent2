@@ -23,12 +23,18 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 
 const {
   ACCEPTED_REQUIREMENT_STATUSES,
+  BINDING_FILE_BYTES,
+  BINDING_SELF_PROJECTION,
   listScorecardEvidence,
   buildScorecardEvidenceProof,
   assessScorecardEvidenceProof,
+  serializeManifest,
+  selfCarrierProjection,
+  evidenceBinding,
 } = require('../../../scripts/governance/lib/scorecard-evidence-proof');
 
 const RUN_STARTED_AT = '2026-10-05T12:00:00.000Z';
@@ -280,6 +286,117 @@ describe('SCORECARD_EVIDENCE_PROOF', () => {
         expect(proof.records[0].selfProduced).toBe(false);
         expect(assessScorecardEvidenceProof(proof).violations.map((v) => v.code))
           .toContain('SCORECARD_EVIDENCE_NOT_ACCEPTED');
+      });
+    });
+  });
+
+  // ── ARTEFATO PORTADOR: o manifest carrega o proof set e por isso NÃO pode ser
+  // prova de si mesmo por hash de bytes (defeito medido em 2026-10-06: o
+  // evidence-manifest voltava sem `scorecardEvidence` porque a projeção DB→JSON o
+  // reescrevia depois do proof-engine, e o hash do manifest dentro dele mesmo é
+  // impossível por construção).
+  describe('5. artefato portador (evidence-manifest) — projeção auto-excludente', () => {
+    const CARRIER = 'governance/evidence-manifest.json';
+    const manifestBase = () => ({
+      artifactType: 'evidence-manifest',
+      artifactVersion: '1.0.0',
+      generatedAt: '2026-10-06T13:07:39.950Z',
+      runId: RUN_ID,
+      sourceFingerprint: 'b'.repeat(64),
+      status: 'PASS',
+      finalDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE',
+      artifacts: [{ path: 'governance/system-scope-audit.json', packageRequired: true }],
+      fingerprints: { sourceFingerprint: 'b'.repeat(64), chainFingerprint: 'c'.repeat(64) },
+    });
+
+    function withCarrierRoot(run) {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'scorecard-carrier-'));
+      fs.mkdirSync(path.join(root, 'governance'), { recursive: true });
+      const base = manifestBase();
+      fs.writeFileSync(
+        path.join(root, 'governance', 'evidence-manifest.json'),
+        serializeManifest({ ...base, scorecardEvidence: { artifactType: 'scorecard-evidence-proof', records: [] } }),
+      );
+      try {
+        return run(root);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+
+    const buildCarrier = (root, { manifestForCarrier = manifestBase() } = {}) => buildScorecardEvidenceProof({
+      rootDir: root,
+      registry: fakeRegistry(CARRIER),
+      scorecard: fakeScorecard('PASS'),
+      runContext: { runId: RUN_ID, sourceFingerprint: 'b'.repeat(64), startedAt: RUN_STARTED_AT },
+      manifestForCarrier,
+    });
+
+    test('o portador é vinculado pela PROJEÇÃO (sem o proof set), não pelo arquivo inteiro', () => {
+      withCarrierRoot((root) => {
+        const proof = buildCarrier(root);
+        const record = proof.records[0];
+        expect(record.bindingKind).toBe(BINDING_SELF_PROJECTION);
+        // O hash gravado é o do manifest SEM `scorecardEvidence` — verificável por
+        // qualquer leitor, e impossível de ser o hash do arquivo que o contém.
+        const expected = crypto.createHash('sha256').update(serializeManifest(manifestBase())).digest('hex');
+        expect(record.sha256).toBe(expected);
+        // E o hash do arquivo inteiro é DIFERENTE (prova de que não é auto-hash).
+        const wholeFile = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, CARRIER))).digest('hex');
+        expect(wholeFile).not.toBe(record.sha256);
+        expect(assessScorecardEvidenceProof(proof).violations).toEqual([]);
+      });
+    });
+
+    test('sem a projeção fornecida o portador REPROVA (nunca aceitação silenciosa)', () => {
+      withCarrierRoot((root) => {
+        const proof = buildCarrier(root, { manifestForCarrier: null });
+        const codes = assessScorecardEvidenceProof(proof).violations.map((v) => v.code);
+        expect(codes).toContain('SCORECARD_EVIDENCE_CARRIER_UNBOUND');
+        expect(codes).toContain('SCORECARD_EVIDENCE_HASH_MISSING');
+      });
+    });
+
+    test('ADVERSARIAL: projeção declarada em OUTRO caminho é fraude, não atalho', () => {
+      // Sem esta guarda, marcar `bindingKind` bastaria para escapar do binding
+      // criptográfico de qualquer evidência.
+      const forged = {
+        runStartedAt: RUN_STARTED_AT,
+        records: [{
+          dimensionId: 'RAP-001',
+          requirementId: 'runtime-validated',
+          path: 'governance/system-scope-audit.json',
+          classification: 'CERTIFICATION_ARTIFACT',
+          classificationAuthoritative: true,
+          exists: true,
+          sha256: 'a'.repeat(64),
+          bindingKind: BINDING_SELF_PROJECTION,
+          result: 'PASS',
+          resultAccepted: true,
+          selfProduced: false,
+          temporalValidity: 'SAME_RUN',
+        }],
+      };
+      expect(assessScorecardEvidenceProof(forged).violations.map((v) => v.code))
+        .toContain('SCORECARD_EVIDENCE_BINDING_KIND_FORGED');
+    });
+
+    test('a projeção do manifest ESCRITO é idêntica à do objeto sem o proof set', () => {
+      // Invariante que faz produtor e verifier offline concordarem: escrever
+      // `{...base, scorecardEvidence}` e depois projetar tem de devolver os bytes
+      // de `base` — sem depender de ordem de chaves nem de reserialização livre.
+      const base = manifestBase();
+      const written = { ...base, scorecardEvidence: { artifactType: 'scorecard-evidence-proof', records: [{}] } };
+      const reparsed = JSON.parse(serializeManifest(written).toString('utf8'));
+      expect(selfCarrierProjection(reparsed).toString('utf8')).toBe(serializeManifest(base).toString('utf8'));
+    });
+
+    test('arquivo ausente não inventa hash; arquivo presente vincula por bytes', () => {
+      expect(evidenceBinding({ rootDir: '/tmp/nao-existe-' + Date.now(), relPath: 'governance/x.json' }))
+        .toEqual({ sha256: null, bindingKind: null });
+      withTempRoot((root) => {
+        expect(evidenceBinding({ rootDir: root, relPath: 'governance/system-scope-audit.json' }).bindingKind)
+          .toBe(BINDING_FILE_BYTES);
       });
     });
   });

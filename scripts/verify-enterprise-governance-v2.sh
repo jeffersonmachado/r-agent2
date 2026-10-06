@@ -558,7 +558,7 @@ fi
 #
 step "10. Evidência do Master Scorecard verificável offline (proof records)"
 SCORECARD_EVIDENCE_OUT="$(node -e "
-const fs=require('fs'),path=require('path'),crypto=require('crypto');
+const fs=require('fs'),path=require('path');
 const root=process.argv[1];
 const manifestPath=path.join(root,'governance','evidence-manifest.json');
 if(!fs.existsSync(manifestPath)){process.stdout.write('SCORECARD_EVIDENCE_MANIFEST_MISSING');process.exit(0);}
@@ -567,44 +567,52 @@ const proof=manifest.scorecardEvidence;
 if(!proof||typeof proof!=='object'){process.stdout.write('SCORECARD_EVIDENCE_PROOF_MISSING');process.exit(0);}
 const records=Array.isArray(proof.records)?proof.records:[];
 if(records.length===0){process.stdout.write('SCORECARD_EVIDENCE_PROOF_EMPTY');process.exit(0);}
-// Mesma autoridade de classificação do pipeline (taxonomia empacotada).
-const taxPath=path.join(root,'config','runtime-evidence-artifacts.json');
-if(!fs.existsSync(taxPath)){process.stdout.write('SCORECARD_EVIDENCE_TAXONOMY_MISSING');process.exit(0);}
-const tax=JSON.parse(fs.readFileSync(taxPath,'utf8'));
-const AUTHORITATIVE=['RUNTIME_EVIDENCE','DERIVED_REPORT','CERTIFICATION_ARTIFACT'];
-const declaredModes={};
-for(const mode of AUTHORITATIVE)for(const a of ((tax.modes||{})[mode]||{}).artifacts||[])declaredModes[a]=mode;
-const ACCEPTED=['PASS','DEFERRED'];
-// O scorecard EMPACOTADO é a lista do que precisa de prova: um proof set que
-// omitisse uma evidência declarada passaria como 'completo'.
-const regPath=path.join(root,'governance','master-scorecard-registry.js');
-const declared=[];
-if(fs.existsSync(regPath)){const txt=fs.readFileSync(regPath,'utf8');const re=/path:\s*'([^']+)'/g;let m;while((m=re.exec(txt))!==null)declared.push(m[1]);}
-if(declared.length===0){process.stdout.write('SCORECARD_EVIDENCE_DECLARATIONS_UNREADABLE');process.exit(0);}
-const uniqDeclared=[...new Set(declared)];
-const proven=new Set(records.map(r=>r.path));
+// AUTORIDADE ÚNICA: o MESMO módulo que materializou o proof set vem empacotado e
+// é consultado aqui. Julgar com código reimplementado criava duas autoridades que
+// divergem (exatamente o defeito que a biblioteca existe para impedir).
+const libPath=path.join(root,'scripts','governance','lib','scorecard-evidence-proof.js');
+let lib=null;try{lib=require(libPath);}catch(_){lib=null;}
+if(!lib){process.stdout.write('SCORECARD_EVIDENCE_BINDING_AUTHORITY_MISSING:'+libPath);process.exit(0);}
 const violations=[];
-for(const rel of uniqDeclared)if(!proven.has(rel))violations.push('SCORECARD_EVIDENCE_UNPROVEN:'+rel);
+// (1) Julgamento canônico: exists, sha256, classificação autoritativa, validade
+// temporal same-run, veredito aceito e bindingKind legítimo.
+const verdict=lib.assessScorecardEvidenceProof(proof);
+for(const v of verdict.violations)violations.push(v.code+':'+v.path);
+// (2) O scorecard EMPACOTADO é a lista do que precisa de prova: um proof set que
+// omitisse uma evidência declarada passaria como 'completo'. Lista derivada da
+// MESMA autoridade (registry canônico), nunca de regex sobre o arquivo.
+let declaredPaths=[];
+try{declaredPaths=[...new Set(lib.listScorecardEvidence().map(e=>e.path))];}catch(_){declaredPaths=[];}
+if(declaredPaths.length===0){violations.push('SCORECARD_EVIDENCE_DECLARATIONS_UNREADABLE');}
+const proven=new Set(records.map(r=>r.path));
+for(const rel of declaredPaths)if(!proven.has(rel))violations.push('SCORECARD_EVIDENCE_UNPROVEN:'+rel);
+// (3) Coerência com o manifest empacotado.
 const runStartedAt=proof.runStartedAt||null;
 const startedMs=runStartedAt?Date.parse(runStartedAt):NaN;
 if(!Number.isFinite(startedMs))violations.push('SCORECARD_EVIDENCE_RUN_START_UNKNOWN');
 if(proof.runId&&manifest.runId&&proof.runId!==manifest.runId)violations.push('SCORECARD_EVIDENCE_RUN_MISMATCH');
 if(proof.sourceFingerprint&&manifest.sourceFingerprint&&proof.sourceFingerprint!==manifest.sourceFingerprint)violations.push('SCORECARD_EVIDENCE_SOURCE_MISMATCH');
-for(const r of records){
-  if(!r.sha256)violations.push('SCORECARD_EVIDENCE_HASH_MISSING:'+r.path);
-  const mode=declaredModes[r.path]||null;
-  if(!mode)violations.push('SCORECARD_EVIDENCE_NOT_AUTHORITATIVE:'+r.path+'('+String(r.classification)+')');
-  if(r.temporalValidity!=='SAME_RUN')violations.push('SCORECARD_EVIDENCE_TEMPORAL:'+r.path+'('+String(r.temporalValidity)+')');
-  if(!ACCEPTED.includes(String(r.result)))violations.push('SCORECARD_EVIDENCE_NOT_ACCEPTED:'+r.path+'('+String(r.result)+')');
-  // BINDING CRIPTOGRÁFICO: se o artefato está no payload, o sha256 REAL tem de
-  // bater com o registrado — prova não pode ser uma afirmação sobre si mesma.
-  const abs=path.join(root,r.path);
-  if(fs.existsSync(abs)&&r.sha256){
-    const real=crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
-    if(real!==r.sha256)violations.push('SCORECARD_EVIDENCE_HASH_MISMATCH:'+r.path);
-  }
+// (4) Taxonomia EMPACOTADA (a classificação declarada tem de estar na allowlist).
+const taxPath=path.join(root,'config','runtime-evidence-artifacts.json');
+if(!fs.existsSync(taxPath)){violations.push('SCORECARD_EVIDENCE_TAXONOMY_MISSING');}
+else{
+  const tax=JSON.parse(fs.readFileSync(taxPath,'utf8'));
+  const AUTHORITATIVE=['RUNTIME_EVIDENCE','DERIVED_REPORT','CERTIFICATION_ARTIFACT'];
+  const declaredModes={};
+  for(const mode of AUTHORITATIVE)for(const a of ((tax.modes||{})[mode]||{}).artifacts||[])declaredModes[a]=mode;
+  for(const r of records)if(!declaredModes[r.path])violations.push('SCORECARD_EVIDENCE_NOT_AUTHORITATIVE:'+r.path+'('+String(r.classification)+')');
 }
-process.stdout.write(violations.length===0?('OK:'+records.length+' provas/('+uniqDeclared.length+' declaradas)'):violations.slice(0,8).join(' | '));
+// (5) BINDING CRIPTOGRÁFICO pela autoridade única: bytes do arquivo quando ele
+// está no payload; para o artefato PORTADOR (o próprio manifest), a projeção
+// auto-excludente — hash de si mesmo é impossível por construção.
+for(const r of records){
+  const abs=path.join(root,r.path);
+  if(!fs.existsSync(abs)||!r.sha256)continue;
+  const binding=lib.evidenceBinding({rootDir:root,relPath:r.path,manifestForCarrier:manifest});
+  if(!binding||!binding.sha256){violations.push('SCORECARD_EVIDENCE_BINDING_UNRESOLVED:'+r.path);continue;}
+  if(binding.sha256!==r.sha256)violations.push('SCORECARD_EVIDENCE_HASH_MISMATCH:'+r.path);
+}
+process.stdout.write(violations.length===0?('OK:'+records.length+' provas/('+declaredPaths.length+' declaradas)'):violations.slice(0,8).join(' | '));
 " "$TEMPORAL_PAYLOAD_ROOT" 2>/dev/null || echo 'SCORECARD_EVIDENCE_CHECK_UNREADABLE')"
 if [[ "$SCORECARD_EVIDENCE_OUT" == OK:* ]]; then
   ok "nota do scorecard conferível offline: ${SCORECARD_EVIDENCE_OUT#OK:}"

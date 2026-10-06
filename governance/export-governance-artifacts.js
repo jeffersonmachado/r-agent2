@@ -280,7 +280,22 @@ async function exportGovernanceArtifacts() {
   write('governance/final-consistency-gate-report.json', consistency);
 
   const preservedArtifacts = refreshManifestArtifacts('governance/evidence-manifest.json');
-  const manifest = {
+  // ── PROOF SET MATERIALIZADO NO ÚLTIMO ESCRITOR DO MANIFEST ──────────────────
+  // DEFEITO MEDIDO (2026-10-06, ciclo do selo): esta projeção DB→JSON reescrevia o
+  // evidence-manifest DEPOIS do proof-engine e zerava `scorecardEvidence` (só o
+  // array `artifacts` era preservado). O verifier do artefato entregue reprovava
+  // com SCORECARD_EVIDENCE_PROOF_MISSING (0 provas) — a nota 78/78 voltava a ser
+  // um número a ser acreditado em vez de conferível offline.
+  //
+  // Preservar o campo não bastaria: os ~30 relatórios declarados como evidência
+  // são reescritos pelas projeções/fixpoint DEPOIS do proof-engine, então os
+  // sha256 gravados ficariam velhos e o binding offline reprovaria por
+  // SCORECARD_EVIDENCE_HASH_MISMATCH. Aqui os bytes finais já existem (esta é a
+  // última escrita do manifest antes do selo), então o proof set é materializado
+  // agora, pela autoridade única (`materializeScorecardEvidence`).
+  const { materializeScorecardEvidence } = require('../scripts/governance/lib/scorecard-evidence-proof');
+  const { readRunContext } = require('./shared/run-context');
+  const manifestBase = {
     ...artifactBase(run, 'evidence-manifest'),
     status: 'PASS',
     finalDecision: proofDecision,
@@ -293,6 +308,15 @@ async function exportGovernanceArtifacts() {
       chainFingerprint: chain.chainFingerprint,
     },
   };
+  // `manifestBase` é exatamente a projeção auto-excludente do manifest final: o
+  // proof set vinculado ao portador é o sha256 do manifest SEM `scorecardEvidence`.
+  const scorecardEvidence = materializeScorecardEvidence({
+    rootDir: process.cwd(),
+    runContext: (() => { try { return readRunContext(process.cwd()); } catch (_) { return null; } })(),
+    scorecard: (() => { try { return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'governance', 'rap-master-scorecard.json'), 'utf8')); } catch (_) { return null; } })(),
+    manifestForCarrier: manifestBase,
+  });
+  const manifest = { ...manifestBase, scorecardEvidence };
   write('governance/evidence-manifest.json', manifest);
 
   return { runId: run.run_id, below10, failedGates: failedGates.length, finalDecision, proofDecision };
