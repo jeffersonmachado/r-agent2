@@ -179,7 +179,12 @@ function validateRunContext(runContext) {
 
 function evaluateCurrentSource(context) {
   const runValidation = validateRunContext(context.runContext);
-  if (runValidation.status !== 'PASS') return runValidation;
+  // `RUN_STATUS_NOT_CERTIFIABLE` bloqueia o VEREDITO (ver `evaluateMasterScorecard`),
+  // não a verificação de fonte: o fingerprint pode perfeitamente coincidir num run com
+  // desfecho de falha. Curto-circuitar aqui propagava o INVALID para cada requisito que
+  // declara lineage e zerava o scorecard inteiro (468 requisitos / 78 dimensões medidos
+  // em 2026-10-06), escondendo a causa real atrás de um número agregado.
+  if (runValidation.status !== 'PASS' && runValidation.code !== 'RUN_STATUS_NOT_CERTIFIABLE') return runValidation;
   if (context.runContext.sourceFingerprint !== context.sourceFingerprint) {
     return result('STALE', 'RUN_SOURCE_DRIFT', 'A fonte atual diverge do source freeze do run.', {
       runSourceFingerprint: context.runContext.sourceFingerprint,
@@ -223,7 +228,11 @@ function evaluateCurrentArtifact(spec, context) {
 
   if (spec.requireLineage !== false) {
     const runValidation = validateRunContext(context.runContext);
-    if (runValidation.status !== 'PASS') return { ...runValidation, path: spec.path };
+    // Só a falha de ESTRUTURA do run context (runId/fingerprint/startedAt ausentes ou
+    // inválidos) impede checar a lineage do artefato. Um run com status não-certificável
+    // não torna os artefatos ilegíveis — quem bloqueia a certificação é o requisito
+    // `current_run` e o veredito global.
+    if (runValidation.status !== 'PASS' && runValidation.code !== 'RUN_STATUS_NOT_CERTIFIABLE') return { ...runValidation, path: spec.path };
     if (!artifact.runId) {
       return result('INVALID', 'ARTIFACT_RUN_ID_MISSING', `Artifact sem runId: ${spec.path}`, { path: spec.path });
     }

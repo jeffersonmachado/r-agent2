@@ -55,8 +55,23 @@ async function calculateFinalDecision({ runId, sourceFingerprint, proofFingerpri
     // Recalcula e sobrescreve a decisão a cada execução: findOrCreate deixaria
     // um registro NO_GO antigo preso após a transição NO_GO -> AUTONOMOUS_READY.
     const [record] = await getDecision().upsert(payload, { transaction, ...options });
-    await run.update({ status: decision === 'AUTONOMOUS_READY' ? 'COMPLETED' : 'FAILED', completed_at: new Date() }, { transaction });
-    return { record, decision, mandatoryGateFailures: failedGates.length + missingMandatoryGates, scorecardBelow10: below10, openGaps: openGaps.length };
+    // O DESFECHO DO RUN É DO CICLO, NÃO DA FASE.
+    // Em `PRE_PACKAGE` os gaps abertos e `below10` são ESPERADOS: as dimensões do
+    // pacote (RAP-052/054) e as DELIVERED (RAP-055/056) ainda não são verificáveis
+    // porque o pacote não existe. Marcar FAILED aqui encerrava o ciclo no meio e,
+    // como `RUN_STATUS_NOT_CERTIFIABLE` invalidava cada requisito, o scorecard
+    // inteiro caía (78/78 below10 medido em 2026-10-06) => `seal-time-gate`
+    // SEAL_NO_GO => `prepare` abortava => laço fechado (repetir o ciclo reproduzia
+    // o mesmo estado). Só `AUTONOMOUS_READY` conclui; `FAILED` é reservado ao
+    // NO_GO de fase TERMINAL (POST_PACKAGE/DELIVERED), onde não há mais o que
+    // construir — fail-closed preservado.
+    const terminalStatus = decision === 'AUTONOMOUS_READY'
+      ? 'COMPLETED'
+      : (phase === 'PRE_PACKAGE' ? null : 'FAILED');
+    if (terminalStatus) {
+      await run.update({ status: terminalStatus, completed_at: new Date() }, { transaction });
+    }
+    return { record, decision, mandatoryGateFailures: failedGates.length + missingMandatoryGates, scorecardBelow10: below10, openGaps: openGaps.length, runStatus: terminalStatus || run.status };
   });
 }
 

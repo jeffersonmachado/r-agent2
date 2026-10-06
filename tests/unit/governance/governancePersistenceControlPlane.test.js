@@ -61,4 +61,57 @@ describe('Governance Persistence & Certification Control Plane', () => {
     getDecision.mockReturnValue({ upsert: jest.fn().mockImplementation((payload) => Promise.resolve([payload, false])) });
     await expect(calculateFinalDecision({ runId: 'run-1', sourceFingerprint })).resolves.toMatchObject({ decision: 'NO_GO', mandatoryGateFailures: 1, scorecardBelow10: 1 });
   });
+
+  // ── O DESFECHO DO RUN PERTENCE AO CICLO, NÃO À FASE ────────────────────────
+  // DEFEITO MEDIDO (2026-10-06, ciclo do selo): `calculateFinalDecision` gravava
+  // FAILED sempre que a decisão não era AUTONOMOUS_READY — inclusive em PRE_PACKAGE,
+  // onde a pendência do PACOTE (RAP-052/054) e os gaps que ela abre são ESPERADOS.
+  // Como `RUN_STATUS_NOT_CERTIFIABLE` contaminava cada requisito, o ciclo virava
+  // laço: NO_GO => FAILED => 78/78 below10 => SEAL_NO_GO => repetir reproduzia tudo.
+  function stubRun() {
+    const run = { source_fingerprint: sourceFingerprint, status: 'RUNNING', policy_id: 'RAP-AGENT-CONSTITUTION', policy_version: '1.0.0', policy_fingerprint: 'a'.repeat(64), update: jest.fn() };
+    getGovernanceRun.mockReturnValue({ findOne: jest.fn().mockResolvedValue(run) });
+    getDecision.mockReturnValue({ upsert: jest.fn().mockImplementation((payload) => Promise.resolve([payload, false])) });
+    return run;
+  }
+
+  test('PRE_PACKAGE com pendência de fase NÃO encerra o run (nem grava FAILED)', async () => {
+    const run = stubRun();
+    // Pendências legítimas da fase pré-pacote: gate DEFERRED + dimensões do pacote.
+    getGate.mockReturnValue({ findAll: jest.fn().mockResolvedValue([{ status: 'DEFERRED' }]) });
+    getEvaluation.mockReturnValue({ findOne: jest.fn().mockResolvedValue({ dimensions_below_10: 2 }) });
+    getGap.mockReturnValue({ findAll: jest.fn().mockResolvedValue([{ id: 'gap-rap-052' }]) });
+
+    const outcome = await calculateFinalDecision({ runId: 'run-1', sourceFingerprint, phase: 'PRE_PACKAGE' });
+
+    expect(outcome.decision).toBe('NO_GO');
+    expect(outcome.runStatus).toBe('RUNNING');
+    // O run continua vivo para a fase seguinte: nada de encerrá-lo no meio.
+    expect(run.update).not.toHaveBeenCalled();
+  });
+
+  test('POST_PACKAGE com gate ainda DEFERRED encerra em FAILED (fail-closed preservado)', async () => {
+    const run = stubRun();
+    getGate.mockReturnValue({ findAll: jest.fn().mockResolvedValue([{ status: 'DEFERRED' }]) });
+    getEvaluation.mockReturnValue({ findOne: jest.fn().mockResolvedValue({ dimensions_below_10: 0 }) });
+    getGap.mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) });
+
+    const outcome = await calculateFinalDecision({ runId: 'run-1', sourceFingerprint, phase: 'POST_PACKAGE' });
+
+    expect(outcome.decision).toBe('NO_GO');
+    expect(run.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'FAILED' }), expect.any(Object));
+  });
+
+  test('AUTONOMOUS_READY conclui o run em qualquer fase', async () => {
+    const run = stubRun();
+    getGate.mockReturnValue({ findAll: jest.fn().mockResolvedValue([{ status: 'PASS' }]) });
+    getEvaluation.mockReturnValue({ findOne: jest.fn().mockResolvedValue({ dimensions_below_10: 0 }) });
+    getGap.mockReturnValue({ findAll: jest.fn().mockResolvedValue([]) });
+
+    const outcome = await calculateFinalDecision({ runId: 'run-1', sourceFingerprint, phase: 'PRE_PACKAGE' });
+
+    expect(outcome.decision).toBe('AUTONOMOUS_READY');
+    expect(outcome.runStatus).toBe('COMPLETED');
+    expect(run.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'COMPLETED' }), expect.any(Object));
+  });
 });

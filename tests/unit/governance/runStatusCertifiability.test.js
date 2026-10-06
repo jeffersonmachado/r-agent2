@@ -285,4 +285,49 @@ describe('RUN_STATUS_CERTIFIABILITY', () => {
       fs.rmSync(tmp, { recursive: true, force: true });
     });
   });
+
+  describe('7. ESCOPO DO BLOQUEIO: status do run trava o VEREDITO, não cada artefato', () => {
+    // DEFEITO MEDIDO (2026-10-06, ciclo do selo): `evaluateCurrentSource` e
+    // `evaluateCurrentArtifact` curto-circuitavam com QUALQUER falha do run context,
+    // inclusive `RUN_STATUS_NOT_CERTIFIABLE`. Como quase toda dimensão verifica um
+    // artefato com lineage, um run FAILED reprovava 468 requisitos e derrubava as
+    // 78 dimensões (`dimensionsBelow10=78`): o número agregado escondia a causa real
+    // e o ciclo entrava em laço — NO_GO => FAILED => 78 below10 => SEAL_NO_GO.
+    // O bloqueio pertence ao requisito `CURRENT_RUN` e ao veredito; a lineage de cada
+    // artefato continua sendo verificada de verdade.
+    const scorecardWithStatus = (status) => evaluateMasterScorecard({
+      rootDir: ROOT,
+      runContext: runContext({ status }),
+      sourceFingerprint: SOURCE_FP,
+      requireCanonicalIds: false,
+    });
+
+    test('nenhum requisito fora de CURRENT_RUN é reprovado por causa do status do run', () => {
+      const scorecard = scorecardWithStatus('FAILED');
+      const requirements = scorecard.dimensions.flatMap((dimension) => dimension.requirements);
+      const reprovadosPorStatus = requirements.filter((r) => r.code === 'RUN_STATUS_NOT_CERTIFIABLE');
+      const currentRun = requirements.filter((r) => r.category === 'CURRENT_RUN');
+
+      // O run PRECISA reprovar (a proteção continua valendo)...
+      expect(currentRun.length).toBeGreaterThan(0);
+      expect(currentRun.every((r) => r.status !== 'PASS')).toBe(true);
+      // ...mas a reprovação não pode vazar para os requisitos que avaliam evidência.
+      expect(reprovadosPorStatus.length).toBeGreaterThan(0);
+      expect(reprovadosPorStatus.every((r) => r.category === 'CURRENT_RUN')).toBe(true);
+    });
+
+    test('a contaminação não derruba o scorecard inteiro (o defeito eram 78/78 below10)', () => {
+      const failed = scorecardWithStatus('FAILED');
+      const requirements = failed.dimensions.flatMap((dimension) => dimension.requirements);
+      const reprovadosPorStatus = requirements.filter((r) => r.code === 'RUN_STATUS_NOT_CERTIFIABLE');
+      // Antes: 468 (um por artefato com lineage). Agora: só o run corrente.
+      expect(reprovadosPorStatus.length).toBeLessThan(requirements.length / 10);
+    });
+
+    test('com o run certificável não há reprovação por status (sem regressão)', () => {
+      const scorecard = scorecardWithStatus('COMPLETED');
+      const requirements = scorecard.dimensions.flatMap((dimension) => dimension.requirements);
+      expect(requirements.filter((r) => r.code === 'RUN_STATUS_NOT_CERTIFIABLE')).toHaveLength(0);
+    });
+  });
 });
