@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-05T21-27-41-771Z",
+  "executionId": "mesh-2026-10-06T02-03-46-227Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "GO",
+  "gate": "NO_GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-05T21-27-41-771Z",
+    "executionId": "mesh-2026-10-06T02-03-46-227Z",
     "tenantId": "system",
-    "timestamp": "2026-10-05T21:27:41.771Z",
+    "timestamp": "2026-10-06T02:03:46.227Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,12 +31,12 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 144,
+    "passed": 140,
     "fallbackPassed": 0,
-    "failed": 0,
+    "failed": 1,
     "skipped": 0,
-    "infraErrors": 0,
-    "environmentMissing": 0,
+    "infraErrors": 1,
+    "environmentMissing": 2,
     "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
@@ -81,12 +81,12 @@
         "total": 2
       },
       "core": {
-        "passed": 90,
+        "passed": 86,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
+        "infra_error": 1,
+        "environment_missing": 2,
         "flaky": 0,
         "total": 90
       },
@@ -171,10 +171,24 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "CRITICAL_DOMAIN_FAILED:core",
+      "BASELINE_PASS_RATE_REGRESSION",
+      "BASELINE_INFRA_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "core": {
+        "total": 4,
+        "blocking": 0,
+        "byType": {
+          "environment_missing": 2,
+          "infra_error": 1,
+          "functional_failure": 1
+        },
+        "successRate": 0.9555555555555556
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -188,12 +202,6 @@
         "successRate": 1
       },
       "clinic": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -248,37 +256,62 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "environment_missing": 2,
+      "infra_error": 1,
+      "functional_failure": 1
+    },
+    "topErrors": [
+      {
+        "message": "Tutor não respondeu com conteúdo disponível (reason=ai_unavailable, available=false)",
+        "count": 1
+      },
+      {
+        "message": "fetch failed (cause: UND_ERR_HEADERS_TIMEOUT)",
+        "count": 1
+      },
+      {
+        "message": "500 Internal Server Error: Erro ao criar projeto",
+        "count": 1
+      },
+      {
+        "message": "Documento não foi indexado dentro do tempo esperado (estado final: indexStatus=failed chunks=0 indexed=false erro=RAG_INDEX_FAILED::RAG service error: 503 {\"error\":\"service_misconfigured\",\"message\":\"Autenticação interna do RAG não configurada\"})",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-05T21-27-41-771Z",
-      "startedAt": "2026-10-05T21:27:41.771Z",
+      "executionId": "mesh-2026-10-06T02-03-46-227Z",
+      "startedAt": "2026-10-06T02:03:46.227Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-05T22:00:41.797Z",
+      "promotedAt": "2026-10-06T03:11:54.270Z",
       "registryTotal": 144,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [],
+  "reasons": [
+    "CRITICAL_DOMAIN_FAILED:core",
+    "BASELINE_PASS_RATE_REGRESSION",
+    "BASELINE_INFRA_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-05T21-27-41-771Z",
-    "startedAt": "2026-10-05T21:27:41.771Z",
+    "executionId": "mesh-2026-10-06T02-03-46-227Z",
+    "startedAt": "2026-10-06T02:03:46.227Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-05T22:00:41.797Z",
+    "promotedAt": "2026-10-06T03:11:54.270Z",
     "registryTotal": 144,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "artifactType": "release-gate-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261005204741332-4e6cda2c",
-  "sourceFingerprint": "b4a8e99c54a28a705c4a8e1738d38e6581afe70554939c2fed77977d92c45d81",
-  "sourceCommit": "3a25c40b9c0389c5682819f635f1c6a17a01dc4d",
-  "sourceTree": "fd31d60fc25f72742f758cf90d479ab70bca851f",
-  "generatedAt": "2026-10-05T22:00:41.799Z"
+  "runId": "rap-governed-20261006013644103-a61e6b8b",
+  "sourceFingerprint": "63ec69d823358fe867d772a1ec47a30f98d9766138a8fdc8b58a2d0f082ff10d",
+  "sourceCommit": "4b5ca39a0822fcf35e11522226308f1d6592116e",
+  "sourceTree": "7a563d64ec6e3268d633eaea45673466e362dbf6",
+  "generatedAt": "2026-10-06T03:11:54.271Z"
 }
