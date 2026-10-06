@@ -115,13 +115,42 @@ describe('certificationCoherence — artefatos finais não podem se contradizer'
       expect(verdict.code).toBe('GOVERNANCE_STATUS_NUMBERS_CONTRADICTORY');
     });
 
-    test('a MESMA situação com explicação semântica explícita é aceita', () => {
+    test('a MESMA situação com explicação semântica explícita E não-corrente é aceita', () => {
       const verdict = assessRunStatusSemantics({
         runStatus: 'FAILED', scorecardTotal: 78, scorecardPassed: 78, scorecardBelow10: 0, openBlockers: 0,
         semanticNote: 'runStatus é o estado do RUN no banco neste instante; a decisão de release é publicada à parte.',
+        lifecycle: 'TRANSITIONAL',
       });
       expect(verdict.coherent).toBe(true);
       expect(verdict.declared).toBe(true);
+    });
+
+    // Fechamento da brecha medida em 2026-10-05: o PRODUTOR do snapshot injetava a
+    // nota automaticamente quando via runStatus=FAILED, então o gate era satisfeito
+    // por construção — bastava escrever prosa para um artefato CORRENTE se absolver.
+    // Texto não é transição de estado: sem declarar não-corrente, não passa.
+    test('nota semântica em artefato CORRENTE NÃO absolve (texto não é transição de estado)', () => {
+      for (const lifecycle of [null, 'CURRENT']) {
+        const verdict = assessRunStatusSemantics({
+          runStatus: 'FAILED', scorecardTotal: 78, scorecardPassed: 78, scorecardBelow10: 0, openBlockers: 0,
+          semanticNote: 'runStatus é o estado do RUN no banco neste instante; a decisão de release é publicada à parte.',
+          lifecycle,
+        });
+        expect(verdict.coherent).toBe(false);
+        expect(verdict.code).toBe('GOVERNANCE_STATUS_NOTE_WITHOUT_SUPERSESSION');
+      }
+    });
+
+    test('a nota só absolve quando o artefato diz por quem foi substituído', () => {
+      for (const marker of NON_CURRENT_MARKERS) {
+        const verdict = assessRunStatusSemantics({
+          runStatus: 'FAILED', scorecardTotal: 78, scorecardPassed: 78, scorecardBelow10: 0, openBlockers: 0,
+          semanticNote: 'runStatus é o estado do RUN no banco neste instante; a decisão de release é publicada à parte.',
+          lifecycle: marker,
+        });
+        expect(verdict.coherent).toBe(true);
+        expect(verdict.declared).toBe(true);
+      }
     });
 
     test('explicação curta demais não conta como explicação', () => {

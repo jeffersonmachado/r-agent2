@@ -144,6 +144,12 @@ function assessFinalCoherence({ artifacts = [] } = {}) {
  * passar sem explicação: ou o artefato é de um estado intermediário (e então falta a marca), ou os
  * números não descrevem o que o status afirma. Nos dois casos o leitor é induzido a erro.
  *
+ * A explicação só vale para artefato que DECLARA NÃO SER A AUTORIDADE (`lifecycle`
+ * TRANSITIONAL/SUPERSEDED/INTERMEDIATE/HISTORICAL). Antes disso, bastava o produtor escrever
+ * qualquer nota de 20 caracteres para o próprio artefato CORRENTE se absolver — medido em
+ * 2026-10-05: `export-certification-snapshot.js` injetava a nota automaticamente quando via
+ * `runStatus=FAILED`, e o gate passava por construção. Texto não é transição de estado.
+ *
  * @returns {{coherent:boolean, code:string|null, reason:string}}
  */
 function assessRunStatusSemantics({
@@ -153,6 +159,7 @@ function assessRunStatusSemantics({
   scorecardBelow10 = null,
   openBlockers = null,
   semanticNote = null,
+  lifecycle = null,
 } = {}) {
   const status = String(runStatus || '').trim().toUpperCase();
   const failedLike = ['FAILED', 'NO_GO', 'BLOCKED'].includes(status);
@@ -173,11 +180,18 @@ function assessRunStatusSemantics({
     return { coherent: true, code: null, reason: `status ${status} compatível com os números apresentados` };
   }
   if (semanticNote && String(semanticNote).trim().length >= 20) {
+    if (!isNonCurrent({ lifecycle })) {
+      return {
+        coherent: false,
+        code: 'GOVERNANCE_STATUS_NOTE_WITHOUT_SUPERSESSION',
+        reason: `artefato declara ${status} com indicadores de sucesso total e se explica por nota, mas NÃO declara ser não-corrente (lifecycle=${lifecycle || 'CURRENT'}) — uma nota não converte um run falho em certificável: é preciso transicionar o run (FAILED → RUNNING → COMPLETED) ou marcar o artefato como TRANSITIONAL/SUPERSEDED com supersededBy e motivo`,
+      };
+    }
     return {
       coherent: true,
       code: null,
       declared: true,
-      reason: `status ${status} com números favoráveis, mas a contradição está EXPLICADA semanticamente no artefato`,
+      reason: `status ${status} com números favoráveis, mas a contradição está EXPLICADA semanticamente no artefato, que declara não ser a autoridade (${String(lifecycle).toUpperCase()})`,
     };
   }
   return {

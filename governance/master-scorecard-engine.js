@@ -30,14 +30,20 @@ const ALLOWED_REQUIREMENT_STATUSES = new Set([
   'INVALID',
   'INSUFFICIENT_EVIDENCE',
 ]);
-const ALLOWED_RUN_STATUSES = new Set([
-  'CREATED',
-  'RUNNING',
-  'COMPLETED',
-  'PACKAGED',
-  'VERIFIED',
-  'FAILED',
-]);
+// A lista de estados NÃO é mais uma cópia local: a autoridade é a máquina de
+// estados de `governance/shared/run-context.js` (fonte única, já usada pelo
+// ciclo de vida real). Manter uma segunda lista aqui foi o que permitiu
+// `ALLOWED_RUN_STATUSES` aceitar `FAILED` e o scorecard atribuir 78/78 a um run
+// cujo desfecho registrado era a falha.
+const {
+  RUN_STATES,
+  ALLOWED_TRANSITIONS,
+  CERTIFIABLE_FINAL_STATES,
+  NON_CERTIFIABLE_STATES,
+  assessCertifiableRunStatus,
+} = require('./shared/run-context');
+
+const ALLOWED_RUN_STATUSES = new Set(Object.keys(ALLOWED_TRANSITIONS));
 const STATUS_PRIORITY = Object.freeze({
   PASS: 0,
   INSUFFICIENT_EVIDENCE: 1,
@@ -150,8 +156,20 @@ function validateRunContext(runContext) {
     return result(
       'INVALID',
       runContext.status === 'INVALIDATED' ? 'RUN_INVALIDATED' : 'RUN_STATUS_INVALID',
-      `RunContext possui status não certificável: ${runContext.status || 'missing'}.`,
+      `RunContext possui status não conhecido: ${runContext.status || 'missing'}.`,
     );
+  }
+  // FAILED/INVALIDATED nunca certificam: um run com desfecho de falha não pode
+  // receber CURRENT_RUN=PASS nem sustentar final certification. A recuperação é
+  // explícita (FAILED → RUNNING → COMPLETED), nunca implícita por omissão.
+  const certifiable = assessCertifiableRunStatus(runContext.status);
+  if (!certifiable.certifiable) {
+    return result('INVALID', certifiable.code, certifiable.reason, {
+      runId: runContext.runId,
+      runStatus: runContext.status,
+      certifiableStatuses: [...CERTIFIABLE_FINAL_STATES],
+      nonCertifiableStatuses: [...NON_CERTIFIABLE_STATES],
+    });
   }
   return result('PASS', 'RUN_CONTEXT_VALID', 'RunContext está completo e em estado certificável.', {
     runId: runContext.runId,

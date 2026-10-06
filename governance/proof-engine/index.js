@@ -964,6 +964,51 @@ function buildFinalProofReport(context = {}) {
   evidenceManifest.fingerprints = fingerprintChain;
   evidenceManifest.sourceFingerprint = fingerprintChain.sourceFingerprint || null;
 
+  // ─── PROVA OFFLINE DAS EVIDÊNCIAS DO MASTER SCORECARD ───────────────────────
+  // DEFEITO MEDIDO (2026-10-05) no artefato entregue: o scorecard referencia 44
+  // evidências únicas, 3 tinham registro neste manifest e 41 não tinham NENHUMA
+  // prova. `78/78` era, para o leitor do pacote, um número a ser acreditado — e o
+  // verifier, ao não achar o arquivo, fazia `if (!exists) continue` e seguia.
+  //
+  // O proof set entra AQUI (não num arquivo paralelo) porque este manifest é o
+  // artefato que o pacote já carrega e o verifier já abre: a autoridade continua
+  // sendo uma só. Para cada (dimensão, requisito, evidência) ele grava o veredito
+  // JÁ ATRIBUÍDO pelo engine + hash, classificação da taxonomia canônica e
+  // validade temporal — o mínimo para a nota ser conferível sem confiar no número.
+  try {
+    const { buildScorecardEvidenceProof, assessScorecardEvidenceProof } = require('../../scripts/governance/lib/scorecard-evidence-proof');
+    const { readRunContext } = require('../shared/run-context');
+    const scorecardForProof = readJsonMaybe(resolveWorkspacePath(ROOT, 'governance/rap-master-scorecard.json'));
+    const proofRunContext = (() => { try { return readRunContext(ROOT); } catch (_) { return null; } })();
+    const proofSet = buildScorecardEvidenceProof({
+      rootDir: ROOT,
+      runContext: proofRunContext,
+      scorecard: scorecardForProof,
+    });
+    const proofVerdict = assessScorecardEvidenceProof(proofSet);
+    proofSet.verdict = {
+      ok: proofVerdict.ok,
+      checked: proofVerdict.checked,
+      violations: proofVerdict.violations.slice(0, 50),
+      violationCount: proofVerdict.violations.length,
+    };
+    evidenceManifest.scorecardEvidence = proofSet;
+  } catch (error) {
+    // Falha de plumbing não pode virar ausência silenciosa: o proof set entra
+    // marcado como inválido e o verifier reprova por MISSING/EMPTY.
+    evidenceManifest.scorecardEvidence = {
+      artifactType: 'scorecard-evidence-proof',
+      artifactVersion: '1.0.0',
+      generatedAt: new Date().toISOString(),
+      runId: readCurrentRunId(),
+      runStartedAt: null,
+      total: 0,
+      summary: {},
+      records: [],
+      verdict: { ok: false, checked: 0, violations: [{ code: 'SCORECARD_EVIDENCE_PROOF_BUILD_FAILED', path: '-', detail: String((error && error.message) || error) }], violationCount: 1 },
+    };
+  }
+
   // Package validation — A. Strict package binding
   let packageValidation;
   try {

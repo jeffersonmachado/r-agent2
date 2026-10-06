@@ -12,20 +12,73 @@ const RUN_CONTEXT_VERSION = '1.0.0';
 const RUN_STATES = Object.freeze({
   CREATED: 'CREATED',
   RUNNING: 'RUNNING',
+  FAILED: 'FAILED',
   INVALIDATED: 'INVALIDATED',
   COMPLETED: 'COMPLETED',
   PACKAGED: 'PACKAGED',
   VERIFIED: 'VERIFIED',
 });
 
+// DEFEITO MEDIDO (2026-10-05): a máquina não conhecia `FAILED`, embora o banco
+// (`certificationService.calculateFinalDecision`) grave exatamente esse estado
+// quando a decisão é NO_GO. Sem o estado, não havia transição de RECUPERAÇÃO —
+// um run que falhou e depois convergiu ficava preso em FAILED para sempre, e o
+// envelope publicava `scorecard 78/78 / overallStatus=VERIFIED` ao lado de
+// `runStatus=FAILED / NO_GO` sem que nenhuma máquina pudesse reconciliar os dois.
+// Recuperar é permitido (FAILED → RUNNING → COMPLETED); certificar um run ainda
+// em FAILED, nunca (ver CERTIFIABLE_FINAL_STATES).
 const ALLOWED_TRANSITIONS = Object.freeze({
-  [RUN_STATES.CREATED]: new Set([RUN_STATES.RUNNING, RUN_STATES.INVALIDATED]),
-  [RUN_STATES.RUNNING]: new Set([RUN_STATES.COMPLETED, RUN_STATES.INVALIDATED]),
+  [RUN_STATES.CREATED]: new Set([RUN_STATES.RUNNING, RUN_STATES.FAILED, RUN_STATES.INVALIDATED]),
+  [RUN_STATES.RUNNING]: new Set([RUN_STATES.COMPLETED, RUN_STATES.FAILED, RUN_STATES.INVALIDATED]),
+  [RUN_STATES.FAILED]: new Set([RUN_STATES.RUNNING, RUN_STATES.INVALIDATED]),
   [RUN_STATES.COMPLETED]: new Set([RUN_STATES.PACKAGED, RUN_STATES.INVALIDATED]),
   [RUN_STATES.PACKAGED]: new Set([RUN_STATES.VERIFIED, RUN_STATES.INVALIDATED]),
   [RUN_STATES.VERIFIED]: new Set(),
   [RUN_STATES.INVALIDATED]: new Set(),
 });
+
+/**
+ * Estados finais que PODEM sustentar certificação/release.
+ * A ordem é a do ciclo: concluído → empacotado → verificado.
+ */
+const CERTIFIABLE_FINAL_STATES = Object.freeze([
+  RUN_STATES.COMPLETED,
+  RUN_STATES.PACKAGED,
+  RUN_STATES.VERIFIED,
+]);
+
+/**
+ * Estados que NUNCA certificam, em nenhuma fase. `FAILED` não é "ainda vai
+ * convergir": é o desfecho REGISTRADO de uma decisão NO_GO. `INVALIDATED` é a
+ * marca de drift de fonte (o run nem descreve a fonte atual).
+ */
+const NON_CERTIFIABLE_STATES = Object.freeze([
+  RUN_STATES.FAILED,
+  RUN_STATES.INVALIDATED,
+]);
+
+/**
+ * Um status sustenta certificação final?
+ * @returns {{certifiable:boolean, code:string|null, reason:string}}
+ */
+function assessCertifiableRunStatus(status) {
+  const normalized = String(status || '').trim().toUpperCase();
+  if (!Object.prototype.hasOwnProperty.call(ALLOWED_TRANSITIONS, normalized)) {
+    return {
+      certifiable: false,
+      code: 'RUN_STATUS_UNKNOWN',
+      reason: `status de run desconhecido: ${status || 'missing'}`,
+    };
+  }
+  if (NON_CERTIFIABLE_STATES.includes(normalized)) {
+    return {
+      certifiable: false,
+      code: normalized === RUN_STATES.INVALIDATED ? 'RUN_INVALIDATED' : 'RUN_STATUS_NOT_CERTIFIABLE',
+      reason: `run em ${normalized} não pode ser certificado: transicione para ${RUN_STATES.RUNNING} (recuperação) e conclua o ciclo (${CERTIFIABLE_FINAL_STATES.join('/')}) antes de certificar`,
+    };
+  }
+  return { certifiable: true, code: null, reason: `status ${normalized} pode certificar` };
+}
 
 function runContextPath(rootDir = DEFAULT_ROOT) {
   return path.join(path.resolve(rootDir), RUN_CONTEXT_RELATIVE_PATH);
@@ -221,6 +274,9 @@ module.exports = {
   RUN_CONTEXT_VERSION,
   RUN_CONTEXT_RELATIVE_PATH,
   ALLOWED_TRANSITIONS,
+  CERTIFIABLE_FINAL_STATES,
+  NON_CERTIFIABLE_STATES,
+  assessCertifiableRunStatus,
   createRunContext,
   readRunContext,
   requireRunContext,

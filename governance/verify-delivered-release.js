@@ -553,9 +553,31 @@ function checkMasterScorecard() {
   const gate = makeGate('master_scorecard');
   const scorecard = readJson('governance/rap-master-scorecard.json');
   if (!scorecard) return fail(gate, 'MASTER_SCORECARD_MISSING');
+
+  // ── O RUN PRECISA SER CERTIFICÁVEL (defeito medido em 2026-10-05) ───────────
+  // O artefato entregue afirmava 78/78/VERIFIED enquanto o run estava FAILED. O
+  // verifier aprovava porque só olhava as dimensões. Um run com desfecho de falha
+  // não certifica: exige retomada explícita (FAILED → RUNNING → COMPLETED).
+  const { assessCertifiableRunStatus } = require('./shared/run-context');
+  const certifiable = assessCertifiableRunStatus(scorecard.runStatus);
+  if (!certifiable.certifiable) {
+    return fail(gate, `MASTER_SCORECARD_RUN_STATUS_NOT_CERTIFIABLE - ${certifiable.reason}`);
+  }
+
+  // ── A NOTA PRECISA SER CONFERÍVEL OFFLINE ───────────────────────────────────
+  // Mesma autoridade do verifier do payload (`scripts/verify-enterprise-governance-v2.sh`,
+  // seção 10): sem proof set completo, 78/78 é um número a ser acreditado.
+  const manifest = readJson('governance/evidence-manifest.json');
+  const { assessScorecardEvidenceProof } = require('../scripts/governance/lib/scorecard-evidence-proof');
+  const proofVerdict = assessScorecardEvidenceProof(manifest && manifest.scorecardEvidence);
+  if (!proofVerdict.ok) {
+    const codes = [...new Set(proofVerdict.violations.map((violation) => String(violation.code)))];
+    return fail(gate, `SCORECARD_EVIDENCE_PROOF_INVALID - ${codes.join(', ')} (${proofVerdict.violations.length} violação(ões) em ${proofVerdict.checked} prova(s))`);
+  }
+
   const dimensions = Array.isArray(scorecard.dimensions) ? scorecard.dimensions : [];
   const below10 = dimensions.filter((dimension) => (dimension.score ?? dimension.currentScore) !== 10);
-  if (below10.length === 0) return pass(gate, { dimensions: dimensions.length });
+  if (below10.length === 0) return pass(gate, { dimensions: dimensions.length, runStatus: scorecard.runStatus, proofs: proofVerdict.checked });
 
   const below10Ids = below10.map((dimension) => dimension.id).filter(Boolean);
   const nonDelivered = below10Ids.filter((id) => !DELIVERED_PHASE_DIMENSIONS.has(id));

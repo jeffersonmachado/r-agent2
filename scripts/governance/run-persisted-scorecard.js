@@ -34,6 +34,8 @@ const DELIVERED_PHASE_DIMENSIONS = deliveredPhaseDimensions();
 // requisito persistido carrega o caminho em `evidence[].path` — então o guard
 // nunca casava e 41 blockers circulares derrubavam o run.
 const { isCircularRequirement, isCircularOnlyDimension } = require('./circular-projection');
+const { planRunRecovery, syncRunContextStatus } = require('./lib/governed-run-status');
+const { readRunContext } = require('../../governance/shared/run-context');
 
 function toPersistable(scorecard) {
   return scorecard.dimensions.map((dimension) => ({
@@ -72,6 +74,34 @@ async function main() {
   if (!run) throw new Error('governance_run_missing');
   const sourceFingerprint = computeSourceFingerprint(rootDir);
   if (run.source_fingerprint !== sourceFingerprint) { await run.update({ status: 'INVALIDATED', invalidated_at: new Date(), invalidated_reason: 'RUN_SOURCE_DRIFT' }); throw new Error('RUN_SOURCE_DRIFT'); }
+
+  // ── RETOMADA EXPLÍCITA DE RUN FALHO ──────────────────────────────────────────
+  // Um run que falhou numa passagem anterior e voltou a ser trabalhado precisa ser
+  // RETOMADO antes da nova avaliação (FAILED → RUNNING). Sem isto, `FAILED` virava o
+  // estado permanente do run enquanto os números do scorecard continuavam subindo —
+  // foi assim que o envelope publicou 78/78/VERIFIED ao lado de runStatus=FAILED.
+  // Retomar não apaga a falha: o histórico vai para `metadata.failureRecoveries`.
+  const recovery = planRunRecovery({
+    dbStatus: run.status,
+    runContextStatus: (() => { try { return readRunContext(rootDir)?.status || null; } catch (_) { return null; } })(),
+  });
+  if (recovery.recover) {
+    const previousMetadata = run.metadata && typeof run.metadata === 'object' ? run.metadata : {};
+    await run.update({
+      status: recovery.toStatus,
+      completed_at: null,
+      metadata: {
+        ...previousMetadata,
+        failureRecoveries: [
+          ...(Array.isArray(previousMetadata.failureRecoveries) ? previousMetadata.failureRecoveries : []),
+          { at: new Date().toISOString(), from: recovery.fromStatus, to: recovery.toStatus, reason: recovery.reason },
+        ],
+      },
+    });
+    console.log(JSON.stringify({ event: 'GOVERNED_RUN_RECOVERED', ...recovery }));
+  } else if (recovery.code) {
+    console.warn(`[run-recovery] ${recovery.code}: ${recovery.reason}`);
+  }
   const runContext = { runId: run.run_id, sourceFingerprint, startedAt: new Date(run.started_at).toISOString(), generatedAt: new Date(run.createdAt).toISOString(), status: run.status, artifactType: 'run-context', artifactVersion: '1.0.0', policyId: run.policy_id, policyVersion: run.policy_version, policyFingerprint: run.policy_fingerprint };
 
   let scorecard = evaluateMasterScorecard({ rootDir, runContext, sourceFingerprint, requireCanonicalIds: true });
@@ -135,8 +165,27 @@ async function main() {
   const attestation = await getAttestation().findOne({ where: { run_id: run.run_id, policy_fingerprint: run.policy_fingerprint, status: 'ATTESTED' } });
   await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'agent_policy_compliance', status: attestation ? 'PASS' : 'FAIL', reason: attestation ? 'policy attestation exists for the governed run' : 'agent policy attestation missing', validator: 'verify-agent-policy-compliance' });
   const decision = await calculateFinalDecision({ runId: run.run_id, sourceFingerprint, proofFingerprint: scorecard.scorecardFingerprint, phase: 'PRE_PACKAGE' });
+
+  // ── O ARTEFATO FINAL CARREGA O DESFECHO REAL DO RUN ──────────────────────────
+  // A avaliação acima rodou com o estado com que o run COMEÇOU a passagem; a decisão
+  // recém-calculada é que define o desfecho (COMPLETED/FAILED). Publicar o scorecard
+  // no estado intermediário deixaria o artefato afirmando sucesso enquanto o run
+  // registrado já tinha falhado — exatamente a contradição medida em 2026-10-05.
+  const dbStatusAfterDecision = decision.decision === 'AUTONOMOUS_READY' ? 'COMPLETED' : 'FAILED';
+  const statusSync = syncRunContextStatus({ rootDir, targetStatus: dbStatusAfterDecision });
+  if (!statusSync.applied && statusSync.skippedReason && statusSync.skippedReason !== 'ALREADY_AT_TARGET') {
+    console.warn(`[run-status-sync] não aplicado: ${statusSync.skippedReason}`);
+  }
+  const finalRunContext = {
+    ...runContext,
+    status: (() => { try { return readRunContext(rootDir)?.status || statusSync.status || runContext.status; } catch (_) { return runContext.status; } })(),
+  };
+  scorecard = evaluateMasterScorecard({ rootDir, runContext: finalRunContext, sourceFingerprint, requireCanonicalIds: true });
+  await persistEvaluation({ runId: run.run_id, sourceFingerprint, results: toPersistable(scorecard), scorecardFingerprint: scorecard.scorecardFingerprint });
+  writeScorecard(scorecard, path.join(rootDir, 'governance', 'rap-master-scorecard.json'));
+  await exportCertificationSnapshot().catch(() => {});
   const exported = await exportGovernanceArtifacts();
-  console.log(JSON.stringify({ runId: run.run_id, scorecard: scorecard.summary, decision: decision.decision, exported }));
+  console.log(JSON.stringify({ runId: run.run_id, scorecard: scorecard.summary, decision: decision.decision, runStatus: scorecard.runStatus, statusSync, exported }));
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => close().catch(() => {}));

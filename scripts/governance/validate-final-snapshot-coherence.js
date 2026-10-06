@@ -96,6 +96,9 @@ function main() {
       scorecardBelow10: artifact.scorecardBelow10,
       openBlockers: artifact.openBlockers,
       semanticNote: artifact.semanticNote,
+      // A explicação por nota só é aceita para artefato que NÃO se apresenta como
+      // a autoridade corrente (ver certificationCoherence.assessRunStatusSemantics).
+      lifecycle: artifact.lifecycle,
     });
     if (!verdict.coherent) semanticChecks.push({ path: artifact.path, ...verdict });
   }

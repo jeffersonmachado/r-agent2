@@ -17,6 +17,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
+const { buildScorecardEvidenceFixture } = require('../../helpers/releaseEnvelopeFixture');
 
 // Helpers para criar ambiente temporário de teste
 function makeTempDir() {
@@ -122,6 +123,8 @@ function buildMinimalValidRoot(dir, provenance) {
   const scorecard = {
     ...lineage('rap-master-scorecard'),
     schema: 'rap-master-scorecard/v2',
+    // O estado do run é parte do artefato: sem ele o scorecard não é certificável.
+    runStatus: 'PACKAGED',
     dimensions: [{
       id: 'RAP-001', name: 'Verifier', score: 10, target: 10, status: 'VERIFIED',
       requirements: [{ id: 'delivered', mandatory: true, status: 'PASS' }],
@@ -153,6 +156,10 @@ function buildMinimalValidRoot(dir, provenance) {
     ...lineage('evidence-manifest'),
     fingerprints,
     artifacts: [],
+    // O scorecard precisa levar a PROVA das suas evidências, não só o número:
+    // sem proof set o gate `master_scorecard` reprova (fail-closed). O conjunto é
+    // derivado da taxonomia canônica pelo MESMO builder da fixture de envelope.
+    scorecardEvidence: buildScorecardEvidenceFixture(path.join(dir, 'governance'), runId, sourceFingerprint),
   });
 
   writeJson(dir, 'governance/final-governance-report.json', {
@@ -327,6 +334,7 @@ describe('verify-delivered-release — fail-closed behavior', () => {
       runId: 'rap-release-20260820-000000-testtest',
       generatedAt: '2026-08-20T00:01:00.000Z',
       artifactType: 'rap-master-scorecard', artifactVersion: '1.0.0',
+      runStatus: 'PACKAGED',
       dimensions: [
         { id: 'RAP-055', name: 'Delivered', score: 6, target: 10 },
         { id: 'RAP-056', name: 'Source/Proof', score: 6, target: 10 },

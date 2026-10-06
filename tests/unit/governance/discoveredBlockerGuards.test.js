@@ -20,6 +20,47 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 
+describe('run status e prova do scorecard — guardas de FIAÇÃO', () => {
+  const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+
+  test('o produtor do scorecard RETOMA run falho e SINCRONIZA o desfecho', () => {
+    // Sem as duas chamadas, o ponteiro do run volta a divergir do banco — que foi
+    // exatamente a origem de `78/78` convivendo com `runStatus=FAILED`.
+    const producer = read('scripts/governance/run-persisted-scorecard.js');
+    expect(producer).toContain('planRunRecovery');
+    expect(producer).toContain('syncRunContextStatus');
+  });
+
+  test('o engine valida o status contra a MÁQUINA DE ESTADOS (não uma lista local)', () => {
+    const engine = read('governance/master-scorecard-engine.js');
+    // A lista local que aceitava FAILED não pode voltar.
+    expect(engine).not.toMatch(/ALLOWED_RUN_STATUSES = new Set\(\[\s*'CREATED'/);
+    expect(engine).toContain("require('./shared/run-context')");
+    expect(engine).toContain('assessCertifiableRunStatus');
+  });
+
+  test('o proof set é embutido no MANIFEST canônico (não num arquivo paralelo)', () => {
+    const proofEngine = read('governance/proof-engine/index.js');
+    expect(proofEngine).toContain('scorecard-evidence-proof');
+    expect(proofEngine).toContain('evidenceManifest.scorecardEvidence');
+  });
+
+  test('o verifier do payload exige o proof set e não pula evidência em silêncio', () => {
+    const verifier = read('scripts/verify-enterprise-governance-v2.sh');
+    expect(verifier).toContain('SCORECARD_EVIDENCE_PROOF_MISSING');
+    expect(verifier).toContain('SCORECARD_EVIDENCE_HASH_MISMATCH');
+    expect(verifier).toContain('TEMPORAL_EVIDENCE_MISSING');
+    // O padrão proibido: `if(!fs.existsSync(abs))continue;` sem registrar violação.
+    expect(verifier).not.toMatch(/if\(!fs\.existsSync\(abs\)\)continue;/);
+  });
+
+  test('o verifier entregue rejeita scorecard com run não-certificável', () => {
+    const delivered = read('governance/verify-delivered-release.js');
+    expect(delivered).toContain('assessCertifiableRunStatus');
+    expect(delivered).toContain('SCORECARD_EVIDENCE_PROOF_INVALID');
+  });
+});
+
 describe('gate agregado — ordem do stamp de lineage', () => {
   const chain = () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));

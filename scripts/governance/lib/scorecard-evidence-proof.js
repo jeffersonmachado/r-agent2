@@ -1,0 +1,245 @@
+#!/usr/bin/env node
+'use strict';
+
+/**
+ * scorecard-evidence-proof.js — PROOF RECORDS das evidências que sustentam o
+ * RAP Master Scorecard.
+ *
+ * DEFEITO MEDIDO (2026-10-05) no artefato ENTREGUE:
+ *   evidências únicas referenciadas pelo Master Scorecard ....... 44
+ *   presentes fisicamente no workspace .......................... 44
+ *   com proof record no evidence-manifest do pacote .............  3
+ *   sem NENHUMA prova offline ................................... 41
+ * Ou seja: 78/78 era REPORTADO, mas 41 das 44 evidências que atribuem nota não
+ * tinham como ser conferidas por quem recebeu o pacote — o leitor tinha de
+ * confiar no número. E o verifier offline, ao não encontrar o artefato,
+ * executava `if (!exists) continue` e seguia em silêncio.
+ *
+ * O QUE ESTE MÓDULO É. Um materializador de PROOF RECORDS — não um segundo
+ * scorecard. O veredito NÃO é recalculado aqui: é LIDO do scorecard já avaliado
+ * pelo engine canônico (`master-scorecard-engine.js`). Reimplementar o
+ * julgamento criaria uma segunda autoridade que diverge — foi o que aconteceu na
+ * primeira versão deste arquivo, que reprovou `status: true` (o engine normaliza
+ * `true` → `PASS`) e tratou artefato de fase DELIVERED como reprovado em vez de
+ * DEFERRED.
+ *
+ * Aqui só se ADICIONA o que faltava para a nota ser verificável offline: sha256,
+ * classificação (taxonomia canônica), lineage e validade temporal.
+ *
+ * O MANIFEST CANÔNICO É A AUTORIDADE (não um arquivo paralelo): o resultado é
+ * embutido em `governance/evidence-manifest.json` sob `scorecardEvidence`, o
+ * mesmo artefato que o pacote já carrega e que o verifier já abre.
+ */
+
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const { MASTER_SCORECARD_REGISTRY } = require('../../../governance/master-scorecard-registry');
+const { getModeForArtifact, AUTHORITATIVE_MODES } = require('./runtime-evidence-artifacts');
+
+const ARTIFACT_TYPE = 'scorecard-evidence-proof';
+const ARTIFACT_VERSION = '1.0.0';
+
+/** Status de requisito do engine que contam como prova ACEITA para a nota. */
+const ACCEPTED_REQUIREMENT_STATUSES = Object.freeze(['PASS', 'DEFERRED']);
+
+function readJsonSafe(absPath) {
+  try {
+    return JSON.parse(fs.readFileSync(absPath, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+function sha256File(absPath) {
+  try {
+    return crypto.createHash('sha256').update(fs.readFileSync(absPath)).digest('hex');
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Indexa o veredito canônico do engine por `dimensionId|requirementId`. */
+function indexScorecardVerdicts(scorecard) {
+  const index = new Map();
+  for (const dimension of scorecard?.dimensions || []) {
+    for (const requirement of dimension.requirements || []) {
+      index.set(`${dimension.id}|${requirement.id}`, {
+        status: requirement.status,
+        reason: requirement.reason,
+        code: requirement.code || null,
+        score: dimension.score,
+        gaps: (dimension.gaps || []).length,
+        blockers: (dimension.blockers || []).length,
+      });
+    }
+  }
+  return index;
+}
+
+/**
+ * Enumera as evidências tipo-artefato usadas para decidir, a partir do registry
+ * canônico (fonte única — nada é re-listado aqui).
+ *
+ * @returns {Array<{dimensionId:string, requirementId:string, category:string, path:string}>}
+ */
+function listScorecardEvidence(registry = MASTER_SCORECARD_REGISTRY) {
+  const entries = new Map();
+  for (const dimension of registry) {
+    if (dimension.applicable === false) continue;
+    for (const requirement of dimension.requirements || []) {
+      for (const evidence of requirement.evidence || []) {
+        if (evidence && evidence.type === 'current_artifact' && evidence.path) {
+          const key = `${dimension.id}|${requirement.id}|${evidence.path}`;
+          if (!entries.has(key)) {
+            entries.set(key, {
+              dimensionId: dimension.id,
+              requirementId: requirement.id,
+              category: requirement.category,
+              path: evidence.path,
+            });
+          }
+        }
+      }
+    }
+  }
+  return [...entries.values()];
+}
+
+/**
+ * Constrói os proof records, casando cada evidência declarada com o veredito que
+ * o engine ATRIBUIU ao requisito correspondente.
+ *
+ * @param {{rootDir:string, runContext?:object, scorecard?:object, registry?:Array, now?:() => Date}} input
+ */
+function buildScorecardEvidenceProof({ rootDir, runContext = null, scorecard = null, registry = MASTER_SCORECARD_REGISTRY, now = () => new Date() } = {}) {
+  const runStartedAt = runContext?.startedAt || runContext?.createdAt || null;
+  const runId = runContext?.runId || null;
+  const sourceFingerprint = runContext?.sourceFingerprint || null;
+  const runStartedMs = runStartedAt ? Date.parse(runStartedAt) : NaN;
+  const verdicts = indexScorecardVerdicts(scorecard);
+
+  const records = listScorecardEvidence(registry).map((entry) => {
+    const absPath = path.join(rootDir, entry.path);
+    const exists = fs.existsSync(absPath) && fs.statSync(absPath).isFile();
+    const artifact = exists ? readJsonSafe(absPath) : null;
+
+    let classification = null;
+    try {
+      classification = getModeForArtifact(entry.path);
+    } catch (_) {
+      classification = null;
+    }
+
+    const verdict = verdicts.get(`${entry.dimensionId}|${entry.requirementId}`) || null;
+    const generatedAt = artifact?.generatedAt || artifact?.generated_at || null;
+    const generatedMs = generatedAt ? Date.parse(generatedAt) : NaN;
+
+    return {
+      dimensionId: entry.dimensionId,
+      requirementId: entry.requirementId,
+      category: entry.category,
+      path: entry.path,
+      classification,
+      classificationAuthoritative: classification ? AUTHORITATIVE_MODES.includes(classification) : false,
+      exists,
+      sha256: exists ? sha256File(absPath) : null,
+      result: verdict?.status || null,
+      resultAccepted: verdict ? ACCEPTED_REQUIREMENT_STATUSES.includes(verdict.status) : false,
+      reason: verdict?.reason || null,
+      dimensionScore: verdict?.score ?? null,
+      generatedAt,
+      artifactRunId: artifact?.runId || null,
+      artifactSourceFingerprint: artifact?.sourceFingerprint || null,
+      temporalValidity: Number.isFinite(generatedMs) && Number.isFinite(runStartedMs)
+        ? (generatedMs >= runStartedMs ? 'SAME_RUN' : 'PRE_RUN')
+        : 'UNKNOWN',
+    };
+  });
+
+  const summary = {
+    total: records.length,
+    missing: records.filter((r) => !r.exists).length,
+    preRun: records.filter((r) => r.temporalValidity === 'PRE_RUN').length,
+    unknownTemporal: records.filter((r) => r.temporalValidity === 'UNKNOWN').length,
+    unclassified: records.filter((r) => !r.classificationAuthoritative).length,
+    notAccepted: records.filter((r) => !r.resultAccepted).length,
+    withoutVerdict: records.filter((r) => r.result === null).length,
+    dimensionsCovered: new Set(records.map((r) => r.dimensionId)).size,
+  };
+
+  return {
+    artifactType: ARTIFACT_TYPE,
+    artifactVersion: ARTIFACT_VERSION,
+    generatedAt: now().toISOString(),
+    runId,
+    sourceFingerprint,
+    runStartedAt,
+    total: records.length,
+    summary,
+    records,
+  };
+}
+
+/**
+ * Julga um proof set. PURO (não toca disco) — é o MESMO critério que o verifier
+ * offline aplica no payload, para que produtor e consumidor não possam divergir.
+ *
+ * @returns {{ok:boolean, violations:Array<{code:string,path:string,detail:string}>, checked:number}}
+ */
+function assessScorecardEvidenceProof(proof) {
+  if (!proof || typeof proof !== 'object') {
+    return { ok: false, violations: [{ code: 'SCORECARD_EVIDENCE_PROOF_MISSING', path: '-', detail: 'proof set ausente' }], checked: 0 };
+  }
+  const records = Array.isArray(proof.records) ? proof.records : [];
+  if (records.length === 0) {
+    return { ok: false, violations: [{ code: 'SCORECARD_EVIDENCE_PROOF_EMPTY', path: '-', detail: 'proof set sem registros' }], checked: 0 };
+  }
+
+  const violations = [];
+  const runStartedMs = proof.runStartedAt ? Date.parse(proof.runStartedAt) : NaN;
+  if (!Number.isFinite(runStartedMs)) {
+    violations.push({ code: 'SCORECARD_EVIDENCE_RUN_START_UNKNOWN', path: '-', detail: `runStartedAt=${proof.runStartedAt}` });
+  }
+
+  for (const record of records) {
+    // A ausência de prova é FAIL, nunca `continue`: era exatamente esse o
+    // comportamento que deixava o scorecard inauditável offline.
+    if (!record.exists) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_MISSING', path: record.path, detail: `${record.dimensionId}/${record.requirementId}` });
+      continue;
+    }
+    if (!record.sha256) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_HASH_MISSING', path: record.path, detail: 'sem sha256' });
+    }
+    if (!record.classification) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_UNCLASSIFIED', path: record.path, detail: 'sem classificação na taxonomia canônica' });
+    } else if (!record.classificationAuthoritative) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_NOT_AUTHORITATIVE', path: record.path, detail: `classification=${record.classification}` });
+    }
+    if (record.temporalValidity === 'PRE_RUN') {
+      violations.push({ code: 'STALE_ARTIFACT', path: record.path, detail: `generatedAt=${record.generatedAt} < runStartedAt=${proof.runStartedAt}` });
+    } else if (record.temporalValidity === 'UNKNOWN') {
+      violations.push({ code: 'SCORECARD_EVIDENCE_TEMPORAL_UNKNOWN', path: record.path, detail: 'generatedAt não comparável com o início do run' });
+    }
+    // O veredito precisa EXISTIR e ser aceito: nota sustentada por evidência sem
+    // julgamento registrado é indistinguível de nota atribuída por engano.
+    if (record.result === null || record.result === undefined) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_WITHOUT_VERDICT', path: record.path, detail: `${record.dimensionId}/${record.requirementId}` });
+    } else if (!record.resultAccepted) {
+      violations.push({ code: 'SCORECARD_EVIDENCE_NOT_ACCEPTED', path: record.path, detail: `result=${record.result}` });
+    }
+  }
+
+  return { ok: violations.length === 0, violations, checked: records.length };
+}
+
+module.exports = {
+  ARTIFACT_TYPE,
+  ARTIFACT_VERSION,
+  ACCEPTED_REQUIREMENT_STATUSES,
+  listScorecardEvidence,
+  buildScorecardEvidenceProof,
+  assessScorecardEvidenceProof,
+};

@@ -34,6 +34,59 @@ function sha256File(absPath) {
   return crypto.createHash('sha256').update(fs.readFileSync(absPath)).digest('hex');
 }
 
+/**
+ * Proof set mínimo e VÁLIDO para a fixture — mesma forma que
+ * `scripts/governance/lib/scorecard-evidence-proof.js` produz no pipeline.
+ * A classificação é derivada da taxonomia canônica para que a fixture não possa
+ * aprovar o que o pipeline reprovaria.
+ */
+function buildScorecardEvidenceFixture(govDir, runId, sourceFp) {
+  const { getModeForArtifact, AUTHORITATIVE_MODES } =
+    require('../../scripts/governance/lib/runtime-evidence-artifacts');
+  // Candidatos derivados da TAXONOMIA (não de uma lista escrita à mão): só entra
+  // artefato que a autoridade canônica reconhece como sustentador de decisão.
+  const records = fs.readdirSync(govDir)
+    .filter((name) => name.endsWith('.json') && name !== 'evidence-manifest.json')
+    .map((name) => {
+      const rel = `governance/${name}`;
+      let classification = null;
+      try { classification = getModeForArtifact(rel); } catch (_) { classification = null; }
+      if (!classification || !AUTHORITATIVE_MODES.includes(classification)) return null;
+      return {
+        dimensionId: 'RAP-078',
+        requirementId: 'governed',
+        category: 'GOVERNED',
+        path: rel,
+        classification,
+        classificationAuthoritative: true,
+        exists: true,
+        sha256: sha256File(path.join(govDir, name)),
+        result: 'PASS',
+        resultAccepted: true,
+        reason: 'fixture',
+        dimensionScore: 10,
+        generatedAt: '2026-01-01T00:00:00.000Z',
+        artifactRunId: runId,
+        artifactSourceFingerprint: sourceFp,
+        temporalValidity: 'SAME_RUN',
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    artifactType: 'scorecard-evidence-proof',
+    artifactVersion: '1.0.0',
+    generatedAt: '2026-01-01T00:00:00.000Z',
+    runId,
+    sourceFingerprint: sourceFp,
+    runStartedAt: '2026-01-01T00:00:00.000Z',
+    total: records.length,
+    summary: { total: records.length, missing: 0, preRun: 0, unclassified: 0, notAccepted: 0 },
+    records,
+    verdict: { ok: true, checked: records.length, violations: [], violationCount: 0 },
+  };
+}
+
 function writeJson(absPath, data) {
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   fs.writeFileSync(absPath, `${JSON.stringify(data, null, 2)}\n`);
@@ -61,6 +114,9 @@ function buildScorecard(below10Ids = [], lin = lineage) {
   return {
     ...lin('rap-master-scorecard'),
     schema: 'rap-master-scorecard/v2',
+    // O engine SEMPRE grava o estado do run no scorecard. Um scorecard que não
+    // declara o desfecho não é certificável (ver verify-delivered-release.js).
+    runStatus: 'PACKAGED',
     overallStatus: below10Ids.length > 0 ? 'IN_PROGRESS' : 'VERIFIED',
     summary: { totalDimensions: 78, dimensionsAt10: at10, dimensionsBelow10: below10Ids.length },
     dimensions,
@@ -361,6 +417,18 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
       ...lin('evidence-manifest'),
       status: 'PASS',
       artifacts: manifestArtifacts,
+      // ── PROVA OFFLINE DAS EVIDÊNCIAS DO SCORECARD ─────────────────────────────
+      // O gate `master_scorecard` exige que a nota seja conferível, não acreditada
+      // (seção 10 do verifier do payload). A fixture produz prova VÁLIDA como o
+      // pipeline produz; `tamper.omitScorecardEvidence` a remove para o caso
+      // adversário. A classificação vem da taxonomia REAL (nunca de literal
+      // copiado no teste), então a fixture não pode "aprovar" uma classificação
+      // que o pipeline reprovaria.
+      ...(tamper.omitScorecardEvidence === true
+        ? {}
+        : {
+          scorecardEvidence: buildScorecardEvidenceFixture(govDir, payloadRunId || RUN_ID, payloadFp || SOURCE_FP),
+        }),
     });
 
     // Projeções derivadas da canônica embutida (gate final_status_projection_consistency):
@@ -575,4 +643,4 @@ function makeFixtureDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'rap-release-fixture-'));
 }
 
-module.exports = { buildReleaseFixture, makeFixtureDir, RELEASE_ID, RUN_ID, SOURCE_FP, GIT_COMMIT, GIT_TREE };
+module.exports = { buildReleaseFixture, makeFixtureDir, buildScorecardEvidenceFixture, RELEASE_ID, RUN_ID, SOURCE_FP, GIT_COMMIT, GIT_TREE };

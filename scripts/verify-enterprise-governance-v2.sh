@@ -516,11 +516,18 @@ if(fs.existsSync(manifestPath)){try{const m=JSON.parse(fs.readFileSync(manifestP
 if(!runStartedAt&&runId){const m=/^rap-governed-(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{3})/.exec(runId);if(m){runStartedAt=new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6],+m[7])).toISOString();}}
 if(!runStartedAt){process.stdout.write('TEMPORAL_RUN_START_UNKNOWN');process.exit(0);}
 const startedMs=Date.parse(runStartedAt);
+// Artefatos canônicos que PRECISAM existir no payload. Ausência aqui era
+// silenciada pelo `continue` abaixo — o mesmo padrão que deixava o scorecard
+// referenciar 41 evidências sem prova e ainda passar.
+const mandatory=new Set([...MINIMUM]);
 const targets=[...new Set([...MINIMUM,...declared,...scorePaths])];
 const violations=[];let scanned=0;
 for(const rel of targets){
   const abs=path.join(root,rel);
-  if(!fs.existsSync(abs))continue;
+  if(!fs.existsSync(abs)){
+    if(mandatory.has(rel))violations.push('TEMPORAL_EVIDENCE_MISSING:'+rel);
+    continue;
+  }
   let a;try{a=JSON.parse(fs.readFileSync(abs,'utf8'));}catch(_){continue;}
   if(!a||typeof a!=='object')continue;
   scanned++;
@@ -534,6 +541,75 @@ if [[ "$TEMPORAL_OUT" == OK:* ]]; then
   ok "evidência autoritativa com integridade temporal: ${TEMPORAL_OUT#OK:}"
 else
   fail "integridade temporal da evidência reprovada — $TEMPORAL_OUT"
+fi
+
+#
+# Seção 10 — A NOTA DO SCORECARD PRECISA SER CONFERÍVEL, NÃO ACREDITADA.
+#
+# DEFEITO MEDIDO (2026-10-05) no artefato entregue: o Master Scorecard referenci 44
+# evidências únicas; 3 tinham registro no evidence-manifest e 41 não tinham NENHUMA
+# prova. `78/78` era, para quem recebia o pacote, um número a ser acreditado — e a
+# seção 9, ao não encontrar o arquivo, executava `if (!exists) continue`.
+#
+# Aqui se exige o PROOF SET (`evidence-manifest.scorecardEvidence`) com, para cada
+# evidência declarada pelo scorecard EMPACOTADO: hash, classificação autoritativa,
+# validade temporal same-run, veredito aceito — e binding contra os BYTES reais
+# quando o artefato está no payload. Faltando prova ⇒ FAIL (nunca `continue`).
+#
+step "10. Evidência do Master Scorecard verificável offline (proof records)"
+SCORECARD_EVIDENCE_OUT="$(node -e "
+const fs=require('fs'),path=require('path'),crypto=require('crypto');
+const root=process.argv[1];
+const manifestPath=path.join(root,'governance','evidence-manifest.json');
+if(!fs.existsSync(manifestPath)){process.stdout.write('SCORECARD_EVIDENCE_MANIFEST_MISSING');process.exit(0);}
+let manifest;try{manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));}catch(_){process.stdout.write('SCORECARD_EVIDENCE_MANIFEST_UNREADABLE');process.exit(0);}
+const proof=manifest.scorecardEvidence;
+if(!proof||typeof proof!=='object'){process.stdout.write('SCORECARD_EVIDENCE_PROOF_MISSING');process.exit(0);}
+const records=Array.isArray(proof.records)?proof.records:[];
+if(records.length===0){process.stdout.write('SCORECARD_EVIDENCE_PROOF_EMPTY');process.exit(0);}
+// Mesma autoridade de classificação do pipeline (taxonomia empacotada).
+const taxPath=path.join(root,'config','runtime-evidence-artifacts.json');
+if(!fs.existsSync(taxPath)){process.stdout.write('SCORECARD_EVIDENCE_TAXONOMY_MISSING');process.exit(0);}
+const tax=JSON.parse(fs.readFileSync(taxPath,'utf8'));
+const AUTHORITATIVE=['RUNTIME_EVIDENCE','DERIVED_REPORT','CERTIFICATION_ARTIFACT'];
+const declaredModes={};
+for(const mode of AUTHORITATIVE)for(const a of ((tax.modes||{})[mode]||{}).artifacts||[])declaredModes[a]=mode;
+const ACCEPTED=['PASS','DEFERRED'];
+// O scorecard EMPACOTADO é a lista do que precisa de prova: um proof set que
+// omitisse uma evidência declarada passaria como 'completo'.
+const regPath=path.join(root,'governance','master-scorecard-registry.js');
+const declared=[];
+if(fs.existsSync(regPath)){const txt=fs.readFileSync(regPath,'utf8');const re=/path:\s*'([^']+)'/g;let m;while((m=re.exec(txt))!==null)declared.push(m[1]);}
+if(declared.length===0){process.stdout.write('SCORECARD_EVIDENCE_DECLARATIONS_UNREADABLE');process.exit(0);}
+const uniqDeclared=[...new Set(declared)];
+const proven=new Set(records.map(r=>r.path));
+const violations=[];
+for(const rel of uniqDeclared)if(!proven.has(rel))violations.push('SCORECARD_EVIDENCE_UNPROVEN:'+rel);
+const runStartedAt=proof.runStartedAt||null;
+const startedMs=runStartedAt?Date.parse(runStartedAt):NaN;
+if(!Number.isFinite(startedMs))violations.push('SCORECARD_EVIDENCE_RUN_START_UNKNOWN');
+if(proof.runId&&manifest.runId&&proof.runId!==manifest.runId)violations.push('SCORECARD_EVIDENCE_RUN_MISMATCH');
+if(proof.sourceFingerprint&&manifest.sourceFingerprint&&proof.sourceFingerprint!==manifest.sourceFingerprint)violations.push('SCORECARD_EVIDENCE_SOURCE_MISMATCH');
+for(const r of records){
+  if(!r.sha256)violations.push('SCORECARD_EVIDENCE_HASH_MISSING:'+r.path);
+  const mode=declaredModes[r.path]||null;
+  if(!mode)violations.push('SCORECARD_EVIDENCE_NOT_AUTHORITATIVE:'+r.path+'('+String(r.classification)+')');
+  if(r.temporalValidity!=='SAME_RUN')violations.push('SCORECARD_EVIDENCE_TEMPORAL:'+r.path+'('+String(r.temporalValidity)+')');
+  if(!ACCEPTED.includes(String(r.result)))violations.push('SCORECARD_EVIDENCE_NOT_ACCEPTED:'+r.path+'('+String(r.result)+')');
+  // BINDING CRIPTOGRÁFICO: se o artefato está no payload, o sha256 REAL tem de
+  // bater com o registrado — prova não pode ser uma afirmação sobre si mesma.
+  const abs=path.join(root,r.path);
+  if(fs.existsSync(abs)&&r.sha256){
+    const real=crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+    if(real!==r.sha256)violations.push('SCORECARD_EVIDENCE_HASH_MISMATCH:'+r.path);
+  }
+}
+process.stdout.write(violations.length===0?('OK:'+records.length+' provas/('+uniqDeclared.length+' declaradas)'):violations.slice(0,8).join(' | '));
+" "$TEMPORAL_PAYLOAD_ROOT" 2>/dev/null || echo 'SCORECARD_EVIDENCE_CHECK_UNREADABLE')"
+if [[ "$SCORECARD_EVIDENCE_OUT" == OK:* ]]; then
+  ok "nota do scorecard conferível offline: ${SCORECARD_EVIDENCE_OUT#OK:}"
+else
+  fail "prova das evidências do Master Scorecard reprovada — $SCORECARD_EVIDENCE_OUT"
 fi
 
 echo ""

@@ -56,6 +56,8 @@
     "tests/unit/governance/requiredTestReportPathResolution.test.js",
     "tests/unit/governance/waveTransportRetry.test.js",
       "tests/unit/governance/certificationCoherence.test.js",
+      "tests/unit/governance/runStatusCertifiability.test.js",
+      "tests/unit/governance/scorecardEvidenceProof.test.js",
       "tests/unit/governance/releasePipelineV2Orchestration.test.js",
       "tests/unit/governance/releaseSuiteExclusiveGroups.test.js",
       "tests/integration/bugRegressionCommandContamination.test.js"
