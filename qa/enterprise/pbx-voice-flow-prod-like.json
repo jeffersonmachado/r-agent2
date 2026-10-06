@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-06T16:12:59.172Z",
+  "generatedAt": "2026-10-06T17:14:13.894Z",
   "ok": true,
   "warnings": [],
   "evidencePaths": [
@@ -11,13 +11,13 @@
   "sources": {
     "l03": {
       "smoke": "L-03",
-      "generatedAt": "2026-10-06T16:12:37.405Z",
+      "generatedAt": "2026-10-06T17:13:57.716Z",
       "ok": true,
       "authMode": "rpa_scoped",
       "tenantId": "debug-e2e-engineering-router",
-      "flowId": "flow-voice-tts-asr-smoke-1791303143210",
-      "callId": "call-voice-tts-asr-1791303143210",
-      "extension": "1110",
+      "flowId": "flow-voice-tts-asr-smoke-1791306828434",
+      "callId": "call-voice-tts-asr-1791306828434",
+      "extension": "1134",
       "selftestExtension": "9191",
       "dialplanSignature": "a14edf22f34bf4e813de270f",
       "runtime": {
@@ -31,16 +31,16 @@
       },
       "realCall": {
         "attempted": true,
-        "click2callId": "cc_c2c-1791303143457-f6313247713b",
+        "click2callId": "cc_c2c-1791306828579-4e6e9b4dd944",
         "click2callStatus": "originated",
         "synthetic": false,
         "cdrFound": true,
         "cdr": {
-          "uniqueid": "1791303143.240",
+          "uniqueid": "1791306828.248",
           "disposition": "ANSWERED",
           "src": "9191",
           "dst": "9191",
-          "calldate": "2026-10-06T16:12:24.665Z"
+          "calldate": "2026-10-06T17:13:49.754Z"
         }
       },
       "ttsPrompts": [
@@ -73,12 +73,12 @@
         {
           "nodeId": "prompt-1",
           "phase": "prompt",
-          "recordingUrl": "recordings://call-voice-tts-asr-1791303143210/prompt.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1791306828434/prompt.wav"
         },
         {
           "nodeId": "asr-1",
           "phase": "asr",
-          "recordingUrl": "recordings://call-voice-tts-asr-1791303143210/asr.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1791306828434/asr.wav"
         }
       ],
       "selftestStatus": "WARN",
@@ -86,13 +86,13 @@
     },
     "l04": {
       "smoke": "L-04",
-      "generatedAt": "2026-10-06T16:12:55.482Z",
+      "generatedAt": "2026-10-06T17:14:04.213Z",
       "ok": true,
       "authMode": "rpa_scoped",
       "tenantId": "debug-e2e-engineering-router",
       "cdr": {
-        "id": "cdr-l04-1791303166417",
-        "uniqueid": "l04-1791303166417",
+        "id": "cdr-l04-1791306838201",
+        "uniqueid": "l04-1791306838201",
         "source": "synthetic_insert"
       },
       "trigger": {
@@ -105,24 +105,24 @@
           "scanned": 1,
           "emitted": 3,
           "cursor": {
-            "calldate": "2026-10-06T16:13:48.415Z",
-            "cdrId": "cdr-l04-1791303166417"
+            "calldate": "2026-10-06T17:14:58.910Z",
+            "cdrId": "cdr-l04-1791306838201"
           },
           "inboxBridged": 0,
           "recordingsUpserted": 0
         },
         "eventIds": [
-          "evt-1791303169566-e2cf53666800",
-          "evt-1791303169619-2ecb8216da72",
-          "evt-1791303169629-5d36432fc5f4"
+          "evt-1791306839507-01fcb224367e",
+          "evt-1791306839546-0df314d5c14c",
+          "evt-1791306839554-660f1436b0ed"
         ],
         "queue": null
       },
       "flow": {
-        "flowId": "flow-pbx-call-events-runtime-smoke-1791303166417",
-        "executionId": "fx-1791303170156-4de0ee2c868f",
+        "flowId": "flow-pbx-call-events-runtime-smoke-1791306838201",
+        "executionId": "fx-1791306840016-9f93633e32f7",
         "status": "done",
-        "latencyMs": 12,
+        "latencyMs": 10,
         "nodesCount": 3
       },
       "dispatch": {
@@ -145,8 +145,8 @@
     "recordings": true,
     "replayTimeline": true
   },
-  "runId": "rap-governed-20261006133101104-e86f5557",
-  "sourceFingerprint": "da03d84bef542432eba0472303aedf6bcc5d8da2aa37df056b69880792c5d885",
-  "sourceCommit": "02b3b711393426ca81c6e7fbe81988ac604b4b5e",
-  "sourceTree": "0938dd30603a251dbb5f20cb8f23fe681459d5f9"
+  "runId": "rap-governed-20261006171344629-ca06ee7d",
+  "sourceFingerprint": "c37b181b2e52950d6115e8b82437245423e7615b3d0581cb6332c79642ad0ab0",
+  "sourceCommit": "dac1ca9e44813b41d132536970b76bf15e894637",
+  "sourceTree": "80946e17fc7f48de1b8ba62d8ec0e99d10190dc6"
 }
