@@ -177,21 +177,16 @@ preflight() {
   # passam a divergir da evidência-fonte com
   # `scheduled_flow_source_mismatch:<jornada>:integrityValid` (medido em
   # 2026-09-27) — ou seja, sem `.env` esta checagem bloquearia selo válido.
-  local qa_state
-  qa_state="$(node --env-file-if-exists=.env -e '
-    const fs = require("fs");
-    const { assessScheduledEvidence } = require("./tools/system/lib/qa-waves-enterprise-governance-bridge");
-    const p = "qa/smoke/qa-waves-scheduled-operational-smoke.json";
-    let scheduled = null;
-    try { scheduled = JSON.parse(fs.readFileSync(p, "utf8")); } catch (_) { scheduled = null; }
-    const r = assessScheduledEvidence(scheduled, { root: process.cwd() }) || {};
-    if (r.healthy === true) process.stdout.write("OK");
-    else process.stdout.write(`INVALIDO motivos=${(r.reasons || []).join(",") || "desconhecido"} maxAgeHours=${r.maxAgeHours}`);
-  ' 2>/dev/null)"
+  # Autoridade ÚNICA da avaliação do TTL (o `.env` é carregado pelo próprio script):
+  # a mesma chamada é repetida no início do `consolidate`, porque o ciclo leva
+  # ~1,5 h e a evidência (TTL 48 h) pode vencer no MEIO dele.
+  local qa_state qa_rc
+  qa_state="$(node "$PROJECT_ROOT/scripts/governance/qa-waves-scheduled-ttl-preflight.js" 2>/dev/null)"
+  qa_rc=$?
 
-  if [ "$qa_state" = "OK" ]; then
+  if [ "$qa_rc" = "0" ] && [ "$qa_state" = "OK" ]; then
     ok "evidência de smoke contínuo das QA Waves dentro da validade"
-  elif [ -z "$qa_state" ]; then
+  elif [ "$qa_rc" = "2" ] || [ -z "$qa_state" ]; then
     bad "não foi possível avaliar a evidência de smoke contínuo das QA Waves"
     echo "      (falha ao carregar .env/bridge — verifique .env e node_modules antes do ciclo)"
     [ "$DRY_RUN" = "1" ] || exit 1
@@ -504,6 +499,24 @@ phase_publish() {
 # reparações rodam imediatamente em seguida, na mesma fase.
 phase_consolidate() {
   step consolidate "varredura agregada + aprovação de deploy + reparos (journey/stamp) + verificação final"
+
+  # GUARD: reavalia o TTL do smoke contínuo IMEDIATAMENTE antes do agregado.
+  #
+  # MEDIDO em 2026-10-05: o preflight valida a idade do smoke na ENTRADA da
+  # execução; o ciclo completo leva ~1,5 h, e a evidência (TTL 48 h) venceu
+  # DURANTE o candidate/final. O agregado então reprovou em
+  # `validate:qa-governance` (qa_waves_continuous_smoke_degraded) depois de
+  # ~25 min de varredura — e a única saída era renovar o smoke e repetir a fase.
+  # Reavaliar aqui troca 25 min de falha tardia por falha imediata com o remédio,
+  # sem afrouxar nada: TTL vencido ⇒ o ciclo PARA.
+  local consolidate_qa_state consolidate_qa_rc
+  consolidate_qa_state="$(node "$PROJECT_ROOT/scripts/governance/qa-waves-scheduled-ttl-preflight.js" 2>&1)"
+  consolidate_qa_rc=$?
+  if [ "$consolidate_qa_rc" != "0" ]; then
+    warn "smoke contínuo das QA Waves FORA da validade no início do consolidate"
+    printf '%s\n' "$consolidate_qa_state" | tail -6 | sed 's/^/    /'
+    fail "QA_WAVES_SCHEDULED_EVIDENCE_STALE no consolidate — o TTL venceu durante o ciclo; renove o smoke agendado e retome com --from consolidate"
+  fi
 
   local alog="$LOG_DIR/aggregate.log"
   timeout 3000 npm run validate:governance-enforcement > "$alog" 2>&1

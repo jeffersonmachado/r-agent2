@@ -1,6 +1,6 @@
 # Evidência de discovery — segurança, RAG e agentes
 
-Data: 2026-10-05. Artefato de análise; não certificação/release. Código-fonte e dependências sintéticas reproduzem caminhos de erro/permissividade, sem ler dados reais, configurar serviços, acessar rede ou enviar mensagens. Testes existentes e gates reais são coordenados no [registro central](./validation.md).
+Data: 2026-10-05. Artefato de análise; não certificação/release. Código-fonte e dependências sintéticas reproduzem caminhos de erro/permissividade, sem ler dados reais, configurar serviços, acessar rede ou enviar mensagens. Testes existentes e gates reais são coordenados no [registro central](./domain-findings.md).
 
 ## Probe reproduzível
 

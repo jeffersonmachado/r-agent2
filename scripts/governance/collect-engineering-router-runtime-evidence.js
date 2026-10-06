@@ -30,6 +30,7 @@
  */
 
 const crypto = require('crypto');
+const path = require('path');
 const { execFileSync } = require('child_process');
 const { ROOT, writeReport } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
@@ -45,6 +46,59 @@ loadEnvFile(ROOT);
 
 function currentCommit() {
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
+}
+
+/** O diretório é um work tree git? (`git` indisponível ou fora de repo ⇒ false.) */
+function isGitWorkTree(dir) {
+  try {
+    return execFileSync('git', ['rev-parse', '--is-inside-work-tree'], {
+      cwd: dir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim() === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * GUARD DE AMBIENTE — fail-closed ANTES dos 25 testes.
+ *
+ * MEDIDO em 2026-10-05: `ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria` (a variável
+ * vazou para o shell compartilhado ao subir `docker compose` para o smoke agendado — e
+ * `/opt/results/ria` NÃO é repositório git; o repo é `/opt/results/ria/r-agent2`).
+ * `api/services/engineeringRouter/{contextBuilderService,executionSandbox}.js` usam essa
+ * variável como ROOT; com ela apontando para um não-repo, o sandbox falha em
+ * `git rev-parse HEAD` e 10 dos 25 itens reprovam com
+ * "saída do Jest não pôde ser parseada como JSON" — sintoma que acusa o RUNNER, não a
+ * causa, e que já custou um ciclo de selagem inteiro na fase `consolidate`.
+ *
+ * O guard troca ~20 min de falha enganosa por 200 ms dizendo exatamente qual variável
+ * está errada e como corrigir. Nunca "conserta" o ambiente por conta própria: só recusa.
+ */
+function assertRouterEnvironmentUsable() {
+  const declared = String(process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT || '').trim();
+  if (declared) {
+    const resolved = path.resolve(declared);
+    if (!isGitWorkTree(resolved)) {
+      process.stderr.write(
+        '[runtime-evidence] ENV_HOST_REPO_ROOT_NOT_A_GIT_REPO — ENGINEERING_ROUTER_HOST_REPO_ROOT='
+        + `${resolved} não é um repositório git.\n`
+        + '  O Engineering Router resolve `git rev-parse HEAD` nesse diretório quando a variável está\n'
+        + '  definida; fora de um repo, os itens de runtime reprovam com "saída do Jest não pôde ser\n'
+        + '  parseada como JSON" (falha de AMBIENTE, não de código).\n'
+        + '  Remédio: `unset ENGINEERING_ROUTER_HOST_REPO_ROOT` (o default é este repositório) ou aponte\n'
+        + `  a variável para um clone git válido. Repositório desta aplicação: ${ROOT}\n`,
+      );
+      return { ok: false, declared: resolved };
+    }
+    return { ok: true, declared: resolved };
+  }
+  if (!isGitWorkTree(ROOT)) {
+    process.stderr.write(`[runtime-evidence] ENV_REPO_ROOT_NOT_A_GIT_REPO — ${ROOT} não é repositório git.\n`);
+    return { ok: false, declared: ROOT };
+  }
+  return { ok: true, declared: null };
 }
 
 // Cada item mapeia para um teste REAL específico já existente no repositório (nunca um teste
@@ -182,6 +236,8 @@ function runTargetedTest(testPath, testId) {
 }
 
 function main() {
+  const environment = assertRouterEnvironmentUsable();
+  if (!environment.ok) process.exit(2); // 2 = ambiente recusado (≠ 1 = item de runtime reprovado)
   const sourceCommit = currentCommit();
   // Reutiliza a MESMA autoridade de fingerprint já usada pelo resto da governança do RAP
   // (governance/proof-engine/fingerprint-chain.js), em vez de um hash paralelo — amarra a
@@ -241,7 +297,7 @@ function main() {
   process.exit(failed.length === 0 ? 0 : 1);
 }
 
-module.exports = { RUNTIME_ITEMS };
+module.exports = { RUNTIME_ITEMS, isGitWorkTree, assertRouterEnvironmentUsable };
 
 // ER-V1-FINAL-009 (Full-Suite Isolation) — achado real: `validate-engineering-router-v1.js`
 // (REQUIRED_RUNTIME_ITEM_IDS) e `tests/integration/engineeringRouterMandatoryRuntimeGate.test.js`

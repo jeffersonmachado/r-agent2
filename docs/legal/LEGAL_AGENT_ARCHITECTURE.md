@@ -1,6 +1,6 @@
 # LEGAL — agentes, Cognitive Core, execução e aprovação
 
-Data: 2026-10-05. Discovery, sem criar agentes/tools/endpoints ou alterar o catálogo. Esta avaliação descreve a execução encontrada e as extensões futuras. [Gap matrix](./LEGAL_GAP_MATRIX.md), [segurança](./LEGAL_SECURITY_REVIEW.md) e [RAG](./LEGAL_RAG_REVIEW.md) compõem a decisão.
+Data: 2026-10-05. Discovery, sem criar agentes/tools/endpoints ou alterar o catálogo. Esta avaliação descreve a execução encontrada e as extensões futuras. Gap matrix, [segurança](./LEGAL_SECURITY_REVIEW.md) e [RAG](./LEGAL_RAG_REVIEW.md) compõem a decisão.
 
 ## Arquitetura existente a reutilizar
 
@@ -66,7 +66,7 @@ Existe padrão forte reutilizável em [`missionApprovalService.js:67`](../../api
 
 ## Prova, drift e critérios de aceitação
 
-Testes encontrados: [`agentSupervisor.test.js:48`](../../tests/unit/agentSupervisor.test.js), seleção/tenant/delegação/vertical; [`cognitivePrincipal.test.js:48`](../../tests/unit/cognitivePrincipal.test.js); [`cognitiveCoreToolRegistry.test.js:26`](../../tests/unit/cognitiveCoreToolRegistry.test.js); [`executionRouter.test.js:118`](../../tests/unit/executionRouter.test.js), serialização de task.service; [`executionRouterDurableRuntime.test.js:22`](../../tests/unit/executionRouterDurableRuntime.test.js), bridge de tools cujo comentário em 48 declara fallback memória sem Sequelize; [`processDurableRuntime.test.js:135`](../../tests/unit/processDurableRuntime.test.js), human `task.user` direto; [`mcpHardening.test.js:69`](../../tests/unit/mcpHardening.test.js); [`mcpToolPolicy.test.js:97`](../../tests/unit/mcpToolPolicy.test.js). Não são prova de DB/restart, aprovação jurídica ou bridge HUMAN_TASK/WAIT_EVENT; esta última falhou no probe. Execuções: [registro central](./_evidence/validation.md).
+Testes encontrados: [`agentSupervisor.test.js:48`](../../tests/unit/agentSupervisor.test.js), seleção/tenant/delegação/vertical; [`cognitivePrincipal.test.js:48`](../../tests/unit/cognitivePrincipal.test.js); [`cognitiveCoreToolRegistry.test.js:26`](../../tests/unit/cognitiveCoreToolRegistry.test.js); [`executionRouter.test.js:118`](../../tests/unit/executionRouter.test.js), serialização de task.service; [`executionRouterDurableRuntime.test.js:22`](../../tests/unit/executionRouterDurableRuntime.test.js), bridge de tools cujo comentário em 48 declara fallback memória sem Sequelize; [`processDurableRuntime.test.js:135`](../../tests/unit/processDurableRuntime.test.js), human `task.user` direto; [`mcpHardening.test.js:69`](../../tests/unit/mcpHardening.test.js); [`mcpToolPolicy.test.js:97`](../../tests/unit/mcpToolPolicy.test.js). Não são prova de DB/restart, aprovação jurídica ou bridge HUMAN_TASK/WAIT_EVENT; esta última falhou no probe. Execuções: [registro central](./_evidence/domain-findings.md).
 
 `DOCUMENTATION_DRIFT`: o comentário de `execution-router/index.js:6–15` declara human/wait durable, porém seus tipos emitidos não são suportados pelo runtime. O catálogo usa `ticket.manage`/`support.createTicket` em `agent-marketplace/service.js:49–66` e tool default em `tool-registry:723`, embora a política atual peça `case.manage` e aliases legados apenas por compatibilidade. Novas capabilities Legal devem usar IDs canônicos atuais; não duplicar o legado.
 

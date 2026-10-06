@@ -1712,6 +1712,31 @@ function persistReport(report) {
     mandatoryBlockReasons: report.mandatoryBlockReasons,
     canonicalMeshExecutionId: report.canonicalMeshExecutionId,
     totalCoverage: report.readiness.readinessScore,
+    // O score do core é uma média PONDERADA de seis componentes; publicar só o
+    // total torna impossível auditar POR QUE ele caiu (medido 2026-10-05: o
+    // score foi de 100 para 91 durante um ciclo de selagem e a única forma de
+    // descobrir o componente era reverse-engineering do cálculo). Os
+    // componentes viajam com o total para o veredito ser auditável.
+    readinessComponents: {
+      docsScore: report.readiness.docsScore,
+      meshScore: report.readiness.meshScore,
+      qaWavesScore: report.readiness.qaWavesScore,
+      replayScore: report.readiness.replayScore,
+      verticalScore: report.readiness.verticalScore,
+      productionScore: report.readiness.productionScore,
+      readinessScore: report.readiness.readinessScore,
+    },
+    // O `docsScore` (peso 0.15) é derivado de links quebrados em `docs/`; sem a
+    // lista, uma queda do score por documentação é indistinguível de regressão
+    // de plataforma. Publica a CONTAGEM e uma amostra auditável do que quebrou.
+    docsValidationSummary: {
+      filesScanned: report.docsValidation.filesScanned,
+      totalMarkdownLinks: report.docsValidation.totalMarkdownLinks,
+      brokenCount: report.docsValidation.brokenMarkdownLinks.length,
+      bareCount: report.docsValidation.knownBareReferences.length,
+      ok: report.docsValidation.ok,
+      brokenSample: report.docsValidation.brokenMarkdownLinks.slice(0, 10),
+    },
     // §55 Os cinco estados de certificação viajam SEPARADOS no artefato
     // canônico. Nenhum consumidor pode apresentar "100%" sem dizer 100% de quê.
     certificationStates: report.certificationStates,
