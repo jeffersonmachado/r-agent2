@@ -1,0 +1,68 @@
+{
+  "id": "2026-10-07-engineering-mission-decomposition",
+  "generatedAt": "2026-10-07T15:20:00.000Z",
+  "kind": "HUMAN_EXTERNAL_BOOTSTRAP_DECOMPOSITION",
+  "authorization": "HUMANA/EXTERNA (usuário) — autorizada apenas a decomposição da missão em incrementos pequenos e executáveis",
+  "autonomyDistinction": "DECOMPOSIÇÃO EXTERNA TEMPORÁRIA. Objetivo declarado: tornar o Engenheiro capaz de decompor e replanejar sozinho (INC-1/INC-2) e então PARAR esta intervenção, entregando ao próprio Engenheiro a decomposição e execução dos itens restantes. NÃO deve ser contada como entrega autônoma do Engenheiro.",
+  "mainMissionId": "8c555706-8c53-4e07-b069-e74735c683a0",
+
+  "reconFacts": {
+    "decomposition": "parent_mission_id é write-only: gravado (missionStoreService.js:133, missionCompilerService.js:514) e NUNCA lido; nenhum chamador passa parentMissionId; não existe motor de decomposição, nem dependência/ordem entre missões, nem teto de iteração de missão.",
+    "replanBudget": "existe APENAS budget de replan de FONTE (engine/engineeringMission/missionSource.js:749-753 SOURCE_REPLAN_POLICY.maxAttempts=2), persistido em resume_metadata.sourceReplan.attempts; não há budget geral (tempo/custo/tokens) nem por motivo.",
+    "replanLineage": "existe resume_metadata.sourceReplan.history e resume_metadata.bugLoop.lineage; NÃO existe evento de replan em engineering_mission_versions nem fingerprint do motivo, e missionReportService não expõe replan algum.",
+    "livelock": "existe NO_PROGRESS de WORKER por tempo (engine/engineeringMission/progressPolicy.js) e reincidência de FINDING (MAX_FINDING_RECURRENCE=3); NÃO existe detecção de LIVELOCK de PLANO (mesmo motivo/plano repetido sem progresso material).",
+    "autoResume": "missionRecoveryCoordinator retoma só RESUMABLE_MISSION_STATES (CREATED/ENRICHING/APPROVED/EXECUTING); bugLoop resumeOriginalMission reabre automaticamente SÓ FAILED e sempre sob a MESMA spec aprovada (nunca cria versão nova); BLOCKED/DEGRADED/REJECTED/CANCELLED são HUMAN_ONLY. Não há contador de reaberturas."
+  },
+
+  "increments": [
+    {
+      "id": "INC-1",
+      "title": "Mission Replan Policy (núcleo puro): budget, livelock, decomposição e lineage",
+      "why": "Prioridade exigida: é a base determinística que permite ao Engenheiro decompor e replanejar. Sem política pura e testável, qualquer wiring é adivinhação.",
+      "dependsOn": [],
+      "executable": "module + tests (sem I/O, sem tocar nenhum outro arquivo)",
+      "objectiveAcceptance": [
+        "módulo puro novo em engine/engineeringMission/replanPolicy.js, zero I/O",
+        "testes em tests/unit/engineeringMission/replanPolicy.test.js verdes",
+        "suíte-âncora tests/unit/engineeringMission/missionSource.test.js continua verde (nenhuma regressão)"
+      ]
+    },
+    {
+      "id": "INC-2",
+      "title": "Wiring do replan/decomposição no runtime de missões (serviço + persistência + exposição)",
+      "dependsOn": ["INC-1"],
+      "executable": "usa a política pura do INC-1; persiste budget/lineage, decide replan após falha legítima e cria missões-filhas",
+      "objectiveAcceptance": [
+        "budget/lineage persistidos e expostos no relatório da missão",
+        "replan/decomposição automáticos dentro do budget, com livelock detectado e estado terminal honesto",
+        "testes de integração verdes e nenhuma regressão nas suítes do Router"
+      ]
+    },
+    {
+      "id": "HANDOVER",
+      "title": "O Engenheiro decompõe e executa os itens restantes da missão original",
+      "dependsOn": ["INC-2"],
+      "why": "A partir daqui esta decomposição externa é ENCERRADA: a responsabilidade de decompor volta ao Engenheiro.",
+      "remainingOriginalItems": [
+        "Replan Budget e proteção contra livelock (fechado por INC-1/INC-2)",
+        "separação PROPOSER → APPROVER → EXECUTOR → VERIFIER",
+        "evolução da Engineering Memory e prevenção de problemas conhecidos",
+        "testes adversariais de concorrência e self-engineering",
+        "proteção contra o Engenheiro reduzir/contornar os próprios gates",
+        "proveniência/attestation",
+        "Cost-Aware Routing (determinístico/local/CLI antes de API paga)",
+        "métricas de custo, tokens, tempo, tentativas e sucesso por provider/modelo/canal",
+        "fallback e escalation automáticos (bootstrap externo já corrigiu o caso do provider; a política fica com o Engenheiro)",
+        "regressão completa, evidências e gates"
+      ]
+    }
+  ],
+
+  "rules": [
+    "Um incremento por vez; só avança quando o anterior estiver GREEN.",
+    "Sem retry cego: cada nova versão de incremento exige diagnóstico da falha anterior.",
+    "Nenhum gate, cobertura ou critério de aceite é reduzido.",
+    "Nenhuma allowlist é alterada para contornar falha de provider.",
+    "Nada é integrado sem passar pelos gates reais."
+  ]
+}

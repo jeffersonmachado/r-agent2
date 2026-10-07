@@ -121,9 +121,23 @@ describe('orçamento de saída adaptativo (regressão: max_tokens 1000 fixo)', (
   });
 
   test('teto absoluto: tier + reserva nunca passam de MAX (custo não cresce sem limite)', () => {
-    const budget = resolveMaxOutputTokens('deepseek-v4-pro', 65000);
+    const budget = resolveMaxOutputTokens('deepseek-v4-pro', 65000, { purpose: 'engineering_coder' });
     expect(budget).toBe(OUTPUT_TOKEN_BUDGET.MAX);
-    expect(budget).toBeLessThan(OUTPUT_TOKEN_BUDGET.ENGINEERING_PROMPT + REASONING_TOKEN_RESERVE);
+    expect(budget).toBeLessThan(OUTPUT_TOKEN_BUDGET.ENGINEERING_MIN_OUTPUT + REASONING_TOKEN_RESERVE);
+  });
+
+  // REGRESSÃO MEDIDA 2026-10-07 (task do INC-1): o tamanho da SAÍDA depende do ARTEFATO a
+  // produzir, não do tamanho do prompt. A task tinha prompt pequeno (~3-5 KB, o arquivo ainda
+  // não existia) e o tier dava 2.000/6.000 tokens — qwen3-coder-flash devolveu resposta
+  // TRUNCADA (6.716 chars cortados) e todos os candidatos caíram em PROVIDER_UNAVAILABLE.
+  test('PISO de engenharia: propósito engineering_* não é ditado pelo tamanho do prompt', () => {
+    const engineering = resolveMaxOutputTokens('qwen3-coder-flash', 3000, { purpose: 'engineering_coder' });
+    expect(engineering).toBe(OUTPUT_TOKEN_BUDGET.ENGINEERING_MIN_OUTPUT);
+    expect(resolveMaxOutputTokens('qwen3-coder-flash', 3000)).toBe(OUTPUT_TOKEN_BUDGET.MEDIUM_PROMPT);
+    expect(engineering).toBeGreaterThan(OUTPUT_TOKEN_BUDGET.MEDIUM_PROMPT);
+    // prompt grande de engenharia continua no piso (nunca abaixo dele)
+    expect(resolveMaxOutputTokens('qwen3-coder-flash', 65000, { purpose: 'engineering_coder' }))
+      .toBe(OUTPUT_TOKEN_BUDGET.ENGINEERING_MIN_OUTPUT);
   });
 });
 
@@ -168,6 +182,34 @@ describe('DeepSeek/Kimi/compatíveis ENVIAM o orçamento adaptativo', () => {
 
     expect(body.max_tokens).toBe(resolveMaxOutputTokens('qwen3-max', ENGINEERING_PROMPT.length));
     expect(body.max_tokens).toBeGreaterThan(1000);
+  });
+
+  test('CODER de engenharia: o corpo enviado leva o PISO de engenharia (artefato grande, prompt pequeno)', async () => {
+    global.fetch = jest.fn(async () => okJson({
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop' }],
+      usage: { completion_tokens: 5 },
+    }));
+
+    await createOpenAICompatibleProvider(QWEN_DEF)
+      .generate('x'.repeat(3000), { tenantId: TENANT_ID, model: 'qwen3-coder-flash', purpose: 'engineering_coder' });
+    const body = JSON.parse(lastRequest()[1].body);
+
+    expect(body.max_tokens).toBe(OUTPUT_TOKEN_BUDGET.ENGINEERING_MIN_OUTPUT);
+    expect(body.max_tokens).toBeGreaterThanOrEqual(32000);
+  });
+
+  test('DeepSeek em propósito de engenharia: piso + reserva de reasoning, limitado pelo teto', async () => {
+    global.fetch = jest.fn(async () => okJson({
+      choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop' }],
+      usage: { completion_tokens: 5 },
+    }));
+
+    await createDeepSeekProvider()
+      .generate('x'.repeat(3000), { tenantId: TENANT_ID, model: 'deepseek-flash', purpose: 'engineering_coder' });
+    const body = JSON.parse(lastRequest()[1].body);
+
+    // 32000 (piso) + 8000 (reasoning) = 40000, limitado por MAX
+    expect(body.max_tokens).toBe(OUTPUT_TOKEN_BUDGET.MAX);
   });
 });
 
@@ -264,6 +306,6 @@ describe('guarda de regressão no código-fonte (o mascaramento não pode voltar
       expect(block).not.toContain('max_tokens: 1000');
     }
     // Factory OpenAI-compatible (Qwen/Mistral/Groq) usa a mesma fonte única.
-    expect(source).toContain('...getTokenLimitParam(model, prompt.length),');
+    expect(source).toContain('...getTokenLimitParam(model, prompt.length, context?.purpose),');
   });
 });

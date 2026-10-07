@@ -81,7 +81,13 @@ const OUTPUT_TOKEN_BUDGET = Object.freeze({
   MEDIUM_PROMPT: 2000,      // > 2000 chars
   LARGE_PROMPT: 4000,       // > 5000 chars
   ENGINEERING_PROMPT: 8000, // > 20000 chars (contrato de tarefa + arquivos de contexto)
-  MAX: 10000,               // teto absoluto: tier + reserva de reasoning nunca passa daqui
+  // Piso de ENGENHARIA: o tamanho da SAÍDA depende do ARTEFATO a produzir (um módulo novo +
+  // testes), não do tamanho do prompt. MEDIDO 2026-10-07: a task do INC-1 tinha prompt pequeno
+  // (~3-5 KB, o arquivo ainda não existia) e o tier dava 2000/6000 tokens — qwen3-coder-flash
+  // devolveu resposta TRUNCADA (6716 chars cortados) e TODOS os candidatos caíram em
+  // PROVIDER_UNAVAILABLE, bloqueando a task. O provider ACEITA este teto (medido: 40000 ok).
+  ENGINEERING_MIN_OUTPUT: 32000,
+  MAX: 36000,               // teto absoluto: piso de engenharia + reserva de reasoning nunca passa daqui
 });
 
 /**
@@ -90,21 +96,28 @@ const OUTPUT_TOKEN_BUDGET = Object.freeze({
  * não listado não ganha reserva por adivinhação) e cobre os modelos OBSERVADOS consumindo o teto
  * inteiro em reasoning na medição de 2026-10-07 (deepseek-v4-pro, deepseek-flash, kimi-k2.6).
  */
-const REASONING_TOKEN_RESERVE = 4000;
+const REASONING_TOKEN_RESERVE = 8000;
 const REASONING_CAPABLE_MODEL_RE = /(deepseek-v4-pro|deepseek-flash|kimi-k2|kimi-k3|reasoner|thinking)/i;
+
+/** Propósitos de ENGENHARIA (o `purpose` vem do engineeringAiInvoker) que exigem o piso de saída. */
+const ENGINEERING_PURPOSE_RE = /^engineering_/i;
 
 /**
  * @param {string} model
  * @param {number} promptLength - tamanho do prompt em caracteres
+ * @param {{purpose?:string}} [options] - `purpose: 'engineering_coder'` aplica o PISO de engenharia
  * @returns {number} orçamento de saída em tokens (limitado por OUTPUT_TOKEN_BUDGET.MAX)
  */
-function resolveMaxOutputTokens(model, promptLength = 0) {
+function resolveMaxOutputTokens(model, promptLength = 0, { purpose = null } = {}) {
   const length = Number.isFinite(promptLength) ? promptLength : 0;
   let tokens = OUTPUT_TOKEN_BUDGET.BASE;
   if (length > 20000) tokens = OUTPUT_TOKEN_BUDGET.ENGINEERING_PROMPT;
   else if (length > 5000) tokens = OUTPUT_TOKEN_BUDGET.LARGE_PROMPT;
   else if (length > 2000) tokens = OUTPUT_TOKEN_BUDGET.MEDIUM_PROMPT;
 
+  if (ENGINEERING_PURPOSE_RE.test(String(purpose || ''))) {
+    tokens = Math.max(tokens, OUTPUT_TOKEN_BUDGET.ENGINEERING_MIN_OUTPUT);
+  }
   if (REASONING_CAPABLE_MODEL_RE.test(String(model || ''))) tokens += REASONING_TOKEN_RESERVE;
   return Math.min(tokens, OUTPUT_TOKEN_BUDGET.MAX);
 }
@@ -164,7 +177,7 @@ function usableTextOrThrow({ label, model, text, finishReason = null, usage = nu
   return value;
 }
 
-function getTokenLimitParam(model, promptLength = 0) {
+function getTokenLimitParam(model, promptLength = 0, purpose = null) {
   // Modelos que requerem max_completion_tokens
   const requiresMaxCompletionTokens = /^gpt-5\./;
   
@@ -174,7 +187,7 @@ function getTokenLimitParam(model, promptLength = 0) {
   // Caso contrário, usa 1000 tokens padrão
   // Orçamento ADAPTATIVO (fonte única, compartilhada com DeepSeek/Kimi/compatíveis): a tabela
   // fixa antiga (1000/2000/4000) não cobria reasoning tokens nem prompts reais de engenharia.
-  const tokenLimit = resolveMaxOutputTokens(model, promptLength);
+  const tokenLimit = resolveMaxOutputTokens(model, promptLength, { purpose });
   
   if (requiresMaxCompletionTokens.test(model)) {
     return { max_completion_tokens: tokenLimit };
@@ -215,7 +228,7 @@ function createOpenAIProvider() {
         }
 
         const model = context?.model || config.get('ai.openai.model', 'gpt-5.2');
-        const tokenParams = getTokenLimitParam(model, prompt.length);
+        const tokenParams = getTokenLimitParam(model, prompt.length, context?.purpose);
         
         logger.debug('🤖 OpenAI: Iniciando geração', {
           // Observabilidade do "porquê" (origem) da chamada:
@@ -573,7 +586,7 @@ function createOpenAICompatibleProvider(def) {
           body: JSON.stringify({
             model: model,
             messages: [{ role: 'user', content: prompt }],
-            ...getTokenLimitParam(model, prompt.length),
+            ...getTokenLimitParam(model, prompt.length, context?.purpose),
           }),
         });
 
@@ -723,7 +736,7 @@ function createDeepSeekProvider() {
 
         const model = context?.model || config.get('ai.deepseek.model', 'deepseek-flash');
         // Orçamento de saída ADAPTATIVO (defeito real: 1000 fixo → content vazio consumido por reasoning).
-        const tokenParams = getTokenLimitParam(model, prompt.length);
+        const tokenParams = getTokenLimitParam(model, prompt.length, context?.purpose);
         logger.debug('🤖 DeepSeek: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,
@@ -811,7 +824,7 @@ function createKimiProvider() {
 
         const model = context?.model || config.get('ai.kimi.model', 'kimi-k2.6');
         // Orçamento de saída ADAPTATIVO (defeito real: 1000 fixo → content vazio consumido por reasoning).
-        const tokenParams = getTokenLimitParam(model, prompt.length);
+        const tokenParams = getTokenLimitParam(model, prompt.length, context?.purpose);
         logger.debug('🤖 Kimi: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,

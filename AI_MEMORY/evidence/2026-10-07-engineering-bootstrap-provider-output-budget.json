@@ -55,6 +55,15 @@
     "conclusion": "Com o reroute funcionando, a cadeia do Router (LOW → LOW → LOW) sai de deepseek-flash (vazio) e gpt-5.4-mini (429) e aterrissa em qwen3-coder-flash, que devolve o JSON do CODER. O caminho executável existe; DeepSeek/Kimi não fecham o contrato neste porte de prompt — o comportamento correto é exatamente o fallback/escalation, agora disparado."
   },
 
+  "recalibration": {
+    "at": "2026-10-07T15:35:00.000Z",
+    "measured": "a task do INC-1 tinha prompt PEQUENO (2.834 chars; o arquivo ainda nao existia) e o tier deu 2.000/6.000 tokens: qwen3-coder-flash respondeu TRUNCADA (6.716 chars cortados) e os 6 candidatos caíram em PROVIDER_UNAVAILABLE -> task BLOCKED. Medicao direta do provider: max_tokens 16384, 32768 e 40000 sao ACEITOS (HTTP 200) no compat-mode do DashScope.",
+    "change": "ENGINEERING_MIN_OUTPUT=32000 aplicado quando o purpose e engineering_* (piso de ENGENHARIA independente do tamanho do prompt); REASONING_TOKEN_RESERVE 4000->8000; MAX 10000->36000; getTokenLimitParam passa a receber o purpose e todos os caminhos o repassam.",
+    "why": "o tamanho da SAIDA depende do ARTEFATO a produzir (modulo novo + testes), nao do tamanho do prompt.",
+    "proof": "probe com o prompt REAL do CODER do INC-1 + purpose engineering_coder: qwen3-coder-flash devolveu JSON completo (5.665 chars, completion_tokens=1606, parseOk=true) onde antes truncava.",
+    "tests": "tests/unit/aiProviderOutputBudget.test.js (18 testes, inclui o piso de engenharia e o clamp pelo teto) + regressao tests/unit 931 suites / 7522 testes PASS."
+  },
+
   "outOfScopeRemaining": [
     "Anthropic (fetch, SDK e factory anthropic-compatible) mantém max_tokens: 1000 fixo — fora do escopo autorizado (DeepSeek/Kimi) e sem credencial para o tenant system; os 3 caminhos já receberam o guarda de saída inutilizável.",
     "O catálogo governado (EngineeringModelCatalogEntry) continua write-only para roteamento e sem endpoint humano de DENIED (item já registrado em POST_RELEASE_MODEL_ROUTER_BACKLOG.md)."
