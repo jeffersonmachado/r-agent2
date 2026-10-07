@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-07T04:38:18.472Z",
-  "artifact": "r-agent2-20261007-012904.zip",
+  "generatedAt": "2026-10-07T06:11:21.452Z",
+  "artifact": "r-agent2-20261007-025903.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20261007-012904.zip",
-        "computedHash": "84798e0fa8a6d50b2262e62f03e6224e4d39cc23fefae998690a0b58e9fad50f",
-        "recordedHash": "84798e0fa8a6d50b2262e62f03e6224e4d39cc23fefae998690a0b58e9fad50f",
+        "zipName": "r-agent2-20261007-025903.zip",
+        "computedHash": "1ac6217e801260168e20f27e568f0e8c0a22a1638afdf50aa56f562a31e764f3",
+        "recordedHash": "1ac6217e801260168e20f27e568f0e8c0a22a1638afdf50aa56f562a31e764f3",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20261007-012904.manifest.json"
+        "subject": "r-agent2-20261007-025903.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20261007-012904.zip"
+        "subject": "r-agent2-20261007-025903.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "85e5b927a95ded829c6a7204…"
+        "storedChainRoot": "8ccab817ee13522dc2f744b6…"
       }
     },
     {
@@ -99,9 +99,9 @@
     }
   ],
   "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20261007023446001-28ce3f98",
+  "runId": "rap-governed-20261007044956931-c1df8021",
   "sourceFingerprint": "a7b302194da2b88fd7756d59f290eb8e5fce0fe171bb2fa09ea1092a2d29a98f",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-10-07T04:39:26.231Z"
+  "reboundAt": "2026-10-07T06:13:59.048Z"
 }
