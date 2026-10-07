@@ -15,7 +15,7 @@
  * possível.
  */
 
-const { createProviderBudget } = require('../../api/services/engineeringRouter/engineeringRouterService');
+const { createProviderBudget, patchApplyRerouteAfter } = require('../../api/services/engineeringRouter/engineeringRouterService');
 const { engineeringProviderTimeoutMs, ENGINEERING_PURPOSE_TIMEOUT_MS } = require('../../api/services/engineeringRouter/engineeringAiInvoker');
 const { classifyModelFailure, UNUSABLE_STATES } = require('../../api/services/engineeringRouter/modelAvailabilityStore');
 const { selectForRole, selectCoderAndReviewer } = require('../../engine/engineeringRouter/modelSelector');
@@ -150,6 +150,23 @@ describe('HUMAN_EXTERNAL_BOOTSTRAP — política de execução da cadeia de prov
   });
 
   describe('progression em falhas determinísticas (sem retry inútil)', () => {
+    test('falha de FORMATO de patch progride IMEDIATAMENTE (nunca repete o mesmo coder)', () => {
+      const previous = process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER;
+      try {
+        delete process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER;
+        // Formato determinístico (corpo sem prefixo / diff recusado pelo git): limiar 1.
+        expect(patchApplyRerouteAfter('PATCH_NOT_APPLICABLE')).toBe(1);
+        // Demais falhas mantêm o limiar conservador (uma repetição antes de trocar de modelo).
+        expect(patchApplyRerouteAfter(null)).toBe(2);
+        // A env continua sendo override EXPLÍCITO para operação.
+        process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER = '2';
+        expect(patchApplyRerouteAfter('PATCH_NOT_APPLICABLE')).toBe(2);
+      } finally {
+        if (previous === undefined) delete process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER;
+        else process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER = previous;
+      }
+    });
+
     test('falha determinística exclui o candidato e o próximo assume; repetição só até o teto', () => {
       const models = [
         CODER_MODEL('qwen', 'a', 'LOW'),

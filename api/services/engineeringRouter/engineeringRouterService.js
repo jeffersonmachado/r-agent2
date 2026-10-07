@@ -912,19 +912,25 @@ async function blockTask(taskId, ts, eventAudienceTenantId, { code, message, det
 }
 
 const PATCH_APPLY_REROUTE_AFTER_DEFAULT = 2;
+// Falha de FORMATO do patch (corpo sem prefixo / diff que o git recusa) e DETERMINISTICA: repetir
+// o mesmo modelo reproduz o mesmo defeito. Medido em runtime: 10/10 patches do qwen3-coder-flash
+// com o mesmo defeito, e o deepseek-v4-pro gastou 217s numa repeticao que produziu o MESMO tipo de
+// falha. Por isso o limiar de formato e 1 (progression IMEDIATA), enquanto a env
+// `ENGINEERING_PATCH_APPLY_REROUTE_AFTER` continua funcionando como override explicito.
+const PATCH_FORMAT_REROUTE_AFTER_DEFAULT = 1;
 
 /**
- * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — quantas falhas CONSECUTIVAS de geração/aplicação de
+ * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — quantas falhas CONSECUTIVAS de geracao/aplicacao de
  * patch no MESMO coder, sem nenhum progresso, autorizam reroute para outro modelo/provider.
  *
  * Achado real medido: `qwen:qwen3-coder-flash` emite o corpo do hunk sem prefixo em 10/10 patches;
- * `PATCH_APPLY_FAILED` NÃO reroteava, então as 6 iterações da task eram gastas no mesmo modelo
- * reproduzindo exatamente o mesmo defeito (task RED, missão FAILED). Default 2 = uma repetição
- * confirma que não é ruído de amostragem; override operacional por env (sem tocar allowlists).
+ * `PATCH_APPLY_FAILED` NAO reroteava, entao as 6 iteracoes da task eram gastas no mesmo modelo
+ * reproduzindo exatamente o mesmo defeito (task RED, missao FAILED).
  */
-function patchApplyRerouteAfter() {
+function patchApplyRerouteAfter(failureKind = null) {
   const raw = Number(process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER);
-  return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : PATCH_APPLY_REROUTE_AFTER_DEFAULT;
+  if (Number.isFinite(raw) && raw >= 1) return Math.floor(raw);
+  return failureKind === 'PATCH_NOT_APPLICABLE' ? PATCH_FORMAT_REROUTE_AFTER_DEFAULT : PATCH_APPLY_REROUTE_AFTER_DEFAULT;
 }
 
 /**
@@ -1161,7 +1167,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
       const failedModelKey = `${attemptRow.coder_provider || task.routing_decision?.coder?.selected?.providerId}:${attemptRow.coder_model || task.routing_decision?.coder?.selected?.modelId}`;
       const streak = (patchApplyFailureStreak.get(failedModelKey) || 0) + 1;
       patchApplyFailureStreak.set(failedModelKey, streak);
-      const threshold = patchApplyRerouteAfter();
+      const threshold = patchApplyRerouteAfter(patchFailure.failureKind);
       const willReroute = streak >= threshold;
 
       emitTaskStage(eventAudienceTenantId, taskId, {
@@ -1747,4 +1753,5 @@ module.exports = {
   // da cadeia de providers (limite de tentativas/tempo) — mesma implementacao usada em producao.
   createProviderBudget,
   loadProvenPatchModelKeys,
+  patchApplyRerouteAfter,
 };
