@@ -103,7 +103,7 @@
     "PROVIDER_FALLBACK": {
       "category": "OPERATION_DEADLINE",
       "configClass": "engineeringSpecific",
-      "default": 600000,
+      "default": 1800000,
       "min": 30000,
       "max": 3600000,
       "unit": "ms",
@@ -112,7 +112,7 @@
       "guards": {
         "maxProviderAttempts": 12,
         "maxProviderCostUsd": 25,
-        "maxProviderElapsedMs": 600000
+        "maxProviderElapsedMs": 1800000
       },
       "retryable": false,
       "envOverride": "ENGINEERING_PROVIDER_BUDGET_MS"

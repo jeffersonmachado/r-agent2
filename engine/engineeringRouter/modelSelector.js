@@ -17,6 +17,11 @@
  */
 
 const { REASON_CODES } = require('./constants');
+const {
+  scoreModel,
+  modelKey,
+  currentExecutionPenalty,
+} = require('./modelDecision');
 
 const COST_RANK = Object.freeze({ LOW: 0, MEDIUM: 1, HIGH: 2 });
 
@@ -46,18 +51,48 @@ function evaluateCandidate(model, { requiredCapabilities }) {
   return { qualified: true, reasons };
 }
 
-function compareCandidates(a, b, preferredCostClass, preferredModelKeys = null) {
-  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — prioridade por EVIDÊNCIA antes da prioridade por
-  // custo: quando o chamador informa os modelos que já entregaram patch aplicado para a mesma
-  // classe de tarefa, eles passam à frente. O conjunto vem de telemetria real (nunca de uma
-  // lista fixa de modelos), e só é aplicado pelo Router depois de um candidato anterior falhar
-  // de forma determinística na execução corrente.
+/**
+ * Comparação entre dois candidatos JÁ qualificados (Safety/Governance e Capability são filtros de
+ * `evaluateCandidate` — nada aqui pode reabrir um candidato inseguro ou sem capacidade).
+ *
+ * Prevalência exigida pela política: Reliability > Cost.
+ *   1. evidência explícita de sucesso do chamador (`preferredModelKeys`) quando houver;
+ *   2. FAIXA de confiabilidade (comprovado / sem evidência / degradado / saída inválida);
+ *   3. `expected_cost_per_GREEN` (custo efetivo, não preço de token);
+ *   4. classe de custo relativa;
+ *   5. chave estável (determinismo).
+ *
+ * @param {Object} [options] aceita também o formato legado `compareCandidates(a, b, 'LOW')`.
+ */
+function compareCandidates(a, b, options = null) {
+  const opts = typeof options === 'string' ? { preferredCostClass: options } : (options || {});
+  const { preferredCostClass = 'ANY', preferredModelKeys = null, modelEvidence = null, currentExecutionFailures = null } = opts;
+  const keyOf = (m) => modelKey(m.providerId, m.modelId);
+
+  // (1) Evidência explícita de patch aplicado (telemetria) — o chamador informa o conjunto.
   if (preferredModelKeys instanceof Set && preferredModelKeys.size > 0) {
-    const keyOf = (m) => `${m.providerId}:${m.modelId}`;
-    const aPreferred = preferredModelKeys.has(keyOf(a)) ? 0 : 1;
-    const bPreferred = preferredModelKeys.has(keyOf(b)) ? 0 : 1;
-    if (aPreferred !== bPreferred) return aPreferred - bPreferred;
+    const aPref = preferredModelKeys.has(keyOf(a)) ? 0 : 1;
+    const bPref = preferredModelKeys.has(keyOf(b)) ? 0 : 1;
+    if (aPref !== bPref) return aPref - bPref;
   }
+
+  // (2) Reliability — faixa de confiabilidade derivada da evidência por classe de tarefa.
+  const evidenceGet = (m) => (modelEvidence instanceof Map ? modelEvidence.get(keyOf(m)) : null);
+  const scoreA = scoreModel(a, evidenceGet(a));
+  const scoreB = scoreModel(b, evidenceGet(b));
+  const penaltyA = currentExecutionPenalty(a, currentExecutionFailures);
+  const penaltyB = currentExecutionPenalty(b, currentExecutionFailures);
+  // Penalidade da execução corrente pode rebaixar a faixa (falha determinística AGORA conta mais
+  // que histórico antigo), mas nunca promove ninguém.
+  const tierA = scoreA.reliabilityTier + (penaltyA > 0 ? 1 : 0);
+  const tierB = scoreB.reliabilityTier + (penaltyB > 0 ? 1 : 0);
+  if (tierA !== tierB) return tierA - tierB;
+
+  // (3) Cost — custo EFETIVO por GREEN esperado (preço relativo / P(sucesso) + latência + despedício).
+  const ecgDiff = scoreA.expectedCostPerGreen - scoreB.expectedCostPerGreen;
+  if (ecgDiff !== 0) return ecgDiff;
+
+  // (4) Classe de custo relativa (desempate estável).
   if (preferredCostClass && preferredCostClass !== 'ANY') {
     const aMatch = a.costClass === preferredCostClass ? 0 : 1;
     const bMatch = b.costClass === preferredCostClass ? 0 : 1;
@@ -65,7 +100,9 @@ function compareCandidates(a, b, preferredCostClass, preferredModelKeys = null) 
   }
   const costDiff = COST_RANK[a.costClass] - COST_RANK[b.costClass];
   if (costDiff !== 0) return costDiff;
-  return `${a.providerId}:${a.modelId}`.localeCompare(`${b.providerId}:${b.modelId}`);
+
+  // (5) Determinismo.
+  return keyOf(a).localeCompare(keyOf(b));
 }
 
 /**
@@ -80,6 +117,8 @@ function selectForRole(availableModels, {
   excludeProviderId = null,
   excludedModelKeys = null,
   preferredModelKeys = null,
+  modelEvidence = null,
+  currentExecutionFailures = null,
 }) {
   const roleCandidates = (availableModels || []).filter((m) => Array.isArray(m.roles) && m.roles.includes(role));
   const excludedKeys = excludedModelKeys instanceof Set ? excludedModelKeys : null;
@@ -89,22 +128,27 @@ function selectForRole(availableModels, {
     .filter((m) => !excludeProviderId || m.providerId !== excludeProviderId)
     // ERV1-CLOSE-008: reroute dentro da mesma task exclui explicitamente o(s) modelo(s) que já
     // falharam nesta tentativa — nunca reselecionar o mesmo candidato que acabou de quebrar.
-    .filter((m) => !excludedKeys || !excludedKeys.has(`${m.providerId}:${m.modelId}`))
+    .filter((m) => !excludedKeys || !excludedKeys.has(modelKey(m.providerId, m.modelId)))
     .map((m) => ({ model: m, evaluation: evaluateCandidate(m, { requiredCapabilities }) }));
 
   const qualified = evaluated.filter((e) => e.evaluation.qualified).map((e) => e.model);
 
   if (qualified.length === 0) {
-    return { selected: null, qualifiedCandidates: [], reasonCodes: [REASON_CODES.NO_QUALIFIED_CANDIDATE] };
+    return { selected: null, qualifiedCandidates: [], reasonCodes: [REASON_CODES.NO_QUALIFIED_CANDIDATE], decisionFactors: [] };
   }
 
-  const sorted = [...qualified].sort((a, b) => compareCandidates(a, b, preferredCostClass, preferredKeys));
+  const rankOptions = { preferredCostClass, preferredModelKeys: preferredKeys, modelEvidence, currentExecutionFailures };
+  const sorted = [...qualified].sort((a, b) => compareCandidates(a, b, rankOptions));
   const winner = sorted[0];
   const winnerEval = evaluated.find((e) => e.model === winner).evaluation;
+  const scoreOf = (m) => scoreModel(m, modelEvidence instanceof Map ? modelEvidence.get(modelKey(m.providerId, m.modelId)) : null);
 
   const reasonCodes = [...winnerEval.reasons];
-  if (preferredKeys && preferredKeys.has(`${winner.providerId}:${winner.modelId}`)) {
+  if (preferredKeys && preferredKeys.has(modelKey(winner.providerId, winner.modelId))) {
     reasonCodes.push(REASON_CODES.PROVEN_FOR_TASK_CLASS);
+  }
+  if (scoreOf(winner).reliabilityTier === 0) {
+    reasonCodes.push(REASON_CODES.RELIABILITY_PROVEN);
   }
   if (preferredCostClass && preferredCostClass !== 'ANY' && winner.costClass === preferredCostClass) {
     reasonCodes.push(REASON_CODES.POLICY_PRIORITY);
@@ -113,10 +157,31 @@ function selectForRole(availableModels, {
     reasonCodes.push(REASON_CODES.LOWER_COST_AMONG_QUALIFIED);
   }
 
+  // Fatores da decisão para TELEMETRIA (o porquê auditável de cada escolha).
+  const decisionFactors = sorted.map((m) => {
+    const s = scoreOf(m);
+    return {
+      key: modelKey(m.providerId, m.modelId),
+      costClass: m.costClass,
+      reliabilityTier: s.reliabilityTier,
+      tierReason: s.tierReason,
+      expectedCostPerGreen: s.expectedCostPerGreen,
+      probabilityOfApplied: s.probabilityOfApplied,
+      timeoutRate: s.timeoutRate,
+      invalidRate: s.invalidRate,
+      meanLatencyMs: s.meanLatencyMs,
+      quotaFailures: s.quotaFailures,
+      sampleSize: s.sampleSize,
+      currentExecutionPenalty: currentExecutionPenalty(m, currentExecutionFailures),
+      selected: m === winner,
+    };
+  });
+
   return {
-    selected: { providerId: winner.providerId, modelId: winner.modelId, contextClass: winner.contextClass, costClass: winner.costClass },
+    selected: { providerId: winner.providerId, modelId: winner.modelId, contextClass: winner.contextClass, costClass: winner.costClass, reliabilityTier: scoreOf(winner).reliabilityTier, expectedCostPerGreen: scoreOf(winner).expectedCostPerGreen },
     qualifiedCandidates: sorted.map((c) => ({ providerId: c.providerId, modelId: c.modelId, costClass: c.costClass })),
     reasonCodes,
+    decisionFactors,
   };
 }
 
@@ -142,6 +207,8 @@ function selectCoderAndReviewer(availableModels, {
   policyVersion,
   excludedModelKeys = null,
   preferredCoderModelKeys = null,
+  modelEvidence = null,
+  currentExecutionFailures = null,
 }) {
   const coder = selectForRole(availableModels, {
     role: 'CODER',
@@ -149,6 +216,8 @@ function selectCoderAndReviewer(availableModels, {
     preferredCostClass,
     excludedModelKeys,
     preferredModelKeys: preferredCoderModelKeys,
+    modelEvidence,
+    currentExecutionFailures,
   });
 
   const excludeProviderId = independentReviewRequired && coder.selected ? coder.selected.providerId : null;
@@ -159,6 +228,8 @@ function selectCoderAndReviewer(availableModels, {
     preferredCostClass,
     excludeProviderId,
     excludedModelKeys,
+    modelEvidence,
+    currentExecutionFailures,
   });
 
   let independentReviewApplied = false;
@@ -175,6 +246,8 @@ function selectCoderAndReviewer(availableModels, {
         requiredCapabilities: reviewerCapabilities,
         preferredCostClass,
         excludedModelKeys,
+        modelEvidence,
+        currentExecutionFailures,
       });
       reviewer = {
         ...fallback,

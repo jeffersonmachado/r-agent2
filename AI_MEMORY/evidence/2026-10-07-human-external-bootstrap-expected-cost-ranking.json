@@ -1,0 +1,48 @@
+{
+  "id": "2026-10-07-human-external-bootstrap-expected-cost-ranking",
+  "generatedAt": "2026-10-07T19:50:00.000Z",
+  "kind": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "classification": "intervencao_humana_externa_decisao_por_evidencia",
+  "authorization": "AUTORIZO ampliar maxProviderElapsedMs de 600s para no maximo 1800s ... e evoluir a selecao cost-aware/failure-aware para considerar evidencia empirica ... funcao objetivo expected_cost_per_GREEN (mensagem do usuario, 2026-10-07)",
+  "separadoDasEntregasAutonomas": true,
+
+  "motivoMedido": {
+    "execucao": "missao ca56cbdc v8 (task 04f641d3), com a politica anterior (cadeia 12 tentativas, deadline 300s)",
+    "estadoTerminal": "BLOCKED / PROVIDER_EXHAUSTED por ORCAMENTO DE TEMPO (632286ms/600000ms)",
+    "duracoesMedidas": {
+      "deepseek-flash": "111234ms — reasoning esgotou o orcamento de saida (escolhido 1o pela prioridade por evidencia: mecanismo funcionou)",
+      "openai:gpt-5.4-mini": "3795ms — 429 sem credito",
+      "qwen3-coder-flash": "33905ms + 27355ms — PATCH_BODY_MISSING_PREFIX (2 tentativas)",
+      "deepseek-v4-pro": "238547ms — RESPONDEU diff (o deadline de 300s funcionou); git apply recusou; depois 217355ms numa repeticao",
+      "kimi-k2.6": "300037ms — timeout"
+    },
+    "leitura": "o teto de TEMPO (10 min) passou a ser o gargalo depois que o deadline por chamada subiu para 300s; duas tentativas produtivas mas lentas ja consomem a maior parte do orcamento e a cadeia nunca alcanca os candidatos MEDIUM seguintes (incluindo qwen3-coder-plus, 25s)"
+  },
+
+  "alteracoesImplementadas": [
+    "config/timeout-policy.json: PROVIDER_FALLBACK.default 600000 -> 1800000 e guards.maxProviderElapsedMs 600000 -> 1800000 (politica engineeringSpecific). TETO DE SEGURANCA, nao meta de consumo; maxProviderAttempts=12 mantido",
+    "api/services/engineeringRouter/engineeringRouterService.js: createProviderBudget expoe startedAtMs e remainingMs() (usa o MAIOR entre tempo de parede e acumulado, com reserva) — nenhuma chamada individual pode ultrapassar o orcamento restante da cadeia; effectiveDeadlineMeta() limita o deadline do provider ao restante da cadeia E ao deadline do chamador (o mais restritivo vence)",
+    "engine/engineeringRouter/modelDecision.js (NOVO, puro): agregacao de evidencia por provider:model a partir de ATTEMPTS reais (sucesso/patch aplicado, falha estrutural de saida, timeout, reasoning exhaustion, quota/429, latencia, amostra) + DESFECHO FINAL da task (GREEN/RED/BLOCKED) atribuido ao modelo que fez a ultima tentativa; scoreModel() com faixas de confiabilidade (PROVEN/UNKNOWN/DEGRADED/INVALID_OUTPUT) e expectedCostPerGreen = custo_relativo/P(sucesso) + penalidade_de_latencia + penalidade_de_desperdicio",
+    "engine/engineeringRouter/modelSelector.js: prevalencia Safety/Governance > Capability > Reliability > Cost — Safety e Capability continuam FILTROS (evaluateCandidate nao foi relaxado), a ordenacao passa a ser: evidencia explicita -> faixa de confiabilidade -> expected_cost_per_GREEN -> classe de custo -> chave; expoe decisionFactors (factores auditaveis por candidato) e propaga modelEvidence/currentExecutionFailures",
+    "api/services/engineeringRouter/engineeringRouterService.js: currentExecutionFailures (Map por modelo) registra falhas determinísticas da execucao corrente (invalidFormat/timeout/provider) e REDUZ a prioridade daquele candidato durante a execucao; loadModelDecisionEvidence(taskType) le tasks+attempts reais da mesma classe; telemetria ATTEMPT_DISPATCH passa a registrar decisionFactors, selectedReliabilityTier e selectedExpectedCostPerGreen"
+  ],
+
+  "bugRealCapturadoPorTeste": "Na primeira versao do agregador, o incremento usava o NOME do kind como campo de evidencia (`entry.timeout`, `entry.quota`) enquanto os campos reais sao `timeouts`/`quotaFailures` — os dois fatores mais caros da politica ficavam silenciosamente ZERADOS. Corrigido com mapa explicito OUTCOME_FIELD e coberto por teste de agregacao.",
+
+  "proibicoesRespeitadas": [
+    "NENHUM modelo fixado no codigo: nenhuma ocorrencia de qwen3-coder-plus como selecao; a politica vale para qualquer candidato qualificado e a evidencia e dado historico agregado de attempts reais",
+    "Safety/Governance e Capability permanecem filtros: candidato sem credencial, unhealthy, indisponivel ou sem a capability exigida nunca e selecionado, por melhor que seja a evidencia",
+    "nenhum gate, cobertura, criterio de aceite ou seguranca do sandbox reduzido; INC-2 nao implementado manualmente"
+  ],
+
+  "provas": {
+    "unit_engineeringRouterModelDecision": "13 testes — classificacao de cada desfecho real; agregacao completa (sucesso/formato/timeout/reasoning/quota/latencia/desfecho final); probabilidade suavizada; COMPROVADO vence mais barato DEGRADADO; desempate por custo efetivo dentro da mesma faixa (latencia conta); invalid output e a pior faixa; penalidade da execucao corrente; capacidade como filtro; Safety acima de confiabilidade; excluido continua excluido",
+    "unit_engineeringRouterProviderChainPolicy": "15 testes — teto de tempo 1800s; orcamento restante limita chamada; nenhum laco infinito; deadline por purpose; NO_CREDIT; progression imediata de formato",
+    "unit_engineeringRouterPatchValidator": "17 testes",
+    "E2E_engineeringRouterPatchFormatReroute": "3 testes reais — rejeicao estrutural + reroute ate GREEN; orcamento impede laco; 429/quota sem retry inutil",
+    "total": "49 testes PASS nas 4 suites",
+    "regressaoFocada": "a executar apos o commit"
+  },
+
+  "proximoPasso": "Reiniciar a API, rodar a regressao focada, retomar o INC-2 pelo Roteador real (v9) e seguir para INC-2B, follow-up das divergencias do INC-1 e HANDOVER."
+}

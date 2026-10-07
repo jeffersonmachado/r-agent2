@@ -108,6 +108,10 @@ const REASON_CODES = Object.freeze({
   // aplicado em tasks da MESMA classe (task_type) — prioridade por evidência histórica, nunca
   // por nome/modelo fixo. Só é aplicado depois de falha determinística de um candidato anterior.
   PROVEN_FOR_TASK_CLASS: 'PROVEN_FOR_TASK_CLASS',
+  // Confiabilidade comprovada: o candidato está na faixa PROVEN (já entregou patch aplicado na
+  // mesma classe de tarefa) segundo a evidência agregada — distinto de PROVEN_FOR_TASK_CLASS,
+  // que registra a APLICAÇÃO explícita dessa prioridade na seleção corrente.
+  RELIABILITY_PROVEN: 'RELIABILITY_PROVEN',
 });
 
 const FAILURE_CODES = Object.freeze({

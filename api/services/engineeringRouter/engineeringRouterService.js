@@ -59,6 +59,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { createTaskRun, isOwnershipLoss } = require('./taskRunContext');
 const { resolvePolicy, policyMs, recordLivenessEvent } = require('../../utils/operationDeadline');
+const { aggregateEvidenceFromAttempts } = require('../../../engine/engineeringRouter/modelDecision');
 
 /**
  * Identidade de worker: UUID de instância. O PID NÃO entra na identidade (não é global entre
@@ -238,8 +239,22 @@ async function ensureRouted(task, { credentialScope, eventAudienceTenantId, run 
   return routedTask;
 }
 
+/**
+ * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — o deadline de UMA chamada nunca pode ultrapassar o
+ * orçamento RESTANTE da cadeia de providers. Sem isso, uma única chamada lenta consumiria o
+ * orçamento inteiro e a cadeia morreria sem registrar estado terminal nem alcançar candidatos
+ * seguintes. O deadline do chamador (fase/task) continua valendo quando for mais restritivo.
+ */
+function effectiveDeadlineMeta(run, task, providerBudget) {
+  const base = run ? run.deadlineMeta(task, 'CODING') : {};
+  const remaining = providerBudget && typeof providerBudget.remainingMs === 'function' ? providerBudget.remainingMs() : null;
+  const chainDeadlineAtMs = Number.isFinite(remaining) && remaining > 0 ? Date.now() + remaining : null;
+  const candidates = [base.parentDeadlineAtMs, chainDeadlineAtMs].filter((v) => Number.isFinite(v));
+  return { ...base, parentDeadlineAtMs: candidates.length ? Math.min(...candidates) : null };
+}
+
 /** Um attempt completo: CODE → PATCH VALIDATE → APPLY → TEST → REVIEW. */
-async function runOneAttempt({ task, routingDecision, failureBundle, previousAttempt, credentialScope, eventAudienceTenantId, run = null }) {
+async function runOneAttempt({ task, routingDecision, failureBundle, previousAttempt, credentialScope, eventAudienceTenantId, run = null, providerBudget = null }) {
   const ts = writesFor(run);
   const coderSelection = routingDecision?.coder?.selected;
   if (!coderSelection) {
@@ -292,6 +307,11 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       policyVersion: routingDecision.policyVersion || null,
       independentReviewRequired: Boolean(routingDecision.independentReviewRequired),
       dispatchedAfterReroute: Boolean(failureBundle && String(failureBundle.failedCommand || '').endsWith('_REROUTE')),
+      // FATORES DA DECISÃO: por que ESTE candidato, com tier de confiabilidade, custo efetivo por
+      // GREEN esperado, taxas observadas e amostra — auditoria completa do ranking.
+      decisionFactors: routingDecision.coder.decisionFactors || [],
+      selectedReliabilityTier: coderSelection.reliabilityTier ?? null,
+      selectedExpectedCostPerGreen: coderSelection.expectedCostPerGreen ?? null,
     },
   }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar despacho da tentativa', { taskId: task.id, error: err.message }));
 
@@ -307,7 +327,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       modelId: coderSelection.modelId,
       tenantId: credentialScope,
       signal: coderOp ? coderOp.signal : null,
-      deadlineMeta: run ? run.deadlineMeta(task, 'CODING') : {},
+      deadlineMeta: effectiveDeadlineMeta(run, task, providerBudget),
     });
   } catch (err) {
     if (run) run.endOperation(coderOp);
@@ -846,9 +866,24 @@ function createProviderBudget() {
     maxAttempts: Number(registryGuards.maxProviderAttempts) || 12,
     maxCostUsd: Number(registryGuards.maxProviderCostUsd) || 25,
     maxElapsedMs: Math.min(Number(registryGuards.maxProviderElapsedMs) || policy.resolved, policy.resolved),
+    startedAtMs: Date.now(),
     failedAttempts: 0,
     elapsedMs: 0,
     timeouts: 0,
+    /**
+     * Orçamento de tempo RESTANTE da cadeia. É o teto que uma chamada individual pode consumir:
+     * nenhuma chamada pode ultrapassar o que resta (HUMAN_EXTERNAL_BOOTSTRAP 2026-10-07 —
+     * "timeout da chamada limitado pelo orçamento global restante"). Reserva uma fração mínima
+     * para que a cadeia consiga registrar o estado terminal em vez de morrer no meio da chamada.
+     * @returns {number|null}
+     */
+    remainingMs(nowMs = Date.now(), { reserveMs = 5000 } = {}) {
+      if (!Number.isFinite(this.maxElapsedMs)) return null;
+      // Conservador: considera o MAIOR entre o tempo de parede decorrido e o acumulado contábil
+      // das tentativas de provider — nunca libera mais do que realmente resta.
+      const used = Math.max(nowMs - this.startedAtMs, this.elapsedMs);
+      return Math.max(0, this.maxElapsedMs - used - reserveMs);
+    },
     register(result) {
       this.failedAttempts += 1;
       this.elapsedMs += Number(result.providerElapsedMs) || 0;
@@ -863,44 +898,64 @@ function createProviderBudget() {
 }
 
 /**
- * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — EVIDÊNCIA HISTÓRICA de sucesso por classe de tarefa.
+ * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — EVIDÊNCIA EMPÍRICA por classe de tarefa.
  *
- * Devolve as chaves `provider:model` que JÁ entregaram patch aplicado (`PATCH_APPLIED`) em tasks
- * da MESMA classe (`task_type`). O Router usa isso para priorizar candidatos comprovados quando um
- * candidato anterior falha de forma determinística — evidência real de telemetria, NUNCA uma lista
- * de modelos fixa no código (o teste histórico do `qwen3-coder-plus` é insumo para a decisão da
- * política, não um atalho de seleção).
+ * Lê as tentativas REAIS das tasks da mesma classe (task_type) e agrega, por `provider:model`:
+ * sucesso (patch aplicado), falha estrutural de saída, timeout, reasoning exhaustion, quota, latência,
+ * amostra e o DESFECHO FINAL (GREEN/RED/BLOCKED) da task em que cada modelo estava no comando.
  *
- * Falha aqui NUNCA impede a seleção: sem evidência, o comportamento é o determinístico de custo.
- * @returns {Promise<Set<string>>}
+ * É insumo do `modelDecision` — nenhuma lista de modelos é fixada aqui: a política vale para
+ * qualquer candidato qualificado e a evidência é apenas dado histórico.
+ *
+ * Falha de leitura NUNCA impede a seleção (sem evidência, cai no determinismo por custo).
+ * @returns {Promise<Map<string, Object>>}
  */
-async function loadProvenPatchModelKeys(taskType, { maxTasks = 200 } = {}) {
+async function loadModelDecisionEvidence(taskType, { maxTasks = 200 } = {}) {
   try {
     const index = require('../../db/models');
     const Task = index.EngineeringTask();
-    const Telemetry = index.EngineeringTelemetryEvent();
+    const Attempt = index.EngineeringAttempt();
     const recentTasks = await Task.findAll({
       where: { task_type: taskType },
-      attributes: ['id'],
+      attributes: ['id', 'status'],
       order: [['created_at', 'DESC']],
       limit: maxTasks,
     });
-    if (recentTasks.length === 0) return new Set();
-    const rows = await Telemetry.findAll({
-      where: {
-        task_id: recentTasks.map((t) => t.get('id')),
-        event_type: 'PATCH_GENERATION',
-        result: 'PATCH_APPLIED',
-      },
-      attributes: ['provider', 'model'],
+    if (recentTasks.length === 0) return new Map();
+    const attempts = await Attempt.findAll({
+      where: { task_id: recentTasks.map((t) => t.get('id')) },
+      attributes: ['id', 'task_id', 'attempt_number', 'status', 'coder_provider', 'coder_model', 'error', 'started_at', 'completed_at'],
+      order: [['created_at', 'ASC']],
     });
-    return new Set(rows
-      .map((r) => `${r.get('provider')}:${r.get('model')}`)
-      .filter((k) => Boolean(k) && !k.includes('null') && !k.includes('undefined')));
+    return aggregateEvidenceFromAttempts({
+      tasks: recentTasks.map((t) => ({ id: t.get('id'), status: t.get('status') })),
+      attempts: attempts.map((a) => ({
+        task_id: a.get('task_id'),
+        status: a.get('status'),
+        coder_provider: a.get('coder_provider'),
+        coder_model: a.get('coder_model'),
+        error: a.get('error'),
+        started_at: a.get('started_at'),
+        completed_at: a.get('completed_at'),
+      })),
+    });
   } catch (err) {
-    logger.warn('[engineeringRouterService] evidência histórica de patch indisponível — seguindo sem prioridade', { taskType, error: err.message });
-    return new Set();
+    logger.warn('[engineeringRouterService] evidência empírica indisponível — seguindo apenas com custo/capacidade', { taskType, error: err.message });
+    return new Map();
   }
+}
+
+/**
+ * Conjunto das chaves que a evidência marca como PROVEN (já entregaram patch aplicado nesta classe).
+ * Mantido separado porque é o sinal mais forte e barato de aplicar na ordenação.
+ */
+function provenKeysFromEvidence(evidence) {
+  const keys = new Set();
+  if (!(evidence instanceof Map)) return keys;
+  for (const [key, entry] of evidence.entries()) {
+    if (Number(entry?.applied || 0) > 0) keys.add(key);
+  }
+  return keys;
 }
 
 async function blockTask(taskId, ts, eventAudienceTenantId, { code, message, detail = null }) {
@@ -987,7 +1042,7 @@ function patchTelemetryDetail({ attempt, validation = null, patchDiff = '', extr
 async function rerouteRole({
   task, role, failedModelKey, reasonCode, failureClass = null, failureKind = null,
   providerElapsedMs = 0, excludedModelKeys, providerBudget, credentialScope, eventAudienceTenantId, ts,
-  messageOverride = null, stderrOverride = null,
+  messageOverride = null, stderrOverride = null, currentExecutionFailures = null,
 }) {
   const taskId = task.id;
   excludedModelKeys.add(failedModelKey);
@@ -1009,9 +1064,10 @@ async function rerouteRole({
   const policy = getPolicy(task.task_type);
   const independentRequired = requiresIndependentReview(task.task_type, task.risk);
   const availableModels = await buildAvailableModels({ tenantId: credentialScope });
-  // Prioridade por evidência: só no reroute (falha determinística já ocorreu na execução) e só
-  // para o CODER — o reviewer mantém a seleção por custo/independência.
-  const preferredCoderModelKeys = role === 'CODER' ? await loadProvenPatchModelKeys(task.task_type) : null;
+  // Decisao por EVIDENCIA: sucesso/falha por classe, latencia, timeout, reasoning, quota e desfecho
+  // final — mais as falhas determinísticas JA observadas nesta execucao (reduzem prioridade agora).
+  const modelEvidence = await loadModelDecisionEvidence(task.task_type);
+  const provenKeys = role === 'CODER' ? provenKeysFromEvidence(modelEvidence) : null;
   const newRoutingDecision = selectCoderAndReviewer(availableModels, {
     coderCapabilities: policy.coderCapabilities,
     reviewerCapabilities: policy.reviewerCapabilities,
@@ -1019,7 +1075,9 @@ async function rerouteRole({
     independentReviewRequired: independentRequired,
     policyVersion: policy.policyVersion,
     excludedModelKeys,
-    preferredCoderModelKeys,
+    preferredCoderModelKeys: provenKeys,
+    modelEvidence,
+    currentExecutionFailures,
   });
 
   const stillNoCandidate = role === 'CODER'
@@ -1108,13 +1166,25 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
   // — ao atingir o limiar ele é excluído e outro candidato assume (ou a task termina de forma
   // honesta, respeitando orçamento e maxIterations).
   const patchApplyFailureStreak = new Map();
+  // Falhas determinísticas JÁ observadas nesta execução, por modelo — reduzem a prioridade do
+  // candidato durante ESTA execução (evidência de longo prazo continua valendo para os demais).
+  const currentExecutionFailures = new Map();
+  const noteExecutionFailure = (attemptLike, kind) => {
+    if (!attemptLike) return;
+    const key = `${attemptLike.coder_provider}:${attemptLike.coder_model}`;
+    if (!key || key.includes('null') || key.includes('undefined')) return;
+    const entry = currentExecutionFailures.get(key) || { count: 0, kind };
+    entry.count += 1;
+    entry.kind = kind || entry.kind;
+    currentExecutionFailures.set(key, entry);
+  };
 
   while (iterationsUsed < task.max_iterations) {
     // Fase CODING: consome LLM, gera patch e cria workspace. É trabalho material — não roda sobre
     // contrato obsoleto.
     await assertSpecFresh(specFreshnessGuard, 'CODING', taskId);
     if (run) await run.assertHeld();
-    const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, credentialScope, eventAudienceTenantId, run });
+    const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, credentialScope, eventAudienceTenantId, run, providerBudget });
     iterationsUsed += 1;
 
     if (result.outcome === 'FATAL') {
@@ -1134,10 +1204,11 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
     }
 
     if (result.outcome === 'REROUTE') {
+      noteExecutionFailure(result.attempt, result.failureClass === 'PROVIDER_TIMEOUT' ? 'timeout' : 'provider');
       const reroute = await rerouteRole({
         task, role: result.role, failedModelKey: result.failedModelKey, reasonCode: result.reasonCode,
         failureClass: result.failureClass || null, providerElapsedMs: result.providerElapsedMs ?? 0,
-        excludedModelKeys, providerBudget, credentialScope, eventAudienceTenantId, ts,
+        excludedModelKeys, providerBudget, credentialScope, eventAudienceTenantId, ts, currentExecutionFailures,
       });
       if (reroute.terminal) return reroute.terminal;
       task = reroute.task;
@@ -1167,6 +1238,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
       const failedModelKey = `${attemptRow.coder_provider || task.routing_decision?.coder?.selected?.providerId}:${attemptRow.coder_model || task.routing_decision?.coder?.selected?.modelId}`;
       const streak = (patchApplyFailureStreak.get(failedModelKey) || 0) + 1;
       patchApplyFailureStreak.set(failedModelKey, streak);
+      noteExecutionFailure(attemptRow, patchFailure.failureKind === 'PATCH_NOT_APPLICABLE' ? 'invalidFormat' : 'patch');
       const threshold = patchApplyRerouteAfter(patchFailure.failureKind);
       const willReroute = streak >= threshold;
 
@@ -1220,6 +1292,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
           ts,
           messageOverride: (sel) => `${failedModelKey} produziu patch não aplicável ${streak}x seguidas (${patchFailure.code}) — reroteado para ${sel.providerId}:${sel.modelId} (CODER).`,
           stderrOverride: `${failedModelKey} produziu patch não aplicável ${streak}x seguidas (${patchFailure.code}) — formato do CODER, não mérito do código`,
+          currentExecutionFailures,
         });
 
         const rerouteTarget = reroute.terminal
@@ -1752,6 +1825,7 @@ module.exports = {
   // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): exportado para teste direto da política do orcamento
   // da cadeia de providers (limite de tentativas/tempo) — mesma implementacao usada em producao.
   createProviderBudget,
-  loadProvenPatchModelKeys,
+  loadModelDecisionEvidence,
+  provenKeysFromEvidence,
   patchApplyRerouteAfter,
 };
