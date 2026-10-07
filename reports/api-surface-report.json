@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-06T22:51:56.360Z",
-  "commit": "c137dad630f0bd22679c6ecc2794023c2abdd7c1",
+  "generatedAt": "2026-10-07T03:33:27.976Z",
+  "commit": "f16c57f43cb3d51242912cd9f0b574d7bd82ab87",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
@@ -25287,8 +25287,8 @@
       }
     }
   ],
-  "runId": "rap-governed-20261006220921280-15ae3988",
-  "sourceFingerprint": "9de287edecb0811f35902c59d20f7a3f6ef023fff8d307d6f7bb87aba09b2419",
+  "runId": "rap-governed-20261007023446001-28ce3f98",
+  "sourceFingerprint": "a7b302194da2b88fd7756d59f290eb8e5fce0fe171bb2fa09ea1092a2d29a98f",
   "artifactType": "api-surface-report",
   "artifactVersion": "1.0.0"
 }

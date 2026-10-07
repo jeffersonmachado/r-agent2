@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-06T22:59:04.932Z",
-  "runId": "rap-governed-20261006220921280-15ae3988",
-  "sourceFingerprint": "9de287edecb0811f35902c59d20f7a3f6ef023fff8d307d6f7bb87aba09b2419",
+  "generatedAt": "2026-10-07T03:40:56.567Z",
+  "runId": "rap-governed-20261007023446001-28ce3f98",
+  "sourceFingerprint": "a7b302194da2b88fd7756d59f290eb8e5fce0fe171bb2fa09ea1092a2d29a98f",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
   "engine": "report-contamination-cleaner/v3",
@@ -24,7 +24,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/final-consistency-report.json",
-      "expected": "rap-governed-20261006220921280-15ae3988",
+      "expected": "rap-governed-20261007023446001-28ce3f98",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -36,7 +36,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/package-integrity-report.json",
-      "expected": "rap-governed-20261006220921280-15ae3988",
+      "expected": "rap-governed-20261007023446001-28ce3f98",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -48,7 +48,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/replay-integrity-report.json",
-      "expected": "rap-governed-20261006220921280-15ae3988",
+      "expected": "rap-governed-20261007023446001-28ce3f98",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -60,7 +60,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/self-proving-report.json",
-      "expected": "rap-governed-20261006220921280-15ae3988",
+      "expected": "rap-governed-20261007023446001-28ce3f98",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -72,12 +72,12 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/tamper-detection-report.json",
-      "expected": "rap-governed-20261006220921280-15ae3988",
+      "expected": "rap-governed-20261007023446001-28ce3f98",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     }
   ],
-  "currentRunId": "rap-governed-20261006220921280-15ae3988",
+  "currentRunId": "rap-governed-20261007023446001-28ce3f98",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",
