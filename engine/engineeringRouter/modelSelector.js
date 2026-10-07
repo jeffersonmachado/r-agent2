@@ -88,20 +88,25 @@ function compareCandidates(a, b, options = null) {
   const tierB = scoreB.reliabilityTier + (penaltyB > 0 ? 1 : 0);
   if (tierA !== tierB) return tierA - tierB;
 
-  // (3) Cost — custo EFETIVO por GREEN esperado (preço relativo / P(sucesso) + latência + despedício).
-  const ecgDiff = scoreA.expectedCostPerGreen - scoreB.expectedCostPerGreen;
-  if (ecgDiff !== 0) return ecgDiff;
-
-  // (4) Classe de custo relativa (desempate estável).
+  // (3) POLÍTICA de custo preferida — `preferredCostClass` é decisão de POLICY, não preço: dentro da
+  // MESMA faixa de confiabilidade ela continua tendo prioridade sobre o custo absoluto (regra
+  // histórica preservada). A partir da faixa de confiabilidade ela NÃO decide: um candidato
+  // comprovado pode ultrapassar um mais barato degradado (exigência da política de evidência).
   if (preferredCostClass && preferredCostClass !== 'ANY') {
     const aMatch = a.costClass === preferredCostClass ? 0 : 1;
     const bMatch = b.costClass === preferredCostClass ? 0 : 1;
     if (aMatch !== bMatch) return aMatch - bMatch;
   }
+
+  // (4) Cost — custo EFETIVO por GREEN esperado (preço relativo / P(sucesso) + latência + desperdício).
+  const ecgDiff = scoreA.expectedCostPerGreen - scoreB.expectedCostPerGreen;
+  if (ecgDiff !== 0) return ecgDiff;
+
+  // (5) Classe de custo relativa (desempate estável).
   const costDiff = COST_RANK[a.costClass] - COST_RANK[b.costClass];
   if (costDiff !== 0) return costDiff;
 
-  // (5) Determinismo.
+  // (6) Determinismo.
   return keyOf(a).localeCompare(keyOf(b));
 }
 

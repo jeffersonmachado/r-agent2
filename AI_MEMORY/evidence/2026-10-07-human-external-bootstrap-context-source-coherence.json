@@ -1,0 +1,38 @@
+{
+  "id": "2026-10-07-human-external-bootstrap-context-source-coherence",
+  "generatedAt": "2026-10-07T20:40:00.000Z",
+  "kind": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "classification": "intervencao_humana_externa_coerencia_contexto_workspace",
+  "authorization": "siga (resposta afirmativa ao pedido de autorizacao da correcao minima proposta — contexto do CODER deve vir do commit da task)",
+  "separadoDasEntregasAutonomas": true,
+
+  "defeitoMedido": {
+    "sintoma": "INC-2B (task 99138bf8) terminou RED: o candidato viavel qwen3-coder-plus gerou um patch estruturalmente valido e falhou em PATCH_APPLY_FAILED (missionReportService.js:144); depois o mesmo qwen3-max foi tentado 8x com o mesmo TEST_FAIL",
+    "causaRaiz": "o workspace onde o patch e aplicado e materializado do `source_commit` da task (fonte da Engineering Mission), mas `contextBuilderService` lia os arquivos do CHECKOUT PRINCIPAL (main)",
+    "provaEstrutural": [
+      "git diff --numstat main <fonte-da-missao> -- api/services/engineeringMission/ => 102 linhas novas em missionReplanService.js + 53 em missionStoreService.js (155 linhas que existem na FONTE e ZERO no main)",
+      "grep por commit|source_ref|source_commit em contextBuilderService.js => VAZIO (nenhuma nocao de commit)",
+      "contextBuilderService lia `fs.readFileSync(path.join(ROOT, relPath))`; patchApplyService.createWorkspace materializa o worktree do `source_commit`"
+    ],
+    "impacto": "QUALQUER incremento cujo arquivo-alvo tenha sido alterado por um incremento anterior da MESMA missao recebe contexto desatualizado — ou seja, a decomposicao (objetivo central da missao) era inviavel na pratica"
+  },
+
+  "correcaoImplementada": [
+    "contextBuilderService.createSourceReader(task): devolve MISSION_SOURCE quando a task declara `source_commit` valido — listagem por `git ls-tree -r --name-only <commit>` e leitura por `git show <commit>:<path>`; devolve ROOT (comportamento anterior) para task avulsa ou commit irresolvivel, sem lancar",
+    "expandGlobsToFiles(globs, reader): globs deixam de ser expandidos so no checkout — a expansao passa a considerar a FONTE (uma listagem por buildContext, sem custo relevante)",
+    "buildContext devolve `sourceOrigin: { kind, commit }` e o attempt passa a registrar isso em `context_summary.sourceOrigin` (auditoria da coerencia contexto<->workspace)",
+    "modelSelector: precedencia reconciliada — a faixa de CONFIABILIDADE decide primeiro (um candidato comprovado pode ultrapassar um mais barato degradado, exigencia da politica de evidencia), e `preferredCostClass` continua sendo POLICY dentro da MESMA faixa (regra historica preservada). Um teste pre-existente (engineeringRouterModelSelector.test.js) falhou na primeira versao desta mudanca e expôs o conflito: ele foi MANTIDO e passa com a nova precedencia, sem enfraquecimento"
+  ],
+
+  "provas": {
+    "unit_contextSource": "6 testes PASS com git REAL (sem mock): prova de que o arquivo do incremento anterior NAO existe no checkout principal; que a task de missao le do commit da fonte e inclui o arquivo; que task sem source_commit continua lendo do ROOT; que commit irresolvivel degrada sem lancar; e que globs sao expandidos contra a fonte",
+    "unit_modelSelectorExistente": "o teste pre-existente 'preferredCostClass tem prioridade sobre custo absoluto' PASS (regra preservada dentro da faixa de confiabilidade)",
+    "unit_modelDecision": "13 testes PASS (decisao por evidencia/expected_cost_per_GREEN)",
+    "unit_providerChainPolicy": "17 testes PASS",
+    "unit_patchValidator": "17 testes PASS",
+    "total": "60 testes PASS nos 5 arquivos afetados",
+    "flakeConhecidoConferido": "tests/integration/engineeringRouterDurableResumeE2E.test.js falhou na regressao em LOTE (BLOCKED_INFRA/READY_FOR_PROMOTION por contencao de sandbox) e PASSA 5/5 rodando ISOLADO — flake de contencao, nao regressao desta mudanca"
+  },
+
+  "proximoPasso": "Reiniciar a API, commitar, rodar a regressao focada e reentregar o INC-2B (v11). Depois: INC-3 (conformidade: divergencias do INC-1 e do INC-2A) e HANDOVER."
+}

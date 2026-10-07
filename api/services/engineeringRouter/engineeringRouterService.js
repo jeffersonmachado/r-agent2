@@ -279,7 +279,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   });
 
   const context = buildContext(task, { failureBundle, previousAttempt });
-  await ts.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget } });
+  await ts.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget, sourceOrigin: context.sourceOrigin || null } });
 
   // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — telemetria POR TENTATIVA de despacho: motivo da
   // seleção (reason codes estruturados), custo estimado (costClass do catálogo de modelos) e a

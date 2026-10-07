@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { applySecretPolicy } = require('../../../engine/engineeringRouter/secretRedaction');
 const { globToRegExp, normalize } = require('../../../engine/engineeringRouter/pathBoundary');
 const logger = require('../../utils/logger');
@@ -74,24 +75,22 @@ function walkFiles(startRelDir, { maxEntries = MAX_DIR_ENTRIES_WALKED } = {}) {
   return out;
 }
 
-/** Resolve globs de `allowedPaths` para caminhos de arquivo reais existentes no repositório. */
-function expandGlobsToFiles(globs) {
+/** Resolve globs de `allowedPaths` para caminhos de arquivo reais existentes na FONTE da task. */
+function expandGlobsToFiles(globs, reader = null) {
+  const source = reader || createSourceReader({});
   const matched = new Set();
   for (const glob of globs || []) {
     const g = normalize(glob);
-    const abs = path.join(ROOT, g);
-    // Caminho literal (sem wildcard) apontando para um arquivo existente.
     if (!g.includes('*')) {
-      try {
-        if (fs.statSync(abs).isFile()) {
-          matched.add(g);
-          continue;
-        }
-      } catch (_) { /* não é arquivo direto — tenta como diretório abaixo */ }
+      // Caminho literal: só entra se existir NA FONTE (commit da missão ou checkout).
+      if (source.isFile(g)) matched.add(g);
+      continue;
     }
     const base = baseDirOf(g);
     const re = globToRegExp(g);
-    for (const filePath of walkFiles(base)) {
+    const listing = source.listFiles();
+    const candidates = listing === null ? walkFiles(base) : listing.filter((p) => p === base || p.startsWith(`${base}/`) || base === '');
+    for (const filePath of candidates) {
       if (re.test(filePath)) matched.add(filePath);
     }
   }
@@ -108,6 +107,68 @@ function readFileSafe(relPath) {
   }
 }
 
+/** Executa git no checkout principal (ROOT). Nunca lança: devolve null em falha. */
+function runGit(args) {
+  try {
+    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — COERÊNCIA CONTEXTO↔WORKSPACE.
+ *
+ * Defeito real medido: o workspace onde o patch é aplicado é materializado do `source_commit` da
+ * task (fonte da Engineering Mission), mas este construtor lia os arquivos do CHECKOUT PRINCIPAL
+ * (main). Em qualquer incremento cujo arquivo-alvo tenha sido alterado por um incremento anterior
+ * da MESMA missão, o CODER recebia o conteúdo ANTIGO — e o patch não aplicava
+ * (`PATCH_APPLY_FAILED`) ou, pior, aplicava sobre premissas erradas. Medido no INC-2B: 155 linhas
+ * existiam na fonte e não no main (`missionReplanService.js`, `missionStoreService.js`).
+ *
+ * Este resolvedor devolve a fonte de leitura correta para a task:
+ *   - `MISSION_SOURCE` quando a task declara `source_commit` válido: listagem por
+ *     `git ls-tree -r --name-only <commit>` e leitura por `git show <commit>:<path>`;
+ *   - `ROOT` (comportamento anterior) para task avulsa ou commit irresolvível — nunca falha por
+ *     causa disso, apenas registra a degradação.
+ *
+ * @returns {{kind:'MISSION_SOURCE'|'ROOT', commit:string|null, listFiles:()=>string[], readFile:(p:string)=>string|null, isFile:(p:string) => boolean}}
+ */
+function createSourceReader(task = {}) {
+  const commit = String(task.source_commit || task.sourceCommit || '').trim();
+  const rootReader = {
+    kind: 'ROOT',
+    commit: null,
+    listFiles: () => null,
+    readFile: readFileSafe,
+    isFile: (relPath) => {
+      try { return fs.statSync(path.join(ROOT, relPath)).isFile(); } catch (_) { return false; }
+    },
+  };
+  if (commit === '') return rootReader;
+  if (runGit(['cat-file', '-e', `${commit}^{commit}`]) === null) {
+    logger.warn('[engineeringContextBuilder] source_commit irresolvível — lendo do checkout principal', { taskId: task.id, commit });
+    return rootReader;
+  }
+
+  let cachedListing = null;
+  const listFiles = () => {
+    if (cachedListing === null) {
+      const out = runGit(['ls-tree', '-r', '--name-only', commit]);
+      cachedListing = out === null ? [] : out.split('\n').map((l) => l.trim()).filter((l) => l !== '').map(normalize);
+    }
+    return cachedListing;
+  };
+
+  return {
+    kind: 'MISSION_SOURCE',
+    commit,
+    listFiles,
+    readFile: (relPath) => runGit(['show', `${commit}:${relPath}`]),
+    isFile: (relPath) => listFiles().includes(normalize(relPath)),
+  };
+}
+
 /**
  * Monta o contexto real para uma EngineeringTask/tentativa.
  *
@@ -120,13 +181,14 @@ function readFileSafe(relPath) {
 function buildContext(task, { failureBundle = null, previousAttempt = null } = {}) {
   const allowedPaths = Array.isArray(task.allowed_paths) ? task.allowed_paths : (task.allowedPaths || []);
   const failingTestPaths = Array.isArray(failureBundle?.failedTests) ? failureBundle.failedTests : [];
+  // FONTE DE LEITURA: commit da missão quando a task declara source_commit (coerência com o
+  // workspace onde o patch será aplicado); checkout principal caso contrário.
+  const reader = createSourceReader(task);
 
   // Prioridade: arquivos de teste que falharam (mais relevantes para diagnóstico) primeiro,
   // depois o escopo autorizado pelo Task Contract.
-  const priorityCandidates = failingTestPaths.map(normalize).filter((p) => {
-    try { return fs.statSync(path.join(ROOT, p)).isFile(); } catch (_) { return false; }
-  });
-  const scopeCandidates = expandGlobsToFiles(allowedPaths);
+  const priorityCandidates = failingTestPaths.map(normalize).filter((p) => reader.isFile(p));
+  const scopeCandidates = expandGlobsToFiles(allowedPaths, reader);
 
   const orderedCandidates = [...new Set([...priorityCandidates, ...scopeCandidates])];
 
@@ -140,7 +202,7 @@ function buildContext(task, { failureBundle = null, previousAttempt = null } = {
       skippedFiles.push({ path: relPath, reason: 'MAX_FILES_REACHED' });
       continue;
     }
-    const content = readFileSafe(relPath);
+    const content = reader.readFile(relPath);
     if (content == null) {
       skippedFiles.push({ path: relPath, reason: 'UNREADABLE_OR_BINARY' });
       continue;
@@ -181,6 +243,8 @@ function buildContext(task, { failureBundle = null, previousAttempt = null } = {
     includedFiles: safeFiles.map((f) => f.path),
     blockedFiles: blocked,
     skippedFiles,
+    // Auditoria da FONTE usada (coerência contexto↔workspace): fica registrado no attempt.
+    sourceOrigin: { kind: reader.kind, commit: reader.commit },
     budget: { maxTotalBytes: DEFAULT_MAX_TOTAL_BYTES, usedBytes, maxFiles: DEFAULT_MAX_FILES },
   };
 }
@@ -189,6 +253,7 @@ module.exports = {
   ROOT,
   DEFAULT_MAX_TOTAL_BYTES,
   DEFAULT_MAX_FILES,
+  createSourceReader,
   expandGlobsToFiles,
   buildContext,
 };

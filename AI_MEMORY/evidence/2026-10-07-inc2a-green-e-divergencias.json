@@ -1,0 +1,66 @@
+{
+  "id": "2026-10-07-inc2a-entregue-pelo-engenheiro-e-divergencias",
+  "generatedAt": "2026-10-07T20:05:00.000Z",
+  "kind": "ENTREGA_AUTONOMA_DO_ENGENHEIRO",
+  "classification": "resultado_de_execucao_real + divergencias_de_conformidade",
+  "naoEhIntervencaoHumana": "O codigo do INC-2A foi escrito pelo PROPRIO Engenheiro (nao pelo agente externo). Este registro apenas documenta o resultado, as provas e as divergencias encontradas.",
+
+  "inc2a": {
+    "missao": "ca56cbdc-3280-4be8-beff-f9301199fc9f (versao 9 do contrato)",
+    "task": "db01fdf4-2a87-4a66-a029-f2aeb4402519",
+    "resultado": "GREEN em 1 TENTATIVA, sem nenhum reroute",
+    "coder": "deepseek:deepseek-flash (LOW — o mais barato qualificado; escolhido pela politica, nao por hardcode)",
+    "patch": "12155 chars — criou api/services/engineeringMission/missionReplanService.js e tests/unit/engineeringMission/missionReplanService.test.js, alterou api/services/engineeringMission/missionStoreService.js",
+    "commitIntegradoNaFonte": "0ada6025e49b",
+    "sourceState": "READY",
+    "provasIndependentes": {
+      "testesDoContratoNoWorktreeDoCommit": "16/16 PASS (6 do novo servico + 10 do nucleo puro do INC-1), rodados por mim em worktree detached de 0ada6025 com node_modules compartilhado",
+      "revisaoMETA": "23 checks: 18 PASS, 1 FAIL heuristico (NO_COMMENTED_OUT_CODE, 1 linha suspeita por heuristica textual), 4 NOT_VERIFIABLE (exigem analise semantica/alcancabilidade, nao textual)",
+      "blockers": 0,
+      "regressions": 0,
+      "adversarial": "PASS (0 findings)"
+    },
+    "aderenciaAoContrato": [
+      "CONFORME: consome o nucleo puro (`replanPolicy.decideReplan`) sem duplicar politica de budget/livelock/fingerprint",
+      "CONFORME: linhagem append-only idempotente por (fingerprint, ordinal) via `missionStore.appendReplanLineage`",
+      "CONFORME: efeito somente em EXHAUSTED/LIVELOCK (REPLAN nao cria versao nem reabre); usa updateMissionGuarded quando ha lease token (fencing)",
+      "DIVERGENTE: o teste entregue mocka TAMBEM o nucleo puro (`jest.mock` de replanPolicy), enquanto o contrato exigia que a politica do nucleo fosse a REAL — mock era permitido apenas na fronteira de persistencia. A delegacao esta provada por chamada/argumentos, nao por equivalencia de comportamento real."
+    ]
+  },
+
+  "comoOPoliticaDeExecucaoViabilizou": {
+    "sequenciaDeBloqueiosResolvidosPorMedicao": [
+      "v3-v5: coder emitia corpo de hunk sem prefixo; sem deteccao, PATCH_APPLY_FAILED sem reroute -> RED (12 tentativas desperdicadas)",
+      "v6: com deteccao+reroute, ainda esgotava em 6/6 tentativas de provider com tempo sobrando",
+      "v7-v8: cadeia 12 e deadline 300s; deepseek-v4-pro RESPONDEU (238s) e o consumo de tempo passou a ser o gargalo",
+      "v9: teto de tempo 1800s + deadline limitado ao orcamento restante + decisao por evidencia -> GREEN em 1 tentativa"
+    ],
+    "observacaoRelevante": "o MESMO modelo que falhou por reasoning exhaustion nas execucoes anteriores (deepseek-flash) entregou o patch valido na v9 — com deadline maior (300s em vez de 120s). Nao houve troca de modelo nem de contrato."
+  },
+
+  "divergenciasDeConformidadeParaFollowUp": [
+    {
+      "id": "DIV-INC1-A",
+      "incremento": "INC-1 (replanPolicy.js, integrado em 5c756932)",
+      "divergencia": "`fingerprintReplanReason` usa FNV-1a; o contrato declarava SHA-256 determinístico com ordenacao canonica de chaves",
+      "impacto": "fingerprints de 32 bits, sem ordenacao canonica garantida — colisao teoricamente possivel e incompatibilidade com a expectativa do contrato",
+      "acao": "entregar ao Engenheiro (INC-3), nunca corrigir manualmente"
+    },
+    {
+      "id": "DIV-INC1-B",
+      "incremento": "INC-1",
+      "divergencia": "`planMissionDecomposition(mission)` em vez de `{ spec, maxIncrements }`, e sem tratamento auditavel de limite excedido",
+      "impacto": "assinatura divergente do contrato; consumidores futuros podem assumir a forma errada",
+      "acao": "entregar ao Engenheiro (INC-3)"
+    },
+    {
+      "id": "DIV-INC2A-C",
+      "incremento": "INC-2A (missionReplanService.js, integrado em 0ada6025)",
+      "divergencia": "teste mocka o nucleo puro; contrato exigia a politica REAL na prova de delegacao",
+      "impacto": "a prova de 'delega sem duplicar' e estrutural (chamada/argumentos), nao comportamental — um teste com o nucleo real compararia a decisao do servico com a do nucleo para a mesma entrada",
+      "acao": "entregar ao Engenheiro (INC-3)"
+    }
+  ],
+
+  "proximoPasso": "INC-2B (secao aditiva do relatorio) em execucao. Depois: INC-3 com as 3 divergencias para o Engenheiro; entao HANDOVER quando decomposicao + Replan Budget + lineage + livelock + retomada/replanejamento estiverem GREEN."
+}
