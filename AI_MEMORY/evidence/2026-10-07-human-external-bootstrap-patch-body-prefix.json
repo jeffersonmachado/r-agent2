@@ -1,0 +1,54 @@
+{
+  "id": "2026-10-07-human-external-bootstrap-patch-body-prefix",
+  "generatedAt": "2026-10-07T17:30:00.000Z",
+  "kind": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "classification": "intervencao_humana_externa_minima",
+  "authorization": "AUTORIZO (a) + (b) + (c) como bootstrap externo minimo para desbloquear o Engenheiro (mensagem do usuario, 2026-10-07)",
+  "separadoDasEntregasAutonomas": true,
+  "naoEhTrabalhoDoEngenheiro": "Implementado pelo agente externo (Copilot) sob autorizacao explicita. As entregas AUTONOMAS do Engenheiro nesta mesma missao sao o INC-1 (replanPolicy.js + testes), integrado em 5c756932. Este bootstrap NAO deve ser atribuido ao Engenheiro nem contado como item da missao principal.",
+
+  "motivo": "Desbloquear o Engenheiro de um defeito de plataforma medido: o coder selecionado pelo roteador (qwen:qwen3-coder-flash) emite unified diff com cabecalho valido e CORPO de hunk sem prefixo; a plataforma aceitava o patch na validacao estrutural, falhava no `git apply` (PATCH_APPLY_FAILED) e NAO reroteava — 12 tentativas em 2 tasks RED, nenhuma delas com veredito sobre o merito do codigo.",
+  "escopoAutorizadoImplementado": [
+    "(a) parseUnifiedDiff detecta corpo de hunk sem prefixo valido e rejeita deterministicamente com PATCH_BODY_MISSING_PREFIX, registrando arquivo/hunk/contagens;",
+    "(b) PATCH_APPLY_FAILED repetido sem progresso (e a falha estrutural de formato) torna-se elegivel a reroute/escalation, respeitando providerBudget, Replan Budget, anti-livelock e os guardas existentes;",
+    "(c) telemetria da cadeia de decisao: provider, modelo, tipo/codigo da falha, arquivo/hunk, tentativa, reroute e resultado — base para confiabilidade de geracao de patch por provider/modelo."
+  ],
+  "proibicoesRespeitadas": [
+    "nenhum reparo heuristico/automatico do diff: nada de adicionar '+', '-' ou espaco para tornar um patch aplicavel;",
+    "nenhuma allowlist alterada para favorecer outro modelo (o reroute usa o mesmo seletor e os mesmos guardas ja existentes);",
+    "nenhum gate, cobertura, regressao, criterio de aceite ou seguranca do sandbox reduzido;",
+    "INC-2 e os demais itens da missao principal NAO foram implementados manualmente."
+  ],
+
+  "arquivosAlterados": [
+    "engine/engineeringRouter/constants.js (novo FAILURE_CODES.PATCH_BODY_MISSING_PREFIX)",
+    "engine/engineeringRouter/patchValidator.js (deteccao estrutural do corpo do hunk; modulo segue puro: sem I/O, Date, console ou process)",
+    "api/services/engineeringRouter/engineeringRouterService.js (classifyPatchGenerationFailure, patchApplyRerouteAfter, rerouteRole extraido e reusado, streak por modelo, telemetria PATCH_GENERATION/PATCH_DECISION, error auditavel no attempt rejeitado)",
+    "tests/unit/engineeringRouterPatchValidator.test.js (8 casos novos: aceito, rejeitado, determinismo, hunk especifico, falso-positivo do contexto, defeito real, remocao pura)",
+    "tests/integration/engineeringRouterPatchFormatRerouteE2E.test.js (novo: reroute real + telemetria + orcamento)"
+  ],
+
+  "deteccaoCorretaDescobertaDuranteOTrabalho": {
+    "regraInicialIncorreta": "prefixedLines === 0 && bareLines > 0 — NAO pegava o defeito real",
+    "porque": "o corpo e o CONTEUDO INTEGRAL do arquivo: as linhas indentadas do codigo comecam com ESPACO, que e prefixo de contexto valido em unified diff => prefixedLines > 0",
+    "comoFoiDescoberto": "o proprio teste de integracao (assert de error.code caiu em PATCH_APPLY_FAILED) — nao por inspecao teorica",
+    "regraFinal": "ancorada no HEADER do hunk (deterministica): declaredNewCount > declaredOldCount com plusLines === 0, ou declaredOldCount > declaredNewCount com minusLines === 0 => o corpo nao pode produzir as adicoes/remocoes declaradas => PATCH_BODY_MISSING_PREFIX",
+    "naoConfundirCom": "contagem ERRADA no header — isso o hunkNormalizer conserta e NAO pode virar rejeicao (nenhuma regressao de capacidade)"
+  },
+
+  "politicaDeReroute": {
+    "limiar": "ENGINEERING_PATCH_APPLY_REROUTE_AFTER (default 2; lido a cada avaliacao, nunca capturado em load)",
+    "falhasElegiveis": ["PATCH_VALIDATION + PATCH_BODY_MISSING_PREFIX", "PATCH_APPLY + PATCH_APPLY_FAILED"],
+    "naoElegiveis": "violacao de escopo/segredo/binario continua em RETRY com failureBundle (decisao de contrato, nunca reroute silencioso)",
+    "guardasPreservados": ["providerBudget (tentativas/tempo da cadeia) => PROVIDER_EXHAUSTED/BLOCKED", "excludedModelKeys (nunca reselecionar o mesmo candidato quebrado)", "maxIterations da task => ENGINEERING_TASK_EXHAUSTED/RED", "ausencia de candidato => NO_ALTERNATIVE_CANDIDATE/RED"],
+    "estadoTerminalHonesto": "sem convergencia a task termina RED/BLOCKED com codigo explicito — nunca laco infinito, nunca GREEN falso"
+  },
+
+  "evidenciaDeExecucao": {
+    "unitPatchValidator": "17 passed (8 casos novos, incluindo o defeito real e os dois casos de nao-falso-positivo: hunk so de contexto e remocao pura)",
+    "integracaoRerouteEFormat": "2 passed — cenario 1: patch sem prefixo rejeitado ANTES do git apply (error.code=PATCH_BODY_MISSING_PREFIX, status PATCH_REJECTED), reroute real para outro modelo/provider, task GREEN com o provider que funciona, telemetria PATCH_GENERATION + PATCH_DECISION preservando a cadeia (failureCode, failuresOnThisModel, rerouteThreshold, rerouteTarget); cenario 2: sem convergencia, a task termina RED com codigo explicito e nenhum modelo repetido (orcamento impede laco infinito)",
+    "regressaoFocada": "74 suites / 695 testes PASS (npx jest --testPathPattern engineeringRouter|engineeringMission --runInBand) — nenhuma regressao nos patches validos existentes, nos fluxos de reroute por provider, no hunkNormalizer, na suite de contratos/constantes nem nos testes de missao/source/replan"
+  },
+
+  "proximoPasso": "Com o bootstrap GREEN, retomar o INC-2 pelo Roteador Engenheiro real (missao ca56cbdc-3280-4be8-beff-f9301199fc9f, contrato v5) e, se GREEN, entregar as divergencias do INC-1 (fnv1a vs SHA-256 e assinatura de planMissionDecomposition) como follow-up AO ENGENHEIRO — nunca corrigidas manualmente."
+}

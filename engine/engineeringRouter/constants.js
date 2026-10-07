@@ -109,6 +109,14 @@ const REASON_CODES = Object.freeze({
 const FAILURE_CODES = Object.freeze({
   PATCH_OUTSIDE_ALLOWED_SCOPE: 'PATCH_OUTSIDE_ALLOWED_SCOPE',
   PATCH_INVALID_FORMAT: 'PATCH_INVALID_FORMAT',
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): corpo de hunk SEM prefixo de unified diff ('+', '-' ou
+  // ' '). Achado real medido: o coder `qwen:qwen3-coder-flash` emite o cabecalho do diff correto
+  // (diff --git / --- / +++ / @@) e o CORPO sem nenhum prefixo — `git apply` rejeita o patch inteiro
+  // com "patch corrompido". Antes desta correcao a plataforma so descobria isso no apply, com
+  // PATCH_APPLY_FAILED (sem reroute); agora e rejeitado ANTES, de forma deterministica e especifica.
+  // NUNCA reparado heuristicamente: adivinhar quais linhas sao contexto/adiçao mudaria a semantica
+  // do patch em silencio.
+  PATCH_BODY_MISSING_PREFIX: 'PATCH_BODY_MISSING_PREFIX',
   PATCH_FORBIDDEN_FILE: 'PATCH_FORBIDDEN_FILE',
   PATCH_BINARY_CHANGE: 'PATCH_BINARY_CHANGE',
   PATCH_TOO_LARGE: 'PATCH_TOO_LARGE',

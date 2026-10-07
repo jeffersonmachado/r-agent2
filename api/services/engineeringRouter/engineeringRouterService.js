@@ -337,8 +337,44 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   await ts.updateAttempt(attempt.id, { patch_diff: patchResult.diff, patch_validation: validation });
 
   if (!validation.ok) {
-    await ts.updateAttempt(attempt.id, { status: 'PATCH_REJECTED', completed_at: new Date() });
-    return { outcome: 'RETRY', failureBundle: { failedCommand: 'PATCH_VALIDATION', issues: validation.issues, code: validation.code }, attempt };
+    // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): a rejeição de FORMATO passa a ficar auditável no
+    // próprio attempt (o ramo de falha do `git apply` já gravava `error`; este não gravava) —
+    // inclui as violações com arquivo/hunk/contagens para diagnóstico posterior.
+    await ts.updateAttempt(attempt.id, {
+      status: 'PATCH_REJECTED',
+      error: {
+        code: validation.code,
+        message: (validation.issues[0] || {}).message || null,
+        failureKind: validation.code === FAILURE_CODES.PATCH_BODY_MISSING_PREFIX ? 'PATCH_NOT_APPLICABLE' : 'PATCH_CONTRACT_VIOLATION',
+        violations: (validation.issues[0] || {}).violations || null,
+      },
+      completed_at: new Date(),
+    });
+    const patchDetail = patchTelemetryDetail({ attempt, validation, patchDiff: patchResult.diff, extra: { rejectedBy: 'PATCH_VALIDATION', failureCode: validation.code, failureKind: validation.code === FAILURE_CODES.PATCH_BODY_MISSING_PREFIX ? 'PATCH_NOT_APPLICABLE' : 'PATCH_CONTRACT_VIOLATION' } });
+    // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): telemetria da geração de patch por provider/modelo —
+    // permite calcular confiabilidade de geração (rejeitado ANTES de qualquer escrita no workspace).
+    await ts.recordTelemetry({
+      ...telemetryBase,
+      input_tokens: patchResult.usage?.prompt_tokens ?? null,
+      output_tokens: patchResult.usage?.completion_tokens ?? null,
+      latency_ms: patchResult.latencyMs,
+      result: validation.code,
+      event_type: 'PATCH_GENERATION',
+      detail: patchDetail,
+    }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar telemetria de patch', { taskId: task.id, error: err.message }));
+    return {
+      outcome: 'RETRY',
+      failureBundle: {
+        failedCommand: 'PATCH_VALIDATION',
+        issues: validation.issues,
+        code: validation.code,
+        failureKind: validation.code === FAILURE_CODES.PATCH_BODY_MISSING_PREFIX ? 'PATCH_NOT_APPLICABLE' : 'PATCH_CONTRACT_VIOLATION',
+        patchFiles: patchDetail.patchFiles,
+        patchTotalHunks: patchDetail.patchTotalHunks,
+        patchBytes: patchDetail.patchBytes,
+      },
+      attempt,
+    };
   }
   await recordProgress(run, 'patch_produced', `attempt ${attempt.attempt_number}`);
 
@@ -351,6 +387,16 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     const applyResult = await applyPatch(workspace, patchResult.diff);
     if (!applyResult.ok) {
       await ts.updateAttempt(attempt.id, { status: 'FAILED', error: { code: applyResult.code, stderr: applyResult.stderr }, completed_at: new Date() });
+      const patchDetail = patchTelemetryDetail({ attempt, validation, patchDiff: patchResult.diff, extra: { rejectedBy: 'PATCH_APPLY', failureCode: applyResult.code, failureKind: 'PATCH_NOT_APPLICABLE' } });
+      await ts.recordTelemetry({
+        ...telemetryBase,
+        input_tokens: patchResult.usage?.prompt_tokens ?? null,
+        output_tokens: patchResult.usage?.completion_tokens ?? null,
+        latency_ms: patchResult.latencyMs,
+        result: applyResult.code,
+        event_type: 'PATCH_GENERATION',
+        detail: patchDetail,
+      }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar telemetria de patch', { taskId: task.id, error: err.message }));
       emitTaskStage(eventAudienceTenantId, task.id, {
         stage: 'PATCH_APPLY',
         status: 'error',
@@ -358,10 +404,32 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
         message: `Falha ao aplicar patch: ${applyResult.code}`,
         meta: { stderr: applyResult.stderr },
       });
-      return { outcome: 'RETRY', failureBundle: { failedCommand: 'PATCH_APPLY', stderr: applyResult.stderr, code: applyResult.code }, attempt };
+      return {
+        outcome: 'RETRY',
+        failureBundle: {
+          failedCommand: 'PATCH_APPLY',
+          stderr: applyResult.stderr,
+          code: applyResult.code,
+          failureKind: 'PATCH_NOT_APPLICABLE',
+          patchFiles: patchDetail.patchFiles,
+          patchTotalHunks: patchDetail.patchTotalHunks,
+          patchBytes: patchDetail.patchBytes,
+        },
+        attempt,
+      };
     }
 
     await ts.updateAttempt(attempt.id, { status: 'APPLIED' });
+    const appliedDetail = patchTelemetryDetail({ attempt, validation, patchDiff: patchResult.diff, extra: { rejectedBy: null, failureCode: null } });
+    await ts.recordTelemetry({
+      ...telemetryBase,
+      input_tokens: patchResult.usage?.prompt_tokens ?? null,
+      output_tokens: patchResult.usage?.completion_tokens ?? null,
+      latency_ms: patchResult.latencyMs,
+      result: 'PATCH_APPLIED',
+      event_type: 'PATCH_GENERATION',
+      detail: appliedDetail,
+    }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar telemetria de patch', { taskId: task.id, error: err.message }));
     await recordProgress(run, 'patch_applied', `attempt ${attempt.attempt_number}`);
     // Achado do pilot: mostrar os arquivos realmente tocados assim que o patch aplica é o
     // equivalente, para esta UI, à lista de arquivos editados que a extensão do VSCode mostra
@@ -767,6 +835,157 @@ async function blockTask(taskId, ts, eventAudienceTenantId, { code, message, det
   return { taskId, status: 'BLOCKED', reasonCode: code };
 }
 
+const PATCH_APPLY_REROUTE_AFTER_DEFAULT = 2;
+
+/**
+ * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — quantas falhas CONSECUTIVAS de geração/aplicação de
+ * patch no MESMO coder, sem nenhum progresso, autorizam reroute para outro modelo/provider.
+ *
+ * Achado real medido: `qwen:qwen3-coder-flash` emite o corpo do hunk sem prefixo em 10/10 patches;
+ * `PATCH_APPLY_FAILED` NÃO reroteava, então as 6 iterações da task eram gastas no mesmo modelo
+ * reproduzindo exatamente o mesmo defeito (task RED, missão FAILED). Default 2 = uma repetição
+ * confirma que não é ruído de amostragem; override operacional por env (sem tocar allowlists).
+ */
+function patchApplyRerouteAfter() {
+  const raw = Number(process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER);
+  return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : PATCH_APPLY_REROUTE_AFTER_DEFAULT;
+}
+
+/**
+ * Classifica a falha de um attempt como falha de GERAÇÃO/FORMATO de patch (do CODER), não de
+ * mérito do código. Somente estas são elegíveis a reroute por repetição:
+ *  - `PATCH_VALIDATION` + `PATCH_BODY_MISSING_PREFIX` (corpo de hunk sem prefixo — detectado ANTES
+ *    do apply);
+ *  - `PATCH_APPLY` + `PATCH_APPLY_FAILED` (diff que o `git apply` recusa).
+ * Violação de escopo/segredo/binário é decisão de contrato e continua em RETRY com o failureBundle
+ * — nunca vira reroute silencioso.
+ * @returns {{code:string, failureKind:string, failedCommand:string}|null}
+ */
+function classifyPatchGenerationFailure(failureBundle) {
+  const bundle = failureBundle || {};
+  if (bundle.failedCommand === 'PATCH_APPLY' && bundle.code === FAILURE_CODES.PATCH_APPLY_FAILED) {
+    return { code: FAILURE_CODES.PATCH_APPLY_FAILED, failureKind: 'PATCH_NOT_APPLICABLE', failedCommand: bundle.failedCommand };
+  }
+  if (bundle.failedCommand === 'PATCH_VALIDATION' && bundle.code === FAILURE_CODES.PATCH_BODY_MISSING_PREFIX) {
+    return { code: FAILURE_CODES.PATCH_BODY_MISSING_PREFIX, failureKind: 'PATCH_NOT_APPLICABLE', failedCommand: bundle.failedCommand };
+  }
+  return null;
+}
+
+/**
+ * Detalhe de telemetria de UMA tentativa de geração de patch — a base para calcular confiabilidade
+ * de geração de patch por provider/modelo (HUMAN_EXTERNAL_BOOTSTRAP 2026-10-07, item c).
+ */
+function patchTelemetryDetail({ attempt, validation = null, patchDiff = '', extra = {} }) {
+  const files = (validation?.files || []).map((f) => ({
+    path: f.newPath && f.newPath !== '/dev/null' ? f.newPath : f.oldPath,
+    isNew: Boolean(f.isNew),
+    isDeleted: Boolean(f.isDeleted),
+    hunks: f.hunkCount || 0,
+  }));
+  return {
+    attemptNumber: attempt?.attempt_number ?? null,
+    patchBytes: Buffer.byteLength(String(patchDiff || ''), 'utf8'),
+    patchFiles: files,
+    patchTotalHunks: files.reduce((sum, f) => sum + f.hunks, 0),
+    ...extra,
+  };
+}
+
+/**
+ * Reseleciona o papel que falhou EXCLUINDO o modelo quebrado, preservando integralmente os guardas
+ * já existentes: orçamento da cadeia de providers (anti-livelock global), ausência de candidato
+ * qualificado e a regra de nunca reselecionar o mesmo candidato dentro da mesma task.
+ *
+ * Extraído do caminho de indisponibilidade de provider para ser reusado também por falha de
+ * FORMATO de patch repetida (HUMAN_EXTERNAL_BOOTSTRAP 2026-10-07).
+ *
+ * @returns {Promise<{terminal?:Object, rerouted?:boolean, task?:Object, failureBundle?:Object}>}
+ */
+async function rerouteRole({
+  task, role, failedModelKey, reasonCode, failureClass = null, failureKind = null,
+  providerElapsedMs = 0, excludedModelKeys, providerBudget, credentialScope, eventAudienceTenantId, ts,
+  messageOverride = null, stderrOverride = null,
+}) {
+  const taskId = task.id;
+  excludedModelKeys.add(failedModelKey);
+  providerBudget.register({ providerElapsedMs, failureClass });
+  if (failureClass === 'PROVIDER_TIMEOUT') recordLivenessEvent('TIMEOUT_FALLBACK', { taskId, failedModelKey, role });
+
+  const exhaustedReason = providerBudget.exhausted();
+  if (exhaustedReason) {
+    recordLivenessEvent('PROVIDER_EXHAUSTED', { taskId, reason: exhaustedReason });
+    return {
+      terminal: await blockTask(taskId, ts, eventAudienceTenantId, {
+        code: FAILURE_CODES.PROVIDER_EXHAUSTED,
+        message: `PROVIDER_EXHAUSTED: ${exhaustedReason} — a missão pode replanejar; o worker segue vivo.`,
+        detail: { failedAttempts: providerBudget.failedAttempts, elapsedMs: providerBudget.elapsedMs, timeouts: providerBudget.timeouts, reasonCode, failureKind },
+      }),
+    };
+  }
+
+  const policy = getPolicy(task.task_type);
+  const independentRequired = requiresIndependentReview(task.task_type, task.risk);
+  const availableModels = await buildAvailableModels({ tenantId: credentialScope });
+  const newRoutingDecision = selectCoderAndReviewer(availableModels, {
+    coderCapabilities: policy.coderCapabilities,
+    reviewerCapabilities: policy.reviewerCapabilities,
+    preferredCostClass: policy.preferredCostClass,
+    independentReviewRequired: independentRequired,
+    policyVersion: policy.policyVersion,
+    excludedModelKeys,
+  });
+
+  const stillNoCandidate = role === 'CODER'
+    ? !newRoutingDecision.coder?.selected
+    : !newRoutingDecision.reviewer?.selected;
+
+  if (stillNoCandidate) {
+    if (providerBudget.timeouts > 0 && providerBudget.timeouts === providerBudget.failedAttempts) {
+      // Toda a cadeia caiu por TIMEOUT de provider: é dependência externa esgotada, não bug do
+      // patch nem da task — BLOCKED (replanejável), nunca RED.
+      recordLivenessEvent('PROVIDER_EXHAUSTED', { taskId, reason: 'NO_ALTERNATIVE_AFTER_TIMEOUTS' });
+      return {
+        terminal: await blockTask(taskId, ts, eventAudienceTenantId, {
+          code: FAILURE_CODES.PROVIDER_EXHAUSTED,
+          message: `PROVIDER_EXHAUSTED: nenhum ${role} alternativo após ${providerBudget.timeouts} timeout(s) de provider.`,
+          detail: { failedAttempts: providerBudget.failedAttempts, timeouts: providerBudget.timeouts },
+        }),
+      };
+    }
+    await ts.saveLastError(taskId, {
+      code: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE,
+      message: `Nenhum ${role} alternativo disponível após ${failedModelKey} falhar (${reasonCode})`,
+    });
+    await ts.transitionTask(taskId, 'RED');
+    emitTaskStage(eventAudienceTenantId, taskId, {
+      stage: 'RED',
+      status: 'error',
+      message: `Nenhum ${role} alternativo qualificado após ${failedModelKey} falhar.`,
+    });
+    return { terminal: { taskId, status: 'RED', reasonCode: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE } };
+  }
+
+  await ts.saveRoutingDecision(taskId, newRoutingDecision);
+  const newSelection = role === 'CODER' ? newRoutingDecision.coder.selected : newRoutingDecision.reviewer.selected;
+  const defaultMessage = `${failedModelKey} ${failureClass === 'PROVIDER_TIMEOUT' ? 'expirou (PROVIDER_TIMEOUT)' : 'indisponível'} — reroteado para ${newSelection.providerId}:${newSelection.modelId} (${role}).`;
+  emitTaskStage(eventAudienceTenantId, taskId, {
+    stage: 'REROUTE',
+    status: 'info',
+    message: messageOverride ? messageOverride(newSelection) : defaultMessage,
+    meta: { failedModelKey, role, reasonCode, failureClass: failureClass || null, failureKind: failureKind || null, newModelKey: `${newSelection.providerId}:${newSelection.modelId}` },
+  });
+  logger.info('[engineeringRouterService] reroute de modelo', { taskId, role, failedModelKey, failureClass: failureClass || null, failureKind: failureKind || null, newModelKey: `${newSelection.providerId}:${newSelection.modelId}` });
+
+  return {
+    rerouted: true,
+    task: { ...task, routing_decision: newRoutingDecision },
+    failureBundle: stderrOverride
+      ? { failedCommand: `${role}_REROUTE`, stderr: stderrOverride, ...(failureKind ? { failureKind } : {}) }
+      : { failedCommand: `${role}_REROUTE`, stderr: `${failedModelKey} indisponível (${reasonCode}${failureClass ? `/${failureClass}` : ''})` },
+  };
+}
+
 async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null, run = null }) {
   const taskId = task.id;
   const ts = writesFor(run);
@@ -798,6 +1017,11 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
   // seguinte dentro da mesma task.
   const excludedModelKeys = new Set();
   const providerBudget = createProviderBudget();
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): falhas CONSECUTIVAS de formato/aplicação de patch por
+  // modelo. Um coder que reproduz o mesmíssimo defeito de formato nunca vai convergir por repetição
+  // — ao atingir o limiar ele é excluído e outro candidato assume (ou a task termina de forma
+  // honesta, respeitando orçamento e maxIterations).
+  const patchApplyFailureStreak = new Map();
 
   while (iterationsUsed < task.max_iterations) {
     // Fase CODING: consome LLM, gera patch e cria workspace. É trabalho material — não roda sobre
@@ -824,69 +1048,14 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
     }
 
     if (result.outcome === 'REROUTE') {
-      excludedModelKeys.add(result.failedModelKey);
-      providerBudget.register(result);
-      if (result.failureClass === 'PROVIDER_TIMEOUT') recordLivenessEvent('TIMEOUT_FALLBACK', { taskId, failedModelKey: result.failedModelKey, role: result.role });
-      const exhaustedReason = providerBudget.exhausted();
-      if (exhaustedReason) {
-        recordLivenessEvent('PROVIDER_EXHAUSTED', { taskId, reason: exhaustedReason });
-        return blockTask(taskId, ts, eventAudienceTenantId, {
-          code: FAILURE_CODES.PROVIDER_EXHAUSTED,
-          message: `PROVIDER_EXHAUSTED: ${exhaustedReason} — a missão pode replanejar; o worker segue vivo.`,
-          detail: { failedAttempts: providerBudget.failedAttempts, elapsedMs: providerBudget.elapsedMs, timeouts: providerBudget.timeouts },
-        });
-      }
-      const policy = getPolicy(task.task_type);
-      const independentRequired = requiresIndependentReview(task.task_type, task.risk);
-      const availableModels = await buildAvailableModels({ tenantId: credentialScope });
-      const newRoutingDecision = selectCoderAndReviewer(availableModels, {
-        coderCapabilities: policy.coderCapabilities,
-        reviewerCapabilities: policy.reviewerCapabilities,
-        preferredCostClass: policy.preferredCostClass,
-        independentReviewRequired: independentRequired,
-        policyVersion: policy.policyVersion,
-        excludedModelKeys,
+      const reroute = await rerouteRole({
+        task, role: result.role, failedModelKey: result.failedModelKey, reasonCode: result.reasonCode,
+        failureClass: result.failureClass || null, providerElapsedMs: result.providerElapsedMs ?? 0,
+        excludedModelKeys, providerBudget, credentialScope, eventAudienceTenantId, ts,
       });
-
-      const stillNoCandidate = result.role === 'CODER'
-        ? !newRoutingDecision.coder?.selected
-        : !newRoutingDecision.reviewer?.selected;
-
-      if (stillNoCandidate) {
-        if (providerBudget.timeouts > 0 && providerBudget.timeouts === providerBudget.failedAttempts) {
-          // Toda a cadeia caiu por TIMEOUT de provider: é dependência externa esgotada, não bug do
-          // patch nem da task — BLOCKED (replanejável), nunca RED.
-          recordLivenessEvent('PROVIDER_EXHAUSTED', { taskId, reason: 'NO_ALTERNATIVE_AFTER_TIMEOUTS' });
-          return blockTask(taskId, ts, eventAudienceTenantId, {
-            code: FAILURE_CODES.PROVIDER_EXHAUSTED,
-            message: `PROVIDER_EXHAUSTED: nenhum ${result.role} alternativo após ${providerBudget.timeouts} timeout(s) de provider.`,
-            detail: { failedAttempts: providerBudget.failedAttempts, timeouts: providerBudget.timeouts },
-          });
-        }
-        await ts.saveLastError(taskId, {
-          code: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE,
-          message: `Nenhum ${result.role} alternativo disponível após ${result.failedModelKey} falhar (${result.reasonCode})`,
-        });
-        await ts.transitionTask(taskId, 'RED');
-        emitTaskStage(eventAudienceTenantId, taskId, {
-          stage: 'RED',
-          status: 'error',
-          message: `Nenhum ${result.role} alternativo qualificado após ${result.failedModelKey} falhar.`,
-        });
-        return { taskId, status: 'RED', reasonCode: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE };
-      }
-
-      await ts.saveRoutingDecision(taskId, newRoutingDecision);
-      task = { ...task, routing_decision: newRoutingDecision };
-      const newSelection = result.role === 'CODER' ? newRoutingDecision.coder.selected : newRoutingDecision.reviewer.selected;
-      emitTaskStage(eventAudienceTenantId, taskId, {
-        stage: 'REROUTE',
-        status: 'info',
-        message: `${result.failedModelKey} ${result.failureClass === 'PROVIDER_TIMEOUT' ? 'expirou (PROVIDER_TIMEOUT)' : 'indisponível'} — reroteado para ${newSelection.providerId}:${newSelection.modelId} (${result.role}).`,
-        meta: { failedModelKey: result.failedModelKey, role: result.role, reasonCode: result.reasonCode, failureClass: result.failureClass || null },
-      });
-      failureBundle = { failedCommand: `${result.role}_REROUTE`, stderr: `${result.failedModelKey} indisponível (${result.reasonCode}${result.failureClass ? `/${result.failureClass}` : ''})` };
-      logger.info('[engineeringRouterService] reroute de modelo', { taskId, role: result.role, failedModelKey: result.failedModelKey, failureClass: result.failureClass || null });
+      if (reroute.terminal) return reroute.terminal;
+      task = reroute.task;
+      failureBundle = reroute.failureBundle;
       continue;
     }
 
@@ -899,6 +1068,91 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
 
     // RETRY
     failureBundle = result.failureBundle;
+
+    // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — patch NÃO aplicável produzido pelo mesmo coder,
+    // repetidamente e sem nenhum progresso: é falha de FORMATO do CODER, não do mérito do código.
+    // Repetir o mesmo modelo reproduz o mesmo defeito (medido: 6/6 tentativas do qwen3-coder-flash
+    // com `PATCH_APPLY_FAILED`), então ao atingir o limiar o modelo é excluído e outro candidato
+    // assume — pelos MESMOS guardas do caminho de provider (orçamento da cadeia, anti-livelock,
+    // ausência de candidato). Nunca há loop infinito e nada é reparado heuristicamente.
+    const patchFailure = classifyPatchGenerationFailure(failureBundle);
+    if (patchFailure) {
+      const attemptRow = result.attempt || {};
+      const failedModelKey = `${attemptRow.coder_provider || task.routing_decision?.coder?.selected?.providerId}:${attemptRow.coder_model || task.routing_decision?.coder?.selected?.modelId}`;
+      const streak = (patchApplyFailureStreak.get(failedModelKey) || 0) + 1;
+      patchApplyFailureStreak.set(failedModelKey, streak);
+      const threshold = patchApplyRerouteAfter();
+      const willReroute = streak >= threshold;
+
+      emitTaskStage(eventAudienceTenantId, taskId, {
+        stage: 'PATCH_APPLY',
+        status: 'error',
+        attemptNumber: attemptRow.attempt_number ?? iterationsUsed,
+        message: `${failedModelKey} produziu patch não aplicável (${patchFailure.code}) — ${streak}ª vez consecutiva.`,
+        meta: { failureCode: patchFailure.code, failuresOnThisModel: streak, rerouteThreshold: threshold, willReroute },
+      });
+
+      const decisionTelemetry = {
+        task_id: taskId,
+        attempt_id: attemptRow.id || null,
+        role: 'CODER',
+        provider: attemptRow.coder_provider || null,
+        model: attemptRow.coder_model || null,
+        event_type: 'PATCH_DECISION',
+        detail: {
+          failedModelKey,
+          failureCode: patchFailure.code,
+          failureKind: patchFailure.failureKind,
+          failedCommand: patchFailure.failedCommand,
+          failuresOnThisModel: streak,
+          rerouteThreshold: threshold,
+          attemptNumber: attemptRow.attempt_number ?? iterationsUsed,
+          patchFiles: failureBundle?.patchFiles || null,
+          patchTotalHunks: failureBundle?.patchTotalHunks ?? null,
+          patchBytes: failureBundle?.patchBytes ?? null,
+        },
+      };
+
+      if (!willReroute) {
+        await ts.recordTelemetry({
+          ...decisionTelemetry,
+          result: 'REPEATED_BELOW_THRESHOLD',
+          detail: { ...decisionTelemetry.detail, rerouted: false },
+        }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar decisão de patch', { taskId, error: err.message }));
+      } else {
+        const reroute = await rerouteRole({
+          task,
+          role: 'CODER',
+          failedModelKey,
+          reasonCode: patchFailure.code,
+          failureClass: 'CODER_PATCH_NOT_APPLICABLE',
+          failureKind: 'PATCH_APPLY_REPEATED',
+          excludedModelKeys,
+          providerBudget,
+          credentialScope,
+          eventAudienceTenantId,
+          ts,
+          messageOverride: (sel) => `${failedModelKey} produziu patch não aplicável ${streak}x seguidas (${patchFailure.code}) — reroteado para ${sel.providerId}:${sel.modelId} (CODER).`,
+          stderrOverride: `${failedModelKey} produziu patch não aplicável ${streak}x seguidas (${patchFailure.code}) — formato do CODER, não mérito do código`,
+        });
+
+        const rerouteTarget = reroute.terminal
+          ? null
+          : `${reroute.task.routing_decision.coder.selected.providerId}:${reroute.task.routing_decision.coder.selected.modelId}`;
+        await ts.recordTelemetry({
+          ...decisionTelemetry,
+          result: reroute.terminal ? String(reroute.terminal.reasonCode || 'NOT_REROUTED') : 'REROUTED',
+          detail: { ...decisionTelemetry.detail, rerouted: !reroute.terminal, rerouteTarget, taskOutcome: reroute.terminal?.status || null },
+        }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar decisão de patch', { taskId, error: err.message }));
+
+        if (reroute.terminal) return reroute.terminal;
+        task = reroute.task;
+        failureBundle = reroute.failureBundle;
+        patchApplyFailureStreak.delete(failedModelKey);
+        continue;
+      }
+    }
+
     emitTaskStage(eventAudienceTenantId, taskId, {
       stage: 'RETRY',
       status: 'info',

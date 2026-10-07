@@ -1,0 +1,55 @@
+{
+  "id": "2026-10-07-engineering-coder-diff-format-blocker",
+  "generatedAt": "2026-10-07T16:52:00.000Z",
+  "kind": "BLOCKER_MEDIDO",
+  "classification": "defeito_de_plataforma_com_prova_de_runtime",
+  "implemented": false,
+  "awaitingExternalAuthorization": true,
+  "summary": "O CODER selecionado pelo roteador (qwen3-coder-flash) emite unified diff com CABECALHO correto e CORPO de hunk SEM o prefixo obrigatorio (+/-/espaco). O validador estrutural da plataforma nao checa prefixo de corpo, aceita o patch (patch_validation.ok=true), e a rejeicao so aparece no `git apply --check` como PATCH_APPLY_FAILED. PATCH_APPLY_FAILED NAO reroteia: as 6 iterations sao gastas no MESMO modelo e a task termina RED. Defeito DETERMINISTICO e nao relacionado ao INCREMENTO 2.",
+  "mission": {
+    "id": "ca56cbdc-3280-4be8-beff-f9301199fc9f",
+    "increment": "INC-2 (wiring de Replan Budget/lineage/livelock)",
+    "versions": [
+      { "version": 3, "task": "b736b89b-19e2-484b-a729-2dc9b2e875de", "outcome": "RED", "attempts": 6 },
+      { "version": 5, "task": "61baadfa-0551-4ab3-877f-8a94cc70b687", "outcome": "RED", "attempts": 6 }
+    ]
+  },
+  "medicoes": {
+    "distribuicaoDeModelos": "1 tentativa openai:gpt-5.4-mini (429 credit_balance_exhausted → REROUTE correto) + 5 tentativas qwen:qwen3-coder-flash em cada versao (10/10 patches)",
+    "erroConstante": "PATCH_APPLY_FAILED — stderr: `error: patch corrompido na linha 7`",
+    "linha7": "primeira linha de CORPO do hunk; linha 6 e o cabecalho valido `@@ -0,0 +1,N @@`",
+    "cabecalhoValido": ["diff --git a/<path> b/<path>", "new file mode 100644", "index 00000000..<hash>", "--- /dev/null", "+++ b/<path>", "@@ -0,0 +1,N @@"],
+    "corpoInvalido": "linhas de conteudo sem prefixo — ex.: \"'use strict';\", \"\", \"/**\" (deveriam ser \"+'use strict';\", \"+\", \"+/**\")",
+    "tamanhosDePatchObservados": [7700, 11814, 6584, 5942, 13195, 17312, 14950, 9621, 10957, 9621],
+    "provaNoTextoCRUDoProvider": {
+      "metodo": "node --env-file-if-exists=.env /tmp/probe-diff.js 61baadfa-... qwen3-coder-flash qwen (prompt REAL do CODER, reconstruido por coderService.buildCoderPrompt a partir da task persistida)",
+      "resultado": "parseOk=true; trecho cru a partir de \"diff --git\": \"...@@ -0,0 +1,130 @@\\\\n'use strict';\\\\n\\\\n/**...\"",
+      "conclusao": "o corpo sem prefixo ja vem do MODELO, antes de qualquer processamento da plataforma (cabecalhos intactos, portanto nao ha transformacao que remova '+')"
+    },
+    "contrasteQueLocalizaADiferencaNoModelo": {
+      "INC-1": "task 54c03783 attempt 1 — coder deepseek:deepseek-flash, patch de 12660 bytes, corpo COM prefixos ('+\\'use strict\\';', '+', '+const REPLAN_BUDGET_DEFAULTS...') → git apply OK, task GREEN, integrada em 5c756932"
+    },
+    "contratoDeMissaoNaoResolve": "a versao 5 adicionou ao CONTRATO o requisito explicito de formato (corpo com +, -, espaco) e o coder continuou emitindo corpo sem prefixo — o requisito textual nao corrige o defeito de formato do modelo"
+  },
+  "causaRaiz": [
+    "1. engine/engineeringRouter/patchValidator.js :: parseUnifiedDiff — conta cabecalhos de arquivo/hunk e sinaliza isNew/isDeleted/isBinary, mas NUNCA valida o prefixo das linhas de corpo; validatePatch devolve ok=true para um diff inaplicavel.",
+    "2. api/services/engineeringRouter/patchApplyService.js :: applyPatch — normaliza contagem de linhas do hunk (normalizeHunkHeaders, achado real anterior) mas nao tem caminho para corpo sem prefixo; `git apply --check` recusa com 'patch corrompido' e o codigo vira PATCH_APPLY_FAILED.",
+    "3. api/services/engineeringRouter/engineeringRouterService.js :: runOneAttempt — REROUTE depende de outcome==='REROUTE', produzido apenas por falha de PROVIDER (PROVIDER_UNAVAILABLE/TIMEOUT). PATCH_APPLY_FAILED cai em RETRY com a MESMA routing_decision → mesmo modelo → repeticao deterministica ate esgotar maxIterations → task RED.",
+    "4. Efeito: livelock de retry identico (exatamente a classe de defeito que a missao principal 8c555706 foi criada para eliminar) e impossibilidade pratica de entregar patches de CODE_GENERATION sempre que o coder mais barato qualificado for um modelo que emite corpo sem prefixo."
+  ],
+  "impacto": {
+    "incremento2": "BLOCKED — nenhuma das 12 iterations produziu veredito sobre a CORRECAO do codigo (o patch nunca chegou a ser aplicado)",
+    "incremento1": "nao afetado (entregue e integrado com coder deepseek)",
+    "qualidadeDoCodigoGerado": "nao avaliada — o conteudo dos patches tem cabecalhos coerentes e hash de conteudo real (index 00000000..5077281c); a rejeicao e de FORMATO, nao de merito"
+  },
+  "correcaoMinimaRecomendadaParaAutorizacao": {
+    "escopo": "engine/engineeringRouter/patchValidator.js + api/services/engineeringRouter + testes",
+    "itens": [
+      "(a) detectar estruturalmente corpo de hunk sem prefixo em parseUnifiedDiff → novo codigo PATCH_BODY_MISSING_PREFIX (classe de formato, PATCH_INVALID_FORMAT), com contagem por hunk para evidencia;",
+      "(b) classificar PATCH_APPLY_FAILED REPETIDO sem progresso como falha de FORMATO DO CODER elegivel a reroute/escalonamento (respeitando os guardas existentes de providerBudget/anti-livelock), em vez de repetir o MESMO modelo ate RED;",
+      "(c) registrar o motivo na telemetria/attempt (formato, modelo, hunk) para metrica por provider/modelo (item 8/9 da missao principal)."
+    ],
+    "naoProposto": "nenhuma reducao de gate/cobertura/criterio; nenhuma alteracao de allowlist; nenhum reparo heuristico que adivinhe quais linhas sao contexto (isso mudaria semantica de patch silenciosamente)"
+  },
+  "relacaoComAMissaoPrincipal": "Os itens obrigatorios 9 (fallback/escalonamento automatico) e 10 (metricas por provider/modelo/canal + taxa de sucesso) cobrem exatamente este defeito; por isso a correcao e, em tese, trabalho DO ENGENHEIRO — mas nesta fase ele e o proprio bloqueado, o que configura bloqueio legitimo de autoridade externa."
+}
