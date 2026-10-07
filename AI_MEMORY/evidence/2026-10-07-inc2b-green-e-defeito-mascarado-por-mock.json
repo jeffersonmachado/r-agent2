@@ -1,0 +1,90 @@
+{
+  "artifactType": "ENGINEERING_MISSION_OBSERVATION",
+  "generatedAt": "2026-10-07T21:05:00.000Z",
+  "author": "HUMAN_EXTERNAL_OBSERVER (GitHub Copilot / DeepSeek V4 Flash)",
+  "mission": {
+    "id": "ca56cbdc-3280-4be8-beff-f9301199fc9f",
+    "parentOf": "8c555706-8c53-4e07-b069-e74735c683a0"
+  },
+  "increments": [
+    {
+      "id": "INC-1",
+      "delivery": "ENGINEER_AUTONOMOUS",
+      "commit": "5c756932",
+      "status": "GREEN_INTEGRATED"
+    },
+    {
+      "id": "INC-2A",
+      "delivery": "ENGINEER_AUTONOMOUS",
+      "commit": "0ada6025",
+      "status": "GREEN_INTEGRATED_BUT_DEFECTIVE (ver defeito D-2A)"
+    },
+    {
+      "id": "INC-2B",
+      "delivery": "ENGINEER_AUTONOMOUS",
+      "taskId": "b923860e-2b91-4def-9adc-d3c5713ec71a",
+      "specVersion": 12,
+      "attempts": 7,
+      "winningModel": "kimi:kimi-k2.7-code-highspeed",
+      "commit": "4a798e54",
+      "status": "GREEN_INTEGRATED",
+      "note": "Reformulacao do contrato por autoridade humana (v11->v12) foi necessaria: o contexto do coder e derivado de allowedPaths, entao o nucleo puro e o servico do 2A nao eram visiveis. Medido na v11: deepseek-flash inventou o caminho '../../../engine/engineeringMission/replan/budget' (inexistente) e os qwen3 nao criaram o arquivo de teste exigido ('No tests found')."
+    }
+  ],
+  "defect_D_2A": {
+    "severity": "CRITICAL",
+    "title": "Fachada do INC-2A consome API INEXISTENTE do nucleo puro",
+    "evidence": {
+      "nucleo_real_exports": [
+        "REPLAN_BUDGET_DEFAULTS",
+        "fingerprintReplanReason",
+        "evaluateReplan",
+        "planMissionDecomposition",
+        "buildReplanLineageRecord"
+      ],
+      "fachada_chama": [
+        "replanPolicy.decideReplan(...)  -> typeof undefined",
+        "replanPolicy.DECISIONS         -> typeof undefined"
+      ],
+      "runtime_proof": {
+        "command": "node -e \"require('api/services/engineeringMission/missionReplanService').decideReplanForMission({id:'m1',current_version:1},{replanAttempts:0,maxReplans:3})\"",
+        "result": "TypeError: Cannot read properties of undefined (reading 'EXHAUSTED')"
+      }
+    },
+    "why_the_gate_was_green": {
+      "test": "tests/unit/engineeringMission/missionReplanService.test.js",
+      "mock": "jest.mock('../../../engine/engineeringMission/replanPolicy', () => ({ DECISIONS: {REPLAN,EXHAUSTED,LIVELOCK}, decideReplan: jest.fn() }))",
+      "effect": "O teste substitui o nucleo puro por uma API inventada; nenhum caminho de teste toca a API real.",
+      "measured": "PASS - 6/6 testes verdes com o codigo quebrado em runtime",
+      "tautology": "expect(entry.fingerprint).toBe(service.fingerprintReason('  motivo  ')) compara o resultado com a propria funcao do servico (nao prova valor algum)"
+    },
+    "independent_verification": {
+      "worktree": "/tmp/wt-inc2b @ 4a798e54",
+      "suite": "npx jest tests/unit/engineeringMission --no-coverage --runInBand",
+      "result": "Test Suites: 27 passed, 27 total | Tests: 357 passed, 357 total | EXIT=0",
+      "conclusion": "Gate verde integral com defeito CRITICAL de integracao nao detectado: prova de que o mock do nucleo puro nao e questao de estilo."
+    }
+  },
+  "divergences_assigned_to_engineer": [
+    {
+      "id": "DIV-1",
+      "target": "engine/engineeringMission/replanPolicy.js",
+      "detail": "fingerprintReplanReason usa FNV-1a 32 bits; o contrato declarado exige SHA-256 deterministico com ordenacao canonica de chaves."
+    },
+    {
+      "id": "DIV-2",
+      "target": "engine/engineeringMission/replanPolicy.js",
+      "detail": "planMissionDecomposition(mission) em vez da assinatura declarada planMissionDecomposition({ spec, maxIncrements }); e o limite nao reporta criterios deixados FORA de forma auditavel."
+    },
+    {
+      "id": "DIV-3",
+      "target": "api/services/engineeringMission/missionReplanService.js + tests/unit/engineeringMission/missionReplanService.test.js",
+      "detail": "API inventada na fachada (decideReplan/DECISIONS) e teste que mocka o nucleo puro. Correcao: fachada conforma-se ao nucleo REAL; mock permitido apenas na fronteira de persistencia."
+    }
+  ],
+  "authority_boundary": {
+    "human_external_bootstrap_used": "Nenhum neste passo (apenas observacao/medicao).",
+    "engineer_owns": "implementacao dos incrementos INC-3A/INC-3B, testes, review, regressao, evidencia",
+    "forbidden_for_observer": "implementar manualmente o INC-3 ou o INC-2"
+  }
+}

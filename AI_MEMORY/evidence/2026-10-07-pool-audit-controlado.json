@@ -1,0 +1,136 @@
+{
+  "artifactType": "ENGINEERING_POOL_CONTROLLED_AUDIT",
+  "generatedAt": "2026-10-07T23:20:00.000Z",
+  "author": "HUMAN_EXTERNAL_OBSERVER (GitHub Copilot / DeepSeek V4 Flash)",
+  "method": {
+    "readOnly": true,
+    "touchedMissionCode": false,
+    "source": "Postgres do r-agent2 (engineering_tasks, engineering_attempts, engineering_telemetry_events, engineering_test_runs, engineering_reviews, engineering_regression_runs) + GET /engineering/models + modulos REAIS do router (modelDecision, hunkNormalizer)",
+    "reproducibleScripts": "AI_MEMORY/evidence/2026-10-07-pool-audit/*.js (rodar com node; somente leitura do banco)",
+    "note": "healthy do catalogo NAO foi tratado como disponibilidade real"
+  },
+  "sampleHygiene": {
+    "finding": "a maior parte do historico do router e LIXO SINTETICO de teste",
+    "excludedByCreatedBy": {
+      "jest-review": 423,
+      "jest-regression-governance-test": 240,
+      "TEST": 176,
+      "verify-real-task-recovery": 143,
+      "jest-natural-worker": 87,
+      "RECOVERY:*": 6,
+      "jest-natural": 6,
+      "repro/diag/sanity/debug-e2e/worker-2/(null)": 8
+    },
+    "syntheticSignature": "objective fixo 'Corrija o defeito de soma em mathUtils.' e patch_validation = {} (pipeline real sempre grava patch_validation)",
+    "realCohortsUsed": {
+      "A": "created_by = cc1fbca6-d8cb-4ac8-a858-2d221244a8b3 (tasks das missoes INC-1..INC-3)",
+      "B": "created_by = SYSTEM:BUG_LOOP_WORKER (trabalho autonomo real do bug loop)"
+    },
+    "realSample": { "attempts": 299, "tasks": 121, "period": "2026-10-02 .. 2026-10-07" }
+  },
+  "funnelPerModel": {
+    "columns": "modelo | dispatches | GREENs | P(runtime_response) | P(patch_valido|response) | P(aplicado|valido) | P(teste_ok|aplicado) | P(GREEN|dispatch) | p50_ms | E[tempo/GREEN]_ms | custo_conhecido",
+    "rows": [
+      ["deepseek:deepseek-flash", 149, 64, 0.926, 0.812, 0.946, 0.632, 0.43, 9708, 125663, 0],
+      ["deepseek:deepseek-v4-pro", 32, 0, 0.656, 0.667, 0.786, 0.0, 0.0, 200233, null, 0],
+      ["qwen:qwen3-coder-flash", 30, 0, 0.967, 0.759, 0.091, 0.5, 0.0, 27355, null, 0],
+      ["openai:gpt-5.4-mini", 18, 1, 0.5, 0.667, 0.167, 1.0, 0.056, 4004, 71816, 0],
+      ["qwen:qwen3-max", 18, 0, 1.0, 1.0, 0.667, 0.0, 0.0, 25895, null, 0],
+      ["kimi:kimi-k2.7-code-highspeed", 15, 1, 0.6, 1.0, 0.778, 0.143, 0.067, 148452, 2280432, 0],
+      ["kimi:kimi-k2.7-code", 10, 0, 0.1, 1.0, 0.0, null, 0.0, 195212, null, 0],
+      ["qwen:qwen3-coder-plus", 10, 0, 1.0, 0.9, 0.222, 0.0, 0.0, 27984, null, 0],
+      ["openai:gpt-4o", 5, 1, 0.2, 1.0, 1.0, 1.0, 0.2, 4135, 27138, 0],
+      ["kimi:kimi-k3", 5, 0, 0.0, null, null, null, 0.0, 300201, null, 0],
+      ["deepseek:deepseek-chat", 3, 0, 0.0, null, null, null, 0.0, 1051, null, 0],
+      ["kimi:kimi-k2.6", 3, 0, 0.0, null, null, null, 0.0, 120029, null, 0],
+      ["anthropic:claude-haiku-4-5-20251001", 1, 0, 0.0, null, null, null, 0.0, 693, null, 0]
+    ],
+    "expectedCostPerGreen": "NAO DERIVAVEL: estimated_cost = UNKNOWN em 100% dos eventos de telemetria (costKnownEvents = 0 para todos os modelos). Tokens in/out existem e estao no JSON /tmp/audit-final.json."
+  },
+  "failureClasses": {
+    "OK_DONE": 71,
+    "PROVIDER_FAILURE": 63,
+    "TEST_FAILURE": 71,
+    "PATCH_APPLY_FAILURE": 49,
+    "PATCH_FORMAT_FAILURE": 43,
+    "APPLICATION_CODE_FAILURE": 2,
+    "breakdown": {
+      "PROVIDER_UNAVAILABLE": 60,
+      "PATCH_APPLY_FAILED": 49,
+      "TEST_FAIL": 38,
+      "PATCH_INVALID_FORMAT": 32,
+      "TEST_TIMEOUT": 18,
+      "TEST_BLOCKED": 15,
+      "PATCH_BODY_MISSING_PREFIX": 6,
+      "PATCH_REJECTED": 5,
+      "invalid_request_error": 3,
+      "RESUME_ABANDONED_INCOMPLETE_PHASE": 1,
+      "FAILED": 1
+    },
+    "providerSubclasses": {
+      "QUOTA_429": "openai:gpt-4o (4/4 das respostas ausentes) e openai:gpt-5.4-mini (maioria)",
+      "TIMEOUT": "kimi:* (7 de 10 do k2.7-code), kimi-k3 (4/5), deepseek-v4-pro",
+      "EMPTY_OR_REASONING": "deepseek:deepseek-flash, kimi:k2.6, kimi:k2.7-code-highspeed"
+    }
+  },
+  "patchApplyFailedRootCauses": {
+    "population": 49,
+    "reproducedWith": "git apply --check num worktree do source_commit da task (scripts audit-apply-causes.js)",
+    "CONTEXTO_NAO_ENCONTRADO": 25,
+    "CONTAGEM_DE_HUNK_INCONSISTENTE": 11,
+    "HEADER_DE_ARQUIVO_AUSENTE": 7,
+    "SOURCE_COMMIT_AUSENTE (source_commit null na task)": 5,
+    "INDETERMINADO": 1,
+    "absentCauses": "ZERO casos de source stale, conflito, path invalido, ja-aplicado ou diff binario",
+    "byModel": {
+      "qwen:qwen3-coder-flash": "10 contagem + 5 contexto + 5 header",
+      "qwen:qwen3-coder-plus": "5 contexto + 2 header",
+      "qwen:qwen3-max": "5 contexto",
+      "deepseek:deepseek-flash": "5 contexto",
+      "kimi:kimi-k2.7-code-highspeed": "2 contexto",
+      "deepseek:deepseek-v4-pro": "2 contexto + 1 contagem",
+      "openai:gpt-5.4-mini": "5 com source_commit ausente",
+      "kimi:kimi-k2.7-code": "1 contexto"
+    },
+    "conclusion": "PATCH_APPLY_FAILED agrupa causas DIFERENTES: 51% e contexto inventado pelo modelo (nao reparavel sem adivinhacao), 36% e falha DETERMINISTICA de formato (header ausente + contagem inconsistente) que poderia ser detectada antes do git apply e reroteada"
+  },
+  "poolClasses": {
+    "configured": 15,
+    "credentialed": 11,
+    "runtime_available": 9,
+    "patch_capable": 9,
+    "task_capable": 4,
+    "taskCapableModels": ["deepseek:deepseek-flash (64 GREENs)", "openai:gpt-4o (1)", "kimi:kimi-k2.7-code-highspeed (1)", "openai:gpt-5.4-mini (1)"],
+    "credentialedButNeverResponded": ["kimi:kimi-k3", "kimi:kimi-k2.6"],
+    "noCredential": ["anthropic:claude-opus-5", "anthropic:claude-sonnet-5", "anthropic:claude-haiku-4-5-20251001", "mistral:mistral-large-latest", "groq:llama-3.3-70b-versatile"]
+  },
+  "evidencePoisoningDefect": {
+    "id": "EVIDENCE_POISONING",
+    "severity": "HIGH",
+    "where": "api/services/engineeringRouter/engineeringRouterService.js::loadModelDecisionEvidence",
+    "mechanism": "seleciona as 200 tasks mais recentes do task_type SEM filtrar origem (created_by) e alimenta aggregateEvidenceFromAttempts — logo o ranking aprende majoritariamente com execucoes SIMULADAS de teste",
+    "measuredImpact": {
+      "asRouterUsesToday": {
+        "anthropic:claude-sonnet-5": { "reliabilityTier": 0, "probabilityOfApplied": 0.97, "expectedCostPerGreen": 3.08, "greenFinal": 37, "redFinal": 0, "meanLatencyMs": 0, "note": "SEM credencial, NUNCA executou de verdade, mas e a PRIMEIRA escolha do ranking" },
+        "deepseek:deepseek-flash": { "reliabilityTier": 0, "probabilityOfApplied": 0.12, "expectedCostPerGreen": 11.58, "greenFinal": 17, "redFinal": 31 }
+      },
+      "withCleanEvidence": {
+        "deepseek:deepseek-flash": { "reliabilityTier": 0, "probabilityOfApplied": 0.45, "expectedCostPerGreen": 3.74, "greenFinal": 64, "redFinal": 19, "note": "primeira escolha correta" },
+        "anthropic:claude-sonnet-5": { "sampleSize": 0 }
+      },
+      "factor": "P(applied) do melhor coder real aparece como 12% quando a medicao limpa mostra 45% (3.8x de distorcao)",
+      "effectPrecision": "o fantasma claude-sonnet-5 NAO chega a ser despachado: evaluateCandidate (engine/engineeringRouter/modelSelector.js:33) desqualifica com PROVIDER_NO_CREDENTIAL quando hasCredential=false. O dano real e (a) distorcer a ORDEM RELATIVA dos modelos qualificados pela evidencia (P(applied) 12% vs 45% para o melhor coder real) e (b) poluir qualquer diagnostico feito sobre o catalogo/telemetria",
+      "secondaryFactor": "a POLITICA de custo tambem empurra modelos ruins para a frente: routingPolicy.js define preferredCostClass='LOW' para BUG_FIX e TEST_GENERATION, o que coloca gpt-5.4-mini e qwen3-coder-flash (ambos LOW, ambos com baixa taxa real) antes de modelos melhores dentro da mesma faixa"
+    },
+    "notImplemented": "NENHUMA alteracao feita. Corrigir isso muda o comportamento do roteador e pode ser lido como 'favorecer um modelo' — decisao do dono da plataforma."
+  },
+  "answersToRequestedQuestions": {
+    "1_credenciado_com_boa_probabilidade": "SIM: deepseek:deepseek-flash e task_capable com 43% de GREEN por dispatch, P(teste ok|aplicado)=63% e E[tempo/GREEN]=126s. O Router NAO o prioriza hoje por causa do EVIDENCE_POISONING (e por causa do fantasma claude-sonnet-5 como 1a escolha).",
+    "2_external_capacity_gap": "PARCIAL. Ha capacidade real suficiente em deepseek-flash para a classe analisada; o que falta e (a) quota nos modelos OpenAI (429 comprovado) e (b) o roteador enxergar a evidencia limpa. Nao e um caso puro de EXTERNAL_CAPACITY_GAP.",
+    "3_candidatos_externos": "anthropic:claude-opus-5 / claude-sonnet-5 / claude-haiku-4-5 e mistral:mistral-large-latest devem ser classificados como UNMEASURED_EXTERNAL_CANDIDATE: ZERO execucoes reais. Nao atribuo taxa de sucesso estimada a eles.",
+    "handover": "NAO executado: INC-3B segue com defeito conhecido (fachada consumindo API inexistente) que compromete o proprio mecanismo de replanejamento."
+  },
+  "noGateWeakened": true,
+  "noPatchAutoRepair": true,
+  "noCredentialRequested": true
+}

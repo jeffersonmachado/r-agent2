@@ -1,0 +1,57 @@
+{
+  "artifactType": "ENGINEERING_MISSION_OBSERVATION",
+  "generatedAt": "2026-10-07T21:40:00.000Z",
+  "author": "HUMAN_EXTERNAL_OBSERVER (GitHub Copilot / DeepSeek V4 Flash)",
+  "mission": { "id": "ca56cbdc-3280-4be8-beff-f9301199fc9f" },
+  "increment": "INC-3A (conformidade do nucleo puro de replan)",
+  "specVersions": [
+    { "version": 14, "missionType": "BUGFIX", "result": "REJECTED_BEFORE_EXECUTION", "reason": "MISSION_TYPE_NOT_MAPPED (valor canonico e BUG_FIX)" },
+    { "version": 14, "taskId": "b5fe34f5-60e6-4542-97fd-9ab7f488da7f", "result": "RED", "attempts": 10 },
+    { "version": 15, "taskId": "52be6325-2216-4041-885c-8e25a0437fcb", "result": "RED", "attempts": 10 }
+  ],
+  "failureDistribution_v15": {
+    "PATCH_APPLY_FAILED": 6,
+    "PROVIDER_UNAVAILABLE": 1,
+    "TEST_FAIL": 0,
+    "untested": 1
+  },
+  "root_cause_measured": {
+    "context_integrity": {
+      "file": "engine/engineeringMission/replanPolicy.js",
+      "bytes_on_disk_at_source_commit": 5657,
+      "context_summary_usedBytes": 5657,
+      "conclusion": "contexto entregue INTEGRO — nao houve truncamento nem divergencia contexto<->workspace"
+    },
+    "patch_quality": {
+      "probe": "/tmp/probe-hunknorm.js (patch real da tentativa, aplicado com git apply --check no worktree do source_commit 4a798e54)",
+      "original_patch": "error: patch corrompido na linha 34  (contagem de hunk inconsistente com o corpo)",
+      "normalized_patch": "error: falha no patch: engine/engineeringMission/replanPolicy.js:11 / patch does not apply (contexto do hunk nao casa com o arquivo real)",
+      "conclusion": "os patches gerados pelos modelos sao estruturalmente defeituosos para este arquivo; o normalizeHunkHeaders conserta a contagem mas nao o contexto inventado"
+    },
+    "normalizer_verdict": {
+      "module": "engine/engineeringRouter/hunkNormalizer.js",
+      "status": "FUNCIONA — corrige a contagem sem tocar o conteudo",
+      "no_platform_defect_here": true
+    },
+    "validator_gap": {
+      "observed": "patch_validation.ok = true para um patch que o git apply recusa (contagem de hunk errada)",
+      "impact": "a falha chega como PATCH_APPLY_FAILED generico em vez de ser classificada como falha de FORMATO (elegivel a reroute imediato)",
+      "status": "melhoria de plataforma candidata — NAO implementada (fora da autorizacao vigente)"
+    },
+    "scope_leak_measured": {
+      "version": 14,
+      "attempt": 5,
+      "detail": "o patch editou api/services/engineeringMission/missionReplanService.js, que estava no allowedPaths APENAS como contexto de leitura",
+      "conclusion": "allowedPaths concede leitura E escrita — nao existe 'contexto somente leitura'; a v15 removeu os arquivos de contexto do escopo"
+    }
+  },
+  "action_taken": {
+    "type": "INCREMENT_RESCOPE_AND_REPRIORITIZATION",
+    "authority": "HUMAN_EXTERNAL (autor do incremento; nao e implementacao)",
+    "decisions": [
+      "v15 reescopou o INC-3A para escopo AUTOCONTIDO (modulo alvo + arquivo de teste NOVO, sem arquivos de contexto) com o teste existente como ancora de nao-regressao",
+      "o INC-3B (fachada quebrada, defeito CRITICAL) foi PRIORIZADO sobre o INC-3A (conformidade do fingerprint), por ser defeito funcional no caminho de decisao de replanejamento"
+    ]
+  },
+  "no_manual_implementation": true
+}

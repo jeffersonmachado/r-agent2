@@ -60,6 +60,11 @@ const crypto = require('crypto');
 const { createTaskRun, isOwnershipLoss } = require('./taskRunContext');
 const { resolvePolicy, policyMs, recordLivenessEvent } = require('../../utils/operationDeadline');
 const { aggregateEvidenceFromAttempts } = require('../../../engine/engineeringRouter/modelDecision');
+const {
+  EVIDENCE_MAX_SCAN,
+  EVIDENCE_OVERSAMPLE_FACTOR,
+  selectProductionTasks,
+} = require('../../../engine/engineeringRouter/evidenceOrigin');
 
 /**
  * Identidade de worker: UUID de instância. O PID NÃO entra na identidade (não é global entre
@@ -907,6 +912,13 @@ function createProviderBudget() {
  * É insumo do `modelDecision` — nenhuma lista de modelos é fixada aqui: a política vale para
  * qualquer candidato qualificado e a evidência é apenas dado histórico.
  *
+ * ORIGEM (HUMAN_EXTERNAL_BOOTSTRAP 2026-10-07): tasks criadas por ROTINA DE TESTE são descartadas
+ * antes do agregado (ver `engine/engineeringRouter/evidenceOrigin.js`). Sem isso, execuções
+ * sintéticas entram como "patch aplicado" e distorcem a ordenação — medido: `P(aplicado)` do melhor
+ * coder real aparecia como 12% (green/red 17/31) enquanto a medição limpa do mesmo modelo mostra
+ * 45% (green/red 64/19), e um modelo SEM credencial (`anthropic:claude-sonnet-5`) aparecia como
+ * PROVEN com 37/37 aplicados. O filtro é por ORIGEM da task, nunca por modelo/provider/custo.
+ *
  * Falha de leitura NUNCA impede a seleção (sem evidência, cai no determinismo por custo).
  * @returns {Promise<Map<string, Object>>}
  */
@@ -915,20 +927,27 @@ async function loadModelDecisionEvidence(taskType, { maxTasks = 200 } = {}) {
     const index = require('../../db/models');
     const Task = index.EngineeringTask();
     const Attempt = index.EngineeringAttempt();
-    const recentTasks = await Task.findAll({
+    // Sobre-amostragem: as tasks de rotina de teste são descartadas DEPOIS da consulta, então
+    // buscamos mais linhas para ainda entregar `maxTasks` tasks de produção.
+    const scanLimit = Math.min(EVIDENCE_MAX_SCAN, Math.max(maxTasks, maxTasks * EVIDENCE_OVERSAMPLE_FACTOR));
+    const scanned = await Task.findAll({
       where: { task_type: taskType },
-      attributes: ['id', 'status'],
+      attributes: ['id', 'status', 'created_by'],
       order: [['created_at', 'DESC']],
-      limit: maxTasks,
+      limit: scanLimit,
     });
+    const recentTasks = selectProductionTasks(
+      scanned.map((t) => ({ id: t.get('id'), status: t.get('status'), created_by: t.get('created_by') })),
+      maxTasks,
+    );
     if (recentTasks.length === 0) return new Map();
     const attempts = await Attempt.findAll({
-      where: { task_id: recentTasks.map((t) => t.get('id')) },
+      where: { task_id: recentTasks.map((t) => t.id) },
       attributes: ['id', 'task_id', 'attempt_number', 'status', 'coder_provider', 'coder_model', 'error', 'started_at', 'completed_at'],
       order: [['created_at', 'ASC']],
     });
     return aggregateEvidenceFromAttempts({
-      tasks: recentTasks.map((t) => ({ id: t.get('id'), status: t.get('status') })),
+      tasks: recentTasks.map((t) => ({ id: t.id, status: t.status })),
       attempts: attempts.map((a) => ({
         task_id: a.get('task_id'),
         status: a.get('status'),

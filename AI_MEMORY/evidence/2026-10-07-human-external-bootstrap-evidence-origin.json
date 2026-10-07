@@ -1,0 +1,69 @@
+{
+  "artifactType": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "generatedAt": "2026-10-07T23:50:00.000Z",
+  "author": "GitHub Copilot (DeepSeek V4 Flash) — autoridade humana, não é entrega autônoma do Engenheiro",
+  "scope": "Higiene da evidência empírica do ranking de modelos do Engineering Router",
+  "problemMeasured": {
+    "id": "EVIDENCE_POISONING",
+    "where": "api/services/engineeringRouter/engineeringRouterService.js::loadModelDecisionEvidence",
+    "mechanism": "a função agregava as 200 tasks mais recentes do `task_type` SEM filtrar a ORIGEM da execução; o histórico contém execuções de ROTINA DE TESTE gravadas como tasks reais",
+    "syntheticVolume": {
+      "jest-task-fencing": 547,
+      "jest-review": 267,
+      "jest-regression-governance-test": 240,
+      "TEST": 97,
+      "verify-real-task-recovery": 48,
+      "jest-natural-worker": 51,
+      "jest-natural": 3,
+      "signature": "objective fixo ('Corrija o defeito de soma em mathUtils.', 'objetivo de teste') e patch_validation = {} — o pipeline real sempre grava patch_validation"
+    },
+    "impact": {
+      "asRouterSawBefore": {
+        "BUG_FIX": {
+          "deepseek:deepseek-flash": { "probabilityOfApplied": 0.12, "expectedCostPerGreen": 11.58, "greenFinal": 17, "redFinal": 31 },
+          "anthropic:claude-sonnet-5": { "reliabilityTier": 0, "probabilityOfApplied": 0.97, "greenFinal": 37, "redFinal": 0, "hasCredential": false }
+        }
+      },
+      "afterFix": {
+        "BUG_FIX": {
+          "deepseek:deepseek-flash": { "reliabilityTier": 0, "probabilityOfApplied": 0.6, "expectedCostPerGreen": 2.4959, "greenFinal": 63, "redFinal": 11, "sampleSize": 107 }
+        },
+        "CODE_GENERATION": {
+          "deepseek:deepseek-flash": { "reliabilityTier": 0, "probabilityOfApplied": 0.31, "expectedCostPerGreen": 6.3174 }
+        }
+      },
+      "effect": "o Router passa a priorizar o melhor coder real (deepseek:deepseek-flash) como 1ª escolha em BUG_FIX e CODE_GENERATION, exclusivamente pela evidência"
+    }
+  },
+  "change": {
+    "files": [
+      "engine/engineeringRouter/evidenceOrigin.js (NOVO, puro)",
+      "api/services/engineeringRouter/engineeringRouterService.js (loadModelDecisionEvidence)",
+      "tests/unit/engineeringRouterEvidenceOrigin.test.js (NOVO, 9 casos)"
+    ],
+    "semantics": "descarta tasks criadas por ROTINA DE TESTE/VERIFICAÇÃO antes de agregar a evidência, com sobre-amostragem (fator 4, teto 800 linhas) para ainda entregar `maxTasks` tasks de produção",
+    "criteria": "por ORIGEM (created_by), NUNCA por modelo, provider, classe de custo, risco ou resultado",
+    "notWeakened": [
+      "nenhum gate, cobertura, critério de aceitação ou allowlist foi reduzido",
+      "nenhum modelo foi favorecido por nome; nenhuma credencial foi cadastrada ou solicitada",
+      "nenhum patch é reparado automaticamente",
+      "a evidência continua sendo dado histórico; a decisão continua no modelDecision"
+    ]
+  },
+  "limitedNature": {
+    "disclosure": "esta é uma mitigação MÍNIMA, não a correção definitiva: o discriminador é o rótulo de origem (`created_by`), que é uma convenção de nomes",
+    "definitiveFix": "campo explícito `origin = PRODUCTION | BENCHMARK | TEST` na task (migration) + filtro correspondente; enquanto ele não existir, qualquer rotina de teste que use um `created_by` novo volta a contaminar a evidência",
+    "note": "o filtro é um lugar único e testável para atualizar quando o campo existir"
+  },
+  "evidenceArtifacts": {
+    "audit": "AI_MEMORY/evidence/2026-10-07-pool-audit-controlado.json",
+    "auditScripts": "AI_MEMORY/evidence/2026-10-07-pool-audit/*.js (somente leitura do banco)",
+    "benchmarkProtocol": "AI_MEMORY/evidence/2026-10-07-benchmark-protocol-pb1.md"
+  },
+  "notDone": [
+    "INC-3B segue RED: a fachada de replan continua consumindo API inexistente do núcleo puro (defeito CRITICAL conhecido)",
+    "nenhum HANDOVER foi feito",
+    "nenhum reparo automático de patch foi implementado",
+    "nenhuma credencial foi cadastrada ou solicitada"
+  ]
+}

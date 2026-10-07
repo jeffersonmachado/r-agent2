@@ -1,0 +1,124 @@
+{
+  "artifactType": "ENGINEERING_MISSION_BLOCKER_REPORT",
+  "generatedAt": "2026-10-07T22:40:00.000Z",
+  "author": "HUMAN_EXTERNAL_OBSERVER (GitHub Copilot / DeepSeek V4 Flash)",
+  "mission": { "id": "ca56cbdc-3280-4be8-beff-f9301199fc9f", "parent": "8c555706-8c53-4e07-b069-e74735c683a0" },
+  "scope": "INC-3 (conformidade + defeito da fachada de replan)",
+  "attempts_burned": {
+    "INC-3A_v14": 10,
+    "INC-3A_v15": 10,
+    "INC-3B_v16": 10,
+    "INC-3B_v17": 10,
+    "INC-3B1_v18": 10,
+    "total": 50,
+    "all_red": true
+  },
+  "measured_failure_distribution_last_50_attempts": {
+    "PROVIDER_UNAVAILABLE": 23,
+    "PATCH_APPLY_FAILED": 22,
+    "TEST_FAIL": 3,
+    "PATCH_INVALID_FORMAT": 1,
+    "other": 1,
+    "conclusion": "90% das tentativas morrem ANTES de qualquer julgamento de merito do codigo; apenas 3 chegaram a executar o teste"
+  },
+  "provider_unavailability_by_model": {
+    "kimi:kimi-k2.7-code": 5,
+    "deepseek:deepseek-flash": 4,
+    "kimi:kimi-k2.7-code-highspeed": 4,
+    "deepseek:deepseek-v4-pro": 4,
+    "kimi:kimi-k3": 4,
+    "openai:gpt-4o": 1,
+    "openai:gpt-5.4-mini": 1,
+    "error_kinds": [
+      "openai: 429 'You have no credits remaining'",
+      "deepseek:flash: resposta SEM conteudo utilizavel (reasoning consumiu a saida)",
+      "deepseek-v4-pro / kimi: PROVIDER_TIMEOUT apos 300000ms (deadline de engenharia)"
+    ]
+  },
+  "patch_format_defect_proven": {
+    "model": "qwen:qwen3-coder-flash",
+    "occurrences": "recorrente em v15/v16/v17/v18 (sempre a primeira tentativa do modelo)",
+    "symptom": "git apply: 'error: patch fragment without header at line 3'",
+    "root_cause": "o patch emitido contem 'diff --git a/X b/X' seguido DIRETO do '@@', sem as linhas '--- a/X' e '+++ b/X'",
+    "validator_behaviour": "patch_validation.ok = true — o validador aprova porque o CORPO tem prefixos validos; o defeito e o cabecalho de ARQUIVO ausente",
+    "repro": "/tmp/probe-hunknorm.js <taskId> <att> /tmp/wt-src (patch original vs normalizado contra git apply --check)",
+    "why_not_fixed": "sintetizar '--- a/X'/'+++ b/X' a partir do 'diff --git' e REPARO AUTOMATICO de patch — explicitamente proibido pelo dono da plataforma na autorizacao vigente"
+  },
+  "other_patch_failures": {
+    "hunk_count_mismatch": "mitigado pelo normalizeHunkHeaders (engine/engineeringRouter/hunkNormalizer.js) — FUNCIONA e nao toca conteudo",
+    "invented_context": "hunks com linhas de contexto que nao existem no arquivo real — nao reparavel sem adivinhacao (proibido)",
+    "context_integrity_check": "engine/engineeringMission/replanPolicy.js = 5657 bytes no disco E 5657 bytes entregues no contexto (sem truncamento, sem divergencia contexto<->workspace)"
+  },
+  "best_result_achieved": {
+    "task": "1801eada-ca84-4f5e-8cc9-c3b8c5f52a66 (INC-3B v16, attempt 4, kimi-k2.7-code-highspeed)",
+    "outcome": "TEST_FAIL com 5 de 6 testes do servico PASSANDO — a fachada passou a delegar ao nucleo REAL (o TypeError foi eliminado)",
+    "single_missing_point": "applyReplanDecision retornou applied=false em HALT/LIVELOCK (mapa de efeitos nao migrado para HALT + reason)"
+  },
+  "defect_confirmed_earlier_and_unfixed": {
+    "id": "D-2A",
+    "severity": "CRITICAL",
+    "file": "api/services/engineeringMission/missionReplanService.js (commit 0ada6025)",
+    "runtime_proof": "TypeError: Cannot read properties of undefined (reading 'EXHAUSTED')",
+    "status": "AINDA PRESENTE na branch da missao",
+    "masked_by": "jest.mock do nucleo puro no proprio teste do servico (suite completa: 27 suites / 357 testes PASS com o defeito presente)"
+  },
+  "external_decision_required": [
+    {
+      "id": "EXT-1",
+      "topic": "Custos/cotas dos providers de codigo",
+      "evidence": "23 de 50 tentativas morreram por indisponibilidade; openai sem creditos; kimi/deepseek-v4-pro estourando o deadline de 300s",
+      "owner": "dono da plataforma"
+    },
+    {
+      "id": "EXT-2",
+      "topic": "Autorizar (ou nao) o reparo DETERMINISTICO do cabecalho de arquivo ausente",
+      "detail": "sintetizar '--- a/X' e '+++ b/X' a partir de 'diff --git a/X b/X'. Nao e adivinhacao (os paths estao declarados no patch) e nao toca nenhuma linha de conteudo, mas e reparo automatico de patch — proibido pela autorizacao vigente",
+      "impact_if_authorized": "recupera a classe de falha de FORMATO (hoje ~metade dos PATCH_APPLY_FAILED) e permite reroute de formato imediato em vez de queimar tentativa"
+    },
+    {
+      "id": "EXT-3",
+      "topic": "Prioridade do INC-3 vs HANDOVER",
+      "detail": "a capacidade de decompor/replanejar (INC-1 + INC-2A + INC-2B) esta entregue, mas o INC-2A tem defeito CRITICAL em runtime; HANDOVER sem corrigir o 2A nao e honesto"
+    }
+  ],
+  "provider_catalog_measured": {
+    "source": "GET /engineering/models (tenant 3b7ec7e9-e773-420c-ae31-2c09884f70c9)",
+    "with_credential_12": [
+      "openai:gpt-5.4-mini", "openai:gpt-4o",
+      "deepseek:deepseek-flash", "deepseek:deepseek-v4-pro",
+      "kimi:kimi-k2.6", "kimi:kimi-k2.7-code", "kimi:kimi-k2.7-code-highspeed", "kimi:kimi-k3",
+      "qwen:qwen3-coder-plus", "qwen:qwen3-coder-flash", "qwen:qwen3-max", "qwen:qwen-plus"
+    ],
+    "without_credential_5": [
+      "anthropic:claude-opus-5 (cost HIGH)",
+      "anthropic:claude-sonnet-5 (cost MEDIUM)",
+      "anthropic:claude-haiku-4-5-20251001 (cost LOW)",
+      "mistral:mistral-large-latest (cost MEDIUM)",
+      "groq:llama-3.3-70b-versatile (cost LOW)"
+    ],
+    "finding": "TODO o pool efetivo de coder e composto pelos modelos mais fracos em patch; os modelos de maior capacidade para codificacao (Claude Opus/Sonnet) NUNCA sao tentados porque nao tem credencial cadastrada no tenant",
+    "caveat": "healthy=true no catalogo reflete configuracao, NAO quota real: openai retornou 429 'no credits remaining' e kimi/deepseek-v4-pro estouraram 300s com healthy=true",
+    "action_owner": "dono da plataforma — cadastrar credencial Anthropic em Config IA do tenant (tabela tenant_ai_credentials, coluna api_key_encrypted)"
+  },
+  "effective_pool_quality_measured": {
+    "source": "telemetry por modelo do GET /engineering/models",
+    "table_model_cost_runs_successRate_avgLatency": [
+      { "model": "qwen:qwen-plus", "cost": "LOW", "runs": 61, "successRate": "100%", "avgLatencyMs": 284, "note": "REVIEWER/ENRICHER — nao e CODER" },
+      { "model": "deepseek:deepseek-v4-pro", "cost": "MEDIUM", "runs": 190, "successRate": "44%", "avgLatencyMs": 41083 },
+      { "model": "qwen:qwen3-coder-flash", "cost": "LOW", "runs": 89, "successRate": "37%", "avgLatencyMs": 21401, "note": "o modelo que emite diff sem ---/+++" },
+      { "model": "openai:gpt-4o", "cost": "MEDIUM", "runs": 12, "successRate": "33%", "avgLatencyMs": 3049, "note": "429 no credits remaining" },
+      { "model": "kimi:kimi-k2.6", "cost": "MEDIUM", "runs": 6, "successRate": "33%", "avgLatencyMs": 127296 },
+      { "model": "qwen:qwen3-max", "cost": "MEDIUM", "runs": 61, "successRate": "30%", "avgLatencyMs": 18128 },
+      { "model": "kimi:kimi-k2.7-code-highspeed", "cost": "MEDIUM", "runs": 32, "successRate": "28%", "avgLatencyMs": 98688, "note": "melhor resultado no INC-3B (5/6 testes) mas 28% global" },
+      { "model": "deepseek:deepseek-flash", "cost": "LOW", "runs": 784, "successRate": "27%", "avgLatencyMs": 13641 },
+      { "model": "qwen:qwen3-coder-plus", "cost": "MEDIUM", "runs": 37, "successRate": "27%", "avgLatencyMs": 21074 },
+      { "model": "openai:gpt-5.4-mini", "cost": "LOW", "runs": 114, "successRate": "7%", "avgLatencyMs": 5751, "note": "429 no credits remaining" },
+      { "model": "kimi:kimi-k2.7-code", "cost": "MEDIUM", "runs": 28, "successRate": "4%", "avgLatencyMs": 155815 },
+      { "model": "kimi:kimi-k3", "cost": "HIGH", "runs": 12, "successRate": "0%", "avgLatencyMs": 240034 }
+    ],
+    "conclusion": "o MELHOR coder disponivel tem 44% de sucesso e NENHUM coder passa disso; os modelos de codificacao de alta capacidade (Claude Opus/Sonnet/Haiku, Mistral Large) estao sem credencial. Um incremento que exige patch aplicavel E teste passando E regra especifica tem chance estruturalmente baixa em 10 tentativas com este pool — o bloqueio e de CAPACIDADE/COTA, nao de politica do roteador",
+    "highest_impact_action": "cadastrar credencial Anthropic (Claude Sonnet 5 ou Opus 5) no Config IA do tenant"
+  },
+  "no_manual_implementation": true,
+  "no_gate_weakened": true
+}

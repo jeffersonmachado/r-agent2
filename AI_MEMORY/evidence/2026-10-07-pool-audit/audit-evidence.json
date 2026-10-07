@@ -1,0 +1,374 @@
+{
+  "asIs": [
+    [
+      "anthropic:claude-sonnet-5",
+      {
+        "attempts": 37,
+        "applied": 37,
+        "invalidFormat": 0,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 0,
+        "latencySamples": 0,
+        "greenFinal": 37,
+        "redFinal": 0,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "deepseek:deepseek-flash",
+      {
+        "attempts": 163,
+        "applied": 18,
+        "invalidFormat": 74,
+        "timeouts": 0,
+        "reasoningExhausted": 10,
+        "quotaFailures": 1,
+        "latencySumMs": 7863186,
+        "latencySamples": 163,
+        "greenFinal": 17,
+        "redFinal": 31,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "openai:gpt-5.4-mini",
+      {
+        "attempts": 27,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 10,
+        "latencySumMs": 104829,
+        "latencySamples": 27,
+        "greenFinal": 0,
+        "redFinal": 0,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "qwen:qwen3-coder-flash",
+      {
+        "attempts": 38,
+        "applied": 1,
+        "invalidFormat": 26,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 1038873,
+        "latencySamples": 38,
+        "greenFinal": 0,
+        "redFinal": 8,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "deepseek:deepseek-v4-pro",
+      {
+        "attempts": 24,
+        "applied": 0,
+        "invalidFormat": 3,
+        "timeouts": 1,
+        "reasoningExhausted": 3,
+        "quotaFailures": 1,
+        "latencySumMs": 4583814,
+        "latencySamples": 24,
+        "greenFinal": 0,
+        "redFinal": 2,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "kimi:kimi-k2.7-code",
+      {
+        "attempts": 12,
+        "applied": 0,
+        "invalidFormat": 1,
+        "timeouts": 7,
+        "reasoningExhausted": 1,
+        "quotaFailures": 0,
+        "latencySumMs": 1834068,
+        "latencySamples": 12,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 1
+      }
+    ],
+    [
+      "kimi:kimi-k2.7-code-highspeed",
+      {
+        "attempts": 17,
+        "applied": 1,
+        "invalidFormat": 2,
+        "timeouts": 2,
+        "reasoningExhausted": 3,
+        "quotaFailures": 0,
+        "latencySumMs": 2291037,
+        "latencySamples": 17,
+        "greenFinal": 1,
+        "redFinal": 3,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "kimi:kimi-k2.6",
+      {
+        "attempts": 3,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 2,
+        "reasoningExhausted": 1,
+        "quotaFailures": 0,
+        "latencySumMs": 510847,
+        "latencySamples": 3,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 1
+      }
+    ],
+    [
+      "openai:gpt-4o",
+      {
+        "attempts": 4,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 4,
+        "latencySumMs": 18107,
+        "latencySamples": 4,
+        "greenFinal": 0,
+        "redFinal": 3,
+        "blockedFinal": 1
+      }
+    ],
+    [
+      "qwen:qwen3-coder-plus",
+      {
+        "attempts": 10,
+        "applied": 0,
+        "invalidFormat": 7,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 375680,
+        "latencySamples": 10,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "qwen:qwen3-max",
+      {
+        "attempts": 18,
+        "applied": 0,
+        "invalidFormat": 6,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 498097,
+        "latencySamples": 18,
+        "greenFinal": 0,
+        "redFinal": 2,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "kimi:kimi-k3",
+      {
+        "attempts": 5,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 4,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 1201055,
+        "latencySamples": 5,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 0
+      }
+    ]
+  ],
+  "clean": [
+    [
+      "deepseek:deepseek-flash",
+      {
+        "attempts": 149,
+        "applied": 67,
+        "invalidFormat": 31,
+        "timeouts": 0,
+        "reasoningExhausted": 10,
+        "quotaFailures": 0,
+        "latencySumMs": 8042442,
+        "latencySamples": 149,
+        "greenFinal": 64,
+        "redFinal": 19,
+        "blockedFinal": 1
+      }
+    ],
+    [
+      "openai:gpt-5.4-mini",
+      {
+        "attempts": 9,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 9,
+        "latencySumMs": 35165,
+        "latencySamples": 9,
+        "greenFinal": 0,
+        "redFinal": 0,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "qwen:qwen3-coder-flash",
+      {
+        "attempts": 30,
+        "applied": 1,
+        "invalidFormat": 26,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 1004868,
+        "latencySamples": 30,
+        "greenFinal": 0,
+        "redFinal": 3,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "deepseek:deepseek-v4-pro",
+      {
+        "attempts": 22,
+        "applied": 0,
+        "invalidFormat": 3,
+        "timeouts": 1,
+        "reasoningExhausted": 3,
+        "quotaFailures": 1,
+        "latencySumMs": 4573022,
+        "latencySamples": 22,
+        "greenFinal": 0,
+        "redFinal": 2,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "kimi:kimi-k2.6",
+      {
+        "attempts": 3,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 2,
+        "reasoningExhausted": 1,
+        "quotaFailures": 0,
+        "latencySumMs": 510847,
+        "latencySamples": 3,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 1
+      }
+    ],
+    [
+      "kimi:kimi-k2.7-code",
+      {
+        "attempts": 10,
+        "applied": 0,
+        "invalidFormat": 1,
+        "timeouts": 7,
+        "reasoningExhausted": 1,
+        "quotaFailures": 0,
+        "latencySumMs": 1823640,
+        "latencySamples": 10,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 1
+      }
+    ],
+    [
+      "kimi:kimi-k2.7-code-highspeed",
+      {
+        "attempts": 15,
+        "applied": 1,
+        "invalidFormat": 2,
+        "timeouts": 2,
+        "reasoningExhausted": 3,
+        "quotaFailures": 0,
+        "latencySumMs": 2280432,
+        "latencySamples": 15,
+        "greenFinal": 1,
+        "redFinal": 1,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "openai:gpt-4o",
+      {
+        "attempts": 4,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 4,
+        "latencySumMs": 18107,
+        "latencySamples": 4,
+        "greenFinal": 0,
+        "redFinal": 3,
+        "blockedFinal": 1
+      }
+    ],
+    [
+      "qwen:qwen3-coder-plus",
+      {
+        "attempts": 10,
+        "applied": 0,
+        "invalidFormat": 7,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 375680,
+        "latencySamples": 10,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "qwen:qwen3-max",
+      {
+        "attempts": 18,
+        "applied": 0,
+        "invalidFormat": 6,
+        "timeouts": 0,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 498097,
+        "latencySamples": 18,
+        "greenFinal": 0,
+        "redFinal": 2,
+        "blockedFinal": 0
+      }
+    ],
+    [
+      "kimi:kimi-k3",
+      {
+        "attempts": 5,
+        "applied": 0,
+        "invalidFormat": 0,
+        "timeouts": 4,
+        "reasoningExhausted": 0,
+        "quotaFailures": 0,
+        "latencySumMs": 1201055,
+        "latencySamples": 5,
+        "greenFinal": 0,
+        "redFinal": 1,
+        "blockedFinal": 0
+      }
+    ]
+  ]
+}
