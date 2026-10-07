@@ -50,5 +50,26 @@
     "regressaoFocada": "74 suites / 695 testes PASS (npx jest --testPathPattern engineeringRouter|engineeringMission --runInBand) — nenhuma regressao nos patches validos existentes, nos fluxos de reroute por provider, no hunkNormalizer, na suite de contratos/constantes nem nos testes de missao/source/replan"
   },
 
-  "proximoPasso": "Com o bootstrap GREEN, retomar o INC-2 pelo Roteador Engenheiro real (missao ca56cbdc-3280-4be8-beff-f9301199fc9f, contrato v5) e, se GREEN, entregar as divergencias do INC-1 (fnv1a vs SHA-256 e assinatura de planMissionDecomposition) como follow-up AO ENGENHEIRO — nunca corrigidas manualmente."
+  "provaEmProducao": {
+    "execucao": "missao ca56cbdc v6 (task 8a47ac9c-c3bb-4e9e-bcf5-f874922a9862), 2026-10-07 17:33-17:41",
+    "resultado": [
+      "attempt 3 qwen3-coder-flash: PATCH_REJECTED com PATCH_BODY_MISSING_PREFIX (nao mais PATCH_APPLY_FAILED) — rejeitado ANTES do git apply, com arquivo/hunk/contagens no attempt.error.violations",
+      "PATCH_DECISION streak=1/threshold=2 => REPEATED_BELOW_THRESHOLD (sem reroute na primeira repeticao — limiar respeitado)",
+      "attempt 4 qwen3-coder-flash: segunda rejeicao identica => PATCH_DECISION streak=2/threshold=2 REROUTED=true target=deepseek:deepseek-v4-pro (reroute automatico por formato, usando os mesmos guardas)",
+      "PATCH_GENERATION registrado nos dois attempts com patchFiles/hunks/patchBytes por provider:modelo"
+    ],
+    "conclusao": "os itens (a), (b) e (c) funcionam ponta a ponta no ambiente real, com telemetria auditavel; nenhum 'patch corrompido' voltou a ocorrer nesta execucao"
+  },
+  "bloqueioSeguinteMedido": {
+    "natureza": "capacidade/latencia dos providers (NAO formato)",
+    "medicoes": [
+      "deepseek-flash: PROVIDER_EMPTY_RESPONSE — reasoning consumiu TODO o orcamento de saida (36000 tokens, finish_reason=length)",
+      "deepseek-v4-pro: PROVIDER_TIMEOUT (operacao provider:engineering_coder > 120000 ms, politica PROVIDER_REQUEST)",
+      "kimi-k2.6: PROVIDER_TIMEOUT (idem)",
+      "openai gpt-5.4-mini: 429 credit_balance_exhausted"
+    ],
+    "causaPratica": "patch de 4 arquivos (~20KB de diff) sobre prompt de ~51KB excede tempo/tokens em UMA tarefa",
+    "mitigacaoAdotadaSemTocarGates": "decompor o INC-2 em 2A (servico+store+teste) e 2B (relatorio) e elevar maxIterations de 6 para 8 — nenhum criterio removido, apenas distribuido; nenhum timeout, allowlist ou gate alterado"
+  },
+  "proximoPasso": "Com o bootstrap provado, executar o INC-2A (v7) pelo Roteador real; depois o INC-2B. Se ambos GREEN, entregar as divergencias do INC-1 (fnv1a vs SHA-256 e assinatura de planMissionDecomposition) como follow-up AO ENGENHEIRO — nunca corrigidas manualmente — e so entao fazer o HANDOVER."
 }

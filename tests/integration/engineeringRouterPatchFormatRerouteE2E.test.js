@@ -27,8 +27,10 @@ const modelAvailabilityStore = require('../../api/services/engineeringRouter/mod
 
 const BROKEN_PROVIDER = 'anthropic'; // CODER que SEMPRE devolve corpo de hunk sem prefixo
 const WORKING_PROVIDER = 'mistral'; // CODER que devolve um unified diff aplicável
+const QUOTA_PROVIDER = 'openai'; // CODER que SEMPRE responde 429 sem crédito (2 modelos qualificados)
 const TEST_TENANT_KEY = 'jest-e2e-engineering-patch-format-reroute';
 const TEST_TENANT_KEY_NO_ALTERNATIVE = 'jest-e2e-engineering-patch-format-budget';
+const TEST_TENANT_KEY_QUOTA = 'jest-e2e-engineering-patch-format-quota';
 
 const FIXTURE_FILE = 'tests/fixtures/engineering-router-sandbox/mathUtils.js';
 const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/fixtures/engineering-router-sandbox/mathUtils.test.js --no-coverage';
@@ -138,11 +140,31 @@ beforeAll(async () => {
 
   await ensureTenant(TEST_TENANT_KEY, 'Jest E2E — Patch Format Reroute');
   await ensureTenant(TEST_TENANT_KEY_NO_ALTERNATIVE, 'Jest E2E — Patch Format Budget');
+  await ensureTenant(TEST_TENANT_KEY_QUOTA, 'Jest E2E — Provider Quota Progression');
 
   await setupCredential(TEST_TENANT_KEY, BROKEN_PROVIDER);
   await setupCredential(TEST_TENANT_KEY, WORKING_PROVIDER);
 
   await setupCredential(TEST_TENANT_KEY_NO_ALTERNATIVE, BROKEN_PROVIDER);
+
+  // Par (quota + saudável) para provar progression SEM retry inútil do mesmo modelo.
+  await setupCredential(TEST_TENANT_KEY_QUOTA, QUOTA_PROVIDER);
+  await setupCredential(TEST_TENANT_KEY_QUOTA, WORKING_PROVIDER);
+
+  registerAiProvider(QUOTA_PROVIDER, {
+    async generate(prompt, context) {
+      if (context.purpose === 'engineering_coder') {
+        const err = new Error('429 You have no credits remaining. Add credits to continue using the API.');
+        err.status = 429;
+        err.code = 'insufficient_quota';
+        throw err;
+      }
+      if (context.purpose === 'engineering_reviewer') {
+        return { text: JSON.stringify({ decision: 'APPROVE', findings: [] }), usage: { prompt_tokens: 80, completion_tokens: 20 } };
+      }
+      throw new Error(`[${QUOTA_PROVIDER}] purpose inesperado: ${context.purpose}`);
+    },
+  });
 
   registerAiProvider(BROKEN_PROVIDER, {
     async generate(prompt, context) {
@@ -196,7 +218,11 @@ afterAll(async () => {
     }
   } catch (_) { /* best-effort */ }
 
-  for (const [tenantKey, providers] of [[TEST_TENANT_KEY, [BROKEN_PROVIDER, WORKING_PROVIDER]], [TEST_TENANT_KEY_NO_ALTERNATIVE, [BROKEN_PROVIDER]]]) {
+  for (const [tenantKey, providers] of [
+    [TEST_TENANT_KEY, [BROKEN_PROVIDER, WORKING_PROVIDER]],
+    [TEST_TENANT_KEY_NO_ALTERNATIVE, [BROKEN_PROVIDER]],
+    [TEST_TENANT_KEY_QUOTA, [QUOTA_PROVIDER, WORKING_PROVIDER]],
+  ]) {
     for (const provider of providers) await teardownCredential(tenantKey, provider);
     try {
       const TenantModel = getModels.getTenant();
@@ -326,5 +352,48 @@ describe('HUMAN_EXTERNAL_BOOTSTRAP — patch não aplicável reroteia em vez de 
     for (const decision of decisions) {
       expect(decision.detail.failuresOnThisModel).toBeLessThanOrEqual(1);
     }
+  });
+
+  test('429/quota não provoca retry inútil do MESMO modelo: a cadeia progride e alcança o saudável', async () => {
+    if (skipIfNoDatabase()) return;
+
+    const task = await engineeringTaskService.createTask({
+      title: 'jest-quota-progression-e2e: adicionar add() em mathUtils',
+      objective: 'A função add() precisa existir e somar dois números corretamente.',
+      taskType: 'BUG_FIX',
+      risk: 'LOW',
+      allowedPaths: [FIXTURE_FILE],
+      testCommands: [FIXTURE_TEST_COMMAND],
+      maxIterations: 6,
+    }, { createdBy: 'jest-quota-progression-e2e' });
+    createdTaskIds.push(task.id);
+
+    const result = await runTask(task.id, { runnerId: 'jest-quota-progression-e2e-runner', credentialScope: TEST_TENANT_KEY_QUOTA, eventAudienceTenantId: TEST_TENANT_KEY_QUOTA });
+
+    // O provider sem crédito não pode consumir a execução inteira: a cadeia progride até o
+    // provider saudável, que entrega o trabalho de verdade.
+    expect(result.status).toBe('GREEN');
+    const attempts = await engineeringTaskService.listAttempts(task.id);
+    const quotaAttempts = attempts.filter((a) => a.coder_provider === QUOTA_PROVIDER);
+    expect(quotaAttempts.length).toBeGreaterThan(0);
+
+    // NENHUM modelo foi tentado duas vezes na mesma execução (o oposto do retry cego).
+    const modelKeys = attempts.map((a) => `${a.coder_provider}:${a.coder_model}`);
+    expect(new Set(modelKeys).size).toBe(modelKeys.length);
+    // O provider sem crédito aparece uma vez por MODELO, nunca repetindo o mesmo.
+    const quotaModels = quotaAttempts.map((a) => a.coder_model);
+    expect(new Set(quotaModels).size).toBe(quotaModels.length);
+    for (const attempt of quotaAttempts) {
+      expect(attempt.error.code).toBe('PROVIDER_UNAVAILABLE');
+    }
+
+    const lastAttempt = attempts[attempts.length - 1];
+    expect(lastAttempt.coder_provider).toBe(WORKING_PROVIDER);
+    expect(lastAttempt.status).toBe('DONE');
+
+    // A progression gastou exatamente UMA tentativa no provider sem crédito e seguiu adiante —
+    // antes do bootstrap a mesma condição podia consumir a execução inteira no mesmo candidato.
+    expect(attempts.length).toBeGreaterThanOrEqual(2);
+    expect(attempts[0].coder_provider).toBe(QUOTA_PROVIDER);
   });
 });

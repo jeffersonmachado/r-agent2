@@ -51,5 +51,13 @@
     ],
     "naoProposto": "nenhuma reducao de gate/cobertura/criterio; nenhuma alteracao de allowlist; nenhum reparo heuristico que adivinhe quais linhas sao contexto (isso mudaria semantica de patch silenciosamente)"
   },
+  "resolucaoPossivelMedida": {
+    "modelo": "qwen:qwen3-coder-plus (candidato MEDIUM qualificado para CODE_GENERATION, NUNCA alcancado em execucao real)",
+    "medicao": "prompt REAL do CODER reconstruido da task 5cc6757c (44.289 chars, 1 arquivo de contexto) => 25.147 ms, 6.454 chars de resposta, 1.942 tokens de saida, parseOk=true",
+    "diffGerado": "cabecalho valido E corpo COM prefixos — linha 7 = \"+'use strict';\" (o oposto exato do defeito do qwen3-coder-flash)",
+    "conclusao": "existe coder qualificado, barato e rapido que entrega diff aplicavel para ESTE incremento; o que impede a convergencia e o ORCAMENTO DA CADEIA DE PROVIDERS (maxProviderAttempts=6), que se esgota antes de alcanca-lo: 2 modelos openai sem credito (429), 2 tentativas do qwen-flash consumidas pelo reroute de formato, kimi-k2.7-code/kimi-k2.7-code-highspeed/deepseek-v4-pro/kimi-k2.6 em PROVIDER_TIMEOUT de 120s e deepseek-flash esgotando o orcamento em reasoning",
+    "tentativasUsadasNaExecucaoV7": 7,
+    "estadoTerminal": "BLOCKED (PROVIDER_EXHAUSTED) — replanejavel, nunca RED silencioso nem laco; anti-livelock funcionou"
+  },
   "relacaoComAMissaoPrincipal": "Os itens obrigatorios 9 (fallback/escalonamento automatico) e 10 (metricas por provider/modelo/canal + taxa de sucesso) cobrem exatamente este defeito; por isso a correcao e, em tese, trabalho DO ENGENHEIRO — mas nesta fase ele e o proprio bloqueado, o que configura bloqueio legitimo de autoridade externa."
 }

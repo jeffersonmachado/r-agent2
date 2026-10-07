@@ -1,0 +1,57 @@
+{
+  "id": "2026-10-07-human-external-bootstrap-provider-chain-policy",
+  "generatedAt": "2026-10-07T18:20:00.000Z",
+  "kind": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "classification": "intervencao_humana_externa_politica_de_execucao",
+  "authorization": "AUTORIZO as opcoes 1 + 2 como evolucao controlada da politica de execucao do Roteador Engenheiro (mensagem do usuario, 2026-10-07)",
+  "separadoDasEntregasAutonomas": true,
+
+  "motivoMedido": {
+    "execucao": "missao ca56cbdc v7 (task 5cc6757c-cf60-4b95-80a6-d70316aa68e2)",
+    "estadoTerminal": "BLOCKED / PROVIDER_EXHAUSTED",
+    "lastError": "tentativas de provider esgotadas (6/6) — failedAttempts=6, elapsedMs=356840 de maxElapsedMs=600000",
+    "leitura": "o orcamento de TEMPO nao era o limitante (sobravam ~243s); o teto de 6 TENTATIVAS cortou a cadeia antes de alcancar um coder viavel",
+    "cadeiaObservada": [
+      "openai:gpt-5.4-mini — 429 credit_balance_exhausted (1 tentativa da cadeia)",
+      "qwen:qwen3-coder-flash — PATCH_BODY_MISSING_PREFIX (2 tentativas, reroute de formato)",
+      "kimi:kimi-k2.7-code — PROVIDER_TIMEOUT 120s",
+      "deepseek:deepseek-flash — reasoning consumiu todo o orcamento de saida",
+      "kimi:kimi-k2.7-code-highspeed — PROVIDER_TIMEOUT 120s",
+      "openai:gpt-4o — 429 credit_balance_exhausted"
+    ],
+    "evidenciaDeQueHaCaminho": "qwen:qwen3-coder-plus (candidato MEDIUM, NUNCA alcancado) gerou patch VALIDO — corpo com prefixos '+', 6.454 chars — em 25.147 ms com o prompt REAL desta task (44.289 chars)"
+  },
+
+  "alteracoesImplementadas": [
+    "config/timeout-policy.json: PROVIDER_FALLBACK.guards.maxProviderAttempts 6 -> 12 (o guard e declarado engineeringSpecific; maxProviderElapsedMs=600000 permanece como guarda final)",
+    "api/services/engineeringRouter/engineeringAiInvoker.js: ENGINEERING_PURPOSE_TIMEOUT_MS=300000 aplicado via OVERRIDE de PROVIDER_REQUEST SOMENTE quando purpose casa /^engineering_/i; o default global permanece 120000 para todo o resto da plataforma",
+    "api/services/engineeringRouter/modelAvailabilityStore.js: 429 por FALTA DE CREDITO ('no credits remaining', 'credit_balance_exhausted', 'out of credits', 'quota exceeded') passa a classificar NO_CREDIT (TTL longo) em vez de RATE_LIMITED (5 min) — evita reescolher um modelo sem credito depois de minutos",
+    "engine/engineeringRouter/modelSelector.js: prioridade por EVIDENCIA HISTORICA (preferredModelKeys) antes do custo, com reason code novo PROVEN_FOR_TASK_CLASS; excluidos continuam excluidos",
+    "api/services/engineeringRouter/engineeringRouterService.js: orcamento da cadeia lido do registry (12) com fallback coerente; loadProvenPatchModelKeys(taskType) le a telemetria de PATCH_APPLIED da MESMA classe de tarefa para priorizar candidatos comprovados (sem lista fixa de modelos); telemetria ATTEMPT_DISPATCH por tentativa"
+  ],
+
+  "failureAwareImplementado": {
+    "429_quota_sem_credito": "excluido da selecao na execucao (excludedModelKeys) + classificado NO_CREDIT no store (TTL longo) — nunca repete o mesmo modelo",
+    "PATCH_BODY_MISSING_PREFIX_repetido": "streak por modelo; ao atingir ENGINEERING_PATCH_APPLY_REROUTE_AFTER (default 2) o modelo e excluido e outro candidato assume (PATCH_DECISION com rerouted=true)",
+    "PROVIDER_EMPTY_RESPONSE_reasoning": "ja e PROVIDER_UNAVAILABLE -> REROUTE; o modelo nao volta na mesma execucao",
+    "timeout": "PROVIDER_TIMEOUT -> REROUTE com exclusao do candidato; com o deadline ampliado o modelo tem chance real de responder em vez de desperdicar a tentativa",
+    "modelo_comprovado": "prioridade por evidencia de PATCH_APPLIED na mesma task_type, aplicada SO no reroute (depois de falha deterministica) e apenas para o CODER",
+    "guardas_preservados": "providerBudget (tentativas E tempo), Replan Budget, excludedModelKeys, maxIterations da task, ausencia de candidato -> estado terminal honesto"
+  },
+
+  "proibicoesRespeitadas": [
+    "nenhuma allowlist alterada para forcar qwen3-coder-plus — o modelo e alcancado pela politica, nao por hardcode; o teste historico entrou apenas como evidencia e como insumo de prioridade por telemetria",
+    "nenhum gate, cobertura, criterio de aceite ou seguranca do sandbox reduzido",
+    "o default global de PROVIDER_REQUEST (120 s) nao foi alterado: o aumento e escopado por purpose=engineering_*",
+    "INC-2 nao foi implementado manualmente"
+  ],
+
+  "provas": {
+    "unit_engineeringRouterProviderChainPolicy": "14 testes PASS — cadeia ultrapassa 6 tentativas; NUNCA passa do teto 12; tempo segue como guarda final; nenhum laco infinito; deadline por purpose (engineering_*=300000, outros=null) e default global intacto; 429 por credito classificado NO_CREDIT; prioridade por evidencia historicA com reason code; progression sem repetir modelo",
+    "E2E_engineeringRouterPatchFormatReroute": "3 testes PASS — rejeicao estrutural ANTES do git apply + reroute ate GREEN; orcamento impede laco com estado terminal honesto; 429/quota NAO repete o mesmo modelo e a cadeia alcanca o provider saudavel",
+    "unit_engineeringRouterPatchValidator": "17 testes PASS (18 incluindo os casos de nao-falso-positivo)",
+    "regressaoFocada": "em execucao no momento deste registro (npx jest --testPathPattern engineeringRouter|engineeringMission --runInBand)"
+  },
+
+  "proximoPasso": "Com os gates/testes GREEN: reiniciar a API (carregar a politica nova), commitar este bootstrap, retomar o INC-2 pelo Roteador real e, se GREEN, entregar ao Engenheiro o follow-up das divergencias do INC-1; depois HANDOVER."
+}

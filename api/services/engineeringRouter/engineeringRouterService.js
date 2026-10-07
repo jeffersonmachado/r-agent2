@@ -266,6 +266,35 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   const context = buildContext(task, { failureBundle, previousAttempt });
   await ts.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget } });
 
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — telemetria POR TENTATIVA de despacho: motivo da
+  // seleção (reason codes estruturados), custo estimado (costClass do catálogo de modelos) e a
+  // ordem dos próximos candidatos elegíveis. É o que permite auditar por que um coder foi
+  // escolhido e qual seria o próximo, sem inferir isso do histórico de reroutes.
+  await ts.recordTelemetry({
+    task_id: task.id,
+    attempt_id: attempt.id,
+    role: 'CODER',
+    provider: coderSelection.providerId,
+    model: coderSelection.modelId,
+    result: 'DISPATCHED',
+    event_type: 'ATTEMPT_DISPATCH',
+    detail: {
+      attemptNumber: attempt.attempt_number,
+      taskType: task.task_type,
+      risk: task.risk,
+      costClass: coderSelection.costClass || null,
+      costEstimateBasis: 'model_catalog_cost_class',
+      routingReasonCodes: routingDecision.coder.reasonCodes || [],
+      selectedModelKey: `${coderSelection.providerId}:${coderSelection.modelId}`,
+      nextCandidates: (routingDecision.coder.qualifiedCandidates || [])
+        .map((c) => `${c.providerId}:${c.modelId}(${c.costClass})`)
+        .filter((k) => k !== `${coderSelection.providerId}:${coderSelection.modelId}(${coderSelection.costClass})`),
+      policyVersion: routingDecision.policyVersion || null,
+      independentReviewRequired: Boolean(routingDecision.independentReviewRequired),
+      dispatchedAfterReroute: Boolean(failureBundle && String(failureBundle.failedCommand || '').endsWith('_REROUTE')),
+    },
+  }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar despacho da tentativa', { taskId: task.id, error: err.message }));
+
   let patchResult;
   const telemetryBase = { task_id: task.id, attempt_id: attempt.id, role: 'CODER', provider: coderSelection.providerId, model: coderSelection.modelId };
   // Operação de PROVIDER: deadline da política PROVIDER_REQUEST (Deadline Manager); o signal junta
@@ -809,7 +838,13 @@ function createProviderBudget() {
   const policy = resolvePolicy('PROVIDER_FALLBACK');
   const registryGuards = require('../../../engine/shared/executionDeadline').loadPolicyRegistry()?.policies?.PROVIDER_FALLBACK?.guards || {};
   return {
-    maxAttempts: Number(registryGuards.maxProviderAttempts) || 6,
+    // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): o guard do registry subiu de 6 para 12 tentativas de
+    // provider. Medicao real que motivou: a cadeia esgotava em 6/6 (com 357s de tempo AINDA
+    // disponiveis de 600s) antes de alcancar um coder viável — `qwen3-coder-plus` produziu diff
+    // valido em 25s para o mesmo prompt, mas nunca foi tentado. Tentativas continuam finitas e o
+    // tempo total (maxProviderElapsedMs) segue como guarda final; nada virou retry cego.
+    maxAttempts: Number(registryGuards.maxProviderAttempts) || 12,
+    maxCostUsd: Number(registryGuards.maxProviderCostUsd) || 25,
     maxElapsedMs: Math.min(Number(registryGuards.maxProviderElapsedMs) || policy.resolved, policy.resolved),
     failedAttempts: 0,
     elapsedMs: 0,
@@ -825,6 +860,47 @@ function createProviderBudget() {
       return null;
     },
   };
+}
+
+/**
+ * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — EVIDÊNCIA HISTÓRICA de sucesso por classe de tarefa.
+ *
+ * Devolve as chaves `provider:model` que JÁ entregaram patch aplicado (`PATCH_APPLIED`) em tasks
+ * da MESMA classe (`task_type`). O Router usa isso para priorizar candidatos comprovados quando um
+ * candidato anterior falha de forma determinística — evidência real de telemetria, NUNCA uma lista
+ * de modelos fixa no código (o teste histórico do `qwen3-coder-plus` é insumo para a decisão da
+ * política, não um atalho de seleção).
+ *
+ * Falha aqui NUNCA impede a seleção: sem evidência, o comportamento é o determinístico de custo.
+ * @returns {Promise<Set<string>>}
+ */
+async function loadProvenPatchModelKeys(taskType, { maxTasks = 200 } = {}) {
+  try {
+    const index = require('../../db/models');
+    const Task = index.EngineeringTask();
+    const Telemetry = index.EngineeringTelemetryEvent();
+    const recentTasks = await Task.findAll({
+      where: { task_type: taskType },
+      attributes: ['id'],
+      order: [['created_at', 'DESC']],
+      limit: maxTasks,
+    });
+    if (recentTasks.length === 0) return new Set();
+    const rows = await Telemetry.findAll({
+      where: {
+        task_id: recentTasks.map((t) => t.get('id')),
+        event_type: 'PATCH_GENERATION',
+        result: 'PATCH_APPLIED',
+      },
+      attributes: ['provider', 'model'],
+    });
+    return new Set(rows
+      .map((r) => `${r.get('provider')}:${r.get('model')}`)
+      .filter((k) => Boolean(k) && !k.includes('null') && !k.includes('undefined')));
+  } catch (err) {
+    logger.warn('[engineeringRouterService] evidência histórica de patch indisponível — seguindo sem prioridade', { taskType, error: err.message });
+    return new Set();
+  }
 }
 
 async function blockTask(taskId, ts, eventAudienceTenantId, { code, message, detail = null }) {
@@ -927,6 +1003,9 @@ async function rerouteRole({
   const policy = getPolicy(task.task_type);
   const independentRequired = requiresIndependentReview(task.task_type, task.risk);
   const availableModels = await buildAvailableModels({ tenantId: credentialScope });
+  // Prioridade por evidência: só no reroute (falha determinística já ocorreu na execução) e só
+  // para o CODER — o reviewer mantém a seleção por custo/independência.
+  const preferredCoderModelKeys = role === 'CODER' ? await loadProvenPatchModelKeys(task.task_type) : null;
   const newRoutingDecision = selectCoderAndReviewer(availableModels, {
     coderCapabilities: policy.coderCapabilities,
     reviewerCapabilities: policy.reviewerCapabilities,
@@ -934,6 +1013,7 @@ async function rerouteRole({
     independentReviewRequired: independentRequired,
     policyVersion: policy.policyVersion,
     excludedModelKeys,
+    preferredCoderModelKeys,
   });
 
   const stillNoCandidate = role === 'CODER'
@@ -1663,4 +1743,8 @@ module.exports = {
   advanceFromCodedAttempt,
   resumeAdvancePhaseIfNeeded,
   ADVANCE_PHASE_ORDER,
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): exportado para teste direto da política do orcamento
+  // da cadeia de providers (limite de tentativas/tempo) — mesma implementacao usada em producao.
+  createProviderBudget,
+  loadProvenPatchModelKeys,
 };

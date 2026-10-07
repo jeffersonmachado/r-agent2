@@ -110,7 +110,7 @@
       "onExpiry": "BLOCKED",
       "onExpiryDetail": "orcamento total da cadeia de providers esgotado -> PROVIDER_EXHAUSTED (BLOCKED_EXTERNAL_DEPENDENCY), permitindo ao Router replanejar. Nao e crash.",
       "guards": {
-        "maxProviderAttempts": 6,
+        "maxProviderAttempts": 12,
         "maxProviderCostUsd": 25,
         "maxProviderElapsedMs": 600000
       },

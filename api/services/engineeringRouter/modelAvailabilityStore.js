@@ -108,6 +108,14 @@ function classifyModelFailure(err) {
     // TTL curto de uma falha transitória de rede.
     return { state: 'NO_CREDIT', reason: err?.message || 'sem saldo/crédito', ttlMs: DEFAULT_TTL_MS };
   }
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): falta de crédito reportada como 429.
+  // Medido em runtime: a OpenAI devolve 429 com "You have no credits remaining" — texto que NÃO
+  // casava com `insufficient_credit`, então caía em RATE_LIMITED (TTL de 5 min) e o modelo voltava
+  // a ser escolhido minutos depois, gastando outra tentativa da mesma cadeia. Sem crédito é uma
+  // condição praticamente permanente (como 402): TTL longo, igual a NO_CREDIT.
+  if (/no credits? remaining|credit_balance_exhausted|out of credits|quota exceeded/i.test(message)) {
+    return { state: 'NO_CREDIT', reason: err?.message || 'sem crédito', ttlMs: DEFAULT_TTL_MS };
+  }
   if (status === 429 || /rate limit/i.test(message)) {
     return { state: 'RATE_LIMITED', reason: err?.message || 'rate limit', ttlMs: 5 * 60 * 1000 };
   }

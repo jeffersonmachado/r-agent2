@@ -19,6 +19,28 @@ const { runWithDeadline, isDeadlineError } = require('../../utils/operationDeadl
 
 const DEFAULT_TENANT_ID = process.env.ENGINEERING_ROUTER_TENANT_ID || 'system';
 
+/**
+ * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — deadline de UMA chamada de provider para os propósitos
+ * do Engineering Router (`engineering_coder`/`engineering_reviewer`/`engineering_*`).
+ *
+ * Achado real medido: a política global `PROVIDER_REQUEST` (120 s) cortava coders qualificados no
+ * meio da geração — `kimi-k2.7-code`, `kimi-k2.7-code-highspeed`, `deepseek-v4-pro` e `kimi-k2.6`
+ * devolveram PROVIDER_TIMEOUT em 120 s enquanto `qwen3-coder-plus` gerou um patch VÁLIDO em 25 s
+ * para o MESMO prompt. O limite de 120 s é adequado para chamadas curtas do resto da plataforma,
+ * mas não para geração de patch de engenharia — o override é aplicado SOMENTE aos propósitos
+ * `engineering_*`, mantendo a política global intacta para todos os demais usos.
+ *
+ * Valor dentro do máximo declarado da política (900 s) e abaixo do orçamento da cadeia
+ * (`PROVIDER_FALLBACK.maxProviderElapsedMs`), que continua sendo o guarda final.
+ */
+const ENGINEERING_PURPOSE_TIMEOUT_MS = 300000;
+const ENGINEERING_PURPOSE_RE = /^engineering_/i;
+
+/** @returns {number|null} override em ms para o purpose, ou null para usar o default da política. */
+function engineeringProviderTimeoutMs(purpose) {
+  return ENGINEERING_PURPOSE_RE.test(String(purpose || '')) ? ENGINEERING_PURPOSE_TIMEOUT_MS : null;
+}
+
 function recordProviderTimeout(providerId, err) {
   try {
     // eslint-disable-next-line global-require
@@ -66,6 +88,8 @@ async function invokeModel({ providerId, modelId, prompt, tenantId = DEFAULT_TEN
       signal: deadlineSignal,
     }), {
       operation: `provider:${extraContext.purpose || 'engineering_router'}`,
+      // Deadline maior APENAS para os propósitos do Router (ver ENGINEERING_PURPOSE_TIMEOUT_MS).
+      override: engineeringProviderTimeoutMs(extraContext.purpose || 'engineering_router'),
       parentSignal: signal,
       parentDeadlineAtMs,
       meta: { ...meta, provider: providerId, model: modelId },
@@ -114,5 +138,7 @@ async function invokeModel({ providerId, modelId, prompt, tenantId = DEFAULT_TEN
 
 module.exports = {
   DEFAULT_TENANT_ID,
+  ENGINEERING_PURPOSE_TIMEOUT_MS,
+  engineeringProviderTimeoutMs,
   invokeModel,
 };

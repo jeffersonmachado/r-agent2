@@ -46,7 +46,18 @@ function evaluateCandidate(model, { requiredCapabilities }) {
   return { qualified: true, reasons };
 }
 
-function compareCandidates(a, b, preferredCostClass) {
+function compareCandidates(a, b, preferredCostClass, preferredModelKeys = null) {
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — prioridade por EVIDÊNCIA antes da prioridade por
+  // custo: quando o chamador informa os modelos que já entregaram patch aplicado para a mesma
+  // classe de tarefa, eles passam à frente. O conjunto vem de telemetria real (nunca de uma
+  // lista fixa de modelos), e só é aplicado pelo Router depois de um candidato anterior falhar
+  // de forma determinística na execução corrente.
+  if (preferredModelKeys instanceof Set && preferredModelKeys.size > 0) {
+    const keyOf = (m) => `${m.providerId}:${m.modelId}`;
+    const aPreferred = preferredModelKeys.has(keyOf(a)) ? 0 : 1;
+    const bPreferred = preferredModelKeys.has(keyOf(b)) ? 0 : 1;
+    if (aPreferred !== bPreferred) return aPreferred - bPreferred;
+  }
   if (preferredCostClass && preferredCostClass !== 'ANY') {
     const aMatch = a.costClass === preferredCostClass ? 0 : 1;
     const bMatch = b.costClass === preferredCostClass ? 0 : 1;
@@ -62,9 +73,17 @@ function compareCandidates(a, b, preferredCostClass) {
  *
  * @returns {{selected: Object|null, qualifiedCandidates: Object[], reasonCodes: string[]}}
  */
-function selectForRole(availableModels, { role, requiredCapabilities, preferredCostClass = 'ANY', excludeProviderId = null, excludedModelKeys = null }) {
+function selectForRole(availableModels, {
+  role,
+  requiredCapabilities,
+  preferredCostClass = 'ANY',
+  excludeProviderId = null,
+  excludedModelKeys = null,
+  preferredModelKeys = null,
+}) {
   const roleCandidates = (availableModels || []).filter((m) => Array.isArray(m.roles) && m.roles.includes(role));
   const excludedKeys = excludedModelKeys instanceof Set ? excludedModelKeys : null;
+  const preferredKeys = preferredModelKeys instanceof Set ? preferredModelKeys : null;
 
   const evaluated = roleCandidates
     .filter((m) => !excludeProviderId || m.providerId !== excludeProviderId)
@@ -79,11 +98,14 @@ function selectForRole(availableModels, { role, requiredCapabilities, preferredC
     return { selected: null, qualifiedCandidates: [], reasonCodes: [REASON_CODES.NO_QUALIFIED_CANDIDATE] };
   }
 
-  const sorted = [...qualified].sort((a, b) => compareCandidates(a, b, preferredCostClass));
+  const sorted = [...qualified].sort((a, b) => compareCandidates(a, b, preferredCostClass, preferredKeys));
   const winner = sorted[0];
   const winnerEval = evaluated.find((e) => e.model === winner).evaluation;
 
   const reasonCodes = [...winnerEval.reasons];
+  if (preferredKeys && preferredKeys.has(`${winner.providerId}:${winner.modelId}`)) {
+    reasonCodes.push(REASON_CODES.PROVEN_FOR_TASK_CLASS);
+  }
   if (preferredCostClass && preferredCostClass !== 'ANY' && winner.costClass === preferredCostClass) {
     reasonCodes.push(REASON_CODES.POLICY_PRIORITY);
   }
@@ -119,12 +141,14 @@ function selectCoderAndReviewer(availableModels, {
   independentReviewRequired = false,
   policyVersion,
   excludedModelKeys = null,
+  preferredCoderModelKeys = null,
 }) {
   const coder = selectForRole(availableModels, {
     role: 'CODER',
     requiredCapabilities: coderCapabilities,
     preferredCostClass,
     excludedModelKeys,
+    preferredModelKeys: preferredCoderModelKeys,
   });
 
   const excludeProviderId = independentReviewRequired && coder.selected ? coder.selected.providerId : null;

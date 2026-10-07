@@ -104,6 +104,10 @@ const REASON_CODES = Object.freeze({
   // ERV1-CLOSE-008: modelo com falha real recente (404/retirado/auth negada) — provider pode
   // estar healthy (breaker fechado) e mesmo assim este modelId específico não funcionar.
   MODEL_UNAVAILABLE: 'MODEL_UNAVAILABLE',
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): o modelo foi escolhido porque JÁ ENTREGOU patch
+  // aplicado em tasks da MESMA classe (task_type) — prioridade por evidência histórica, nunca
+  // por nome/modelo fixo. Só é aplicado depois de falha determinística de um candidato anterior.
+  PROVEN_FOR_TASK_CLASS: 'PROVEN_FOR_TASK_CLASS',
 });
 
 const FAILURE_CODES = Object.freeze({
