@@ -28,9 +28,11 @@ const modelAvailabilityStore = require('../../api/services/engineeringRouter/mod
 const BROKEN_PROVIDER = 'anthropic'; // CODER que SEMPRE devolve corpo de hunk sem prefixo
 const WORKING_PROVIDER = 'mistral'; // CODER que devolve um unified diff aplicável
 const QUOTA_PROVIDER = 'openai'; // CODER que SEMPRE responde 429 sem crédito (2 modelos qualificados)
+const MERIT_PROVIDER = 'deepseek'; // CODER que aplica um diff que NÃO resolve o teste (falha de MÉRITO)
 const TEST_TENANT_KEY = 'jest-e2e-engineering-patch-format-reroute';
 const TEST_TENANT_KEY_NO_ALTERNATIVE = 'jest-e2e-engineering-patch-format-budget';
 const TEST_TENANT_KEY_QUOTA = 'jest-e2e-engineering-patch-format-quota';
+const TEST_TENANT_KEY_MERIT = 'jest-e2e-engineering-patch-format-merit';
 
 const FIXTURE_FILE = 'tests/fixtures/engineering-router-sandbox/mathUtils.js';
 const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/fixtures/engineering-router-sandbox/mathUtils.test.js --no-coverage';
@@ -75,6 +77,26 @@ function add(a, b) {
 }
 
 module.exports = { multiply, add };
+`;
+
+/**
+ * Diff que APLICA limpo mas NÃO resolve o teste (falta a função `add`): produz uma falha de MÉRITO
+ * na fase TESTING, exatamente o padrão medido em produção (8 tentativas consecutivas do MESMO coder
+ * com o mesmo TEST_FAIL, queimando a execução inteira).
+ */
+const MERIT_NO_FIX_DIFF = `diff --git a/${FIXTURE_FILE} b/${FIXTURE_FILE}
+--- a/${FIXTURE_FILE}
++++ b/${FIXTURE_FILE}
+@@ -1,7 +1,8 @@
+ 'use strict';
+ 
++// tentativa que NAO corrige o teste (falta a funcao add)
+ function multiply(a, b) {
+   return a * b;
+ }
+ 
+-module.exports = { multiply };
++module.exports = { multiply };
 `;
 
 let dbAvailable = false;
@@ -141,6 +163,7 @@ beforeAll(async () => {
   await ensureTenant(TEST_TENANT_KEY, 'Jest E2E — Patch Format Reroute');
   await ensureTenant(TEST_TENANT_KEY_NO_ALTERNATIVE, 'Jest E2E — Patch Format Budget');
   await ensureTenant(TEST_TENANT_KEY_QUOTA, 'Jest E2E — Provider Quota Progression');
+  await ensureTenant(TEST_TENANT_KEY_MERIT, 'Jest E2E — Merit Progression');
 
   await setupCredential(TEST_TENANT_KEY, BROKEN_PROVIDER);
   await setupCredential(TEST_TENANT_KEY, WORKING_PROVIDER);
@@ -150,6 +173,22 @@ beforeAll(async () => {
   // Par (quota + saudável) para provar progression SEM retry inútil do mesmo modelo.
   await setupCredential(TEST_TENANT_KEY_QUOTA, QUOTA_PROVIDER);
   await setupCredential(TEST_TENANT_KEY_QUOTA, WORKING_PROVIDER);
+
+  // Par (falha de mérito + saudável) para provar progression SEM repetir o mesmo coder.
+  await setupCredential(TEST_TENANT_KEY_MERIT, MERIT_PROVIDER);
+  await setupCredential(TEST_TENANT_KEY_MERIT, WORKING_PROVIDER);
+
+  registerAiProvider(MERIT_PROVIDER, {
+    async generate(prompt, context) {
+      if (context.purpose === 'engineering_coder') {
+        return { text: JSON.stringify({ summary: 'alteracao que nao resolve o teste', diff: MERIT_NO_FIX_DIFF }), usage: { prompt_tokens: 120, completion_tokens: 40 } };
+      }
+      if (context.purpose === 'engineering_reviewer') {
+        return { text: JSON.stringify({ decision: 'APPROVE', findings: [] }), usage: { prompt_tokens: 80, completion_tokens: 20 } };
+      }
+      throw new Error(`[${MERIT_PROVIDER}] purpose inesperado: ${context.purpose}`);
+    },
+  });
 
   registerAiProvider(QUOTA_PROVIDER, {
     async generate(prompt, context) {
@@ -222,6 +261,7 @@ afterAll(async () => {
     [TEST_TENANT_KEY, [BROKEN_PROVIDER, WORKING_PROVIDER]],
     [TEST_TENANT_KEY_NO_ALTERNATIVE, [BROKEN_PROVIDER]],
     [TEST_TENANT_KEY_QUOTA, [QUOTA_PROVIDER, WORKING_PROVIDER]],
+    [TEST_TENANT_KEY_MERIT, [MERIT_PROVIDER, WORKING_PROVIDER]],
   ]) {
     for (const provider of providers) await teardownCredential(tenantKey, provider);
     try {
@@ -395,5 +435,56 @@ describe('HUMAN_EXTERNAL_BOOTSTRAP — patch não aplicável reroteia em vez de 
     // antes do bootstrap a mesma condição podia consumir a execução inteira no mesmo candidato.
     expect(attempts.length).toBeGreaterThanOrEqual(2);
     expect(attempts[0].coder_provider).toBe(QUOTA_PROVIDER);
+  });
+
+  test('falha de MÉRITO repetida (patch aplica mas o teste não passa) progride em vez de repetir o mesmo coder', async () => {
+    if (skipIfNoDatabase()) return;
+
+    const previousLimit = process.env.ENGINEERING_MERIT_RETRY_LIMIT;
+    // Limiar 1 para manter o teste curto: uma falha de mérito já troca de candidato (o default é 2).
+    process.env.ENGINEERING_MERIT_RETRY_LIMIT = '1';
+    try {
+      const task = await engineeringTaskService.createTask({
+        title: 'jest-merit-progression-e2e: adicionar add() em mathUtils',
+        objective: 'A função add() precisa existir e somar dois números corretamente.',
+        taskType: 'BUG_FIX',
+        risk: 'LOW',
+        allowedPaths: [FIXTURE_FILE],
+        testCommands: [FIXTURE_TEST_COMMAND],
+        maxIterations: 6,
+      }, { createdBy: 'jest-merit-progression-e2e' });
+      createdTaskIds.push(task.id);
+
+      const result = await runTask(task.id, { runnerId: 'jest-merit-progression-e2e-runner', credentialScope: TEST_TENANT_KEY_MERIT, eventAudienceTenantId: TEST_TENANT_KEY_MERIT });
+
+      // O coder que só sabe falhar o teste NÃO pode consumir a execução: a cadeia progride até o
+      // candidato que resolve, e o trabalho termina GREEN.
+      expect(result.status).toBe('GREEN');
+      const attempts = await engineeringTaskService.listAttempts(task.id);
+      const meritAttempts = attempts.filter((a) => a.coder_provider === MERIT_PROVIDER);
+      expect(meritAttempts.length).toBeGreaterThan(0);
+      // NENHUM modelo foi repetido após a falha de mérito (o oposto do retry cego medido: 8x).
+      const meritModels = meritAttempts.map((a) => a.coder_model);
+      expect(new Set(meritModels).size).toBe(meritModels.length);
+      for (const attempt of meritAttempts) {
+        expect(attempt.status).toBe('FAILED');
+      }
+
+      const lastAttempt = attempts[attempts.length - 1];
+      expect(lastAttempt.coder_provider).toBe(WORKING_PROVIDER);
+      expect(lastAttempt.status).toBe('DONE');
+
+      // A decisão fica registrada de forma auditável, com a assinatura da falha repetida.
+      const telemetry = await engineeringTaskService.listTelemetry(task.id);
+      const meritDecision = telemetry.find((e) => e.event_type === 'PATCH_DECISION' && e.detail && e.detail.failureKind === 'MERIT_REPEATED');
+      expect(meritDecision).toBeTruthy();
+      expect(meritDecision.provider).toBe(MERIT_PROVIDER);
+      expect(meritDecision.detail.rerouted).toBe(true);
+      expect(meritDecision.detail.failureSignature).toBeTruthy();
+      expect(meritDecision.detail.failuresOnThisModel).toBe(1);
+    } finally {
+      if (previousLimit === undefined) delete process.env.ENGINEERING_MERIT_RETRY_LIMIT;
+      else process.env.ENGINEERING_MERIT_RETRY_LIMIT = previousLimit;
+    }
   });
 });

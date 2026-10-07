@@ -967,12 +967,36 @@ async function blockTask(taskId, ts, eventAudienceTenantId, { code, message, det
 }
 
 const PATCH_APPLY_REROUTE_AFTER_DEFAULT = 2;
-// Falha de FORMATO do patch (corpo sem prefixo / diff que o git recusa) e DETERMINISTICA: repetir
-// o mesmo modelo reproduz o mesmo defeito. Medido em runtime: 10/10 patches do qwen3-coder-flash
-// com o mesmo defeito, e o deepseek-v4-pro gastou 217s numa repeticao que produziu o MESMO tipo de
-// falha. Por isso o limiar de formato e 1 (progression IMEDIATA), enquanto a env
-// `ENGINEERING_PATCH_APPLY_REROUTE_AFTER` continua funcionando como override explicito.
-const PATCH_FORMAT_REROUTE_AFTER_DEFAULT = 1;
+// Corpo de hunk SEM PREFIXO e defeito ESTRUTURAL do gerador (medido: 10/10 patches do mesmo modelo):
+// repetir reproduz o mesmo defeito, entao progride imediatamente.
+const PATCH_BARE_BODY_REROUTE_AFTER = 1;
+// `PATCH_APPLY_FAILED` (conflito de contexto/contagem) pode ser corrigido quando o modelo RECEBE o
+// erro no contexto da proxima tentativa — entao ganha UMA repeticao informada antes de ser excluido.
+const PATCH_APPLY_FAILED_REROUTE_AFTER = 2;
+// Falha de MERITO repetida com a MESMA assinatura (ex.: TEST_FAIL identico) nao converge por
+// repeticao: apos este numero de tentativas consecutivas do MESMO modelo com a mesma assinatura,
+// o candidato e excluido e outro assume. Medido: 8 tentativas identicas do mesmo coder numa unica
+// execucao, todas com o mesmo TEST_FAIL.
+const MERIT_RETRY_LIMIT_DEFAULT = 2;
+
+/**
+ * Assinatura ESTÁVEL de uma falha de merito: comando + codigo + resumo do erro. Serve para
+ * distinguir "erro diferente a cada tentativa" (progresso) de "mesmo erro repetido" (laco).
+ */
+function failureSignature(bundle) {
+  if (!bundle) return null;
+  const command = String(bundle.failedCommand || '');
+  if (command === '' || command.endsWith('_REROUTE')) return null; // reroute nao e falha de merito
+  const code = String(bundle.code || bundle.failureKind || bundle.outcome || '');
+  const detail = String(bundle.stderr || '').slice(0, 400);
+  const digest = detail ? crypto.createHash('sha256').update(detail).digest('hex').slice(0, 12) : '';
+  return `${command}|${code}|${digest}`;
+}
+
+function meritRetryLimit() {
+  const raw = Number(process.env.ENGINEERING_MERIT_RETRY_LIMIT);
+  return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : MERIT_RETRY_LIMIT_DEFAULT;
+}
 
 /**
  * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — quantas falhas CONSECUTIVAS de geracao/aplicacao de
@@ -982,10 +1006,12 @@ const PATCH_FORMAT_REROUTE_AFTER_DEFAULT = 1;
  * `PATCH_APPLY_FAILED` NAO reroteava, entao as 6 iteracoes da task eram gastas no mesmo modelo
  * reproduzindo exatamente o mesmo defeito (task RED, missao FAILED).
  */
-function patchApplyRerouteAfter(failureKind = null) {
+function patchApplyRerouteAfter(failureKind = null, failureCode = null) {
   const raw = Number(process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER);
   if (Number.isFinite(raw) && raw >= 1) return Math.floor(raw);
-  return failureKind === 'PATCH_NOT_APPLICABLE' ? PATCH_FORMAT_REROUTE_AFTER_DEFAULT : PATCH_APPLY_REROUTE_AFTER_DEFAULT;
+  if (failureCode === FAILURE_CODES.PATCH_BODY_MISSING_PREFIX) return PATCH_BARE_BODY_REROUTE_AFTER;
+  if (failureCode === FAILURE_CODES.PATCH_APPLY_FAILED) return PATCH_APPLY_FAILED_REROUTE_AFTER;
+  return failureKind === 'PATCH_NOT_APPLICABLE' ? PATCH_BARE_BODY_REROUTE_AFTER : PATCH_APPLY_REROUTE_AFTER_DEFAULT;
 }
 
 /**
@@ -1166,6 +1192,8 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
   // — ao atingir o limiar ele é excluído e outro candidato assume (ou a task termina de forma
   // honesta, respeitando orçamento e maxIterations).
   const patchApplyFailureStreak = new Map();
+  // Assinatura da ultima falha de MERITO por modelo: mesma assinatura repetida = laco de retry.
+  const repeatFailureSignature = new Map();
   // Falhas determinísticas JÁ observadas nesta execução, por modelo — reduzem a prioridade do
   // candidato durante ESTA execução (evidência de longo prazo continua valendo para os demais).
   const currentExecutionFailures = new Map();
@@ -1239,7 +1267,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
       const streak = (patchApplyFailureStreak.get(failedModelKey) || 0) + 1;
       patchApplyFailureStreak.set(failedModelKey, streak);
       noteExecutionFailure(attemptRow, patchFailure.failureKind === 'PATCH_NOT_APPLICABLE' ? 'invalidFormat' : 'patch');
-      const threshold = patchApplyRerouteAfter(patchFailure.failureKind);
+      const threshold = patchApplyRerouteAfter(patchFailure.failureKind, patchFailure.code);
       const willReroute = streak >= threshold;
 
       emitTaskStage(eventAudienceTenantId, taskId, {
@@ -1317,6 +1345,66 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
       status: 'info',
       message: `Tentativa ${iterationsUsed}/${task.max_iterations} falhou (${failureBundle?.failedCommand || 'motivo desconhecido'}${failureBundle?.failureKind ? ` — ${failureBundle.failureKind}` : ''}) — iniciando nova tentativa.`,
     });
+
+    // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — PROGRESSION por falha de MERITO repetida sem progresso.
+    // Medido: 8 tentativas consecutivas do MESMO coder, todas com o mesmo TEST_FAIL, queimando a
+    // execucao inteira (retry cego). A mesma assinatura de falha repetida no mesmo modelo nao tem
+    // como convergir por repeticao: ao atingir o limite o candidato e excluido e outro assume.
+    const signature = failureSignature(failureBundle);
+    if (signature) {
+      const attemptRow = result.attempt || {};
+      const failedModelKey = `${attemptRow.coder_provider || task.routing_decision?.coder?.selected?.providerId}:${attemptRow.coder_model || task.routing_decision?.coder?.selected?.modelId}`;
+      const previous = repeatFailureSignature.get(failedModelKey);
+      const count = previous && previous.signature === signature ? previous.count + 1 : 1;
+      repeatFailureSignature.set(failedModelKey, { signature, count });
+      const limit = meritRetryLimit();
+      noteExecutionFailure(attemptRow, 'merit');
+
+      if (count >= limit) {
+        await ts.recordTelemetry({
+          task_id: taskId,
+          attempt_id: attemptRow.id || null,
+          role: 'CODER',
+          provider: attemptRow.coder_provider || null,
+          model: attemptRow.coder_model || null,
+          result: 'REROUTED',
+          event_type: 'PATCH_DECISION',
+          detail: {
+            failedModelKey,
+            failedCommand: failureBundle?.failedCommand || null,
+            failureCode: failureBundle?.code || null,
+            failureSignature: signature,
+            failuresOnThisModel: count,
+            rerouteThreshold: limit,
+            rerouted: true,
+            failureKind: 'MERIT_REPEATED',
+            attemptNumber: attemptRow.attempt_number ?? iterationsUsed,
+          },
+        }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar decisao de merito', { taskId, error: err.message }));
+
+        const reroute = await rerouteRole({
+          task,
+          role: 'CODER',
+          failedModelKey,
+          reasonCode: failureBundle?.code || FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED,
+          failureClass: 'CODER_MERIT_REPEATED',
+          failureKind: 'MERIT_REPEATED',
+          excludedModelKeys,
+          providerBudget,
+          credentialScope,
+          eventAudienceTenantId,
+          ts,
+          currentExecutionFailures,
+          messageOverride: (sel) => `${failedModelKey} repetiu a MESMA falha ${count}x (${failureBundle?.failedCommand}${failureBundle?.code ? `/${failureBundle.code}` : ''}) sem progresso — reroteado para ${sel.providerId}:${sel.modelId} (CODER).`,
+          stderrOverride: `${failedModelKey} repetiu a mesma falha ${count}x sem progresso (${failureBundle?.failedCommand}) — retry do mesmo modelo nao converge`,
+        });
+        if (reroute.terminal) return reroute.terminal;
+        task = reroute.task;
+        failureBundle = reroute.failureBundle;
+        repeatFailureSignature.delete(failedModelKey);
+        continue;
+      }
+    }
     logger.info('[engineeringRouterService] RED->FIX: nova tentativa', { taskId, iterationsUsed, reason: failureBundle?.failedCommand, failureKind: failureBundle?.failureKind || null });
   }
 
@@ -1828,4 +1916,5 @@ module.exports = {
   loadModelDecisionEvidence,
   provenKeysFromEvidence,
   patchApplyRerouteAfter,
+  failureSignature,
 };

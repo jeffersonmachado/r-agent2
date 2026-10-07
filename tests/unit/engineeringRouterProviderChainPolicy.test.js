@@ -15,7 +15,7 @@
  * possível.
  */
 
-const { createProviderBudget, patchApplyRerouteAfter } = require('../../api/services/engineeringRouter/engineeringRouterService');
+const { createProviderBudget, patchApplyRerouteAfter, failureSignature } = require('../../api/services/engineeringRouter/engineeringRouterService');
 const { engineeringProviderTimeoutMs, ENGINEERING_PURPOSE_TIMEOUT_MS } = require('../../api/services/engineeringRouter/engineeringAiInvoker');
 const { classifyModelFailure, UNUSABLE_STATES } = require('../../api/services/engineeringRouter/modelAvailabilityStore');
 const { selectForRole, selectCoderAndReviewer } = require('../../engine/engineeringRouter/modelSelector');
@@ -154,17 +154,33 @@ describe('HUMAN_EXTERNAL_BOOTSTRAP — política de execução da cadeia de prov
       const previous = process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER;
       try {
         delete process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER;
-        // Formato determinístico (corpo sem prefixo / diff recusado pelo git): limiar 1.
-        expect(patchApplyRerouteAfter('PATCH_NOT_APPLICABLE')).toBe(1);
-        // Demais falhas mantêm o limiar conservador (uma repetição antes de trocar de modelo).
-        expect(patchApplyRerouteAfter(null)).toBe(2);
+        // Corpo sem prefixo: defeito ESTRUTURAL do gerador (10/10 patches do mesmo modelo) — limiar 1.
+        expect(patchApplyRerouteAfter('PATCH_NOT_APPLICABLE', 'PATCH_BODY_MISSING_PREFIX')).toBe(1);
+        // Conflito de contexto/contagem: ganha UMA repeticao informada (o erro entra no contexto).
+        expect(patchApplyRerouteAfter('PATCH_NOT_APPLICABLE', 'PATCH_APPLY_FAILED')).toBe(2);
+        // Demais falhas mantem o limiar conservador.
+        expect(patchApplyRerouteAfter(null, null)).toBe(2);
         // A env continua sendo override EXPLÍCITO para operação.
         process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER = '2';
-        expect(patchApplyRerouteAfter('PATCH_NOT_APPLICABLE')).toBe(2);
+        expect(patchApplyRerouteAfter('PATCH_NOT_APPLICABLE', 'PATCH_BODY_MISSING_PREFIX')).toBe(2);
       } finally {
         if (previous === undefined) delete process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER;
         else process.env.ENGINEERING_PATCH_APPLY_REROUTE_AFTER = previous;
       }
+    });
+
+    test('assinatura de falha distingue LACO de progresso (mesma falha repetida vs erro diferente)', () => {
+      const sameA = failureSignature({ failedCommand: 'TEST_STAGE', code: 'TEST_FAIL', stderr: 'suite mathUtils falhou: add is not a function' });
+      const sameB = failureSignature({ failedCommand: 'TEST_STAGE', code: 'TEST_FAIL', stderr: 'suite mathUtils falhou: add is not a function' });
+      const different = failureSignature({ failedCommand: 'TEST_STAGE', code: 'TEST_FAIL', stderr: 'suite mathUtils falhou: outra coisa totalmente diferente' });
+      const otherPhase = failureSignature({ failedCommand: 'PATCH_APPLY', code: 'PATCH_APPLY_FAILED', stderr: 'x' });
+
+      expect(sameA).toBe(sameB);            // mesma falha ⇒ mesma assinatura (laco detectavel)
+      expect(different).not.toBe(sameA);    // erro diferente ⇒ assinatura diferente (progresso)
+      expect(otherPhase).not.toBe(sameA);
+      // Reroute NAO e falha de merito: nunca conta para o laco.
+      expect(failureSignature({ failedCommand: 'CODER_REROUTE' })).toBeNull();
+      expect(failureSignature(null)).toBeNull();
     });
 
     test('falha determinística exclui o candidato e o próximo assume; repetição só até o teto', () => {
