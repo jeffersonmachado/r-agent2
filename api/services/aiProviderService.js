@@ -61,6 +61,109 @@ function getCallerHint() {
  * @param {number} promptLength - Tamanho do prompt em caracteres (opcional, para ajustar limite)
  * @returns {Object} Parâmetros de limite de tokens
  */
+
+/**
+ * ORÇAMENTO DE SAÍDA ADAPTATIVO (max_tokens) — fonte ÚNICA para todos os providers.
+ *
+ * DEFEITO REAL MEDIDO (2026-10-07): DeepSeek e Kimi enviavam `max_tokens: 1000` FIXO (hardcoded)
+ * enquanto só a OpenAI usava esta função. Com o prompt REAL do CODER (~65 KB), modelos que emitem
+ * reasoning consumiam o orçamento INTEIRO em `reasoning_tokens` e devolviam `content` VAZIO — o
+ * Router repetia o MESMO modelo até esgotar `max_iterations` e toda EngineeringTask terminava RED.
+ *
+ * Regras (determinísticas e testadas):
+ *   - tiers por TAMANHO do prompt (a saída cresce com a entrada: patch/diff acompanham o contexto);
+ *   - RESERVA de reasoning para modelos que emitem `reasoning_tokens` ANTES do conteúdo, para que
+ *     o orçamento cubra raciocínio + resposta (nunca "só raciocínio");
+ *   - teto absoluto (MAX): custo nunca cresce sem limite.
+ */
+const OUTPUT_TOKEN_BUDGET = Object.freeze({
+  BASE: 1000,               // prompt pequeno (<= 2000 chars)
+  MEDIUM_PROMPT: 2000,      // > 2000 chars
+  LARGE_PROMPT: 4000,       // > 5000 chars
+  ENGINEERING_PROMPT: 8000, // > 20000 chars (contrato de tarefa + arquivos de contexto)
+  MAX: 10000,               // teto absoluto: tier + reserva de reasoning nunca passa daqui
+});
+
+/**
+ * Reserva de reasoning somada ao tier quando o modelo emite tokens de raciocínio antes do
+ * conteúdo. A lista é EXPLÍCITA e versionada (mesmo critério de `modelCapabilities.js`: um modelo
+ * não listado não ganha reserva por adivinhação) e cobre os modelos OBSERVADOS consumindo o teto
+ * inteiro em reasoning na medição de 2026-10-07 (deepseek-v4-pro, deepseek-flash, kimi-k2.6).
+ */
+const REASONING_TOKEN_RESERVE = 4000;
+const REASONING_CAPABLE_MODEL_RE = /(deepseek-v4-pro|deepseek-flash|kimi-k2|kimi-k3|reasoner|thinking)/i;
+
+/**
+ * @param {string} model
+ * @param {number} promptLength - tamanho do prompt em caracteres
+ * @returns {number} orçamento de saída em tokens (limitado por OUTPUT_TOKEN_BUDGET.MAX)
+ */
+function resolveMaxOutputTokens(model, promptLength = 0) {
+  const length = Number.isFinite(promptLength) ? promptLength : 0;
+  let tokens = OUTPUT_TOKEN_BUDGET.BASE;
+  if (length > 20000) tokens = OUTPUT_TOKEN_BUDGET.ENGINEERING_PROMPT;
+  else if (length > 5000) tokens = OUTPUT_TOKEN_BUDGET.LARGE_PROMPT;
+  else if (length > 2000) tokens = OUTPUT_TOKEN_BUDGET.MEDIUM_PROMPT;
+
+  if (REASONING_CAPABLE_MODEL_RE.test(String(model || ''))) tokens += REASONING_TOKEN_RESERVE;
+  return Math.min(tokens, OUTPUT_TOKEN_BUDGET.MAX);
+}
+
+/**
+ * Códigos de falha de SAÍDA do provider. São REROUTEÁVEIS por construção:
+ * `engineeringAiInvoker` embrulha qualquer erro de invocação como `PROVIDER_UNAVAILABLE`, e é
+ * nesse código que o Router dispara `outcome: 'REROUTE'` (fallback/escalation para o próximo
+ * candidato qualificado) em vez de repetir o mesmo modelo.
+ */
+const PROVIDER_OUTPUT_FAILURE_CODES = Object.freeze({
+  EMPTY_RESPONSE: 'PROVIDER_EMPTY_RESPONSE',
+  OUTPUT_TRUNCATED: 'PROVIDER_OUTPUT_TRUNCATED',
+});
+
+/** Normaliza `stop_reason` da Anthropic para o vocabulário de `finish_reason`. */
+function anthropicFinishReason(payload) {
+  const stop = payload?.stop_reason ?? null;
+  return stop === 'max_tokens' ? 'length' : stop;
+}
+
+/**
+ * Extrai o texto do provider e RECUSA saída inutilizável — nunca inventa texto.
+ *
+ * Antes: `content || '[Resposta vazia da X]'` convertia resposta vazia em TEXTO VÁLIDO; o CODER
+ * falhava depois com `NO_JSON_FOUND` (classe NÃO rerouteável) e o Router repetia o MESMO modelo
+ * até esgotar `max_iterations`. Agora a saída inutilizável sobe como erro de provider
+ * classificado → invoker → `PROVIDER_UNAVAILABLE` → fallback/escalation.
+ *
+ * @throws {Error} `.code = PROVIDER_EMPTY_RESPONSE` (sem conteúdo — tipicamente reasoning
+ *   consumindo todo o orçamento) ou `.code = PROVIDER_OUTPUT_TRUNCATED`
+ *   (`finish_reason === 'length'` — resposta cortada pelo limite, portanto INCOMPLETA).
+ */
+function usableTextOrThrow({ label, model, text, finishReason = null, usage = null }) {
+  const value = typeof text === 'string' ? text : '';
+  const reasoningTokens = usage?.completion_tokens_details?.reasoning_tokens ?? null;
+  if (value.trim() === '') {
+    const err = new Error(
+      `${label}: resposta SEM conteúdo utilizável (modelo=${model}; finish_reason=${finishReason || 'desconhecido'}`
+      + `${reasoningTokens === null ? '' : `; reasoning_tokens=${reasoningTokens}`}) — orçamento de saída esgotado pelo modelo, nunca texto válido`,
+    );
+    err.code = PROVIDER_OUTPUT_FAILURE_CODES.EMPTY_RESPONSE;
+    err.finishReason = finishReason;
+    err.usage = usage;
+    err.reasoningTokens = reasoningTokens;
+    throw err;
+  }
+  if (finishReason === 'length') {
+    const err = new Error(
+      `${label}: resposta TRUNCADA pelo limite de tokens de saída (modelo=${model}; chars=${value.length}) — saída incompleta, nunca tratada como válida`,
+    );
+    err.code = PROVIDER_OUTPUT_FAILURE_CODES.OUTPUT_TRUNCATED;
+    err.finishReason = finishReason;
+    err.usage = usage;
+    throw err;
+  }
+  return value;
+}
+
 function getTokenLimitParam(model, promptLength = 0) {
   // Modelos que requerem max_completion_tokens
   const requiresMaxCompletionTokens = /^gpt-5\./;
@@ -69,12 +172,9 @@ function getTokenLimitParam(model, promptLength = 0) {
   // Para prompts grandes (>5000 chars), aumenta o limite para 4000 tokens
   // Para prompts médios (>2000 chars), usa 2000 tokens
   // Caso contrário, usa 1000 tokens padrão
-  let tokenLimit = 1000;
-  if (promptLength > 5000) {
-    tokenLimit = 4000;
-  } else if (promptLength > 2000) {
-    tokenLimit = 2000;
-  }
+  // Orçamento ADAPTATIVO (fonte única, compartilhada com DeepSeek/Kimi/compatíveis): a tabela
+  // fixa antiga (1000/2000/4000) não cobria reasoning tokens nem prompts reais de engenharia.
+  const tokenLimit = resolveMaxOutputTokens(model, promptLength);
   
   if (requiresMaxCompletionTokens.test(model)) {
     return { max_completion_tokens: tokenLimit };
@@ -195,9 +295,17 @@ function createOpenAIProvider() {
             textLength: data.choices[0]?.message?.content?.length,
           });
           
+          const openaiFinishReason = data.choices?.[0]?.finish_reason ?? null;
           return {
-            text: data.choices[0]?.message?.content || '[Resposta vazia da OpenAI]',
+            text: usableTextOrThrow({
+              label: 'OpenAI',
+              model,
+              text: data.choices?.[0]?.message?.content,
+              finishReason: openaiFinishReason,
+              usage: data.usage || null,
+            }),
             usage: data.usage || null,
+            finishReason: openaiFinishReason,
           };
         }
 
@@ -220,9 +328,17 @@ function createOpenAIProvider() {
           textLength: completion.choices[0]?.message?.content?.length,
         });
 
+        const openaiSdkFinishReason = completion.choices?.[0]?.finish_reason ?? null;
         return {
-          text: completion.choices[0]?.message?.content || '[Resposta vazia da OpenAI]',
+          text: usableTextOrThrow({
+            label: 'OpenAI',
+            model,
+            text: completion.choices?.[0]?.message?.content,
+            finishReason: openaiSdkFinishReason,
+            usage: completion.usage || null,
+          }),
           usage: completion.usage || null,
+          finishReason: openaiSdkFinishReason,
         };
       } catch (error) {
         logger.error('❌ OpenAI: Erro ao gerar resposta', {
@@ -343,9 +459,17 @@ function createAnthropicProvider() {
             textLength: data.content?.[0]?.text?.length,
           });
           
+          const anthropicFetchFinishReason = anthropicFinishReason(data);
           return {
-            text: data.content?.[0]?.text || '[Resposta vazia da Anthropic]',
+            text: usableTextOrThrow({
+              label: 'Anthropic',
+              model,
+              text: data.content?.[0]?.text,
+              finishReason: anthropicFetchFinishReason,
+              usage: data.usage || null,
+            }),
             usage: data.usage || null,
+            finishReason: anthropicFetchFinishReason,
           };
         }
 
@@ -368,9 +492,17 @@ function createAnthropicProvider() {
           hasUsage: !!message.usage,
         });
 
+        const anthropicSdkFinishReason = anthropicFinishReason(message);
         return {
-          text: message.content[0]?.text || '[Resposta vazia da Anthropic]',
+          text: usableTextOrThrow({
+            label: 'Anthropic',
+            model,
+            text: message.content?.[0]?.text,
+            finishReason: anthropicSdkFinishReason,
+            usage: message.usage || null,
+          }),
           usage: message.usage || null,
+          finishReason: anthropicSdkFinishReason,
         };
       } catch (error) {
         logger.error('❌ Anthropic: Erro ao gerar resposta', {
@@ -441,7 +573,7 @@ function createOpenAICompatibleProvider(def) {
           body: JSON.stringify({
             model: model,
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 1000,
+            ...getTokenLimitParam(model, prompt.length),
           }),
         });
 
@@ -455,9 +587,17 @@ function createOpenAICompatibleProvider(def) {
         }
 
         const data = await response.json();
+        const compatibleFinishReason = data.choices?.[0]?.finish_reason ?? null;
         return {
-          text: data.choices?.[0]?.message?.content || `[Resposta vazia da ${label}]`,
+          text: usableTextOrThrow({
+            label,
+            model,
+            text: data.choices?.[0]?.message?.content,
+            finishReason: compatibleFinishReason,
+            usage: data.usage || null,
+          }),
           usage: data.usage || null,
+          finishReason: compatibleFinishReason,
         };
       } catch (error) {
         logger.error(`❌ ${label}: Erro ao gerar resposta`, {
@@ -531,9 +671,17 @@ function createAnthropicCompatibleProvider(def) {
         }
 
         const data = await response.json();
+        const compatibleAnthropicFinishReason = anthropicFinishReason(data);
         return {
-          text: data.content?.[0]?.text || `[Resposta vazia da ${label}]`,
+          text: usableTextOrThrow({
+            label,
+            model,
+            text: data.content?.[0]?.text,
+            finishReason: compatibleAnthropicFinishReason,
+            usage: data.usage || null,
+          }),
           usage: data.usage || null,
+          finishReason: compatibleAnthropicFinishReason,
         };
       } catch (error) {
         logger.error(`❌ ${label}: Erro ao gerar resposta`, {
@@ -574,11 +722,14 @@ function createDeepSeekProvider() {
         }
 
         const model = context?.model || config.get('ai.deepseek.model', 'deepseek-flash');
+        // Orçamento de saída ADAPTATIVO (defeito real: 1000 fixo → content vazio consumido por reasoning).
+        const tokenParams = getTokenLimitParam(model, prompt.length);
         logger.debug('🤖 DeepSeek: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,
           model,
           promptLength: prompt.length,
+          tokenParams,
         });
 
         // DeepSeek é OpenAI-compatible: usa fetch direto
@@ -593,7 +744,7 @@ function createDeepSeekProvider() {
           body: JSON.stringify({
             model: model,
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 1000,
+            ...tokenParams,
           }),
         });
 
@@ -607,9 +758,17 @@ function createDeepSeekProvider() {
         }
 
         const data = await response.json();
+        const deepseekFinishReason = data.choices?.[0]?.finish_reason ?? null;
         return {
-          text: data.choices?.[0]?.message?.content || '[Resposta vazia da DeepSeek]',
+          text: usableTextOrThrow({
+            label: 'DeepSeek',
+            model,
+            text: data.choices?.[0]?.message?.content,
+            finishReason: deepseekFinishReason,
+            usage: data.usage || null,
+          }),
           usage: data.usage || null,
+          finishReason: deepseekFinishReason,
         };
       } catch (error) {
         logger.error('❌ DeepSeek: Erro ao gerar resposta', {
@@ -651,11 +810,14 @@ function createKimiProvider() {
         }
 
         const model = context?.model || config.get('ai.kimi.model', 'kimi-k2.6');
+        // Orçamento de saída ADAPTATIVO (defeito real: 1000 fixo → content vazio consumido por reasoning).
+        const tokenParams = getTokenLimitParam(model, prompt.length);
         logger.debug('🤖 Kimi: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,
           model,
           promptLength: prompt.length,
+          tokenParams,
         });
 
         // Kimi (Moonshot) é OpenAI-compatible: usa fetch direto
@@ -670,7 +832,7 @@ function createKimiProvider() {
           body: JSON.stringify({
             model: model,
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 1000,
+            ...tokenParams,
           }),
         });
 
@@ -684,9 +846,17 @@ function createKimiProvider() {
         }
 
         const data = await response.json();
+        const kimiFinishReason = data.choices?.[0]?.finish_reason ?? null;
         return {
-          text: data.choices?.[0]?.message?.content || '[Resposta vazia da Kimi]',
+          text: usableTextOrThrow({
+            label: 'Kimi',
+            model,
+            text: data.choices?.[0]?.message?.content,
+            finishReason: kimiFinishReason,
+            usage: data.usage || null,
+          }),
           usage: data.usage || null,
+          finishReason: kimiFinishReason,
         };
       } catch (error) {
         logger.error('❌ Kimi: Erro ao gerar resposta', {
@@ -924,8 +1094,14 @@ module.exports = {
   initializeAiProviders,
   ensureTenantAiConfigLoaded,
   generateAiResponse,
+  resolveMaxOutputTokens,
+  usableTextOrThrow,
+  OUTPUT_TOKEN_BUDGET,
+  REASONING_TOKEN_RESERVE,
+  PROVIDER_OUTPUT_FAILURE_CODES,
   createOpenAIProvider,
   createAnthropicProvider,
+  createDeepSeekProvider,
   createKimiProvider,
   createOpenAICompatibleProvider,
   createAnthropicCompatibleProvider,

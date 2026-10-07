@@ -1,0 +1,62 @@
+{
+  "id": "2026-10-07-engineering-bootstrap-provider-output-budget",
+  "generatedAt": "2026-10-07T14:40:00.000Z",
+  "kind": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "authorization": "HUMANA/EXTERNA (usuário) — autorizado apenas o bootstrap mínimo para destravar o próprio Roteador Engenheiro",
+  "autonomyDistinction": "TRABALHO DE HABILITAÇÃO DA AUTONOMIA, NÃO trabalho autônomo do Engenheiro. O Engenheiro estava BLOQUEADO por este defeito (não conseguia emitir nenhum patch). Este registro existe para que a distinção entre 'trabalho realizado autonomamente' e 'trabalho necessário para habilitar a autonomia' permaneça auditável — não deve ser contado como entrega da Engineering Mission.",
+  "missionId": "8c555706-8c53-4e07-b069-e74735c683a0",
+  "authorizedScope": [
+    "substituir o limite hardcoded max_tokens: 1000 de DeepSeek/Kimi por orçamento de saída adaptativo",
+    "tratar resposta vazia/truncada/consumida por reasoning como falha de provider rerouteável, em vez de convertê-la em texto válido"
+  ],
+
+  "blocker1": {
+    "summary": "max_tokens: 1000 HARDCODED em DeepSeek e Kimi (só a OpenAI usava a tabela adaptativa)",
+    "file": "api/services/aiProviderService.js",
+    "measuredBefore": {
+      "promptLength": 64995,
+      "contextFiles": 11,
+      "deepseek-flash": { "completion_tokens": 1000, "reasoning_tokens": 1000, "content": "" },
+      "deepseek-v4-pro": { "completion_tokens": 1000, "reasoning_tokens": 1000, "content": "" },
+      "kimi-k2.6": { "completion_tokens": 1000, "reasoning_tokens": 999, "content": "" }
+    },
+    "fix": "resolveMaxOutputTokens(model, promptLength) — tiers por tamanho de prompt (1000/2000/4000/8000), reserva de reasoning (4000) para modelos que emitem reasoning_tokens e teto absoluto MAX=10000; getTokenLimitParam passa a delegar para essa fonte única (OpenAI incluída) e DeepSeek/Kimi/factory OpenAI-compatible enviam o orçamento."
+  },
+
+  "blocker2": {
+    "summary": "saída vazia/truncada MASCARADA como texto ('[Resposta vazia da X]'), virando NO_JSON_FOUND (classe NÃO rerouteável) e repetindo o MESMO modelo até esgotar max_iterations",
+    "fix": "usableTextOrThrow({label, model, text, finishReason, usage}) — lança PROVIDER_EMPTY_RESPONSE (sem conteúdo; expõe reasoning_tokens) ou PROVIDER_OUTPUT_TRUNCATED (finish_reason='length'); aplicado nos 9 caminhos de completion (OpenAI fetch+SDK, Anthropic fetch+SDK, factory OpenAI-compatible, factory Anthropic-compatible, DeepSeek, Kimi). Como engineeringAiInvoker embrulha qualquer falha de invocação como PROVIDER_UNAVAILABLE, o Router passa a disparar outcome='REROUTE' (fallback/escalation) em vez de repetir o modelo quebrado."
+  },
+
+  "regressionTests": {
+    "newSuite": "tests/unit/aiProviderOutputBudget.test.js (15 testes)",
+    "updatedSuite": "tests/unit/engineeringRouterQwenProvider.test.js (QWEN_MALFORMED_RESPONSE agora exige PROVIDER_EMPTY_RESPONSE — o teste antigo codificava o defeito)",
+    "covers": [
+      "tiers do orçamento adaptativo + reserva de reasoning + teto",
+      "DeepSeek/Kimi/compatíveis ENVIAM o orçamento (regressão direta do 1000 fixo)",
+      "vazio/truncado/sem choices sobem como falha classificada (nunca texto)",
+      "seam do invoker: a falha chega como PROVIDER_UNAVAILABLE com o código de saída preservado (branch real do REROUTE)",
+      "guarda de código-fonte: o mascaramento '|| [Resposta vazia ...]' não pode voltar"
+    ],
+    "unitSuite": "npx jest tests/unit --bail=0 → 931 suítes / 7519 testes PASS, 0 falhas"
+  },
+
+  "liveVerification": {
+    "prompt": "prompt REAL do CODER reconstruído da task e88bd1d1 (64.995 chars / 11 arquivos de contexto)",
+    "after": {
+      "deepseek-flash": "PROVIDER_EMPTY_RESPONSE (reasoning_tokens=9999, finish_reason=length) — falha classificada e rerouteável; content vazio NUNCA virou texto",
+      "deepseek-v4-pro": "PROVIDER_EMPTY_RESPONSE (reasoning_tokens=10000)",
+      "kimi-k2.6": "PROVIDER_TIMEOUT (120s, política PROVIDER_REQUEST) — também rerouteável",
+      "openai/gpt-5.4-mini": "429 credit_balance_exhausted — rerouteável",
+      "qwen/qwen3-coder-flash": "PASS real: 1731 chars, parseOk=true (JSON estruturado do CODER)",
+      "qwen/qwen3-coder-plus": "PASS real: 5374 chars (reparo do envelope aplicado)",
+      "qwen/qwen3-max": "PASS real: 1238 chars, parseOk=true"
+    },
+    "conclusion": "Com o reroute funcionando, a cadeia do Router (LOW → LOW → LOW) sai de deepseek-flash (vazio) e gpt-5.4-mini (429) e aterrissa em qwen3-coder-flash, que devolve o JSON do CODER. O caminho executável existe; DeepSeek/Kimi não fecham o contrato neste porte de prompt — o comportamento correto é exatamente o fallback/escalation, agora disparado."
+  },
+
+  "outOfScopeRemaining": [
+    "Anthropic (fetch, SDK e factory anthropic-compatible) mantém max_tokens: 1000 fixo — fora do escopo autorizado (DeepSeek/Kimi) e sem credencial para o tenant system; os 3 caminhos já receberam o guarda de saída inutilizável.",
+    "O catálogo governado (EngineeringModelCatalogEntry) continua write-only para roteamento e sem endpoint humano de DENIED (item já registrado em POST_RELEASE_MODEL_ROUTER_BACKLOG.md)."
+  ]
+}

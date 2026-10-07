@@ -226,13 +226,16 @@ describe('Qwen — contrato do provider (transporte MOCKADO, não é prova ao vi
     global.fetch = realFetch;
   });
 
-  test('QWEN_MALFORMED_RESPONSE: resposta sem choices não vira texto inventado', async () => {
+  test('QWEN_MALFORMED_RESPONSE: resposta sem choices vira falha classificada (nunca texto inventado)', async () => {
     tenantAIService.getDecryptedAPIKey.mockResolvedValue('jest-fake-qwen-key');
     global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => ({ output: 'shape inesperado' }) }));
     const provider = createOpenAICompatibleProvider(QWEN_DEF);
-    const out = await provider.generate('x', { tenantId: TENANT_ID, model: 'qwen3-max' });
-    expect(out.text).toMatch(/Resposta vazia/);
-    expect(out.usage).toBeNull();
+    // Regressão do bootstrap 2026-10-07: `content || '[Resposta vazia da X]'` convertia saída
+    // inutilizável em TEXTO VÁLIDO — o Router falhava depois com NO_JSON_FOUND (classe NÃO
+    // rerouteável) e repetia o MESMO modelo. Agora sobe como falha de provider classificada.
+    await expect(provider.generate('x', { tenantId: TENANT_ID, model: 'qwen3-max' })).rejects.toMatchObject({
+      code: 'PROVIDER_EMPTY_RESPONSE',
+    });
   });
 
   test('QWEN_MALFORMED_JSON: corpo inválido é propagado como falha real (nunca engolido)', async () => {
