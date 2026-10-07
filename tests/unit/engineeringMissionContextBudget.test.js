@@ -30,11 +30,19 @@ describe('missionContextService — orçamento de varredura', () => {
     expect(Array.isArray(result.evidenceRefs)).toBe(true);
   });
 
-  test('orçamento default cobre a árvore real (medido: 25.544 arquivos) e devolve evidências ordenadas', () => {
+  test('orçamento default cobre a ÁRVORE DISPONÍVEL (relativo ao ambiente) e devolve evidências ordenadas', () => {
     const ctx = loadContextModule(undefined);
     const result = ctx.scanRepository(['missioncompiler']);
+    // O invariante é o teto DEFAULT ser maior que a árvore REALMENTE VARRIDA — nunca um número
+    // absoluto de arquivos. MEDIDO 2026-10-07: um checkout completo tem dezenas de milhares de
+    // arquivos, mas o workspace do sandbox do Engineer é um `git worktree` (apenas arquivos
+    // rastreados) com 3.943 arquivos — a asserção fixa em `>10000` reprovava a suite por
+    // AMBIENTE, sem nenhuma relação com o patch sob regressão (defeito medido: reprovava até
+    // num worktree limpo, sem patch nenhum).
     expect(result.truncated).toBe(false);
-    expect(result.filesScanned).toBeGreaterThan(10000);
+    // Piso de sanidade: a varredura percorreu uma árvore de verdade (não uma árvore vazia) nos
+    // dois ambientes medidos (checkout completo e worktree).
+    expect(result.filesScanned).toBeGreaterThan(1000);
     expect(result.evidenceRefs.length).toBeGreaterThan(0);
     // Ordem determinística: a varredura é estável, o que mantém o enriquecimento reprodutível.
     const again = ctx.scanRepository(['missioncompiler']);

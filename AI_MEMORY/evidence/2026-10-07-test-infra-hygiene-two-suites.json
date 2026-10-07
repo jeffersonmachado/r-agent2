@@ -1,0 +1,38 @@
+{
+  "id": "2026-10-07-test-infra-hygiene-two-suites",
+  "generatedAt": "2026-10-07T16:05:00.000Z",
+  "kind": "HUMAN_EXTERNAL_TEST_INFRA_HYGIENE",
+  "authorization": "HUMANA/EXTERNA (usuário) — opção (a): corrigir exclusivamente as DUAS suítes comprovadamente defeituosas que tornavam a regressão HIGH/CRITICAL insatisfazível no sandbox",
+  "autonomyDistinction": "HIGIENE DA INFRAESTRUTURA DE TESTES — não é entrega da Engineering Mission nem implementação de item da missão. Existe porque o gate de regressão estava insatisfazível por defeito das SUÍTES, não por defeito do código sob regressão.",
+
+  "defects": [
+    {
+      "file": "tests/unit/engineeringMissionContextBudget.test.js:37",
+      "defect": "expect(result.filesScanned).toBeGreaterThan(10000) — número ABSOLUTO de arquivos da árvore completa do repositório, não um invariante.",
+      "measured": "num git worktree limpo (o workspace real do sandbox do Engineer) a varredura devolve 3.943 arquivos → FAIL. Reproduzido SEM nenhum patch aplicado: a suíte reprovava a regressão por AMBIENTE.",
+      "fix": "asserção RELATIVA/determinística preservando o objetivo: `truncated === false` (o teto DEFAULT cobre a árvore realmente varrida — é isso que o teste quer provar) + piso de sanidade `filesScanned > 1000` (a varredura percorreu uma árvore de verdade, válido nos dois ambientes medidos) + evidências ordenadas inalteradas.",
+      "coverageImpact": "nenhum — nenhuma suite removida, nenhum caso removido; a intenção original (orçamento default cobre a árvore e a varredura é determinística) permanece verificada."
+    },
+    {
+      "file": "tests/integration/engineeringMissionSourceE2E.test.js:207 (e mais 14 call sites)",
+      "defect": "a porta canônica era chamada na forma POSICIONAL `skipOrFail(SUITE_NAME, skipReason)`, mas `tests/helpers/infraGate.js` espera `{suite, available, reason, requirement}`. Desestruturar um string deixa todas as chaves `undefined` → `available` falsy → a função devolve `true`; os callbacks SÍNCRONOS faziam `return` desse `true` → Jest aborta com 'test functions can only return Promise or undefined. Returned value: true'. O skip também era registrado com `suite: undefined` (registro inútil).",
+      "measured": "no sandbox (sem Postgres, `--network=none`) MISSION_SRC_01 falhava por ERRO DE API DO JEST — não por falha real — derrubando a regressão de toda task do subsistema. Fato exato do log: `● Mission Source Authority — E2E com git real › MISSION_SRC_01 … test functions can only return Promise or undefined. Returned value: true`.",
+      "fix": "chamada no contrato CORRETO da mesma porta canônica (`available: false`, motivo preservado) e SEM valor de retorno, de modo que `return skipOrFail(...)` apenas encerra o teste. O comportamento de gate é IDÊNTICO ao canônico: em `RELEASE_AUTHORITATIVE=1` a infra ausente lança `INFRA_ERROR` (a suíte FALHA, nunca PASS silencioso); em modo dev o pulo fica REGISTRADO como `NOT_EXECUTED` com suite/requisito/motivo.",
+      "coverageImpact": "nenhum — nenhuma suite/caso removido; 15/15 testes de MISSION_SRC continuam executando quando a infraestrutura existe (provado no host)."
+    }
+  ],
+
+  "notChanged": [
+    "nenhuma suite removida; nenhum caso de teste removido",
+    "tier HIGH/CRITICAL inalterado (engine/engineeringRouter/regressionPlan.js intocado)",
+    "sandbox sem Postgres, sem rede e sem permissões adicionais",
+    "nenhum gate alterado; falha real continua falha (nada virou NOT_EXECUTED por conveniência)",
+    "INC-1, INC-2 e os itens da missão NÃO foram implementados por esta intervenção"
+  ],
+
+  "proofs": {
+    "host_apropriado": "npx jest tests/unit/engineeringMissionContextBudget.test.js tests/integration/engineeringMissionSourceE2E.test.js -> 2 suites / 21 testes PASS (MISSION_SRC_01..14 executaram de verdade)",
+    "worktree_sem_infra": "a executar (git worktree limpo, env sem DATABASE_URL): ContextBudget PASS; SourceE2E registra NOT_EXECUTED (skip explícito) em vez de erro de API do Jest",
+    "authoritative_sem_infra": "a executar (RELEASE_AUTHORITATIVE=1 no mesmo worktree): SourceE2E FALHA com INFRA_ERROR — prova de que o skip NÃO é PASS silencioso"
+  }
+}

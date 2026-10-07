@@ -43,7 +43,32 @@ process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT = REPO_DIR;
 process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT = WORKSPACE_DIR;
 
 const sequelizeModule = require('../../api/db/sequelize');
-const { skipOrFail } = require('../helpers/infraGate');
+const { skipOrFail: infraSkipOrFail } = require('../helpers/infraGate');
+
+/**
+ * HIGIENE DE INFRAESTRUTURA DE TESTE (intervenção humana/externa, 2026-10-07).
+ *
+ * DEFEITO MEDIDO: este arquivo chamava a porta canônica como `skipOrFail(SUITE_NAME, reason)` —
+ * forma POSICIONAL —, mas `tests/helpers/infraGate.js` espera `{suite, available, reason,
+ * requirement}`. Como um string desestruturado não tem essas chaves, `available` virava
+ * `undefined` (falsy) e a função devolvia `true`; os callbacks SÍNCRONOS faziam `return` desse
+ * `true`, e o Jest abortava a suíte com "test functions can only return Promise or undefined.
+ * Returned value: true". Resultado real: no sandbox (sem Postgres), MISSION_SRC_01 falhava por
+ * um erro de API do Jest — não por uma falha real —, derrubando a regressão HIGH/CRITICAL de
+ * TODA task do subsistema. Além disso, o skip era registrado com `suite: undefined` (registro
+ * inútil) nos callbacks assíncronos.
+ *
+ * CORREÇÃO (mínima, sem afrouxar nada): delega para a MESMA porta canônica com o contrato
+ * correto — `available: false` porque a chamada só acontece quando a infraestrutura está
+ * ausente — e NÃO devolve valor, de modo que `return skipOrFail(...)` apenas encerra o teste.
+ * O comportamento de gate permanece idêntico ao canônico: em `RELEASE_AUTHORITATIVE=1` a
+ * ausência lança `INFRA_ERROR` (a suíte FALHA, nunca PASS silencioso); em modo dev o pulo é
+ * REGISTRADO como `NOT_EXECUTED` com suite/requisito/motivo.
+ */
+function skipOrFail(suite, reason) {
+  infraSkipOrFail({ suite, available: false, reason, requirement: 'postgres' });
+}
+
 const missionSourceService = require('../../api/services/engineeringMission/missionSourceService');
 const engineeringTaskService = require('../../api/services/engineeringRouter/engineeringTaskService');
 const patchApplyService = require('../../api/services/engineeringRouter/patchApplyService');
