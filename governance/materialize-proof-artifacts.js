@@ -31,6 +31,31 @@ function readJsonFromCandidates(relativePath, explicitEnvVar = null) {
   return null;
 }
 
+/**
+ * Lê um artefato de PIPELINE da cópia do WORKSPACE.
+ *
+ * DEFEITO MEDIDO (2026-10-06): `qa/qa-waves-enterprise-governance.json` existe em
+ * duas cópias — a do runtime root (canônica para o bridge, que a escreve primeiro)
+ * e o espelho no workspace, que é o que VAI NO PAYLOAD e o que o
+ * `governance/replay-integrity.js` confere. `readJsonFromCandidates` prefere o
+ * runtime root, então o `proof-signature.json` podia vincular um relatório
+ * DIFERENTE do entregue. Quando as duas cópias divergem (medido: runtime
+ * reportHash 94b46d59…, workspace 2f0cb027…) o empacotamento morre com
+ * `proof_report_hash_mismatch` + `proof_enterprise_signature_mismatch`.
+ *
+ * Produtor e consumidor da mesma prova têm de ler a MESMA cópia: para artefato que
+ * é empacotado, essa cópia é a do workspace. O runtime root continua valendo para
+ * evidência genuinamente de runtime (PBX/L03, smoke operacional etc.).
+ */
+function readJsonFromWorkspace(relativePath) {
+  const absPath = path.join(ROOT, relativePath);
+  try {
+    return JSON.parse(fs.readFileSync(absPath, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
 function writeJson(relativePath, payload) {
   const absPath = resolveWorkspacePath(ROOT, relativePath);
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
@@ -316,7 +341,7 @@ function buildCleanupProof() {
 function main() {
   const l03Evidence = readJsonFromCandidates('qa/l03-pbx-voice-tts-asr-evidence.json', 'PBX_VOICE_TTS_ASR_EVIDENCE_PATH');
   const finalSmoke = readJsonFromCandidates('qa/smoke/qa-waves-operational-final-smoke.json');
-  const governanceReport = readJsonFromCandidates('qa/qa-waves-enterprise-governance.json');
+  const governanceReport = readJsonFromWorkspace('qa/qa-waves-enterprise-governance.json');
 
   const written = [];
   written.push(...buildPbxArtifacts(l03Evidence));
