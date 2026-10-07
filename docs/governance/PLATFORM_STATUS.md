@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-10-07T04:48:58.416Z
-- Canonical mesh execution: mesh-2026-10-07T02-57-17-384Z
+- Generated at: 2026-10-07T05:58:39.742Z
+- Canonical mesh execution: mesh-2026-10-07T05-13-43-857Z
 - Canonical mesh decision: GO
-- Readiness decision: AUTONOMOUS_READY_GO
+- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -13,7 +13,7 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-07T02-57-17-384Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-07T05-13-43-857Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json
