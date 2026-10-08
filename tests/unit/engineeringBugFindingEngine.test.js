@@ -260,6 +260,72 @@ describe('bugFinding engine — ciclo de vida (BUG-03, BUG-04, BUG-07, BUG-08, B
     expect(contract.releaseBlocker).toBe(true);
   });
 
+  // DEFEITO MEDIDO (2026-10-08, fix task d84bdab8 / INC-3B): o contrato lia
+  // `finding.expectedBehavior`/`observedBehavior`/`rootCause`, mas `getFinding` devolve as linhas
+  // CRUAS do Sequelize (`expected_behavior`, `observed_behavior`, `root_cause`). Os três campos
+  // existiam no banco e a task nasceu com o objective de UMA linha — "Corrigir finding X na causa
+  // raiz, não no sintoma" — sem comportamento esperado, observado nem causa raiz. O teste BUG-08
+  // acima não pegava porque passava um objeto já em camelCase: media a forma do chamador, não a
+  // forma que o produtor real entrega.
+  test('BUG-08b: contrato lê a LINHA CRUA do banco (snake_case), não só o objeto normalizado', () => {
+    const linhaCrua = {
+      id: 'f-2',
+      title: 'bug',
+      category: 'BUG',
+      severity: 'MEDIUM',
+      expected_behavior: 'a fachada deve produzir efeito explicito',
+      observed_behavior: 'retorna applied:false',
+      root_cause: 'le a decisao por uma chave que o nucleo nao produz',
+      reproduction: { command: 'npx jest tests/y.test.js' },
+      mission_id: 'm-2',
+      mission_version: 7,
+      mission_spec_hash: 'h2',
+      affected_files: ['api/services/y.js'],
+      affected_subsystems: ['ENGINEERING'],
+      evidence_refs: [{ type: 'TEST_REPORT', ref: 'tr-1' }],
+      acceptance_criteria: ['caso real verde'],
+      self_modification: true,
+    };
+    const contract = engine.buildFixTaskContract({ finding: linhaCrua });
+
+    expect(contract.objective.split('\n')).toHaveLength(4);
+    expect(contract.objective).toContain('Comportamento esperado: a fachada deve produzir efeito explicito');
+    expect(contract.objective).toContain('Comportamento observado: retorna applied:false');
+    expect(contract.objective).toContain('Causa raiz: le a decisao por uma chave que o nucleo nao produz');
+    expect(contract.missionId).toBe('m-2');
+    expect(contract.missionVersion).toBe(7);
+    expect(contract.missionSpecHash).toBe('h2');
+    expect(contract.evidenceRefs).toHaveLength(1);
+    expect(contract.acceptanceCriteria).toContain('caso real verde');
+    expect(contract.selfModification).toBe(true);
+    expect(contract.testCommands).toContain('npx jest tests/y.test.js');
+  });
+
+  test('BUG-08c: camelCase e snake_case produzem o MESMO contrato (nenhuma grafia vira campo ausente)', () => {
+    const base = { id: 'f-3', title: 'bug', category: 'BUG', severity: 'MEDIUM' };
+    const camel = engine.buildFixTaskContract({
+      finding: { ...base, expectedBehavior: 'X', observedBehavior: 'Y', rootCause: 'Z', missionId: 'm-3', affectedFiles: ['a.js'] },
+    });
+    const snake = engine.buildFixTaskContract({
+      finding: { ...base, expected_behavior: 'X', observed_behavior: 'Y', root_cause: 'Z', mission_id: 'm-3', affected_files: ['a.js'] },
+    });
+
+    expect(snake.objective).toBe(camel.objective);
+    expect(snake.missionId).toBe(camel.missionId);
+    expect(snake.allowedPaths).toEqual(camel.allowedPaths);
+  });
+
+  test('BUG-08d: campo realmente AUSENTE continua ausente (a tolerância não inventa contexto)', () => {
+    const contract = engine.buildFixTaskContract({
+      finding: { id: 'f-4', title: 'bug', category: 'BUG', severity: 'LOW' },
+    });
+
+    expect(contract.objective.split('\n')).toHaveLength(1);
+    expect(contract.objective).not.toContain('Comportamento esperado');
+    expect(contract.objective).not.toContain('Causa raiz');
+    expect(contract.missionId).toBeNull();
+  });
+
   test('BUG-17: reincidência escala severidade e incrementa a contagem (sem criar estado paralelo)', () => {
     expect(engine.isRecurrence('FIXED')).toBe(true);
     expect(engine.isRecurrence('CLOSED')).toBe(true);

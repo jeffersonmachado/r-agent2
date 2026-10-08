@@ -96,6 +96,52 @@ function deriveTaskType({ category = 'UNKNOWN', severity = 'MEDIUM' } = {}) {
 }
 
 /**
+ * ── FRONTEIRA PERSISTÊNCIA → CONTRATO ───────────────────────────────────────────
+ *
+ * Este contrato lê o finding em camelCase; `bugFindingService.getFinding` devolve as linhas CRUAS
+ * do Sequelize, em snake_case. Nada normalizava essa fronteira, e o efeito era silencioso: campos
+ * PRESENTES no banco chegavam aqui como `undefined`.
+ *
+ * Medido em 2026-10-08 (fix task d84bdab8, INC-3B): o `objective` é montado com
+ * `expectedBehavior`/`observedBehavior`/`rootCause`. Os três existiam no banco
+ * (`expected_behavior`, `observed_behavior`, `root_cause`) e mesmo assim a task nasceu com UMA
+ * linha — "Corrigir finding X (BUG/MEDIUM) na causa raiz, não no sintoma" — sem o comportamento
+ * esperado, o observado nem a causa raiz. O coder recebia objetivo genérico para um defeito
+ * descrito em detalhe. Não era dado ausente (ausência de dado é um fato); era dado presente que o
+ * contrato não enxergava.
+ *
+ * `FIELD_ALIASES` aceita as DUAS grafias de propósito: o contrato é chamado tanto com a linha crua
+ * do banco quanto com objetos já normalizados (memória de engenharia, testes), e nenhum dos dois é
+ * errado. Nada é inventado: campo vazio continua vazio.
+ */
+const FIELD_ALIASES = Object.freeze({
+  affectedFiles: 'affected_files',
+  affectedSubsystems: 'affected_subsystems',
+  expectedBehavior: 'expected_behavior',
+  observedBehavior: 'observed_behavior',
+  rootCause: 'root_cause',
+  acceptanceCriteria: 'acceptance_criteria',
+  regressionCommands: 'regression_commands',
+  missionId: 'mission_id',
+  missionVersion: 'mission_version',
+  missionSpecHash: 'mission_spec_hash',
+  evidenceRefs: 'evidence_refs',
+  selfModification: 'self_modification',
+});
+
+/**
+ * Valor de um campo do finding aceitando camelCase (forma do contrato) ou snake_case (linha crua
+ * do banco). O valor NÃO-vaZIO declarado em camelCase tem precedência; sem ele, cai para o alias.
+ */
+function fieldOf(finding, name) {
+  if (!finding) return undefined;
+  const value = finding[name];
+  if (value !== undefined && value !== null) return value;
+  const alias = FIELD_ALIASES[name];
+  return alias ? finding[alias] : undefined;
+}
+
+/**
  * Contrato de correção para `engineeringTaskService.createTask`. O escopo de caminhos NUNCA é
  * inventado: vem dos arquivos afetados declarados no finding ou da MissionSpec corrente. Sem escopo
  * e sem autorização explícita, o chamador recebe `allowedPaths: []` — e o Router é fail-closed
@@ -110,15 +156,16 @@ function buildFixTaskContract({
 } = {}) {
   const category = finding.category || 'UNKNOWN';
   const severity = finding.severity || 'MEDIUM';
+  const affectedFiles = fieldOf(finding, 'affectedFiles');
   const paths = Array.isArray(allowedPaths) && allowedPaths.length > 0
     ? allowedPaths
-    : (Array.isArray(finding.affectedFiles) ? finding.affectedFiles : []);
+    : (Array.isArray(affectedFiles) ? affectedFiles : []);
 
   const capabilities = deriveCapabilities({
     category,
     severity,
     paths,
-    subsystems: finding.affectedSubsystems,
+    subsystems: fieldOf(finding, 'affectedSubsystems'),
   });
 
   // Comandos de teste da correção: a PRÓPRIA reprodução (que era vermelha e deve ficar verde) mais
@@ -126,10 +173,16 @@ function buildFixTaskContract({
   const reproductionCommand = finding.reproduction && typeof finding.reproduction.command === 'string'
     ? finding.reproduction.command
     : null;
+  const regressionCommands = fieldOf(finding, 'regressionCommands');
   const testCommands = Array.from(new Set([
     ...(reproductionCommand ? [reproductionCommand] : []),
-    ...(Array.isArray(finding.regressionCommands) ? finding.regressionCommands : []),
+    ...(Array.isArray(regressionCommands) ? regressionCommands : []),
   ].filter(Boolean)));
+
+  const expectedBehavior = fieldOf(finding, 'expectedBehavior');
+  const observedBehavior = fieldOf(finding, 'observedBehavior');
+  const rootCause = fieldOf(finding, 'rootCause');
+  const acceptanceCriteria = fieldOf(finding, 'acceptanceCriteria');
 
   return {
     // O id do finding vai no TÍTULO de propósito: a task nasce no Router e precisa ser
@@ -137,9 +190,9 @@ function buildFixTaskContract({
     title: `[BUG ${severity}] ${finding.title || 'finding sem título'} (${finding.id || 'sem-id'})`,
     objective: [
       `Corrigir finding ${finding.id} (${category}/${severity}) na causa raiz, não no sintoma.`,
-      finding.expectedBehavior ? `Comportamento esperado: ${finding.expectedBehavior}` : null,
-      finding.observedBehavior ? `Comportamento observado: ${finding.observedBehavior}` : null,
-      finding.rootCause ? `Causa raiz: ${finding.rootCause}` : null,
+      expectedBehavior ? `Comportamento esperado: ${expectedBehavior}` : null,
+      observedBehavior ? `Comportamento observado: ${observedBehavior}` : null,
+      rootCause ? `Causa raiz: ${rootCause}` : null,
     ].filter(Boolean).join('\n'),
     taskType: deriveTaskType({ category, severity }),
     risk: severity === 'CRITICAL' ? 'CRITICAL' : (severity === 'HIGH' ? 'HIGH' : (severity === 'MEDIUM' ? 'MEDIUM' : 'LOW')),
@@ -153,17 +206,17 @@ function buildFixTaskContract({
       `A reprodução registrada no finding ${finding.id} passa a ser verde`,
       'Testes direcionados passam',
       'Nenhuma regressão relevante quebrada',
-      ...(Array.isArray(finding.acceptanceCriteria) ? finding.acceptanceCriteria : []),
+      ...(Array.isArray(acceptanceCriteria) ? acceptanceCriteria : []),
     ],
     testCommands,
     maxIterations: maxIterations || undefined,
     releaseBlocker: SEVERITY_RANK[severity] >= SEVERITY_RANK.HIGH,
     findingId: finding.id || null,
-    missionId: finding.missionId || null,
-    missionVersion: finding.missionVersion || null,
-    missionSpecHash: finding.missionSpecHash || null,
-    evidenceRefs: Array.isArray(finding.evidenceRefs) ? finding.evidenceRefs : [],
-    selfModification: finding.selfModification === true,
+    missionId: fieldOf(finding, 'missionId') || null,
+    missionVersion: fieldOf(finding, 'missionVersion') || null,
+    missionSpecHash: fieldOf(finding, 'missionSpecHash') || null,
+    evidenceRefs: Array.isArray(fieldOf(finding, 'evidenceRefs')) ? fieldOf(finding, 'evidenceRefs') : [],
+    selfModification: fieldOf(finding, 'selfModification') === true,
   };
 }
 
@@ -173,5 +226,6 @@ module.exports = {
   deriveTaskType,
   touchesFrontend,
   buildFixTaskContract,
+  fieldOf,
   FINDING_CATEGORIES,
 };
