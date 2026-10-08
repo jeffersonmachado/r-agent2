@@ -1,0 +1,49 @@
+{
+  "$comment": "Política da capacidade RAP Version & Security Intelligence. Fonte única dos limiares de release, da exposição por serviço e da validade da base de advisories. Alterações aqui mudam veredito de gate — não é configuracao cosmetica.",
+  "version": "1.0.0",
+  "advisorySources": {
+    "osv": {
+      "enabled": true,
+      "url": "https://api.osv.dev/v1/query",
+      "maxAgeHoursBeforeStale": 72,
+      "maxAgeHoursBeforeBlocking": 336
+    },
+    "cisa-kev": {
+      "enabled": true,
+      "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+      "maxAgeHoursBeforeStale": 168
+    },
+    "first-epss": {
+      "enabled": true,
+      "url": "https://api.first.org/data/v1/epss",
+      "maxAgeHoursBeforeStale": 48
+    }
+  },
+  "serviceExposure": {
+    "frontend": "internet",
+    "api": "internet",
+    "asterisk": "partner",
+    "rag-service": "internal",
+    "postgres": "internal",
+    "redis": "internal",
+    "mcp-research": "internal",
+    "api-host": "local",
+    "engineering-runner": "development"
+  },
+  "defaultExposure": "unknown",
+  "scan": {
+    "defaultScope": "direct",
+    "maxComponentsPerRun": 5000,
+    "componentBatchSize": 500
+  },
+  "releaseGate": {
+    "blockOnSeverity": ["CRITICAL", "HIGH"],
+    "blockWhenKevWithoutFix": true,
+    "blockOnStaleAdvisoryBase": true,
+    "requireSbomSnapshot": true,
+    "requireValidSbom": true,
+    "minCoveragePercent": 80,
+    "waiverRequiresExpiry": true,
+    "maxWaiverDays": 90
+  }
+}

@@ -360,6 +360,40 @@ async function getLatestDiscoveryRun({ tenantKey = 'system' } = {}) {
   });
 }
 
+/**
+ * Pacotes DISTINTOS do inventário (ecossistema + nome, com a versão mais grave
+ * encontrada) — é a entrada natural da consulta de advisories: consultar por
+ * pacote reduz drasticamente o número de requisições ao provedor.
+ */
+async function listDistinctPackages({
+  tenantKey = 'system',
+  scope = 'direct',
+  ecosystems = ['npm', 'pypi'],
+  limit = 0,
+} = {}) {
+  await ensureConnected();
+  requireSequelize();
+  const Component = getSecurityComponent();
+  const where = { tenant_key: tenantKey };
+  if (scope === 'direct') where.direct = true;
+  if (scope === 'running') where.version_class = 'RUNNING';
+  if (Array.isArray(ecosystems) && ecosystems.length > 0) {
+    where.ecosystem = { [Op.in]: ecosystems };
+  }
+
+  const rows = await Component.findAll({
+    where,
+    attributes: ['ecosystem', 'name'],
+    group: ['ecosystem', 'name'],
+    order: [['ecosystem', 'ASC'], ['name', 'ASC']],
+    raw: true,
+  });
+  const packages = rows
+    .map((row) => ({ ecosystem: row.ecosystem, name: row.name }))
+    .filter((row) => row.ecosystem && row.name);
+  return limit > 0 ? packages.slice(0, limit) : packages;
+}
+
 /** Histórico de versões de um componente (linha do tempo do que foi observado). */
 async function getComponentVersions({ bomRef, tenantKey = 'system', limit = 50 } = {}) {
   if (!bomRef) throw new Error('security_intel_bom_ref_required');
@@ -379,6 +413,7 @@ module.exports = {
   persistDiscovery,
   getInventory,
   getInventorySummary,
+  listDistinctPackages,
   getLatestDiscoveryRun,
   getComponentVersions,
 };

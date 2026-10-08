@@ -55,6 +55,11 @@ function parseArgs(argv) {
     else if (token === '--no-docker') args.noDocker = true;
     else if (token === '--tenant') args.tenant = argv[++index];
     else if (token === '--out') args.out = argv[++index];
+    else if (token === '--limit') args.limit = argv[++index];
+    else if (token === '--rate') args.rate = argv[++index];
+    else if (token === '--scope') args.scope = argv[++index];
+    else if (token === '--service') args.service = argv[++index];
+    else if (token === '--actor') args.actor = argv[++index];
     else args._.push(token);
   }
   return args;
@@ -294,18 +299,106 @@ async function commandStatus(args) {
   return 0;
 }
 
+async function commandAdvisories(args) {
+  const { listDistinctPackages } = require('../api/services/securityIntel/inventoryStoreService');
+  const { syncAdvisories } = require('../api/services/securityIntel/vulnerabilityScanService');
+  const tenantKey = args.tenant || 'system';
+  const limit = args.limit ? Number(args.limit) : 0;
+  const packages = await listDistinctPackages({ tenantKey, scope: args.scope || 'direct', limit });
+  if (packages.length === 0) {
+    console.error('[security-intel] inventário vazio: rode `discover --persist` antes de sincronizar advisories.');
+    return 3;
+  }
+  const startedMs = Date.now();
+  const result = await syncAdvisories({
+    packages,
+    tenantKey,
+    actor: args.actor || 'security-intel-cli',
+    options: {
+      rateLimitPerSecond: args.rate ? Number(args.rate) : 4,
+      maxPackages: limit || undefined,
+    },
+  });
+  const report = {
+    generatedAt: new Date().toISOString(),
+    status: result.failures.length === 0 ? 'PASS' : 'DEGRADED',
+    durationMs: Date.now() - startedMs,
+    scope: args.scope || 'direct',
+    packages: packages.length,
+    stats: result.stats,
+    failures: result.failures,
+    snapshotSha256: result.snapshotSha256,
+    syncId: result.sync.id,
+    advisoriesTotal: result.sync.advisories_total,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-advisories-report.json', report);
+  if (args.json) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return 0;
+  }
+  console.log('=== Sincronização de advisories (OSV + KEV + EPSS) ===');
+  console.log(`pacotes consultados : ${result.stats.packagesQueried}/${packages.length}${result.stats.packagesTruncated ? ' (TRUNCADO)' : ''}`);
+  console.log(`advisories gravados : ${result.sync.advisories_upserted} (base total: ${result.sync.advisories_total})`);
+  console.log(`KEV casados ........: ${result.stats.kevMatches}  EPSS casados: ${result.stats.epssMatches}`);
+  console.log(`catálogo KEV .......: ${result.stats.kevCatalogSize || 'indisponível'}`);
+  console.log(`snapshot (sha256) ..: ${result.snapshotSha256}`);
+  console.log(`duração ............: ${report.durationMs} ms`);
+  if (result.failures.length > 0) {
+    console.log(`FALHAS ..............: ${result.failures.length}`);
+    for (const failure of result.failures.slice(0, 10)) console.log(`   ! ${failure.package || failure.source}: ${failure.reason}`);
+    console.log('   (a base está PARCIAL: a análise não pode ser lida como completa)');
+  }
+  console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  return 0;
+}
+
+async function commandScan(args) {
+  const { scanComponents, getFindingSummary } = require('../api/services/securityIntel/vulnerabilityScanService');
+  const tenantKey = args.tenant || 'system';
+  const report = await scanComponents({
+    tenantKey,
+    scope: args.scope || null,
+    limit: args.limit ? Number(args.limit) : null,
+    services: args.service ? [args.service] : null,
+    actor: args.actor || 'security-intel-cli',
+  });
+  const summary = await getFindingSummary({ tenantKey });
+  const payload = { generatedAt: new Date().toISOString(), ...report, summary };
+  const reportPath = writeJsonReport('reports/security-intel-scan-report.json', payload);
+  if (args.json) {
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    return 0;
+  }
+  console.log('=== Correlação inventário × advisories ===');
+  console.log(`componentes varridos: ${report.componentsScanned}${report.componentsTruncated ? ' (TRUNCADO pelo teto da política)' : ''}`);
+  console.log(`base de advisories .: ${report.advisoriesInBase} (${report.advisorySource ? `sincronizada há ${report.advisorySource.ageHours}h, status ${report.advisorySource.status}` : 'NENHUMA sincronização registrada'})`);
+  if (report.advisoryBaseStale) {
+    console.log('   ! BASE VENCIDA: a análise abaixo reflete informação antiga — não é prova de ausência de risco');
+  }
+  console.log(`achados com risco ..: ${report.findings} (KEV: ${report.kevFindings}, não comparáveis: ${report.unknownApplicability})`);
+  console.log(`avaliações VEX .....: ${report.notAffected} NOT_AFFECTED/FALSE_POSITIVE registrados (total avaliado: ${report.evaluations})`);
+  console.log(`por severidade .....: ${Object.entries(report.bySeverity).map(([k, v]) => `${k}=${v}`).join(' ') || '-'}`);
+  console.log(`por estado .........: ${Object.entries(report.byStatus).map(([k, v]) => `${k}=${v}`).join(' ') || '-'}`);
+  console.log(`eventos novos ......: ${report.events}  resolvidos: ${report.resolved}`);
+  console.log(`achados abertos ....: ${summary.open}`);
+  console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  return 0;
+}
+
 const COMMANDS = {
   discover: commandDiscover,
   sbom: commandSbom,
   inventory: commandInventory,
   status: commandStatus,
+  advisories: commandAdvisories,
+  scan: commandScan,
 };
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
   if (!command || !COMMANDS[command]) {
-    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status> [--persist] [--json] [--no-docker] [--tenant <key>] [--out <path>]');
+    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>]');
     return 2;
   }
   // Em modo `--json` o stdout é dado de máquina: todo log vai para stderr,
