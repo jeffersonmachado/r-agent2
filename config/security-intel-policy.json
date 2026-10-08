@@ -31,6 +31,17 @@
     "engineering-runner": "development"
   },
   "defaultExposure": "unknown",
+  "vectorIndex": {
+    "$comment": "Check permanente de integridade do índice vetorial do RAG. recommendedMinVersion é DECISÃO DE PLATAFORMA (alinhar com as correções de HNSW/concorrência disponíveis upstream), não requisito do fornecedor. expectedDimensions = 384 (all-MiniLM-L6-v2). Ver docs/architecture/SECURITY_INTELLIGENCE.md.",
+    "tableName": "rag_chunks",
+    "columnName": "embedding",
+    "recommendedMinVersion": "0.8.0",
+    "expectedDimensions": 384,
+    "maxNullEmbeddings": 0,
+    "requireIndexValid": true,
+    "requirePlannerUsesIndex": true,
+    "measuredAt": "2026-10-08"
+  },
   "scan": {
     "defaultScope": "direct",
     "maxComponentsPerRun": 5000,

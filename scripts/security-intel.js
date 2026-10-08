@@ -385,6 +385,50 @@ async function commandScan(args) {
   return 0;
 }
 
+async function commandVectorIndex(args) {
+  const { checkVectorIndexHealth } = require('../api/services/securityIntel/vectorIndexProbe');
+  const { loadPolicy } = require('../api/services/securityIntel/vulnerabilityScanService');
+  const policy = loadPolicy({ reload: true });
+  const result = await checkVectorIndexHealth({ policy });
+  const report = {
+    generatedAt: new Date().toISOString(),
+    status: result.evaluation.verdict,
+    verdict: result.evaluation.verdict,
+    summary: result.evaluation.summary,
+    findings: result.evaluation.findings,
+    unmeasured: result.evaluation.unmeasured,
+    essentialUnmeasured: result.evaluation.essentialUnmeasured,
+    evidence: result.evaluation.evidence,
+    policy: result.policy,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-vector-index-report.json', report);
+  if (args.json) {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return result.evaluation.verdict === 'INVALID' ? 1 : 0;
+  }
+  console.log('=== Integridade do índice vetorial (RAG) ===');
+  console.log(`veredito ...........: ${result.evaluation.verdict}`);
+  console.log(`resumo .............: ${result.evaluation.summary}`);
+  const ev = result.evaluation.evidence;
+  if (ev.extension) console.log(`extensão ...........: ${ev.extension.name} ${ev.extension.version || '(sem versão)'} (mínimo recomendado: ${ev.recommendedMinVersion || 'não declarado'})`);
+  if (ev.index) {
+    console.log(`índice .............: ${ev.index.name} [${ev.index.method}] opclass=${ev.index.opclass || '-'}`);
+    console.log(`  validade ..........: indisvalid=${ev.index.isValid} indisready=${ev.index.isReady} indislive=${ev.index.isLive} (scans=${ev.index.scans ?? '?'})`);
+  }
+  if (ev.embeddings) {
+    console.log(`embeddings ........: ${ev.embeddings.total} linhas, ${ev.embeddings.nulls} nulo(s), ${ev.embeddings.wrongDimensions} com dimensão errada (esperada ${ev.embeddings.expectedDimensions ?? 'não declarada'})`);
+  }
+  if (ev.planner) console.log(`planner usa índice .: ${ev.planner.usesVectorIndex === true ? 'SIM' : 'NÃO'}`);
+  for (const finding of result.evaluation.findings) {
+    console.log(`   [${finding.severity}] ${finding.code}: ${finding.message}`);
+  }
+  if (result.evaluation.unmeasured.length > 0) {
+    console.log(`   não medido: ${result.evaluation.unmeasured.join(', ')} (lacuna de evidência, não é "está tudo bem")`);
+  }
+  console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  return result.evaluation.verdict === 'INVALID' ? 1 : 0;
+}
+
 const COMMANDS = {
   discover: commandDiscover,
   sbom: commandSbom,
@@ -392,13 +436,14 @@ const COMMANDS = {
   status: commandStatus,
   advisories: commandAdvisories,
   scan: commandScan,
+  'vector-index': commandVectorIndex,
 };
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
   if (!command || !COMMANDS[command]) {
-    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>]');
+    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>]');
     return 2;
   }
   // Em modo `--json` o stdout é dado de máquina: todo log vai para stderr,
