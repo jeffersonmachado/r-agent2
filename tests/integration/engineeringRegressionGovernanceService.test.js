@@ -14,10 +14,14 @@
  * (scripts/governance/validate-engineering-router-v1.js) como subprocess real.
  */
 
+const fs = require('fs');
+const path = require('path');
 const sequelizeModule = require('../../api/db/sequelize');
 const engineeringTaskService = require('../../api/services/engineeringRouter/engineeringTaskService');
 const { createWorkspace, applyPatch, destroyWorkspace } = require('../../api/services/engineeringRouter/patchApplyService');
 const { checkRegression, checkGovernance } = require('../../api/services/engineeringRouter/regressionGovernanceService');
+const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
+const { ROOT } = require('../../api/services/engineeringRouter/contextBuilderService');
 
 jest.setTimeout(90000);
 
@@ -162,6 +166,85 @@ describe('ER-V1-FINAL-006 — checkRegression executa de verdade (Postgres + wor
     expect(result.evidence.planTier).toBe('MEDIUM');
     // targeted (1) + pelo menos um teste relacionado a "pathBoundary" encontrado no repositório.
     expect(result.evidence.commandCount).toBeGreaterThan(1);
+  });
+
+  test('source_fingerprint é da ÁRVORE DA TENTATIVA, nunca do ROOT do processo', async () => {
+    if (skipIfNoDatabase()) return;
+    const { task, attempt } = await makeTaskAndAttempt({
+      testCommands: ['node tests/fixtures/engineering-router-sandbox/printEnvProbe.js'],
+    });
+    const workspace = await createWorkspace(task.id, attempt.attempt_number);
+    createdWorkspaces.push(workspace);
+
+    // Altera SÓ a árvore da tentativa, num diretório que participa do fingerprint (`engine/` está
+    // em SOURCE_ROOTS). Sem isso as duas árvores teriam o MESMO conteúdo — a tentativa nasce do
+    // HEAD do ROOT — e o teste não conseguiria distinguir ROOT de workspace.
+    const alvoRel = 'engine/engineeringRouter/hunkNormalizer.js';
+    const alvoAbs = path.join(workspace, alvoRel);
+    const original = fs.readFileSync(alvoAbs, 'utf8');
+    try {
+      fs.writeFileSync(alvoAbs, `${original}\n// marcador de teste: muda APENAS a arvore da tentativa\n`, 'utf8');
+
+      const result = await checkRegression({
+        taskId: task.id,
+        attemptId: attempt.id,
+        workspacePath: workspace,
+        touchedPaths: [],
+        risk: 'LOW',
+        targetedCommands: task.test_commands,
+      });
+
+      expect(result.pass).toBe(true);
+      expect(result.evidence.sourceFingerprintRoot).toEqual({
+        kind: 'WORKSPACE_DA_TENTATIVA', path: workspace,
+      });
+
+      const runs = await engineeringTaskService.listRegressionRuns(attempt.id);
+      expect(runs).toHaveLength(1);
+      // O contrato do modelo diz "working tree no momento da execução".
+      expect(runs[0].source_fingerprint).toBe(computeSourceFingerprint(workspace));
+      // O DEFEITO medido: antes o campo carregava o fingerprint do ROOT do processo (outra árvore).
+      expect(runs[0].source_fingerprint).not.toBe(computeSourceFingerprint(ROOT));
+    } finally {
+      fs.writeFileSync(alvoAbs, original, 'utf8');
+    }
+  });
+
+  test('plano CRITICAL registra COMPOSIÇÃO e sinaliza quando degenera para só o contrato', async () => {
+    if (skipIfNoDatabase()) return;
+    const { task, attempt } = await makeTaskAndAttempt({
+      testCommands: ['node tests/fixtures/engineering-router-sandbox/printEnvProbe.js'],
+      risk: 'CRITICAL',
+    });
+    const workspace = await createWorkspace(task.id, attempt.attempt_number);
+    createdWorkspaces.push(workspace);
+
+    // Caminhos que não casam NENHUM teste do repositório ⇒ plano sem related/subsystem.
+    // É o caso REAL medido (3 comandos num tier CRITICAL) — aqui ele é reproduzido sem custo: o
+    // plano degenerado executa 1 comando. O caso AMPLO (related/subsystem preenchidos) é provado no
+    // teste unitário puro do plano: executá-lo aqui dispararia dezenas de suítes reais.
+    const degenerado = await checkRegression({
+      taskId: task.id,
+      attemptId: attempt.id,
+      workspacePath: workspace,
+      touchedPaths: ['docs/zzz-sem-teste/inexistente.md'],
+      risk: 'CRITICAL',
+      targetedCommands: task.test_commands,
+    });
+
+    expect(degenerado.pass).toBe(true);
+    expect(degenerado.evidence.planBreakdown).toEqual({ targeted: 1, related: 0, subsystem: 0 });
+    expect(degenerado.evidence.planDegraded).toBe(true);
+    expect(degenerado.evidence.touchedPaths).toEqual(['docs/zzz-sem-teste/inexistente.md']);
+    // A evidência passa a DISTINGUIR os dois planos (antes, 3 e 43 comandos eram indistinguíveis).
+    expect(degenerado.evidence.commandCount).toBe(1);
+
+    // O sinal não fica só no JSON: vira evento operacional consultável.
+    const telemetria = await engineeringTaskService.listTelemetry(task.id);
+    const degradado = telemetria.filter((e) => e.event_type === 'REGRESSION_PLAN_DEGRADED');
+    expect(degradado).toHaveLength(1);
+    expect(degradado[0].detail.planTier).toBe('CRITICAL');
+    expect(degradado[0].detail.breakdown).toEqual({ targeted: 1, related: 0, subsystem: 0 });
   });
 });
 

@@ -186,7 +186,13 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
     };
   }
 
-  const sourceFingerprint = computeSourceFingerprint(ROOT);
+  // FINGERPRINT DA FONTE (defeito medido em 2026-10-08): o modelo `EngineeringRegressionRun`
+  // declara que `source_fingerprint` é "da working tree no momento da execução", mas o cálculo
+  // usava o ROOT do PROCESSO enquanto os comandos rodam com `cwd: workspacePath`. Numa task de
+  // missão o workspace é materializado do commit da FONTE DA MISSÃO, então o fingerprint descrevia
+  // a `main` e o veredito falava do WORKSPACE — duas árvores, o mesmo campo. Agora fingerprinta a
+  // árvore onde os comandos de fato rodaram, e a raiz usada fica registrada na evidência.
+  const sourceFingerprint = computeSourceFingerprint(workspacePath);
   const startedAt = new Date();
   // Cada comando da regressão tem o deadline da política REGRESSION_COMMAND (registry), nunca o
   // default de teste unitário: regressão é legitimamente longa e é governada por progresso
@@ -218,6 +224,26 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
     completed_at: completedAt,
   });
 
+  // PLANO DEGRADADO É SINALIZADO, NÃO SILENCIADO: um tier HIGH/CRITICAL que executa apenas os
+  // comandos do contrato mede menos do que promete. Sem este evento, o caso só existiria num JSON
+  // de evidência que ninguém consulta — e foi assim que ele passou desapercebido.
+  if (plan.degraded === true) {
+    await engineeringTaskService.recordTelemetry({
+      task_id: taskId,
+      attempt_id: attemptId,
+      role: 'REGRESSION',
+      result: 'PLAN_DEGRADED',
+      event_type: 'REGRESSION_PLAN_DEGRADED',
+      detail: {
+        planTier: plan.tier,
+        breakdown: plan.breakdown,
+        commandCount: plan.commands.length,
+        touchedPaths: Array.isArray(touchedPaths) ? touchedPaths : [],
+        availableTestFilesCount: testFileAudit ? testFileAudit.availableTestFilesCount : null,
+      },
+    });
+  }
+
   const failed = results.filter((r) => r.status !== 'PASS');
   return {
     pass: allPass,
@@ -226,8 +252,15 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
       checkedAt,
       planTier: plan.tier,
       sourceFingerprint,
+      // De QUAL árvore é o fingerprint acima (auditável): antes ele vinha do ROOT do processo.
+      sourceFingerprintRoot: { kind: 'WORKSPACE_DA_TENTATIVA', path: workspacePath },
       outcome,
       commandCount: plan.commands.length,
+      // Composição do plano por origem + os caminhos tocados que a alimentaram: sem isto, um plano
+      // CRITICAL com 3 comandos e outro com 43 produziam evidência indistinguível.
+      planBreakdown: plan.breakdown,
+      planDegraded: plan.degraded === true,
+      touchedPaths: Array.isArray(touchedPaths) ? touchedPaths : [],
       testFileAudit,
       commands: results.map((r) => ({ command: r.command, status: r.status, outcome: r.outcome || r.status, exitCode: r.exitCode })),
       failed: failed.map((r) => ({ command: r.command, status: r.status, outcome: r.outcome || r.status, exitCode: r.exitCode })),

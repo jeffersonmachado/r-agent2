@@ -103,33 +103,49 @@ function findSubsystemTestFiles(touchedPaths, availableTestFiles) {
  * @param {string[]} [params.availableTestFiles] - candidatos a teste relacionado/subsistema,
  *   já resolvidos pelo chamador (glob real do repositório) — ausente/vazio é seguro (o plano
  *   cai para só `targeted`, nunca lança).
- * @returns {{tier:string, commands:string[]}}
+ * @returns {{tier:string, commands:string[], breakdown:{targeted:number, related:number,
+ *   subsystem:number}, degraded:boolean}}
  */
 function buildRegressionPlan({ touchedPaths = [], targetedCommands = [], risk, availableTestFiles = [] } = {}) {
   const tier = RISK_SET.has(risk) ? risk : 'LOW';
   const commands = [];
   const seen = new Set();
-  const add = (cmd) => {
-    if (!cmd || seen.has(cmd)) return;
+  // COMPOSIÇÃO DO PLANO, por origem. Achado medido (2026-10-08): um plano de tier CRITICAL executou
+  // SOMENTE os testCommands do contrato (3 comandos) enquanto outro, no MESMO código, executou 43 —
+  // e nada na evidência distinguia os dois casos. A composição passa a ser parte do retorno para que
+  // o chamador possa registrar, e sinalizar, um plano degradado.
+  const breakdown = { targeted: 0, related: 0, subsystem: 0 };
+  const add = (cmd, bucket) => {
+    if (!cmd || seen.has(cmd)) return false;
     seen.add(cmd);
     commands.push(cmd);
+    breakdown[bucket] += 1;
+    return true;
   };
 
-  for (const cmd of targetedCommands) add(cmd);
+  for (const cmd of targetedCommands) add(cmd, 'targeted');
 
   if (tier === 'MEDIUM' || tier === 'HIGH' || tier === 'CRITICAL') {
     for (const testFile of findRelatedTestFiles(touchedPaths, availableTestFiles)) {
-      add(`npx jest ${testFile}`);
+      add(`npx jest ${testFile}`, 'related');
     }
   }
 
   if (tier === 'HIGH' || tier === 'CRITICAL') {
     for (const testFile of findSubsystemTestFiles(touchedPaths, availableTestFiles)) {
-      add(`npx jest ${testFile}`);
+      add(`npx jest ${testFile}`, 'subsystem');
     }
   }
 
-  return { tier, commands };
+  // `degraded`: o tier promete amplitude ALÉM do contrato (HIGH/CRITICAL) e nada de related/subsystem
+  // entrou. Não é erro por si só — um patch que só toca arquivos sem teste casável é legítimo — mas
+  // deixar isso indistinguível foi exatamente o que escondeu o caso dos 3 comandos. O módulo apenas
+  // DECLARA; quem decide registrar ou sinalizar é o chamador.
+  const degraded = (tier === 'HIGH' || tier === 'CRITICAL')
+    && breakdown.related === 0
+    && breakdown.subsystem === 0;
+
+  return { tier, commands, breakdown, degraded };
 }
 
 module.exports = {

@@ -136,6 +136,52 @@ describe('ER-V1-FINAL-006 — regressionPlan (módulo puro)', () => {
     expect(occurrences).toHaveLength(1);
   });
 
+  test('declara a COMPOSIÇÃO do plano e sinaliza plano degenerado (achado medido: 3 vs 43 comandos)', () => {
+    // Caso degenerado REAL: tier CRITICAL que executa SOMENTE os testCommands do contrato porque
+    // os caminhos tocados não casam nenhum teste. Aconteceu ao vivo (3 comandos) enquanto outro
+    // task, no mesmo código, executou 43 — e a evidência não distinguia os dois.
+    const degenerado = buildRegressionPlan({
+      touchedPaths: ['docs/sem-teste/inexistente.md'],
+      targetedCommands: ['npm test'],
+      risk: 'CRITICAL',
+      availableTestFiles: AVAILABLE,
+    });
+    expect(degenerado.breakdown).toEqual({ targeted: 1, related: 0, subsystem: 0 });
+    expect(degenerado.degraded).toBe(true);
+
+    // Com caminho que casa teste, o plano é amplo e `degraded` é falso.
+    const amplo = buildRegressionPlan({
+      touchedPaths: ['api/services/engineeringRouter/promotionService.js'],
+      targetedCommands: ['npm test'],
+      risk: 'CRITICAL',
+      availableTestFiles: AVAILABLE,
+    });
+    expect(amplo.breakdown.targeted).toBe(1);
+    expect(amplo.breakdown.related).toBeGreaterThan(0);
+    expect(amplo.degraded).toBe(false);
+
+    // Tiers que NÃO prometem amplitude além do contrato nunca são "degradados" por isso.
+    const low = buildRegressionPlan({
+      touchedPaths: ['docs/sem-teste/inexistente.md'],
+      targetedCommands: ['npm test'],
+      risk: 'LOW',
+      availableTestFiles: AVAILABLE,
+    });
+    expect(low.degraded).toBe(false);
+    expect(low.breakdown).toEqual({ targeted: 1, related: 0, subsystem: 0 });
+  });
+
+  test('composição conta o comando DEDUPLICADO uma única vez (breakdown soma = commands)', () => {
+    const plan = buildRegressionPlan({
+      touchedPaths: ['api/services/engineeringRouter/promotionService.js'],
+      targetedCommands: ['npx jest tests/integration/engineeringPromotionService.test.js'],
+      risk: 'HIGH',
+      availableTestFiles: AVAILABLE,
+    });
+    const soma = plan.breakdown.targeted + plan.breakdown.related + plan.breakdown.subsystem;
+    expect(soma).toBe(plan.commands.length);
+  });
+
   test('risk desconhecido/ausente cai em LOW (fail-closed conservador, nunca escopo maior por engano)', () => {
     const plan = buildRegressionPlan({
       touchedPaths: ['api/services/engineeringRouter/promotionService.js'],
