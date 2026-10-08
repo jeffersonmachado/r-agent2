@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-08T21:52:27.371Z",
+  "generatedAt": "2026-10-08T23:00:22.553Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "24c510cedb28f2f1a019734164e8fbbc34e8c94e",
+  "commit": "65059198a344b72c130a345930e666030c9605f7",
   "dbAvailable": true,
   "totals": {
-    "models": 221,
-    "validated": 221,
+    "models": 222,
+    "validated": 222,
     "visited": 0,
     "failed": 0,
     "warnings": 49
@@ -9587,6 +9587,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "12 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityPatchCandidate",
+      "table": "security_patch_candidates",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityPatchCandidate.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_patch_candidates"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008230000-create-security-patch-candidates.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_patch_candidates' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "25 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
