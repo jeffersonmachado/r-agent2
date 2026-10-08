@@ -67,5 +67,32 @@
       "detail": "nunca emitir comando para arquivo que nao existe onde o comando roda; registrar os ausentes como observacao auditavel"
     }
   ],
-  "constraintHonored": "nenhuma alteracao de codigo feita para este achado; medicao apenas"
+  "constraintHonored": "nenhuma alteracao de codigo feita para este achado; medicao apenas",
+  "fix": {
+    "commit": "62853bfb",
+    "files": [
+      "api/services/engineeringRouter/regressionGovernanceService.js",
+      "tests/unit/engineeringRegressionPlanSource.test.js"
+    ],
+    "change": [
+      "resolveAvailableTestFiles(workspacePath) resolve os candidatos no MESMO lugar onde os comandos rodam",
+      "createWorkspaceReader: walk de fs com cache, separador /, sem seguir symlink, pulando node_modules/.git/dist/coverage/logs/tmp/cache",
+      "suites CRIADAS pelo patch entram no plano (workspace e a fonte, nao o source_commit)",
+      "exclusoes do jest.config.cjs real (tests/rpa, fixtures do Router) mantidas",
+      "AUDITORIA: testFileAudit {source, availableTestFilesCount, candidatesAbsentInWorkspace} entra na evidencia do check"
+    ],
+    "proof": {
+      "twoWay": "codigo anterior: 8 de 8 casos falham; corrigido: 8/8 PASS",
+      "regression": "suite do Router 324 passed"
+    },
+    "measuredMagnitude": "no probe com workspace temporario, 1029 suites do repositorio principal estavam ausentes no workspace — a dimensao do desalinhamento"
+  },
+  "preExistingDefectFound": {
+    "test": "tests/integration/engineeringRegressionGovernanceService.test.js › checkGovernance › reprovacao real do gate e propagada como pass:false com evidencia (exec mockado, sem quebrar o gate real do repo)",
+    "error": "TypeError: spawn is not a function (api/utils/operationDeadline.js:330)",
+    "cause": "o teste MOCA exec, mas checkGovernance passou a usar runChildWithDeadline, que usa spawn",
+    "status": "PRE-EXISTENTE — confirmado rodando o MESMO teste contra o commit 776e21f2 (1 failed, 4 passed)",
+    "impact": "a suite fica vermelha por um teste desatualizado, nao por defeito de produto; 1 de 325 no lote do Router",
+    "action": "nao corrigido (fora do escopo autorizado) — registrado para decisao"
+  }
 }
