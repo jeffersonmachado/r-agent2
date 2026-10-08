@@ -43,9 +43,12 @@ artefato está ausente ou indica o contrário.
 
 - Rotas registradas em `frontend/src/main.jsx` (`isEngineering*`, checadas da mais específica
   — `/dev/engineering/tasks/:id` — para a mais genérica — `/dev/engineering`).
-- Item de menu "Engineering" em `frontend/src/navigation/menu.js`, dentro do grupo
-  `super-admin`, com `classifications: ['DEVELOPMENT']` em cada folha (mesmo padrão usado por
-  `dev-benchmark-research`).
+- Item de menu "Engineering" em `frontend/src/navigation/menu.js`, no grupo `dev-engineering`,
+  filho direto do nó de topo `plataforma` e exposto pela **área `dev`** (rail DEV, blueprint
+  `dev` em `frontend/src/navigation/workspaceAreas.js`). `roles: ['super_admin']` e
+  `classifications: ['DEVELOPMENT']` em cada folha (mesmo padrão usado por
+  `dev-benchmark-research`). Desde 2026-10-08 a superfície de engenharia NÃO fica mais dentro
+  do grupo `super-admin` (Admin).
 - `canAccessPath` (`frontend/src/utils/menuPermissions.js`) bloqueia acesso direto por URL para
   quem não é `DEVELOPMENT` — mas a autoridade real é sempre o backend
   (`requireClassification('DEVELOPMENT')` em toda rota `/engineering/*`).

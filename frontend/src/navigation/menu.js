@@ -364,12 +364,38 @@ export const navigationMenu = [
         ],
       },
       {
+        // Área `dev` (rail DEV): superfície de engenharia — Central Dev e Engineering Model
+        // Router. Fica FORA do grupo `super-admin` de propósito: as ferramentas de
+        // engenharia pertencem à área Dev, não ao Admin. Os `roles` são herdados pelas
+        // folhas e são idênticos aos do antigo grupo `super-admin` (não relaxa acesso).
+        id: 'dev-hub',
+        label: 'Dev',
+        roles: ['super_admin'],
+        children: [
+          { id: 'dev', label: 'Central Dev', path: '/dev', roles: ['super_admin'] },
+        ],
+      },
+      {
+        id: 'dev-engineering',
+        label: 'Engineering',
+        roles: ['super_admin'],
+        children: [
+          { id: 'dev-engineering-overview', label: 'Overview', path: '/dev/engineering', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          { id: 'dev-engineering-tasks', label: 'Tasks', path: '/dev/engineering/tasks', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          { id: 'dev-engineering-missions', label: 'Missions / Enriquecimento', path: '/dev/engineering/missions', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          // Ciclo de bug (finding → reprodução → task → correção → regressão). DEVELOPMENT-only:
+          // é superfície interna de engenharia, nunca do Workspace operacional.
+          { id: 'dev-engineering-findings', label: 'Findings / Ciclo de Bug', path: '/dev/engineering/findings', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          { id: 'dev-engineering-models', label: 'Models / Router', path: '/dev/engineering/models', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          { id: 'dev-engineering-release-closure', label: 'Release Closure', path: '/dev/engineering/release-closure', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+        ],
+      },
+      {
         id: 'super-admin',
         label: 'Super Admin',
         roles: ['super_admin'],
         children: [
           { id: 'super-admin-page', label: 'Super Admin', path: '/super-admin', roles: ['super_admin'] },
-          { id: 'dev', label: 'Central Dev', path: '/dev', roles: ['super_admin'] },
           { id: 'agent-os-hub', label: 'Agent OS', path: '/admin/agents', roles: ['super_admin'] },
           { id: 'dev-dashboard-alias', label: 'Dashboard Dev', path: '/dev-dashboard', roles: ['super_admin'], hiddenInSidebar: true },
           { id: 'generate-system', label: 'Gerar Sistema', path: '/generate-system', permission: { resource: 'config', action: 'read' }, roles: ['super_admin'] },
@@ -387,20 +413,6 @@ export const navigationMenu = [
               { id: 'rpa-replays', label: 'Replays RPA', path: '/rpa-replays', permission: { resource: 'reports', action: 'read' }, classifications: ['SUPPORT', 'DEVELOPMENT'] },
               { id: 'rpa-seeds', label: 'Seeds RPA', path: '/dev/rpa-seeds', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
               { id: 'dev-benchmark-research', label: 'Pesquisa de Benchmark', path: '/dev/benchmark-research', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
-            ],
-          },
-          {
-            id: 'dev-engineering',
-            label: 'Engineering',
-            children: [
-              { id: 'dev-engineering-overview', label: 'Overview', path: '/dev/engineering', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
-              { id: 'dev-engineering-tasks', label: 'Tasks', path: '/dev/engineering/tasks', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
-              { id: 'dev-engineering-missions', label: 'Missions / Enriquecimento', path: '/dev/engineering/missions', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
-              // Ciclo de bug (finding → reprodução → task → correção → regressão). DEVELOPMENT-only:
-              // é superfície interna de engenharia, nunca do Workspace operacional.
-              { id: 'dev-engineering-findings', label: 'Findings / Ciclo de Bug', path: '/dev/engineering/findings', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
-              { id: 'dev-engineering-models', label: 'Models / Router', path: '/dev/engineering/models', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
-              { id: 'dev-engineering-release-closure', label: 'Release Closure', path: '/dev/engineering/release-closure', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
             ],
           },
         ],
@@ -699,21 +711,43 @@ export function flattenNavigationLeaves(nodes, items = []) {
 }
 
 export function findNavigationTrail(nodes, currentPath, trail = []) {
+  let best = [];
+
   for (const node of nodes) {
     const nextTrail = [...trail, node];
-    if (node.path && pathMatches(node.path, currentPath)) {
-      if (Array.isArray(node.children) && node.children.length > 0) {
-        const deeper = findNavigationTrail(node.children, currentPath, nextTrail);
-        if (deeper.length > 0) return deeper;
-      }
-      return nextTrail;
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+    const isCandidate = Boolean(node.path) && pathMatches(node.path, currentPath);
+
+    if (isCandidate) {
+      const deeper = hasChildren ? findNavigationTrail(node.children, currentPath, nextTrail) : [];
+      const candidate = deeper.length > 0 ? deeper : nextTrail;
+      if (isMoreSpecificTrail(candidate, best)) best = candidate;
+      // Segue para os irmãos: um item mais específico pode vir depois. `pathMatches` é
+      // por PREFIXO, e o primeiro match nem sempre é o item da página (`/dev` casa
+      // `/dev/engineering`, mas a página de engenharia é `/dev/engineering`).
+      continue;
     }
-    if (Array.isArray(node.children) && node.children.length > 0) {
+
+    if (hasChildren) {
       const nested = findNavigationTrail(node.children, currentPath, nextTrail);
-      if (nested.length > 0) return nested;
+      if (isMoreSpecificTrail(nested, best)) best = nested;
     }
   }
-  return [];
+
+  return best;
+}
+
+/** Path casado do último item da trilha (quanto maior, mais específico). */
+function matchedPathLength(trail) {
+  const last = trail[trail.length - 1];
+  return last?.path ? normalizeNavigationPath(last.path).length : -1;
+}
+
+/** Uma trilha é mais específica quando casa um path mais longo; empate mantém a primeira. */
+function isMoreSpecificTrail(candidate, current) {
+  if (!candidate || candidate.length === 0) return false;
+  if (!current || current.length === 0) return true;
+  return matchedPathLength(candidate) > matchedPathLength(current);
 }
 
 export function getTopLevelNode(nodes, currentPath) {

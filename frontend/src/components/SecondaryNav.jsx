@@ -37,6 +37,24 @@ function buildSections(activeArea) {
 
   const shouldShowInSecondaryNav = (item) => item?.path && !item.hiddenInSubNav;
 
+  // Um grupo vira uma seção com as folhas DIRETAS que contém (rótulo = label do grupo) e
+  // delega para os subgrupos. Sem a recursão, um grupo aninhado dentro de outro grupo
+  // (ex.: Super Admin → Engineering) era descartado em silêncio: o item era declarado no
+  // menu e mesmo assim não existia em nenhuma navegação.
+  const collectGroupSections = (group) => {
+    const found = [];
+    const directItems = (group.children || []).filter(shouldShowInSecondaryNav);
+    if (directItems.length > 0) {
+      found.push({ id: group.id, label: group.label, items: directItems });
+    }
+    (group.children || []).forEach((nested) => {
+      if (Array.isArray(nested.children) && nested.children.length > 0) {
+        found.push(...collectGroupSections(nested));
+      }
+    });
+    return found;
+  };
+
   activeArea.nodes.forEach((node) => {
     if (shouldShowInSecondaryNav(node)) {
       fallbackItems.push(node);
@@ -44,10 +62,7 @@ function buildSections(activeArea) {
 
     (node.children || []).forEach((child) => {
       if (Array.isArray(child.children) && child.children.length > 0) {
-        const children = child.children.filter(shouldShowInSecondaryNav);
-        if (children.length > 0) {
-          sections.push({ id: child.id, label: child.label, items: children });
-        }
+        sections.push(...collectGroupSections(child));
         return;
       }
 
@@ -77,7 +92,10 @@ function buildSections(activeArea) {
 
 export function SecondaryNav({ agent, currentPath, onCollapsedChange, capabilities }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [collapsedSections, setCollapsedSections] = useState({});
+  // Guarda APENAS a intenção explícita do usuário (`true` = recolhida). O padrão é
+  // derivado da rota a cada render — guardar o padrão em estado criava um snapshot que
+  // "grudava": a seção que contém a rota ativa ficava recolhida depois da 1ª resolução.
+  const [collapsedOverrides, setCollapsedOverrides] = useState({});
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
   const prevPathRef = useRef(currentPath);
@@ -94,6 +112,18 @@ export function SecondaryNav({ agent, currentPath, onCollapsedChange, capabiliti
     () => (projectContextSection ? [projectContextSection, ...sections] : sections),
     [projectContextSection, sections],
   );
+
+  // Item ativo = match MAIS ESPECÍFICO. `pathMatches` é por prefixo (`/dev` casa
+  // `/dev/engineering`), então sem isso dois itens da mesma área ficam marcados como
+  // ativos ao mesmo tempo e a seção errada abre por padrão.
+  const activeItemPath = useMemo(() => {
+    const paths = sectionsWithContext
+      .flatMap((section) => section.items.map((item) => item.path))
+      .filter(Boolean);
+    return paths
+      .filter((path) => pathMatches(path, currentPath))
+      .sort((left, right) => right.length - left.length)[0] || null;
+  }, [sectionsWithContext, currentPath]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1080px)');
@@ -145,16 +175,6 @@ export function SecondaryNav({ agent, currentPath, onCollapsedChange, capabiliti
     return () => document.removeEventListener('pointerdown', handleOutsideClick);
   }, [isMobilePanelOpen]);
 
-  useEffect(() => {
-    setCollapsedSections((previous) => {
-      const nextState = {};
-      sectionsWithContext.forEach((section, index) => {
-        nextState[section.id] = previous[section.id] ?? index > 0;
-      });
-      return nextState;
-    });
-  }, [sectionsWithContext]);
-
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
   const filteredSections = useMemo(() => {
@@ -176,16 +196,26 @@ export function SecondaryNav({ agent, currentPath, onCollapsedChange, capabiliti
       .filter((section) => section.items.length > 0);
   }, [sectionsWithContext, normalizedSearchTerm]);
 
-  function toggleSection(sectionId) {
-    setCollapsedSections((previous) => ({
+  /** Seção recolhida? Override do usuário vence; sem override, a 1ª seção e a seção da
+   *  rota atual abrem. Derivado a cada render, então acompanha a navegação. */
+  function isSectionCollapsed(section, index) {
+    const override = collapsedOverrides[section.id];
+    if (typeof override === 'boolean') return override;
+    const containsActiveItem = section.items.some((item) => item.path && item.path === activeItemPath);
+    return !(index === 0 || containsActiveItem);
+  }
+
+  function toggleSection(section, index) {
+    const nextCollapsed = !isSectionCollapsed(section, index);
+    setCollapsedOverrides((previous) => ({
       ...previous,
       ...(isMobileViewport
-        ? sectionsWithContext.reduce((accumulator, section) => {
-            accumulator[section.id] = section.id !== sectionId;
+        ? sectionsWithContext.reduce((accumulator, item) => {
+            accumulator[item.id] = item.id !== section.id;
             return accumulator;
           }, {})
         : {}),
-      [sectionId]: isMobileViewport ? false : !previous[sectionId],
+      [section.id]: isMobileViewport ? false : nextCollapsed,
     }));
   }
 
@@ -230,14 +260,14 @@ export function SecondaryNav({ agent, currentPath, onCollapsedChange, capabiliti
         </div>
 
         <div className="rap-secondary-nav-scroll">
-          {filteredSections.map((section) => {
-            const isCollapsed = normalizedSearchTerm ? false : !!collapsedSections[section.id];
+          {filteredSections.map((section, index) => {
+            const isCollapsed = normalizedSearchTerm ? false : isSectionCollapsed(section, index);
             return (
               <section key={section.id} className={`rap-secondary-nav-section ${isCollapsed ? 'is-collapsed' : ''}`}>
                 <button
                   type="button"
                   className="rap-secondary-nav-section-header"
-                  onClick={() => toggleSection(section.id)}
+                  onClick={() => toggleSection(section, index)}
                   aria-expanded={!isCollapsed}
                   aria-controls={`secondary-nav-section-${section.id}`}
                 >
@@ -257,7 +287,7 @@ export function SecondaryNav({ agent, currentPath, onCollapsedChange, capabiliti
                       <NavigationLink
                         key={item.id}
                         to={item.path}
-                        className={`rap-secondary-nav-item ${pathMatches(item.path, currentPath) ? 'is-active' : ''}`}
+                        className={`rap-secondary-nav-item ${item.path === activeItemPath ? 'is-active' : ''}`}
                         onClick={handleItemClick}
                       >
                         <span className="rap-secondary-nav-item-label">{item.label}</span>

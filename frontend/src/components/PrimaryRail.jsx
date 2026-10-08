@@ -12,6 +12,7 @@ const RAIL_PREFERRED_PATHS = {
   conhecimento: ['/knowledge-base', '/rag-documents', '/faq', '/product-docs', '/web-scraping'],
   operacoes: ['/supervisor', '/operations-dashboard', '/analytics', '/channel-health', '/pbx'],
   builder: ['/editor', '/bpmn-editor', '/automations', '/projects'],
+  dev: ['/dev'],
   admin: ['/config', '/agents', '/tenants', '/audit', '/rbac', '/access-control', '/super-admin'],
 };
 

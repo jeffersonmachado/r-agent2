@@ -122,3 +122,27 @@ Notas de runtime medidas:
 - Ordem de rota é contrato: `GET /self-assessment` estava capturada por `/:id` e respondia o
   handler errado — rota estática tem de vir ANTES de `/:id` (teste de regressão em
   `tests/unit/engineeringMissionRoutes.test.js`).
+
+## Área DEV passa a existir de verdade (2026-10-08)
+
+Medido em browser real (`systemadmin` / tenant `system`) ao tentar abrir a UI do engenheiro **pelo menu**: ela não existia em navegação nenhuma. Três defeitos de produto:
+
+1. **Grupo aninhado era descartado em silêncio.** `SecondaryNav.buildSections` só tratava UM nível de grupo; `Engineering` e `QA & RPA` são grupos de nível 3 (dentro de `plataforma > super-admin`) e sumiam. Corrigido com recursão (`collectGroupSections`).
+2. **`/dev*` resolvia para a área `admin`.** O rail DEV era injetado sinteticamente por `PrimaryRail` e não tinha blueprint em `workspaceAreas.js`; o Admin declara prefixo `/dev` (para `/dev/system-status` e `/dev/stack-versions`), então o menu secundário da área DEV mostrava o menu do Admin.
+3. **Trilha/ativo por prefixo.** `pathMatches` é por prefixo, então `/dev` casava `/dev/engineering`: breadcrumb/H1 das páginas de engenharia mostravam "Central Dev" e **dois** itens apareciam ativos. Agora vence o path mais específico (`findNavigationTrail`) e o item ativo é único (`activeItemPath`).
+
+Layout canônico resultante:
+
+- **Área Dev (rail DEV)**: blueprint `dev` em `workspaceAreas.js` (`pathPrefixes: ['/dev']`, sem `fallbackPath` de propósito — sem item acessível a área não existe e o rail não aparece). Seções: **DEV** (`/dev`, Central Dev) e **ENGINEERING** (`/dev/engineering`, `/tasks`, `/missions`, `/findings`, `/models`, `/release-closure`).
+- Nós de menu: grupo `dev-hub` (label `Dev`) + grupo `dev-engineering`, ambos filhos diretos de `plataforma`, com `roles: ['super_admin']`. **Os `roles` do grupo são obrigatórios**: sem eles as folhas de engenharia deixariam de herdar `super_admin` (o scanner de inventário herda roles de ancestrais) e o campo `roles` de `config/system-inventory.json` mudaria → fingerprint estrutural diferente → `REVALIDATION_REQUIRED` no coverage gate. Medido: com os roles, `inventory:build` altera só `generatedAt`.
+- A área `admin` exclui `dev-hub`/`dev-engineering`; a área `dev` exclui `operacao` e `dev-qa-rpa` (recorte por EXCLUSÃO: `includeNodeIds` poda os filhos do nó incluído).
+- `dev-qa-rpa` **permanece** em Admin > Super Admin (decisão de 2026-07-23) — mas agora **visível**, e `/rpa-replays` continua SUPPORT/DEVELOPMENT no Admin.
+- Seção recolhida por padrão escondia a rota atual: o estado passou a guardar apenas o override do usuário e o padrão é derivado da rota (`collapsedOverrides` + `isSectionCollapsed`).
+
+Jornada completa das 6 telas validada no browser (Overview, Tasks, Missions / Enriquecimento, Findings / Ciclo de Bug, Models / Router, Release Closure): todas com área `Dev`, H1 correto, exatamente 1 item ativo, seção Engineering aberta e **zero** erro de console/pageerror/request falho. Regressão conferida em `/workspace`, `/inbox`, `/supervisor`, `/config`, `/qa` e `/crm`: nenhuma seção da rota ativa ficou recolhida.
+
+Gaps observados (pré-existentes, não introduzidos nesta mudança):
+
+- `Clientes` (`/crm`) exibe **apenas** "Atalhos → Relacionamento (`/support`)" porque os 12 itens de CRM declaram `hiddenInSubNav: true` — a área fica sem seção própria e o atalho aponta para a página legada de Atendimento.
+- `/config`, `/supervisor` e `/crm` não têm item marcado como ativo no menu secundário (paths sem item visível), comportamento pré-existente.
+- `/dev/engineering/release-closure` reporta `NÃO É UM RELEASE LIMPO` com motivos explícitos (`NO_CURRENT_GOVERNED_RUN`, `QA_MESH_GO_NO_GO_MISSING`, `FINAL_READINESS_MISSING`, `FINAL_CONSISTENCY_GATE_MISSING`, `ENGINEERING_RELEASE_BLOCKERS_PENDING`, `ENGINEERING_REGRESSIONS_PENDING`): o run corrente não está amarrado ao fingerprint da árvore.

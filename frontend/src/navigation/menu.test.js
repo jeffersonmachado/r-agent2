@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { navigationMenu, flattenNavigationLeaves, getWorkspaceKeysForPath, inferWorkspaceKeyFromTenantContext, inferWorkspaceKeyFromTenantProfile } from './menu';
+import { findNavigationTrail, navigationMenu, flattenNavigationLeaves, getWorkspaceKeysForPath, inferWorkspaceKeyFromTenantContext, inferWorkspaceKeyFromTenantProfile } from './menu';
 
 describe('vertical workspace resolution', () => {
   it('infere beauty pelo contexto do tenant', () => {
@@ -88,6 +88,59 @@ describe('QA & RPA navigation structure', () => {
 
   it('mantém as páginas de negócio de QA na seção Qualidade (fora de /dev)', () => {
     expect(flattenNavigationLeaves([qualidade]).map((l) => l.path)).toEqual(['/qa', '/qa/stability', '/qa-mesh']);
+  });
+});
+
+describe('área Dev (rail DEV)', () => {
+  const plataforma = navigationMenu.find((n) => n.id === 'plataforma');
+
+  it('mantém a superfície de engenharia FORA do grupo Super Admin', () => {
+    const superAdmin = plataforma.children.find((n) => n.id === 'super-admin');
+    expect(superAdmin.children.some((n) => n.id === 'dev-engineering')).toBe(false);
+    expect(superAdmin.children.some((n) => n.id === 'dev')).toBe(false);
+    expect(flattenNavigationLeaves([superAdmin]).map((l) => l.path)).not.toContain('/dev/engineering');
+  });
+
+  it('declara Central Dev e Engineering como nós da área Dev', () => {
+    const devHub = plataforma.children.find((n) => n.id === 'dev-hub');
+    const engineering = plataforma.children.find((n) => n.id === 'dev-engineering');
+    expect(devHub).toBeTruthy();
+    expect(engineering).toBeTruthy();
+    expect(flattenNavigationLeaves([devHub]).map((l) => l.path)).toEqual(['/dev']);
+    expect(flattenNavigationLeaves([engineering]).map((l) => l.path)).toEqual([
+      '/dev/engineering',
+      '/dev/engineering/tasks',
+      '/dev/engineering/missions',
+      '/dev/engineering/findings',
+      '/dev/engineering/models',
+      '/dev/engineering/release-closure',
+    ]);
+  });
+});
+
+describe('trilha de navegação (breadcrumb/H1)', () => {
+  it('escolhe o item MAIS ESPECÍFICO, não o primeiro match por prefixo', () => {
+    const trail = findNavigationTrail(navigationMenu, '/dev/engineering');
+    expect(trail.map((node) => node.id)).toEqual([
+      'plataforma',
+      'dev-engineering',
+      'dev-engineering-overview',
+    ]);
+  });
+
+  it('resolve o detalhe de task para a lista de Tasks', () => {
+    const trail = findNavigationTrail(navigationMenu, '/dev/engineering/tasks/abc-123');
+    expect(trail[trail.length - 1].id).toBe('dev-engineering-tasks');
+  });
+
+  it('continua resolvendo /dev para Central Dev (não para Engineering)', () => {
+    const trail = findNavigationTrail(navigationMenu, '/dev');
+    expect(trail[trail.length - 1].id).toBe('dev');
+  });
+
+  it('não regride páginas fora de /dev (ex.: /qa/stability)', () => {
+    const trail = findNavigationTrail(navigationMenu, '/qa/stability');
+    expect(trail[trail.length - 1].id).toBe('qa-stability');
   });
 });
 

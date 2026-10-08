@@ -132,6 +132,27 @@ const AREA_BLUEPRINTS = [
     fallbackPath: '/editor',
   },
   {
+    // Área de engenharia (rail DEV). Sem este blueprint, `/dev*` era resolvido para
+    // `admin` (o Admin também declara prefixo `/dev`) — ver AI_MEMORY/runtime-navigation.md.
+    // O escopo é o prefixo `/dev` e o recorte é por EXCLUSÃO: `operacao` traz
+    // /dev/system-status e /dev/stack-versions (Monitoramento, decisão consciente de
+    // 2026-07-23) e `dev-qa-rpa` traz as ferramentas de QA técnica/RPA, que permanecem
+    // no Admin (grupo Super Admin).
+    id: 'dev',
+    label: 'Dev',
+    shortLabel: 'DEV',
+    icon: 'flow',
+    accent: 'var(--color-status-info)',
+    description: 'Engenharia: Central Dev e Engineering Model Router.',
+    searchScope: 'engineering',
+    defaultContextPanel: 'admin',
+    pathPrefixes: ['/dev'],
+    excludeNodeIds: ['operacao', 'dev-qa-rpa'],
+    // Sem `fallbackPath` de propósito: se o agente não tem nenhum item acessível da
+    // engenharia, a área NÃO existe e o rail DEV não aparece (com fallback, a área
+    // sobrevive apontando para /dev mesmo para quem não pode abrir a rota).
+  },
+  {
     id: 'admin',
     label: 'Admin',
     shortLabel: 'ADM',
@@ -158,6 +179,11 @@ const AREA_BLUEPRINTS = [
       '/qa/stability',
     ],
     legacyAnchorIds: ['plataforma'],
+    // As superfícies de engenharia (Central Dev e Engineering Model Router) são da área
+    // `dev`. O prefixo `/dev` do Admin continua existindo apenas para
+    // `/dev/system-status` e `/dev/stack-versions` (Monitoramento) e para as ferramentas
+    // de QA técnica/RPA de `dev-qa-rpa`, que permanecem no grupo Super Admin.
+    excludeNodeIds: ['dev-hub', 'dev-engineering'],
     fallbackPath: '/config',
   },
 ];
@@ -279,7 +305,13 @@ export function buildWorkspaceAreas(filteredMenu = [], currentPath = '/') {
     const leaves = allLeaves.filter((item) => !item.hiddenInSidebar);
 
     const activeByLeaf = leaves.some((item) => pathMatches(item.path, currentPath));
-    const activeByNode = nodes.some((item) => item.path && pathMatches(item.path, currentPath));
+    // `nodes` inclui ANCESTRAIS de grupo cujo path próprio (ex.: `plataforma` → `/config`)
+    // não é uma página desta área — sem o filtro por `leafPaths`, a área `dev` (que tem
+    // `plataforma` como ancestral) reivindicava `/config`, que é do Admin.
+    const leafPaths = new Set(allLeaves.map((item) => item.path));
+    const activeByNode = nodes.some(
+      (item) => item.path && leafPaths.has(item.path) && pathMatches(item.path, currentPath),
+    );
     const activeByPrefix = Array.isArray(area.pathPrefixes) && area.pathPrefixes.some((prefix) => pathMatches(prefix, currentPath));
     const preferredPath = leaves.find((item) => item.path === area.fallbackPath)?.path;
     const fallbackFromMenu = availablePaths.has(area.fallbackPath) ? area.fallbackPath : null;
