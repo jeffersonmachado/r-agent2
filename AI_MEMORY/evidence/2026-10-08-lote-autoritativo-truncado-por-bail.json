@@ -1,0 +1,51 @@
+{
+  "artifact": "LOTE_AUTORITATIVO_TRUNCADO_POR_BAIL",
+  "generatedAt": "2026-10-08",
+  "escopo": "Defeito de integridade na execução autoritativa das suítes do manifesto de release",
+
+  "sintoma": {
+    "observado": "reports/release-suite-execution.json com status=FAIL suites=83/89 + 1 BATCH_REPORT_MISSING + 6 MANIFEST_SUITE_NOT_EXECUTED",
+    "efeitoNoGate": "V2-08, V2-16 e V2-24 apareciam como NOT_EXECUTED (não como FALHA) e o validador de requisitos caía para PROVEN:65",
+    "aparencia": "parecia 'lote que não rodou' — e foi assim que eu o tratei por duas execuções"
+  },
+
+  "defeito": {
+    "causaRaiz": "jest.config.cjs (linha 36) declara `bail: 1` — comentado como 'útil para debug' — e scripts/governance/run-release-suites.js chamava `npx jest <suites> --runInBand --no-coverage --json --outputFile=...` SEM `--bail=0`: a conveniência de debug governava a execução do release",
+    "mecanismo": "o Jest aborta no primeiro teste falho do lote e NÃO escreve o --outputFile; o runner então degrada TODAS as suítes do lote para MANIFEST_SUITE_NOT_EXECUTED",
+    "consequenciaDeGovernanca": "uma suíte que falha apagava a evidência de até 5 outras (que nunca chegaram a rodar) e o relatório dizia 'não executada' em vez de nomear a que falhou — causa e resultado escondidos ao mesmo tempo",
+    "medicaoBidirecional": {
+      "metodo": "MESMAS 6 suítes do lote 1, RELEASE_AUTHORITATIVE=1, mesmo --outputFile",
+      "comBailDoProjeto": "3 de 6 suítes executadas; relatório do lote AUSENTE",
+      "comBailZero": "6 de 6 suítes executadas; relatório do lote PRESENTE (1 failed, 5 passed)"
+    }
+  },
+
+  "correcao": {
+    "commit": "5710ab13",
+    "arquivo": "scripts/governance/run-release-suites.js",
+    "mudanca": "buildJestArgs(suites, outputFile) passa a declarar `--bail=0` no ponto que PRODUZ a evidência — a política de execução do manifesto não é mais herdada da configuração de projeto",
+    "guarda": "tests/unit/governance/releaseSuiteRunner.test.js — 3 testes novos (bail=0 explícito; nenhum --bail diferente de 0; serialização, --json, --outputFile e a lista exata de suítes preservadas). Suíte: 14/14 PASS"
+  },
+
+  "gatilhoQueExposODefeito": {
+    "suite": "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js",
+    "motivoDaFalha": "exige evidência de runtime V1 FRESCA: `reports/engineering-router-v1-runtime-evidence.json` com sourceFingerprint === computeSourceFingerprint(ROOT). Fonte ROOTS do fingerprint inclui `scripts/governance/` → qualquer alteração em script de governança invalida a evidência anterior",
+    "naoEUmFalsoPositivo": "a falha é legítima e o remédio é o que o próprio gate nomeia (recoletar a evidência para o fingerprint corrente)",
+    "comoOSeloJaTrata": "engineering-router-v2-seal.js roda V1_RUNTIME_EVIDENCE → V1_RUNTIME_VERDICT com dependsOn em SUITE_EXECUTION, isto é, coleta a evidência ANTES de executar as suítes",
+    "licaoOperacional": "rodar run-release-suites.js à mão SEM recoletar a evidência V1 reproduz a falha da suíte do envelope — e, com o bail, ela se disfarçava de 'suíte não executada'",
+    "nota": "reports/*.json NÃO entra no fingerprint (reports/ não está em SOURCE_ROOTS)"
+  },
+
+  "estadoFinalMedido": {
+    "manifestoAutoritativo": "reports/release-suite-execution.json → status=PASS suites=89/89 testes=994 (reusedBatches=true, lote 1 reexecutado com a correção)",
+    "requisitosV2": "validate-engineering-router-v2-required-tests.js → status=PASS itens=68 {\"PROVEN\":68} (V2-37/38/39 incluídos)",
+    "auditoriaV2": "validate-engineering-router-v2-audit-items.js → status=PASS itens=33 {STILL_PROVEN:15, ALREADY_FIXED:18}",
+    "evidenciaV1": "validate-engineering-router-v1.js --runtime → status=PASS (STRUCTURAL_PASS/RUNTIME_PASS) checks=209 falhas=0, fresca para o fingerprint de 41bd3660"
+  },
+
+  "etapa2bContinuaPendente": {
+    "passo": "retirar V1_RUNTIME_EVIDENCE e V1_RUNTIME_VERDICT do selo (e o dependsOn de SUITE_EXECUTION) e aposentar o envelope V1 (generate/verify-engineering-router-v1-audit-envelope.js) + seu teste",
+    "porqueNaoFoiFeitoAgora": "o envelope V1 ainda é consumido pelo caminho de EMPACOTAMENTO (scripts/generate-zip.sh, scripts/check-dist-clean.sh, scripts/governance/converge-governance.sh e scripts do package.json): aposentá-lo muda o ARTEFATO DE AUDITORIA entregue no ZIP — decisão de governança que exige aval explícito, não limpeza silenciosa",
+    "ordemRecomendada": "2B só depois de decidir o destino do envelope entregue; enquanto ele existir, a ordem V1_RUNTIME_EVIDENCE → V1_RUNTIME_VERDICT → SUITE_EXECUTION é o que mantém a suíte do envelope com sinal real"
+  }
+}
