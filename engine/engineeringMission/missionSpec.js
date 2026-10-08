@@ -117,7 +117,22 @@ const REQUIREMENT_FIELDS = Object.freeze([
  */
 function normalizeRequirements(items, listName = 'requirements') {
   return normalizeList(items).map((item, index) => {
-    if (typeof item === 'string') return { id: null, text: item, source: null, enrichmentType: null, confidence: null, riskImpact: null };
+    // MESMO SHAPE para os dois formatos aceitos: um item em texto e um item em objeto não podem
+    // sair daqui com campos diferentes — o shape da spec tem de ser previsível (é ele que entra no
+    // specHash), e um `ruleId` ausente em um dos ramos reintroduziria a assimetria que o defeito
+    // tinha.
+    if (typeof item === 'string') {
+      return {
+        id: null,
+        text: item,
+        source: null,
+        enrichmentType: null,
+        confidence: null,
+        riskImpact: null,
+        ruleId: null,
+        blocksAutoApproval: false,
+      };
+    }
 
     const unknownFields = Object.keys(item).filter((key) => !REQUIREMENT_FIELDS.includes(key));
     if (unknownFields.length > 0) {
