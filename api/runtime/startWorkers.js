@@ -138,6 +138,27 @@ function startWorkers({
     }
   }
 
+  // Monitoramento contínuo de versões e vulnerabilidades (RAP Version &
+  // Security Intelligence). Mantém a correlação inventário × advisories fresca
+  // SEM tocar a rede por padrão: o egress de sincronização é opt-in
+  // (SECURITY_INTEL_SYNC_ADVISORIES=1). Uma CVE nova afeta componentes já
+  // instalados sem nenhuma mudança de código — sem este worker a plataforma
+  // ficaria desatualizada em silêncio.
+  if (processRef.env.ENABLE_SECURITY_INTEL_WORKER !== 'false') {
+    const { startSecurityIntelWorker } = require('../services/securityIntel/securityIntelWorker');
+    try {
+      const intervalMs = parseInt(processRef.env.SECURITY_INTEL_WORKER_INTERVAL_MS || '', 10) || undefined;
+      const startResult = startSecurityIntelWorker({ intervalMs });
+      if (startResult.started === false) {
+        logger.warn('[securityIntelWorker] não iniciou', { reason: startResult.reason });
+      }
+    } catch (err) {
+      // Falha visível: monitor que não roda é indistinguível de monitor que nada
+      // encontra — o estado DOWN fica registrado e exposto em status.
+      logger.error('[securityIntelWorker] FALHOU ao iniciar', { error: err.message, code: err.code || null });
+    }
+  }
+
   // Bug Loop Worker (laço autônomo de bugs do Engineering Router) - best-effort.
   // Sem ele, um finding criado pelo hook de falha da missão só seria processado por chamada manual.
   //
@@ -234,6 +255,7 @@ function stopWorkers() {
     () => require('../services/channelHealthService').stopChannelHealthMonitor(),
     () => require('../services/marketing/googleAdsRecommendationSchedulerService').stopMarketingGoogleAdsScheduler(),
     () => require('../services/engineeringMission/bugLoopWorker').stopBugLoopWorker(),
+    () => require('../services/securityIntel/securityIntelWorker').stopSecurityIntelWorker(),
   ];
 
   for (const stopFn of stopFns) {
