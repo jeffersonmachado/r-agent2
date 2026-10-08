@@ -1,0 +1,56 @@
+{
+  "artifactType": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "generatedAt": "2026-10-08T01:40:00.000Z",
+  "author": "GitHub Copilot (DeepSeek V4 Flash) — autoridade humana, autorizado explicitamente pelo dono da plataforma",
+  "scope": "Canonicalização DETERMINÍSTICA de headers de arquivo ausentes em unified diff",
+  "authorization": {
+    "granted": "exclusivamente a canonicalização determinística de headers de arquivo ausentes",
+    "notGranted": "reparo genérico de patches (inventar/alterar linhas, transformar contexto, alterar hunks, corrigir contagens como parte desta autorização, escolher paths por heurística, corrigir contexto não encontrado, resolver conflitos, fuzzy apply, alterar source_commit, adaptar semanticamente, mascarar source stale, aceitar patch que continue inválido)"
+  },
+  "problemMeasured": {
+    "defect": "bloco emitido com 'diff --git a/<P> b/<P>' seguido DIRETO do '@@', sem '--- a/<P>' e '+++ b/<P>'",
+    "gitError": "error: patch fragment without header at line 3",
+    "whyItBurnedAttempts": "o validador estrutural aprovava (o CORPO tem prefixos válidos; o que falta é o cabeçalho de ARQUIVO), então a falha só aparecia no `git apply`, como PATCH_APPLY_FAILED genérico, sem reroute por formato",
+    "model": "qwen:qwen3-coder-flash (recorrente: primeira tentativa desse modelo em quase toda task)"
+  },
+  "implementation": {
+    "files": [
+      "engine/engineeringRouter/diffCanonicalizer.js (NOVO, puro)",
+      "api/services/engineeringRouter/engineeringRouterService.js (fluxo CODING + retomada)",
+      "tests/unit/engineeringRouterDiffCanonicalizer.test.js (NOVO, 18 casos)"
+    ],
+    "rule": "insere '--- a/<P>' e/ou '+++ b/<P>' derivados do 'diff --git a/<P> b/<P>' SOMENTE quando: a/b apontam para o MESMO path; não há marcador de new file/deleted file/rename/copy/binary; existe ao menos um hunk; e o header presente (quando há um) é consistente com o path do 'diff --git'",
+    "mandatoryOrder": "RAW_MODEL_OUTPUT -> STRUCTURAL_VALIDATION -> canonicalização (quando aplicável) -> STRUCTURAL_VALIDATION de novo -> git apply --check -> execução normal",
+    "ambiguity": "bloco ambíguo NÃO é canonicalizado (fica exatamente como o modelo emitiu) e o patch segue o fluxo normal de rejeição",
+    "originalPreserved": "patch_diff do attempt continua sendo o ORIGINAL; o canonicalizado vai na telemetria",
+    "resumeCovered": "a retomada pós-reinício reaplica o patch persistido pelo MESMO caminho canônico"
+  },
+  "telemetry": {
+    "event": "PATCH_CANONICALIZATION_APPLIED",
+    "fields": [
+      "provider", "model", "taskId", "attemptId", "attemptNumber",
+      "files", "missingHeaders", "derivedHeaders",
+      "originalPatchHash (sha256)", "canonicalizedPatchHash (sha256)",
+      "originalPatchBytes", "canonicalizedPatchBytes",
+      "structuralRevalidationOk", "structuralRevalidationCode",
+      "gitApplyCheckResult (PASS/FAIL)", "gitApplyStderr", "skippedBlocks",
+      "canonicalizedPatch (texto integral, para auditoria)"
+    ]
+  },
+  "measuredEffect": {
+    "probe": "/tmp/prove-canonicalization.js — reproduz o pipeline REAL (canonicalização + normalização de contagens pré-existente) contra `git apply --check` num worktree do source_commit, sobre TODOS os patches históricos que falharam com 'fragment without header'",
+    "population": 9,
+    "canonicalizationApplied": 8,
+    "appliesAfterFullPipeline": 1,
+    "stillFailing": 8,
+    "rootCauseOfRemainder": "CONTEXTO_NAO_ENCONTRADO — o hunk declara linhas de contexto que não existem no arquivo real (defeito diferente, e explicitamente fora do escopo autorizado: corrigir exigiria adivinhar)",
+    "honestConclusion": "a canonicalização corrige a classe de falha de HEADER (8 de 9), mas na maioria desses patches o header vinha acompanhado de contexto inventado; o ganho líquido medido é 1 patch recuperado. Ela NÃO é a solução do gargalo e não mascara os demais defeitos"
+  },
+  "combinationNote": {
+    "existingBehavior": "a normalização de contagem de hunk (`engine/engineeringRouter/hunkNormalizer.js`) é PRE-EXISTENTE (achado do pilot V1) e NÃO faz parte desta autorização — foi apenas usada no probe para reproduzir o pipeline real",
+    "observed": "os patches do qwen3-coder-flash costumam trazer DOIS defeitos juntos: header de arquivo ausente E contagem de hunk inconsistente"
+  },
+  "noGateWeakened": true,
+  "noFuzzyApply": true,
+  "noContentModification": true
+}

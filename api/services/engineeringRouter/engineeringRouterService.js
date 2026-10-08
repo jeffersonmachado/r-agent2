@@ -69,6 +69,7 @@ const {
   isInfrastructureFailure,
   meritFailureKindOf,
 } = require('../../../engine/engineeringRouter/executionFailurePolicy');
+const { canonicalizeMissingFileHeaders } = require('../../../engine/engineeringRouter/diffCanonicalizer');
 
 /**
  * Identidade de worker: UUID de instância. O PID NÃO entra na identidade (não é global entre
@@ -436,13 +437,75 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   }
   await recordProgress(run, 'patch_produced', `attempt ${attempt.attempt_number}`);
 
+  // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — CANONICALIZAÇÃO DETERMINÍSTICA DE HEADERS DE ARQUIVO.
+  // Fluxo obrigatório: RAW_MODEL_OUTPUT -> STRUCTURAL_VALIDATION (acima) -> canonicalização ->
+  // STRUCTURAL_VALIDATION novamente -> `git apply --check` -> execução normal.
+  // Só insere `--- a/<P>` / `+++ b/<P>` quando o bloco declara `diff --git a/<P> b/<P>` com o MESMO
+  // path e falta apenas esse par (ver engine/engineeringRouter/diffCanonicalizer.js). O patch
+  // ORIGINAL é preservado como evidência em `patch_diff`; nenhuma linha de conteúdo é tocada.
+  let effectiveDiff = patchResult.diff;
+  let canonicalization = null;
+  const candidateCanonicalization = canonicalizeMissingFileHeaders(patchResult.diff);
+  if (candidateCanonicalization.applied) {
+    // Revalidação estrutural OBRIGATÓRIA sobre o texto canonicalizado: se qualquer coisa ficar
+    // inválida (contrato de paths, formato, corpo), usamos o patch CRU e o fluxo de rejeição
+    // normal continua valendo — a canonicalização nunca transforma inválido em aprovado.
+    const revalidation = validatePatch(candidateCanonicalization.text, { contract: contractFromTask(task) });
+    const originalHash = crypto.createHash('sha256').update(patchResult.diff, 'utf8').digest('hex');
+    const canonicalHash = crypto.createHash('sha256').update(candidateCanonicalization.text, 'utf8').digest('hex');
+    canonicalization = {
+      blocks: candidateCanonicalization.blocks,
+      skipped: candidateCanonicalization.skipped,
+      revalidationOk: revalidation.ok,
+      revalidationCode: revalidation.ok ? null : revalidation.code,
+      originalPatchHash: originalHash,
+      canonicalizedPatchHash: canonicalHash,
+      originalPatchBytes: Buffer.byteLength(patchResult.diff, 'utf8'),
+      canonicalizedPatchBytes: Buffer.byteLength(candidateCanonicalization.text, 'utf8'),
+      canonicalizedPatch: candidateCanonicalization.text,
+    };
+    if (revalidation.ok) effectiveDiff = candidateCanonicalization.text;
+  }
+
   let workspace = null;
   let keepWorkspace = false;
   try {
     workspace = await createWorkspace(task.id, attempt.attempt_number);
     await ts.updateAttempt(attempt.id, { workspace_path: workspace });
 
-    const applyResult = await applyPatch(workspace, patchResult.diff);
+    const applyResult = await applyPatch(workspace, effectiveDiff);
+    if (canonicalization) {
+      // Telemetria exigida pela autorização: registrada com o RESULTADO REAL do `git apply --check`
+      // (que roda dentro do applyPatch) e com os dois hashes, preservando o patch original.
+      await ts.recordTelemetry({
+        ...telemetryBase,
+        input_tokens: patchResult.usage?.prompt_tokens ?? null,
+        output_tokens: patchResult.usage?.completion_tokens ?? null,
+        latency_ms: patchResult.latencyMs,
+        result: applyResult.ok ? 'APPLIED' : applyResult.code,
+        event_type: 'PATCH_CANONICALIZATION_APPLIED',
+        detail: {
+          provider: attempt.coder_provider || null,
+          model: attempt.coder_model || null,
+          taskId: task.id,
+          attemptId: attempt.id,
+          attemptNumber: attempt.attempt_number,
+          files: canonicalization.blocks.map((b) => b.path),
+          missingHeaders: canonicalization.blocks.flatMap((b) => b.missingHeaders),
+          derivedHeaders: canonicalization.blocks.flatMap((b) => b.derivedHeaders),
+          originalPatchHash: canonicalization.originalPatchHash,
+          canonicalizedPatchHash: canonicalization.canonicalizedPatchHash,
+          originalPatchBytes: canonicalization.originalPatchBytes,
+          canonicalizedPatchBytes: canonicalization.canonicalizedPatchBytes,
+          structuralRevalidationOk: canonicalization.revalidationOk,
+          structuralRevalidationCode: canonicalization.revalidationCode,
+          gitApplyCheckResult: applyResult.ok ? 'PASS' : 'FAIL',
+          gitApplyStderr: applyResult.ok ? null : String(applyResult.stderr || '').slice(0, 500),
+          skippedBlocks: canonicalization.skipped,
+          canonicalizedPatch: canonicalization.canonicalizedPatch,
+        },
+      }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar telemetria de canonicalização', { taskId: task.id, error: err.message }));
+    }
     if (!applyResult.ok) {
       await ts.updateAttempt(attempt.id, { status: 'FAILED', error: { code: applyResult.code, stderr: applyResult.stderr }, completed_at: new Date() });
       const patchDetail = patchTelemetryDetail({ attempt, validation, patchDiff: patchResult.diff, extra: { rejectedBy: 'PATCH_APPLY', failureCode: applyResult.code, failureKind: 'PATCH_NOT_APPLICABLE' } });
@@ -1894,7 +1957,14 @@ async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTena
       // diff persistido sobre um workspace novo produz a MESMA tree, determinístico.
       try {
         workspace = await createWorkspace(taskId, lastAttempt.attempt_number);
-        const applyResult = await applyPatch(workspace, diff);
+        // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): a retomada reaplica o MESMO patch persistido;
+        // se ele dependia da canonicalização determinística de headers para aplicar, a retomada
+        // precisa usar o mesmo texto canônico — senão a reconstrução falharia por um motivo que
+        // a execução original já havia resolvido (o patch ORIGINAL segue preservado em
+        // `patch_diff`, como evidência).
+        const resumeCanonicalization = canonicalizeMissingFileHeaders(diff);
+        const resumeDiff = resumeCanonicalization.applied ? resumeCanonicalization.text : diff;
+        const applyResult = await applyPatch(workspace, resumeDiff);
         if (!applyResult.ok) {
           await ts.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: applyResult.stderr || applyResult.code });
           await ts.transitionTask(taskId, 'BLOCKED');
