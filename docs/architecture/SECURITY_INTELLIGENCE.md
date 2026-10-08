@@ -149,11 +149,23 @@ agendado depois que o anterior termina.
 - Runtime medido: Node 22.12.0, PostgreSQL 16.15, **pgvector 0.6.0**, Redis 7.0.15,
   Ubuntu 24.04, OpenSSL 3.0.15.
 - SBOM: 1653 componentes, 816 arestas, **válido**, persistido (`sha256 b00f482c…`).
-- Vulnerabilidades (83 pacotes distintos = todas as dependências diretas npm + PyPI):
-  **298 advisories**, catálogo KEV com 1739 CVEs, 284 advisories com EPSS, 1 KEV casado.
-  Correlação de 1653 componentes → **81 achados com risco** + **312 avaliações VEX**.
-- **Release Security Gate: `NO_GO` (exit 1)** com **21 bloqueios de runtime** e 28
-  avisos dev-only:
+- Vulnerabilidades — **dois escopos medidos, e o escopo importa**:
+  - ESCOPO PARCIAL (só dependências diretas, 83 pacotes distintos = 64 npm + 19
+    PyPI): **298 advisories**, catálogo KEV com 1739 CVEs, 284 com EPSS, 1 KEV
+    casado; 1653 componentes → **81 achados com risco** + **312 avaliações VEX**.
+  - ESCOPO COMPLETO (1125 pacotes **instalados**, inclui transitivos; base de **654
+    advisories**): **248 achados com risco** (3 CRITICAL, 118 HIGH, 108 MEDIUM, 10
+    LOW, 9 INFORMATIONAL) + **843 avaliações VEX**; plano de correção com **108
+    candidatos** (39 `DIRECT_BUMP`, 60 `TRANSITIVE_OVERRIDE`, 9 `NO_PATCH`; 79
+    Nível B, 29 Nível C). Sweep de 374 s a 5 req/s com **0 falhas**
+    (`reports/security-intel-advisories-report.json`).
+  - **Lição**: a base só de diretos subestimou o risco em ~4x. Número de achados
+    sem o escopo declarado é um número enganoso.
+- **Release Security Gate: `NO_GO` (exit 1)** com **47 bloqueios de runtime** e 131
+  avisos dev-only no escopo completo (o escopo parcial dava 21 bloqueios e 28
+  avisos). Bloqueios do escopo PARCIAL, que permanecem no completo — este último
+  acrescenta `@modelcontextprotocol/sdk`, `brace-expansion`, `braces` e
+  `extract-zip` entre os primeiros:
 
   | Pacote | Serviço | Advisories | Severidade |
   |---|---|---|---|

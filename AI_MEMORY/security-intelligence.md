@@ -15,15 +15,30 @@ operacional; não duplica o doc.
 - **Vulnerabilidades**: `osvConnector` é o ÚNICO ponto com egress de rede;
   `vulnerabilityScanService` correlaciona OFFLINE contra o banco. Resultados em
   `security_findings` + histórico em `security_finding_events`.
-  Medido 2026-10-08: 83 pacotes (todas as dependências diretas npm+PyPI) → **298
-  advisories**, 284 com EPSS, 1 KEV; 1653 componentes varridos → **81 achados com
-  risco** + 312 avaliações VEX.
+  Medido 2026-10-08 (ESCOPO PARCIAL — só dependências **diretas**): 83 pacotes
+  (64 npm + 19 PyPI) → **298 advisories**, 284 com EPSS, 1 KEV; 1653 componentes
+  varridos → **81 achados com risco** + 312 avaliações VEX; gate **NO_GO com 21
+  bloqueios de runtime**.
+
+  Medido 2026-10-08 (ESCOPO COMPLETO — **1125 pacotes instalados**, incluindo
+  transitivos; base de 654 advisories): **248 achados com risco** (3 CRITICAL, 118
+  HIGH, 108 MEDIUM, 10 LOW, 9 INFORMATIONAL) + **843 avaliações VEX**; plano de
+  correção com **108 candidatos** (39 `DIRECT_BUMP`, 60 `TRANSITIVE_OVERRIDE`, 9
+  `NO_PATCH`; 79 Nível B, 29 Nível C); gate **NO_GO com 47 bloqueios de runtime e
+  131 avisos** (exit 1). O sweep levou 374 s a 5 req/s, com **0 falhas**.
+
+  **Lição medida (não repetir):** correlação com base só de dependências DIRETAS
+  subestimou o risco em ~4x (21 → 47 bloqueios). Cobertura parcial não é
+  "menos risco", é **menos conhecimento** — a cobertura precisa ser declarada
+  junto do número, nunca omitida.
 - **Release Security Gate** (`npm run validate:security-release-gate`): decide
   GO/NO_GO com exit code real (NO_GO ⇒ exit 1; `SECURITY_GATE_MODE=advisory` ⇒ exit 0
-  mantendo a decisão real no relatório). Estado medido: **NO_GO** com 21 bloqueios de
-  runtime — `transformers@4.57.6` (11, inclui 1 CRITICAL), `nodemailer@8.0.7` (3),
-  `torch@2.9.1+cpu` (2), `uuid` (2), `ws@8.20.0`, `postcss@8.4.49` (2),
-  `@modelcontextprotocol/sdk@1.30.0`. 28 achados dev-only ficam como aviso.
+  mantendo a decisão real no relatório). Estado medido: **NO_GO** — com a base
+  parcial eram 21 bloqueios de runtime (`transformers@4.57.6`, `nodemailer@8.0.7`,
+  `torch@2.9.1+cpu`, `uuid`, `ws@8.20.0`, `postcss@8.4.49`,
+  `@modelcontextprotocol/sdk@1.30.0`); com a base completa são **47 bloqueios de
+  runtime** (`@modelcontextprotocol/sdk`, `brace-expansion`, `braces`,
+  `extract-zip` entre os primeiros) e 131 avisos dev-only.
 - **Índice vetorial** (`npm run security:vector-index`): veredito DEGRADED por
   `vector 0.6.0` < mínimo recomendado; índice HNSW VÁLIDO e em uso.
 - **Worker contínuo** (`securityIntelWorker`, registrado em `api/runtime/startWorkers.js`):
@@ -64,6 +79,11 @@ operacional; não duplica o doc.
   `null` — nunca score inventado, porque score inventado é decisão de gate inventada.
 - **Ecossistema no OSV é case-sensitive**: `PyPI` (não `pypi`). A tradução vive na
   fronteira do conector; ecossistema não mapeado falha ANTES da rede.
+- **Número de achados sem o ESCOPO declarado é enganoso** (medido 2026-10-08):
+  consultar advisories só das dependências DIRETAS (83 pacotes) deu 81 achados e 21
+  bloqueios; consultar os 1125 pacotes INSTALADOS deu **248 achados e 47 bloqueios**.
+  Cobertura parcial não é "menos risco", é menos conhecimento. Sempre rode o sweep
+  com `--scope installed` e reporte o escopo junto do número.
 - **Priorize por exposição real**: dev-only é aviso, não bloqueio
   (`releaseGate.blockOnDevDependencies`). Sem isso o gate vira ruído e o time aprende a
   ignorá-lo.
@@ -82,14 +102,20 @@ operacional; não duplica o doc.
 
 ## Pendências (ordem de valor)
 
-1. **Triagem dos 21 achados** (decisão humana): 5 são `NO_PATCH` (controle
-   compensatório ou waiver com expiração); 5 são bump MINOR Nível B (podem ir a
-   missão isolada já); 11 são MAJOR Nível C. Waiver **ainda não existe** como
-   tabela — nada é isentado hoje.
+1. **Triagem dos achados** (decisão humana). No escopo completo são **248 achados**
+   (121 de severidade bloqueante; 47 bloqueios de runtime no gate) e **108 candidatos
+   de patch**: 39 `DIRECT_BUMP`, 60 `TRANSITIVE_OVERRIDE`, 9 `NO_PATCH`; 79 Nível B e
+   29 Nível C. Waiver **ainda não existe** como tabela — nada é isentado hoje.
 2. Registrar o Release Security Gate em `validate:governance-enforcement` — só
    DEPOIS de triar (hoje o registro bloquearia o release; decisão do dono).
-3. APIs REST + UI de engenharia (DEVELOPMENT) com segregação testada.
-4. Worker de monitoramento contínuo (`api/runtime/startWorkers.js`).
-5. Sweep completo (~1400 pacotes ≈ 6 min) + agendamento; testes de falha/resiliência.
-6. pgvector: check de integridade já existe; falta planejar 0.6.0 → 0.8.x com
+3. Testes de falha/resiliência do worker e do conector (sobreposição de ciclos,
+   falha persistente, restart, sync parcial).
+4. Agendamento do sweep `--scope installed` (hoje é manual; o worker NÃO sincroniza
+   base por padrão — egress é opt-in).
+5. pgvector: check de integridade já existe; falta planejar 0.6.0 → 0.8.x com
    regressão de ranking híbrido.
+
+**Já entregue:** inventário (Fase 1), SBOM, advisories + correlação (Fase 2), Risk
+Engine (Fase 3), Patch Engine + ponte com o Roteador (Fase 4), Release Security Gate
+com exit real (Fase 5), worker contínuo (Fase 7), check de índice vetorial (Fase 8),
+APIs DEVELOPMENT + UI de engenharia (Fase 6) e sweep de cobertura completa (Fase 9a).

@@ -1,0 +1,66 @@
+{
+  "sweep": {
+    "packages": 1125,
+    "advisories": 654,
+    "kev": 2,
+    "epss": 311,
+    "failures": 0,
+    "durationMs": 374582,
+    "snapshotSha256": "1da89e7a02fc8b7da401900e62e9c2f24afe52effecfc01e5b5b536c2c1af04b"
+  },
+  "scan": {
+    "findings": 248,
+    "evaluations": 1091,
+    "vex": 843,
+    "events": 698,
+    "bySeverity": {
+      "MEDIUM": 108,
+      "LOW": 10,
+      "HIGH": 118,
+      "CRITICAL": 3,
+      "INFORMATIONAL": 9
+    },
+    "durationMs": 966
+  },
+  "patch": {
+    "candidates": 108,
+    "summary": {
+      "total": 108,
+      "byKind": {
+        "TRANSITIVE_OVERRIDE": 60,
+        "NO_PATCH": 9,
+        "DIRECT_BUMP": 39
+      },
+      "byRisk": {
+        "PATCH": 30,
+        "NONE": 9,
+        "MINOR": 49,
+        "MAJOR": 20
+      },
+      "byAutonomy": {
+        "LEVEL_B_ISOLATED": 79,
+        "LEVEL_C_PRODUCTION": 29
+      },
+      "actionable": 99,
+      "withoutPatch": 9,
+      "requiringHumanApproval": 29
+    }
+  },
+  "summary": {
+    "open": 248,
+    "blocking": 121,
+    "vex": 843,
+    "kevOpen": 0,
+    "byStatus": {
+      "UNDER_INVESTIGATION": 9,
+      "NOT_AFFECTED": 843,
+      "NO_FIX_AVAILABLE": 11,
+      "FIX_AVAILABLE": 228
+    },
+    "byService": {
+      "rag-service": 177,
+      "api": 576,
+      "frontend": 338
+    }
+  }
+}
