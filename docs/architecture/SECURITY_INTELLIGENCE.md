@@ -155,9 +155,23 @@ Relatórios: `reports/security-intel-discovery-report.json`,
 4. **APIs REST + UI de engenharia** (DEVELOPMENT) e segregação testada.
 5. **Worker de monitoramento contínuo** (`startSecurityIntelWorker` em
    `api/runtime/startWorkers.js`) + métricas e alertas.
-6. **Caso PostgreSQL/pgvector**: `pgvector 0.6.0` está instalado (2 minors atrás das
-   correções de HNSW/concorrência de 0.7+/0.8.x). Investigação de causa raiz da
-   "corrupção de índice" **não concluída** — é o próximo item de maior valor.
+6. **Caso PostgreSQL/pgvector** — evidência coletada em 2026-10-08:
+   - `vector 0.6.0` instalado (2 *minors* atrás das correções de HNSW/README de
+     0.7+/0.8.x); PostgreSQL 16.15.
+   - O índice vetorial existente é **HNSW** (`rag_chunks_embedding_hnsw_idx`,
+     `vector_cosine_ops`, 15 MB).
+   - **O índice está VÁLIDO** (`indisvalid/indisready/indislive = true`), o planner
+     **usa** o HNSW para ordenação vetorial, e os embeddings estão íntegros:
+     8460 chunks, **0 nulos, 0 com dimensão diferente de 384**.
+   - Conclusão honesta: **a corrupção relatada NÃO se reproduz neste banco**.
+     Afirmar "corrupção corrigida" seria fabricação. O risco real é de
+     *versão* + *ausência de verificação* — não há check de integridade de índice
+     vetorial em nenhum gate.
+   - Próximo passo de maior valor: (a) coletar a verificação de integridade do
+     HNSW (`indisvalid`, `vector_dims`, contagens) como check permanente da
+     capacidade; (b) planejar a atualização de `vector` 0.6.0 → 0.8.x em ambiente
+     isolado com regressão do ranking híbrido (vetorial + lexical + fusão RRF +
+     filtros multi-tenant) antes de qualquer mudança em produção.
 7. Testes de falha/resiliência da capacidade (concorrência, reinício, fonte fora do ar
    durante scan) e regressão de ranking híbrido pós-atualização de extensão.
 

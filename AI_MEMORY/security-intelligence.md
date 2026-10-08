@@ -46,8 +46,14 @@ operacional; não duplica o doc.
 
 ## Pendências (ordem de valor)
 
-1. Caso pgvector: **0.6.0 instalado** (2 minors atrás das correções de HNSW) —
-   investigar causa raiz da "corrupção de índice" do RAG. Maior valor isolado.
+1. Caso pgvector — **medido em 2026-10-08: NÃO há corrupção neste banco**.
+   `vector 0.6.0`, índice `rag_chunks_embedding_hnsw_idx` (HNSW,
+   `vector_cosine_ops`, 15 MB) com `indisvalid/indisready/indislive = true`, o
+   planner USA o índice, e 8460 chunks com 0 nulos / 0 dimensões erradas (384).
+   Não existe check de integridade de índice vetorial em nenhum gate. Próximo
+   passo: (a) transformar a medição em check permanente; (b) planejar 0.6.0 →
+   0.8.x em ambiente isolado com regressão de ranking híbrido. NÃO declarar
+   "corrupção corrigida" sem reprodução.
 2. Patch Engine (candidatos → missão no Roteador Engenheiro; nada automático em prod).
 3. Release Security Gate bloqueante (política já declarada em
    `config/security-intel-policy.json > releaseGate`).
