@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-08T07-46-49-560Z",
+  "executionId": "mesh-2026-10-08T08-35-44-059Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "NO_GO",
+  "gate": "GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-08T07-46-49-560Z",
+    "executionId": "mesh-2026-10-08T08-35-44-059Z",
     "tenantId": "system",
-    "timestamp": "2026-10-08T07:46:49.560Z",
+    "timestamp": "2026-10-08T08:35:44.059Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,12 +31,12 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 142,
+    "passed": 144,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
-    "environmentMissing": 2,
+    "environmentMissing": 0,
     "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
@@ -81,12 +81,12 @@
         "total": 2
       },
       "core": {
-        "passed": 88,
+        "passed": 90,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
-        "environment_missing": 2,
+        "environment_missing": 0,
         "flaky": 0,
         "total": 90
       },
@@ -171,21 +171,10 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "CRITICAL_DOMAIN_FAILED:core",
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "core": {
-        "total": 2,
-        "blocking": 0,
-        "byType": {
-          "environment_missing": 2
-        },
-        "successRate": 0.9777777777777777
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -199,6 +188,12 @@
         "successRate": 1
       },
       "clinic": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -253,44 +248,30 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "environment_missing": 2
-    },
-    "topErrors": [
-      {
-        "message": "Tutor não respondeu com conteúdo disponível (reason=ai_unavailable, available=false)",
-        "count": 1
-      },
-      {
-        "message": "Documento não foi indexado dentro do tempo esperado (estado final: indexStatus=failed chunks=0 indexed=false erro=RAG_INDEX_FAILED::RAG service error: 503 {\"error\":\"service_misconfigured\",\"message\":\"Autenticação interna do RAG não configurada\"})",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-08T07-46-49-560Z",
-      "startedAt": "2026-10-08T07:46:49.560Z",
+      "executionId": "mesh-2026-10-08T08-35-44-059Z",
+      "startedAt": "2026-10-08T08:35:44.059Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-08T08:24:17.977Z",
+      "promotedAt": "2026-10-08T09:13:34.173Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [
-    "CRITICAL_DOMAIN_FAILED:core",
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-08T07-46-49-560Z",
-    "startedAt": "2026-10-08T07:46:49.560Z",
+    "executionId": "mesh-2026-10-08T08-35-44-059Z",
+    "startedAt": "2026-10-08T08:35:44.059Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-08T08:24:17.977Z",
+    "promotedAt": "2026-10-08T09:13:34.173Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "artifactType": "release-gate-report",
@@ -299,5 +280,5 @@
   "sourceFingerprint": "562725bb40637a609fd0310f597c13d19108ccb18f52c938a51c804b5ec18c4a",
   "sourceCommit": "ea8f1347388fe9e6fcca6daaef81f2f8d3b2bd45",
   "sourceTree": "c979c7aecf64b994e0c036f1b92a444d3490999f",
-  "generatedAt": "2026-10-08T08:24:17.980Z"
+  "generatedAt": "2026-10-08T09:13:34.176Z"
 }
