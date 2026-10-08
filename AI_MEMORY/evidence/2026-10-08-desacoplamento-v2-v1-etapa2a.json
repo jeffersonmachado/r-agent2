@@ -1,0 +1,32 @@
+{
+  "artifact": "DESACOPLAMENTO_V2_V1_ETAPA_2A",
+  "generatedAt": "2026-10-08",
+  "decisaoDoUsuario": "desacoplar",
+  "escopo": "Etapa 2A — o SELO V2 deixa de derivar requisito/item de auditoria do relatório do gate V1",
+
+  "feito": {
+    "V2-01": "config/engineering-router-v2-required-tests.json — 'Legacy Router continua funcional' deixa de declarar `reports: [reports/engineering-router-v1-report.json]` e passa a ser provado pela suíte comportamental REAL que já declarava (tests/integration/engineeringMissionFullE2E.test.js)",
+    "ENGINEERING_ROUTER_LEGACY": "config/engineering-router-v2-audit-items.json — prova trocada de kind=report (relatório V1) para kind=suite (mesma suíte E2E)",
+    "nota_de_metodo": "provar por COMPORTAMENTO é mais forte que derivar de um relatório estrutural; e o requisito mantém prova real, não vira GAP"
+  },
+
+  "provas": {
+    "requisitos": "validate-engineering-router-v2-required-tests.js → status=PASS itens=68 {\"PROVEN\":68}; V2-01 agora com `reports: []` e detail '1 suíte(s) PASS'",
+    "auditoria": "validate-engineering-router-v2-audit-items.js → status=PASS itens=33 {STILL_PROVEN:15, ALREADY_FIXED:18}; item ENGINEERING_ROUTER_LEGACY = [STILL_PROVEN] auditoria=PASS prova=PASS",
+    "contraprova": "antes desta mudança, remover o relatório V1 levava V2-01 a UNPROVEN/blocking (simulado e registrado em 2026-10-08-deprecacao-router-v1-etapa2-inexequivel.json)"
+  },
+
+  "defeitoDeIntegridadeEncontradoDuranteODesacoplamento": {
+    "natureza": "PRE-EXISTENTE e independente da deprecação do V1",
+    "enunciado": "V2-37, V2-38 e V2-39 ('Audit envelope inclui Mission Compiler' / 'inclui approval/autoapproval' / 'inclui Qwen status') declaram como ÚNICA prova tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js — um teste do envelope V1 — que NÃO menciona Mission Compiler, approval nem Qwen (grep: 0 ocorrências).",
+    "agravante": "os itens que os requisitos descrevem existem no envelope V2 (MISSION_COMPILER_LEASE_RUNTIME, MISSION_APPROVAL, QWEN_STRUCTURAL), mas MISSION_COMPILER_LEASE_RUNTIME e QWEN_STRUCTURAL não têm NENHUMA referência em tests/ ou scripts/ além do próprio config: a prova correta NÃO EXISTE no repositório.",
+    "porqueNaoCorrigiAgora": "reapontar esses requisitos para outro teste qualquer seria trocar uma não-prova por outra — exatamente o greenwashing que validate-anti-greenwashing.js existe para impedir. Criar a prova faltante é trabalho de verificação NOVO sobre um manifesto selado, e merece mudança própria e verificável, não carona num desacoplamento."
+  },
+
+  "etapa2bAindaBloqueada": {
+    "passoRestante": "scripts/governance/engineering-router-v2-seal.js:118 — V1_RUNTIME_VERDICT (e V1_RUNTIME_EVIDENCE, mais o dependsOn de SUITE_EXECUTION) é o ÚNICO acoplamento restante; `validate:engineering-router-v1:runtime` no agregado depende dele",
+    "bloqueio1": "o teste tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js — que É prova declarada de V2-37/38/39 e está na execução autoritativa — usa infraGate.skipOrFail, que sob RELEASE_AUTHORITATIVE=1 LANÇA INFRA_ERROR quando os relatórios do V1 não existem. Removê-los reprova o selo.",
+    "bloqueio2": "o regime V1 leva junto o envelope V1 (generate/verify-engineering-router-v1-audit-envelope.js). Aposentá-lo é etapa própria, com o teste que o comprova.",
+    "ordemRecomendada": "primeiro resolver a prova faltante de V2-37/38/39 (defeito acima), depois aposentar o envelope V1 + seu teste, e só então remover V1_RUNTIME_EVIDENCE/V1_RUNTIME_VERDICT do selo e o script do agregado"
+  }
+}

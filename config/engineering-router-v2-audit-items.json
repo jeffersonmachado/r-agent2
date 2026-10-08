@@ -7,8 +7,8 @@
     {
       "id": "ENGINEERING_ROUTER_LEGACY",
       "auditState": "PASS",
-      "proof": { "kind": "report", "report": "reports/engineering-router-v1-report.json", "decisionPath": "status" },
-      "note": "validador V1 estrutural+runtime"
+      "proof": { "kind": "suite", "suite": "tests/integration/engineeringMissionFullE2E.test.js" },
+      "note": "Legacy Router provado por COMPORTAMENTO (suíte E2E real da missão), não pelo relatório do gate V1 — desacoplado na deprecação do Router V1"
     },
     {
       "id": "ENGINEERING_ROUTER_V2",

@@ -15,9 +15,7 @@
       "suites": [
         "tests/integration/engineeringMissionFullE2E.test.js"
       ],
-      "reports": [
-        "reports/engineering-router-v1-report.json"
-      ]
+      "reports": []
     },
     {
       "id": "V2-02",
