@@ -26,8 +26,16 @@ operacional; não duplica o doc.
   `@modelcontextprotocol/sdk@1.30.0`. 28 achados dev-only ficam como aviso.
 - **Índice vetorial** (`npm run security:vector-index`): veredito DEGRADED por
   `vector 0.6.0` < mínimo recomendado; índice HNSW VÁLIDO e em uso.
-- Comandos: `security:discover|sbom|inventory|status|vector-index` e
-  `node scripts/security-intel.js advisories|scan`.
+- **Patch Engine** (`npm run security:patches`): planeja a correção (menor versão
+  corrigida acima da instalada; semântica PATCH/MINOR/MAJOR; Nível B automático em
+  ambiente isolado, Nível C exige `--authorized-by`) e consolida por pacote.
+  `patch-mission --candidate <key>` submete a missão ao Roteador Engenheiro —
+  NUNCA aplica. Estado medido: dos 21 bloqueios, 16 exigem autorização;
+  `transformers` (CRITICAL) e `torch` **NÃO são limpáveis por bump** (4 e 1
+  advisories sem versão corrigida) ⇒ controle compensatório ou waiver formal com
+  expiração.
+- Comandos: `security:discover|sbom|inventory|status|vector-index|patches` e
+  `node scripts/security-intel.js advisories|scan|patch-mission`.
 
 ## Regras que NÃO podem ser relaxadas
 
@@ -67,16 +75,14 @@ operacional; não duplica o doc.
 
 ## Pendências (ordem de valor)
 
-1. Caso pgvector — **medido em 2026-10-08: NÃO há corrupção neste banco**.
-   `vector 0.6.0`, índice `rag_chunks_embedding_hnsw_idx` (HNSW,
-   `vector_cosine_ops`, 15 MB) com `indisvalid/indisready/indislive = true`, o
-   planner USA o índice, e 8460 chunks com 0 nulos / 0 dimensões erradas (384).
-   Não existe check de integridade de índice vetorial em nenhum gate. Próximo
-   passo: (a) transformar a medição em check permanente; (b) planejar 0.6.0 →
-   0.8.x em ambiente isolado com regressão de ranking híbrido. NÃO declarar
-   "corrupção corrigida" sem reprodução.
-2. Patch Engine (candidatos → missão no Roteador Engenheiro; nada automático em prod).
-3. Release Security Gate bloqueante (política já declarada em
-   `config/security-intel-policy.json > releaseGate`).
-4. Waivers auditáveis com expiração; APIs REST + UI DEVELOPMENT; worker contínuo.
-5. Sweep completo de advisories (~1400 pacotes a 4 rps ≈ 6 min) e agendamento.
+1. **Triagem dos 21 achados** (decisão humana): 5 são `NO_PATCH` (controle
+   compensatório ou waiver com expiração); 5 são bump MINOR Nível B (podem ir a
+   missão isolada já); 11 são MAJOR Nível C. Waiver **ainda não existe** como
+   tabela — nada é isentado hoje.
+2. Registrar o Release Security Gate em `validate:governance-enforcement` — só
+   DEPOIS de triar (hoje o registro bloquearia o release; decisão do dono).
+3. APIs REST + UI de engenharia (DEVELOPMENT) com segregação testada.
+4. Worker de monitoramento contínuo (`api/runtime/startWorkers.js`).
+5. Sweep completo (~1400 pacotes ≈ 6 min) + agendamento; testes de falha/resiliência.
+6. pgvector: check de integridade já existe; falta planejar 0.6.0 → 0.8.x com
+   regressão de ranking híbrido.

@@ -189,8 +189,27 @@ Relatórios: `reports/security-intel-discovery-report.json`,
 
 ## 8. Pendências (não implementadas nesta fase)
 
-1. **Patch Engine** (§8 da missão): candidatos de atualização → missão/task no
-   Roteador Engenheiro; nada é aplicado automaticamente.
+1. **Patch Engine** — implementado (Fase 4). Planeja e persiste candidatos e, com
+autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta é a
+   **triagem humana** dos candidatos de Nível C e a execução das missões.
+
+   Plano real dos 21 bloqueios (consolidado por pacote):
+
+   | Pacote | Alvo recomendado | Advisories | Sem correção | Veredito |
+   |---|---|---|---|---|
+   | `transformers` 4.57.6 | 5.10.0 | 10 | **4** | **REQUER AÇÃO HUMANA** (Nível C) |
+   | `torch` 2.9.1+cpu | 2.10.0 | 2 | **1** | **REQUER AÇÃO HUMANA** (Nível C) |
+   | `nodemailer` 8.0.7 | 10.0.6 | 3 | 0 | limpo por bump MAJOR (Nível C) |
+   | `uuid` 8.3.2 | 11.1.1 | 2 | 0 | limpo por bump MAJOR (Nível C) |
+   | `postcss` 8.4.49 | 8.5.18 | 2 | 0 | limpo por bump MINOR (Nível B) |
+   | `@modelcontextprotocol/sdk` 1.30.0 | 1.31.0 | 1 | 0 | limpo por bump MINOR (Nível B) |
+   | `ws` 8.20.0 | 8.21.0 | 1 | 0 | limpo por bump MINOR (Nível B) |
+
+   **Conclusão operacional:** `transformers` (CRITICAL) e `torch` **não são limpáveis
+   por atualização** — 4 e 1 advisories respectivamente não têm versão corrigida
+   publicada. Isso exige controle compensatório ou **waiver formal com expiração**,
+   não um bump. É a diferença entre "atualizar dependências" e "aceitar risco com
+   registro".
 2. **Registrar o Release Security Gate no agregado**: o gate já existe, decide e sai 1 em
    `NO_GO` (`npm run validate:security-release-gate`), mas **não** foi incluído em
    `validate:governance-enforcement`. Motivo declarado: o estado atual é `NO_GO` por 21
