@@ -15,7 +15,18 @@ operacional; não duplica o doc.
 - **Vulnerabilidades**: `osvConnector` é o ÚNICO ponto com egress de rede;
   `vulnerabilityScanService` correlaciona OFFLINE contra o banco. Resultados em
   `security_findings` + histórico em `security_finding_events`.
-- Comandos: `security:discover|sbom|inventory|status` e
+  Medido 2026-10-08: 83 pacotes (todas as dependências diretas npm+PyPI) → **298
+  advisories**, 284 com EPSS, 1 KEV; 1653 componentes varridos → **81 achados com
+  risco** + 312 avaliações VEX.
+- **Release Security Gate** (`npm run validate:security-release-gate`): decide
+  GO/NO_GO com exit code real (NO_GO ⇒ exit 1; `SECURITY_GATE_MODE=advisory` ⇒ exit 0
+  mantendo a decisão real no relatório). Estado medido: **NO_GO** com 21 bloqueios de
+  runtime — `transformers@4.57.6` (11, inclui 1 CRITICAL), `nodemailer@8.0.7` (3),
+  `torch@2.9.1+cpu` (2), `uuid` (2), `ws@8.20.0`, `postcss@8.4.49` (2),
+  `@modelcontextprotocol/sdk@1.30.0`. 28 achados dev-only ficam como aviso.
+- **Índice vetorial** (`npm run security:vector-index`): veredito DEGRADED por
+  `vector 0.6.0` < mínimo recomendado; índice HNSW VÁLIDO e em uso.
+- Comandos: `security:discover|sbom|inventory|status|vector-index` e
   `node scripts/security-intel.js advisories|scan`.
 
 ## Regras que NÃO podem ser relaxadas
@@ -31,6 +42,16 @@ operacional; não duplica o doc.
 
 ## Armadilhas medidas (não repetir)
 
+- **CVSS publicado como VETOR** (`CVSS:3.1/AV:N/...`, padrão do GitHub Advisory
+  Database) NÃO pode ser ignorado: sem converter para score, todo achado cai na
+  severidade assumida (MEDIUM) e um CRITICAL/HIGH **não bloqueia o gate**. Use
+  `engine/securityIntel/cvss.js` (`baseScore`, spec FIRST). Vetor inválido devolve
+  `null` — nunca score inventado, porque score inventado é decisão de gate inventada.
+- **Ecossistema no OSV é case-sensitive**: `PyPI` (não `pypi`). A tradução vive na
+  fronteira do conector; ecossistema não mapeado falha ANTES da rede.
+- **Priorize por exposição real**: dev-only é aviso, não bloqueio
+  (`releaseGate.blockOnDevDependencies`). Sem isso o gate vira ruído e o time aprende a
+  ignorá-lo.
 - O auditor `governance/json-persistence-audit.js` classifica junção de caminho com
   último segmento `.json` como alvo de **escrita** quando não é argumento direto de um
   leitor. Em módulo LEITOR, passe o nome do arquivo como parâmetro — e não escreva o
