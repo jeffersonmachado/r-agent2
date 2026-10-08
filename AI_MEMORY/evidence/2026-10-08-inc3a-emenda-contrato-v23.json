@@ -1,0 +1,73 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "CONTRACT_AMENDMENT",
+  "generatedAt": "2026-10-08T03:18:59.979Z",
+  "actor": "HUMAN_AUTHORITY_DECISION_VIA_EXTERNAL_INITIATOR",
+  "title": "INC-3A decidido (opcao B): contrato do INCREMENTO 1 emendado — a implementacao vigente do nucleo de replan e a fonte de verdade",
+  "decision": "B — EMENDAR O CONTRATO com registro de materialidade",
+  "rationale": [
+    "o vocabulario implementado ja foi absorvido a jusante (fachada de replan e criterios de aceite do INC-3B falam decision=HALT + reason=LIVELOCK)",
+    "reescrever o nucleo para o contrato antigo atingiria tres camadas verdes e provadas sem ganho funcional demonstrado"
+  ],
+  "appliedVia": "POST /engineering/missions/ca56cbdc-3280-4be8-beff-f9301199fc9f/edit (editAndApprove) com patch {derivedRequirements}",
+  "result": {
+    "missionVersion": 23,
+    "materiality": [
+      "MATERIAL_FIELD_CHANGE"
+    ],
+    "specHash": "9f41f05ad67362db9cb3a682fb58eb5f4e0dd027dba866fe0f0e960fe21f4d35",
+    "itemsRegistered": [
+      {
+        "id": "R2-EMENDADO",
+        "textChars": 680,
+        "source": "HUMAN_AUTHORITY_DECISION",
+        "enrichmentType": "CONTRACT_AMENDMENT"
+      },
+      {
+        "id": "R3-EMENDADO",
+        "textChars": 922,
+        "source": "HUMAN_AUTHORITY_DECISION",
+        "enrichmentType": "CONTRACT_AMENDMENT"
+      },
+      {
+        "id": "R4-EMENDADO",
+        "textChars": 549,
+        "source": "HUMAN_AUTHORITY_DECISION",
+        "enrichmentType": "CONTRACT_AMENDMENT"
+      },
+      {
+        "id": "R5-EMENDADO",
+        "textChars": 567,
+        "source": "HUMAN_AUTHORITY_DECISION",
+        "enrichmentType": "CONTRACT_AMENDMENT"
+      }
+    ],
+    "missionStatusAfter": "APPROVED",
+    "sourceCommitUnchanged": "f07bbbffb1d4",
+    "fenceUnchanged": 6
+  },
+  "pendingDeclaredNotSilenced": "R4: o relatorio auditavel de OVERFLOW da decomposicao continua AUSENTE e ficou declarado no proprio texto da emenda — nao foi maquiado como atendido",
+  "measuredBehaviourOfTheEditor": {
+    "finding": "o normalizador da spec (`normalizeRequirements`) aceita { id, text, source, enrichmentType, confidence, riskImpact }. Campos com OUTROS nomes são DESCARTADOS EM SILÊNCIO — a primeira tentativa usou originalContract/implemented/decision/rationale e sobreviveu apenas o `id` (v22 ficou com 4 itens vazios e a edição foi classificada MATERIAL mesmo assim).",
+    "impact": "uma emenda de contrato pode ser \"aprovada\" sem registrar conteúdo algum; nada avisa",
+    "sameClass": "mesma classe dos defeitos do INC-3B (contrato/interface divergente com falha silenciosa), agora na entrada da spec",
+    "note": "na segunda tentativa o texto foi enviado em `text` e persistiu integralmente (v23)"
+  },
+  "sourceOfTruthNow": "a IMPLEMENTACAO do nucleo (commit vigente da missao). Consumidores devem usar NO_REPLAN|HALT|REPLAN com o motivo em `reason`; a fachada de replan traduz o payload e e a entrada esperada",
+  "evidenceChain": [
+    "AI_MEMORY/evidence/2026-10-08-inc3a-divergencias-contrato-nucleo.json",
+    "AI_MEMORY/evidence/2026-10-08-inc3b-fechamento-fachada-e-teste-real.json",
+    "AI_MEMORY/evidence/2026-10-08-inc3b-green-invalido-mock-mascara-nucleo-real.json"
+  ],
+  "residualState": [
+    "INC-3B funcional: fachada carrega com o nucleo real, delega a evaluateReplan, TRADUZ o payload e aplica efeito em HALT/LIVELOCK e HALT/BUDGET_EXHAUSTED (commit f07bbbff, fence 6)",
+    "INC-3A decidido: contrato emendado (v23, MATERIAL, APPROVED)",
+    "pendencia aberta declarada: relatorio de overflow da decomposicao (R4)",
+    "a missao ficou APPROVED; continuar os incrementos exige nova execucao (decisao do usuario)"
+  ],
+  "constraintsHonored": [
+    "nenhum codigo alterado por causa da emenda",
+    "nenhum gate/severidade/cobertura alterados",
+    "a fonte da missao (commit/fence) NAO foi tocada: emenda de spec, nao de codigo"
+  ]
+}
