@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-07T05:57:42.075Z",
+  "generatedAt": "2026-10-08T07:40:42.891Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -7,17 +7,20 @@
     "unclassifiedDocuments": 0,
     "incoherentDocuments": 0,
     "indexedSecrets": 0,
-    "operationalAccessToSystemDomain": 0,
+    "operationalAccessToSystemDomain": 1,
     "dbChecksFailed": 0,
-    "runtimeChecksFailed": 0,
+    "runtimeChecksFailed": 1,
     "internalTokenMissing": 0
   },
   "probes": {
     "serviceReachable": true,
-    "crossDomainLeakage": 0,
-    "crossTenantLeakage": 0,
-    "operationalAccessToSystemDomain": 0,
-    "details": []
+    "crossDomainLeakage": "skipped",
+    "crossTenantLeakage": "skipped",
+    "operationalAccessToSystemDomain": 1,
+    "details": [
+      "chamada sem token retornou HTTP 503 (esperado 401)",
+      "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 503"
+    ]
   },
   "distribution": [
     {
@@ -41,10 +44,9 @@
       "count": 4860
     }
   ],
-  "details": [],
-  "status": "PASS",
-  "runId": "rap-governed-20261007044956931-c1df8021",
-  "sourceFingerprint": "a7b302194da2b88fd7756d59f290eb8e5fce0fe171bb2fa09ea1092a2d29a98f",
-  "artifactType": "rag-domain-segregation-report",
-  "artifactVersion": "1.0.0"
+  "details": [
+    "chamada sem token retornou HTTP 503 (esperado 401)",
+    "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 503"
+  ],
+  "status": "FAIL"
 }

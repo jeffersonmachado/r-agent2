@@ -1,8 +1,47 @@
 {
-  "generatedAt": "2026-10-07T11:04:31.681Z",
-  "status": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-10-08T08:24:30.269Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-environment_missing-business-core-biz-academy",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-academy"
+        ],
+        "sampleError": "Tutor não respondeu com conteúdo disponível (reason=ai_unavailable, available=false)"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-environment_missing-business-core-biz-rag-segregation",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-rag-segregation"
+        ],
+        "sampleError": "Documento não foi indexado dentro do tempo esperado (estado final: indexStatus=failed chunks=0 indexed=false erro=RAG_INDEX_FAILED::RAG service error: 503 {\"error\":\"service_misconfigured\",\"message\":\"Autenticação interna do RAG não configurada\"})"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    }
+  ],
+  "blocking": 2,
   "nonBlocking": 0
 }
