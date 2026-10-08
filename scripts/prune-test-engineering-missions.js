@@ -52,11 +52,76 @@ function isTestFixture(createdBy) {
   return TEST_MARKER_PATTERNS.some((pattern) => pattern.test(value));
 }
 
+/**
+ * FKs que referenciam `engineering_missions` e NÃO estão declaradas em MISSION_CHILD_DELETIONS.
+ *
+ * PURA de propósito: recebe as linhas do `information_schema` e a declaração, e devolve a lista de
+ * chaves `tabela.coluna` descobertas — assim o comportamento é testável sem banco, e a mesma
+ * função é usada no runtime contra o banco ALVO (não contra o banco que o ambiente de teste
+ * escolher: medido em 2026-10-08, sob Jest o `TEST_DATABASE_URL` aponta para outro banco e uma
+ * verificação rodada ali mediria o alvo errado e passaria vazia).
+ */
+function findMissingFkCoverage(tableRows, declarations = MISSION_CHILD_DELETIONS) {
+  const declared = new Set(declarations.map((item) => `${item.table}.${item.column}`));
+  return (Array.isArray(tableRows) ? tableRows : [])
+    .map((row) => `${row.table_name}.${row.column_name}`)
+    .filter((key) => !declared.has(key));
+}
+
+/**
+ * FILHOS ESCOPADOS À MISSÃO, NA ORDEM DE REMOÇÃO (filho antes do pai). Nada de CASCADE.
+ *
+ * DEFEITO REAL medido em 2026-10-08: a lista estava escrita À MÃO dentro do `main()` e ficou
+ * DESATUALIZADA — `engineering_mission_reviews` (FK RESTRICT) e `engineering_bug_findings` não
+ * constavam, então o `--apply` abortava com violação de FK e a higiene canônica não removia NADA
+ * (`[prune] falhou: update or delete on table "engineering_missions" violates foreign key
+ * constraint "engineering_mission_reviews_mission_fk"`). Com a poda inoperante, o resíduo
+ * acumulado (1079 missões, 1069 fixtures de teste, 8 em estado RESUMÍVEL) continuava sendo
+ * processado por `resumeInterruptedMissions` a cada varredura — auto-envenenamento que estoura
+ * passos obrigatórios do selo (`MISSION_CRASH_RECOVERY`) e o E2E do laço de bug.
+ *
+ * A COBERTURA é verificada contra o BANCO por
+ * `tests/unit/governance/pruneTestMissionFkCoverage.test.js`: qualquer tabela que referencie
+ * `engineering_missions` sem entrada aqui reprova o teste — foi assim que a lista à mão passou
+ * despercebida quando `engineering_mission_reviews` nasceu.
+ */
+const MISSION_CHILD_DELETIONS = [
+  // eventos do finding ANTES do finding (é o único filho de engineering_bug_findings)
+  { table: 'engineering_bug_finding_events', model: 'EngineeringBugFindingEvent', column: 'finding_id', label: 'bugFindingEvents' },
+  { table: 'engineering_bug_findings', model: 'EngineeringBugFinding', column: 'mission_id', label: 'bugFindings' },
+  { table: 'engineering_mission_reviews', model: 'EngineeringMissionReview', column: 'mission_id', label: 'missionReviews' },
+  { table: 'engineering_mission_approvals', model: 'EngineeringMissionApproval', column: 'mission_id', label: 'approvals' },
+  { table: 'engineering_mission_versions', model: 'EngineeringMissionVersion', column: 'mission_id', label: 'versions' },
+];
+
 async function main() {
   await db.connect();
 
-  const { Op } = require('sequelize');
+  const { Op, QueryTypes } = require('sequelize');
   const Mission = getModels.EngineeringMission();
+
+  // ANTES de qualquer remoção: o banco ALVO ainda referencia a missão por alguma tabela que a
+  // declaração não cobre? Se sim, aborta (fail-closed) — sem isto, a poda morria no meio com
+  // violação de FK e o resíduo ficava (foi o defeito de 2026-10-08).
+  const missionFks = await Mission.sequelize.query(
+    `SELECT tc.table_name AS table_name, kcu.column_name AS column_name
+       FROM information_schema.table_constraints tc
+       JOIN information_schema.key_column_usage kcu ON kcu.constraint_name = tc.constraint_name
+       JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name
+      WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'engineering_missions'`,
+    { type: QueryTypes.SELECT },
+  );
+  const uncovered = findMissingFkCoverage(missionFks);
+  if (missionFks.length === 0) {
+    console.error('[prune] ABORTADO: o banco alvo não expõe NENHUMA referência a engineering_missions — consulta vazia não prova cobertura (banco/credencial errados?).');
+    process.exit(1);
+  }
+  if (uncovered.length > 0) {
+    console.error(`[prune] ABORTADO: ${missionFks.length} referência(s) a engineering_missions e ${uncovered.length} fora da declaração: ${uncovered.join(', ')}`);
+    console.error('[prune] adicione a tabela em MISSION_CHILD_DELETIONS (filho antes do pai) — a poda não pode remover com FK pendente.');
+    process.exit(1);
+  }
+  console.log(`[prune] cobertura de FKs conferida no banco alvo: ${missionFks.length} referência(s), todas declaradas`);
   const all = await Mission.findAll({ attributes: ['id', 'status', 'created_by', 'title'], raw: true });
 
   const fixtures = all.filter((mission) => isTestFixture(mission.created_by));
@@ -92,8 +157,6 @@ async function main() {
   const Review = getModels.getEngineeringReview();
   const Attempt = getModels.getEngineeringAttempt();
   const Task = getModels.getEngineeringTask();
-  const Approval = getModels.EngineeringMissionApproval();
-  const Version = getModels.EngineeringMissionVersion();
 
   // Ordem das FKs: filhos antes dos pais. Nada de CASCADE.
   const removed = {};
@@ -104,8 +167,20 @@ async function main() {
   removed.reviews = await Review.destroy({ where: { attempt_id: { [Op.in]: attemptIds } } });
   removed.attempts = await Attempt.destroy({ where: { task_id: { [Op.in]: taskIds } } });
   removed.tasks = await Task.destroy({ where: { id: { [Op.in]: taskIds } } });
-  removed.approvals = await Approval.destroy({ where: { mission_id: { [Op.in]: ids } } });
-  removed.versions = await Version.destroy({ where: { mission_id: { [Op.in]: ids } } });
+
+  // Filhos ESCOPADOS À MISSÃO — percorridos a partir da DECLARAÇÃO (ver MISSION_CHILD_DELETIONS),
+  // e não de uma lista paralela aqui, para que a cobertura verificada pelo teste seja exatamente
+  // a que roda.
+  const findingRows = await getModels.EngineeringBugFinding()
+    .findAll({ where: { mission_id: { [Op.in]: ids } }, attributes: ['id'], raw: true });
+  const scopedIds = { mission_id: ids, finding_id: findingRows.map((row) => row.id) };
+  for (const item of MISSION_CHILD_DELETIONS) {
+    const values = scopedIds[item.column] || [];
+    removed[item.label] = values.length === 0
+      ? 0
+      : await getModels[item.model]().destroy({ where: { [item.column]: { [Op.in]: values } } });
+  }
+
   removed.missions = await Mission.destroy({ where: { id: { [Op.in]: ids } } });
 
   console.log('[prune] removidos:', JSON.stringify(removed));
@@ -118,9 +193,19 @@ async function main() {
   }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('[prune] falhou:', error.message);
-    process.exit(1);
-  });
+if (require.main === module) {
+  main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('[prune] falhou:', error.message);
+      process.exit(1);
+    });
+}
+
+module.exports = {
+  MISSION_CHILD_DELETIONS,
+  TEST_MARKER_PATTERNS,
+  RESUMABLE_STATES,
+  isTestFixture,
+  findMissingFkCoverage,
+};
