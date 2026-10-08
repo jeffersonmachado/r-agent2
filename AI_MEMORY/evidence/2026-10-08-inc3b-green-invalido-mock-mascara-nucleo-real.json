@@ -1,0 +1,64 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "FALSE_GREEN_DETECTED",
+  "generatedAt": "2026-10-08T02:56:34.460Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "INC-3B: GREEN do ciclo 3 e INVÁLIDO — a fachada de replan nao carrega com o nucleo REAL (mock mascara o defeito)",
+  "headline": "O patch do ciclo 3 adicionou o mapeamento correto por `decision`/`reason`, mas MANTEVE a linha legada que le `DECISIONS.EXHAUSTED`/`DECISIONS.LIVELOCK` de um modulo que NAO exporta `DECISIONS`. Com o nucleo real, o require do modulo explode; com o mock do teste, ele funciona. O gate verde, a revisao e a minha propria validacao de 16/16 passaram pelo MESMO motivo: o teste substitui o nucleo puro.",
+  "proof": {
+    "withRealCore": {
+      "command": "npx jest tests/unit/engineeringMission/verifyRealCore.test.js --no-coverage (worktree de auditoria, nucleo REAL, mock apenas do missionStoreService)",
+      "result": "Test suite failed to run — TypeError: Cannot read properties of undefined (reading EXHAUSTED)",
+      "crashPoint": "\nconst { DECISIONS } = replanPolicy;\nconst AFFECTING_OUTCOMES = Object.freeze([DECISIONS.EXHAUSTED, DECISIONS.LIVELOCK]);\n",
+      "commitsWithSameCrashPoint": [
+        "4a798e54",
+        "3c3ec48d"
+      ],
+      "verdict": "a fachada e INUTILIZAVEL com o nucleo real: o defeito NAO foi corrigido"
+    },
+    "withRepositoryTest": {
+      "file": "tests/unit/engineeringMission/missionReplanService.test.js",
+      "mocks": [
+        "jest.mock('.../missionStoreService', ...)  // aceitavel: I/O",
+        "jest.mock('.../replanPolicy', () => ({ DECISIONS: { REPLAN: 'REPLAN', EXHAUSTED: 'EXHAUSTED', LIVELOCK: 'LIVELOCK' }, decideReplan: jest.fn() }))  // INVENTA a API do nucleo"
+      ],
+      "feeding": "os casos alimentam a fachada com { outcome: 'EXHAUSTED' } / { outcome: 'LIVELOCK' } — campo que o nucleo real NAO produz",
+      "result": "portanto passa com o codigo defeituoso E com o corrigido: a prova e vazia"
+    },
+    "whatTheCoreActuallyExports": [
+      "REPLAN_BUDGET_DEFAULTS",
+      "fingerprintReplanReason",
+      "evaluateReplan",
+      "planMissionDecomposition",
+      "buildReplanLineageRecord"
+    ],
+    "coreExportsDECISIONS": false,
+    "coreDecisionShape": "{ decision: 'HALT', reason: 'LIVELOCK' | 'BUDGET_EXHAUSTED_*', fingerprint, attempts, replans, budget, streak } — nao existe `outcome` nem `DECISIONS`"
+  },
+  "whyItMatters": [
+    "ocorre o mesmo padrao do INC-2A: gate verde porque o teste MOCA o nucleo puro — exatamente o que o usuario proibiu (\"nao use mocks substituindo a integracao real fachada<->nucleo\")",
+    "o modulo e carregado pela aplicacao: qualquer consumidor real que fizer require dele derruba o processo com TypeError",
+    "a correcao do coder esta PARCIAL: resolveAffectingKind (correto) convive com a linha legada que quebra a integracao"
+  ],
+  "whatTheCoderDidRight": [
+    "patch de 3383B aplicado em 1 arquivo, SEM tocar o arquivo de teste (verificado: 1 file changed, 41 insertions, 2 deletions)",
+    "resolveAffectingKind mapeia HALT+reason=LIVELOCK e HALT+reason=BUDGET_EXHAUSTED_* corretamente",
+    "task chegou a GREEN passando por TESTING/REVIEWING/REGRESSION/GOVERNANCE"
+  ],
+  "conclusion": {
+    "inc3bStatus": "NAO RESOLVIDO — RED disfarcado de GREEN",
+    "classification": "KNOWN_APPLICATION_GAP (persistente)",
+    "requiredForRealClosure": [
+      "remover da fachada a leitura legada de `DECISIONS` (linha 23-24) e qualquer constante inexistente no nucleo",
+      "substituir o mock do nucleo no teste por INTEGRACAO REAL (nucleo real + fachada real), que e o unico teste capaz de reprovar o defeito",
+      "so depois reavaliar GREEN"
+    ],
+    "handoverAllowed": false
+  },
+  "constraintsHonored": [
+    "nenhuma correcao aplicada ao codigo de producao pelo iniciador externo",
+    "arquivo de teste NAO foi editado",
+    "nenhum gate/cobertura/severidade alterados",
+    "a verificacao rodou em worktree temporario de auditoria, removido em seguida"
+  ]
+}

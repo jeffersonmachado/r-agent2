@@ -1,0 +1,85 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "BOOTSTRAP_AND_CLOSURE",
+  "generatedAt": "2026-10-08T03:06:31.292Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "INC-3B fechado de fato: fachada de replan carrega com o nucleo REAL e o teste deixa de mockar o nucleo",
+  "headline": "O GREEN anterior era falso. A fachada importava `DECISIONS` (inexistente no nucleo) e explodia na CARGA; o teste mocado escondia isso. Correcao definitiva aplicada e provada nos dois sentidos com o nucleo REAL.",
+  "commit": "9d0a62565696",
+  "defectsEliminated": [
+    {
+      "id": 1,
+      "what": "fachada importava `const { DECISIONS } = replanPolicy` e montava AFFECTING_OUTCOMES com constantes inexistentes",
+      "effect": "TypeError na carga do modulo — qualquer consumidor real derrubava o processo"
+    },
+    {
+      "id": 2,
+      "what": "`decideReplanForMission` chamava `replanPolicy.decideReplan` (funcao que o nucleo NAO publica)",
+      "effect": "contrato inventado; o nucleo publica `evaluateReplan`. Agora delega a funcao real e falha explicito (REPLAN_CORE_CONTRACT_VIOLATION) se faltar"
+    },
+    {
+      "id": 3,
+      "what": "`fingerprintReason` reimplementava o fingerprint em SHA-256 enquanto o nucleo usa FNV-1a",
+      "effect": "a MESMA razao ganhava dois fingerprints; a linhagem deduplica por (fingerprint, ordinal) e a idempotencia era furada. Agora delega ao nucleo"
+    },
+    {
+      "id": 4,
+      "what": "a linhagem registrava apenas campos legados (`outcome`/`code`), que o nucleo real nao produz",
+      "effect": "auditoria perderia decision+reason do nucleo; agora registra os dois"
+    },
+    {
+      "id": 5,
+      "what": "o teste da camada MOCAVA o nucleo e inventava `DECISIONS`/`decideReplan`, alimentando a fachada com `{outcome: ...}`",
+      "effect": "gate vacuoso: passava com o codigo quebrado E com o corrigido"
+    }
+  ],
+  "proof": {
+    "twoWay": {
+      "oldCodePlusNewTest": "TypeError: Cannot read properties of undefined (reading EXHAUSTED) — REPROVA",
+      "newCodePlusNewTest": "22/22 PASS (missionReplanService.test.js + replanPolicy.test.js)"
+    },
+    "decisionsComeFromTheCore": "os casos usam decisoes produzidas por `evaluateReplan` (HALT+LIVELOCK, HALT+BUDGET_EXHAUSTED_ATTEMPTS, REPLAN, NO_REPLAN) — nenhum objeto de decisao escrito a mao",
+    "mockScope": "apenas missionStoreService (I/O). O nucleo puro roda de verdade",
+    "coreApiConfirmed": [
+      "REPLAN_BUDGET_DEFAULTS",
+      "fingerprintReplanReason",
+      "evaluateReplan",
+      "planMissionDecomposition",
+      "buildReplanLineageRecord"
+    ],
+    "regression": "27 suites / 363 testes PASS (tests/unit/engineeringMission) no worktree do branch da missao"
+  },
+  "sourceAuthority": {
+    "branchAdvanced": true,
+    "cas": "applySourceAdvanceCommit({ expectedCommit: <3c3ec48d>, expectedFence: 4, candidateCommit: <9d0a6256> })",
+    "result": {
+      "advanced": true,
+      "fenceBefore": 4,
+      "fenceAfter": 5
+    },
+    "missionStateAfter": {
+      "commit": "9d0a625656961986ed600860b63e5a5a036bd17e",
+      "fence": 5,
+      "sourceState": "READY",
+      "status": "EXECUTING"
+    },
+    "note": "o branch NAO avanca sozinho: commit e fence andam juntos sob CAS, senao uma escrita protegida por fence vencido continuaria autorizada (defeito documentado e eliminado em 2026-10-03 no proprio servico)"
+  },
+  "artifactsPreserved": [
+    "/tmp/inc3b-auditoria/verifyRealCore.test.js (auditoria que expos o GREEN falso)",
+    "/tmp/inc3b-auditoria/teste.real.js (teste de integracao real aplicado no branch)",
+    "/tmp/inc3b-auditoria/fachada.corrigida.js (fachada corrigida)"
+  ],
+  "constraintsHonored": [
+    "nenhuma correcao da fachada foi implementada pelo Engenheiro a pedido do iniciador — o iniciador aplicou o bootstrap autorizado pelo usuario",
+    "o caso de teste NAO foi enfraquecido: ele foi FORTALECIDO (deixou de mockar o nucleo)",
+    "nenhum criterio de aceitacao reduzido; nenhum gate/cobertura/severidade alterados",
+    "nenhuma escrita de estado por SQL cru: o avanco da fonte passou pela funcao oficial com CAS",
+    "HANDOVER nao declarado automaticamente: a decisao continua com o usuario/pipeline"
+  ],
+  "residualNotes": [
+    "o registro do Router (task 4511af1f / finding 4d84cc49) permanece CLOSED com um patch parcial; o commit 9d0a6256 e o que torna o INC-3B realmente funcional",
+    "existe agora um gate honesto: se a fachada voltar a depender de algo que o nucleo nao publica, o proprio require do teste falha",
+    "INC-3A continua com a divergencia declarada (fingerprint do nucleo vs contrato descrito) — este bootstrap unificou a fachada ao nucleo, nao alterou o nucleo"
+  ]
+}
