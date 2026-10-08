@@ -1,0 +1,35 @@
+{
+  "artifact": "DEPRECACAO_ROUTER_V1_ENCERRAMENTO_ETAPA_2_NAO_EXECUTAVEL",
+  "generatedAt": "2026-10-08",
+  "decisaoDoUsuario": "o router v1 deve ser deprecado",
+  "resultado": "etapa 1 CONCLUÍDA (5af8aa9b); etapas 2/3 do escopo original são INEXEQUÍVEIS como especificadas — motivo medido abaixo, não preferência",
+
+  "medicao": {
+    "agregado": "package.json:149 → validate:engineering-router-v1:runtime = `npm run collect:engineering-router-runtime-evidence && node scripts/governance/validate-engineering-router-v1.js --runtime`",
+    "produtor": "scripts/governance/validate-engineering-router-v1.js:1226 → writeReport('engineering-router-v1-report.json', report). O script é o PRODUTOR do relatório.",
+    "consumidor": "config/engineering-router-v2-required-tests.json:19 → o requisito V2-01 do selo V2 aponta a prova declarada para `reports/engineering-router-v1-report.json`, derivada com TTL (STALE/UNPROVEN são blocking)",
+    "simulacaoJaRealizada": "removendo o relatório, V2-01 = UNPROVEN, blocking:true, status_geral=FAIL (exit 1)"
+  },
+
+  "conclusao": {
+    "enunciado": "Remover `validate:engineering-router-v1:runtime` do agregado NÃO depreca o V1 — ele para de PRODUZIR a prova que o selo V2 exige. Não é enfraquecimento de gate: é autossabotagem do selo ativo.",
+    "consequencia": "O escopo original das etapas 2/3 (sair do agregado + o selo V2 deixar de exigir V1_RUNTIME_VERDICT) é internamente incoerente com o manifesto de requisitos JÁ SELADO do V2."
+  },
+
+  "o_que_fica_valendo": {
+    "deprecado": "o REGIME V1 como alvo de trabalho novo: o gate saiu do plano de regressão das missões (etapa 1, 5af8aa9b), não recebe evolução e seu código fica congelado",
+    "permanece": "o gate V1 segue executando — por task, na fase GOVERNANCE com cwd=ROOT (onde sempre passou), e no agregado como PRODUTOR do relatório que o V2-01 consome",
+    "saida_possivel_no_futuro": "trocar a prova declarada do V2-01 por evidência independente do gate V1. Isso exige EMENDAR um manifesto pós-selo — é reescrita de evidência, matéria de decisão humana explícita, não etapa de deprecação"
+  },
+
+  "naoFeito": [
+    "remover validate:engineering-router-v1:runtime do agregado bloqueante (quebraria o V2-01 do selo V2)",
+    "alterar config/engineering-router-v2-required-tests.json (manifesto pós-selo; emenda exige decisão humana)",
+    "alterar o selo V2 (engineering-router-v2-seal.js) para não exigir V1_RUNTIME_VERDICT"
+  ],
+
+  "referencias": {
+    "etapa1": "commit 5af8aa9b + AI_MEMORY/evidence/2026-10-08-deprecacao-router-v1-etapa1-plano-de-regressao.json",
+    "provaDaEtapa1": "missão ca56cbdc v27: GOVERNANCE PASS com validate-engineering-router-v1 (checks=183 falhas=0) executado com cwd=ROOT — o enforcement continua inteiro"
+  }
+}
