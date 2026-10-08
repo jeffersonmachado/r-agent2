@@ -65,3 +65,26 @@ describe('área Dev (rail DEV)', () => {
     expect(admin.items.map((item) => item.path)).toContain('/rpa-replays');
   });
 });
+
+describe('área Clientes (CRM)', () => {
+  it('resolve /crm para a área clientes', () => {
+    expect(resolveAreas('/crm').activeArea.id).toBe('clientes');
+  });
+
+  it('NÃO reivindica /support (Central de Atendimento legada) como página da área', () => {
+    const { areas } = resolveAreas('/crm');
+    const clientes = areas.find((area) => area.id === 'clientes');
+    const paths = clientes.items.map((item) => item.path);
+
+    expect(paths).not.toContain('/support');
+    expect(paths).toContain('/crm');
+    expect(paths).toContain('/crm/leads');
+    expect(paths).toContain('/crm/audit');
+  });
+
+  it('mantém /support na área Atendimento, onde a página legada pertence', () => {
+    const { areas } = resolveAreas('/support');
+    expect(areas.find((area) => area.id === 'atendimento').items.map((item) => item.path))
+      .toContain('/support');
+  });
+});

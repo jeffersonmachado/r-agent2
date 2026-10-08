@@ -112,7 +112,9 @@ export const navigationMenu = [
             path: '/crm',
             permission: { resource: 'crm', action: 'read' },
           },
-          { id: 'crm-dashboard-alias', label: 'Painel CRM', path: '/crm/dashboard', permission: { resource: 'crm', action: 'read' }, hiddenInSidebar: true },
+          // Alias de `/crm` (mesma página "Painel CRM"): fica fora do menu secundário para
+          // não duplicar o mesmo rótulo duas vezes na área Clientes. A rota continua válida.
+          { id: 'crm-dashboard-alias', label: 'Painel CRM', path: '/crm/dashboard', permission: { resource: 'crm', action: 'read' }, hiddenInSidebar: true, hiddenInSubNav: true },
           { id: 'crm-accounts', label: 'Contas', path: '/crm/accounts', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-contacts', label: 'Contatos', path: '/crm/contacts', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },
           { id: 'crm-leads', label: 'Leads', path: '/crm/leads', permission: { resource: 'crm', action: 'read' }, hiddenInSubNav: true },

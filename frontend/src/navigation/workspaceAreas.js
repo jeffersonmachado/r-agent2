@@ -54,7 +54,10 @@ const AREA_BLUEPRINTS = [
     defaultContextPanel: 'crm',
     pathPrefixes: ['/crm'],
     legacyAnchorIds: ['relacionamento'],
-    includeNodeIds: ['crm'],
+    // Recorte por EXCLUSÃO: `includeNodeIds: ['crm']` podava os filhos do nó `crm`
+    // (pickByNodeIds mantém só os ids pedidos), e a área ficava sem seção própria —
+    // exibindo apenas o atalho para `/support`, que é a página LEGADA de Atendimento.
+    excludeNodeIds: ['atendimento', 'canais-mensageria'],
     fallbackPath: '/crm',
   },
   {
@@ -299,8 +302,17 @@ export function buildWorkspaceAreas(filteredMenu = [], currentPath = '/') {
         .filter((item) => item.path)
         .map((item) => item.path),
     );
+    // Um nó ANCESTRAL (grupo) pode ter path próprio que não é página desta área: na área
+    // Clientes, `relacionamento` (path `/support`, Central de Atendimento LEGADA) é apenas
+    // o ancestral do nó `crm`. O path de um grupo só vale como item da área quando casa o
+    // `pathPrefixes` dela (ex.: `cockpit` → `/workspace` é página da área inicial).
+    const belongsToArea = (item) => {
+      const isGroupNode = Array.isArray(item.children) && item.children.length > 0;
+      if (!isGroupNode) return true;
+      return (area.pathPrefixes || []).some((prefix) => pathMatches(prefix, item.path));
+    };
     const allLeaves = uniqueByPath(
-      sourceLeaves.filter((item) => item.path && scopedNodePaths.has(item.path)),
+      sourceLeaves.filter((item) => item.path && scopedNodePaths.has(item.path) && belongsToArea(item)),
     );
     const leaves = allLeaves.filter((item) => !item.hiddenInSidebar);
 

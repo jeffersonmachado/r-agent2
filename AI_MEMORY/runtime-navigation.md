@@ -143,6 +143,6 @@ Jornada completa das 6 telas validada no browser (Overview, Tasks, Missions / En
 
 Gaps observados (pré-existentes, não introduzidos nesta mudança):
 
-- `Clientes` (`/crm`) exibe **apenas** "Atalhos → Relacionamento (`/support`)" porque os 12 itens de CRM declaram `hiddenInSubNav: true` — a área fica sem seção própria e o atalho aponta para a página legada de Atendimento.
-- `/config`, `/supervisor` e `/crm` não têm item marcado como ativo no menu secundário (paths sem item visível), comportamento pré-existente.
+- `Clientes` (`/crm`): **CORRIGIDO em 2026-10-08** — a área reivindicava `/support` (Central de Atendimento LEGADA) como página própria: `includeNodeIds: ['crm']` podava os filhos do nó `crm` e o path do nó ancestral `relacionamento` contava como item da área. Agora o recorte é por exclusão (`atendimento`, `canais-mensageria`) e o path de um nó de GRUPO só vale como item se casar o `pathPrefixes` da área. A seção CRM aparece com "Painel CRM" (`/crm`) e o alias `/crm/dashboard` saiu do submenu (rota preservada, `hiddenInSubNav`).
+- `/config` e `/supervisor` não têm item marcado como ativo no menu secundário (paths sem item visível), comportamento pré-existente.
 - `/dev/engineering/release-closure` reporta `NÃO É UM RELEASE LIMPO` com motivos explícitos (`NO_CURRENT_GOVERNED_RUN`, `QA_MESH_GO_NO_GO_MISSING`, `FINAL_READINESS_MISSING`, `FINAL_CONSISTENCY_GATE_MISSING`, `ENGINEERING_RELEASE_BLOCKERS_PENDING`, `ENGINEERING_REGRESSIONS_PENDING`): o run corrente não está amarrado ao fingerprint da árvore.

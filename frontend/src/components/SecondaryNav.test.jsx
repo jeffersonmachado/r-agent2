@@ -92,3 +92,14 @@ describe('SecondaryNav — área Dev', () => {
     expect(sectionOf('Engineering').classList.contains('is-collapsed')).toBe(true);
   });
 });
+
+describe('SecondaryNav — área Clientes', () => {
+  it('não oferece atalho para a página legada /support e mostra a seção CRM', () => {
+    renderAt('/crm');
+
+    expect(screen.queryByRole('link', { name: /Relacionamento|Central de Atendimento/i })).toBeNull();
+    expect(document.querySelector('.rap-secondary-nav a[href="/support"]')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'CRM' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Painel CRM' })).toHaveLength(1);
+  });
+});
