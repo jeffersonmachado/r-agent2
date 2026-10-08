@@ -1,0 +1,80 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "CONTRACT_DIVERGENCE",
+  "generatedAt": "2026-10-08T03:14:28.386Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "INC-3A: nucleo puro de replan diverge do contrato declarado no INCREMENTO 1 (R1-R6)",
+  "headline": "O nucleo implementado nao cumpre o contrato escrito da missao: algoritmo de fingerprint, assinatura e vocabulario de decisao, assinatura da decomposicao e do registro de linhagem. Chamar o nucleo com as chaves DO CONTRATO devolve NO_REPLAN/NO_REASON — falha SILENCIOSA (\"nao precisa replanejar\"), o mesmo padrao dos defeitos anteriores.",
+  "measuredAgainst": {
+    "core": "engine/engineeringMission/replanPolicy.js",
+    "commit": "f07bbbff",
+    "method": "worktree temporario + require do modulo REAL"
+  },
+  "divergences": [
+    {
+      "requirement": "R2",
+      "declared": "fingerprintReplanReason({ code, cause, specVersion, taskId }) — SHA-256 determinístico com ordenação canônica das chaves",
+      "real": "aceita string; com objeto faz String(objeto); devolve FNV-1a de 8 hex com prefixo `rp_`",
+      "observed": {
+        "porString": "rp_d051d75d",
+        "porObjetoDoContrato": "rp_0461f1c4",
+        "ordemDeChaves": "estavel por coerção, não por ordenação declarada"
+      },
+      "impact": "dois motivos equivalentes com chaves em ordem diferente podem divergir; e o algoritmo não é o declarado (SHA-256)"
+    },
+    {
+      "requirement": "R3",
+      "declared": "evaluateReplan({ missionState, history, budget, progress, nowMs }) -> { decision, code, reasonFingerprint, nextAttempt, evidence }, com NOT_APPLICABLE | EXHAUSTED | LIVELOCK | REPLAN",
+      "real": "evaluateReplan({ reason, attempts, replans, history, materialProgress }) -> { decision, reason, fingerprint, attempts, replans, budget, streak }, com NO_REPLAN | HALT | REPLAN",
+      "observed": {
+        "comChavesDoContrato": "NO_REPLAN / NO_REASON",
+        "camposDoContratoAusentes": [
+          "code",
+          "reasonFingerprint",
+          "nextAttempt",
+          "evidence"
+        ]
+      },
+      "impact": "FALHA SILENCIOSA: quem chama pelo contrato recebe \"não há replanejamento\" em vez de erro, mesmo em estado que exigiria HALT/LIVELOCK"
+    },
+    {
+      "requirement": "R4",
+      "declared": "planMissionDecomposition({ spec, maxIncrements }) com relatório auditável de overflow",
+      "real": "planMissionDecomposition(mission) lê critérios da missão crua",
+      "observed": {
+        "comSpecDoContrato": {
+          "increments": 0,
+          "errors": [
+            "NO_ACCEPTANCE_CRITERIA"
+          ]
+        },
+        "relatorioDeOverflow": "ausente"
+      },
+      "impact": "chamar pelo contrato devolve plano VAZIO interpretado como \"nada a fazer\""
+    },
+    {
+      "requirement": "R5",
+      "declared": "buildReplanLineageRecord({ before, decision, atMs })",
+      "real": "espera outro formato; com as chaves do contrato devolve decision=UNKNOWN, createdAt=null",
+      "impact": "registro de linhagem nasce sem decisão nem instante quando chamado pelo contrato"
+    },
+    {
+      "requirement": "R6",
+      "declared": "pureza verificável",
+      "real": "sem fs/net/http/child_process/logger, sem relógio interno",
+      "status": "ATENDIDO"
+    }
+  ],
+  "pattern": "Mesma classe dos defeitos do INC-3B: interface inventada por um lado, consumida pelo outro, com falha SILENCIOSA em vez de erro. O contrato foi escrito; a implementação seguiu outro vocabulário; os testes foram escritos para a implementação — então o gate nunca comparou os dois.",
+  "noteAboutTheGivenSpec": "A spec do INC-3B (v21) adotou o vocabulário da IMPLEMENTAÇÃO (`decision=\"HALT\"` + `reason=\"LIVELOCK\"`), então o desalinhamento já foi parcialmente absorvido a jusante. Decidir qual lado é a fonte de verdade é decisão de autoridade — não do iniciador externo.",
+  "options": [
+    "A) O CONTRATO é a autoridade: o núcleo passa a implementar R2-R5 (SHA-256 canônico, NOT_APPLICABLE/EXHAUSTED/LIVELOCK, {decision, code, reasonFingerprint, nextAttempt, evidence}, planMissionDecomposition({spec, maxIncrements})). Isso obriga a reescrever a fachada, os testes dela e o vocabulário já absorvido pelo INC-3B.",
+    "B) A IMPLEMENTAÇÃO é a autoridade: o contrato do INCREMENTO 1 é EMENDADO com registro de materialidade (o sistema já tem o código ACCEPTANCE_CRITERION_REMOVED para isso), documentando a divergência aceita."
+  ],
+  "evidenceRaw": "=== R1 — orçamentos declarados ===\nexports: REPLAN_BUDGET_DEFAULTS, buildReplanLineageRecord, evaluateReplan, fingerprintReplanReason, planMissionDecomposition\nREPLAN_BUDGET_DEFAULTS = {\"maxAttempts\":3,\"maxReplans\":3,\"maxEquivalentFingerprints\":2,\"maxCriteriaPerIncrement\":1}\n\n=== R2 — fingerprint: contrato pede SHA-256 com ordenacao canonica de {code, cause, specVersion, taskId} ===\n  assinatura real: recebe (string) e devolve rp_d051d75d\n  chamada com o OBJETO do contrato -> {\"ok\":true,\"value\":\"rp_0461f1c4\"}\n  algoritmo: FNV-1a com prefixo rp_ (NAO e SHA-256 hex de 64 chars)\n  ordenacao canonica de chaves: A=rp_adccc436 B=rp_adccc436 (iguais — mas por stringificacao do objeto, nao por ordenacao declarada)\n\n=== R3 — evaluateReplan: contrato pede ({missionState, history, budget, progress, nowMs}) -> {decision, code, reasonFingerprint, nextAttempt, evidence} ===\n  chamada com as CHAVES do contrato -> {\"ok\":true,\"value\":{\"decision\":\"NO_REPLAN\",\"reason\":\"NO_REASON\",\"fingerprint\":null,\"attempts\":0,\"replans\":0,\"budget\":{\"maxAttempts\":3,\"maxReplans\":3,\"maxEquivalentFingerprints\":2,\"maxCriteriaPerIncrement\":1},\"streak\":0}}\n  chamada com as chaves REAIS -> {\"ok\":true,\"value\":{\"decision\":\"REPLAN\",\"reason\":\"REPLAN_APPROVED\",\"fingerprint\":\"rp_fd0c5087\",\"attempts\":0,\"replans\":0,\"budget\":{\"maxAttempts\":3,\"maxReplans\":3,\"maxEquivalentFingerprints\":2,\"maxCriteriaPerIncrement\":1},\n  vocabulario declarado: NOT_APPLICABLE | EXHAUSTED | LIVELOCK | REPLAN\n  vocabulario real: NO_REPLAN | HALT | REPLAN (o motivo vai em 'reason')\n  campos do contrato AUSENTES: code, reasonFingerprint, nextAttempt, evidence\n  campos devolvidos: decision, reason, fingerprint, attempts, replans, budget, streak\n\n=== R4 — planMissionDecomposition: contrato pede ({spec, maxIncrements}) ===\n  chamada com {spec, maxIncrements} -> {\"ok\":true,\"value\":{\"missionId\":null,\"increments\":[],\"coveredCriteria\":[],\"errors\":[\"NO_ACCEPTANCE_CRITERIA\"]}}\n  chamada com a missao crua -> {\"ok\":true,\"value\":{\"missionId\":\"m1\",\"increments\":[],\"coveredCriteria\":[],\"errors\":[\"NO_ACCEPTANCE_CRITERIA\"]}}\n  relatorio auditavel de overflow: AUSENTE no retorno\n\n=== R5 — buildReplanLineageRecord: contrato pede ({before, decision, atMs}) ===\n  chamada com as chaves do contrato -> {\"ok\":true,\"value\":{\"record\":{\"missionId\":null,\"decision\":\"UNKNOWN\",\"reason\":null,\"fingerprint\":null,\"attempts\":0,\"replans\":0,\"materialProgress\":false,\"createdAt\":null,\"parentFingerprint\":null},\"lineage\":[{\"missionId\":nu\n\n=== R6 — pureza ===\n  (verificado por leitura + suite propria do modulo)",
+  "constraintsHonored": [
+    "nenhuma alteracao de contrato ou de nucleo feita pelo iniciador externo",
+    "nenhum gate/severidade/cobertura alterados",
+    "medicao contra o modulo REAL em worktree temporario, removido depois"
+  ]
+}
