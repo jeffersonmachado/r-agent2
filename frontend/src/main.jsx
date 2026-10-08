@@ -91,6 +91,7 @@ const EngineeringFindingsPage = lazyPage(() => import('./pages/engineering-findi
 const EngineeringMissionDetailPage = lazyPage(() => import('./pages/engineering-missions/EngineeringMissionDetailPage'), 'EngineeringMissionDetailPage');
 const QaGapsPage = lazyPage(() => import('./pages/QaGapsPage'), 'QaGapsPage');
 const BenchmarkResearchGovernancePage = lazyPage(() => import('./pages/BenchmarkResearchGovernancePage'), 'BenchmarkResearchGovernancePage');
+const SecurityIntelligencePage = lazyPage(() => import('./pages/SecurityIntelligencePage'), 'SecurityIntelligencePage');
 const QaWavesOperationalHealthPage = lazyPage(() => import('./pages/QaWavesOperationalHealthPage'), 'QaWavesOperationalHealthPage');
 const QaWavesEnterpriseGovernancePage = lazyPage(() => import('./pages/QaWavesEnterpriseGovernancePage'), 'QaWavesEnterpriseGovernancePage');
 const WorkspacePage = lazyPage(() => import('./pages/WorkspacePage'), 'WorkspacePage');
@@ -514,6 +515,7 @@ function AppWithAuth() {
     && !isEngineeringTasks && !isEngineeringTaskDetail && !isEngineeringModels && !isEngineeringReleaseClosure
     && !isEngineeringMissions && !isEngineeringMissionDetail && !isEngineeringFindings;
   const isBenchmarkResearch = isRoute('/dev/benchmark-research');
+  const isSecurityIntel = isRoute('/dev/security-intel');
   const isQaWavesOperationalHealth = isRoute('/dev/qa-waves/operational-health');
   const isQaWavesEnterpriseGovernance = isRoute('/dev/qa-waves/enterprise-governance');
   const isAgentOsHub = isRoute('/admin/agents');
@@ -598,6 +600,7 @@ function AppWithAuth() {
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
       isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isBenchmarkResearch,
+      isSecurityIntel,
       isEngineeringOverview, isEngineeringTasks, isEngineeringTaskDetail, isEngineeringModels, isEngineeringReleaseClosure,
       isEngineeringMissions, isEngineeringMissionDetail, isEngineeringFindings,
       isAgentOsHub,
@@ -618,7 +621,7 @@ function AppWithAuth() {
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isCases, isPlatformSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isStackVersions, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-            isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isBenchmarkResearch, isEngineeringOverview, isEngineeringTasks, isEngineeringTaskDetail, isEngineeringModels, isEngineeringReleaseClosure, isEngineeringMissions, isEngineeringMissionDetail, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
+            isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isBenchmarkResearch, isSecurityIntel, isEngineeringOverview, isEngineeringTasks, isEngineeringTaskDetail, isEngineeringModels, isEngineeringReleaseClosure, isEngineeringMissions, isEngineeringMissionDetail, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -755,6 +758,7 @@ function AppWithAuth() {
       '/dev/qa-waves': '🌊 QA Waves Integrado',
       '/dev/qa-gaps': '🧭 QA Gaps Operacionais',
       '/dev/benchmark-research': '🔬 Pesquisa de Benchmark',
+      '/dev/security-intel': '🛡️ Versões e Segurança',
       '/dev/qa-waves/operational-health': 'QA Waves Operational Health',
       '/dev/qa-waves/enterprise-governance': 'QA Waves Enterprise Governance',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
@@ -1078,6 +1082,8 @@ function AppWithAuth() {
     pageContent = <EngineeringOverviewPage />;
   } else if (isBenchmarkResearch) {
     pageContent = <BenchmarkResearchGovernancePage />;
+  } else if (isSecurityIntel) {
+    pageContent = <SecurityIntelligencePage />;
   } else if (isOrders) {
     pageContent = <OrdersPage />;
   } else if (isKitchen) {

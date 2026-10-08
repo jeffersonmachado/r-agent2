@@ -26,6 +26,9 @@ function createRouteRegistry(routers) {
     // §B1/§B2: pesquisa competitiva de benchmarks (DEVELOPMENT). Montado aqui
     // porque router fora desta lista simplesmente NÃO é montado.
     { router: routers.benchmarkResearchRouter },
+    // RAP Version & Security Intelligence (DEVELOPMENT). Montado aqui porque
+    // router fora desta lista simplesmente NÃO é montado (responde 404).
+    { router: routers.securityIntelRouter },
     // T-MR1: descoberta autônoma de mercado (DEVELOPMENT/SYSTEM). Montado aqui
     // porque router fora desta lista simplesmente NÃO é montado.
     { router: routers.marketDiscoveryRouter },

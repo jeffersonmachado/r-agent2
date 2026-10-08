@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-08T22:58:01.289Z",
+  "generatedAt": "2026-10-08T23:24:31.088Z",
   "counts": {
-    "total": 3948,
+    "total": 3960,
     "byKind": {
-      "api": 893,
+      "api": 904,
       "field": 2454,
       "model": 222,
-      "page": 148,
+      "page": 149,
       "relation": 9,
       "table": 222
     },
     "byClassification": {
-      "PRODUCTION": 3654,
-      "DEVELOPMENT": 202,
+      "PRODUCTION": 3665,
+      "DEVELOPMENT": 203,
       "SUPPORT": 92
     },
-    "orphaned": 18
+    "orphaned": 29
   },
   "items": [
     {
@@ -4968,6 +4968,126 @@
       ],
       "linkedDomains": [],
       "fingerprint": "7fd2441cc23aab817e640a57d02a17072b54f57bdac880ee83edd4abad89bcae"
+    },
+    {
+      "id": "api:GET:/api/security-intel/advisories",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/advisories",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "4ddb2656da9afe0dd94a1f9755382678b897f8a0eec264705799a6825ce9c83e"
+    },
+    {
+      "id": "api:GET:/api/security-intel/findings",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/findings",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "656bf6fe35b1b618e09fb5e9a30b91f72f8f417c6e300c6f5bcb8dbbc3df3574"
+    },
+    {
+      "id": "api:GET:/api/security-intel/findings/timeline",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/findings/timeline",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "c9f0b584a939d713389e7420152c6fa78758c748f13e422da82a3207376c126a"
+    },
+    {
+      "id": "api:GET:/api/security-intel/inventory",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/inventory",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0744df9bab778901bcdf106bbf27384a29680744a3521f8ebe4b02d7a53db4f6"
+    },
+    {
+      "id": "api:GET:/api/security-intel/patches",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/patches",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "67c2ce8f5b99fee00f7d0af6f80dd6102f5032171f3adca530e06d5feef0f84a"
+    },
+    {
+      "id": "api:GET:/api/security-intel/summary",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/summary",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "5c5668f6e000ec142a19129c2c0ab257de12a7c348afb1998f89a675de67a1f9"
+    },
+    {
+      "id": "api:GET:/api/security-intel/vector-index",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/vector-index",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0f37a0f4a279b9d00ea53ae00ccf83c8ae00f335428c746a72bf15b637b98f4f"
+    },
+    {
+      "id": "api:GET:/api/security-intel/versions",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/versions",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0e89e72de8556135e88882c7c49090dcc8f8dcfc64ea7331d2d5c42ba99dc2ef"
     },
     {
       "id": "api:GET:/api/services/dashboard",
@@ -13365,6 +13485,51 @@
       ],
       "linkedDomains": [],
       "fingerprint": "f41bf3c822797d442c3136075bf77105039faa10411cd4af0d9d252c9c65a440"
+    },
+    {
+      "id": "api:POST:/api/security-intel/patch-mission",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/security-intel/patch-mission",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "cd22ca3e2b7055a1964a8967995bc041b2821a54a9f35fc03c9a788d45794cf9"
+    },
+    {
+      "id": "api:POST:/api/security-intel/patches/generate",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/security-intel/patches/generate",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "183a9cc44835caacefc5c898480d83a9d4d0c0ddb7d9a6ea9da1068a117d2a08"
+    },
+    {
+      "id": "api:POST:/api/security-intel/scan",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/security-intel/scan",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "2fe49f479f9699c43ee4547dad5c08556d60e99202e5a0b8f3f3456d7b20dc49"
     },
     {
       "id": "api:POST:/api/services/journey/event",
@@ -70827,6 +70992,27 @@
       "technicalWave": "resilience",
       "linkedJourneys": [],
       "fingerprint": "65fc526bc787153389f21408f4d3678ef662462022265047714f3edd5a0b4eb6"
+    },
+    {
+      "id": "page:/dev/security-intel",
+      "kind": "page",
+      "path": "/dev/security-intel",
+      "roles": [
+        "super_admin"
+      ],
+      "permission": "reports:read",
+      "classifications": [
+        "DEVELOPMENT"
+      ],
+      "section": "plataforma",
+      "guarded": true,
+      "classification": "DEVELOPMENT",
+      "source": "frontend/src/main.jsx",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "3d82242f71b5813fc2567dec611e2e56fd2bd0d663aa5a834f18046ca4673c7c"
     },
     {
       "id": "page:/dev/stack-versions",

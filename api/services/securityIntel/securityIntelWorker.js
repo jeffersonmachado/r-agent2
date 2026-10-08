@@ -265,6 +265,7 @@ module.exports = {
   shouldSyncAdvisories,
   countEscalations,
   runCycle,
+  getLatestAdvisorySyncAge,
   startSecurityIntelWorker,
   stopSecurityIntelWorker,
   getSecurityIntelWorkerStatus,

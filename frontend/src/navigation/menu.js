@@ -390,6 +390,10 @@ export const navigationMenu = [
           { id: 'dev-engineering-findings', label: 'Findings / Ciclo de Bug', path: '/dev/engineering/findings', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
           { id: 'dev-engineering-models', label: 'Models / Router', path: '/dev/engineering/models', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
           { id: 'dev-engineering-release-closure', label: 'Release Closure', path: '/dev/engineering/release-closure', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          // Versões e segurança: inventário de componentes, CVEs internos e plano de
+          // correção. DEVELOPMENT-only (a API também exige a classificação — a
+          // ocultação de menu NÃO é o controle de acesso).
+          { id: 'dev-engineering-security-intel', label: 'Versões e Segurança', path: '/dev/security-intel', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
         ],
       },
       {

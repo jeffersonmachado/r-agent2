@@ -91,6 +91,8 @@ const { createAgentOsExpressRouter } = require('../composition/agent-os');
 const { createLearningCoreExpressRouter } = require('../composition/learning-core');
 // §B1/§B2: chamador de produção do benchmarkResearchSupervisor (DEVELOPMENT).
 const { createBenchmarkResearchExpressRouter } = require('../composition/benchmark-research');
+// RAP Version & Security Intelligence: superfície de engenharia (DEVELOPMENT).
+const { createSecurityIntelExpressRouter } = require('../composition/security-intel');
 // T-MR1: chamador de runtime do marketDiscoverySupervisor (DEVELOPMENT/SYSTEM).
 const { createMarketDiscoveryExpressRouter } = require('../composition/market-discovery');
 const { createCognitiveExpressRouter } = require('../composition/cognitive');
@@ -143,6 +145,8 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const engineeringMissionRouter = createEngineeringMissionExpressRouter();
   // Pesquisa de benchmarks: superfície de engenharia (DEVELOPMENT).
   const benchmarkResearchRouter = createBenchmarkResearchExpressRouter({ buildCoreRoutingContext });
+  // Inteligência de versões/segurança: inventário, findings, patches (DEVELOPMENT).
+  const securityIntelRouter = createSecurityIntelExpressRouter({ buildCoreRoutingContext });
   // Descoberta de mercado: superfície de engenharia (DEVELOPMENT), tenant SYSTEM.
   const marketDiscoveryRouter = createMarketDiscoveryExpressRouter({ buildCoreRoutingContext });
   const mcpRouter = createMcpExpressRouter();
@@ -218,6 +222,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     engineeringRouterRouter,
     engineeringMissionRouter,
     benchmarkResearchRouter,
+    securityIntelRouter,
     marketDiscoveryRouter,
     mcpRouter,
     demoRouter,

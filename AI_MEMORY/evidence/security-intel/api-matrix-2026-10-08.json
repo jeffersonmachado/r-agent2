@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-10-08T23:23:17.299Z",
+  "tenant": "system",
+  "results": [
+    {
+      "method": "GET",
+      "path": "/api/security-intel/summary",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/security-intel/inventory?search=torch",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/security-intel/versions?bomRef=nao-existe",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/security-intel/findings?severity=CRITICAL",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/security-intel/findings/timeline?findingKey=dummy",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/security-intel/patches",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/security-intel/vector-index",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/security-intel/advisories",
+      "status": 200,
+      "error": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/security-intel/scan",
+      "status": 200,
+      "findings": 81,
+      "components": 1653,
+      "durationMs": 2039
+    },
+    {
+      "method": "POST",
+      "path": "/api/security-intel/patches/generate",
+      "status": 200,
+      "candidates": 44
+    },
+    {
+      "method": "POST",
+      "path": "/api/security-intel/patch-mission (Nivel C sem authorizedBy)",
+      "status": 403,
+      "error": "patch_candidate_requires_authorization",
+      "candidate": "transformers"
+    },
+    {
+      "method": "POST",
+      "path": "/api/security-intel/patch-mission (candidato inexistente)",
+      "status": 404,
+      "error": "patch_candidate_not_found"
+    }
+  ]
+}
