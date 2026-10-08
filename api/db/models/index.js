@@ -194,6 +194,10 @@ const getGovernanceGateResult = require('./GovernanceGateResult');
 const getExecutionTrace = require('./ExecutionTrace');
 const getExecutionTraceEvent = require('./ExecutionTraceEvent');
 const getGovernanceFinalDecision = require('./GovernanceFinalDecision');
+const getSecurityComponent = require('./SecurityComponent');
+const getSecurityComponentVersion = require('./SecurityComponentVersion');
+const getSecurityDiscoveryRun = require('./SecurityDiscoveryRun');
+const getSecuritySbomSnapshot = require('./SecuritySbomSnapshot');
 const getReleaseManifestRecord = require('./ReleaseManifestRecord');
 const getAgentPolicy = require('./AgentPolicy');
 const getAgentPolicyVersion = require('./AgentPolicyVersion');
@@ -410,6 +414,10 @@ const GovernanceGateResult = () => getGovernanceGateResult();
 const ExecutionTrace = () => getExecutionTrace();
 const ExecutionTraceEvent = () => getExecutionTraceEvent();
 const GovernanceFinalDecision = () => getGovernanceFinalDecision();
+const SecurityComponent = () => getSecurityComponent();
+const SecurityComponentVersion = () => getSecurityComponentVersion();
+const SecurityDiscoveryRun = () => getSecurityDiscoveryRun();
+const SecuritySbomSnapshot = () => getSecuritySbomSnapshot();
 const ReleaseManifestRecord = () => getReleaseManifestRecord();
 const AgentPolicy = () => getAgentPolicy();
 const AgentPolicyVersion = () => getAgentPolicyVersion();
@@ -1107,6 +1115,11 @@ module.exports = {
   ScorecardEvaluation,
   ScorecardDimensionResult,
   ScorecardRequirementResult,
+  SecurityComponent,
+  SecurityComponentVersion,
+  SecurityDiscoveryRun,
+  SecuritySbomSnapshot,
+  ScorecardRequirementResult,
   GovernanceGap,
   GovernanceGateResult,
   ExecutionTrace,
@@ -1304,6 +1317,10 @@ module.exports = {
   getScorecardEvaluation,
   getScorecardDimensionResult,
   getScorecardRequirementResult,
+  getSecurityComponent,
+  getSecurityComponentVersion,
+  getSecurityDiscoveryRun,
+  getSecuritySbomSnapshot,
   getGovernanceGap,
   getGovernanceGateResult,
   getExecutionTrace,
