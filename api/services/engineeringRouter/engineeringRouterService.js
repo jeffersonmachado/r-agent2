@@ -65,6 +65,10 @@ const {
   EVIDENCE_OVERSAMPLE_FACTOR,
   selectProductionTasks,
 } = require('../../../engine/engineeringRouter/evidenceOrigin');
+const {
+  isInfrastructureFailure,
+  meritFailureKindOf,
+} = require('../../../engine/engineeringRouter/executionFailurePolicy');
 
 /**
  * Identidade de worker: UUID de instância. O PID NÃO entra na identidade (não é global entre
@@ -1251,7 +1255,17 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
     }
 
     if (result.outcome === 'REROUTE') {
-      noteExecutionFailure(result.attempt, result.failureClass === 'PROVIDER_TIMEOUT' ? 'timeout' : 'provider');
+      // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): indisponibilidade de PROVIDER é infraestrutura, não
+      // incapacidade do modelo. A rotação nesta execução já é garantida por `excludedModelKeys`
+      // (adicionado dentro de `rerouteRole`); marcar aqui como falha determinística degradava o
+      // MELHOR coder do pool por uma resposta vazia/timeout do provedor e o retirava das iterações
+      // seguintes. Medido: em 50 tentativas dos incrementos INC-3A/3B/3B1, 23 foram
+      // PROVIDER_UNAVAILABLE e o modelo com maior P(patch aplicável E teste passando) era
+      // abandonado já na 1ª tentativa. Falhas de MÉRITO continuam registradas nos seus próprios
+      // caminhos (patch não aplicável e teste falhando).
+      if (!isInfrastructureFailure(result.failureClass, result.reasonCode)) {
+        noteExecutionFailure(result.attempt, meritFailureKindOf(result.failureClass));
+      }
       const reroute = await rerouteRole({
         task, role: result.role, failedModelKey: result.failedModelKey, reasonCode: result.reasonCode,
         failureClass: result.failureClass || null, providerElapsedMs: result.providerElapsedMs ?? 0,

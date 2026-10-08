@@ -1,0 +1,43 @@
+{
+  "artifactType": "HUMAN_EXTERNAL_BOOTSTRAP",
+  "generatedAt": "2026-10-08T00:40:00.000Z",
+  "author": "GitHub Copilot (DeepSeek V4 Flash) — autoridade humana, não é entrega autônoma do Engenheiro",
+  "scope": "Falha de PROVIDER não pode degradar a prioridade do modelo (mérito != infraestrutura)",
+  "problemMeasured": {
+    "where": "api/services/engineeringRouter/engineeringRouterService.js, caminho `result.outcome === 'REROUTE'`",
+    "mechanism": "uma falha de indisponibilidade do provider chamava `noteExecutionFailure(attempt, 'provider'|'timeout')`, que alimenta `currentExecutionFailures`; `currentExecutionPenalty` soma +1 à faixa de confiabilidade do modelo, rebaixando-o nas iterações seguintes da MESMA execução",
+    "whyItMatters": "a rotação dentro da execução já é garantida por `excludedModelKeys.add(failedModelKey)` (dentro de `rerouteRole`), então a penalidade adicional só servia para retirar o melhor candidato do jogo por uma falha que não diz nada sobre a capacidade dele",
+    "observed": {
+      "INC-3B_v19_task": "c751c8af-ae5c-422b-a828-d2e6da9a807a",
+      "attempt1": "deepseek:deepseek-flash PROVIDER_UNAVAILABLE (resposta vazia) — melhor coder do pool, tier 0, P(aplicado)=60% em BUG_FIX",
+      "attempt2e3": "qwen3-coder-flash (P(aplicado)=13%) assumiu e falhou em PATCH_APPLY_FAILED",
+      "pattern": "em 50 tentativas dos incrementos INC-3A/3B/3B1, 23 foram PROVIDER_UNAVAILABLE; o melhor coder era abandonado logo na 1ª falha de infraestrutura"
+    }
+  },
+  "change": {
+    "files": [
+      "engine/engineeringRouter/executionFailurePolicy.js (NOVO, puro)",
+      "api/services/engineeringRouter/engineeringRouterService.js (caminho REROUTE)",
+      "tests/unit/engineeringRouterExecutionFailurePolicy.test.js (NOVO, 5 casos)"
+    ],
+    "semantics": "registra falha corrente do modelo apenas quando ela revela INCAPACIDADE (mérito). Classes de infraestrutura (PROVIDER_TIMEOUT, PROVIDER_UNAVAILABLE, PROVIDER_QUOTA, PROVIDER_RATE_LIMITED) e motivos (PROVIDER_UNAVAILABLE, PROVIDER_TIMEOUT, PROVIDER_EXHAUSTED) não degradam mais o candidato",
+    "unchanged": [
+      "a rotação dentro da execução continua garantida por excludedModelKeys (nunca reseleciona o modelo que acabou de falhar) — sem risco de loop",
+      "falhas de MÉRITO continuam registradas nos seus próprios caminhos: patch não aplicável (linha do patchFailure) e mérito repetido (MERIT_REPEATED)",
+      "nenhum gate, cobertura, critério, allowlist ou política de custo foi alterado",
+      "nenhuma credencial foi cadastrada ou solicitada"
+    ]
+  },
+  "relationToPreviousBootstrap": {
+    "previous": "0a0df9ce — evidência do ranking passa a descartar execuções de ROTINA DE TESTE",
+    "whyBothAreNeeded": "a evidência limpa coloca o melhor coder em 1º (P=60% em BUG_FIX); sem esta segunda correção ele era removido do jogo na 1ª falha de provider, e a ordenação corrigida não produzia efeito prático"
+  },
+  "proof": {
+    "newTests": "14/14 (5 de executionFailurePolicy + 9 de evidenceOrigin)",
+    "regression": "npx jest --testPathPattern engineeringRouter → 42 suítes / 331 testes, 0 falhas, EXIT=0",
+    "note": "a mudança exige reinício do processo da API para valer (módulo carregado no boot)"
+  },
+  "noGateWeakened": true,
+  "noPatchAutoRepair": true,
+  "noCredentialRequested": true
+}
