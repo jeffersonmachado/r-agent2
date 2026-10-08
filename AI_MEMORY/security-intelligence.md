@@ -94,6 +94,17 @@ operacional; não duplica o doc.
   `UNKNOWN_JSON_WRITE_TARGET` com o alvo literalmente `algo.json`).
 - `resetMocks: true` no `jest.config.cjs` apaga implementações: reestabeleça mocks no
   `beforeEach`.
+- **Testar o worker exige cuidado com o harness do repo** (`tests/setup.js`):
+  - o `Promise.all` é MONKEY-PATCHED com um `.finally()` derivado — rejeição JÁ
+    TRATADA vira unhandled rejection e falha o teste com o erro original. Para
+    testar o caminho de erro, prefira rota/função com `await` único;
+  - o `afterEach` global aguarda um `setTimeout` REAL: com timers falsos ele trava
+    até o timeout. Restaure `jest.useRealTimers()` no CORPO do teste (a ordem dos
+    `afterEach` não é garantia), antes do hook global;
+  - o callback do agendamento do worker é `() => tick(...)` e devolve a promise do
+    ciclo: avançar timers falsos AGUARDA essa promise e trava enquanto o ciclo está
+    pendente (o cenário exato de "sem sobreposição"). Esse teste usa tempo real com
+    espera ativa (`waitFor`), não timers falsos.
 - Alterar `package.json` neste worktree exige staging por hunk: há WIP de outro agente
   removendo ~30 scripts no mesmo arquivo.
 - `RELEASE_SIGNING_KEY`/probes de serviço: rodar `security:*` carrega `.env` pela CLI;
@@ -108,14 +119,16 @@ operacional; não duplica o doc.
    29 Nível C. Waiver **ainda não existe** como tabela — nada é isentado hoje.
 2. Registrar o Release Security Gate em `validate:governance-enforcement` — só
    DEPOIS de triar (hoje o registro bloquearia o release; decisão do dono).
-3. Testes de falha/resiliência do worker e do conector (sobreposição de ciclos,
-   falha persistente, restart, sync parcial).
-4. Agendamento do sweep `--scope installed` (hoje é manual; o worker NÃO sincroniza
+3. Agendamento do sweep `--scope installed` (hoje é manual; o worker NÃO sincroniza
    base por padrão — egress é opt-in).
-5. pgvector: check de integridade já existe; falta planejar 0.6.0 → 0.8.x com
+4. pgvector: check de integridade já existe; falta planejar 0.6.0 → 0.8.x com
    regressão de ranking híbrido.
 
 **Já entregue:** inventário (Fase 1), SBOM, advisories + correlação (Fase 2), Risk
 Engine (Fase 3), Patch Engine + ponte com o Roteador (Fase 4), Release Security Gate
 com exit real (Fase 5), worker contínuo (Fase 7), check de índice vetorial (Fase 8),
-APIs DEVELOPMENT + UI de engenharia (Fase 6) e sweep de cobertura completa (Fase 9a).
+APIs DEVELOPMENT + UI de engenharia (Fase 6), sweep de cobertura completa (Fase 9a) e
+testes de falha/resiliência do worker (Fase 9b): ciclos nunca se sobrepõem, erro de
+ciclo é capturado (sem unhandled rejection), falha persistente derruba a saúde para
+DEGRADED com recuperação, restart limpo e falha de sincronização não é memorizada
+como base fresca.

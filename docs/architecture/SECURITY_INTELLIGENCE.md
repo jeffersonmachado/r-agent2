@@ -182,7 +182,17 @@ agendado depois que o anterior termina.
 - Verificação do índice vetorial: **DEGRADED** (só por `vector 0.6.0` < mínimo
   recomendado 0.8.0); índice HNSW **VÁLIDO**, planner **usa** o índice, 8460 chunks com
   0 nulos e 0 dimensões erradas.
-- Testes: **160 asserções em 10 suítes** (`tests/unit/securityIntel/`).
+- Testes: **207 casos em 13 suítes** (`tests/unit/securityIntel/`), incluindo
+  **5 de resiliência** (`resilience.test.js`): ciclos **nunca se sobrepõem** (ciclo
+  lento em andamento não deixa o próximo disparar), erro de ciclo é **capturado**
+  (sem unhandled rejection que derrubaria a API) e o worker **continua tentando**,
+  falha persistente derruba a saúde para `DEGRADED` com **recuperação** após um
+  sucesso, `stop` cancela o agendamento de verdade (**nenhum ciclo fantasma**), e
+  falha na sincronização da base **não é memorizada como base fresca**.
+- Rotas HTTP: `api/modules/security-intel/routes.test.js` (6 casos) prova 401 anônimo,
+  403 para ator PRODUCTION mesmo declarando classificação na query, 400 quando o
+  tenant não é resolvível, 200 com risco separado de evidência VEX e 503 em falha de
+  persistência.
 
 ### 6.1 Defeitos reais encontrados e corrigidos nesta fase
 
@@ -241,17 +251,16 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
    registro".
 2. **Registrar o Release Security Gate no agregado**: o gate já existe, decide e sai 1 em
    `NO_GO` (`npm run validate:security-release-gate`), mas **não** foi incluído em
-   `validate:governance-enforcement`. Motivo declarado: o estado atual é `NO_GO` por 21
-   achados de runtime ainda não tratados — registrá-lo agora bloquearia o release da
-   plataforma por decisão que é do dono, não de uma correção isolada (mesmo precedente
-   de `validate:layer-conventions`). Ordem correta: triar/mitigar os 21 achados,
-   sincronizar a base com sweep completo e SÓ ENTÃO registrar o gate.
-3. **Waivers auditáveis** (tabela + expiração + aprovação humana).
-4. **APIs REST + UI de engenharia** (DEVELOPMENT) e segregação testada.
-5. **Sweep completo de advisories** (~1400 pacotes ≈ 6 min) e os **testes de
-   falha/resiliência** da própria capacidade (concorrência, reinício, fonte fora do
-   ar durante o scan, worker sob falha repetida).
-6. **Caso PostgreSQL/pgvector** — evidência coletada em 2026-10-08:
+   `validate:governance-enforcement`. Motivo declarado: o estado atual é `NO_GO` por 47
+   achados de runtime (com a base de advisories completa) ainda não tratados —
+   registrá-lo agora bloquearia o release da plataforma por decisão que é do dono, não
+   de uma correção isolada (mesmo precedente de `validate:layer-conventions`). Ordem
+   correta: triar/mitigar os achados e SÓ ENTÃO registrar o gate.
+3. **Waivers auditáveis** (tabela + expiração + aprovação humana) — nada é isentado
+   hoje.
+4. **Agendamento do sweep** `--scope installed` (hoje é manual; o egress do worker é
+   opt-in por decisão de segurança).
+5. **Caso PostgreSQL/pgvector** — evidência coletada em 2026-10-08:
    - `vector 0.6.0` instalado (2 *minors* atrás das correções de HNSW/README de
      0.7+/0.8.x); PostgreSQL 16.15.
    - O índice vetorial existente é **HNSW** (`rag_chunks_embedding_hnsw_idx`,
@@ -268,17 +277,26 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
      capacidade; (b) planejar a atualização de `vector` 0.6.0 → 0.8.x em ambiente
      isolado com regressão do ranking híbrido (vetorial + lexical + fusão RRF +
      filtros multi-tenant) antes de qualquer mudança em produção.
-7. Testes de falha/resiliência da capacidade (concorrência, reinício, fonte fora do ar
-   durante scan) e regressão de ranking híbrido pós-atualização de extensão.
+6. Regressão de ranking híbrido pós-atualização de extensão (vetorial + lexical + fusão
+   RRF + filtros multi-tenant).
+
+**Entregues nesta capacidade (com prova):** inventário de componentes, SBOM CycloneDX,
+advisories + correlação (sweep de 1125 pacotes instalados), Risk Engine, Patch Engine +
+ponte com o Roteador, Release Security Gate com exit real, APIs DEVELOPMENT + UI de
+engenharia (segregação provada em teste e em HTTP real), worker contínuo, check de
+integridade do índice vetorial e testes de falha/resiliência (5 casos).
 
 ## 9. Decisão
 
-- **Release Security Gate: `NO_GO`.** Há 21 achados de runtime com severidade
-  `CRITICAL`/`HIGH` abertos (2 CRITICAL). O gate está correto ao reprovar; o trabalho
-  pendente é de **correção**, não de ajuste do gate. Nenhuma dependência foi atualizada
-  nem nada foi implantado — a decisão de aplicar correções é de produção (Nível C).
-- **Capacidade: operacional e comprovada** nas fases 1–2 e nos itens 5 (gate) e 8
-  (integridade vetorial) da missão. Restam abertos: Patch Engine, APIs/UI, worker
-  contínuo, waivers, sweep completo e os testes de falha/resiliência.
-- **Missão integral: `NO-GO`** — os critérios de aceite §21 não estão todos satisfeitos.
+- **Release Security Gate: `NO_GO`.** Com a base de advisories completa (1125 pacotes
+  instalados) há **248 achados com risco** (3 `CRITICAL`, 118 `HIGH`) e **47 bloqueios
+  de runtime** no gate. O gate está correto ao reprovar; o trabalho pendente é de
+  **correção**, não de ajuste do gate. Nenhuma dependência foi atualizada nem nada foi
+  implantado — a decisão de aplicar correções é de produção (Nível C).
+- **Capacidade: operacional e comprovada** nas fases 1–9 da missão (inventário, SBOM,
+  advisories, Risk/Patch Engine, gate, APIs/UI de engenharia, worker contínuo,
+  integridade vetorial, sweep de cobertura completa e resiliência). Restam abertos:
+  triagem dos achados, waivers auditáveis e o caso pgvector 0.6.0 → 0.8.x.
+- **Missão integral: `NO-GO`** — os critérios de aceite §21 não estão todos satisfeitos
+  (nenhuma correção de produção foi aplicada e a triagem é decisão humana pendente).
   O que existe é verificável, reproduzível e não se declara pronto antes da hora.
