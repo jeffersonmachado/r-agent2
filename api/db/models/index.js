@@ -202,6 +202,7 @@ const getSecurityAdvisory = require('./SecurityAdvisory');
 const getSecurityAdvisorySync = require('./SecurityAdvisorySync');
 const getSecurityFinding = require('./SecurityFinding');
 const getSecurityFindingEvent = require('./SecurityFindingEvent');
+const getSecurityPatchCandidate = require('./SecurityPatchCandidate');
 const getReleaseManifestRecord = require('./ReleaseManifestRecord');
 const getAgentPolicy = require('./AgentPolicy');
 const getAgentPolicyVersion = require('./AgentPolicyVersion');
@@ -426,6 +427,7 @@ const SecurityAdvisory = () => getSecurityAdvisory();
 const SecurityAdvisorySync = () => getSecurityAdvisorySync();
 const SecurityFinding = () => getSecurityFinding();
 const SecurityFindingEvent = () => getSecurityFindingEvent();
+const SecurityPatchCandidate = () => getSecurityPatchCandidate();
 const ReleaseManifestRecord = () => getReleaseManifestRecord();
 const AgentPolicy = () => getAgentPolicy();
 const AgentPolicyVersion = () => getAgentPolicyVersion();
@@ -1131,6 +1133,7 @@ module.exports = {
   SecurityAdvisorySync,
   SecurityFinding,
   SecurityFindingEvent,
+  SecurityPatchCandidate,
   ScorecardRequirementResult,
   GovernanceGap,
   GovernanceGateResult,
@@ -1337,6 +1340,7 @@ module.exports = {
   getSecurityAdvisorySync,
   getSecurityFinding,
   getSecurityFindingEvent,
+  getSecurityPatchCandidate,
   getGovernanceGap,
   getGovernanceGateResult,
   getExecutionTrace,

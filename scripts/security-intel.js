@@ -60,6 +60,10 @@ function parseArgs(argv) {
     else if (token === '--scope') args.scope = argv[++index];
     else if (token === '--service') args.service = argv[++index];
     else if (token === '--actor') args.actor = argv[++index];
+    else if (token === '--candidate') args.candidate = argv[++index];
+    else if (token === '--authorized-by') args.authorizedBy = argv[++index];
+    else if (token === '--blocking') args.blocking = true;
+    else if (token === '--include-dev') args.includeDev = true;
     else args._.push(token);
   }
   return args;
@@ -429,6 +433,97 @@ async function commandVectorIndex(args) {
   return result.evaluation.verdict === 'INVALID' ? 1 : 0;
 }
 
+async function commandPatches(args) {
+  const { generatePatchPlans, listPatchCandidates, fingerprintPlans } = require('../api/services/securityIntel/patchPlanService');
+  const tenantKey = args.tenant || 'system';
+  const result = await generatePatchPlans({
+    tenantKey,
+    onlyBlocking: args.blocking === true,
+    includeDevOnly: args.includeDev === true,
+  });
+  const listed = await listPatchCandidates({ tenantKey, limit: 50 });
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    status: 'PASS',
+    tenantKey,
+    findings: result.findings,
+    candidates: result.candidates,
+    summary: result.summary,
+    fingerprint: fingerprintPlans(result.plans),
+    plans: result.plans.map((plan) => ({
+      candidateKey: plan.candidateKey,
+      package: plan.packageName,
+      service: plan.service,
+      from: plan.currentVersion,
+      to: plan.targetVersion,
+      kind: plan.kind,
+      updateRisk: plan.updateRisk,
+      autonomy: plan.autonomy,
+      requiresHumanApproval: plan.requiresHumanApproval,
+      severity: plan.severity,
+      kev: plan.kev,
+      devOnly: plan.devOnly,
+    })),
+    persisted: listed.total,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-patch-report.json', payload);
+  if (args.json) {
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    return 0;
+  }
+  console.log('=== Candidatos de correção (plano) ===');
+  console.log(`achados considerados: ${result.findings}  candidatos: ${result.candidates}`);
+  console.log(`por tipo ...........: ${Object.entries(result.summary.byKind).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  console.log(`por risco de upd ...: ${Object.entries(result.summary.byRisk).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  console.log(`por autonomia ......: ${Object.entries(result.summary.byAutonomy).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+  console.log(`sem correção .......: ${result.summary.withoutPatch}  exigem autorização: ${result.summary.requiringHumanApproval}`);
+  const { consolidatePlansByPackage } = require('../engine/securityIntel/patchPlanner');
+  const consolidated = consolidatePlansByPackage(result.plans);
+  console.log('--- por pacote (versão recomendada limpa TODOS os advisories) ---');
+  for (const group of consolidated.slice(0, 15)) {
+    const target = group.recommendedVersion || '(sem versão corrigida publicada)';
+    console.log(`  [${group.severity}${group.kev ? '/KEV' : ''}] ${group.packageName} ${group.currentVersion} -> ${target} | ${group.advisoriesTotal} advisorie(s), ${group.advisoriesWithoutFix} sem correção | ${group.fullyClearable ? 'limpo por bump' : 'REQUER AÇÃO HUMANA'} | ${group.autonomy}`);
+  }
+  for (const plan of result.plans.slice(0, 25)) {
+    const target = plan.targetVersion || '(sem alvo)';
+    console.log(`  [${plan.severity}${plan.kev ? '/KEV' : ''}] ${plan.packageName} ${plan.currentVersion} -> ${target} (${plan.kind}, risco ${plan.updateRisk}, ${plan.autonomy})`);
+  }
+  if (result.plans.length > 25) console.log(`  ... e ${result.plans.length - 25} outro(s)`);
+  console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  return 0;
+}
+
+async function commandPatchMission(args) {
+  const { createPatchMission } = require('../api/services/securityIntel/patchPlanService');
+  if (!args.candidate) {
+    console.error('[security-intel] informe --candidate <candidateKey> (ver `patches`)');
+    return 2;
+  }
+  const result = await createPatchMission({
+    candidateKey: args.candidate,
+    tenantKey: args.tenant || 'system',
+    actor: args.actor || 'security-intel-cli',
+    authorizedBy: args.authorizedBy || null,
+  });
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    status: result.created ? 'MISSION_CREATED' : 'MISSION_LINKED',
+    candidateKey: result.candidateKey,
+    missionId: result.missionId,
+    created: result.created,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-patch-mission-report.json', payload);
+  if (args.json) process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  else {
+    console.log('=== Missão de correção (Roteador Engenheiro) ===');
+    console.log(`candidato ..........: ${payload.candidateKey}`);
+    console.log(`missão .............: ${payload.missionId || 'não criada'}`);
+    console.log(`criada agora .......: ${payload.created}`);
+    console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  }
+  return 0;
+}
+
 const COMMANDS = {
   discover: commandDiscover,
   sbom: commandSbom,
@@ -437,13 +532,15 @@ const COMMANDS = {
   advisories: commandAdvisories,
   scan: commandScan,
   'vector-index': commandVectorIndex,
+  patches: commandPatches,
+  'patch-mission': commandPatchMission,
 };
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
   if (!command || !COMMANDS[command]) {
-    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>]');
+    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index|patches|patch-mission> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>] [--blocking] [--include-dev] [--candidate <key>] [--authorized-by <quem autoriza>]');
     return 2;
   }
   // Em modo `--json` o stdout é dado de máquina: todo log vai para stderr,

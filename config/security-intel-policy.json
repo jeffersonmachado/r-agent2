@@ -47,6 +47,12 @@
     "maxComponentsPerRun": 5000,
     "componentBatchSize": 500
   },
+  "patch": {
+    "$comment": "Planejamento de correcao. Nada aqui aplica mudanca: o plano vira missao no Roteador Engenheiro (Nivel B em ambiente isolado) e mudanca MAJOR/runtime exige autorizacao explicita (Nivel C).",
+    "blockKevUntilPatched": true,
+    "planDevDependencies": false,
+    "requireAuthorizationForMajor": true
+  },
   "releaseGate": {
     "blockOnSeverity": ["CRITICAL", "HIGH"],
     "blockOnDevDependencies": false,
