@@ -1,0 +1,73 @@
+{
+  "artifact": "DEPRECACAO_ROUTER_V1_ETAPA_1",
+  "generatedAt": "2026-10-08",
+  "decisaoDoUsuario": "o router v1 deve ser deprecado",
+  "escopoAutorizado": "A) Regime de selagem V1: sai do plano de regressão CRITICAL, sai do agregado e o selo V2 deixa de exigir V1_RUNTIME_VERDICT. Código do router e artefatos históricos congelados.",
+  "etapaConcluida": "1 de 3 — gate de selagem global fora do plano de regressão das missões",
+
+  "defeitoMedido": {
+    "task": "99ce6a35-31dd-4f14-b7c6-db729df6d8ee",
+    "missao": "ca56cbdc-3280-4be8-beff-f9301199fc9f (v25)",
+    "patch": "649B, aprovado nos 3 test runs do contrato (TESTING PASS)",
+    "vereditoRegressao": "FAIL — tier CRITICAL, 44 comandos, 43 com exit 0",
+    "comandoQueReprovou": "node scripts/governance/validate-engineering-router-v1.js (indice 43)",
+    "stderr": "EACCES: permission denied, open '<workspace>/reports/engineering-router-v1-report.json'",
+    "stack": "writeReport (scripts/governance/common.js:41) <- main (validate-engineering-router-v1.js:1220)",
+    "workspace": "/tmp/engineering-router-workspaces/task-99ce6a35-...-<hash>",
+    "provaDeAmbienteENaoDeMerito": [
+      "O MESMO comando passa na arvore principal: status=PASS (STRUCTURAL_PASS/RUNTIME_NOT_REQUESTED) checks=183 falhas=0, exit 0.",
+      "A MESMA saida apareceu em tasks DIFERENTES com patches DIFERENTES: eef5f81e-bf75-4253-a8ac-c2e494aea8e4 e ba07490a-836c-447d-9978-f7b51c3f14c2 produziram stdout vazio (md5 d41d8cd98f00b204e9800998ecf8427e) e stderr identico ao da task 99ce6a35."
+    ],
+    "causaRaiz": "O tier CRITICAL do plano de regressão embutia um gate de SELAGEM global como se fosse mais um comando de teste. O plano roda com cwd = workspace isolado da tentativa, e um gate de selagem grava `reports/` relativo ao cwd — o que e impossivel/indesejado dentro do workspace. Um gate global nao certifica o delta de uma task."
+  },
+
+  "correcaoAplicada": {
+    "engine/engineeringRouter/regressionPlan.js": "GOVERNANCE_GATE_COMMAND removido do tier CRITICAL (constante, uso e export). Doc do modulo registra a medição e o principio: gate de selagem certifica o REPOSITORIO, nunca o delta da tentativa.",
+    "scripts/governance/validate-engineering-router-v1.js": "check REGRESSION_PLAN_PROPORTIONAL_TO_RISK deixou de exigir o simbolo GOVERNANCE_GATE_COMMAND — era auto-referencia que travava o desenho (mudar o plano deixava ESTE gate vermelho). Mantem as 3 asserções que importam: buildRegressionPlan/findRelatedTestFiles/findSubsystemTestFiles.",
+    "tests/unit/engineeringRouterRegressionPlan.test.js": "Teste do CRITICAL reescrito para o contrato novo: superset do HIGH + nenhum tier pode embutir comando de `scripts/governance/` (o EACCES vira regressao de teste)."
+  },
+
+  "naoEnfraquecimento": {
+    "afirmacao": "Nenhuma cobertura foi perdida: o MESMO gate continua executado em TODA task pela fase GOVERNANCE, com cwd=ROOT, onde ele sempre passou.",
+    "codigo": "api/services/engineeringRouter/regressionGovernanceService.js::checkGovernance -> runChildWithDeadline({ cwd: ROOT })",
+    "provaVerde": "tests/integration/engineeringRegressionGovernanceService.test.js: 'gate real (validate-engineering-router-v1.js) executa de verdade e aprova no estado atual do repo' PASS",
+    "oQueSaiu": "apenas a execucao DUPLICADA no cwd errado (workspace), que so produzia RED falso"
+  },
+
+  "defeitoPreExistenteCorrigido": {
+    "teste": "tests/integration/engineeringRegressionGovernanceService.test.js — 'reprovacao real do gate e propagada como pass:false'",
+    "sintoma": "TypeError: spawn is not a function (api/utils/operationDeadline.js:330) — teste vermelho PERMANENTE",
+    "causa": "o teste mockava child_process.execFile, mas checkGovernance usa runChildWithDeadline (child_process.spawn). O modulo mockado nao tinha spawn.",
+    "relevanciaParaEstaTarefa": "era exatamente o teste que provaria que uma reprovacao do gate reprova a task — o enforcement usado como salvaguarda da deprecacao estava SEM PROVA.",
+    "correcao": "mock passou a substituir somente `spawn` (jest.requireActual + spread), emitindo stdout/stderr e 'close' com code 1 — o mesmo contrato consumido por runChildWithDeadline.",
+    "resultado": "5 passed / 5 total (antes: 1 failed, 4 passed)"
+  },
+
+  "provasExecutadas": [
+    "npx jest tests/unit/engineeringRouterRegressionPlan.test.js -> 11 passed",
+    "node scripts/governance/validate-engineering-router-v1.js -> status=PASS checks=183 falhas=0 (o gate por task nao regrediu com a remocao da auto-referencia)",
+    "npx jest tests/integration/engineeringRegressionGovernanceService.test.js -> 5 passed (inclui o gate real e a propagacao de reprovacao)",
+    "npx jest tests/integration/engineeringRouterRegressionGovernanceGate.test.js -> PASS"
+  ],
+
+  "pendente": {
+    "etapa2_agregado": "Remover `validate:engineering-router-v1:runtime` do agregado bloqueante exige substituto. Candidato medido: `validate:engineering-router-v2` (roda standalone, exit 0, ENGINEERING_ROUTER_V2=GO, envelope de 25 checks, 0 falhas).",
+    "etapa3_selo_v2": "BLOQUEADA por inconsistencia medida: o requisito V2-01 ('Legacy Router continua funcional') deriva sua prova de `reports/engineering-router-v1-report.json` COM TTL (config/engineering-router-v2-required-tests.json:19) e o item de auditoria idem (config/engineering-router-v2-audit-items.json:10). Sem um produtor do report, V2-01 fica STALE e o proprio selo V2 se auto-reprova. Ou seja: 'selo V2 deixa de exigir V1_RUNTIME_VERDICT' conflita com um criterio de aceitacao declarado da missao original (secao 38).",
+    "opcoesMedidas": [
+      "a) produtor de runtime mantem o report V1 fresco (requisito V2-01 preservado; V1 deixa de ser gate de release) — exige implementar/definir o produtor",
+      "b) emendar o requisito V2-01 + o item de auditoria para outra evidencia — altera criterio de aceitacao, exige autorizacao explicita",
+      "c) manter V1 no agregado/selo e entregar apenas a etapa 1 (esta)"
+    ],
+    "outros": [
+      "SEM IMPLEMENTACAO V2 SEPARADA: engine/engineeringRouterV2 e api/services/engineeringRouterV2 nao existem. V1 e V2 sao dois REGIMES DE SELAGEM sobre o MESMO codigo do router. O V2 ja chama o V1 de 'Legacy Router' (item V2-01).",
+      "computeSourceFingerprint(ROOT) dentro de checkRegression ainda fingerprinta a arvore principal em vez do workspace da tentativa (mesma familia do defeito corrigido em 62853bfb)."
+    ]
+  },
+
+  "arquivosAlterados": [
+    "engine/engineeringRouter/regressionPlan.js",
+    "scripts/governance/validate-engineering-router-v1.js",
+    "tests/unit/engineeringRouterRegressionPlan.test.js",
+    "tests/integration/engineeringRegressionGovernanceService.test.js"
+  ]
+}

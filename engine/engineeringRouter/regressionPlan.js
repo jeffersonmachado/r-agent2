@@ -24,9 +24,23 @@
  *   LOW:      targeted (testCommands do próprio Task Contract).
  *   MEDIUM:   targeted + testes cujo nome de arquivo relaciona com os caminhos tocados pelo patch.
  *   HIGH:     targeted + related + suíte completa do "subsistema" (diretório pai comum) afetado.
- *   CRITICAL: targeted + related + subsystem + o gate estrutural de governança canônico
- *             (scripts/governance/validate-engineering-router-v1.js — reaproveitado, nunca
- *             reimplementado em paralelo).
+ *   CRITICAL: targeted + related + subsystem.
+ *
+ * DEPRECAÇÃO DO ROUTER V1 (2026-10-08) — o tier CRITICAL incluía o gate de selagem global
+ * (`scripts/governance/validate-engineering-router-v1.js`), executado como MAIS UM comando do
+ * plano. Isso não podia funcionar por construção: o plano roda com `cwd` = workspace isolado da
+ * tentativa, e um gate de selagem escreve `reports/` relativo ao cwd. Medido ao vivo na task
+ * 99ce6a35 (patch de 649B aprovado nos 3 test runs do contrato):
+ *   EACCES: permission denied, open '<workspace>/reports/engineering-router-v1-report.json'
+ *   -> exit 1 -> regressão FAIL.
+ * A MESMA saída (stdout vazio, stderr byte a byte idêntico) apareceu em tasks DIFERENTES com
+ * patches DIFERENTES: a reprovação media o ambiente, nunca o mérito do patch.
+ *
+ * Um gate de selagem certifica o REPOSITÓRIO (cwd = ROOT); ele não certifica o delta de uma task.
+ * O gate V1 NÃO sai do enforcement: `regressionGovernanceService.checkGovernance` continua
+ * executando o MESMO script em toda task, com `cwd: ROOT`, onde ele passa de verdade (183 checks,
+ * 0 falhas). O que sai é apenas a execução DUPLICADA e no cwd errado — nenhuma cobertura foi
+ * perdida, e a regressão volta a medir o patch.
  *
  * Módulo puro (sem I/O).
  */
@@ -34,7 +48,6 @@
 const { RISK_LEVELS } = require('./constants');
 
 const RISK_SET = new Set(RISK_LEVELS);
-const GOVERNANCE_GATE_COMMAND = 'node scripts/governance/validate-engineering-router-v1.js';
 
 function basenameNoExt(filePath) {
   const parts = String(filePath || '').split('/');
@@ -116,15 +129,10 @@ function buildRegressionPlan({ touchedPaths = [], targetedCommands = [], risk, a
     }
   }
 
-  if (tier === 'CRITICAL') {
-    add(GOVERNANCE_GATE_COMMAND);
-  }
-
   return { tier, commands };
 }
 
 module.exports = {
-  GOVERNANCE_GATE_COMMAND,
   basenameNoExt,
   subsystemOf,
   findRelatedTestFiles,

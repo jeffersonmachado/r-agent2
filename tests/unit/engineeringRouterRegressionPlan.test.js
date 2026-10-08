@@ -5,7 +5,13 @@
  *
  * Prova a política determinística de escopo proporcional ao risco, isolada de I/O real:
  * LOW = só targeted; MEDIUM = +related (nome de arquivo tocado); HIGH = +subsystem
- * (diretório pai comum); CRITICAL = +gate de governança canônico.
+ * (diretório pai comum); CRITICAL = superset do HIGH.
+ *
+ * DEPRECAÇÃO DO ROUTER V1 (2026-10-08): o CRITICAL embutia o gate de selagem global
+ * (`node scripts/governance/validate-engineering-router-v1.js`). O plano roda com cwd = workspace
+ * isolado da tentativa e o gate escreve `reports/` relativo ao cwd -> EACCES -> FAIL medido na
+ * task 99ce6a35 com o patch aprovado nos 3 test runs do contrato. Nenhuma cobertura foi perdida:
+ * o MESMO gate continua sendo executado em toda task pela fase GOVERNANCE com cwd = ROOT.
  */
 
 const {
@@ -14,7 +20,6 @@ const {
   findSubsystemTestFiles,
   basenameNoExt,
   subsystemOf,
-  GOVERNANCE_GATE_COMMAND,
 } = require('../../engine/engineeringRouter/regressionPlan');
 
 const AVAILABLE = [
@@ -98,15 +103,26 @@ describe('ER-V1-FINAL-006 — regressionPlan (módulo puro)', () => {
     expect(plan.commands).toContain('npx jest tests/integration/engineeringRouterFullLoopE2E.test.js');
   });
 
-  test('CRITICAL: plano inclui tudo do HIGH + o gate de governança canônico', () => {
-    const plan = buildRegressionPlan({
+  test('CRITICAL: plano nunca embute gate de selagem global e mantém tudo do HIGH', () => {
+    const params = {
       touchedPaths: ['api/services/engineeringRouter/promotionService.js'],
       targetedCommands: ['npm test'],
-      risk: 'CRITICAL',
       availableTestFiles: AVAILABLE,
-    });
-    expect(plan.tier).toBe('CRITICAL');
-    expect(plan.commands).toContain(GOVERNANCE_GATE_COMMAND);
+    };
+    const high = buildRegressionPlan({ ...params, risk: 'HIGH' });
+    const critical = buildRegressionPlan({ ...params, risk: 'CRITICAL' });
+
+    expect(critical.tier).toBe('CRITICAL');
+    // Superset do HIGH: a proporcionalidade ao risco continua valendo.
+    for (const cmd of high.commands) expect(critical.commands).toContain(cmd);
+
+    // Gate de selagem global é PROIBIDO em qualquer tier: ele certifica o repositório (cwd=ROOT,
+    // executado na fase GOVERNANCE), não o delta da tentativa. Dentro do workspace isolado ele
+    // reprova por EACCES ao gravar `reports/` — RED falso medido ao vivo, não mérito do patch.
+    for (const tier of ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']) {
+      const plan = buildRegressionPlan({ ...params, risk: tier });
+      expect(plan.commands.filter((c) => c.includes('scripts/governance/'))).toEqual([]);
+    }
   });
 
   test('nunca duplica comando (targeted que também aparece via related/subsystem entra uma única vez)', () => {

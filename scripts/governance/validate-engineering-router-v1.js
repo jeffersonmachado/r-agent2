@@ -388,10 +388,16 @@ function main() {
   // ER-V1-FINAL-006 — Real Regression: checkRegression precisa EXECUTAR comandos de verdade
   // (nunca só reler EngineeringTestRun da fase TESTING original) e persistir um
   // EngineeringRegressionRun amarrado ao sourceFingerprint da execução real.
+  //
+  // DEPRECAÇÃO DO ROUTER V1 (2026-10-08): este check exigia o símbolo `GOVERNANCE_GATE_COMMAND` no
+  // plano de regressão — auto-referência que travava o desenho (mudar o plano deixava ESTE gate
+  // vermelho). O comando foi removido do plano por medição ao vivo: ele rodava com cwd = workspace
+  // da tentativa e reprovava por EACCES ao escrever `reports/`, medindo o ambiente em vez do patch.
+  // O que este check precisa provar é o que de fato importa: o plano é proporcional ao risco.
   checks.push({
     id: 'REGRESSION_PLAN_PROPORTIONAL_TO_RISK',
     ...checkFileContains('engine/engineeringRouter/regressionPlan.js', [
-      /buildRegressionPlan/, /findRelatedTestFiles/, /findSubsystemTestFiles/, /GOVERNANCE_GATE_COMMAND/,
+      /buildRegressionPlan/, /findRelatedTestFiles/, /findSubsystemTestFiles/,
     ]),
   });
   checks.push({

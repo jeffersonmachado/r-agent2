@@ -173,17 +173,32 @@ describe('ERV1-CLOSE-004 — checkGovernance (subprocess real do gate canônico)
     expect(result.pass).toBe(true);
   });
 
-  test('reprovação real do gate é propagada como pass:false com evidência (exec mockado, sem quebrar o gate real do repo)', async () => {
+  // DEFEITO PRÉ-EXISTENTE CORRIGIDO (2026-10-08): este teste mockava `child_process.execFile`, mas
+  // `checkGovernance` executa o gate por `runChildWithDeadline` (`api/utils/operationDeadline`), que
+  // usa `child_process.spawn`. O mock nunca era aplicado ao caminho real e, como o módulo mockado
+  // não tinha `spawn`, a execução morria com `TypeError: spawn is not a function` — o teste ficava
+  // vermelho PERMANENTE e o enforcement crítico ("reprovação do gate reprova a task") ficava SEM
+  // PROVA. Um enforcement que não pode ser provado é um enforcement que se remove sem ninguém notar.
+  test('reprovação real do gate é propagada como pass:false com evidência (spawn mockado, sem quebrar o gate real do repo)', async () => {
     jest.resetModules();
-    jest.doMock('child_process', () => ({
-      execFile: (file, args, opts, cb) => {
-        const callback = typeof opts === 'function' ? opts : cb;
-        const err = new Error('gate reprovou');
-        err.code = 1;
-        err.stdout = '[engineering-router-v1] status=FAIL checks=66 falhas=3\n - EXEMPLO: motivo simulado';
-        callback(err);
-      },
-    }));
+    jest.doMock('child_process', () => {
+      const actual = jest.requireActual('child_process');
+      const { EventEmitter } = require('events');
+      // Mesmo contrato consumido por `runChildWithDeadline`: stdout/stderr com 'data' + 'close' com code.
+      const fakeSpawn = () => {
+        const child = new EventEmitter();
+        child.pid = 4242;
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        setImmediate(() => {
+          child.stdout.emit('data', Buffer.from('[engineering-router-v1] status=FAIL checks=66 falhas=3\n - EXEMPLO: motivo simulado\n'));
+          child.stderr.emit('data', Buffer.from('falha simulada do gate\n'));
+          child.emit('close', 1, null);
+        });
+        return child;
+      };
+      return { ...actual, spawn: fakeSpawn };
+    });
 
     const { checkGovernance: mockedCheckGovernance } = require('../../api/services/engineeringRouter/regressionGovernanceService');
     const result = await mockedCheckGovernance();
