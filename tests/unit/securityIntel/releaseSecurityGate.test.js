@@ -108,6 +108,32 @@ describe('releaseSecurityGate — decisão', () => {
     expect(critical.decision).toBe(DECISIONS.NO_GO);
   });
 
+  test('dependência dev-only HIGH vira AVISO, não bloqueio (exposição real)', () => {
+    const devOnly = evaluateReleaseSecurity(healthyInput({
+      findings: { available: true, items: [finding({ severity: 'HIGH', dev: true, packageName: 'vitest' })] },
+    }));
+    expect(devOnly.decision).toBe(DECISIONS.GO);
+    expect(devOnly.warnings.map((item) => item.code)).toContain('DEV_ONLY_VULNERABILITY');
+    expect(devOnly.blocking).toEqual([]);
+  });
+
+  test('DEV-only bloqueia quando a política pede explicitamente', () => {
+    const strict = evaluateReleaseSecurity(healthyInput({
+      policy: { ...POLICY, blockOnDevDependencies: true },
+      findings: { available: true, items: [finding({ severity: 'HIGH', dev: true })] },
+    }));
+    expect(strict.decision).toBe(DECISIONS.NO_GO);
+    expect(strict.blocking[0].detail.dev).toBe(true);
+  });
+
+  test('KEV dev-only sem correção também vira aviso, não bloqueio', () => {
+    const result = evaluateReleaseSecurity(healthyInput({
+      findings: { available: true, items: [finding({ severity: 'MEDIUM', dev: true, kev: true, fixAvailable: false })] },
+    }));
+    expect(result.decision).toBe(DECISIONS.GO);
+    expect(result.warnings.map((item) => item.code)).toContain('DEV_ONLY_VULNERABILITY');
+  });
+
   test('KEV sem correção ⇒ NO_GO mesmo em severidade menor', () => {
     const result = evaluateReleaseSecurity(healthyInput({
       findings: { available: true, items: [finding({ severity: 'MEDIUM', kev: true, fixAvailable: false })] },

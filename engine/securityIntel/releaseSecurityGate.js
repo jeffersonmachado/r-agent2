@@ -105,9 +105,22 @@ function evaluateReleaseSecurity({
       }
       if (exemption.exempt) continue;
       const severity = String(finding.severity || '').toUpperCase();
+
+      // Exposição REAL: dependência instalada apenas para build/teste não vai a
+      // produção. Bloquear por ela misturaria risco de runtime com risco de
+      // cadeia de build e ensinaria o time a ignorar o gate — então é AVISO,
+      // salvo quando a política pedir explicitamente bloqueio.
+      const devOnly = finding.dev === true;
+      if (devOnly && policy.blockOnDevDependencies !== true) {
+        warn('DEV_ONLY_VULNERABILITY',
+          `achado ${severity} em dependência dev-only: ${finding.advisoryId || finding.advisory_id} em ${finding.packageName || finding.package_name}@${finding.installedVersion || finding.installed_version}`,
+          { findingKey: key, severity, packageName: finding.packageName || finding.package_name });
+        continue;
+      }
+
       if (blockOnSeverity.includes(severity)) {
         block('OPEN_VULNERABILITY', `achado ${severity} aberto: ${finding.advisoryId || finding.advisory_id} em ${finding.packageName || finding.package_name}@${finding.installedVersion || finding.installed_version}`,
-          { findingKey: key, severity, service: finding.service || null, status: finding.status || null, priority: finding.priority ?? null });
+          { findingKey: key, severity, service: finding.service || null, status: finding.status || null, priority: finding.priority ?? null, dev: devOnly });
       }
       if (policy.blockWhenKevWithoutFix && (finding.kev === true) && finding.fixAvailable === false) {
         block('KEV_WITHOUT_FIX', `vulnerabilidade com exploração conhecida (KEV) e SEM correção: ${finding.advisoryId || finding.advisory_id}`,

@@ -34,15 +34,18 @@ const path = require('path');
 
 const {
   writeReport,
-  readText,
+  readJson,
 } = require('./common');
 
 const ROOT = path.join(__dirname, '..', '..');
 
 function loadPolicy() {
-  const raw = readText(path.join('config', 'security-intel-policy.json'));
-  if (!raw) throw new Error('security_intel_policy_missing');
-  return JSON.parse(raw);
+  // `readJson` (helper de governança) resolve o caminho a partir da raiz e é
+  // reconhecido pelo auditor de persistência como LEITURA — não como alvo de
+  // escrita, que é o falso positivo que a junção de caminho provocava.
+  const policy = readJson('config/security-intel-policy.json', null);
+  if (!policy) throw new Error('security_intel_policy_missing');
+  return policy;
 }
 
 function loadDotEnv() {
@@ -81,6 +84,18 @@ async function collectFacts({ tenantKey, policy }) {
   const Finding = getSecurityFinding();
   const findings = await Finding.findAll({ where: { tenant_key: tenantKey }, raw: true });
 
+  // Exposição real: o flag `dev` vive no inventário de componentes (lockfile).
+  // Carregamos aqui para que a decisão distinga risco de runtime de risco de
+  // cadeia de build/teste em vez de tratar os dois como iguais.
+  const getSecurityComponent = require('../../api/db/models/SecurityComponent');
+  const Component = getSecurityComponent();
+  const components = await Component.findAll({
+    where: { tenant_key: tenantKey },
+    attributes: ['bom_ref', 'dev', 'direct', 'version_class', 'service'],
+    raw: true,
+  });
+  const componentByRef = new Map(components.map((row) => [row.bom_ref, row]));
+
   const snapshot = await getLatestSbomSnapshot({ tenantKey });
   const latestRun = await getLatestDiscoveryRun({ tenantKey });
   const Sync = getSecurityAdvisorySync();
@@ -117,6 +132,8 @@ async function collectFacts({ tenantKey, policy }) {
         fixAvailable: Array.isArray(row.fixed_versions) && row.fixed_versions.length > 0,
         resolvedAt: row.resolved_at,
         priority: row.priority,
+        dev: componentByRef.get(row.component_bom_ref)?.dev === true,
+        direct: componentByRef.get(row.component_bom_ref)?.direct === true,
       })),
     },
     sbom: snapshot

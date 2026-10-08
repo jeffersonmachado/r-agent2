@@ -17,6 +17,7 @@
 
 const { isVersionInOsvRange, normalizeEcosystem } = require('./versionCore');
 const { normalizeName } = require('./componentIdentity');
+const { baseScore, severityFromScore } = require('./cvss');
 
 const SEVERITY_ORDER = Object.freeze(['INFORMATIONAL', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
 
@@ -25,8 +26,14 @@ const SUPPORTED_ECOSYSTEMS = Object.freeze(new Set(['npm', 'PyPI', 'pypi', 'Dock
 
 /**
  * Normaliza a entrada `severity` do OSV, que pode ser
- * `[{type:'CVSS_V3', score:'CVSS:3.1/...'}]` ou
- * `[{type:'Ubuntu', score:'High'}]`.
+ * `[{type:'CVSS_V3', score:'CVSS:3.1/...'}]`, `[{type:'CVSS_V3', score:'9.8'}]`
+ * ou `[{type:'Ubuntu', score:'High'}]`.
+ *
+ * Defeito corrigido (medido 2026-10-08): o GitHub Advisory Database publica o
+ * score como VETOR. Antes, só número era aceito, então todo achado com vetor
+ * caía para a severidade assumida (MEDIUM) — um CRITICAL/HIGH não bloqueava o
+ * Release Security Gate. Subestimar severidade é a pior falha possível num gate
+ * de segurança. Agora o vetor é convertido pelo cálculo oficial (módulo `cvss`).
  */
 function normalizeSeverity(entries) {
   const result = { cvssVector: null, cvssScore: null, declaredSeverity: null, raw: [] };
@@ -37,13 +44,25 @@ function normalizeSeverity(entries) {
     const score = entry.score === undefined || entry.score === null ? null : String(entry.score);
     result.raw.push({ type, score });
     if (type.startsWith('CVSS_V3') && score) {
-      result.cvssVector = score;
       const numeric = Number(score);
-      if (!Number.isNaN(numeric) && numeric > 0 && numeric <= 10) result.cvssScore = numeric;
+      if (!Number.isNaN(numeric) && numeric > 0 && numeric <= 10) {
+        result.cvssScore = numeric;
+      } else {
+        // Score veio como VETOR: converte para a base oficial.
+        result.cvssVector = score;
+        const computed = baseScore(score);
+        if (computed !== null && computed > 0) result.cvssScore = computed;
+      }
     } else if (!type.startsWith('CVSS') && score && /^[A-Z]+$/i.test(score)) {
       const upper = score.toUpperCase();
       if (SEVERITY_ORDER.includes(upper)) result.declaredSeverity = upper;
     }
+  }
+  // Sem score da fonte, a severidade derivada do vetor entra como declarada —
+  // sempre rastreável a um cálculo publicado, nunca a um chute.
+  if (!result.declaredSeverity && result.cvssScore !== null) {
+    result.declaredSeverity = severityFromScore(result.cvssScore);
+    result.declaredSeveritySource = 'computed_from_vector';
   }
   return result;
 }

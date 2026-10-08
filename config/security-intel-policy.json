@@ -49,6 +49,7 @@
   },
   "releaseGate": {
     "blockOnSeverity": ["CRITICAL", "HIGH"],
+    "blockOnDevDependencies": false,
     "blockWhenKevWithoutFix": true,
     "blockOnStaleAdvisoryBase": true,
     "requireSbomSnapshot": true,

@@ -33,6 +33,28 @@ const DEFAULT_OPTIONS = Object.freeze({
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
+/**
+ * Nome do ecossistema NA FORMA EXIGIDA PELO OSV.
+ *
+ * Defeito medido em 2026-10-08: o OSV responde 400 `{"code":3,"message":
+ * "invalid ecosystem"}` para `pypi` minúsculo e exige `PyPI`. Como o inventário é
+ * canônico em minúsculas, a tradução precisa acontecer na fronteira do
+ * provedor — caso contrário NENHUM advisory do Python é consultado (e o erro
+ * só apareceu quando o sweep passou dos pacotes npm, que vinham primeiro em
+ * ordem alfabética).
+ */
+const OSV_ECOSYSTEM_NAMES = Object.freeze({
+  npm: 'npm',
+  pypi: 'PyPI',
+  docker: 'Docker',
+});
+
+function toOsvEcosystem(ecosystem) {
+  if (!ecosystem) return null;
+  const key = String(ecosystem).toLowerCase();
+  return OSV_ECOSYSTEM_NAMES[key] || null;
+}
+
 function defaultSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -70,6 +92,12 @@ async function queryOsvPackage({ ecosystem, name }, {
   backoffBaseMs = DEFAULT_OPTIONS.backoffBaseMs,
 } = {}) {
   const doFetch = fetchImpl || fetch;
+  const osvEcosystem = toOsvEcosystem(ecosystem);
+  if (!osvEcosystem) {
+    // Falha explícita ANTES da rede: inventar o nome do ecossistema produziria
+    // um 400 confuso e uma base parcial silenciosa.
+    throw new Error(`osv_ecosystem_unsupported:${ecosystem}`);
+  }
   let lastError = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     await acquire();
@@ -77,7 +105,7 @@ async function queryOsvPackage({ ecosystem, name }, {
       const response = await doFetch(OSV_QUERY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ package: { name, ecosystem } }),
+        body: JSON.stringify({ package: { name, ecosystem: osvEcosystem } }),
         signal: AbortSignal.timeout(timeoutMs),
       });
       if (!response.ok) {
@@ -303,6 +331,8 @@ module.exports = {
   KEV_FEED_URL,
   EPSS_API_URL,
   DEFAULT_OPTIONS,
+  OSV_ECOSYSTEM_NAMES,
+  toOsvEcosystem,
   createRateLimiter,
   queryOsvPackage,
   fetchKevCatalog,

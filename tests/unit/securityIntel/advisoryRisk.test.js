@@ -161,6 +161,41 @@ describe('riskEngine — priorização', () => {
   const baseAdvisory = normalizeAdvisory(osvFixture({ severity: [{ type: 'CVSS_V3', score: '5.4' }] }));
   const baseMatch = matchesComponent(baseAdvisory, component({ version: '1.2.0' }));
 
+  test('REGRESSÃO: severidade publicada como VETOR não pode virar MEDIUM assumido', () => {
+    // Defeito medido em 2026-10-08: o GitHub Advisory Database publica o score
+    // como vetor; o normalizador só aceitava número, então um CRITICAL caía para
+    // a severidade assumida (MEDIUM) e NÃO bloqueava o Release Security Gate.
+    const byVector = normalizeAdvisory(osvFixture({
+      severity: [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' }],
+    }));
+    expect(byVector.severity.cvssScore).toBe(9.8);
+    expect(byVector.severity.declaredSeverity).toBe('CRITICAL');
+    expect(byVector.severity.declaredSeveritySource).toBe('computed_from_vector');
+
+    const match = matchesComponent(byVector, component({ version: '1.2.0' }));
+    const risk = computeRisk({ advisory: byVector, component: component(), match, exposure: 'internet' });
+    expect(risk.severity).toBe('CRITICAL');
+    expect(risk.priority).toBeGreaterThanOrEqual(60);
+  });
+
+  test('vetor de escopo alterado (S:C) também é calculado', () => {
+    const advisory = normalizeAdvisory(osvFixture({
+      severity: [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H' }],
+    }));
+    expect(advisory.severity.cvssScore).toBe(10);
+    expect(advisory.severity.declaredSeverity).toBe('CRITICAL');
+  });
+
+  test('vetor inválido NÃO vira score nem severidade inventados', () => {
+    const advisory = normalizeAdvisory(osvFixture({ severity: [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N' }] }));
+    expect(advisory.severity.cvssScore).toBeNull();
+    expect(advisory.severity.cvssVector).toBe('CVSS:3.1/AV:N');
+    const match = matchesComponent(advisory, component({ version: '1.2.0' }));
+    const risk = computeRisk({ advisory, component: component(), match });
+    expect(risk.severity).toBe('MEDIUM'); // assumido, e a razão declara isso
+    expect(risk.rationale.join(' ')).toMatch(/NÃO foi assumido/);
+  });
+
   test('faixas oficiais de CVSS', () => {
     expect(severityFromCvss(9.8)).toBe('CRITICAL');
     expect(severityFromCvss(7.0)).toBe('HIGH');

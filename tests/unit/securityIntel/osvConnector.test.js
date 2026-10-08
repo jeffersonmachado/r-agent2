@@ -27,6 +27,7 @@ const {
   createRateLimiter,
   applyEnrichment,
   cveIdsOf,
+  toOsvEcosystem,
 } = require('../../../api/services/securityIntel/osvConnector');
 
 function jsonResponse(body, { ok = true, status = 200 } = {}) {
@@ -50,6 +51,29 @@ const VULN = {
 };
 
 describe('osvConnector — consulta', () => {
+  test('traduz o ecossistema canônico para o nome exigido pelo OSV', () => {
+    expect(toOsvEcosystem('pypi')).toBe('PyPI');
+    expect(toOsvEcosystem('PyPI')).toBe('PyPI');
+    expect(toOsvEcosystem('npm')).toBe('npm');
+    expect(toOsvEcosystem('docker')).toBe('Docker');
+    expect(toOsvEcosystem('maven')).toBeNull();
+    expect(toOsvEcosystem(null)).toBeNull();
+  });
+
+  test('envia PyPI (caixa exata) no corpo — o OSV responde 400 para "pypi"', async () => {
+    const fetchImpl = jest.fn(async () => jsonResponse({ vulns: [] }));
+    await queryOsvPackage({ ecosystem: 'pypi', name: 'fastapi' }, { fetchImpl });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      package: { name: 'fastapi', ecosystem: 'PyPI' },
+    });
+  });
+
+  test('ecossistema não mapeado falha ANTES da rede (sem base parcial silenciosa)', async () => {
+    const fetchImpl = jest.fn();
+    await expect(queryOsvPackage({ ecosystem: 'maven', name: 'x' }, { fetchImpl }))
+      .rejects.toThrow(/osv_ecosystem_unsupported:maven/);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
   test('sucesso devolve vulnerabilidades e número de tentativas', async () => {
     const fetchImpl = jest.fn(async () => jsonResponse({ vulns: [VULN] }));
     const result = await queryOsvPackage({ ecosystem: 'npm', name: 'pacote-a' }, { fetchImpl });
