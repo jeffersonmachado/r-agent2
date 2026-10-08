@@ -72,16 +72,85 @@ function normalizeList(value) {
   return list.map((v) => (typeof v === 'string' ? v.trim() : v)).filter((v) => v !== '' && v !== null && v !== undefined);
 }
 
-function normalizeRequirements(items) {
-  return normalizeList(items).map((item) => {
+/**
+ * Campos aceitos em um item de requirement (`acceptanceCriteria` / `derivedRequirements`).
+ *
+ * LISTA FECHADA DE PROPÓSITO: qualquer outro campo é REJEITADO (ver `normalizeRequirements`).
+ *
+ * `ruleId` e `blocksAutoApproval` estão aqui porque o PRODUTOR REAL os emite
+ * (`engine/engineeringMission/enrichmentBuilder.js`): sem eles a spec perdia a regra que gerou o
+ * requisito. `ruleId` não é decorativo — é consumido por `materiality.js`
+ * (`CRITICAL_RULE_IDS` → CRITICAL_REQUIREMENT_INTRODUCED) e por `autoApprovalPolicy.js`
+ * (`HUMAN_ONLY_RULE_IDS` → bloqueio de decisão humana). Descartá-lo no caminho de EDIÇÃO (onde o
+ * enriquecimento é substituído por `nextSpec.derivedRequirements`) deixava esses bloqueios
+ * desarmados.
+ */
+const REQUIREMENT_FIELDS = Object.freeze([
+  'id',
+  'text',
+  'source',
+  'enrichmentType',
+  'confidence',
+  'riskImpact',
+  'knowledge',
+  'ruleId',
+  'blocksAutoApproval',
+]);
+
+/**
+ * Normaliza itens de requirement.
+ *
+ * DEFEITO ELIMINADO (2026-10-08). Antes, campos fora do schema eram DESCARTADOS EM SILÊNCIO: um item
+ * era aceito e "normalizado" para `{ id, text, source, enrichmentType, confidence, riskImpact }`,
+ * e tudo o mais sumia sem erro. Efeito medido: uma emenda de contrato enviada com os campos
+ * `originalContract`/`implemented`/`decision`/`rationale` foi aprovada como MATERIAL e ficou com
+ * QUATRO ITENS VAZIOS — apenas o `id` sobreviveu. A spec registrava a emenda sem o conteúdo dela, e
+ * nada indicava o problema.
+ *
+ * Não era ausência de dado (ausência é um fato): era dado presente que a camada de entrada
+ * descartava. O descarte agora é RUIDOSO — mesmo padrão já usado no descarte de regressão inválida
+ * (`bugLoopCoordinatorService`): filtrar em silêncio esconde o produtor defeituoso.
+ *
+ * Também exige CONTEÚDO: item sem `text` não carrega nada e vira ruído na spec. A exigência foi
+ * medida contra o acervo antes de entrar (917 versões: zero itens de acceptanceCriteria sem texto e
+ * apenas os 4 itens vazios do defeito em derivedRequirements), então nenhuma spec legítima quebra.
+ */
+function normalizeRequirements(items, listName = 'requirements') {
+  return normalizeList(items).map((item, index) => {
     if (typeof item === 'string') return { id: null, text: item, source: null, enrichmentType: null, confidence: null, riskImpact: null };
+
+    const unknownFields = Object.keys(item).filter((key) => !REQUIREMENT_FIELDS.includes(key));
+    if (unknownFields.length > 0) {
+      const err = fail(
+        MISSION_FAILURE_CODES.INVALID_REQUIREMENT_ITEM,
+        `${listName}[${index}]: campo(s) fora do schema de requirement: ${unknownFields.join(', ')} — ` +
+        `aceitos: ${REQUIREMENT_FIELDS.join(', ')}. O conteúdo NÃO é descartado em silêncio.`,
+      );
+      err.detail = { list: listName, index, unknownFields, acceptedFields: [...REQUIREMENT_FIELDS] };
+      throw err;
+    }
+
+    const text = typeof item.text === 'string' ? item.text.trim() : item.text;
+    if (text === undefined || text === null || text === '') {
+      const err = fail(
+        MISSION_FAILURE_CODES.INVALID_REQUIREMENT_ITEM,
+        `${listName}[${index}]: item sem conteúdo ('text' ausente ou vazio) — item vazio na spec é ruído, não registro.`,
+      );
+      err.detail = { list: listName, index, id: item.id || null };
+      throw err;
+    }
+
     return {
       id: item.id || null,
-      text: item.text,
+      text,
       source: item.source || null,
       enrichmentType: item.enrichmentType || null,
       confidence: item.confidence === undefined ? null : item.confidence,
       riskImpact: item.riskImpact || null,
+      // Rastreabilidade da REGRA que gerou o requisito. Era descartada em silêncio e é consumida
+      // pela materialidade (CRITICAL_RULE_IDS) e pelo auto-approval (HUMAN_ONLY_RULE_IDS).
+      ruleId: item.ruleId || null,
+      blocksAutoApproval: item.blocksAutoApproval === true,
       // Proveniência de conhecimento (§35) só quando existe: critérios sem ela mantêm exatamente o
       // shape (e portanto o specHash) anterior.
       ...(item.knowledge && typeof item.knowledge === 'object' ? {
@@ -109,8 +178,8 @@ function buildSpecShape(input) {
     branch: input.branch || null,
     scope: input.scope || null,
     constraints: normalizeList(input.constraints),
-    acceptanceCriteria: normalizeRequirements(input.acceptanceCriteria),
-    derivedRequirements: normalizeRequirements(input.derivedRequirements),
+    acceptanceCriteria: normalizeRequirements(input.acceptanceCriteria, 'acceptanceCriteria'),
+    derivedRequirements: normalizeRequirements(input.derivedRequirements, 'derivedRequirements'),
     testStrategy: normalizeList(input.testStrategy),
     assumptions: normalizeList(input.assumptions),
     contextSources: normalizeList(input.contextSources),

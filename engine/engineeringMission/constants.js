@@ -156,6 +156,10 @@ const MISSION_FAILURE_CODES = Object.freeze({
   ENRICHMENT_FAILED: 'ENRICHMENT_FAILED',
   MISSION_TASK_NOT_LINKED: 'MISSION_TASK_NOT_LINKED',
   CREDENTIAL_UNAVAILABLE: 'CREDENTIAL_UNAVAILABLE',
+  // Item de acceptanceCriteria/derivedRequirements inválido: campo fora do schema (que era
+  // DESCARTADO EM SILÊNCIO) ou conteúdo ausente. Medido em 2026-10-08: uma emenda de contrato com
+  // quatro itens foi aprovada como MATERIAL e ficou com quatro itens VAZIOS — só o `id` sobreviveu.
+  INVALID_REQUIREMENT_ITEM: 'INVALID_REQUIREMENT_ITEM',
 });
 
 /** Tipos de evento do histórico de versões/aprovações (§13, §29). */
