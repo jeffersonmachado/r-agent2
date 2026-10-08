@@ -1,0 +1,144 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "BLOCKER_DIAGNOSIS",
+  "generatedAt": "2026-10-08T02:09:19.421Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "INC-3B via fix loop: patch APLICADO mas TESTING bloqueado por contrato sem testCommands",
+  "headline": "O Engenheiro gerou e APLICOU patch em 2 de 3 tentativas; a task nao pode testar porque nasceu com test_commands=[] — causa raiz e um defeito de BOUNDARY na rota de confirmacao (descarta `reproduction`). Nao e problema de provider nem de merito do modelo.",
+  "fixTask": {
+    "id": "43172d6d-15c5-493a-9e08-f33259eac0a3",
+    "status": "RED",
+    "taskType": "BUG_FIX",
+    "risk": "MEDIUM",
+    "missionId": "ca56cbdc-3280-4be8-beff-f9301199fc9f",
+    "testCommands": [],
+    "allowedPaths": [
+      "api/services/engineeringMission/missionReplanService.js"
+    ],
+    "acceptanceCriteria": [
+      "A reprodução registrada no finding c2cc1772-db7a-491c-a65f-e81864deafca passa a ser verde",
+      "Testes direcionados passam",
+      "Nenhuma regressão relevante quebrada"
+    ],
+    "testRunsExecuted": 0
+  },
+  "finding": {
+    "id": "c2cc1772-db7a-491c-a65f-e81864deafca",
+    "status": "FIXING",
+    "reproduction": {},
+    "confirmationBasis": "REPRODUCED_TEST_FAILURE",
+    "humanApprovalRequired": false
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "status": "FAILED",
+      "model": "deepseek:deepseek-flash",
+      "patchBytes": 3721,
+      "error": "{\"code\": \"NO_TEST_COMMANDS\"}"
+    },
+    {
+      "attempt": 2,
+      "status": "FAILED",
+      "model": "deepseek:deepseek-flash",
+      "patchBytes": 0,
+      "error": "{\"code\": \"PROVIDER_UNAVAILABLE\", \"message\": \"Falha ao invocar deepseek:deepseek-flash — DeepSeek: resposta SEM conteúdo utilizável (modelo=deepseek-flash; finish_reason=length; reasoning_tokens=36000) — orçamento de saída esgotado pelo modelo, nunca texto válido\", \"failureClass\": \"PROVIDER_EMPTY_RESPONSE\"}"
+    },
+    {
+      "attempt": 3,
+      "status": "FAILED",
+      "model": "qwen:qwen3-coder-flash",
+      "patchBytes": 2312,
+      "error": "{\"code\": \"NO_TEST_COMMANDS\"}"
+    }
+  ],
+  "telemetry": [
+    {
+      "event": "ATTEMPT_DISPATCH",
+      "model": "deepseek:deepseek-flash",
+      "result": "DISPATCHED",
+      "ms": null
+    },
+    {
+      "event": "PATCH_GENERATION",
+      "model": "deepseek:deepseek-flash",
+      "result": "PATCH_APPLIED",
+      "ms": 73748
+    },
+    {
+      "event": "ATTEMPT_DISPATCH",
+      "model": "deepseek:deepseek-flash",
+      "result": "DISPATCHED",
+      "ms": null
+    },
+    {
+      "event": "ATTEMPT_DISPATCH",
+      "model": "qwen:qwen3-coder-flash",
+      "result": "DISPATCHED",
+      "ms": null
+    },
+    {
+      "event": "PATCH_CANONICALIZATION_APPLIED",
+      "model": "qwen:qwen3-coder-flash",
+      "result": "APPLIED",
+      "ms": 12596
+    },
+    {
+      "event": "PATCH_GENERATION",
+      "model": "qwen:qwen3-coder-flash",
+      "result": "PATCH_APPLIED",
+      "ms": 12596
+    }
+  ],
+  "meritPreserved": {
+    "patchesGeneratedAndApplied": 2,
+    "models": [
+      "deepseek:deepseek-flash",
+      "qwen:qwen3-coder-flash"
+    ],
+    "headerCanonicalizationActiveInProduction": true,
+    "testsExecuted": 0,
+    "notAProviderProblem": true,
+    "classification": "KNOWN_APPLICATION_GAP"
+  },
+  "rootCauseChain": [
+    {
+      "step": 1,
+      "where": "api/modules/engineering-missions/routes.js (~818)",
+      "finding": "a rota POST /findings/:id/confirm repassa apenas basis/evidence/rootCause/actor/tenantId — `reproduction` do corpo e DESCARTADO no boundary"
+    },
+    {
+      "step": 2,
+      "where": "api/services/engineeringMission/bugFindingService.js (confirmFinding)",
+      "finding": "o servico ACEITA e persiste `reproduction` no patch (linha do `...(reproduction ? { reproduction } : {})`) — o campo existe no servico, nao chega pela rota"
+    },
+    {
+      "step": 3,
+      "where": "engine/engineeringMission/bugFinding/routing.js (buildFixTaskContract, ~129)",
+      "finding": "testCommands = [finding.reproduction.command, ...regressionCommands] -> como reproduction={}, testCommands=[]"
+    },
+    {
+      "step": 4,
+      "where": "api/services/engineeringRouter/engineeringRouterService.js (~616)",
+      "finding": "em TESTING, testCommands.length === 0 -> attempt FAILED com NO_TEST_COMMANDS (o patch JA foi gerado e aplicado antes disso)"
+    }
+  ],
+  "precedentOfSameClass": "DEFEITO ELIMINADO (2026-10-03) na rota approve-self-modification: a rota encaminhava apenas parte dos campos que o servico exigia, tornando o caminho inalcancavel por HTTP. Mesma classe: boundary descartando campos.",
+  "deadEndConfirmed": {
+    "retriar": "linkFixTask recusa novo vinculo (FINDING_TASK_ALREADY_LINKED) e nao existe funcao de re-triagem/nova fix task",
+    "corrigirTaskDireto": "engineeringTaskService.updateTaskFields tem allowlist ESTRITA de metadados e RECUSA test_commands (escrita de estado exige CAS) — correto por desenho",
+    "corrigirFinding": "gravar reproduction no finding nao reescreve test_commands de uma task ja criada",
+    "criacaoRepassaReproduction": "POST /engineering/findings (criacao) repassa o body inteiro; o caminho projetado exige que o finding NASCA com reproduction"
+  },
+  "authorizedPathsForward": [
+    "A) BOOTSTRAP MINIMO (recomendado): repassar `reproduction` na rota confirm, como ja foi feito para approve-self-modification; corrige a classe inteira de defeito (todo finding confirmado por HTTP)",
+    "B) SEM CODIGO: registrar novo finding do mesmo defeito JA com reproduction (fingerprint distinto por identificador legitimo), deixando o mecanismo criar task com contrato completo; o finding atual fica encerrado como DUPLICATE"
+  ],
+  "constraintsHonored": [
+    "nenhuma correcao manual de applyReplanDecision",
+    "nenhum gate/cobertura/allowlist/severidade alterados",
+    "nenhum mock substituindo integracao real",
+    "nenhuma escrita de estado por SQL cru",
+    "HANDOVER nao declarado com INC-3B RED"
+  ]
+}

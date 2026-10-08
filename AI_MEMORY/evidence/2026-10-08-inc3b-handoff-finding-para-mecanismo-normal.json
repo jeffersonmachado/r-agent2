@@ -1,0 +1,155 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "HANDOFF_FINDING",
+  "generatedAt": "2026-10-08T01:58:14.007Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "INC-3B v21 tentativa 10: finding de merito entregue ao mecanismo normal de replan",
+  "summary": "A evidencia de MERITO da tentativa 10 (patch APLICADO -> teste EXECUTADO -> 5/6 PASS) foi registrada como finding rastreavel e entregue ao bug loop do Roteador Engenheiro. O mecanismo triou, criou a task de correcao BUG_FIX com escopo restrito a fachada (sem o arquivo de teste) e PAUSOU em AWAITING_HUMAN_APPROVAL, porque a correcao e auto-modificacao do proprio sistema de engenharia (auto_approval_forbidden=true). Nenhuma correcao foi implementada manualmente pelo iniciador externo.",
+  "priorFailureScope": "As 9 tentativas anteriores falharam por indisponibilidade de provider (7) e por formato/contexto de patch (2); nenhuma delas executou teste. Esses desfechos NAO apagam o merito da tentativa 10.",
+  "merit": {
+    "attemptNumber": 10,
+    "model": "qwen:qwen3-max",
+    "flow": [
+      "PATCH_APPLIED",
+      "TEST_EXECUTED",
+      "PASS 5/6"
+    ],
+    "failingCases": [
+      "produz efeito explicito em EXHAUSTED",
+      "produz efeito explicito em LIVELOCK"
+    ],
+    "testRuns": [
+      {
+        "id": "15c4a75a-153c-4218-aee6-bd856e682e6f",
+        "command": "npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/unit/engineeringMission/missionReplanService.test.js --no-coverage",
+        "status": "FAIL",
+        "exit_code": 1
+      },
+      {
+        "id": "03993e05-a310-4fcd-a710-1cbd8c6cc935",
+        "command": "npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/unit/engineeringMission/replanPolicy.test.js --no-coverage",
+        "status": "PASS",
+        "exit_code": 0
+      },
+      {
+        "id": "eefd2c93-e527-44f0-b731-a1af782c861c",
+        "command": "npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/unit/engineeringMission/missionReportReplan.test.js --no-coverage",
+        "status": "PASS",
+        "exit_code": 0
+      }
+    ],
+    "reproducerCommand": "npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/unit/engineeringMission/missionReplanService.test.js --no-coverage",
+    "defect": "applyReplanDecision nao produz efeito para a combinacao que o nucleo puro realmente devolve (decision=HALT com reason=LIVELOCK / BUDGET_EXHAUSTED_*).",
+    "notAProviderProblem": true,
+    "classificationIfBlocked": "KNOWN_APPLICATION_GAP"
+  },
+  "findingCanonical": {
+    "id": "c2cc1772-db7a-491c-a65f-e81864deafca",
+    "status": "FIXING",
+    "category": "BUG",
+    "severity": "MEDIUM",
+    "confirmationBasis": "REPRODUCED_TEST_FAILURE",
+    "fingerprintParts": {
+      "test": "tests/unit/engineeringMission/missionReplanService.test.js",
+      "route": "",
+      "title": "Fachada de replan nao aplica efeito para HALT + LIVELOCK / BUDGET_EXHAUSTED",
+      "source": "UNIT_TEST",
+      "symbol": "applyReplanDecision",
+      "category": "",
+      "errorType": "",
+      "invariant": "",
+      "subsystem": "",
+      "stackSignature": ""
+    },
+    "selfModification": true,
+    "origin": null,
+    "fingerprint": "d3dcdfd49a1cc2e024c8f5f7610306f6f60fdd6d04cf3e41c2c32e7e5f080d1e",
+    "evidenceCount": 4,
+    "missionId": "ca56cbdc-3280-4be8-beff-f9301199fc9f",
+    "missionVersion": 21,
+    "missionSpecHash": "1e5e4bfbb05585c90dafbc460e7c4cf027d27e1d95257390bf9d4c2f83d10001",
+    "taskId": "e5ad9354-ebb6-4870-9cd1-de2c74c75a2f",
+    "fixTaskId": "43172d6d-15c5-493a-9e08-f33259eac0a3",
+    "humanApprovalRequired": true,
+    "autoApprovalForbidden": true,
+    "relatedFindings": [
+      "553af9c0-efa9-4d48-9858-7ced4c6c2800"
+    ],
+    "classificationNote": "categoria BUG/MEDIUM inferida pelo PROPRIO motor (assessSeverity) a partir de texto limpo; nenhuma categoria ou severidade foi declarada ou ajustada pelo iniciador"
+  },
+  "findingDuplicateRetired": {
+    "id": "553af9c0-efa9-4d48-9858-7ced4c6c2800",
+    "reason": "o TEXTO do primeiro registro continha a palavra \"provider\", que casou a regra /provider|provedor|.../ de inferCategory ANTES das demais; um defeito de APLICACAO saiu como PROVIDER/LOW, categoria NON_APPLICATION (requiresApplicationFix=false) e o laco nunca abriria fix task. Encerrado pela funcao oficial markDuplicate, apontando para o finding canonico.",
+    "status": "DUPLICATE",
+    "categoryWhenRetired": "PROVIDER"
+  },
+  "fixTaskCreatedByMechanism": {
+    "id": "43172d6d-15c5-493a-9e08-f33259eac0a3",
+    "status": "CLASSIFIED",
+    "taskType": "BUG_FIX",
+    "risk": "MEDIUM",
+    "objective": "Corrigir finding c2cc1772-db7a-491c-a65f-e81864deafca (BUG/MEDIUM) na causa raiz, não no sintoma.",
+    "allowedPaths": [
+      "api/services/engineeringMission/missionReplanService.js"
+    ],
+    "acceptanceCriteria": [
+      "A reprodução registrada no finding c2cc1772-db7a-491c-a65f-e81864deafca passa a ser verde",
+      "Testes direcionados passam",
+      "Nenhuma regressão relevante quebrada"
+    ],
+    "missionId": "ca56cbdc-3280-4be8-beff-f9301199fc9f",
+    "createdBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3",
+    "testFileExcludedOnPurpose": true,
+    "note": "A triage do proprio mecanismo restringiu o escopo a fachada; o arquivo de teste NAO esta em allowed_paths (o teste nao pode ser alterado para acomodar a implementacao)."
+  },
+  "mechanismTrace": [
+    {
+      "step": 1,
+      "call": "POST /engineering/findings",
+      "result": "201 finding c2cc1772-db7a-491c-a65f-e81864deafca (BUG/MEDIUM, SUSPECTED)"
+    },
+    {
+      "step": 2,
+      "call": "markDuplicate(553af9c0-efa9-4d48-9858-7ced4c6c2800 -> c2cc1772-db7a-491c-a65f-e81864deafca)",
+      "result": "finding espurio encerrado como DUPLICATE"
+    },
+    {
+      "step": 3,
+      "call": "POST /engineering/findings/sweep (limit=1)",
+      "result": "NO_REPRODUCTION_PLAN: sem comando de reproducao declarado (o insumo faltava no registro)"
+    },
+    {
+      "step": 4,
+      "call": "POST /engineering/findings/c2cc1772-db7a-491c-a65f-e81864deafca/confirm (basis=REPRODUCED_TEST_FAILURE)",
+      "result": "200 CONFIRMED (base objetiva: TestRun real com exit=1)"
+    },
+    {
+      "step": 5,
+      "call": "POST /engineering/findings/sweep (limit=1, autoFix=true, allowedPaths=[fachada])",
+      "result": "triaged=1 -> AWAITING_HUMAN_APPROVAL, fixTask=43172d6d-15c5-493a-9e08-f33259eac0a3"
+    },
+    {
+      "step": 6,
+      "call": "(pendente) POST /engineering/findings/c2cc1772-db7a-491c-a65f-e81864deafca/approve-self-modification",
+      "result": "exige ator HUMANO com permissao granular engineering:approve_self_modification — NAO executado pelo iniciador externo"
+    }
+  ],
+  "pendingHumanDecision": {
+    "required": "aprovacao humana de auto-modificacao",
+    "route": "POST /engineering/findings/c2cc1772-db7a-491c-a65f-e81864deafca/approve-self-modification",
+    "permission": "engineering:approve_self_modification",
+    "whyHuman": "a correcao altera o proprio sistema de engenharia (fachada de replan), o que o desenho de governanca reserva ao humano; o iniciador externo nao exerceu essa autoridade"
+  },
+  "constraintsHonored": [
+    "nenhuma correcao implementada manualmente pelo iniciador externo",
+    "nenhum novo HUMAN_EXTERNAL_BOOTSTRAP para codigo funcional do INC-3B",
+    "arquivo de teste fora do escopo permitido (criterio de aceite preservado)",
+    "nenhum gate, cobertura, allowlist ou classificacao de severidade alterados",
+    "nenhum mock substituindo a integracao real fachada<->nucleo",
+    "HANDOVER NAO declarado com INC-3B RED"
+  ],
+  "filesInEvidenceDir": [
+    "2026-10-08-inc3b-v21-funil-e-gap-unico.json",
+    "2026-10-08-human-external-bootstrap-header-canonicalization.json"
+  ]
+}

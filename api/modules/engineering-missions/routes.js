@@ -821,10 +821,34 @@ function createEngineeringMissionRoutes({ buildDeps }) {
     if (!auth) return;
     try {
       const body = (await readBody(req, res, deps)) || {};
+      // CONTRATO COMPLETO DA CONFIRMAÇÃO.
+      //
+      // DEFEITO ELIMINADO (2026-10-08): a rota repassava apenas
+      // `basis`/`evidence`/`rootCause`. O SERVIÇO já aceitava e persistia `reproduction`
+      // (`confirmFinding` → patch `...(reproduction ? { reproduction } : {})`), mas o campo era
+      // DESCARTADO neste boundary. Efeito medido ponta a ponta: o finding ficava com
+      // `reproduction = {}`; `buildFixTaskContract` monta
+      // `testCommands = [finding.reproduction.command, ...]`, então a fix task nascia com
+      // `testCommands = []`; em TESTING o Router reprovava a tentativa com `NO_TEST_COMMANDS`
+      // — DEPOIS de o coder ter gerado e APLICADO o patch. A correção não podia ser testada e o
+      // sintoma ("tentativas esgotadas", task RED) ficava longe da causa (um campo perdido no
+      // boundary). Medido no finding c2cc1772 (INC-3B): 2 de 3 tentativas com patch aplicado e
+      // 0 TestRun executado.
+      //
+      // A forma é VALIDADA, nunca confiada: `buildReproductionPlan` só reconhece plano de comando
+      // (`command` string não vazia) ou de invariante (`invariants` array não vazio). Um formato
+      // fora disso é recusado aqui em vez de virar um plano silenciosamente inútil.
+      const reproduction = body.reproduction;
+      const reproductionValid = Boolean(reproduction)
+        && typeof reproduction === 'object'
+        && !Array.isArray(reproduction)
+        && ((typeof reproduction.command === 'string' && reproduction.command.trim() !== '')
+          || (Array.isArray(reproduction.invariants) && reproduction.invariants.length > 0));
       const result = await deps.bugFindingService.confirmFinding(req.params.id, {
         basis: body.basis,
         evidence: Array.isArray(body.evidence) ? body.evidence : [],
         rootCause: body.rootCause || null,
+        reproduction: reproductionValid ? reproduction : null,
         actor: req.agent?.id || req.agent?.email || null,
         tenantId: requireTenantId(req.tenantId),
       });

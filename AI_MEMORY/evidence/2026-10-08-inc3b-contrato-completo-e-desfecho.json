@@ -1,0 +1,109 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "BOOTSTRAP_AND_OUTCOME",
+  "generatedAt": "2026-10-08T02:39:27.366Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "INC-3B: contrato de reproducao destravado (A+B) e desfecho por capacidade externa + formato de patch",
+  "bootstrapA": {
+    "id": "HUMAN_EXTERNAL_BOOTSTRAP:CONFIRM_REPRODUCTION_CONTRACT",
+    "file": "api/modules/engineering-missions/routes.js",
+    "defectEliminated": "a rota POST /engineering/findings/:id/confirm descartava `reproduction` no boundary; o servico ja aceitava e persistia o campo",
+    "consequenceMeasuredBefore": "finding sem reproduction -> buildFixTaskContract monta testCommands=[] -> Router reprova em TESTING com NO_TEST_COMMANDS DEPOIS do patch aplicado",
+    "change": "repassa `reproduction` apos validacao de forma (command string nao vazia OU invariants array nao vazio); formato invalido e recusado no boundary em vez de virar plano inutil",
+    "regression": "tests/unit/engineeringMissionRoutes.test.js: 4 casos novos, incluindo o EFEITO REAL (buildFixTaskContract com e sem reproduction) — o teste nao mede apenas o duble",
+    "regressionResult": "57 suites / 684 testes PASS, 0 falhas",
+    "sameClassPrecedent": "rota approve-self-modification (DEFEITO ELIMINADO, 2026-10-03)"
+  },
+  "proofContractFixed": {
+    "before": {
+      "taskId": "43172d6d-15c5-493a-9e08-f33259eac0a3",
+      "status": "RED",
+      "testCommands": [],
+      "testRunsExecuted": 0
+    },
+    "after": {
+      "taskId": "d84bdab8-18b8-4d5c-8afc-5e50f0dd497a",
+      "status": "RED",
+      "testCommands": [
+        "npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/unit/engineeringMission/missionReplanService.test.js --no-coverage"
+      ],
+      "testRunsExecuted": 0
+    },
+    "verdict": "o contrato passou a nascer com o comando que era vermelho — a prova de que A+B destravaram a causa"
+  },
+  "outcomeB": {
+    "finding": {
+      "id": "f4ae9753-0cdb-40d9-b4ea-a3d0242a985c",
+      "status": "FIXING",
+      "reproductionCommand": "npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/unit/engineeringMission/missionReplanService.test.js --no-coverage",
+      "humanApprovalRequired": false
+    },
+    "obsoleteFindingRetired": {
+      "id": "c2cc1772-db7a-491c-a65f-e81864deafca",
+      "status": "BLOCKED",
+      "reason": "task nascida sem testCommands por defeito de boundary; vinculo finding<->task e 1:1 sem re-triagem"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "model": "deepseek:deepseek-flash",
+        "status": "FAILED",
+        "patchBytes": 0,
+        "code": "PROVIDER_UNAVAILABLE"
+      },
+      {
+        "attempt": 2,
+        "model": "openai:gpt-5.4-mini",
+        "status": "FAILED",
+        "patchBytes": 0,
+        "code": "PROVIDER_UNAVAILABLE"
+      },
+      {
+        "attempt": 3,
+        "model": "qwen:qwen3-coder-flash",
+        "status": "FAILED",
+        "patchBytes": 3975,
+        "code": "PATCH_APPLY_FAILED"
+      }
+    ],
+    "failureSplit": {
+      "providerUnavailable": 2,
+      "patchApplyFailed": 1,
+      "testsExecuted": 0
+    },
+    "patchAnalysis": {
+      "model": "qwen:qwen3-coder-flash",
+      "bytes": 3975,
+      "files": 1,
+      "hunks": 3,
+      "removed": 15,
+      "added": 29,
+      "hunksWithValidAnchor": 2,
+      "hunksMisplacedOrInvented": 1,
+      "gitApplyBehaviour": "UM hunk deslocado invalida o patch INTEIRO — os outros 2 hunks estavam corretos",
+      "class": "CONTEXTO_NAO_ENCONTRADO (classe ja medida: 25 de 49 PATCH_APPLY_FAILED)"
+    },
+    "classification": "KNOWN_APPLICATION_GAP",
+    "preservedMerit": "o coder gerou patch direcionado a CAUSA (remove as constantes inexistentes e reescreve o mapa de efeitos) em 3994B, com 2 de 3 hunks ancorados corretamente; nenhuma tentativa chegou a executar teste",
+    "notReclassifiedAsProviderProblem": true
+  },
+  "additionalDefectFound": {
+    "id": "CONTRACT_READS_SNAKE_CASE_FIELDS_AS_CAMEL_CASE",
+    "evidence": "buildFixTaskContract le finding.expectedBehavior/observedBehavior/rootCause, mas getFinding devolve as linhas cruas (expected_behavior/observed_behavior/root_cause) — o objective da fix task nasceu com APENAS a primeira linha, sem comportamento esperado, observado nem causa raiz",
+    "impact": "toda fix task criada a partir de finding perde o contexto descritivo; o coder fica com o objetivo generico + o teste que falha",
+    "status": "NAO corrigido — fora do escopo autorizado (A e B); registrado para decisao"
+  },
+  "constraintsHonored": [
+    "nenhuma correcao manual de applyReplanDecision pelo iniciador externo",
+    "arquivo de teste NAO foi editado",
+    "nenhum gate/cobertura/allowlist/severidade alterados",
+    "nenhum mock substituindo integracao real",
+    "nenhuma escrita de estado por SQL cru",
+    "HANDOVER nao declarado enquanto INC-3B estiver RED"
+  ],
+  "recommendation": [
+    "INC-3B permanece RED: a correcao depende de capacidade externa (openai sem creditos, deepseek devolvendo resposta vazia) e de patch que aplique integralmente",
+    "o insumo esta correto agora (contrato completo com testCommands); a proxima execucao ja entra na fase TESTING se o patch aplicar",
+    "o achado CONTRACT_READS_SNAKE_CASE_FIELDS_AS_CAMEL_CASE reduz a chance de correcao na causa raiz e merece avaliacao"
+  ]
+}

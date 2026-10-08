@@ -453,6 +453,138 @@ describe('engineering-missions routes — aprovação de self-modification (HTTP
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRATO DE REPRODUÇÃO NA CONFIRMAÇÃO (defeito de boundary eliminado em 2026-10-08).
+//
+// A rota encaminhava apenas basis/evidence/rootCause. O campo `reproduction` era DESCARTADO aqui,
+// embora o serviço já o aceitasse e persistisse. Efeito medido ponta a ponta no finding c2cc1772
+// (INC-3B): `finding.reproduction = {}` ⇒ `buildFixTaskContract` monta
+// `testCommands = [finding.reproduction.command, ...]` ⇒ fix task nasce com `testCommands = []` ⇒
+// em TESTING o Router reprova com `NO_TEST_COMMANDS` DEPOIS do patch ter sido gerado e aplicado
+// (2 de 3 tentativas com patch aplicado e ZERO TestRun executado).
+//
+// Os testes abaixo medem o EFEITO REAL (o contrato de fix task), não apenas o dublê: um dublê que
+// "recebe o campo" passaria mesmo se o consumidor continuasse montando a task sem comando.
+describe('engineering-missions routes — confirmação de finding encaminha o contrato de reprodução', () => {
+  const FINDING_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+  const REPRO_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/unit/engineeringMission/missionReplanService.test.js --no-coverage';
+  const { buildFixTaskContract } = require('../../engine/engineeringMission/bugFinding');
+  let server;
+
+  afterEach(() => {
+    if (server) { server.close(); server = null; }
+  });
+
+  const findingBase = () => ({
+    id: FINDING_ID,
+    title: 'fachada de replan nao aplica efeito para HALT + LIVELOCK / BUDGET_EXHAUSTED',
+    status: 'SUSPECTED',
+    category: 'BUG',
+    severity: 'MEDIUM',
+    source: 'UNIT_TEST',
+    evidence_refs: [],
+    affected_subsystems: [],
+    reproduction: {},
+    fingerprint: 'fp-repro-contract',
+  });
+
+  const depsWithConfirm = () => {
+    const captured = { id: null, args: null };
+    const deps = buildDepsFactory({
+      requireAuth: asDevelopment,
+      bugFindingService: {
+        getFinding: async () => findingBase(),
+        confirmFinding: async (id, args) => {
+          captured.id = id;
+          captured.args = args;
+          return {
+            finding: { ...findingBase(), ...(args.reproduction ? { reproduction: args.reproduction } : {}) },
+            basis: args.basis,
+          };
+        },
+      },
+    });
+    return { deps, captured };
+  };
+
+  const confirm = async (body) => {
+    const res = await fetch(`${baseUrl(server)}/engineering/findings/${FINDING_ID}/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return { status: res.status, body: await res.json() };
+  };
+
+  test('reproduction de COMANDO atravessa o boundary e produz testCommands não vazio na fix task', async () => {
+    const { deps, captured } = depsWithConfirm();
+    server = await startServer(deps);
+
+    const res = await confirm({
+      basis: 'REPRODUCED_TEST_FAILURE',
+      reproduction: { command: REPRO_COMMAND, expect: 'FAIL' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(captured.args.reproduction).toEqual({ command: REPRO_COMMAND, expect: 'FAIL' });
+
+    // EFEITO REAL: o contrato da correção passa a carregar o comando que era vermelho.
+    const contract = buildFixTaskContract({ finding: { ...findingBase(), reproduction: captured.args.reproduction } });
+    expect(contract.testCommands).toEqual([REPRO_COMMAND]);
+
+    // CONTROLE do defeito: com o campo perdido, o contrato nasce SEM comando — era este o estado
+    // que produzia NO_TEST_COMMANDS em TESTING, depois do patch já aplicado.
+    const broken = buildFixTaskContract({ finding: { ...findingBase(), reproduction: {} } });
+    expect(broken.testCommands).toEqual([]);
+  });
+
+  test('reproduction de INVARIANTE é aceito (plano INVARIANT tem caminho próprio)', async () => {
+    const { deps, captured } = depsWithConfirm();
+    server = await startServer(deps);
+
+    const reproduction = { invariants: ['HALT+LIVELOCK deve produzir efeito explicito'] };
+    const res = await confirm({ basis: 'REPRODUCED_TEST_FAILURE', reproduction });
+
+    expect(res.status).toBe(200);
+    expect(captured.args.reproduction).toEqual(reproduction);
+  });
+
+  test('reproduction inválido é recusado no boundary (nunca vira plano silenciosamente inútil)', async () => {
+    const invalidos = [
+      {},
+      { command: '   ' },
+      { command: 42 },
+      { command: null },
+      'comando',
+      ['comando'],
+      { invariants: [] },
+      { invariants: 'nao-e-lista' },
+    ];
+    for (const reproducao of invalidos) {
+      const { deps, captured } = depsWithConfirm();
+      server = await startServer(deps);
+
+      const res = await confirm({ basis: 'REPRODUCED_TEST_FAILURE', reproduction: reproducao });
+
+      expect(res.status).toBe(200);
+      expect(captured.args.reproduction).toBeNull();
+      server.close();
+      server = null;
+    }
+  });
+
+  test('confirmar SEM reproduction continua válido (o campo é opcional, não uma exigência nova)', async () => {
+    const { deps, captured } = depsWithConfirm();
+    server = await startServer(deps);
+
+    const res = await confirm({ basis: 'REPRODUCED_TEST_FAILURE' });
+
+    expect(res.status).toBe(200);
+    expect(captured.args.reproduction).toBeNull();
+    expect(captured.args.basis).toBe('REPRODUCED_TEST_FAILURE');
+  });
+});
+
 describe('resolveAuthenticatedActorType', () => {
   const { resolveAuthenticatedActorType } = require('../../api/modules/engineering-missions/routes');
 
