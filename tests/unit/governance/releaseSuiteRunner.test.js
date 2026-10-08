@@ -14,7 +14,7 @@
  * Este teste fixa o mapeamento contra a ESTRUTURA REAL do Jest.
  */
 
-const { mapSuiteResult } = require('../../../scripts/governance/run-release-suites');
+const { mapSuiteResult, buildJestArgs } = require('../../../scripts/governance/run-release-suites');
 
 function suite({ assertions = [], status = 'passed', message = '' }) {
   return {
@@ -112,5 +112,37 @@ describe('run-release-suites — mapSuiteResult', () => {
   it('estrutura ausente não derruba o mapeamento (relatório malformado ⇒ FAIL, nunca exceção)', () => {
     expect(mapSuiteResult({ name: '/tmp/y.test.js' }).state).toBe('FAIL');
     expect(mapSuiteResult({}).state).toBe('FAIL');
+  });
+});
+
+/**
+ * POLÍTICA DE EXECUÇÃO DO LOTE — um lote NUNCA pode ser truncado.
+ *
+ * Defeito real medido em 2026-10-08: o `jest.config.cjs` traz `bail: 1` (comentado como "útil para
+ * debug") e o runner não o desligava. O Jest abortava no primeiro teste falho do lote e NÃO
+ * escrevia o `--outputFile`: as 6 suítes do lote viravam `MANIFEST_SUITE_NOT_EXECUTED`. Uma falha
+ * real (uma suíte) apagava a evidência das suítes que nem chegaram a rodar, e o relatório agregado
+ * passava a dizer "não executada" em vez de nomear a que falhou — causa e resultado escondidos ao
+ * mesmo tempo.
+ */
+describe('run-release-suites — política de execução do lote', () => {
+  it('desliga o bail EXPLICITAMENTE (o bail do projeto é conveniência de debug, não política de gate)', () => {
+    const args = buildJestArgs(['tests/unit/x.test.js'], '/tmp/batch-0.json');
+    expect(args).toContain('--bail=0');
+  });
+
+  it('nenhum `--bail` diferente de 0 pode entrar nos argumentos', () => {
+    const args = buildJestArgs(['tests/unit/x.test.js'], '/tmp/batch-0.json');
+    const bailFlags = args.filter((a) => String(a).startsWith('--bail'));
+    expect(bailFlags).toEqual(['--bail=0']);
+  });
+
+  it('mantém a serialização e o transporte do relatório do lote', () => {
+    const args = buildJestArgs(['tests/unit/x.test.js', 'tests/unit/y.test.js'], '/tmp/batch-3.json');
+    expect(args).toContain('--runInBand');
+    expect(args).toContain('--json');
+    expect(args).toContain('--outputFile=/tmp/batch-3.json');
+    // as suítes pedidas são exatamente as que o lote executa — nenhuma some no caminho
+    expect(args.filter((a) => a.startsWith('tests/'))).toEqual(['tests/unit/x.test.js', 'tests/unit/y.test.js']);
   });
 });

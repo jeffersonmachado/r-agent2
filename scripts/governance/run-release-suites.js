@@ -137,13 +137,32 @@ function batchReportPath(batchIndex) {
   return path.join(batchReportDir(), `batch-${batchIndex}.json`);
 }
 
+/**
+ * ARGUMENTOS DO LOTE — a POLÍTICA DE EXECUÇÃO do manifesto é declarada aqui.
+ *
+ * DEFEITO REAL medido em 2026-10-08: o `jest.config.cjs` traz `bail: 1` (comentado como "útil para
+ * debug") e o runner não o desligava. Um lote de 6 suítes em que a 3ª falhava parava ali: o Jest
+ * encerrava no primeiro teste falho e NÃO escrevia o `--outputFile`, então TODAS as 6 suítes do
+ * lote viravam `MANIFEST_SUITE_NOT_EXECUTED`. Uma falha real (uma suíte) apagava a evidência de até
+ * 5 suítes que sequer chegaram a rodar, e o relatório agregado dizia "não executada" em vez de
+ * nomear o que falhou. Medido com as mesmas 6 suítes: com `bail: 1` → 3 de 6 suítes e relatório
+ * AUSENTE; com `--bail=0` → 6 de 6 suítes e relatório PRESENTE.
+ *
+ * O manifesto autoritativo existe para executar TODAS as suítes declaradas. Abortar no primeiro
+ * erro é conveniência de debug interativo, nunca política de gate — por isso a flag é explícita
+ * AQUI, no ponto que produz a evidência, e não herdada de uma configuração de projeto.
+ */
+function buildJestArgs(suites, outputFile) {
+  // Execução serial: as suítes autoritativas compartilham banco real e já se mostraram sensíveis a
+  // contenção de recursos quando executadas em paralelo.
+  return ['jest', ...suites, '--runInBand', '--no-coverage', '--bail=0', '--json', `--outputFile=${outputFile}`];
+}
+
 function runJestBatch(suites, batchIndex) {
   const outputFile = batchReportPath(batchIndex);
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   if (fs.existsSync(outputFile)) fs.rmSync(outputFile, { force: true });
-  // Execução serial: as suítes autoritativas compartilham banco real e já se mostraram sensíveis a
-  // contenção de recursos quando executadas em paralelo.
-  const args = ['jest', ...suites, '--runInBand', '--no-coverage', '--json', `--outputFile=${outputFile}`];
+  const args = buildJestArgs(suites, outputFile);
   const result = spawnSync('npx', args, {
     cwd: ROOT,
     env: { ...process.env, RELEASE_AUTHORITATIVE: process.env.RELEASE_AUTHORITATIVE || '1' },
@@ -399,4 +418,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { mapSuiteResult, batchPaths, buildExclusiveIndex };
+module.exports = { mapSuiteResult, batchPaths, buildExclusiveIndex, buildJestArgs };
