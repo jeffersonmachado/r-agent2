@@ -20,6 +20,7 @@
       "tests/unit/governance/migrationsAppliedGate.test.js",
       "tests/unit/timeoutArchitectureMatrix.test.js",
       "tests/unit/governance/v2AuditItemsMapping.test.js",
+      "tests/unit/governance/v2AuditEnvelopeCoverage.test.js",
       "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js",
       "tests/unit/engineeringRouterAuditEnvelopeVerifier.test.js",
       "tests/unit/governance/v2RequiredTestsCoverage.test.js",

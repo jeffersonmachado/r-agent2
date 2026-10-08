@@ -333,7 +333,7 @@
       "id": "V2-37",
       "requirement": "Audit envelope inclui Mission Compiler.",
       "suites": [
-        "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"
+        "tests/unit/governance/v2AuditEnvelopeCoverage.test.js"
       ],
       "reports": []
     },
@@ -341,7 +341,7 @@
       "id": "V2-38",
       "requirement": "Audit envelope inclui approval/autoapproval.",
       "suites": [
-        "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"
+        "tests/unit/governance/v2AuditEnvelopeCoverage.test.js"
       ],
       "reports": []
     },
@@ -349,7 +349,7 @@
       "id": "V2-39",
       "requirement": "Audit envelope inclui Qwen status correto.",
       "suites": [
-        "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js"
+        "tests/unit/governance/v2AuditEnvelopeCoverage.test.js"
       ],
       "reports": []
     },

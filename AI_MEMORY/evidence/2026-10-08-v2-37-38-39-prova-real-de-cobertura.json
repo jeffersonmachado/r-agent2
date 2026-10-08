@@ -1,0 +1,44 @@
+{
+  "artifact": "V2_37_38_39_PROVA_REAL_DE_COBERTURA",
+  "generatedAt": "2026-10-08",
+  "decisaoDoUsuario": "siga (após 'desacoplar')",
+  "origem": "defeito descoberto DURANTE o desacoplamento do selo V2 (commit 4134267f)",
+
+  "defeitoMedido": {
+    "requisitos": ["V2-37", "V2-38", "V2-39"],
+    "enunciados": [
+      "Audit envelope inclui Mission Compiler.",
+      "Audit envelope inclui approval/autoapproval.",
+      "Audit envelope inclui Qwen status correto."
+    ],
+    "provaDeclarada": "tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js",
+    "porqueEraProvaFalsa": "o teste é do envelope do Router V1 e NÃO menciona Mission Compiler, approval nem Qwen (grep no arquivo: 0 ocorrências). Três requisitos selados apontavam para uma prova alheia ao próprio enunciado.",
+    "provaCorretaAusente": "MISSION_COMPILER_LEASE_RUNTIME e QWEN_STRUCTURAL não tinham NENHUMA referência em tests/ ou scripts/ além do próprio config do envelope; o teste que verifica o enunciado não existia."
+  },
+
+  "oQueCobreOsRequisitos": {
+    "MISSION_COMPILER_LEASE_RUNTIME": "proof kind=report → reports/TIMEOUT_ARCHITECTURE_REPORT.json#verdicts.LEASE (arquivo existente, valor GREEN)",
+    "MISSION_APPROVAL": "proof kind=suite → tests/unit/engineeringMissionRbac.test.js (existe e É autoritativa)",
+    "QWEN_STRUCTURAL": "proof kind=suite → tests/unit/engineeringRouterQwenProvider.test.js (existe e É autoritativa)"
+  },
+
+  "correcao": {
+    "provaNova": "tests/unit/governance/v2AuditEnvelopeCoverage.test.js — verifica, para cada capacidade exigida, (a) que existe item de auditoria cobrindo-a, (b) que a prova declarada é de um tipo que o validador sabe resolver, (c) que o alvo EXISTE, e (d) quando a prova é uma suíte, que ela está no MANIFESTO AUTORITATIVO — prova por suíte que nunca executa é indistinguível de ausência de prova. Inclui teste ANTI-VACUIDADE que exige que o resolvedor RECUSE prova ausente, tipo desconhecido, suíte fora do autoritativo e valor não provado.",
+    "autoritativa": "config/canonical-release-suites.json — a suíte entra em discovery.explicit (o mecanismo canônico). resolveManifest(): total 89, ok=true, violações=0, suíte presente.",
+    "manifesto": "V2-37/38/39 repontados da prova alheia para a suíte nova",
+    "guardaDeRegressao": "a suíte nova FALHA se algum dos três voltar a apontar para o teste do envelope V1 (verificado: falha antes do repoint, passa depois)"
+  },
+
+  "provas": {
+    "suiteNova": "7/7 PASS, inclusive em modo RELEASE_AUTHORITATIVE=1 (não pula, não lança INFRA_ERROR)",
+    "manifestoAutoritativo": "resolveManifest() → 89 suítes, ok=true, 0 violações",
+    "guardaBidirecional": "antes do repoint: ✕ na guarda 'a prova declarada NÃO pode ser o teste do envelope do Router V1'; depois: ✓"
+  },
+
+  "estadoHonesto": {
+    "antes": "status=PASS itens=68 {\"PROVEN\":68} — porém três deles provados por teste que não verifica o enunciado (prova FALSA)",
+    "durante": "status=FAIL itens=68 {\"PROVEN\":65,\"NOT_EXECUTED\":3} — [NOT_EXECUTED] V2-37/38/39: 'suíte(s) sem execução autoritativa registrada'",
+    "leitura": "NOT_EXECUTED é o valor correto e honesto enquanto a suíte não rodou numa execução autoritativa. Converter prova falsa em prova pendente é ganho de integridade, não regressão.",
+    "comoFecha": "a selagem executa SUITE_EXECUTION (que agora inclui a suíte nova) ANTES do passo REQUIRED_TESTS_V2: dentro de um ciclo de selagem os três resolvem PROVEN. Execução autoritativa disparada em background para deixar a árvore coerente."
+  }
+}
