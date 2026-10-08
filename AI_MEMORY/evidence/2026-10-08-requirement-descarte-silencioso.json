@@ -82,5 +82,26 @@
     "nenhum gate/severidade/cobertura alterados",
     "a validacao foi medida contra o acervo ANTES de entrar (nada legitimo quebrou)",
     "nenhum dado historico apagado"
-  ]
+  ],
+  "safeguardsRegression": {
+    "commit": "a164a53f",
+    "file": "tests/unit/engineeringMissionGovernanceSafeguards.test.js",
+    "cases": 6,
+    "whatItLocks": [
+      "as duas listas de regras (CRITICAL_RULE_IDS e HUMAN_ONLY_RULE_IDS) sao as mesmas",
+      "ruleId sobrevive a normalizacao da spec",
+      "auto-approval com a spec NORMALIZADA (o input exato do caminho de edicao) bloqueia com TENANT_ISOLATION_CHANGE",
+      "materialidade escala para CRITICAL com CRITICAL_REQUIREMENT_INTRODUCED",
+      "CONTROLE: sem ruleId nenhuma salvaguarda dispara — prova de que era o dado perdido que armava",
+      "blocksAutoApproval do produtor sobrevive"
+    ],
+    "shapeUnification": "item em texto e item em objeto passam a sair da normalizacao com os MESMOS campos (o ramo string nao tinha ruleId/blocksAutoApproval — a assimetria que o defeito produzia)",
+    "twoWayProof": {
+      "againstCommit": "08c75a87 (pre-correcao)",
+      "result": "4 de 6 casos falham; os 2 que passam sao os que nao dependem da correcao (checagem das listas e CONTROLE)",
+      "afterFix": "6/6 PASS"
+    },
+    "note": "a primeira tentativa de prova bidirecional foi INVALIDA: reverti com git checkout um arquivo cuja correcao ja estava commitada, entao comparei o codigo corrigido consigo mesmo. Refiz lendo o arquivo do commit anterior via git show."
+  },
+  "regression": "361 testes PASS (dominio de missao + spec + salvaguardas + stale spec)"
 }
