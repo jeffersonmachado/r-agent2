@@ -1,0 +1,71 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "FALSE_RED_BY_TEST_PLAN",
+  "generatedAt": "2026-10-08T04:10:16.130Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "RED da task eef5f81e e artefato do PLANO de regressao: arquivos resolvidos no repositorio principal, comandos executados no worktree da missao",
+  "headline": "O coder (qwen3-coder-flash) aplicou patch de 1354B e passou os 3 test runs do contrato. A regressao reprovou porque o plano listou suites que existem na main e NAO existem no worktree (source_commit do branch da missao): `npx jest <arquivo>` devolve \"No tests found\" (exit 1). A terceira falha e o mesmo desalinhamento (o script passa na main: PASS/183 checks).",
+  "task": {
+    "id": "eef5f81e-bf75-4253-a8ac-c2e494aea8e4",
+    "status": "RED",
+    "risk": "CRITICAL",
+    "sourceCommit": "bd53aa5c308e"
+  },
+  "mission": {
+    "id": "ca56cbdc-3280-4be8-beff-f9301199fc9f",
+    "status": "FAILED",
+    "version": 24
+  },
+  "meritPreserved": {
+    "providerFailureAttempt1": "deepseek-flash: resposta sem conteudo (capacidade externa)",
+    "attempt2": "qwen3-coder-flash: patch APLICADO (1354B) e TESTADO — 3 test runs PASS",
+    "verdict": "o RED NAO e do patch; nenhum teste do contrato falhou"
+  },
+  "failedCommands": [
+    {
+      "command": "npx jest tests/unit/engineeringMissionGovernanceSafeguards.test.js",
+      "exitCode": 1,
+      "existsInWorktree": false
+    },
+    {
+      "command": "npx jest tests/unit/engineeringMissionSpec.test.js",
+      "exitCode": 1,
+      "existsInWorktree": false
+    },
+    {
+      "command": "node scripts/governance/validate-engineering-router-v1.js",
+      "exitCode": 1,
+      "existsInWorktree": null
+    }
+  ],
+  "rootCause": {
+    "where": "api/services/engineeringRouter/regressionGovernanceService.js",
+    "line": "const availableTestFiles = expandGlobsToFiles(['tests/**/*.test.js']) — SEM reader",
+    "effect": "expandGlobsToFiles usa createSourceReader({}) por default, que lista do ROOT do processo (repositorio principal / main)",
+    "execution": "os comandos do plano sao executados com `cwd: workspacePath` (linha ~87), o worktree isolado da tentativa (source_commit + patch)",
+    "divergence": "PLANO resolvido no workspace principal x EXECUCAO no worktree — fontes diferentes para o mesmo plano"
+  },
+  "sameClassNote": "mesma classe dominante desta sessao: fontes/contratos divergentes entre camadas, com sintoma longe da causa (aqui o sintoma e \"task RED\", que parece reprovacao do patch)",
+  "ironyNote": "o proprio servico JA contem uma correcao para um caso da mesma familia (excluir tests/fixtures/engineering-router-sandbox e tests/rpa para nao gerar comando que sempre falha com \"No tests found\") — o problema de RAIZ (de onde a lista vem) ficou",
+  "alreadyCorrectInTheFile": "createSourceReader(task) resolve `source_commit` e lista daquele commit — a infraestrutura para ler de outra fonte existe",
+  "options": [
+    {
+      "id": "A",
+      "label": "reader do WORKSPACE da tentativa (correto)",
+      "detail": "listar os arquivos a partir de `workspacePath` (fs do worktree) — reflete o que os comandos realmente veem, inclusive arquivos de teste CRIADOS pelo patch",
+      "cost": "implementar um reader com listFiles baseado em fs (walk) + testes"
+    },
+    {
+      "id": "B",
+      "label": "reader do source_commit da task (1 linha)",
+      "detail": "passar createSourceReader({ source_commit }) — a infraestrutura ja existe",
+      "caveat": "perde arquivos de teste criados PELO PATCH (o coder pode criar um teste novo, como exige o proprio contrato de correcao)"
+    },
+    {
+      "id": "C",
+      "label": "interseccao: listar do workspace e, dos ausentes, avisar",
+      "detail": "nunca emitir comando para arquivo que nao existe onde o comando roda; registrar os ausentes como observacao auditavel"
+    }
+  ],
+  "constraintHonored": "nenhuma alteracao de codigo feita para este achado; medicao apenas"
+}
