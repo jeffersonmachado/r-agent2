@@ -1,4 +1,18 @@
 const fs = require('fs');
+const os = require('os');
+const { applyJestDbBudgetToEnv } = require('./lib/jestDbConnectionBudget');
+
+// ORÇAMENTO DE CONEXÕES DO POSTGRES (defeito real medido em 2026-10-08):
+// `max_connections=100`. Os workers do Jest herdam `process.env` do processo principal — que o
+// `tests/setup/engineeringRunnerGlobalSetup.js` populou com o `.env` — e o `.env` declara
+// `DB_POOL_MAX=40` (medido no worker por probe: DB_POOL_MAX=40). Com o default
+// `maxWorkers = cpus - 1` = 11, isso dava 11 × 40 = 440 conexões pretendidas contra 100
+// existentes: batches de suítes em paralelo morriam com "sorry, too many clients already",
+// um erro de infraestrutura disfarçado de falha de teste.
+// `maxWorkers` agora é DERIVADO do teto de conexões (ver lib/jestDbConnectionBudget.js): o
+// número de workers e o pool por worker são dimensionados juntos. Rodar com `--runInBand`
+// (runners oficiais de evidência) continua sendo 1 worker.
+const dbBudget = applyJestDbBudgetToEnv(process.env);
 
 // Pacote irmão @results/auth (fora do repo em /opt/results/ria/): incluído nos
 // roots apenas quando existe, para que clones/CI sem o diretório não falhem
@@ -13,7 +27,11 @@ if (fs.existsSync(EXTERNAL_PACKAGES_ROOT)) {
 module.exports = {
   // Timeout global para todos os testes (10 segundos)
   testTimeout: 10000,
-  
+
+  // Paralelismo seguro: teto derivado do orçamento de conexões do Postgres
+  // (workers × DB_POOL_MAX ≤ orçamento). Nunca o default `cpus - 1` sem essa conta.
+  maxWorkers: dbBudget.workers,
+
   // Proteção contra travamentos
   bail: 1, // Para após primeiro teste falhar (útil para debug)
 

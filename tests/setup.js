@@ -4,6 +4,11 @@
 
 process.env.NODE_ENV = 'test';
 process.env.DISABLE_BACKGROUND_INIT = 'true';
+
+// Orçamento de conexões do Postgres (ver lib/jestDbConnectionBudget.js): garante o teto do pool
+// DENTRO de cada worker, não só no processo principal do Jest. Idempotente — honra um
+// `DB_POOL_MAX` já exportado no ambiente (caso em que o teto de workers do config é reduzido).
+require('../lib/jestDbConnectionBudget').applyJestDbBudgetToEnv(process.env);
 // Assinaturas de replay são obrigatórias. Testes usam uma chave isolada,
 // explícita e sem qualquer relação com segredos de runtime.
 process.env.REPLAY_SIGNING_KEY = process.env.REPLAY_SIGNING_KEY
