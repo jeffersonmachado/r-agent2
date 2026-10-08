@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-08T09:28:10.372Z",
+  "generatedAt": "2026-10-08T21:52:27.371Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "59208130253b6af3abb74f034ba0860a5e914a59",
+  "commit": "24c510cedb28f2f1a019734164e8fbbc34e8c94e",
   "dbAvailable": true,
   "totals": {
-    "models": 213,
-    "validated": 213,
+    "models": 221,
+    "validated": 221,
     "visited": 0,
     "failed": 0,
     "warnings": 49
@@ -9232,6 +9232,422 @@
       ]
     },
     {
+      "id": "model:SecurityAdvisory",
+      "table": "security_advisories",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityAdvisory.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_advisories"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008210000-create-security-vulnerability-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_advisories' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "25 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityAdvisorySync",
+      "table": "security_advisory_syncs",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityAdvisorySync.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_advisory_syncs"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008210000-create-security-vulnerability-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_advisory_syncs' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "16 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityComponent",
+      "table": "security_components",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityComponent.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_components"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008190000-create-security-intelligence-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_components' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "26 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityComponentVersion",
+      "table": "security_component_versions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityComponentVersion.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_component_versions"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008190000-create-security-intelligence-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_component_versions' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "13 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityDiscoveryRun",
+      "table": "security_discovery_runs",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityDiscoveryRun.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_discovery_runs"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008190000-create-security-intelligence-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_discovery_runs' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "16 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityFinding",
+      "table": "security_findings",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityFinding.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_findings"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008210000-create-security-vulnerability-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_findings' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "29 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityFindingEvent",
+      "table": "security_finding_events",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityFindingEvent.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_finding_events"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008210000-create-security-vulnerability-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_finding_events' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "12 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecuritySbomSnapshot",
+      "table": "security_sbom_snapshots",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecuritySbomSnapshot.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_sbom_snapshots"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008190000-create-security-intelligence-core.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_sbom_snapshots' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "14 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
       "id": "model:Session",
       "table": "sessions",
       "state": "VALIDATED",
@@ -11491,7 +11907,5 @@
         }
       ]
     }
-  ],
-  "runId": "rap-governed-20261008073646010-b5f26127",
-  "sourceFingerprint": "562725bb40637a609fd0310f597c13d19108ccb18f52c938a51c804b5ec18c4a"
+  ]
 }
