@@ -1,0 +1,86 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "SILENT_DISCARD_ELIMINATED",
+  "generatedAt": "2026-10-08T03:29:19.498Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "Defeito #5 eliminado: entrada de requirements descartava campos em silencio — inclusive `ruleId`, que armava salvaguardas de governanca",
+  "headline": "A spec aceitava um item de requirement e jogava fora todo campo fora do schema, sem erro. Uma emenda de contrato foi aprovada como MATERIAL com QUATRO ITENS VAZIOS. E o produtor real emite `ruleId`, consumido pela materialidade (CRITICAL_RULE_IDS) e pelo auto-approval (HUMAN_ONLY_RULE_IDS): no caminho de EDICAO, o auto-approval recebe a spec normalizada, entao o descarte DESARMAVA esses bloqueios.",
+  "discoveredIn": "ciclo INC-3A, ao registrar a emenda de contrato (v22 ficou com 4 itens vazios)",
+  "chain": [
+    {
+      "step": 1,
+      "where": "engine/engineeringMission/missionSpec.js — normalizeRequirements",
+      "what": "mapeava para {id, text, source, enrichmentType, confidence, riskImpact} e descartava o resto sem erro"
+    },
+    {
+      "step": 2,
+      "where": "engine/engineeringMission/enrichmentBuilder.js (linhas ~415-470)",
+      "what": "o PRODUTOR REAL emite {id, text, source, enrichmentType, confidence, riskImpact, ruleId, blocksAutoApproval}"
+    },
+    {
+      "step": 3,
+      "where": "engine/engineeringMission/materiality.js:104",
+      "what": "filtra requisitos com ruleId em CRITICAL_RULE_IDS -> CRITICAL_REQUIREMENT_INTRODUCED"
+    },
+    {
+      "step": 4,
+      "where": "engine/engineeringMission/autoApprovalPolicy.js:104",
+      "what": "se ruleId esta em HUMAN_ONLY_RULE_IDS, adiciona bloqueio de decisao humana"
+    },
+    {
+      "step": 5,
+      "where": "api/services/engineeringMission/missionApprovalService.js (~183)",
+      "what": "no caminho de EDICAO o evaluateAutoApproval recebe `derivedRequirements: nextSpec.derivedRequirements` (ja normalizado) — sem ruleId, os bloqueios human-only nao disparam"
+    }
+  ],
+  "measuredImpact": {
+    "amendmentWithEmptyItems": "v22 aprovada como MATERIAL com 4 itens vazios (apenas `id` sobreviveu)",
+    "lostFieldsInProduction": [
+      "ruleId",
+      "blocksAutoApproval"
+    ],
+    "safeguardsAffected": [
+      "CRITICAL_REQUIREMENT_INTRODUCED (materialidade)",
+      "HUMAN_ONLY_RULE_IDS (bloqueio de decisao humana no auto-approval)"
+    ]
+  },
+  "fix": {
+    "commit": "3ad6ca40",
+    "files": [
+      "engine/engineeringMission/missionSpec.js",
+      "engine/engineeringMission/constants.js",
+      "tests/unit/engineeringMissionSpec.test.js"
+    ],
+    "changes": [
+      "REQUIREMENT_FIELDS vira lista FECHADA que inclui o que o produtor real emite (ruleId, blocksAutoApproval) e esses campos passam a ser PRESERVADOS",
+      "campo fora do schema falha ALTO com INVALID_REQUIREMENT_ITEM, nomeando campo, posicao e lista aceita",
+      "item sem conteudo (text ausente/vazio) falha alto — item vazio e ruido, nao registro"
+    ]
+  },
+  "scopeMeasuredBeforeChanging": {
+    "source": "base de dados de versoes de missao",
+    "versions": 917,
+    "acceptanceCriteriaWithoutText": 0,
+    "acceptanceCriteriaWithUnknownFields": 0,
+    "derivedRequirementsWithoutText": 4,
+    "note": "os unicos itens vazios eram os 4 do proprio defeito; nenhuma spec legitima quebra com a nova validacao"
+  },
+  "proof": {
+    "twoWay": {
+      "oldCodePlusNewTests": "7 de 9 casos falham",
+      "newCodePlusNewTests": "9/9 PASS"
+    },
+    "regression": "26 suites / 355 testes PASS (domínio de missão + compilador + freshness + stale spec + rotas)"
+  },
+  "residualNotes": [
+    "a v22 (emenda vazia) permanece no historico: e evidencia do defeito, nao deve ser apagada; a v23 e a emenda valida",
+    "o specHash de novas versoes muda (o shape agora carrega ruleId/blocksAutoApproval) — aprovacoes existentes seguem presas as versoes delas",
+    "a salvaguarda do auto-approval no caminho de EDICAO volta a poder disparar; nenhum teste cobria esse caminho com ruleId human-only (candidato a regressao futura)"
+  ],
+  "constraintsHonored": [
+    "nenhuma correcao aplicada pelo Engenheiro a pedido do iniciador: bootstrap autorizado pelo usuario",
+    "nenhum gate/severidade/cobertura alterados",
+    "a validacao foi medida contra o acervo ANTES de entrar (nada legitimo quebrou)",
+    "nenhum dado historico apagado"
+  ]
+}
