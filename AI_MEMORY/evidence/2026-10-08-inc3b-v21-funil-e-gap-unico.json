@@ -1,0 +1,55 @@
+{
+  "artifactType": "ENGINEERING_MISSION_OBSERVATION",
+  "generatedAt": "2026-10-08T01:45:00.000Z",
+  "author": "GitHub Copilot (DeepSeek V4 Flash) — observador externo",
+  "mission": { "id": "ca56cbdc-3280-4be8-beff-f9301199fc9f" },
+  "increment": "INC-3B v21 — reentrega com as TRÊS correções externas ativas (0a0df9ce, 0d772ce7, 69a33d40)",
+  "taskId": "e5ad9354-ebb6-4870-9cd1-de2c74c75a2f",
+  "result": "RED (10 tentativas)",
+  "funnelWhereEachAttemptDied": [
+    { "att": 1, "model": "deepseek:deepseek-flash", "diedAt": "PROVIDER", "detail": "resposta SEM conteúdo utilizável (melhor coder medido do pool)" },
+    { "att": 2, "model": "openai:gpt-5.4-mini", "diedAt": "PROVIDER", "detail": "429 no credits remaining" },
+    { "att": 3, "model": "qwen:qwen3-coder-flash", "diedAt": "PATCH_APPLY_CONTEXT", "detail": "falha no patch: missionReplanService.js — CONTEXTO não encontrado (o header JÁ foi canonicalizado)" },
+    { "att": 4, "model": "qwen:qwen3-coder-flash", "diedAt": "PATCH_APPLY_CONTEXT", "detail": "idem" },
+    { "att": 5, "model": "openai:gpt-4o", "diedAt": "PROVIDER", "detail": "429 no credits remaining" },
+    { "att": 6, "model": "kimi:kimi-k2.7-code-highspeed", "diedAt": "PROVIDER", "detail": "provider indisponível" },
+    { "att": 7, "model": "kimi:kimi-k2.7-code", "diedAt": "PROVIDER", "detail": "provider indisponível" },
+    { "att": 8, "model": "deepseek:deepseek-v4-pro", "diedAt": "PROVIDER", "detail": "provider indisponível" },
+    { "att": 9, "model": "kimi:kimi-k3", "diedAt": "PROVIDER", "detail": "provider indisponível" },
+    { "att": 10, "model": "qwen:qwen3-max", "diedAt": "TEST_FAIL", "detail": "patch aplicou e o teste RODOU: 5 de 6 passaram na primeira suíte; falhou APENAS em applyReplanDecision, que não produz efeito em HALT/LIVELOCK (expected true, received false) — o mesmo ponto do melhor resultado da v16" }
+  ],
+  "funnelSummary": {
+    "providerUnavailable": 7,
+    "patchApplyFailed_byContext": 2,
+    "patchApplyFailed_byHeader": 0,
+    "testFail": 1,
+    "reachedTest": 1,
+    "comparison": {
+      "v20": "6 provider + 4 patch + 0 teste (0 tentativas julgaram código)",
+      "v21": "7 provider + 2 patch(contexto) + 1 teste (1 tentativa julgou código)"
+    }
+  },
+  "canonicalizationEffectConfirmedInProduction": {
+    "telemetryEvent": "PATCH_CANONICALIZATION_APPLIED",
+    "occurrences": 1,
+    "record": {
+      "provider": "qwen",
+      "model": "qwen3-coder-flash",
+      "files": ["api/services/engineeringMission/missionReplanService.js"],
+      "missingHeaders": ["---", "+++"],
+      "derivedHeaders": ["--- a/api/services/engineeringMission/missionReplanService.js", "+++ b/api/services/engineeringMission/missionReplanService.js"],
+      "originalPatchHash": "e725da9f794f…",
+      "canonicalizedPatchHash": "2e3ee26ca91f…",
+      "gitApplyCheckResult": "FAIL",
+      "gitApplyStderr": "error: falha no patch: api/services/engineeringMission/missionReplanService.js:…"
+    },
+    "beforeVsAfter": "o stderr do qwen3-coder-flash mudou de 'patch fragment without header at line 3' (defeito de header) para 'falha no patch: <arquivo>' (defeito de CONTEXTO) — exatamente o que o probe previu: a canonicalização resolveu o header e revelou o próximo defeito, sem mascará-lo"
+  },
+  "keyFinding": {
+    "singleRemainingGap": "o incremento está a UM ajuste conhecido e específico de distância: `applyReplanDecision` precisa produzir efeito quando a decisão do núcleo é HALT + reason LIVELOCK e HALT + reason BUDGET_EXHAUSTED_*. Os outros 5 testes do serviço já passam com o núcleo REAL (delegação funcionando)",
+    "note": "esse é o mesmo ponto que falhou na melhor tentativa da v16 — agora confirmado com o teste efetivamente executado"
+  },
+  "noManualImplementation": true,
+  "noHandover": "INC-3B segue RED — HANDOVER não executado",
+  "noGateWeakened": true
+}
