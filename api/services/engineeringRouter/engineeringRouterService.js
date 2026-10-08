@@ -69,7 +69,9 @@ const {
   isInfrastructureFailure,
   meritFailureKindOf,
 } = require('../../../engine/engineeringRouter/executionFailurePolicy');
-const { canonicalizeMissingFileHeaders } = require('../../../engine/engineeringRouter/diffCanonicalizer');
+// A canonicalização de headers deixou de ser chamada direto aqui: a decisão de QUAL texto é
+// aplicado passou a ter FONTE ÚNICA em `applyDiffPolicy` (usada por este fluxo e pela retomada).
+const { resolveApplyDiff } = require('../../../engine/engineeringRouter/applyDiffPolicy');
 
 /**
  * Identidade de worker: UUID de instância. O PID NÃO entra na identidade (não é global entre
@@ -443,28 +445,49 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   // Só insere `--- a/<P>` / `+++ b/<P>` quando o bloco declara `diff --git a/<P> b/<P>` com o MESMO
   // path e falta apenas esse par (ver engine/engineeringRouter/diffCanonicalizer.js). O patch
   // ORIGINAL é preservado como evidência em `patch_diff`; nenhuma linha de conteúdo é tocada.
-  let effectiveDiff = patchResult.diff;
-  let canonicalization = null;
-  const candidateCanonicalization = canonicalizeMissingFileHeaders(patchResult.diff);
-  if (candidateCanonicalization.applied) {
+  // FONTE ÚNICA (2026-10-08): a decisão de QUAL texto é aplicado vive em
+  // `engine/engineeringRouter/applyDiffPolicy.js` — o MESMO módulo que a retomada usa. Antes havia
+  // duas cópias da regra (aqui e na retomada) e, nas duas, o texto aplicado era descartado: só o
+  // CRU seguia adiante. A promoção declara receber "o mesmo texto usado em applyPatch" e, recebendo
+  // o cru, morria com PROMOTION_EXPECTED_TREE_APPLY_FAILED ("patch fragment without header") —
+  // missão DEGRADED com REGRESSION e GOVERNANCE em PASS.
+  const applyDiffResolution = resolveApplyDiff(patchResult.diff, {
     // Revalidação estrutural OBRIGATÓRIA sobre o texto canonicalizado: se qualquer coisa ficar
-    // inválida (contrato de paths, formato, corpo), usamos o patch CRU e o fluxo de rejeição
-    // normal continua valendo — a canonicalização nunca transforma inválido em aprovado.
-    const revalidation = validatePatch(candidateCanonicalization.text, { contract: contractFromTask(task) });
-    const originalHash = crypto.createHash('sha256').update(patchResult.diff, 'utf8').digest('hex');
-    const canonicalHash = crypto.createHash('sha256').update(candidateCanonicalization.text, 'utf8').digest('hex');
+    // inválida (contrato de paths, formato, corpo), o policy devolve o patch CRU e o fluxo de
+    // rejeição normal continua valendo — a canonicalização nunca transforma inválido em aprovado.
+    revalidate: (text) => validatePatch(text, { contract: contractFromTask(task) }),
+  });
+  const effectiveDiff = applyDiffResolution.diff;
+  let canonicalization = null;
+  if (applyDiffResolution.canonicalization) {
+    const res = applyDiffResolution.canonicalization;
     canonicalization = {
-      blocks: candidateCanonicalization.blocks,
-      skipped: candidateCanonicalization.skipped,
-      revalidationOk: revalidation.ok,
-      revalidationCode: revalidation.ok ? null : revalidation.code,
-      originalPatchHash: originalHash,
-      canonicalizedPatchHash: canonicalHash,
+      blocks: res.blocks,
+      skipped: res.skipped,
+      revalidationOk: res.revalidationOk,
+      revalidationCode: res.revalidationCode,
+      originalPatchHash: crypto.createHash('sha256').update(patchResult.diff, 'utf8').digest('hex'),
+      canonicalizedPatchHash: crypto.createHash('sha256').update(res.canonicalizedText, 'utf8').digest('hex'),
       originalPatchBytes: Buffer.byteLength(patchResult.diff, 'utf8'),
-      canonicalizedPatchBytes: Buffer.byteLength(candidateCanonicalization.text, 'utf8'),
-      canonicalizedPatch: candidateCanonicalization.text,
+      canonicalizedPatchBytes: Buffer.byteLength(res.canonicalizedText, 'utf8'),
+      canonicalizedPatch: res.canonicalizedText,
     };
-    if (revalidation.ok) effectiveDiff = candidateCanonicalization.text;
+
+    // PROVENIÊNCIA DO QUE FOI APLICADO: o `patch_diff` guarda o patch ORIGINAL do modelo (evidência);
+    // sem registrar também QUAL texto foi de fato aplicado, a auditoria não consegue explicar por que
+    // a árvore validada difere do cru. Aqui ficam os dois hashes, de forma comparável.
+    await ts.updateAttempt(attempt.id, {
+      patch_validation: {
+        ...validation,
+        applyDiff: {
+          appliedCanonicalized: applyDiffResolution.applied,
+          rawPatchHash: canonicalization.originalPatchHash,
+          appliedDiffHash: canonicalization.canonicalizedPatchHash,
+          rawPatchBytes: canonicalization.originalPatchBytes,
+          appliedDiffBytes: canonicalization.canonicalizedPatchBytes,
+        },
+      },
+    });
   }
 
   let workspace = null;
@@ -761,7 +784,10 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     // (`executeRoutedLoop`) assume a responsabilidade de destruí-lo depois que a promoção
     // (ou a decisão de não promover) terminar.
     keepWorkspace = true;
-    return { outcome: 'ADVANCE', attempt, diff: patchResult.diff, testResult, workspace };
+    // `effectiveDiff` (o texto REALMENTE aplicado e testado), NUNCA `patchResult.diff` (o cru):
+    // `createPromotionCandidate` exige em contrato "o mesmo texto usado em applyPatch", e é este
+    // valor que alimenta o tree hash esperado, o validatedPatchHash e a reconciliação pós-crash.
+    return { outcome: 'ADVANCE', attempt, diff: effectiveDiff, testResult, workspace };
   } finally {
     if (workspace && !keepWorkspace) await destroyWorkspace(workspace);
   }
@@ -1951,19 +1977,16 @@ async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTena
       emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: 'Retomada bloqueada: tentativa concluída sem patch persistido (estado inconsistente, nunca assumido).' });
       return { taskId, status: 'BLOCKED', reasonCode: 'RESUME_MISSING_PATCH_DIFF' };
     }
+    // Mesmo policy do caminho normal: a retomada precisa do texto canônico (a tentativa JÁ foi
+    // aplicada com sucesso uma vez, daí `assumeAlreadyApplied`) e precisa PROPAGAR esse mesmo texto
+    // para a promoção — antes ela canonicalizava só para o apply local e seguia com o cru.
+    const resumeDiff = resolveApplyDiff(diff, { assumeAlreadyApplied: true }).diff;
     if (!workspace || !fs.existsSync(workspace)) {
       // Workspace efêmero pode não sobreviver a um restart real (tmpdir limpo, container
       // reiniciado) — SEAL-001 garante que HEAD é real e imutável, então reaplicar o MESMO
       // diff persistido sobre um workspace novo produz a MESMA tree, determinístico.
       try {
         workspace = await createWorkspace(taskId, lastAttempt.attempt_number);
-        // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07): a retomada reaplica o MESMO patch persistido;
-        // se ele dependia da canonicalização determinística de headers para aplicar, a retomada
-        // precisa usar o mesmo texto canônico — senão a reconstrução falharia por um motivo que
-        // a execução original já havia resolvido (o patch ORIGINAL segue preservado em
-        // `patch_diff`, como evidência).
-        const resumeCanonicalization = canonicalizeMissingFileHeaders(diff);
-        const resumeDiff = resumeCanonicalization.applied ? resumeCanonicalization.text : diff;
         const applyResult = await applyPatch(workspace, resumeDiff);
         if (!applyResult.ok) {
           await ts.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: applyResult.stderr || applyResult.code });
@@ -1980,7 +2003,7 @@ async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTena
     }
     logger.info('[engineeringRouterService] retomando fase pós-CODE após reinício de processo', { taskId, attemptId: lastAttempt.id, taskStatus: task.status });
     emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RESUME', status: 'info', message: `Retomando a partir de ${task.status} após reinício — patch já validado, nunca uma nova tentativa de CODER.` });
-    return advanceFromCodedAttempt(task, { attempt: lastAttempt, diff, workspace }, { eventAudienceTenantId, run });
+    return advanceFromCodedAttempt(task, { attempt: lastAttempt, diff: resumeDiff, workspace }, { eventAudienceTenantId, run });
   }
 
   if (ATTEMPT_INFLIGHT_STATUSES.includes(lastAttempt.status)) {

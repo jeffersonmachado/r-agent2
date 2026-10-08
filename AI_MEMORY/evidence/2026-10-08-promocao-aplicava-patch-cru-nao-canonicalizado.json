@@ -1,0 +1,62 @@
+{
+  "artifact": "PROMOCAO_APLICAVA_PATCH_CRU_NAO_CANONICALIZADO",
+  "generatedAt": "2026-10-08",
+  "decisaoDoUsuario": "siga (após o checkpoint da frente 1)",
+  "autorizacaoAplicada": "self-modification do finding 4dfdf9c4 aprovada explicitamente pelo operador (actor HUMANO, policy HUMAN_ONLY)",
+
+  "contexto": {
+    "missao": "ca56cbdc-3280-4be8-beff-f9301199fc9f",
+    "versao": 26,
+    "task": "7fb9cf2a-4213-4cf5-8e36-4de9c87b271c",
+    "tentativa": 2,
+    "patch": "1047B",
+    "regressao": "tier=CRITICAL result=PASS (falhas=0) — veredito REAL, já sem o RED falso do gate V1",
+    "governanca": "validate-engineering-router-v1 PASS, checks=183 falhas=0, exitCode=0",
+    "promocao": "FAIL"
+  },
+
+  "defeitoMedido": {
+    "erro": "PROMOTION_EXPECTED_TREE_APPLY_FAILED",
+    "stderr": "error: patch fragment without header at line 3: @@ -109,16 +109,16 @@",
+    "consequencia": "missão ficou DEGRADED com REGRESSION e GOVERNANCE em PASS — artefato de fiação entre fases, nunca mérito do patch"
+  },
+
+  "causaRaiz": {
+    "resumo": "o texto CANONICALIZADO era aplicado no sandbox e depois DESCARTADO; só o patch CRU seguia adiante",
+    "mecanismo": [
+      "o coder (qwen3-coder-flash) emitiu `diff --git a/<p> b/<p>` seguido direto de `@@`, sem `--- a/<p>` e `+++ b/<p>`",
+      "engineeringRouterService: canonicalizava (diffCanonicalizer), revalidava e aplicava `effectiveDiff` — daí TESTING passar (status APPLIED)",
+      "persistia `patch_diff` = patch CRU (por desenho: preservado como evidência) e devolvia `diff: patchResult.diff` no ADVANCE",
+      "promotionService.computeExpectedTreeHash aplica esse diff num worktree limpo; `git apply` recusa o patch sem cabeçalho",
+      "o contrato de createPromotionCandidate JÁ declara `diff` = 'o mesmo texto usado em applyPatch' — o chamador violava o próprio contrato",
+      "o caminho de RETOMADA tinha a SUA PRÓPRIA cópia da regra (canonicalizava para o apply local) e também propagava o texto cru: duas cópias, ambas incompletas"
+    ],
+    "provaDireta": "git apply --check do patch cru no worktree do source_commit bd53aa5c: 'error: patch fragment without header at line 3' (reproduzido)"
+  },
+
+  "correcao": {
+    "fonteUnica": "engine/engineeringRouter/applyDiffPolicy.js — módulo PURO que decide QUAL texto é aplicado",
+    "invariante": "canonicalização só é aceita com revalidação estrutural aprovada, OU com declaracao explicita assumeAlreadyApplied=true (retomada de attempt já DONE); na dúvida devolve o CRU (fail-closed)",
+    "propagacao": [
+      "engineeringRouterService: ADVANCE devolve `diff: effectiveDiff` (o texto realmente aplicado)",
+      "retomada usa o MESMO policy (assumeAlreadyApplied) e propaga `resumeDiff` adiante",
+      "proveniência persistida em `patch_validation.applyDiff` (rawPatchHash + appliedDiffHash + tamanhos), sem sobrescrever `patch_diff`"
+    ],
+    "naoAlterado": "nenhuma linha de conteúdo do patch; nenhum gate; nenhuma severidade; o patch ORIGINAL permanece em `patch_diff` como evidência"
+  },
+
+  "provas": {
+    "unit_novo": "tests/unit/engineeringRouterApplyDiffPolicy.test.js — 6/6 PASS, incluindo `git apply --check` REAL contra repositório temporário (cru recusado, canonicalizado aceito)",
+    "unit_dominio": "tests/unit/engineeringRouter* — 33 suítes / 327 testes PASS",
+    "integracao": "engineeringRouterPatchFormatRerouteE2E + engineeringRouterDurableResumeE2E + engineeringRouterPromotionEvidencePersistence — 3 suítes / 10 testes PASS",
+    "bidirecional": "o teste 'o patch do modelo é REALMENTE recusado pelo git' falha no código anterior (o cru era o que ia para a promoção) e passa no corrigido"
+  },
+
+  "dividaRegistrada": {
+    "item": "plano de regressão CRITICAL degenerou para 3 comandos",
+    "medicao": "tier=CRITICAL, cmds=3 (só os testCommands do contrato), falhas=0; availableTestFiles=1023 no workspace, mas related/subsystem não casaram nada",
+    "hipotese": "`touchedPaths` vazio no momento da regressão (listChangedFiles(result.workspace)) ⇒ findRelatedTestFiles/findSubsystemTestFiles sem base",
+    "agravante": "`touchedPaths` NÃO é registrado na evidência — a primeira leitura deu 'null' enganoso",
+    "status": "NÃO corrigido — pendente, com evidência"
+  }
+}
