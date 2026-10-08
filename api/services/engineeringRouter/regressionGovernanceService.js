@@ -21,6 +21,7 @@
  *     reimplementa governança, só invoca a autoridade que já existe.
  */
 
+const fs = require('fs');
 const path = require('path');
 const engineeringTaskService = require('./engineeringTaskService');
 const { ROOT, expandGlobsToFiles } = require('./contextBuilderService');
@@ -29,6 +30,119 @@ const { buildRegressionPlan } = require('../../../engine/engineeringRouter/regre
 const { computeSourceFingerprint } = require('../../../governance/proof-engine/fingerprint-chain');
 const { TEST_OUTCOMES } = require('../../../engine/engineeringRouter/constants');
 const { runChildWithDeadline } = require('../../utils/operationDeadline');
+const logger = require('../../utils/logger');
+
+/**
+ * Diretórios que o walk do workspace nunca percorre: pesados e irrelevantes para descobrir
+ * suítes de teste (e `node_modules` pode estar symlinkado no worktree).
+ */
+const WORKSPACE_IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', 'logs', 'tmp', 'cache']);
+
+/**
+ * Candidatos a "teste relacionado"/"subsistema" resolvidos A PARTIR DO WORKSPACE DA TENTATIVA.
+ *
+ * DEFEITO ELIMINADO (2026-10-08). `buildRegressionPlan` recebia `expandGlobsToFiles(['tests/**\/*.test.js'])`
+ * SEM reader, então a lista vinha do ROOT do processo (o repositório principal). Os comandos do plano,
+ * porém, rodam com `cwd: workspacePath` — o worktree isolado da tentativa (`source_commit` + patch).
+ * Um arquivo que existe numa fonte e não na outra vira `npx jest <arquivo>` ⇒ "No tests found"
+ * (exit 1), e a regressão reprova por um comando que NUNCA poderia passar.
+ *
+ * Medido ao vivo (task eef5f81e, missão ca56cbdc): o coder aplicou um patch de 1354B e passou os três
+ * test runs do contrato; a regressão reprovou em `tests/unit/engineeringMissionGovernanceSafeguards.
+ * test.js` e `tests/unit/engineeringMissionSpec.test.js` — suítes que existiam na main e NÃO existiam
+ * no worktree da missão. O RED do patch era, na verdade, um artefato do plano.
+ *
+ * A lista passa a ser resolvida no MESMO lugar onde os comandos rodam (inclusive arquivos de teste
+ * CRIADOS pelo patch), e o que ficou de fora por não existir no workspace é registrado como
+ * observação auditável — nunca descartado em silêncio.
+ *
+ * @returns {{availableTestFiles: string[], audit: Object}}
+ */
+function resolveAvailableTestFiles(workspacePath) {
+  const ignoredByJest = (f) => f.startsWith('tests/rpa/') || f.startsWith('tests/fixtures/engineering-router-sandbox/');
+  // O filtro acima replica as exclusões de `testPathIgnorePatterns` do jest.config.cjs real: um
+  // diretório ignorado pelo jest nunca pode virar comando do plano.
+  const doWorkspace = expandGlobsToFiles(['tests/**/*.test.js'], createWorkspaceReader(workspacePath))
+    .filter((f) => !ignoredByJest(f));
+  const availableTestFiles = [...new Set(doWorkspace)].sort();
+
+  // AUDITORIA: candidatos que existem no repositório principal e NÃO existem no workspace. Sem este
+  // registro, o desalinhamento de fonte desapareceria sem deixar rastro.
+  let ausentesNoWorkspace = [];
+  try {
+    const doPrincipal = expandGlobsToFiles(['tests/**/*.test.js']).filter((f) => !ignoredByJest(f));
+    const presentes = new Set(availableTestFiles);
+    ausentesNoWorkspace = doPrincipal.filter((f) => !presentes.has(f)).sort();
+  } catch (err) {
+    logger.warn('[engineeringRegressionGovernance] auditoria de candidatos indisponível', {
+      workspacePath, error: err.message,
+    });
+  }
+
+  return {
+    availableTestFiles,
+    audit: {
+      workspacePath,
+      source: 'WORKSPACE_DA_TENTATIVA',
+      availableTestFilesCount: availableTestFiles.length,
+      candidatesAbsentInWorkspace: ausentesNoWorkspace,
+      candidatesAbsentInWorkspaceCount: ausentesNoWorkspace.length,
+    },
+  };
+}
+
+/**
+ * Reader dos arquivos do WORKSPACE da tentativa (walk de fs, com cache).
+ *
+ * O contrato é o mesmo dos readers de `contextBuilderService` (`listFiles`/`isFile`/`readFile`):
+ * `listFiles()` devolve a lista relativa de arquivos, e `null` faria `expandGlobsToFiles` cair no
+ * walk do ROOT — exatamente o comportamento errado que este reader existe para eliminar.
+ */
+function createWorkspaceReader(workspacePath) {
+  const root = path.resolve(workspacePath);
+  let cachedListing = null;
+
+  const walk = (dir, acc) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (_) {
+      return acc;
+    }
+    for (const entry of entries) {
+      if (WORKSPACE_IGNORED_DIRS.has(entry.name)) continue;
+      // Symlink não é seguido: um link para fora do workspace não representa o que os comandos veem.
+      if (entry.isSymbolicLink()) continue;
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(abs, acc);
+      else if (entry.isFile()) acc.push(path.relative(root, abs).split(path.sep).join('/'));
+    }
+    return acc;
+  };
+
+  return {
+    kind: 'WORKSPACE',
+    commit: null,
+    listFiles: () => {
+      if (cachedListing === null) cachedListing = walk(root, []);
+      return cachedListing;
+    },
+    isFile: (relPath) => {
+      try {
+        return fs.statSync(path.join(root, relPath)).isFile();
+      } catch (_) {
+        return false;
+      }
+    },
+    readFile: (relPath) => {
+      try {
+        return fs.readFileSync(path.join(root, relPath), 'utf8');
+      } catch (_) {
+        return null;
+      }
+    },
+  };
+}
 
 /**
  * ER-V1-FINAL-006 — Real Regression.
@@ -55,23 +169,20 @@ const { runChildWithDeadline } = require('../../utils/operationDeadline');
 async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths, risk, targetedCommands, signal = null, onCommandCompleted = null, assertHeld = null }) {
   const checkedAt = new Date().toISOString();
 
-  // Candidatos a "teste relacionado"/"subsistema" resolvidos AQUI (I/O real, glob do
-  // repositório) — buildRegressionPlan em si permanece puro, recebendo a lista já pronta.
-  // Achado real reproduzido ao vivo: sem este filtro, um patch tocando fixtures de teste do
-  // próprio Engineering Router (ex.: tests/fixtures/engineering-router-sandbox/mathUtils.js)
-  // fazia o plano HIGH/MEDIUM sugerir `npx jest tests/fixtures/engineering-router-sandbox/
-  // mathUtils.test.js` — um comando que SEMPRE falha com "No tests found" porque esse
-  // diretório está em `testPathIgnorePatterns` do jest.config.cjs real (mesma exclusão de
-  // `tests/rpa/`). Não é uma reprovação real de regressão, é o próprio plano sugerindo um
-  // comando estruturalmente inválido — replica aqui a MESMA exclusão do jest.config.cjs.
-  const availableTestFiles = expandGlobsToFiles(['tests/**/*.test.js'])
-    .filter((f) => !f.startsWith('tests/rpa/') && !f.startsWith('tests/fixtures/engineering-router-sandbox/'));
+  // Candidatos a "teste relacionado"/"subsistema" resolvidos AQUI (I/O real) — `buildRegressionPlan`
+  // permanece puro, recebendo a lista já pronta.
+  //
+  // A resolução é feita A PARTIR DO WORKSPACE DA TENTATIVA, que é onde os comandos rodam
+  // (`cwd: workspacePath` abaixo). Antes vinha do ROOT do processo e o plano sugeria comandos para
+  // arquivos que não existiam no worktree — "No tests found" (exit 1) reprovando a regressão por um
+  // defeito do plano, não do patch. Ver `resolveAvailableTestFiles` para a medição ao vivo.
+  const { availableTestFiles, audit: testFileAudit } = resolveAvailableTestFiles(workspacePath);
   const plan = buildRegressionPlan({ touchedPaths, targetedCommands, risk, availableTestFiles });
 
   if (plan.commands.length === 0) {
     return {
       pass: false,
-      evidence: { checkedAt, planTier: plan.tier, reason: 'RegressionPlan vazio — nenhum comando determinístico para executar' },
+      evidence: { checkedAt, planTier: plan.tier, testFileAudit, reason: 'RegressionPlan vazio — nenhum comando determinístico para executar' },
     };
   }
 
@@ -117,6 +228,7 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
       sourceFingerprint,
       outcome,
       commandCount: plan.commands.length,
+      testFileAudit,
       commands: results.map((r) => ({ command: r.command, status: r.status, outcome: r.outcome || r.status, exitCode: r.exitCode })),
       failed: failed.map((r) => ({ command: r.command, status: r.status, outcome: r.outcome || r.status, exitCode: r.exitCode })),
     },
@@ -176,4 +288,8 @@ async function checkGovernance({ signal = null } = {}) {
 module.exports = {
   checkRegression,
   checkGovernance,
+  // Exportados para teste direto: a resolução dos candidatos é a fronteira que estava lendo a
+  // fonte errada, e precisa ser verificável sem banco nem sandbox.
+  resolveAvailableTestFiles,
+  createWorkspaceReader,
 };
