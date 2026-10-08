@@ -1,0 +1,60 @@
+{
+  "artifactType": "ENGINEERING_MISSION_OBSERVATION",
+  "generatedAt": "2026-10-08T01:00:00.000Z",
+  "author": "GitHub Copilot (DeepSeek V4 Flash) — observador externo",
+  "mission": { "id": "ca56cbdc-3280-4be8-beff-f9301199fc9f" },
+  "increment": "INC-3B (fachada de replan conformada ao núcleo puro real)",
+  "purpose": "reentregar o INC-3B sob as duas correções externas já aplicadas e ativas em runtime",
+  "attemptsAccepted": [
+    { "version": 16, "taskId": "1801eada-ca84-4f5e-8cc9-c3b8c5f52a66", "result": "RED", "attempts": 10, "best": "5/6 testes do serviço passando (delegação ao núcleo real), falhou só o mapa de efeitos" },
+    { "version": 17, "taskId": "a669bf18-970a-43fa-b4c8-f5d01c94c410", "result": "RED", "attempts": 10 },
+    { "version": 18, "taskId": "68e5f101-7587-4cb7-acdf-80d3d7463cec", "result": "RED", "attempts": 10, "note": "3B1 (decomposição: só delegação)" },
+    { "version": 19, "taskId": "c751c8af-ae5c-422b-a828-d2e6da9a807a", "result": "RED", "attempts": 10, "note": "reentrega com evidência limpa (0a0df9ce)" },
+    { "version": 20, "taskId": "613c0b7e-91af-448a-a22a-18dfe693fca0", "result": "RED", "attempts": 10, "note": "reentrega com evidência limpa + falha de provider não penaliza mérito (0d772ce7)" }
+  ],
+  "version20AttemptInventory": [
+    { "att": 1, "model": "deepseek:deepseek-flash", "outcome": "PROVIDER_UNAVAILABLE", "detail": "resposta sem conteúdo utilizável (melhor coder do pool: tier 0, P=60% em BUG_FIX)" },
+    { "att": 2, "model": "openai:gpt-5.4-mini", "outcome": "PROVIDER_UNAVAILABLE", "detail": "429 no credits remaining" },
+    { "att": 3, "model": "qwen:qwen3-coder-flash", "outcome": "PATCH_APPLY_FAILED", "detail": "patch fragment without header at line 3" },
+    { "att": 4, "model": "qwen:qwen3-coder-flash", "outcome": "PATCH_APPLY_FAILED", "detail": "contexto do hunk não encontrado" },
+    { "att": 5, "model": "openai:gpt-4o", "outcome": "PROVIDER_UNAVAILABLE", "detail": "429 no credits remaining" },
+    { "att": 6, "model": "kimi:kimi-k2.7-code-highspeed", "outcome": "PROVIDER_UNAVAILABLE", "detail": "timeout/imagem do provedor" },
+    { "att": 7, "model": "deepseek:deepseek-v4-pro", "outcome": "PATCH_APPLY_FAILED", "detail": "tocou serviço + teste" },
+    { "att": 8, "model": "deepseek:deepseek-v4-pro", "outcome": "PROVIDER_UNAVAILABLE", "detail": "" },
+    { "att": 9, "model": "kimi:kimi-k2.7-code", "outcome": "PROVIDER_UNAVAILABLE", "detail": "" },
+    { "att": 10, "model": "kimi:kimi-k3", "outcome": "em andamento", "detail": "" }
+  ],
+  "finalMeasurement": {
+    "providerUnavailable": 6,
+    "patchApplyFailed": 4,
+    "testFail": 0,
+    "reachedTestPhase": 0,
+    "preMetricFailureRate": "100% — nenhuma tentativa chegou a julgar código"
+  },
+  "comparison": {
+    "baseline_beforeCorrections": "INC-3A/3B/3B1 (50 tentativas): 23 PROVIDER_UNAVAILABLE + 22 PATCH_APPLY_FAILED + 3 TEST_FAIL → 90% pré-mérito",
+    "withCorrections": "v20 (10 tentativas): 6 PROVIDER_UNAVAILABLE + 4 PATCH_APPLY_FAILED + 0 TEST_FAIL → 100% pré-mérito",
+    "interpretation": "o roteador passou a escolher corretamente (deepseek-flash em 1º pela evidência limpa, e sem ser abandonado por falha de infraestrutura), mas o INSUMO é o teto: indisponibilidade de provider e qualidade de patch dos modelos disponíveis"
+  },
+  "blockerClassification": {
+    "type": "EXTERNAL_CAPACITY_GAP (parcial) + pre-metric quality ceiling",
+    "components": [
+      "openai:* sem créditos — 429 'no credits remaining' em 100% das tentativas reais",
+      "deepseek:deepseek-flash responde vazio com frequência (reasoning consome a saída) apesar de ser o melhor coder medido",
+      "kimi:* estoura o deadline de 300s (latência p50 medida > 140s)",
+      "qwen3-coder-flash emite diff sem cabeçalho de arquivo ('diff --git' seguido direto de '@@') — falha de formato que o validador aprova e o git recusa; NÃO reparável sem autorização (reparo automático proibido pelo dono)"
+    ],
+    "nextActionRequires": "credito/quota/estabilidade de provider (autoridade externa) OU autorização para o reparo determinístico do cabeçalho de arquivo"
+  },
+  "correctionsAppliedAndActive": [
+    { "commit": "0a0df9ce", "what": "evidência do ranking descarta execuções de ROTINA DE TESTE" },
+    { "commit": "0d772ce7", "what": "falha de PROVIDER não degrada o mérito do modelo" }
+  ],
+  "notDone": [
+    "INC-3B continua RED: a fachada de replan segue consumindo API inexistente do núcleo puro (TypeError em runtime) — defeito CRITICAL conhecido e NÃO corrigido",
+    "HANDOVER NÃO executado (proibido enquanto INC-2/INC-3 tiver defeito conhecido)",
+    "nenhum gate, cobertura, critério ou allowlist reduzido",
+    "nenhum patch reparado automaticamente",
+    "nenhuma credencial cadastrada ou solicitada"
+  ]
+}
