@@ -26,6 +26,13 @@ operacional; não duplica o doc.
   `@modelcontextprotocol/sdk@1.30.0`. 28 achados dev-only ficam como aviso.
 - **Índice vetorial** (`npm run security:vector-index`): veredito DEGRADED por
   `vector 0.6.0` < mínimo recomendado; índice HNSW VÁLIDO e em uso.
+- **Worker contínuo** (`securityIntelWorker`, registrado em `api/runtime/startWorkers.js`):
+  ciclo de 6h (`SECURITY_INTEL_WORKER_INTERVAL_MS`, desligável com
+  `ENABLE_SECURITY_INTEL_WORKER=false`) que mantém correlação e plano frescos
+  SEM tocar a rede — o egress de sincronização é opt-in
+  (`SECURITY_INTEL_SYNC_ADVISORIES=1`, só quando a base está vencida). Ciclo real
+  medido: 723 ms. Cadeia de `setTimeout`, nunca `setInterval`. Saúde
+  UP/DEGRADED/DOWN visível; parado nunca parece saudável.
 - **Patch Engine** (`npm run security:patches`): planeja a correção (menor versão
   corrigida acima da instalada; semântica PATCH/MINOR/MAJOR; Nível B automático em
   ambiente isolado, Nível C exige `--authorized-by`) e consolida por pacote.

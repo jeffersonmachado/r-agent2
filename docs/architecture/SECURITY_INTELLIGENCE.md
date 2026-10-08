@@ -114,14 +114,31 @@ Relatórios: `reports/security-intel-discovery-report.json`,
 `reports/security-release-gate-report.json` (com lineage); artefato:
 `reports/security-intel/sbom-<sha>.cdx.json`.
 
-### Cadências (recomendadas, ainda não agendadas)
+### Cadências — o que é automático hoje
 
-| Cadência | Ação |
+O **worker de monitoramento contínuo** (`api/services/securityIntel/securityIntelWorker.js`,
+registrado em `api/runtime/startWorkers.js`) executa a cada 6h
+(`SECURITY_INTEL_WORKER_INTERVAL_MS`, piso 60s; desligável com
+`ENABLE_SECURITY_INTEL_WORKER=false`) um ciclo de **723 ms** medido:
+
+1. sincronização da base de advisories — **só se** `SECURITY_INTEL_SYNC_ADVISORIES=1`
+   **e** a base estiver vencida (egress é opt-in: o worker não toca a rede por padrão);
+2. correlação inventário × advisories;
+3. regeneração do plano de correção;
+4. escalonamento (log de erro + `security_finding_events`) quando surge achado
+   KEV/`CRITICAL`/`HIGH` novo.
+
+Saúde do worker é **UP/DEGRADED/DOWN** e falha é visível — um monitor parado não pode
+parecer saudável. Cadeia de `setTimeout` (nunca `setInterval`): o próximo ciclo só é
+agendado depois que o anterior termina.
+
+| Cadência | Situação |
 |---|---|
-| por release | `discover` + `sbom` + `scan` + gate de release |
-| diária | `advisories` (sincronizar base) + `scan` |
-| semanal | inventário completo + drift + fim de suporte |
-| sob nova CVE crítica | `advisories --scope all` + `scan` (sem esperar o ciclo) |
+| contínua (6h) | **automática** pelo worker — correlação + plano |
+| por release | `discover` + `sbom` + `validate:security-release-gate` (manual no pipeline) |
+| diária | sincronizar base: ligar `SECURITY_INTEL_SYNC_ADVISORIES=1` ou cron |
+| semanal | inventário completo + drift + fim de suporte (a agendar) |
+| sob nova CVE crítica | rodar `advisories --scope all` + `scan` sem esperar o ciclo |
 
 ## 6. Evidência medida (2026-10-08)
 
@@ -219,8 +236,9 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
    sincronizar a base com sweep completo e SÓ ENTÃO registrar o gate.
 3. **Waivers auditáveis** (tabela + expiração + aprovação humana).
 4. **APIs REST + UI de engenharia** (DEVELOPMENT) e segregação testada.
-5. **Worker de monitoramento contínuo** (`startSecurityIntelWorker` em
-   `api/runtime/startWorkers.js`) + métricas e alertas.
+5. **Sweep completo de advisories** (~1400 pacotes ≈ 6 min) e os **testes de
+   falha/resiliência** da própria capacidade (concorrência, reinício, fonte fora do
+   ar durante o scan, worker sob falha repetida).
 6. **Caso PostgreSQL/pgvector** — evidência coletada em 2026-10-08:
    - `vector 0.6.0` instalado (2 *minors* atrás das correções de HNSW/README de
      0.7+/0.8.x); PostgreSQL 16.15.
