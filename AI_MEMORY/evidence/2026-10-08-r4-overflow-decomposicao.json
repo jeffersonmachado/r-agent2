@@ -1,0 +1,62 @@
+{
+  "schema": "rap.evidence/v1",
+  "kind": "PENDING_ITEM_CLOSED",
+  "generatedAt": "2026-10-08T03:41:53.169Z",
+  "actor": "HUMAN_EXTERNAL_INITIATOR",
+  "title": "R4 fechado: orcamento de incrementos com relatorio AUDITAVEL de overflow (era pendencia declarada na emenda v23)",
+  "headline": "O contrato original (R4) pedia \"relatorio auditavel de overflow\" e a implementacao nao tinha `maxIncrements`. Implementado sem truncar plano: exceder o orcamento NAO some com criterio de aceite — o plano permanece COMPLETO e o excesso e reportado, com codigo proprio.",
+  "commit": "bd53aa5c",
+  "sourceAuthority": {
+    "branchAdvanced": true,
+    "cas": "applySourceAdvanceCommit({ expectedCommit: f07bbbff, expectedFence: 6, candidateCommit: bd53aa5c })",
+    "result": {
+      "fenceBefore": 6,
+      "fenceAfter": 7
+    },
+    "missionStateAfter": {
+      "commit": "bd53aa5c308e",
+      "fence": 7,
+      "status": "APPROVED",
+      "version": 24
+    }
+  },
+  "whatNowExists": {
+    "maxIncrements": "parametro opcional; ausente = sem limite (nada muda para quem nao usa)",
+    "noTruncation": "exceder o orcamento NAO remove incrementos nem criterios do plano",
+    "overflowReport": "{ exceeded, maxIncrements, planned, excess, overflowIncrementIds, overflowCriteria }",
+    "errorCode": "errors: ['INCREMENT_BUDGET_EXCEEDED'] quando excede",
+    "tolerantInput": "aceita a missao (formato vigente) E o par do contrato original { spec, maxIncrements } — sem isso, quem chamasse pelo contrato antigo receberia plano VAZIO com NO_ACCEPTANCE_CRITERIA (um \"nada a fazer\" falso)",
+    "purityPreserved": "R6 continua verde: sem I/O e sem relogio interno"
+  },
+  "whyNotTruncate": "truncar em silencio descartaria criterios de aceite — exatamente a classe de falha silenciosa que esta sessao vem eliminando (descarte sem erro na entrada de requirements, campos perdidos em boundaries, suite mascarando o nucleo). O orcamento aqui LIMITA e AVISA, nao apaga.",
+  "proof": {
+    "cases": 5,
+    "list": [
+      "sem maxIncrements: sem overflow e sem codigo de erro",
+      "excedendo: excess correto, ids e criterios excedentes listados e PLANO COMPLETO (5 de 5 criterios cobertos)",
+      "dentro do orcamento: sem overflow e sem erro",
+      "entrada do contrato { spec, maxIncrements }: plano correto, nao vazio",
+      "sem criterios: overflow vazio e NO_ACCEPTANCE_CRITERIA explicito"
+    ],
+    "regression": "27 suites / 372 testes PASS (dominio, no branch da missao)"
+  },
+  "contractKeptCoherent": {
+    "missionVersion": 24,
+    "materiality": [
+      "MATERIAL_FIELD_CHANGE"
+    ],
+    "pendingStillDeclared": false,
+    "note": "a emenda de contrato foi ATUALIZADA (v24) para retirar a pendencia declarada na v23 e registrar o que passou a existir — uma pendencia resolvida nao deve continuar anunciada"
+  },
+  "residualState": [
+    "INC-3B funcional (commit f07bbbff); R4 fechado (commit bd53aa5c); contrato emendado coerente (v24)",
+    "nenhuma pendencia declarada permanece aberta no contrato emendado",
+    "a missao segue APPROVED aguardando execucao dos incrementos restantes"
+  ],
+  "constraintsHonored": [
+    "nenhum gate/severidade/cobertura alterados",
+    "nenhum criterio de aceite removido por truncagem",
+    "fonte da missao avancada sob CAS, nunca por escrita direta",
+    "worktree de trabalho removido; artefato preservado em /tmp/inc3b-auditoria/replanPolicy.com-r4.js"
+  ]
+}
