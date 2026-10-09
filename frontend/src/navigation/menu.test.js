@@ -114,7 +114,20 @@ describe('área Dev (rail DEV)', () => {
       '/dev/engineering/findings',
       '/dev/engineering/models',
       '/dev/engineering/release-closure',
+      // Versões e Segurança: mesma área de engenharia (DEVELOPMENT), rota sob
+      // /dev/security-intel para não colidir com o hub /dev/engineering.
+      '/dev/security-intel',
     ]);
+  });
+
+  it('mantém a página de Versões e Segurança como DEVELOPMENT-only', () => {
+    const engineering = plataforma.children.find((n) => n.id === 'dev-engineering');
+    const seguranca = flattenNavigationLeaves([engineering])
+      .find((l) => l.path === '/dev/security-intel');
+    expect(seguranca).toBeTruthy();
+    // A ocultação de menu não é o controle de acesso: a classificação declarada
+    // precisa continuar DEVELOPMENT para casar com o guard da API.
+    expect(seguranca.classifications).toEqual(['DEVELOPMENT']);
   });
 });
 

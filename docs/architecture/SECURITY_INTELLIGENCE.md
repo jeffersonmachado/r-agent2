@@ -205,6 +205,16 @@ severidade/KEV, linha do tempo por achado, a **fila de triagem** com o comando p
 cada pacote e a seção de waivers para isentar/revogar). A fila exibida na tela vem do mesmo
 serviço do CLI — não existe uma segunda fila calculada no frontend.
 
+O seletor de achado da seção de waivers não é uma lista "dos primeiros N": ele é montado por
+`frontend/src/shared/securityIntel/waiverOptions.js` em dois grupos. O primeiro, *Exigem
+decisão (fila de triagem)*, traz **todos** os achados dos buckets que exigem decisão humana,
+derivados da mesma fila, e continua completo mesmo quando a lista da API vem cortada ou o
+usuário digita um filtro (o filtro estreita só o segundo grupo). Quando a API devolve menos
+itens do que declara existir, a tela **diz o número** ("500 de 1091 achados abertos
+carregados") em vez de truncar em silêncio; o mesmo vale para o inventário (25 linhas
+exibidas) e para a tabela da fila (40 grupos). Tabelas com corte de EXIBIÇÃO declaram o corte;
+nenhuma decisão da fila depende de estar dentro do corte.
+
 ### Cadências — o que é automático hoje
 
 O **worker de monitoramento contínuo** (`api/services/securityIntel/securityIntelWorker.js`,
@@ -319,7 +329,16 @@ agendado depois que o anterior termina.
    `releaseGate.blockOnDevDependencies`, default `false`), com o flag `dev` vindo do
    inventário: `ws@8.18.3` (dev) não bloqueia enquanto `ws@8.20.0` (runtime) bloqueia —
    porque **cópias físicas distintas não são colapsadas**.
-  A versão do Python em execução no serviço não é medida (lacuna registrada).
+   A versão do Python em execução no serviço não é medida (lacuna registrada).
+4. **Tela não alcançava as decisões (medido em 2026-10-08, com 1091 achados abertos)** —
+   o seletor de achado da seção de waivers cortava a lista em 50 itens e a API devolvia no
+   máximo 100: apenas **4 dos 35** achados de decisão humana eram selecionáveis; os outros
+   **31** (nodemailer inteiro, uuid, basic-ftp, pytest, torch, sprintf-js, braces,
+   extract-zip, a maior parte de transformers) só existiam pela CLI. A tela parecia completa
+   porque o corte era silencioso. Correção: a seleção passa a ser derivada da **fila** pelo
+   módulo puro `frontend/src/shared/securityIntel/waiverOptions.js` (bucket de decisão sempre
+   completo, filtro que nunca remove decisão, limite da API **declarado** em vez de omitido),
+   com regressão em `waiverOptions.test.js`. Verificado no browser: **35/35** alcançáveis.
 - Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
 - A base de advisories cobre apenas os pacotes já consultados (`advisories --limit`).

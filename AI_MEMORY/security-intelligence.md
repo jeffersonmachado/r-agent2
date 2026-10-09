@@ -171,3 +171,21 @@ testes de falha/resiliência (Fase 9b: ciclos nunca se sobrepõem, erro de ciclo
 capturado, DEGRADED com recuperação, restart limpo, sync parcial não memorizado) e
 **waivers auditáveis com expiração** (prova end-to-end: vigente ⇒ `MITIGATED`, gate
 segue com 47 bloqueios; revogado ⇒ volta a risco aberto).
+
+## Defeito medido na tela (2026-10-08) — corte silencioso escondia decisões
+
+A jornada real no browser (`/dev/security-intel`) mediu o que o código prometia:
+com **1091 achados abertos**, o seletor de achado da seção de waivers oferecia 50 e a
+API devolvia no máximo 100 → **4 dos 35** achados de decisão humana eram selecionáveis.
+Os 31 restantes (nodemailer inteiro, uuid, basic-ftp, pytest, torch, sprintf-js, braces,
+extract-zip, maior parte de transformers) só existiam pela CLI: a tela *parecia* completa
+porque o corte era silencioso (`slice(0, 50)`).
+
+Correção: a seleção é derivada da **fila** por `frontend/src/shared/securityIntel/waiverOptions.js`
+(módulo puro, testado): bucket de decisão **sempre completo** (mesmo se a API cortar),
+filtro que **nunca** remove achado de decisão, e limite da API **declarado** na tela
+("500 de 1091 carregados"). Corte de exibição (inventário 25, fila 40) passou a ser dito.
+Verificado no browser: **35/35** alcançáveis, filtro preserva as decisões, 0 erros de console.
+
+Regra que fica: contagem exibida e contagem real precisam concordar ou o número precisa
+estar na tela. Truncamento silencioso em superfície de decisão é defeito, não detalhe de UI.

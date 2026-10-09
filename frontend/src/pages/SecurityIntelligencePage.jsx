@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../components/Toast';
+import { buildWaiverOptions } from '../shared/securityIntel/waiverOptions';
 import {
   createSecurityPatchMission,
   createSecurityWaiver,
@@ -41,6 +42,10 @@ const BTN_SMALL = 'px-2 py-1 rounded-lg border border-border-default bg-bg-prima
 const FIELD = 'border border-border-default rounded-lg px-3 py-2 bg-bg-primary text-sm text-text-primary';
 
 const SEVERITY_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFORMATIONAL'];
+
+/** Linhas exibidas por tabela: corte de EXIBIÇÃO, sempre declarado na tela. */
+const INVENTORY_ROWS = 25;
+const TRIAGE_ROWS = 40;
 
 const SEVERITY_LABELS = {
   CRITICAL: 'Crítica',
@@ -195,6 +200,7 @@ export function SecurityIntelligencePage() {
   const [waiverForm, setWaiverForm] = useState({
     findingKey: '', reason: '', approvedBy: '', expiresInDays: 30, compensatingControl: '',
   });
+  const [waiverFilter, setWaiverFilter] = useState('');
   const [authorizedBy, setAuthorizedBy] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -206,7 +212,13 @@ export function SecurityIntelligencePage() {
     try {
       const [summaryData, findingsData, patchesData, advisoryData, waiverData] = await Promise.all([
         getSecurityIntelSummary(),
-        listSecurityFindings({ severity: severityFilter || undefined, kev: onlyKev ? 'true' : undefined }),
+        // `limit` explícito no teto aceito pela API: sem isso o padrão do backend
+        // (100) cortava a lista e o seletor de isenção não alcançava achados.
+        listSecurityFindings({
+          severity: severityFilter || undefined,
+          kev: onlyKev ? 'true' : undefined,
+          limit: 500,
+        }),
         listSecurityPatches({ limit: 100 }),
         listSecurityAdvisories(),
         listSecurityWaivers(),
@@ -260,6 +272,13 @@ export function SecurityIntelligencePage() {
       showToast(messageOf(err), 'error');
     }
   }, [inventorySearch, showToast]);
+
+  // Opções do seletor de achado para isenção: os achados de decisão vêm da FILA
+  // (sempre completos) e o filtro só estreita os demais — nenhum corte silencioso.
+  const waiverOptions = useMemo(
+    () => buildWaiverOptions({ findings, triage, filter: waiverFilter }),
+    [findings, triage, waiverFilter],
+  );
 
   const showTimeline = useCallback(async (findingKey) => {
     try {
@@ -625,7 +644,12 @@ export function SecurityIntelligencePage() {
             aria-label="Buscar componente"
           />
           <button type="button" className={BTN_SECONDARY} onClick={searchInventory}>Buscar</button>
-          <span className="text-xs text-text-secondary">{inventory.total ?? 0} componentes correspondentes</span>
+          <span className="text-xs text-text-secondary">
+            {inventory.total ?? 0} componentes correspondentes
+            {(inventory.items || []).length > INVENTORY_ROWS
+              ? ` · exibindo os ${INVENTORY_ROWS} primeiros`
+              : ''}
+          </span>
         </div>
         <div className={TABLE_WRAP}>
           <table className="w-full">
@@ -639,7 +663,7 @@ export function SecurityIntelligencePage() {
               </tr>
             </thead>
             <tbody>
-              {(inventory.items || []).slice(0, 25).map((row) => (
+              {(inventory.items || []).slice(0, INVENTORY_ROWS).map((row) => (
                 <tr key={row.id || row.bom_ref}>
                   <td className={TD}>{row.name}</td>
                   <td className={TD}>{row.version || '—'}</td>
@@ -723,6 +747,12 @@ export function SecurityIntelligencePage() {
               {' '}{triage.totals.withoutPublishedFix} sem correção publicada.
               Nada aqui é aplicado pela tela.
             </p>
+            {triage.groups.length > TRIAGE_ROWS && (
+              <p className="text-xs text-amber-500 mb-3" data-testid="triage-truncation-notice">
+                Exibindo os {TRIAGE_ROWS} primeiros de {triage.groups.length} grupos — a fila completa
+                (e o comando de cada grupo) sai por `node scripts/security-intel.js triage`.
+              </p>
+            )}
             <div className={TABLE_WRAP}>
               <table className="w-full">
                 <thead>
@@ -736,7 +766,7 @@ export function SecurityIntelligencePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {triage.groups.slice(0, 40).map((group) => (
+                  {triage.groups.slice(0, TRIAGE_ROWS).map((group) => (
                     <tr key={group.key}>
                       <td className={TD}>
                         <Badge tone={TRIAGE_BUCKET_TONES[group.bucket]}>
@@ -798,13 +828,43 @@ export function SecurityIntelligencePage() {
                 data-testid="waiver-finding-select"
               >
                 <option value="">Selecione um achado aberto…</option>
-                {(findings.items || []).slice(0, 50).map((row) => (
-                  <option key={row.finding_key} value={row.finding_key}>
-                    {SEVERITY_LABELS[row.severity] || row.severity} · {row.package_name}@{row.installed_version || '—'} · {row.advisory_id}
-                  </option>
-                ))}
+                {waiverOptions.decision.length > 0 && (
+                  <optgroup label={`Exigem decisão (fila de triagem) — ${waiverOptions.decisionTotal}`}>
+                    {waiverOptions.decision.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.withoutFix ? 'sem correção publicada · ' : ''}{option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label={`Demais achados abertos — ${waiverOptions.others.length}${waiverFilter ? ' (filtrados)' : ''}`}>
+                  {waiverOptions.others.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </optgroup>
               </select>
             </label>
+            <label className="flex flex-col gap-1 md:col-span-2">
+              <span className="text-xs text-text-secondary">
+                Filtrar demais achados (pacote, versão ou advisory)
+              </span>
+              <input
+                type="text"
+                className={FIELD}
+                value={waiverFilter}
+                onChange={(event) => setWaiverFilter(event.target.value)}
+                placeholder="Ex.: nodemailer, 8.0.7, GHSA-p6gq"
+                data-testid="waiver-findings-filter"
+              />
+            </label>
+            <p className="md:col-span-2 text-xs text-text-secondary" data-testid="waiver-options-summary">
+              {waiverOptions.decisionTotal} achados exigem decisão (sempre listados, independentemente do filtro)
+              {' · '}{waiverOptions.others.length} demais selecionáveis
+              {' · '}{waiverOptions.loaded} de {waiverOptions.totalOpen} achados abertos carregados
+              {waiverOptions.capped
+                ? ' — a lista da API é limitada: os achados de decisão continuam acessíveis acima; para os demais, use o filtro ou o comando da fila.'
+                : ''}
+            </p>
             <label className="flex flex-col gap-1 md:col-span-2">
               <span className="text-xs text-text-secondary">Motivo da aceitação (mínimo 20 caracteres)</span>
               <textarea
