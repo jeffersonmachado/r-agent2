@@ -101,6 +101,42 @@ function ensureWorkspaceReadableBySandbox(cwd) {
 }
 
 /**
+ * Torna o workspace GRAVÁVEL pelo UID fixo do sandbox (10001).
+ *
+ * Achado real (2026-10-09, missão brace-expansion): `ensureWorkspaceReadableBySandbox` dava
+ * apenas LEITURA, mas este docstring já afirmava "legível/gravável" — divergência entre o
+ * documentado e o implementado. Comandos de teste que GRAVAM no workspace (ex.:
+ * `engine/__tests__/functionalFlows.test.js` cria `replays/simulation`, qualquer build que gere
+ * artefato) morriam com `EACCES: permission denied, mkdir '<workspace>/replays/simulation'`,
+ * derrubando `npm run test:flow` (medido: 2 testes falhando no workspace isolado e 264 passando
+ * na MESMA árvore fora dele — a diferença era só o sandbox).
+ *
+ * Mecanismo: ACL (setfacl) concede `rwX` EXATAMENTE ao UID do sandbox — nunca a "others", porque
+ * o workspace carrega uma cópia do `.env`. A default ACL faz arquivos e diretórios criados
+ * DEPOIS (pelos próprios testes) nascerem graváveis, que é o caso que falhava.
+ * Fallback (fs sem ACL): `go+rwX` nos bits de modo; como `+X`, nunca altera o bit de execução do
+ * DONO — o único que o git rastreia (modo 100644 vs 100755), preservando a comparação de tree
+ * hash.
+ *
+ * @returns {{mechanism:'acl'|'chmod', uid:string}} para o relatório de execução.
+ */
+function ensureWorkspaceWritableBySandbox(cwd, uidGid = SANDBOX_UID_GID) {
+  const uid = String(uidGid || '').split(':')[0].trim();
+  const excluirNodeModules = ['-not', '-path', `${cwd}/node_modules`, '-not', '-path', `${cwd}/node_modules/*`];
+  if (uid) {
+    try {
+      execFileSync('setfacl', ['-R', '-m', `u:${uid}:rwX`, cwd], { stdio: 'ignore' });
+      execFileSync('setfacl', ['-R', '-d', '-m', `u:${uid}:rwX`, cwd], { stdio: 'ignore' });
+      return { mechanism: 'acl', uid };
+    } catch {
+      // Sem ACL no filesystem: cai para os bits de modo abaixo.
+    }
+  }
+  execFileSync('find', [cwd, ...excluirNodeModules, '-exec', 'chmod', 'go+rwX', '{}', '+']);
+  return { mechanism: 'chmod', uid };
+}
+
+/**
  * Monta os argumentos do `docker run` para uma execução sandboxed de um único comando.
  *
  * `cwd` é montado no MESMO caminho absoluto dentro do container (não remapeado para
@@ -225,6 +261,8 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
   }
 
   ensureWorkspaceReadableBySandbox(cwd);
+  // Leitura não basta: comandos de teste que gravam no workspace falhavam com EACCES (medido).
+  ensureWorkspaceWritableBySandbox(cwd);
   const containerName = `er-sandbox-${crypto.randomBytes(8).toString('hex')}`;
   const dockerArgs = buildDockerArgs({ executable, args, cwd, env, containerName, network });
 
@@ -308,5 +346,8 @@ module.exports = {
   runInSandbox,
   isSandboxAvailable,
   resetSandboxAvailabilityCache,
+  ensureWorkspaceReadableBySandbox,
+  ensureWorkspaceWritableBySandbox,
   SANDBOX_IMAGE,
+  SANDBOX_UID_GID,
 };

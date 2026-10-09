@@ -31,7 +31,7 @@
  * ROOT via `fs`, independente de qualquer commit/worktree.
  */
 
-const { execFile } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
@@ -72,16 +72,42 @@ async function runGit(args, { cwd } = {}) {
  * defeito ER-V1-FINAL-001. Cópia mantém a tentativa isolada — o teste pode escrever à vontade.
  */
 const WORKSPACE_STATE_ARTIFACTS = Object.freeze([
-  '.env',      // configuração/DB — o globalSetup do Jest carrega daqui
-  'api/data',  // config da aplicação (bootstrap)
-  'reports',   // evidência que os gates leem
+  '.env',                  // configuração/DB — o globalSetup do Jest carrega daqui
+  'api/data/config.json',  // config da aplicação (bootstrap)
 ]);
+
+/**
+ * Um caminho só pode ser herdado do host se o git **não** o rastrear.
+ *
+ * Achado real (2026-10-09): a lista trazia os diretórios `api/data` (16 arquivos versionados,
+ * ex. `config.example.json`) e `reports/` (6 relatórios versionados). Copiar o diretório inteiro
+ * deixava o worktree **sujo** — `git status` mostrava 4 relatórios modificados —, o que quebra o
+ * invariante de árvore limpa provado por `engineeringRouterExecutionSandboxSecurity.test.js` e
+ * contamina a comparação de tree hash da promoção exata (ER-V1-FINAL-002).
+ *
+ * Regra: qualquer coisa **rastreada** tem de vir do PRÓPRIO commit; só estado que o commit não
+ * carrega (ignorado/untracked) pode ser semeado. Por isso a checagem é `git ls-files` vazio, e não
+ * `check-ignore` — medido: `check-ignore` não casa `api/data` como ignorado, embora o diretório
+ * tenha entradas ignoradas dentro dele, e o diretório também tem entradas rastreadas.
+ */
+function isSeedableState(rel) {
+  try {
+    const rastreados = execFileSync('git', ['ls-files', '--', rel], { cwd: ROOT, encoding: 'utf8' });
+    return String(rastreados).trim() === '';
+  } catch {
+    return false;
+  }
+}
 
 function seedWorkspaceState(dir) {
   const seeded = [];
   for (const rel of WORKSPACE_STATE_ARTIFACTS) {
     const source = path.join(ROOT, rel);
     if (!fs.existsSync(source)) continue;
+    if (!isSeedableState(rel)) {
+      logger.warn(`[engineeringRouter] estado "${rel}" NÃO semeado: é rastreado pelo git (sujaria o worktree)`);
+      continue;
+    }
     try {
       fs.cpSync(source, path.join(dir, rel), { recursive: true, dereference: true });
       seeded.push(rel);
@@ -342,6 +368,7 @@ async function pruneOrphanedWorkspaces({ olderThanMs = DEFAULT_ORPHAN_WORKSPACE_
 module.exports = {
   WORKSPACE_ROOT,
   WORKSPACE_STATE_ARTIFACTS,
+  isSeedableState,
   seedWorkspaceState,
   createWorkspace,
   resolveTaskBaseCommit,

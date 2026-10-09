@@ -4,7 +4,11 @@
  * Semeadura do workspace isolado da missão.
  *
  * DEFEITO ESTRUTURAL medido em 2026-10-09: o `git worktree` da missão não herda `.env`,
- * `api/data` nem `reports` (são ignorados/untracked). Sem eles, a suíte do serviço reprova
+ * `api/data` (são ignorados/untracked). Sem eles, a suíte do serviço reprova
+ * no worktree isolado. **`reports` NÃO entra**: é rastreado pelo git (6 relatórios versionados)
+ * e copiar o estado do host deixaria o worktree **sujo** — quebra o invariante de árvore limpa
+ * provado em `engineeringRouterExecutionSandboxSecurity.test.js` (e a comparação de tree hash da
+ * promoção exata). Estado herdado só pode ser o que o commit NÃO carrega.
  * dentro do workspace **com a árvore limpa** — o aceite era insatisfazível ali, independente do
  * patch (missões com patch válido morriam em TESTING; 1 GREEN em 75 aprovações).
  *
@@ -21,6 +25,7 @@ const path = require('path');
 
 const {
   WORKSPACE_STATE_ARTIFACTS,
+  isSeedableState,
   seedWorkspaceState,
 } = require('../../../api/services/engineeringRouter/patchApplyService');
 
@@ -38,7 +43,7 @@ describe('semeadura de estado do workspace isolado', () => {
   it('copia .env e api/data para o workspace (sem eles o aceite não roda)', () => {
     const seeded = seedWorkspaceState(destino);
     expect(seeded).toContain('.env');
-    expect(seeded).toContain('api/data');
+    expect(seeded).toContain('api/data/config.json');
     expect(fs.existsSync(path.join(destino, '.env'))).toBe(true);
     expect(fs.existsSync(path.join(destino, 'api', 'data', 'config.json'))).toBe(true);
   });
@@ -59,7 +64,18 @@ describe('semeadura de estado do workspace isolado', () => {
   });
 
   it('declara exatamente os artefatos que o aceite exige', () => {
-    expect(WORKSPACE_STATE_ARTIFACTS).toEqual(['.env', 'api/data', 'reports']);
+    expect(WORKSPACE_STATE_ARTIFACTS).toEqual(['.env', 'api/data/config.json']);
+  });
+
+  it('RECUSA herdar caminho RASTREADO (senão o worktree nasce sujo)', () => {
+    // Medido: herdar `reports/` (6 relatórios versionados) deixava `git status` com 4 arquivos
+    // modificados no worktree e quebrava o invariante de árvore limpa do sandbox.
+    expect(isSeedableState('reports/api-surface-report.json')).toBe(false);
+    expect(isSeedableState('api/data')).toBe(false); // 16 arquivos versionados dentro
+    expect(isSeedableState('package.json')).toBe(false);
+    // Não rastreado é herdável — é o que o commit NÃO carrega.
+    expect(isSeedableState('.env')).toBe(true);
+    expect(isSeedableState('api/data/config.json')).toBe(true);
   });
 
   it('workspace inválido não lança (semear não pode derrubar a materialização)', () => {

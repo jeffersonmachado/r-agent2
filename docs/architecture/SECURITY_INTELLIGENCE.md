@@ -405,7 +405,10 @@ agendado depois que o anterior termina.
    o defeito ER-V1-FINAL-001; falha ao semear não derruba a materialização);
    **(2) aceite escopado**: prova MECÂNICA do alvo aplicado (o pacote resolvido tem versão
    ≥ alvo) + comando funcional que cabe no deadline (`npm run test:flow`, medido em 30 suítes /
-   264 testes / 40 s **dentro do workspace isolado**).
+   264 testes / 40 s). **Correção de uma afirmação desta própria seção (medida em 2026-10-09):**
+   esses 264 testes são a medição **fora** do sandbox; **dentro** dele o comando ficava vermelho
+   por `EACCES` no workspace — ver item 13. `test:flow` no workspace sandboxado mede
+   45–47 s / 264 testes depois da correção de permissão.
    O que NÃO muda: a suíte completa e os gates de selo/release seguem obrigatórios no pipeline
    (`validate:governance-enforcement`, `npm run test:unit` humano/CI); o que muda é o que uma
    missão de **bump de dependência** precisa provar. O fechamento do achado não é afirmado pela
@@ -414,7 +417,55 @@ agendado depois que o anterior termina.
    (`frontend/node_modules` não existe lá, e symlink gravável é proibido) — o sinal funcional do
    frontend é o núcleo determinístico compartilhado.
    Regressões: `patchMissionAcceptance.test.js` (7 casos) e `workspaceStateSeeding.test.js`
-   (5 casos).- Docker local pode não conter as imagens de produção: nesse caso a lacuna é
+   (5 casos).
+11. **O comando de prova não cabia no registro de execução (medido em 2026-10-09)** —
+   `engineering_test_runs.command` é **varchar(255)** e a prova mecânica inline (`node -e`) tinha
+   ~300 caracteres: o INSERT falhava com `22001 value too long for type character varying(255)` e
+   o comando era gravado como **REJECTED sem nunca rodar** — a missão reportava uma falha de
+   aceite que não aconteceu. Correção: `scripts/security-intel-verify-target.js` (comando de
+   61–76 caracteres) e regressão que exige **todo** comando de aceite ≤ 255 chars
+   (`patchMissionAcceptance.test.js`).
+12. **A prova do aceite media a árvore errada (medido em 2026-10-09)** — a versão `installed` lia
+   `node_modules`, que no workspace isolado é bind **READ-ONLY** do repositório do host
+   (`executionSandbox`, `--network=none`): nenhum patch de dependência pode alterar aquela árvore,
+   então a prova reprovaria **todo** patch correto — e "mediria" o host, não a correção. A prova
+   passou a medir o **grafo declarado** (`package.json`: `overrides`/`dependencies` +
+   `package-lock.json`), que é exatamente o que `allowedPaths` da missão declara, com
+   `--expect=override|direct` vindo do **tipo** da correção (override transitivo exige entrada
+   durável em `overrides`; lock editado à mão volta no próximo `npm install`), corroboração do
+   lock (cópia resolvida abaixo do alvo ⇒ `NOT_APPLIED`) e fail-closed mantido (declaração não
+   avaliável ⇒ `INCOMPARABLE`, nunca sucesso). `--source=installed` continua disponível para
+   verificação **no host**, depois de `npm ci`.
+13. **Escrita no workspace negada ao UID do sandbox (medido em 2026-10-09)** —
+   `ensureWorkspaceReadableBySandbox` concedia apenas LEITURA (`go+rX`) embora o próprio docstring
+   afirmasse "legível/gravável": o container roda com UID fixo **10001** e o worktree pertence ao
+   UID do host. Testes que **gravam** no workspace falhavam com
+   `EACCES: permission denied, mkdir '<workspace>/replays/simulation'`
+   (`engine/__tests__/functionalFlows.test.js`) e derrubavam `npm run test:flow` **dentro** do
+   sandbox — a mesma árvore fora dele passa **30/30 suítes, 264 testes, exit 0**. Correção:
+   `ensureWorkspaceWritableBySandbox` concede `rwX` **exatamente ao UID do sandbox** via ACL
+   (`setfacl` + default ACL para o que os testes criarem depois) e cai para `go+rwX` onde não há
+   ACL; nunca altera o bit de execução do dono (único rastreado pelo git). Regressão:
+   `sandboxWorkspaceWritePermission.test.js` (5 casos).
+
+**Lacunas declaradas abertas (bloqueiam fechar achados; nenhum limiar de gate as resolve):**
+
+- **O patch de dependência COMPLETO não é producível hoje.** O coder emite **apenas diff** (sem
+  shell), o sandbox roda `--network=none` (sem registry) e `node_modules` é read-only. Medido:
+  com `overrides` fora do lock, `npm ci` **falha** (`EUSAGE`, exit 1) — ou seja, o patch
+  "só declaração" quebra o install do CI/release, e o lock **não pode** ser regenerado offline.
+  Enquanto não existir um passo governado de materialização do lock (host, com rede) ou um cache
+  npm pré-aquecido com a versão alvo, o aceite reprova **corretamente** e a missão de dependência
+  não fecha.
+- **As missões são materializadas a partir da `main`** (`missionSourceService`, `sourceRef='main'`;
+  branch de missão é recusada como origem — `MISSION_SOURCE_REF_INVALID`). Logo um aceite que
+  depende de script do repositório só funciona **depois** que o script está na linha principal:
+  medido, o workspace em `594dce8d` (main) falhava com
+  `Cannot find module '<workspace>/scripts/security-intel-verify-target.js'` enquanto os commits
+  desta fase estavam em `mission/engineer-router-memory-hardening-20261008` (41 commits à frente;
+  `main` 0 atrás).
+
+- Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
 - A base de advisories cobre apenas os pacotes já consultados (`advisories --limit`).
   Scan sobre pacote não consultado resulta em "sem achados", que NÃO é "sem
