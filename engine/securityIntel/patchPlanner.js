@@ -235,12 +235,56 @@ function rankPlans(plans = []) {
   });
 }
 
-/** Comandos de teste por serviço — declarados a partir do que o repositório já documenta. */
+/**
+ * Comando FUNCIONAL de aceite por serviço.
+ *
+ * Por que não a suíte inteira: o deadline de UM comando de teste no Runner é a política
+ * `INTEGRATION_TEST` (**120 s**), e `jest tests/unit` leva ~9 min. Exigir dela tornava o aceite
+ * INSATISFAZÍVEL no workspace isolado, independentemente da qualidade do patch — medido em
+ * 2026-10-09: missões com patch válido (`valid=true`) morriam em TESTING, árvore limpa também
+ * reprovava, e o histórico do próprio repo era 1 GREEN em 75 aprovações. A suíte completa (e os
+ * gates de selo/release) continua obrigatória no pipeline de release
+ * (`validate:governance-enforcement`, `npm run test:unit` do humano/CI) — o que muda é o que uma
+ * missão de BUMP DE DEPENDÊNCIA precisa provar aqui.
+ *
+ * `npm run test:flow` (`jest tests/flow engine/__tests__`, o núcleo determinístico) foi medido no
+ * workspace isolado: **30 suítes / 264 testes / 40 s**, verde sem nenhum artefato de estado.
+ */
 const SERVICE_TEST_COMMANDS = Object.freeze({
-  api: ['npm run test:unit'],
-  frontend: ['npm run frontend:test'],
+  api: ['npm run test:flow'],
+  // Limitação declarada: `frontend/node_modules` não existe no workspace isolado (e criar
+  // symlink gravável para ele é exatamente o defeito ER-V1-FINAL-001), então não há suíte de
+  // frontend executável ali. O sinal funcional fica com o núcleo determinístico (compartilhado
+  // com o frontend via `engine/`) e a prova mecânica da versão abaixo.
+  frontend: ['npm run test:flow'],
   'rag-service': ['./venv/bin/python -m pytest tests -q'],
 });
+
+/**
+ * Prova MECÂNICA de que o alvo foi aplicado: o pacote resolvido tem versão >= alvo.
+ *
+ * É a asserção direta do que um bump faz. O fechamento do ACHADO não é afirmado aqui: quem
+ * decide isso é o Release Security Gate, que re-escaneia e deixa de contar o achado como aberto.
+ */
+function dependencyResolutionCommand(plan = {}) {
+  const packageName = String(plan.packageName || '').trim();
+  const target = String(plan.targetVersion || '').trim();
+  if (!packageName || !target) return null;
+  const ecosystem = String(plan.ecosystem || (String(plan.service || '').toLowerCase() === 'rag-service' ? 'pypi' : 'npm')).toLowerCase();
+
+  if (ecosystem === 'pypi') {
+    return `./venv/bin/python -c "import importlib.metadata as m, sys; from packaging.version import Version; v = m.version('${packageName}'); sys.exit(0 if Version(v) >= Version('${target}') else 1)"`;
+  }
+  // Aspas simples no shell, duplas no JS: o comando é executado por `sh -c`.
+  const script = `const v=require("${packageName}/package.json").version;`
+    + `const t="${target}";`
+    + 'const p=s=>String(s).split("-")[0].split(".").map(Number);'
+    + 'const c=(a,b)=>{const A=p(a),B=p(b);for(let i=0;i<3;i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}return 0};'
+    + 'if(c(v,t)<0){console.error("ALVO NAO APLICADO: "+v+" < "+t);process.exit(1)}'
+    + 'console.log("ALVO APLICADO: "+v)';
+  return `node -e '${script}'`;
+}
+
 
 /**
  * Escopo de caminho de uma correção de DEPENDÊNCIA (o que o patch pode tocar).
@@ -305,7 +349,12 @@ function dependencyScopeOf(plan = {}) {
 function buildPatchMissionSpec({ plan, finding = {}, component = {} } = {}) {
   if (!plan) throw new Error('patch_plan_required');
   const service = plan.service || component.service || null;
-  const testCommands = SERVICE_TEST_COMMANDS[service] || [];
+  // Aceite = prova MECÂNICA (versão alvo aplicada) + sinal FUNCIONAL que cabe no deadline de
+  // comando do Runner (120 s). A suíte completa e os gates de selo ficam no pipeline de release.
+  const testCommands = [
+    dependencyResolutionCommand(plan),
+    ...(SERVICE_TEST_COMMANDS[service] || []),
+  ].filter(Boolean);
   const risk = plan.updateRisk === UPDATE_RISK.MAJOR || plan.severity === 'CRITICAL'
     ? 'high'
     : (plan.severity === 'HIGH' || plan.kev) ? 'medium' : 'low';
@@ -325,6 +374,9 @@ function buildPatchMissionSpec({ plan, finding = {}, component = {} } = {}) {
     '',
     'Pré-condições antes de considerar concluído:',
     ...plan.preconditions.map((item) => `- ${item}`),
+    '',
+    'Aceite executado por comando (o que precisa passar):',
+    ...testCommands.map((cmd) => `- ${cmd}`),
   ];
 
   return {
@@ -352,7 +404,7 @@ function buildPatchMissionSpec({ plan, finding = {}, component = {} } = {}) {
       },
       acceptanceCriteria: [
         `${plan.packageName} resolvido em versão >= ${plan.targetVersion || 'corrigida'}`,
-        'suíte do serviço consumidor verde',
+        'comando funcional do aceite verde (núcleo determinístico do serviço; a suíte completa e os gates de selo são do pipeline de release, não da missão)',
         'nenhuma dependência não relacionada alterada',
       ],
       testCommands,
@@ -481,6 +533,7 @@ module.exports = {
   planPatch,
   buildPatchMissionSpec,
   dependencyScopeOf,
+  dependencyResolutionCommand,
   consolidatePlansByPackage,
   rankPlans,
   summarizePlans,

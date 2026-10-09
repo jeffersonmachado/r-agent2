@@ -258,3 +258,30 @@ termina com **código 0** mesmo com 13 suítes FAILED. Medido em 2026-10-09 no `
 
 Regra: ao medir "suíte verde", exigir a linha `Test Suites:` no final e desconfiar de `EXIT=0`
 sem resumo. Script CLI requerido por teste precisa do guard.
+
+## Aceite da missão: era INSATISFAZÍVEL no ambiente em que roda (2026-10-09)
+
+Duas causas independentes, as duas medidas:
+
+1. **O worktree isolado não herda ESTADO.** `.env`, `api/data` e `reports` são ignorados/untracked,
+   então a suíte do serviço reprova ali **com a árvore limpa** (sem patch nenhum).
+2. **O deadline de UM comando de teste é 120 s** (política `INTEGRATION_TEST`), e
+   `npm run test:unit` leva ~9 min. Exigi-la era pedir o impossível.
+
+Consequência: missões com patch **válido** (`valid=true`) morriam em `TESTING`; o histórico do
+repo era **1 GREEN em 75 aprovações**. Não era qualidade de patch — era o aceite.
+
+Correção (decisão do dono, duas partes):
+- **(1) Semear o estado** no worktree: `patchApplyService.seedWorkspaceState` copia `.env`,
+  `api/data` e `reports`. **Cópia, nunca symlink** (symlink gravável para o repo real é o defeito
+  ER-V1-FINAL-001). Falha ao semear NÃO derruba a materialização (semear é pré-requisito do
+  aceite, não do patch).
+- **(2) Aceite escopado**: prova MECÂNICA do alvo (o pacote resolvido tem versão >= alvo —
+  comando real validado: `fast-uri 3.1.0 < 3.1.7` → exit 1 "ALVO NAO APLICADO") + comando
+  funcional que cabe no deadline (`npm run test:flow`: 30 suítes / 264 testes / **40 s no
+  workspace isolado**).
+
+O que NÃO muda: suíte completa e gates de selo/release continuam obrigatórios no pipeline
+(`validate:governance-enforcement`, `test:unit` humano/CI). O fechamento do ACHADO quem mede é o
+Release Security Gate (re-scan), não a missão. Limitação declarada: o frontend não tem suíte
+executável no workspace isolado (`frontend/node_modules` ausente; symlink gravável proibido).

@@ -60,6 +60,43 @@ async function runGit(args, { cwd } = {}) {
 }
 
 /**
+ * Artefatos de ESTADO que o worktree isolado não herda do `git` (são ignorados/untracked) e que
+ * a suíte do serviço exige para rodar de verdade.
+ *
+ * DEFEITO ESTRUTURAL medido em 2026-10-09: sem eles, `npm run test:unit` reprova dentro do
+ * workspace isolado **com a árvore limpa** (sem patch nenhum) — o aceite da missão era
+ * insatisfazível ali, independente da qualidade do patch: as missões com patch válido
+ * (`valid=true`) morriam em TESTING e o histórico do próprio repo era 1 GREEN em 75 aprovações.
+ *
+ * São COPIADOS (nunca symlink): um symlink gravável para o repositório real é exatamente o
+ * defeito ER-V1-FINAL-001. Cópia mantém a tentativa isolada — o teste pode escrever à vontade.
+ */
+const WORKSPACE_STATE_ARTIFACTS = Object.freeze([
+  '.env',      // configuração/DB — o globalSetup do Jest carrega daqui
+  'api/data',  // config da aplicação (bootstrap)
+  'reports',   // evidência que os gates leem
+]);
+
+function seedWorkspaceState(dir) {
+  const seeded = [];
+  for (const rel of WORKSPACE_STATE_ARTIFACTS) {
+    const source = path.join(ROOT, rel);
+    if (!fs.existsSync(source)) continue;
+    try {
+      fs.cpSync(source, path.join(dir, rel), { recursive: true, dereference: true });
+      seeded.push(rel);
+    } catch (error) {
+      // Semear é pré-requisito do ACEITE, não do patch: falhar aqui não pode derrubar a
+      // materialização do worktree (que é o que o Router precisa para aplicar o patch).
+      logger.warn('[patchApplyService] falha ao semear artefato de estado no workspace', {
+        artifact: rel, workspace: dir, error: error.message,
+      });
+    }
+  }
+  return seeded;
+}
+
+/**
  * Materializa um `git worktree` isolado (detached) a partir de um commit real já existente.
  * Compartilhado por `createWorkspace` (snapshot do estado atual) e pela verificação
  * pós-promoção (ERV1-CLOSE-005, a partir de um commit candidato real já criado).
@@ -70,6 +107,9 @@ async function runGit(args, { cwd } = {}) {
  * `node_modules` para os testes reais agora é responsabilidade exclusiva do sandbox de
  * execução (`executionSandbox.js`), que monta o `node_modules` real como bind READ-ONLY dentro
  * do container — nunca gravável, nunca fora do sandbox.
+ *
+ * O ESTADO (`.env`, `api/data`, `reports`) é copiado do repositório: sem ele o aceite não
+ * consegue rodar no workspace (ver `WORKSPACE_STATE_ARTIFACTS`).
  * @returns {Promise<string>} caminho absoluto do workspace
  */
 async function materializeWorktree(commitHash, dirLabel) {
@@ -83,6 +123,11 @@ async function materializeWorktree(commitHash, dirLabel) {
     err.code = FAILURE_CODES.PATCH_APPLY_FAILED;
     throw err;
   }
+
+  const seeded = seedWorkspaceState(dir);
+  logger.info('[patchApplyService] workspace isolado materializado', {
+    workspace: dir, commit: commitHash, seeded,
+  });
 
   return dir;
 }
@@ -296,6 +341,8 @@ async function pruneOrphanedWorkspaces({ olderThanMs = DEFAULT_ORPHAN_WORKSPACE_
 
 module.exports = {
   WORKSPACE_ROOT,
+  WORKSPACE_STATE_ARTIFACTS,
+  seedWorkspaceState,
   createWorkspace,
   resolveTaskBaseCommit,
   materializeWorktree,

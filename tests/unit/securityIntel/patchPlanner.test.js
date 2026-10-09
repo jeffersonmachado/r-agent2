@@ -186,7 +186,13 @@ describe('patchPlanner — payload de missão (puro)', () => {
     expect(spec.mission).toContain('1.2.9');
     expect(spec.mission).toMatch(/NÃO reduzir cobertura/);
     expect(spec.options.acceptanceCriteria).toHaveLength(3);
-    expect(spec.options.testCommands).toEqual(['npm run test:unit']);
+    // Aceite = prova MECÂNICA da versão alvo + comando funcional que cabe no deadline de 120 s
+    // do Runner. A suíte completa (`npm run test:unit`, ~9 min) é do pipeline de release, não da
+    // missão: exigi-la aqui tornava o aceite insatisfazível no workspace isolado (medido 2026-10-09).
+    expect(spec.options.testCommands).toHaveLength(2);
+    expect(spec.options.testCommands[0]).toContain('require("left/package.json")');
+    expect(spec.options.testCommands[1]).toBe('npm run test:flow');
+    expect(spec.options.testCommands).not.toContain('npm run test:unit');
     expect(spec.options.risk).toBe('medium');
   });
 
@@ -201,12 +207,19 @@ describe('patchPlanner — payload de missão (puro)', () => {
       finding: finding({ packageName: 'transformers', ecosystem: 'pypi', installedVersion: '4.57.6', fixedVersions: ['4.57.7'] }),
       component: { direct: true, ecosystem: 'pypi', service: 'rag-service' },
     });
-    expect(buildPatchMissionSpec({ plan: rag }).options.testCommands).toEqual(['./venv/bin/python -m pytest tests -q']);
+    const ragCommands = buildPatchMissionSpec({ plan: rag }).options.testCommands;
+    expect(ragCommands).toContain('./venv/bin/python -m pytest tests -q');
+    expect(ragCommands[0]).toContain('./venv/bin/python');
+    expect(ragCommands[0]).toContain('importlib.metadata');
   });
 
-  test('serviço sem comando de teste declarado não inventa comando', () => {
+  test('serviço sem comando funcional declarado não inventa comando (a prova de versão continua)', () => {
     const unknown = planPatch({ finding: finding(), component: { direct: true, ecosystem: 'npm', service: 'servico-novo' } });
-    expect(buildPatchMissionSpec({ plan: unknown }).options.testCommands).toEqual([]);
+    const commands = buildPatchMissionSpec({ plan: unknown }).options.testCommands;
+    // Sem serviço conhecido não há comando funcional — mas a prova mecânica do alvo aplicado
+    // vale para qualquer serviço, então ela permanece (e é a única entrada).
+    expect(commands).toHaveLength(1);
+    expect(commands[0]).toContain('require("left/package.json")');
   });
 
   test('sem plano é erro explícito', () => {

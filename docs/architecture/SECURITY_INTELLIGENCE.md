@@ -393,8 +393,28 @@ agendado depois que o anterior termina.
    também um **falso verde** na própria suíte: um teste que `require`-ia um script CLI executava
    `main()` e `process.exit(0)`, matando o Jest no meio — o run terminava **sem** `Test Suites:` e
    com **código de saída 0** mesmo com 13 suítes falhando (`--bail=0`). Guard
-   `require.main === module` obrigatório em scripts requeridos por teste.
-- Docker local pode não conter as imagens de produção: nesse caso a lacuna é
+   `require.main === module` obrigatório em scripts requeridos por teste.10. **O ACEITE da missão era insatisfazível no ambiente em que roda (medido em 2026-10-09)** — duas
+   causas independentes: (a) o worktree isolado **não herda estado** (`.env`, `api/data`,
+   `reports` são ignorados/untracked), então a suíte do serviço reprova ali **com a árvore
+   limpa**; (b) o deadline de UM comando de teste no Runner é a política `INTEGRATION_TEST`
+   (**120 s**), enquanto `npm run test:unit` leva ~9 min. Resultado: missões com patch **válido**
+   morriam em `TESTING` e o histórico do repositório era **1 GREEN em 75 aprovações** — não por
+   qualidade de patch. Correção em duas partes (decisão explícita do dono):
+   **(1) semear o estado** no worktree (`patchApplyService.seedWorkspaceState`: cópia de `.env`,
+   `api/data`, `reports` — **cópia, nunca symlink**, porque symlink gravável para o repositório é
+   o defeito ER-V1-FINAL-001; falha ao semear não derruba a materialização);
+   **(2) aceite escopado**: prova MECÂNICA do alvo aplicado (o pacote resolvido tem versão
+   ≥ alvo) + comando funcional que cabe no deadline (`npm run test:flow`, medido em 30 suítes /
+   264 testes / 40 s **dentro do workspace isolado**).
+   O que NÃO muda: a suíte completa e os gates de selo/release seguem obrigatórios no pipeline
+   (`validate:governance-enforcement`, `npm run test:unit` humano/CI); o que muda é o que uma
+   missão de **bump de dependência** precisa provar. O fechamento do achado não é afirmado pela
+   missão: quem mede é o **Release Security Gate**, que re-escaneia e deixa de contar o achado
+   como aberto. Limitação declarada: `frontend` não tem suíte executável no workspace isolado
+   (`frontend/node_modules` não existe lá, e symlink gravável é proibido) — o sinal funcional do
+   frontend é o núcleo determinístico compartilhado.
+   Regressões: `patchMissionAcceptance.test.js` (7 casos) e `workspaceStateSeeding.test.js`
+   (5 casos).- Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
 - A base de advisories cobre apenas os pacotes já consultados (`advisories --limit`).
   Scan sobre pacote não consultado resulta em "sem achados", que NÃO é "sem
