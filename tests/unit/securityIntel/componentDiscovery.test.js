@@ -43,6 +43,31 @@ function makeTempProject(files) {
   return dir;
 }
 
+/**
+ * Oráculo INDEPENDENTE para os serviços do compose: leitura de TEXTO (indentação de 2 espaços
+ * sob `services:`), deliberadamente sem reusar `parseComposeImages` do código de produção — um
+ * oráculo que chama o parser sob teste não provaria nada.
+ *
+ * Por que não uma lista fixa (medido em 2026-10-09): a expectativa anterior enumerava 7 serviços e
+ * quebrou quando o compose ganhou/perdeu `engineering-runner` (o serviço dedicado do Router V1, em
+ * descomissionamento por outra frente). O nome do teste é "todas as imagens do compose são
+ * inventariadas" — a asserção tem de medir COBERTURA (nada omitido, nada fantasma), não congelar a
+ * topologia. Derivar do compose mantém a força (igualdade nos dois sentidos) e para de acusar
+ * mudança legítima de topologia.
+ */
+function servicosDoCompose(texto) {
+  const linhas = String(texto).split(/\r?\n/);
+  const inicio = linhas.findIndex((linha) => /^services:\s*$/.test(linha));
+  const nomes = [];
+  for (let i = inicio + 1; i >= 0 && i < linhas.length; i += 1) {
+    const linha = linhas[i];
+    if (/^[A-Za-z]/.test(linha)) break; // próxima seção de topo (`volumes:`, `networks:`)
+    const achado = linha.match(/^ {2}([A-Za-z0-9._-]+):\s*$/);
+    if (achado) nomes.push(achado[1]);
+  }
+  return nomes.sort();
+}
+
 describe('descoberta — repositório real', () => {
   let discovery;
 
@@ -95,9 +120,12 @@ describe('descoberta — repositório real', () => {
       .filter((component) => component.ecosystem === 'docker' && component.source === 'docker-compose.prod.yml')
       .map((component) => component.service)
       .sort();
-    expect(services).toEqual([
-      'api', 'asterisk', 'frontend', 'mcp-research', 'postgres', 'rag-service', 'redis',
-    ]);
+    const declarados = servicosDoCompose(fs.readFileSync(path.join(REPO_ROOT, 'docker-compose.prod.yml'), 'utf8'));
+    // Igualdade nos DOIS sentidos: serviço do compose fora do inventário (omissão) e componente do
+    // inventário que o compose não declara (fantasma) quebram aqui.
+    expect(declarados.length).toBeGreaterThan(5);
+    expect(services).toEqual(declarados);
+    expect(services).toContain('mcp-research');
     const postgres = discovery.components.find((component) => component.service === 'postgres' && component.source === 'docker-compose.prod.yml');
     expect(postgres.name).toBe('pgvector/pgvector');
     expect(postgres.version).toBe('pg16');
