@@ -303,17 +303,46 @@ integridade do índice vetorial, testes de falha/resiliência (5 casos) e **waiv
 auditáveis com expiração obrigatória** — no CLI, na API e na UI (jornada validada em
 browser real: isentar e revogar pela tela).
 
-## 9. Decisão
+## 9. Matriz de aceitação (área → prova → estado)
+
+Cada linha declara **o que foi provado**, não o que foi escrito. Estado possível:
+`SATISFEITO`, `SATISFEITO COM RESSALVA` (funciona, com limite declarado),
+`PENDENTE — DECISÃO` (depende de humano) ou `PENDENTE — TRABALHO`.
+
+| Área | Prova medida | Estado |
+|---|---|---|
+| Inventário de componentes/versões | 1653 componentes (96 diretos, 1529 transitivos), 816 arestas, 13 fontes lidas / 0 ausentes, cobertura 100% com 4 limites declarados; classes DECLARED/RESOLVED/BUILT/RUNNING | SATISFEITO |
+| SBOM | CycloneDX 1.5, 1653 componentes, **válido**, persistido (`sha256 b00f482c…`), geração idempotente por conteúdo | SATISFEITO |
+| Descoberta de vulnerabilidades | OSV + catálogo KEV (1739 CVEs) + EPSS; base de **654 advisories**; sweep de **1125/1125 pacotes instalados** a 5 req/s em 374 s com 0 falhas | SATISFEITO COM RESSALVA (o sweep é manual; o worker não sincroniza base por padrão — egress é opt-in) |
+| Correlação e triagem automática (VEX) | 248 achados com risco (3 CRITICAL, 118 HIGH, 108 MEDIUM, 10 LOW, 9 INFORMATIONAL) + 843 avaliações VEX em 966 ms, offline e idempotente | SATISFEITO |
+| Avaliação de risco auditável | CVSS oficial (spec FIRST, **vetor convertido**, nunca assumido), KEV, EPSS, exposição por serviço e classe de versão; fatores e rationale persistidos por achado | SATISFEITO |
+| Evidência e reprodutibilidade | `security_findings` + `security_finding_events` append-only, timeline por achado, SBOM versionado por sha256, toda medição com evidência em `AI_MEMORY/evidence/security-intel/` | SATISFEITO |
+| Plano de correção | 108 candidatos (39 DIRECT_BUMP, 60 TRANSITIVE_OVERRIDE, 9 NO_PATCH), autonomia Nível A/B/C explícita; ponte com o Roteador Engenheiro só cria missão (nada aplica correção) | SATISFEITO COM RESSALVA (a aplicação é decisão de produção/Nível C) |
+| Gate de release | `validate:security-release-gate` decide e **sai 1** em NO_GO: 47 bloqueios de runtime + 131 avisos dev-only | SATISFEITO COM RESSALVA (não registrado no agregado — decisão do dono) |
+| API de engenharia + segregação | 14 rotas DEVELOPMENT em 13 caminhos; 401 anônimo, 403 para ator PRODUCTION (mesmo com classificação na query), 400 sem tenant resolvível; `visibility-policy` PASS, `route-mounts` 62/62 | SATISFEITO |
+| UI de engenharia | Página `/dev/security-intel` (menu DEVELOPMENT) validada em browser real: KPIs, tabelas, alerta de índice vetorial e jornada de waiver (isentar/revogar) | SATISFEITO |
+| Monitoramento contínuo | Worker de 6 h sem egress por padrão, ciclo real de 723 ms, escalonamento de achado novo KEV/CRITICAL/HIGH; DEGRADED após 3 falhas e recuperação | SATISFEITO |
+| Resiliência | 5 testes: ciclos nunca se sobrepõem, erro de ciclo capturado (sem unhandled rejection), falha persistente → DEGRADED com recuperação, restart limpo, sync parcial não memorizado | SATISFEITO |
+| Waivers auditáveis | Tabela + serviço + scan + gate + CLI + API + UI; expiração obrigatória (NOT NULL), recusa de isenção sem substância/aprovador e de achado que não é risco aberto; prova end-to-end contra o banco real | SATISFEITO (nada isentado: 0 waivers vigentes) |
+| Fila de triagem | `triage` → 28 pacotes (19 isolados, 4 exigem aprovação humana, 5 sem correção publicada), com motivo e comando por item, em JSON + Markdown | SATISFEITO |
+| Triagem das 248 achados | Dossiê pronto; **a decisão é humana** e ainda não foi tomada | PENDENTE — DECISÃO |
+| Registro do gate no agregado | Não registrado de propósito: hoje bloquearia o release da plataforma por decisão que é do dono | PENDENTE — DECISÃO |
+| Índice vetorial (pgvector) | `vector 0.6.0` < 0.8.0 recomendado ⇒ **DEGRADED**; HNSW VÁLIDO, planner **usa** o índice, 8460 chunks com 0 nulos / 0 dimensões erradas. A "corrupção" relatada **não se reproduz** | PENDENTE — TRABALHO (upgrade 0.6.0 → 0.8.x em ambiente isolado + regressão de ranking híbrido) |
+| Atualização de runtime/extensão | Nenhuma atualização foi aplicada: a validação de uma atualização exige ambiente isolado e regressão (o Patch Engine já emite a missão com pré-condições e comandos de teste) | PENDENTE — TRABALHO |
+
+## 10. Decisão
 
 - **Release Security Gate: `NO_GO`.** Com a base de advisories completa (1125 pacotes
   instalados) há **248 achados com risco** (3 `CRITICAL`, 118 `HIGH`) e **47 bloqueios
   de runtime** no gate. O gate está correto ao reprovar; o trabalho pendente é de
   **correção**, não de ajuste do gate. Nenhuma dependência foi atualizada nem nada foi
   implantado — a decisão de aplicar correções é de produção (Nível C).
-- **Capacidade: operacional e comprovada** nas fases 1–9 da missão (inventário, SBOM,
+- **Capacidade: operacional e comprovada** nas fases 1–10 da missão (inventário, SBOM,
   advisories, Risk/Patch Engine, gate, APIs/UI de engenharia, worker contínuo,
-  integridade vetorial, sweep de cobertura completa e resiliência). Restam abertos:
-  triagem dos achados, waivers auditáveis e o caso pgvector 0.6.0 → 0.8.x.
+  integridade vetorial, sweep de cobertura completa, resiliência, waivers auditáveis e
+  fila de triagem). Restam abertos: **triagem dos achados** (decisão humana), **registro
+  do gate no agregado** (decisão do dono) e o **caso pgvector 0.6.0 → 0.8.x** (trabalho
+  em ambiente isolado, com regressão de ranking híbrido).
 - **Missão integral: `NO-GO`** — os critérios de aceite §21 não estão todos satisfeitos
   (nenhuma correção de produção foi aplicada e a triagem é decisão humana pendente).
   O que existe é verificável, reproduzível e não se declara pronto antes da hora.
