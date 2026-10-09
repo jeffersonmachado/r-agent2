@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../components/Toast';
 import {
   createSecurityPatchMission,
+  createSecurityWaiver,
   generateSecurityPatchPlans,
   getSecurityFindingTimeline,
   getSecurityIntelSummary,
@@ -10,6 +11,8 @@ import {
   listSecurityAdvisories,
   listSecurityFindings,
   listSecurityPatches,
+  listSecurityWaivers,
+  revokeSecurityWaiver,
   runSecurityScan,
 } from '../api/securityIntel';
 
@@ -96,6 +99,14 @@ const ERROR_MESSAGES = {
   persistence_required: 'O banco de dados não está disponível: a leitura seria degradada, então foi recusada.',
   patch_candidate_requires_authorization: 'Candidato de Nível C (produção) exige autorização explícita.',
   patch_candidate_not_found: 'Candidato de patch não encontrado.',
+  waiver_expiry_required: 'Informe o prazo em dias: isenção sem expiração não é permitida.',
+  waiver_expiry_not_in_future: 'O prazo precisa estar no futuro.',
+  waiver_exceeds_max_days: 'Prazo acima do limite da política de waivers.',
+  waiver_reason_required: 'Descreva o motivo da aceitação do risco (mínimo de 20 caracteres).',
+  waiver_approver_required: 'Informe quem aprova a aceitação do risco.',
+  waiver_not_needed_for_vex_state: 'Este achado não é risco aberto (já descartado por VEX ou resolvido) — não precisa de isenção.',
+  waiver_finding_not_found: 'Achado não encontrado no inventário atual.',
+  waiver_not_found: 'Waiver não encontrado.',
 };
 
 function messageOf(error) {
@@ -165,6 +176,10 @@ export function SecurityIntelligencePage() {
   const [severityFilter, setSeverityFilter] = useState('');
   const [onlyKev, setOnlyKev] = useState(false);
   const [timeline, setTimeline] = useState(null);
+  const [waivers, setWaivers] = useState({ items: [], total: 0, maxWaiverDays: null });
+  const [waiverForm, setWaiverForm] = useState({
+    findingKey: '', reason: '', approvedBy: '', expiresInDays: 30, compensatingControl: '',
+  });
   const [authorizedBy, setAuthorizedBy] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -174,16 +189,18 @@ export function SecurityIntelligencePage() {
     setLoading(true);
     setError(null);
     try {
-      const [summaryData, findingsData, patchesData, advisoryData] = await Promise.all([
+      const [summaryData, findingsData, patchesData, advisoryData, waiverData] = await Promise.all([
         getSecurityIntelSummary(),
         listSecurityFindings({ severity: severityFilter || undefined, kev: onlyKev ? 'true' : undefined }),
         listSecurityPatches({ limit: 100 }),
         listSecurityAdvisories(),
+        listSecurityWaivers(),
       ]);
       setSummary(summaryData);
       setFindings(findingsData || { items: [], total: 0 });
       setPatches(patchesData || { items: [], total: 0 });
       setAdvisories(advisoryData);
+      setWaivers(waiverData || { items: [], total: 0, maxWaiverDays: null });
     } catch (err) {
       setError(messageOf(err));
       setSummary(null);
@@ -247,6 +264,50 @@ export function SecurityIntelligencePage() {
     try {
       const result = await generateSecurityPatchPlans({ onlyBlocking: false });
       showToast(`Plano de correção regerado: ${result.candidates} candidatos.`, 'success');
+      await loadAll();
+    } catch (err) {
+      showToast(messageOf(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [loadAll, showToast]);
+
+  const handleCreateWaiver = useCallback(async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const result = await createSecurityWaiver({
+        findingKey: waiverForm.findingKey,
+        reason: waiverForm.reason,
+        approvedBy: waiverForm.approvedBy,
+        expiresInDays: Number(waiverForm.expiresInDays),
+        compensatingControl: waiverForm.compensatingControl || null,
+      });
+      showToast(
+        result.created
+          ? `Waiver registrado para ${result.findingKey} (expira em ${formatDate(result.expiresAt)}).`
+          : 'Este achado já possuía uma isenção com o mesmo prazo (nada foi duplicado).',
+        'success',
+      );
+      setWaiverForm({ findingKey: '', reason: '', approvedBy: '', expiresInDays: 30, compensatingControl: '' });
+      await loadAll();
+    } catch (err) {
+      showToast(messageOf(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [loadAll, showToast, waiverForm]);
+
+  const handleRevokeWaiver = useCallback(async (waiver) => {
+    setBusy(true);
+    try {
+      const result = await revokeSecurityWaiver({ waiverKey: waiver.waiver_key, reason: 'Revogado pela tela de engenharia.' });
+      showToast(
+        result.revoked
+          ? `Waiver revogado: ${waiver.finding_key} volta a contar como risco aberto.`
+          : 'Waiver já estava revogado.',
+        result.revoked ? 'success' : 'info',
+      );
       await loadAll();
     } catch (err) {
       showToast(messageOf(err), 'error');
@@ -597,6 +658,127 @@ export function SecurityIntelligencePage() {
                   <td colSpan={6} className="p-4 text-center text-sm text-text-secondary">
                     Nenhuma sincronização registrada: a base de advisories pode estar vazia, e a correlação atual
                     não prova ausência de vulnerabilidade.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-lg font-bold text-text-primary mb-4">Waivers de risco (isenção formal com prazo)</h2>
+        <p className="text-xs text-text-secondary mb-4">
+          Nada é isentado por padrão. Um waiver aceita um risco <strong className="text-text-primary">com prazo</strong>
+          {' '}em nome de um aprovador identificado e devolve o achado ao estado de risco aberto quando expira ou é
+          revogado. O gate revalida a expiração a cada leitura — isenção vencida não protege nada.
+          {' '}{waivers.maxWaiverDays ? `Prazo máximo permitido: ${waivers.maxWaiverDays} dias.` : ''}
+        </p>
+
+        <div className={`${CARD} mb-4`}>
+          <h3 className="text-sm font-bold text-text-primary mb-3">Conceder isenção (decisão humana)</h3>
+          <form onSubmit={handleCreateWaiver} className="grid gap-3 md:grid-cols-2">
+            <label className="flex flex-col gap-1 md:col-span-2">
+              <span className="text-xs text-text-secondary">Achado</span>
+              <select
+                className={FIELD}
+                value={waiverForm.findingKey}
+                onChange={(event) => setWaiverForm((prev) => ({ ...prev, findingKey: event.target.value }))}
+                required
+                data-testid="waiver-finding-select"
+              >
+                <option value="">Selecione um achado aberto…</option>
+                {(findings.items || []).slice(0, 50).map((row) => (
+                  <option key={row.finding_key} value={row.finding_key}>
+                    {SEVERITY_LABELS[row.severity] || row.severity} · {row.package_name}@{row.installed_version || '—'} · {row.advisory_id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 md:col-span-2">
+              <span className="text-xs text-text-secondary">Motivo da aceitação (mínimo 20 caracteres)</span>
+              <textarea
+                className={FIELD}
+                rows={2}
+                value={waiverForm.reason}
+                onChange={(event) => setWaiverForm((prev) => ({ ...prev, reason: event.target.value }))}
+                placeholder="Ex.: sem versão corrigida publicada; risco aceito até o upgrade do runtime, com WAF no vetor de exploração."
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-text-secondary">Aprovado por</span>
+              <input
+                type="text"
+                className={FIELD}
+                value={waiverForm.approvedBy}
+                onChange={(event) => setWaiverForm((prev) => ({ ...prev, approvedBy: event.target.value }))}
+                placeholder="quem assume o risco"
+                required
+                data-testid="waiver-approver-input"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-text-secondary">Prazo em dias</span>
+              <input
+                type="number"
+                min={1}
+                max={waivers.maxWaiverDays || 90}
+                className={FIELD}
+                value={waiverForm.expiresInDays}
+                onChange={(event) => setWaiverForm((prev) => ({ ...prev, expiresInDays: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1 md:col-span-2">
+              <span className="text-xs text-text-secondary">Controle compensatório (opcional)</span>
+              <input
+                type="text"
+                className={FIELD}
+                value={waiverForm.compensatingControl}
+                onChange={(event) => setWaiverForm((prev) => ({ ...prev, compensatingControl: event.target.value }))}
+                placeholder="o que reduz o risco enquanto a correção não sai"
+              />
+            </label>
+            <div className="md:col-span-2">
+              <button type="submit" className={BTN_PRIMARY} disabled={busy} data-testid="waiver-submit-button">
+                Registrar isenção com prazo
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className={TABLE_WRAP}>
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className={TH}>Achado</th>
+                <th className={TH}>Expira em</th>
+                <th className={TH}>Aprovado por</th>
+                <th className={TH}>Motivo</th>
+                <th className={TH}>Estado</th>
+                <th className={TH}>Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(waivers.items || []).map((row) => (
+                <tr key={row.waiver_key}>
+                  <td className={TD}>{row.finding_key}</td>
+                  <td className={TD}>{formatDate(row.expires_at)}</td>
+                  <td className={TD}>{row.approved_by}</td>
+                  <td className={TD}>{row.reason}</td>
+                  <td className={TD}>{row.state}</td>
+                  <td className={TD}>
+                    <button type="button" className={BTN_SMALL} onClick={() => handleRevokeWaiver(row)} disabled={busy}>
+                      Revogar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {(waivers.items || []).length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-4 text-center text-sm text-text-secondary">
+                    Nenhum risco isentado. O gate avalia todos os achados abertos — é o estado desejado.
                   </td>
                 </tr>
               )}

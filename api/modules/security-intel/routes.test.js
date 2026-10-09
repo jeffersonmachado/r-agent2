@@ -37,12 +37,18 @@ jest.mock('../../services/securityIntel/securityIntelWorker', () => ({
   getSecurityIntelWorkerStatus: jest.fn(),
   getLatestAdvisorySyncAge: jest.fn(),
 }));
+jest.mock('../../services/securityIntel/waiverService', () => ({
+  listWaivers: jest.fn(),
+  createWaiver: jest.fn(),
+  revokeWaiver: jest.fn(),
+}));
 
 const inventoryStoreService = require('../../services/securityIntel/inventoryStoreService');
 const vulnerabilityScanService = require('../../services/securityIntel/vulnerabilityScanService');
 const sbomService = require('../../services/securityIntel/sbomService');
 const patchPlanService = require('../../services/securityIntel/patchPlanService');
 const securityIntelWorker = require('../../services/securityIntel/securityIntelWorker');
+const waiverService = require('../../services/securityIntel/waiverService');
 
 const { createSecurityIntelRoutes } = require('./routes');
 
@@ -205,5 +211,42 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     const res = await request(port, 'GET', '/api/security-intel/inventory');
     expect(res.status).toBe(503);
     expect(res.body.error).toBe('persistence_required');
+  });
+
+  it('mapeia recusa de política de waiver para HTTP com o código do motivo (não 500)', async () => {
+    const refusal = new Error('waiver_exceeds_max_days:90');
+    refusal.code = 'waiver_exceeds_max_days';
+    refusal.statusCode = 400;
+    waiverService.createWaiver.mockImplementation(() => Promise.reject(refusal));
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('waiver_exceeds_max_days');
+    expect(res.body.detail).toBe('90');
+  });
+
+  it('recusa isentar achado que não é risco aberto com 409 (maquiagem de métrica)', async () => {
+    const refusal = new Error('waiver_not_needed_for_vex_state:NOT_AFFECTED');
+    refusal.code = 'waiver_not_needed_for_vex_state';
+    refusal.statusCode = 409;
+    waiverService.createWaiver.mockImplementation(() => Promise.reject(refusal));
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers');
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('waiver_not_needed_for_vex_state');
+  });
+
+  it('revogar waiver inexistente responde 404, não 500', async () => {
+    const missing = new Error('waiver_not_found:abc');
+    missing.code = 'waiver_not_found';
+    missing.statusCode = 404;
+    waiverService.revokeWaiver.mockImplementation(() => Promise.reject(missing));
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers/revoke');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('waiver_not_found');
   });
 });

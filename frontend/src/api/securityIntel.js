@@ -91,3 +91,34 @@ export async function generateSecurityPatchPlans(body = {}) {
 export async function createSecurityPatchMission({ candidateKey, authorizedBy = null }) {
   return postJson(`${BASE_PATH}/patch-mission`, { candidateKey, authorizedBy });
 }
+
+/** Waivers de risco: isenção formal com expiração (decisão humana). */
+export async function listSecurityWaivers(filters = {}) {
+  return fetchJson(withQuery(`${BASE_PATH}/waivers`, filters));
+}
+
+/**
+ * Concede um waiver. Recusas de política (prazo acima do limite, sem expiração,
+ * motivo curto, aprovador ausente, achado que não é risco aberto) vêm do
+ * backend com o código do motivo — a tela não tenta decidir elegibilidade.
+ */
+export async function createSecurityWaiver({
+  findingKey,
+  reason,
+  approvedBy,
+  expiresInDays,
+  compensatingControl = null,
+}) {
+  return postJson(`${BASE_PATH}/waivers`, {
+    findingKey,
+    reason,
+    approvedBy,
+    expiresInDays,
+    compensatingControl,
+  });
+}
+
+/** Revoga sem apagar: o achado volta a contar como risco aberto. */
+export async function revokeSecurityWaiver({ waiverKey, reason = null }) {
+  return postJson(`${BASE_PATH}/waivers/revoke`, { waiverKey, reason });
+}

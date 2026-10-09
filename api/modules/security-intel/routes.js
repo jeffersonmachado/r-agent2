@@ -33,6 +33,9 @@ const ROUTE_ACTIONS = Object.freeze({
   SCAN: 'scan',
   PLAN: 'plan',
   PATCH_MISSION: 'patch_mission',
+  WAIVERS_LIST: 'read',
+  WAIVER_CREATE: 'waiver_create',
+  WAIVER_REVOKE: 'waiver_revoke',
 });
 
 function createSecurityIntelRoutes({ buildDeps } = {}) {
@@ -90,6 +93,14 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
     const code = error && error.code ? error.code : null;
     if (code === 'persistence_required') {
       return deps.sendJson(res, 503, { error: 'persistence_required', detail: error.message });
+    }
+    // Recusas do waiver são decisões de política, não falhas de servidor: o
+    // código e o motivo precisam chegar ao cliente para a ação ser corrigível.
+    if (code && String(code).startsWith('waiver_')) {
+      return deps.sendJson(res, error.statusCode || 400, {
+        error: code,
+        detail: String(error.message || '').slice(code.length + 1) || null,
+      });
     }
     if (code === 'patch_candidate_requires_authorization') {
       return deps.sendJson(res, 403, {
@@ -406,6 +417,82 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
         candidateKey: result.candidateKey || req.body?.candidateKey,
         missionId: result.missionId || null,
         created: result.created === true,
+        reason: result.reason || null,
+      });
+    } catch (error) {
+      handleError(deps, res, error);
+    }
+  });
+
+  // ── Waivers: aceitação formal e temporária de risco (decisão HUMANA) ─────
+
+  router.get('/api/security-intel/waivers', async (req, res) => {
+    const ctx = guard(req, res);
+    if (!ctx) return;
+    const { deps, tenantKey } = ctx;
+    try {
+      const { listWaivers } = require('../../services/securityIntel/waiverService');
+      const result = await listWaivers({
+        tenantKey,
+        state: String(req.query.state || 'ACTIVE').toUpperCase(),
+        limit: req.query.limit,
+        offset: req.query.offset,
+      });
+      const { loadPolicy } = require('../../services/securityIntel/vulnerabilityScanService');
+      deps.sendJson(res, 200, {
+        ...result,
+        maxWaiverDays: loadPolicy().releaseGate?.maxWaiverDays ?? null,
+      });
+    } catch (error) {
+      handleError(deps, res, error);
+    }
+  });
+
+  router.post('/api/security-intel/waivers', async (req, res) => {
+    const ctx = guard(req, res);
+    if (!ctx) return;
+    const { deps, tenantKey, actor } = ctx;
+    try {
+      const { createWaiver } = require('../../services/securityIntel/waiverService');
+      const { loadPolicy } = require('../../services/securityIntel/vulnerabilityScanService');
+      const result = await createWaiver({
+        tenantKey,
+        findingKey: req.body?.findingKey,
+        reason: req.body?.reason,
+        approvedBy: req.body?.approvedBy,
+        createdBy: actor,
+        expiresInDays: req.body?.expiresInDays,
+        expiresAt: req.body?.expiresAt,
+        compensatingControl: req.body?.compensatingControl || null,
+        maxWaiverDays: loadPolicy().releaseGate?.maxWaiverDays ?? undefined,
+      });
+      deps.sendJson(res, 201, {
+        waiverKey: result.waiverKey,
+        findingKey: req.body?.findingKey,
+        created: result.created === true,
+        expiresAt: result.waiver.expires_at,
+        approvedBy: result.waiver.approved_by,
+      });
+    } catch (error) {
+      handleError(deps, res, error);
+    }
+  });
+
+  router.post('/api/security-intel/waivers/revoke', async (req, res) => {
+    const ctx = guard(req, res);
+    if (!ctx) return;
+    const { deps, tenantKey, actor } = ctx;
+    try {
+      const { revokeWaiver } = require('../../services/securityIntel/waiverService');
+      const result = await revokeWaiver({
+        waiverKey: req.body?.waiverKey,
+        tenantKey,
+        actor,
+        reason: req.body?.reason || null,
+      });
+      deps.sendJson(res, 200, {
+        waiverKey: req.body?.waiverKey,
+        revoked: result.revoked === true,
         reason: result.reason || null,
       });
     } catch (error) {
