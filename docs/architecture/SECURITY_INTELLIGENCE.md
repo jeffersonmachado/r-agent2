@@ -182,7 +182,19 @@ agendado depois que o anterior termina.
 - Verificação do índice vetorial: **DEGRADED** (só por `vector 0.6.0` < mínimo
   recomendado 0.8.0); índice HNSW **VÁLIDO**, planner **usa** o índice, 8460 chunks com
   0 nulos e 0 dimensões erradas.
-- Testes: **207 casos em 13 suítes** (`tests/unit/securityIntel/`), incluindo
+- Waivers de risco (`security_waivers` + `waiverService`): isenção FORMAL e
+  TEMPORÁRIA. PROVA end-to-end contra o banco real (2026-10-08, em achado NÃO
+  bloqueante para que a decisão de release não mudasse em nenhum instante): waiver
+  criado ⇒ achado vira `MITIGATED` com `waiver_id` vinculado ⇒ gate reporta 1 waiver
+  vigente e **mantém os mesmos 47 bloqueios** ⇒ revogação ⇒ achado volta a risco
+  aberto e 0 waivers vigentes (`AI_MEMORY/evidence/security-intel/waiver-proof-2026-10-09.json`).
+  A tabela nasce VAZIA: nada é isentado hoje. Regras recusadas por construção:
+  expiração ausente/passada/prazo acima de `maxWaiverDays`, motivo sem substância,
+  aprovador ausente e tentativa de isentar achado que não é risco aberto (VEX ou
+  resolvido). A prova também revelou um defeito real: `createWaiver` não era
+  atômico e uma falha ao gravar o evento deixava **isenção sem trilha** — hoje roda
+  em transação.
+- Testes: **219 casos em 14 suítes** (`tests/unit/securityIntel/`).
   **5 de resiliência** (`resilience.test.js`): ciclos **nunca se sobrepõem** (ciclo
   lento em andamento não deixa o próximo disparar), erro de ciclo é **capturado**
   (sem unhandled rejection que derrubaria a API) e o worker **continua tentando**,
@@ -256,8 +268,9 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
    registrá-lo agora bloquearia o release da plataforma por decisão que é do dono, não
    de uma correção isolada (mesmo precedente de `validate:layer-conventions`). Ordem
    correta: triar/mitigar os achados e SÓ ENTÃO registrar o gate.
-3. **Waivers auditáveis** (tabela + expiração + aprovação humana) — nada é isentado
-   hoje.
+3. **Expor waivers na superfície HTTP/UI** (`/api/security-intel/waivers`): hoje a
+   decisão de isentar tem caminho auditável e testado no CLI (`waive`/`revoke`), mas
+   não aparece na tela de engenharia.
 4. **Agendamento do sweep** `--scope installed` (hoje é manual; o egress do worker é
    opt-in por decisão de segurança).
 5. **Caso PostgreSQL/pgvector** — evidência coletada em 2026-10-08:
@@ -284,7 +297,8 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
 advisories + correlação (sweep de 1125 pacotes instalados), Risk Engine, Patch Engine +
 ponte com o Roteador, Release Security Gate com exit real, APIs DEVELOPMENT + UI de
 engenharia (segregação provada em teste e em HTTP real), worker contínuo, check de
-integridade do índice vetorial e testes de falha/resiliência (5 casos).
+integridade do índice vetorial, testes de falha/resiliência (5 casos) e **waivers
+auditáveis com expiração obrigatória** (prova end-to-end contra o banco real).
 
 ## 9. Decisão
 

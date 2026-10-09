@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-10-09T00:05:54.543Z",
+  "tenant": "system",
+  "steps": [
+    {
+      "step": "achado alvo",
+      "findingKey": "GHSA-4x5r-pxfx-6jf8|npm:@babel/core@7.28.5#RESOLVED#frontend#@babel/core",
+      "severity": "LOW",
+      "statusBefore": "FIX_AVAILABLE",
+      "blockingSeverity": false
+    },
+    {
+      "step": "waiver criado",
+      "waiverKey": "78277d19f49f448c228af63bae0431b727609fd9",
+      "created": true,
+      "expiresAt": "2026-10-16T00:05:54.591Z"
+    },
+    {
+      "step": "waivers vigentes apos criacao",
+      "count": 1
+    },
+    {
+      "step": "scan com waiver vigente",
+      "status": "MITIGATED",
+      "waiverId": "7afeab2e-3772-465f-aa67-cd94defb5246",
+      "expectedStatus": "MITIGATED"
+    },
+    {
+      "step": "gate com waiver vigente",
+      "exitCode": 1,
+      "waiversActive": 1,
+      "blocking": 47,
+      "reportWaiversActive": 1
+    },
+    {
+      "step": "waiver revogado",
+      "revoked": true
+    },
+    {
+      "step": "scan apos revogacao",
+      "status": "FIX_AVAILABLE",
+      "waiverId": null,
+      "restored": true
+    },
+    {
+      "step": "estado final",
+      "waiversVigentes": 0,
+      "gate": {
+        "exitCode": 1,
+        "waiversActive": 0,
+        "blocking": 47,
+        "reportWaiversActive": 0
+      }
+    }
+  ]
+}

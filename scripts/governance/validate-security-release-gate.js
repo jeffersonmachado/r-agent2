@@ -178,6 +178,19 @@ async function main() {
     collectError = error.message;
   }
 
+  // Waivers VIGENTES do tenant. O motor revalida a expiração de cada um
+  // (`waiverExemption`) — waiver sem expiração ou expirado NÃO isenta nada. Sem
+  // banco acessível, a lista fica vazia (o gate continua fail-closed: nada é
+  // isentado por indisponibilidade de leitura).
+  let waivers = [];
+  let waiversError = null;
+  try {
+    const { waiversForGate } = require('../../api/services/securityIntel/waiverService');
+    waivers = await waiversForGate({ tenantKey });
+  } catch (error) {
+    waiversError = error.message;
+  }
+
   const evaluation = evaluateReleaseSecurity({
     policy: policy.releaseGate || {},
     findings: facts ? facts.findings : null,
@@ -185,7 +198,7 @@ async function main() {
     advisoryBase: facts ? facts.advisoryBase : null,
     vectorIndex: facts ? facts.vectorIndex : null,
     coveragePercent: facts ? facts.coveragePercent : null,
-    waivers: [],
+    waivers,
     now: new Date(),
   });
 
@@ -212,12 +225,20 @@ async function main() {
       }
       : null,
     collectionError: collectError,
-    waiversImplemented: false,
+    waiversImplemented: true,
+    waiversActive: waivers.length,
+    waiversError,
+    waivers: waivers.map((waiver) => ({
+      findingKey: waiver.findingKey,
+      expiresAt: waiver.expiresAt,
+      approvedBy: waiver.approvedBy,
+    })),
   }, 'security-release-gate-report');
 
   writeReport('security-release-gate-report.json', report);
 
   console.log(`[security-release-gate] mode=${report.mode} decision=${evaluation.decision}`);
+  console.log(`[security-release-gate] waivers vigentes=${waivers.length}${waiversError ? ` (leitura falhou: ${waiversError})` : ''}`);
   for (const item of evaluation.blocking) console.log(`  ✗ ${item.code}: ${item.message}`);
   for (const item of evaluation.warnings) console.log(`  ! ${item.code}: ${item.message}`);
   if (collectError) console.log(`  ! coleta falhou: ${collectError}`);

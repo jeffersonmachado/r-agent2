@@ -39,6 +39,13 @@ operacional; não duplica o doc.
   `@modelcontextprotocol/sdk@1.30.0`); com a base completa são **47 bloqueios de
   runtime** (`@modelcontextprotocol/sdk`, `brace-expansion`, `braces`,
   `extract-zip` entre os primeiros) e 131 avisos dev-only.
+- **Waiver de risco** (`security_waivers` + `api/services/securityIntel/waiverService.js`,
+  CLI `waivers|waive|revoke`): aceitação FORMAL e TEMPORÁRIA por humano identificado.
+  Regras duras: expiração obrigatória e futura, prazo ≤ `releaseGate.maxWaiverDays`
+  (90), motivo com substância, aprovador identificado, e recusa de isenção para
+  achado que NÃO é risco aberto (VEX `NOT_AFFECTED`/`FALSE_POSITIVE` ou resolvido).
+  Revogar não apaga (histórico). **Nada está isentado hoje**: a tabela nasce vazia.
+  O gate consome os waivers VIGENTES (`waiversForGate`) e revalida a expiração.
 - **Índice vetorial** (`npm run security:vector-index`): veredito DEGRADED por
   `vector 0.6.0` < mínimo recomendado; índice HNSW VÁLIDO e em uso.
 - **Worker contínuo** (`securityIntelWorker`, registrado em `api/runtime/startWorkers.js`):
@@ -92,6 +99,12 @@ operacional; não duplica o doc.
   leitor. Em módulo LEITOR, passe o nome do arquivo como parâmetro — e não escreva o
   literal dentro de comentário (o scanner lê comentário como código: gerou
   `UNKNOWN_JSON_WRITE_TARGET` com o alvo literalmente `algo.json`).
+- **Escrita parcial vira isenção sem auditoria** (medido 2026-10-08 numa prova
+  end-to-end): a criação de waiver não era transacional e, quando a gravação do
+  EVENTO falhou, o waiver e o vínculo no achado permaneceram — ficaram 2 waivers
+  vigentes com 1 evento. `createWaiver` agora roda em transação (waiver + vínculo +
+  evento, tudo ou nada). Regra geral: **isenção de risco é um ato com trilha ou não
+  é nada** — nunca grave o efeito antes da evidência.
 - `resetMocks: true` no `jest.config.cjs` apaga implementações: reestabeleça mocks no
   `beforeEach`.
 - **Testar o worker exige cuidado com o harness do repo** (`tests/setup.js`):
@@ -123,12 +136,14 @@ operacional; não duplica o doc.
    base por padrão — egress é opt-in).
 4. pgvector: check de integridade já existe; falta planejar 0.6.0 → 0.8.x com
    regressão de ranking híbrido.
+5. Expor waivers na API/UI de engenharia (`/api/security-intel/waivers`) — hoje o
+   caminho de decisão é o CLI, que é auditável mas não é a superfície da tela.
 
 **Já entregue:** inventário (Fase 1), SBOM, advisories + correlação (Fase 2), Risk
 Engine (Fase 3), Patch Engine + ponte com o Roteador (Fase 4), Release Security Gate
 com exit real (Fase 5), worker contínuo (Fase 7), check de índice vetorial (Fase 8),
-APIs DEVELOPMENT + UI de engenharia (Fase 6), sweep de cobertura completa (Fase 9a) e
-testes de falha/resiliência do worker (Fase 9b): ciclos nunca se sobrepõem, erro de
-ciclo é capturado (sem unhandled rejection), falha persistente derruba a saúde para
-DEGRADED com recuperação, restart limpo e falha de sincronização não é memorizada
-como base fresca.
+APIs DEVELOPMENT + UI de engenharia (Fase 6), sweep de cobertura completa (Fase 9a),
+testes de falha/resiliência (Fase 9b: ciclos nunca se sobrepõem, erro de ciclo
+capturado, DEGRADED com recuperação, restart limpo, sync parcial não memorizado) e
+**waivers auditáveis com expiração** (prova end-to-end: vigente ⇒ `MITIGATED`, gate
+segue com 47 bloqueios; revogado ⇒ volta a risco aberto).

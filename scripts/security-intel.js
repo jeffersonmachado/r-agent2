@@ -62,6 +62,13 @@ function parseArgs(argv) {
     else if (token === '--actor') args.actor = argv[++index];
     else if (token === '--candidate') args.candidate = argv[++index];
     else if (token === '--authorized-by') args.authorizedBy = argv[++index];
+    else if (token === '--finding') args.finding = argv[++index];
+    else if (token === '--waiver') args.waiver = argv[++index];
+    else if (token === '--approve') args.approve = argv[++index];
+    else if (token === '--days') args.days = argv[++index];
+    else if (token === '--reason') args.reason = argv[++index];
+    else if (token === '--control') args.control = argv[++index];
+    else if (token === '--state') args.state = argv[++index];
     else if (token === '--blocking') args.blocking = true;
     else if (token === '--include-dev') args.includeDev = true;
     else args._.push(token);
@@ -524,6 +531,132 @@ async function commandPatchMission(args) {
   return 0;
 }
 
+/**
+ * Waivers: listar / conceder / revogar.
+ *
+ * Conceder é uma DECISÃO HUMANA registrada: exige aprovador identificado, motivo
+ * com substância e prazo em dias. Nada aqui isenta risco por conta própria — o
+ * serviço recusa isenção perpétua, prazo acima do limite da política e achado que
+ * não é risco aberto (estado VEX ou já resolvido).
+ */
+async function commandWaivers(args) {
+  const { listWaivers } = require('../api/services/securityIntel/waiverService');
+  const tenantKey = args.tenant || 'system';
+  const result = await listWaivers({
+    tenantKey,
+    state: (args.state || 'ACTIVE').toUpperCase(),
+    limit: args.limit ? Number(args.limit) : 100,
+  });
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    tenantKey,
+    state: (args.state || 'ACTIVE').toUpperCase(),
+    total: result.total,
+    waivers: result.items,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-waivers-report.json', payload);
+  if (args.json) process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  else {
+    console.log('=== Waivers de risco (isenção formal com expiração) ===');
+    console.log(`tenant .............: ${tenantKey} | estado: ${payload.state}`);
+    console.log(`waivers ............: ${result.items.length}`);
+    for (const waiver of result.items) {
+      console.log(`  ${waiver.waiver_key} | ${waiver.finding_key} | expira ${waiver.expires_at} | aprovou ${waiver.approved_by} | ${waiver.state}`);
+    }
+    if (result.items.length === 0) console.log('  (nenhum risco isentado)');
+    console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  }
+  return 0;
+}
+
+async function commandWaive(args) {
+  const { createWaiver } = require('../api/services/securityIntel/waiverService');
+  const { loadPolicy } = require('../api/services/securityIntel/vulnerabilityScanService');
+  const tenantKey = args.tenant || 'system';
+  if (!args.finding) {
+    console.error('[security-intel] informe --finding <findingKey> (veja `patches`/`findings`).');
+    return 2;
+  }
+  if (!args.approve) {
+    console.error('[security-intel] informe --approve <quem aprova>: isenção sem autor não é auditável.');
+    return 2;
+  }
+  const policy = loadPolicy({ reload: true });
+  let result;
+  try {
+    result = await createWaiver({
+      tenantKey,
+      findingKey: args.finding,
+      reason: args.reason,
+      approvedBy: args.approve,
+      createdBy: args.actor || null,
+      expiresInDays: args.days ? Number(args.days) : undefined,
+      compensatingControl: args.control || null,
+      maxWaiverDays: policy.releaseGate?.maxWaiverDays ?? undefined,
+    });
+  } catch (error) {
+    console.error(`[security-intel] waiver recusado: ${error.code || error.message}`);
+    return 3;
+  }
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    tenantKey,
+    waiverKey: result.waiverKey,
+    findingKey: args.finding,
+    created: result.created,
+    expiresAt: result.waiver.expires_at,
+    approvedBy: result.waiver.approved_by,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-waiver-report.json', payload);
+  if (args.json) process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  else {
+    console.log('=== Waiver registrado (risco aceito formalmente, com prazo) ===');
+    console.log(`achado .............: ${payload.findingKey}`);
+    console.log(`waiver .............: ${payload.waiverKey} (novo: ${payload.created})`);
+    console.log(`expira em ..........: ${payload.expiresAt}`);
+    console.log(`aprovado por .......: ${payload.approvedBy}`);
+    console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  }
+  return 0;
+}
+
+async function commandRevokeWaiver(args) {
+  const { revokeWaiver } = require('../api/services/securityIntel/waiverService');
+  const tenantKey = args.tenant || 'system';
+  if (!args.waiver) {
+    console.error('[security-intel] informe --waiver <waiverKey> (veja `waivers --state ALL`).');
+    return 2;
+  }
+  let result;
+  try {
+    result = await revokeWaiver({
+      waiverKey: args.waiver,
+      tenantKey,
+      actor: args.actor || args.approve || 'unknown',
+      reason: args.reason || null,
+    });
+  } catch (error) {
+    console.error(`[security-intel] revogação recusada: ${error.code || error.message}`);
+    return 3;
+  }
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    tenantKey,
+    waiverKey: args.waiver,
+    revoked: result.revoked,
+    reason: result.reason || null,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-waiver-revoke-report.json', payload);
+  if (args.json) process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  else {
+    console.log('=== Waiver revogado (o achado volta a contar como risco aberto) ===');
+    console.log(`waiver .............: ${payload.waiverKey}`);
+    console.log(`revogado agora .....: ${payload.revoked}`);
+    console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  }
+  return 0;
+}
+
 const COMMANDS = {
   discover: commandDiscover,
   sbom: commandSbom,
@@ -534,13 +667,16 @@ const COMMANDS = {
   'vector-index': commandVectorIndex,
   patches: commandPatches,
   'patch-mission': commandPatchMission,
+  waivers: commandWaivers,
+  waive: commandWaive,
+  revoke: commandRevokeWaiver,
 };
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
   if (!command || !COMMANDS[command]) {
-    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index|patches|patch-mission> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>] [--blocking] [--include-dev] [--candidate <key>] [--authorized-by <quem autoriza>]');
+    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index|patches|patch-mission|waivers|waive|revoke> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>] [--blocking] [--include-dev] [--candidate <key>] [--authorized-by <quem autoriza>] [--finding <findingKey>] [--waiver <waiverKey>] [--approve <quem aprova>] [--days N] [--reason <texto>] [--control <texto>] [--state ACTIVE|EXPIRED|REVOKED|ALL]');
     return 2;
   }
   // Em modo `--json` o stdout é dado de máquina: todo log vai para stderr,
