@@ -170,10 +170,27 @@ describe('verify-target — CLI sobre arquivos reais', () => {
     expect(r.message).toContain('ALVO NAO DECLARADO');
   });
 
-  it('no repositório real do r-agent2 o alvo NÃO está declarado (aceite honesto)', () => {
+  it('lê o repositório real e devolve um estado do contrato (nunca lança, nunca inventa)', () => {
     const raiz = path.join(__dirname, '..', '..', '..');
     const r = verifyTarget({ packageName: 'js-yaml', targetVersion: ALVO, expect: 'override', rootDir: raiz });
-    expect(r.status).toBe('NOT_APPLIED');
+    expect(['OK', 'NOT_APPLIED', 'INCOMPARABLE', 'MISSING']).toContain(r.status);
+    expect(typeof r.message).toBe('string');
+  });
+
+  it('a expectativa sobre o repositório REAL é derivada do próprio repositório (não congela o estado)', () => {
+    // Achado (medido em 2026-10-09, num worktree onde o override havia sido aplicado durante a
+    // prova do aceite): a versão anterior deste teste afirmava sempre `NOT_APPLIED` para o repo
+    // real — ou seja, REPROVARIA exatamente quando o motor de patch faz a correção que ele existe
+    // para fazer. Um teste do motor não pode punir o resultado que o motor deve produzir.
+    const raiz = path.join(__dirname, '..', '..', '..');
+    const textoOverrides = JSON.stringify(JSON.parse(fs.readFileSync(path.join(raiz, 'package.json'), 'utf8')).overrides || {});
+    const r = verifyTarget({ packageName: 'js-yaml', targetVersion: ALVO, expect: 'override', rootDir: raiz });
+    if (!textoOverrides.includes('js-yaml')) {
+      expect(r.status).toBe('NOT_APPLIED'); // nada declarado ⇒ nada aplicado
+    } else {
+      // Declarado: quem decide é a corroboração do lock (coerente ⇒ OK; cópia antiga ⇒ NOT_APPLIED).
+      expect(['OK', 'NOT_APPLIED']).toContain(r.status);
+    }
   });
 
   it('--source=installed lê a árvore instalada (verificação de host, pós `npm ci`)', () => {
