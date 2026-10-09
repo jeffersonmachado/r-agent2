@@ -30,10 +30,12 @@ jest.mock('../../../api/db/models/SecurityComponent', () => jest.fn());
 const { Op } = require('sequelize');
 const { getSequelize } = require('../../../api/db/sequelize');
 const getSecurityFinding = require('../../../api/db/models/SecurityFinding');
+const getSecurityFindingEvent = require('../../../api/db/models/SecurityFindingEvent');
 const {
   VEX_EXCLUDED_STATUSES,
   listFindings,
   getFindingSummary,
+  getFindingTimeline,
 } = require('../../../api/services/securityIntel/vulnerabilityScanService');
 
 const VEX_STATUSES = ['NOT_AFFECTED', 'FALSE_POSITIVE'];
@@ -107,5 +109,35 @@ describe('listFindings — riskOnly usa a MESMA definição de risco do resumo',
     chamadas = [];
     await listFindings({ tenantKey: 'system', riskOnly: true });
     expect(chamadas[0].where.status[Op.notIn]).toBe(VEX_EXCLUDED_STATUSES);
+  });
+});
+
+describe('getFindingTimeline — o carimbo de tempo não depende do nome do campo do ORM', () => {
+  beforeEach(() => {
+    getSequelize.mockReturnValue({ fn: (name) => name, col: (name) => name });
+  });
+
+  it('expõe `at` a partir de createdAt (o histórico aparecia SEM DATA)', async () => {
+    // O modelo declara `timestamps` + `underscored`: a linha vem com `createdAt`,
+    // e a tela lia `created_at` — o evento era exibido com data vazia ("— —").
+    const evento = {
+      id: 'e1',
+      to_status: 'FIX_AVAILABLE',
+      actor: 'systemadmin',
+      createdAt: '2026-10-08T23:37:41.967Z',
+      toJSON() { return { ...this, toJSON: undefined }; },
+    };
+    getSecurityFindingEvent.mockReturnValue({ findAll: jest.fn(async () => [evento]) });
+
+    const rows = await getFindingTimeline({ findingKey: 'GHSA-x|npm:y@1.0.0', tenantKey: 'system' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].at).toBe('2026-10-08T23:37:41.967Z');
+    expect(rows[0].to_status).toBe('FIX_AVAILABLE');
+  });
+
+  it('sem carimbo de tempo devolve `at: null` em vez de inventar uma data', async () => {
+    getSecurityFindingEvent.mockReturnValue({ findAll: jest.fn(async () => [{ id: 'e2', to_status: 'RESOLVED' }]) });
+    const rows = await getFindingTimeline({ findingKey: 'GHSA-x|npm:y@1.0.0', tenantKey: 'system' });
+    expect(rows[0].at).toBeNull();
   });
 });

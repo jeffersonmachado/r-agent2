@@ -208,3 +208,20 @@ a MESMA instância da lista").
 Regra que fica: dois números sobre o mesmo assunto no mesmo painel precisam de UMA definição
 compartilhada ou de rótulos que digam qual definição estão usando. "Aberto" sem qualificar
 (risco? registro?) é ambíguo e já produziu leitura errada de 4× o risco real.
+
+## Defeito medido no histórico (2026-10-08) — evento sem DATA
+
+O painel de histórico de um achado exibia "— — Correção disponível · systemadmin". Causa: o
+serviço devolvia a linha crua do ORM, e o modelo (`timestamps` + `underscored`) expõe o
+carimbo como `createdAt` — a tela lia `created_at`. Data vazia num recurso cujo propósito é
+responder "quando apareceu, quem aceitou e por quê".
+
+Correção: `getFindingTimeline` normaliza e expõe `at` (ISO) explicitamente, `null` quando não
+há carimbo (nunca data inventada); a tela lê `at`. Regressão: 2 casos em
+`findingsRiskOnly.test.js` (com createdAt → `at` preenchido; sem carimbo → `at: null`).
+Verificado no browser: "08/10/2026, 20:37:41 — Correção disponível · systemadmin".
+
+Regra que fica: nome de campo do ORM não pode vazar para a tela. Ao expor linha de modelo,
+normalize o carimbo de tempo num campo próprio e teste — `formatDate(x)` que devolve "—" é
+falha silenciosa, não estado vazio legítimo. Varredura da classe: na tela sobrou só
+`row.expires_at` (declarado no modelo de waiver).

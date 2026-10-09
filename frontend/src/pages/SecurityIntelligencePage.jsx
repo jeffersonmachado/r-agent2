@@ -576,7 +576,7 @@ export function SecurityIntelligencePage() {
             <ul className="space-y-1 text-sm text-text-secondary">
               {timeline.items.map((event) => (
                 <li key={event.id}>
-                  <strong className="text-text-primary">{formatDate(event.created_at)}</strong> — {STATUS_LABELS[event.to_status] || event.to_status}
+                  <strong className="text-text-primary">{formatDate(event.at ?? event.createdAt ?? event.created_at)}</strong> — {STATUS_LABELS[event.to_status] || event.to_status}
                   {event.actor ? ` · ${event.actor}` : ''}
                 </li>
               ))}

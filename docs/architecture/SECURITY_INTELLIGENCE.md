@@ -352,6 +352,15 @@ agendado depois que o anterior termina.
    filtro consomem **a mesma instância** da lista, não cópias literais). A tela mostra os dois
    números e mantém os descartados auditáveis por um toggle explícito: 248 em risco aberto,
    843 descartados por VEX, 1091 registrados — a soma fecha. Verificado no browser.
+6. **Histórico de achado sem DATA (medido em 2026-10-08)** — o painel mostrava
+   "— — Correção disponível · systemadmin": o serviço devolvia a linha crua do ORM, que
+   expõe o carimbo como `createdAt` (o modelo usa `timestamps` + `underscored`), enquanto a
+   tela lia `created_at`. O evento aparecia com data vazia — num recurso cujo propósito é
+   responder "quando este risco apareceu, quem aceitou e por quê". Correção: `getFindingTimeline`
+   normaliza e expõe `at` explícito (`null` quando não há carimbo — nunca uma data inventada),
+   com regressão nos dois sentidos em `findingsRiskOnly.test.js`. Varredura da mesma classe em
+   toda a tela: só restou `row.expires_at`, que o modelo de waiver declara explicitamente.
+   Verificado no browser: `08/10/2026, 20:37:41 — Correção disponível · systemadmin`.
 - Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
 - A base de advisories cobre apenas os pacotes já consultados (`advisories --limit`).
