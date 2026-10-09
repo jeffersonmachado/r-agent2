@@ -361,6 +361,39 @@ agendado depois que o anterior termina.
    com regressão nos dois sentidos em `findingsRiskOnly.test.js`. Varredura da mesma classe em
    toda a tela: só restou `row.expires_at`, que o modelo de waiver declara explicitamente.
    Verificado no browser: `08/10/2026, 20:37:41 — Correção disponível · systemadmin`.
+7. **A missão de correção não EXECUTAVA — HTTP 500 no INSERT (medido em 2026-10-09, executando a
+   primeira missão de verdade)** — clicar *Executar* devolvia
+   `22001 value too long for type character varying(255)`: `engineering_tasks.title` é
+   varchar(255) e o orquestrador colocava ali o **objetivo inteiro** da missão (`objective` é
+   `text`). Missão criada à mão tem objetivo curto e passava; a missão de segurança carrega o
+   texto completo da spec (restrições + pré-condições) e estourava a coluna — a execução morria
+   **antes de começar**. Correção em `missionOrchestratorService.buildTaskContract`: o título é
+   RÓTULO (primeira linha, limitado a 255; usa o `title` da spec quando existe) e o texto
+   completo continua em `objective`; regressão em `taskContractTitleLength.test.js` (6 casos).
+8. **Todo patch era rejeitado por AUSÊNCIA de escopo (mesma medição)** — a task ia a RED com
+   `NO_PATCH_SCOPE`: o coder produzia o patch **certo** (bump no `package.json`, 271/358 chars) e
+   o validador o recusava porque o spec não declarava `allowedPaths` — e no Roteador escopo vazio
+   NUNCA significa "tudo permitido" (ER-V1-FINAL-003), significa "nenhum patch é aceitável".
+   Consequência: **a capacidade não corrigia nenhuma vulnerabilidade sozinha**. Correção: a
+   correção declara o escopo mecanicamente (`dependencyScopeOf`: manifesto+lock do serviço;
+   `rag-service/requirements.txt` no PyPI) e uma lista de caminhos **proibidos** (governança,
+   gates, política de roteamento, CI, migrations, config, segredos) que o próprio boundary
+   aplica; regressão em `patchMissionScope.test.js` (7 casos, com o `checkPathBoundary` real).
+   Declarar nas opções da missão **não bastava**: o compilador só herda `allowedPaths` de uma
+   versão anterior (`previousSpec ? previousSpec.allowedPaths : []`), então o escopo passou a
+   entrar como NOVA VERSÃO do spec pelo caminho do operador ("Editar e aprovar") com
+   `approveEdited: false` — aplicar escopo **nunca** aprova. Regressão: 3 casos novos em
+   `patchMissionBridge.test.js` (inclui "aplicar escopo nunca aprova" e falha explícita com o
+   `missionId`). Prova no browser: contrato exibido com `package.json package-lock.json` e
+   `npm run test:unit`; as **duas** tentativas seguintes validaram com `ok=true` (`APPLIED`).
+9. **O aceite não pode passar: a suíte do serviço está vermelha (estado de 2026-10-09)** — com
+   o patch válido e aplicado, a task vai para `TESTING` e reprova porque `npm run test:unit`
+   falha. Enquanto a suíte do serviço não estiver verde, **nenhuma missão chega a GREEN** e o
+   caminho autônomo não fecha achado nenhum — o gate de segurança continua `NO_GO`. Medido
+   também um **falso verde** na própria suíte: um teste que `require`-ia um script CLI executava
+   `main()` e `process.exit(0)`, matando o Jest no meio — o run terminava **sem** `Test Suites:` e
+   com **código de saída 0** mesmo com 13 suítes falhando (`--bail=0`). Guard
+   `require.main === module` obrigatório em scripts requeridos por teste.
 - Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
 - A base de advisories cobre apenas os pacotes já consultados (`advisories --limit`).

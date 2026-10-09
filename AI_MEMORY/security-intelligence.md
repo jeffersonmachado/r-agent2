@@ -225,3 +225,36 @@ Regra que fica: nome de campo do ORM não pode vazar para a tela. Ao expor linha
 normalize o carimbo de tempo num campo próprio e teste — `formatDate(x)` que devolve "—" é
 falha silenciosa, não estado vazio legítimo. Varredura da classe: na tela sobrou só
 `row.expires_at` (declarado no modelo de waiver).
+
+## Caminho de execução: 3 bloqueios reais medidos (2026-10-09)
+
+Executar a primeira missão de correção de verdade (fast-uri) revelou uma cadeia de bloqueios que
+nenhum teste pegava — todos corrigidos e commitados (`b1eb87bee`, `a8a2881a4`):
+
+1. **HTTP 500 `22001` ao clicar Executar**: `engineering_tasks.title` é varchar(255) e o
+   orquestrador punha ali o objetivo INTEIRO da missão (`objective` é `text`). Missão manual tem
+   objetivo curto e passava; a de segurança estourava e morria ANTES de começar. Fix: título =
+   rótulo limitado (`buildTaskContract`/`taskTitleOf`).
+2. **`NO_PATCH_SCOPE` em todo patch**: sem `allowedPaths` o Roteador recusa QUALQUER patch
+   (ER-V1-FINAL-003 — vazio nunca é "tudo"). O coder acertava o patch e ele era barrado.
+   Fix: `dependencyScopeOf` + caminhos proibidos (governança/gates/roteamento/segredos) com
+   regressão no `checkPathBoundary` real.
+3. **O compilador descarta `allowedPaths` do criador** (`previousSpec ? … : []`): declarar nas
+   opções não bastava. Fix: o escopo entra como NOVA VERSÃO do spec pelo caminho "Editar e
+   aprovar" com `approveEdited: false` (aplicar escopo nunca aprova; a decisão humana segue
+   obrigatória).
+
+Depois dos três, a missão `undici` produziu **duas tentativas com patch válido** (`ok=true`,
+`APPLIED`) e avançou para `TESTING`. O que a reprova agora é a **suíte do serviço**, que precisa
+estar verde para o aceite ("suíte do serviço consumidor verde").
+
+## Falso verde na suíte: `process.exit(0)` mata o Jest
+
+`tests/unit/governance/pruneTestMissionFkCoverage.test.js` faz `require` de um script CLI; sem o
+guard `if (require.main === module)` o `require` roda `main()` (que apaga dados de DEV) e chama
+`process.exit(0)`: o Jest **morre no meio**, sai **sem** a linha `Test Suites:` e o comando
+termina com **código 0** mesmo com 13 suítes FAILED. Medido em 2026-10-09 no `--bail=0`
+(`EXIT=0`, 13 `FAIL` no log).
+
+Regra: ao medir "suíte verde", exigir a linha `Test Suites:` no final e desconfiar de `EXIT=0`
+sem resumo. Script CLI requerido por teste precisa do guard.
