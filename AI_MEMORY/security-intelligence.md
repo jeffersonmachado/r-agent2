@@ -150,6 +150,17 @@ operacional; não duplica o doc.
 5. Regressão de ranking híbrido pós-atualização de extensão (vetorial + lexical +
    RRF + filtros multi-tenant).
 
+**Baseline pré-upgrade do pgvector (2026-10-09):**
+`AI_MEMORY/evidence/security-intel/pgvector-upgrade-baseline-2026-10-09.json` —
+0.6.0, PostgreSQL 16.15, 384 dimensões medidas, HNSW válido/pronto/vivo com planner
+usando o índice, 8460 chunks com 0 nulos e 0 dimensões erradas, e a regressão de
+ranking híbrido (com isolamento multi-tenant **contra o banco real**) em
+**20 passed / 0 skipped / 0 failed** (26 s). Armadilha medida: os 4 testes de
+isolamento são PULADOS sem `DATABASE_URL` no ambiente do pytest — rode com o `.env`
+carregado (`set -a && . ../.env && set +a`), senão a "regressão verde" é meia prova.
+Critério: qualquer `failed`, `passed` < 20, skip novo por ambiente ou mudança em
+qualquer eixo do índice ⇒ upgrade NÃO validado.
+
 **Já entregue:** inventário (Fase 1), SBOM, advisories + correlação (Fase 2), Risk
 Engine (Fase 3), Patch Engine + ponte com o Roteador (Fase 4), Release Security Gate
 com exit real (Fase 5), worker contínuo (Fase 7), check de índice vetorial (Fase 8),

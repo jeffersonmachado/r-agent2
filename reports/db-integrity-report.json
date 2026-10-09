@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-08T23:00:22.553Z",
+  "generatedAt": "2026-10-09T00:57:25.853Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "65059198a344b72c130a345930e666030c9605f7",
+  "commit": "9684193defc42d379e9c8c7dc2bf45d3dc766053",
   "dbAvailable": true,
   "totals": {
-    "models": 222,
-    "validated": 222,
+    "models": 223,
+    "validated": 223,
     "visited": 0,
     "failed": 0,
     "warnings": 49
@@ -9691,6 +9691,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "14 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:SecurityWaiver",
+      "table": "security_waivers",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/SecurityWaiver.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=security_waivers"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261008233000-create-security-waivers.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'security_waivers' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "17 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",

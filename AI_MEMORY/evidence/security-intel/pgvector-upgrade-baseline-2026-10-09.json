@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-10-09T01:02:57.950Z",
+  "purpose": "Baseline comparável ANTES de qualquer mudança de versão do pgvector (ou do índice). O upgrade só pode ser declarado seguro contra ESTES números.",
+  "environment": {
+    "pgvectorVersion": "0.6.0",
+    "recommendedMinVersion": "0.8.0",
+    "postgresVersion": "PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+    "postgresVersionDetail": "PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit",
+    "measuredDimensions": 384,
+    "expectedDimensions": 384
+  },
+  "vectorIndex": {
+    "indexName": "rag_chunks_embedding_hnsw_idx",
+    "accessMethod": "hnsw",
+    "opclass": "vector_cosine_ops",
+    "isValid": true,
+    "isReady": true,
+    "isLive": true,
+    "definition": "CREATE INDEX rag_chunks_embedding_hnsw_idx ON public.rag_chunks USING hnsw (embedding vector_cosine_ops)",
+    "sizeBytes": 15728640,
+    "scans": 6,
+    "chunksTotal": 8460,
+    "chunksWithNullEmbedding": 0,
+    "chunksWithWrongDimensions": 0,
+    "plannerUsesIndex": true,
+    "plannerPlan": "  ->  Index Scan using rag_chunks_embedding_hnsw_idx on rag_chunks |         Order By: (embedding <=> $0) |         Filter: (embedding IS NOT NULL)"
+  },
+  "hybridRankingRegression": {
+    "command": "./venv/bin/python -m pytest tests/test_hybrid_search.py tests/test_query_hybrid_strategy.py tests/test_hybrid_isolation_real_db.py -q -rs --no-cov",
+    "files": [
+      "tests/test_hybrid_search.py",
+      "tests/test_query_hybrid_strategy.py",
+      "tests/test_hybrid_isolation_real_db.py"
+    ],
+    "passed": 20,
+    "skipped": 0,
+    "failed": 0,
+    "suspiciousEmptyRun": false,
+    "skipReasons": [],
+    "exitCode": 0,
+    "durationMs": 26536,
+    "coverage": "as suítes de ranking híbrido e de isolamento multi-tenant (vetorial + lexical + RRF)"
+  },
+  "howToCompareAfterUpgrade": [
+    "Rode o MESMO comando com o banco já na versão nova e compare: passed/skipped/failed e a integridade do índice.",
+    "Regressão com passed < 20, qualquer failed, ou skip novo por ambiente ⇒ upgrade NÃO validado.",
+    "Confira também os eixos do índice: isValid/isReady/isLive, 0 nulos e 0 dimensões erradas, e o planner usando o índice.",
+    "Nada disso substitui a decisão de produção: o upgrade é mudança de infraestrutura."
+  ],
+  "limits": [
+    "Esta baseline mede o ranking híbrido e o isolamento multi-tenant; não mede latência sob carga real.",
+    "Os testes usam o tenant system e tenant-demo; tenants sem dados não são exercitados."
+  ]
+}

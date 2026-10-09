@@ -292,8 +292,20 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
      capacidade; (b) planejar a atualização de `vector` 0.6.0 → 0.8.x em ambiente
      isolado com regressão do ranking híbrido (vetorial + lexical + fusão RRF +
      filtros multi-tenant) antes de qualquer mudança em produção.
-6. Regressão de ranking híbrido pós-atualização de extensão (vetorial + lexical + fusão
-   RRF + filtros multi-tenant).
+   - **BASELINE PRÉ-UPGRADE ESTABELECIDA** (2026-10-09) em
+     `AI_MEMORY/evidence/security-intel/pgvector-upgrade-baseline-2026-10-09.json`:
+     ambiente (0.6.0, PostgreSQL 16.15, 384 dimensões medidas = esperadas), índice HNSW
+     `isValid/isReady/isLive = true` com planner **usando** o índice, 8460 chunks com
+     **0 nulos e 0 dimensões erradas**, e a regressão de ranking híbrido
+     (vetorial + lexical + RRF + **isolamento multi-tenant contra o banco real**) em
+     **20 passed / 0 skipped / 0 failed** (26 s). Nota de método: os 4 testes de
+     isolamento **eram pulados** por falta de `DATABASE_URL` no ambiente do pytest — a
+     baseline só é completa quando eles rodam; o comando agora carrega o `.env`.
+     **Critério de comparação após o upgrade:** mesmo comando, e o upgrade NÃO é
+     validado se houver qualquer `failed`, se `passed` cair de 20, se aparecer skip por
+     ambiente, ou se mudar qualquer eixo do índice (validade, nulos, dimensões,
+     planner). Isso é pré-requisito técnico; a decisão de trocar a extensão continua
+     sendo de produção.
 
 **Entregues nesta capacidade (com prova):** inventário de componentes, SBOM CycloneDX,
 advisories + correlação (sweep de 1125 pacotes instalados), Risk Engine, Patch Engine +
@@ -327,7 +339,7 @@ Cada linha declara **o que foi provado**, não o que foi escrito. Estado possív
 | Fila de triagem | `triage` → 28 pacotes (19 isolados, 4 exigem aprovação humana, 5 sem correção publicada), com motivo e comando por item, em JSON + Markdown | SATISFEITO |
 | Triagem das 248 achados | Dossiê pronto; **a decisão é humana** e ainda não foi tomada | PENDENTE — DECISÃO |
 | Registro do gate no agregado | Não registrado de propósito: hoje bloquearia o release da plataforma por decisão que é do dono | PENDENTE — DECISÃO |
-| Índice vetorial (pgvector) | `vector 0.6.0` < 0.8.0 recomendado ⇒ **DEGRADED**; HNSW VÁLIDO, planner **usa** o índice, 8460 chunks com 0 nulos / 0 dimensões erradas. A "corrupção" relatada **não se reproduz** | PENDENTE — TRABALHO (upgrade 0.6.0 → 0.8.x em ambiente isolado + regressão de ranking híbrido) |
+| Índice vetorial (pgvector) | `vector 0.6.0` < 0.8.0 recomendado ⇒ **DEGRADED**; HNSW VÁLIDO, planner **usa** o índice, 8460 chunks com 0 nulos / 0 dimensões erradas. **Baseline pré-upgrade estabelecida** (regressão de ranking híbrido + isolamento multi-tenant: 20 passed / 0 skipped / 0 failed) com critério objetivo de comparação | PENDENTE — TRABALHO (upgrade 0.6.0 → 0.8.x; a baseline já existe para provar que não regrediu) |
 | Atualização de runtime/extensão | Nenhuma atualização foi aplicada: a validação de uma atualização exige ambiente isolado e regressão (o Patch Engine já emite a missão com pré-condições e comandos de teste) | PENDENTE — TRABALHO |
 
 ## 10. Decisão
