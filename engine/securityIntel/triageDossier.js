@@ -95,9 +95,11 @@ function normalizeGroup(group) {
     advisoriesWithoutFix: Number(group.advisoriesWithoutFix || 0),
     fullyClearable: group.fullyClearable === true,
     // Impacto medido: quantos achados de severidade BLOQUEANTE continuam abertos
-    // neste pacote/serviço. Sem isso a fila é ordenada por severidade, não por
-    // efeito no gate — e o operador descobre depois que resolveu pouco.
+    // neste pacote/serviço (em dependência de RUNTIME — dev-only só conta quando a
+    // política manda bloquear). Sem isso a fila é ordenada por severidade, não por
+    // efeito no gate, e o operador descobre depois que resolveu pouco.
     blockingFindingsOpen: Number(group.blockingFindingsOpen || 0),
+    blockingFindingsDevOnly: Number(group.blockingFindingsDevOnly || 0),
     // Chaves reais para a ação (quando o chamador tem os candidatos em mãos): a
     // fila precisa ser EXECUTÁVEL, não um lembrete de que algo existe.
     candidateKeys: Array.isArray(group.candidateKeys) ? group.candidateKeys.filter(Boolean) : [],
@@ -208,7 +210,7 @@ function buildTriageDossier({
       queueBlockingFindings: queueBlockingImpact,
       queueBlockingFindingsDevOnly: queueBlockingDevOnly,
       globalBlockingFindings: blockingFindings,
-      unitWarning: 'gate conta bloqueio por achado × cópia física; o dossiê conta achado no inventário. Não subtraia estas contagens entre si — use a cobertura por pacote.',
+      unitWarning: 'gate conta bloqueio por achado × cópia física; o dossiê conta achado no inventário (e exclui dev-only quando a política não bloqueia dev). Não subtraia estas contagens entre si — use a cobertura por pacote.',
     },
     measured: {
       findingsAtRisk: findings?.open ?? null,
@@ -261,8 +263,11 @@ function renderTriageMarkdown(dossier) {
     + `${dossier.blockingImpact.gateBlockingPackagesOutOfQueue.length === 0
       ? ' (nenhum bloqueador ficou fora)'
       : ` — FORA da fila: ${dossier.blockingImpact.gateBlockingPackagesOutOfQueue.join(', ')}`}`);
-  lines.push(`- Bloqueantes por ACHADO (unidade diferente da do gate): ${dossier.blockingImpact.queueBlockingFindings} endereçados pela fila`
+  lines.push(`- Bloqueantes por ACHADO (unidade do inventário): ${dossier.blockingImpact.queueBlockingFindings} endereçados pela fila`
     + ` (${dossier.blockingImpact.queueBlockingFindingsDevOnly} em pacotes marcados dev-only) de ${dossier.blockingImpact.globalBlockingFindings} abertos.`
+    + `${dossier.blockingImpact.gateBlockingItems !== null && dossier.blockingImpact.gateBlockingItems === dossier.blockingImpact.queueBlockingFindings
+      ? ` As duas medidas INDEPENDENTES concordam: o gate também conta ${dossier.blockingImpact.gateBlockingItems} bloqueios.`
+      : ` O gate conta ${dossier.blockingImpact.gateBlockingItems ?? '?'} bloqueios — números diferentes são esperados entre unidades diferentes.`}`
     + ` ${dossier.blockingImpact.unitWarning}`);  lines.push('');
   for (const bucket of BUCKET_ORDER) {
     const items = dossier.groups.filter((group) => group.bucket === bucket);
@@ -275,7 +280,7 @@ function renderTriageMarkdown(dossier) {
       lines.push(`- Versão: ${group.currentVersion || '—'} → ${group.recommendedVersion || '**sem alvo publicado**'}`);
       lines.push(`- Advisories: ${group.advisoriesTotal} (sem correção: ${group.advisoriesWithoutFix}) | risco da atualização: ${group.updateRisk}`);
       lines.push(`- Impacto: ${group.blockingFindingsOpen} achado(s) de severidade bloqueante em aberto neste pacote`
-        + `${group.devOnly ? ' (dev-only: não conta como bloqueio na política vigente)' : ''}`);
+        + `${group.blockingFindingsDevOnly > 0 ? ` (+${group.blockingFindingsDevOnly} em dependência dev-only, que não bloqueia na política vigente)` : ''}`);
       lines.push(`- Por quê: ${group.rationale}`);
       if (group.recommendedCandidateKey) {
         lines.push(`- Candidato recomendado: \`${group.recommendedCandidateKey}\`${group.recommendedVersion ? ` (alvo ${group.recommendedVersion})` : ''}`);

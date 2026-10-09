@@ -674,12 +674,36 @@ async function commandTriage(args) {
 
   // Impacto por pacote/serviço: quantos achados de severidade BLOQUEANTE seguem
   // abertos. É o que permite ordenar a fila por efeito no gate, não por severidade.
+  //
+  // Precisão que importa: achado em dependência dev-only NÃO bloqueia release quando a
+  // política manda tratá-la como aviso (`blockOnDevDependencies: false`). Contar esses
+  // achados como impacto inflaria a fila e faria o operador perseguir o que não bloqueia.
+  // O `dev` é lido do COMPONENTE (por `bom_ref`), não por heurística de nome.
   const blockingSeverities = policy.releaseGate?.blockOnSeverity || [];
+  const blockOnDev = policy.releaseGate?.blockOnDevDependencies === true;
+  // O factory de model exige conexão ativa (sem ela devolve um Proxy que lança):
+  // conectar explicitamente em vez de depender da ordem das chamadas anteriores.
+  const { connect, getSequelize } = require('../api/db/sequelize');
+  if (!getSequelize()) await connect(3, 500);
+  const Component = require('../api/db/models/SecurityComponent')();
+  const componentRows = await Component.findAll({
+    where: { tenant_key: tenantKey },
+    attributes: ['bom_ref', 'dev'],
+    raw: true,
+  });
+  const devByBomRef = new Map(componentRows.map((row) => [row.bom_ref, row.dev === true]));
+
   const blockingCountsByPackageService = new Map();
+  const devBlockingCountsByPackageService = new Map();
   for (const severity of blockingSeverities) {
     const page = await listFindings({ tenantKey, severity, limit: 500 });
     for (const row of page.items) {
       const key = `${row.package_name}|${row.service || ''}`;
+      const isDevOnly = devByBomRef.get(row.component_bom_ref) === true;
+      if (isDevOnly && !blockOnDev) {
+        devBlockingCountsByPackageService.set(key, (devBlockingCountsByPackageService.get(key) || 0) + 1);
+        continue;
+      }
       blockingCountsByPackageService.set(key, (blockingCountsByPackageService.get(key) || 0) + 1);
     }
   }
@@ -737,6 +761,7 @@ async function commandTriage(args) {
       findingKeys: entry.findingKeys,
       withoutFixFindingKeys: entry.withoutFixFindingKeys,
       blockingFindingsOpen: blockingCountsByPackageService.get(`${group.packageName}|${group.service || ''}`) || 0,
+      blockingFindingsDevOnly: devBlockingCountsByPackageService.get(`${group.packageName}|${group.service || ''}`) || 0,
     };
   });
 

@@ -228,4 +228,27 @@ describe('triageDossier — ordenação, totais e honestidade', () => {
     expect(md).toContain('2 de 3');
     expect(md).toContain('FORA da fila: undici');
   });
+
+  it('declara a concordância quando a fila e o gate chegam ao mesmo número', () => {
+    // Duas medidas independentes (fila = achado de runtime por severidade bloqueante;
+    // gate = lista de bloqueios da sua própria coleta). Concordarem é evidência forte;
+    // divergirem é sinal de investigação — em nenhum caso se subtrai uma da outra.
+    const groups = [
+      group({ packageName: 'lodash', blockingFindingsOpen: 3 }),
+      group({ packageName: 'postcss', blockingFindingsOpen: 2 }),
+    ];
+    const gate = {
+      decision: 'NO_GO',
+      blocking: [
+        { message: 'achado HIGH aberto: GHSA-1 em lodash@4.17.23' },
+        { message: 'achado HIGH aberto: GHSA-2 em lodash@4.17.23' },
+        { message: 'achado HIGH aberto: GHSA-3 em lodash@4.17.23' },
+        { message: 'achado HIGH aberto: GHSA-4 em postcss@8.5.6' },
+        { message: 'achado HIGH aberto: GHSA-5 em postcss@8.5.6' },
+      ],
+      warnings: [],
+    };
+    const md = renderTriageMarkdown(dossier(groups, { gate }));
+    expect(md).toContain('As duas medidas INDEPENDENTES concordam');
+  });
 });
