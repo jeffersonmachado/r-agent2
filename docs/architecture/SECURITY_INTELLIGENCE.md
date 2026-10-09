@@ -339,6 +339,19 @@ agendado depois que o anterior termina.
    módulo puro `frontend/src/shared/securityIntel/waiverOptions.js` (bucket de decisão sempre
    completo, filtro que nunca remove decisão, limite da API **declarado** em vez de omitido),
    com regressão em `waiverOptions.test.js`. Verificado no browser: **35/35** alcançáveis.
+5. **Dois números do mesmo painel contavam coisas diferentes (medido em 2026-10-08)** — a
+   tabela de achados dizia "1091 achados abertos" enquanto o KPI dizia "248 achados abertos
+   (risco)": **843 registros (77%) já haviam sido descartados por VEX** (`NOT_AFFECTED` /
+   `FALSE_POSITIVE`) e continuavam contados/rotulados como abertos. No mesmo painel, o filtro
+   *Somente KEV* devolvia **4** achados (todos `INFORMATIONAL` descartados por VEX) enquanto o
+   KPI *Achados em KEV* dizia **0** — o usuário não tinha como saber qual número valia.
+   A leitura do gate sempre foi a de risco (exclui VEX); a listagem não. Correção: a definição
+   virou **uma constante só** (`VEX_EXCLUDED_STATUSES`), usada pelo resumo e pelo filtro
+   `riskOnly` da listagem (KPI e tabela não podem divergir), com regressão em
+   `tests/unit/securityIntel/findingsRiskOnly.test.js` (inclui a asserção de que o resumo e o
+   filtro consomem **a mesma instância** da lista, não cópias literais). A tela mostra os dois
+   números e mantém os descartados auditáveis por um toggle explícito: 248 em risco aberto,
+   843 descartados por VEX, 1091 registrados — a soma fecha. Verificado no browser.
 - Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
 - A base de advisories cobre apenas os pacotes já consultados (`advisories --limit`).

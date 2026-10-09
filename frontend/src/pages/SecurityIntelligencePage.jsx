@@ -194,6 +194,9 @@ export function SecurityIntelligencePage() {
   const [inventorySearch, setInventorySearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
   const [onlyKev, setOnlyKev] = useState(false);
+  // Achados descartados por VEX (não afetado / falso positivo) são registros
+  // auditáveis, mas NÃO são risco: ficam fora da contagem por padrão, como no KPI.
+  const [includeVex, setIncludeVex] = useState(false);
   const [timeline, setTimeline] = useState(null);
   const [waivers, setWaivers] = useState({ items: [], total: 0, maxWaiverDays: null });
   const [triage, setTriage] = useState(null);
@@ -217,6 +220,9 @@ export function SecurityIntelligencePage() {
         listSecurityFindings({
           severity: severityFilter || undefined,
           kev: onlyKev ? 'true' : undefined,
+          // KEV significa risco explorado: usa sempre a definição de risco aberto.
+          // Fora disso, o VEX só aparece se o usuário pedir explicitamente.
+          riskOnly: onlyKev || !includeVex ? 'true' : undefined,
           limit: 500,
         }),
         listSecurityPatches({ limit: 100 }),
@@ -234,7 +240,7 @@ export function SecurityIntelligencePage() {
     } finally {
       setLoading(false);
     }
-  }, [severityFilter, onlyKev]);
+  }, [severityFilter, onlyKev, includeVex]);
 
   useEffect(() => {
     loadAll();
@@ -406,7 +412,7 @@ export function SecurityIntelligencePage() {
       { label: 'Achados de severidade bloqueante', value: blocking, tone: blocking > 0 ? 'text-red-500' : 'text-emerald-500' },
       { label: 'Sem correção publicada', value: noFix, tone: noFix > 0 ? 'text-orange-500' : 'text-emerald-500' },
       { label: 'Candidatos de correção', value: summary.patchCandidates ?? 0 },
-      { label: 'Achados em KEV (explorado)', value: kev, tone: kev > 0 ? 'text-orange-500' : 'text-emerald-500' },
+      { label: 'Achados em KEV (risco aberto)', value: kev, tone: kev > 0 ? 'text-orange-500' : 'text-emerald-500' },
       { label: 'Índice vetorial', value: VECTOR_VERDICT_LABELS[vectorIndex?.verdict] || 'não medido', tone: vectorTone },
       { label: 'Base de advisories', value: summary.advisoryBase?.stale ? `vencida (${formatHours(summary.advisoryBase?.ageHours)})` : formatHours(summary.advisoryBase?.ageHours), tone: summary.advisoryBase?.stale ? 'text-red-500' : 'text-emerald-500' },
       { label: 'Descartados por VEX (evidência)', value: summary.vexEvaluations ?? 0 },
@@ -486,7 +492,16 @@ export function SecurityIntelligencePage() {
             </select>
             <label className="flex items-center gap-2 text-sm text-text-secondary">
               <input type="checkbox" checked={onlyKev} onChange={(event) => setOnlyKev(event.target.checked)} />
-              Somente KEV
+              Somente KEV (risco aberto)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={includeVex}
+                onChange={(event) => setIncludeVex(event.target.checked)}
+                data-testid="findings-include-vex"
+              />
+              Incluir descartados por VEX (auditoria)
             </label>
           </div>
         </div>
@@ -545,7 +560,15 @@ export function SecurityIntelligencePage() {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-text-secondary mt-2">Total: {findings.total ?? 0} achados abertos registrados.</p>
+        <p className="text-xs text-text-secondary mt-2" data-testid="findings-totals">
+          {includeVex
+            ? `${findings.total ?? 0} achados registrados, incluindo ${summary?.vexEvaluations ?? 0} descartados por VEX (não são risco)`
+            : `${findings.total ?? 0} achados em risco aberto`}
+          {(summary?.vexEvaluations ?? 0) > 0 && !includeVex
+            ? ` · ${summary.vexEvaluations} descartados por VEX (não afetado / falso positivo) ficam FORA desta contagem — marque "Incluir descartados por VEX" para auditá-los`
+            : ''}
+          {onlyKev ? ' · filtro "somente KEV" na mesma definição do KPI acima' : ''}
+        </p>
 
         {timeline && (
           <div className={`${CARD} mt-4`}>

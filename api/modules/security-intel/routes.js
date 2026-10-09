@@ -259,6 +259,9 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
         severity: req.query.severity,
         service: req.query.service,
         kev: req.query.kev === 'true' ? true : undefined,
+        // Mesma definição de risco do resumo: sem isto a tabela contava 843
+        // achados já descartados por VEX como "abertos".
+        riskOnly: req.query.riskOnly === 'true' ? true : undefined,
         includeResolved: req.query.includeResolved === 'true',
         limit: req.query.limit,
         offset: req.query.offset,

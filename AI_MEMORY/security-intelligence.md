@@ -189,3 +189,22 @@ Verificado no browser: **35/35** alcançáveis, filtro preserva as decisões, 0 
 
 Regra que fica: contagem exibida e contagem real precisam concordar ou o número precisa
 estar na tela. Truncamento silencioso em superfície de decisão é defeito, não detalhe de UI.
+
+## Defeito medido no painel (2026-10-08) — KPI, tabela e filtro contavam coisas diferentes
+
+Medido no browser, no MESMO painel: a tabela dizia "1091 achados abertos" e o KPI dizia
+"248 achados abertos (risco)". A diferença (843) já estava **descartada por VEX**
+(`NOT_AFFECTED`/`FALSE_POSITIVE`) e continuava contada como aberta. Pior no KEV: o filtro
+"Somente KEV" devolvia 4 achados (todos `INFORMATIONAL`, todos descartados por VEX) enquanto
+o KPI dizia 0 — sem como saber qual número valia.
+
+O gate sempre leu risco (exclui VEX); a listagem não. Correção: `VEX_EXCLUDED_STATUSES` é a
+definição ÚNICA, usada pelo resumo (`open`/`kevOpen`) e pelo novo filtro `riskOnly` da
+listagem; a tela passa `riskOnly=true` por padrão, declara os dois números e mantém os
+descartados auditáveis por toggle ("Incluir descartados por VEX"). Regressão:
+`tests/unit/securityIntel/findingsRiskOnly.test.js` (7 casos, inclui "o resumo e o filtro usam
+a MESMA instância da lista").
+
+Regra que fica: dois números sobre o mesmo assunto no mesmo painel precisam de UMA definição
+compartilhada ou de rótulos que digam qual definição estão usando. "Aberto" sem qualificar
+(risco? registro?) é ambíguo e já produziu leitura errada de 4× o risco real.
