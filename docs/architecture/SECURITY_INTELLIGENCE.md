@@ -121,6 +121,11 @@ existe comando que "resolva" a triagem, e nenhum deles aplica correção em prod
 
 ```bash
 # 0) Frescor primeiro: base vencida (ou plano antigo) invalida a fila.
+#    O ciclo completo em UMA entrada (ordem fixa, falha para o ciclo):
+bash scripts/security-intel-sweep.sh                 # com egress (atualiza a base, ~6 min)
+bash scripts/security-intel-sweep.sh --no-egress      # sem rede (~15 s medidos)
+#    log fora do workspace: ~/.local/state/ragent2-security-intel/sweep-<ts>.log
+#    Equivalente manual (se preferir passo a passo):
 node scripts/security-intel.js advisories --scope installed --rate 5   # só se a base estiver velha
 node scripts/security-intel.js scan --scope installed                  # correlação (offline)
 node scripts/security-intel.js patches                                 # regenera candidatos
@@ -128,6 +133,32 @@ node scripts/security-intel.js patches                                 # regener
 # 1) Fila de decisão: 3 buckets, com motivo, chaves reais e comando por pacote
 node scripts/security-intel.js triage
 #    -> reports/security-intel-triage.md (leitura humana) + .json (evidência)
+```
+
+Ciclo semanal sugerido (o egress é deliberado, fora da janela de release):
+
+```cron
+# domingo 03:17 UTC — o mesmo horário da atualização das waves técnicas
+17 3 * * 0 cd /opt/results/ria/r-agent2 && bash scripts/security-intel-sweep.sh >> $HOME/.local/state/ragent2-security-intel/cron.log 2>&1
+```
+
+Como `systemd --user` (alternativa ao cron, com unidade própria):
+
+```ini
+# ~/.config/systemd/user/security-intel-sweep.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/results/ria/r-agent2
+ExecStart=/usr/bin/bash scripts/security-intel-sweep.sh
+```
+
+```ini
+# ~/.config/systemd/user/security-intel-sweep.timer
+[Timer]
+OnCalendar=Sun 03:17
+Persistent=true
+[Install]
+WantedBy=timers.target
 ```
 
 `reports/security-intel-triage.md` traz, por pacote: versão atual → alvo, advisories
@@ -366,6 +397,14 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
      ambiente, ou se mudar qualquer eixo do índice (validade, nulos, dimensões,
      planner). Isso é pré-requisito técnico; a decisão de trocar a extensão continua
      sendo de produção.
+   - **BLOQUEIO REAL NOMEADO** (verificado em 2026-10-09 pelo check
+     `node scripts/governance/check-pgvector-upgrade-readiness.js`, evidência em
+     `reports/pgvector-upgrade-readiness.json`): o servidor de banco **só oferece a
+     versão 0.6.0** (`pg_available_extension_versions`); a 0.8.0 **não está instalada
+     nem disponível**. Ou seja: o upgrade não é executável aqui — exige instalar o
+     pacote da extensão no host do banco, fora do fluxo automático. E, como pgvector
+     **não suporta downgrade**, o rollback é restaurar backup (`scripts/backup-postgres.sh`),
+     nunca `ALTER EXTENSION UPDATE TO <versão antiga>`.
 
 **Entregues nesta capacidade (com prova):** inventário de componentes, SBOM CycloneDX,
 advisories + correlação (sweep de 1125 pacotes instalados), Risk Engine, Patch Engine +
@@ -385,7 +424,7 @@ Cada linha declara **o que foi provado**, não o que foi escrito. Estado possív
 |---|---|---|
 | Inventário de componentes/versões | 1653 componentes (96 diretos, 1529 transitivos), 816 arestas, 13 fontes lidas / 0 ausentes, cobertura 100% com 4 limites declarados; classes DECLARED/RESOLVED/BUILT/RUNNING | SATISFEITO |
 | SBOM | CycloneDX 1.5, 1653 componentes, **válido**, persistido (`sha256 b00f482c…`), geração idempotente por conteúdo | SATISFEITO |
-| Descoberta de vulnerabilidades | OSV + catálogo KEV (1739 CVEs) + EPSS; base de **654 advisories**; sweep de **1125/1125 pacotes instalados** a 5 req/s em 374 s com 0 falhas | SATISFEITO COM RESSALVA (o sweep é manual; o worker não sincroniza base por padrão — egress é opt-in) |
+| Descoberta de vulnerabilidades | OSV + catálogo KEV (1739 CVEs) + EPSS; base de **654 advisories**; sweep de **1125/1125 pacotes instalados** a 5 req/s em 374 s com 0 falhas; ciclo completo em UMA entrada (`scripts/security-intel-sweep.sh`, com log fora do workspace) e cadência semanal documentada (cron/systemd) | SATISFEITO (a cadência é documentada, não agendada pelo repo: egress é deliberado e fora da janela de release) |
 | Correlação e triagem automática (VEX) | 248 achados com risco (3 CRITICAL, 118 HIGH, 108 MEDIUM, 10 LOW, 9 INFORMATIONAL) + 843 avaliações VEX em 966 ms, offline e idempotente | SATISFEITO |
 | Avaliação de risco auditável | CVSS oficial (spec FIRST, **vetor convertido**, nunca assumido), KEV, EPSS, exposição por serviço e classe de versão; fatores e rationale persistidos por achado | SATISFEITO |
 | Evidência e reprodutibilidade | `security_findings` + `security_finding_events` append-only, timeline por achado, SBOM versionado por sha256, toda medição com evidência em `AI_MEMORY/evidence/security-intel/` | SATISFEITO |
@@ -399,7 +438,7 @@ Cada linha declara **o que foi provado**, não o que foi escrito. Estado possív
 | Fila de triagem | `triage` → 28 pacotes (19 isolados, 4 exigem aprovação humana, 5 sem correção publicada), com motivo, impacto medido, candidato recomendado e comando pronto; a **mesma** fila vem do serviço único `triageService` para o CLI, a API (`GET /api/security-intel/triage`) e a UI | SATISFEITO |
 | Triagem das 248 achados | Dossiê pronto; **a decisão é humana** e ainda não foi tomada | PENDENTE — DECISÃO |
 | Registro do gate no agregado | Não registrado de propósito: hoje bloquearia o release da plataforma por decisão que é do dono | PENDENTE — DECISÃO |
-| Índice vetorial (pgvector) | `vector 0.6.0` < 0.8.0 recomendado ⇒ **DEGRADED**; HNSW VÁLIDO, planner **usa** o índice, 8460 chunks com 0 nulos / 0 dimensões erradas. **Baseline pré-upgrade estabelecida** (regressão de ranking híbrido + isolamento multi-tenant: 20 passed / 0 skipped / 0 failed) com critério objetivo de comparação | PENDENTE — TRABALHO (upgrade 0.6.0 → 0.8.x; a baseline já existe para provar que não regrediu) |
+| Índice vetorial (pgvector) | `vector 0.6.0` < 0.8.0 recomendado ⇒ **DEGRADED**; HNSW VÁLIDO, planner **usa** o índice, 8460 chunks com 0 nulos / 0 dimensões erradas. **Baseline pré-upgrade estabelecida** (regressão de ranking híbrido + isolamento multi-tenant: 20 passed / 0 skipped / 0 failed) com critério objetivo de comparação, e **bloqueio medido**: o servidor só oferece 0.6.0 — a 0.8.0 precisa ser instalada no host do banco (`check-pgvector-upgrade-readiness.js`) | PENDENTE — INFRA (fora do repo: instalar o pacote da extensão; sem downgrade, o rollback é backup) |
 | Atualização de runtime/extensão | Nenhuma atualização foi aplicada: a validação de uma atualização exige ambiente isolado e regressão (o Patch Engine já emite a missão com pré-condições e comandos de teste) | PENDENTE — TRABALHO |
 
 ## 10. Decisão
