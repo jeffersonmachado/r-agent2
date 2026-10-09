@@ -59,11 +59,22 @@ function rationaleOf(group, bucket) {
 }
 
 function commandOf(group, bucket) {
+  // Prefere o candidato RECOMENDADO (alvo que limpa todos os advisories do pacote):
+  // mandar missão para o primeiro candidato da lista resolveria só parte do pacote
+  // e a fila pareceria travada.
+  const candidateKey = group.recommendedCandidateKey || (group.candidateKeys || [])[0] || null;
   if (bucket === BUCKETS.WAIVER_OR_COMPENSATING_CONTROL) {
-    return `node scripts/security-intel.js waive --finding <findingKey de ${group.packageName}> --approve <quem assume> --days <prazo ≤ máximo> --reason "<motivo>" --control "<controle compensatório>"`;
+    const findingKey = (group.withoutFixFindingKeys || [])[0] || (group.findingKeys || [])[0] || '<findingKey>';
+    return `node scripts/security-intel.js waive --finding "${findingKey}"`
+      + ' --approve <quem assume> --days <prazo ≤ máximo>'
+      + ' --reason "<motivo>" --control "<controle compensatório>"';
+  }
+  const rest = bucket === BUCKETS.HUMAN_APPROVAL ? ' --authorized-by <quem autoriza>' : '';
+  if (candidateKey) {
+    return `node scripts/security-intel.js patch-mission --candidate "${candidateKey}"${rest}`;
   }
   return `node scripts/security-intel.js patches  # obter a chave do candidato de ${group.packageName}, depois:`
-    + ` node scripts/security-intel.js patch-mission --candidate <chave>${bucket === BUCKETS.HUMAN_APPROVAL ? ' --authorized-by <quem autoriza>' : ''}`;
+    + ` node scripts/security-intel.js patch-mission --candidate <chave>${rest}`;
 }
 
 function normalizeGroup(group) {
@@ -83,6 +94,12 @@ function normalizeGroup(group) {
     advisoriesTotal: Number(group.advisoriesTotal || 0),
     advisoriesWithoutFix: Number(group.advisoriesWithoutFix || 0),
     fullyClearable: group.fullyClearable === true,
+    // Chaves reais para a ação (quando o chamador tem os candidatos em mãos): a
+    // fila precisa ser EXECUTÁVEL, não um lembrete de que algo existe.
+    candidateKeys: Array.isArray(group.candidateKeys) ? group.candidateKeys.filter(Boolean) : [],
+    recommendedCandidateKey: group.recommendedCandidateKey || null,
+    findingKeys: Array.isArray(group.findingKeys) ? group.findingKeys.filter(Boolean) : [],
+    withoutFixFindingKeys: Array.isArray(group.withoutFixFindingKeys) ? group.withoutFixFindingKeys.filter(Boolean) : [],
     bucket,
     bucketLabel: BUCKET_LABELS[bucket],
     rationale: rationaleOf(group, bucket),
@@ -213,6 +230,15 @@ function renderTriageMarkdown(dossier) {
       lines.push(`- Versão: ${group.currentVersion || '—'} → ${group.recommendedVersion || '**sem alvo publicado**'}`);
       lines.push(`- Advisories: ${group.advisoriesTotal} (sem correção: ${group.advisoriesWithoutFix}) | risco da atualização: ${group.updateRisk}`);
       lines.push(`- Por quê: ${group.rationale}`);
+      if (group.recommendedCandidateKey) {
+        lines.push(`- Candidato recomendado: \`${group.recommendedCandidateKey}\`${group.recommendedVersion ? ` (alvo ${group.recommendedVersion})` : ''}`);
+      }
+      if (group.candidateKeys.length > 1) {
+        lines.push(`- Outros candidatos do pacote: ${group.candidateKeys.filter((key) => key !== group.recommendedCandidateKey).map((key) => `\`${key}\``).join(', ')}`);
+      }
+      if (group.bucket === BUCKETS.WAIVER_OR_COMPENSATING_CONTROL && group.withoutFixFindingKeys.length > 0) {
+        lines.push(`- Achado(s) sem correção publicada: ${group.withoutFixFindingKeys.map((key) => `\`${key}\``).join(', ')}`);
+      }
       lines.push(`- Comando: \`${group.command}\``);
       lines.push('');
     }

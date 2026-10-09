@@ -114,6 +114,49 @@ Relatórios: `reports/security-intel-discovery-report.json`,
 `reports/security-release-gate-report.json` (com lineage); artefato:
 `reports/security-intel/sbom-<sha>.cdx.json`.
 
+### Como fazer a triagem (runbook)
+
+Triagem é uma **decisão humana**. O que a capacidade oferece é a fila pronta: não
+existe comando que "resolva" a triagem, e nenhum deles aplica correção em produção.
+
+```bash
+# 0) Frescor primeiro: base vencida (ou plano antigo) invalida a fila.
+node scripts/security-intel.js advisories --scope installed --rate 5   # só se a base estiver velha
+node scripts/security-intel.js scan --scope installed                  # correlação (offline)
+node scripts/security-intel.js patches                                 # regenera candidatos
+
+# 1) Fila de decisão: 3 buckets, com motivo, chaves reais e comando por pacote
+node scripts/security-intel.js triage
+#    -> reports/security-intel-triage.md (leitura humana) + .json (evidência)
+```
+
+`reports/security-intel-triage.md` traz, por pacote: versão atual → alvo, advisories
+(sem correção), risco da atualização, por que aquele bucket, o **candidato recomendado**
+(o alvo que limpa todos os advisories), os achados sem correção publicada e o **comando
+exato**. A ordem já é a ordem de decisão: KEV primeiro, depois o que não tem remédio,
+depois o que exige aprovação, e dev-only por último.
+
+| Bucket na fila | Decisão humana | Ação |
+|---|---|---|
+| **Sem correção publicada** (5 pacotes) | aceitar com controle compensatório **e registrar com prazo**, ou achar alternativa (trocar/remover a dependência, elevar o pacote pai) | `node scripts/security-intel.js waive --finding "<chave do achado>" --approve "<quem assume>" --days <≤ máximo> --reason "<motivo>" --control "<controle>"` |
+| **Exige aprovação humana** (4 pacotes) | autorizar a missão (Nível C) ou postergar com justificativa | `node scripts/security-intel.js patch-mission --candidate "<candidato recomendado>" --authorized-by "<quem autoriza>"` |
+| **Missão isolada** (19 pacotes) | disparar a missão (roda em ambiente isolado com testes; **não** aplica em produção) | `node scripts/security-intel.js patch-mission --candidate "<candidato recomendado>"` |
+
+Depois de cada ação, confirme o efeito medido (não a intenção):
+
+```bash
+node scripts/security-intel.js waivers          # isenções vigentes (como aprovador e prazo)
+node scripts/security-intel.js patches          # candidatos restantes
+npm run validate:security-release-gate          # decisão e contagem de bloqueios (exit 1 em NO_GO)
+```
+
+Regras de método: (1) se o contador de bloqueios não cair, a ação não resolveu — investigue
+antes de registrar waiver; (2) waiver sem prazo, sem aprovador identificado ou para achado
+que não é risco aberto é **recusado** pelo serviço; (3) revogar é sempre possível e devolve o
+achado ao risco aberto; (4) dev-only não bloqueia release (é aviso) — trate por último.
+Interface equivalente para triagem item a item: `/dev/security-intel` (filtros por
+severidade/KEV, linha do tempo por achado e a seção de waivers).
+
 ### Cadências — o que é automático hoje
 
 O **worker de monitoramento contínuo** (`api/services/securityIntel/securityIntelWorker.js`,

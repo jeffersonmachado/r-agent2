@@ -95,6 +95,41 @@ describe('triageDossier — buckets', () => {
     expect(byName.tranquilo.command).toMatch(/patch-mission/);
     expect(byName.tranquilo.command).not.toMatch(/--authorized-by/);
   });
+
+  it('usa o candidato RECOMENDADO e a chave real do achado na hora de mandar o comando', () => {
+    const result = dossier([
+      group({
+        packageName: 'nodemailer',
+        updateRisk: 'MAJOR',
+        autonomy: 'LEVEL_C_PRODUCTION',
+        requiresHumanApproval: true,
+        recommendedVersion: '10.0.6',
+        candidateKeys: ['chave-parcial-9.1.0', 'chave-limpa-10.0.6'],
+        recommendedCandidateKey: 'chave-limpa-10.0.6',
+      }),
+      group({
+        packageName: 'transformers',
+        fullyClearable: false,
+        advisoriesWithoutFix: 4,
+        recommendedVersion: '5.10.0',
+        candidateKeys: ['candidato-com-alvo-5.10.0'],
+        recommendedCandidateKey: 'candidato-com-alvo-5.10.0',
+        withoutFixFindingKeys: ['PYSEC-1|pypi:transformers@4.57.6#RESOLVED#rag-service'],
+      }),
+    ]);
+
+    const byName = Object.fromEntries(result.groups.map((item) => [item.packageName, item]));
+    // Mandar missão para o primeiro candidato da lista fixaria só parte do pacote.
+    expect(byName.nodemailer.command).toContain('chave-limpa-10.0.6');
+    expect(byName.nodemailer.command).not.toContain('chave-parcial-9.1.0');
+    expect(byName.nodemailer.command).toContain('--authorized-by');
+    // Waiver precisa da chave REAL do achado sem correção (não de um placeholder).
+    expect(byName.transformers.command).toContain('PYSEC-1|pypi:transformers@4.57.6#RESOLVED#rag-service');
+    expect(byName.transformers.command).not.toContain('<findingKey>');
+    const md = renderTriageMarkdown(result);
+    expect(md).toContain('Candidato recomendado');
+    expect(md).toContain('Achado(s) sem correção publicada');
+  });
 });
 
 describe('triageDossier — ordenação, totais e honestidade', () => {

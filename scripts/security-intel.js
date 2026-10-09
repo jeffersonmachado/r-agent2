@@ -673,7 +673,7 @@ async function commandTriage(args) {
   const policy = loadPolicy({ reload: true });
 
   const candidates = await listPatchCandidates({ tenantKey, limit: args.limit ? Number(args.limit) : 500 });
-  const plans = candidates.items.map((row) => ({
+  const planOf = (row) => ({
     ...(row.plan || {}),
     ecosystem: row.ecosystem,
     packageName: row.package_name,
@@ -688,8 +688,44 @@ async function commandTriage(args) {
     kev: row.kev,
     devOnly: row.dev_only,
     advisoryId: row.advisory_id,
-  }));
-  const groups = consolidatePlansByPackage(plans);
+  });
+  const plans = candidates.items.map(planOf);
+  const consolidated = consolidatePlansByPackage(plans);
+
+  // Chaves reais por agrupamento: a fila de triagem precisa ser EXECUTÁVEL.
+  // Um candidato sem `targetVersion` representa advisory SEM correção publicada —
+  // é a chave que o comando de waiver exige.
+  const keysByGroup = new Map();
+  for (const row of candidates.items) {
+    const key = `${row.ecosystem || '?'}:${row.package_name}@${row.service || '-'}`;
+    if (!keysByGroup.has(key)) {
+      keysByGroup.set(key, { candidates: [], findingKeys: [], withoutFixFindingKeys: [] });
+    }
+    const entry = keysByGroup.get(key);
+    entry.candidates.push({
+      candidateKey: row.candidate_key,
+      findingKey: row.finding_key,
+      targetVersion: row.target_version || null,
+    });
+    entry.findingKeys.push(row.finding_key);
+    if (!row.target_version) entry.withoutFixFindingKeys.push(row.finding_key);
+  }
+  const groups = consolidated.map((group) => {
+    const entry = keysByGroup.get(group.key) || { candidates: [], findingKeys: [], withoutFixFindingKeys: [] };
+    // O candidato recomendado é o que tem o alvo que limpa TODOS os advisories.
+    const withTarget = entry.candidates.filter((candidate) => candidate.targetVersion);
+    const recommended = withTarget.find((candidate) => candidate.targetVersion === group.recommendedVersion) || null;
+    const ordered = recommended
+      ? [recommended, ...withTarget.filter((candidate) => candidate !== recommended)]
+      : withTarget;
+    return {
+      ...group,
+      candidateKeys: ordered.map((candidate) => candidate.candidateKey),
+      recommendedCandidateKey: recommended ? recommended.candidateKey : null,
+      findingKeys: entry.findingKeys,
+      withoutFixFindingKeys: entry.withoutFixFindingKeys,
+    };
+  });
 
   const findings = await getFindingSummary({ tenantKey });
   const advisoryAgeHours = await getLatestAdvisorySyncAge();
