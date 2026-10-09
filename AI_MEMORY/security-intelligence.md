@@ -136,8 +136,8 @@ operacional; não duplica o doc.
    base por padrão — egress é opt-in).
 4. pgvector: check de integridade já existe; falta planejar 0.6.0 → 0.8.x com
    regressão de ranking híbrido.
-5. Expor waivers na API/UI de engenharia (`/api/security-intel/waivers`) — hoje o
-   caminho de decisão é o CLI, que é auditável mas não é a superfície da tela.
+5. Regressão de ranking híbrido pós-atualização de extensão (vetorial + lexical +
+   RRF + filtros multi-tenant).
 
 **Já entregue:** inventário (Fase 1), SBOM, advisories + correlação (Fase 2), Risk
 Engine (Fase 3), Patch Engine + ponte com o Roteador (Fase 4), Release Security Gate

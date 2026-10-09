@@ -268,12 +268,9 @@ autorização, submete missão ao Roteador Engenheiro; nunca aplica. O que falta
    registrá-lo agora bloquearia o release da plataforma por decisão que é do dono, não
    de uma correção isolada (mesmo precedente de `validate:layer-conventions`). Ordem
    correta: triar/mitigar os achados e SÓ ENTÃO registrar o gate.
-3. **Expor waivers na superfície HTTP/UI** (`/api/security-intel/waivers`): hoje a
-   decisão de isentar tem caminho auditável e testado no CLI (`waive`/`revoke`), mas
-   não aparece na tela de engenharia.
-4. **Agendamento do sweep** `--scope installed` (hoje é manual; o egress do worker é
+3. **Agendamento do sweep** `--scope installed` (hoje é manual; o egress do worker é
    opt-in por decisão de segurança).
-5. **Caso PostgreSQL/pgvector** — evidência coletada em 2026-10-08:
+4. **Caso PostgreSQL/pgvector** — evidência coletada em 2026-10-08:
    - `vector 0.6.0` instalado (2 *minors* atrás das correções de HNSW/README de
      0.7+/0.8.x); PostgreSQL 16.15.
    - O índice vetorial existente é **HNSW** (`rag_chunks_embedding_hnsw_idx`,
@@ -298,7 +295,8 @@ advisories + correlação (sweep de 1125 pacotes instalados), Risk Engine, Patch
 ponte com o Roteador, Release Security Gate com exit real, APIs DEVELOPMENT + UI de
 engenharia (segregação provada em teste e em HTTP real), worker contínuo, check de
 integridade do índice vetorial, testes de falha/resiliência (5 casos) e **waivers
-auditáveis com expiração obrigatória** (prova end-to-end contra o banco real).
+auditáveis com expiração obrigatória** — no CLI, na API e na UI (jornada validada em
+browser real: isentar e revogar pela tela).
 
 ## 9. Decisão
 
