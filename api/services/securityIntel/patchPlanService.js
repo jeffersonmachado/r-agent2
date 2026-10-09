@@ -267,12 +267,53 @@ async function createPatchMission({
     updated_at: new Date(),
   });
 
+  // ESCOPO DE CAMINHO — sem isto a correção nunca aplica patch.
+  //
+  // O compilador cria a v1 do spec com `allowedPaths: []`, e no Roteador escopo
+  // vazio NUNCA significa "tudo permitido" (ER-V1-FINAL-003): significa que
+  // NENHUM patch é aceitável. Medido em 2026-10-09: o coder produziu o patch
+  // correto (`package.json`, bump do fast-uri) e ele foi rejeitado com
+  // `NO_PATCH_SCOPE`, esgotando as tentativas da missão.
+  //
+  // O escopo declarado pela correção (manifesto+lock do serviço, com governança e
+  // segredos PROIBIDOS) entra como NOVA VERSÃO do spec pelo MESMO caminho que o
+  // operador usa em "Editar e aprovar" — e aqui `approveEdited: false`: a missão
+  // continua AWAITING_APPROVAL e a decisão humana segue obrigatória.
+  const scopePatch = {
+    allowedPaths: spec.options.allowedPaths || [],
+    forbiddenPaths: spec.options.forbiddenPaths || [],
+    ...(spec.options.testCommands ? { testCommands: spec.options.testCommands } : {}),
+  };
+  if (scopePatch.allowedPaths.length > 0) {
+    // require tardio: evita ciclo de módulo entre a correção de segurança e a
+    // cadeia de missão/aprovação do Roteador.
+    const missionApprovalService = require('../engineeringMission/missionApprovalService');
+    try {
+      await missionApprovalService.editAndApprove(missionId, {
+        patch: scopePatch,
+        actor: actor || 'security-intel',
+        reason: 'escopo de caminho declarado pela correção de dependência (manifesto/lock; governança e segredos proibidos)',
+        tenantId: tenantKey,
+        approveEdited: false,
+      });
+    } catch (error) {
+      // Estado parcial explícito: a missão EXISTE e está vinculada ao candidato,
+      // mas o escopo não foi aplicado — sem escopo ela não consegue aplicar patch.
+      const failure = new Error(`patch_mission_scope_not_applied: ${error.message}`);
+      failure.code = 'patch_mission_scope_not_applied';
+      failure.missionId = missionId;
+      failure.cause = error;
+      throw failure;
+    }
+  }
+
   logger.info('[SecurityIntel] missão de correção submetida ao Roteador Engenheiro', {
     candidateKey: candidate.candidate_key,
     missionId,
     package: candidate.package_name,
     target: candidate.target_version,
     created: result?.created === true,
+    allowedPaths: scopePatch.allowedPaths,
   });
 
   return { missionId, created: result?.created === true, candidateKey: candidate.candidate_key, spec };

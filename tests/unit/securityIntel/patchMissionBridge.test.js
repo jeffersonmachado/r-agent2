@@ -22,6 +22,9 @@ jest.mock('../../../api/db/models/SecurityPatchCandidate', () => jest.fn());
 jest.mock('../../../api/services/engineeringMission/missionCompilerService', () => ({
   compileMission: jest.fn(),
 }));
+jest.mock('../../../api/services/engineeringMission/missionApprovalService', () => ({
+  editAndApprove: jest.fn(),
+}));
 jest.mock('../../../api/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -32,6 +35,7 @@ jest.mock('../../../api/utils/logger', () => ({
 const { getSequelize } = require('../../../api/db/sequelize');
 const getSecurityPatchCandidate = require('../../../api/db/models/SecurityPatchCandidate');
 const { compileMission } = require('../../../api/services/engineeringMission/missionCompilerService');
+const { editAndApprove } = require('../../../api/services/engineeringMission/missionApprovalService');
 
 const { createPatchMission } = require('../../../api/services/securityIntel/patchPlanService');
 
@@ -67,6 +71,7 @@ function candidateFixture(overrides = {}) {
 
 beforeEach(() => {
   getSequelize.mockReturnValue({});
+  editAndApprove.mockResolvedValue({ created: true });
 });
 
 describe('patch-mission — fiação da ponte com o Roteador Engenheiro', () => {
@@ -148,5 +153,41 @@ describe('patch-mission — fiação da ponte com o Roteador Engenheiro', () => 
     });
 
     expect(candidate.update.mock.calls[0][0].mission_requested_by).toBe('cto@empresa');
+  });
+
+  it('aplica o ESCOPO DE CAMINHO como nova versão — sem isto o patch é rejeitado', async () => {
+    const candidate = candidateFixture();
+    compileMission.mockResolvedValue({ created: true, mission: { id: 'missao-scope' } });
+
+    await createPatchMission({ candidateKey: candidate.candidate_key, tenantKey: 'system', actor: 'engineer' });
+
+    // Sem `allowedPaths` o Roteador rejeita TODO patch (NO_PATCH_SCOPE, ER-V1-FINAL-003):
+    // medido em 2026-10-09 — o coder produziu o patch certo do package.json e ele foi barrado.
+    expect(editAndApprove).toHaveBeenCalledTimes(1);
+    const [missionId, opcoes] = editAndApprove.mock.calls[0];
+    expect(missionId).toBe('missao-scope');
+    expect(opcoes.patch.allowedPaths).toEqual(expect.arrayContaining(['package.json', 'package-lock.json']));
+    expect(opcoes.patch.forbiddenPaths).toEqual(expect.arrayContaining(['scripts/governance/**', '.env']));
+    expect(opcoes.reason).toMatch(/escopo de caminho/);
+  });
+
+  it('aplicar o escopo NUNCA aprova a missão (decisão humana continua obrigatória)', async () => {
+    const candidate = candidateFixture();
+    compileMission.mockResolvedValue({ created: true, mission: { id: 'missao-scope2' } });
+
+    await createPatchMission({ candidateKey: candidate.candidate_key, tenantKey: 'system', actor: 'engineer' });
+
+    expect(editAndApprove.mock.calls[0][1].approveEdited).toBe(false);
+  });
+
+  it('falha ao aplicar o escopo é EXPLÍCITA e nomeia a missão (nada de estado parcial silencioso)', async () => {
+    const candidate = candidateFixture();
+    compileMission.mockResolvedValue({ created: true, mission: { id: 'missao-falha' } });
+    editAndApprove.mockRejectedValue(new Error('política recusou'));
+
+    await expect(createPatchMission({ candidateKey: candidate.candidate_key, tenantKey: 'system' }))
+      .rejects.toMatchObject({ code: 'patch_mission_scope_not_applied', missionId: 'missao-falha' });
+    // O vínculo com o candidato permanece: a missão existe e é investigável (sem missão duplicada).
+    expect(candidate.update).toHaveBeenCalled();
   });
 });
