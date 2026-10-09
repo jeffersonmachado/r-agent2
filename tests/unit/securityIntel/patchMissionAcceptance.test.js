@@ -43,20 +43,27 @@ describe('aceite da correção de dependência — cabe no deadline e prova o al
 
   it('inclui a prova MECÂNICA de versão (o alvo aplicado), antes do comando funcional', () => {
     const { options } = buildPatchMissionSpec({ plan: plano() });
-    expect(options.testCommands[0]).toContain('fast-uri');
-    expect(options.testCommands[0]).toContain('3.1.8');
-    expect(options.testCommands[0]).toContain('require("fast-uri/package.json")');
-    // O comando falha quando a versão instalada é MENOR que o alvo.
-    expect(options.testCommands[0]).toContain('process.exit(1)');
-    expect(options.testCommands[0]).toContain('ALVO NAO APLICADO');
+    expect(options.testCommands[0]).toBe('node scripts/security-intel-verify-target.js fast-uri 3.1.8');
   });
 
-  it('PyPI usa importlib do venv do serviço', () => {
+  it('TODO comando de aceite cabe na coluna do registro de execução (varchar(255))', () => {
+    // Defeito real medido em 2026-10-09: o comando de prova inline tinha ~300 chars, o INSERT em
+    // `engineering_test_runs` falhava com `22001 value too long for type character varying(255)`
+    // e o comando era classificado como REJECTED sem nunca rodar.
+    const LIMITE_DE_REGISTRO = 255;
+    for (const service of ['api', 'frontend', 'rag-service', 'desconhecido']) {
+      const { options } = buildPatchMissionSpec({
+        plan: plano({ service, packageName: '@scope/pacote-com-nome-longo', targetVersion: '10.20.30' }),
+      });
+      for (const cmd of options.testCommands) {
+        expect(cmd.length).toBeLessThanOrEqual(LIMITE_DE_REGISTRO);
+      }
+    }
+  });
+
+  it('PyPI usa o mesmo script com --ecosystem=pypi', () => {
     const cmd = dependencyResolutionCommand(plano({ service: 'rag-service', packageName: 'transformers', targetVersion: '5.10.0' }));
-    expect(cmd).toContain('./venv/bin/python');
-    expect(cmd).toContain('importlib.metadata');
-    expect(cmd).toContain("'transformers'");
-    expect(cmd).toContain("Version('5.10.0')");
+    expect(cmd).toBe('node scripts/security-intel-verify-target.js transformers 5.10.0 --ecosystem=pypi');
   });
 
   it('sem alvo não inventa prova (devolve null, nada de comando vazio)', () => {

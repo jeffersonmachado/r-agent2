@@ -272,17 +272,11 @@ function dependencyResolutionCommand(plan = {}) {
   if (!packageName || !target) return null;
   const ecosystem = String(plan.ecosystem || (String(plan.service || '').toLowerCase() === 'rag-service' ? 'pypi' : 'npm')).toLowerCase();
 
-  if (ecosystem === 'pypi') {
-    return `./venv/bin/python -c "import importlib.metadata as m, sys; from packaging.version import Version; v = m.version('${packageName}'); sys.exit(0 if Version(v) >= Version('${target}') else 1)"`;
-  }
-  // Aspas simples no shell, duplas no JS: o comando é executado por `sh -c`.
-  const script = `const v=require("${packageName}/package.json").version;`
-    + `const t="${target}";`
-    + 'const p=s=>String(s).split("-")[0].split(".").map(Number);'
-    + 'const c=(a,b)=>{const A=p(a),B=p(b);for(let i=0;i<3;i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}return 0};'
-    + 'if(c(v,t)<0){console.error("ALVO NAO APLICADO: "+v+" < "+t);process.exit(1)}'
-    + 'console.log("ALVO APLICADO: "+v)';
-  return `node -e '${script}'`;
+  // Comando CURTO de propósito: ele é REGISTRADO em `engineering_test_runs.command`
+  // (varchar(255)). O `node -e` inline que existia aqui tinha ~300 chars, o INSERT falhava com
+  // `22001` e o comando era classificado como REJECTED sem nunca rodar (medido em 2026-10-09).
+  const suffix = ecosystem === 'pypi' ? ' --ecosystem=pypi' : '';
+  return `node scripts/security-intel-verify-target.js ${packageName} ${target}${suffix}`;
 }
 
 
