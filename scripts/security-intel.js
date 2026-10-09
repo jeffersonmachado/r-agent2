@@ -663,133 +663,13 @@ async function commandRevokeWaiver(args) {
  */
 async function commandTriage(args) {
   const fs = require('fs');
-  const { listPatchCandidates } = require('../api/services/securityIntel/patchPlanService');
-  const { getFindingSummary, listFindings, loadPolicy } = require('../api/services/securityIntel/vulnerabilityScanService');
-  const { getLatestAdvisorySyncAge } = require('../api/services/securityIntel/securityIntelWorker');
-  const { consolidatePlansByPackage } = require('../engine/securityIntel/patchPlanner');
-  const { buildTriageDossier, renderTriageMarkdown } = require('../engine/securityIntel/triageDossier');
+  const { buildTriage } = require('../api/services/securityIntel/triageService');
+  const { renderTriageMarkdown } = require('../engine/securityIntel/triageDossier');
 
+  // A coleta vive no serviço (`triageService`), a MESMA fonte usada pela API:
+  // duplicar aqui criaria duas filas que discordam.
   const tenantKey = args.tenant || 'system';
-  const policy = loadPolicy({ reload: true });
-
-  // Impacto por pacote/serviço: quantos achados de severidade BLOQUEANTE seguem
-  // abertos. É o que permite ordenar a fila por efeito no gate, não por severidade.
-  //
-  // Precisão que importa: achado em dependência dev-only NÃO bloqueia release quando a
-  // política manda tratá-la como aviso (`blockOnDevDependencies: false`). Contar esses
-  // achados como impacto inflaria a fila e faria o operador perseguir o que não bloqueia.
-  // O `dev` é lido do COMPONENTE (por `bom_ref`), não por heurística de nome.
-  const blockingSeverities = policy.releaseGate?.blockOnSeverity || [];
-  const blockOnDev = policy.releaseGate?.blockOnDevDependencies === true;
-  // O factory de model exige conexão ativa (sem ela devolve um Proxy que lança):
-  // conectar explicitamente em vez de depender da ordem das chamadas anteriores.
-  const { connect, getSequelize } = require('../api/db/sequelize');
-  if (!getSequelize()) await connect(3, 500);
-  const Component = require('../api/db/models/SecurityComponent')();
-  const componentRows = await Component.findAll({
-    where: { tenant_key: tenantKey },
-    attributes: ['bom_ref', 'dev'],
-    raw: true,
-  });
-  const devByBomRef = new Map(componentRows.map((row) => [row.bom_ref, row.dev === true]));
-
-  const blockingCountsByPackageService = new Map();
-  const devBlockingCountsByPackageService = new Map();
-  for (const severity of blockingSeverities) {
-    const page = await listFindings({ tenantKey, severity, limit: 500 });
-    for (const row of page.items) {
-      const key = `${row.package_name}|${row.service || ''}`;
-      const isDevOnly = devByBomRef.get(row.component_bom_ref) === true;
-      if (isDevOnly && !blockOnDev) {
-        devBlockingCountsByPackageService.set(key, (devBlockingCountsByPackageService.get(key) || 0) + 1);
-        continue;
-      }
-      blockingCountsByPackageService.set(key, (blockingCountsByPackageService.get(key) || 0) + 1);
-    }
-  }
-
-  const candidates = await listPatchCandidates({ tenantKey, limit: args.limit ? Number(args.limit) : 500 });
-  const planOf = (row) => ({
-    ...(row.plan || {}),
-    ecosystem: row.ecosystem,
-    packageName: row.package_name,
-    service: row.service,
-    currentVersion: row.current_version,
-    targetVersion: row.target_version,
-    kind: row.kind,
-    updateRisk: row.update_risk,
-    autonomy: row.autonomy,
-    requiresHumanApproval: row.requires_human_approval,
-    severity: row.severity,
-    kev: row.kev,
-    devOnly: row.dev_only,
-    advisoryId: row.advisory_id,
-  });
-  const plans = candidates.items.map(planOf);
-  const consolidated = consolidatePlansByPackage(plans);
-
-  // Chaves reais por agrupamento: a fila de triagem precisa ser EXECUTÁVEL.
-  // Um candidato sem `targetVersion` representa advisory SEM correção publicada —
-  // é a chave que o comando de waiver exige.
-  const keysByGroup = new Map();
-  for (const row of candidates.items) {
-    const key = `${row.ecosystem || '?'}:${row.package_name}@${row.service || '-'}`;
-    if (!keysByGroup.has(key)) {
-      keysByGroup.set(key, { candidates: [], findingKeys: [], withoutFixFindingKeys: [] });
-    }
-    const entry = keysByGroup.get(key);
-    entry.candidates.push({
-      candidateKey: row.candidate_key,
-      findingKey: row.finding_key,
-      targetVersion: row.target_version || null,
-    });
-    entry.findingKeys.push(row.finding_key);
-    if (!row.target_version) entry.withoutFixFindingKeys.push(row.finding_key);
-  }
-  const groups = consolidated.map((group) => {
-    const entry = keysByGroup.get(group.key) || { candidates: [], findingKeys: [], withoutFixFindingKeys: [] };
-    // O candidato recomendado é o que tem o alvo que limpa TODOS os advisories.
-    const withTarget = entry.candidates.filter((candidate) => candidate.targetVersion);
-    const recommended = withTarget.find((candidate) => candidate.targetVersion === group.recommendedVersion) || null;
-    const ordered = recommended
-      ? [recommended, ...withTarget.filter((candidate) => candidate !== recommended)]
-      : withTarget;
-    return {
-      ...group,
-      candidateKeys: ordered.map((candidate) => candidate.candidateKey),
-      recommendedCandidateKey: recommended ? recommended.candidateKey : null,
-      findingKeys: entry.findingKeys,
-      withoutFixFindingKeys: entry.withoutFixFindingKeys,
-      blockingFindingsOpen: blockingCountsByPackageService.get(`${group.packageName}|${group.service || ''}`) || 0,
-      blockingFindingsDevOnly: devBlockingCountsByPackageService.get(`${group.packageName}|${group.service || ''}`) || 0,
-    };
-  });
-
-  const findings = await getFindingSummary({ tenantKey });
-  const advisoryAgeHours = await getLatestAdvisorySyncAge();
-  const staleAfter = policy.advisorySources?.osv?.maxAgeHoursBeforeStale ?? 72;
-
-  // O gate é lido do relatório oficial quando existe: o dossiê reporta a decisão,
-  // não a recalcula (recalcular aqui criaria uma segunda fonte de verdade).
-  let gate = null;
-  const gatePath = path.join(ROOT, 'reports', 'security-release-gate-report.json');
-  if (fs.existsSync(gatePath)) {
-    const report = JSON.parse(fs.readFileSync(gatePath, 'utf8'));
-    gate = { decision: report.decision || report.status || null, blocking: report.blocking || [], warnings: report.warnings || [] };
-  }
-
-  const dossier = buildTriageDossier({
-    groups,
-    gate,
-    findings,
-    advisoryBase: {
-      ageHours: advisoryAgeHours === null ? null : Math.round(advisoryAgeHours * 100) / 100,
-      stale: advisoryAgeHours === null || advisoryAgeHours > staleAfter,
-    },
-    policy: policy.releaseGate || {},
-    tenantKey,
-    now: new Date().toISOString(),
-  });
+  const dossier = await buildTriage({ tenantKey });
 
   const jsonPath = writeJsonReport('reports/security-intel-triage.json', dossier);
   const markdownPath = path.join(ROOT, 'reports/security-intel-triage.md');

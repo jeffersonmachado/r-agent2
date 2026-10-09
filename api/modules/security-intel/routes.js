@@ -36,6 +36,7 @@ const ROUTE_ACTIONS = Object.freeze({
   WAIVERS_LIST: 'read',
   WAIVER_CREATE: 'waiver_create',
   WAIVER_REVOKE: 'waiver_revoke',
+  TRIAGE: 'read',
 });
 
 function createSecurityIntelRoutes({ buildDeps } = {}) {
@@ -495,6 +496,19 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
         revoked: result.revoked === true,
         reason: result.reason || null,
       });
+    } catch (error) {
+      handleError(deps, res, error);
+    }
+  });
+
+  router.get('/api/security-intel/triage', async (req, res) => {
+    const ctx = guard(req, res);
+    if (!ctx) return;
+    const { deps, tenantKey } = ctx;
+    try {
+      // Mesmo serviço usado pelo CLI: uma única fonte para a fila.
+      const { buildTriage } = require('../../services/securityIntel/triageService');
+      deps.sendJson(res, 200, await buildTriage({ tenantKey }));
     } catch (error) {
       handleError(deps, res, error);
     }

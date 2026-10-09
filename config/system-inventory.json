@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-09T00:12:44.994Z",
+  "generatedAt": "2026-10-09T01:58:07.430Z",
   "counts": {
-    "total": 3982,
+    "total": 3983,
     "byKind": {
-      "api": 907,
+      "api": 908,
       "field": 2471,
       "model": 223,
       "page": 149,
@@ -12,11 +12,11 @@
       "table": 223
     },
     "byClassification": {
-      "PRODUCTION": 3687,
+      "PRODUCTION": 3688,
       "DEVELOPMENT": 203,
       "SUPPORT": 92
     },
-    "orphaned": 32
+    "orphaned": 33
   },
   "items": [
     {
@@ -5058,6 +5058,21 @@
       "classification": "PRODUCTION",
       "linkStatus": "ORPHANED",
       "fingerprint": "5c5668f6e000ec142a19129c2c0ab257de12a7c348afb1998f89a675de67a1f9"
+    },
+    {
+      "id": "api:GET:/api/security-intel/triage",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/security-intel/triage",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "1d3f3e2369624c417292eaaf18cafd55958e104b9b7cf6d718ca544834340405"
     },
     {
       "id": "api:GET:/api/security-intel/vector-index",

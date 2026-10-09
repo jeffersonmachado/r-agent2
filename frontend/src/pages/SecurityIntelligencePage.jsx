@@ -12,6 +12,7 @@ import {
   listSecurityFindings,
   listSecurityPatches,
   listSecurityWaivers,
+  getSecurityTriage,
   revokeSecurityWaiver,
   runSecurityScan,
 } from '../api/securityIntel';
@@ -89,6 +90,19 @@ const VECTOR_VERDICT_LABELS = {
   DEGRADED: 'Degradado',
   INVALID: 'Inválido',
   UNKNOWN: 'Não medido',
+};
+
+/** Rótulos curtos dos buckets da fila de triagem (o motivo completo vem do dado). */
+const TRIAGE_BUCKET_LABELS = {
+  WAIVER_OR_COMPENSATING_CONTROL: 'Sem correção publicada',
+  HUMAN_APPROVAL: 'Exige aprovação humana',
+  AUTO_ISOLATED: 'Missão isolada (Nível B)',
+};
+
+const TRIAGE_BUCKET_TONES = {
+  WAIVER_OR_COMPENSATING_CONTROL: 'bg-red-500/15 text-red-500 border-red-500/30',
+  HUMAN_APPROVAL: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+  AUTO_ISOLATED: 'bg-bg-tertiary text-text-secondary border-border-default',
 };
 
 const ERROR_MESSAGES = {
@@ -177,6 +191,7 @@ export function SecurityIntelligencePage() {
   const [onlyKev, setOnlyKev] = useState(false);
   const [timeline, setTimeline] = useState(null);
   const [waivers, setWaivers] = useState({ items: [], total: 0, maxWaiverDays: null });
+  const [triage, setTriage] = useState(null);
   const [waiverForm, setWaiverForm] = useState({
     findingKey: '', reason: '', approvedBy: '', expiresInDays: 30, compensatingControl: '',
   });
@@ -225,6 +240,19 @@ export function SecurityIntelligencePage() {
     loadVectorIndex();
   }, [loadVectorIndex]);
 
+  const loadTriage = useCallback(async () => {
+    try {
+      setTriage(await getSecurityTriage());
+    } catch (err) {
+      setTriage(null);
+      showToast(messageOf(err), 'error');
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadTriage();
+  }, [loadTriage]);
+
   const searchInventory = useCallback(async () => {
     try {
       setInventory(await getSecurityInventory({ search: inventorySearch || undefined, limit: 50 }));
@@ -271,6 +299,15 @@ export function SecurityIntelligencePage() {
       setBusy(false);
     }
   }, [loadAll, showToast]);
+
+  const handleCopyCommand = useCallback(async (command) => {
+    try {
+      await navigator.clipboard.writeText(command);
+      showToast('Comando copiado. Ele NÃO aplica nada sozinho: submeter missão não altera produção.', 'success');
+    } catch {
+      showToast('Não foi possível copiar automaticamente — selecione o texto do comando.', 'error');
+    }
+  }, [showToast]);
 
   const handleCreateWaiver = useCallback(async (event) => {
     event.preventDefault();
@@ -664,6 +701,79 @@ export function SecurityIntelligencePage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="mb-8">
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+          <h2 className="text-lg font-bold text-text-primary">Fila de triagem (ordenada por efeito no gate)</h2>
+          <button type="button" className={BTN_SECONDARY} onClick={loadTriage} disabled={busy}>
+            Recalcular fila
+          </button>
+        </div>
+        {triage ? (
+          <>
+            <p className="text-xs text-text-secondary mb-3">
+              {triage.blockingImpact.gateBlockingPackagesInQueue.length} de {triage.blockingImpact.gateBlockingPackages} pacotes
+              que bloqueiam o release estão na fila
+              {triage.blockingImpact.gateBlockingPackagesOutOfQueue.length > 0
+                ? ` — fora: ${triage.blockingImpact.gateBlockingPackagesOutOfQueue.join(', ')}`
+                : ' (nenhum bloqueador ficou fora)'}
+              {' · '}{triage.totals.groups} pacotes, {triage.totals.autoIsolated} isolados,
+              {' '}{triage.totals.requiringHumanApproval} exigem aprovação,
+              {' '}{triage.totals.withoutPublishedFix} sem correção publicada.
+              Nada aqui é aplicado pela tela.
+            </p>
+            <div className={TABLE_WRAP}>
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className={TH}>Bucket</th>
+                    <th className={TH}>Pacote</th>
+                    <th className={TH}>Atual → alvo</th>
+                    <th className={TH}>Impacto (bloqueantes)</th>
+                    <th className={TH}>Motivo</th>
+                    <th className={TH}>Comando</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {triage.groups.slice(0, 40).map((group) => (
+                    <tr key={group.key}>
+                      <td className={TD}>
+                        <Badge tone={TRIAGE_BUCKET_TONES[group.bucket]}>
+                          {TRIAGE_BUCKET_LABELS[group.bucket] || group.bucket}
+                        </Badge>
+                        {group.kev && <Badge tone="bg-red-500/15 text-red-500 border-red-500/30" className="ml-1">KEV</Badge>}
+                        {group.devOnly && <Badge className="ml-1">dev</Badge>}
+                      </td>
+                      <td className={TD}>{group.packageName}{group.service ? ` · ${group.service}` : ''}</td>
+                      <td className={TD}>{group.currentVersion || '—'} → {group.recommendedVersion || 'sem alvo'}</td>
+                      <td className={TD}>
+                        {group.blockingFindingsOpen}
+                        {group.blockingFindingsDevOnly > 0 && (
+                          <span className="text-xs text-text-secondary"> (+{group.blockingFindingsDevOnly} dev-only)</span>
+                        )}
+                      </td>
+                      <td className={`${TD} max-w-md`}>{group.rationale}</td>
+                      <td className={TD}>
+                        <div className="flex flex-col gap-1">
+                          <code className="text-xs text-text-secondary break-all">{group.command}</code>
+                          <button type="button" className={BTN_SMALL} onClick={() => handleCopyCommand(group.command)}>
+                            Copiar comando
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-text-secondary mt-2">
+              {triage.blockingImpact.unitWarning}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-text-secondary">Fila não calculada nesta sessão.</p>
+        )}
       </section>
 
       <section className="mb-8">

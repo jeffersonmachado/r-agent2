@@ -122,3 +122,11 @@ export async function createSecurityWaiver({
 export async function revokeSecurityWaiver({ waiverKey, reason = null }) {
   return postJson(`${BASE_PATH}/waivers/revoke`, { waiverKey, reason });
 }
+
+/**
+ * Fila de triagem: pacotes classificados por bucket, com motivo, impacto medido no
+ * gate e comando pronto. Mesma fonte do CLI (`security-intel.js triage`).
+ */
+export async function getSecurityTriage() {
+  return fetchJson(`${BASE_PATH}/triage`);
+}

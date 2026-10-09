@@ -42,6 +42,9 @@ jest.mock('../../services/securityIntel/waiverService', () => ({
   createWaiver: jest.fn(),
   revokeWaiver: jest.fn(),
 }));
+jest.mock('../../services/securityIntel/triageService', () => ({
+  buildTriage: jest.fn(),
+}));
 
 const inventoryStoreService = require('../../services/securityIntel/inventoryStoreService');
 const vulnerabilityScanService = require('../../services/securityIntel/vulnerabilityScanService');
@@ -49,6 +52,7 @@ const sbomService = require('../../services/securityIntel/sbomService');
 const patchPlanService = require('../../services/securityIntel/patchPlanService');
 const securityIntelWorker = require('../../services/securityIntel/securityIntelWorker');
 const waiverService = require('../../services/securityIntel/waiverService');
+const triageService = require('../../services/securityIntel/triageService');
 
 const { createSecurityIntelRoutes } = require('./routes');
 
@@ -248,5 +252,21 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     const res = await request(port, 'POST', '/api/security-intel/waivers/revoke');
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('waiver_not_found');
+  });
+
+  it('GET /triage devolve a fila do MESMO serviço usado pelo CLI', async () => {
+    triageService.buildTriage.mockResolvedValue({
+      tenantKey: 'system',
+      totals: { groups: 28, autoIsolated: 19, requiringHumanApproval: 4, withoutPublishedFix: 5 },
+      groups: [{ packageName: 'transformers', bucket: 'WAIVER_OR_COMPENSATING_CONTROL', command: 'node scripts/security-intel.js waive ...' }],
+    });
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'GET', '/api/security-intel/triage');
+    expect(res.status).toBe(200);
+    expect(res.body.totals.groups).toBe(28);
+    expect(res.body.groups[0].command).toContain('waive');
+    // Uma única fonte para a fila: a rota não recolhe dados por conta própria.
+    expect(triageService.buildTriage).toHaveBeenCalledWith({ tenantKey: 'system' });
   });
 });
