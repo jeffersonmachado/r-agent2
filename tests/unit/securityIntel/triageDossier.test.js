@@ -1,0 +1,161 @@
+'use strict';
+
+/**
+ * Testes do dossiê de triagem (transformação PURA de dados medidos).
+ *
+ * O que precisa ser protegido:
+ *   - agrupamento SEM correção publicada NUNCA cai no bucket automático, por mais
+ *     baixa que seja a severidade: falta de remédio não é ausência de risco;
+ *   - MAJOR e risco desconhecido exigem aprovação humana (Nível C), não missão
+ *     automática;
+ *   - a ordenação coloca primeiro o que exige decisão (KEV, sem correção,
+ *     severidade), e dev-only por último;
+ *   - `unmeasured` existe e nomeia o que o dossiê NÃO cobre (senão o dossiê
+ *     viraria promessa);
+ *   - `now` é injetado: o módulo é determinístico e não lê relógio.
+ */
+
+const {
+  BUCKETS,
+  bucketOf,
+  buildTriageDossier,
+  renderTriageMarkdown,
+} = require('../../../engine/securityIntel/triageDossier');
+
+const NOW = '2026-10-09T00:00:00.000Z';
+
+function group(overrides = {}) {
+  return {
+    key: 'npm:pkg@api',
+    ecosystem: 'npm',
+    packageName: 'pkg',
+    service: 'api',
+    currentVersion: '1.0.0',
+    recommendedVersion: '1.0.1',
+    updateRisk: 'PATCH',
+    autonomy: 'LEVEL_B_ISOLATED',
+    requiresHumanApproval: false,
+    advisoriesTotal: 1,
+    advisoriesWithoutFix: 0,
+    fullyClearable: true,
+    severity: 'HIGH',
+    kev: false,
+    devOnly: false,
+    ...overrides,
+  };
+}
+
+function dossier(groups, extra = {}) {
+  return buildTriageDossier({
+    groups,
+    policy: { blockOnSeverity: ['CRITICAL', 'HIGH'], maxWaiverDays: 90 },
+    findings: { open: 248, kevOpen: 0, bySeverity: { CRITICAL: 3, HIGH: 118 }, vex: { total: 843 } },
+    advisoryBase: { ageHours: 0.7, stale: false },
+    gate: { decision: 'NO_GO', blocking: [1, 2], warnings: [1] },
+    tenantKey: 'system',
+    now: NOW,
+    ...extra,
+  });
+}
+
+describe('triageDossier — buckets', () => {
+  it('agrupamento sem correção publicada vai para waiver/compensatório, nunca para o automático', () => {
+    const notClearable = group({
+      fullyClearable: false,
+      advisoriesWithoutFix: 2,
+      recommendedVersion: null,
+      updateRisk: 'NONE',
+      autonomy: 'LEVEL_C_PRODUCTION',
+      requiresHumanApproval: true,
+      severity: 'LOW',
+    });
+    expect(bucketOf(notClearable)).toBe(BUCKETS.WAIVER_OR_COMPENSATING_CONTROL);
+  });
+
+  it('MAJOR e risco desconhecido exigem aprovação humana; patch/minor isolado é nível B', () => {
+    expect(bucketOf(group({ updateRisk: 'MAJOR', autonomy: 'LEVEL_C_PRODUCTION', requiresHumanApproval: true })))
+      .toBe(BUCKETS.HUMAN_APPROVAL);
+    expect(bucketOf(group({ updateRisk: 'UNKNOWN' }))).toBe(BUCKETS.HUMAN_APPROVAL);
+    expect(bucketOf(group({ updateRisk: 'MINOR' }))).toBe(BUCKETS.AUTO_ISOLATED);
+    expect(bucketOf(group({ updateRisk: 'PATCH' }))).toBe(BUCKETS.AUTO_ISOLATED);
+  });
+
+  it('motivo e comando dizem o que a decisão exige (e nada é aplicado pelo dossiê)', () => {
+    const result = dossier([
+      group({ packageName: 'sem-fix', fullyClearable: false, advisoriesWithoutFix: 3, recommendedVersion: null, severity: 'CRITICAL' }),
+      group({ packageName: 'majorzinho', updateRisk: 'MAJOR', autonomy: 'LEVEL_C_PRODUCTION', requiresHumanApproval: true }),
+      group({ packageName: 'tranquilo' }),
+    ]);
+
+    const byName = Object.fromEntries(result.groups.map((item) => [item.packageName, item]));
+    expect(byName['sem-fix'].rationale).toMatch(/sem versão corrigida/);
+    expect(byName['sem-fix'].command).toMatch(/waive/);
+    expect(byName.majorzinho.rationale).toMatch(/MAJOR/);
+    expect(byName.majorzinho.command).toMatch(/--authorized-by/);
+    expect(byName.tranquilo.command).toMatch(/patch-mission/);
+    expect(byName.tranquilo.command).not.toMatch(/--authorized-by/);
+  });
+});
+
+describe('triageDossier — ordenação, totais e honestidade', () => {
+  it('ordena por KEV, bucket decisório e severidade, com dev-only por último', () => {
+    const result = dossier([
+      group({ packageName: 'dev', devOnly: true, updateRisk: 'PATCH' }),
+      group({ packageName: 'isolado-low', severity: 'LOW' }),
+      group({ packageName: 'kev-critical', severity: 'CRITICAL', kev: true }),
+      group({ packageName: 'sem-fix', fullyClearable: false, advisoriesWithoutFix: 1, severity: 'MEDIUM' }),
+      group({ packageName: 'major', updateRisk: 'MAJOR', autonomy: 'LEVEL_C_PRODUCTION', requiresHumanApproval: true }),
+    ]);
+
+    expect(result.groups.map((item) => item.packageName)).toEqual([
+      'kev-critical', 'sem-fix', 'major', 'isolado-low', 'dev',
+    ]);
+  });
+
+  it('soma dos buckets fecha com o total (nada some no caminho)', () => {
+    const result = dossier([
+      group({ packageName: 'a' }),
+      group({ packageName: 'b', updateRisk: 'MAJOR', autonomy: 'LEVEL_C_PRODUCTION', requiresHumanApproval: true }),
+      group({ packageName: 'c', fullyClearable: false, advisoriesWithoutFix: 1 }),
+    ]);
+    const { totals, buckets } = result;
+    expect(totals.groups).toBe(3);
+    expect(buckets[BUCKETS.AUTO_ISOLATED].count + buckets[BUCKETS.HUMAN_APPROVAL].count + buckets[BUCKETS.WAIVER_OR_COMPENSATING_CONTROL].count)
+      .toBe(totals.groups);
+    expect(totals.withoutPublishedFix).toBe(1);
+  });
+
+  it('declara o que NÃO cobre e reporta o estado medido sem recalcular o gate', () => {
+    const result = dossier([group({ packageName: 'a' })]);
+    expect(result.unmeasured.length).toBeGreaterThanOrEqual(3);
+    expect(result.unmeasured.join(' ')).toMatch(/VEX/);
+    expect(result.unmeasured.join(' ')).toMatch(/waiver/);
+    expect(result.measured).toMatchObject({
+      gateDecision: 'NO_GO',
+      gateBlocking: 2,
+      gateWarnings: 1,
+      blockingFindings: 121,
+      vexDiscarded: 843,
+      advisoryBaseStale: false,
+    });
+  });
+
+  it('exige `now` injetado e é determinístico para a mesma entrada', () => {
+    expect(() => buildTriageDossier({ groups: [group()] })).toThrow(/triage_dossier_now_required/);
+    const first = JSON.stringify(dossier([group({ packageName: 'x' })]));
+    const second = JSON.stringify(dossier([group({ packageName: 'x' })]));
+    expect(first).toBe(second);
+  });
+
+  it('markdown mostra a fila, o comando e os limites (sem prometer cobertura)', () => {
+    const md = renderTriageMarkdown(dossier([
+      group({ packageName: 'sem-fix', fullyClearable: false, advisoriesWithoutFix: 4, recommendedVersion: null, severity: 'CRITICAL' }),
+      group({ packageName: 'tranquilo' }),
+    ]));
+    expect(md).toMatch(/Triagem de segurança — system/);
+    expect(md).toMatch(/não decide nada/);
+    expect(md).toMatch(/sem-fix/);
+    expect(md).toMatch(/Limites deste dossiê/);
+    expect(md).toMatch(/waive --finding/);
+  });
+});

@@ -657,6 +657,93 @@ async function commandRevokeWaiver(args) {
   return 0;
 }
 
+/**
+ * Dossiê de triagem: fila de decisão com motivo e comando, a partir do que já foi
+ * medido. Não decide nada — só ordena o que a decisão humana precisa cobrir.
+ */
+async function commandTriage(args) {
+  const fs = require('fs');
+  const { listPatchCandidates } = require('../api/services/securityIntel/patchPlanService');
+  const { getFindingSummary, loadPolicy } = require('../api/services/securityIntel/vulnerabilityScanService');
+  const { getLatestAdvisorySyncAge } = require('../api/services/securityIntel/securityIntelWorker');
+  const { consolidatePlansByPackage } = require('../engine/securityIntel/patchPlanner');
+  const { buildTriageDossier, renderTriageMarkdown } = require('../engine/securityIntel/triageDossier');
+
+  const tenantKey = args.tenant || 'system';
+  const policy = loadPolicy({ reload: true });
+
+  const candidates = await listPatchCandidates({ tenantKey, limit: args.limit ? Number(args.limit) : 500 });
+  const plans = candidates.items.map((row) => ({
+    ...(row.plan || {}),
+    ecosystem: row.ecosystem,
+    packageName: row.package_name,
+    service: row.service,
+    currentVersion: row.current_version,
+    targetVersion: row.target_version,
+    kind: row.kind,
+    updateRisk: row.update_risk,
+    autonomy: row.autonomy,
+    requiresHumanApproval: row.requires_human_approval,
+    severity: row.severity,
+    kev: row.kev,
+    devOnly: row.dev_only,
+    advisoryId: row.advisory_id,
+  }));
+  const groups = consolidatePlansByPackage(plans);
+
+  const findings = await getFindingSummary({ tenantKey });
+  const advisoryAgeHours = await getLatestAdvisorySyncAge();
+  const staleAfter = policy.advisorySources?.osv?.maxAgeHoursBeforeStale ?? 72;
+
+  // O gate é lido do relatório oficial quando existe: o dossiê reporta a decisão,
+  // não a recalcula (recalcular aqui criaria uma segunda fonte de verdade).
+  let gate = null;
+  const gatePath = path.join(ROOT, 'reports', 'security-release-gate-report.json');
+  if (fs.existsSync(gatePath)) {
+    const report = JSON.parse(fs.readFileSync(gatePath, 'utf8'));
+    gate = { decision: report.decision || report.status || null, blocking: report.blocking || [], warnings: report.warnings || [] };
+  }
+
+  const dossier = buildTriageDossier({
+    groups,
+    gate,
+    findings,
+    advisoryBase: {
+      ageHours: advisoryAgeHours === null ? null : Math.round(advisoryAgeHours * 100) / 100,
+      stale: advisoryAgeHours === null || advisoryAgeHours > staleAfter,
+    },
+    policy: policy.releaseGate || {},
+    tenantKey,
+    now: new Date().toISOString(),
+  });
+
+  const jsonPath = writeJsonReport('reports/security-intel-triage.json', dossier);
+  const markdownPath = path.join(ROOT, 'reports/security-intel-triage.md');
+  fs.writeFileSync(markdownPath, renderTriageMarkdown(dossier));
+
+  if (args.json) process.stdout.write(`${JSON.stringify(dossier, null, 2)}\n`);
+  else {
+    console.log('=== Triagem de segurança (fila de decisão; nada é aplicado aqui) ===');
+    console.log(`gate ...............: ${dossier.measured.gateDecision || 'não executado'}`
+      + `${dossier.measured.gateBlocking === null ? '' : ` (${dossier.measured.gateBlocking} bloqueios)`}`);
+    console.log(`achados abertos ....: ${dossier.measured.findingsAtRisk ?? 'não medido'}`
+      + ` | bloqueantes: ${dossier.measured.blockingFindings}`);
+    console.log(`base advisories ....: ${dossier.measured.advisoryBaseAgeHours ?? 'não medida'} h${dossier.measured.advisoryBaseStale ? ' (VENCIDA)' : ''}`);
+    console.log(`pacotes na fila ....: ${dossier.totals.groups}`
+      + ` | isolados: ${dossier.totals.autoIsolated}`
+      + ` | aprovação humana: ${dossier.totals.requiringHumanApproval}`
+      + ` | sem correção publicada: ${dossier.totals.withoutPublishedFix}`);
+    for (const group of dossier.groups.slice(0, 10)) {
+      console.log(`  [${group.bucket}] ${group.packageName}@${group.currentVersion || '?'}`
+        + ` → ${group.recommendedVersion || 'sem alvo'} (${group.severity || '?'}, advisories sem correção: ${group.advisoriesWithoutFix})`);
+    }
+    if (dossier.groups.length > 10) console.log(`  ... e ${dossier.groups.length - 10} outros (ver relatório)`);
+    console.log(`json ...............: ${path.relative(ROOT, jsonPath)}`);
+    console.log(`markdown ...........: ${path.relative(ROOT, markdownPath)}`);
+  }
+  return 0;
+}
+
 const COMMANDS = {
   discover: commandDiscover,
   sbom: commandSbom,
@@ -670,13 +757,14 @@ const COMMANDS = {
   waivers: commandWaivers,
   waive: commandWaive,
   revoke: commandRevokeWaiver,
+  triage: commandTriage,
 };
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
   if (!command || !COMMANDS[command]) {
-    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index|patches|patch-mission|waivers|waive|revoke> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>] [--blocking] [--include-dev] [--candidate <key>] [--authorized-by <quem autoriza>] [--finding <findingKey>] [--waiver <waiverKey>] [--approve <quem aprova>] [--days N] [--reason <texto>] [--control <texto>] [--state ACTIVE|EXPIRED|REVOKED|ALL]');
+    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index|patches|patch-mission|waivers|waive|revoke|triage> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>] [--blocking] [--include-dev] [--candidate <key>] [--authorized-by <quem autoriza>] [--finding <findingKey>] [--waiver <waiverKey>] [--approve <quem aprova>] [--days N] [--reason <texto>] [--control <texto>] [--state ACTIVE|EXPIRED|REVOKED|ALL]');
     return 2;
   }
   // Em modo `--json` o stdout é dado de máquina: todo log vai para stderr,

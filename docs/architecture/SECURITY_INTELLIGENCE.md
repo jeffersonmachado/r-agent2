@@ -182,6 +182,11 @@ agendado depois que o anterior termina.
 - Verificação do índice vetorial: **DEGRADED** (só por `vector 0.6.0` < mínimo
   recomendado 0.8.0); índice HNSW **VÁLIDO**, planner **usa** o índice, 8460 chunks com
   0 nulos e 0 dimensões erradas.
+- Dossiê de triagem (`node scripts/security-intel.js triage` →
+  `reports/security-intel-triage.json` + `.md`): fila de decisão com motivo e comando
+  por pacote, em três buckets. Medido 2026-10-09: 28 pacotes na fila (19 isolados,
+  4 exigem aprovação humana, 5 sem correção publicada). Transformação pura
+  (`engine/securityIntel/triageDossier.js`), sem I/O e com `now` injetado.
 - Waivers de risco (`security_waivers` + `waiverService`): isenção FORMAL e
   TEMPORÁRIA. PROVA end-to-end contra o banco real (2026-10-08, em achado NÃO
   bloqueante para que a decisão de release não mudasse em nenhum instante): waiver
@@ -194,7 +199,7 @@ agendado depois que o anterior termina.
   resolvido). A prova também revelou um defeito real: `createWaiver` não era
   atômico e uma falha ao gravar o evento deixava **isenção sem trilha** — hoje roda
   em transação.
-- Testes: **219 casos em 14 suítes** (`tests/unit/securityIntel/`).
+- Testes: **236 casos em 16 suítes** (`tests/unit/securityIntel/` + `api/modules/security-intel/`).
   **5 de resiliência** (`resilience.test.js`): ciclos **nunca se sobrepõem** (ciclo
   lento em andamento não deixa o próximo disparar), erro de ciclo é **capturado**
   (sem unhandled rejection que derrubaria a API) e o worker **continua tentando**,

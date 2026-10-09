@@ -39,6 +39,14 @@ operacional; não duplica o doc.
   `@modelcontextprotocol/sdk@1.30.0`); com a base completa são **47 bloqueios de
   runtime** (`@modelcontextprotocol/sdk`, `brace-expansion`, `braces`,
   `extract-zip` entre os primeiros) e 131 avisos dev-only.
+- **Dossiê de triagem** (`node scripts/security-intel.js triage`, saída
+  `reports/security-intel-triage.json` + `.md`): transforma o que já foi medido em
+  FILA de decisão, com motivo e comando por pacote. Três buckets: missão isolada
+  (Nível B), exige aprovação humana (Nível C) e **sem correção publicada**
+  (controle compensatório ou waiver com prazo). Não decide nada — e um agrupamento
+  sem correção publicada NUNCA cai no bucket automático, por menor que seja a
+  severidade. Medido 2026-10-09: **28 pacotes na fila** (19 isolados, 4 exigem
+  aprovação, 5 sem correção publicada).
 - **Waiver de risco** (`security_waivers` + `api/services/securityIntel/waiverService.js`,
   CLI `waivers|waive|revoke`): aceitação FORMAL e TEMPORÁRIA por humano identificado.
   Regras duras: expiração obrigatória e futura, prazo ≤ `releaseGate.maxWaiverDays`
@@ -128,8 +136,11 @@ operacional; não duplica o doc.
 
 1. **Triagem dos achados** (decisão humana). No escopo completo são **248 achados**
    (121 de severidade bloqueante; 47 bloqueios de runtime no gate) e **108 candidatos
-   de patch**: 39 `DIRECT_BUMP`, 60 `TRANSITIVE_OVERRIDE`, 9 `NO_PATCH`; 79 Nível B e
-   29 Nível C. Waiver **ainda não existe** como tabela — nada é isentado hoje.
+   de patch**, consolidados em **28 pacotes**: 19 isolados (Nível B), 4 exigem
+   aprovação (Nível C) e 5 sem correção publicada. A fila com motivo e comando por
+   pacote está em `reports/security-intel-triage.md` (`node scripts/security-intel.js triage`).
+   Waiver **existe** desde 2026-10-08, mas **nada está isentado**: a tabela está
+   vazia e só um humano identificado isenta, com prazo.
 2. Registrar o Release Security Gate em `validate:governance-enforcement` — só
    DEPOIS de triar (hoje o registro bloquearia o release; decisão do dono).
 3. Agendamento do sweep `--scope installed` (hoje é manual; o worker NÃO sincroniza

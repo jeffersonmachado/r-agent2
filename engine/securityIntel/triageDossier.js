@@ -1,0 +1,234 @@
+'use strict';
+
+/**
+ * Dossiê de triagem — transformação PURA de dados medidos em fila de decisão.
+ *
+ * A capacidade já sabe medir (inventário, CVEs, plano, gate) e já sabe registrar
+ * a decisão humana (waivers). O que faltava era o elo entre os dois: uma fila
+ * priorizada, com o motivo de cada agrupamento e o comando exato de cada ação.
+ *
+ * Regras de honestidade embutidas:
+ *   - este módulo NÃO decide nada: nenhum bucket aprova, isenta ou aplica correção.
+ *     Ele diz o que a decisão exige (missão isolada, aprovação humana, waiver com
+ *     prazo) e o que aconteceu de fato;
+ *   - agrupamento que NÃO é limpável por atualização nunca entra no bucket
+ *     automático, mesmo com severidade baixa — falta de versão corrigida é
+ *     ausência de remédio, não ausência de risco;
+ *   - dev-only e estados VEX aparecem explicitamente como NÃO contados no
+ *     bloqueio (para o número não ser lido errado);
+ *   - `unmeasured` declara o que o dossiê não cobre. Sem isso o dossiê seria uma
+ *     promessa, não um recorte.
+ */
+
+const BUCKETS = Object.freeze({
+  AUTO_ISOLATED: 'AUTO_ISOLATED',
+  HUMAN_APPROVAL: 'HUMAN_APPROVAL',
+  WAIVER_OR_COMPENSATING_CONTROL: 'WAIVER_OR_COMPENSATING_CONTROL',
+});
+
+const BUCKET_ORDER = [BUCKETS.WAIVER_OR_COMPENSATING_CONTROL, BUCKETS.HUMAN_APPROVAL, BUCKETS.AUTO_ISOLATED];
+
+const SEVERITY_WEIGHT = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFORMATIONAL: 4 };
+
+const BUCKET_LABELS = Object.freeze({
+  [BUCKETS.AUTO_ISOLATED]: 'Missão isolada (Nível B)',
+  [BUCKETS.HUMAN_APPROVAL]: 'Exige aprovação humana (Nível C)',
+  [BUCKETS.WAIVER_OR_COMPENSATING_CONTROL]: 'Sem correção publicada: controle compensatório ou waiver com prazo',
+});
+
+function bucketOf(group) {
+  if (group.fullyClearable !== true) return BUCKETS.WAIVER_OR_COMPENSATING_CONTROL;
+  if (group.requiresHumanApproval === true) return BUCKETS.HUMAN_APPROVAL;
+  if (String(group.updateRisk || 'UNKNOWN') === 'MAJOR') return BUCKETS.HUMAN_APPROVAL;
+  if (String(group.updateRisk || 'UNKNOWN') === 'UNKNOWN') return BUCKETS.HUMAN_APPROVAL;
+  return BUCKETS.AUTO_ISOLATED;
+}
+
+function rationaleOf(group, bucket) {
+  if (bucket === BUCKETS.WAIVER_OR_COMPENSATING_CONTROL) {
+    return `${group.advisoriesWithoutFix} de ${group.advisoriesTotal} advisories sem versão corrigida publicada:`
+      + ' atualização não resolve — exige controle compensatório e waiver COM PRAZO (ou aceitar e registrar o risco).';
+  }
+  if (bucket === BUCKETS.HUMAN_APPROVAL) {
+    const reason = String(group.updateRisk) === 'MAJOR'
+      ? `atualização MAJOR (${group.currentVersion || '?'} → ${group.recommendedVersion})`
+      : 'componente de runtime/autonomia Nível C';
+    return `Limpável por bump, mas ${reason}: missão isolada exige autorização explícita.`;
+  }
+  return `Limpável por bump ${String(group.updateRisk).toLowerCase()} (${group.currentVersion || '?'} → ${group.recommendedVersion}) em missão isolada.`;
+}
+
+function commandOf(group, bucket) {
+  if (bucket === BUCKETS.WAIVER_OR_COMPENSATING_CONTROL) {
+    return `node scripts/security-intel.js waive --finding <findingKey de ${group.packageName}> --approve <quem assume> --days <prazo ≤ máximo> --reason "<motivo>" --control "<controle compensatório>"`;
+  }
+  return `node scripts/security-intel.js patches  # obter a chave do candidato de ${group.packageName}, depois:`
+    + ` node scripts/security-intel.js patch-mission --candidate <chave>${bucket === BUCKETS.HUMAN_APPROVAL ? ' --authorized-by <quem autoriza>' : ''}`;
+}
+
+function normalizeGroup(group) {
+  const bucket = bucketOf(group);
+  return {
+    key: group.key,
+    packageName: group.packageName,
+    service: group.service || null,
+    ecosystem: group.ecosystem || null,
+    currentVersion: group.currentVersion || null,
+    recommendedVersion: group.recommendedVersion || null,
+    updateRisk: group.updateRisk || 'UNKNOWN',
+    autonomy: group.autonomy || null,
+    severity: group.severity || null,
+    kev: group.kev === true,
+    devOnly: group.devOnly === true,
+    advisoriesTotal: Number(group.advisoriesTotal || 0),
+    advisoriesWithoutFix: Number(group.advisoriesWithoutFix || 0),
+    fullyClearable: group.fullyClearable === true,
+    bucket,
+    bucketLabel: BUCKET_LABELS[bucket],
+    rationale: rationaleOf(group, bucket),
+    command: commandOf(group, bucket),
+  };
+}
+
+function sortGroups(a, b) {
+  if (a.devOnly !== b.devOnly) return a.devOnly ? 1 : -1;
+  if (a.kev !== b.kev) return a.kev ? -1 : 1;
+  const orderDiff = BUCKET_ORDER.indexOf(a.bucket) - BUCKET_ORDER.indexOf(b.bucket);
+  if (orderDiff !== 0) return orderDiff;
+  const severityDiff = (SEVERITY_WEIGHT[a.severity] ?? 9) - (SEVERITY_WEIGHT[b.severity] ?? 9);
+  if (severityDiff !== 0) return severityDiff;
+  if (a.advisoriesWithoutFix !== b.advisoriesWithoutFix) return b.advisoriesWithoutFix - a.advisoriesWithoutFix;
+  return String(a.packageName).localeCompare(String(b.packageName));
+}
+
+/**
+ * @param {object} input
+ * @param {Array<object>} input.groups    saída de `consolidatePlansByPackage`
+ * @param {object|null}  input.gate       relatório do Release Security Gate (opcional)
+ * @param {object|null}  input.findings   resumo de achados (contadores)
+ * @param {object|null}  input.advisoryBase { ageHours, stale }
+ * @param {object}       input.policy     `releaseGate` da política
+ * @param {string}       input.now        ISO-8601 (injetado: nada lê relógio aqui)
+ * @param {string}       input.tenantKey
+ */
+function buildTriageDossier({
+  groups = [],
+  gate = null,
+  findings = null,
+  advisoryBase = null,
+  policy = {},
+  tenantKey = 'system',
+  now,
+} = {}) {
+  if (!now) throw new Error('triage_dossier_now_required');
+
+  const normalized = groups.map(normalizeGroup).sort(sortGroups);
+  const byBucket = {
+    [BUCKETS.AUTO_ISOLATED]: normalized.filter((group) => group.bucket === BUCKETS.AUTO_ISOLATED),
+    [BUCKETS.HUMAN_APPROVAL]: normalized.filter((group) => group.bucket === BUCKETS.HUMAN_APPROVAL),
+    [BUCKETS.WAIVER_OR_COMPENSATING_CONTROL]: normalized.filter((group) => group.bucket === BUCKETS.WAIVER_OR_COMPENSATING_CONTROL),
+  };
+
+  const blockingSeverities = policy.blockOnSeverity || [];
+  const severityBands = findings?.bySeverity || {};
+  const blockingFindings = blockingSeverities.reduce((total, severity) => total + (severityBands[severity] || 0), 0);
+
+  return {
+    generatedAt: now,
+    tenantKey,
+    // Fila de decisão (nada aqui é aplicado por este dossiê).
+    buckets: Object.fromEntries(
+      Object.entries(byBucket).map(([bucket, items]) => [bucket, {
+        label: BUCKET_LABELS[bucket],
+        count: items.length,
+        packages: items.map((item) => item.packageName),
+      }]),
+    ),
+    groups: normalized,
+    totals: {
+      groups: normalized.length,
+      autoIsolated: byBucket[BUCKETS.AUTO_ISOLATED].length,
+      requiringHumanApproval: byBucket[BUCKETS.HUMAN_APPROVAL].length,
+      withoutPublishedFix: byBucket[BUCKETS.WAIVER_OR_COMPENSATING_CONTROL].length,
+      advisoriesWithoutFix: normalized.reduce((total, group) => total + group.advisoriesWithoutFix, 0),
+      devOnlyGroups: normalized.filter((group) => group.devOnly).length,
+      kevGroups: normalized.filter((group) => group.kev).length,
+    },
+    measured: {
+      findingsAtRisk: findings?.open ?? null,
+      blockingFindings,
+      blockingSeverities,
+      kevOpen: findings?.kevOpen ?? null,
+      vexDiscarded: findings?.vex?.total ?? null,
+      advisoryBaseAgeHours: advisoryBase?.ageHours ?? null,
+      advisoryBaseStale: advisoryBase?.stale ?? null,
+      gateDecision: gate?.decision ?? null,
+      gateBlocking: Array.isArray(gate?.blocking) ? gate.blocking.length : null,
+      gateWarnings: Array.isArray(gate?.warnings) ? gate.warnings.length : null,
+    },
+    policy: {
+      blockOnSeverity: blockingSeverities,
+      blockOnDevDependencies: policy.blockOnDevDependencies === true,
+      blockWhenKevWithoutFix: policy.blockWhenKevWithoutFix !== false,
+      maxWaiverDays: policy.maxWaiverDays ?? null,
+    },
+    // O que este dossiê NÃO cobre. Sem esta lista, o dossiê pareceria completo.
+    unmeasured: [
+      'Achados cobertos por waiver VIGENTE não aparecem como risco aberto; consulte `security-intel.js waivers`.',
+      'Dependências dev-only são agrupadas e marcadas, mas não contam como bloqueio quando a política manda tratá-las como aviso.',
+      `Estados VEX (NOT_AFFECTED/FALSE_POSITIVE) não entram na fila: são evidência de triagem, não risco${findings?.vex?.total ? ` (${findings.vex.total} registros)` : ''}.`,
+      'O dossiê não aplica correção nem cria isenção: ele lista o que a decisão humana precisa cobrir.',
+    ],
+  };
+}
+
+/** Markdown para leitura humana (mesma informação do JSON, sem decidir por ninguém). */
+function renderTriageMarkdown(dossier) {
+  const lines = [];
+  lines.push(`# Triagem de segurança — ${dossier.tenantKey} (${dossier.generatedAt})`);
+  lines.push('');
+  lines.push('Este relatório **não decide nada**: ele ordena o que foi medido e o que cada ação exige.');
+  lines.push('');
+  lines.push('## Estado medido');
+  lines.push('');
+  lines.push(`- Gate de release: **${dossier.measured.gateDecision ?? 'não executado'}**`
+    + `${dossier.measured.gateBlocking === null ? '' : ` (${dossier.measured.gateBlocking} bloqueios, ${dossier.measured.gateWarnings} avisos)`}`);
+  lines.push(`- Achados abertos: **${dossier.measured.findingsAtRisk ?? 'não medido'}**`
+    + ` | bloqueantes (${(dossier.policy.blockOnSeverity || []).join('/') || 'sem política'}): **${dossier.measured.blockingFindings}**`
+    + ` | KEV aberto: ${dossier.measured.kevOpen ?? 'não medido'}`);
+  lines.push(`- Evidência descartada por VEX: ${dossier.measured.vexDiscarded ?? 'não medido'}`);
+  lines.push(`- Base de advisories: ${dossier.measured.advisoryBaseAgeHours ?? 'não medida'} h`
+    + `${dossier.measured.advisoryBaseStale ? ' — **VENCIDA**' : ''}`);
+  lines.push(`- Pacotes na fila: **${dossier.totals.groups}**`
+    + ` (${dossier.totals.autoIsolated} isolados, ${dossier.totals.requiringHumanApproval} exigem aprovação, ${dossier.totals.withoutPublishedFix} sem correção publicada)`);
+  lines.push('');
+  for (const bucket of BUCKET_ORDER) {
+    const items = dossier.groups.filter((group) => group.bucket === bucket);
+    if (items.length === 0) continue;
+    lines.push(`## ${BUCKET_LABELS[bucket]} (${items.length})`);
+    lines.push('');
+    for (const group of items) {
+      lines.push(`### ${group.packageName}${group.service ? ` · ${group.service}` : ''} — ${group.severity || 'severidade não declarada'}${group.kev ? ' · KEV' : ''}${group.devOnly ? ' · dev-only' : ''}`);
+      lines.push('');
+      lines.push(`- Versão: ${group.currentVersion || '—'} → ${group.recommendedVersion || '**sem alvo publicado**'}`);
+      lines.push(`- Advisories: ${group.advisoriesTotal} (sem correção: ${group.advisoriesWithoutFix}) | risco da atualização: ${group.updateRisk}`);
+      lines.push(`- Por quê: ${group.rationale}`);
+      lines.push(`- Comando: \`${group.command}\``);
+      lines.push('');
+    }
+  }
+  lines.push('## Limites deste dossiê');
+  lines.push('');
+  for (const item of dossier.unmeasured) lines.push(`- ${item}`);
+  lines.push('');
+  return `${lines.join('\n')}\n`;
+}
+
+module.exports = {
+  BUCKETS,
+  BUCKET_LABELS,
+  BUCKET_ORDER,
+  bucketOf,
+  buildTriageDossier,
+  renderTriageMarkdown,
+};
