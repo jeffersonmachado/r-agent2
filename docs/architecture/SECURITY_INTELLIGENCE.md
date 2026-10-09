@@ -458,12 +458,15 @@ agendado depois que o anterior termina.
   npm pré-aquecido com a versão alvo, o aceite reprova **corretamente** e a missão de dependência
   não fecha.
 - **As missões são materializadas a partir da `main`** (`missionSourceService`, `sourceRef='main'`;
-  branch de missão é recusada como origem — `MISSION_SOURCE_REF_INVALID`). Logo um aceite que
-  depende de script do repositório só funciona **depois** que o script está na linha principal:
-  medido, o workspace em `594dce8d` (main) falhava com
-  `Cannot find module '<workspace>/scripts/security-intel-verify-target.js'` enquanto os commits
-  desta fase estavam em `mission/engineer-router-memory-hardening-20261008` (41 commits à frente;
-  `main` 0 atrás).
+  branch de missão é recusada como origem — `MISSION_SOURCE_REF_INVALID`). Medido em 2026-10-09: a
+  `main` (`594dce8d`) **não contém** `engine/securityIntel/`, `api/services/securityIntel/` nem
+  `scripts/security-intel*` — toda esta capability vive em
+  `mission/engineer-router-memory-hardening-20261008` (42 commits à frente; `main` 0 atrás). Por
+  isso o workspace da missão falha em `Cannot find module
+  '<workspace>/scripts/security-intel-verify-target.js'`: **nenhum aceite que dependa de arquivo do
+  repositório funciona antes desta capability estar na linha principal.** Enquanto isso não
+  acontecer, o Patch Engine não fecha achado nenhum, e o gate de release construído a partir da
+  `main` não inclui o `validate:security-release-gate`.
 
 - Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
