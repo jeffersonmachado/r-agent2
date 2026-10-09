@@ -69,10 +69,25 @@ const DISPLAY_TO_MISSION_STATE = Object.freeze({
   DEGRADED: 'DEGRADED',
 });
 
+/**
+ * `engineering_tasks.title` é varchar(255): o título da task é um RÓTULO, nunca o texto
+ * da missão (que vive em `objective`, coluna `text`). O orquestrador usava o objetivo
+ * inteiro no título; com o objetivo longo de uma missão de segurança o INSERT falhava
+ * (`22001 value too long for type character varying(255)`) e a execução morria em HTTP 500
+ * antes de começar — medido em 2026-10-09 com a missão de patch do `fast-uri`.
+ */
+const TASK_TITLE_MAX_LENGTH = 255;
+
+function taskTitleOf(spec = {}) {
+  const explicit = typeof spec.title === 'string' ? spec.title.trim() : '';
+  const fallback = String(spec.objective || spec.originalMission || '').split('\n')[0].trim();
+  return (explicit || fallback || 'Missão de engenharia').slice(0, TASK_TITLE_MAX_LENGTH);
+}
+
 /** Constrói o Task Contract a partir da MissionSpec aprovada — tradução de vocabulário apenas. */
 function buildTaskContract(spec, { createdBy = null, sourceCommit = null, sourceRef = null, sourceMissionFence = null } = {}) {
   return {
-    title: spec.objective || spec.originalMission.slice(0, 120),
+    title: taskTitleOf(spec),
     objective: spec.objective || spec.originalMission,
     taskType: toEngineeringTaskType(spec.missionType),
     risk: spec.risk,

@@ -243,6 +243,60 @@ const SERVICE_TEST_COMMANDS = Object.freeze({
 });
 
 /**
+ * Escopo de caminho de uma correção de DEPENDÊNCIA (o que o patch pode tocar).
+ *
+ * Não é decoração: `allowedPaths` vazio/ausente NUNCA significa "tudo permitido" —
+ * é `NO_PATCH_SCOPE` (reject) por decisão explícita do Roteador (ER-V1-FINAL-003).
+ * Sem declarar o escopo, o coder pode produzir exatamente o patch certo e ele é
+ * rejeitado: medido em 2026-10-09, o patch correto do `package.json` (fast-uri
+ * 3.1.0 -> 3.1.8) foi barrado com `NO_PATCH_SCOPE` e a missão esgotou as tentativas.
+ *
+ * O escopo é o MANIFESTO/LOCKFILE que declara a dependência — nunca o código do
+ * serviço: uma atualização de dependência não edita `api/server.js`.
+ */
+const DEPENDENCY_SCOPE_BY_SERVICE = Object.freeze({
+  // npm é um workspace: a árvore resolvida vive no lock da raiz, mesmo para pacote
+  // que pertence ao serviço `api` (não existe api/package.json neste repositório).
+  api: ['package.json', 'package-lock.json'],
+  // Dependência do frontend pode estar hoisted para a raiz; manter os dois conjuntos
+  // é necessário para o override/bump real, e ainda é só manifesto+lock.
+  frontend: ['frontend/package.json', 'frontend/package-lock.json', 'package.json', 'package-lock.json'],
+  'rag-service': ['rag-service/requirements.txt'],
+});
+const DEFAULT_DEPENDENCY_SCOPE = Object.freeze(['package.json', 'package-lock.json']);
+
+/**
+ * Caminhos que uma correção de dependência NÃO pode tocar, mesmo que apareçam no
+ * patch: governança, gates, políticas de roteamento, CI e segredos. O texto da
+ * missão já proíbe; aqui a proibição passa a ser MECÂNICA (forbidden sempre vence
+ * sobre allowed). Motivo: já houve patch de missão que alterou
+ * `modelCapabilities.js` (peça de governança do roteador) durante um fix.
+ */
+const DEPENDENCY_FORBIDDEN_PATHS = Object.freeze([
+  'scripts/governance/**',
+  'governance/**',
+  'qa/**',
+  'qa-mesh/**',
+  '.github/**',
+  'migrations/**',
+  'config/**',
+  'engine/engineeringRouter/**',
+  'api/services/engineeringRouter/**',
+  '.env',
+  '.env.*',
+  '**/.env',
+  '**/.env.*',
+]);
+
+/** Escopo declarado para o alvo da correção (serviço/ecossistema). */
+function dependencyScopeOf(plan = {}) {
+  const service = String(plan.service || '').toLowerCase();
+  const ecosystem = String(plan.ecosystem || '').toLowerCase();
+  if (ecosystem === 'pypi' || service === 'rag-service') return [...DEPENDENCY_SCOPE_BY_SERVICE['rag-service']];
+  return [...(DEPENDENCY_SCOPE_BY_SERVICE[service] || DEFAULT_DEPENDENCY_SCOPE)];
+}
+
+/**
  * Monta o payload da missão do Roteador Engenheiro para um candidato.
  *
  * PURO: não cria nada. O chamador é quem submete (e é isso que mantém a
@@ -279,6 +333,11 @@ function buildPatchMissionSpec({ plan, finding = {}, component = {} } = {}) {
       title: `security: atualizar ${plan.packageName} ${plan.currentVersion} -> ${plan.targetVersion || 'sem alvo'} (${plan.advisoryId || 'advisory'})`,
       scope: 'single-dependency-update',
       risk,
+      // Escopo MECÂNICO: sem `allowedPaths` o Roteador rejeita todo patch
+      // (NO_PATCH_SCOPE); com ele, o patch só pode tocar manifesto/lock da
+      // dependência, e governança/segredos ficam proibidos por contrato.
+      allowedPaths: dependencyScopeOf(plan),
+      forbiddenPaths: [...DEPENDENCY_FORBIDDEN_PATHS],
       constraints: plan.preconditions,
       contextHints: {
         advisoryId: plan.advisoryId || null,
@@ -421,6 +480,7 @@ module.exports = {
   preconditionsFor,
   planPatch,
   buildPatchMissionSpec,
+  dependencyScopeOf,
   consolidatePlansByPackage,
   rankPlans,
   summarizePlans,
