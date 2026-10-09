@@ -144,6 +144,13 @@ cópia física e o inventário conta achado, e subtrair as duas contagens produz
 lacuna inventada; (2) pacotes puramente dev-only podem não ter candidato (a política decide
 se o plano os cobre) e, nesse caso, não aparecem na fila.
 
+O impacto por pacote conta apenas achado de **runtime**: achado em dependência dev-only é
+exibido separado (`+N em dependência dev-only`) e nunca somado, porque dev-only não bloqueia
+quando a política manda tratá-lo como aviso. Com essa separação as duas medidas independentes
+passam a **concordar** (2026-10-09: a fila endereça 47 achados bloqueantes e o gate conta 47
+bloqueios) — o relatório declara a concordância quando ela existe; ele nunca subtrai uma
+contagem da outra.
+
 | Bucket na fila | Decisão humana | Ação |
 |---|---|---|
 | **Sem correção publicada** (5 pacotes) | aceitar com controle compensatório **e registrar com prazo**, ou achar alternativa (trocar/remover a dependência, elevar o pacote pai) | `node scripts/security-intel.js waive --finding "<chave do achado>" --approve "<quem assume>" --days <≤ máximo> --reason "<motivo>" --control "<controle>"` |
