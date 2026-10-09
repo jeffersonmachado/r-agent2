@@ -190,7 +190,7 @@ describe('patchPlanner — payload de missão (puro)', () => {
     // do Runner. A suíte completa (`npm run test:unit`, ~9 min) é do pipeline de release, não da
     // missão: exigi-la aqui tornava o aceite insatisfazível no workspace isolado (medido 2026-10-09).
     expect(spec.options.testCommands).toHaveLength(2);
-    expect(spec.options.testCommands[0]).toBe('node scripts/security-intel-verify-target.js left 1.2.9');
+    expect(spec.options.testCommands[0]).toBe('node scripts/security-intel-verify-target.js left 1.2.9 --expect=direct');
     expect(spec.options.testCommands[1]).toBe('npm run test:flow');
     expect(spec.options.testCommands).not.toContain('npm run test:unit');
     expect(spec.options.risk).toBe('medium');
@@ -218,7 +218,7 @@ describe('patchPlanner — payload de missão (puro)', () => {
     // Sem serviço conhecido não há comando funcional — mas a prova mecânica do alvo aplicado
     // vale para qualquer serviço, então ela permanece (e é a única entrada).
     expect(commands).toHaveLength(1);
-    expect(commands[0]).toBe('node scripts/security-intel-verify-target.js left 1.2.9');
+    expect(commands[0]).toBe('node scripts/security-intel-verify-target.js left 1.2.9 --expect=direct');
   });
 
   test('sem plano é erro explícito', () => {

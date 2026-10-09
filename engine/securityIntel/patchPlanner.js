@@ -261,10 +261,20 @@ const SERVICE_TEST_COMMANDS = Object.freeze({
 });
 
 /**
- * Prova MECÂNICA de que o alvo foi aplicado: o pacote resolvido tem versão >= alvo.
+ * Prova MECÂNICA de que o alvo foi aplicado no GRAFO DECLARADO (`package.json` / lockfile).
  *
- * É a asserção direta do que um bump faz. O fechamento do ACHADO não é afirmado aqui: quem
- * decide isso é o Release Security Gate, que re-escaneia e deixa de contar o achado como aberto.
+ * Por que o grafo declarado e não a árvore instalada: no workspace isolado o `executionSandbox`
+ * monta `node_modules` como bind **READ-ONLY** do repositório do host — a árvore instalada não é
+ * (e não pode ser) alterada por um patch de dependência, então uma prova que olhasse
+ * `node_modules` reprovaria todo patch correto e ainda mediria o host, não a correção.
+ * `--source=installed` segue disponível para verificação no host, depois de `npm ci`.
+ *
+ * `--expect` fixa o tipo de correção que o plano exige, para que o patch não "passe" alterando o
+ * lugar errado: override transitivo precisa da entrada DURÁVEL em `overrides` (um lock editado à
+ * mão volta no próximo `npm install`), bump direto precisa da dependência declarada.
+ *
+ * É a asserção direta do que um bump faz. O fechamento do ACHADO não é afirmado aqui: quem decide
+ * isso é o Release Security Gate, que re-escaneia e deixa de contar o achado como aberto.
  */
 function dependencyResolutionCommand(plan = {}) {
   const packageName = String(plan.packageName || '').trim();
@@ -275,8 +285,9 @@ function dependencyResolutionCommand(plan = {}) {
   // Comando CURTO de propósito: ele é REGISTRADO em `engineering_test_runs.command`
   // (varchar(255)). O `node -e` inline que existia aqui tinha ~300 chars, o INSERT falhava com
   // `22001` e o comando era classificado como REJECTED sem nunca rodar (medido em 2026-10-09).
+  const expect = plan.kind === PATCH_KINDS.TRANSITIVE_OVERRIDE ? 'override' : 'direct';
   const suffix = ecosystem === 'pypi' ? ' --ecosystem=pypi' : '';
-  return `node scripts/security-intel-verify-target.js ${packageName} ${target}${suffix}`;
+  return `node scripts/security-intel-verify-target.js ${packageName} ${target} --expect=${expect}${suffix}`;
 }
 
 

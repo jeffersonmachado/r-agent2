@@ -15,7 +15,7 @@
  *    que a missão NÃO os substitui nem os declara cumpridos.
  */
 
-const { buildPatchMissionSpec, dependencyResolutionCommand } = require('../../../engine/securityIntel/patchPlanner');
+const { buildPatchMissionSpec, dependencyResolutionCommand, PATCH_KINDS } = require('../../../engine/securityIntel/patchPlanner');
 
 const plano = (extra = {}) => ({
   advisoryId: 'GHSA-hrr3-gc8f-f4qj',
@@ -43,7 +43,14 @@ describe('aceite da correção de dependência — cabe no deadline e prova o al
 
   it('inclui a prova MECÂNICA de versão (o alvo aplicado), antes do comando funcional', () => {
     const { options } = buildPatchMissionSpec({ plan: plano() });
-    expect(options.testCommands[0]).toBe('node scripts/security-intel-verify-target.js fast-uri 3.1.8');
+    expect(options.testCommands[0]).toBe('node scripts/security-intel-verify-target.js fast-uri 3.1.8 --expect=override');
+  });
+
+  it('a prova exige o TIPO de correção do plano (override transitivo ≠ bump direto)', () => {
+    const override = dependencyResolutionCommand(plano({ kind: PATCH_KINDS.TRANSITIVE_OVERRIDE, packageName: 'js-yaml', targetVersion: '4.3.2' }));
+    const direto = dependencyResolutionCommand(plano({ kind: PATCH_KINDS.DIRECT_BUMP, packageName: 'postcss', targetVersion: '8.5.18' }));
+    expect(override).toContain('--expect=override');
+    expect(direto).toContain('--expect=direct');
   });
 
   it('TODO comando de aceite cabe na coluna do registro de execução (varchar(255))', () => {
@@ -63,7 +70,7 @@ describe('aceite da correção de dependência — cabe no deadline e prova o al
 
   it('PyPI usa o mesmo script com --ecosystem=pypi', () => {
     const cmd = dependencyResolutionCommand(plano({ service: 'rag-service', packageName: 'transformers', targetVersion: '5.10.0' }));
-    expect(cmd).toBe('node scripts/security-intel-verify-target.js transformers 5.10.0 --ecosystem=pypi');
+    expect(cmd).toBe('node scripts/security-intel-verify-target.js transformers 5.10.0 --expect=override --ecosystem=pypi');
   });
 
   it('sem alvo não inventa prova (devolve null, nada de comando vazio)', () => {
