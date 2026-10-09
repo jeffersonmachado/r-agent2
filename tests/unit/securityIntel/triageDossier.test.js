@@ -193,4 +193,39 @@ describe('triageDossier — ordenação, totais e honestidade', () => {
     expect(md).toMatch(/Limites deste dossiê/);
     expect(md).toMatch(/waive --finding/);
   });
+
+  it('mede a cobertura da fila por PACOTE (critério do gate), não por subtração de contagens', () => {
+    // A primeira versão deste campo subtraía contagens de unidades diferentes
+    // (achado × cópia física do gate vs. achado do inventário) e produzia uma
+    // lacuna inventada. O teste fixa a medida nominal.
+    const result = dossier(
+      [
+        group({ packageName: 'brace-expansion', blockingFindingsOpen: 4 }),
+        group({ packageName: 'lodash', blockingFindingsOpen: 2 }),
+      ],
+      {
+        gate: {
+          decision: 'NO_GO',
+          blocking: [
+            { code: 'OPEN_VULNERABILITY', message: 'achado HIGH aberto: GHSA-1 em brace-expansion@2.1.4' },
+            { code: 'OPEN_VULNERABILITY', message: 'achado HIGH aberto: GHSA-1 em brace-expansion@2.1.4' },
+            { code: 'OPEN_VULNERABILITY', message: 'achado HIGH aberto: GHSA-2 em lodash@4.17.23' },
+            { code: 'OPEN_VULNERABILITY', message: 'achado CRITICAL aberto: GHSA-3 em undici@9.0.0' },
+          ],
+          warnings: [],
+        },
+      },
+    );
+
+    expect(result.blockingImpact.gateBlockingItems).toBe(4);
+    expect(result.blockingImpact.gateBlockingPackages).toBe(3);
+    expect(result.blockingImpact.gateBlockingPackagesInQueue).toEqual(['brace-expansion', 'lodash']);
+    expect(result.blockingImpact.gateBlockingPackagesOutOfQueue).toEqual(['undici']);
+    expect(result.blockingImpact.unitWarning).toMatch(/Não subtraia/);
+    expect(result.blockingImpact).not.toHaveProperty('notAddressedByQueue');
+
+    const md = renderTriageMarkdown(result);
+    expect(md).toContain('2 de 3');
+    expect(md).toContain('FORA da fila: undici');
+  });
 });

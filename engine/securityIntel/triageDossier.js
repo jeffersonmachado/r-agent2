@@ -94,6 +94,10 @@ function normalizeGroup(group) {
     advisoriesTotal: Number(group.advisoriesTotal || 0),
     advisoriesWithoutFix: Number(group.advisoriesWithoutFix || 0),
     fullyClearable: group.fullyClearable === true,
+    // Impacto medido: quantos achados de severidade BLOQUEANTE continuam abertos
+    // neste pacote/serviço. Sem isso a fila é ordenada por severidade, não por
+    // efeito no gate — e o operador descobre depois que resolveu pouco.
+    blockingFindingsOpen: Number(group.blockingFindingsOpen || 0),
     // Chaves reais para a ação (quando o chamador tem os candidatos em mãos): a
     // fila precisa ser EXECUTÁVEL, não um lembrete de que algo existe.
     candidateKeys: Array.isArray(group.candidateKeys) ? group.candidateKeys.filter(Boolean) : [],
@@ -112,6 +116,10 @@ function sortGroups(a, b) {
   if (a.kev !== b.kev) return a.kev ? -1 : 1;
   const orderDiff = BUCKET_ORDER.indexOf(a.bucket) - BUCKET_ORDER.indexOf(b.bucket);
   if (orderDiff !== 0) return orderDiff;
+  // Dentro do bucket, primeiro o que tem mais efeito medido no gate.
+  if (a.blockingFindingsOpen !== b.blockingFindingsOpen) {
+    return b.blockingFindingsOpen - a.blockingFindingsOpen;
+  }
   const severityDiff = (SEVERITY_WEIGHT[a.severity] ?? 9) - (SEVERITY_WEIGHT[b.severity] ?? 9);
   if (severityDiff !== 0) return severityDiff;
   if (a.advisoriesWithoutFix !== b.advisoriesWithoutFix) return b.advisoriesWithoutFix - a.advisoriesWithoutFix;
@@ -150,6 +158,25 @@ function buildTriageDossier({
   const severityBands = findings?.bySeverity || {};
   const blockingFindings = blockingSeverities.reduce((total, severity) => total + (severityBands[severity] || 0), 0);
 
+  // Cobertura da FILA medida pelo critério do GATE (autoridade da decisão), por
+  // PACOTE e não por contagem: o gate conta bloqueio por achado × cópia física e o
+  // dossiê conta achado no inventário — subtrair uma contagem da outra produziria
+  // número inventado (foi o que aconteceu na primeira versão deste campo).
+  const packageOfBlocker = (message) => {
+    const match = / em ([^@\s]+)@/.exec(String(message || ''));
+    return match ? match[1] : null;
+  };
+  const gatePackages = new Set(
+    (gate?.blocking || []).map((item) => packageOfBlocker(item.message)).filter(Boolean),
+  );
+  const queuePackages = new Set(normalized.map((group) => group.packageName));
+  const gateBlocksInQueue = [...gatePackages].filter((name) => queuePackages.has(name)).sort();
+  const gateBlocksOutOfQueue = [...gatePackages].filter((name) => !queuePackages.has(name)).sort();
+  const queueBlockingImpact = normalized.reduce((total, group) => total + group.blockingFindingsOpen, 0);
+  const queueBlockingDevOnly = normalized
+    .filter((group) => group.devOnly)
+    .reduce((total, group) => total + group.blockingFindingsOpen, 0);
+
   return {
     generatedAt: now,
     tenantKey,
@@ -170,6 +197,18 @@ function buildTriageDossier({
       advisoriesWithoutFix: normalized.reduce((total, group) => total + group.advisoriesWithoutFix, 0),
       devOnlyGroups: normalized.filter((group) => group.devOnly).length,
       kevGroups: normalized.filter((group) => group.kev).length,
+    },
+    blockingImpact: {
+      // Cobertura por PACOTE (comparável com o gate).
+      gateBlockingItems: Array.isArray(gate?.blocking) ? gate.blocking.length : null,
+      gateBlockingPackages: gatePackages.size,
+      gateBlockingPackagesInQueue: gateBlocksInQueue,
+      gateBlockingPackagesOutOfQueue: gateBlocksOutOfQueue,
+      // Contagens de ACHADO do dossiê (unidade diferente da do gate).
+      queueBlockingFindings: queueBlockingImpact,
+      queueBlockingFindingsDevOnly: queueBlockingDevOnly,
+      globalBlockingFindings: blockingFindings,
+      unitWarning: 'gate conta bloqueio por achado × cópia física; o dossiê conta achado no inventário. Não subtraia estas contagens entre si — use a cobertura por pacote.',
     },
     measured: {
       findingsAtRisk: findings?.open ?? null,
@@ -192,7 +231,7 @@ function buildTriageDossier({
     // O que este dossiê NÃO cobre. Sem esta lista, o dossiê pareceria completo.
     unmeasured: [
       'Achados cobertos por waiver VIGENTE não aparecem como risco aberto; consulte `security-intel.js waivers`.',
-      'Dependências dev-only são agrupadas e marcadas, mas não contam como bloqueio quando a política manda tratá-las como aviso.',
+      'Dependências puramente dev-only podem NÃO ter candidato de correção (a política decide se o plano as cobre) e, nesse caso, não aparecem nesta fila — o número de bloqueantes por achado pode ser maior que o endereçado aqui.',
       `Estados VEX (NOT_AFFECTED/FALSE_POSITIVE) não entram na fila: são evidência de triagem, não risco${findings?.vex?.total ? ` (${findings.vex.total} registros)` : ''}.`,
       'O dossiê não aplica correção nem cria isenção: ele lista o que a decisão humana precisa cobrir.',
     ],
@@ -218,7 +257,13 @@ function renderTriageMarkdown(dossier) {
     + `${dossier.measured.advisoryBaseStale ? ' — **VENCIDA**' : ''}`);
   lines.push(`- Pacotes na fila: **${dossier.totals.groups}**`
     + ` (${dossier.totals.autoIsolated} isolados, ${dossier.totals.requiringHumanApproval} exigem aprovação, ${dossier.totals.withoutPublishedFix} sem correção publicada)`);
-  lines.push('');
+  lines.push(`- Efeito da fila no gate: **${dossier.blockingImpact.gateBlockingPackagesInQueue.length} de ${dossier.blockingImpact.gateBlockingPackages}** pacotes que bloqueiam o release estão na fila`
+    + `${dossier.blockingImpact.gateBlockingPackagesOutOfQueue.length === 0
+      ? ' (nenhum bloqueador ficou fora)'
+      : ` — FORA da fila: ${dossier.blockingImpact.gateBlockingPackagesOutOfQueue.join(', ')}`}`);
+  lines.push(`- Bloqueantes por ACHADO (unidade diferente da do gate): ${dossier.blockingImpact.queueBlockingFindings} endereçados pela fila`
+    + ` (${dossier.blockingImpact.queueBlockingFindingsDevOnly} em pacotes marcados dev-only) de ${dossier.blockingImpact.globalBlockingFindings} abertos.`
+    + ` ${dossier.blockingImpact.unitWarning}`);  lines.push('');
   for (const bucket of BUCKET_ORDER) {
     const items = dossier.groups.filter((group) => group.bucket === bucket);
     if (items.length === 0) continue;
@@ -229,6 +274,8 @@ function renderTriageMarkdown(dossier) {
       lines.push('');
       lines.push(`- Versão: ${group.currentVersion || '—'} → ${group.recommendedVersion || '**sem alvo publicado**'}`);
       lines.push(`- Advisories: ${group.advisoriesTotal} (sem correção: ${group.advisoriesWithoutFix}) | risco da atualização: ${group.updateRisk}`);
+      lines.push(`- Impacto: ${group.blockingFindingsOpen} achado(s) de severidade bloqueante em aberto neste pacote`
+        + `${group.devOnly ? ' (dev-only: não conta como bloqueio na política vigente)' : ''}`);
       lines.push(`- Por quê: ${group.rationale}`);
       if (group.recommendedCandidateKey) {
         lines.push(`- Candidato recomendado: \`${group.recommendedCandidateKey}\`${group.recommendedVersion ? ` (alvo ${group.recommendedVersion})` : ''}`);

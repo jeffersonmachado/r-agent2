@@ -131,10 +131,18 @@ node scripts/security-intel.js triage
 ```
 
 `reports/security-intel-triage.md` traz, por pacote: versão atual → alvo, advisories
-(sem correção), risco da atualização, por que aquele bucket, o **candidato recomendado**
-(o alvo que limpa todos os advisories), os achados sem correção publicada e o **comando
-exato**. A ordem já é a ordem de decisão: KEV primeiro, depois o que não tem remédio,
-depois o que exige aprovação, e dev-only por último.
+(sem correção), risco da atualização, **quantos achados bloqueantes abertos** o pacote
+resolve, por que aquele bucket, o **candidato recomendado** (o alvo que limpa todos os
+advisories), os achados sem correção publicada e o **comando exato**. A ordem já é a ordem
+de decisão: KEV primeiro, depois o que não tem remédio, depois o que exige aprovação, e
+dev-only por último.
+
+Duas leituras que o relatório força a fazer direito: (1) a cobertura da fila é medida por
+**pacote** contra os bloqueios do gate (medido em 2026-10-09: **16 de 16** pacotes
+bloqueadores estão na fila — nenhum ficou fora), porque o gate conta bloqueio por achado ×
+cópia física e o inventário conta achado, e subtrair as duas contagens produziria uma
+lacuna inventada; (2) pacotes puramente dev-only podem não ter candidato (a política decide
+se o plano os cobre) e, nesse caso, não aparecem na fila.
 
 | Bucket na fila | Decisão humana | Ação |
 |---|---|---|

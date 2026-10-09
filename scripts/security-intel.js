@@ -664,13 +664,25 @@ async function commandRevokeWaiver(args) {
 async function commandTriage(args) {
   const fs = require('fs');
   const { listPatchCandidates } = require('../api/services/securityIntel/patchPlanService');
-  const { getFindingSummary, loadPolicy } = require('../api/services/securityIntel/vulnerabilityScanService');
+  const { getFindingSummary, listFindings, loadPolicy } = require('../api/services/securityIntel/vulnerabilityScanService');
   const { getLatestAdvisorySyncAge } = require('../api/services/securityIntel/securityIntelWorker');
   const { consolidatePlansByPackage } = require('../engine/securityIntel/patchPlanner');
   const { buildTriageDossier, renderTriageMarkdown } = require('../engine/securityIntel/triageDossier');
 
   const tenantKey = args.tenant || 'system';
   const policy = loadPolicy({ reload: true });
+
+  // Impacto por pacote/serviço: quantos achados de severidade BLOQUEANTE seguem
+  // abertos. É o que permite ordenar a fila por efeito no gate, não por severidade.
+  const blockingSeverities = policy.releaseGate?.blockOnSeverity || [];
+  const blockingCountsByPackageService = new Map();
+  for (const severity of blockingSeverities) {
+    const page = await listFindings({ tenantKey, severity, limit: 500 });
+    for (const row of page.items) {
+      const key = `${row.package_name}|${row.service || ''}`;
+      blockingCountsByPackageService.set(key, (blockingCountsByPackageService.get(key) || 0) + 1);
+    }
+  }
 
   const candidates = await listPatchCandidates({ tenantKey, limit: args.limit ? Number(args.limit) : 500 });
   const planOf = (row) => ({
@@ -724,6 +736,7 @@ async function commandTriage(args) {
       recommendedCandidateKey: recommended ? recommended.candidateKey : null,
       findingKeys: entry.findingKeys,
       withoutFixFindingKeys: entry.withoutFixFindingKeys,
+      blockingFindingsOpen: blockingCountsByPackageService.get(`${group.packageName}|${group.service || ''}`) || 0,
     };
   });
 
