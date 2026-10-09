@@ -170,7 +170,9 @@ antes de registrar waiver; (2) waiver sem prazo, sem aprovador identificado ou p
 que não é risco aberto é **recusado** pelo serviço; (3) revogar é sempre possível e devolve o
 achado ao risco aberto; (4) dev-only não bloqueia release (é aviso) — trate por último.
 Interface equivalente para triagem item a item: `/dev/security-intel` (filtros por
-severidade/KEV, linha do tempo por achado e a seção de waivers).
+severidade/KEV, linha do tempo por achado, a **fila de triagem** com o comando pronto de
+cada pacote e a seção de waivers para isentar/revogar). A fila exibida na tela vem do mesmo
+serviço do CLI — não existe uma segunda fila calculada no frontend.
 
 ### Cadências — o que é automático hoje
 
@@ -394,7 +396,7 @@ Cada linha declara **o que foi provado**, não o que foi escrito. Estado possív
 | Monitoramento contínuo | Worker de 6 h sem egress por padrão, ciclo real de 723 ms, escalonamento de achado novo KEV/CRITICAL/HIGH; DEGRADED após 3 falhas e recuperação | SATISFEITO |
 | Resiliência | 5 testes: ciclos nunca se sobrepõem, erro de ciclo capturado (sem unhandled rejection), falha persistente → DEGRADED com recuperação, restart limpo, sync parcial não memorizado | SATISFEITO |
 | Waivers auditáveis | Tabela + serviço + scan + gate + CLI + API + UI; expiração obrigatória (NOT NULL), recusa de isenção sem substância/aprovador e de achado que não é risco aberto; prova end-to-end contra o banco real | SATISFEITO (nada isentado: 0 waivers vigentes) |
-| Fila de triagem | `triage` → 28 pacotes (19 isolados, 4 exigem aprovação humana, 5 sem correção publicada), com motivo e comando por item, em JSON + Markdown | SATISFEITO |
+| Fila de triagem | `triage` → 28 pacotes (19 isolados, 4 exigem aprovação humana, 5 sem correção publicada), com motivo, impacto medido, candidato recomendado e comando pronto; a **mesma** fila vem do serviço único `triageService` para o CLI, a API (`GET /api/security-intel/triage`) e a UI | SATISFEITO |
 | Triagem das 248 achados | Dossiê pronto; **a decisão é humana** e ainda não foi tomada | PENDENTE — DECISÃO |
 | Registro do gate no agregado | Não registrado de propósito: hoje bloquearia o release da plataforma por decisão que é do dono | PENDENTE — DECISÃO |
 | Índice vetorial (pgvector) | `vector 0.6.0` < 0.8.0 recomendado ⇒ **DEGRADED**; HNSW VÁLIDO, planner **usa** o índice, 8460 chunks com 0 nulos / 0 dimensões erradas. **Baseline pré-upgrade estabelecida** (regressão de ranking híbrido + isolamento multi-tenant: 20 passed / 0 skipped / 0 failed) com critério objetivo de comparação | PENDENTE — TRABALHO (upgrade 0.6.0 → 0.8.x; a baseline já existe para provar que não regrediu) |

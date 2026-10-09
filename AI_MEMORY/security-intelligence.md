@@ -39,14 +39,16 @@ operacional; não duplica o doc.
   `@modelcontextprotocol/sdk@1.30.0`); com a base completa são **47 bloqueios de
   runtime** (`@modelcontextprotocol/sdk`, `brace-expansion`, `braces`,
   `extract-zip` entre os primeiros) e 131 avisos dev-only.
-- **Dossiê de triagem** (`node scripts/security-intel.js triage`, saída
-  `reports/security-intel-triage.json` + `.md`): transforma o que já foi medido em
-  FILA de decisão, com motivo e comando por pacote. Três buckets: missão isolada
+- **Dossiê e fila de triagem** (`node scripts/security-intel.js triage`, `GET /api/security-intel/triage`
+  e a seção na UI — todos pelo MESMO `api/services/securityIntel/triageService.js`):
+  saída `reports/security-intel-triage.json` + `.md`. Três buckets: missão isolada
   (Nível B), exige aprovação humana (Nível C) e **sem correção publicada**
   (controle compensatório ou waiver com prazo). Não decide nada — e um agrupamento
   sem correção publicada NUNCA cai no bucket automático, por menor que seja a
-  severidade. Medido 2026-10-09: **28 pacotes na fila** (19 isolados, 4 exigem
-  aprovação, 5 sem correção publicada).
+  severidade. Ordenação por KEV, bucket e **impacto medido no gate**. Medido
+  2026-10-09: **28 pacotes na fila** (19 isolados, 4 exigem aprovação, 5 sem
+  correção), **16 de 16** pacotes bloqueadores cobertos e as duas medidas
+  independentes concordando (47 achados endereçados = 47 bloqueios do gate).
 - **Waiver de risco** (`security_waivers` + `api/services/securityIntel/waiverService.js`,
   CLI `waivers|waive|revoke`): aceitação FORMAL e TEMPORÁRIA por humano identificado.
   Regras duras: expiração obrigatória e futura, prazo ≤ `releaseGate.maxWaiverDays`
