@@ -4,6 +4,7 @@ Configurações do serviço RAG.
 Lê configurações de api/data/config.json com fallback para variáveis de ambiente.
 """
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import os
@@ -197,8 +198,25 @@ class Settings(BaseSettings):
     )
 
     # Database (para pgvector)
-    # Prioridade: DATABASE_URL env > PG* env > vazio
-    database_url: Optional[str] = None
+    #
+    # Prioridade: DATABASE_URL > RAG_DATABASE_URL > PG* > vazio.
+    #
+    # DEFEITO MEDIDO (2026-10-10): o campo era `Optional[str] = None` com
+    # `env_prefix="RAG_"`, então o pydantic procurava `RAG_DATABASE_URL` e NUNCA
+    # `DATABASE_URL` — e a property `postgres_dsn` só achava o DSN via
+    # `os.getenv("DATABASE_URL")`, que NÃO é populado pelo `env_file` do pydantic
+    # (o .env é lido para o modelo, não para o ambiente do processo). Resultado com
+    # o `.env` do serviço (que declara DATABASE_URL): DSN vazio ⇒ vector store sem
+    # banco e as provas de isolamento multi-tenant/domínio PULADAS para sempre
+    # (`test_hybrid_isolation_real_db`, `test_concurrency_real_db`).
+    #
+    # `validation_alias` (em vez de alias de env prefixado) faz o campo aceitar os
+    # dois nomes; o `env_prefix` deixa de valer só para este campo, por isso o nome
+    # prefixado aparece explicitamente na lista.
+    database_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("DATABASE_URL", "RAG_DATABASE_URL"),
+    )
 
     @property
     def postgres_dsn(self) -> Optional[str]:
@@ -206,10 +224,10 @@ class Settings(BaseSettings):
         Retorna DSN do Postgres para o vector store (pgvector).
         Usa DATABASE_URL (recomendado) ou monta via PG*.
         """
-        if os.getenv("DATABASE_URL"):
-            return os.getenv("DATABASE_URL")
         if self.database_url:
             return self.database_url
+        if os.getenv("DATABASE_URL"):
+            return os.getenv("DATABASE_URL")
 
         host = os.getenv("PGHOST")
         user = os.getenv("PGUSER")

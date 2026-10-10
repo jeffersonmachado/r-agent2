@@ -37,9 +37,22 @@ HEADERS = {"X-RAG-Internal-Token": os.getenv("RAG_INTERNAL_TOKEN", "irrelevante-
 
 @pytest.fixture
 def sem_banco(monkeypatch):
-    """Simula serviço subido sem DATABASE_URL/PG*."""
+    """Simula serviço subido sem DATABASE_URL/PG*.
+
+    Endurecido em 2026-10-10: mockar apenas `is_database_configured` NÃO simulava
+    ausência de banco — o `/rag/ready` conecta de verdade (`SELECT 1`), então o 503
+    só acontecia porque o DSN estava vazio por um defeito de configuração (o
+    pydantic não lia `DATABASE_URL` do `.env`). Com o DSN corrigido, este teste
+    passou a falhar e revelou que ele nunca exercitava o caminho de falha. Agora a
+    conexão É que falha.
+    """
     monkeypatch.setattr(internal_auth, "is_database_configured", lambda: False)
     monkeypatch.setattr(health_routes, "is_database_configured", lambda: False)
+
+    def _sem_conexao():
+        raise ConnectionError("database not configured (fixture)")
+
+    monkeypatch.setattr(health_routes, "_get_conn", _sem_conexao, raising=False)
 
 
 def test_health_sem_banco_reporta_degradado_sem_mentir(sem_banco):
