@@ -210,6 +210,21 @@ module.exports = async function engineeringRunnerGlobalSetup() {
     );
   }
 
+  // DIAGNÓSTICO DO RUNNER (medido 2026-10-09): o `stderr` do filho era DESCARTADO
+  // (`stdio: ['ignore','ignore','ignore']`), então um `INFRA_ERROR`/`exitCode: null`
+  // chegava ao chamador sem NENHUMA pista da causa — foi o que tornou o diagnóstico
+  // do sandbox um exercício de adivinhação. O destino é ARQUIVO, nunca stdout: o
+  // stdout do globalSetup é parseado pelo coletor (ver aviso no topo deste arquivo).
+  const runnerLogFd = (() => {
+    try {
+      const logDir = path.join(ROOT, 'logs');
+      fs.mkdirSync(logDir, { recursive: true });
+      return fs.openSync(path.join(logDir, 'engineering-runner-jest.log'), 'a');
+    } catch (_) {
+      return 'ignore';
+    }
+  })();
+
   const child = spawn(process.execPath, [path.join(ROOT, 'services', 'engineering-runner', 'src', 'index.js')], {
     cwd: ROOT,
     env: {
@@ -217,7 +232,7 @@ module.exports = async function engineeringRunnerGlobalSetup() {
       ENGINEERING_RUNNER_TOKEN: RUNNER_TOKEN,
       ENGINEERING_RUNNER_PORT: String(RUNNER_PORT),
     },
-    stdio: ['ignore', 'ignore', 'ignore'],
+    stdio: ['ignore', 'ignore', runnerLogFd],
     detached: false,
   });
 

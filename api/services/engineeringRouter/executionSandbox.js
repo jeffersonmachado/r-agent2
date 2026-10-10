@@ -92,8 +92,25 @@ function resetSandboxAvailabilityCache() {
  * dono, único que o git rastreia, nunca é tocado.
  */
 function ensureWorkspaceReadableBySandbox(cwd) {
+  // `-user <uid do host>`: só tenta `chmod` no que ESTE processo materializou.
+  //
+  // DEFEITO REAL medido 2026-10-09: comandos sandboxed criam artefatos DENTRO do
+  // workspace sob o UID fixo do container (10001) — `.npm/`, `.npm/_logs/…`,
+  // `.cache/`. Na execução SEGUINTE (o mesmo workspace roda patch e depois
+  // regressão) o `chmod go+rX` batia nesses arquivos, recebia EPERM ("Operação não
+  // permitida": não se altera modo de arquivo alheio) e o `execFileSync` lançava —
+  // abortando a execução INTEIRA. Efeito medido: `exitCode: null` →
+  // `INFRA_ERROR` → `BLOCKED_INFRA` em todas as suítes E2E do Router e nos workers
+  // da própria API (bug-loop), de forma sistemática neste ambiente.
+  //
+  // Arquivo criado pelo UID do sandbox NÃO precisa deste passo: quem o criou
+  // (uid 10001) é exatamente quem vai lê-lo. Pular o que não é nosso mantém o
+  // invariante (nada do host fica ilegível para o sandbox) sem transformar um
+  // artefato de cache alheio em falha de infraestrutura.
+  const uid = typeof process.getuid === 'function' ? String(process.getuid()) : null;
   execFileSync('find', [
     cwd,
+    ...(uid ? ['-user', uid] : []),
     '-not', '-path', `${cwd}/node_modules`,
     '-not', '-path', `${cwd}/node_modules/*`,
     '-exec', 'chmod', 'go+rX', '{}', '+',
@@ -132,7 +149,12 @@ function ensureWorkspaceWritableBySandbox(cwd, uidGid = SANDBOX_UID_GID) {
       // Sem ACL no filesystem: cai para os bits de modo abaixo.
     }
   }
-  execFileSync('find', [cwd, ...excluirNodeModules, '-exec', 'chmod', 'go+rwX', '{}', '+']);
+  execFileSync('find', [
+    cwd,
+    ...(typeof process.getuid === 'function' ? ['-user', String(process.getuid())] : []),
+    ...excluirNodeModules,
+    '-exec', 'chmod', 'go+rwX', '{}', '+',
+  ]);
   return { mechanism: 'chmod', uid };
 }
 
