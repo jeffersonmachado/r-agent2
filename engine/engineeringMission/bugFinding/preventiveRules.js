@@ -57,6 +57,14 @@ const PREVENTIVE_RULE_FAILURE_CODES = Object.freeze({
   PREVENTIVE_RULE_UNVERIFIED: 'PREVENTIVE_RULE_UNVERIFIED',
   PREVENTIVE_RULE_NOT_EXECUTABLE: 'PREVENTIVE_RULE_NOT_EXECUTABLE',
   PREVENTIVE_RULE_INVALID_STATE: 'PREVENTIVE_RULE_INVALID_STATE',
+  // A regra aponta para um teste que NUNCA foi executado (ou cuja execução não
+  // passou). Existir o caminho não prova que o teste roda nem que passa.
+  PREVENTIVE_RULE_TEST_NOT_EXECUTED: 'PREVENTIVE_RULE_TEST_NOT_EXECUTED',
+  // A execução não diz a que código corresponde (sem commit/fingerprint): não é
+  // possível afirmar que ela é a do código corrigido.
+  PREVENTIVE_RULE_TEST_PROVENANCE_MISSING: 'PREVENTIVE_RULE_TEST_PROVENANCE_MISSING',
+  // Causa raiz sem proveniência demonstrável: sintoma não é causa.
+  ROOT_CAUSE_UNVERIFIED: 'ROOT_CAUSE_UNVERIFIED',
 });
 
 const EMPTY = (value) => value === null || value === undefined
@@ -119,6 +127,83 @@ function isExecutableRegressionTest(test) {
 }
 
 /**
+ * O teste preventivo foi REALMENTE EXECUTADO, passou e é rastreável ao código?
+ *
+ * DEFEITO MEDIDO (auditoria 2026-10-10): `isExecutableRegressionTest` só checava
+ * se o campo `path`/`command` era uma string não-vazia — ou seja, uma regra
+ * preventiva podia virar OBRIGATÓRIA citando um teste que não existe, que nunca
+ * rodou ou que nunca passou. "Prevenção" sem execução é prosa.
+ *
+ * Exige, na ativação:
+ *   - `execution.status === 'PASS'` e `execution.exitCode === 0`;
+ *   - PROCEDÊNCIA da execução (`sourceFingerprint` ou `commit`), senão não há como
+ *     afirmar que a execução corresponde ao código CORRIGIDO.
+ *
+ * @returns {{ok:boolean, code?:string, reason?:string}}
+ */
+function evaluateRegressionTestExecution(test) {
+  if (!isExecutableRegressionTest(test)) {
+    return {
+      ok: false,
+      code: PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_NOT_EXECUTABLE,
+      reason: 'teste de não regressão sem caminho nem comando',
+    };
+  }
+  const execution = test.execution;
+  if (!execution || typeof execution !== 'object') {
+    return {
+      ok: false,
+      code: PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_TEST_NOT_EXECUTED,
+      reason: 'teste preventivo NUNCA executado (sem registro de execução) — apontar para um arquivo não prova que ele roda',
+    };
+  }
+  const status = String(execution.status || '').toUpperCase();
+  const exitCode = execution.exitCode === undefined || execution.exitCode === null
+    ? null : Number(execution.exitCode);
+  if (status !== 'PASS' || exitCode !== 0) {
+    return {
+      ok: false,
+      code: PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_TEST_NOT_EXECUTED,
+      reason: `execução do teste preventivo não é verde (status=${status || 'ausente'} exitCode=${exitCode})`,
+    };
+  }
+  const fingerprint = typeof execution.sourceFingerprint === 'string' ? execution.sourceFingerprint.trim() : '';
+  const commit = typeof execution.commit === 'string' ? execution.commit.trim() : '';
+  if (fingerprint === '' && commit === '') {
+    return {
+      ok: false,
+      code: PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_TEST_PROVENANCE_MISSING,
+      reason: 'execução sem procedência (sourceFingerprint/commit) — não é possível ligá-la ao código corrigido',
+    };
+  }
+  return { ok: true, evidence: { status, exitCode, sourceFingerprint: fingerprint || null, commit: commit || null } };
+}
+
+/**
+ * A causa raiz tem proveniência DEMONSTRÁVEL?
+ *
+ * Aceita `DERIVED_FROM_OCCURRENCE` (derivada de evidência medida da ocorrência) e
+ * `DECLARED` (declaração humana registrada como tal). Recusa ausência de
+ * proveniência e `ABSENT`: sem isso, uma descrição de SINTOMA viraria causa raiz e
+ * a regra preventiva seria construída sobre uma suposição.
+ */
+const ACCEPTED_ROOT_CAUSE_SOURCES = Object.freeze(['DECLARED', 'DERIVED_FROM_OCCURRENCE']);
+
+function evaluateRootCauseProvenance(record) {
+  const source = record && record.provenance && typeof record.provenance === 'object'
+    ? String(record.provenance.rootCauseSource || '').toUpperCase()
+    : '';
+  if (!ACCEPTED_ROOT_CAUSE_SOURCES.includes(source)) {
+    return {
+      ok: false,
+      code: PREVENTIVE_RULE_FAILURE_CODES.ROOT_CAUSE_UNVERIFIED,
+      reason: `causa raiz sem proveniência demonstrável (rootCauseSource=${source || 'ausente'}) — sintoma não é causa`,
+    };
+  }
+  return { ok: true, source };
+}
+
+/**
  * Valida a COMPLETUDE do registro. Fail-closed: qualquer campo ausente/vazio reprova.
  * @returns {{ok:boolean, missing:string[], code?:string}}
  */
@@ -173,7 +258,26 @@ function canActivate(record, { findingStatus = null } = {}) {
       reason: `finding em ${findingStatus || 'desconhecido'} não prova a correção — regra permanece PROPOSED`,
     };
   }
-  return { allowed: true, evidence: { findingStatus, knownProblemId: record.knownProblemId } };
+  // CAUSA RAIZ: sem proveniência demonstrável a regra nasceria de uma suposição.
+  const rootCause = evaluateRootCauseProvenance(record);
+  if (!rootCause.ok) {
+    return { allowed: false, code: rootCause.code, missing: ['rootCause(proveniência)'], reason: rootCause.reason };
+  }
+  // TESTE PREVENTIVO: precisa ter sido EXECUTADO e passado, com procedência. Citar
+  // um caminho não prova que o teste existe, roda ou passa.
+  const execution = evaluateRegressionTestExecution(record.regressionTest);
+  if (!execution.ok) {
+    return { allowed: false, code: execution.code, missing: ['regressionTest(executado)'], reason: execution.reason };
+  }
+  return {
+    allowed: true,
+    evidence: {
+      findingStatus,
+      knownProblemId: record.knownProblemId,
+      rootCauseSource: rootCause.source,
+      regressionTest: execution.evidence,
+    },
+  };
 }
 
 /**
@@ -257,9 +361,12 @@ module.exports = {
   VERIFIED_FINDING_STATUSES,
   KNOWN_PROBLEM_REQUIRED_FIELDS,
   PREVENTIVE_RULE_FAILURE_CODES,
+  ACCEPTED_ROOT_CAUSE_SOURCES,
   computeKnownProblemId,
   buildKnownProblem,
   isExecutableRegressionTest,
+  evaluateRegressionTestExecution,
+  evaluateRootCauseProvenance,
   validateKnownProblem,
   canActivate,
   activate,

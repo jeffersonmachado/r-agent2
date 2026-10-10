@@ -70,6 +70,7 @@ async function readRegressionRuns(fixTaskId) {
       id: plain.id,
       planTier: plain.plan_tier,
       commands: plain.commands,
+      exitCodes: Array.isArray(plain.exit_codes) ? plain.exit_codes : [],
       result: plain.result,
       passed: plain.result === 'PASS',
       sourceFingerprint: plain.source_fingerprint,
@@ -366,7 +367,10 @@ async function runFixLoop(findingId, {
       // Ordem importa: registrar ANTES de fechar, porque `closeFinding` recusa o fechamento de
       // findings de SELF_MODIFICATION ou REINCIDENTES sem prevenção ativa e verificada.
       const fresh = await bugFindingService.getFinding(findingId);
-      const knownProblem = bugFindingService.buildKnownProblemFromFinding(fresh, { actor });
+      // Os runs REAIS de regressão desta tentativa entram no problema conhecido: é
+      // a execução que prova que o teste preventivo existe, roda e passa (sem ela a
+      // ativação é recusada com PREVENTIVE_RULE_TEST_NOT_EXECUTED).
+      const knownProblem = bugFindingService.buildKnownProblemFromFinding(fresh, { actor, regressionRuns: runs });
       const activeKnownProblem = engine.activate(knownProblem, {
         findingStatus: 'REGRESSION_VALIDATED',
         now: new Date().toISOString(),

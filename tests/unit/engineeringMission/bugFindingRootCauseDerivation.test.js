@@ -101,7 +101,11 @@ describe('causa raiz do problema conhecido — declarada ou derivada da ocorrên
       occurrenceEvidence: FINDING_FROM_HOOK.evidence_refs,
       fix: 'fix task a8482e37 (status=REGRESSION_VALIDATED)',
       preventiveRule: 'impedir reincidência de BUG em tests/fixtures/...: manter a correção sob teste',
-      regressionTest: { command: FINDING_FROM_HOOK.reproduction.command },
+      // EXECUÇÃO registrada: sem ela a ativação é recusada (endurecimento 2026-10-10).
+      regressionTest: {
+        command: FINDING_FROM_HOOK.reproduction.command,
+        execution: { status: 'PASS', exitCode: 0, sourceFingerprint: 'fp-tree-abc' },
+      },
       introducedIn: FINDING_FROM_HOOK.first_seen_at,
       fixedIn: FINDING_FROM_HOOK.resolved_at,
       verificationState: 'VERIFIED',
@@ -129,7 +133,10 @@ describe('causa raiz do problema conhecido — declarada ou derivada da ocorrên
       occurrenceEvidence: FINDING_FROM_HOOK.evidence_refs,
       fix: 'fix task a8428e37',
       preventiveRule: 'impedir reincidência',
-      regressionTest: { command: FINDING_FROM_HOOK.reproduction.command },
+      regressionTest: {
+        command: FINDING_FROM_HOOK.reproduction.command,
+        execution: { status: 'PASS', exitCode: 0, sourceFingerprint: 'fp-tree-abc' },
+      },
       introducedIn: FINDING_FROM_HOOK.first_seen_at,
       fixedIn: FINDING_FROM_HOOK.resolved_at,
       verificationState: 'VERIFIED',
@@ -144,11 +151,34 @@ describe('causa raiz do problema conhecido — declarada ou derivada da ocorrên
 
   test('o serviço exporta o problema conhecido com a MESMA derivação (produção, não só o motor)', () => {
     const bugFindingService = require('../../../api/services/engineeringMission/bugFindingService');
-    const record = bugFindingService.buildKnownProblemFromFinding(FINDING_FROM_HOOK, { actor: 'TEST' });
+    const PASSING_RUN = {
+      result: 'PASS',
+      passed: true,
+      exitCodes: [0],
+      sourceFingerprint: 'fp-tree-abc',
+      completedAt: '2026-10-10T00:00:00.000Z',
+    };
+    const record = bugFindingService.buildKnownProblemFromFinding(FINDING_FROM_HOOK, {
+      actor: 'TEST',
+      regressionRuns: [PASSING_RUN],
+    });
 
     expect(record.rootCause).toBe(deriveRootCauseStatement(FINDING_FROM_HOOK));
     expect(record.provenance.rootCauseSource).toBe('DERIVED_FROM_OCCURRENCE');
+    expect(record.regressionTest.execution).toMatchObject({
+      status: 'PASS',
+      exitCode: 0,
+      sourceFingerprint: 'fp-tree-abc',
+    });
     expect(canActivate(record, { findingStatus: 'REGRESSION_VALIDATED' }).allowed).toBe(true);
+
+    // ENDURECIMENTO (2026-10-10): SEM execução registrada a regra NÃO ativa — citar o
+    // comando de reprodução não prova que o teste preventivo foi executado.
+    const semExecucao = bugFindingService.buildKnownProblemFromFinding(FINDING_FROM_HOOK, { actor: 'TEST' });
+    const semExecucaoCheck = canActivate(semExecucao, { findingStatus: 'REGRESSION_VALIDATED' });
+    expect(semExecucaoCheck.allowed).toBe(false);
+    expect(semExecucaoCheck.code).toBe(PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_TEST_NOT_EXECUTED);
+
     // Declarado ⇒ proveniência DECLARED.
     const declared = bugFindingService.buildKnownProblemFromFinding(
       { ...FINDING_FROM_HOOK, root_cause: 'causa declarada por humano' },

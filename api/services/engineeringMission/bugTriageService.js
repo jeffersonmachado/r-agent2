@@ -199,6 +199,15 @@ async function triage(findingId, {
   // exigindo base objetiva da ocorrência atual.
   const memory = await bugFindingService.getFindingMemory(finding.fingerprint, { excludeId: finding.id }).catch(() => ({ known: false, priorFindings: [], priorRegressionCommands: [] }));
 
+  // REGRAS PREVENTIVAS ATIVAS desta categoria (Engineering Memory APLICADA, não só consultada).
+  //
+  // Antes de 2026-10-10 `activeRules()` não tinha chamador de produção: a regra era gravada como
+  // ACTIVE e nunca lida no planejamento. Aqui ela entra no contexto da correção — o coder é
+  // instruído a não repetir solução já rejeitada e a respeitar a causa raiz conhecida.
+  const activePreventiveRules = await bugFindingService
+    .getActivePreventiveRules({ category, limit: 20 })
+    .catch(() => []);
+
   const assessment = {
     category,
     severity,
@@ -218,6 +227,7 @@ async function triage(findingId, {
         priorFindings: memory.priorFindings,
       }
       : null,
+    preventiveRules: activePreventiveRules,
     triagedAt: new Date().toISOString(),
     triagedBy: actor,
   };
@@ -277,6 +287,18 @@ async function triage(findingId, {
   // causa raiz do bug atual, que só pode ser afirmada com evidência desta ocorrência.
   if (memory.known && memory.lastKnownRootCause && !triaged.root_cause) {
     contract.objective = `${contract.objective}\nPista (ocorrência anterior desta mesma falha, a CONFIRMAR): ${memory.lastKnownRootCause}`;
+  }
+
+  // REGRAS PREVENTIVAS ATIVAS entram como instrução explícita do contrato: prevenção que não chega
+  // ao executor é prosa. Texto apenas — os comandos NÃO são impostos aqui para não executar um teste
+  // de classe de falha diferente; o que é obrigatório é não repetir a solução já rejeitada.
+  if (activePreventiveRules.length > 0) {
+    const linhas = activePreventiveRules.map((rule) => {
+      const causa = rule.rootCause ? ` (causa raiz conhecida: ${rule.rootCause})` : '';
+      return `- ${rule.preventiveRule}${causa}`;
+    });
+    contract.objective = `${contract.objective}\nRegras preventivas ATIVAS desta categoria `
+      + `(não repita soluções já rejeitadas):\n${linhas.join('\n')}`;
   }
 
   // MISSION SOURCE AUTHORITY — A FIX TASK PERTENCE À MISSÃO E NASCE DA FONTE DELA.

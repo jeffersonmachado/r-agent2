@@ -17,6 +17,8 @@ const {
   computeKnownProblemId,
   buildKnownProblem,
   isExecutableRegressionTest,
+  evaluateRegressionTestExecution,
+  evaluateRootCauseProvenance,
   validateKnownProblem,
   canActivate,
   activate,
@@ -34,11 +36,16 @@ const COMPLETO = Object.freeze({
   occurrenceEvidence: [{ type: 'LOG', ref: 'logs/x.log' }],
   fix: 'restaurou a checagem removida',
   preventiveRule: 'nenhum patch de missão pode alterar scripts/governance/** sem autorização humana',
-  regressionTest: { path: 'tests/unit/engineeringRouterPatchValidator.test.js' },
+  // O teste precisa de EXECUÇÃO registrada e com procedência: apontar para um
+  // arquivo não prova que o teste existe, roda ou passa (endurecimento 2026-10-10).
+  regressionTest: {
+    path: 'tests/unit/engineeringRouterPatchValidator.test.js',
+    execution: { status: 'PASS', exitCode: 0, sourceFingerprint: 'fp-tree-abc', executedAt: '2026-10-10T00:00:00.000Z' },
+  },
   introducedIn: 'commit-abc123',
   fixedIn: 'commit-def456',
   verificationState: 'PENDING',
-  provenance: { source: 'bug_loop', missionId: 'm-1' },
+  provenance: { source: 'bug_loop', missionId: 'm-1', rootCauseSource: 'DERIVED_FROM_OCCURRENCE' },
 });
 
 describe('engineeringMemory/preventiveRules — ciclo governado de problema conhecido', () => {
@@ -118,6 +125,72 @@ describe('engineeringMemory/preventiveRules — ciclo governado de problema conh
     const kp = { ...buildKnownProblem(COMPLETO), state: 'QUALQUER_COISA' };
     expect(validateKnownProblem(kp).code).toBe(PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_INVALID_STATE);
     expect(PREVENTIVE_RULE_STATES).toEqual(['PROPOSED', 'ACTIVE', 'RETIRED']);
+  });
+
+  describe('teste preventivo EXECUTADO (endurecimento 2026-10-10)', () => {
+    test('existir o caminho NÃO prova execução: sem registro ⇒ recusa', () => {
+      const kp = buildKnownProblem({ ...COMPLETO, regressionTest: { path: 'tests/unit/a.test.js' } });
+      const check = canActivate(kp, { findingStatus: 'REGRESSION_VALIDATED' });
+      expect(check.allowed).toBe(false);
+      expect(check.code).toBe(PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_TEST_NOT_EXECUTED);
+    });
+
+    test('execução que NÃO passou ⇒ recusa (status/exit code reais)', () => {
+      for (const execution of [
+        { status: 'FAIL', exitCode: 1, sourceFingerprint: 'fp-1' },
+        { status: 'PASS', exitCode: 1, sourceFingerprint: 'fp-1' },
+        { status: 'SKIPPED', exitCode: 0, sourceFingerprint: 'fp-1' },
+      ]) {
+        const kp = buildKnownProblem({
+          ...COMPLETO,
+          regressionTest: { path: 'tests/unit/a.test.js', execution },
+        });
+        const check = canActivate(kp, { findingStatus: 'CLOSED' });
+        expect(check.allowed).toBe(false);
+        expect(check.code).toBe(PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_TEST_NOT_EXECUTED);
+      }
+    });
+
+    test('execução verde mas SEM procedência não se liga ao código corrigido ⇒ recusa', () => {
+      const kp = buildKnownProblem({
+        ...COMPLETO,
+        regressionTest: { path: 'tests/unit/a.test.js', execution: { status: 'PASS', exitCode: 0 } },
+      });
+      const check = canActivate(kp, { findingStatus: 'CLOSED' });
+      expect(check.allowed).toBe(false);
+      expect(check.code).toBe(PREVENTIVE_RULE_FAILURE_CODES.PREVENTIVE_RULE_TEST_PROVENANCE_MISSING);
+      // `commit` também satisfaz a procedência.
+      expect(evaluateRegressionTestExecution({
+        path: 'tests/unit/a.test.js',
+        execution: { status: 'PASS', exitCode: 0, commit: 'deadbeef' },
+      }).ok).toBe(true);
+    });
+  });
+
+  describe('causa raiz com proveniência (ROOT_CAUSE_UNVERIFIED)', () => {
+    test('proveniência ausente/ABSENT ⇒ ativação recusada (sintoma não é causa)', () => {
+      for (const provenance of [
+        { source: 'bug_loop' },
+        { source: 'bug_loop', rootCauseSource: 'ABSENT' },
+        { source: 'bug_loop', rootCauseSource: 'ACHISMO' },
+      ]) {
+        const kp = buildKnownProblem({ ...COMPLETO, provenance });
+        const check = canActivate(kp, { findingStatus: 'REGRESSION_VALIDATED' });
+        expect(check.allowed).toBe(false);
+        expect(check.code).toBe(PREVENTIVE_RULE_FAILURE_CODES.ROOT_CAUSE_UNVERIFIED);
+      }
+    });
+
+    test('DECLARED (declaração humana registrada) é aceita e fica explícita na evidência', () => {
+      const kp = buildKnownProblem({ ...COMPLETO, provenance: { source: 'human', rootCauseSource: 'DECLARED' } });
+      const check = canActivate(kp, { findingStatus: 'REGRESSION_VALIDATED' });
+      expect(check.allowed).toBe(true);
+      expect(check.evidence).toMatchObject({
+        rootCauseSource: 'DECLARED',
+        regressionTest: { status: 'PASS', exitCode: 0, sourceFingerprint: 'fp-tree-abc' },
+      });
+      expect(evaluateRootCauseProvenance(kp).source).toBe('DECLARED');
+    });
   });
 
   describe('enforcement de fechamento', () => {

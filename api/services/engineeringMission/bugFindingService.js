@@ -930,13 +930,45 @@ async function recordKnownProblem(findingId, knownProblem, { tenantId = null } =
 }
 
 /**
+ * ENGINEERING MEMORY — REGRAS PREVENTIVAS ATIVAS.
+ *
+ * § missão: "O Roteador Engenheiro deve consultar problemas conhecidos antes de implementar
+ * correções". `activeRules()` existia no motor desde 2026-10-08 mas **não tinha chamador de
+ * produção**: a regra era gravada como ACTIVE e nunca lida, o que na prática a tornava decorativa
+ * (a "prevenção" só aparecia no fechamento). Aqui a regra é lida do MESMO registro que o ciclo
+ * grava (`engineering_bug_findings.triage.knownProblem`) e entregue como contexto ANTES do
+ * planejamento da correção.
+ *
+ * Somente `state === 'ACTIVE'` conta — PROPOSED não é obrigação (a ativação exige teste
+ * preventivo EXECUTADO com procedência e causa raiz demonstrável; ver `preventiveRules`).
+ */
+async function getActivePreventiveRules({ category = null, limit = 50 } = {}) {
+  const where = { status: ['REGRESSION_VALIDATED', 'CLOSED'] };
+  if (category) where.category = String(category);
+  const bounded = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const rows = await model().findAll({ where, order: [['last_seen_at', 'DESC']], limit: bounded });
+  return rows
+    .map(toPlain)
+    .map((row) => (row.triage && row.triage.knownProblem ? row.triage.knownProblem : null))
+    .filter((rule) => rule && rule.state === 'ACTIVE')
+    .map((rule) => ({
+      knownProblemId: rule.knownProblemId || null,
+      rootCause: rule.rootCause || null,
+      preventiveRule: rule.preventiveRule || null,
+      regressionTest: rule.regressionTest || null,
+      fixedIn: rule.fixedIn || null,
+      activatedAt: rule.activatedAt || null,
+    }));
+}
+
+/**
  * EXPORTAÇÃO DO PROBLEMA CONHECIDO a partir do estado REAL do finding.
  *
  * Só o que o finding comprova entra no registro — nada é inventado. `preventiveRule` é a única
  * parte derivada por texto: a memória de engenharia exige a REGRA, não apenas a causa, e o laço de
  * bugs não recebe uma do modelo. Ela nomeia a classe de falha e o alvo do teste de não regressão.
  */
-function buildKnownProblemFromFinding(finding, { actor = null } = {}) {
+function buildKnownProblemFromFinding(finding, { actor = null, regressionRuns = [] } = {}) {
   const regressionCommands = Array.isArray(finding.regression_test_refs) ? finding.regression_test_refs : [];
   const affected = [
     ...(Array.isArray(finding.affected_files) ? finding.affected_files : []),
@@ -950,6 +982,29 @@ function buildKnownProblemFromFinding(finding, { actor = null } = {}) {
   const regressionCommand = regressionCommands.length > 0
     ? regressionCommands[0]
     : ((finding.reproduction && finding.reproduction.command) || null);
+
+  // EXECUÇÃO DO TESTE PREVENTIVO (endurecido 2026-10-10).
+  //
+  // Antes, o registro só carregava o COMANDO — e o módulo de regras considerava
+  // "teste executável" a mera existência de uma string. Uma regra preventiva podia
+  // então virar OBRIGATÓRIA citando um teste que nunca rodou. Aqui a execução vem
+  // do run de regressão REAL que passou nesta tentativa (`engineering_regression_runs`),
+  // com a procedência (`source_fingerprint`) que liga a execução à árvore corrigida.
+  const passingRun = (Array.isArray(regressionRuns) ? regressionRuns : [])
+    .find((run) => run && (run.passed === true || String(run.result || run.status || '').toUpperCase() === 'PASS')) || null;
+  const execution = passingRun
+    ? {
+      status: 'PASS',
+      // Exit code REAL do run (todos os comandos do plano precisam ser zero para ser PASS).
+      exitCode: Array.isArray(passingRun.exitCodes) && passingRun.exitCodes.length > 0
+        ? (passingRun.exitCodes.every((code) => Number(code) === 0) ? 0 : 1)
+        : 0,
+      executedAt: passingRun.completed_at || passingRun.completedAt || null,
+      sourceFingerprint: passingRun.source_fingerprint || passingRun.sourceFingerprint || null,
+      attemptId: passingRun.attempt_id || null,
+      commands: Array.isArray(passingRun.commands) ? passingRun.commands : [],
+    }
+    : null;
 
   // CAUSA RAIZ: declarada vence; sem declaração, deriva da evidência REAL desta ocorrência.
   // Sem isto o problema conhecido nascia INCOMPLETO (`KNOWN_PROBLEM_INCOMPLETE: rootCause`) e o
@@ -970,7 +1025,7 @@ function buildKnownProblemFromFinding(finding, { actor = null } = {}) {
     fix: finding.fix_task_id ? `fix task ${finding.fix_task_id} (status=${finding.status})` : null,
     preventiveRule: `impedir reincidência de ${finding.category || 'falha'} em ${affectedComponents[0]}: `
       + `manter a correção de "${String(finding.title || finding.id).slice(0, 120)}" sob teste de não regressão`,
-    regressionTest: regressionCommand ? { command: regressionCommand } : null,
+    regressionTest: regressionCommand ? { command: regressionCommand, execution } : null,
     introducedIn: finding.first_seen_at ? String(finding.first_seen_at) : null,
     fixedIn: finding.resolved_at ? String(finding.resolved_at) : null,
     verificationState: 'VERIFIED',
@@ -1010,6 +1065,7 @@ module.exports = {
   closeFinding,
   blockFinding,
   getFindingMemory,
+  getActivePreventiveRules,
   summarizeFindings,
   // Posse durável + dedup consultável (worker do laço)
   findNonTerminalFinding,
