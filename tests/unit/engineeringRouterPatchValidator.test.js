@@ -59,6 +59,128 @@ describe('engineeringRouter/patchValidator', () => {
     expect(result.issues.some((i) => i.code === 'PATCH_FORBIDDEN_FILE')).toBe(true);
   });
 
+  // SEGURANÇA (2026-10-08) — a redação de segredos existia só no CONTEXTO DE ENTRADA e na saída de
+  // comandos: o diff do CODER ia direto para validação/aplicação/persistência/promoção, com a única
+  // defesa sendo a instrução no prompt e a proteção por NOME de arquivo. Uma chave colada dentro de
+  // um arquivo de nome inocente atravessava tudo.
+  describe('segredo no CONTEÚDO adicionado (fail-closed)', () => {
+    const comAdicao = (add) => [
+      'diff --git a/src/valores.js b/src/valores.js',
+      '--- a/src/valores.js',
+      '+++ b/src/valores.js',
+      '@@ -1 +1,2 @@',
+      ' const a = 1;',
+      add,
+      '',
+    ].join('\n');
+
+    const CHAVE_OPENAI = '+const k = "sk-projABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";';
+
+    test('rejeita patch que ADICIONA uma chave de provider', () => {
+      const result = validatePatch(comAdicao(CHAVE_OPENAI), { contract: { allowedPaths: ['src/**'] } });
+      expect(result.ok).toBe(false);
+      const issue = result.issues.find((i) => i.code === 'PATCH_CONTAINS_SECRET');
+      expect(issue).toBeTruthy();
+      expect(issue.secretPatterns).toContain('OPENAI_STYLE_KEY');
+    });
+
+    test('rejeita bloco de chave privada PEM adicionado em várias linhas', () => {
+      const pem = [
+        'diff --git a/src/k.js b/src/k.js',
+        '--- a/src/k.js',
+        '+++ b/src/k.js',
+        '@@ -1 +1,3 @@',
+        ' const a = 1;',
+        '+-----BEGIN RSA PRIVATE KEY-----',
+        '+MIIEowIBAAKCAQEA1234567890abcdefghijklmnop',
+        '+-----END RSA PRIVATE KEY-----',
+        '',
+      ].join('\n');
+      const result = validatePatch(pem, { contract: { allowedPaths: ['src/**'] } });
+      expect(result.ok).toBe(false);
+      expect(result.issues.some((i) => i.code === 'PATCH_CONTAINS_SECRET')).toBe(true);
+    });
+
+    test('controle negativo: REMOVER o segredo é a CORREÇÃO — nunca a violação', () => {
+      const remocao = [
+        'diff --git a/src/valores.js b/src/valores.js',
+        '--- a/src/valores.js',
+        '+++ b/src/valores.js',
+        '@@ -1,2 +1 @@',
+        `-${CHAVE_OPENAI.slice(1)}`,
+        ' const a = 1;',
+        '',
+      ].join('\n');
+      expect(validatePatch(remocao, { contract: { allowedPaths: ['src/**'] } }).ok).toBe(true);
+    });
+
+    test('controle negativo: placeholder não é falso positivo', () => {
+      const resultado = validatePatch(comAdicao('+const k = "sk-xxx";'), { contract: { allowedPaths: ['src/**'] } });
+      expect(resultado.ok).toBe(true);
+    });
+
+    test('controle negativo: patch comum continua aceito', () => {
+      expect(validatePatch(comAdicao('+const b = 2;'), { contract: { allowedPaths: ['src/**'] } }).ok).toBe(true);
+    });
+
+    test('a varredura ignora o cabeçalho +++ e olha só as adições', () => {
+      const { addedContentFromDiff, findSecretsInAddedContent } = require('../../engine/engineeringRouter/patchValidator');
+      const diff = comAdicao('+token = "curto"');
+      expect(addedContentFromDiff(diff)).not.toContain('b/src/valores.js');
+      expect(findSecretsInAddedContent(diff)).toEqual([]);
+    });
+  });
+
+
+  describe('caminhos de INTEGRIDADE (fail-closed)', () => {
+    const patchEm = (p) => `diff --git a/${p} b/${p}\nindex 111..222 100644\n--- a/${p}\n+++ b/${p}\n@@ -1 +1 @@\n-a\n+b\n`;
+
+    const INTEGRIDADE = [
+      'scripts/governance/validate-qualquer-coisa.js',
+      'jest.config.cjs',
+      '.github/workflows/release-governance.yml',
+      'pipeline/runFullValidation.js',
+      'tools/system/release.js',
+      'governance/replay-integrity.js',
+      'config/engineering-router-v2-required-tests.json',
+      'config/timeout-policy.json',
+      'config/journey-criticality.json',
+    ];
+
+    test.each(INTEGRIDADE)('recusa %s mesmo dentro do escopo autorizado', (alvo) => {
+      const result = validatePatch(patchEm(alvo), { contract: { allowedPaths: ['**'] } });
+      expect(result.ok).toBe(false);
+      const issue = result.issues.find((i) => i.code === 'PATCH_FORBIDDEN_FILE');
+      expect(issue).toBeTruthy();
+      expect(issue.integrityCriticalPaths).toContain(alvo);
+    });
+
+    test('a autorização é EXPLÍCITA no contrato — nunca um default', () => {
+      const semAutorizacao = validatePatch(patchEm('jest.config.cjs'), { contract: { allowedPaths: ['**'] } });
+      expect(semAutorizacao.ok).toBe(false);
+
+      const comAutorizacao = validatePatch(patchEm('jest.config.cjs'), {
+        contract: { allowedPaths: ['**'], integrityCriticalAuthorization: true },
+      });
+      expect(comAutorizacao.ok).toBe(true);
+      expect(comAutorizacao.touchedPaths).toEqual(['jest.config.cjs']);
+    });
+
+    test('controle negativo: caminho comum NÃO é afetado', () => {
+      const result = validatePatch(patchEm('api/services/foo/bar.js'), { contract: { allowedPaths: ['api/**'] } });
+      expect(result.ok).toBe(true);
+    });
+
+    test('controle negativo: nome parecido não é falso positivo', () => {
+      // `api/services/engineeringMission/governanceBaseline.js` contém "governance" no BASENAME,
+      // não no diretório — não é maquinário de release.
+      const result = validatePatch(patchEm('api/services/engineeringMission/governanceBaseline.js'), {
+        contract: { allowedPaths: ['api/**'] },
+      });
+      expect(result.ok).toBe(true);
+    });
+  });
+
   test('rejeita patch maior que o limite de tamanho', () => {
     const result = validatePatch(VALID_DIFF, { contract: { allowedPaths: ['src/**'] }, maxPatchSizeBytes: 10 });
     expect(result.ok).toBe(false);

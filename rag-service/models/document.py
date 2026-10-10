@@ -55,6 +55,10 @@ class ChunkMetadata(BaseModel):
     chunk_id: Optional[str] = None
     tenant_id: Optional[str] = None
     active: Optional[bool] = True
+    # Explicabilidade da recuperação híbrida (FASE 6): scores por modalidade,
+    # posições em cada ranking, RRF final e versão do algoritmo. `None` quando a
+    # busca foi somente semântica (contrato anterior preservado).
+    hybrid: Optional[Dict[str, Any]] = None
 
 
 class Chunk(BaseModel):

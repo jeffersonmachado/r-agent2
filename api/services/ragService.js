@@ -201,6 +201,115 @@ async function generateEmbeddingsBatch(texts, tenantId, options = {}) {
 }
 
 /**
+ * Providers cujo endpoint fala o protocolo da OpenAI (o rag-service usa o SDK
+ * da OpenAI). `anthropic` fica de fora: tem protocolo próprio.
+ */
+const RAG_COMPATIBLE_PROVIDER_KINDS = new Set(['openai-sdk', 'openai-compatible']);
+
+/**
+ * Resolve credencial + endpoint de LLM do tenant para a geração do RAG.
+ *
+ * O rag-service usa o SDK da OpenAI e não tem roteamento próprio. Até
+ * 2026-10-08 esta função fixava a credencial `openai` do tenant: um tenant
+ * roteado para deepseek/kimi (Configuração > IA) continuava gerando com a
+ * chave OpenAI, recebia 429 sem crédito e o serviço engolia o erro devolvendo
+ * um trecho cru apresentado como resposta fundamentada.
+ *
+ * Aqui a rota do tenant (`primary` → `secondary`) é seguida, restrita a
+ * endpoints OpenAI-compatible; `openai` fica como último recurso (mantém o
+ * comportamento anterior quando não há roteamento configurado).
+ *
+ * A chave nunca é logada. Devolve `{}` quando nada é resolvível — nesse caso o
+ * rag-service responde degradado de forma declarada (`metadata.generated=false`).
+ *
+ * @param {string} tenantId - tenant_key ou UUID
+ * @returns {Promise<Object>} headers internos do LLM (vazio se irresolvível)
+ */
+async function resolveTenantLlmHeaders(tenantId) {
+  // Só resolve quando a conexão Sequelize já está estabelecida (em testes de
+  // unidade não há DB: getSequelize() retorna null e evita o connect()
+  // implícito de getDecryptedAPIKey).
+  // eslint-disable-next-line global-require
+  const { getSequelize } = require('../db/sequelize');
+  if (!getSequelize()) {
+    // Sem conexão não há como ler o roteamento do tenant: o RAG cai no fallback
+    // declarado (`metadata.generated: false`). O aviso existe porque, no runtime
+    // da API, a conexão é aberta no boot (`bootstrap/startInitialization.js`) —
+    // chegar aqui em produção significa degradação silenciosa de conhecimento.
+    logger.warn('[RAGService] Sem conexão de banco: LLM do RAG não resolvido (resposta degradada)', {
+      tenantId,
+    });
+    return {};
+  }
+
+  // eslint-disable-next-line global-require
+  const { getAIConfig, getDecryptedAPIKey } = require('./tenantAIService');
+  // eslint-disable-next-line global-require
+  const aiProviderRegistryService = require('./aiProviderRegistryService');
+
+  let aiConfig = null;
+  try {
+    aiConfig = await getAIConfig(tenantId);
+  } catch (configError) {
+    logger.warn('[RAGService] Falha ao ler roteamento de IA do tenant', {
+      tenantId,
+      error: safeErrorMessage(configError),
+    });
+  }
+
+  const candidates = [];
+  for (const provider of [aiConfig?.primary, aiConfig?.secondary, 'openai']) {
+    const key = typeof provider === 'string' ? provider.trim().toLowerCase() : '';
+    if (key && !candidates.includes(key)) candidates.push(key);
+  }
+
+  for (const provider of candidates) {
+    let providerDef = null;
+    try {
+      providerDef = await aiProviderRegistryService.getProviderDef(provider);
+    } catch (providerError) {
+      logger.warn('[RAGService] Falha ao ler provider do catálogo', {
+        tenantId,
+        provider,
+        error: safeErrorMessage(providerError),
+      });
+      continue;
+    }
+    const kind = String(providerDef?.kind || '').toLowerCase();
+    if (!providerDef?.baseUrl || !RAG_COMPATIBLE_PROVIDER_KINDS.has(kind)) continue;
+
+    const apiKey = await getDecryptedAPIKey(tenantId, provider);
+    if (!apiKey) continue;
+
+    // O modelo configurado no tenant só vale para o provider primário (é o
+    // modelo daquela rota); para os demais, o default do catálogo.
+    const tenantModel = provider === aiConfig?.primary && aiConfig?.model
+      ? String(aiConfig.model)
+      : null;
+    const model = tenantModel || providerDef.defaultModel || '';
+
+    logger.debug('[RAGService] LLM do RAG resolvido pelo roteamento do tenant', {
+      tenantId,
+      provider,
+      model,
+    });
+
+    return {
+      'X-RAG-LLM-API-Key': apiKey,
+      'X-RAG-LLM-Base-URL': providerDef.baseUrl,
+      'X-RAG-LLM-Model': model,
+      'X-RAG-LLM-Provider': provider,
+    };
+  }
+
+  logger.warn('[RAGService] Nenhum provider OpenAI-compatible com credencial para o RAG', {
+    tenantId,
+    tentados: candidates,
+  });
+  return {};
+}
+
+/**
  * Consulta RAG.
  *
  * @param {string} query - Query do usuário
@@ -480,25 +589,12 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagQueryTimeout(tenantId);
     
-    // Repassa a credencial de LLM do tenant (mesma gerida em Configuração > IA)
-    // ao rag-service via header interno, para que a geração use a chave do
-    // tenant em vez de depender de OPENAI_API_KEY global. Falha ao resolver a
-    // chave não bloqueia: o rag-service cai no fallback sem LLM.
+    // Repassa a credencial, o endpoint e o modelo de LLM do tenant (os mesmos
+    // geridos em Configuração > IA) ao rag-service via headers internos, para
+    // que a geração use o provider do tenant — e não a OpenAI global.
     let ragLlmHeaders = {};
     try {
-      // Só resolve a credencial quando a conexão Sequelize já está estabelecida
-      // (em testes de unidade não há DB: getSequelize() retorna null e evita o
-      // connect() implícito de getDecryptedAPIKey).
-      // eslint-disable-next-line global-require
-      const { getSequelize } = require('../db/sequelize');
-      if (getSequelize()) {
-        // eslint-disable-next-line global-require
-        const { getDecryptedAPIKey } = require('./tenantAIService');
-        const tenantLlmApiKey = await getDecryptedAPIKey(tenantId, 'openai');
-        if (tenantLlmApiKey) {
-          ragLlmHeaders = { 'X-RAG-LLM-API-Key': tenantLlmApiKey };
-        }
-      }
+      ragLlmHeaders = await resolveTenantLlmHeaders(tenantId);
     } catch (llmKeyError) {
       logger.warn('[RAGService] Falha ao resolver credencial de LLM do tenant', {
         tenantId,
@@ -591,9 +687,11 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     };
 
     // Cacheia SOMENTE sucesso com resposta não-vazia. Erros, respostas
-    // vazias e falhas de circuito nunca entram no cache.
+    // vazias, falhas de circuito e respostas DEGRADADAS (texto recuperado sem
+    // síntese, `metadata.generated === false`) nunca entram no cache.
     if (
       responsePayload.success
+      && responsePayload.metadata?.generated !== false
       && typeof responsePayload.response === 'string'
       && responsePayload.response.trim()
     ) {
@@ -1013,18 +1111,82 @@ async function searchChunks(query, tenantId, options = {}) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Saúde do serviço RAG — TRI-ESTADO
+//
+// O serviço Python publica três situações distintas em `/rag/health`
+// (`rag-service/api/routes/health.py`):
+//   - `healthy`    → liveness OK E READINESS OK (`ready: true`);
+//   - `degraded`   → processo no ar (HTTP 200) mas NÃO pronto para servir
+//                    `/rag/*` — hoje `reason: 'database_not_configured'` /
+//                    `dbConfigured: false`, quando indexar/consultar não tem
+//                    onde persistir;
+//   - `unhealthy`  → inacessível (timeout/conexão recusada) ou HTTP != 2xx.
+//
+// Antes tudo era colapsado em `status === 'healthy'`, então um serviço
+// degradado era reportado como "não disponível" e o operador perdia a causa
+// real (README de `systemStatusService` e memória: rag-service sem env).
+// `isRagAvailable()` continua booleano para quem só decide "tento o RAG ou não".
+// ---------------------------------------------------------------------------
+const RAG_HEALTH_STATE = Object.freeze({
+  HEALTHY: 'healthy',
+  DEGRADED: 'degraded',
+  UNHEALTHY: 'unhealthy',
+});
+
 /**
- * Verifica se o serviço RAG está disponível.
+ * Classifica o corpo de `/rag/health`. Nunca devolve verde sem o serviço
+ * afirmar `status: healthy` E readiness (`ready !== false`).
  *
- * @returns {Promise<boolean>}
+ * @param {any} payload
+ * @returns {'healthy'|'degraded'}
  */
-async function isRagAvailable(tenantId = null) {
+function classifyRagHealthPayload(payload) {
+  const status = typeof payload?.status === 'string' ? payload.status.trim().toLowerCase() : '';
+  const ready = payload?.ready !== false;
+  if (status === 'healthy' && ready) return RAG_HEALTH_STATE.HEALTHY;
+  // `degraded` explícito, readiness negada ou status desconhecido: degradado.
+  return RAG_HEALTH_STATE.DEGRADED;
+}
+
+function classifyRagTransportError(error) {
+  const message = safeErrorMessage(error);
+  if (error?.name === 'AbortError' || /timed?\s*out|timeout/i.test(message)) return 'timeout';
+  if (/ECONNREFUSED/.test(message)) return 'connection_refused';
+  if (/ENOTFOUND/.test(message)) return 'host_not_found';
+  return 'connection_error';
+}
+
+function safeRagServiceUrl(tenantId) {
   try {
-    // Circuito aberto: indisponibilidade já conhecida — responde false sem
-    // ir à rede e sem contar falha nova no breaker.
+    return getRagServiceUrl(tenantId);
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Estado detalhado do serviço RAG (liveness + readiness), preservando a causa
+ * reportada pelo serviço Python (`reason`, `dbConfigured`, `ready`).
+ *
+ * @param {string|null} tenantId
+ * @returns {Promise<{state: string, available: boolean, ready: boolean, reason: string|null, errorType: string|null, httpStatus?: number, payload: any, serviceUrl: string|null, message?: string}>}
+ */
+async function getRagHealth(tenantId = null) {
+  try {
+    // Circuito aberto: indisponibilidade já conhecida — responde sem ir à rede
+    // e sem contar falha nova no breaker.
     if (isRagCircuitOpen()) {
       logger.warn('[RAGService] Circuit breaker aberto, RAG considerado indisponível sem health check', { tenantId });
-      return false;
+      return {
+        state: RAG_HEALTH_STATE.UNHEALTHY,
+        available: false,
+        ready: false,
+        reason: 'circuit_breaker_open',
+        errorType: 'circuit_breaker_open',
+        payload: null,
+        serviceUrl: safeRagServiceUrl(tenantId),
+      };
     }
 
     const serviceUrl = getRagServiceUrl(tenantId);
@@ -1044,32 +1206,100 @@ async function isRagAvailable(tenantId = null) {
     );
 
     if (!response.ok) {
-      logger.warn('[RAGService] Resposta não OK', { 
-        status: response.status, 
+      // Corpo do erro é diagnóstico, não veredito: no caso medido em
+      // 2026-10-09 o rag-service SEM env responde 503
+      // `service_misconfigured` ("Autenticação interna do RAG não
+      // configurada") e o operador só via "HTTP 503" sem a causa.
+      let errorPayload = null;
+      try {
+        if (typeof response.json === 'function') {
+          errorPayload = await response.json();
+        }
+      } catch (_) {
+        errorPayload = null;
+      }
+      const errorReason = errorPayload?.error || errorPayload?.reason || null;
+
+      logger.warn('[RAGService] Resposta não OK', {
+        status: response.status,
         statusText: response.statusText,
+        reason: errorReason,
         serviceUrl,
-        tenantId 
+        tenantId
       });
-      return false;
+      return {
+        state: RAG_HEALTH_STATE.UNHEALTHY,
+        available: false,
+        ready: false,
+        reason: errorReason || `http_${response.status}`,
+        errorType: 'http_error',
+        httpStatus: response.status,
+        payload: errorPayload,
+        serviceUrl,
+      };
     }
 
-    const result = await response.json();
-    const isHealthy = result.status === 'healthy';
-    logger.info('[RAGService] Status do serviço', { 
-      isHealthy, 
-      status: result.status,
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (parseErr) {
+      logger.warn('[RAGService] /rag/health respondeu corpo não-JSON', {
+        error: safeErrorMessage(parseErr),
+        serviceUrl,
+        tenantId,
+      });
+    }
+
+    const state = classifyRagHealthPayload(payload);
+    logger.info('[RAGService] Status do serviço', {
+      state,
+      status: payload?.status ?? null,
+      ready: payload?.ready ?? null,
       serviceUrl,
-      tenantId 
-    });
-    return isHealthy;
-  } catch (error) {
-    logger.warn('[RAGService] Serviço RAG não disponível', {
-      error: safeErrorMessage(error),
-      stack: error.stack,
       tenantId
     });
-    return false;
+
+    return {
+      state,
+      available: state === RAG_HEALTH_STATE.HEALTHY,
+      ready: state === RAG_HEALTH_STATE.HEALTHY,
+      reason: state === RAG_HEALTH_STATE.HEALTHY
+        ? null
+        : (payload?.reason || payload?.status || 'not_ready'),
+      errorType: null,
+      httpStatus: response.status,
+      payload,
+      serviceUrl,
+    };
+  } catch (error) {
+    const errorType = classifyRagTransportError(error);
+    logger.warn('[RAGService] Serviço RAG não disponível', {
+      error: safeErrorMessage(error),
+      errorType,
+      stack: error?.stack,
+      tenantId
+    });
+    return {
+      state: RAG_HEALTH_STATE.UNHEALTHY,
+      available: false,
+      ready: false,
+      reason: errorType,
+      errorType,
+      payload: null,
+      serviceUrl: safeRagServiceUrl(tenantId),
+      message: safeErrorMessage(error),
+    };
   }
+}
+
+/**
+ * Verifica se o serviço RAG está disponível (liveness + readiness).
+ *
+ * @returns {Promise<boolean>}
+ */
+async function isRagAvailable(tenantId = null) {
+  const health = await getRagHealth(tenantId);
+  return health.available === true;
 }
 
 /**
@@ -1559,6 +1789,8 @@ module.exports = {
   indexDocument,
   deindexDocument,
   isRagAvailable,
+  getRagHealth,
+  RAG_HEALTH_STATE,
   getRagServiceUrl,
   getRagTimeout,
   getRagInternalHeaders,
@@ -1578,4 +1810,10 @@ module.exports = {
   adaptValidationRules,
   cleanOrphanedDocuments,
   listVectorDocuments,
+  // Superfície interna para teste: resolução do LLM do RAG pelo roteamento
+  // (provider/base_url/modelo) do tenant.
+  _internal: {
+    resolveTenantLlmHeaders,
+    RAG_COMPATIBLE_PROVIDER_KINDS,
+  },
 };

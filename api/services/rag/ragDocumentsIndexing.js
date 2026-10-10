@@ -1,6 +1,7 @@
 const logger = require('../../utils/logger');
 const { safeErrorMessage, safeToString } = require('../../utils/defensiveCoercion');
 const { setIndexState } = require('./ragDocumentsState');
+const { hasIndexableContent } = require('./indexableContent');
 
 const ragService = require('../ragService');
 
@@ -35,6 +36,45 @@ async function reindexDocument(documentId, documentsCache, persistFn, loadConten
         success: false,
         chunksCreated: 0,
         error: 'Documento não tem conteúdo',
+      };
+    }
+
+    // Conteúdo que é APENAS o placeholder de "sem texto extraído" não tem o que
+    // embeddar. Indexá-lo cria um chunk fantasma que pontua alto e vira FONTE do
+    // copiloto (medido em 2026-10-08: `.jpeg` sem OCR como 1ª fonte de "Como faço
+    // uma matrícula?"). O documento continua existindo como asset; só sai do
+    // índice — inclusive o chunk de versões anteriores, que é removido aqui.
+    if (!hasIndexableContent(content)) {
+      let chunksRemoved = 0;
+      try {
+        const deindex = await ragService.deindexDocument(document.id, document.tenantId);
+        chunksRemoved = deindex?.chunksRemoved || 0;
+      } catch (deindexError) {
+        // A remoção é limpeza: o retrieval já é fail-closed pelo estado do pai
+        // (`index_status` diferente de `indexed`). Falha aqui não autoriza
+        // indexar o placeholder.
+        logger.warn('[RAGDocuments] Falha ao remover chunks de documento sem texto', {
+          documentId: document.id,
+          tenantId: document.tenantId,
+          error: safeErrorMessage(deindexError),
+        });
+      }
+      setIndexState(document, 'not_applicable_no_text', {
+        errorCode: 'NO_TEXT_EXTRACTED',
+        errorMessage: 'Documento sem texto extraído: mantido fora do índice de busca.',
+      });
+      if (persistFn) await persistFn(document);
+      logger.warn('[RAGDocuments] Documento sem texto extraído não é indexado', {
+        documentId: document.id,
+        tenantId: document.tenantId,
+        chunksRemoved,
+      });
+      return {
+        success: false,
+        chunksCreated: 0,
+        chunksRemoved,
+        errorCode: 'NO_TEXT_EXTRACTED',
+        error: 'Documento sem texto extraído: mantido fora do índice de busca.',
       };
     }
 

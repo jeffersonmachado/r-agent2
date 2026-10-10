@@ -157,6 +157,48 @@ describe('GET /api/pbx/operator-panel/events (SSE)', () => {
     expect(ctx.res._status).toBe(401);
     expect(ctx.res.write).not.toHaveBeenCalled();
   });
+
+  // EventSource não envia headers: token e tenant precisam chegar por query param,
+  // senão o próprio super-admin recebe 403 `tenant_required` no stream (medido em
+  // 2026-10-09 no Painel Operador).
+  test('aceita o token via query param e o injeta no header Authorization', async () => {
+    const ctx = buildCtx({ url: '/api/pbx/operator-panel/events?token=abc123' });
+    let closeHandler;
+    ctx.req.on = jest.fn((evt, cb) => { if (evt === 'close') closeHandler = cb; });
+
+    const routePromise = handlePbxOperatorPanelRoutes(ctx);
+    if (closeHandler) closeHandler();
+    await routePromise;
+
+    expect(ctx.req.headers.authorization).toBe('Bearer abc123');
+    expect(ctx.res.setHeader).toHaveBeenCalledWith('Content-Type', expect.stringContaining('text/event-stream'));
+  });
+
+  test('aceita o tenant via query param e o injeta no header X-Tenant-Id', async () => {
+    const ctx = buildCtx({ url: '/api/pbx/operator-panel/events?tenantId=system' });
+    let closeHandler;
+    ctx.req.on = jest.fn((evt, cb) => { if (evt === 'close') closeHandler = cb; });
+
+    const routePromise = handlePbxOperatorPanelRoutes(ctx);
+    if (closeHandler) closeHandler();
+    await routePromise;
+
+    expect(ctx.req.headers['x-tenant-id']).toBe('system');
+    expect(ctx.res._status).not.toBe(403);
+  });
+
+  test('não sobrescreve X-Tenant-Id já enviado por header', async () => {
+    const ctx = buildCtx({ url: '/api/pbx/operator-panel/events?tenantId=outro' });
+    ctx.req.headers['x-tenant-id'] = 'system';
+    let closeHandler;
+    ctx.req.on = jest.fn((evt, cb) => { if (evt === 'close') closeHandler = cb; });
+
+    const routePromise = handlePbxOperatorPanelRoutes(ctx);
+    if (closeHandler) closeHandler();
+    await routePromise;
+
+    expect(ctx.req.headers['x-tenant-id']).toBe('system');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

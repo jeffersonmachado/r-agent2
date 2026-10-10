@@ -29,7 +29,12 @@ async function handleRagOperationsRoutes({ req, res, method, pathname, deps }) {
       }
 
       const autoRepair = url.searchParams.get('autoRepair') === 'true';
-      const health = await deps.ragDocumentsService.getRagHealth(tenantId, { autoRepair });
+      const health = await deps.ragDocumentsService.getRagHealth(tenantId, {
+        autoRepair,
+        // A superfície do operador precisa saber se o SERVIÇO consegue servir
+        // (readiness), não só se o banco está consistente.
+        includeServiceHealth: true,
+      });
       deps.sendJson(res, 200, health);
     } catch (err) {
       return sendRagApiError(req, res, deps, {

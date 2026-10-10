@@ -60,6 +60,36 @@ async function call(pathname, { method = 'GET', token = null, body = null } = {}
   }
 }
 
+/**
+ * Marcadores de resposta DEGRADADA (texto recuperado sem síntese). Espelham o
+ * caminho de fallback de geração em `rag-service/api/routes/query.py`.
+ */
+const DEGRADATION_MARKERS = [
+  'Não foi possível gerar a resposta agora',
+  'Com base nas informações disponíveis',
+];
+
+/**
+ * Um turno só é evidência de copiloto funcionando se a resposta foi SINTETIZADA.
+ *
+ * HTTP 200 não basta: em 2026-10-08 o rag-service devolvia um trecho cru de
+ * documento com `confidence: fully_grounded` e este script dava PASS num
+ * copiloto que não respondia. Puro de propósito — a checagem roda contra a API
+ * viva, então a REGRA precisa ser testável em isolamento.
+ *
+ * @param {{status: number, answer: string, confidence: string|null}} turno
+ * @returns {{ok: boolean, reason: string|null}}
+ */
+function evaluateSynthesizedAnswer({ status, answer, confidence }) {
+  const text = String(answer || '');
+  if (status !== 200) return { ok: false, reason: `http_${status}` };
+  const marker = DEGRADATION_MARKERS.find((candidate) => text.includes(candidate));
+  if (marker) return { ok: false, reason: `degradation_marker:${marker}` };
+  if (confidence === 'source_only') return { ok: false, reason: 'confidence_source_only' };
+  if (text.trim().length < 40) return { ok: false, reason: 'answer_too_short' };
+  return { ok: true, reason: null };
+}
+
 async function main() {
   if (!USERNAME || !PASSWORD) {
     console.error('❌ Defina ASKAI_VERIFY_USER e ASKAI_VERIFY_PASSWORD (nunca hardcoded no repositório).');
@@ -131,6 +161,34 @@ async function main() {
     'Pergunta procedimental responde com conversa identificada',
     first.status === 200 && first.payload?.success === true && conversationId ? 'PASS' : 'FAIL',
     { status: first.status, intent: first.payload?.intent || null, confidence: first.payload?.confidence || null, conversationId },
+  );
+
+  // 6b. A resposta precisa ter sido GERADA — HTTP 200 não basta.
+  //
+  // Defeito medido em 2026-10-08: com o provider de geração sem crédito (429),
+  // o rag-service devolvia um TRECHO CRU de documento e o turno vinha com
+  // `confidence: fully_grounded`. Este script dava PASS num copiloto que não
+  // respondia ("Como faço uma matrícula?" devolvia texto sobre replay).
+  //
+  // `metadata.generated` não é exposto ao cliente por design: a evidência
+  // exibível é o TEXTO (marcador de degradação) somado à confiança.
+  const firstAnswer = String(first.payload?.answer || '');
+  const firstConfidence = first.payload?.confidence || null;
+  const synthesized = evaluateSynthesizedAnswer({
+    status: first.status,
+    answer: firstAnswer,
+    confidence: firstConfidence,
+  });
+  record(
+    'first_turn_answer_generated',
+    'Resposta do turno foi SINTETIZADA (não é trecho recuperado nem degradação)',
+    synthesized.ok ? 'PASS' : 'FAIL',
+    {
+      status: first.status,
+      confidence: firstConfidence,
+      answerLength: firstAnswer.trim().length,
+      reason: synthesized.reason,
+    },
   );
 
   // 7. Follow-up na mesma conversa
@@ -210,7 +268,11 @@ function finish() {
   if (failed.length > 0) process.exit(1);
 }
 
-main().catch((error) => {
-  console.error('FATAL:', error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('FATAL:', error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { evaluateSynthesizedAnswer, DEGRADATION_MARKERS };

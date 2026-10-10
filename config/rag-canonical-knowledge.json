@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "description": "Conhecimento que o copiloto OPERACIONAL precisa ter para responder as perguntas canônicas. Prova de INGESTÃO: o manifesto de sync não é prova — cada fonte listada aqui precisa existir no banco do tenant, no escopo declarado, indexada e COM chunks. Falha = RAG_CANONICAL_SOURCE_*.",
+  "tenantKey": "system",
+  "domain": "OPERATIONAL",
+  "sources": [
+    {
+      "id": "src-docs-manual-sobre-a-plataforma-md",
+      "reason": "responde \"o que é o RAP\""
+    },
+    {
+      "id": "src-docs-documentacao-operacional-indice-md",
+      "reason": "índice da documentação operacional"
+    },
+    {
+      "id": "src-docs-manual-verticals-fitness-html",
+      "reason": "manual de verticais — fitness (matrícula, check-in, status de acesso)"
+    },
+    {
+      "id": "src-docs-manual-journeys-fitness-html",
+      "reason": "manual de jornadas — fitness (cadastro, plano, ativação)"
+    },
+    {
+      "id": "src-docs-manual-journeys-beauty-html",
+      "reason": "manual de jornadas — beleza"
+    },
+    {
+      "id": "src-docs-roteiros-jornada-fitness-fitness-new-customer-md",
+      "reason": "roteiro da jornada de novo cliente (matrícula) em fitness"
+    },
+    {
+      "id": "src-docs-casos-de-uso-md",
+      "reason": "casos de uso operacionais"
+    },
+    {
+      "id": "src-docs-como-acessar-funcionalidades-md",
+      "reason": "como acessar as funcionalidades (onboarding do operador)"
+    }
+  ]
+}

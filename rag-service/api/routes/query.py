@@ -274,6 +274,11 @@ def query_rag(request: QueryRequest, http_request: Request):
         # Credencial de LLM do tenant repassada pelo backend (Configuração > IA).
         # Nunca é logada nem incluída na resposta; ausente cai no fallback sem LLM.
         llm_api_key_override = http_request.headers.get("X-RAG-LLM-API-Key") or None
+        # Provider/base_url/modelo do tenant (Configuração > IA), repassados pelo
+        # backend. Sem eles o serviço fala apenas com a OpenAI global, o que
+        # fazia um tenant roteado para deepseek/kimi gerar com chave OpenAI.
+        llm_base_url_override = http_request.headers.get("X-RAG-LLM-Base-URL") or None
+        llm_model_override = http_request.headers.get("X-RAG-LLM-Model") or None
         
         # Validações
         if not request.query or not request.query.strip():
@@ -307,6 +312,8 @@ def query_rag(request: QueryRequest, http_request: Request):
                     domain=scope['domain'],
                     classificationsApplied=scope['classifications'],
                     sensitivitiesApplied=scope['sensitivities'],
+                    generated=False,
+                    degradationReason="invalid_query",
                 ),
                 error="Query inválida: UUID ou sem sentido semântico"
             )
@@ -380,13 +387,55 @@ def query_rag(request: QueryRequest, http_request: Request):
         
         # Busca
         logger.debug(f"Buscando chunks: top_k={top_k}, min_score={min_score}, filters={filters}")
-        chunks = vector_store.search(query_embedding, top_k=top_k, filters=filters, scope=scope)
-        logger.debug(f"Chunks encontrados antes do filtro: {len(chunks)}")
-        
-        # Filtra por min_score
-        chunks_before_filter = len(chunks)
-        chunks = [chunk for chunk in chunks if chunk.score and chunk.score >= min_score]
-        chunks_filtered = chunks_before_filter - len(chunks)
+        # Estratégia de recuperação: híbrida (semântica+lexical por RRF) quando
+        # habilitada, senão a vetorial histórica. A híbrida é MEDIDA (benchmark
+        # A/B/C em corpus real: recall@6 0.625 -> 0.750, MRR 0.521 -> 0.588) e
+        # fica atrás de `RAG_HYBRID_ENABLED` para a troca ser uma decisão
+        # explícita, nunca um efeito colateral.
+        retrieval_strategy = "semantic"
+        retrieval_info: dict = {}
+        if getattr(settings, "hybrid_enabled", False):
+            retrieval_strategy = "hybrid"
+            hybrid_result = vector_store.search_hybrid(
+                request.query,
+                query_embedding,
+                top_k=top_k,
+                filters=filters,
+                scope=scope,
+                candidates=max(top_k, getattr(settings, "hybrid_candidates", 30)),
+            )
+            chunks = hybrid_result["chunks"]
+            chunks_before_filter = len(chunks)
+            # minScore é um corte de COSSENO: aplicá-lo a um match puramente
+            # lexical (sem score semântico) descartaria o ganho da fusão.
+            chunks = [
+                chunk for chunk in chunks
+                if (chunk.metadata.hybrid or {}).get("semanticRank") is None
+                or (chunk.score or 0.0) >= min_score
+            ]
+            chunks_filtered = chunks_before_filter - len(chunks)
+            retrieval_info = {
+                "strategy": retrieval_strategy,
+                "algorithmVersion": hybrid_result["algorithmVersion"],
+                "weights": hybrid_result["weights"],
+                "rrfK": hybrid_result["rrfK"],
+                "semanticFound": hybrid_result["semanticFound"],
+                "lexicalFound": hybrid_result["lexicalFound"],
+                "degraded": hybrid_result["degraded"],
+                "degradationReasons": hybrid_result["degradationReasons"],
+            }
+            # Confiança só pode ser calculada sobre cosseno: `ts_rank_cd` tem
+            # escala própria e inflaria o valor se misturado.
+            confidence_chunks = [
+                chunk for chunk in chunks
+                if (chunk.metadata.hybrid or {}).get("semanticScore") is not None
+            ]
+        else:
+            chunks = vector_store.search(query_embedding, top_k=top_k, filters=filters, scope=scope)
+            chunks_before_filter = len(chunks)
+            chunks = [chunk for chunk in chunks if chunk.score and chunk.score >= min_score]
+            chunks_filtered = chunks_before_filter - len(chunks)
+            confidence_chunks = chunks
         
         if chunks_filtered > 0:
             logger.debug(f"Chunks filtrados por min_score: {chunks_filtered} removidos")
@@ -599,12 +648,14 @@ def query_rag(request: QueryRequest, http_request: Request):
                     domain=scope['domain'],
                     classificationsApplied=scope['classifications'],
                     sensitivitiesApplied=scope['sensitivities'],
+                    generated=False,
+                    degradationReason="no_relevant_chunks",
                 ),
                 error="Nenhum chunk encontrado com score suficiente"
             )
         
         # Calcula confidence
-        confidence = calculate_confidence(chunks, min_score)
+        confidence = calculate_confidence(confidence_chunks, min_score)
         
         # PASSO 5: Constrói prompt RAG com tenant_context (já carregado no PASSO 1)
         # O tenant_context é injetado no system prompt e NÃO pode ser fragmentado em chunks
@@ -615,6 +666,10 @@ def query_rag(request: QueryRequest, http_request: Request):
         prompt = learning_service.get_optimized_prompt(request.tenantId, base_prompt)
         
         # Gera resposta usando LLM
+        # Estado de geração: um texto NÃO sintetizado nunca pode ser propagado
+        # como resposta fundamentada (defeito medido em 2026-10-08).
+        llm_generated = False
+        degradation_reason: Optional[str] = None
         max_tokens = request.options.maxTokens if request.options else settings.llm_max_tokens
         try:
             logger.debug(f"Gerando resposta com LLM: chunks={len(chunks)}, confidence={confidence:.2f}, max_tokens={max_tokens}")
@@ -631,27 +686,43 @@ def query_rag(request: QueryRequest, http_request: Request):
                 temperature=settings.llm_temperature,
                 system_prompt=security_system_prompt,
                 api_key_override=llm_api_key_override,
+                base_url_override=llm_base_url_override,
+                model_override=llm_model_override,
             )
             
             # Valida se a resposta não é muito curta ou genérica
             if not response_text or len(response_text.strip()) < 20:
                 logger.warning("Resposta do LLM muito curta, pode ser erro")
                 response_text = "Não tenho informação suficiente sobre isso. Posso transferir você para um atendente humano?"
+                degradation_reason = "llm_empty_response"
             else:
                 logger.debug(f"Resposta gerada com sucesso: {len(response_text)} caracteres")
+                llm_generated = True
                 
         except Exception as e:
             logger.error(f"Erro ao gerar resposta com LLM: {e}", exc_info=True)
             # Fallback sem LLM: só usa chunks com relevância mínima; caso
             # contrário responde honestamente em vez de devolver conteúdo
             # irrelevante (evita respostas incoerentes).
+            #
+            # O texto NÃO foi sintetizado: precisa se declarar como trecho bruto.
+            # Antes ele saía como "Com base nas informações disponíveis: ..." e o
+            # consumidor (Ask AI) o apresentava como resposta fundamentada com
+            # confidence alta (defeito medido em 2026-10-08).
             best_score = max((chunk.score or 0.0 for chunk in chunks), default=0.0)
+            degradation_reason = "llm_unavailable"
             if chunks and best_score >= MIN_RELEVANCE_SCORE:
-                # Fallback inteligente: usa o primeiro chunk como resposta base
                 first_chunk = chunks[0]
-                response_text = f"Com base nas informações disponíveis: {first_chunk.content[:300]}..."
+                response_text = (
+                    "Não foi possível gerar a resposta agora: a geração de linguagem "
+                    "está indisponível. Sem síntese, segue o trecho mais relevante "
+                    f"recuperado:\n\n{first_chunk.content[:300]}..."
+                )
                 if len(chunks) > 1:
-                    response_text += f"\n\nHá {len(chunks)} fontes de informação relacionadas disponíveis."
+                    response_text += (
+                        f"\n\n({len(chunks)} fontes relacionadas recuperadas, "
+                        "nenhuma sintetizada.)"
+                    )
             else:
                 response_text = (
                     "Não tenho informação suficiente sobre isso. Posso transferir você para um atendente humano?"
@@ -687,6 +758,10 @@ def query_rag(request: QueryRequest, http_request: Request):
                 domain=scope['domain'],
                 classificationsApplied=scope['classifications'],
                 sensitivitiesApplied=scope['sensitivities'],
+                generated=llm_generated,
+                degradationReason=degradation_reason,
+                strategy=retrieval_strategy,
+                retrieval=retrieval_info or None,
             )
         )
     
@@ -701,7 +776,9 @@ def query_rag(request: QueryRequest, http_request: Request):
             confidence=0.0,
             metadata=QueryMetadata(
                 chunksSearched=0,
-                chunksFound=0
+                chunksFound=0,
+                generated=False,
+                degradationReason="internal_error",
             ),
             error=str(e)
         )

@@ -43,6 +43,11 @@ class SearchRequest(BaseModel):
     scope: Optional[QueryScope] = None
     topK: Optional[int] = Field(default=None, ge=1, le=50)
     minScore: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    # Estratégia de recuperação: semantic (default), lexical ou hybrid (RRF).
+    # Sem valor explícito, usa hybrid quando RAG_HYBRID_ENABLED=true.
+    strategy: Optional[str] = Field(default=None, pattern="^(semantic|lexical|hybrid)$")
+    # Candidatos por modalidade ANTES da fusão (top-k de cada recuperador).
+    candidates: Optional[int] = Field(default=None, ge=1, le=200)
 
 
 def _serialize_chunk(chunk) -> dict:
@@ -77,6 +82,10 @@ def _serialize_chunk(chunk) -> dict:
         "semanticHash": meta_get("semantic_hash"),
         "sourceId": meta_get("source_id"),
         "sourceVersion": meta_get("source_version"),
+        # Rastreabilidade do ranking híbrido (FASE 6): score/posição por
+        # modalidade, RRF final, pesos e versão do algoritmo. `None` quando a
+        # busca foi apenas vetorial — o consumidor não precisa inferir.
+        "ranking": meta_get("hybrid"),
         # Segregação: atributos do CHUNK (não do metadata).
         "domain": getattr(chunk, "domain", None),
         "classification": getattr(chunk, "classification", None),
@@ -119,9 +128,54 @@ def search_chunks(request: SearchRequest, http_request: Request):
             if request.filters.agentId:
                 filters["agentId"] = request.filters.agentId
 
-        chunks = vector_store.search(query_embedding, top_k=top_k, filters=filters, scope=scope)
-        found_before_filter = len(chunks)
-        chunks = [chunk for chunk in chunks if chunk.score and chunk.score >= min_score]
+        strategy = (request.strategy or ("hybrid" if getattr(settings, "hybrid_enabled", False) else "semantic")).lower()
+        explain = {"strategy": strategy}
+
+        if strategy == "hybrid":
+            hybrid = vector_store.search_hybrid(
+                request.query,
+                query_embedding,
+                top_k=top_k,
+                filters=filters,
+                scope=scope,
+                candidates=request.candidates,
+            )
+            chunks = hybrid["chunks"]
+            # `chunksFound` é a contagem ANTES do corte de score (contrato
+            # preservado do caminho anterior).
+            found_before_filter = len(chunks)
+            # minScore é um corte de COSSENO: aplicá-lo a um match puramente
+            # lexical (sem score semântico) descartaria justamente o ganho que
+            # motivou a busca híbrida. O corte vale para quem tem cosseno.
+            chunks = [
+                chunk for chunk in chunks
+                if (chunk.metadata.hybrid or {}).get("semanticRank") is None
+                or (chunk.score or 0.0) >= min_score
+            ]
+            explain.update({
+                "algorithmVersion": hybrid["algorithmVersion"],
+                "rrfK": hybrid["rrfK"],
+                "weights": hybrid["weights"],
+                "candidatesPerModality": hybrid["candidatesPerModality"],
+                "semanticFound": hybrid["semanticFound"],
+                "lexicalFound": hybrid["lexicalFound"],
+                "degraded": hybrid["degraded"],
+                "degradationReasons": hybrid["degradationReasons"],
+            })
+        elif strategy == "lexical":
+            chunks = vector_store.lexical_search(
+                request.query,
+                top_k=top_k,
+                filters=filters,
+                scope=scope,
+                text_config=getattr(settings, "hybrid_text_config", "portuguese"),
+            )
+            found_before_filter = len(chunks)
+            explain["textConfig"] = getattr(settings, "hybrid_text_config", "portuguese")
+        else:
+            chunks = vector_store.search(query_embedding, top_k=top_k, filters=filters, scope=scope)
+            found_before_filter = len(chunks)
+            chunks = [chunk for chunk in chunks if chunk.score and chunk.score >= min_score]
 
         logger.info(
             "RAG search (retrieve-only)",
@@ -131,6 +185,8 @@ def search_chunks(request: SearchRequest, http_request: Request):
                 "classifications": scope["classifications"],
                 "found": found_before_filter,
                 "after_min_score": len(chunks),
+                "strategy": strategy,
+                "degraded": explain.get("degraded"),
             },
         )
 
@@ -146,6 +202,7 @@ def search_chunks(request: SearchRequest, http_request: Request):
                 "minScore": min_score,
                 "topK": top_k,
                 "generationUsed": False,
+                **explain,
             },
         }
     except HTTPException:

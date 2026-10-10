@@ -105,6 +105,30 @@ export function StatusTab({ systemStatus }) {
               </div>
             )}
 
+            {/* Aviso operacional RAG degradado: processo no ar, readiness negada */}
+            {key === 'ragService' && service.status === 'degraded' && (
+              <div className="mt-2 p-2 rounded text-sm" style={{
+                backgroundColor: theme.colors.status.warning + '18',
+                border: `1px solid ${theme.colors.status.warning}50`,
+                color: theme.colors.status.warning,
+              }}>
+                <strong>Modo degradado:</strong> o serviço está no ar mas não está pronto
+                {service.details?.reason ? <> (<code>{String(service.details.reason)}</code>)</> : null}.
+                {service.details?.dbConfigured === false && (
+                  <div className="mt-1">
+                    Sem banco configurado (DSN/Postgres). Suba com <code>--env-file .env</code>:
+                    nesse estado nenhuma indexação/consulta persiste.
+                  </div>
+                )}
+                {service.details?.consistency?.status === 'warning' && (
+                  <div className="mt-1">{String(service.details.consistency.message || 'Inconsistência do índice RAG.')}</div>
+                )}
+                <div className="mt-1">
+                  <a href="/config?tab=rag" className="underline font-medium">Abrir configuração do RAG →</a>
+                </div>
+              </div>
+            )}
+
             {/* Erro */}
             {service.error && (
               <div className="mt-2 p-2 rounded text-sm" style={{ 

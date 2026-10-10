@@ -19,6 +19,7 @@ import logging
 
 from api.routes import query, index, health, nlp, learning, maintenance, embeddings, search
 from config.settings import get_settings
+from services import internal_auth
 from services.internal_auth import get_internal_token, has_valid_internal_token
 
 # Configura logging
@@ -71,6 +72,13 @@ if not get_internal_token():
         "permanecerão bloqueadas até a configuração ser corrigida."
     )
 
+if not internal_auth.is_database_configured():
+    logger.error(
+        "[CONFIG] Banco do RAG não configurado (DATABASE_URL/PG*): indexação e "
+        "consulta em /rag/* ficam BLOQUEADAS (fail-closed). Suba com o env do "
+        "serviço: ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8001 --env-file .env"
+    )
+
 
 @app.middleware("http")
 async def require_internal_token(request: Request, call_next):
@@ -79,6 +87,15 @@ async def require_internal_token(request: Request, call_next):
     RAG_INTERNAL_TOKEN esteja configurado e que o header correspondente confira.
     O backend Node é o único chamador autorizado — clientes finais nunca
     falam diretamente com este serviço.
+
+    NOTA (2026-10-08): bloqueio global por "banco não configurado" foi AVALIADO e
+    REJEITADO. Medição: no ambiente de teste o DSN não está em `os.environ`
+    (`.env` é lido pelo pydantic, mas `os.getenv("DATABASE_URL")` não vê o arquivo)
+    e 33 testes que stubam o vector store passaram a receber 503 — o gate
+    bloqueava caminhos que não precisam do banco. A necessidade de banco é por
+    rota e já falha fechado no ponto de uso (`persistence_required`); a
+    visibilidade de configuração vive em `/rag/health` (`status=degraded`,
+    `ready=false`) e `/rag/ready` (503) — que é o que faltava em 2026-10-06.
     """
     if request.url.path.startswith("/rag"):
         configured_token = get_internal_token()

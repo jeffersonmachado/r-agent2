@@ -25,7 +25,7 @@ function safeErrorMessage(err, fallback = '') {
   try { return String(err); } catch (_) { return fallback; }
 }
 const { isRedisAvailable, getRateLimitClient } = require('../../infra/redis/rateLimitClient');
-const { isRagAvailable, getRagServiceUrl } = require('./ragService');
+const { getRagHealth, getRagServiceUrl } = require('./ragService');
 const { getRagInternalHeaders } = require('./rag/ragRuntime');
 const { getWebSocketServer } = require('./websocketService');
 const { getSequelize } = require('../db/sequelize');
@@ -198,133 +198,145 @@ async function checkRedisStatus() {
  */
 async function checkRagServiceStatus() {
   try {
-    const available = await isRagAvailable();
+    // TRI-ESTADO: o serviço Python publica `healthy`, `degraded` (liveness OK
+    // mas readiness negada — ex.: `database_not_configured`) e ausência/erro.
+    // Antes o adapter colapsava tudo em booleano (`status === 'healthy'`), e um
+    // RAG degradado aparecia no /dev como "Serviço RAG não disponível"
+    // (vermelho), escondendo a causa real do operador.
+    const health = await getRagHealth();
+    const available = health.state === 'healthy';
+
+    if (health.state === 'degraded') {
+      const degradedPayload = health.payload || {};
+      const degradedReason = degradedPayload.reason || health.reason || 'not_ready';
+      const degradedServiceUrl = health.serviceUrl || getRagServiceUrl();
+      return {
+        status: 'degraded',
+        error: `Serviço RAG no ar, mas não está pronto para servir requisições (${degradedReason})`,
+        details: {
+          port: extractPortFromUrl(degradedServiceUrl, 8001),
+          serviceUrl: degradedServiceUrl,
+          ready: degradedPayload.ready === true,
+          reason: degradedReason,
+          dbConfigured: degradedPayload.dbConfigured ?? null,
+          vectorStore: degradedPayload.vectorStore ?? null,
+          embeddingModel: degradedPayload.embeddingModel ?? null,
+          hint: degradedPayload.dbConfigured === false
+            ? 'RAG subiu sem banco configurado (DSN/Postgres): suba com --env-file .env — nesse estado nenhuma indexação/consulta persiste.'
+            : 'Liveness OK e readiness negada pelo serviço RAG. Inspecione /rag/health.',
+        },
+      };
+    }
+
     if (available) {
-      // Tenta obter informações detalhadas do health check
-      const ragServiceUrl = getRagServiceUrl();
-      
-      // Usa fetch nativo do Node.js 18+ ou fallback
-      let fetchFn;
-      try {
-        // Node.js 18+ tem fetch nativo
-        if (typeof global.fetch === 'function') {
-          fetchFn = global.fetch;
-        } else {
-          // Tenta usar node-fetch se disponível
-          fetchFn = require('node-fetch');
-        }
-      } catch (err) {
-        // Se não tiver fetch, retorna status básico
-        // Extrai a porta da URL do serviço RAG
-        const port = extractPortFromUrl(ragServiceUrl, 8001);
-        
-        return {
-          status: 'healthy',
-          details: {
-            port: port,
-            serviceUrl: ragServiceUrl,
-            note: 'Detalhes não disponíveis (fetch não disponível)',
-          },
-        };
-      }
-      
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        
-        const response = await fetchFn(`${ragServiceUrl}/rag/health`, {
-          method: 'GET',
-          headers: getRagInternalHeaders(),
-          signal: controller.signal,
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Extrai a porta da URL do serviço RAG
-          const port = extractPortFromUrl(ragServiceUrl, 8001);
+      // Detalhes: reutiliza o payload JÁ medido por getRagHealth. Antes havia um
+      // segundo probe de /rag/health aqui — redundante (custava até 2s por
+      // chamada em /system/status) e origem de um "healthy básico" sem
+      // consistência quando esse probe falhava.
+      const ragServiceUrl = health.serviceUrl || getRagServiceUrl();
+      const data = health.payload || {};
 
-          // -------------------------------------------------------------------
-          // Unificação: também reporta consistência BD vs Vector Store (agregado)
-          // - /system/status é público, então NÃO usa tenantId (agregado).
-          // - Compara apenas contagens (não vaza conteúdo).
-          // -------------------------------------------------------------------
-          let dbIndexedDocuments = null;
-          let dbInconsistentDocuments = null;
-          let consistency = null;
-          try {
-            if (getSequelize()) {
-              const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
-              dbIndexedDocuments = await RagDocumentModel.count({ where: { index_status: 'indexed' } });
-              dbInconsistentDocuments = await RagDocumentModel.count({ where: { inconsistent: true } });
-
-              // Vetores: conta direto do pgvector (mesma fonte de verdade do BD).
-              // Não usa `data.indexedDocuments` do /rag/health, que é
-              // scope-restricted sem tenant_id (retorna 0) e gerava falso
-              // warning de inconsistência.
-              let vectorDocs = 0;
-              let vectorChunks = 0;
-              try {
-                const [vectorRows] = await getSequelize().query(
-                  `SELECT COUNT(*)::int AS chunks, COUNT(DISTINCT document_id)::int AS docs FROM rag_chunks`,
-                );
-                const vectorRow = Array.isArray(vectorRows) && vectorRows[0] ? vectorRows[0] : null;
-                vectorChunks = Number(vectorRow?.chunks || 0);
-                vectorDocs = Number(vectorRow?.docs || 0);
-              } catch (vectorErr) {
-                logger.debug('[SystemStatus] Falha ao contar rag_chunks (best-effort)', { error: safeErrorMessage(vectorErr) });
-              }
-
-              const inconsistent =
-                (dbIndexedDocuments || 0) > 0 &&
-                (vectorChunks === 0 || vectorDocs === 0);
-
-              consistency = {
-                status: inconsistent ? 'warning' : 'ok',
-                dbIndexedDocuments,
-                dbInconsistentDocuments,
-                vectorIndexedDocuments: vectorDocs,
-                vectorIndexedChunks: vectorChunks,
-                deltaDocuments: (dbIndexedDocuments || 0) - vectorDocs,
-                message: inconsistent
-                  ? `Inconsistência RAG detectada (BD indexed=${dbIndexedDocuments}, vector docs=${vectorDocs}, vector chunks=${vectorChunks})`
-                  : 'Consistência RAG OK (BD vs Vector Store)',
-              };
-            }
-          } catch (dbErr) {
-            // Best-effort: não quebra /system/status se DB estiver indisponível
-            logger.debug('[SystemStatus] Não foi possível obter contagem do BD para consistência RAG', { error: safeErrorMessage(dbErr) });
-          }
-          
-          return {
-            status: 'healthy',
-            details: {
-              port: port,
-              vectorStore: data.vectorStore,
-              embeddingModel: data.embeddingModel,
-              indexedDocuments: data.indexedDocuments || 0,
-              indexedChunks: data.indexedChunks || 0,
-              dbIndexedDocuments,
-              dbInconsistentDocuments,
-              consistency,
-            },
-          };
-        }
-      } catch (fetchErr) {
-        // Se falhar, retorna status básico
-        logger.debug('[SystemStatus] Não foi possível obter detalhes do RAG', { error: safeErrorMessage(fetchErr) });
-      }
-      
       // Extrai a porta da URL do serviço RAG
       const port = extractPortFromUrl(ragServiceUrl, 8001);
-      
+
+      // -------------------------------------------------------------------
+      // Unificação: também reporta consistência BD vs Vector Store (agregado)
+      // - /system/status é público, então NÃO usa tenantId (agregado).
+      // - Compara apenas contagens (não vaza conteúdo).
+      // -------------------------------------------------------------------
+      let dbIndexedDocuments = null;
+      let dbInconsistentDocuments = null;
+      let dbFailedDocuments = null;
+      let dbTotalDocuments = null;
+      let consistency = null;
+      // Saúde do ÍNDICE (não do processo): o /dev precisa enxergar drift
+      // BD↔vetor e documentos presos em `failed`, não só o heartbeat.
+      let indexHealth = null;
+      let indexDriftDetected = false;
+      try {
+        if (getSequelize()) {
+          const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+          dbIndexedDocuments = await RagDocumentModel.count({ where: { index_status: 'indexed' } });
+          dbInconsistentDocuments = await RagDocumentModel.count({ where: { inconsistent: true } });
+          try {
+            dbFailedDocuments = await RagDocumentModel.count({ where: { index_status: 'failed' } });
+            dbTotalDocuments = await RagDocumentModel.count();
+          } catch (indexCountErr) {
+            logger.debug('[SystemStatus] Falha ao contar documentos failed/total (best-effort)', { error: safeErrorMessage(indexCountErr) });
+          }
+
+          // Vetores: conta direto do pgvector (mesma fonte de verdade do BD).
+          // Não usa `data.indexedDocuments` do /rag/health, que é
+          // scope-restricted sem tenant_id (retorna 0) e gerava falso
+          // warning de inconsistência.
+          let vectorDocs = 0;
+          let vectorChunks = 0;
+          try {
+            const [vectorRows] = await getSequelize().query(
+              `SELECT COUNT(*)::int AS chunks, COUNT(DISTINCT document_id)::int AS docs FROM rag_chunks`,
+            );
+            const vectorRow = Array.isArray(vectorRows) && vectorRows[0] ? vectorRows[0] : null;
+            vectorChunks = Number(vectorRow?.chunks || 0);
+            vectorDocs = Number(vectorRow?.docs || 0);
+          } catch (vectorErr) {
+            logger.debug('[SystemStatus] Falha ao contar rag_chunks (best-effort)', { error: safeErrorMessage(vectorErr) });
+          }
+
+          const inconsistent =
+            (dbIndexedDocuments || 0) > 0 &&
+            (vectorChunks === 0 || vectorDocs === 0);
+
+          // Drift real = índice declarado no BD sem representação no vetor
+          // (ou documentos marcados `inconsistent`). Diferença de contagem
+          // sozinha NÃO degrada: é usada apenas como informação.
+          indexDriftDetected = inconsistent || (Number(dbInconsistentDocuments) || 0) > 0;
+
+          indexHealth = {
+            total: dbTotalDocuments,
+            indexed: dbIndexedDocuments,
+            failed: dbFailedDocuments,
+            inconsistent: dbInconsistentDocuments,
+          };
+
+          consistency = {
+            status: indexDriftDetected ? 'warning' : 'ok',
+            dbIndexedDocuments,
+            dbInconsistentDocuments,
+            dbFailedDocuments,
+            dbTotalDocuments,
+            vectorIndexedDocuments: vectorDocs,
+            vectorIndexedChunks: vectorChunks,
+            deltaDocuments: (dbIndexedDocuments || 0) - vectorDocs,
+            message: indexDriftDetected
+              ? `Inconsistência RAG detectada (BD indexed=${dbIndexedDocuments}, vector docs=${vectorDocs}, vector chunks=${vectorChunks}, inconsistent=${dbInconsistentDocuments})`
+              : 'Consistência RAG OK (BD vs Vector Store)',
+          };
+        }
+      } catch (dbErr) {
+        // Best-effort: não quebra /system/status se DB estiver indisponível
+        logger.debug('[SystemStatus] Não foi possível obter contagem do BD para consistência RAG', { error: safeErrorMessage(dbErr) });
+      }
+
       return {
-        status: 'healthy',
+        // Índice com drift (BD↔vetor ou documentos `inconsistent`) é
+        // `degraded`: o processo responde, mas a recuperação serve dados
+        // inconsistentes. Liveness/readiness do serviço seguem OK.
+        status: indexDriftDetected ? 'degraded' : 'healthy',
+        ...(indexDriftDetected
+          ? { error: consistency ? consistency.message : 'Inconsistência do índice RAG detectada' }
+          : {}),
         details: {
           port: port,
-          serviceUrl: ragServiceUrl,
+          vectorStore: data.vectorStore,
+          embeddingModel: data.embeddingModel,
+          indexedDocuments: data.indexedDocuments || 0,
+          indexedChunks: data.indexedChunks || 0,
+          dbIndexedDocuments,
+          dbInconsistentDocuments,
+          dbFailedDocuments,
+          dbTotalDocuments,
+          indexHealth,
+          consistency,
         },
       };
     }
@@ -377,13 +389,37 @@ async function checkRagServiceStatus() {
       logger.debug('[SystemStatus] Não foi possível obter detalhes do erro RAG', { error: safeErrorMessage(checkErr) });
     }
     
+    // Prefere a causa JÁ MEDIDA por getRagHealth (a mesma chamada que decidiu o
+    // estado). O probe extra acima fica como reforço apenas quando o transporte
+    // não classificou o erro.
+    // Corpo de erro do rag-service (ex.: HTTP 503 `service_misconfigured` /
+    // "Autenticação interna do RAG não configurada") entra na mensagem: sem ele
+    // o operador só via "HTTP 503" e não sabia o que configurar.
+    const httpErrorDetail = health.errorType === 'http_error'
+      ? [
+        health.payload?.error || null,
+        health.payload?.message || null,
+      ].filter(Boolean).join(': ') || null
+      : null;
+
+    const measuredErrorByType = {
+      timeout: 'Timeout ao conectar com serviço RAG',
+      connection_refused: 'Conexão recusada - serviço RAG não está rodando',
+      host_not_found: `Host não encontrado: ${ragServiceUrl}`,
+      http_error: `Serviço RAG retornou status HTTP ${health.httpStatus}${httpErrorDetail ? ` (${httpErrorDetail})` : ''}`,
+      circuit_breaker_open: 'Circuito aberto para o serviço RAG (falhas recentes)',
+    };
+    const measuredError = measuredErrorByType[health.errorType] || null;
+
     return {
       status: 'unhealthy',
-      error: safeErrorMessage(errorDetails.error),
+      error: safeErrorMessage(measuredError || errorDetails.error),
       details: {
-        serviceUrl: errorDetails.serviceUrl,
-        errorType: errorDetails.errorType,
-        httpStatus: errorDetails.httpStatus,
+        serviceUrl: ragServiceUrl,
+        errorType: health.errorType || errorDetails.errorType,
+        httpStatus: health.httpStatus ?? errorDetails.httpStatus,
+        reason: health.reason || null,
+        message: health.payload?.message || null,
         hint: 'Verifique se o serviço RAG está rodando e acessível na URL configurada',
       },
     };

@@ -15,13 +15,29 @@ if _os.getenv("RAG_INTERNAL_TOKEN"):
 
 
 def test_health_check():
-    """Testa se o health check retorna status healthy."""
+    """
+    Health check responde e NUNCA mente sobre readiness.
+
+    O status depende da configuração do ambiente (com DSN -> healthy/ready; sem
+    DSN -> degraded/ready=false). O que este teste fixa é a CONSISTÊNCIA entre
+    `status`, `ready` e `dbConfigured` — antes o serviço dizia `healthy` com
+    `dbConfigured=false` e o operador só descobria o problema por documentos
+    nascendo `failed` (2026-10-06).
+    """
     response = client.get("/rag/health")
-    assert response.status_code == 200
+    assert response.status_code == 200  # liveness: processo no ar
     data = response.json()
-    assert data["status"] == "healthy"
     assert "vectorStore" in data
     assert "embeddingModel" in data
+    assert "ready" in data
+    assert "dbConfigured" in data
+
+    if data["dbConfigured"] is False:
+        assert data["status"] == "degraded"
+        assert data["ready"] is False
+    else:
+        assert data["status"] == "healthy"
+        assert data["ready"] is True
 
 
 def test_health_check_structure():

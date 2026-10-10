@@ -74,6 +74,17 @@ class QueryMetadata(BaseModel):
     domain: Optional[str] = None
     classificationsApplied: Optional[List[str]] = None
     sensitivitiesApplied: Optional[List[str]] = None
+    # Geração: `False` significa que o texto NÃO foi sintetizado por LLM (o
+    # serviço caiu no fallback). O consumidor deve rotular a resposta como
+    # degradada em vez de apresentá-la como fundamentada — sem este campo um
+    # trecho cru era propagado como resposta com confidence alta.
+    generated: Optional[bool] = None
+    degradationReason: Optional[str] = None
+    # Estratégia de recuperação efetivamente usada (semantic|hybrid) e sua
+    # explicação (pesos, RRF, candidatos por modalidade, degradação de
+    # modalidade). `None` quando a busca foi vetorial histórica.
+    strategy: Optional[str] = None
+    retrieval: Optional[Dict[str, Any]] = None
 
 
 class QueryResponse(BaseModel):

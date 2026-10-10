@@ -24,7 +24,7 @@ jest.mock('../../infra/redis/rateLimitClient', () => ({
 }));
 
 jest.mock('../../api/services/ragService', () => ({
-  isRagAvailable: jest.fn(),
+  getRagHealth: jest.fn(),
   getRagServiceUrl: jest.fn(),
 }));
 
@@ -42,7 +42,7 @@ jest.mock('../../api/db/models', () => ({
 
 const config = require('../../api/utils/config');
 const { isRedisAvailable } = require('../../infra/redis/rateLimitClient');
-const { isRagAvailable } = require('../../api/services/ragService');
+const { getRagHealth } = require('../../api/services/ragService');
 const { getWebSocketServer } = require('../../api/services/websocketService');
 const {
   checkRedisStatus,
@@ -76,7 +76,7 @@ describe('systemStatusService coercion guards', () => {
   beforeEach(() => {
     config.get.mockImplementation((key, fallback) => fallback);
     isRedisAvailable.mockReset();
-    isRagAvailable.mockReset();
+    getRagHealth.mockReset();
     getWebSocketServer.mockReset();
   });
 
@@ -97,7 +97,7 @@ describe('systemStatusService coercion guards', () => {
   });
 
   test('checkRagServiceStatus: hostile err.message in catch does not throw', async () => {
-    isRagAvailable.mockRejectedValue(hostileErr());
+    getRagHealth.mockRejectedValue(hostileErr());
     const out = await checkRagServiceStatus();
     expect(out.status).toBe('unhealthy');
     expect(typeof out.error).toBe('string');

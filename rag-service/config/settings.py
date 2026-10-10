@@ -232,6 +232,23 @@ class Settings(BaseSettings):
         if _CONFIG_JSON else "gpt-4o-mini"
     )
     llm_api_key: Optional[str] = None
+    # Busca híbrida (semântica + lexical por RRF). Default DESLIGADO até o
+    # benchmark no corpus real provar ganho (FASE 10) — ligar por env sem medição
+    # seria trocar um comportamento não medido por outro.
+    # RAG_HYBRID_ENABLED / RAG_HYBRID_RRF_K / RAG_HYBRID_WEIGHT_SEMANTIC /
+    # RAG_HYBRID_WEIGHT_LEXICAL / RAG_HYBRID_CANDIDATES / RAG_HYBRID_TEXT_CONFIG
+    hybrid_enabled: bool = False
+    hybrid_rrf_k: int = 60
+    hybrid_weight_semantic: float = 0.60
+    hybrid_weight_lexical: float = 0.40
+    hybrid_candidates: int = 30
+    hybrid_text_config: str = "portuguese"
+    # Endpoint OpenAI-compatible (ex.: deepseek/kimi/qwen). Sem isto o SDK fala
+    # apenas com a OpenAI; o backend repassa o provider do tenant por header.
+    llm_base_url: Optional[str] = (
+        _CONFIG_JSON.get('llm', {}).get('baseUrl')
+        if _CONFIG_JSON else None
+    )
     llm_max_tokens: int = (
         _CONFIG_JSON.get('llm', {}).get('maxTokens', 1000)
         if _CONFIG_JSON else 1000

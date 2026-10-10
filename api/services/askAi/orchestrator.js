@@ -218,10 +218,17 @@ function buildAnswer({
   }).answer;
 }
 
-function computeConfidence({ accessDenied, facts, knowledgeAnswer, failedTools }) {
+function computeConfidence({ accessDenied, facts, knowledgeAnswer, failedTools, knowledgeDegraded = false }) {
   if (accessDenied) return 'insufficient_evidence';
   const hasFacts = facts.length > 0;
   const hasKnowledge = Boolean(knowledgeAnswer);
+  // Texto recuperado SEM síntese (geração indisponível no rag-service) não é
+  // resposta fundamentada: no máximo evidência recuperada. Nunca
+  // "fully_grounded" — era assim que um trecho cru de documento era propagado
+  // como resposta pronta (defeito medido em 2026-10-08).
+  if (knowledgeDegraded) {
+    return hasFacts ? 'partially_grounded' : 'source_only';
+  }
   if ((hasFacts || hasKnowledge) && failedTools.length === 0) return 'fully_grounded';
   if (hasFacts || hasKnowledge) return 'partially_grounded';
   return 'insufficient_evidence';
@@ -631,6 +638,9 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
   // ── Conhecimento: RAG OPERATIONAL (global ∪ tenant). Nunca SYSTEM. ──────
   let knowledgeAnswer = null;
   let knowledgeSources = [];
+  // `true` quando o rag-service devolveu texto recuperado SEM síntese
+  // (`metadata.generated === false`): a resposta é evidência, não resposta.
+  let knowledgeDegraded = false;
   if (!accessDenied && needsKnowledge(intent) && getRagBudget() > 0 && ragService) {
     try {
       // Recuperação contextualizada: um acompanhamento curto não é buscado no
@@ -645,6 +655,7 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
       if (ragResult?.success && typeof ragResult.response === 'string' && ragResult.response.trim()) {
         knowledgeAnswer = ragResult.response;
         knowledgeSources = Array.isArray(ragResult.sources) ? ragResult.sources : [];
+        knowledgeDegraded = ragResult.metadata?.generated === false;
       }
     } catch (error) {
       logger.warn('[ask-ai] Recuperação de conhecimento indisponível', {
@@ -671,6 +682,7 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     facts: operational.facts,
     knowledgeAnswer,
     failedTools,
+    knowledgeDegraded,
   });
 
   const operationalLink = buildOperationalLink({

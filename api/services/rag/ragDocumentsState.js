@@ -99,6 +99,29 @@ function setIndexState(doc, state, opts = {}) {
     return;
   }
 
+  if (state === 'not_applicable_no_text') {
+    // ESTADO PRÓPRIO para "documento não tem texto para indexar".
+    //
+    // Defeito real medido (2026-10-08): documento sem texto extraído (imagem sem
+    // OCR, extração falha) era gravado com o placeholder como CONTEÚDO e
+    // INDEXADO — um "chunk fantasma" que pontuava alto e virava FONTE do
+    // copiloto (`.jpeg` sem OCR foi a 1ª fonte de "Como faço uma matrícula?",
+    // score 0.70, à frente dos manuais).
+    //
+    // Não é sucesso (nada foi ingerido) e NÃO é falha de indexação: não havia
+    // conteúdo a indexar. Usar `failed` faria a saúde do índice tratar dezenas de
+    // documentos legítimos como defeito — e o ruído esconderia falha real.
+    doc.indexed = false;
+    doc.indexedAt = null;
+    doc.chunksCount = 0;
+    doc.indexErrorCode = opts.errorCode || 'NO_TEXT_EXTRACTED';
+    doc.indexErrorMessage = opts.errorMessage
+      || 'Documento sem texto extraído: não participa do índice de busca';
+    doc.inconsistent = false;
+    doc.inconsistentReason = null;
+    return;
+  }
+
   if (state === 'not_indexed_duplicate') {
     // ESTADO PRÓPRIO para "0 chunks por DEDUPLICAÇÃO" (missão 2026-09-28).
     //
@@ -123,12 +146,20 @@ function setIndexState(doc, state, opts = {}) {
 }
 
 /** Estados possíveis da máquina de indexação (fonte única para consumidores). */
-const INDEX_STATES = Object.freeze(['pending', 'indexing', 'indexed', 'failed', 'not_indexed_duplicate']);
+const INDEX_STATES = Object.freeze([
+  'pending',
+  'indexing',
+  'indexed',
+  'failed',
+  'not_indexed_duplicate',
+  'not_applicable_no_text',
+]);
 
 /**
- * O estado representa PROBLEMA de indexação? `not_indexed_duplicate` NÃO representa: é descarte
- * intencional por deduplicação. Usado por health/consistência para não transformar deduplicação em
- * falha (o defeito que originou este estado).
+ * O estado representa PROBLEMA de indexação? `not_indexed_duplicate` (dedup
+ * intencional) e `not_applicable_no_text` (nada a indexar) NÃO representam.
+ * Usado por health/consistência para não transformar ausência de conteúdo em
+ * falha — o ruído de falsos `failed` foi o que escondeu o defeito de 2026-10-08.
  */
 function isIndexFailure(state) {
   return String(state || '') === 'failed';

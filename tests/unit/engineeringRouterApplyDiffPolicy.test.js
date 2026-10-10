@@ -176,4 +176,63 @@ describe('applyDiffPolicy — QUAL texto é realmente aplicado (fonte única)', 
     expect(resolved.applied).toBe(false);
     expect(resolved.diff).toBe(ambíguo);
   });
+
+  test('o texto APLICADO é exatamente o texto VALIDADO (hash único entre validar/apply/promover)', () => {
+    const crypto = require('crypto');
+    const { normalizeHunkHeaders } = require('../../engine/engineeringRouter/hunkNormalizer');
+
+    const resolved = resolveApplyDiff(SEM_HEADERS, { revalidate: () => ({ ok: true }) });
+    expect(resolved.applied).toBe(true);
+
+    const hashDoValidado = crypto.createHash('sha256').update(resolved.diff, 'utf8').digest('hex');
+    const hashDoAplicado = crypto.createHash('sha256')
+      .update(resolved.canonicalization.canonicalizedText, 'utf8').digest('hex');
+    expect(hashDoAplicado).toBe(hashDoValidado);
+
+    // A normalização de contagem agora vive AQUI (fonte única): a passada interna de
+    // `applyPatch` é no-op sobre o texto canônico — nenhum byte muda entre validar e aplicar.
+    expect(normalizeHunkHeaders(resolved.diff)).toBe(resolved.diff);
+  });
+
+  test('contagem de hunk ERRADA é reparada aqui (não mais silenciosamente dentro do applyPatch)', () => {
+    const { normalizeHunkHeaders } = require('../../engine/engineeringRouter/hunkNormalizer');
+
+    // Estraga SOMENTE a contagem declarada (preserva os `oldStart`/`newStart`, que o normalizador
+    // nunca toca) — é o erro sistemático dos modelos ao gerar diffs.
+    const comContagemErrada = SEM_HEADERS.replace(
+      /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/m,
+      '@@ -$1,999 +$2,999 @@',
+    );
+    expect(comContagemErrada).not.toBe(SEM_HEADERS); // sanidade do fixture
+
+    const resolved = resolveApplyDiff(comContagemErrada, { revalidate: () => ({ ok: true }) });
+    expect(resolved.applied).toBe(true);
+    expect(resolved.canonicalization.hunkCountsAdjusted).toBe(true);
+    expect(resolved.diff).not.toContain('999');
+    // Fixpoint: reaplicar a normalização sobre o resultado não muda nenhum byte.
+    expect(normalizeHunkHeaders(resolved.diff)).toBe(resolved.diff);
+    // E o texto devolvido é aplicável DE VERDADE.
+    expect(gitApplyCheck(resolved.diff).ok).toBe(true);
+    expect(gitApplyCheck(comContagemErrada).ok).toBe(false);
+  });
+
+  test('sem reparo real ⇒ canonicalization é null (nenhuma revalidação/telemetria espúria)', () => {
+    const { normalizeHunkHeaders } = require('../../engine/engineeringRouter/hunkNormalizer');
+    // Um diff já íntegro (headers presentes + contagens corretas) não é tocado.
+    const completo = [
+      'diff --git a/src/x.js b/src/x.js',
+      '--- a/src/x.js',
+      '+++ b/src/x.js',
+      '@@ -1 +1 @@',
+      '-const a = 1;',
+      '+const a = 2;',
+      '',
+    ].join('\n');
+    expect(normalizeHunkHeaders(completo)).toBe(completo);
+
+    const resolved = resolveApplyDiff(completo, { revalidate: () => ({ ok: true }) });
+    expect(resolved.applied).toBe(false);
+    expect(resolved.canonicalization).toBeNull();
+    expect(resolved.diff).toBe(completo);
+  });
 });

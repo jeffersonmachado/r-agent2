@@ -150,6 +150,13 @@ describe('GET /rag/health', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(expect.objectContaining({ status: 'healthy' }));
-    expect(mocks.getRagHealth).toHaveBeenCalledWith('system', { autoRepair: false });
+    // A superfície do operador (`RAGDocumentsPage.impl.jsx`) só consegue mostrar
+    // "RAG degradado" (toast a partir de `warnings[0]`) se a rota pedir o
+    // readiness do SERVIÇO — não só a consistência do banco. O objeto é pinado
+    // inteiro de propósito: a rota não pode voltar a omitir o probe em silêncio.
+    expect(mocks.getRagHealth).toHaveBeenCalledWith('system', {
+      autoRepair: false,
+      includeServiceHealth: true,
+    });
   });
 });

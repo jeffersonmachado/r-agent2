@@ -91,3 +91,66 @@ describe('engineeringRouter/engineeringAiInvoker — wrapped.code é sempre PROV
       .rejects.toMatchObject({ code: FAILURE_CODES.PROVIDER_UNAVAILABLE, httpStatus: null, providerErrorCode: null });
   });
 });
+
+// CONFIABILIDADE (2026-10-08) — ESTADOS IMUTÁVEIS.
+//
+// DEFEITO MEDIDO na auditoria: RETIRED era apenas uma entrada com TTL (`DEFAULT_TTL_MS` = 1h).
+// Passada a hora, `getAvailability` APAGAVA o registro, o estado voltava a `UNKNOWN` e
+// `isUsable(UNKNOWN) === true` — o Router voltava a escolher um modelo que o provider já havia
+// dito que NÃO EXISTE (404 "not a chat model"/"deprecated"), queimando uma tentativa por hora,
+// para sempre. "Não existe nesta conta" é um FATO do provider: nenhum tempo decorrido o desfaz.
+describe('modelAvailabilityStore — estados imutáveis (RETIRED não volta por decurso de tempo)', () => {
+  const ERRO_404 = () => Object.assign(new Error('this is not a chat model'), { httpStatus: 404 });
+
+  beforeEach(() => modelAvailabilityStore._clearAllForTests());
+
+  test('404 é classificado como RETIRED SEM expiração automática', () => {
+    const classified = classifyModelFailure(ERRO_404());
+    expect(classified.state).toBe('RETIRED');
+    expect(classified.ttlMs).toBeNull();
+  });
+
+  test('RETIRED não expira: a entrada permanece e o modelo continua fora da seleção', () => {
+    modelAvailabilityStore.markUnavailable('openai', 'gpt-5-codex', classifyModelFailure(ERRO_404()));
+
+    const entry = modelAvailabilityStore.getAvailability('openai', 'gpt-5-codex');
+    expect(entry.availability).toBe('RETIRED');
+    expect(entry.expiresAt).toBeNull();
+    expect(modelAvailabilityStore.isUsable('openai', 'gpt-5-codex')).toBe(false);
+    expect(modelAvailabilityStore.isHardState('RETIRED')).toBe(true);
+  });
+
+  test('ttlMs explícito NÃO vence um estado hard (nem `now + null` = expiração imediata)', () => {
+    modelAvailabilityStore.markUnavailable('openai', 'm', { state: 'RETIRED', ttlMs: 1000 });
+    expect(modelAvailabilityStore.getAvailability('openai', 'm').expiresAt).toBeNull();
+    expect(modelAvailabilityStore.isUsable('openai', 'm')).toBe(false);
+  });
+
+  test('só PROVA POSITIVA reabilita: um sucesso real limpa o RETIRED', () => {
+    modelAvailabilityStore.markUnavailable('openai', 'gpt-5-codex', classifyModelFailure(ERRO_404()));
+    expect(modelAvailabilityStore.isUsable('openai', 'gpt-5-codex')).toBe(false);
+
+    modelAvailabilityStore.markAvailable('openai', 'gpt-5-codex');
+    expect(modelAvailabilityStore.isUsable('openai', 'gpt-5-codex')).toBe(true);
+    expect(modelAvailabilityStore.getAvailability('openai', 'gpt-5-codex').availability).toBe('UNKNOWN');
+  });
+
+  test('controle: RATE_LIMITED continua TEMPORAL (é falha transitória de verdade)', () => {
+    const classified = classifyModelFailure(Object.assign(new Error('rate limit'), { httpStatus: 429 }));
+    expect(classified.ttlMs).toBe(5 * 60 * 1000);
+    modelAvailabilityStore.markUnavailable('anthropic', 'm', classified);
+    expect(typeof modelAvailabilityStore.getAvailability('anthropic', 'm').expiresAt).toBe('number');
+  });
+
+  test('controle: AUTH_DENIED continua temporal (a credencial pode ser rotacionada)', () => {
+    modelAvailabilityStore.markUnavailable('anthropic', 'm2', classifyModelFailure(Object.assign(new Error('unauthorized'), { httpStatus: 401 })));
+    expect(typeof modelAvailabilityStore.getAvailability('anthropic', 'm2').expiresAt).toBe('number');
+    expect(modelAvailabilityStore.isHardState('AUTH_DENIED')).toBe(false);
+  });
+
+  test('controle: NO_CREDIT continua com TTL longo e definido (não é hard state)', () => {
+    const classified = classifyModelFailure(Object.assign(new Error('insufficient balance'), { httpStatus: 402 }));
+    expect(classified.state).toBe('NO_CREDIT');
+    expect(classified.ttlMs).toBeGreaterThanOrEqual(60 * 60 * 1000);
+  });
+});

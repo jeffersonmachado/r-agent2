@@ -14,6 +14,10 @@ const { enforceScrapingRateLimit } = require('../../infra/rate-limit/scraping');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const { resolveRuntimePath } = require('../utils/runtimePaths');
+// Placeholder de "sem texto extraído" tem FONTE ÚNICA em `rag/indexableContent`
+// (mesma regra usada pelo indexador para não indexá-lo). Literal duplicado aqui
+// era o que permitia a divergência entre os caminhos de ingestão (2026-10-08).
+const { NO_TEXT_PLACEHOLDER_WEB } = require('./rag/indexableContent');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -329,7 +333,7 @@ function buildMinimalScrape(url) {
     title,
     metaDescription: '',
     headings: [],
-    extractedText: 'Sem texto extraído. Indexando metadados do site.',
+    extractedText: NO_TEXT_PLACEHOLDER_WEB,
   };
 }
 
@@ -342,7 +346,7 @@ function buildIndexableContent(scrape) {
     lines.push(`Headings:\n- ${safe.headings.slice(0, 30).join('\n- ')}`);
   }
   if (safe.extractedText) lines.push(safe.extractedText);
-  return lines.join('\n\n').trim() || 'Sem texto extraído. Indexando metadados do site.';
+  return lines.join('\n\n').trim() || NO_TEXT_PLACEHOLDER_WEB;
 }
 
 /**
@@ -621,10 +625,10 @@ async function scrapeUrl(url, options = {}) {
     if (!safeTrim(scrapeResult.extractedText)) {
       warnings.push({
         code: 'NO_TEXT_EXTRACTED',
-        message: 'Sem texto extraído. Indexando metadados do site.',
+        message: NO_TEXT_PLACEHOLDER_WEB,
         details: { url },
       });
-      scrapeResult.extractedText = 'Sem texto extraído. Indexando metadados do site.';
+      scrapeResult.extractedText = NO_TEXT_PLACEHOLDER_WEB;
     }
 
     // Cria documento

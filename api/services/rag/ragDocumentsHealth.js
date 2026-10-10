@@ -5,6 +5,49 @@ const { setIndexState } = require('./ragDocumentsState');
 const postgresVectorStore = require('../vectorStore/postgresVectorStore');
 const ragService = require('../ragService');
 
+/**
+ * Prontidão do SERVIÇO RAG (liveness + readiness), complementar à consistência
+ * BD↔vetor medida aqui.
+ *
+ * Sem isto a tela do operador (`/rag-documents`) dizia "ok" enquanto o serviço
+ * estava no ar mas não pronto (ex.: subiu sem `.env` ⇒ `dbConfigured: false`),
+ * e o problema só aparecia por documentos nascendo `failed` (defeito medido em
+ * 2026-10-06).
+ *
+ * Best-effort: qualquer falha do probe devolve `null` e nunca quebra o health.
+ */
+async function probeRagServiceReadiness(tenantId) {
+  try {
+    if (typeof ragService.getRagHealth !== 'function') return null;
+    const health = await ragService.getRagHealth(tenantId);
+    const state = health?.state || 'unknown';
+    const reason = health?.reason || null;
+    const dbConfigured = health?.payload?.dbConfigured ?? null;
+
+    let message = null;
+    if (state === 'degraded') {
+      message = dbConfigured === false
+        ? `Serviço RAG no ar mas sem banco configurado (${reason || 'database_not_configured'}): indexar/consultar não persiste. Suba com --env-file .env.`
+        : `Serviço RAG no ar mas não está pronto para servir (${reason || 'not_ready'}).`;
+    } else if (state === 'unhealthy') {
+      message = `Serviço RAG indisponível (${reason || 'unreachable'}): indexar/consultar vai falhar.`;
+    }
+
+    return {
+      state,
+      ready: health?.ready === true,
+      reason,
+      dbConfigured,
+      httpStatus: health?.httpStatus ?? null,
+      serviceUrl: health?.serviceUrl || null,
+      message,
+    };
+  } catch (probeErr) {
+    logger.debug('[RAGDocumentsHealth] Falha ao medir prontidão do serviço RAG', { error: safeErrorMessage(probeErr) });
+    return null;
+  }
+}
+
 async function getRagHealth(tenantId, options = {}, documentsCache, persistFn, markInconsistentFn, markConsistentFn) {
   const finalTenantId = tenantId || null;
   if (!finalTenantId) {
@@ -17,10 +60,34 @@ async function getRagHealth(tenantId, options = {}, documentsCache, persistFn, m
     const indexed = docs.filter((document) => document.indexStatus === 'indexed').length;
     const failed = docs.filter((document) => document.indexStatus === 'failed').length;
 
+    // Prontidão do SERVIÇO medida EM PARALELO com as contagens (não soma
+    // latência). Opt-in: só a rota HTTP do `/rag/health` pede, para que os
+    // testes de unidade do health não façam rede.
+    const serviceReadinessPromise = options?.includeServiceHealth === true
+      ? probeRagServiceReadiness(finalTenantId)
+      : null;
+
     const vectorCounts = await postgresVectorStore.countVectorDocs({ tenantId: finalTenantId });
     const chunksByDoc = await postgresVectorStore.countChunksByDocument({ tenantId: finalTenantId });
 
     const warnings = [];
+
+    // Primeiro warning: se o serviço não consegue servir, isso domina qualquer
+    // detalhe de consistência (a página mostra o primeiro).
+    const serviceHealth = serviceReadinessPromise ? await serviceReadinessPromise : null;
+    if (serviceHealth && serviceHealth.state !== 'healthy' && serviceHealth.message) {
+      warnings.push({
+        code: 'RAG_SERVICE_NOT_READY',
+        message: serviceHealth.message,
+        details: {
+          tenantId: finalTenantId,
+          state: serviceHealth.state,
+          reason: serviceHealth.reason,
+          dbConfigured: serviceHealth.dbConfigured,
+          serviceUrl: serviceHealth.serviceUrl,
+        },
+      });
+    }
     const inconsistentDocIds = docs
       .filter((document) => document.indexStatus === 'indexed' && (Number(chunksByDoc[document.id] || 0) === 0))
       .map((document) => document.id);
@@ -89,6 +156,7 @@ async function getRagHealth(tenantId, options = {}, documentsCache, persistFn, m
       docs: { total, indexed, failed },
       chunks: { total: vectorCounts.chunks || 0 },
       warnings,
+      serviceHealth,
     };
   } catch (error) {
     return {

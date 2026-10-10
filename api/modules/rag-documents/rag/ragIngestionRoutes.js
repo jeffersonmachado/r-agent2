@@ -3,16 +3,20 @@ const {
   isRouteMatch,
   sendRagApiError,
 } = require('./ragRouteUtils');
+const {
+  NO_TEXT_PLACEHOLDER,
+  hasIndexableContent,
+  isPlaceholderOnlyContent,
+} = require('../../../services/rag/indexableContent');
 
 function normalizeExtractedText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
 function looksLikePlaceholder(text) {
-  if (!text) return false;
-  if (text.includes('Não foi possível extrair conteúdo automaticamente')) return true;
-  if (text.startsWith('[Arquivo:') && text.includes('Não foi possível extrair')) return true;
-  return false;
+  // A regra de placeholder é uma só (`services/rag/indexableContent`) — manter
+  // aqui uma lista paralela foi o que deixou o defeito passar (2026-10-08).
+  return isPlaceholderOnlyContent(text);
 }
 
 async function emitUploadStage(deps, pipelineWsForStage, execIdForStage, payload) {
@@ -154,13 +158,27 @@ async function handleRagIngestionRoutes({ req, res, method, pathname, deps }) {
 
     const extractedText = extractionResult.extractedText;
     const warnings = extractionResult.warnings;
-    const finalText = extractedText || 'Sem texto extraído. Indexando metadados do arquivo.';
+    const finalText = extractedText || NO_TEXT_PLACEHOLDER;
+    const autoIndexRequested = !(fields && String(fields.autoIndex).toLowerCase() === 'false');
+    // Sem texto extraído não existe conteúdo para EMBEDDAR: indexar o
+    // placeholder cria um "chunk fantasma" que pontua alto e entra nas respostas
+    // do copiloto (medido 2026-10-08: um .jpeg sem OCR foi a 1ª fonte de "Como
+    // faço uma matrícula?" com score 0.70, na frente dos manuais). O documento
+    // continua armazenado como asset + metadados; só não participa do retrieval.
+    const canIndex = hasIndexableContent(extractedText);
     if (!extractedText) {
       warnings.push({
         code: 'NO_TEXT_EXTRACTED',
-        message: 'Sem texto extraído. Indexando metadados do arquivo.',
+        message: NO_TEXT_PLACEHOLDER,
         details: { fileName: file.filename, mimeType: file.mimeType },
       });
+      if (autoIndexRequested) {
+        warnings.push({
+          code: 'NOT_INDEXED_NO_TEXT',
+          message: 'Documento sem texto extraído: armazenado como asset e mantido fora do índice de busca.',
+          details: { fileName: file.filename, mimeType: file.mimeType },
+        });
+      }
     }
 
     if (isDryRun) {
@@ -204,7 +222,7 @@ async function handleRagIngestionRoutes({ req, res, method, pathname, deps }) {
         extractionWarnings: warnings,
         ...metadataFromField,
       },
-      autoIndex: !(fields && String(fields.autoIndex).toLowerCase() === 'false'),
+      autoIndex: canIndex && autoIndexRequested,
     };
 
     const result = await deps.createDocument(documentData, finalTenantId);

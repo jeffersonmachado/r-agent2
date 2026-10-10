@@ -13,6 +13,7 @@ from psycopg2.extras import execute_values
 
 from models.document import Chunk, ChunkMetadata, DocumentPermissions
 from services.domain_policy import resolve_query_scope, resolve_scope_tenant_keys
+from services.hybrid_search import ALGORITHM_VERSION, fuse_with_fallback
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,98 @@ def _resolve_ivfflat_probes() -> int:
         except Exception:
             pass
     return 10
+
+
+def _build_access_filters(tenant_keys, resolved_scope, filters=None):
+    """
+    Cláusulas de ACESSO + parâmetros, compartilhadas por TODAS as modalidades de
+    recuperação (semântica, lexical e futuras).
+
+    Fonte única de propósito (FASE 7): se a busca lexical montasse o próprio
+    filtro, uma mudança de política poderia valer só para uma modalidade e o
+    resultado seria vazamento entre tenants/domínios — o tipo de defeito que não
+    aparece em teste feliz.
+    """
+    filters = filters or {}
+    roles = filters.get("roles")
+    if isinstance(roles, str):
+        roles = [roles]
+    roles = [str(r) for r in (roles or []) if str(r).strip()] if isinstance(roles, (list, tuple)) else []
+    agent_id = str(filters.get("agentId")).strip() if filters.get("agentId") else ""
+
+    where_clauses = [
+        "c.tenant_key = ANY(%s)",
+        "c.domain = %s",
+        "c.classification = ANY(%s)",
+        "c.sensitivity = ANY(%s)",
+        "(c.permissions->'roles' IS NULL OR c.permissions->'roles' = 'null'::jsonb"
+        " OR c.permissions->'roles' = '[]'::jsonb OR c.permissions->'roles' ?| %s)",
+        "(c.permissions->'agents' IS NULL OR c.permissions->'agents' = 'null'::jsonb"
+        " OR c.permissions->'agents' = '[]'::jsonb OR c.permissions->'agents' ? %s)",
+        "EXISTS (SELECT 1 FROM rag_documents d"
+        " WHERE d.id = c.document_id AND d.tenant_key = c.tenant_key AND d.status = 'active'"
+        " AND COALESCE(d.index_status, CASE WHEN d.indexed THEN 'indexed' ELSE 'pending' END) = 'indexed')",
+    ]
+    params: List[Any] = [
+        tenant_keys,
+        resolved_scope["domain"],
+        resolved_scope["classifications"],
+        resolved_scope["sensitivities"],
+        roles,
+        agent_id,
+    ]
+    return where_clauses, params
+
+
+def _row_to_chunk(tenant_id: str, row, score: Optional[float]) -> Chunk:
+    """
+    Mapeia uma linha do SELECT (id, document_id, chunk_index, content, metadata,
+    permissions, domain, classification, sensitivity, <score>) para `Chunk`.
+
+    Compartilhado por TODAS as modalidades: semântica, lexical e híbrida. Era
+    inline na busca vetorial; duplicá-lo na lexical faria os campos de um dos
+    caminhos divergirem em silêncio.
+    """
+    (chunk_id, document_id, chunk_index, content, metadata, permissions,
+     domain, classification, sensitivity, _last) = row
+
+    meta_obj = metadata or {}
+    perm_obj = permissions or {}
+    try:
+        if isinstance(meta_obj, str):
+            meta_obj = json.loads(meta_obj)
+    except Exception:
+        meta_obj = {}
+    try:
+        if isinstance(perm_obj, str):
+            perm_obj = json.loads(perm_obj)
+    except Exception:
+        perm_obj = {}
+
+    # Garante campos obrigatórios do ChunkMetadata
+    base_meta = {
+        "chunkIndex": int(chunk_index or 0),
+        "startChar": 0,
+        "endChar": 0,
+        "tokenCount": 0,
+    }
+    if isinstance(meta_obj, dict):
+        base_meta.update(meta_obj)
+    meta_obj = base_meta
+
+    return Chunk(
+        id=str(chunk_id),
+        documentId=str(document_id),
+        tenantId=tenant_id,
+        content=str(content or ""),
+        embedding=None,
+        metadata=ChunkMetadata(**meta_obj),
+        permissions=DocumentPermissions(**perm_obj) if isinstance(perm_obj, dict) else DocumentPermissions(),
+        score=score,
+        domain=str(domain or "OPERATIONAL"),
+        classification=str(classification or "PRODUCTION"),
+        sensitivity=str(sensitivity or "INTERNAL"),
+    )
 
 
 def _get_conn():
@@ -257,35 +350,11 @@ class VectorStore:
         # reproduzindo a semântica histórica do filtro em Python: chunk sem
         # restrição (permissions vazio/ausente, ou roles/agents ausente/vazio)
         # é visível para todos; com restrição, exige interseção.
-        filters = filters or {}
-        roles = filters.get("roles")
-        if isinstance(roles, str):
-            roles = [roles]
-        roles = [str(r) for r in (roles or []) if str(r).strip()] if isinstance(roles, (list, tuple)) else []
-        agent_id = str(filters.get("agentId")).strip() if filters.get("agentId") else ""
-
-        where_clauses = [
-            "c.tenant_key = ANY(%s)",
-            "c.domain = %s",
-            "c.classification = ANY(%s)",
-            "c.sensitivity = ANY(%s)",
-            "(c.permissions->'roles' IS NULL OR c.permissions->'roles' = 'null'::jsonb"
-            " OR c.permissions->'roles' = '[]'::jsonb OR c.permissions->'roles' ?| %s)",
-            "(c.permissions->'agents' IS NULL OR c.permissions->'agents' = 'null'::jsonb"
-            " OR c.permissions->'agents' = '[]'::jsonb OR c.permissions->'agents' ? %s)",
-            "EXISTS (SELECT 1 FROM rag_documents d"
-            " WHERE d.id = c.document_id AND d.tenant_key = c.tenant_key AND d.status = 'active'"
-            " AND COALESCE(d.index_status, CASE WHEN d.indexed THEN 'indexed' ELSE 'pending' END) = 'indexed')",
-        ]
-        params: List[Any] = [
-            qv,
-            tenant_keys,
-            resolved_scope["domain"],
-            resolved_scope["classifications"],
-            resolved_scope["sensitivities"],
-            roles,
-            agent_id,
-        ]
+        #
+        # A construção vive em `_build_access_filters` para ser a MESMA em todas
+        # as modalidades de recuperação (semântica/lexical/híbrida).
+        where_clauses, params = _build_access_filters(tenant_keys, resolved_scope, filters)
+        params = [qv, *params]
 
         # ACL e sensitivity são sempre aplicadas no SQL; não existe modo de
         # recuperação sem filtro de autorização.
@@ -309,54 +378,187 @@ class VectorStore:
                 rows = cur.fetchall()
 
         results: List[Chunk] = []
-        for (chunk_id, document_id, chunk_index, content, metadata, permissions, domain, classification, sensitivity, distance) in rows:
-            score = None
+        for row in rows:
+            distance = row[9]
             try:
-                d = float(distance)
-                score = max(0.0, 1.0 - d)
+                score = max(0.0, 1.0 - float(distance))
             except Exception:
                 score = 0.0
-
-            meta_obj = metadata or {}
-            perm_obj = permissions or {}
-            try:
-                if isinstance(meta_obj, str):
-                    meta_obj = json.loads(meta_obj)
-            except Exception:
-                meta_obj = {}
-            try:
-                if isinstance(perm_obj, str):
-                    perm_obj = json.loads(perm_obj)
-            except Exception:
-                perm_obj = {}
-
-            # Garante campos obrigatórios do ChunkMetadata
-            base_meta = {
-                "chunkIndex": int(chunk_index or 0),
-                "startChar": 0,
-                "endChar": 0,
-                "tokenCount": 0,
-            }
-            if isinstance(meta_obj, dict):
-                base_meta.update(meta_obj)
-            meta_obj = base_meta
-
-            chunk = Chunk(
-                id=str(chunk_id),
-                documentId=str(document_id),
-                tenantId=self.tenant_id,
-                content=str(content or ""),
-                embedding=None,
-                metadata=ChunkMetadata(**meta_obj),
-                permissions=DocumentPermissions(**perm_obj) if isinstance(perm_obj, dict) else DocumentPermissions(),
-                score=score,
-                domain=str(domain or "OPERATIONAL"),
-                classification=str(classification or "PRODUCTION"),
-                sensitivity=str(sensitivity or "INTERNAL"),
-            )
-            results.append(chunk)
+            results.append(_row_to_chunk(self.tenant_id, row, score))
 
         return results[:k]
+
+    # ----------------------------------------------------------------------
+    # Recuperação LEXICAL e HÍBRIDA (FASE 5)
+    # ----------------------------------------------------------------------
+
+    def lexical_search(
+        self,
+        query_text: str,
+        top_k: int = 5,
+        filters: Optional[Dict] = None,
+        scope: Optional[Dict] = None,
+        text_config: str = "portuguese",
+    ) -> List[Chunk]:
+        """
+        Busca lexical (PostgreSQL FTS) sobre o MESMO universo autorizado.
+
+        Existe porque o vetorial perde correspondência EXATA: identificador,
+        sigla, nome de função ou termo técnico presente no corpus pode não
+        aparecer no top-k por similaridade de embedding. O filtro de acesso é o
+        mesmo `_build_access_filters` da busca semântica — sem exceção.
+        """
+        resolved_scope = resolve_query_scope(scope)
+        tenant_keys = resolve_scope_tenant_keys(scope, self.tenant_id)
+        if not tenant_keys:
+            return []
+
+        k = max(1, min(int(top_k or 5), 50))
+        where_clauses, params = _build_access_filters(tenant_keys, resolved_scope, filters)
+
+        # tsquery por OR de lexemas, não AND de termos.
+        #
+        # MEDIDO (benchmark A/B/C, 2026-10-08): `websearch_to_tsquery` sobre uma
+        # PERGUNTA em linguagem natural vira uma conjunção — o chunk só casa se
+        # contiver TODOS os termos da pergunta, o que praticamente nunca acontece
+        # em chunks curtos. Resultado: recall@6 = 0.125 (pior que o vetorial) e
+        # fusão sem efeito. Para servir de CANDIDATO na fusão, o léxico precisa
+        # ser orientado a RECALL: qualquer lexema casa e o `ts_rank_cd` ordena.
+        sql = f"""
+            WITH termos AS (
+                SELECT to_tsquery('{text_config}',
+                                  string_agg(DISTINCT lexeme, ' | ')) AS query
+                  FROM unnest(to_tsvector('{text_config}', %s)) AS t(lexeme, positions, weights)
+                 WHERE length(lexeme) > 2
+            )
+            SELECT id, document_id, chunk_index, content, metadata, permissions,
+                   domain, classification, sensitivity,
+                   ts_rank_cd(to_tsvector('{text_config}', c.content), termos.query) AS rank
+            FROM rag_chunks c, termos
+            WHERE {' AND '.join(where_clauses)}
+              AND termos.query IS NOT NULL
+              AND to_tsvector('{text_config}', c.content) @@ termos.query
+            ORDER BY rank DESC, c.id ASC
+            LIMIT %s
+        """
+        exec_params = [query_text, *params, k]
+
+        with _get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(exec_params))
+                rows = cur.fetchall()
+
+        results: List[Chunk] = []
+        for row in rows:
+            try:
+                lexical_score = float(row[9])
+            except Exception:
+                lexical_score = 0.0
+            # `score` do Chunk permanece o score da estratégia em vigor; o rank
+            # textual cru vai em `metadata.hybrid.lexicalScore` (escala própria,
+            # nunca misturado ao cosseno).
+            results.append(_row_to_chunk(self.tenant_id, row, lexical_score))
+        return results[:k]
+
+    def search_hybrid(
+        self,
+        query_text: str,
+        query_embedding: List[float],
+        top_k: int = 5,
+        filters: Optional[Dict] = None,
+        scope: Optional[Dict] = None,
+        candidates: Optional[int] = None,
+        rrf_k: Optional[int] = None,
+        weight_semantic: Optional[float] = None,
+        weight_lexical: Optional[float] = None,
+        text_config: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Fusão semântica + lexical por RRF, com fallback DECLARADO.
+
+        Cada modalidade recupera seus próprios candidatos sob o MESMO filtro de
+        acesso; a fusão é por POSIÇÃO (RRF), nunca por média de scores de escalas
+        diferentes. Falha de uma modalidade não derruba a outra: o resultado sai
+        com `degraded=true` e o motivo.
+        """
+        settings = get_settings()
+        k = max(1, min(int(top_k or 5), 50))
+        pool = max(k, int(candidates or getattr(settings, "hybrid_candidates", 30) or 30))
+        resolved_rrf_k = int(rrf_k if rrf_k is not None else getattr(settings, "hybrid_rrf_k", 60))
+        w_sem = float(weight_semantic if weight_semantic is not None else getattr(settings, "hybrid_weight_semantic", 0.60))
+        w_lex = float(weight_lexical if weight_lexical is not None else getattr(settings, "hybrid_weight_lexical", 0.40))
+        config = text_config or getattr(settings, "hybrid_text_config", "portuguese")
+
+        semantic_rows: List[Chunk] = []
+        lexical_rows: List[Chunk] = []
+        semantic_error = None
+        lexical_error = None
+
+        try:
+            semantic_rows = self.search(query_embedding, top_k=pool, filters=filters, scope=scope)
+        except Exception as error:  # noqa: BLE001 - degradação declarada, não silenciosa
+            semantic_error = str(error)
+
+        if query_text and str(query_text).strip():
+            try:
+                lexical_rows = self.lexical_search(query_text, top_k=pool, filters=filters, scope=scope, text_config=config)
+            except Exception as error:  # noqa: BLE001
+                lexical_error = str(error)
+        else:
+            lexical_error = "query_text_ausente"
+
+        by_id: Dict[str, Chunk] = {}
+        for chunk in [*semantic_rows, *lexical_rows]:
+            by_id.setdefault(str(chunk.id), chunk)
+
+        fused = fuse_with_fallback(
+            [{"id": str(c.id), "score": c.score} for c in semantic_rows],
+            [{"id": str(c.id), "score": c.score} for c in lexical_rows],
+            semantic_error=semantic_error,
+            lexical_error=lexical_error,
+            k=resolved_rrf_k,
+            weight_semantic=w_sem,
+            weight_lexical=w_lex,
+            top_k=k,
+        )
+
+        chunks: List[Chunk] = []
+        for entry in fused["results"]:
+            chunk = by_id.get(entry["id"])
+            if chunk is None:
+                continue
+            chunk.metadata.hybrid = {
+                "rank": entry["rank"],
+                "rrfScore": entry["rrfScore"],
+                "semanticRank": entry["semanticRank"],
+                "semanticScore": entry["semanticScore"],
+                "lexicalRank": entry["lexicalRank"],
+                "lexicalScore": entry["lexicalScore"],
+                "matchedBy": entry["matchedBy"],
+                "strategy": "hybrid",
+                "algorithmVersion": entry["algorithmVersion"],
+                "rrfK": entry["rrfK"],
+                "weights": entry["weights"],
+            }
+            # Score exposto do chunk: o RRF é comparável apenas dentro desta
+            # fusão; mantemos o score semântico quando existir (compatibilidade
+            # com consumidores que aplicam minScore) e o lexical na explicação.
+            if entry["semanticScore"] is not None:
+                chunk.score = entry["semanticScore"]
+            chunks.append(chunk)
+
+        return {
+            "chunks": chunks,
+            "strategy": "hybrid",
+            "algorithmVersion": ALGORITHM_VERSION,
+            "rrfK": resolved_rrf_k,
+            "weights": {"semantic": w_sem, "lexical": w_lex},
+            "candidatesPerModality": pool,
+            "semanticFound": len(semantic_rows),
+            "lexicalFound": len(lexical_rows),
+            "degraded": fused["degraded"],
+            "degradationReasons": fused["degradationReasons"],
+        }
 
     def remove_document(self, document_id: str) -> int:
         """

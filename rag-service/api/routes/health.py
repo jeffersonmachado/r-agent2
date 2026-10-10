@@ -3,9 +3,10 @@ Endpoint de health check.
 """
 
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import JSONResponse
 from typing import Optional
 from config.settings import get_settings
-from services.internal_auth import has_valid_internal_token
+from services.internal_auth import has_valid_internal_token, is_database_configured
 import psycopg2
 
 router = APIRouter()
@@ -56,10 +57,16 @@ def health_check(tenant_id: Optional[str] = Query(None, description="ID do tenan
     dsn = settings.postgres_dsn
     allow_aggregated = has_valid_internal_token(request.headers) if request else False
 
-    # Fallback para ambientes sem Postgres configurado (ex.: testes locais/unitários).
-    if not dsn:
+    # Sem banco configurado o serviço NÃO está pronto para servir /rag/*: indexar
+    # ou consultar não tem onde persistir. Antes esta resposta dizia
+    # `status: healthy` e o operador só descobria o problema por documentos
+    # nascendo `failed` (2026-10-06). Liveness (processo no ar) segue 200;
+    # READINESS é reportada em `ready` — consumidores devem checá-la.
+    if not is_database_configured():
         response = {
-            "status": "healthy",
+            "status": "degraded",
+            "ready": False,
+            "reason": "database_not_configured",
             "vectorStore": settings.vector_store_type,
             "embeddingModel": settings.embedding_model,
             "indexedDocuments": 0,
@@ -100,6 +107,8 @@ def health_check(tenant_id: Optional[str] = Query(None, description="ID do tenan
 
     response = {
         "status": "healthy",
+        "ready": True,
+        "dbConfigured": True,
         "vectorStore": settings.vector_store_type,
         "embeddingModel": settings.embedding_model,
         "indexedDocuments": indexed_docs,
@@ -124,15 +133,24 @@ def readiness_check():
     Readiness check (rápido e read-only).
 
     Retorna 200 apenas se conseguir conectar ao Postgres e executar um SELECT 1.
+    Indisponível responde **503** (antes respondia 200 com
+    `{"status": "not_ready"}`: probe que olha só o HTTP status via "pronto").
     """
     try:
         with _get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
                 _ = cur.fetchone()
-        return {"status": "ready"}
+        return {"status": "ready", "dbConfigured": True}
     except Exception as e:
-        return {"status": "not_ready", "error": str(e)}
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not_ready",
+                "dbConfigured": is_database_configured(),
+                "error": str(e),
+            },
+        )
 
 
 @router.get("/selftest")
