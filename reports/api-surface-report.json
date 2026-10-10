@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-08T15:32:41.278Z",
-  "commit": "594dce8d54c1e44f4af3ccae398ee6f5e906b79c",
+  "generatedAt": "2026-10-10T05:40:34.310Z",
+  "commit": "4e34287f23390648caf2101d2975c9d0500d0ed4",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 893,
+    "items": 908,
     "byState": {
-      "VALIDATED": 863,
-      "VISITED": 9,
-      "NOT_APPLICABLE": 21
+      "VALIDATED": 880,
+      "NOT_APPLICABLE": 21,
+      "VISITED": 7
     }
   },
   "status": "PASS",
@@ -6114,7 +6114,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/executions",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6134,8 +6134,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 com erro de rede",
-          "notEvaluated": true
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -6147,7 +6146,10 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": "network-error"
+        "p3": {
+          "status": 200,
+          "notFoundFallback": false
+        }
       }
     },
     {
@@ -6232,7 +6234,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/governance",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6242,8 +6244,7 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         },
         {
           "name": "classificationEnforced",
@@ -6257,7 +6258,10 @@
         }
       ],
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 403,
           "notFoundFallback": false
@@ -6926,6 +6930,276 @@
         },
         "p2": {
           "status": 200,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/advisories",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/findings",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/findings/timeline",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/inventory",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/patches",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/summary",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/triage",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/vector-index",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/versions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/security-intel/waivers",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -18852,6 +19126,126 @@
       }
     },
     {
+      "id": "api:POST:/api/security-intel/patch-mission",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/security-intel/patches/generate",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/security-intel/scan",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/security-intel/waivers",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/security-intel/waivers/revoke",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/api/services/journey/event",
       "state": "VALIDATED",
       "assertions": [
@@ -25283,8 +25677,8 @@
       }
     }
   ],
-  "runId": "rap-governed-20261008144342533-e3f691f1",
-  "sourceFingerprint": "a29f9309296a4384792e27ed9b576e1f615de74b9ecdc14e744c3f52aa8f650b",
+  "runId": "rap-governed-20261010045617268-19ce0cbd",
+  "sourceFingerprint": "ee991914bddf1787c34fda9eff5cccbc96b55570390c8569102f431458a8ffbc",
   "artifactType": "api-surface-report",
   "artifactVersion": "1.0.0"
 }
