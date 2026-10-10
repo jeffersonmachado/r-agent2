@@ -23,6 +23,7 @@ const path = require('path');
 
 const { runMetaReview, META_REVIEW_ENGINE_VERSION, REQUIRED_GATES_FOR_GREEN } = require('../../../engine/engineeringMission/metaReview');
 const { evaluateAdversarialCoverage, ADVERSARIAL_REVIEW_ENGINE_VERSION } = require('../../../engine/engineeringMission/adversarialReview');
+const { summarizeTestCoverage, CATEGORIES: TEST_CATEGORIES } = require('../../../engine/engineeringMission/testSuiteClassifier');
 const { parseUnifiedDiff } = require('../../../engine/engineeringMission/diffAnalysis');
 const missionStore = require('./missionStoreService');
 const compiler = require('./missionCompilerService');
@@ -92,6 +93,15 @@ function hasEvidenceRecord(value) {
  */
 function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = null }) {
   const testsAllPass = testRuns.length > 0 && testRuns.every((t) => t.status === 'PASS' && t.exit_code === 0);
+  // COBERTURA POR CATEGORIA (2026-10-10): a mesma condição alimenta `unit` e
+  // `integration`, então é preciso DIZER que categoria a evidência cobre. Sem
+  // isso, uma suíte genérica marcava as duas como PASS sem que ninguém pudesse
+  // ver que não havia evidência de integração distinta.
+  const coverage = summarizeTestCoverage(testRuns);
+  const unitEvidence = coverage.byCategory[TEST_CATEGORIES.UNIT];
+  const integrationEvidence = coverage.byCategory[TEST_CATEGORIES.INTEGRATION];
+  const e2eEvidence = coverage.byCategory[TEST_CATEGORIES.E2E];
+  const hasDistinctIntegration = coverage.hasIntegrationEvidence;
   const approvedReview = reviews.find((r) => r.decision === 'APPROVE');
   const regressionPass = regressionRuns.length > 0 && regressionRuns.every((r) => r.status === 'PASS');
   const greenAttestation = Boolean(task && task.status === 'GREEN');
@@ -125,13 +135,32 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
     gate(
       'unit',
       testsAllPass,
-      { source: 'engineering_test_runs', commands: testRuns.map((t) => t.command), allExitCodeZero: true },
+      {
+        source: 'engineering_test_runs',
+        commands: testRuns.map((t) => t.command),
+        allExitCodeZero: true,
+        classification: TEST_CATEGORIES.UNIT,
+        executedUnitCommands: unitEvidence.commands,
+        unitRuns: unitEvidence.passed,
+      },
       { source: 'engineering_test_runs', count: testRuns.length, attestedBy: 'task.status' },
     ),
     gate(
       'integration',
       testsAllPass,
-      { source: 'engineering_test_runs', commands: testRuns.map((t) => t.command) },
+      {
+        source: 'engineering_test_runs',
+        commands: testRuns.map((t) => t.command),
+        classification: hasDistinctIntegration ? TEST_CATEGORIES.INTEGRATION : TEST_CATEGORIES.UNKNOWN,
+        hasDistinctIntegrationEvidence: hasDistinctIntegration,
+        integrationCommands: [...integrationEvidence.commands, ...e2eEvidence.commands],
+        unknownCommands: coverage.unknownCommands,
+        // Não silencia a lacuna: quem lê o parecer vê que a categoria foi
+        // satisfeita pela MESMA evidência genérica que satisfez `unit`.
+        note: hasDistinctIntegration
+          ? 'cobertura de integração executada nesta missão'
+          : 'sem evidência de integração distinta: o gate combina com `unit` sobre a mesma evidência genérica (policyNote do testSuiteClassifier)',
+      },
       { source: 'engineering_test_runs', count: testRuns.length, attestedBy: 'task.status' },
     ),
     gate(
@@ -218,6 +247,10 @@ async function collectReviewBundle(missionId, { changedFiles = [] } = {}) {
   const gates = deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt });
 
   return {
+    // Cobertura REAL por categoria de teste executada (unit/integration/e2e/unknown).
+    // Fica no bundle porque `unit` e `integration` compartilham a mesma condição
+    // de aprovação: o consumidor precisa poder ver o que foi executado.
+    testCoverage: summarizeTestCoverage(testRuns),
     mission: {
       id: detail.id,
       originalMission: detail.original_mission,
