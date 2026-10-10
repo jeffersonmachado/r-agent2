@@ -1,0 +1,148 @@
+{
+  "mission": "MISSAO P0/P1 DE HARDENING DEFINITIVO",
+  "repository": "jeffersonmachado/r-agent2",
+  "branch": "mission/p0p1-hardening-20261010",
+  "baseline": "2f1795454",
+  "updatedAt": "2026-10-10T21:05:00Z",
+  "consumers": [
+    ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
+  ],
+  "rules": {
+    "openStatuses": ["pending", "in_progress"],
+    "closedStatuses": ["done", "blocked"],
+    "blockedRequires": "blocked_reason escrito",
+    "doneRequires": ["commit", "evidence"],
+    "note": "O hook de continuidade bloqueia o fim do turno enquanto houver item pending/in_progress E houver progresso desde o ultimo bloqueio. Item so muda para done com commit e evidencia reais."
+  },
+  "items": [
+    {
+      "id": "P0-1",
+      "title": "Identidade de aprovacao derivada do ator autenticado",
+      "status": "done",
+      "commit": "0c15e658b",
+      "evidence": "tests/unit/securityIntel/approvalAuthority.test.js (16) + routes fail-closed 403 route_action_undeclared"
+    },
+    {
+      "id": "P0-2",
+      "title": "Evidencia ausente nunca e PASS (imutabilidade do evidence manifest)",
+      "status": "done",
+      "commit": "6f8e56349",
+      "evidence": "governance/lib/evidence-manifest-hash-baseline.js + tests/unit/governance/evidenceManifestHashBaseline.test.js (9); check real mudou de PASS para FAIL"
+    },
+    {
+      "id": "P0-3",
+      "title": "Proveniencia do Security Gate consegue falhar (fail-closed)",
+      "status": "done",
+      "commit": "065b66cba",
+      "evidence": "teste negativo de proveniencia do Security Gate"
+    },
+    {
+      "id": "P0-4",
+      "title": "Waiver em duas etapas com segregacao de funcoes e escopo",
+      "status": "done",
+      "commit": "89a86c22b",
+      "evidence": "api/services/securityIntel/waiverService.js + tests/unit/securityIntel/waiverService.test.js (25)"
+    },
+    {
+      "id": "P0-5",
+      "title": "Suite E2E do Security Gate contra Postgres real",
+      "status": "done",
+      "commit": "c3e0dd004",
+      "evidence": "tests/integration/securityWaiverApprovalE2E.test.js (7) vs Postgres real"
+    },
+    {
+      "id": "P1-1",
+      "title": "Gates unit/integration declaram a CATEGORIA da evidencia",
+      "status": "done",
+      "commit": "63ee55ad2",
+      "evidence": "engine/engineeringMission/testSuiteClassifier.js + tests/unit/engineeringMission/testSuiteClassifier.test.js"
+    },
+    {
+      "id": "P1-2",
+      "title": "Revisao independente verificavel (vinculada a tentativa + independencia nos dados)",
+      "status": "done",
+      "commit": "e9b8c009d",
+      "evidence": "api/services/engineeringMission/missionReviewService.js + E2E Engineering Router 20/20"
+    },
+    {
+      "id": "P1-3",
+      "title": "Promocao verificada obrigatoria para GREEN",
+      "status": "done",
+      "commit": "66c64c060",
+      "evidence": "engine/engineeringMission/metaReview.js REQUIRED_GATES_FOR_GREEN"
+    },
+    {
+      "id": "P1-4",
+      "title": "Regra preventiva exige teste EXECUTADO e regras ativas passam a ser consultadas",
+      "status": "done",
+      "commit": "085c203ec",
+      "evidence": "engine/engineeringMission/bugFinding/preventiveRules.js + getActivePreventiveRules + 416 testes"
+    },
+    {
+      "id": "P1-5",
+      "title": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
+      "status": "done",
+      "commit": "8624e5594",
+      "evidence": "rag-service/services/hybrid_search.py + rag-service 156 passed"
+    },
+    {
+      "id": "P1-6",
+      "title": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
+      "status": "done",
+      "commit": "73e76535d",
+      "evidence": "rag-service/config/settings.py (AliasChoices) + 156 passed / 0 skipped (antes: isolamento 100% SKIPPED)"
+    },
+    {
+      "id": "P1-7",
+      "title": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
+      "status": "done",
+      "commit": "1d78fb4ad",
+      "evidence": "engine/securityIntel/triageDossier.js summarizeRemediation + triageService + 7 testes"
+    },
+    {
+      "id": "P1-8",
+      "title": "Inventario do sistema regenerado",
+      "status": "done",
+      "commit": "64091e5eb",
+      "evidence": "config/system-inventory.json + reports/inventory-report.json"
+    },
+    {
+      "id": "P2-1",
+      "title": "Proveniencia remota verifica o commit do RUN, nao o HEAD",
+      "status": "done",
+      "commit": "b1eaeef80",
+      "evidence": "scripts/governance/verify-remote-provenance.js + tests/unit/governance/remoteProvenanceAuthority.test.js (5)"
+    },
+    {
+      "id": "P1-9",
+      "title": "Contrato unico de evidencias (campos obrigatorios, runId/lineage, FAIL vs INCOMPLETE)",
+      "status": "done",
+      "commit": "f218a7c48",
+      "evidence": "governance/lib/evidence-contract.js + scripts/governance/report-evidence-contract.js + tests/unit/governance/evidenceContract.test.js (11 passed); reports/evidence-contract-report.json (enforced:false) mede 0/24 conformes e 10 campos ausentes em 24/24"
+    },
+    {
+      "id": "P1-12",
+      "title": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
+      "status": "pending",
+      "evidence": "governance/evidence-manifest.json: qa/smoke-evidence.json (timestamp 2026-08-21T01:26:02Z, proofStatus valid, governanceLinkage [final_decision]) e qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json (timestamp 2026-10-08T07:34:03Z) ambos ANTERIORES ao inicio do run rap-governed-20261010045617268 (startedAt 2026-10-10T04:56:17.406Z). Detectado por reports/evidence-contract-report.json (byCode EVIDENCE_STALE=2). Falta achar o produtor do manifesto e impedir valid=true para artefato anterior ao run."
+    },
+    {
+      "id": "P1-10",
+      "title": "Self-engineering E2E governado (relatorio agregado obsoleto)",
+      "status": "pending",
+      "evidence": "reports/mission-self-engineering-gates-report.json gerado em 2026-10-07 enquanto os 3 eixos sao de 2026-10-10; regenerar via scripts/governance/validate-mission-self-engineering-gates.js"
+    },
+    {
+      "id": "P1-11",
+      "title": "Destravar empacotamento e selagem (ciclo release:seal completo)",
+      "status": "pending",
+      "evidence": "dist/ sem ZIPs; exige worktree limpo, dist/release e dist/candidate vazios, PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct e branch publicada para proveniencia remota"
+    },
+    {
+      "id": "P2-2",
+      "title": "Divergencia de lineage nos relatorios",
+      "status": "pending",
+      "evidence": "governance/lib/evidence-contract.js cobre runId/proveniencia; falta aplicar aos relatorios reportados"
+    }
+  ]
+}

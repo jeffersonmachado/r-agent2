@@ -183,3 +183,23 @@ Documentação não é suficiente. Use os validadores bloqueantes em `scripts/go
 ## Estado de governança observado
 
 Conforme `docs/governance/PLATFORM_STATUS.md` (gerado em 2026-06-12): mesh canônico **GO**, mas decisão de readiness **NO_GO:AUTONOMOUS_READY_GO** (score 83.5) — o ZIP de release não contém todos os proofs obrigatórios (`gap-proof-package-validation`). QA coverage 100%, vertical coverage 100%. Sempre reconsulte o arquivo antes de afirmações de status.
+
+## Continuidade de missão (loop obrigatório, com enforcement executável)
+
+A fila oficial de pendências é `AI_MEMORY/hardening-queue.json`. Ela é a única fonte
+de verdade sobre "o que ainda falta" — não o histórico de commits nem a narrativa do
+turno.
+
+- Antes de começar um item, mude o status para `in_progress`.
+- Ao concluir, mude para `done` gravando `commit` (hash real) e `evidence` (caminho da prova).
+- Item impossível vira `blocked` com `blocked_reason` escrito — **nunca** `done` sem prova.
+- Nunca encerre o turno com item `pending`/`in_progress` na fila.
+
+Enforcement determinístico: `.github/hooks/continue-until-done.json` (script
+`continue-until-done.cjs`) roda em `SessionStart` e `Stop`. No `SessionStart` injeta a
+fila como contexto; no `Stop` devolve `decision: block` com o próximo item, impedindo o
+encerramento enquanto houver item aberto **e houver progresso** (HEAD, worktree ou fila
+mudaram) desde o último bloqueio. Sem progresso ele libera, para não entrar em loop
+infinito, e há um teto de continuidades consecutivas (`MISSION_MAX_CONTINUES`, default 50).
+Isso é enforcement executável, não prosa: **não remova, não relaxe e não contorne** alterando
+a fila para esvaziá-la sem prova real.

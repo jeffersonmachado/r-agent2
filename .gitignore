@@ -217,3 +217,7 @@ training/
 # Include de contextos realtime gerado em runtime pela API (pbxDialplanService).
 # Nao versionado: eh config derivada do banco, nao fonte.
 pbx/asterisk/etc/asterisk/conf/
+
+# Estado local do hook de continuidade da missao (nao eh artefato de release;
+# um arquivo nao rastreado aqui sujaria o worktree exigido pela selagem).
+.github/hooks/.continue-state.json
