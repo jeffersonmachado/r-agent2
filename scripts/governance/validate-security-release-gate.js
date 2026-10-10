@@ -215,32 +215,13 @@ async function main() {
   // run NÃO sustenta o run. Fail-closed: sem run governado, ou com evidência anterior/estrangeira,
   // a decisão vira NO_GO — nunca PASS por ausência de dado.
   const { CURRENT_RUN_RELATIVE_PATH, resolveRunLineage } = require('./lib/resolve-run-lineage');
-  const provenanceIssues = [];
+  const { resolveSecurityProvenance } = require('./lib/security-gate-provenance');
+  let provenanceIssues = [];
   let currentRun = null;
   try {
     const lineage = resolveRunLineage({ rootDir: ROOT });
     currentRun = JSON.parse(fs.readFileSync(path.join(ROOT, CURRENT_RUN_RELATIVE_PATH), 'utf8'));
-    if (!lineage.runId || lineage.source === 'none') {
-      provenanceIssues.push({
-        code: 'SECURITY_GATE_NO_GOVERNED_RUN',
-        message: 'sem run governado — o veredito de segurança não pode sustentar release',
-      });
-    }
-    const sbom = facts ? facts.sbom : null;
-    const sbomGeneratedAt = sbom && sbom.generatedAt ? new Date(sbom.generatedAt) : null;
-    const runStartedAt = currentRun && currentRun.startedAt ? new Date(currentRun.startedAt) : null;
-    if (sbomGeneratedAt && runStartedAt && sbomGeneratedAt.getTime() < runStartedAt.getTime()) {
-      provenanceIssues.push({
-        code: 'SECURITY_GATE_STALE_EVIDENCE',
-        message: `SBOM de ${sbomGeneratedAt.toISOString()} é ANTERIOR ao início do run ${currentRun.runId} (${runStartedAt.toISOString()}) — evidência vencida não sustenta o release`,
-      });
-    }
-    if (sbom && sbom.runId && currentRun && sbom.runId !== currentRun.runId) {
-      provenanceIssues.push({
-        code: 'SECURITY_GATE_FOREIGN_RUN',
-        message: `SBOM pertence ao run ${sbom.runId}, não ao run corrente ${currentRun.runId}`,
-      });
-    }
+    provenanceIssues = resolveSecurityProvenance({ lineage, currentRun, sbom: facts ? facts.sbom : null });
   } catch (error) {
     provenanceIssues.push({
       code: 'SECURITY_GATE_UNAVAILABLE',
