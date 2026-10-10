@@ -468,6 +468,21 @@ agendado depois que o anterior termina.
   acontecer, o Patch Engine não fecha achado nenhum, e o gate de release construído a partir da
   `main` não inclui o `validate:security-release-gate`.
 
+**Prova de que o aceite é satisfazível quando o artefato está COMPLETO (medido em 2026-10-09)** —
+num worktree do commit da fase, com o mesmo script e o mesmo `engine/securityIntel/versionCore`:
+
+1. `overrides` declarado e lock intocado ⇒
+   `ALVO NAO APLICADO: lockfile ainda resolve js-yaml@4.3.1 < 4.3.2
+   (packages[node_modules/cosmiconfig/node_modules/js-yaml])` (exit 1) — o caminho exato da cópia
+   vulnerável, não um "falhou" genérico;
+2. `npm install --package-lock-only --ignore-scripts` **executado no host** (com rede) ⇒ exit 0,
+   diff final de 2 arquivos (`package.json` + `package-lock.json`, +22/−35);
+3. prova ⇒ `ALVO DECLARADO: js-yaml js-yaml=^4.3.2 lock[4.3.2] >= 4.3.2` (exit 0) **e**
+   `npm run test:flow` ⇒ **30/30 suítes, 264 testes, exit 0**.
+
+Conclusão: a lacuna do lock é de **quem produz o lock**, não do critério de aceite — o aceite
+distingue corretamente "declarado sem materializar" de "materializado".
+
 - Docker local pode não conter as imagens de produção: nesse caso a lacuna é
   registrada em vez de assumir que o local representa o deploy.
 - A base de advisories cobre apenas os pacotes já consultados (`advisories --limit`).

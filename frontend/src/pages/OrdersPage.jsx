@@ -79,25 +79,25 @@ export function OrdersPage() {
         ) : (
           <div style={{ display: 'grid', gap: '0.75rem' }}>
             {orders.map((o) => (
-              <div key={o.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.75rem' }}>
+              <div key={o.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: 10, padding: '0.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
                   <div>
                     <div><strong>{o.order_number}</strong></div>
-                    <div style={{ color: '#6b7280' }}>{o.status}</div>
+                    <div style={{ color: 'var(--color-text-secondary)' }}>{o.status}</div>
                   </div>
                   <button onClick={() => advance(o)} disabled={!NEXT_STATUS[o.status]}>
                     Avançar
                   </button>
                 </div>
-                <div style={{ marginTop: '0.5rem', color: '#374151' }}>
+                <div style={{ marginTop: '0.5rem', color: 'var(--color-text-primary)' }}>
                   {(o.items || []).slice(0, 3).map((it, idx) => (
                     <div key={idx}>{it.qty}x {it.name}</div>
                   ))}
-                  {(o.items || []).length > 3 ? <div style={{ color: '#6b7280' }}>+ {(o.items || []).length - 3} item(ns)</div> : null}
+                  {(o.items || []).length > 3 ? <div style={{ color: 'var(--color-text-secondary)' }}>+ {(o.items || []).length - 3} item(ns)</div> : null}
                 </div>
               </div>
             ))}
-            {orders.length === 0 ? <p style={{ color: '#6b7280' }}>Nenhum pedido.</p> : null}
+            {orders.length === 0 ? <p style={{ color: 'var(--color-text-secondary)' }}>Nenhum pedido.</p> : null}
           </div>
         )}
       </div>

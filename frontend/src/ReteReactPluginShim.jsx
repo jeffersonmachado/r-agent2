@@ -95,7 +95,7 @@ function EditablePreviewValue({ value, onSave, className = '' }) {
         style={{
           width: '100%',
           background: 'transparent',
-          border: '1px solid var(--color-primary, #3b82f6)',
+          border: '1px solid var(--color-accent-primary, #3b82f6)',
           borderRadius: '4px',
           padding: '2px 4px',
           font: 'inherit',

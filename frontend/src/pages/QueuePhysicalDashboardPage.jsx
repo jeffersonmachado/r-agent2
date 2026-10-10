@@ -15,7 +15,7 @@ export function QueuePhysicalDashboardPage() {
     { id: 'inbox', title: 'Caixa de Entrada', description: 'Backlog e fila de atendimento em tempo real', icon: '📥', path: '/inbox', color: 'bg-sky-500', category: 'Suporte' },
     { id: 'support', title: 'Atendimento', description: 'Tratamento da jornada após entrada na fila', icon: '💬', path: '/support', color: 'bg-emerald-500', category: 'Suporte' },
     { id: 'analytics', title: 'Análises', description: 'Métricas consolidadas por fila e operação', icon: '📊', path: '/analytics', color: 'bg-rose-500', category: 'Monitoramento' },
-    { id: 'audit', title: 'Auditoria', description: 'Rastro operacional para compliance e incidentes', icon: '📋', path: '/audit', color: 'bg-slate-500', category: 'Governança' },
+    { id: 'audit', title: 'Auditoria', description: 'Rastro operacional para compliance e incidentes', icon: '📋', path: '/audit', color: 'bg-text-tertiary', category: 'Governança' },
   ];
 
   const categories = useMemo(

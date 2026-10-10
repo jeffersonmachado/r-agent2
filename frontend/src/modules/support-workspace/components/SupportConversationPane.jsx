@@ -433,7 +433,7 @@ function SupportConversationPaneInner({
                       if (reason) parts.push(formatSupportReason(reason) || reason);
                       if (err && err !== reason) parts.push(String(err).slice(0, 180));
                       return (
-                        <div style={{ fontSize: '11px', color: '#b91c1c', marginTop: '3px', wordBreak: 'break-word', padding: '2px 0' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-status-error)', marginTop: '3px', wordBreak: 'break-word', padding: '2px 0' }}>
                           ⚠ {parts.join(' · ')}
                         </div>
                       );

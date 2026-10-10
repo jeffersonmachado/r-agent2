@@ -78,7 +78,7 @@ function getAttributionAlertStyles(severity) {
     return {
       background: 'rgba(220, 38, 38, 0.12)',
       border: '1px solid rgba(220, 38, 38, 0.35)',
-      color: '#fecaca',
+      color: 'var(--color-status-error)',
       label: 'Crítico',
     };
   }
@@ -86,14 +86,14 @@ function getAttributionAlertStyles(severity) {
     return {
       background: 'rgba(245, 158, 11, 0.14)',
       border: '1px solid rgba(245, 158, 11, 0.35)',
-      color: '#fde68a',
+      color: 'var(--color-status-warning)',
       label: 'Alerta',
     };
   }
   return {
     background: 'rgba(34, 197, 94, 0.12)',
     border: '1px solid rgba(34, 197, 94, 0.28)',
-    color: '#bbf7d0',
+    color: 'var(--color-status-success)',
     label: 'Estável',
   };
 }

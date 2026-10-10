@@ -551,7 +551,7 @@ export function PbxContactCenterGovernanceTabs({
             Tela para manter compatibilidade com cadastros do RIPABX.
           </div>
           {legacyXmlError ? (
-            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-status-warning)', borderRadius: 10, background: 'var(--qa-warning-muted)' }}>
               <strong>Legado (XML) indisponível.</strong>
               <div style={{ marginTop: 6, opacity: 0.85 }}>{legacyXmlError}</div>
             </div>

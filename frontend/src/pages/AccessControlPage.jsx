@@ -275,8 +275,8 @@ export function AccessControlPage() {
                 padding: '0.6rem 0.9rem',
                 borderRadius: 999,
                 border: '1px solid var(--color-border-default)',
-                background: tab === item.id ? 'var(--color-accent-primary, #111827)' : 'var(--color-bg-elevated)',
-                color: tab === item.id ? '#fff' : 'var(--color-text-primary)',
+                background: tab === item.id ? 'var(--color-accent-primary)' : 'var(--color-bg-elevated)',
+                color: tab === item.id ? 'var(--qa-on-accent)' : 'var(--color-text-primary)',
               }}
             >
               {item.label}

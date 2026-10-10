@@ -124,7 +124,7 @@ export function AccountsPage() {
       key: 'status',
       label: 'Status',
       render: (status) => (
-        <span className={status === 'active' ? 'text-green-600' : 'text-gray-500'}>
+        <span className={status === 'active' ? 'text-status-success' : 'text-text-tertiary'}>
           {status}
         </span>
       ),

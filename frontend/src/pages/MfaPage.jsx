@@ -151,9 +151,9 @@ export function MfaPage() {
                   marginBottom: '10px',
                   padding: '10px',
                   borderRadius: '8px',
-                  background: '#fff7ed',
-                  border: '1px solid #fed7aa',
-                  color: '#9a3412',
+                  background: 'var(--qa-warning-muted)',
+                  border: '1px solid var(--color-status-warning)',
+                  color: 'var(--color-status-warning)',
                   fontSize: '12px',
                 }}
               >
@@ -187,7 +187,7 @@ export function MfaPage() {
                     width={220}
                     height={220}
                     onError={() => setQrImageError(true)}
-                    style={{ border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff' }}
+                    style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', background: 'var(--color-bg-elevated)' }}
                   />
                 </div>
               )}

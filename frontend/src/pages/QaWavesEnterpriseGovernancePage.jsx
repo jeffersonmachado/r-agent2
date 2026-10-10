@@ -4,14 +4,14 @@ import { fetchJson } from '../api/client';
 function Badge({ value, neutral = false }) {
   if (neutral) {
     return (
-      <span className="inline-flex rounded px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600">
+      <span className="inline-flex rounded px-2 py-1 text-xs font-semibold bg-bg-secondary text-text-secondary">
         —
       </span>
     );
   }
   const go = String(value || '').toUpperCase() === 'GO';
   return (
-    <span className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${go ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+    <span className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${go ? 'bg-status-success/10 text-status-success' : 'bg-status-error/10 text-status-error'}`}>
       {value || 'N/A'}
     </span>
   );
@@ -19,7 +19,7 @@ function Badge({ value, neutral = false }) {
 
 function Tile({ label, value, good }) {
   return (
-    <div className="bg-bg-elevated border border-border rounded-lg p-4">
+    <div className="bg-bg-elevated border border-border-default rounded-lg p-4">
       <div className="text-xs text-text-secondary">{label}</div>
       <div className={`mt-1 text-2xl font-bold ${good === false ? 'text-red-600' : good === true ? 'text-green-600' : 'text-text-primary'}`}>{value}</div>
     </div>
@@ -76,7 +76,7 @@ export function QaWavesEnterpriseGovernancePage() {
         </button>
       </div>
 
-      {error ? <div className="border border-red-300 bg-red-50 text-red-700 rounded-md p-3 text-sm">{error}</div> : null}
+      {error ? <div className="border border-status-error/30 bg-status-error/10 text-status-error rounded-md p-3 text-sm">{error}</div> : null}
 
       <section className="grid grid-cols-1 md:grid-cols-5 gap-3">
         <Tile label="Global GO/NO_GO" value={<Badge value={globalDecision} neutral={!hasReport} />} good={tileGood(String(globalDecision).startsWith('GO'))} />
@@ -93,7 +93,7 @@ export function QaWavesEnterpriseGovernancePage() {
         <Tile label="Runtime Risk" value={tileValue(report?.riskLevel || 'N/A')} good={tileGood(report?.riskLevel === 'LOW')} />
       </section>
 
-      <section className="bg-bg-elevated border border-border rounded-lg p-4">
+      <section className="bg-bg-elevated border border-border-default rounded-lg p-4">
         <h2 className="text-base font-semibold mb-3">Smoke Lineage</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
           <div>
@@ -111,11 +111,11 @@ export function QaWavesEnterpriseGovernancePage() {
         </div>
       </section>
 
-      <section className="bg-bg-elevated border border-border rounded-lg p-4">
+      <section className="bg-bg-elevated border border-border-default rounded-lg p-4">
         <h2 className="text-base font-semibold mb-3">Replay Artifacts</h2>
         <div className="space-y-2 text-sm">
           {(report?.replayArtifacts || []).map((artifact) => (
-            <div key={artifact.journeyId} className="rounded border border-border bg-bg-default p-3">
+            <div key={artifact.journeyId} className="rounded border border-border-default bg-bg-default p-3">
               <div className="font-semibold">{artifact.journeyId}</div>
               <div className="text-xs text-text-secondary break-all">hash: {artifact.replayHash}</div>
               <div className="text-xs text-text-secondary break-all">checksum: {artifact.replayChecksum}</div>
@@ -125,7 +125,7 @@ export function QaWavesEnterpriseGovernancePage() {
         </div>
       </section>
 
-      <section className="bg-bg-elevated border border-border rounded-lg p-4">
+      <section className="bg-bg-elevated border border-border-default rounded-lg p-4">
         <h2 className="text-base font-semibold mb-3">Active Blockers</h2>
         {blockers.length === 0 ? (
           <p className="text-sm text-text-secondary">Zero active blockers.</p>
@@ -138,7 +138,7 @@ export function QaWavesEnterpriseGovernancePage() {
         )}
       </section>
 
-      <section className="bg-bg-elevated border border-border rounded-lg p-4">
+      <section className="bg-bg-elevated border border-border-default rounded-lg p-4">
         <h2 className="text-base font-semibold mb-3">Failed Proofs</h2>
         {failedProofs.length === 0 ? (
           <p className="text-sm text-text-secondary">Zero failed proofs.</p>

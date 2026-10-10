@@ -712,7 +712,7 @@ export function CoverageGapsTab({ domainId = null }) {
                         padding: '2px 8px',
                         borderRadius: 10,
                         fontSize: 11,
-                        background: isGap ? 'var(--color-bg-error)' : 'var(--color-bg-success)',
+                        background: isGap ? 'var(--color-status-error)' : 'var(--color-status-success)',
                         color: isGap ? 'var(--color-status-error)' : 'var(--color-status-success)',
                       }}>{isGap ? '✗ ' : '✓ '}{cap}</span>
                     );

@@ -21,6 +21,43 @@ Validação Playwright de 2026-08-14 na stack local isolada confirmou
 `/rag-documents` autenticada, renderizada em HTTP 200, sem erros de console nem
 falhas de rede (`reports/runtime-routes-validation-report.json`).
 
+## Conteúdo indexável e estados de indexação (2026-10-08)
+
+**Invariante:** documento sem texto extraído NÃO é indexado. A regra vive num
+único módulo puro — `api/services/rag/indexableContent.js`
+(`hasIndexableContent`/`isPlaceholderOnlyContent`) — consumido pela ingestão
+(`api/modules/rag-documents/rag/ragIngestionRoutes.js`) e pelo indexador
+(`api/services/rag/ragDocumentsIndexing.js`). O literal do placeholder
+("Sem texto extraído. Indexando metadados …") só pode existir nesse módulo; o
+scanner `scripts/governance/rag-indexable-content-guard.js` reprova duplicação
+(invocado por `validate:rag-index-health`; teste de fixture em
+`tests/unit/ragIndexableContentSourceGuard.test.js`).
+
+**Por que:** até então o upload gravava o placeholder como CONTEÚDO e o indexador
+o aceitava. Resultado medido: um `.jpeg` sem OCR foi a **1ª fonte** de "Como faço
+uma matrícula?" (score 0.70, à frente dos manuais) e reapareceu nas fontes de "O
+que é o RAP?". Com a regra duplicada em dois caminhos, corrigir um deixava o
+defeito entrar pelo outro.
+
+**Estados** (`ragDocumentsState.INDEX_STATES`): `pending`, `indexing`, `indexed`,
+`failed`, `not_indexed_duplicate` e — novo — `not_applicable_no_text` (nada a
+indexar: não é sucesso nem falha; `isIndexFailure` = false). Sem esse estado, a
+saúde do índice trataria dezenas de documentos legítimos como `failed` e o ruído
+esconderia falha real.
+
+**Gate:** `npm run validate:rag-index-health` (agora NO agregado
+`validate:governance-enforcement`) mede o banco e reprova com
+`INDEXED_WITHOUT_CHUNKS`, `UNDECLARED_FAILED_DOCUMENT`,
+`NO_TEXT_DOCUMENT_WITH_CHUNKS` (chunk fantasma de documento sem texto — a
+assinatura do defeito) e `RAG_PLACEHOLDER_SOURCE_DUPLICATED`.
+
+**Reconciliação executada:** 4 documentos cujo conteúdo era o placeholder passaram
+a `not_applicable_no_text` (via `ragDocumentsService.reindexDocument`, caminho
+oficial) e o único chunk fantasma foi removido — `semTexto=4`, `chunks` 8461 →
+8460, gate `HEALTHY`. Dois documentos `failed` sem tenant continuam declarados
+como exceção (inalcançáveis: o retrieval é tenant-scoped).
+
+
 ## Arquitetura de eficiência (2026-08-03)
 
 - **Deduplicação no Postgres** (não mais Maps/dicts em memória): structural via `metadata->>'content_hash'`, semantic via hash exato + top-1 vetorial (`embedding <=> ::vector`, limiar 0.97) no HNSW; sobrevive a restart. Índices de expressão: migration `api/db/migrations/20260803000001-add-rag-chunks-dedup-indexes.js`. `registerChunk`/`register_chunk` são no-ops de compatibilidade — o JSONB `metadata` de `rag_chunks` é a fonte da verdade.

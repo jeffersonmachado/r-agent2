@@ -744,7 +744,7 @@ export function TenantsPage() {
                         ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30'
                         : tenant.plan === 'trial'
                         ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
-                        : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
+                        : 'bg-text-tertiary/20 text-text-tertiary border border-text-tertiary/30'
                     }`}>
                       {tenant.plan ? tenant.plan.toUpperCase() : 'TRIAL'}
                     </span>
@@ -757,7 +757,7 @@ export function TenantsPage() {
                         ? 'bg-status-error/20 text-status-error border border-status-error/30'
                         : tenant.status === 'trial'
                         ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30'
-                        : 'bg-gray-500/20 text-gray-500 border border-gray-500/30'
+                        : 'bg-text-tertiary/20 text-text-tertiary border border-text-tertiary/30'
                     }`}>
                       {tenant.status === 'trial' ? 'Trial' : 
                        tenant.status === 'suspended' ? 'Suspenso' :

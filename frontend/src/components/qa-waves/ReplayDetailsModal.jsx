@@ -20,7 +20,7 @@ function formatDuration(ms) {
 
 const ACTOR_CONFIG = {
   customer:  { label: 'Cliente',  icon: '👤', color: 'text-blue-400',   bg: 'bg-blue-400/10 border-blue-400/30' },
-  system:    { label: 'Sistema',  icon: '⚙️', color: 'text-gray-400',   bg: 'bg-gray-400/10 border-gray-400/30' },
+  system:    { label: 'Sistema',  icon: '⚙️', color: 'text-text-tertiary',   bg: 'bg-text-tertiary/10 border-text-tertiary/30' },
   ai:        { label: 'IA',       icon: '🧠', color: 'text-purple-400', bg: 'bg-purple-400/10 border-purple-400/30' },
   bot:       { label: 'Bot',      icon: '🤖', color: 'text-teal-400',   bg: 'bg-teal-400/10 border-teal-400/30' },
   agent:     { label: 'Humano',   icon: '👨‍💼', color: 'text-amber-400',  bg: 'bg-amber-400/10 border-amber-400/30' },
@@ -42,7 +42,7 @@ const CATEGORY_ICON = {
 
 function getStepActorConfig(step) {
   const actor = step?.actor || step?.stepActor;
-  return ACTOR_CONFIG[actor] || { label: actor || 'Sistema', icon: '⚙️', color: 'text-gray-400', bg: 'bg-gray-400/10 border-gray-400/30' };
+  return ACTOR_CONFIG[actor] || { label: actor || 'Sistema', icon: '⚙️', color: 'text-text-tertiary', bg: 'bg-text-tertiary/10 border-text-tertiary/30' };
 }
 
 function getStepIcon(step) {

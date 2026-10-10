@@ -22,7 +22,7 @@ export function SupportTicketWorkspaceCard({
           padding: '2px 8px',
           borderRadius: '999px',
           fontSize: '11px',
-          border: '1px solid #ddd',
+          border: '1px solid var(--color-border-default)',
           background: modeLabel.bg,
           color: modeLabel.fg,
         }}>

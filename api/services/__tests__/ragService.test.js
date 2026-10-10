@@ -112,6 +112,115 @@ describe('ragService', () => {
     });
   });
 
+  describe('getRagHealth (tri-estado)', () => {
+    it('preserva degraded + causa do /rag/health (não colapsa em indisponível)', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: 'degraded',
+          ready: false,
+          reason: 'database_not_configured',
+          dbConfigured: false,
+        }),
+      });
+
+      const health = await ragService.getRagHealth();
+
+      expect(health.state).toBe('degraded');
+      expect(health.available).toBe(false);
+      expect(health.reason).toBe('database_not_configured');
+      expect(health.payload.dbConfigured).toBe(false);
+      expect(health.httpStatus).toBe(200);
+    });
+
+    it('readiness negada vence status healthy (nunca verde sem ready)', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'healthy', ready: false, reason: 'db_unreachable' }),
+      });
+
+      const health = await ragService.getRagHealth();
+
+      expect(health.state).toBe('degraded');
+      expect(health.available).toBe(false);
+      expect(health.reason).toBe('db_unreachable');
+    });
+
+    it('healthy com ready=true é o único estado disponível', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'healthy', ready: true, dbConfigured: true }),
+      });
+
+      const health = await ragService.getRagHealth();
+
+      expect(health.state).toBe('healthy');
+      expect(health.available).toBe(true);
+      expect(health.ready).toBe(true);
+      expect(health.reason).toBeNull();
+    });
+
+    it('HTTP != 2xx é unhealthy com o status medido', async () => {
+      fetch.mockResolvedValueOnce({ ok: false, status: 503 });
+
+      const health = await ragService.getRagHealth();
+
+      expect(health.state).toBe('unhealthy');
+      expect(health.errorType).toBe('http_error');
+      expect(health.httpStatus).toBe(503);
+    });
+
+    it('HTTP 503 com corpo do serviço expõe a causa (service_misconfigured)', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => ({ error: 'service_misconfigured', message: 'Autenticação interna do RAG não configurada' }),
+      });
+
+      const health = await ragService.getRagHealth();
+
+      expect(health.state).toBe('unhealthy');
+      expect(health.httpStatus).toBe(503);
+      expect(health.reason).toBe('service_misconfigured');
+      expect(health.payload.message).toContain('Autenticação interna');
+    });
+
+    it('corpo não-JSON nunca é tratado como verde', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => { throw new Error('invalid json'); },
+      });
+
+      const health = await ragService.getRagHealth();
+
+      expect(health.state).toBe('degraded');
+      expect(health.available).toBe(false);
+    });
+
+    it('falha de transporte é unhealthy classificada', async () => {
+      fetch.mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:8001'));
+
+      const health = await ragService.getRagHealth();
+
+      expect(health.state).toBe('unhealthy');
+      expect(health.errorType).toBe('connection_refused');
+    });
+
+    it('isRagAvailable segue booleano: false quando degradado', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'degraded', ready: false }),
+      });
+
+      await expect(ragService.isRagAvailable()).resolves.toBe(false);
+    });
+  });
+
   describe('queryRag', () => {
     it('deve fazer consulta RAG com sucesso', async () => {
       const mockResponse = {

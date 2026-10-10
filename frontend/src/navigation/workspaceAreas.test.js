@@ -27,7 +27,10 @@ describe('área Dev (rail DEV)', () => {
     const dev = areas.find((area) => area.id === 'dev');
     expect(dev).toBeTruthy();
     const paths = dev.items.map((item) => item.path);
-    expect(paths[0]).toBe('/dev');
+    // A âncora da área continua sendo a Central Dev (`/dev`), mesmo com o grupo
+    // `qualidade` antecedendo `dev-hub` na ordem do menu.
+    expect(dev.path).toBe('/dev');
+    expect(paths).toContain('/dev');
     expect(paths).toContain('/dev/engineering');
     expect(paths).toContain('/dev/engineering/findings');
     expect(paths).not.toContain('/dev/qa-waves');
@@ -54,7 +57,27 @@ describe('área Dev (rail DEV)', () => {
   it('não rouba /config do Admin (ancestral `plataforma` não é página da área dev)', () => {
     expect(resolveAreas('/config').activeArea.id).toBe('admin');
     expect(resolveAreas('/tenants').activeArea.id).toBe('admin');
-    expect(resolveAreas('/qa-mesh').activeArea.id).toBe('admin');
+    expect(resolveAreas('/audit').activeArea.id).toBe('admin');
+  });
+
+  it('mantém o grupo Qualidade (QA / Estabilidade QA / QA Mesh) na área Dev, não no Admin', () => {
+    const { areas, activeArea } = resolveAreas('/qa/stability');
+    expect(activeArea.id).toBe('dev');
+
+    const dev = areas.find((area) => area.id === 'dev');
+    const admin = areas.find((area) => area.id === 'admin');
+    const devPaths = dev.items.map((item) => item.path);
+    const adminPaths = admin.items.map((item) => item.path);
+
+    expect(devPaths).toContain('/qa');
+    expect(devPaths).toContain('/qa/stability');
+    expect(devPaths).toContain('/qa-mesh');
+    expect(adminPaths).not.toContain('/qa');
+    expect(adminPaths).not.toContain('/qa/stability');
+    expect(adminPaths).not.toContain('/qa-mesh');
+
+    expect(resolveAreas('/qa').activeArea.id).toBe('dev');
+    expect(resolveAreas('/qa-mesh').activeArea.id).toBe('dev');
   });
 
   it('mantém os Replays RPA (SUPPORT) no Admin, não em Dev', () => {

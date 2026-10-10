@@ -63,3 +63,11 @@ Os scripts da auditoria vivem em `/tmp` (ferramenta de diagnóstico, não suíte
 repetir: subir o frontend dev (`npm run dev:frontend`), autenticar e, por rota/viewport, medir
 `documentElement.scrollWidth - clientWidth`, classificar elementos fora da viewport por
 `overflow-x` dos ancestrais e comparar pares de elementos interativos por interseção de retângulos.
+
+## Cobertura ampliada: 131 rotas varridas (2026-10-09)
+
+A ressalva acima foi fechada: a varredura passou a cobrir **todas as 131 rotas do menu** (`frontend/src/navigation/menu.js`), em headless, medida a 1366px e a 390px. Evidência: `AI_MEMORY/evidence/route-audit-2026-10-09.json`; método e armadilhas de medição em `runtime-navigation.md`.
+
+Resultado medido: **0 overflow horizontal de página** (1366 e 390), **0 conteúdo inalcançável** a 390, **0 rota sem conteúdo renderizado**.
+
+O que continua aberto (medido, não corrigido): alvos de toque < 28px em telas densas — `/departments` (466), `/dev/security-intel` (349), `/dev/rpa-seeds` (222), `/rpa-replays` (103), `/tenants` (73). É legibilidade de toque, não corte nem sobreposição; corrigir exige decisão de design (tamanho mínimo de controle), não um lote mecânico.

@@ -52,12 +52,12 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
                 const reasonCode = it?.reason_code || it?.reasonCode || null;
                 return (
                   <div key={it.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
-                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
                       <strong>{it.channel_type}</strong> • {it.status} • tentativas: {it.attempts ?? '-'}
                       {to ? ` • para: ${to}` : ''}
                     </div>
                     {reasonCode ? (
-                      <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-status-warning)', marginBottom: '6px' }}>
                         reason_code: <strong>{String(reasonCode)}</strong>
                       </div>
                     ) : null}
@@ -65,7 +65,7 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
                       {text ? text : <span style={{ color: '#999' }}>(sem texto)</span>}
                     </div>
                     {it.last_error ? (
-                      <div style={{ fontSize: '12px', color: '#b91c1c', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-status-error)', marginBottom: '8px' }}>
                         {String(it.last_error).slice(0, 500)}
                       </div>
                     ) : null}
@@ -114,11 +114,11 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
                   const lastError = m?.last_error || matchedOut?.last_error || null;
                   return (
                     <div key={m.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: '8px', padding: '10px' }}>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
                         <strong>{m.channel_type}</strong> • {m.status} • {m.created_at ? new Date(m.created_at).toLocaleString('pt-BR') : ''}
                       </div>
                       {reasonCode ? (
-                        <div style={{ fontSize: '12px', color: '#b45309', marginBottom: '6px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--color-status-warning)', marginBottom: '6px' }}>
                           reason_code: <strong>{String(reasonCode)}</strong>
                         </div>
                       ) : null}
@@ -126,7 +126,7 @@ export function SupportDeliveryFailuresModal({ isOpen, loading, deliveryFailures
                         {m?.body?.text ? String(m.body.text) : JSON.stringify(m.body || {})}
                       </div>
                       {lastError ? (
-                        <div style={{ fontSize: '12px', color: '#b91c1c' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--color-status-error)' }}>
                           {String(lastError).slice(0, 500)}
                         </div>
                       ) : null}

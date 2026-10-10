@@ -60,8 +60,8 @@ function statusBadgeClass(status) {
     return 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
   }
   if (value === 'provider-dependent') return 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40';
-  if (value === 'skipped' || value === 'no-show') return 'bg-slate-500/20 text-slate-300 border border-slate-500/40';
-  return 'bg-slate-600/20 text-slate-200 border border-slate-500/40';
+  if (value === 'skipped' || value === 'no-show') return 'bg-text-tertiary/20 text-text-secondary border border-text-tertiary/40';
+  return 'bg-text-tertiary/20 text-text-secondary border border-text-tertiary/40';
 }
 
 function cardNumber(value) {
@@ -1747,7 +1747,7 @@ export function OperationsDashboardPage() {
             />
 
             {lastReconcileResult ? (
-              <div className={`mb-4 rounded-xl border p-4 ${financeSnapshotMatchedJob ? 'border-emerald-400 bg-emerald-500/10 shadow-lg shadow-emerald-900/20' : 'border-border-default bg-bg-tertiary'}`}>
+              <div className={`mb-4 rounded-xl border p-4 ${financeSnapshotMatchedJob ? 'border-status-success bg-status-success/10 shadow-lg' : 'border-border-default bg-bg-tertiary'}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                   <div>
                     <div className="text-sm font-medium text-text-primary">Ultima reconciliação {reconcileModeLabel(lastReconcileResult.mode)}</div>

@@ -137,20 +137,27 @@ const AREA_BLUEPRINTS = [
   {
     // Área de engenharia (rail DEV). Sem este blueprint, `/dev*` era resolvido para
     // `admin` (o Admin também declara prefixo `/dev`) — ver AI_MEMORY/runtime-navigation.md.
-    // O escopo é o prefixo `/dev` e o recorte é por EXCLUSÃO: `operacao` traz
-    // /dev/system-status e /dev/stack-versions (Monitoramento, decisão consciente de
-    // 2026-07-23) e `dev-qa-rpa` traz as ferramentas de QA técnica/RPA, que permanecem
-    // no Admin (grupo Super Admin).
+    // O escopo é o prefixo `/dev` MAIS as páginas de negócio de QA (`/qa`, `/qa/stability`,
+    // `/qa-mesh`): o grupo de menu `qualidade` pertence à área Dev, não ao Admin (decisão
+    // 2026-10-09). O recorte é por EXCLUSÃO: `operacao` traz /dev/system-status e
+    // /dev/stack-versions (Monitoramento, decisão consciente de 2026-07-23) e `dev-qa-rpa`
+    // traz as ferramentas de QA técnica/RPA, que permanecem no Admin (grupo Super Admin).
     id: 'dev',
     label: 'Dev',
     shortLabel: 'DEV',
     icon: 'flow',
     accent: 'var(--color-status-info)',
-    description: 'Engenharia: Central Dev e Engineering Model Router.',
+    description: 'Engenharia: Central Dev, Engineering Model Router e Qualidade.',
     searchScope: 'engineering',
     defaultContextPanel: 'admin',
-    pathPrefixes: ['/dev'],
+    pathPrefixes: ['/dev', '/qa', '/qa/stability', '/qa-mesh'],
     excludeNodeIds: ['operacao', 'dev-qa-rpa'],
+    // Âncora explícita da área: sem ela o `primaryPath` cairia na PRIMEIRA folha do
+    // menu (hoje `/qa`, porque o grupo `qualidade` vem antes de `dev-hub` em
+    // `plataforma`) e a área passaria a apontar para Qualidade. Diferente de
+    // `fallbackPath`, `primaryPath` NÃO faz a área sobreviver sem itens acessíveis:
+    // só é honrado quando o path existe entre as folhas já filtradas por permissão.
+    primaryPath: '/dev',
     // Sem `fallbackPath` de propósito: se o agente não tem nenhum item acessível da
     // engenharia, a área NÃO existe e o rail DEV não aparece (com fallback, a área
     // sobrevive apontando para /dev mesmo para quem não pode abrir a rota).
@@ -177,16 +184,14 @@ const AREA_BLUEPRINTS = [
       '/backup',
       '/sso-scim',
       '/dev',
-      '/qa',
-      '/qa-mesh',
-      '/qa/stability',
     ],
     legacyAnchorIds: ['plataforma'],
-    // As superfícies de engenharia (Central Dev e Engineering Model Router) são da área
-    // `dev`. O prefixo `/dev` do Admin continua existindo apenas para
-    // `/dev/system-status` e `/dev/stack-versions` (Monitoramento) e para as ferramentas
-    // de QA técnica/RPA de `dev-qa-rpa`, que permanecem no grupo Super Admin.
-    excludeNodeIds: ['dev-hub', 'dev-engineering'],
+    // As superfícies de engenharia (Central Dev e Engineering Model Router) e o grupo
+    // Qualidade (QA / Estabilidade QA / QA Mesh) são da área `dev`. O prefixo `/dev` do
+    // Admin continua existindo apenas para `/dev/system-status` e `/dev/stack-versions`
+    // (Monitoramento) e para as ferramentas de QA técnica/RPA de `dev-qa-rpa`, que
+    // permanecem no grupo Super Admin.
+    excludeNodeIds: ['dev-hub', 'dev-engineering', 'qualidade'],
     fallbackPath: '/config',
   },
 ];
@@ -326,8 +331,13 @@ export function buildWorkspaceAreas(filteredMenu = [], currentPath = '/') {
     );
     const activeByPrefix = Array.isArray(area.pathPrefixes) && area.pathPrefixes.some((prefix) => pathMatches(prefix, currentPath));
     const preferredPath = leaves.find((item) => item.path === area.fallbackPath)?.path;
+    // `primaryPath` explícito só vale quando a folha correspondente está acessível —
+    // assim a âncora da área não vira um link para uma página que o agente não pode abrir.
+    const explicitPrimary = area.primaryPath && leaves.some((item) => item.path === area.primaryPath)
+      ? area.primaryPath
+      : null;
     const fallbackFromMenu = availablePaths.has(area.fallbackPath) ? area.fallbackPath : null;
-    const primaryPath = preferredPath || fallbackFromMenu || leaves[0]?.path || allLeaves[0]?.path || area.fallbackPath || null;
+    const primaryPath = explicitPrimary || preferredPath || fallbackFromMenu || leaves[0]?.path || allLeaves[0]?.path || area.fallbackPath || null;
 
     return {
       ...area,

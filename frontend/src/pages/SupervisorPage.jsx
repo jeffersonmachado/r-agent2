@@ -449,12 +449,12 @@ export function SupervisorPage() {
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
                   </div>
-                  <div style={{ height: '8px', background: '#eef2ff', borderRadius: '6px' }}>
+                  <div style={{ height: '8px', background: 'var(--color-accent-light)', borderRadius: '6px' }}>
                     <div
                       style={{
                         width: `${Math.max(6, Math.round((item.value / maxQueueLoad) * 100))}%`,
                         height: '100%',
-                        background: '#2563eb',
+                        background: 'var(--color-accent-primary)',
                         borderRadius: '6px',
                       }}
                     />
@@ -472,12 +472,12 @@ export function SupervisorPage() {
                     <span>{item.label}</span>
                     <strong>{item.value}</strong>
                   </div>
-                  <div style={{ height: '8px', background: '#fef3c7', borderRadius: '6px' }}>
+                  <div style={{ height: '8px', background: 'var(--qa-warning-muted)', borderRadius: '6px' }}>
                     <div
                       style={{
                         width: `${Math.max(6, Math.round((item.value / maxAgentLoad) * 100))}%`,
                         height: '100%',
-                        background: '#d97706',
+                        background: 'var(--color-status-warning)',
                         borderRadius: '6px',
                       }}
                     />

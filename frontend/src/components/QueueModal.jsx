@@ -361,7 +361,7 @@ export function QueueModal({ isOpen, onClose, queueName, queues }) {
                   }}
                   title={wsStatus.title}
                 />
-                <span style={{ fontSize: '14px', color: '#666' }}>
+                <span style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>
                   Atualização em tempo real
                 </span>
               </div>

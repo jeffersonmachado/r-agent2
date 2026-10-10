@@ -91,13 +91,13 @@ export function FailedMessagesPage() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'failed':
-        return 'bg-red-100 text-red-800 border-red-300';
+        return 'bg-status-error/10 text-status-error border-status-error/30';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        return 'bg-status-warning/10 text-status-warning border-status-warning/30';
       case 'delivered':
-        return 'bg-green-100 text-green-800 border-green-300';
+        return 'bg-status-success/10 text-status-success border-status-success/30';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return 'bg-bg-secondary text-text-secondary border-border-default';
     }
   };
 
@@ -294,7 +294,7 @@ export function FailedMessagesPage() {
             onClick={() => setTab('failed')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               tab === 'failed'
-                ? 'bg-red-50 text-red-700 border-b-2 border-red-500'
+                ? 'bg-status-error/10 text-status-error border-b-2 border-status-error'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -304,7 +304,7 @@ export function FailedMessagesPage() {
             onClick={() => setTab('delivered')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
               tab === 'delivered'
-                ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
+                ? 'bg-status-success/10 text-status-success border-b-2 border-status-success'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -383,11 +383,11 @@ export function FailedMessagesPage() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-300 rounded-xl p-4 mb-6">
-          <div className="text-red-800 text-sm">Erro: {error}</div>
+        <div className="bg-status-error/10 border border-status-error/30 rounded-xl p-4 mb-6">
+          <div className="text-status-error text-sm">Erro: {error}</div>
           <button
             onClick={handleRetry}
-            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+            className="mt-2 px-4 py-2 bg-status-error text-white rounded-lg text-sm hover:bg-status-error/90 transition-colors"
           >
             Tentar novamente
           </button>
@@ -458,7 +458,7 @@ export function FailedMessagesPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                          <span className="inline-block px-2 py-1 bg-status-warning/10 text-status-warning rounded text-xs font-medium">
                             {msg.attempts || 0}
                           </span>
                         </td>
@@ -579,7 +579,7 @@ export function FailedMessagesPage() {
                     </button>
                   )}
                 </div>
-                <div className="p-3 bg-red-50 rounded-lg text-sm text-red-900 border border-red-200 min-h-12 max-h-40 overflow-y-auto font-mono whitespace-pre-wrap break-words">
+                <div className="p-3 bg-status-error/10 rounded-lg text-sm text-status-error border border-status-error/30 min-h-12 max-h-40 overflow-y-auto font-mono whitespace-pre-wrap break-words">
                   {selectedMessage.last_error || '-'}
                 </div>
               </div>

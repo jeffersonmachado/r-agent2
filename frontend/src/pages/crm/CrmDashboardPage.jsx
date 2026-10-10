@@ -186,7 +186,7 @@ function CrmDashboardContent() {
       description: 'Controle de acesso e roles do CRM', 
       icon: '🔐', 
       path: '/crm/rbac', 
-      color: 'bg-slate-500', 
+      color: 'bg-text-tertiary', 
       category: 'Governanca' 
     },
     { 
@@ -195,7 +195,7 @@ function CrmDashboardContent() {
       description: 'Logs de ações e compliance', 
       icon: '📋', 
       path: '/crm/audit', 
-      color: 'bg-gray-500', 
+      color: 'bg-text-tertiary', 
       category: 'Governanca' 
     },
   ];

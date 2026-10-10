@@ -27,6 +27,17 @@ async function handlePbxOperatorPanelRoutes(ctx) {
         req.headers.authorization = `Bearer ${tokenFromQuery}`;
       }
     }
+    // Mesma limitação para o tenant: `requireAuth` só preenche `req.tenantId` de
+    // super-admin a partir do header `X-Tenant-Id`, que o EventSource também não
+    // envia. Sem isto o stream responde 403 `tenant_required` para o próprio
+    // super-admin que abriu a página (medido em 2026-10-09). Aceito apenas nesta
+    // rota SSE; o tenant continua sendo validado por `requireTenant`.
+    if (!req.headers['x-tenant-id']) {
+      const tenantFromQuery = new URL(req.url || '/', 'http://localhost').searchParams.get('tenantId');
+      if (tenantFromQuery && tenantFromQuery.trim()) {
+        req.headers['x-tenant-id'] = tenantFromQuery.trim();
+      }
+    }
     const authResult = requireAuth(req);
     if (!authResult.valid) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });

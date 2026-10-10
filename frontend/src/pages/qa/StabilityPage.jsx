@@ -248,7 +248,7 @@ export function StabilityPage() {
 
 	return (
 		<CrudPageBase>
-			<section className="mb-6 rounded-2xl border border-border-default bg-gradient-to-r from-[#ecf8ff] via-[#f8fbff] to-[#f4fff5] p-6 shadow-sm">
+			<section className="mb-6 rounded-2xl border border-border-default p-6 shadow-sm" style={{ background: 'var(--rap-hero-background)' }}>
 				<div className="flex items-center justify-between gap-3">
 					<div>
 						<h1 className="text-3xl font-bold text-text-primary">Painel de Estabilidade QA</h1>

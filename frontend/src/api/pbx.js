@@ -1,4 +1,5 @@
 import { fetchJson, fetchBlob } from './client';
+import { getToken, getTenantId } from './auth';
 
 export function listExtensions() {
   return fetchJson('/api/pbx/extensions', { method: 'GET' });
@@ -289,11 +290,15 @@ export function buildOperatorPanelEventsUrl(filters = {}, options = {}) {
   if (filters.activeCallWindowMinutes != null) sp.set('activeCallWindowMinutes', String(filters.activeCallWindowMinutes));
   if (options.intervalSec != null) sp.set('intervalSec', String(options.intervalSec));
   if (options.maxDurationSec != null) sp.set('maxDurationSec', String(options.maxDurationSec));
-  // EventSource não envia header Authorization: o token vai via query param
-  // (aceito apenas por esta rota SSE — ver operatorPanelRoutes.js).
+  // EventSource não envia headers: o token E o tenant vão via query param
+  // (aceitos apenas por esta rota SSE — ver operatorPanelRoutes.js). Sem o
+  // tenantId o stream responde 403 `tenant_required` para super-admin, porque
+  // `requireAuth` só conhece o tenant pelo header `X-Tenant-Id`.
   if (typeof window !== 'undefined') {
-    const token = window.localStorage.getItem('auth_token');
+    const token = getToken();
     if (token) sp.set('token', token);
+    const tenantId = getTenantId();
+    if (tenantId) sp.set('tenantId', tenantId);
   }
   const qs = sp.toString() ? `?${sp.toString()}` : '';
   // Resolve to full URL so EventSource can use it (supports relative paths via window.location.origin)

@@ -1375,9 +1375,9 @@ export function QaWavesPage() {
                                   style={{
                                     marginLeft: 8,
                                     display: 'inline-block',
-                                    background: '#fff3cd',
-                                    border: '1px solid #ffc107',
-                                    color: '#856404',
+                                    background: 'var(--qa-warning-muted)',
+                                    border: '1px solid var(--color-status-warning)',
+                                    color: 'var(--color-status-warning)',
                                     borderRadius: 4,
                                     padding: '2px 7px',
                                     fontSize: 11,

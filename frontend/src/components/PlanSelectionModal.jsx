@@ -93,7 +93,7 @@ export function PlanSelectionModal({ isOpen, onClose, currentPlan, onSelectPlan,
   const getColorClasses = (planKey) => {
     const plan = PLAN_INFO[planKey];
     const colorMap = {
-      gray: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+      gray: 'bg-text-tertiary/20 text-text-tertiary border-text-tertiary/30',
       yellow: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30',
       blue: 'bg-blue-500/20 text-blue-500 border-blue-500/30',
       purple: 'bg-purple-500/20 text-purple-500 border-purple-500/30',

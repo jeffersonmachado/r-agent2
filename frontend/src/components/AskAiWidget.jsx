@@ -133,8 +133,14 @@ export function AskAiWidget() {
 
   return (
     <>
+      {/* Posição: a trilha primária ocupa 0–72px. Com `left-6` (24px) o painel
+          cobria os 8 itens do menu e o clique no menu era INTERCEPTADO pelo
+          painel (medido em 2026-10-08, viewport 1194×603: painel top=105,
+          bottom=507, left=24 — todos os links da trilha dentro dessa faixa).
+          `sm:left-20` (80px) libera a trilha; no mobile a margem curta evita
+          estourar a viewport (390px). */}
       {open && (
-        <div className="fixed bottom-24 left-6 z-[1000] w-[380px] max-w-[calc(100vw-2rem)] rounded-xl border border-border-default bg-bg-elevated shadow-2xl flex flex-col overflow-hidden"
+        <div className="fixed bottom-24 left-4 sm:left-20 z-[1000] w-[380px] max-w-[calc(100vw-2rem)] rounded-xl border border-border-default bg-bg-elevated shadow-2xl flex flex-col overflow-hidden"
           role="dialog"
           aria-label="Perguntar à IA"
           data-testid="ask-ai-panel"
@@ -226,7 +232,7 @@ export function AskAiWidget() {
         </div>
       )}
 
-      <div className="fixed bottom-6 left-6 z-[1000] flex items-center gap-2">
+      <div className="fixed bottom-6 left-4 sm:left-20 z-[1000] flex items-center gap-2">
         <button
           type="button"
           onClick={() => setOpen((previous) => !previous)}

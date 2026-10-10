@@ -239,7 +239,7 @@ export function PbxOperationsTabs({
         <>
           <h3 className="mt-0">Mídia (áudios)</h3>
           {audioAssetsError ? (
-            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-status-warning)', borderRadius: 10, background: 'var(--qa-warning-muted)' }}>
               <strong>Não foi possível carregar os áudios.</strong>
               <div style={{ marginTop: 6, opacity: 0.85 }}><code>{audioAssetsError}</code></div>
             </div>
@@ -283,7 +283,7 @@ export function PbxOperationsTabs({
         <>
           <h3 className="mt-0">Gravações</h3>
           {recordingsError || recordingPolicyError ? (
-            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-warning-border, rgba(200,140,0,0.4))', borderRadius: 10, background: 'var(--color-warning-bg, rgba(200,140,0,0.08))' }}>
+            <div style={{ marginBottom: 12, padding: 12, border: '1px solid var(--color-status-warning)', borderRadius: 10, background: 'var(--qa-warning-muted)' }}>
               <strong>Gravações indisponíveis neste ambiente.</strong>
               <div style={{ marginTop: 6, opacity: 0.85 }}>
                 {recordingPolicyError ? <div>Política: <code>{recordingPolicyError}</code></div> : null}

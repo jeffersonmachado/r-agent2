@@ -4,16 +4,16 @@ import { fetchJson } from '../api/client';
 function StatusBadge({ value }) {
   const isGo = String(value || '').toUpperCase() === 'GO';
   return (
-    <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-semibold ${isGo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+    <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-semibold ${isGo ? 'bg-status-success/10 text-status-success' : 'bg-status-error/10 text-status-error'}`}>
       {value || 'N/A'}
     </span>
   );
 }
 
 function Metric({ label, value, tone = 'neutral' }) {
-  const toneClass = tone === 'good' ? 'text-green-600' : tone === 'bad' ? 'text-red-600' : 'text-text-primary';
+  const toneClass = tone === 'good' ? 'text-status-success' : tone === 'bad' ? 'text-status-error' : 'text-text-primary';
   return (
-    <div className="bg-bg-elevated border border-border rounded-lg p-4">
+    <div className="bg-bg-elevated border border-border-default rounded-lg p-4">
       <div className="text-xs text-text-secondary">{label}</div>
       <div className={`mt-1 text-2xl font-bold ${toneClass}`}>{value}</div>
     </div>
@@ -78,7 +78,7 @@ export function QaWavesOperationalHealthPage() {
         </button>
       </div>
 
-      {error ? <div className="border border-red-300 bg-red-50 text-red-700 rounded-md p-3 text-sm">{error}</div> : null}
+      {error ? <div className="border border-status-error/30 bg-status-error/10 text-status-error rounded-md p-3 text-sm">{error}</div> : null}
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <Metric label="GO/NO_GO" value={hasReport ? <StatusBadge value={goNoGo} /> : pendingLabel} tone={metricTone(goNoGo === 'GO' ? 'good' : 'bad')} />
@@ -94,7 +94,7 @@ export function QaWavesOperationalHealthPage() {
         <Metric label="Replay Health" value={metricValue(failedProofs === 0 ? 'Clean' : 'Blocked')} tone={metricTone(failedProofs === 0 ? 'good' : 'bad')} />
       </section>
 
-      <section className="bg-bg-elevated border border-border rounded-lg p-4">
+      <section className="bg-bg-elevated border border-border-default rounded-lg p-4">
         <h2 className="text-base font-semibold mb-3">Smoke History</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
           <div>
@@ -112,7 +112,7 @@ export function QaWavesOperationalHealthPage() {
         </div>
       </section>
 
-      <section className="bg-bg-elevated border border-border rounded-lg p-4">
+      <section className="bg-bg-elevated border border-border-default rounded-lg p-4">
         <h2 className="text-base font-semibold mb-3">Governance Reasoning</h2>
         {blockers.length === 0 ? (
           <p className="text-sm text-text-secondary">Zero blockers ativos.</p>

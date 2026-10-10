@@ -138,13 +138,7 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
       <h2 style={{ marginBottom: '20px' }}>Resolução de Dependências RPA</h2>
 
       {/* Status Geral */}
-      <div style={{
-        padding: '15px',
-        marginBottom: '20px',
-        borderRadius: '8px',
-        backgroundColor: allSatisfied ? '#d4edda' : '#fff3cd',
-        border: `1px solid ${allSatisfied ? '#c3e6cb' : '#ffc107'}`,
-      }}>
+      <div className={`mb-5 rounded-lg border p-4 ${allSatisfied ? 'bg-status-success/10 border-status-success/30' : 'bg-status-warning/10 border-status-warning/30'}`}>
         <strong>
           {allSatisfied ? '✓ Todas as dependências estão satisfeitas' : '⚠ Existem dependências faltantes'}
         </strong>
@@ -162,16 +156,7 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
           {dependencies.map((dep, index) => (
             <div
               key={index}
-              style={{
-                padding: '10px',
-                marginBottom: '8px',
-                borderRadius: '4px',
-                backgroundColor: dep.exists ? '#f8f9fa' : '#fff3cd',
-                border: `1px solid ${dep.exists ? '#dee2e6' : '#ffc107'}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
+              className={`mb-2 flex items-center gap-2.5 rounded border p-2.5 ${dep.exists ? 'bg-bg-secondary border-border-default' : 'bg-status-warning/10 border-status-warning/30'}`}
             >
               <span style={{ fontSize: '18px' }}>
                 {dep.exists ? '✓' : '✖'}
@@ -181,12 +166,12 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
                   {dep.type}: {dep.identifier}
                 </div>
                 {dep.metadata?.nodeId && (
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                     Nó: {dep.metadata.nodeId} ({dep.metadata.nodeType})
                   </div>
                 )}
                 {!dep.exists && dep.rpaSeedName && (
-                  <div style={{ fontSize: '12px', color: '#856404', marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-status-warning)', marginTop: '4px' }}>
                     → Será criado via: {dep.rpaSeedName}
                   </div>
                 )}
@@ -216,9 +201,9 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
           <h3 style={{ marginBottom: '10px' }}>Preview da Gravação RPA</h3>
           <div style={{
             padding: '15px',
-            backgroundColor: '#f8f9fa',
+            backgroundColor: 'var(--color-bg-secondary)',
             borderRadius: '4px',
-            border: '1px solid #dee2e6',
+            border: '1px solid var(--color-border-default)',
           }}>
             <div><strong>Nome:</strong> {preview.recordingPreview.name}</div>
             <div><strong>Total de passos:</strong> {preview.recordingPreview.stepsCount}</div>
@@ -259,7 +244,7 @@ export function RpaDependencyResolver({ flowId, onConfirm, onCancel, autoExecute
         <div style={{
           marginTop: '10px',
           padding: '10px',
-          backgroundColor: '#fff3cd',
+          backgroundColor: 'var(--qa-warning-muted)',
           borderRadius: '4px',
           fontSize: '14px',
         }}>

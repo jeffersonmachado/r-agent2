@@ -5,12 +5,12 @@
   z-index: 1000;
   width: 320px;
   max-width: calc(100vw - 2rem);
-  background: var(--color-surface, #1f2937);
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  background: var(--color-bg-elevated, #1f2937);
+  border: 1px solid var(--color-border-hover);
   border-radius: 0.75rem;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   padding: 0.85rem 1rem;
-  color: var(--color-text-primary, #e5e7eb);
+  color: var(--color-text-primary);
 }
 
 .tutor-dock-header {
@@ -21,7 +21,7 @@
 }
 
 .tutor-dock-badge {
-  background: var(--color-accent, #6366f1);
+  background: var(--color-accent-primary);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -33,7 +33,7 @@
 
 .tutor-dock-route {
   font-size: 0.75rem;
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -43,7 +43,7 @@
 .tutor-dock-close {
   background: transparent;
   border: none;
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
   font-size: 1.1rem;
   cursor: pointer;
   line-height: 1;
@@ -51,7 +51,7 @@
 }
 
 .tutor-dock-close:hover {
-  color: var(--color-text-primary, #e5e7eb);
+  color: var(--color-text-primary);
 }
 
 .tutor-dock-text {
@@ -68,7 +68,7 @@
 .tutor-dock-link {
   background: transparent;
   border: none;
-  color: var(--color-accent, #818cf8);
+  color: var(--color-accent-hover);
   font-size: 0.8rem;
   cursor: pointer;
   padding: 0;
@@ -79,13 +79,13 @@
 }
 
 .tutor-dock-escalated {
-  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--color-border-default);
   margin-bottom: 0.6rem;
   padding-top: 0.6rem;
 }
 
 .tutor-dock-unavailable {
-  color: var(--color-text-secondary, #9ca3af);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 

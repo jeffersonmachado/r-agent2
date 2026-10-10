@@ -86,7 +86,7 @@ export function BackupPage() {
       <ToastContainer />
 
       <div style={{ padding: '0 24px 24px 24px' }}>
-        <p style={{ color: '#6b7280', marginBottom: '20px' }}>
+        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '20px' }}>
           Exportação e importação de flows e settings do tenant.
         </p>
 

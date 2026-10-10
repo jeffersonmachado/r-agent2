@@ -242,7 +242,7 @@ export function CalendarPage() {
 
       <div className="space-y-3">
         {groupedItems.map((group) => (
-          <div key={group.day} style={{ border: '1px solid var(--color-border)', borderRadius: '10px', padding: '10px' }}>
+          <div key={group.day} style={{ border: '1px solid var(--color-border-default)', borderRadius: '10px', padding: '10px' }}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>
               {new Date(`${group.day}T00:00:00`).toLocaleDateString('pt-BR', {
                 weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
@@ -257,7 +257,7 @@ export function CalendarPage() {
                   <div
                     key={`${item?.type || 'item'}-${item?.id || itemIndex}`}
                     style={{
-                      border: `1px solid ${isBlock ? 'var(--color-status-warning)' : 'var(--color-border)'}`,
+                      border: `1px solid ${isBlock ? 'var(--color-status-warning)' : 'var(--color-border-default)'}`,
                       borderRadius: '8px',
                       padding: '8px',
                       background: isBlock ? 'rgba(234,179,8,0.08)' : 'var(--color-bg-secondary)',

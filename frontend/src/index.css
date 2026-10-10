@@ -8,11 +8,22 @@
   --color-bg-tertiary: #151827;
   --color-bg-elevated: #121420;
   --color-bg-hover: #1b2033;
-  
+  /* Superfícies neutras de formulário / cartão / cabeçalho de tabela.
+     Estes aliases já eram usados como utilitários (`bg-bg-surface`,
+     `bg-bg-subtle`, `bg-bg-default`) mas NÃO existiam como token — as classes
+     eram inertes e os elementos ficavam transparentes. Alias de bg-elevated
+     (mesma cor de `.support-form-input`) e de bg-secondary. */
+  --color-bg-surface: #121420;
+  --color-bg-surface-hover: #1b2033;
+  --color-bg-subtle: #10111d;
+  --color-bg-default: #10111d;
+
   /* Borders */
   --color-border-default: rgba(255, 255, 255, 0.06);
   --color-border-hover: rgba(255, 255, 255, 0.12);
   --color-border-focus: #818cf8;
+  /* Estado ativo/hover com acento (usado como `hover:border-border-active`) */
+  --color-border-active: #818cf8;
   
   /* Text */
   --color-text-primary: #f8fafc;
@@ -3268,7 +3279,7 @@ div:has(svg[data-testid="connection"]) {
 }
 
 .support-back-button:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
 }
 

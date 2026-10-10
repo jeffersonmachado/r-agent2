@@ -57,7 +57,7 @@ export function ChatHumanoDashboardPage() {
     { id: 'supervisor', title: 'Painel Supervisor', description: 'TME, TMA, abandono e status operacional', icon: '🧭', path: '/supervisor', color: 'bg-teal-500', category: 'Analytics' },
     { id: 'analytics', title: 'Análises', description: 'Métricas de performance e qualidade', icon: '📊', path: '/analytics', color: 'bg-rose-500', category: 'Analytics' },
     { id: 'automations', title: 'Automações', description: 'Regras para ganho de escala e consistência', icon: '🧩', path: '/automations', color: 'bg-fuchsia-500', category: 'Automação' },
-    { id: 'audit', title: 'Auditoria', description: 'Rastro de eventos para compliance e suporte', icon: '📋', path: '/audit', color: 'bg-slate-500', category: 'Governança' },
+    { id: 'audit', title: 'Auditoria', description: 'Rastro de eventos para compliance e suporte', icon: '📋', path: '/audit', color: 'bg-text-tertiary', category: 'Governança' },
   ];
 
   const categories = useMemo(
@@ -107,14 +107,14 @@ export function ChatHumanoDashboardPage() {
             {failedMessages.errors.slice(0, 5).map((error, idx) => (
               <div
                 key={idx}
-                className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm cursor-pointer hover:bg-red-100 transition-colors"
+                className="bg-status-error/10 border border-status-error/30 rounded-lg p-3 text-sm cursor-pointer hover:bg-status-error/20 transition-colors"
                 onClick={() => navigate('/failed-messages')}
                 role="button"
                 tabIndex={0}
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-mono text-xs text-red-700 cursor-help" title={`ID: ${error.id}\n\nClique para filtrar em Mensagens Falhadas`}>
+                    <div className="font-mono text-xs text-status-error cursor-help" title={`ID: ${error.id}\n\nClique para filtrar em Mensagens Falhadas`}>
                       {error.id?.substring(0, 20)}{error.id?.length > 20 ? '...' : ''}
                     </div>
                     <div className="text-text-secondary">{error.last_error}</div>

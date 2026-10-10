@@ -25,7 +25,7 @@ function callBadgeClass(disposition) {
   if (value === 'NO ANSWER' || value === 'BUSY' || value === 'FAILED' || value === 'CONGESTION') {
     return 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
   }
-  return 'bg-slate-500/20 text-slate-200 border border-slate-500/40';
+  return 'bg-text-tertiary/20 text-text-secondary border border-text-tertiary/40';
 }
 
 function directionLabel(direction) {

@@ -422,9 +422,9 @@ export function FlowTestChat({ flow, onSizeChange }) {
           <h3 className="text-lg font-semibold text-text-primary">Chat de Teste</h3>
         </div>
         <div className="flex-1 p-4 overflow-y-auto">
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800 font-semibold mb-2">Erro de Validação</p>
-            <ul className="list-disc list-inside text-red-700 text-sm space-y-1">
+          <div className="p-4 bg-status-error/10 border border-status-error/30 rounded-lg">
+            <p className="text-status-error font-semibold mb-2">Erro de Validação</p>
+            <ul className="list-disc list-inside text-status-error text-sm space-y-1">
               {validationResult.errors.map((err, idx) => (
                 // eslint-disable-next-line react/no-array-index-key
                 <li key={idx}>{err.messageUi || err.message}</li>
@@ -458,16 +458,16 @@ export function FlowTestChat({ flow, onSizeChange }) {
    */
   const getEventTypeColor = (eventType) => {
     const colors = {
-      FLOW_START: 'text-blue-600 bg-blue-50',
-      NODE_ENTER: 'text-green-600 bg-green-50',
-      BOT_MESSAGE: 'text-purple-600 bg-purple-50',
-      USER_INPUT: 'text-orange-600 bg-orange-50',
-      DECISION_EVALUATED: 'text-yellow-600 bg-yellow-50',
-      ROUTE_SELECTED: 'text-indigo-600 bg-indigo-50',
-      FLOW_END: 'text-gray-600 bg-gray-50',
-      ERROR: 'text-red-600 bg-red-50',
+      FLOW_START: 'text-status-info bg-status-info/10',
+      NODE_ENTER: 'text-status-success bg-status-success/10',
+      BOT_MESSAGE: 'text-accent-hover bg-accent-light',
+      USER_INPUT: 'text-status-warning bg-status-warning/10',
+      DECISION_EVALUATED: 'text-status-warning bg-status-warning/10',
+      ROUTE_SELECTED: 'text-accent-primary bg-accent-light',
+      FLOW_END: 'text-text-secondary bg-bg-secondary',
+      ERROR: 'text-status-error bg-status-error/10',
     };
-    return colors[eventType] || 'text-gray-600 bg-gray-50';
+    return colors[eventType] || 'text-text-secondary bg-bg-secondary';
   };
 
   /**
@@ -669,7 +669,7 @@ export function FlowTestChat({ flow, onSizeChange }) {
           </div>
         </div>
         {error && (
-          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
+          <div className="mt-2 p-2 bg-status-error/10 border border-status-error/30 rounded text-status-error text-sm">
             {error}
           </div>
         )}
@@ -1119,7 +1119,7 @@ export function FlowTestChat({ flow, onSizeChange }) {
                     {copiedMessage ? '✓ Copiado' : '📋 Copiar'}
                   </button>
                   {copiedMessage && (
-                    <div className="absolute top-full left-0 mt-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded shadow-md z-10 whitespace-nowrap">
+                    <div className="absolute top-full left-0 mt-1 px-2 py-1 text-xs bg-status-success/10 text-status-success rounded shadow-md z-10 whitespace-nowrap">
                       Copiado!
                     </div>
                   )}
@@ -1182,7 +1182,7 @@ export function FlowTestChat({ flow, onSizeChange }) {
                       {logEntry.input && (
                         <div className="text-text-secondary">
                           <span className="font-semibold">Input do usuário:</span>{' '}
-                          <span className="font-mono bg-orange-100 text-orange-800 px-2 py-0.5 rounded border border-orange-200 font-semibold">
+                          <span className="font-mono bg-status-warning/10 text-status-warning px-2 py-0.5 rounded border border-status-warning/30 font-semibold">
                             "{logEntry.input}"
                           </span>
                         </div>
@@ -1211,52 +1211,52 @@ export function FlowTestChat({ flow, onSizeChange }) {
                       {logEntry.eventType === 'IA_TASK_RESPONSE' && logEntry.result && (
                         <div className="text-text-secondary mt-1">
                           <span className="font-semibold">Resposta da IA:</span>
-                          <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                          <div className="mt-1 p-2 bg-status-info/10 border border-status-info/30 rounded text-xs">
                             {logEntry.result._noMatch || logEntry.result.value === null ? (
-                              <div className="text-orange-700 font-semibold">
+                              <div className="text-status-warning font-semibold">
                                 ⚠ Nenhum match encontrado
                               </div>
                             ) : (
                               <>
                                 {logEntry.result.value !== undefined && logEntry.result.value !== null && (
                                   <div className="mb-1">
-                                    <span className="font-semibold text-blue-800">Valor:</span>{' '}
-                                    <span className="font-mono text-blue-900">{String(logEntry.result.value)}</span>
+                                    <span className="font-semibold text-text-secondary">Valor:</span>{' '}
+                                    <span className="font-mono text-text-primary">{String(logEntry.result.value)}</span>
                                   </div>
                                 )}
                                 {logEntry.result.confidence !== undefined && (
                                   <div className="mb-1">
-                                    <span className="font-semibold text-blue-800">Confiança:</span>{' '}
-                                    <span className="font-mono text-blue-900">
+                                    <span className="font-semibold text-text-secondary">Confiança:</span>{' '}
+                                    <span className="font-mono text-text-primary">
                                       {(logEntry.result.confidence * 100).toFixed(1)}%
                                     </span>
                                   </div>
                                 )}
                                 {logEntry.result.entities && Array.isArray(logEntry.result.entities) && logEntry.result.entities.length > 0 && (
                                   <div className="mb-1">
-                                    <span className="font-semibold text-blue-800">Entidades:</span>{' '}
-                                    <span className="font-mono text-blue-900">
+                                    <span className="font-semibold text-text-secondary">Entidades:</span>{' '}
+                                    <span className="font-mono text-text-primary">
                                       {JSON.stringify(logEntry.result.entities)}
                                     </span>
                                   </div>
                                 )}
                                 {logEntry.result.normalized !== undefined && (
                                   <div className="mb-1">
-                                    <span className="font-semibold text-blue-800">Normalizado:</span>{' '}
-                                    <span className="font-mono text-blue-900">{String(logEntry.result.normalized)}</span>
+                                    <span className="font-semibold text-text-secondary">Normalizado:</span>{' '}
+                                    <span className="font-mono text-text-primary">{String(logEntry.result.normalized)}</span>
                                   </div>
                                 )}
                                 {logEntry.result.response !== undefined && (
                                   <div className="mb-1">
-                                    <span className="font-semibold text-blue-800">Resposta:</span>{' '}
-                                    <span className="text-blue-900">{String(logEntry.result.response)}</span>
+                                    <span className="font-semibold text-text-secondary">Resposta:</span>{' '}
+                                    <span className="text-text-primary">{String(logEntry.result.response)}</span>
                                   </div>
                                 )}
                               </>
                             )}
                             {logEntry.result._fallbackUsed && (
-                              <div className="mt-1 pt-1 border-t border-blue-300">
-                                <span className="text-orange-700 font-semibold text-xs">
+                              <div className="mt-1 pt-1 border-t border-border-default">
+                                <span className="text-status-warning font-semibold text-xs">
                                   ⚠ Fallback usado
                                   {logEntry.result._reason && ` (${logEntry.result._reason})`}
                                 </span>
@@ -1268,23 +1268,23 @@ export function FlowTestChat({ flow, onSizeChange }) {
                       {logEntry.eventType === 'IA_FALLBACK_USED' && logEntry.originalResponse && (
                         <div className="text-text-secondary mt-1">
                           <span className="font-semibold">Resposta original da IA:</span>
-                          <div className="mt-1 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
+                          <div className="mt-1 p-2 bg-bg-secondary border border-border-default rounded text-xs">
                             {logEntry.originalResponse._noMatch || logEntry.originalResponse.value === null ? (
-                              <div className="text-gray-600 italic">
+                              <div className="text-text-secondary italic">
                                 Nenhum match encontrado
                               </div>
                             ) : (
                               <>
                                 {logEntry.originalResponse.value !== undefined && logEntry.originalResponse.value !== null && (
                                   <div className="mb-1">
-                                    <span className="font-semibold text-gray-700">Valor:</span>{' '}
-                                    <span className="font-mono text-gray-800">{String(logEntry.originalResponse.value)}</span>
+                                    <span className="font-semibold text-text-secondary">Valor:</span>{' '}
+                                    <span className="font-mono text-text-primary">{String(logEntry.originalResponse.value)}</span>
                                   </div>
                                 )}
                                 {logEntry.originalResponse.confidence !== undefined && (
                                   <div className="mb-1">
-                                    <span className="font-semibold text-gray-700">Confiança:</span>{' '}
-                                    <span className="font-mono text-gray-800">
+                                    <span className="font-semibold text-text-secondary">Confiança:</span>{' '}
+                                    <span className="font-mono text-text-primary">
                                       {(logEntry.originalResponse.confidence * 100).toFixed(1)}%
                                     </span>
                                   </div>

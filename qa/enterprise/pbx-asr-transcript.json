@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-10-08T09:37:46.278Z",
+  "generatedAt": "2026-10-08T15:46:52.013Z",
   "sourceArtifact": "qa/l03-pbx-voice-tts-asr-evidence.json",
-  "callId": "call-voice-tts-asr-1791450981060",
-  "flowId": "flow-voice-tts-asr-smoke-1791450981060",
+  "callId": "call-voice-tts-asr-1791473058691",
+  "flowId": "flow-voice-tts-asr-smoke-1791473058691",
   "transcript": "suporte técnico | falar com humano",
   "segments": [
     {

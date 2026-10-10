@@ -54,17 +54,17 @@ export function DispatchPage() {
       <div style={{ padding: '0 1rem 1rem' }}>
         {loading ? <p>Carregando...</p> : null}
         {orders.map((o) => (
-          <div key={o.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '0.75rem', marginBottom: '0.75rem' }}>
+          <div key={o.id} style={{ border: '1px solid var(--color-border-default)', borderRadius: 10, padding: '0.75rem', marginBottom: '0.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong>{o.order_number}</strong>
-                <div style={{ color: '#6b7280' }}>{o.status}</div>
+                <div style={{ color: 'var(--color-text-secondary)' }}>{o.status}</div>
               </div>
               <button onClick={() => dispatch(o.id)}>Despachar</button>
             </div>
           </div>
         ))}
-        {!loading && orders.length === 0 ? <p style={{ color: '#6b7280' }}>Nenhum pedido pronto para expedição.</p> : null}
+        {!loading && orders.length === 0 ? <p style={{ color: 'var(--color-text-secondary)' }}>Nenhum pedido pronto para expedição.</p> : null}
       </div>
       <ToastContainer />
     </CrudPageBase>

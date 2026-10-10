@@ -404,7 +404,7 @@ export function TicketMaintenancePage() {
         <div data-testid="ticket-maintenance-loading" style={{ display: 'none' }}>loading</div>
       )}
       {maintenanceError && (
-        <div data-testid="ticket-maintenance-error" style={{ marginBottom: '12px', color: '#b42318' }}>
+        <div data-testid="ticket-maintenance-error" style={{ marginBottom: '12px', color: 'var(--color-status-error)' }}>
           {maintenanceError}
         </div>
       )}
@@ -422,10 +422,10 @@ export function TicketMaintenancePage() {
             {(filters.status || filters.queue || filters.search) && (
               <span style={{ 
                 fontSize: '0.85em', 
-                color: '#666', 
+                color: 'var(--color-text-secondary)', 
                 fontStyle: 'italic',
                 padding: '4px 8px',
-                backgroundColor: '#f0f0f0',
+                backgroundColor: 'var(--color-bg-secondary)',
                 borderRadius: '4px'
               }}>
                 ℹ️ Métricas mostram todos os tickets (filtros não aplicados)
@@ -500,7 +500,7 @@ export function TicketMaintenancePage() {
                             <span style={{ 
                               marginLeft: '5px', 
                               fontSize: '0.85em', 
-                              color: '#e74c3c',
+                              color: 'var(--color-status-error)',
                               fontWeight: 'bold'
                             }}>
                               ({activeCount} ativo{activeCount > 1 ? 's' : ''})
@@ -523,10 +523,10 @@ export function TicketMaintenancePage() {
                   <div style={{ 
                     padding: '10px', 
                     marginBottom: '15px', 
-                    backgroundColor: '#f0f8ff', 
+                    backgroundColor: 'var(--color-bg-secondary)', 
                     borderRadius: '4px',
                     fontSize: '0.9em',
-                    border: '1px solid #b3d9ff'
+                    border: '1px solid var(--color-border-default)'
                   }}>
                     <strong>ℹ️ Sobre Filas e Fallback:</strong>
                     <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
@@ -730,7 +730,7 @@ export function TicketMaintenancePage() {
               <select
                 value={pagination.limit}
                 onChange={(e) => handleLimitChange(Number(e.target.value))}
-                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--color-border-default)' }}
               >
                 <option value={50}>50</option>
                 <option value={100}>100</option>
@@ -803,7 +803,7 @@ export function TicketMaintenancePage() {
             gap: '10px', 
             marginTop: '20px',
             padding: '15px',
-            borderTop: '1px solid #ddd'
+            borderTop: '1px solid var(--color-border-default)'
           }}>
             <Button
               onClick={() => handlePageChange(1)}

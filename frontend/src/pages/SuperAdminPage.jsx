@@ -307,7 +307,7 @@ export function SuperAdminPage() {
                       tenant.plan === 'enterprise' ? 'bg-purple-500/20 text-purple-500' :
                       tenant.plan === 'pro' ? 'bg-blue-500/20 text-blue-500' :
                       tenant.plan === 'trial' ? 'bg-yellow-500/20 text-yellow-500' :
-                      'bg-gray-500/20 text-gray-500'
+                      'bg-text-tertiary/20 text-text-tertiary'
                     }`}>
                       {tenant.plan?.toUpperCase() || 'TRIAL'}
                     </span>
@@ -317,7 +317,7 @@ export function SuperAdminPage() {
                       tenant.status === 'active' ? 'bg-green-500/20 text-green-500' :
                       tenant.status === 'suspended' ? 'bg-red-500/20 text-red-500' :
                       tenant.status === 'trial' ? 'bg-yellow-500/20 text-yellow-500' :
-                      'bg-gray-500/20 text-gray-500'
+                      'bg-text-tertiary/20 text-text-tertiary'
                     }`}>
                       {tenant.status || 'active'}
                     </span>

@@ -302,7 +302,7 @@ export function DashboardPage() {
       description: 'Configurações de identidade e provisionamento',
       icon: '🔐',
       path: '/sso-scim',
-      color: 'bg-slate-500',
+      color: 'bg-text-tertiary',
       category: 'Administração',
     },
     {
@@ -311,7 +311,7 @@ export function DashboardPage() {
       description: 'Exportar/importar fluxos e configurações',
       icon: '🗄️',
       path: '/backup',
-      color: 'bg-gray-500',
+      color: 'bg-text-tertiary',
       category: 'Administração',
     },
     {
@@ -329,7 +329,7 @@ export function DashboardPage() {
       description: 'Configurações do sistema',
       icon: '⚙️',
       path: '/config',
-      color: 'bg-slate-500',
+      color: 'bg-text-tertiary',
       category: 'Administração',
     },
     {
@@ -357,7 +357,7 @@ export function DashboardPage() {
       description: 'Gestão de roles e permissões',
       icon: '🔐',
       path: '/rbac',
-      color: 'bg-slate-500',
+      color: 'bg-text-tertiary',
       category: 'Administração',
       requiresAdmin: true,
     },
@@ -437,7 +437,7 @@ export function DashboardPage() {
       description: 'Logs e histórico de ações',
       icon: '📝',
       path: '/audit',
-      color: 'bg-gray-500',
+      color: 'bg-text-tertiary',
       category: 'Administração',
     },
     {

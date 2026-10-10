@@ -231,7 +231,7 @@ export function LeadsPage() {
             ]}
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Score: {formData.score}</label>
+            <label className="block text-sm font-medium text-text-secondary mb-1">Score: {formData.score}</label>
             <input
               type="range"
               min="0"

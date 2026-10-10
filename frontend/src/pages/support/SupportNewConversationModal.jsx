@@ -60,7 +60,7 @@ export function SupportNewConversationModal({ isOpen, newConversationPhone, setN
             aria-describedby="phone-format-hint"
             autoFocus
           />
-          <small id="phone-format-hint" style={{ color: '#666', fontSize: '12px' }}>
+          <small id="phone-format-hint" style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
             Formato: +5511999999999 ou 5511999999999
           </small>
         </div>

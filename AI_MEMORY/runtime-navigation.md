@@ -50,7 +50,7 @@ Authenticated as `systemadmin`, role `super_admin`, tenant `system`.
 
 Mapa canônico das rotas de QA após revisão completa de menus/rotas:
 
-- **Plataforma > Qualidade** (roles supervisor+): `/qa` (QaPage), `/qa/stability` (StabilityPage), `/qa-mesh` (QaMeshPage) — visão de negócio/qualidade. Mantidas fora de `/dev` de propósito: são páginas de acompanhamento para perfis não-dev.
+- **Plataforma > Qualidade** (roles super_admin): `/qa` (QaPage), `/qa/stability` (StabilityPage), `/qa-mesh` (QaMeshPage) — visão de negócio/qualidade. **MOVIDAS para a área Dev em 2026-10-09** (ver seção no fim do arquivo): o grupo de menu `qualidade` pertence à área Dev, não ao Admin.
 - **Plataforma > Super Admin > QA & RPA** (roles super_admin; novo subgrupo `dev-qa-rpa`): `/dev/qa-waves`, `/dev/qa-audit`, `/dev/qa-waves/operational-health`, `/dev/qa-waves/enterprise-governance`, `/dev/qa-gaps`, `/dev/rpa-test`, `/dev/rpa-replays`, `/dev/rpa-seeds` — ferramentas de engenharia. Antes estavam soltas no nível direto de Super Admin, misturadas com Gerar Sistema/Chat de Teste.
 - **Aliases preservados**: `/rpa-replays` → `/dev/rpa-replays`; `/rpa-seeds` → `/dev/rpa-seeds` (canonizado nesta data — era a única ferramenta RPA fora de `/dev/*`; o alias legado continua renderizando porque `main.jsx` aceita ambos e `DashboardPage.jsx:498` ainda linka para `/rpa-seeds`); `/system-status` → `/dev/system-status`; `/dev-dashboard` → `/dev`.
 - **Decisão consciente (não movido)**: `/dev/system-status` permanece exposto em Operação > Monitoramento (é monitoramento operacional, apesar do path `/dev`); área `operacoes` em `workspaceAreas.js` mantém o prefixo `/dev/system-status`.
@@ -146,3 +146,35 @@ Gaps observados (pré-existentes, não introduzidos nesta mudança):
 - `Clientes` (`/crm`): **CORRIGIDO em 2026-10-08** — a área reivindicava `/support` (Central de Atendimento LEGADA) como página própria: `includeNodeIds: ['crm']` podava os filhos do nó `crm` e o path do nó ancestral `relacionamento` contava como item da área. Agora o recorte é por exclusão (`atendimento`, `canais-mensageria`) e o path de um nó de GRUPO só vale como item se casar o `pathPrefixes` da área. A seção CRM aparece com "Painel CRM" (`/crm`) e o alias `/crm/dashboard` saiu do submenu (rota preservada, `hiddenInSubNav`).
 - `/config` e `/supervisor` não têm item marcado como ativo no menu secundário (paths sem item visível), comportamento pré-existente.
 - `/dev/engineering/release-closure` reporta `NÃO É UM RELEASE LIMPO` com motivos explícitos (`NO_CURRENT_GOVERNED_RUN`, `QA_MESH_GO_NO_GO_MISSING`, `FINAL_READINESS_MISSING`, `FINAL_CONSISTENCY_GATE_MISSING`, `ENGINEERING_RELEASE_BLOCKERS_PENDING`, `ENGINEERING_REGRESSIONS_PENDING`): o run corrente não está amarrado ao fingerprint da árvore.
+
+## Grupo Qualidade passa para a área Dev (2026-10-09)
+
+Decisão do usuário (substitui a de 2026-07-23): **os itens de menu de qualidade ficam em Dev, não em Admin**.
+
+- `workspaceAreas.js` — blueprint `dev`: `pathPrefixes: ['/dev', '/qa', '/qa/stability', '/qa-mesh']` e descrição passa a citar Qualidade.
+- `workspaceAreas.js` — blueprint `admin`: prefixos `/qa`, `/qa/stability`, `/qa-mesh` **removidos** e `qualidade` adicionado a `excludeNodeIds` (`['dev-hub', 'dev-engineering', 'qualidade']`).
+- A estrutura de `menu.js` **não mudou**: `qualidade` continua filho direto de `plataforma` com `roles: ['super_admin']` (o `SecondaryNav` renderiza os filhos de `plataforma` como seções; o nome "Plataforma" não aparece na sidebar). Trocar de área é só `pathPrefixes`/`excludeNodeIds`.
+- O inventário (`frontendRouteScanner`) lê `menu.js`, não `workspaceAreas.js` → `config/system-inventory.json` **não muda** e não há `REVALIDATION_REQUIRED`.
+- `dev-qa-rpa` (QA Waves, QA Audit, RPA técnico) **permanece no Admin**, como em 2026-07-23.
+- Validação: área ativa de `/qa`, `/qa/stability` e `/qa-mesh` é `dev`; essas rotas não aparecem em `admin.items`. Regressão em `frontend/src/navigation/workspaceAreas.test.js`.
+
+## Auditoria de TODAS as rotas no browser (2026-10-09)
+
+Varredura das **131 rotas do menu** com Playwright headless (`systemadmin`/tenant `system`), medindo carga, erros de console, respostas HTTP >=400, superfícies fora do tema, overflow horizontal em 1366 e 390, conteúdo inalcançável a 390 e presença de conteúdo. Evidência: `AI_MEMORY/evidence/route-audit-2026-10-09.json`.
+
+**Resultado: 131/131 respondem.** Zero rota sem conteúdo, zero overflow horizontal, zero conteúdo inalcançável, zero superfície clara fora do tema, zero resposta >=400. Uma rota tem erro de console de biblioteca: `/bpmn-editor` (avisos internos do bpmn-js), sem impacto na página.
+
+### Defeito real encontrado e corrigido — SSE do Painel Operador
+
+`GET /api/pbx/operator-panel/events` respondia **403 `tenant_required`** para o próprio `systemadmin` que abria `/pbx/operator-panel` (o painel ficava sem dados ao vivo). Causa: o `EventSource` não envia headers e a rota só aceitava o token via query param; `requireAuth` preenche `req.tenantId` de super-admin **apenas** pelo header `X-Tenant-Id`, que nunca chegava. Correção espelhada do escape hatch do token, restrita a esta rota SSE:
+
+- `api/modules/pbx/pbx-core/operatorPanelRoutes.js`: quando não há `x-tenant-id`, lê `tenantId` da query e injeta no header (o tenant segue validado por `requireTenant`).
+- `frontend/src/api/pbx.js` (`buildOperatorPanelEventsUrl`): envia `tenantId` via `getTenantId()` e o token via `getToken()` (fonte canônica, não `localStorage` cru).
+- Regressão: `tests/unit/pbxOperatorPanelRoutes.test.js` (3 casos novos: token via query, tenant via query, header existente não é sobrescrito).
+
+### Armadilhas de medição (não são defeitos)
+
+- Página que ainda mostra o placeholder `Carregando...` parece "vazia": o critério de assentamento deve exigir `h1` **e** texto real, não "texto estável".
+- Limiar de "página vazia" precisa ser baixo (~40 chars): `/crm/activities` (57) e `/crm/pipelines` (97) renderizam estado vazio legítimo ("Nenhum registro encontrado") e eram falso positivo com limiar de 100.
+- Alvos de toque < 28px a 390px seguem numerosos em telas densas (`/departments` 466, `/dev/security-intel` 349, `/dev/rpa-seeds` 222) — medido, não alterado (mesma decisão do ciclo de 2026-09-29).
+

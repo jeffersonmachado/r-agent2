@@ -229,7 +229,7 @@ function AgentRegistryTab() {
                 <td className="px-4 py-2">
                   <span className={`px-2 py-0.5 rounded text-xs ${
                     agent.status === 'active' ? 'bg-green-900 text-green-300' :
-                    agent.status === 'draft' ? 'bg-gray-700 text-gray-300' :
+                    agent.status === 'draft' ? 'bg-bg-hover text-text-secondary' :
                     'bg-yellow-900 text-yellow-300'
                   }`}>{agent.status}</span>
                 </td>

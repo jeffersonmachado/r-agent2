@@ -8,7 +8,7 @@ function badgeClass(tone) {
   if (tone === 'success') return 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30';
   if (tone === 'warning') return 'bg-amber-500/15 text-amber-200 border border-amber-500/30';
   if (tone === 'error') return 'bg-rose-500/15 text-rose-200 border border-rose-500/30';
-  return 'bg-slate-500/15 text-slate-200 border border-slate-500/30';
+  return 'bg-text-tertiary/15 text-text-secondary border border-text-tertiary/30';
 }
 
 function formatDate(value) {

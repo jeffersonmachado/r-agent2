@@ -20,14 +20,14 @@ const STATUS_PALETTE = {
   infra_error: 'bg-orange-900 text-orange-300',
   flaky: 'bg-purple-900 text-purple-300',
   active: 'bg-green-900 text-green-300',
-  draft: 'bg-gray-700 text-gray-300',
+  draft: 'bg-bg-hover text-text-secondary',
   running: 'bg-blue-900 text-blue-300',
-  queued: 'bg-slate-700 text-slate-300',
+  queued: 'bg-bg-hover text-text-secondary',
   completed: 'bg-green-900 text-green-300',
 };
 
 function StatusBadge({ value, className = '' }) {
-  const colors = STATUS_PALETTE[value] || 'bg-slate-700 text-slate-300';
+  const colors = STATUS_PALETTE[value] || 'bg-bg-hover text-text-secondary';
   return (
     <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium border ${colors} ${className}`}>
       {value || 'N/A'}

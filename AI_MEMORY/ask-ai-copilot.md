@@ -162,3 +162,60 @@ via `EXTRA_OPERATIONAL_SOURCES`, verificado pelo gate
 Consequência operacional: **o manifesto de sync não é prova de ingestão**.
 Antes de afirmar que o conhecimento operacional está disponível, valide no banco
 (`rag_documents` por `id`/`title` + `domain`/`classification`), não no manifesto.
+
+## Geração degradada e provider do RAG (2026-10-08)
+
+Defeito medido em browser real: com a credencial `openai` do tenant sem crédito
+(HTTP 429 `credit_balance_exhausted`, 15 erros no dia), o `rag-service` engolia a
+exceção e devolvia `"Com base nas informações disponíveis: <chunk[:300]>... Há N
+fontes de informação relacionadas disponíveis."`. O widget exibia isso como
+resposta normal e a API respondia `confidence: "fully_grounded"`, `intent:
+"PROCEDURE"`, `facts: []` — perguntar "Como faço uma matrícula?" devolvia um
+trecho sobre o modal de detalhe de replay. Os gates não pegavam: o
+`validate:ask-ai-copilot` roda com store/LLM stub offline e o
+`verify:ask-ai-copilot:runtime` validava apenas status/intent/confidence.
+
+Contrato agora em vigor (não reverter):
+
+- `ragService.queryRag` resolve o LLM pelo **roteamento do tenant**
+  (`tenant_ai_settings.primary` → `secondary`, com `openai` como último recurso),
+  restrito a providers OpenAI-compatible (`ai_providers.kind` ∈
+  `openai-sdk` | `openai-compatible`); `anthropic` é pulado (protocolo próprio,
+  o rag-service usa o SDK da OpenAI). Headers internos:
+  `X-RAG-LLM-API-Key`, `X-RAG-LLM-Base-URL`, `X-RAG-LLM-Model`,
+  `X-RAG-LLM-Provider` (a chave nunca é logada).
+- `POST /rag/query` devolve `metadata.generated` e
+  `metadata.degradationReason` (`llm_unavailable`, `llm_empty_response`,
+  `no_relevant_chunks`, `invalid_query`, `internal_error`). Sem síntese, o texto
+  se declara como **trecho recuperado**, nunca como resposta pronta.
+- Ask AI: `metadata.generated === false` ⇒ `confidence: source_only` (com fatos
+  vivos no turno: `partially_grounded`) — nunca `fully_grounded`.
+- Resposta degradada **não** entra no cache de RAG (`metadata.generated !== false`).
+- `resolveTenantLlmHeaders` exige conexão Sequelize (no runtime da API ela é
+  aberta no boot; sem conexão o caminho avisa em `warn` e devolve degradação).
+
+Regressões: `rag-service/tests/test_query_generation_degradation.py`,
+`tests/unit/ragTenantLlmResolver.test.js`,
+`tests/unit/askAiDegradedGeneration.test.js`.
+
+Achado aberto (não corrigido): o corpus `system`/OPERATIONAL contém chunk
+placeholder ("sem texto extraído. indexando metadados do arquivo.") de um `.jpeg`
+cuja extração falhou; ele pontua ~0,55 e pode entrar nas fontes. A correção
+pertence à indexação (não indexar documento sem texto extraído), não ao retrieval.
+
+Camada de evidência e UI (mesma data):
+
+- `verify:ask-ai-copilot:runtime` ganhou `first_turn_answer_generated`: a resposta
+  do turno precisa ser **sintetizada** (sem marcador de degradação, sem
+  `confidence: source_only`, com tamanho mínimo). A regra é a função pura
+  `evaluateSynthesizedAnswer`, exportada para teste não-vácuo em
+  `tests/unit/askAiRuntimeEvidenceGate.test.js` — antes o script só olhava
+  status/intent/confidence e dava PASS com o copiloto degradado. Evidência
+  regerada (10/10).
+- Widget: o painel flutuante saiu de `left-6` para `left-4 sm:left-20`. A trilha
+  primária ocupa 0–72px e o painel em 24px cobria os 8 itens do menu — o clique no
+  menu era interceptado pelo painel (medido em 1194×603; clique em `/crm`
+  bloqueado). Depois: zero item coberto e clique funcionando; em 390×720 o painel
+  permanece dentro da viewport.
+
+
