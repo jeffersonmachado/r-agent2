@@ -91,6 +91,12 @@ async function registerConfirmed({ title, source = 'UNIT_TEST', severitySignals 
     affectedSubsystems: ['ENGINEERING_MISSION'],
     signals: severitySignals,
     reproduction,
+    // CAUSA RAIZ — um finding que chega a CONFIRMED foi DIAGNOSTICADO. Esta fixture não a
+    // declarava porque nada a exigia: o fechamento passava mesmo sem o problema ser "conhecido"
+    // (o registro de Engineering Memory não tinha causa raiz obrigatória). Com a prevenção
+    // enforced (2026-10-08), um finding de self-modification/reincidente só fecha com problema
+    // conhecido COMPLETO — então a fixture passa a declarar o que um finding real traria.
+    rootCause: `regressão de ${String(title).slice(0, 80)} (comando de reprodução: ${reproduction.command})`,
     evidenceRefs: [{ type: 'TEST_REPORT', ref: `jest:${title}`, detail: 'suite reprovada' }],
   }, { actor: 'TEST' });
   created.findings.push(finding.id);

@@ -64,45 +64,102 @@ function readFileIfInsideRepo(relPath) {
   }
 }
 
-/** Gates derivados de evidência REAL, com a fonte declarada em cada um. */
-function deriveGates({ task, testRuns, reviews, regressionRuns }) {
+/**
+ * Um objeto JSONB persistido conta como evidência somente se tiver conteúdo real. `{}`, `null` e
+ * `undefined` NÃO são evidência — são ausência dela.
+ */
+function hasEvidenceRecord(value) {
+  return Boolean(value) && typeof value === 'object' && Object.keys(value).length > 0;
+}
+
+/**
+ * Gates da missão derivados de evidência REAL e VERIFICÁVEL.
+ *
+ * DEFEITO MEDIDO (2026-10-08): `task.status === 'GREEN'` era tratado como atestado suficiente para
+ * os CINCO gates virarem `PASS`. Consequência: qualquer escrita de `status='GREEN'` na tabela
+ * `engineering_tasks` — por bug, migração, script de manutenção ou manipulação — transformava a
+ * revisão da missão em cinco PASS e liberava o handover. A "revisão independente" não era
+ * independente do próprio executor: ela confiava no atestado dele em vez de conferir a evidência.
+ *
+ * AGORA: cada gate é derivado da evidência que o Router PERSISTE ao avançar de fase
+ * (`engineering_test_runs`, `engineering_reviews`, `engineering_regression_runs` e os campos
+ * `regression_evidence` / `governance_evidence` / `promotion_status` da tentativa). O atestado de
+ * `task.status` permanece apenas como rótulo AUDITÁVEL (`verification: 'ATTESTED'`) e NÃO produz
+ * `PASS` — como o Meta Reviewer exige `status === 'PASS'` em MR-06, um GREEN sem evidência de fase
+ * passa a ser BLOQUEADO em vez de promovido.
+ *
+ * @returns {Array<{id:string,status:string,verification:string,evidence:Object}>}
+ */
+function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = null }) {
   const testsAllPass = testRuns.length > 0 && testRuns.every((t) => t.status === 'PASS' && t.exit_code === 0);
   const approvedReview = reviews.find((r) => r.decision === 'APPROVE');
-  const greenAttestation = task && task.status === 'GREEN';
   const regressionPass = regressionRuns.length > 0 && regressionRuns.every((r) => r.status === 'PASS');
+  const greenAttestation = Boolean(task && task.status === 'GREEN');
+
+  // Evidência por fase persistida pelo Router na tentativa que avançou (fonte INDEPENDENTE do
+  // `task.status`). Ver `engineeringRouterService.advanceFromCodedAttempt`.
+  const regressionEvidence = hasEvidenceRecord(greenAttempt && greenAttempt.regression_evidence)
+    ? greenAttempt.regression_evidence : null;
+  const governanceEvidence = hasEvidenceRecord(greenAttempt && greenAttempt.governance_evidence)
+    ? greenAttempt.governance_evidence : null;
+  const promotionEvidence = hasEvidenceRecord(greenAttempt && greenAttempt.promotion_evidence)
+    ? greenAttempt.promotion_evidence : null;
+  const promoted = Boolean(greenAttempt && greenAttempt.promotion_status === 'PROMOTED');
+
+  const gate = (id, backed, evidence, attestedEvidence) => ({
+    id,
+    status: backed ? 'PASS' : (greenAttestation ? 'ATTESTED' : 'MISSING'),
+    verification: backed ? 'EVIDENCE' : (greenAttestation ? 'ATTESTED' : 'MISSING'),
+    evidence: backed
+      ? evidence
+      : (greenAttestation
+        ? {
+          source: 'task.status=GREEN',
+          note: 'atestado do executor — NÃO conta como evidência de execução',
+          observed: attestedEvidence || null,
+        }
+        : (attestedEvidence || { source: 'ausente' })),
+  });
 
   return [
-    {
-      id: 'unit',
-      status: testsAllPass || greenAttestation ? 'PASS' : 'MISSING',
-      evidence: testsAllPass
-        ? { source: 'engineering_test_runs', commands: testRuns.map((t) => t.command), allExitCodeZero: true }
-        : (greenAttestation ? { source: 'task.status=GREEN', note: 'o Router só atesta GREEN após TESTING real' } : { source: 'engineering_test_runs', count: testRuns.length }),
-    },
-    {
-      id: 'integration',
-      status: testsAllPass || greenAttestation ? 'PASS' : 'MISSING',
-      evidence: { source: testsAllPass ? 'engineering_test_runs' : 'task.status=GREEN', commands: testRuns.map((t) => t.command) },
-    },
-    {
-      id: 'review',
-      status: approvedReview || greenAttestation ? 'PASS' : 'MISSING',
-      evidence: approvedReview
-        ? { source: 'engineering_reviews', reviewerProvider: approvedReview.reviewer_provider, independentOfCoder: approvedReview.independent_of_coder }
-        : { source: 'task.status=GREEN' },
-    },
-    {
-      id: 'regression',
-      status: regressionPass || greenAttestation ? 'PASS' : 'MISSING',
-      evidence: regressionPass
+    gate(
+      'unit',
+      testsAllPass,
+      { source: 'engineering_test_runs', commands: testRuns.map((t) => t.command), allExitCodeZero: true },
+      { source: 'engineering_test_runs', count: testRuns.length, attestedBy: 'task.status' },
+    ),
+    gate(
+      'integration',
+      testsAllPass,
+      { source: 'engineering_test_runs', commands: testRuns.map((t) => t.command) },
+      { source: 'engineering_test_runs', count: testRuns.length, attestedBy: 'task.status' },
+    ),
+    gate(
+      'review',
+      Boolean(approvedReview),
+      { source: 'engineering_reviews', reviewerProvider: approvedReview && approvedReview.reviewer_provider, independentOfCoder: approvedReview && approvedReview.independent_of_coder },
+      { source: 'engineering_reviews', count: reviews.length, attestedBy: 'task.status' },
+    ),
+    gate(
+      'regression',
+      regressionPass || Boolean(regressionEvidence),
+      regressionPass
         ? { source: 'engineering_regression_runs', count: regressionRuns.length }
-        : { source: 'task.status=GREEN', note: 'fase REGRESSION do Router precedeu a promoção' },
-    },
-    {
-      id: 'governance',
-      status: greenAttestation ? 'PASS' : 'MISSING',
-      evidence: { source: 'task.status=GREEN', note: 'fase GOVERNANCE do Router aprovou a promoção' },
-    },
+        : { source: 'engineering_attempts.regression_evidence', attemptId: greenAttempt && greenAttempt.id },
+      { source: 'engineering_attempts.regression_evidence', present: false, attestedBy: 'task.status' },
+    ),
+    gate(
+      'governance',
+      Boolean(governanceEvidence),
+      { source: 'engineering_attempts.governance_evidence', attemptId: greenAttempt && greenAttempt.id },
+      { source: 'engineering_attempts.governance_evidence', present: false, attestedBy: 'task.status' },
+    ),
+    gate(
+      'promotion',
+      promoted,
+      { source: 'engineering_attempts.promotion_status', status: 'PROMOTED', attemptId: greenAttempt && greenAttempt.id, evidence: promotionEvidence },
+      { source: 'engineering_attempts.promotion_status', status: greenAttempt && greenAttempt.promotion_status, attestedBy: 'task.status' },
+    ),
   ];
 }
 
@@ -150,7 +207,15 @@ async function collectReviewBundle(missionId, { changedFiles = [] } = {}) {
     if (content) fileContents.set(file, content);
   }
 
-  const gates = deriveGates({ task, testRuns, reviews, regressionRuns });
+  // Tentativa que efetivamente AVANÇOU (é dela que sai a evidência por fase). Preferimos a
+  // tentativa com promoção/evidência persistida; sem nenhuma, a última tentativa registrada.
+  const greenAttempt = [...attempts].reverse().find((a) => (
+    a.promotion_status === 'PROMOTED'
+    || hasEvidenceRecord(a.governance_evidence)
+    || hasEvidenceRecord(a.regression_evidence)
+  )) || (attempts.length > 0 ? attempts[attempts.length - 1] : null);
+
+  const gates = deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt });
 
   return {
     mission: {

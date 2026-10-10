@@ -17,6 +17,7 @@ const reproductionDerivation = require('./reproductionDerivation');
 const selfModification = require('./selfModification');
 const anomalyDetection = require('./anomalyDetection');
 const routing = require('./routing');
+const preventiveRules = require('./preventiveRules');
 
 module.exports = {
   ...constants,
@@ -28,4 +29,5 @@ module.exports = {
   ...selfModification,
   ...anomalyDetection,
   ...routing,
+  ...preventiveRules,
 };

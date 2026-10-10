@@ -356,6 +356,28 @@ async function runFixLoop(findingId, {
   let closed = false;
   if (regressionValidated) {
     try {
+      // ── ENGINEERING MEMORY (2026-10-08) ──────────────────────────────────────────────────────
+      // INCIDENT → ROOT_CAUSE → KNOWN_PROBLEM → PREVENTIVE_RULE → EXECUTABLE_TEST → REGRESSION →
+      // VERIFIED. O registro é montado a partir do estado REAL do finding (nada inventado) e só é
+      // ATIVADO aqui, quando a regressão já foi validada com execuções reais — antes disso ele
+      // permanece PROPOSED, e regra preventiva PROPOSED nunca é imposta (memória não verificada não
+      // vira obrigação).
+      //
+      // Ordem importa: registrar ANTES de fechar, porque `closeFinding` recusa o fechamento de
+      // findings de SELF_MODIFICATION ou REINCIDENTES sem prevenção ativa e verificada.
+      const fresh = await bugFindingService.getFinding(findingId);
+      const knownProblem = bugFindingService.buildKnownProblemFromFinding(fresh, { actor });
+      const activeKnownProblem = engine.activate(knownProblem, {
+        findingStatus: 'REGRESSION_VALIDATED',
+        now: new Date().toISOString(),
+      });
+      await bugFindingService.recordKnownProblem(findingId, activeKnownProblem, { tenantId });
+    } catch (err) {
+      logger.warn('[bugLoopCoordinator] problema conhecido não registrado', {
+        findingId, code: err.code, message: err.message,
+      });
+    }
+    try {
       await bugFindingService.closeFinding(findingId, { actor, reason: 'reprodução verde + testes + parecer + regressão', tenantId });
       closed = true;
     } catch (err) {

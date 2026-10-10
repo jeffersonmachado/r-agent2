@@ -126,6 +126,13 @@ const FAILURE_CODES = Object.freeze({
   // do patch em silencio.
   PATCH_BODY_MISSING_PREFIX: 'PATCH_BODY_MISSING_PREFIX',
   PATCH_FORBIDDEN_FILE: 'PATCH_FORBIDDEN_FILE',
+  // SECURITY (2026-10-08): o diff GERADO pelo modelo contém um valor com forma de segredo real
+  // (chave de provider, token de SCM, bloco de chave privada). Achado de auditoria: a redação de
+  // segredos só existia no CONTEXTO DE ENTRADA (contextBuilderService) e na SAÍDA DE COMANDOS
+  // (testRunnerService) — o patch do CODER ia direto para validação/aplicação/persistência, com a
+  // única defesa sendo a instrução no prompt e a proteção por NOME de arquivo. Um segredo literal
+  // commitado num arquivo de nome inocente passava por tudo.
+  PATCH_CONTAINS_SECRET: 'PATCH_CONTAINS_SECRET',
   PATCH_BINARY_CHANGE: 'PATCH_BINARY_CHANGE',
   PATCH_TOO_LARGE: 'PATCH_TOO_LARGE',
   PATCH_UNEXPECTED_DELETE: 'PATCH_UNEXPECTED_DELETE',

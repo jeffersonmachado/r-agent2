@@ -14,9 +14,37 @@
 
 const { FAILURE_CODES } = require('./constants');
 const { checkPathBoundary, normalize } = require('./pathBoundary');
+const { SECRET_VALUE_PATTERNS, MULTILINE_BLOCK_PATTERNS } = require('./secretRedaction');
 
 const DEFAULT_MAX_PATCH_SIZE_BYTES = 200 * 1024; // 200KB — patch de tarefa, não de release inteira.
 const SECRET_LIKE_FILENAMES = [/(^|\/)\.env(\..*)?$/, /(^|\/)\.token\.env$/, /credentials\.json$/, /(^|\/)secrets?\//i];
+
+/**
+ * Caminhos de INTEGRIDADE (2026-10-08). O maquinário que PROVA o GREEN não pode ser alterado por
+ * um patch de missão sem autorização humana explícita e auditável.
+ *
+ * Defeito medido em auditoria: a única barreira era DECLARATIVA (o `allowedPaths` do próprio
+ * contrato, que a missão define). Um CODER podia, portanto, alterar o gate que o julga
+ * (`scripts/governance/**`), o `jest.config.cjs` que decide quais testes rodam, o workflow de CI,
+ * o contrato de testes obrigatórios ou o `config/timeout-policy.json` que define os orçamentos
+ * de tempo — e ainda assim seguir para REGRESSION → GOVERNANCE → promoção, sem nenhum humano ver.
+ *
+ * Fail-closed por construção: a recusa é o DEFAULT; a autorização é um campo EXPLÍCITO do
+ * contrato (`integrityCriticalAuthorization === true`), que só uma política aprovada por humano
+ * define — nunca inferido do `allowedPaths` nem ligado por default em nenhum chamador.
+ */
+const INTEGRITY_CRITICAL_PATH_PATTERNS = Object.freeze([
+  /(^|\/)jest\.config\.(cjs|mjs|js|ts)$/,
+  /(^|\/)\.github\/workflows\//,
+  /(^|\/)scripts\/governance\//,
+  /(^|\/)pipeline\//,
+  /(^|\/)tools\/system\//,
+  /(^|\/)governance\//,
+  /(^|\/)config\/engineering-router-v2-required-tests\.json$/,
+  /(^|\/)config\/timeout-policy\.json$/,
+  /(^|\/)config\/canonical-capabilities\.json$/,
+  /(^|\/)config\/journey-criticality\.json$/,
+]);
 
 const FILE_HEADER_RE = /^diff --git a\/(.+?) b\/(.+)$/;
 const HUNK_HEADER_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
@@ -175,6 +203,48 @@ function parseUnifiedDiff(diffText) {
   return { files, hasAnyFileHeader: files.length > 0, hasAnyHunk: sawHunk, hasAnyBinary: sawBinary, bodyPrefixViolations };
 }
 
+/**
+ * Reconstrói o CONTEÚDO ADICIONADO por um unified diff (linhas '+', sem o prefixo).
+ *
+ * Linhas de cabeçalho `+++ b/<path>` / `+++ /dev/null` NÃO são adições (são metadados do arquivo)
+ * e por isso são descartadas — mas apenas quando o formato é o de um cabeçalho de verdade, para
+ * que uma adição legítima cujo conteúdo comece com `++ ` não seja pulada em silêncio.
+ */
+function addedContentFromDiff(diffText) {
+  const added = [];
+  for (const line of String(diffText || '').split('\n')) {
+    if (/^\+\+\+ (\/dev\/null|[ab]\/)/.test(line)) continue;
+    if (line.startsWith('+')) added.push(line.slice(1));
+  }
+  return added.join('\n');
+}
+
+/**
+ * Varre SOMENTE o conteúdo ADICIONADO procurando valores com forma de segredo.
+ *
+ * Só as adições importam: remover um segredo do código é a CORREÇÃO, nunca a violação.
+ * As regex de `secretRedaction` são reaproveitadas com `new RegExp(source)`, sem a flag `g`, porque
+ * o estado de `lastIndex` de uma regex global é compartilhado entre chamadas e produziria
+ * resultados que dependem da ordem das verificações (falso negativo silencioso).
+ *
+ * @returns {Array<{name:string}>}
+ */
+function findSecretsInAddedContent(diffText) {
+  const content = addedContentFromDiff(diffText);
+  if (!content.trim()) return [];
+
+  const found = [];
+  for (const { name, re } of MULTILINE_BLOCK_PATTERNS) {
+    // Reconstruído em várias linhas: é assim que uma chave privada PEM entra num diff (uma linha
+    // por linha do bloco), então o padrão multiline precisa ver o conteúdo já remontado.
+    if (new RegExp(re.source).test(content)) found.push({ name });
+  }
+  for (const { name, re } of SECRET_VALUE_PATTERNS) {
+    if (new RegExp(re.source).test(content)) found.push({ name });
+  }
+  return found;
+}
+
 function touchedPathsOf(parsed) {
   const set = new Set();
   for (const f of parsed.files) {
@@ -226,6 +296,24 @@ function validatePatch(diffText, { contract = {}, maxPatchSizeBytes = DEFAULT_MA
 
   const touchedPaths = touchedPathsOf(parsed);
 
+  // INTEGRIDADE: recusa fail-closed de qualquer caminho que pertença ao próprio maquinário de
+  // verificação/release (gates, CI, config de baseline, orçamentos). Ver
+  // INTEGRITY_CRITICAL_PATH_PATTERNS para o defeito medido que motivou o guard.
+  if (contract.integrityCriticalAuthorization !== true) {
+    const integrityCriticalPaths = touchedPaths.filter(
+      (p) => INTEGRITY_CRITICAL_PATH_PATTERNS.some((re) => re.test(p)),
+    );
+    if (integrityCriticalPaths.length > 0) {
+      issues.push({
+        code: FAILURE_CODES.PATCH_FORBIDDEN_FILE,
+        message:
+          'Patch toca caminho de INTEGRIDADE do próprio maquinário de verificação sem autorização '
+          + `explícita (fail-closed) — requer aprovação humana auditável: ${integrityCriticalPaths.join(', ')}`,
+        integrityCriticalPaths,
+      });
+    }
+  }
+
   for (const f of parsed.files) {
     if (f.isBinary) {
       issues.push({ code: FAILURE_CODES.PATCH_BINARY_CHANGE, message: `Alteração binária não permitida: ${f.newPath || f.oldPath}` });
@@ -237,6 +325,23 @@ function validatePatch(diffText, { contract = {}, maxPatchSizeBytes = DEFAULT_MA
     if (SECRET_LIKE_FILENAMES.some((re) => re.test(target))) {
       issues.push({ code: FAILURE_CODES.PATCH_FORBIDDEN_FILE, message: `Arquivo sensível não pode ser alterado por patch: ${target}` });
     }
+  }
+
+  // SEGREDO NO CONTEÚDO ADICIONADO (2026-10-08). A proteção anterior era só por NOME de arquivo:
+  // uma chave colada dentro de um arquivo de nome inocente (ex.: `src/config/valores.js`) passava
+  // por validação, aplicação, persistência e promoção sem nenhum obstáculo. A varredura é feita
+  // aqui, no ponto único por onde todo patch passa, e SÓ sobre as linhas ADICIONADAS — remover um
+  // segredo é a correção, nunca a violação.
+  const secretsInAddedContent = findSecretsInAddedContent(text);
+  if (secretsInAddedContent.length > 0) {
+    issues.push({
+      code: FAILURE_CODES.PATCH_CONTAINS_SECRET,
+      message:
+        'Patch ADICIONA conteúdo com forma de segredo real — recusado antes de qualquer aplicação/persistência '
+        + `(padrões: ${secretsInAddedContent.map((s) => s.name).join(', ')}). `
+        + 'Segredos nunca entram por patch: use variável de ambiente e o cofre de credenciais do tenant.',
+      secretPatterns: secretsInAddedContent.map((s) => s.name),
+    });
   }
 
   const boundary = checkPathBoundary(touchedPaths, contract);
@@ -261,5 +366,7 @@ module.exports = {
   DEFAULT_MAX_PATCH_SIZE_BYTES,
   parseUnifiedDiff,
   touchedPathsOf,
+  addedContentFromDiff,
+  findSecretsInAddedContent,
   validatePatch,
 };

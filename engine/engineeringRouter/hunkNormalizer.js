@@ -19,6 +19,13 @@
 const HUNK_HEADER_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
 
 /**
+ * Marcador do formato unified diff que sucede a linha (de contexto/remoção/adição) SEM newline
+ * final. NÃO é uma linha de conteúdo: não pertence ao lado "old" nem ao lado "new" do hunk.
+ * Ver `NO_NEWLINE_MARKER` abaixo para o defeito medido que a checagem corrige.
+ */
+const NO_NEWLINE_MARKER_RE = /^\\ No newline at end of file$/;
+
+/**
  * @param {string} diffText
  * @returns {string} diff com os headers de hunk recalculados a partir do corpo real
  */
@@ -27,7 +34,9 @@ function normalizeHunkHeaders(diffText) {
   // vezes acrescentam mais de uma quebra de linha ao final da resposta, e cada uma delas vira
   // um elemento "" extra em `split('\n')`, que sem este passo seria contado como uma linha de
   // contexto vazia fantasma dentro do último hunk (inflando oldCount/newCount).
-  const normalizedText = String(diffText || '').replace(/\n+$/, '\n');
+  const source = String(diffText || '');
+  const hadTrailingNewline = source.endsWith('\n');
+  const normalizedText = source.replace(/\n+$/, '\n');
   const lines = normalizedText.split('\n');
   const out = [];
   let i = 0;
@@ -68,6 +77,18 @@ function normalizeHunkHeaders(diffText) {
         j += 1;
         break;
       }
+      // DEFEITO MEDIDO (2026-10-08): `\ No newline at end of file` é um MARCADOR do formato,
+      // não uma linha de conteúdo — acompanha a linha anterior (que não termina em newline) e não
+      // conta para oldCount nem newCount. Sem esta checagem ele caía no ramo de contexto (não
+      // começa com '+', '-' nem ' ') e inflava AMBOS os lados em +1. Medido em diff REAL do
+      // `git diff` (arquivo sem newline final): `@@ -1 +1 @@` virava `@@ -1,3 +1,3 @@`, e o
+      // `git apply` recusava o patch inteiro como "corrompido" — a tentativa era queimada
+      // (PATCH_APPLY_FAILED + reroute indevido) por defeito do normalizador, não do modelo.
+      if (NO_NEWLINE_MARKER_RE.test(bodyLine)) {
+        body.push(bodyLine);
+        j += 1;
+        continue;
+      }
       if (bodyLine.startsWith('+')) {
         newCount += 1;
       } else if (bodyLine.startsWith('-')) {
@@ -89,7 +110,13 @@ function normalizeHunkHeaders(diffText) {
   }
 
   const rebuilt = out.join('\n');
-  return rebuilt.endsWith('\n') ? rebuilt : `${rebuilt}\n`;
+  // IDENTIDADE quando nada precisa ser corrigido: só restaura o newline final que JÁ existia na
+  // entrada (e nunca inventa um para texto que não tinha). Sem isso a função sempre devolvia uma
+  // string diferente da entrada e o chamador não conseguia distinguir "normalizei" de "não mexi"
+  // — distinção que `applyDiffPolicy` usa para decidir se houve reparo de verdade.
+  if (rebuilt === '') return '';
+  if (rebuilt.endsWith('\n')) return rebuilt;
+  return hadTrailingNewline ? `${rebuilt}\n` : rebuilt;
 }
 
 module.exports = {

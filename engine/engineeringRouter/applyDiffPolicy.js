@@ -27,6 +27,7 @@
  */
 
 const { canonicalizeMissingFileHeaders } = require('./diffCanonicalizer');
+const { normalizeHunkHeaders } = require('./hunkNormalizer');
 
 /**
  * @param {string} rawDiff saída CRUA do coder
@@ -39,27 +40,45 @@ const { canonicalizeMissingFileHeaders } = require('./diffCanonicalizer');
  */
 function resolveApplyDiff(rawDiff, { revalidate = null, assumeAlreadyApplied = false } = {}) {
   const raw = String(rawDiff || '');
-  const candidate = canonicalizeMissingFileHeaders(raw);
 
-  if (!candidate.applied) {
+  // Passo 1 — canonicalização ESTRUTURAL: deriva o par `---`/`+++` de blocos que declaram
+  // `diff --git` e o perderam (derivação só quando inequívoca; ver diffCanonicalizer).
+  const headers = canonicalizeMissingFileHeaders(raw);
+  const textAfterHeaders = headers.applied ? headers.text : raw;
+
+  // Passo 2 — canonicalização de CONTAGEM DE HUNK: recalcula `@@ -a,b +c,d @@` a partir do corpo
+  // real (nunca toca uma linha de conteúdo). Antes este reparo vivia DENTRO de `applyPatch`
+  // (`patchApplyService.js`), ou seja DEPOIS de validar/hashear/persistir: o texto aplicado no
+  // sandbox não era o texto validado nem o texto hashado na promoção — a promoção declara receber
+  // "o mesmo texto usado em applyPatch" e recebia outros bytes. Trazendo-o para cá, o texto
+  // canônico de `resolveApplyDiff` é, ao mesmo tempo, o validado (revalidação abaixo), o hashado
+  // pelo chamador e o aplicado (a normalização é idempotente, então a passada interna de
+  // `applyPatch` vira no-op).
+  const countsNormalized = normalizeHunkHeaders(textAfterHeaders);
+  const text = (typeof countsNormalized === 'string' && countsNormalized !== '') ? countsNormalized : textAfterHeaders;
+  const hunkCountsAdjusted = text !== textAfterHeaders;
+
+  if (!headers.applied && !hunkCountsAdjusted) {
     return { diff: raw, applied: false, canonicalization: null };
   }
 
-  const revalidation = typeof revalidate === 'function' ? (revalidate(candidate.text) || null) : null;
+  const revalidation = typeof revalidate === 'function' ? (revalidate(text) || null) : null;
   const revalidationOk = revalidation
     ? revalidation.ok === true
     : assumeAlreadyApplied === true;
 
   return {
-    diff: revalidationOk ? candidate.text : raw,
+    diff: revalidationOk ? text : raw,
     applied: revalidationOk,
     canonicalization: {
-      blocks: candidate.blocks,
-      skipped: candidate.skipped,
+      blocks: headers.blocks,
+      skipped: headers.skipped,
+      headersDerived: headers.applied,
+      hunkCountsAdjusted,
       revalidationOk,
       revalidationCode: revalidation && revalidation.ok !== true ? (revalidation.code || null) : null,
       // Insumo para hashes/telemetria do chamador: este módulo não hasheia (permanece puro).
-      canonicalizedText: candidate.text,
+      canonicalizedText: text,
       rawText: raw,
     },
   };

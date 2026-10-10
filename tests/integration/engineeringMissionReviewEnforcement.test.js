@@ -72,6 +72,16 @@ async function fabricateExecutedTaskArtifacts(taskId, { patchDiff, acceptanceCri
     coder_model: 'claude-sonnet-5',
     patch_diff: patchDiff,
     routing_reason_codes: ['CAPABILITY_MATCH'],
+    // EVIDÊNCIA POR FASE — o Router grava estes campos ao avançar de REGRESSION/GOVERNANCE/
+    // PROMOTION (`engineeringRouterService.advanceFromCodedAttempt`). Antes o fixture deixava-os
+    // nulos enquanto afirmava reproduzir "os artefatos que o Router teria deixado": o teste passava
+    // porque a revisão da missão aceitava `task.status === 'GREEN'` como atestado de TODOS os
+    // gates. Com a verificação independente (2026-10-08), um GREEN sem evidência de fase é
+    // bloqueado — o fixture passa a emular o Router REAL.
+    regression_evidence: { checked: true, commands: ['npx jest DR-ENGINEERING_MEMORY_REUSE --no-coverage'], source: 'jest-fixture' },
+    governance_evidence: { ok: true, gate: 'validate-engineering-router-v1', source: 'jest-fixture' },
+    promotion_evidence: { code: null, source: 'jest-fixture' },
+    promotion_status: 'PROMOTED',
   });
   await m.TestRun.create({
     attempt_id: attempt.id,
