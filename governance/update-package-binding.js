@@ -129,17 +129,33 @@ function run() {
       consistency.manifestConsistency.boundZipName = zipName;
       consistency.manifestConsistency.boundZipSha256Note = `SHA256 stored in sidecar manifest — see ${manifestRel}`;
     }
-    if (consistency.packageImmutability) {
-      consistency.packageImmutability.boundTo   = zipName;
-      consistency.packageImmutability.zipHashRef = `${manifestRel}#sha256`;
-      // Atualizar hash do evidence manifest (regenerado a cada platform-readiness run)
-      const evHash = sha256File(path.join(ROOT, 'governance', 'evidence-manifest.json'));
-      if (evHash) consistency.packageImmutability.evidenceManifestHash = evHash;
+    // Baseline de imutabilidade do evidence manifest.
+    //
+    // Antes este bloco era apenas ATUALIZADO se já existisse, e nenhum produtor
+    // o criava: o check de hash do package-integrity-engine nunca podia falhar
+    // (ausência de baseline virava PASS). Aqui ele é CRIADO com o hash do
+    // manifest e a proveniência do run corrente — sem isso o engine recusa
+    // (`EVIDENCE_MANIFEST_HASH_BASELINE_MISSING`).
+    const evHash = sha256File(path.join(ROOT, 'governance', 'evidence-manifest.json'));
+    const runContextPath = path.join(ROOT, 'governance', '.current-run.json');
+    let runContext = {};
+    if (fs.existsSync(runContextPath)) {
+      try { runContext = readJson(runContextPath) || {}; } catch (_) { runContext = {}; }
     }
-    // Atualizar evidenceConsistency hash também
-    if (consistency.evidenceConsistency) {
-      const evHash = sha256File(path.join(ROOT, 'governance', 'evidence-manifest.json'));
-      if (evHash) consistency.evidenceConsistency.evidenceManifestHash = evHash;
+    if (evHash) {
+      consistency.packageImmutability = {
+        ...(consistency.packageImmutability || {}),
+        boundTo:     zipName,
+        zipHashRef:  `${manifestRel}#sha256`,
+        evidenceManifestHash: evHash,
+        runId:             runContext.runId || consistency.runId || null,
+        sourceFingerprint: runContext.sourceFingerprint || consistency.sourceFingerprint || null,
+        attestedAt:  ts,
+      };
+    } else if (consistency.packageImmutability) {
+      // Sem hash não há atestação: o engine vai reprovar com código próprio.
+      consistency.packageImmutability.boundTo    = zipName;
+      consistency.packageImmutability.zipHashRef = `${manifestRel}#sha256`;
     }
     // Propagar finalDecision do readiness report (autoridade máxima) para o consistency report
     const readinessReport = readJson(path.join(ROOT, 'governance/final-readiness-report.json'));

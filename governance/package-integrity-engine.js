@@ -16,6 +16,7 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 const { withLineage } = require('./report-lineage');
+const { evaluateEvidenceManifestHashBaseline } = require('./lib/evidence-manifest-hash-baseline');
 
 const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'package-integrity-report.json');
@@ -134,36 +135,29 @@ function checkZipNameAlignment() {
 }
 
 // ─── Verificação 3: hash do evidence manifest ─────────────────────────────────
+//
+// A decisão vive em `governance/lib/evidence-manifest-hash-baseline.js` (módulo
+// puro, testável offline). Aqui só se lê o disco: hash atual, baseline atestado
+// (`packageImmutability`/`evidenceConsistency` do final-consistency-report) e o
+// run corrente. Antes o baseline era apenas LIDO e nenhum produtor o criava — a
+// ausência virava PASS e o check não podia falhar.
 function checkEvidenceManifestHash() {
-  const evidencePath = path.join(ROOT, 'governance', 'evidence-manifest.json');
-  if (!fs.existsSync(evidencePath)) {
-    return { check: 'evidence_manifest_hash', pass: false, severity: 'HIGH', reason: 'evidence-manifest.json not found' };
-  }
-
-  const computed = sha256File(evidencePath);
+  const computed    = sha256File(path.join(ROOT, 'governance', 'evidence-manifest.json'));
   const consistency = readJsonSafe('governance/final-consistency-report.json') || {};
-  const recorded    = consistency.packageImmutability?.evidenceManifestHash
-    || consistency.evidenceConsistency?.evidenceManifestHash;
+  const baseline    = consistency.packageImmutability || consistency.evidenceConsistency || null;
+  const currentRun  = readJsonSafe('governance/.current-run.json');
 
-  if (!recorded) {
-    return {
-      check:    'evidence_manifest_hash',
-      pass:     true,  // sem baseline para comparar
-      severity: 'OK',
-      computed,
-      note:     'No stored hash baseline to compare against',
-    };
-  }
+  const verdict = evaluateEvidenceManifestHashBaseline({ computed, baseline, currentRun });
+  const recorded = baseline && baseline.evidenceManifestHash ? String(baseline.evidenceManifestHash) : null;
 
-  const match = computed === recorded;
   return {
     check:    'evidence_manifest_hash',
-    pass:     match,
-    severity: match ? 'OK' : 'HIGH',
-    computed: computed?.slice(0, 24) + '…',
-    recorded: recorded?.slice(0, 24) + '…',
-    match,
-    reason:   match ? null : `Evidence manifest hash diverge — evidence foi alterada após assinatura`,
+    pass:     verdict.pass,
+    severity: verdict.severity,
+    code:     verdict.code,
+    computed: computed ? `${computed.slice(0, 24)}…` : null,
+    recorded: recorded ? `${recorded.slice(0, 24)}…` : null,
+    reason:   verdict.reason,
   };
 }
 
