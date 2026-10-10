@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-10T05:41:31.098Z",
+  "generatedAt": "2026-10-10T15:19:11.372Z",
   "counts": {
-    "total": 3983,
+    "total": 3990,
     "byKind": {
-      "api": 908,
-      "field": 2471,
+      "api": 909,
+      "field": 2477,
       "model": 223,
       "page": 149,
       "relation": 9,
       "table": 223
     },
     "byClassification": {
-      "PRODUCTION": 3688,
+      "PRODUCTION": 3695,
       "DEVELOPMENT": 203,
       "SUPPORT": 92
     },
-    "orphaned": 33
+    "orphaned": 34
   },
   "items": [
     {
@@ -13575,6 +13575,21 @@
       "classification": "PRODUCTION",
       "linkStatus": "ORPHANED",
       "fingerprint": "5aeba9cd263abd7837f65917c27dd68d6a0039b5cdd19062e19dbc3062fc00de"
+    },
+    {
+      "id": "api:POST:/api/security-intel/waivers/:waiverKey/approve",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/security-intel/waivers/:waiverKey/approve",
+      "module": "security-intel",
+      "source": "api/modules/security-intel/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "ae62a4e8b0eeb7bec031c2f24d2e0578a37d82df27880e2d75076a1d2379b67f"
     },
     {
       "id": "api:POST:/api/security-intel/waivers/revoke",
@@ -58465,12 +58480,30 @@
       "fingerprint": "12e578a18c976d768f27f338511083d52e9d725f9338867d5a54bb6f87affdd6"
     },
     {
-      "id": "field:SecurityWaiver.approved_by",
+      "id": "field:SecurityWaiver.approval_version",
       "kind": "field",
       "model": "SecurityWaiver",
-      "field": "approved_by",
-      "type": "STRING",
+      "field": "approval_version",
+      "type": "INTEGER",
       "allowNull": false,
+      "default": "1",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/SecurityWaiver.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e77b418f1da8d6d8038a807e7d582bdec5b7c9479e1c968ca4d48b675ec4702b"
+    },
+    {
+      "id": "field:SecurityWaiver.approved_at",
+      "kind": "field",
+      "model": "SecurityWaiver",
+      "field": "approved_at",
+      "type": "DATE",
+      "allowNull": true,
       "default": null,
       "primaryKey": false,
       "unique": false,
@@ -58480,7 +58513,25 @@
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "383bc6f344111a66b57371ce4f96bfae7af20ac08ab528f96f312506a3c34b34"
+      "fingerprint": "a0affa238e4fd727919650c219c95fae0cf20160492a8e3c2546c0697a87347d"
+    },
+    {
+      "id": "field:SecurityWaiver.approved_by",
+      "kind": "field",
+      "model": "SecurityWaiver",
+      "field": "approved_by",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/SecurityWaiver.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "fa2832fe7142ff032794a09a4d0eeec823d12b72f43a50b00b0edc97225eb27d"
     },
     {
       "id": "field:SecurityWaiver.compensating_control",
@@ -58627,6 +58678,42 @@
       "fingerprint": "07cdbc4a1bb40c2c6a3495b78c8c74e5dc872d80156394f85f2fb521938a0e0e"
     },
     {
+      "id": "field:SecurityWaiver.requested_at",
+      "kind": "field",
+      "model": "SecurityWaiver",
+      "field": "requested_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/SecurityWaiver.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0590261591aa31a0b5b1715c150df596542f1d7ef80c393802a3f0ee34a655be"
+    },
+    {
+      "id": "field:SecurityWaiver.requested_by",
+      "kind": "field",
+      "model": "SecurityWaiver",
+      "field": "requested_by",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/SecurityWaiver.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f97b4e53177edda1d12c94d476f1a2fb011cce9a78e7715522fb4a22600d1c27"
+    },
+    {
       "id": "field:SecurityWaiver.revoke_reason",
       "kind": "field",
       "model": "SecurityWaiver",
@@ -58681,6 +58768,24 @@
       "fingerprint": "4c45f006a43b41ca285f391f412de93eb27d3516a6d164b637897c439f7a9636"
     },
     {
+      "id": "field:SecurityWaiver.scope_hash",
+      "kind": "field",
+      "model": "SecurityWaiver",
+      "field": "scope_hash",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/SecurityWaiver.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f80fc17c5a59785a9edb983ba4762433ede923f30bca1c01e85abfa1be0f6c0e"
+    },
+    {
       "id": "field:SecurityWaiver.service",
       "kind": "field",
       "model": "SecurityWaiver",
@@ -58715,6 +58820,24 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "d7319b5096aac461fe29c7b464c528647e4af2bafb06b2a1c3ead947024e7481"
+    },
+    {
+      "id": "field:SecurityWaiver.status",
+      "kind": "field",
+      "model": "SecurityWaiver",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'ACTIVE'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/SecurityWaiver.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9aa9991f147e27cf4dd54100a3e0427772d41294dac725efa26cdf1443ccabb2"
     },
     {
       "id": "field:SecurityWaiver.tenant_key",
@@ -69364,7 +69487,7 @@
       "kind": "model",
       "model": "SecurityWaiver",
       "tableName": "security_waivers",
-      "fieldCount": 17,
+      "fieldCount": 23,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/SecurityWaiver.js",
@@ -69372,7 +69495,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "2468f114e4e047f89ac1b8e9fe59df9cd64b95517b9baac279422e6ce3a1b7bf"
+      "fingerprint": "99c57e1b12763096228d1455a43716bd760b484aa2edd732eec64a949f9208a2"
     },
     {
       "id": "model:Session",
@@ -79731,6 +79854,14 @@
           ],
           "name": "security_waivers_expires_idx",
           "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "status"
+          ],
+          "name": "security_waivers_status_idx",
+          "unique": false
         }
       ],
       "classification": "PRODUCTION",
@@ -79739,7 +79870,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "d6c588dfd309b8d9d49a0a85a97ac446e3413fd65a1b0c9e3cbe806b92f31e52"
+      "fingerprint": "30e7bbd06ebbedb72c75312e350a887806b459eca40c2c486d7a14b875c808a1"
     },
     {
       "id": "table:sessions",
