@@ -435,7 +435,10 @@ async function revokeWaiver({ waiverKey, tenantKey = 'system', actor, reason = n
 
   const finding = await Finding.findOne({ where: { tenant_key: tenantKey, finding_key: waiver.finding_key } });
   if (finding) {
-    await finding.update({ waiver_id: null });
+    // O achado volta a RISCO ABERTO. Antes só `waiver_id` era limpo e o status
+    // permanecia `MITIGATED` — um estado que afirma isenção sem isenção vigente
+    // (o evento já registrava `UNDER_INVESTIGATION`: estado e trilha divergiam).
+    await finding.update({ waiver_id: null, status: 'UNDER_INVESTIGATION' });
     await getSecurityFindingEvent().create({
       tenant_key: tenantKey,
       finding_key: waiver.finding_key,

@@ -72,6 +72,22 @@ fontes), `componentDiscoveryService` (orquestra fontes + probes + drift), `probe
 6. **Nenhuma escrita de JSON como estado.** Estado é Postgres; `audit:json-persistence`
    fica verde (`unknown=0`).
 7. **Waiver nunca é criado pelo motor.** `MITIGATED` só existe com waiver vigente.
+8. **Identidade de aprovação é DERIVADA, nunca declarada.** O aprovador/autorizador vem do
+   ator autenticado (`req.agent`), resolvido server-side. Tentar declarar identidade no corpo
+   (`approvedBy`/`authorizedBy`) é recusado com 400 `approval_identity_not_accepted` — recusar
+   nomeando o campo ofensor torna a tentativa auditável em vez de invisível.
+9. **Autorização é POR AÇÃO, não por acesso à tela.** Ter classificação DEVELOPMENT abre a
+   superfície de engenharia, mas NÃO concede nenhuma decisão. As ações são
+   `security_intel:read | scan | waiver_request | waiver_approve | waiver_revoke | patch_mission`
+   (owner/admin; `super_admin` mantém bypass) e a rota sem ação declarada é negada com 403
+   `route_action_undeclared` — a tabela `METHOD path → ação`
+   (`api/modules/security-intel/approvalAuthority.js`) é fail-closed por construção.
+10. **Aceitar risco exige DUAS pessoas.** `POST /waivers` **solicita** (202, `PENDING_APPROVAL`,
+    nada é mitigado) e `POST /waivers/:waiverKey/approve` **concede**, exigindo ator diferente do
+    solicitante (`waiver_self_approval_forbidden`). A aprovação vale para o ESCOPO pedido: se o
+    achado mudar (pacote/serviço/severidade/prazo), o `scope_hash` não casa e a aprovação é
+    recusada. No CLI a identidade é o usuário do SO que executa (`waive` solicita,
+    `waive-approve` aprova) — `--approve`/`--authorized-by` só são aceitos se coincidirem com ele.
 
 ## 4. Dados
 
@@ -87,7 +103,8 @@ Migrations: `20261008190000-create-security-intelligence-core.js`,
 | `security_advisories` | advisory normalizado (faixas afetadas; KEV/EPSS com timestamp) |
 | `security_advisory_syncs` | sincronização da base (hash do snapshot, idade, falhas) |
 | `security_findings` | achado corrente (severidade, estado, prioridade, fatores, razão) |
-| `security_finding_events` | histórico append-only (DETECTED/STATUS_CHANGED/RESOLVED) |
+| `security_finding_events` | histórico append-only (DETECTED/STATUS_CHANGED/RESOLVED/WAIVER_*) |
+| `security_waivers` | aceitação formal e temporária de risco (solicitante, aprovador, escopo, prazo) |
 
 ## 5. Operação
 

@@ -344,7 +344,12 @@ describe('waiverService — revogação e vigência', () => {
     const { create } = primeWaiverModel({ waiver: waiverRow({ status: WAIVER_STATUS.ACTIVE, approved_by: APPROVER }) });
     const result = await revokeWaiver({ waiverKey: 'wk-1', actor: 'dba', reason: 'correção saiu', now: NOW });
     expect(result).toMatchObject({ revoked: true, mitigated: true });
-    expect(finding.update.mock.calls[0][0]).toEqual({ waiver_id: null });
+    // Estado e trilha concordam: o achado volta a risco aberto (não fica MITIGATED
+    // sem isenção vigente).
+    expect(finding.update.mock.calls[0][0]).toMatchObject({
+      waiver_id: null,
+      status: 'UNDER_INVESTIGATION',
+    });
     expect(create.mock.calls[0][0]).toEqual(expect.objectContaining({ event: 'WAIVER_REVOKED', actor: 'dba' }));
   });
 
