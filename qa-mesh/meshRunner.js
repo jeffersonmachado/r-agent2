@@ -2533,6 +2533,15 @@ async function runMeshInner(options = {}, tenantId = 'system') {
       totals: summary,
       reasons: summary.reasons,
       canonicalPromotion,
+      // Mesma exigência do go-no-go acima — e o mesmo defeito que ele já corrigiu
+      // foi deixado AQUI: este relatório também é RUNTIME_EVIDENCE, e sem
+      // artifactType/artifactVersion a integridade temporal do converge o reprova.
+      // Medido 2026-10-10: `INVALID_AUTHORITATIVE_ARTIFACT qa-mesh/release-gate-report.json`
+      // com reasons [artifact_type_missing, artifact_version_missing] abortou o
+      // `prepare` em 11.5/12 — o ciclo inteiro caiu por dois campos de IDENTIDADE,
+      // que (como no go-no-go) NÃO são lineage e nascem no produtor.
+      artifactType: 'release-gate-report',
+      artifactVersion: '1.0.0',
       ...resolveOriginLineage(),
       generatedAt: nowIso(),
     });
