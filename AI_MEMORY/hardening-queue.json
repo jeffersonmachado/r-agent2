@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-10T21:05:00Z",
+  "updatedAt": "2026-10-10T21:15:00Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -150,8 +150,9 @@
     {
       "id": "P2-2",
       "title": "Divergencia de lineage nos relatorios",
-      "status": "in_progress",
-      "evidence": "PARCIAL: os 4 relatorios de validate-mission-self-engineering-gates.js passaram a nascer com lineage na origem (commit 52c0d0837). Ferramenta de medicao pronta: governance/lib/evidence-contract.js + npm run report:evidence-contract. Falta: varrer os demais produtores de reports/*.json que usam writeReport sem withLineage (scripts/governance/common.js so acrescenta generatedAt) e corrigir os que importam. Achado relacionado ja aberto: P1-12."
+      "status": "done",
+      "commit": "7d10d7720",
+      "evidence": "Medicao ANTES: dos 154 relatorios em reports/, 120 sem runId; dos 36 produtores que usam writeReport, so 5 chamavam withLineage. Corrigido na ORIGEM COMUM (scripts/governance/common.js::writeReport) em vez de 31 patches: todo relatorio do helper nasce com runId/sourceFingerprint/artifactVersion e artifactType derivado do nome do arquivo (convencao medida: 42/52 relatorios declaram artifactType igual ao nome). Medicao DEPOIS ao regerar 4 validadores: com runId 34 -> 38; o restante sobe conforme cada produtor roda. Teste tests/unit/governance/reportWriteLineage.test.js (6 passed, root temporario para nao vandalizar reports/) + regressao 123 suites/1194 passed/0 failed."
     }
   ]
 }
