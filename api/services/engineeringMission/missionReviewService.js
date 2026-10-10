@@ -102,7 +102,33 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
   const integrationEvidence = coverage.byCategory[TEST_CATEGORIES.INTEGRATION];
   const e2eEvidence = coverage.byCategory[TEST_CATEGORIES.E2E];
   const hasDistinctIntegration = coverage.hasIntegrationEvidence;
-  const approvedReview = reviews.find((r) => r.decision === 'APPROVE');
+
+  // REVISÃO: qual APPROVE conta, e ele é independente DE FATO?
+  //
+  // DEFEITO MEDIDO (auditoria 2026-10-10): `reviews.find(r => r.decision === 'APPROVE')`
+  // varria as revisões de TODAS as tentativas da task. Um APPROVE obtido numa
+  // tentativa ANTERIOR (patch diferente, já substituído) satisfazia o gate da
+  // tentativa corrente — aprovação de outro patch reaproveitada. Agora a revisão
+  // precisa ser da tentativa que efetivamente avançou.
+  const reviewAttemptId = greenAttempt && greenAttempt.id ? greenAttempt.id : null;
+  const attemptReviews = reviewAttemptId
+    ? reviews.filter((r) => r.attempt_id === reviewAttemptId)
+    : reviews;
+  const approvedReview = attemptReviews.find((r) => r.decision === 'APPROVE');
+
+  // INDEPENDÊNCIA CONFERIDA, não apenas declarada: `independent_of_coder` é um
+  // campo gravado pelo Router, e confiar só nele é confiar no atestado do próprio
+  // executor (exatamente o defeito que este arquivo combate desde 2026-10-08).
+  // Aqui o campo é cruzado com os DADOS: o provider do revisor precisa diferir do
+  // provider do coder da tentativa aprovada. Quando a declaração contradiz os
+  // dados, o gate NÃO aceita como PASS e nomeia o código.
+  const coderProvider = String((greenAttempt && greenAttempt.coder_provider) || '').trim();
+  const reviewerProvider = String((approvedReview && approvedReview.reviewer_provider) || '').trim();
+  const providersDiffer = Boolean(coderProvider && reviewerProvider && coderProvider !== reviewerProvider);
+  const declaredIndependent = Boolean(approvedReview && approvedReview.independent_of_coder === true);
+  const independentContradicted = declaredIndependent && coderProvider !== '' && reviewerProvider !== '' && !providersDiffer;
+  const reviewBacked = Boolean(approvedReview) && !independentContradicted;
+
   const regressionPass = regressionRuns.length > 0 && regressionRuns.every((r) => r.status === 'PASS');
   const greenAttestation = Boolean(task && task.status === 'GREEN');
 
@@ -122,13 +148,19 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
     verification: backed ? 'EVIDENCE' : (greenAttestation ? 'ATTESTED' : 'MISSING'),
     evidence: backed
       ? evidence
-      : (greenAttestation
-        ? {
-          source: 'task.status=GREEN',
-          note: 'atestado do executor — NÃO conta como evidência de execução',
-          observed: attestedEvidence || null,
-        }
-        : (attestedEvidence || { source: 'ausente' })),
+      : {
+        ...(greenAttestation
+          ? {
+            source: 'task.status=GREEN',
+            note: 'atestado do executor — NÃO conta como evidência de execução',
+            observed: attestedEvidence || null,
+          }
+          : (attestedEvidence || { source: 'ausente' })),
+        // O motivo ESPECÍFICO da recusa não pode se perder no caminho de falha:
+        // sem isto, um gate recusado por revisão contradita aparecia apenas como
+        // "atestado do executor", e a causa real sumia do parecer.
+        ...(evidence && typeof evidence === 'object' ? { diagnostic: evidence } : {}),
+      },
   });
 
   return [
@@ -165,9 +197,22 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
     ),
     gate(
       'review',
-      Boolean(approvedReview),
-      { source: 'engineering_reviews', reviewerProvider: approvedReview && approvedReview.reviewer_provider, independentOfCoder: approvedReview && approvedReview.independent_of_coder },
-      { source: 'engineering_reviews', count: reviews.length, attestedBy: 'task.status' },
+      reviewBacked,
+      {
+        source: 'engineering_reviews',
+        reviewerProvider: approvedReview && approvedReview.reviewer_provider,
+        coderProvider: coderProvider || null,
+        independentOfCoder: declaredIndependent,
+        providersDiffer,
+        attemptId: reviewAttemptId,
+        // Código explícito quando a independência afirmada é contradita pelos dados
+        // — sem isso o gate diria apenas "review" sem dizer POR QUE recusou.
+        code: independentContradicted ? 'INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER' : null,
+        note: independentContradicted
+          ? 'a revisão se declara independente mas o provider do revisor é o MESMO do coder'
+          : (approvedReview ? 'APPROVE da tentativa que avançou' : 'nenhum APPROVE na tentativa que avançou'),
+      },
+      { source: 'engineering_reviews', count: attemptReviews.length, attestedBy: 'task.status' },
     ),
     gate(
       'regression',

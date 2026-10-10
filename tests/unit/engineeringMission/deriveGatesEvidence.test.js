@@ -28,10 +28,13 @@ const semEvidencia = {
 const comEvidencia = {
   task: TASK_GREEN,
   testRuns: [{ status: 'PASS', exit_code: 0, command: 'npx jest tests/unit' }],
-  reviews: [{ decision: 'APPROVE', reviewer_provider: 'anthropic', independent_of_coder: true }],
+  // `attempt_id` é obrigatório no banco (FK para a tentativa): sem ele a revisão não
+  // pertence a tentativa nenhuma e o gate não pode aceitá-la como APPROVE da corrente.
+  reviews: [{ attempt_id: 'a1', decision: 'APPROVE', reviewer_provider: 'anthropic', independent_of_coder: true }],
   regressionRuns: [],
   greenAttempt: {
     id: 'a1',
+    coder_provider: 'mistral',
     regression_evidence: { checked: true, commands: ['npx jest'] },
     governance_evidence: { ok: true, gate: 'validate-engineering-router-v1' },
     promotion_evidence: { code: null, candidateBranch: 'engineering/task-t1' },
