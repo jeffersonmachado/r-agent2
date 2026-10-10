@@ -197,6 +197,7 @@
     "coverage-gate:links": "node scripts/governance/sync-journey-scenario-links.js",
     "qa:business-contracts": "node scripts/qa-waves/generate-business-contracts.js",
     "report:tenant-isolation": "node scripts/governance/tenant-isolation-report.js",
+    "report:evidence-contract": "node scripts/governance/report-evidence-contract.js",
     "score:operational-experience": "node scripts/product/operational-experience-score.js",
     "wave:db-integrity": "node scripts/governance/db-integrity-wave.js",
     "wave:api-surface": "node scripts/governance/api-surface-wave.js",
