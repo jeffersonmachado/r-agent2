@@ -82,6 +82,33 @@ function commandOf(group, bucket) {
     + ` node scripts/security-intel.js patch-mission --candidate <chave>${approvalNote}`;
 }
 
+/**
+ * Resumo da REMEDIAÇÃO já submetida para o grupo (missões do Roteador Engenheiro).
+ *
+ * Duas razões de existir:
+ *   1. sem isto o operador não distingue "ainda não submeti" de "submeti e a missão
+ *      falhou" — a fila sugeria o comando de novo como se nada tivesse acontecido;
+ *   2. `resolvedRequiresRescan` é declaração de política: uma missão GREEN **não**
+ *      resolve o achado. Quem resolve é o RE-SCAN, quando o inventário atual deixa
+ *      de casar o advisory (`vulnerabilityScanService`, evento RESOLVED). Mudar a
+ *      versão declarada não basta — a versão INSTALADA é que conta.
+ */
+function summarizeRemediation(remediations) {
+  const rows = Array.isArray(remediations) ? remediations.filter(Boolean) : [];
+  if (rows.length === 0) return null;
+  const byStatus = {};
+  for (const row of rows) {
+    const status = String(row.status || 'UNKNOWN');
+    byStatus[status] = (byStatus[status] || 0) + 1;
+  }
+  return {
+    missionsSubmitted: rows.length,
+    byStatus,
+    latest: rows[rows.length - 1],
+    resolvedRequiresRescan: true,
+  };
+}
+
 function normalizeGroup(group) {
   const bucket = bucketOf(group);
   return {
@@ -111,6 +138,8 @@ function normalizeGroup(group) {
     recommendedCandidateKey: group.recommendedCandidateKey || null,
     findingKeys: Array.isArray(group.findingKeys) ? group.findingKeys.filter(Boolean) : [],
     withoutFixFindingKeys: Array.isArray(group.withoutFixFindingKeys) ? group.withoutFixFindingKeys.filter(Boolean) : [],
+    // Estado da correção já submetida (null = nada submetido ainda).
+    remediation: summarizeRemediation(group.remediations),
     bucket,
     bucketLabel: BUCKET_LABELS[bucket],
     rationale: rationaleOf(group, bucket),
@@ -314,4 +343,5 @@ module.exports = {
   bucketOf,
   buildTriageDossier,
   renderTriageMarkdown,
+  summarizeRemediation,
 };

@@ -17,7 +17,9 @@ const path = require('path');
 const fs = require('fs');
 
 const { connect, getSequelize } = require('../../db/sequelize');
+const { Op } = require('sequelize');
 const getSecurityComponent = require('../../db/models/SecurityComponent');
+const getEngineeringMission = require('../../db/models/EngineeringMission');
 const { listPatchCandidates } = require('./patchPlanService');
 const { getFindingSummary, listFindings, loadPolicy } = require('./vulnerabilityScanService');
 const { getLatestAdvisorySyncAge } = require('./securityIntelWorker');
@@ -69,12 +71,29 @@ async function buildTriage({ tenantKey = 'system', now = new Date() } = {}) {
   const plans = candidates.items.map(planOf);
   const consolidated = consolidatePlansByPackage(plans);
 
+  // REMEDIAÇÃO RASTREADA (2026-10-10): o candidato com missão submetida precisa
+  // mostrar o ESTADO da correção. Sem isto o operador não distingue "ainda não
+  // submeti" de "submeti e a missão falhou" — e a fila sugeria o mesmo comando de
+  // novo, como se nada tivesse acontecido.
+  const missionIds = [...new Set(candidates.items.map((row) => row.mission_id).filter(Boolean))];
+  const missionStatusById = new Map();
+  if (missionIds.length > 0) {
+    const missionRows = await getEngineeringMission().findAll({
+      where: { id: { [Op.in]: missionIds } },
+      attributes: ['id', 'status', 'linked_task_id'],
+      raw: true,
+    });
+    for (const row of missionRows) {
+      missionStatusById.set(row.id, { status: row.status || null, linkedTaskId: row.linked_task_id || null });
+    }
+  }
+
   // Chaves reais por agrupamento: a fila precisa ser EXECUTÁVEL, não um lembrete.
   const keysByGroup = new Map();
   for (const row of candidates.items) {
     const key = `${row.ecosystem || '?'}:${row.package_name}@${row.service || '-'}`;
     if (!keysByGroup.has(key)) {
-      keysByGroup.set(key, { candidates: [], findingKeys: [], withoutFixFindingKeys: [] });
+      keysByGroup.set(key, { candidates: [], findingKeys: [], withoutFixFindingKeys: [], remediations: [] });
     }
     const entry = keysByGroup.get(key);
     entry.candidates.push({
@@ -84,6 +103,18 @@ async function buildTriage({ tenantKey = 'system', now = new Date() } = {}) {
     });
     entry.findingKeys.push(row.finding_key);
     if (!row.target_version) entry.withoutFixFindingKeys.push(row.finding_key);
+    if (row.mission_id) {
+      const mission = missionStatusById.get(row.mission_id) || null;
+      entry.remediations.push({
+        missionId: row.mission_id,
+        candidateKey: row.candidate_key,
+        targetVersion: row.target_version || null,
+        status: mission ? mission.status : null,
+        linkedTaskId: mission ? mission.linkedTaskId : null,
+        requestedAt: row.mission_requested_at || null,
+        requestedBy: row.mission_requested_by || null,
+      });
+    }
   }
 
   // Impacto: achado de severidade bloqueante ainda aberto por pacote/serviço.
@@ -112,7 +143,7 @@ async function buildTriage({ tenantKey = 'system', now = new Date() } = {}) {
   }
 
   const groups = consolidated.map((group) => {
-    const entry = keysByGroup.get(group.key) || { candidates: [], findingKeys: [], withoutFixFindingKeys: [] };
+    const entry = keysByGroup.get(group.key) || { candidates: [], findingKeys: [], withoutFixFindingKeys: [], remediations: [] };
     // O recomendado é o candidato cujo alvo limpa TODOS os advisories do pacote:
     // mandar missão para o primeiro da lista resolveria só parte e a fila travaria.
     const withTarget = entry.candidates.filter((candidate) => candidate.targetVersion);
@@ -127,6 +158,7 @@ async function buildTriage({ tenantKey = 'system', now = new Date() } = {}) {
       recommendedCandidateKey: recommended ? recommended.candidateKey : null,
       findingKeys: entry.findingKeys,
       withoutFixFindingKeys: entry.withoutFixFindingKeys,
+      remediations: entry.remediations || [],
       blockingFindingsOpen: blockingCounts.get(packageServiceKey) || 0,
       blockingFindingsDevOnly: devOnlyBlockingCounts.get(packageServiceKey) || 0,
     };
