@@ -34,6 +34,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ROOT, writeReport } = require('./common');
+const { withLineage } = require('../../governance/report-lineage');
 
 const REPORT_NAME = 'mission-self-engineering-gates-report.json';
 const MANIFEST_REL = 'config/canonical-release-suites.json';
@@ -267,7 +268,7 @@ function main() {
   const slug = String(requestedAxis || 'ALL').toLowerCase().replace(/_/g, '-');
   const reportName = requestedAxis ? `mission-gate-${slug}.json` : REPORT_NAME;
 
-  const output = writeReport(reportName, {
+  const output = writeReport(reportName, withLineage({
     artifactType: 'MISSION_SELF_ENGINEERING_GATES',
     requestedAxis,
     status: overall,
@@ -277,7 +278,7 @@ function main() {
       : { present: false, status: null, generatedAt: null, runId: null },
     manifestDeclared: explicit.length,
     axes,
-  });
+  }, 'mission-self-engineering-gates-report'));
 
   for (const axis of axes) {
     process.stdout.write(`[${axis.status}] ${axis.axis} — ${axis.reason}\n`);
