@@ -129,8 +129,9 @@
     {
       "id": "P1-10",
       "title": "Self-engineering E2E governado (relatorio agregado obsoleto)",
-      "status": "pending",
-      "evidence": "reports/mission-self-engineering-gates-report.json gerado em 2026-10-07 enquanto os 3 eixos sao de 2026-10-10; regenerar via scripts/governance/validate-mission-self-engineering-gates.js"
+      "status": "done",
+      "commit": "52c0d0837",
+      "evidence": "NAO era defeito de gate: o unico consumidor do agregado e o proprio produtor (os passos do selo regeram via --axis em toda execucao), logo nao havia leitor de copia velha. Nao-vacuidade verificada: 11 suites de prova declaradas em config/canonical-release-suites.json e state=PASS em reports/release-suite-execution.json com contagem real (4,5,32,4 / 6,17,1 / 12,22,5,30). Defeito REAL encontrado no caminho: os 4 relatorios nasciam SEM runId/sourceFingerprint; corrigido com withLineage na origem (prova: runId=rap-governed-20261010045617268-19ce0cbd igual ao .current-run.json em agregado e por eixo; --axis invalido segue exit 2). Orcamento de custo/tokens JA EXISTE: config/timeout-policy.json:113-114 + api/services/engineeringRouter/engineeringRouterService.js:964-965 + tests/unit/engineeringRouterProviderChainPolicy.test.js — nao reimplementar."
     },
     {
       "id": "P1-11",
@@ -141,8 +142,8 @@
     {
       "id": "P2-2",
       "title": "Divergencia de lineage nos relatorios",
-      "status": "pending",
-      "evidence": "governance/lib/evidence-contract.js cobre runId/proveniencia; falta aplicar aos relatorios reportados"
+      "status": "in_progress",
+      "evidence": "PARCIAL: os 4 relatorios de validate-mission-self-engineering-gates.js passaram a nascer com lineage na origem (commit 52c0d0837). Ferramenta de medicao pronta: governance/lib/evidence-contract.js + npm run report:evidence-contract. Falta: varrer os demais produtores de reports/*.json que usam writeReport sem withLineage (scripts/governance/common.js so acrescenta generatedAt) e corrigir os que importam. Achado relacionado ja aberto: P1-12."
     }
   ]
 }
