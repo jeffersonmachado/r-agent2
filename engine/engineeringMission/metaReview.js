@@ -30,13 +30,22 @@ const FORBIDDEN_DUPLICATION_PATTERNS = Object.freeze([
   { id: 'PARALLEL_TASK_STORE', re: /(^|\/)(engineeringTaskStore|taskStore)\.js$/, detail: 'task store paralelo (usar api/services/engineeringRouter/engineeringTaskService.js)' },
 ]);
 
-/** Gates que precisam existir e PASSAR para uma missão reivindicar GREEN. */
+/**
+ * Gates que precisam existir e PASSAR para uma missão reivindicar GREEN.
+ *
+ * `promotion` entrou em 2026-10-10: o gate existia em `deriveGates` mas NÃO era
+ * exigido — uma missão podia fechar GREEN sem que a promoção tivesse sido
+ * verificada. O status `PROMOTED` só é gravado pelo Router DEPOIS de
+ * `POST_PROMOTION_VERIFY` confirmar o candidato (`verified ? 'PROMOTED' :
+ * 'READY_FOR_PROMOTION'`), então exigi-lo é exigir a verificação pós-promoção.
+ */
 const REQUIRED_GATES_FOR_GREEN = Object.freeze([
   'unit',
   'integration',
   'review',
   'regression',
   'governance',
+  'promotion',
 ]);
 
 function finding({ id, checkId, severity, status, title, detail, evidence = [] }) {
