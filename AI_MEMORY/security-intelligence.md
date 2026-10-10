@@ -116,9 +116,16 @@ operacional; não duplica o doc.
 - **Escrita parcial vira isenção sem auditoria** (medido 2026-10-08 numa prova
   end-to-end): a criação de waiver não era transacional e, quando a gravação do
   EVENTO falhou, o waiver e o vínculo no achado permaneceram — ficaram 2 waivers
-  vigentes com 1 evento. `createWaiver` agora roda em transação (waiver + vínculo +
-  evento, tudo ou nada). Regra geral: **isenção de risco é um ato com trilha ou não
-  é nada** — nunca grave o efeito antes da evidência.
+  vigentes com 1 evento. Hoje `requestWaiver` (registro + evento) e `approveWaiver`
+  (transição + mitigação + evento) rodam cada um em transação, tudo ou nada.
+  Regra geral: **isenção de risco é um ato com trilha ou não é nada** — nunca grave
+  o efeito antes da evidência.
+- **Isentar é DECISÃO DUPLA** (endurecido 2026-10-10): `waive` SOLICITA
+  (`PENDING_APPROVAL`, nada é mitigado) e `waive-approve` APROVA — por OUTRO
+  ator (`waiver_self_approval_forbidden`). A aprovação ainda valida o
+  `scope_hash` do escopo pedido, usa CAS `PENDING_APPROVAL → ACTIVE` (concorrência
+  e replay perdem a corrida) e exige identidade derivada (nunca declarada) mais a
+  permissão `security_intel:waiver_approve`.
 - `resetMocks: true` no `jest.config.cjs` apaga implementações: reestabeleça mocks no
   `beforeEach`.
 - **Testar o worker exige cuidado com o harness do repo** (`tests/setup.js`):

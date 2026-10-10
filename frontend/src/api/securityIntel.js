@@ -100,13 +100,11 @@ export async function listSecurityWaivers(filters = {}) {
 }
 
 /**
- * Concede um waiver. Recusas de política (prazo acima do limite, sem expiração,
- * motivo curto, achado que não é risco aberto) vêm do backend com o código do
- * motivo — a tela não tenta decidir elegibilidade.
+ * SOLICITA um waiver (isenção formal com prazo). NÃO isenta nada: o waiver nasce
+ * pendente e só passa a valer após a APROVAÇÃO por OUTRO usuário.
  *
- * O aprovador NÃO é enviado: ele é derivado do token no backend (permissão
- * `security_intel:waiver_approve`). Enviar `approvedBy` é recusado com 400
- * `approval_identity_not_accepted`.
+ * O solicitante NÃO é enviado: ele é derivado do token no backend. Enviar
+ * `approvedBy` é recusado com 400 `approval_identity_not_accepted`.
  */
 export async function createSecurityWaiver({
   findingKey,
@@ -120,6 +118,16 @@ export async function createSecurityWaiver({
     expiresInDays,
     compensatingControl,
   });
+}
+
+/**
+ * APROVA a solicitação de isenção. Aqui, e somente aqui, o achado vira MITIGATED.
+ *
+ * Segregação de funções: o aprovador é derivado do token e precisa ser DIFERENTE
+ * de quem solicitou (`waiver_self_approval_forbidden`).
+ */
+export async function approveSecurityWaiver({ waiverKey }) {
+  return postJson(`${BASE_PATH}/waivers/${encodeURIComponent(waiverKey)}/approve`, {});
 }
 
 /** Revoga sem apagar: o achado volta a contar como risco aberto. */

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useToast } from '../components/Toast';
 import { buildWaiverOptions } from '../shared/securityIntel/waiverOptions';
 import {
+  approveSecurityWaiver,
   createSecurityPatchMission,
   createSecurityWaiver,
   generateSecurityPatchPlans,
@@ -127,7 +128,13 @@ const ERROR_MESSAGES = {
   waiver_expiry_not_in_future: 'O prazo precisa estar no futuro.',
   waiver_exceeds_max_days: 'Prazo acima do limite da política de waivers.',
   waiver_reason_required: 'Descreva o motivo da aceitação do risco (mínimo de 20 caracteres).',
+  waiver_requester_required: 'A solicitação precisa ter solicitante identificado (derivado da sessão).',
   waiver_approver_required: 'A sessão autenticada precisa ter identidade utilizável para aprovar.',
+  waiver_self_approval_forbidden: 'Quem solicita a isenção não pode aprová-la: a aprovação exige outro usuário.',
+  waiver_scope_changed: 'O escopo mudou desde a solicitação (pacote, serviço, severidade ou prazo): a aprovação não vale para o escopo novo.',
+  waiver_approval_conflict: 'A isenção já foi decidida por outra sessão (aprovação concorrente).',
+  waiver_revoked_cannot_approve: 'Isenção revogada não pode ser aprovada.',
+  waiver_expired_cannot_approve: 'Isenção expirada não pode ser aprovada.',
   waiver_not_needed_for_vex_state: 'Este achado não é risco aberto (já descartado por VEX ou resolvido) — não precisa de isenção.',
   waiver_finding_not_found: 'Achado não encontrado no inventário atual.',
   waiver_not_found: 'Waiver não encontrado.',
@@ -231,7 +238,9 @@ export function SecurityIntelligencePage() {
         }),
         listSecurityPatches({ limit: 100 }),
         listSecurityAdvisories(),
-        listSecurityWaivers(),
+        // `ALL`: a tela precisa ver as SOLICITAÇÕES pendentes (para aprová-las)
+        // além das isenções vigentes. O gate só considera ACTIVE.
+        listSecurityWaivers({ state: 'ALL' }),
       ]);
       setSummary(summaryData);
       setFindings(findingsData || { items: [], total: 0 });
@@ -350,9 +359,9 @@ export function SecurityIntelligencePage() {
       });
       showToast(
         result.created
-          ? `Waiver registrado para ${result.findingKey} (expira em ${formatDate(result.expiresAt)}).`
-          : 'Este achado já possuía uma isenção com o mesmo prazo (nada foi duplicado).',
-        'success',
+          ? `Isenção SOLICITADA para ${result.findingKey} — aguarda aprovação de outro usuário (ainda NÃO vigente).`
+          : 'Este achado já possuía uma solicitação com o mesmo prazo (nada foi duplicado).',
+        result.created ? 'success' : 'info',
       );
       setWaiverForm({ findingKey: '', reason: '', expiresInDays: 30, compensatingControl: '' });
       await loadAll();
@@ -362,6 +371,24 @@ export function SecurityIntelligencePage() {
       setBusy(false);
     }
   }, [loadAll, showToast, waiverForm]);
+
+  const handleApproveWaiver = useCallback(async (waiver) => {
+    setBusy(true);
+    try {
+      const result = await approveSecurityWaiver({ waiverKey: waiver.waiver_key });
+      showToast(
+        result.approved
+          ? `Isenção aprovada por ${result.approvedBy}: ${waiver.finding_key} passa a contar como risco aceito.`
+          : `Isenção não foi aprovada (${result.reason || 'sem motivo informado'}).`,
+        result.approved ? 'success' : 'info',
+      );
+      await loadAll();
+    } catch (err) {
+      showToast(messageOf(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }, [loadAll, showToast]);
 
   const handleRevokeWaiver = useCallback(async (waiver) => {
     setBusy(true);
@@ -826,14 +853,16 @@ export function SecurityIntelligencePage() {
       <section className="mb-8">
         <h2 className="text-lg font-bold text-text-primary mb-4">Waivers de risco (isenção formal com prazo)</h2>
         <p className="text-xs text-text-secondary mb-4">
-          Nada é isentado por padrão. Um waiver aceita um risco <strong className="text-text-primary">com prazo</strong>
-          {' '}em nome de um aprovador identificado e devolve o achado ao estado de risco aberto quando expira ou é
-          revogado. O gate revalida a expiração a cada leitura — isenção vencida não protege nada.
+          Nada é isentado por padrão. A isenção vale <strong className="text-text-primary">com prazo</strong>
+          {' '}e exige <strong className="text-text-primary">duas decisões</strong>: alguém solicita e outro
+          usuário aprova — quem solicita não pode aprovar. Enquanto estiver PENDING_APPROVAL nada está
+          isentado. O achado volta a contar como risco aberto quando a isenção expira ou é revogada; o gate
+          revalida a expiração e o ESCOPO a cada leitura.
           {' '}{waivers.maxWaiverDays ? `Prazo máximo permitido: ${waivers.maxWaiverDays} dias.` : ''}
         </p>
 
         <div className={`${CARD} mb-4`}>
-          <h3 className="text-sm font-bold text-text-primary mb-3">Conceder isenção (decisão humana)</h3>
+          <h3 className="text-sm font-bold text-text-primary mb-3">Solicitar isenção (não vigora até a aprovação)</h3>
           <form onSubmit={handleCreateWaiver} className="grid gap-3 md:grid-cols-2">
             <label className="flex flex-col gap-1 md:col-span-2">
               <span className="text-xs text-text-secondary">Achado</span>
@@ -894,11 +923,10 @@ export function SecurityIntelligencePage() {
               />
             </label>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-text-secondary">Aprovado por</span>
+              <span className="text-xs text-text-secondary">Solicitado por</span>
               <p className="text-xs text-text-primary" data-testid="waiver-approver-note">
-                Registrado em nome do usuário autenticado (identidade derivada da sessão).
-                A autorização é verificada por permissão: ter acesso à tela não concede
-                aprovação de risco.
+                Registrado em nome do usuário autenticado (identidade derivada da sessão). A aprovação exige
+                outro usuário com permissão própria — solicitar não concede isenção.
               </p>
             </div>
             <label className="flex flex-col gap-1">
@@ -925,7 +953,7 @@ export function SecurityIntelligencePage() {
             </label>
             <div className="md:col-span-2">
               <button type="submit" className={BTN_PRIMARY} disabled={busy} data-testid="waiver-submit-button">
-                Registrar isenção com prazo
+                Solicitar isenção com prazo
               </button>
             </div>
           </form>
@@ -952,9 +980,22 @@ export function SecurityIntelligencePage() {
                   <td className={TD}>{row.reason}</td>
                   <td className={TD}>{row.state}</td>
                   <td className={TD}>
-                    <button type="button" className={BTN_SMALL} onClick={() => handleRevokeWaiver(row)} disabled={busy}>
-                      Revogar
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {String(row.state || '').toUpperCase() === 'PENDING_APPROVAL' && (
+                        <button
+                          type="button"
+                          className={BTN_PRIMARY}
+                          onClick={() => handleApproveWaiver(row)}
+                          disabled={busy}
+                          data-testid={`waiver-approve-${row.waiver_key}`}
+                        >
+                          Aprovar
+                        </button>
+                      )}
+                      <button type="button" className={BTN_SMALL} onClick={() => handleRevokeWaiver(row)} disabled={busy}>
+                        Revogar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

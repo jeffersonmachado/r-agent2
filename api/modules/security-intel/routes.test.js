@@ -40,7 +40,8 @@ jest.mock('../../services/securityIntel/securityIntelWorker', () => ({
 }));
 jest.mock('../../services/securityIntel/waiverService', () => ({
   listWaivers: jest.fn(),
-  createWaiver: jest.fn(),
+  requestWaiver: jest.fn(),
+  approveWaiver: jest.fn(),
   revokeWaiver: jest.fn(),
 }));
 jest.mock('../../services/securityIntel/triageService', () => ({
@@ -232,7 +233,7 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     const refusal = new Error('waiver_exceeds_max_days:90');
     refusal.code = 'waiver_exceeds_max_days';
     refusal.statusCode = 400;
-    waiverService.createWaiver.mockImplementation(() => Promise.reject(refusal));
+    waiverService.requestWaiver.mockImplementation(() => Promise.reject(refusal));
     server = await buildServer(DEVELOPER);
     port = server.address().port;
     const res = await request(port, 'POST', '/api/security-intel/waivers');
@@ -245,7 +246,7 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     const refusal = new Error('waiver_not_needed_for_vex_state:NOT_AFFECTED');
     refusal.code = 'waiver_not_needed_for_vex_state';
     refusal.statusCode = 409;
-    waiverService.createWaiver.mockImplementation(() => Promise.reject(refusal));
+    waiverService.requestWaiver.mockImplementation(() => Promise.reject(refusal));
     server = await buildServer(DEVELOPER);
     port = server.address().port;
     const res = await request(port, 'POST', '/api/security-intel/waivers');
@@ -295,7 +296,7 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     expect(res.body.error).toBe('approval_identity_not_accepted');
     expect(res.body.field).toBe('approvedBy');
     // A tentativa é recusada ANTES de qualquer efeito: nada é gravado.
-    expect(waiverService.createWaiver).not.toHaveBeenCalled();
+    expect(waiverService.requestWaiver).not.toHaveBeenCalled();
   });
 
   it('RECUSA authorizedBy autodeclarado ao submeter missão (400)', async () => {
@@ -310,11 +311,12 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     expect(patchPlanService.createPatchMission).not.toHaveBeenCalled();
   });
 
-  it('aprovador do waiver é DERIVADO do ator autenticado (não do corpo)', async () => {
-    waiverService.createWaiver.mockResolvedValue({
+  it('o SOLICITANTE do waiver é DERIVADO do ator autenticado (não do corpo)', async () => {
+    waiverService.requestWaiver.mockResolvedValue({
       waiverKey: 'w1',
       created: true,
-      waiver: { expires_at: '2026-11-01T00:00:00.000Z', approved_by: 'engineer' },
+      status: 'PENDING_APPROVAL',
+      waiver: { expires_at: '2026-11-01T00:00:00.000Z', approved_by: null, requested_by: 'engineer', status: 'PENDING_APPROVAL' },
     });
     server = await buildServer(DEVELOPER);
     port = server.address().port;
@@ -322,11 +324,37 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
       findingKey: 'pkg@1.0.0#x',
       reason: 'motivo com substância suficiente',
     });
-    expect(res.status).toBe(201);
-    expect(waiverService.createWaiver).toHaveBeenCalledWith(expect.objectContaining({
-      approvedBy: 'engineer',
+    // 202: a solicitação foi REGISTRADA; ela ainda não isenta nada.
+    expect(res.status).toBe(202);
+    expect(res.body.status).toBe('PENDING_APPROVAL');
+    expect(waiverService.requestWaiver).toHaveBeenCalledWith(expect.objectContaining({
+      requestedBy: 'engineer',
       createdBy: 'engineer',
     }));
+    // Solicitar NÃO aprova: o serviço de solicitação não recebe aprovador.
+    expect(waiverService.requestWaiver.mock.calls[0][0]).not.toHaveProperty('approvedBy');
+  });
+
+  it('aprovação usa a ação própria (`waiver_approve`) e o aprovador derivado', async () => {
+    waiverService.approveWaiver.mockResolvedValue({ approved: true, approvedBy: 'engineer', scopeHash: 'sc1' });
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers/w1/approve', {}, {});
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ approved: true, approvedBy: 'engineer' });
+    expect(waiverService.approveWaiver).toHaveBeenCalledWith(expect.objectContaining({
+      waiverKey: 'w1',
+      approvedBy: 'engineer',
+    }));
+  });
+
+  it('aprovador NÃO pode ser declarado no corpo da aprovação (400)', async () => {
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers/w1/approve', {}, { approvedBy: 'diretor' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('approval_identity_not_accepted');
+    expect(waiverService.approveWaiver).not.toHaveBeenCalled();
   });
 
   it('autorização da missão também é DERIVADA do ator autenticado', async () => {
@@ -341,7 +369,7 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     }));
   });
 
-  it('SEM permissão de aprovar risco devolve 403 e não toca serviço', async () => {
+  it('SEM permissão de solicitar isenção devolve 403 e não toca serviço', async () => {
     server = await buildServer(DEVELOPER, {
       permission: (req, resource, action) => ({ allowed: action === 'read' }),
     });
@@ -351,8 +379,19 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
       reason: 'motivo com substância suficiente',
     });
     expect(res.status).toBe(403);
-    expect(res.body).toMatchObject({ error: 'forbidden', resource: 'security_intel', action: 'waiver_approve' });
-    expect(waiverService.createWaiver).not.toHaveBeenCalled();
+    expect(res.body).toMatchObject({ error: 'forbidden', resource: 'security_intel', action: 'waiver_request' });
+    expect(waiverService.requestWaiver).not.toHaveBeenCalled();
+  });
+
+  it('SOLICITAR não implica APROVAR: mesma sessão, ações distintas', async () => {
+    server = await buildServer(DEVELOPER, {
+      permission: (req, resource, action) => ({ allowed: action === 'waiver_request' }),
+    });
+    port = server.address().port;
+    const aprovacao = await request(port, 'POST', '/api/security-intel/waivers/w1/approve', {}, {});
+    expect(aprovacao.status).toBe(403);
+    expect(aprovacao.body).toMatchObject({ error: 'forbidden', action: 'waiver_approve' });
+    expect(waiverService.approveWaiver).not.toHaveBeenCalled();
   });
 
   it('autorização é POR AÇÃO: ter leitura NÃO abre escrita (mesmo server, mesmas sessão)', async () => {

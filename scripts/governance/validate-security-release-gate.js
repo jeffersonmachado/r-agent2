@@ -185,12 +185,22 @@ async function main() {
   // Waivers VIGENTES do tenant. O motor revalida a expiração de cada um
   // (`waiverExemption`) — waiver sem expiração ou expirado NÃO isenta nada. Sem
   // banco acessível, a lista fica vazia (o gate continua fail-closed: nada é
-  // isentado por indisponibilidade de leitura).
+  // isentado por indisponibilidade de leitura). Waiver cujo ESCOPO mudou depois
+  // da aprovação chega em `rejected` e NÃO é apresentado como isenção — o motivo
+  // vai para as observações do relatório em vez de desaparecer.
   let waivers = [];
+  let rejectedWaivers = [];
   let waiversError = null;
   try {
     const { waiversForGate } = require('../../api/services/securityIntel/waiverService');
-    waivers = await waiversForGate({ tenantKey });
+    const gateWaivers = await waiversForGate({ tenantKey });
+    if (Array.isArray(gateWaivers)) {
+      // Compatibilidade com o contrato antigo (lista simples).
+      waivers = gateWaivers;
+    } else {
+      waivers = gateWaivers.waivers || [];
+      rejectedWaivers = gateWaivers.rejected || [];
+    }
   } catch (error) {
     waiversError = error.message;
   }
@@ -263,6 +273,10 @@ async function main() {
       expiresAt: waiver.expiresAt,
       approvedBy: waiver.approvedBy,
     })),
+    // Waivers vigentes que NÃO isentam porque o escopo mudou depois da aprovação
+    // (upgrade/severidade/prazo). Registrado de forma explícita: um waiver que
+    // deixou de valer não pode desaparecer do relatório.
+    waiversRejected: rejectedWaivers,
   }, 'security-release-gate-report');
 
   writeReport('security-release-gate-report.json', report);

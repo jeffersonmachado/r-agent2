@@ -52,6 +52,7 @@ const ROLE_PERMISSIONS = {
     // acesso à tela". Ver api/modules/security-intel/approvalAuthority.js.
     { resource: 'security_intel', action: 'read' },
     { resource: 'security_intel', action: 'scan' },
+    { resource: 'security_intel', action: 'waiver_request' },
     { resource: 'security_intel', action: 'waiver_approve' },
     { resource: 'security_intel', action: 'waiver_revoke' },
     { resource: 'security_intel', action: 'patch_mission' },
@@ -178,6 +179,7 @@ const ROLE_PERMISSIONS = {
     // plataforma — a classificação DEVELOPMENT continua sendo exigida à parte.
     { resource: 'security_intel', action: 'read' },
     { resource: 'security_intel', action: 'scan' },
+    { resource: 'security_intel', action: 'waiver_request' },
     { resource: 'security_intel', action: 'waiver_approve' },
     { resource: 'security_intel', action: 'waiver_revoke' },
     { resource: 'security_intel', action: 'patch_mission' },

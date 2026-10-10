@@ -37,6 +37,9 @@ const SECURITY_INTEL_RESOURCE = 'security_intel';
 const SECURITY_INTEL_ACTIONS = Object.freeze({
   READ: 'read',
   SCAN: 'scan',
+  // Solicitar isenção de risco e CONCEDER a isenção são ações distintas — e, por
+  // segregação de funções, de atores distintos.
+  WAIVER_REQUEST: 'waiver_request',
   WAIVER_APPROVE: 'waiver_approve',
   WAIVER_REVOKE: 'waiver_revoke',
   PATCH_MISSION: 'patch_mission',

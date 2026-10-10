@@ -30,7 +30,7 @@ const {
   createApprovalAuthority,
 } = require('./approvalAuthority');
 
-const { READ, SCAN, WAIVER_APPROVE, WAIVER_REVOKE, PATCH_MISSION } = SECURITY_INTEL_ACTIONS;
+const { READ, SCAN, WAIVER_REQUEST, WAIVER_APPROVE, WAIVER_REVOKE, PATCH_MISSION } = SECURITY_INTEL_ACTIONS;
 
 /**
  * Ação autorizável de cada rota (fonte única do enforcement por ação).
@@ -56,7 +56,8 @@ const ROUTE_ACTIONS = Object.freeze({
   'POST /api/security-intel/scan': SCAN,
   'POST /api/security-intel/patches/generate': SCAN,
   'POST /api/security-intel/patch-mission': PATCH_MISSION,
-  'POST /api/security-intel/waivers': WAIVER_APPROVE,
+  'POST /api/security-intel/waivers': WAIVER_REQUEST,
+  'POST /api/security-intel/waivers/:waiverKey/approve': WAIVER_APPROVE,
   'POST /api/security-intel/waivers/revoke': WAIVER_REVOKE,
 });
 
@@ -545,27 +546,60 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
     const { deps, tenantKey, actor } = ctx;
     try {
       assertNoDeclaredIdentity(req.body);
-      const { createWaiver } = require('../../services/securityIntel/waiverService');
+      const { requestWaiver } = require('../../services/securityIntel/waiverService');
       const { loadPolicy } = require('../../services/securityIntel/vulnerabilityScanService');
-      const result = await createWaiver({
+      const result = await requestWaiver({
         tenantKey,
         findingKey: req.body?.findingKey,
         reason: req.body?.reason,
-        // Aprovador derivado do ator autenticado (que já passou por
-        // `security_intel:waiver_approve` no guard).
-        approvedBy: actor,
+        // SOLICITANTE derivado do ator autenticado (que passou por
+        // `security_intel:waiver_request`). Solicitar NÃO isenta: a aprovação
+        // exige OUTRO ator com `security_intel:waiver_approve`.
+        requestedBy: actor,
         createdBy: actor,
         expiresInDays: req.body?.expiresInDays,
         expiresAt: req.body?.expiresAt,
         compensatingControl: req.body?.compensatingControl || null,
         maxWaiverDays: loadPolicy().releaseGate?.maxWaiverDays ?? undefined,
       });
-      deps.sendJson(res, 201, {
+      deps.sendJson(res, 202, {
         waiverKey: result.waiverKey,
         findingKey: req.body?.findingKey,
         created: result.created === true,
+        status: result.status || result.waiver?.status || 'PENDING_APPROVAL',
         expiresAt: result.waiver.expires_at,
-        approvedBy: result.waiver.approved_by,
+        requestedBy: result.waiver.requested_by || actor,
+      });
+    } catch (error) {
+      handleError(deps, res, error);
+    }
+  });
+
+  /**
+   * Aprova a solicitação: aqui o achado vira MITIGATED.
+   *
+   * Segregação de funções: o aprovador autenticado precisa ser diferente de quem
+   * solicitou (`waiver_self_approval_forbidden`).
+   */
+  router.post('/api/security-intel/waivers/:waiverKey/approve', async (req, res) => {
+    const ctx = guard(req, res);
+    if (!ctx) return;
+    const { deps, tenantKey, actor } = ctx;
+    try {
+      assertNoDeclaredIdentity(req.body);
+      const { approveWaiver } = require('../../services/securityIntel/waiverService');
+      const result = await approveWaiver({
+        waiverKey: req.params?.waiverKey,
+        tenantKey,
+        // Aprovador derivado do ator autenticado — nunca do corpo.
+        approvedBy: actor,
+      });
+      deps.sendJson(res, 200, {
+        waiverKey: req.params?.waiverKey,
+        approved: result.approved === true,
+        reason: result.reason || null,
+        approvedBy: result.approvedBy || null,
+        scopeHash: result.scopeHash || null,
       });
     } catch (error) {
       handleError(deps, res, error);

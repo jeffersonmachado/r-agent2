@@ -606,33 +606,42 @@ async function commandWaivers(args) {
   return 0;
 }
 
+/**
+ * SOLICITA a isenção. NÃO isenta: o waiver nasce PENDING_APPROVAL.
+ *
+ * Quem executa é o SOLICITANTE. A concessão exige outro ator
+ * (`waive-approve`), por segregação de funções — declarar o aprovador aqui é
+ * recusado (`--approve` só é aceito se coincidir com quem executa, e mesmo assim
+ * não vale como aprovação).
+ */
 async function commandWaive(args) {
-  const { createWaiver } = require('../api/services/securityIntel/waiverService');
+  const { requestWaiver } = require('../api/services/securityIntel/waiverService');
   const { loadPolicy } = require('../api/services/securityIntel/vulnerabilityScanService');
   const tenantKey = args.tenant || 'system';
   if (!args.finding) {
     console.error('[security-intel] informe --finding <findingKey> (veja `patches`/`findings`).');
     return 2;
   }
-  // A identidade de quem aceita o risco é a de quem executa o comando: `--approve`
-  // não declara autoridade (se divergir do usuário do SO, o comando é recusado).
-  const approver = resolveCliApprover(args.approve, 'waive');
-  if (!approver) return 2;
+  const requester = args.actor || currentOsUser();
+  if (!requester) {
+    console.error('[security-intel] não foi possível determinar o usuário do SO que solicita a isenção; a identidade não pode ser declarada.');
+    return 2;
+  }
   const policy = loadPolicy({ reload: true });
   let result;
   try {
-    result = await createWaiver({
+    result = await requestWaiver({
       tenantKey,
       findingKey: args.finding,
       reason: args.reason,
-      approvedBy: approver,
-      createdBy: args.actor || approver,
+      requestedBy: requester,
+      createdBy: requester,
       expiresInDays: args.days ? Number(args.days) : undefined,
       compensatingControl: args.control || null,
       maxWaiverDays: policy.releaseGate?.maxWaiverDays ?? undefined,
     });
   } catch (error) {
-    console.error(`[security-intel] waiver recusado: ${error.code || error.message}`);
+    console.error(`[security-intel] solicitação recusada: ${error.code || error.message}`);
     return 3;
   }
   const payload = {
@@ -641,17 +650,63 @@ async function commandWaive(args) {
     waiverKey: result.waiverKey,
     findingKey: args.finding,
     created: result.created,
+    status: result.status || result.waiver.status,
     expiresAt: result.waiver.expires_at,
-    approvedBy: result.waiver.approved_by,
+    requestedBy: result.waiver.requested_by,
+    approvedBy: null,
   };
-  const reportPath = writeJsonReport('reports/security-intel-waiver-report.json', payload);
+  const reportPath = writeJsonReport('reports/security-intel-waiver-request-report.json', payload);
   if (args.json) process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   else {
-    console.log('=== Waiver registrado (risco aceito formalmente, com prazo) ===');
+    console.log('=== Isenção SOLICITADA (ainda NÃO vigente) ===');
     console.log(`achado .............: ${payload.findingKey}`);
     console.log(`waiver .............: ${payload.waiverKey} (novo: ${payload.created})`);
+    console.log(`solicitado por .....: ${payload.requestedBy}`);
     console.log(`expira em ..........: ${payload.expiresAt}`);
-    console.log(`aprovado por .......: ${payload.approvedBy}`);
+    console.log('aprovar com ........: node scripts/security-intel.js waive-approve --waiver <chave>  # por OUTRO usuário');
+    console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
+  }
+  return 0;
+}
+
+/**
+ * APROVA a isenção solicitada — aqui, e somente aqui, o achado vira MITIGATED.
+ *
+ * O aprovador é quem executa o comando; se for o mesmo que solicitou, o serviço
+ * recusa (`waiver_self_approval_forbidden`).
+ */
+async function commandWaiveApprove(args) {
+  const { approveWaiver } = require('../api/services/securityIntel/waiverService');
+  const tenantKey = args.tenant || 'system';
+  if (!args.waiver) {
+    console.error('[security-intel] informe --waiver <waiverKey> (veja `waivers --state PENDING_APPROVAL`).');
+    return 2;
+  }
+  const approver = resolveCliApprover(args.approve, 'waive-approve');
+  if (!approver) return 2;
+  let result;
+  try {
+    result = await approveWaiver({ waiverKey: args.waiver, tenantKey, approvedBy: approver });
+  } catch (error) {
+    console.error(`[security-intel] aprovação recusada: ${error.code || error.message}`);
+    return 3;
+  }
+  const payload = {
+    generatedAt: new Date().toISOString(),
+    tenantKey,
+    waiverKey: args.waiver,
+    approved: result.approved === true,
+    reason: result.reason || null,
+    approvedBy: result.approvedBy || null,
+    scopeHash: result.scopeHash || null,
+  };
+  const reportPath = writeJsonReport('reports/security-intel-waiver-approval-report.json', payload);
+  if (args.json) process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  else {
+    console.log('=== Isenção APROVADA (risco aceito formalmente, com prazo) ===');
+    console.log(`waiver .............: ${payload.waiverKey}`);
+    console.log(`aprovada agora .....: ${payload.approved}${payload.reason ? ` (${payload.reason})` : ''}`);
+    console.log(`aprovada por .......: ${payload.approvedBy || '—'}`);
     console.log(`relatório ..........: ${path.relative(ROOT, reportPath)}`);
   }
   return 0;
@@ -747,6 +802,7 @@ const COMMANDS = {
   'patch-mission': commandPatchMission,
   waivers: commandWaivers,
   waive: commandWaive,
+  'waive-approve': commandWaiveApprove,
   revoke: commandRevokeWaiver,
   triage: commandTriage,
 };

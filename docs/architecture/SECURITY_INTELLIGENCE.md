@@ -296,11 +296,20 @@ agendado depois que o anterior termina.
   aberto e 0 waivers vigentes (`AI_MEMORY/evidence/security-intel/waiver-proof-2026-10-09.json`).
   A tabela nasce VAZIA: nada é isentado hoje. Regras recusadas por construção:
   expiração ausente/passada/prazo acima de `maxWaiverDays`, motivo sem substância,
-  aprovador ausente e tentativa de isentar achado que não é risco aberto (VEX ou
-  resolvido). A prova também revelou um defeito real: `createWaiver` não era
-  atômico e uma falha ao gravar o evento deixava **isenção sem trilha** — hoje roda
-  em transação.
-- Testes: **236 casos em 16 suítes** (`tests/unit/securityIntel/` + `api/modules/security-intel/`).
+  solicitante ausente e tentativa de isentar achado que não é risco aberto (VEX ou
+  resolvido). A prova também revelou um defeito real: a criação não era atômica e
+  uma falha ao gravar o evento deixava **isenção sem trilha** — hoje cada transição
+  roda em transação.
+
+  **Duas etapas desde 2026-10-10** (`requestWaiver` → `approveWaiver`): solicitar
+  registra `PENDING_APPROVAL` e **não mitiga nada**; aprovar exige OUTRO ator
+  (segregação de funções), o mesmo `scope_hash` do escopo pedido (alteração de
+  pacote/serviço/severidade/prazo invalida a aprovação) e vence o CAS
+  `PENDING_APPROVAL → ACTIVE` — aprovação concorrente ou replay perde a corrida em
+  vez de mitigar duas vezes. A identidade de ambos os lados é derivada do contexto
+  autenticado; declarar aprovador no corpo é recusado
+  (`approval_identity_not_accepted`).
+- Testes: **336 casos em 23 suítes** (`tests/unit/securityIntel/` + `api/modules/security-intel/`).
   **5 de resiliência** (`resilience.test.js`): ciclos **nunca se sobrepõem** (ciclo
   lento em andamento não deixa o próximo disparar), erro de ciclo é **capturado**
   (sem unhandled rejection que derrubaria a API) e o worker **continua tentando**,

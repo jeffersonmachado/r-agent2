@@ -40,7 +40,20 @@ function getSecurityWaiverModel() {
       severity: { type: DataTypes.STRING, allowNull: true },
       reason: { type: DataTypes.TEXT, allowNull: false },
       compensating_control: { type: DataTypes.TEXT, allowNull: true },
-      approved_by: { type: DataTypes.STRING, allowNull: false },
+      // Status do ciclo de aprovação. `PENDING_APPROVAL` NÃO isenta nada: o gate
+      // e `getActiveWaivers` só consideram `ACTIVE`.
+      status: { type: DataTypes.STRING, allowNull: false, defaultValue: 'ACTIVE' },
+      // Nullable de propósito: pendente não tem aprovador. Gravar o solicitante
+      // aqui afirmaria uma aprovação que não ocorreu.
+      approved_by: { type: DataTypes.STRING, allowNull: true },
+      approved_at: { type: DataTypes.DATE, allowNull: true },
+      requested_by: { type: DataTypes.STRING, allowNull: true },
+      requested_at: { type: DataTypes.DATE, allowNull: true },
+      // Impressão do escopo aprovado: se o escopo mudar depois, o hash não casa e
+      // o waiver deixa de isentar (aprovação não é reaproveitável).
+      scope_hash: { type: DataTypes.STRING, allowNull: true },
+      // CAS/anti-replay: incrementa a cada transição.
+      approval_version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
       created_by: { type: DataTypes.STRING, allowNull: true },
       expires_at: { type: DataTypes.DATE, allowNull: false },
       revoked_at: { type: DataTypes.DATE, allowNull: true },
@@ -55,6 +68,7 @@ function getSecurityWaiverModel() {
         { unique: true, fields: ['tenant_key', 'waiver_key'], name: 'security_waivers_tenant_key_unique' },
         { fields: ['tenant_key', 'finding_key'], name: 'security_waivers_finding_idx' },
         { fields: ['expires_at'], name: 'security_waivers_expires_idx' },
+        { fields: ['tenant_key', 'status'], name: 'security_waivers_status_idx' },
       ],
     });
   }
