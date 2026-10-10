@@ -85,11 +85,13 @@ export async function generateSecurityPatchPlans(body = {}) {
 /**
  * Submete a missão de correção ao Roteador Engenheiro.
  *
- * Candidato de Nível C exige `authorizedBy` — a recusa vem do backend
- * (`patch_candidate_requires_authorization`), nunca é decidida aqui.
+ * A autorização (Nível C) é DERIVADA da sessão autenticada no backend — a tela
+ * não envia `authorizedBy` e não pode declarar quem autoriza. A recusa vem do
+ * backend (`patch_candidate_requires_authorization` para o serviço, ou
+ * `approval_identity_not_accepted` se algum chamador tentar declarar identidade).
  */
-export async function createSecurityPatchMission({ candidateKey, authorizedBy = null }) {
-  return postJson(`${BASE_PATH}/patch-mission`, { candidateKey, authorizedBy });
+export async function createSecurityPatchMission({ candidateKey }) {
+  return postJson(`${BASE_PATH}/patch-mission`, { candidateKey });
 }
 
 /** Waivers de risco: isenção formal com expiração (decisão humana). */
@@ -99,20 +101,22 @@ export async function listSecurityWaivers(filters = {}) {
 
 /**
  * Concede um waiver. Recusas de política (prazo acima do limite, sem expiração,
- * motivo curto, aprovador ausente, achado que não é risco aberto) vêm do
- * backend com o código do motivo — a tela não tenta decidir elegibilidade.
+ * motivo curto, achado que não é risco aberto) vêm do backend com o código do
+ * motivo — a tela não tenta decidir elegibilidade.
+ *
+ * O aprovador NÃO é enviado: ele é derivado do token no backend (permissão
+ * `security_intel:waiver_approve`). Enviar `approvedBy` é recusado com 400
+ * `approval_identity_not_accepted`.
  */
 export async function createSecurityWaiver({
   findingKey,
   reason,
-  approvedBy,
   expiresInDays,
   compensatingControl = null,
 }) {
   return postJson(`${BASE_PATH}/waivers`, {
     findingKey,
     reason,
-    approvedBy,
     expiresInDays,
     compensatingControl,
   });

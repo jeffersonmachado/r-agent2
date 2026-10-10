@@ -67,9 +67,13 @@ operacional; não duplica o doc.
   UP/DEGRADED/DOWN visível; parado nunca parece saudável.
 - **Patch Engine** (`npm run security:patches`): planeja a correção (menor versão
   corrigida acima da instalada; semântica PATCH/MINOR/MAJOR; Nível B automático em
-  ambiente isolado, Nível C exige `--authorized-by`) e consolida por pacote.
+  ambiente isolado, Nível C exige autorização explícita) e consolida por pacote.
   `patch-mission --candidate <key>` submete a missão ao Roteador Engenheiro —
-  NUNCA aplica. Estado medido: dos 21 bloqueios, 16 exigem autorização;
+  NUNCA aplica. A identidade de quem autoriza/aceita risco é **derivada**, nunca
+  declarada: no CLI é o usuário do SO que executa o comando (ver
+  `resolveCliApprover`), na API é o ator autenticado com permissão por ação
+  (`security_intel:waiver_approve|waiver_revoke|patch_mission` — ver
+  `api/modules/security-intel/approvalAuthority.js`). Estado medido: dos 21 bloqueios, 16 exigem autorização;
   `transformers` (CRITICAL) e `torch` **NÃO são limpáveis por bump** (4 e 1
   advisories sem versão corrigida) ⇒ controle compensatório ou waiver formal com
   expiração.

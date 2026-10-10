@@ -116,13 +116,18 @@ const ERROR_MESSAGES = {
   tenant_required: 'Selecione um tenant antes de consultar a inteligência de segurança.',
   tenant_invalid: 'Tenant inválido para esta consulta.',
   persistence_required: 'O banco de dados não está disponível: a leitura seria degradada, então foi recusada.',
-  patch_candidate_requires_authorization: 'Candidato de Nível C (produção) exige autorização explícita.',
+  // Autoridade de aprovação: a identidade vem da sessão e a permissão é por ação.
+  forbidden: 'Sua sessão não tem permissão para esta ação (aceitar risco, revogar isenção ou submeter correção).',
+  approval_identity_not_accepted: 'A identidade de quem aprova é derivada da sessão autenticada — ela não é declarada na requisição.',
+  approval_identity_unresolvable: 'Sessão sem identidade utilizável para assinar a operação.',
+  route_action_undeclared: 'Rota sem autorização declarada (falha de configuração, não do seu acesso).',
+  patch_candidate_requires_authorization: 'Candidato de Nível C (produção) exige autorização explícita da sessão autenticada.',
   patch_candidate_not_found: 'Candidato de patch não encontrado.',
   waiver_expiry_required: 'Informe o prazo em dias: isenção sem expiração não é permitida.',
   waiver_expiry_not_in_future: 'O prazo precisa estar no futuro.',
   waiver_exceeds_max_days: 'Prazo acima do limite da política de waivers.',
   waiver_reason_required: 'Descreva o motivo da aceitação do risco (mínimo de 20 caracteres).',
-  waiver_approver_required: 'Informe quem aprova a aceitação do risco.',
+  waiver_approver_required: 'A sessão autenticada precisa ter identidade utilizável para aprovar.',
   waiver_not_needed_for_vex_state: 'Este achado não é risco aberto (já descartado por VEX ou resolvido) — não precisa de isenção.',
   waiver_finding_not_found: 'Achado não encontrado no inventário atual.',
   waiver_not_found: 'Waiver não encontrado.',
@@ -201,10 +206,9 @@ export function SecurityIntelligencePage() {
   const [waivers, setWaivers] = useState({ items: [], total: 0, maxWaiverDays: null });
   const [triage, setTriage] = useState(null);
   const [waiverForm, setWaiverForm] = useState({
-    findingKey: '', reason: '', approvedBy: '', expiresInDays: 30, compensatingControl: '',
+    findingKey: '', reason: '', expiresInDays: 30, compensatingControl: '',
   });
   const [waiverFilter, setWaiverFilter] = useState('');
-  const [authorizedBy, setAuthorizedBy] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -341,7 +345,6 @@ export function SecurityIntelligencePage() {
       const result = await createSecurityWaiver({
         findingKey: waiverForm.findingKey,
         reason: waiverForm.reason,
-        approvedBy: waiverForm.approvedBy,
         expiresInDays: Number(waiverForm.expiresInDays),
         compensatingControl: waiverForm.compensatingControl || null,
       });
@@ -351,7 +354,7 @@ export function SecurityIntelligencePage() {
           : 'Este achado já possuía uma isenção com o mesmo prazo (nada foi duplicado).',
         'success',
       );
-      setWaiverForm({ findingKey: '', reason: '', approvedBy: '', expiresInDays: 30, compensatingControl: '' });
+      setWaiverForm({ findingKey: '', reason: '', expiresInDays: 30, compensatingControl: '' });
       await loadAll();
     } catch (err) {
       showToast(messageOf(err), 'error');
@@ -383,7 +386,6 @@ export function SecurityIntelligencePage() {
     try {
       const result = await createSecurityPatchMission({
         candidateKey: candidate.candidate_key,
-        authorizedBy: authorizedBy[candidate.candidate_key] || null,
       });
       showToast(
         result.created
@@ -397,7 +399,7 @@ export function SecurityIntelligencePage() {
     } finally {
       setBusy(false);
     }
-  }, [authorizedBy, loadAll, showToast]);
+  }, [loadAll, showToast]);
 
   const kpis = useMemo(() => {
     if (!summary) return [];
@@ -619,17 +621,9 @@ export function SecurityIntelligencePage() {
                     ) : (
                       <div className="flex items-center gap-2 flex-wrap">
                         {row.requires_human_approval && (
-                          <input
-                            type="text"
-                            className={FIELD}
-                            placeholder="autorizado por"
-                            value={authorizedBy[row.candidate_key] || ''}
-                            onChange={(event) => setAuthorizedBy((prev) => ({
-                              ...prev,
-                              [row.candidate_key]: event.target.value,
-                            }))}
-                            aria-label={`Autorizador para ${row.package_name}`}
-                          />
+                          <span className="text-xs text-text-secondary" data-testid="patch-mission-authorization-note">
+                            Nível C: a autorização é registrada em nome do usuário autenticado.
+                          </span>
                         )}
                         <button type="button" className={BTN_SMALL} onClick={() => handleCreateMission(row)} disabled={busy}>
                           Criar missão
@@ -899,18 +893,14 @@ export function SecurityIntelligencePage() {
                 required
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-xs text-text-secondary">Aprovado por</span>
-              <input
-                type="text"
-                className={FIELD}
-                value={waiverForm.approvedBy}
-                onChange={(event) => setWaiverForm((prev) => ({ ...prev, approvedBy: event.target.value }))}
-                placeholder="quem assume o risco"
-                required
-                data-testid="waiver-approver-input"
-              />
-            </label>
+              <p className="text-xs text-text-primary" data-testid="waiver-approver-note">
+                Registrado em nome do usuário autenticado (identidade derivada da sessão).
+                A autorização é verificada por permissão: ter acesso à tela não concede
+                aprovação de risco.
+              </p>
+            </div>
             <label className="flex flex-col gap-1">
               <span className="text-xs text-text-secondary">Prazo em dias</span>
               <input

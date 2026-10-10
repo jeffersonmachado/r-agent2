@@ -22,22 +22,56 @@ const express = require('express');
 
 const { checkClassification } = require('../../middleware/requireClassification');
 const { tenantFromRequest } = require('../../../lib/rpaSecurity');
+const {
+  SECURITY_INTEL_RESOURCE,
+  SECURITY_INTEL_ACTIONS,
+  APPROVAL_IDENTITY_UNRESOLVABLE,
+  assertNoDeclaredIdentity,
+  createApprovalAuthority,
+} = require('./approvalAuthority');
 
+const { READ, SCAN, WAIVER_APPROVE, WAIVER_REVOKE, PATCH_MISSION } = SECURITY_INTEL_ACTIONS;
+
+/**
+ * Ação autorizável de cada rota (fonte única do enforcement por ação).
+ *
+ * A tabela é consultada dentro do `guard` ANTES do handler e é FAIL-CLOSED: rota
+ * sem entrada declarada é negada com 403 (`route_action_undeclared`) em vez de
+ * herdar implicitamente a permissão de leitura. Ser uma tabela `METHOD path` (e
+ * não um parâmetro por rota) é deliberado: uma rota nova que esquecer de
+ * declarar a ação falha alto, em vez de ficar em silêncio sem autorização
+ * própria. `routes.test.js` cobre a não-vacuidade desta tabela.
+ */
 const ROUTE_ACTIONS = Object.freeze({
-  SUMMARY: 'read',
-  INVENTORY: 'read',
-  FINDINGS: 'read',
-  PATCHES: 'read',
-  ADVISORIES: 'read',
-  VECTOR_INDEX: 'read',
-  SCAN: 'scan',
-  PLAN: 'plan',
-  PATCH_MISSION: 'patch_mission',
-  WAIVERS_LIST: 'read',
-  WAIVER_CREATE: 'waiver_create',
-  WAIVER_REVOKE: 'waiver_revoke',
-  TRIAGE: 'read',
+  'GET /api/security-intel/summary': READ,
+  'GET /api/security-intel/inventory': READ,
+  'GET /api/security-intel/versions': READ,
+  'GET /api/security-intel/findings': READ,
+  'GET /api/security-intel/findings/timeline': READ,
+  'GET /api/security-intel/patches': READ,
+  'GET /api/security-intel/vector-index': READ,
+  'GET /api/security-intel/advisories': READ,
+  'GET /api/security-intel/waivers': READ,
+  'GET /api/security-intel/triage': READ,
+  'POST /api/security-intel/scan': SCAN,
+  'POST /api/security-intel/patches/generate': SCAN,
+  'POST /api/security-intel/patch-mission': PATCH_MISSION,
+  'POST /api/security-intel/waivers': WAIVER_APPROVE,
+  'POST /api/security-intel/waivers/revoke': WAIVER_REVOKE,
 });
+
+/** Caminho normalizado para consulta da tabela (o Express preenche `req.route`). */
+function declaredPathOf(req) {
+  const raw = (req && req.route && req.route.path) || (req && req.path) || '';
+  const path = String(raw).split('?')[0];
+  if (path.length > 1 && path.endsWith('/')) return path.slice(0, -1);
+  return path;
+}
+
+function actionForRequest(req) {
+  const key = `${String((req && req.method) || '').toUpperCase()} ${declaredPathOf(req)}`;
+  return ROUTE_ACTIONS[key] || null;
+}
 
 function createSecurityIntelRoutes({ buildDeps } = {}) {
   const router = express.Router();
@@ -47,12 +81,21 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
   }
 
   /**
-   * Guard de engenharia: autenticação (401) -> classificação DEVELOPMENT (403)
-   * -> tenant resolvido server-side (400). Fail-closed em todas as etapas.
+   * Guard de engenharia, fail-closed em TODAS as etapas:
+   *   1. autenticação (401);
+   *   2. classificação DEVELOPMENT (403) — acesso à superfície;
+   *   3. ação declarada da rota (403 `route_action_undeclared`);
+   *   4. identidade do ator derivada server-side (403 se inutilizável);
+   *   5. AUTORIZAÇÃO POR AÇÃO via RBAC (403 `forbidden`);
+   *   6. tenant resolvido server-side (400).
    *
    * O tenant NUNCA é assumido: se não for resolvível, a requisição é negada em
    * vez de cair silenciosamente em 'system' (substituição silenciosa de tenant
    * é exatamente o que a governança deste repo proíbe).
+   *
+   * A ordem importa: a permissão é checada ANTES de qualquer serviço ser tocado
+   * e ANTES de o tenant ser resolvido, de modo que um ator sem autoridade não
+   * consegue nem distinguir "tenant inválido" de "sem permissão".
    */
   function guard(req, res) {
     const deps = depsFor(req, res);
@@ -71,6 +114,34 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
       });
       return null;
     }
+    const action = actionForRequest(req);
+    if (!action) {
+      deps.sendJson(res, 403, { error: 'route_action_undeclared', route: declaredPathOf(req) });
+      return null;
+    }
+    const authority = createApprovalAuthority({
+      agent: auth.agent || req.agent || {},
+      permissionCheck: (resource, act) => (typeof deps.requirePermission === 'function'
+        ? deps.requirePermission(req, resource, act)
+        : { allowed: false, error: 'requirePermission indisponível' }),
+    });
+    if (!authority) {
+      deps.sendJson(res, 403, {
+        error: APPROVAL_IDENTITY_UNRESOLVABLE,
+        message: 'Ator autenticado sem identidade utilizável para autorizar a operação',
+      });
+      return null;
+    }
+    const denial = authority.denialFor(action);
+    if (!denial.allowed) {
+      deps.sendJson(res, 403, {
+        error: 'forbidden',
+        resource: SECURITY_INTEL_RESOURCE,
+        action,
+        message: denial.error || null,
+      });
+      return null;
+    }
     let tenantKey;
     try {
       tenantKey = tenantFromRequest(req, auth);
@@ -81,11 +152,14 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
       });
       return null;
     }
-    const agent = auth.agent || req.agent || {};
     return {
       deps,
+      req,
       tenantKey,
-      actor: agent.username || agent.email || agent.id || 'security-intel-api',
+      action,
+      authority,
+      // Identidade DERIVADA do token: é ela que assina aprovações e auditoria.
+      actor: authority.actor,
       classification: check.classification,
     };
   }
@@ -103,11 +177,20 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
         detail: String(error.message || '').slice(code.length + 1) || null,
       });
     }
+    if (code === 'approval_identity_not_accepted') {
+      // A identidade do aprovador vem do token, nunca do corpo: recusar com o
+      // campo ofensor nomeado torna a tentativa auditável em vez de invisível.
+      return deps.sendJson(res, 400, {
+        error: 'approval_identity_not_accepted',
+        field: String(error.message || '').split(':')[1] || null,
+        message: 'A identidade de quem aprova é derivada do token autenticado; não envie approvedBy/authorizedBy',
+      });
+    }
     if (code === 'patch_candidate_requires_authorization') {
       return deps.sendJson(res, 403, {
         error: 'patch_candidate_requires_authorization',
         autonomy: error.autonomy || null,
-        detail: 'candidato exige autorização explícita (Nível C): informe authorizedBy',
+        detail: 'candidato exige autorização explícita (Nível C) do ator autenticado',
       });
     }
     if (code === 'patch_candidate_not_found') {
@@ -410,12 +493,16 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
     if (!ctx) return;
     const { deps, tenantKey, actor } = ctx;
     try {
+      assertNoDeclaredIdentity(req.body);
       const { createPatchMission } = require('../../services/securityIntel/patchPlanService');
       const result = await createPatchMission({
         candidateKey: req.body?.candidateKey,
         tenantKey,
         actor,
-        authorizedBy: req.body?.authorizedBy || null,
+        // Autorização = ator AUTENTICADO (identidade derivada) que possui a
+        // permissão `security_intel:patch_mission`. O cliente não declara quem
+        // autoriza — ver `approvalAuthority.js`.
+        authorizedBy: actor,
       });
       deps.sendJson(res, 202, {
         candidateKey: result.candidateKey || req.body?.candidateKey,
@@ -457,13 +544,16 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
     if (!ctx) return;
     const { deps, tenantKey, actor } = ctx;
     try {
+      assertNoDeclaredIdentity(req.body);
       const { createWaiver } = require('../../services/securityIntel/waiverService');
       const { loadPolicy } = require('../../services/securityIntel/vulnerabilityScanService');
       const result = await createWaiver({
         tenantKey,
         findingKey: req.body?.findingKey,
         reason: req.body?.reason,
-        approvedBy: req.body?.approvedBy,
+        // Aprovador derivado do ator autenticado (que já passou por
+        // `security_intel:waiver_approve` no guard).
+        approvedBy: actor,
         createdBy: actor,
         expiresInDays: req.body?.expiresInDays,
         expiresAt: req.body?.expiresAt,
@@ -517,7 +607,6 @@ function createSecurityIntelRoutes({ buildDeps } = {}) {
     }
   });
 
-  void ROUTE_ACTIONS;
   return router;
 }
 

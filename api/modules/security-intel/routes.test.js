@@ -32,6 +32,7 @@ jest.mock('../../services/securityIntel/sbomService', () => ({
 }));
 jest.mock('../../services/securityIntel/patchPlanService', () => ({
   listPatchCandidates: jest.fn(),
+  createPatchMission: jest.fn(),
 }));
 jest.mock('../../services/securityIntel/securityIntelWorker', () => ({
   getSecurityIntelWorkerStatus: jest.fn(),
@@ -56,9 +57,13 @@ const triageService = require('../../services/securityIntel/triageService');
 
 const { createSecurityIntelRoutes } = require('./routes');
 
-function request(port, method, path, headers = {}) {
+function request(port, method, path, headers = {}, body = null) {
   return new Promise((resolve, reject) => {
-    const req = http.request({ hostname: '127.0.0.1', port, path, method, headers }, (res) => {
+    const payload = body === null ? null : JSON.stringify(body);
+    const finalHeaders = payload === null
+      ? headers
+      : { ...headers, 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) };
+    const req = http.request({ hostname: '127.0.0.1', port, path, method, headers: finalHeaders }, (res) => {
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
@@ -68,11 +73,12 @@ function request(port, method, path, headers = {}) {
       });
     });
     req.on('error', reject);
+    if (payload !== null) req.write(payload);
     req.end();
   });
 }
 
-function buildServer(agent, { authenticated = true } = {}) {
+function buildServer(agent, { authenticated = true, permission = null } = {}) {
   const deps = {
     requireAuth: jest.fn((req) => {
       if (!authenticated) return { valid: false, error: 'Token de autenticação não fornecido' };
@@ -82,7 +88,12 @@ function buildServer(agent, { authenticated = true } = {}) {
       }
       return { valid: true, agent };
     }),
-    requirePermission: jest.fn(() => ({ allowed: true })),
+    // `permission` permite exercitar a autorização POR AÇÃO: recebe
+    // (req, resource, action) e devolve { allowed }. O default libera tudo para
+    // que os testes de segregação/tenant não dependam do RBAC.
+    requirePermission: jest.fn(typeof permission === 'function'
+      ? permission
+      : () => (permission || { allowed: true })),
     sendJson: (res, status, payload) => res.status(status).json(payload),
     badRequest: (res, message) => res.status(400).json({ error: message }),
     hasJsonContentType: () => true,
@@ -268,5 +279,94 @@ describe('security-intel routes — segregação DEVELOPMENT e fail-closed', () 
     expect(res.body.groups[0].command).toContain('waive');
     // Uma única fonte para a fila: a rota não recolhe dados por conta própria.
     expect(triageService.buildTriage).toHaveBeenCalledWith({ tenantKey: 'system' });
+  });
+
+  // ── Autoridade de aprovação (achado P0 de 2026-10-10) ────────────────────
+
+  it('RECUSA identidade autodeclarada: approvedBy no corpo não autoriza nada (400)', async () => {
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers', {}, {
+      findingKey: 'pkg@1.0.0#x',
+      reason: 'motivo com substância suficiente',
+      approvedBy: 'diretor-fantasma',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('approval_identity_not_accepted');
+    expect(res.body.field).toBe('approvedBy');
+    // A tentativa é recusada ANTES de qualquer efeito: nada é gravado.
+    expect(waiverService.createWaiver).not.toHaveBeenCalled();
+  });
+
+  it('RECUSA authorizedBy autodeclarado ao submeter missão (400)', async () => {
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/patch-mission', {}, {
+      candidateKey: 'c1',
+      authorizedBy: 'cto-fantasma',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('approval_identity_not_accepted');
+    expect(patchPlanService.createPatchMission).not.toHaveBeenCalled();
+  });
+
+  it('aprovador do waiver é DERIVADO do ator autenticado (não do corpo)', async () => {
+    waiverService.createWaiver.mockResolvedValue({
+      waiverKey: 'w1',
+      created: true,
+      waiver: { expires_at: '2026-11-01T00:00:00.000Z', approved_by: 'engineer' },
+    });
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers', {}, {
+      findingKey: 'pkg@1.0.0#x',
+      reason: 'motivo com substância suficiente',
+    });
+    expect(res.status).toBe(201);
+    expect(waiverService.createWaiver).toHaveBeenCalledWith(expect.objectContaining({
+      approvedBy: 'engineer',
+      createdBy: 'engineer',
+    }));
+  });
+
+  it('autorização da missão também é DERIVADA do ator autenticado', async () => {
+    patchPlanService.createPatchMission.mockResolvedValue({ missionId: 'm1', created: true, candidateKey: 'c1' });
+    server = await buildServer(DEVELOPER);
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/patch-mission', {}, { candidateKey: 'c1' });
+    expect(res.status).toBe(202);
+    expect(patchPlanService.createPatchMission).toHaveBeenCalledWith(expect.objectContaining({
+      actor: 'engineer',
+      authorizedBy: 'engineer',
+    }));
+  });
+
+  it('SEM permissão de aprovar risco devolve 403 e não toca serviço', async () => {
+    server = await buildServer(DEVELOPER, {
+      permission: (req, resource, action) => ({ allowed: action === 'read' }),
+    });
+    port = server.address().port;
+    const res = await request(port, 'POST', '/api/security-intel/waivers', {}, {
+      findingKey: 'pkg@1.0.0#x',
+      reason: 'motivo com substância suficiente',
+    });
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ error: 'forbidden', resource: 'security_intel', action: 'waiver_approve' });
+    expect(waiverService.createWaiver).not.toHaveBeenCalled();
+  });
+
+  it('autorização é POR AÇÃO: ter leitura NÃO abre escrita (mesmo server, mesmas sessão)', async () => {
+    server = await buildServer(DEVELOPER, {
+      permission: (req, resource, action) => ({ allowed: action === 'read' }),
+    });
+    port = server.address().port;
+    const leitura = await request(port, 'GET', '/api/security-intel/summary');
+    expect(leitura.status).toBe(200);
+    const missao = await request(port, 'POST', '/api/security-intel/patch-mission', {}, { candidateKey: 'c1' });
+    expect(missao.status).toBe(403);
+    expect(missao.body).toMatchObject({ error: 'forbidden', action: 'patch_mission' });
+    const scan = await request(port, 'POST', '/api/security-intel/scan', {}, { scope: 'installed' });
+    expect(scan.status).toBe(403);
+    expect(scan.body.action).toBe('scan');
   });
 });

@@ -91,7 +91,11 @@ describe('triageDossier — buckets', () => {
     expect(byName['sem-fix'].rationale).toMatch(/sem versão corrigida/);
     expect(byName['sem-fix'].command).toMatch(/waive/);
     expect(byName.majorzinho.rationale).toMatch(/MAJOR/);
-    expect(byName.majorzinho.command).toMatch(/--authorized-by/);
+    // Identidade de aprovação é DERIVADA (CLI: usuário do SO; API: token): o
+    // comando sugerido não pode pedir que o operador a declare.
+    expect(byName.majorzinho.command).not.toMatch(/--authorized-by/);
+    expect(byName['sem-fix'].command).not.toMatch(/--approve/);
+    expect(byName.majorzinho.command).toMatch(/identidade não é declarada/);
     expect(byName.tranquilo.command).toMatch(/patch-mission/);
     expect(byName.tranquilo.command).not.toMatch(/--authorized-by/);
   });
@@ -122,7 +126,7 @@ describe('triageDossier — buckets', () => {
     // Mandar missão para o primeiro candidato da lista fixaria só parte do pacote.
     expect(byName.nodemailer.command).toContain('chave-limpa-10.0.6');
     expect(byName.nodemailer.command).not.toContain('chave-parcial-9.1.0');
-    expect(byName.nodemailer.command).toContain('--authorized-by');
+    expect(byName.nodemailer.command).not.toMatch(/--authorized-by/);
     // Waiver precisa da chave REAL do achado sem correção (não de um placeholder).
     expect(byName.transformers.command).toContain('PYSEC-1|pypi:transformers@4.57.6#RESOLVED#rag-service');
     expect(byName.transformers.command).not.toContain('<findingKey>');

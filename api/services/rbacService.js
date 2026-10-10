@@ -45,6 +45,16 @@ const ROLE_PERMISSIONS = {
     { resource: 'engineering', action: 'reject' },
     { resource: 'engineering', action: 'execute' },
     { resource: 'engineering', action: 'policy_admin' },
+    // Security Intelligence (RAP Version & Security Intelligence): a superfície é
+    // DEVELOPMENT-only, mas a AUTORIDADE sobre ela é POR AÇÃO. Aceitar risco
+    // (waiver), revogar isenção e submeter correção ao Roteador Engenheiro são
+    // decisões distintas de LER o inventário — e nenhuma delas decorre de "ter
+    // acesso à tela". Ver api/modules/security-intel/approvalAuthority.js.
+    { resource: 'security_intel', action: 'read' },
+    { resource: 'security_intel', action: 'scan' },
+    { resource: 'security_intel', action: 'waiver_approve' },
+    { resource: 'security_intel', action: 'waiver_revoke' },
+    { resource: 'security_intel', action: 'patch_mission' },
     // Acesso total + gestão de tenant
     { resource: 'tenant', action: 'read' },
     { resource: 'tenant', action: 'update' },
@@ -163,6 +173,14 @@ const ROLE_PERMISSIONS = {
     { resource: 'engineering', action: 'approve' },
     { resource: 'engineering', action: 'reject' },
     { resource: 'engineering', action: 'execute' },
+    // Security Intelligence: admin de tenant pode ler/scanear e decidir sobre
+    // risco do PRÓPRIO tenant (waiver/revogação/missão). Não é acesso de
+    // plataforma — a classificação DEVELOPMENT continua sendo exigida à parte.
+    { resource: 'security_intel', action: 'read' },
+    { resource: 'security_intel', action: 'scan' },
+    { resource: 'security_intel', action: 'waiver_approve' },
+    { resource: 'security_intel', action: 'waiver_revoke' },
+    { resource: 'security_intel', action: 'patch_mission' },
     // Tickets
     { resource: 'tickets', action: 'create' },
     { resource: 'tickets', action: 'read' },

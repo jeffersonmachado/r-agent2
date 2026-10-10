@@ -20,9 +20,43 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
+
+/**
+ * Usuário que executa o CLI: é a identidade de aprovação no contexto de linha de
+ * comando. `--approve`/`--authorized-by` deixaram de ser identidade
+ * autodeclarada — se divergirem de quem executa, o comando é recusado.
+ */
+function currentOsUser() {
+  try {
+    const info = os.userInfo();
+    if (info && info.username) return info.username;
+  } catch (_) { /* plataforma sem userInfo (container mínimo) */ }
+  return process.env.SUDO_USER || process.env.USER || process.env.LOGNAME || null;
+}
+
+/**
+ * Resolve a identidade de aprovação do CLI (fail-closed).
+ *
+ * @returns {string|null} usuário do SO, ou `null` quando não é possível
+ *   determiná-lo ou quando a identidade declarada diverge dele.
+ */
+function resolveCliApprover(declared, commandName) {
+  const declaredValue = declared ? String(declared).trim() : null;
+  const osUser = currentOsUser();
+  if (!osUser) {
+    console.error(`[security-intel] não foi possível determinar o usuário do SO que executa o comando; a identidade de aprovação não pode ser declarada (${commandName}).`);
+    return null;
+  }
+  if (declaredValue && declaredValue !== osUser) {
+    console.error(`[security-intel] identidade de aprovação não é declarada: "${declaredValue}" difere do usuário que executa (${osUser}).`);
+    return null;
+  }
+  return osUser;
+}
 
 /** Carrega `.env` sem depender de dotenv (não sobrescreve ambiente explícito). */
 function loadEnvFile(file = path.join(ROOT, '.env')) {
@@ -506,11 +540,14 @@ async function commandPatchMission(args) {
     console.error('[security-intel] informe --candidate <candidateKey> (ver `patches`)');
     return 2;
   }
+  const approver = resolveCliApprover(args.authorizedBy, 'patch-mission');
+  if (!approver) return 2;
   const result = await createPatchMission({
     candidateKey: args.candidate,
     tenantKey: args.tenant || 'system',
-    actor: args.actor || 'security-intel-cli',
-    authorizedBy: args.authorizedBy || null,
+    actor: args.actor || approver,
+    // Autorização = quem executa o comando (identidade verificável do SO).
+    authorizedBy: approver,
   });
   const payload = {
     generatedAt: new Date().toISOString(),
@@ -577,10 +614,10 @@ async function commandWaive(args) {
     console.error('[security-intel] informe --finding <findingKey> (veja `patches`/`findings`).');
     return 2;
   }
-  if (!args.approve) {
-    console.error('[security-intel] informe --approve <quem aprova>: isenção sem autor não é auditável.');
-    return 2;
-  }
+  // A identidade de quem aceita o risco é a de quem executa o comando: `--approve`
+  // não declara autoridade (se divergir do usuário do SO, o comando é recusado).
+  const approver = resolveCliApprover(args.approve, 'waive');
+  if (!approver) return 2;
   const policy = loadPolicy({ reload: true });
   let result;
   try {
@@ -588,8 +625,8 @@ async function commandWaive(args) {
       tenantKey,
       findingKey: args.finding,
       reason: args.reason,
-      approvedBy: args.approve,
-      createdBy: args.actor || null,
+      approvedBy: approver,
+      createdBy: args.actor || approver,
       expiresInDays: args.days ? Number(args.days) : undefined,
       compensatingControl: args.control || null,
       maxWaiverDays: policy.releaseGate?.maxWaiverDays ?? undefined,
@@ -632,7 +669,7 @@ async function commandRevokeWaiver(args) {
     result = await revokeWaiver({
       waiverKey: args.waiver,
       tenantKey,
-      actor: args.actor || args.approve || 'unknown',
+      actor: args.actor || currentOsUser() || 'unknown',
       reason: args.reason || null,
     });
   } catch (error) {
@@ -718,7 +755,8 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
   if (!command || !COMMANDS[command]) {
-    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index|patches|patch-mission|waivers|waive|revoke|triage> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>] [--blocking] [--include-dev] [--candidate <key>] [--authorized-by <quem autoriza>] [--finding <findingKey>] [--waiver <waiverKey>] [--approve <quem aprova>] [--days N] [--reason <texto>] [--control <texto>] [--state ACTIVE|EXPIRED|REVOKED|ALL]');
+    console.error('uso: node scripts/security-intel.js <discover|sbom|inventory|status|advisories|scan|vector-index|patches|patch-mission|waivers|waive|revoke|triage> [--persist] [--json] [--no-docker] [--limit N] [--rate N] [--scope direct|installed|running] [--tenant <key>] [--out <path>] [--blocking] [--include-dev] [--candidate <key>] [--finding <findingKey>] [--waiver <waiverKey>] [--days N] [--reason <texto>] [--control <texto>] [--state ACTIVE|EXPIRED|REVOKED|ALL]');
+    console.error('nota: a identidade de aprovação é o usuário do SO que executa o comando (--approve/--authorized-by só são aceitos se coincidirem com ele).');
     return 2;
   }
   // Em modo `--json` o stdout é dado de máquina: todo log vai para stderr,

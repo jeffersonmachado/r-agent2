@@ -184,8 +184,8 @@ contagem da outra.
 
 | Bucket na fila | Decisão humana | Ação |
 |---|---|---|
-| **Sem correção publicada** (5 pacotes) | aceitar com controle compensatório **e registrar com prazo**, ou achar alternativa (trocar/remover a dependência, elevar o pacote pai) | `node scripts/security-intel.js waive --finding "<chave do achado>" --approve "<quem assume>" --days <≤ máximo> --reason "<motivo>" --control "<controle>"` |
-| **Exige aprovação humana** (4 pacotes) | autorizar a missão (Nível C) ou postergar com justificativa | `node scripts/security-intel.js patch-mission --candidate "<candidato recomendado>" --authorized-by "<quem autoriza>"` |
+| **Sem correção publicada** (5 pacotes) | aceitar com controle compensatório **e registrar com prazo**, ou achar alternativa (trocar/remover a dependência, elevar o pacote pai) | `node scripts/security-intel.js waive --finding "<chave do achado>" --days <≤ máximo> --reason "<motivo>" --control "<controle>"` |
+| **Exige aprovação humana** (4 pacotes) | autorizar a missão (Nível C) ou postergar com justificativa | `node scripts/security-intel.js patch-mission --candidate "<candidato recomendado>"` |
 | **Missão isolada** (19 pacotes) | disparar a missão (roda em ambiente isolado com testes; **não** aplica em produção) | `node scripts/security-intel.js patch-mission --candidate "<candidato recomendado>"` |
 
 Depois de cada ação, confirme o efeito medido (não a intenção):

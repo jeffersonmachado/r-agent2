@@ -63,18 +63,23 @@ function commandOf(group, bucket) {
   // mandar missão para o primeiro candidato da lista resolveria só parte do pacote
   // e a fila pareceria travada.
   const candidateKey = group.recommendedCandidateKey || (group.candidateKeys || [])[0] || null;
+  // A identidade de quem aprova/autoriza NUNCA entra no comando: ela é derivada de
+  // quem executa (CLI: usuário do SO) ou do token autenticado (API). Declarar
+  // identidade é recusado pelo backend — ver approvalAuthority.js.
+  const identityNote = '  # aprovador = quem executa o comando (identidade não é declarada)';
   if (bucket === BUCKETS.WAIVER_OR_COMPENSATING_CONTROL) {
     const findingKey = (group.withoutFixFindingKeys || [])[0] || (group.findingKeys || [])[0] || '<findingKey>';
     return `node scripts/security-intel.js waive --finding "${findingKey}"`
-      + ' --approve <quem assume> --days <prazo ≤ máximo>'
-      + ' --reason "<motivo>" --control "<controle compensatório>"';
+      + ' --days <prazo ≤ máximo>'
+      + ' --reason "<motivo>" --control "<controle compensatório>"'
+      + identityNote;
   }
-  const rest = bucket === BUCKETS.HUMAN_APPROVAL ? ' --authorized-by <quem autoriza>' : '';
+  const approvalNote = bucket === BUCKETS.HUMAN_APPROVAL ? identityNote : '';
   if (candidateKey) {
-    return `node scripts/security-intel.js patch-mission --candidate "${candidateKey}"${rest}`;
+    return `node scripts/security-intel.js patch-mission --candidate "${candidateKey}"${approvalNote}`;
   }
   return `node scripts/security-intel.js patches  # obter a chave do candidato de ${group.packageName}, depois:`
-    + ` node scripts/security-intel.js patch-mission --candidate <chave>${rest}`;
+    + ` node scripts/security-intel.js patch-mission --candidate <chave>${approvalNote}`;
 }
 
 function normalizeGroup(group) {
