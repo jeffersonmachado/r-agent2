@@ -8,6 +8,7 @@ const { validatePackage } = require('../package-validator');
 const { withLineage } = require('../report-lineage');
 const { runCrossReportValidation, classifyPbxMaturity, THRESHOLDS } = require('../cross-report-validator');
 const { computeFingerprintChain, compareFingerprintChains } = require('./fingerprint-chain');
+const { evaluateArtifactFreshness, resolveProofStatus, resolveGovernanceLinkage } = require('../lib/evidence-freshness');
 const { calculateSetCoverage } = require('../../qa/coverage/setCoverage');
 const { REQUIRED_REPLAY_JOURNEYS } = require('../shared/required-journeys');
 
@@ -118,6 +119,42 @@ function synchronizeArtifact(sourcePath, targetPath) {
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.copyFileSync(sourcePath, targetPath);
   return targetPath;
+}
+
+/**
+ * Monta UMA entrada do evidence-manifest a partir do artefato resolvido.
+ *
+ * P1-12: presença e conteúdo semântico não bastam. `governanceLinkage:
+ * ['final_decision']` é uma AFIRMAÇÃO sobre o run CORRENTE, e um artefato mais velho
+ * que o TTL de evidência (7 dias, o mesmo já usado pelo master-scorecard e pelas
+ * waves) não pode sustentá-la. Medido antes do fix: `qa/smoke-evidence.json`, com
+ * 50,8 dias, entrava como `proofStatus: 'valid'` + `final_decision`.
+ *
+ * Domínio `governance` é FONTE (linka `proof_based_governance`), com frescor próprio
+ * por CONTEÚDO na fingerprint chain — fora do TTL de evidência.
+ *
+ * Extraída do `map` de propósito: assim os testes exercitam o MESMO código que a
+ * produção executa, em vez de apenas procurar a chamada no texto do arquivo.
+ */
+function buildEvidenceManifestArtifact({ artifact, semanticViolations = [] }) {
+  const freshness = evaluateArtifactFreshness({
+    timestamp: artifact.timestamp,
+    exemptReason: artifact.domain === 'governance'
+      ? 'dominio governance (fonte): resolvido por conteudo na fingerprint chain'
+      : null,
+  });
+  return {
+    id: artifact.id, domain: artifact.domain, path: artifact.path,
+    sourcePath: artifact.sourcePath, resolvedPath: artifact.resolvedPath,
+    exists: artifact.exists, packageRequired: artifact.packageRequired,
+    hash: artifact.sha256, checksum: artifact.sha256, timestamp: artifact.timestamp,
+    proofStatus: resolveProofStatus({ exists: artifact.exists, semanticViolations, freshness }),
+    semanticViolations,
+    freshness,
+    replayLinkage:     artifact.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : artifact.domain === 'human_handoff' ? ['human_handoff_full_validation'] : artifact.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
+    journeyLinkage:    artifact.domain === 'human_handoff' ? ['human_handoff_full_validation'] : artifact.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : artifact.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
+    governanceLinkage: resolveGovernanceLinkage({ domain: artifact.domain, freshness }),
+  };
 }
 
 function resolveArtifact(spec) {
@@ -933,21 +970,17 @@ function buildFinalProofReport(context = {}) {
     artifactType: 'evidence-manifest',
     artifactVersion: '1.0.0',
     status: 'PASS',
-    artifacts: requiredArtifacts.map((a) => {
-      const semanticViolations = semanticArtifactViolations(a);
-      return {
-        id: a.id, domain: a.domain, path: a.path,
-        sourcePath: a.sourcePath, resolvedPath: a.resolvedPath,
-        exists: a.exists, packageRequired: a.packageRequired,
-        hash: a.sha256, checksum: a.sha256, timestamp: a.timestamp,
-        proofStatus: !a.exists ? 'missing' : (semanticViolations.length > 0 ? 'invalid' : 'valid'),
-        semanticViolations,
-        replayLinkage:     a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
-        journeyLinkage:    a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
-        governanceLinkage: a.domain === 'governance' ? ['proof_based_governance'] : ['final_decision'],
-      };
-    }),
+    artifacts: requiredArtifacts.map((a) => buildEvidenceManifestArtifact({
+      artifact: a,
+      semanticViolations: semanticArtifactViolations(a),
+    })),
   };
+
+  // Resumo auditável do frescor: o leitor do manifesto não deve precisar varrer 24
+  // artefatos para saber que a prova está vencida.
+  evidenceManifest.staleArtifacts = evidenceManifest.artifacts
+    .filter((a) => a.proofStatus === 'stale')
+    .map((a) => ({ id: a.id, path: a.path, ageMs: a.freshness ? a.freshness.ageMs : null, reason: a.freshness ? a.freshness.reason : null }));
 
   // ─── FASE 11 — Fingerprint chain: CHANGED CODE → STALE PROOF ──────────────
   // A cadeia registrada no evidence-manifest anterior é comparada com a cadeia
@@ -1177,6 +1210,7 @@ function buildFinalProofReport(context = {}) {
 
 module.exports = {
   buildFinalProofReport,
+  buildEvidenceManifestArtifact,
   STAGE_ORDER,
   STAGE_DECISIONS,
   REQUIRED_ARTIFACT_SPECS,
