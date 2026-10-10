@@ -101,6 +101,23 @@ function parseLsRemote(output) {
 }
 
 /**
+ * Run GOVERNADO corrente (`governance/.current-run.json`).
+ *
+ * É a autoridade sobre qual commit o release está publicando: o HEAD do worktree
+ * não é — ele pode estar em outra branch, detached, ou à frente do run.
+ */
+function readCurrentRun(rootDir) {
+  const target = path.join(rootDir, 'governance', '.current-run.json');
+  if (!fs.existsSync(target)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(target, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
  * Verifica a proveniência remota. Função testável: recebe um gitRunner injetável
  * (args) => stdout (lança em falha), com o mesmo contrato de execGit.
  *
@@ -134,13 +151,35 @@ function verifyRemoteProvenance(options = {}, gitRunner) {
       }, 'MANIFEST_UNREADABLE', `manifest ilegível: ${error.message}`);
     }
   }
-  if (!commit) commit = run(['rev-parse', 'HEAD']);
+
+  // AUTORIDADE do commit (2026-10-10): sem manifest/flag explícito, vale o commit do
+  // RUN GOVERNADO — não o HEAD. O HEAD pode apontar para outra branch ou estado
+  // (worktree de missão, detached) e o relatório passava a verificar o commit
+  // ERRADO: medido em 2026-10-10, o relatório declarava commit `2f179545` para um run
+  // cujo `sourceCommit` era `4e34287f`, e o veredito saía como
+  // `RELEASE_SOURCE_COMMIT_NOT_REMOTE` — parecia falta de push, era verificação do
+  // commit errado. `commitSource` fica registrado no relatório para auditoria.
+  let commitSource = options.commit ? 'flag' : null;
+  if (options.manifestPath && !options.commit) commitSource = commitSource || 'manifest';
+  if (!commit || !tree) {
+    const currentRun = readCurrentRun(rootDir);
+    if (!commit && currentRun && currentRun.sourceCommit) {
+      commit = currentRun.sourceCommit;
+      commitSource = 'current-run';
+    }
+    if (!tree && currentRun && currentRun.sourceTree) tree = currentRun.sourceTree;
+  }
+  if (!commit) {
+    commit = run(['rev-parse', 'HEAD']);
+    commitSource = 'head';
+  }
   if (!tree) tree = run(['rev-parse', 'HEAD^{tree}']);
 
   const result = {
     remote: null,
     remoteName,
     commit,
+    commitSource,
     commitExists: false,
     tree,
     treeMatches: false,
