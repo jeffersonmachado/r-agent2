@@ -10,6 +10,9 @@ import pytest
 
 from services.hybrid_search import (
     ALGORITHM_VERSION,
+    STATUS_DEGRADED,
+    STATUS_HEALTHY,
+    STATUS_UNAVAILABLE,
     reciprocal_rank_fusion,
     fuse_with_fallback,
 )
@@ -114,3 +117,35 @@ class TestFallbackDeModalidade:
         out = fuse_with_fallback(rows("a"), rows("b"))
         assert out["degraded"] is False
         assert out["degradationReasons"] == []
+
+    # ── Contrato de saúde (endurecido 2026-10-10) ────────────────────────────
+    #
+    # O flag `degraded` era `bool(lexical_error) and bool(semantic_rows)`: a falha
+    # SEMÂNTICA com resposta lexical NÃO era marcada, então a busca se declarava
+    # saudável com uma modalidade obrigatória caída. A assimetria é o defeito.
+
+    def test_falha_semantica_com_lexical_respondendo_E_DEGRADED(self):
+        out = fuse_with_fallback([], rows("x"), semantic_error="provider_down")
+        assert out["degraded"] is True, "falha semântica não pode se declarar saudável"
+        assert out["degradationReasons"] == ["semantic:provider_down"]
+
+    def test_falha_lexical_com_vetorial_respondendo_E_DEGRADED(self):
+        out = fuse_with_fallback(rows("a"), [], lexical_error="timeout")
+        assert out["degraded"] is True
+
+    def test_status_tri_estado_e_simetrico(self):
+        assert fuse_with_fallback(rows("a"), rows("b"))["status"] == STATUS_HEALTHY
+        assert fuse_with_fallback([], rows("x"), semantic_error="e")["status"] == STATUS_DEGRADED
+        assert fuse_with_fallback(rows("a"), [], lexical_error="e")["status"] == STATUS_DEGRADED
+        assert fuse_with_fallback([], [], semantic_error="e")["status"] == STATUS_UNAVAILABLE
+
+    def test_sem_resultado_e_SEM_falha_e_healthy_vazio(self):
+        # Busca legítima sem match não é degradação nem indisponibilidade.
+        out = fuse_with_fallback(rows(), rows())
+        assert (out["results"], out["status"], out["degraded"]) == ([], STATUS_HEALTHY, False)
+
+    def test_fusao_parcial_preserva_resultado_e_ordem(self):
+        # Degradado, mas ainda útil: o resultado da modalidade viva continua lá.
+        out = fuse_with_fallback(rows("a", "b"), rows("b"), semantic_error="provider_down")
+        assert [r["id"] for r in out["results"]][:2] == ["b", "a"]
+        assert out["status"] == STATUS_DEGRADED

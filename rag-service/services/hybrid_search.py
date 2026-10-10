@@ -34,6 +34,14 @@ DEFAULT_RRF_K = 60
 DEFAULT_WEIGHT_SEMANTIC = 0.60
 DEFAULT_WEIGHT_LEXICAL = 0.40
 
+# Vocabulário explícito de saúde da busca híbrida (ver `fuse_with_fallback`).
+# Três estados, não um booleano: "saudável", "uma modalidade caiu e a outra
+# respondeu" e "nenhuma modalidade respondeu" exigem decisões diferentes de quem
+# consome o resultado.
+STATUS_HEALTHY = "HEALTHY"
+STATUS_DEGRADED = "DEGRADED"
+STATUS_UNAVAILABLE = "UNAVAILABLE"
+
 
 def _key(item: Dict[str, Any], id_key: str) -> str:
     value = item.get(id_key)
@@ -141,6 +149,23 @@ def fuse_with_fallback(
     Fusão com FALLBACK DECLARADO: se uma modalidade falhar, o resultado continua
     (a outra modalidade responde) e `degraded`/`degradationReasons` dizem qual e
     por quê. Nunca silencia a falha nem devolve lista vazia sem explicação.
+
+    CONTRATO DE SAÚDE (endurecido em 2026-10-10):
+
+      HEALTHY      nenhuma modalidade falhou;
+      DEGRADED     alguma modalidade falhou, mas ao menos uma produziu resultados;
+      UNAVAILABLE  nenhuma modalidade produziu resultados.
+
+    ANTES: `degraded` era `bool(lexical_error) and bool(semantic_rows)` — uma
+    assimetria que só reconhecia a falha LEXICAL. Falha semântica com resposta
+    lexical era reportada como saudável: o motivo aparecia em
+    `degradationReasons`, mas o flag global dizia que não havia degradação.
+    "Uma modalidade caiu e a outra respondeu" é degradação, independentemente de
+    qual caiu.
+
+    `degraded` é mantido (o cliente Node consome esse campo); `status` é o
+    vocabulário explícito de três estados, e a falha de uma modalidade
+    OBRIGATÓRIA nunca deixa de ser registrada.
     """
     semantic_rows = list(semantic_ranked or [])
     lexical_rows = list(lexical_ranked or [])
@@ -154,11 +179,19 @@ def fuse_with_fallback(
 
     if not semantic_rows and not lexical_rows:
         # Nenhuma modalidade produziu candidato: ausência de resultado é o
-        # resultado, mas precisa ser distinguível de "não houve busca".
-        return {"results": [], "degraded": bool(reasons), "degradationReasons": reasons}
+        # resultado, mas precisa ser distinguível de "não houve busca" — e se
+        # alguma modalidade falhou, isso é indisponibilidade, não saúde.
+        return {
+            "results": [],
+            "status": STATUS_UNAVAILABLE if reasons else STATUS_HEALTHY,
+            "degraded": bool(reasons),
+            "degradationReasons": reasons,
+        }
 
     return {
         "results": fused,
-        "degraded": bool(lexical_error) and bool(semantic_rows),
+        # SIMÉTRICO: qualquer modalidade que falhou degrada o resultado.
+        "status": STATUS_DEGRADED if reasons else STATUS_HEALTHY,
+        "degraded": bool(reasons),
         "degradationReasons": reasons,
     }
