@@ -40,6 +40,16 @@ const SAFE_ENV_PASSTHROUGH_KEYS = Object.freeze([
   // Necessário no Windows para localizar node/npm; inofensivo em outros SOs (undefined).
   'SystemRoot',
   'APPDATA',
+  // Cache do npm FORA da árvore do workspace. Com `HOME` = workspace (garantia de isolamento),
+  // o npm gravava `$HOME/.npm` DENTRO do workspace e contaminava a Exact Promotion — medido
+  // 2026-10-09: `PROMOTION_TREE_CONTAMINATED`, `contaminatingFiles: "A\t.npm/_update-notifier-last-checked"`,
+  // que reprovava o candidato e deixava TODA task em READY_FOR_PROMOTION em vez de GREEN.
+  // Apontar para o tmpfs dedicado do sandbox (`/sandbox-tmp`: gravável, efêmero, montado por
+  // `--tmpfs` em TODA execução e fora do bind do workspace) mantém o HOME isolado E a árvore
+  // limpa. Nenhuma destas chaves é um segredo.
+  'npm_config_cache',
+  'npm_config_update_notifier',
+  'XDG_CACHE_HOME',
 ]);
 
 /**
@@ -58,6 +68,16 @@ function buildSafeTestEnv({ cwd } = {}) {
   // (~/.npmrc, ~/.gitconfig, ~/.ssh/config). Workspace isolado é sempre um diretório efêmero
   // criado só para esta tentativa (patchApplyService.createWorkspace).
   if (cwd) env.HOME = cwd;
+
+  // Cache/estado do npm DENTRO do tmpfs do sandbox, nunca na árvore do workspace.
+  // Sem isto o `npx jest` (allowlist do commandPolicy) cria `<workspace>/.npm/_logs/…` e
+  // `<workspace>/.npm/_update-notifier-last-checked`, e a Exact Promotion reprova o candidato
+  // por hash de árvore divergente (`PROMOTION_TREE_CONTAMINATED`) — a task nunca sai de
+  // READY_FOR_PROMOTION. O tmpfs existe em toda execução sandboxed (ver `buildDockerArgs`),
+  // é gravável pelo UID fixo e desaparece no fim do container: nada volta para o host.
+  env.npm_config_cache = '/sandbox-tmp/.npm-cache';
+  env.npm_config_update_notifier = 'false';
+  env.XDG_CACHE_HOME = '/sandbox-tmp/.cache';
   return env;
 }
 
