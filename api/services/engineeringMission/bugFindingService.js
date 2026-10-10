@@ -662,6 +662,31 @@ async function closeFinding(findingId, { actor = null, reason = null, tenantId =
       });
     }
   }
+  // ENGINEERING MEMORY — PREVENÇÃO DE REINCIDÊNCIA (2026-10-08). Um finding de SELF_MODIFICATION
+  // (onde a ausência de prevenção permite afrouxar o próprio critério de julgamento) ou que já
+  // REINCIDIU (prova de que a prevenção anterior falhou) não pode ser fechado sem um problema
+  // conhecido COMPLETO — causa raiz, componentes, evidências, correção, REGRA PREVENTIVA, teste de
+  // não regressão executável, versão de introdução/correção, estado de verificação e proveniência —
+  // e sem que essa regra esteja ACTIVE, ou seja, verificada por execução. Antes, a memory de
+  // engenharia era puramente aditiva: nada obrigava a registrar o que impede a volta da falha.
+  const prevention = engine.assertPreventionBeforeClose({
+    record: (finding.triage && finding.triage.knownProblem) || null,
+    selfModification: finding.self_modification === true,
+    recurrenceCount: finding.recurrence_count || 0,
+  });
+  if (prevention.required && !prevention.allowed) {
+    throw Object.assign(new Error(prevention.reason), {
+      code: prevention.code,
+      detail: {
+        findingId,
+        missing: prevention.missing || null,
+        minimumHumanAction:
+          'registrar o problema conhecido (buildKnownProblem) e ativá-lo após REGRESSION_VALIDATED '
+          + '(engine.activate) — ou aprovar explicitamente a dispensa da regra preventiva',
+      },
+    });
+  }
+
   return transitionFinding(findingId, 'CLOSED', { actor, reason: reason || 'ciclo concluído', patch: { resolved_at: finding.resolved_at || nowIso() }, tenantId });
 }
 
@@ -872,6 +897,92 @@ async function releaseFindingLease(findingId, { token } = {}) {
   return { released: Boolean(affected), findingId };
 }
 
+/**
+ * ENGINEERING MEMORY — persiste o PROBLEMA CONHECIDO no finding (`triage.knownProblem`).
+ *
+ * Escritor DEDICADO (não `transitionFinding`): aquele só aplica `patch` quando HÁ mudança de
+ * estado — para o mesmo estado ele retorna cedo como idempotente e DESCARTA o patch. Registrar a
+ * prevenção é ortogonal à transição (o finding já está em REGRESSION_VALIDATED quando a regra é
+ * ativada), então precisa de escrita própria, com a MESMA proteção de versão (CAS) das demais.
+ */
+async function recordKnownProblem(findingId, knownProblem, { tenantId = null } = {}) {
+  const finding = await getFinding(findingId);
+  if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+  if (!knownProblem || typeof knownProblem !== 'object' || !knownProblem.knownProblemId) {
+    const err = new Error('problema conhecido inválido: registro ausente ou sem knownProblemId');
+    err.code = engine.PREVENTIVE_RULE_FAILURE_CODES.KNOWN_PROBLEM_INCOMPLETE;
+    throw err;
+  }
+  const expectedVersion = Number(finding.version || 0);
+  const triage = { ...(finding.triage || {}), knownProblem };
+  const [affected] = await model().update(
+    { triage, version: expectedVersion + 1 },
+    { where: { id: findingId, version: expectedVersion } },
+  );
+  if (!affected) {
+    const err = new Error(`conflito ao registrar o problema conhecido do finding ${findingId}`);
+    err.code = 'FINDING_STATE_CONFLICT';
+    err.detail = { findingId, expectedVersion };
+    throw err;
+  }
+  void tenantId;
+  return getFinding(findingId);
+}
+
+/**
+ * EXPORTAÇÃO DO PROBLEMA CONHECIDO a partir do estado REAL do finding.
+ *
+ * Só o que o finding comprova entra no registro — nada é inventado. `preventiveRule` é a única
+ * parte derivada por texto: a memória de engenharia exige a REGRA, não apenas a causa, e o laço de
+ * bugs não recebe uma do modelo. Ela nomeia a classe de falha e o alvo do teste de não regressão.
+ */
+function buildKnownProblemFromFinding(finding, { actor = null } = {}) {
+  const regressionCommands = Array.isArray(finding.regression_test_refs) ? finding.regression_test_refs : [];
+  const affected = [
+    ...(Array.isArray(finding.affected_files) ? finding.affected_files : []),
+    ...(Array.isArray(finding.affected_subsystems) ? finding.affected_subsystems : []),
+  ];
+  // Fallbacks SEM invenção: quando o finding não registra arquivos/subsistemas, a ÁREA afetada é a
+  // própria origem classificada do finding (`source`, ex.: MISSION_FAILURE/TELEMETRY), que é um
+  // dado real da linha. Quando não há comando de regressão persistido, usa-se o comando de
+  // REPRODUÇÃO (que foi executado de verdade) — nunca um comando fabricado.
+  const affectedComponents = affected.length > 0 ? affected : [String(finding.source || 'unclassified')];
+  const regressionCommand = regressionCommands.length > 0
+    ? regressionCommands[0]
+    : ((finding.reproduction && finding.reproduction.command) || null);
+
+  // CAUSA RAIZ: declarada vence; sem declaração, deriva da evidência REAL desta ocorrência.
+  // Sem isto o problema conhecido nascia INCOMPLETO (`KNOWN_PROBLEM_INCOMPLETE: rootCause`) e o
+  // fechamento de todo finding de SELF_MODIFICATION era recusado — medido em 2026-10-10 no
+  // `governanceApprovalFullWorkerE2E`, com a task já GREEN. A origem fica registrada na
+  // proveniência para que auditoria distinga causa DECLARADA de causa DERIVADA (e de AUSENTE, caso
+  // em que o registro continua recusado de propósito).
+  const declaredRootCause = typeof finding.root_cause === 'string' && finding.root_cause.trim() !== '';
+  const rootCause = engine.deriveRootCauseStatement(finding);
+
+  return engine.buildKnownProblem({
+    fingerprint: String(finding.fingerprint || ''),
+    fingerprintVersion: String(engine.FINGERPRINT_VERSION || ''),
+    rootCauseClass: String(finding.category || finding.classification || ''),
+    rootCause,
+    affectedComponents,
+    occurrenceEvidence: Array.isArray(finding.evidence_refs) ? finding.evidence_refs : [],
+    fix: finding.fix_task_id ? `fix task ${finding.fix_task_id} (status=${finding.status})` : null,
+    preventiveRule: `impedir reincidência de ${finding.category || 'falha'} em ${affectedComponents[0]}: `
+      + `manter a correção de "${String(finding.title || finding.id).slice(0, 120)}" sob teste de não regressão`,
+    regressionTest: regressionCommand ? { command: regressionCommand } : null,
+    introducedIn: finding.first_seen_at ? String(finding.first_seen_at) : null,
+    fixedIn: finding.resolved_at ? String(finding.resolved_at) : null,
+    verificationState: 'VERIFIED',
+    provenance: {
+      source: 'bugLoopCoordinatorService.runFixLoop',
+      findingId: finding.id,
+      actor,
+      rootCauseSource: declaredRootCause ? 'DECLARED' : (rootCause ? 'DERIVED_FROM_OCCURRENCE' : 'ABSENT'),
+    },
+  });
+}
+
 module.exports = {
   PLATFORM_TENANT_ID,
   makeEvidence,
@@ -894,6 +1005,8 @@ module.exports = {
   clearGovernanceBlock,
   markFixed,
   markRegressionValidated,
+  recordKnownProblem,
+  buildKnownProblemFromFinding,
   closeFinding,
   blockFinding,
   getFindingMemory,

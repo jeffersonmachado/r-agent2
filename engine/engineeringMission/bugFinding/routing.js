@@ -220,12 +220,69 @@ function buildFixTaskContract({
   };
 }
 
+/**
+ * ── CAUSA RAIZ: DECLARADA OU DERIVADA DA PRÓPRIA OCORRÊNCIA ───────────────────────────────────
+ *
+ * A memória de engenharia exige `rootCause` no problema conhecido
+ * (`preventiveRules.KNOWN_PROBLEM_REQUIRED_FIELDS`) e `closeFinding` RECUSA o fechamento de um
+ * finding de SELF_MODIFICATION/REINCIDENTE sem problema conhecido COMPLETO e ACTIVE.
+ *
+ * DEFEITO MEDIDO (2026-10-10, `governanceApprovalFullWorkerE2E`): o finding era reproduzido, a
+ * correção era executada de verdade, a task chegava a GREEN com a promoção confirmada, a regressão
+ * era validada — e o fechamento era recusado com
+ * `KNOWN_PROBLEM_INCOMPLETE (faltando: rootCause)`, porque NENHUM produtor de finding escreve
+ * `root_cause` (`hookMissionFailure`, `missionReviewService` e `bugReproductionService` registram o
+ * comportamento observado, os arquivos afetados e as evidências, mas nunca a causa). O ciclo
+ * autônomo travava no ÚLTIMO passo e o finding ficava órfão em REGRESSION_VALIDATED para sempre.
+ * O defeito era invisível no teste de integração do laço porque a fixture daquele teste DECLARAVA
+ * um `rootCause` à mão — a capacidade existia no teste e não existia em produção.
+ *
+ * Correção: quando ninguém declara a causa raiz, ela é ASSERTADA a partir de evidência REAL desta
+ * ocorrência (o comportamento observado medido + a reprodução que foi executada), marcada como
+ * DERIVADA tanto no texto quanto na proveniência do problema conhecido. Nada é inventado e nada é
+ * copiado de outra ocorrência — a triagem proíbe explicitamente tratar a causa de uma ocorrência
+ * ANTERIOR como causa desta (ela entra apenas como PISTA a confirmar).
+ *
+ * Ordem de autoridade:
+ *   1. `root_cause` DECLARADO (humano/API) — vence sempre e nunca é sobrescrito;
+ *   2. derivação da evidência medida desta ocorrência;
+ *   3. `null` — quando não há NADA real a afirmar. O registro permanece INCOMPLETO de propósito
+ *      (fail-closed) e o fechamento continua recusado: ausência de dado não vira dado.
+ */
+function deriveRootCauseStatement(finding) {
+  const declared = fieldOf(finding, 'rootCause');
+  if (typeof declared === 'string' && declared.trim() !== '') return declared.trim();
+
+  const observed = fieldOf(finding, 'observedBehavior');
+  const reproduction = finding && typeof finding.reproduction === 'object' && finding.reproduction !== null
+    ? finding.reproduction
+    : null;
+  const command = reproduction && typeof reproduction.command === 'string' && reproduction.command.trim() !== ''
+    ? reproduction.command.trim()
+    : null;
+
+  const evidence = [];
+  if (typeof observed === 'string' && observed.trim() !== '') {
+    evidence.push(`comportamento observado: ${observed.trim()}`);
+  }
+  if (command) {
+    evidence.push(`reprodução executada: "${command}" (expect=${reproduction.expect || 'FAIL'})`);
+  }
+  if (evidence.length === 0) return null;
+
+  const source = String(finding.source || 'UNKNOWN');
+  const category = String(finding.category || 'UNKNOWN');
+  return `derivada da evidência medida desta ocorrência (fonte ${source}, categoria ${category}): `
+    + evidence.join('; ');
+}
+
 module.exports = {
   CAPABILITIES_BY_CATEGORY,
   deriveCapabilities,
   deriveTaskType,
   touchesFrontend,
   buildFixTaskContract,
+  deriveRootCauseStatement,
   fieldOf,
   FINDING_CATEGORIES,
 };
