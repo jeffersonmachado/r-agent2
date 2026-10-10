@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-08T09:36:30.648Z",
-  "commit": "59208130253b6af3abb74f034ba0860a5e914a59",
+  "generatedAt": "2026-10-08T15:44:51.077Z",
+  "commit": "594dce8d54c1e44f4af3ccae398ee6f5e906b79c",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
@@ -9,10 +9,11 @@
   "totals": {
     "items": 148,
     "byState": {
-      "VALIDATED": 148
+      "VALIDATED": 147,
+      "FAILED": 1
     }
   },
-  "status": "PASS",
+  "status": "FAIL",
   "exemptions": [
     {
       "item": "page:/audit",
@@ -734,7 +735,7 @@
         {
           "name": "pageLoads",
           "passed": true,
-          "detail": "falha de carregamento para papel PRODUCTION: console.error=100 pageerror=0 | NOT_APPLICABLE — isenção justificada: Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado. (aprovada por jeffersonmachado em 2026-07-28)",
+          "detail": "página carregou são para papel PRODUCTION | NOT_APPLICABLE — isenção justificada: Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado. (aprovada por jeffersonmachado em 2026-07-28)",
           "notApplicable": true
         }
       ],
@@ -759,13 +760,8 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "consoleErrors": 100,
-          "pageErrors": 0,
-          "errorSamples": [
-            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
-            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
-            "unhandled error in event listener Error: Tried to access di from the businessObject. The di is available through the diagram element only. For more information, see https://github.com/bpmn-io/bpmn-js/"
-          ]
+          "consoleErrors": 0,
+          "pageErrors": 0
         },
         "p3": "skipped"
       }
@@ -2300,7 +2296,7 @@
     },
     {
       "id": "page:/dev/qa-waves/operational-health",
-      "state": "VALIDATED",
+      "state": "FAILED",
       "assertions": [
         {
           "name": "authEnforced",
@@ -2314,8 +2310,8 @@
         },
         {
           "name": "pageLoads",
-          "passed": true,
-          "detail": "página carregou são para super_admin"
+          "passed": false,
+          "detail": "falha de carregamento para super_admin: conteúdo não renderizou; console.error=2 pageerror=0"
         }
       ],
       "probes": {
@@ -2337,11 +2333,15 @@
         },
         "p3": {
           "docStatus": 200,
-          "rendered": true,
+          "rendered": false,
           "loginSurface": false,
           "denied": false,
-          "consoleErrors": 0,
-          "pageErrors": 0
+          "consoleErrors": 2,
+          "pageErrors": 0,
+          "errorSamples": [
+            "[2026-10-08T15:43:52.193Z] [ERROR] [HTTP Client] Erro capturado no catch {\n  \"name\": \"AbortError\",\n  \"message\": \"Request timed out after 30000ms\",\n  \"path\": \"/auth/me\",\n  \"url\": \"/auth/me\"\n}",
+            "[2026-10-08T15:43:52.194Z] [ERROR] Request timeout {\n  \"method\": \"GET\",\n  \"url\": \"/auth/me\",\n  \"path\": \"/auth/me\",\n  \"timeout\": 30000\n}"
+          ]
         }
       }
     },
@@ -5588,8 +5588,8 @@
       }
     }
   ],
-  "runId": "rap-governed-20261008073646010-b5f26127",
-  "sourceFingerprint": "562725bb40637a609fd0310f597c13d19108ccb18f52c938a51c804b5ec18c4a",
+  "runId": "rap-governed-20261008144342533-e3f691f1",
+  "sourceFingerprint": "a29f9309296a4384792e27ed9b576e1f615de74b9ecdc14e744c3f52aa8f650b",
   "artifactType": "page-surface-report",
   "artifactVersion": "1.0.0"
 }
