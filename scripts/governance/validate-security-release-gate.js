@@ -143,6 +143,10 @@ async function collectFacts({ tenantKey, policy }) {
         sha256: snapshot.sha256,
         componentCount: snapshot.component_count,
         generatedAt: snapshot.generated_at,
+        // `run_id` é NULLABLE por desenho (unicidade do snapshot é (tenant_key, sha256),
+        // então ele é REUSADO entre runs) — por isso a checagem de proveniência em
+        // `main()` não pode depender só dele: usa também `generated_at` × startedAt do run.
+        runId: snapshot.run_id || null,
       }
       : { available: false },
     advisoryBase: latestSync
@@ -202,13 +206,58 @@ async function main() {
     now: new Date(),
   });
 
+  // ── PROVENIÊNCIA DO VEREDITO (P0) ─────────────────────────────────────────────────────────────
+  // A decisão vale para a FONTE que está sendo liberada. DEFEITO MEDIDO (2026-10-10): os fatos de
+  // segurança vêm do banco (`SecurityFinding`, `SecuritySbomSnapshot`, sync OSV, componentes) e
+  // NENHUM deles carrega vínculo com o source — então um SBOM anterior ao run podia sustentar o
+  // veredito de um código que já mudou. Aplica a MESMA REGRA CENTRAL já usada por
+  // `scripts/governance/lib/runtime-evidence-artifacts.js`: evidência produzida ANTES do início do
+  // run NÃO sustenta o run. Fail-closed: sem run governado, ou com evidência anterior/estrangeira,
+  // a decisão vira NO_GO — nunca PASS por ausência de dado.
+  const { CURRENT_RUN_RELATIVE_PATH, resolveRunLineage } = require('./lib/resolve-run-lineage');
+  const provenanceIssues = [];
+  let currentRun = null;
+  try {
+    const lineage = resolveRunLineage({ rootDir: ROOT });
+    currentRun = JSON.parse(fs.readFileSync(path.join(ROOT, CURRENT_RUN_RELATIVE_PATH), 'utf8'));
+    if (!lineage.runId || lineage.source === 'none') {
+      provenanceIssues.push({
+        code: 'SECURITY_GATE_NO_GOVERNED_RUN',
+        message: 'sem run governado — o veredito de segurança não pode sustentar release',
+      });
+    }
+    const sbom = facts ? facts.sbom : null;
+    const sbomGeneratedAt = sbom && sbom.generatedAt ? new Date(sbom.generatedAt) : null;
+    const runStartedAt = currentRun && currentRun.startedAt ? new Date(currentRun.startedAt) : null;
+    if (sbomGeneratedAt && runStartedAt && sbomGeneratedAt.getTime() < runStartedAt.getTime()) {
+      provenanceIssues.push({
+        code: 'SECURITY_GATE_STALE_EVIDENCE',
+        message: `SBOM de ${sbomGeneratedAt.toISOString()} é ANTERIOR ao início do run ${currentRun.runId} (${runStartedAt.toISOString()}) — evidência vencida não sustenta o release`,
+      });
+    }
+    if (sbom && sbom.runId && currentRun && sbom.runId !== currentRun.runId) {
+      provenanceIssues.push({
+        code: 'SECURITY_GATE_FOREIGN_RUN',
+        message: `SBOM pertence ao run ${sbom.runId}, não ao run corrente ${currentRun.runId}`,
+      });
+    }
+  } catch (error) {
+    provenanceIssues.push({
+      code: 'SECURITY_GATE_UNAVAILABLE',
+      message: `proveniência do veredito não pôde ser verificada: ${error.message}`,
+    });
+  }
+
+  const finalDecision = provenanceIssues.length > 0 ? 'NO_GO' : evaluation.decision;
   const report = withLineage({
-    status: evaluation.decision,
-    decision: evaluation.decision,
+    status: finalDecision,
+    decision: finalDecision,
     mode: informative ? 'advisory' : 'blocking',
     tenantKey,
-    summary: evaluation.summary,
-    blocking: evaluation.blocking,
+    summary: provenanceIssues.length > 0
+      ? `NO_GO: ${provenanceIssues.map((item) => item.code).join(', ')} (motor: ${evaluation.summary})`
+      : evaluation.summary,
+    blocking: [...(evaluation.blocking || []), ...provenanceIssues],
     warnings: evaluation.warnings,
     checks: evaluation.checks,
     evidence: facts
@@ -237,14 +286,14 @@ async function main() {
 
   writeReport('security-release-gate-report.json', report);
 
-  console.log(`[security-release-gate] mode=${report.mode} decision=${evaluation.decision}`);
+  console.log(`[security-release-gate] mode=${report.mode} decision=${finalDecision}`);
   console.log(`[security-release-gate] waivers vigentes=${waivers.length}${waiversError ? ` (leitura falhou: ${waiversError})` : ''}`);
   for (const item of evaluation.blocking) console.log(`  ✗ ${item.code}: ${item.message}`);
   for (const item of evaluation.warnings) console.log(`  ! ${item.code}: ${item.message}`);
   if (collectError) console.log(`  ! coleta falhou: ${collectError}`);
   console.log(`[security-release-gate] ${evaluation.summary}`);
 
-  if (evaluation.decision === 'GO') return 0;
+  if (finalDecision === 'GO') return 0;
   if (informative) {
     console.log('[security-release-gate] modo advisory: exit 0, mas a decisão real é NO_GO');
     return 0;
