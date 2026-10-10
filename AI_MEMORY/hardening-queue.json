@@ -123,8 +123,16 @@
     {
       "id": "P1-12",
       "title": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
-      "status": "pending",
-      "evidence": "governance/evidence-manifest.json: qa/smoke-evidence.json (timestamp 2026-08-21T01:26:02Z, proofStatus valid, governanceLinkage [final_decision]) e qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json (timestamp 2026-10-08T07:34:03Z) ambos ANTERIORES ao inicio do run rap-governed-20261010045617268 (startedAt 2026-10-10T04:56:17.406Z). Detectado por reports/evidence-contract-report.json (byCode EVIDENCE_STALE=2). Falta achar o produtor do manifesto e impedir valid=true para artefato anterior ao run."
+      "status": "done",
+      "commit": "cd7b2da9c",
+      "evidence": "governance/lib/evidence-freshness.js (decisao PURA, FRESH|STALE|UNKNOWN) + wiring em governance/proof-engine/index.js::buildEvidenceManifestArtifact (exportada para ser testada no MESMO codigo da producao). 23 testes (tests/unit/governance/evidenceFreshness.test.js + evidenceManifestFreshnessWiring.test.js) e regressao completa de governanca 122 suites/1188 passed/0 failed. Medicao ANTES do fix nos 24 artefatos do manifesto: 1 viola o TTL canonico de 7 dias (smoke_summary, 50,8d) e 2 sao anteriores ao inicio do run; ZERO falso positivo. TTL reusado dos 3 lugares que ja o definem (master-scorecard-registry 7d, applyWaveReportStaleness 7d, bridge do smoke agendado 48h) — nenhuma politica nova. Raio de impacto medido: evidenceManifestValid so alimenta enterpriseReadiness.evidenceBased, que NAO tem consumidor; proofCoverage conta `exists`, nao proofStatus ⇒ nenhum gate duro mudou de veredito."
+    },
+    {
+      "id": "P1-13",
+      "title": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
+      "status": "blocked",
+      "blocked_reason": "O artefato e `packageRequired: true` no manifesto (spec smoke_summary, domain foundation) mas seu UNICO produtor — scripts/system-autotest-stack.sh, que escreve o resumo L01..L06 — e invocado apenas por .github/workflows-disabled/stack-test.yml, e .github/workflows-disabled/README.md declara que o GitHub Actions foi desativado de proposito ('operacao migrada para gate local no servidor') SEM equivalente local no pipeline de release. Consequencia: o artefato decai para sempre, que e precisamente o que o P1-12 agora TORNA VISIVEL em vez de silenciar. NAO executado aqui de proposito: o script faz `docker compose -f docker-compose.test.yml up` e DERRUBA a stack no final (set -euo pipefail), o que destruiria a stack viva que a selagem exige — e o CLAUDE.md do repo exige confirmacao antes de `docker compose down`. Decisao de politica necessaria do usuario: (a) dar produtor local ao artefato no pipeline de release, ou (b) retirar a exigencia, o que e REDUCAO de gate e por isso nao pode ser feita pela IA sem decisao explicita.",
+      "evidence": "scripts/system-autotest-stack.sh:95 (unico writer) | .github/workflows-disabled/stack-test.yml:104 (unico invocador) | .github/workflows-disabled/README.md (motivo da desativacao) | medicao: 50,8 dias de idade em 2026-10-10"
     },
     {
       "id": "P1-10",
