@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-10T05:41:20.095Z",
+  "generatedAt": "2026-10-11T04:20:22.556Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "4e34287f23390648caf2101d2975c9d0500d0ed4",
+  "commit": "92a79b3efcefd3efc58ef349acbae3d235196156",
   "dbAvailable": true,
   "totals": {
     "models": 223,
@@ -9722,7 +9722,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20261008233000-create-security-waivers.js"
+          "detail": "migrations: api/db/migrations/20261008233000-create-security-waivers.js, api/db/migrations/20261010120000-security-waiver-approval-lineage.js"
         },
         {
           "name": "tenantScope",
@@ -9742,7 +9742,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "17 colunas do model presentes"
+          "detail": "23 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -12012,6 +12012,6 @@
       ]
     }
   ],
-  "runId": "rap-governed-20261010045617268-19ce0cbd",
-  "sourceFingerprint": "ee991914bddf1787c34fda9eff5cccbc96b55570390c8569102f431458a8ffbc"
+  "runId": "rap-governed-20261011024410733-08535686",
+  "sourceFingerprint": "56199a78df759f03ebfc75be9b7f6f9e7b81265cb7d2ccca1a844d716bd5eeba"
 }

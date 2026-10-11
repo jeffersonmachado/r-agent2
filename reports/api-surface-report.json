@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-10-10T05:40:34.310Z",
-  "commit": "4e34287f23390648caf2101d2975c9d0500d0ed4",
+  "generatedAt": "2026-10-11T04:40:04.802Z",
+  "commit": "92a79b3efcefd3efc58ef349acbae3d235196156",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 908,
+    "items": 909,
     "byState": {
-      "VALIDATED": 880,
+      "VALIDATED": 881,
       "NOT_APPLICABLE": 21,
       "VISITED": 7
     }
@@ -19222,6 +19222,30 @@
       }
     },
     {
+      "id": "api:POST:/api/security-intel/waivers/:waiverKey/approve",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/api/security-intel/waivers/revoke",
       "state": "VALIDATED",
       "assertions": [
@@ -25676,9 +25700,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20261010045617268-19ce0cbd",
-  "sourceFingerprint": "ee991914bddf1787c34fda9eff5cccbc96b55570390c8569102f431458a8ffbc",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }
