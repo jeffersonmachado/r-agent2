@@ -61,35 +61,47 @@ describe('releaseActionService — persistência do histórico', () => {
     expect(encontrado.exitCode).toBe(0);
   });
 
-  it('registro `running` de sessão anterior com PID MORTO vira `interrupted` com motivo', () => {
+  it('registro `running` de sessão anterior com LEASE VENCIDO vira `interrupted` com motivo', () => {
     gravarRegistro({
       id: 'job-orfao',
       actionId: 'seal',
       label: 'Novo ciclo de selagem',
       status: 'running',
-      pid: 999999, // PID improvável: nenhum processo real
+      // A autoridade é o LEASE (tempo). O `pid_hint` está aqui de propósito: PID
+      // não decide nada — a política do repo proíbe PID como autoridade de liveness.
+      pid_hint: 999999,
+      lease_token: 'token-antigo',
+      lease_expires_at: '2026-10-11T10:02:00.000Z',
+      heartbeat_at: '2026-10-11T10:00:00.000Z',
       startedAt: '2026-10-11T10:00:00.000Z',
       finishedAt: null,
       logPath: path.join(dirJobs(), 'release-seal-job-orfao.log'),
     });
     const job = service.getReleaseAction({ jobId: 'job-orfao' });
     expect(job.status).toBe('interrupted');
-    expect(job.interruptedReason).toMatch(/reiniciada/);
+    expect(job.lease_state).toBe('EXPIRED');
+    expect(job.interruptedReason).toMatch(/lease/);
   });
 
-  it('registro `running` com PID VIVO permanece `running` (não inventa interrupção)', () => {
+  it('registro `running` com LEASE VÁLIDO permanece `running` mesmo com PID morto', () => {
     gravarRegistro({
       id: 'job-vivo',
       actionId: 'verify',
       label: 'Verificar o entregue',
       status: 'running',
-      pid: process.pid,
-      startedAt: '2026-10-11T10:00:00.000Z',
+      // PID improvável NÃO pode interromper: se ele decidisse, este teste falharia
+      // (é exatamente a regressão que a política de timeout existe para impedir).
+      pid_hint: 999999,
+      lease_token: 'token-vivo',
+      lease_expires_at: new Date(Date.now() + 60000).toISOString(),
+      heartbeat_at: new Date().toISOString(),
+      startedAt: new Date().toISOString(),
       finishedAt: null,
       logPath: path.join(dirJobs(), 'release-verify-job-vivo.log'),
     });
     const job = service.getReleaseAction({ jobId: 'job-vivo' });
     expect(job.status).toBe('running');
+    expect(job.lease_state).toBe('VALID');
     expect(job.interruptedReason).toBeUndefined();
   });
 
@@ -122,11 +134,18 @@ describe('releaseActionService — persistência do histórico', () => {
     expect(() => service.getReleaseAction({ jobId: 'nao-existe' })).toThrow(/release_action_not_found/);
   });
 
-  it('isProcessAlive reconhece o próprio processo e rejeita PID inexistente', () => {
-    expect(service.isProcessAlive(process.pid)).toBe(true);
-    expect(service.isProcessAlive(999999)).toBe(false);
-    expect(service.isProcessAlive(0)).toBe(false);
-    expect(service.isProcessAlive('abc')).toBe(false);
+  it('a autoridade de liveness é o LEASE (tempo), nunca o PID', () => {
+    expect(service.JOB_LEASE_TTL_MS).toBeGreaterThan(0);
+    const vencido = service.projectRecordState({
+      status: 'running', lease_expires_at: '2020-01-01T00:00:00.000Z', pid_hint: process.pid,
+    });
+    expect(vencido.status).toBe('interrupted');
+    const valido = service.projectRecordState({
+      status: 'running', lease_expires_at: '2999-01-01T00:00:00.000Z', pid_hint: 999999,
+    });
+    expect(valido.status).toBe('running');
+    // Não existe autoridade de liveness por PID exportada por este serviço.
+    expect(service.isProcessAlive).toBeUndefined();
   });
 
   it('exporta o teto de retenção do histórico persistido', () => {

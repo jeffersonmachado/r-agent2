@@ -74,13 +74,33 @@ const ACTION_CATALOG = Object.freeze({
  * leitura, então reiniciar a API não apaga o que já aconteceu.
  *
  * Honestidade sobre reinício: um registro gravado como `running` por uma sessão
- * anterior só continua `running` se o PID ainda estiver VIVO. Caso contrário vira
- * `interrupted` com o motivo escrito — nunca “rodando para sempre”, que é o modo
- * clássico de uma tela de status mentir.
+ * anterior só continua `running` enquanto o LEASE de execução estiver válido e
+ * renovado por heartbeat. Quando o lease vence, vira `interrupted` com o motivo
+ * escrito — nunca “rodando para sempre”, que é o modo clássico de uma tela de
+ * status mentir.
+ *
+ * AUTORIDADE DE LIVENESS = LEASE (`lease_token` + `lease_expires_at` renovados por
+ * heartbeat), NUNCA PID. PID não é autoridade distribuída: ele é reciclado pelo SO,
+ * não existe do ponto de vista de outro host e some justamente quando o processo
+ * morre de forma abrupta. A política do repo (`validate:timeout-architecture`) marca
+ * `PID_AS_LIVENESS_AUTHORITY` como proibido — e a medição de 2026-10-11 provou o
+ * ponto: a primeira versao deste serviço decidia por `process.kill(pid, 0)` e
+ * derrubou `TIMEOUT_ARCHITECTURE` para NO_GO. O que sobrevive aqui é apenas a
+ * corroboração de diagnóstico (`pid_hint`), que não decide nada.
  */
 const jobs = new Map();
 const MAX_JOBS = 40;
 const MAX_PERSISTED_JOBS = 100;
+
+/**
+ * Validade do lease de uma ação e intervalo de renovação.
+ *
+ * O TTL é folgado em relacao ao heartbeat de proposito: uma acao que sofre
+ * pausa/GC lento nao pode ser declarada morta por um unico heartbeat perdido
+ * (`SLOW != STUCK != DEAD`). Enquanto houver renovacao, ela continua `running`.
+ */
+const JOB_LEASE_TTL_MS = Number(process.env.DEV_GOVERNANCE_LEASE_TTL_MS) || 120000;
+const JOB_HEARTBEAT_MS = Number(process.env.DEV_GOVERNANCE_HEARTBEAT_MS) || 30000;
 
 function jobDir() {
   return resolveRuntimePath('logs', 'dev-governance');
@@ -90,22 +110,80 @@ function jobRecordPath(jobId) {
   return path.join(jobDir(), `${jobId}.job.json`);
 }
 
-/** PID vivo? `EPERM` significa que existe mas não é nosso — conta como vivo. */
-function isProcessAlive(pid) {
-  const value = Number(pid);
-  if (!Number.isInteger(value) || value <= 0) return false;
-  try {
-    process.kill(value, 0);
-    return true;
-  } catch (error) {
-    return error && error.code === 'EPERM';
+/** Emite um lease novo para a execucao que esta comecando. */
+function newLease(now = Date.now()) {
+  return {
+    lease_token: crypto.randomUUID(),
+    lease_expires_at: new Date(now + JOB_LEASE_TTL_MS).toISOString(),
+    heartbeat_at: new Date(now).toISOString(),
+  };
+}
+
+/** Renova o lease — é isto (e não o PID) que mantém a execução declarada viva. */
+function renewLease(job, now = Date.now()) {
+  job.lease_expires_at = new Date(now + JOB_LEASE_TTL_MS).toISOString();
+  job.heartbeat_at = new Date(now).toISOString();
+}
+
+/**
+ * Heartbeat do lease.
+ *
+ * Timer aqui NÃO é sincronização de estado de UI (o que a regra do repo proíbe): é a
+ * renovação do próprio lease, executada no processo que roda a ação. `unref()` para o
+ * timer nunca segurar o processo/fechar a suíte de testes.
+ */
+function startLeaseHeartbeat(job, { intervalMs = JOB_HEARTBEAT_MS } = {}) {
+  stopLeaseHeartbeat(job);
+  const timer = setInterval(() => {
+    if (job.status !== 'running') return;
+    renewLease(job);
+    persistJob(job);
+  }, intervalMs);
+  if (typeof timer.unref === 'function') timer.unref();
+  job.heartbeatTimer = timer;
+}
+
+function stopLeaseHeartbeat(job) {
+  if (job && job.heartbeatTimer) {
+    clearInterval(job.heartbeatTimer);
+    job.heartbeatTimer = null;
   }
+}
+
+/**
+ * Projeta o estado de um registro lido do disco.
+ *
+ * A decisão usa TEMPO (lease vencido), não PID: um registro `running` cujo lease
+ * venceu é `interrupted` mesmo que exista um PID no arquivo (que pode ser de outro
+ * processo, reciclado pelo SO); um registro `running` com lease válido permanece
+ * `running` mesmo que o PID não exista — não inventamos interrupção sem que o lease
+ * tenha vencido.
+ */
+function projectRecordState(record, now = Date.now()) {
+  if (!record || record.status !== 'running') return record;
+  const expira = Date.parse(record.lease_expires_at || '');
+  if (!Number.isFinite(expira)) {
+    // Registro antigo, sem lease (formato anterior): não podemos afirmar nada;
+    // tratamos como lease vencido apenas se houver heartbeat/deadline conhecido.
+    return { ...record, status: 'running', lease_state: 'UNKNOWN' };
+  }
+  if (expira <= now) {
+    return {
+      ...record,
+      status: 'interrupted',
+      lease_state: 'EXPIRED',
+      interruptedReason: `lease de execução vencido em ${record.lease_expires_at} sem renovação de heartbeat — a execução terminou (ou morreu) sem registrar o desfecho; confira o log para o resultado real`,
+    };
+  }
+  return { ...record, lease_state: 'VALID' };
 }
 
 /** Grava o registro. Falha de escrita NÃO derruba a ação: vira aviso no log. */
 function persistJob(job) {
   try {
-    const { logTail, ...record } = job;
+    // `logTail` é derivado e `heartbeatTimer` é objeto de runtime: nenhum dos dois
+    // pode ir para o disco (o timer viraria `{}` e poluiria a evidência).
+    const { logTail, heartbeatTimer, ...record } = job;
     fs.writeFileSync(jobRecordPath(job.id), JSON.stringify(record, null, 2));
     prunePersistedJobs();
   } catch (error) {
@@ -141,11 +219,7 @@ function readPersistedJobs() {
     try {
       const record = JSON.parse(fs.readFileSync(path.join(jobDir(), name), 'utf8'));
       if (!record || !record.id) continue;
-      if (record.status === 'running' && !jobs.has(record.id) && !isProcessAlive(record.pid)) {
-        record.status = 'interrupted';
-        record.interruptedReason = 'a API foi reiniciada e o processo não está mais vivo; confira o log para o resultado real';
-      }
-      records.push(record);
+      records.push(jobs.has(record.id) ? record : projectRecordState(record));
     } catch (error) {
       logger.warn(`[dev-governance] registro de ação ilegível (${name}): ${error.message}`);
     }
@@ -253,6 +327,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
     exitCode: null,
     logPath,
     releaseName: state.releaseName || null,
+    ...newLease(),
   };
   jobs.set(job.id, job);
   pruneJobs();
@@ -267,7 +342,9 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: false,
     });
-    job.pid = child.pid;
+    job.pid_hint = child.pid; // corroboração de DIAGNÓSTICO — não decide liveness
+    startLeaseHeartbeat(job);
+    persistJob(job);
     child.stdout.pipe(stream, { end: false });
     child.stderr.pipe(stream, { end: false });
 
@@ -280,6 +357,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
 
     child.on('error', (error) => {
       clearTimeout(timeout);
+      stopLeaseHeartbeat(job);
       job.status = 'failed';
       job.exitCode = null;
       job.finishedAt = new Date().toISOString();
@@ -291,6 +369,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
 
     child.on('close', (code, signal) => {
       clearTimeout(timeout);
+      stopLeaseHeartbeat(job);
       job.exitCode = typeof code === 'number' ? code : null;
       job.signal = signal || null;
       job.status = code === 0 ? 'succeeded' : 'failed';
@@ -300,10 +379,12 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
       logger.info(`[dev-governance] ação ${actionId} terminou: ${job.status} (exit ${code})`);
     });
   } catch (error) {
+    stopLeaseHeartbeat(job);
     if (stream) stream.end();
     job.status = 'failed';
     job.error = error.message;
     job.finishedAt = new Date().toISOString();
+    persistJob(job);
     throw codedError('release_action_spawn_failed', error.message, 500);
   }
 
@@ -347,6 +428,7 @@ module.exports = {
   listReleaseActions,
   readLogTail,
   readPersistedJobs,
-  isProcessAlive,
+  projectRecordState,
+  JOB_LEASE_TTL_MS,
   jobRecordPath,
 };
