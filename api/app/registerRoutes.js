@@ -93,6 +93,8 @@ const { createLearningCoreExpressRouter } = require('../composition/learning-cor
 const { createBenchmarkResearchExpressRouter } = require('../composition/benchmark-research');
 // RAP Version & Security Intelligence: superfície de engenharia (DEVELOPMENT).
 const { createSecurityIntelExpressRouter } = require('../composition/security-intel');
+// Governança de engenharia: pendências, estado de release e ações (DEVELOPMENT).
+const { createDevGovernanceExpressRouter } = require('../composition/dev-governance');
 // T-MR1: chamador de runtime do marketDiscoverySupervisor (DEVELOPMENT/SYSTEM).
 const { createMarketDiscoveryExpressRouter } = require('../composition/market-discovery');
 const { createCognitiveExpressRouter } = require('../composition/cognitive');
@@ -147,6 +149,8 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const benchmarkResearchRouter = createBenchmarkResearchExpressRouter({ buildCoreRoutingContext });
   // Inteligência de versões/segurança: inventário, findings, patches (DEVELOPMENT).
   const securityIntelRouter = createSecurityIntelExpressRouter({ buildCoreRoutingContext });
+  // Governança de engenharia: pendências, estado de release e ações governadas.
+  const devGovernanceRouter = createDevGovernanceExpressRouter({ buildCoreRoutingContext });
   // Descoberta de mercado: superfície de engenharia (DEVELOPMENT), tenant SYSTEM.
   const marketDiscoveryRouter = createMarketDiscoveryExpressRouter({ buildCoreRoutingContext });
   const mcpRouter = createMcpExpressRouter();
@@ -223,6 +227,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     engineeringMissionRouter,
     benchmarkResearchRouter,
     securityIntelRouter,
+    devGovernanceRouter,
     marketDiscoveryRouter,
     mcpRouter,
     demoRouter,

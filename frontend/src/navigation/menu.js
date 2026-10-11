@@ -394,6 +394,13 @@ export const navigationMenu = [
           // correção. DEVELOPMENT-only (a API também exige a classificação — a
           // ocultação de menu NÃO é o controle de acesso).
           { id: 'dev-engineering-security-intel', label: 'Versões e Segurança', path: '/dev/security-intel', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          // Pendências de missão (fila oficial) e isenções aguardando aprovação,
+          // com filtro "apenas pendências". DEVELOPMENT-only: a API também exige a
+          // classificação — ocultar o menu NÃO é o controle de acesso.
+          { id: 'dev-engineering-pendencies', label: 'Pendências', path: '/dev/pendencies', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+          // Estado do release e ações governadas (verificar/selar/publicar tag).
+          // A ação é autorizada POR AÇÃO via RBAC no backend (`dev_governance`).
+          { id: 'dev-engineering-release', label: 'Release', path: '/dev/release', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
         ],
       },
       {

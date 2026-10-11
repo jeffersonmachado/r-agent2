@@ -178,3 +178,33 @@ Varredura das **131 rotas do menu** com Playwright headless (`systemadmin`/tenan
 - Limiar de "página vazia" precisa ser baixo (~40 chars): `/crm/activities` (57) e `/crm/pipelines` (97) renderizam estado vazio legítimo ("Nenhum registro encontrado") e eram falso positivo com limiar de 100.
 - Alvos de toque < 28px a 390px seguem numerosos em telas densas (`/departments` 466, `/dev/security-intel` 349, `/dev/rpa-seeds` 222) — medido, não alterado (mesma decisão do ciclo de 2026-09-29).
 
+## Superfícies de governança de engenharia (2026-10-11)
+
+Adicionadas para fechar pendências que **não tinham UI nenhuma**. Todas na área
+Dev, classificação **DEVELOPMENT** (menu por `classifications`; a API também
+exige a classificação — ocultar o menu não é o controle de acesso).
+
+| Rota de UI | Tela | API | Autoridade (RBAC) |
+|---|---|---|---|
+| `/dev/pendencies` | Pendências (fila de missão + isenções aguardando aprovação + bloqueios de release) com filtro **"Apenas pendências"** | `GET /api/dev-governance/pendencies?onlyPending=1` | `dev_governance:read` |
+| `/dev/release` | Release: veredito (entregue/superada), artefatos, guard local e ações governadas | `GET /api/dev-governance/release`, `GET|POST /api/dev-governance/release/{verify,seal,publish-tag}` | `read` / `release_verify` / `release_seal` / `release_publish` |
+| `/dev/security-intel` | Versões e Segurança — ganhou o filtro **"Apenas pendências"** (sem correção publicada ou severidade bloqueante) | — | `security_intel:*` |
+| `/dev/engineering/release-closure` | Release Closure — ganhou o filtro **"Apenas pendências"** (esconde os cartões OK; o motivo do bloqueio NUNCA é escondido) | — | `reports:read` |
+
+Critério de "pendência" (fonte única em `engine/governance/pendenciesModel.js`):
+exige ação humana = item `blocked`/`pending`/`in_progress` da fila oficial, OU
+isenção em `PENDING_APPROVAL`, OU bloqueio de release declarado. Item `done` não é
+pendência — e **desconhecido não é bloqueio** (regressão medida: `finalDecision =
+AUTONOMOUS_READY_GO` com `pass=true` era falso bloqueio).
+
+Ações de release são **allowlist fechada** (`releaseActionService`): comando e
+argumentos fixos, `confirm: true` obrigatório para o que altera o repositório,
+single-flight, e recusa com o MESMO motivo que a tela exibe. Se um guard local
+recusa push de tag, a tela mostra o motivo do guard e desabilita o botão — **não
+contorna** (nem remove hook, nem `--no-verify`).
+
+Gap conhecido: a lista de achados é paginada pelo backend; o filtro "Apenas
+pendências" de `/dev/security-intel` opera sobre os achados CARREGADOS e a tela
+declara isso em vez de sugerir cobertura total.
+
+

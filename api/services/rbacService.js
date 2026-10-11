@@ -56,6 +56,13 @@ const ROLE_PERMISSIONS = {
     { resource: 'security_intel', action: 'waiver_approve' },
     { resource: 'security_intel', action: 'waiver_revoke' },
     { resource: 'security_intel', action: 'patch_mission' },
+    // Governança de engenharia: pendências de missão, estado do release e AÇÕES
+    // de release. Verificar, SELAR e PUBLICAR a tag são decisões distintas:
+    // selar reescreve `dist/` e publicar torna o artefato imutável no remote.
+    { resource: 'dev_governance', action: 'read' },
+    { resource: 'dev_governance', action: 'release_verify' },
+    { resource: 'dev_governance', action: 'release_seal' },
+    { resource: 'dev_governance', action: 'release_publish' },
     // Acesso total + gestão de tenant
     { resource: 'tenant', action: 'read' },
     { resource: 'tenant', action: 'update' },
@@ -183,6 +190,11 @@ const ROLE_PERMISSIONS = {
     { resource: 'security_intel', action: 'waiver_approve' },
     { resource: 'security_intel', action: 'waiver_revoke' },
     { resource: 'security_intel', action: 'patch_mission' },
+    // Governança de engenharia (mesma granularidade do bloco acima).
+    { resource: 'dev_governance', action: 'read' },
+    { resource: 'dev_governance', action: 'release_verify' },
+    { resource: 'dev_governance', action: 'release_seal' },
+    { resource: 'dev_governance', action: 'release_publish' },
     // Tickets
     { resource: 'tickets', action: 'create' },
     { resource: 'tickets', action: 'read' },

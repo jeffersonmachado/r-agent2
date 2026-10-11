@@ -206,6 +206,11 @@ export function SecurityIntelligencePage() {
   const [inventorySearch, setInventorySearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
   const [onlyKev, setOnlyKev] = useState(false);
+  // Filtro "apenas pendências": restringe a lista ao que EXIGE ação humana —
+  // achado sem correção publicada (só sai por waiver/controle compensatório) ou
+  // de severidade bloqueante. O cálculo é sobre os achados CARREGADOS: a lista é
+  // paginada pelo backend, e o total carregado é declarado na própria tela.
+  const [onlyPending, setOnlyPending] = useState(false);
   // Achados descartados por VEX (não afetado / falso positivo) são registros
   // auditáveis, mas NÃO são risco: ficam fora da contagem por padrão, como no KPI.
   const [includeVex, setIncludeVex] = useState(false);
@@ -291,6 +296,20 @@ export function SecurityIntelligencePage() {
       showToast(messageOf(err), 'error');
     }
   }, [inventorySearch, showToast]);
+
+  /**
+   * Achados exibidos. Com "Apenas pendências" ligado, mostra só o que EXIGE ação
+   * humana: sem correção publicada (só sai por waiver/controle compensatório) ou
+   * de severidade bloqueante. A contagem é sobre o que foi CARREGADO — a lista é
+   * paginada, e a tela diz isso em vez de sugerir cobertura total.
+   */
+  const BLOCKING_SEVERITIES = ['CRITICAL', 'HIGH'];
+  const pendingFindings = useMemo(() => (findings.items || []).filter((row) => {
+    const semCorrecao = String(row.status || '').toUpperCase() === 'NO_FIX_AVAILABLE';
+    const bloqueante = BLOCKING_SEVERITIES.includes(String(row.severity || '').toUpperCase());
+    return semCorrecao || bloqueante;
+  }), [findings]);
+  const visibleFindings = onlyPending ? pendingFindings : (findings.items || []);
 
   // Opções do seletor de achado para isenção: os achados de decisão vêm da FILA
   // (sempre completos) e o filtro só estreita os demais — nenhum corte silencioso.
@@ -526,6 +545,15 @@ export function SecurityIntelligencePage() {
             <label className="flex items-center gap-2 text-sm text-text-secondary">
               <input
                 type="checkbox"
+                checked={onlyPending}
+                onChange={(event) => setOnlyPending(event.target.checked)}
+                data-testid="findings-only-pending"
+              />
+              Apenas pendências
+            </label>
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              <input
+                type="checkbox"
                 checked={includeVex}
                 onChange={(event) => setIncludeVex(event.target.checked)}
                 data-testid="findings-include-vex"
@@ -550,7 +578,7 @@ export function SecurityIntelligencePage() {
               </tr>
             </thead>
             <tbody>
-              {(findings.items || []).map((row) => (
+              {visibleFindings.map((row) => (
                 <tr key={row.finding_key}>
                   <td className={TD}>
                     <Badge tone={SEVERITY_TONES[row.severity]}>{SEVERITY_LABELS[row.severity] || row.severity}</Badge>
@@ -578,7 +606,7 @@ export function SecurityIntelligencePage() {
                   </td>
                 </tr>
               ))}
-              {(findings.items || []).length === 0 && (
+              {visibleFindings.length === 0 && (
                 <tr>
                   <td colSpan={8} className="p-4 text-center text-sm text-text-secondary">
                     Nenhum achado para os filtros atuais. Isto não significa ausência de vulnerabilidade — consulte

@@ -92,6 +92,9 @@ const EngineeringMissionDetailPage = lazyPage(() => import('./pages/engineering-
 const QaGapsPage = lazyPage(() => import('./pages/QaGapsPage'), 'QaGapsPage');
 const BenchmarkResearchGovernancePage = lazyPage(() => import('./pages/BenchmarkResearchGovernancePage'), 'BenchmarkResearchGovernancePage');
 const SecurityIntelligencePage = lazyPage(() => import('./pages/SecurityIntelligencePage'), 'SecurityIntelligencePage');
+// Governança de engenharia (DEVELOPMENT): pendências de missão e release.
+const DevPendenciesPage = lazyPage(() => import('./pages/DevPendenciesPage'), 'DevPendenciesPage');
+const DevReleasePage = lazyPage(() => import('./pages/DevReleasePage'), 'DevReleasePage');
 const QaWavesOperationalHealthPage = lazyPage(() => import('./pages/QaWavesOperationalHealthPage'), 'QaWavesOperationalHealthPage');
 const QaWavesEnterpriseGovernancePage = lazyPage(() => import('./pages/QaWavesEnterpriseGovernancePage'), 'QaWavesEnterpriseGovernancePage');
 const WorkspacePage = lazyPage(() => import('./pages/WorkspacePage'), 'WorkspacePage');
@@ -516,6 +519,8 @@ function AppWithAuth() {
     && !isEngineeringMissions && !isEngineeringMissionDetail && !isEngineeringFindings;
   const isBenchmarkResearch = isRoute('/dev/benchmark-research');
   const isSecurityIntel = isRoute('/dev/security-intel');
+  const isDevPendencies = isRoute('/dev/pendencies');
+  const isDevRelease = isRoute('/dev/release');
   const isQaWavesOperationalHealth = isRoute('/dev/qa-waves/operational-health');
   const isQaWavesEnterpriseGovernance = isRoute('/dev/qa-waves/enterprise-governance');
   const isAgentOsHub = isRoute('/admin/agents');
@@ -1084,6 +1089,10 @@ function AppWithAuth() {
     pageContent = <BenchmarkResearchGovernancePage />;
   } else if (isSecurityIntel) {
     pageContent = <SecurityIntelligencePage />;
+  } else if (isDevPendencies) {
+    pageContent = <DevPendenciesPage />;
+  } else if (isDevRelease) {
+    pageContent = <DevReleasePage />;
   } else if (isOrders) {
     pageContent = <OrdersPage />;
   } else if (isKitchen) {

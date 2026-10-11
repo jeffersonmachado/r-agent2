@@ -117,6 +117,11 @@ describe('área Dev (rail DEV)', () => {
       // Versões e Segurança: mesma área de engenharia (DEVELOPMENT), rota sob
       // /dev/security-intel para não colidir com o hub /dev/engineering.
       '/dev/security-intel',
+      // Pendências (fila oficial + isenções aguardando aprovação) e Release
+      // (estado + ações governadas): superfícies de engenharia adicionadas para
+      // fechar as pendências que não tinham UI nenhuma.
+      '/dev/pendencies',
+      '/dev/release',
     ]);
   });
 

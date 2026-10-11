@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-11T11:03:10.428Z",
+  "generatedAt": "2026-10-11T14:59:15.991Z",
   "counts": {
-    "total": 3990,
+    "total": 3999,
     "byKind": {
-      "api": 909,
+      "api": 916,
       "field": 2477,
       "model": 223,
-      "page": 149,
+      "page": 151,
       "relation": 9,
       "table": 223
     },
     "byClassification": {
       "PRODUCTION": 3695,
-      "DEVELOPMENT": 203,
+      "DEVELOPMENT": 212,
       "SUPPORT": 92
     },
     "orphaned": 34
@@ -2158,6 +2158,78 @@
       ],
       "linkedDomains": [],
       "fingerprint": "9f5b57c650261f74571e83e80b9d61fd47c9de8030054cb1a00b71a18b27e6d3"
+    },
+    {
+      "id": "api:GET:/api/dev-governance/pendencies",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/dev-governance/pendencies",
+      "module": "dev-governance",
+      "source": "api/modules/dev-governance/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "54862a8f58316e1e9202525eb87612e453fb984dae95c914d8455a36b5962a31"
+    },
+    {
+      "id": "api:GET:/api/dev-governance/release",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/dev-governance/release",
+      "module": "dev-governance",
+      "source": "api/modules/dev-governance/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "4b48a32ba48691cc856515f2a26bda9703cb1094ffc4f7b88443787b87d3e481"
+    },
+    {
+      "id": "api:GET:/api/dev-governance/release/actions",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/dev-governance/release/actions",
+      "module": "dev-governance",
+      "source": "api/modules/dev-governance/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "208c4bca6ccab34daf10695d1d2c5fc754d6ffb5c8a5fe0b8b99158b79ff31b9"
+    },
+    {
+      "id": "api:GET:/api/dev-governance/release/actions/:jobId",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/dev-governance/release/actions/:jobId",
+      "module": "dev-governance",
+      "source": "api/modules/dev-governance/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "fa468272758987da7135cc69702abb08377e6aa9ea226864f7d2ae704b57a94d"
     },
     {
       "id": "api:GET:/api/event-ledger",
@@ -11113,6 +11185,54 @@
       ],
       "linkedDomains": [],
       "fingerprint": "ae1303430f1a2dfc7bd8fa18e0c4e1bbd4dd5370ae582da4941b68a25682e8b6"
+    },
+    {
+      "id": "api:POST:/api/dev-governance/release/publish-tag",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/dev-governance/release/publish-tag",
+      "module": "dev-governance",
+      "source": "api/modules/dev-governance/routes.js",
+      "authRequired": true,
+      "authorization": [],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "967dde93d99095be88e7e17f150e31a16beb470ec8eb9b2553e228fb865d7316"
+    },
+    {
+      "id": "api:POST:/api/dev-governance/release/seal",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/dev-governance/release/seal",
+      "module": "dev-governance",
+      "source": "api/modules/dev-governance/routes.js",
+      "authRequired": true,
+      "authorization": [],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "80f3d8405b0c59763c703114ee98cf8bed3d2517fe76ed64ca777a9fe3ec3798"
+    },
+    {
+      "id": "api:POST:/api/dev-governance/release/verify",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/dev-governance/release/verify",
+      "module": "dev-governance",
+      "source": "api/modules/dev-governance/routes.js",
+      "authRequired": true,
+      "authorization": [],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "b77f029b4af20e9705976f58fe5a33d38f0237ff75cf9baf1d8fc63510ebe2cb"
     },
     {
       "id": "api:POST:/api/evidence/backfill",
@@ -71348,6 +71468,27 @@
       "fingerprint": "2a69c9a48b0fb037fa74f76a1ef64b60300b1b25b76f159f457ab2b1cb641cc3"
     },
     {
+      "id": "page:/dev/pendencies",
+      "kind": "page",
+      "path": "/dev/pendencies",
+      "roles": [
+        "super_admin"
+      ],
+      "permission": "reports:read",
+      "classifications": [
+        "DEVELOPMENT"
+      ],
+      "section": "plataforma",
+      "guarded": true,
+      "classification": "DEVELOPMENT",
+      "source": "frontend/src/main.jsx",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "2273203151a7efa44bb4dc1ca6ea0f26c37640d726693fc003bad3aab3c2fbf6"
+    },
+    {
       "id": "page:/dev/qa-audit",
       "kind": "page",
       "path": "/dev/qa-audit",
@@ -71441,6 +71582,27 @@
       "technicalWave": "observability",
       "linkedJourneys": [],
       "fingerprint": "6b0a84a16f394da87e695330107fd82c61cd3bfeb126ca6522d4d483a82c35b0"
+    },
+    {
+      "id": "page:/dev/release",
+      "kind": "page",
+      "path": "/dev/release",
+      "roles": [
+        "super_admin"
+      ],
+      "permission": "reports:read",
+      "classifications": [
+        "DEVELOPMENT"
+      ],
+      "section": "plataforma",
+      "guarded": true,
+      "classification": "DEVELOPMENT",
+      "source": "frontend/src/main.jsx",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "04206a0eb457a25e20f8f9e21a024c4f87f28e43189834ec17ed445cd5898d4c"
     },
     {
       "id": "page:/dev/rpa-replays",

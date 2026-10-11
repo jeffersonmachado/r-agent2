@@ -15,6 +15,9 @@ export function EngineeringReleaseClosurePage() {
   const { showToast, ToastContainer } = useToast();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Filtro da tela: com ele ligado, os cartões que estão OK saem de cena e fica
+  // só o que exige decisão (o motivo do bloqueio NUNCA é escondido).
+  const [onlyPending, setOnlyPending] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,13 +40,31 @@ export function EngineeringReleaseClosurePage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <ToastContainer />
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-text-primary">Release Closure</h1>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium border ${data.cleanReleaseState ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30' : 'bg-amber-500/15 text-amber-500 border-amber-500/30'}`}>
-          {data.cleanReleaseState ? 'CLEAN RELEASE STATE' : 'NÃO É UM RELEASE LIMPO'}
-        </span>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={onlyPending}
+              onChange={(event) => setOnlyPending(event.target.checked)}
+              className="h-4 w-4"
+            />
+            Apenas pendências
+          </label>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${data.cleanReleaseState ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30' : 'bg-amber-500/15 text-amber-500 border-amber-500/30'}`}>
+            {data.cleanReleaseState ? 'CLEAN RELEASE STATE' : 'NÃO É UM RELEASE LIMPO'}
+          </span>
+        </div>
       </div>
 
+      {onlyPending && (
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-5 mb-4 text-sm text-text-secondary">
+          Exibindo apenas o que exige decisão. Desmarque o filtro para ver todos os gates do ciclo.
+        </div>
+      )}
+
+      {!onlyPending && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-bg-elevated rounded-xl border border-border-default p-5">
           <h2 className="text-sm font-bold text-text-primary mb-2">Release Candidate</h2>
@@ -86,6 +107,7 @@ export function EngineeringReleaseClosurePage() {
           <Row label="Post-release findings" value={data.engineering.postReleaseFindingsCount} />
         </div>
       </div>
+      )}
 
       {!data.cleanReleaseState && data.lockReasons?.length > 0 && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 mt-4">
