@@ -15,6 +15,7 @@
 
 const {
   deriveGates,
+  loadMissionReviewPolicy,
   REQUIRED_GATES_FOR_GREEN,
 } = require('../../../api/services/engineeringMission/missionReviewService');
 
@@ -27,7 +28,13 @@ const semEvidencia = {
 
 const comEvidencia = {
   task: TASK_GREEN,
-  testRuns: [{ status: 'PASS', exit_code: 0, command: 'npx jest tests/unit' }],
+  // H3 (2026-10-11): evidência real de fase agora exige as DUAS categorias — um run
+  // unitário verde não satisfaz mais o gate `integration` (antes ele marcava os dois
+  // como PASS, afirmando cobertura de integração sem tê-la).
+  testRuns: [
+    { status: 'PASS', exit_code: 0, command: 'npx jest tests/unit' },
+    { status: 'PASS', exit_code: 0, command: 'npx jest tests/integration' },
+  ],
   // `attempt_id` é obrigatório no banco (FK para a tentativa): sem ele a revisão não
   // pertence a tentativa nenhuma e o gate não pode aceitá-la como APPROVE da corrente.
   reviews: [{ attempt_id: 'a1', decision: 'APPROVE', reviewer_provider: 'anthropic', independent_of_coder: true }],
@@ -119,5 +126,75 @@ describe('missionReviewService.deriveGates — verificação independente do ate
       greenAttempt: { ...comEvidencia.greenAttempt, promotion_status: 'READY_FOR_PROMOTION' },
     });
     expect(gateById(gates, 'promotion').status).toBe('ATTESTED');
+  });
+});
+
+/**
+ * H3 (medido 2026-10-11) — `unit` NÃO substitui `integration`.
+ *
+ * O gate `integration` era alimentado por `testsAllPass`, a MESMA condição do `unit`:
+ * uma suíte unitária verde marcava os dois como `PASS`. A política do classificador já
+ * dizia que a decisão era humana e não estava tomada — e o gate decidia "integrou" por
+ * conta própria. Agora: PASS exige execução de integração/e2e; sem ela, `MISSING`
+ * (fail-closed) ou `NOT_APPLICABLE` com política EXPLÍCITA e verificável.
+ */
+describe('missionReviewService.deriveGates — H3: unit não substitui integration', () => {
+  const soUnit = {
+    task: TASK_GREEN,
+    testRuns: [
+      { status: 'PASS', exit_code: 0, command: 'npx jest tests/unit' },
+      { status: 'PASS', exit_code: 0, command: 'npx jest engine/__tests__/flow.test.js' },
+    ],
+    reviews: [],
+    regressionRuns: [],
+    greenAttempt: null,
+  };
+
+  test('com evidência apenas UNIT, `integration` NÃO é PASS e nomeia a ausência', () => {
+    const gates = deriveGates(soUnit);
+    const unit = gateById(gates, 'unit');
+    const integration = gateById(gates, 'integration');
+    expect(unit.status).toBe('PASS');
+    expect(integration.status).not.toBe('PASS');
+    expect(integration.status).toBe('ATTESTED'); // há GREEN atestado, mas não evidência de integração
+    expect(integration.evidence.hasDistinctIntegrationEvidence).toBe(false);
+    expect(integration.evidence.code).toBe('INTEGRATION_EVIDENCE_ABSENT');
+    expect(String(integration.evidence.note)).toMatch(/NÃO substituem testes de integração/);
+  });
+
+  test('com execução de INTEGRAÇÃO, o gate passa com evidência distinta', () => {
+    const gates = deriveGates({
+      ...soUnit,
+      testRuns: [
+        { status: 'PASS', exit_code: 0, command: 'npx jest tests/unit' },
+        { status: 'PASS', exit_code: 0, command: 'npx jest tests/integration' },
+      ],
+    });
+    const integration = gateById(gates, 'integration');
+    expect(integration.status).toBe('PASS');
+    expect(integration.verification).toBe('EVIDENCE');
+    expect(integration.evidence.hasDistinctIntegrationEvidence).toBe(true);
+  });
+
+  test('com política EXPLÍCITA que dispensa, sai NOT_APPLICABLE com a FONTE registrada', () => {
+    const gates = deriveGates({
+      ...soUnit,
+      reviewPolicy: { notApplicableAllowed: true, reason: 'correção de documento, sem superfície de integração', source: 'config/mission-review-policy.json' },
+    });
+    const integration = gateById(gates, 'integration');
+    expect(integration.status).toBe('NOT_APPLICABLE');
+    expect(integration.verification).toBe('POLICY');
+    // A marca é o que o Meta Reviewer exige para aceitar um não-PASS.
+    expect(integration.evidence.policySource).toBe('config/mission-review-policy.json');
+    expect(String(integration.evidence.note)).toMatch(/dispensada por política/);
+  });
+
+  test('política ilegível/ausente NÃO autoriza nada (fail-closed, medido no default)', () => {
+    // Sem arquivo de política no repositório, o default tem de ser recusar.
+    expect(loadMissionReviewPolicy({ policyPath: '/tmp/nao-existe-policy.json' })).toEqual({
+      notApplicableAllowed: false, reason: null, source: null,
+    });
+    const gates = deriveGates(soUnit); // default = lê o arquivo real do repo (ausente)
+    expect(gateById(gates, 'integration').status).not.toBe('NOT_APPLICABLE');
   });
 });

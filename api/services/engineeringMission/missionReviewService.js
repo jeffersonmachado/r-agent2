@@ -21,6 +21,40 @@
 const fs = require('fs');
 const path = require('path');
 
+const REVIEW_POLICY_PATH = path.join(__dirname, '..', '..', '..', 'config', 'mission-review-policy.json');
+
+/**
+ * Política de revisão de missão (H3).
+ *
+ * O gate `integration` NÃO pode ser satisfeito pela evidência que satisfez `unit`:
+ * "testes unitários não substituem testes de integração". Aceitar `NOT_APPLICABLE` aqui
+ * exige política EXPLÍCITA e verificável — sem o arquivo, o gate fica fail-closed
+ * (`MISSING`), e o motivo aparece no parecer em vez de virar `PASS` silencioso.
+ *
+ * A decisão de política é HUMANA: este serviço não cria nem presume o arquivo.
+ *
+ * @returns {{notApplicableAllowed: boolean, reason: string|null, source: string|null}}
+ */
+function loadMissionReviewPolicy({ policyPath = REVIEW_POLICY_PATH } = {}) {
+  try {
+    if (!fs.existsSync(policyPath)) {
+      return { notApplicableAllowed: false, reason: null, source: null };
+    }
+    const raw = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+    const integration = raw && raw.gates && raw.gates.integration ? raw.gates.integration : {};
+    const allowed = integration.notApplicableAllowed === true;
+    return {
+      notApplicableAllowed: allowed,
+      reason: allowed ? String(integration.reason || '').trim() || 'política declara integração não aplicável' : null,
+      source: path.relative(path.join(__dirname, '..', '..', '..'), policyPath).split(path.sep).join('/'),
+    };
+  } catch (error) {
+    // Política ilegível NÃO autoriza nada: fail-closed com o motivo.
+    logger.warn(`[mission-review] politica de revisao ilegivel (${policyPath}): ${error.message}`);
+    return { notApplicableAllowed: false, reason: null, source: null };
+  }
+}
+
 const { runMetaReview, META_REVIEW_ENGINE_VERSION, REQUIRED_GATES_FOR_GREEN } = require('../../../engine/engineeringMission/metaReview');
 const { evaluateAdversarialCoverage, ADVERSARIAL_REVIEW_ENGINE_VERSION } = require('../../../engine/engineeringMission/adversarialReview');
 const { summarizeTestCoverage, CATEGORIES: TEST_CATEGORIES } = require('../../../engine/engineeringMission/testSuiteClassifier');
@@ -91,7 +125,7 @@ function hasEvidenceRecord(value) {
  *
  * @returns {Array<{id:string,status:string,verification:string,evidence:Object}>}
  */
-function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = null }) {
+function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = null, reviewPolicy = loadMissionReviewPolicy() }) {
   const testsAllPass = testRuns.length > 0 && testRuns.every((t) => t.status === 'PASS' && t.exit_code === 0);
   // COBERTURA POR CATEGORIA (2026-10-10): a mesma condição alimenta `unit` e
   // `integration`, então é preciso DIZER que categoria a evidência cobre. Sem
@@ -163,7 +197,7 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
       },
   });
 
-  return [
+  const gates = [
     gate(
       'unit',
       testsAllPass,
@@ -179,7 +213,11 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
     ),
     gate(
       'integration',
-      testsAllPass,
+      // H3 (corrigido 2026-10-11): a MESMA condição de `unit` NÃO satisfaz integração.
+      // Antes: `testsAllPass` — uma suíte unitária verde marcava os DOIS gates como
+      // PASS, ou seja, a missão AFIRMAVA cobertura de integração com evidência
+      // genérica. Agora exige execução classificada como integração/e2e.
+      testsAllPass && hasDistinctIntegration,
       {
         source: 'engineering_test_runs',
         commands: testRuns.map((t) => t.command),
@@ -235,6 +273,44 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
       { source: 'engineering_attempts.promotion_status', status: greenAttempt && greenAttempt.promotion_status, attestedBy: 'task.status' },
     ),
   ];
+
+  // H3 (2026-10-11) — desfecho do gate `integration` quando NÃO há evidência distinta.
+  //
+  // O helper `gate()` só sabe produzir PASS/ATTESTED/MISSING. Sem evidência de
+  // integração e sem política, o desfecho correto é `MISSING` com código explícito
+  // (fail-closed): "testes unitários NÃO substituem integração". Quando existe
+  // política declarada que dispense, o desfecho é `NOT_APPLICABLE` — e o gate carrega
+  // `evidence.policySource`, que é o que o Meta Reviewer exige para aceitar um
+  // não-PASS (sem essa marca, `NOT_APPLICABLE` seria um PASS com outro nome).
+  const integrationGate = gates.find((g) => g.id === 'integration');
+  if (integrationGate && integrationGate.status !== 'PASS') {
+    if (reviewPolicy.notApplicableAllowed) {
+      integrationGate.status = 'NOT_APPLICABLE';
+      integrationGate.verification = 'POLICY';
+      integrationGate.evidence = {
+        ...(integrationGate.evidence || {}),
+        policySource: reviewPolicy.source,
+        policyReason: reviewPolicy.reason,
+        note: `integração dispensada por política declarada (${reviewPolicy.source}): ${reviewPolicy.reason}`,
+      };
+    } else {
+      integrationGate.evidence = {
+        ...(integrationGate.evidence || {}),
+        // O helper `gate()` move a evidência real para `evidence.diagnostic` quando o
+        // gate NÃO é backed. O PARECER precisa do fato no nível do gate (quem lê o
+        // gate tem de ver "não há evidência distinta" sem abrir o diagnóstico), então
+        // os campos que descrevem a lacuna são promovidos explicitamente.
+        hasDistinctIntegrationEvidence: false,
+        classification: TEST_CATEGORIES.UNKNOWN,
+        code: 'INTEGRATION_EVIDENCE_ABSENT',
+        // PRESERVA o texto original da lacuna (ele descreve o fato) e ACRESCENTA a
+        // decisão: o gate não vira PASS por falta de evidência distinta (H3).
+        note: `${(integrationGate.evidence && integrationGate.evidence.diagnostic && integrationGate.evidence.diagnostic.note) || ''} — e o gate NÃO aceita isso como sucesso: testes unitários NÃO substituem testes de integração (H3)`,
+      };
+    }
+  }
+
+  return gates;
 }
 
 /**
@@ -629,6 +705,7 @@ module.exports = {
   META_REVIEW_ENGINE_VERSION,
   ADVERSARIAL_REVIEW_ENGINE_VERSION,
   deriveGates,
+  loadMissionReviewPolicy,
   buildClaims,
   collectReviewBundle,
   runReviews,

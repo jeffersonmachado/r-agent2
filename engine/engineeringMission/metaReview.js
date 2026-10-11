@@ -169,8 +169,16 @@ function runMetaReview(bundle = {}, options = {}) {
       uncovered.map((id) => ({ requirementId: id }))));
 
   // 6. Os gates obrigatórios foram executados e passaram?
+  //
+  // H3 (2026-10-11): `NOT_APPLICABLE` passa a ser aceito — mas SOMENTE quando o gate
+  // carrega `evidence.policySource`, isto é, quando foi o resultado de uma política
+  // DECLARADA e verificável (o gate de `integration` só produz esse status a partir do
+  // arquivo de política). Sem essa marca, `NOT_APPLICABLE` não passa: seria `PASS` com
+  // outro nome, exatamente o que o rigor de gate impede.
   const gateById = new Map(gates.map((g) => [g.id, g]));
-  const missingGates = REQUIRED_GATES_FOR_GREEN.filter((g) => !gateById.has(g) || gateById.get(g).status !== 'PASS');
+  const gateAceitavel = (g) => Boolean(g)
+    && (g.status === 'PASS' || (g.status === 'NOT_APPLICABLE' && Boolean(g.evidence && g.evidence.policySource)));
+  const missingGates = REQUIRED_GATES_FOR_GREEN.filter((g) => !gateAceitavel(gateById.get(g)));
   findings.push(missingGates.length === 0
     ? pass('MR-06', 'GATES_EXECUTED', SEVERITY.BLOCKER, 'Gates obrigatórios executados e PASS', REQUIRED_GATES_FOR_GREEN.join(', '))
     : fail('MR-06', 'GATES_EXECUTED', SEVERITY.BLOCKER,

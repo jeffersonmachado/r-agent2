@@ -14,7 +14,7 @@
  * Este teste fixa o mapeamento contra a ESTRUTURA REAL do Jest.
  */
 
-const { mapSuiteResult, buildJestArgs } = require('../../../scripts/governance/run-release-suites');
+const { mapSuiteResult, buildJestArgs, collectBatchExitCodeViolations } = require('../../../scripts/governance/run-release-suites');
 
 function suite({ assertions = [], status = 'passed', message = '' }) {
   return {
@@ -144,5 +144,55 @@ describe('run-release-suites — política de execução do lote', () => {
     expect(args).toContain('--outputFile=/tmp/batch-3.json');
     // as suítes pedidas são exatamente as que o lote executa — nenhuma some no caminho
     expect(args.filter((a) => a.startsWith('tests/'))).toEqual(['tests/unit/x.test.js', 'tests/unit/y.test.js']);
+  });
+});
+
+/**
+ * H1 (2026-10-11) — o PROCESSO do lote não pode ser ignorado.
+ *
+ * Defeito: `batchExitCodes` era registrado e nunca virava violação; um lote com
+ * exit != 0 cujo JSON listava tudo aprovado deixava o relatório agregado em PASS.
+ * "Não confundir ausência de erros registrados com sucesso comprovado" (regra 16).
+ */
+describe('run-release-suites — exit code do lote é autoridade (H1)', () => {
+  it('JSON PASS com exit 1 ⇒ VIOLAÇÃO (testes aprovados não cancelam o processo)', () => {
+    const violacoes = collectBatchExitCodeViolations({
+      batchRuns: [{ exitCode: 1 }, { exitCode: 0 }],
+      batchFailures: [],
+    });
+    expect(violacoes).toHaveLength(1);
+    expect(violacoes[0].code).toBe('BATCH_EXIT_CODE_NONZERO');
+    expect(violacoes[0].batchIndex).toBe(0);
+    expect(violacoes[0].detail).toMatch(/NÃO cancelam a falha do PROCESSO/);
+  });
+
+  it('exit 0 em todos os lotes ⇒ nenhuma violação (não é não-vacuidade às avessas)', () => {
+    expect(collectBatchExitCodeViolations({ batchRuns: [{ exitCode: 0 }, { exitCode: 0 }] })).toEqual([]);
+  });
+
+  it('morto por sinal (exit null) ⇒ violação nomeada como sinal', () => {
+    const violacoes = collectBatchExitCodeViolations({ batchRuns: [{ exitCode: null, signal: 'SIGKILL' }] });
+    expect(violacoes).toHaveLength(1);
+    expect(violacoes[0].detail).toMatch(/morto por sinal/);
+    expect(violacoes[0].detail).toMatch(/SIGKILL/);
+  });
+
+  it('lote já reportado como BATCH_REPORT_MISSING não gera violação duplicada', () => {
+    const violacoes = collectBatchExitCodeViolations({
+      batchRuns: [{ exitCode: 1 }],
+      batchFailures: [{ batchIndex: 0 }],
+    });
+    expect(violacoes).toEqual([]);
+  });
+
+  it('lote REUTILIZADO não conta como processo executado (contrato próprio)', () => {
+    expect(collectBatchExitCodeViolations({ batchRuns: [{ exitCode: 1, reused: true }] })).toEqual([]);
+  });
+
+  it('a violação é suficiente para impedir PASS (não-vacuidade do gate)', () => {
+    // Espelha o cálculo do runner: `status = violationCount === 0 ? 'PASS' : 'FAIL'`.
+    const violacoes = collectBatchExitCodeViolations({ batchRuns: [{ exitCode: 130 }] });
+    const status = violacoes.length === 0 ? 'PASS' : 'FAIL';
+    expect(status).toBe('FAIL');
   });
 });

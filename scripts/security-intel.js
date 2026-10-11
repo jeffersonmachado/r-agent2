@@ -39,23 +39,49 @@ function currentOsUser() {
 }
 
 /**
+ * Resolve a identidade do CLI a partir do usuário do SO — fail-closed.
+ *
+ * H2 (corrigido 2026-10-11): `--actor` era aceito como o SOLICITANTE da isenção
+ * (`requester = args.actor || currentOsUser()`). Como a segregação de funções compara
+ * solicitante × aprovador, declarar o solicitante permitia ESCOLHER quem aparece como
+ * autor do pedido — e, na prática, plantar a identidade de outra pessoa no registro de
+ * auditoria da exceção. `--actor`, `--approve` e `--authorized-by` deixam de ser
+ * identidade: são, no máximo, reafirmação do usuário que executa. Divergência ⇒ recusa.
+ *
+ * @returns {string|null} usuário do SO, ou `null` quando não é possível determiná-lo
+ *   ou quando a identidade declarada diverge dele (o chamador DEVE abortar).
+ */
+function resolveOsIdentity(declared, { commandName, role }) {
+  const declaredValue = declared ? String(declared).trim() : null;
+  const osUser = currentOsUser();
+  if (!osUser) {
+    console.error(`[security-intel] não foi possível determinar o usuário do SO que executa o comando; a identidade de ${role} não pode ser declarada (${commandName}).`);
+    return null;
+  }
+  if (declaredValue && declaredValue !== osUser) {
+    console.error(`[security-intel] identidade de ${role} não é declarada: "${declaredValue}" difere do usuário que executa (${osUser}).`);
+    return null;
+  }
+  return osUser;
+}
+
+/**
  * Resolve a identidade de aprovação do CLI (fail-closed).
  *
  * @returns {string|null} usuário do SO, ou `null` quando não é possível
  *   determiná-lo ou quando a identidade declarada diverge dele.
  */
 function resolveCliApprover(declared, commandName) {
-  const declaredValue = declared ? String(declared).trim() : null;
-  const osUser = currentOsUser();
-  if (!osUser) {
-    console.error(`[security-intel] não foi possível determinar o usuário do SO que executa o comando; a identidade de aprovação não pode ser declarada (${commandName}).`);
-    return null;
-  }
-  if (declaredValue && declaredValue !== osUser) {
-    console.error(`[security-intel] identidade de aprovação não é declarada: "${declaredValue}" difere do usuário que executa (${osUser}).`);
-    return null;
-  }
-  return osUser;
+  return resolveOsIdentity(declared, { commandName, role: 'aprovação' });
+}
+
+/**
+ * Resolve a identidade de quem EXECUTA o comando (solicitação, revogação, scan).
+ *
+ * Mesma política da aprovação: identidade vem do SO, nunca do payload/argumento.
+ */
+function resolveCliActor(declared, commandName) {
+  return resolveOsIdentity(declared, { commandName, role: 'execução' });
 }
 
 /** Carrega `.env` sem depender de dotenv (não sobrescreve ambiente explícito). */
@@ -355,10 +381,13 @@ async function commandAdvisories(args) {
     return 3;
   }
   const startedMs = Date.now();
+  // Identidade do SO (H2): o autor da sincronização não pode ser declarado no payload.
+  const actor = resolveCliActor(args.actor, 'advisories');
+  if (!actor) return 2;
   const result = await syncAdvisories({
     packages,
     tenantKey,
-    actor: args.actor || 'security-intel-cli',
+    actor,
     options: {
       rateLimitPerSecond: args.rate ? Number(args.rate) : 4,
       maxPackages: limit || undefined,
@@ -400,12 +429,16 @@ async function commandAdvisories(args) {
 async function commandScan(args) {
   const { scanComponents, getFindingSummary } = require('../api/services/securityIntel/vulnerabilityScanService');
   const tenantKey = args.tenant || 'system';
+  // Identidade vem do SO (H2): `--actor` divergente recusa o comando em vez de
+  // registrar outra pessoa como autora do scan.
+  const actor = resolveCliActor(args.actor, 'scan');
+  if (!actor) return 2;
   const report = await scanComponents({
     tenantKey,
     scope: args.scope || null,
     limit: args.limit ? Number(args.limit) : null,
     services: args.service ? [args.service] : null,
-    actor: args.actor || 'security-intel-cli',
+    actor,
   });
   const summary = await getFindingSummary({ tenantKey });
   const payload = { generatedAt: new Date().toISOString(), ...report, summary };
@@ -542,10 +575,14 @@ async function commandPatchMission(args) {
   }
   const approver = resolveCliApprover(args.authorizedBy, 'patch-mission');
   if (!approver) return 2;
+  // `--actor` não pode declarar outra pessoa (H2); quando omitido, quem autoriza é
+  // também quem executa — e ambos vêm do usuário do SO.
+  const actor = resolveOsIdentity(args.actor, { commandName: 'patch-mission', role: 'execução' });
+  if (!actor) return 2;
   const result = await createPatchMission({
     candidateKey: args.candidate,
     tenantKey: args.tenant || 'system',
-    actor: args.actor || approver,
+    actor,
     // Autorização = quem executa o comando (identidade verificável do SO).
     authorizedBy: approver,
   });
@@ -622,9 +659,9 @@ async function commandWaive(args) {
     console.error('[security-intel] informe --finding <findingKey> (veja `patches`/`findings`).');
     return 2;
   }
-  const requester = args.actor || currentOsUser();
+  const requester = resolveCliActor(args.actor, 'waive');
   if (!requester) {
-    console.error('[security-intel] não foi possível determinar o usuário do SO que solicita a isenção; a identidade não pode ser declarada.');
+    console.error('[security-intel] a identidade do SOLICITANTE vem do usuário do SO que executa o comando; --actor não pode declarar outra pessoa.');
     return 2;
   }
   const policy = loadPolicy({ reload: true });
@@ -719,12 +756,16 @@ async function commandRevokeWaiver(args) {
     console.error('[security-intel] informe --waiver <waiverKey> (veja `waivers --state ALL`).');
     return 2;
   }
+  // Quem revoga é identidade do SO (H2): a revogação é decisão de segurança e precisa
+  // de autor verificável no registro — não de um nome vindo do argumento.
+  const actor = resolveCliActor(args.actor, 'revoke');
+  if (!actor) return 2;
   let result;
   try {
     result = await revokeWaiver({
       waiverKey: args.waiver,
       tenantKey,
-      actor: args.actor || currentOsUser() || 'unknown',
+      actor,
       reason: args.reason || null,
     });
   } catch (error) {
@@ -845,4 +886,15 @@ if (require.main === module) {
   });
 }
 
-module.exports = { loadEnvFile, parseArgs, collectDeclaredImages, runDiscovery };
+module.exports = {
+  loadEnvFile,
+  parseArgs,
+  collectDeclaredImages,
+  runDiscovery,
+  // Autoridade de identidade do CLI (H2): exportada para teste direto das regras —
+  // a alternativa seria exercitar tudo por spawn, o que não cobre os casos puros.
+  currentOsUser,
+  resolveOsIdentity,
+  resolveCliActor,
+  resolveCliApprover,
+};

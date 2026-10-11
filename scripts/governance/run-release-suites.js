@@ -418,6 +418,44 @@ function collectBatchResults(batchRuns) {
   return { suites, batchFailures };
 }
 
+/**
+ * Violações por PROCESSO imundo nos lotes da regressão (H1).
+ *
+ * DEFEITO CORRIGIDO (medido 2026-10-11): o exit code do lote era apenas REGISTRADO
+ * (`batchExitCodes`) — nunca virava violação. Assim, um lote cujo PROCESSO terminava
+ * != 0 mas cujo JSON listava tudo aprovado (erro de teardown/forceExit, rejeição não
+ * tratada depois dos testes, morte por sinal) deixava o relatório agregado em `PASS`:
+ * "JSON válido com testes aprovados não pode ocultar uma falha do processo" (Fase 6.1
+ * da missão). O runner roda com `--bail=0` (ver buildJestArgs), então exit != 0 não
+ * é ambiguidade de bail: é o processo dizendo que algo além dos testes falhou — e as
+ * suítes seguintes do lote podem não ter rodado.
+ *
+ * Sem exceção por flag, de propósito: uma lista de exceções seria o mesmo defeito com
+ * outro nome. `reused` fica fora (o lote não foi executado agora; a reutilização tem
+ * contrato próprio) e lotes já reportados como `BATCH_REPORT_MISSING` não são
+ * duplicados.
+ *
+ * @param {{batchRuns?: Array, batchFailures?: Array}} input
+ * @returns {Array<{code: string, batchIndex: number, detail: string}>}
+ */
+function collectBatchExitCodeViolations({ batchRuns, batchFailures } = {}) {
+  const runs = Array.isArray(batchRuns) ? batchRuns : [];
+  const failures = Array.isArray(batchFailures) ? batchFailures : [];
+  const jaViolados = new Set(failures.map((failure) => failure && failure.batchIndex));
+  const violacoes = [];
+  runs.forEach((run, index) => {
+    if (!run || run.reused === true) return;
+    if (jaViolados.has(index)) return;
+    if (run.exitCode === 0) return;
+    violacoes.push({
+      code: 'BATCH_EXIT_CODE_NONZERO',
+      batchIndex: index,
+      detail: `lote terminou com exit=${run.exitCode === null || run.exitCode === undefined ? 'null (morto por sinal)' : run.exitCode}${run.signal ? ` signal=${run.signal}` : ''} — testes aprovados no JSON NÃO cancelam a falha do PROCESSO; reconheça a causa (drenagem, timeout, crash) antes de considerar a regressão válida`,
+    });
+  });
+  return violacoes;
+}
+
 function main() {
   const manifest = resolveManifest();
   // Determinismo do ambiente: o `.env` é carregado ANTES de qualquer suíte (ver `loadEnvFile`).
@@ -496,6 +534,13 @@ function main() {
     failedSuites: Object.values(report.suites).filter((s) => s.state === 'FAIL').length,
   };
   report.violations = [...report.violations, ...evaluation.violations];
+
+  // Processo imundo do lote ⇒ violação (a regra vive em função pura testável).
+  report.violations = [...report.violations, ...collectBatchExitCodeViolations({
+    batchRuns,
+    batchFailures: collected.batchFailures,
+  })];
+
   report.violationCount = report.violations.length;
   report.batchExitCodes = batchRuns.map((b) => b.exitCode);
   report.status = report.violationCount === 0 ? 'PASS' : 'FAIL';
@@ -514,4 +559,6 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { mapSuiteResult, batchPaths, buildExclusiveIndex, buildJestArgs };
+module.exports = {
+  mapSuiteResult, batchPaths, buildExclusiveIndex, buildJestArgs, collectBatchExitCodeViolations,
+};
