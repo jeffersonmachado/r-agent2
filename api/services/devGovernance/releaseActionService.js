@@ -66,10 +66,100 @@ const ACTION_CATALOG = Object.freeze({
   },
 });
 
-/** Registro de execuções (processo único). Sobrevive em disco pelo log; em
- * memória, um restart da API zera o status — o log permanece acessível. */
+/**
+ * Registro de execuções.
+ *
+ * PERSISTÊNCIA: cada execução grava um registro JSON ao lado do próprio log, no
+ * runtime root (fora do workspace). O histórico é reconstruído do DISCO a cada
+ * leitura, então reiniciar a API não apaga o que já aconteceu.
+ *
+ * Honestidade sobre reinício: um registro gravado como `running` por uma sessão
+ * anterior só continua `running` se o PID ainda estiver VIVO. Caso contrário vira
+ * `interrupted` com o motivo escrito — nunca “rodando para sempre”, que é o modo
+ * clássico de uma tela de status mentir.
+ */
 const jobs = new Map();
 const MAX_JOBS = 40;
+const MAX_PERSISTED_JOBS = 100;
+
+function jobDir() {
+  return resolveRuntimePath('logs', 'dev-governance');
+}
+
+function jobRecordPath(jobId) {
+  return path.join(jobDir(), `${jobId}.job.json`);
+}
+
+/** PID vivo? `EPERM` significa que existe mas não é nosso — conta como vivo. */
+function isProcessAlive(pid) {
+  const value = Number(pid);
+  if (!Number.isInteger(value) || value <= 0) return false;
+  try {
+    process.kill(value, 0);
+    return true;
+  } catch (error) {
+    return error && error.code === 'EPERM';
+  }
+}
+
+/** Grava o registro. Falha de escrita NÃO derruba a ação: vira aviso no log. */
+function persistJob(job) {
+  try {
+    const { logTail, ...record } = job;
+    fs.writeFileSync(jobRecordPath(job.id), JSON.stringify(record, null, 2));
+    prunePersistedJobs();
+  } catch (error) {
+    logger.warn(`[dev-governance] não foi possível persistir o registro da ação ${job && job.id}: ${error.message}`);
+  }
+}
+
+/** Mantém o diretório limitado. Evidência real é o LOG; o registro é metadado. */
+function prunePersistedJobs() {
+  try {
+    const arquivos = fs.readdirSync(jobDir())
+      .filter((name) => name.endsWith('.job.json'))
+      .map((name) => ({ name, mtime: fs.statSync(path.join(jobDir(), name)).mtimeMs }))
+      .sort((a, b) => b.mtime - a.mtime);
+    for (const extra of arquivos.slice(MAX_PERSISTED_JOBS)) {
+      fs.unlinkSync(path.join(jobDir(), extra.name));
+    }
+  } catch (_) {
+    // best effort
+  }
+}
+
+/** Lê os registros do disco, projetando o estado de execuções de OUTRA sessão. */
+function readPersistedJobs() {
+  let arquivos = [];
+  try {
+    arquivos = fs.readdirSync(jobDir()).filter((name) => name.endsWith('.job.json'));
+  } catch (_) {
+    return [];
+  }
+  const records = [];
+  for (const name of arquivos) {
+    try {
+      const record = JSON.parse(fs.readFileSync(path.join(jobDir(), name), 'utf8'));
+      if (!record || !record.id) continue;
+      if (record.status === 'running' && !jobs.has(record.id) && !isProcessAlive(record.pid)) {
+        record.status = 'interrupted';
+        record.interruptedReason = 'a API foi reiniciada e o processo não está mais vivo; confira o log para o resultado real';
+      }
+      records.push(record);
+    } catch (error) {
+      logger.warn(`[dev-governance] registro de ação ilegível (${name}): ${error.message}`);
+    }
+  }
+  return records;
+}
+
+/** Histórico completo: o vivo desta sessão tem precedência sobre o do disco. */
+function allJobs() {
+  const porId = new Map();
+  for (const record of readPersistedJobs()) porId.set(record.id, record);
+  for (const job of jobs.values()) porId.set(job.id, job);
+  return [...porId.values()].sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)));
+}
 
 function codedError(code, message, statusCode = 400) {
   const error = new Error(message ? `${code}:${message}` : code);
@@ -148,7 +238,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
     args.push(releaseName);
   }
 
-  const logDir = resolveRuntimePath('logs', 'dev-governance');
+  const logDir = jobDir();
   const id = crypto.randomUUID();
   const logPath = path.join(logDir, `release-${actionId}-${id}.log`);
   const job = {
@@ -166,6 +256,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
   };
   jobs.set(job.id, job);
   pruneJobs();
+  persistJob(job);
 
   let stream;
   try {
@@ -193,6 +284,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
       job.exitCode = null;
       job.finishedAt = new Date().toISOString();
       job.error = error.message;
+      persistJob(job);
       stream.end();
       logger.error(`[dev-governance] ação ${actionId} não pôde iniciar: ${error.message}`);
     });
@@ -203,6 +295,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
       job.signal = signal || null;
       job.status = code === 0 ? 'succeeded' : 'failed';
       job.finishedAt = new Date().toISOString();
+      persistJob(job);
       stream.end();
       logger.info(`[dev-governance] ação ${actionId} terminou: ${job.status} (exit ${code})`);
     });
@@ -232,23 +325,28 @@ function readLogTail(logPath, { maxBytes = 12000 } = {}) {
 }
 
 function getReleaseAction({ jobId } = {}) {
-  const job = jobs.get(String(jobId || ''));
-  if (!job) throw codedError('release_action_not_found', String(jobId || ''), 404);
+  const key = String(jobId || '');
+  const vivo = jobs.get(key);
+  const persistido = vivo ? null : readPersistedJobs().find((record) => record.id === key) || null;
+  const job = vivo || persistido;
+  if (!job) throw codedError('release_action_not_found', key, 404);
   return { ...job, logTail: readLogTail(job.logPath) };
 }
 
 function listReleaseActions() {
-  return [...jobs.values()]
-    .sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)))
-    .map((job) => ({ ...job, logTail: null }));
+  return allJobs().map((job) => ({ ...job, logTail: null }));
 }
 
 module.exports = {
   ACTION_IDS,
   ACTION_CATALOG,
   RELEASE_NAME_PATTERN,
+  MAX_PERSISTED_JOBS,
   runReleaseAction,
   getReleaseAction,
   listReleaseActions,
   readLogTail,
+  readPersistedJobs,
+  isProcessAlive,
+  jobRecordPath,
 };

@@ -3,6 +3,7 @@ import {
   getReleaseState,
   runReleaseAction,
   getReleaseAction,
+  listReleaseActions,
 } from '../api/devGovernance';
 import { useToast } from '../components/Toast';
 
@@ -37,6 +38,7 @@ const JOB_TONE = {
   running: 'bg-sky-500/15 text-sky-500 border-sky-500/30',
   succeeded: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
   failed: 'bg-red-500/15 text-red-500 border-red-500/30',
+  interrupted: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
 };
 
 function KeyValue({ label, value, tone }) {
@@ -74,13 +76,21 @@ export function DevReleasePage() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(null);
   const [job, setJob] = useState(null);
+  const [historico, setHistorico] = useState([]);
   const [erro, setErro] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setErro(null);
     try {
-      setState(await getReleaseState());
+      const [estado, acoes] = await Promise.all([
+        getReleaseState(),
+        // O histórico vem do DISCO (sobrevive ao reinício da API); falha em
+        // carregá-lo não impede ver o estado — vira lista vazia declarada.
+        listReleaseActions().catch(() => ({ items: [] })),
+      ]);
+      setState(estado);
+      setHistorico(Array.isArray(acoes && acoes.items) ? acoes.items : []);
     } catch (err) {
       setErro(err.message || 'Falha ao carregar o estado de release');
       showToast?.(err.message || 'Falha ao carregar o estado de release', 'error');
@@ -114,6 +124,8 @@ export function DevReleasePage() {
     if (!job) return;
     try {
       setJob(await getReleaseAction(job.id));
+      const acoes = await listReleaseActions().catch(() => null);
+      if (acoes && Array.isArray(acoes.items)) setHistorico(acoes.items);
     } catch (err) {
       showToast?.(err.message || 'Falha ao atualizar a ação', 'error');
     }
@@ -263,6 +275,48 @@ export function DevReleasePage() {
           ))}
         </div>
       </Card>
+
+      {historico.length > 0 && (
+        <div className="mt-5">
+          <Card title="Histórico de ações (persistido)">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-text-secondary">
+                  <tr>
+                    <th className="text-left py-1.5 font-medium">Ação</th>
+                    <th className="text-left py-1.5 font-medium">Estado</th>
+                    <th className="text-left py-1.5 font-medium">Início</th>
+                    <th className="text-left py-1.5 font-medium">Log</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historico.map((item) => (
+                    <tr key={item.id} className="border-t border-border-default align-top">
+                      <td className="py-1.5 text-text-primary">{item.label || item.actionId}</td>
+                      <td className="py-1.5">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${JOB_TONE[item.status] || JOB_TONE.running}`}>
+                          {item.status}
+                        </span>
+                        {item.exitCode !== null && item.exitCode !== undefined && (
+                          <span className="ml-2 text-xs text-text-secondary">exit {item.exitCode}</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-text-secondary">
+                        {item.startedAt ? new Date(item.startedAt).toLocaleString('pt-BR') : '—'}
+                      </td>
+                      <td className="py-1.5 text-text-secondary truncate max-w-xs" title={item.logPath}>{item.logPath}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-xs text-text-secondary">
+              Registros ficam no runtime root (fora do workspace) e sobrevivem ao reinício da API. Ação marcada
+              como <code>interrupted</code> foi iniciada por uma sessão anterior e o processo não está mais vivo.
+            </p>
+          </Card>
+        </div>
+      )}
 
       {job && (
         <div className="mt-5">
