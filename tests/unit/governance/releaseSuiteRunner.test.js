@@ -14,7 +14,11 @@
  * Este teste fixa o mapeamento contra a ESTRUTURA REAL do Jest.
  */
 
-const { mapSuiteResult, buildJestArgs, collectBatchExitCodeViolations } = require('../../../scripts/governance/run-release-suites');
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+const { mapSuiteResult, buildJestArgs, collectBatchExitCodeViolations, avaliarReusoDeLote, suitesFingerprint, exitCodeDoRelatorioReusado, parsePidsVivos, ceifarGrupoDoLote } = require('../../../scripts/governance/run-release-suites');
 
 function suite({ assertions = [], status = 'passed', message = '' }) {
   return {
@@ -194,5 +198,154 @@ describe('run-release-suites — exit code do lote é autoridade (H1)', () => {
     const violacoes = collectBatchExitCodeViolations({ batchRuns: [{ exitCode: 130 }] });
     const status = violacoes.length === 0 ? 'PASS' : 'FAIL';
     expect(status).toBe('FAIL');
+  });
+});
+
+// ── Fase 6: reuso de evidência com CONTRATO ─────────────────────────────────────
+//
+// DEFEITO MEDIDO (2026-10-11): o reuso era `if (reuse && fs.existsSync(outputFile))`
+// — aceitava QUALQUER relatório de lote presente, inventava `exitCode: 0` e não
+// conferia nada. Com `RELEASE_SUITES_REUSE_BATCHES=1`, um relatório de um COMMIT
+// ANTERIOR (tudo verde) sustentava uma execução nova: falso verde por reutilização
+// de evidência incompatível, e o relatório agregado ainda exibia as suítes como
+// aprovadas.
+describe('run-release-suites — contrato de reuso de lote (Fase 6)', () => {
+  const suites = ['a.test.js', 'b.test.js'];
+  const identidade = { runId: 'R1', sourceCommit: 'C1', sourceFingerprint: 'F1' };
+  const metaValido = {
+    ...identidade,
+    suitesHash: suitesFingerprint(suites),
+    resultHash: 'HASH-DO-RESULTADO',
+  };
+  const avaliar = (extra = {}) => avaliarReusoDeLote({
+    meta: metaValido, identidade, suites, resultHash: 'HASH-DO-RESULTADO', ...extra,
+  });
+
+  it('sem sidecar de binding NÃO reusa (fail-closed: procedência desconhecida)', () => {
+    expect(avaliar({ meta: null })).toEqual({ reuse: false, reason: 'META_MISSING' });
+    expect(avaliar({ meta: undefined }).reason).toBe('META_MISSING');
+  });
+
+  it('sem run governado NÃO reusa', () => {
+    expect(avaliar({ identidade: { runId: null, sourceCommit: 'C1', sourceFingerprint: 'F1' } }).reason)
+      .toBe('NO_GOVERNED_RUN');
+  });
+
+  it('runId diferente NÃO reusa', () => {
+    expect(avaliar({ meta: { ...metaValido, runId: 'R2' } }).reason).toBe('RUN_MISMATCH');
+  });
+
+  it('commit diferente NÃO reusa', () => {
+    expect(avaliar({ meta: { ...metaValido, sourceCommit: 'C9' } }).reason).toBe('SOURCE_COMMIT_MISMATCH');
+  });
+
+  it('fingerprint de source diferente NÃO reusa', () => {
+    expect(avaliar({ meta: { ...metaValido, sourceFingerprint: 'F9' } }).reason)
+      .toBe('SOURCE_FINGERPRINT_MISMATCH');
+  });
+
+  it('plano de suítes diferente NÃO reusa (o lote agora contém outras suítes)', () => {
+    expect(avaliar({ meta: { ...metaValido, suitesHash: suitesFingerprint(['z.test.js']) } }).reason)
+      .toBe('SUITE_PLAN_MISMATCH');
+  });
+
+  it('hash do resultado diferente NÃO reusa (relatório adulterado/trocado)', () => {
+    expect(avaliar({ resultHash: 'OUTRO-HASH' }).reason).toBe('RESULT_HASH_MISMATCH');
+    expect(avaliar({ meta: { ...metaValido, resultHash: 'OUTRO' } }).reason).toBe('RESULT_HASH_MISMATCH');
+    expect(avaliar({ resultHash: null }).reason).toBe('RESULT_HASH_MISMATCH');
+  });
+
+  it('com binding completo e idêntico, reusa', () => {
+    expect(avaliar()).toEqual({ reuse: true, reason: null });
+  });
+
+  it('o exit code do lote reusado vem do RELATÓRIO, nunca fixo em 0', () => {
+    expect(exitCodeDoRelatorioReusado({ success: true })).toBe(0);
+    expect(exitCodeDoRelatorioReusado({ success: false })).toBe(1);
+    expect(exitCodeDoRelatorioReusado({})).toBe(1);
+    expect(exitCodeDoRelatorioReusado(null)).toBe(1);
+  });
+
+  it('o fingerprint do plano é insensível à ORDEM mas sensível ao CONTEÚDO', () => {
+    expect(suitesFingerprint(['b', 'a'])).toBe(suitesFingerprint(['a', 'b']));
+    expect(suitesFingerprint(['a'])).not.toBe(suitesFingerprint(['a', 'b']));
+  });
+
+  it('a recusa de reuso é registrada no relatório (não pode ser silenciosa)', () => {
+    const fonte = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'run-release-suites.js'),
+      'utf8',
+    );
+    expect(fonte).toContain('reuseRejections');
+    expect(fonte).toMatch(/report\.reuseRejections\s*=\s*reuseRejections/);
+    // E o reuso NÃO pode voltar a ser "existe arquivo, então serve".
+    expect(fonte).not.toMatch(/if\s*\(\s*reuse\s*&&\s*fs\.existsSync\(outputFile\)\s*\)\s*\{\s*\n\s*try/);
+  });
+});
+
+// ── Fase 6: isolamento entre lotes com PROVA DE SAÍDA ────────────────────────────
+//
+// DEFEITO: a ceifa do grupo do lote chamava `process.kill(-pid, 'SIGTERM')` e
+// marcava `reaped = true`. Enviar o sinal NÃO é prova de que o processo morreu — o
+// grupo pode ter sobreviventes segurando conexões, que é a causa medida da falha do
+// lote seguinte. E `ps -o pid= -g <pgid>` lista ZUMBIS como se estivessem vivos, o
+// que faria a verificação declarar sobrevivência com o grupo já morto (falso
+// positivo que esconderia o caso real).
+describe('run-release-suites — prova de saída do grupo do lote (Fase 6)', () => {
+  it('zumbi NÃO conta como processo vivo do grupo', () => {
+    const saida = [
+      '  1234 Ss',
+      '  1235 Z',
+      '  1236 Sl',
+      '  1237 Z+',
+    ].join('\n');
+    expect(parsePidsVivos(saida)).toEqual([1234, 1236]);
+  });
+
+  it('saída vazia/ilegível não inventa processo', () => {
+    expect(parsePidsVivos('')).toEqual([]);
+    expect(parsePidsVivos(null)).toEqual([]);
+    expect(parsePidsVivos('não é ps')).toEqual([]);
+  });
+
+  it('grupo que já não existe ⇒ saída provada por AUSÊNCIA (não por sinal)', () => {
+    const r = ceifarGrupoDoLote(999999, { termTimeoutMs: 300, killTimeoutMs: 300 });
+    expect(r.exitProof).toBe('ALREADY_GONE');
+    expect(r.termEnviado).toBe(false);
+    expect(r.sobreviventesAposTerm).toBe(0);
+  });
+
+  it('grupo que respeita SIGTERM ⇒ exitProof=TERM (sem precisar de KILL)', () => {
+    const filho = spawn('sleep', ['30'], { detached: true, stdio: 'ignore' });
+    try {
+      const r = ceifarGrupoDoLote(filho.pid, { termTimeoutMs: 5000, killTimeoutMs: 3000 });
+      expect(r.termEnviado).toBe(true);
+      expect(r.exitProof).toBe('TERM');
+      expect(r.killEnviado).toBe(false);
+    } finally {
+      try { process.kill(-filho.pid, 'SIGKILL'); } catch (_) { /* já saiu */ }
+    }
+  });
+
+  it('grupo que IGNORA SIGTERM ⇒ escala para SIGKILL e prova a saída', () => {
+    const filho = spawn('bash', ['-c', 'trap "" TERM; sleep 30'], { detached: true, stdio: 'ignore' });
+    try {
+      const r = ceifarGrupoDoLote(filho.pid, { termTimeoutMs: 1500, killTimeoutMs: 5000 });
+      expect(r.sobreviventesAposTerm).toBeGreaterThan(0);
+      expect(r.killEnviado).toBe(true);
+      expect(r.exitProof).toBe('KILL');
+      expect(r.sobreviventesAposKill).toBe(0);
+    } finally {
+      try { process.kill(-filho.pid, 'SIGKILL'); } catch (_) { /* já saiu */ }
+    }
+  });
+
+  it('a evidência do lote publica a prova de saída e o isolamento', () => {
+    const fonte = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'run-release-suites.js'),
+      'utf8',
+    );
+    expect(fonte).toContain('exitProof');
+    expect(fonte).toContain('connectionDrains');
   });
 });

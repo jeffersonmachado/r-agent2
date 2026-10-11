@@ -25,6 +25,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { ROOT, writeReport } = require('./common');
 const { resolveManifest, evaluateExecution, MANIFEST_VIOLATION_CODES } = require('./lib/releaseSuiteManifest');
@@ -133,6 +134,82 @@ function batchReportDir() {
   return override || path.join(os.tmpdir(), 'r-agent2-release-suites');
 }
 
+// ── CONTRATO DE REUSO DE LOTE (Fase 6) ──────────────────────────────────────────
+//
+// DEFEITO MEDIDO (2026-10-11): o reuso era `if (reuse && fs.existsSync(outputFile))`
+// — reusava QUALQUER relatório de lote já presente, inventava `exitCode: 0` e não
+// conferia absolutamente nada. Com `RELEASE_SUITES_REUSE_BATCHES=1`, um relatório
+// de um COMMIT ANTERIOR (todas as suítes verdes) sustentava uma execução nova: o
+// falso verde clássico de reutilização de evidência incompatível — e o relatório
+// agregado ainda dizia quantas suítes passaram.
+//
+// Agora a evidência só é reusada quando o BINDING confere com a execução atual:
+// runId, sourceCommit, sourceFingerprint, plano de suítes e hash do próprio
+// resultado. Sem sidecar de binding (ou sem run governado) NÃO reusa — fail-closed:
+// evidência sem procedência verificável é reexecutada, não presumida.
+const CURRENT_RUN_RELATIVE_PATH = 'governance/.current-run.json';
+
+function batchMetaPath(batchIndex) {
+  return path.join(batchReportDir(), `batch-${batchIndex}.meta.json`);
+}
+
+/** Identidade do source atual (a mesma que o resto da governança usa). */
+function currentBuildIdentity() {
+  try {
+    const run = JSON.parse(fs.readFileSync(path.join(ROOT, CURRENT_RUN_RELATIVE_PATH), 'utf8'));
+    return {
+      runId: run.runId || null,
+      sourceCommit: run.sourceCommit || null,
+      sourceFingerprint: run.sourceFingerprint || null,
+    };
+  } catch (_) {
+    return { runId: null, sourceCommit: null, sourceFingerprint: null };
+  }
+}
+
+function sha256De(texto) {
+  return crypto.createHash('sha256').update(String(texto), 'utf8').digest('hex');
+}
+
+/** Fingerprint do PLANO do lote: quais suítes ele deve executar. */
+function suitesFingerprint(suites) {
+  return sha256De([...suites].sort().join('\n'));
+}
+
+/**
+ * O lote já executado pode ser REUSADO para a execução atual?
+ *
+ * PURA de propósito (a decisão é a parte que já errou uma vez): recebe o sidecar,
+ * a identidade atual, o plano de suítes e o hash do resultado em disco.
+ *
+ * @returns {{reuse: boolean, reason: string|null}}
+ */
+function avaliarReusoDeLote({ meta, identidade, suites, resultHash } = {}) {
+  if (!meta || typeof meta !== 'object') return { reuse: false, reason: 'META_MISSING' };
+  if (!identidade || !identidade.runId || !identidade.sourceFingerprint) {
+    return { reuse: false, reason: 'NO_GOVERNED_RUN' };
+  }
+  if (meta.runId !== identidade.runId) return { reuse: false, reason: 'RUN_MISMATCH' };
+  if (meta.sourceCommit !== identidade.sourceCommit) return { reuse: false, reason: 'SOURCE_COMMIT_MISMATCH' };
+  if (meta.sourceFingerprint !== identidade.sourceFingerprint) {
+    return { reuse: false, reason: 'SOURCE_FINGERPRINT_MISMATCH' };
+  }
+  if (meta.suitesHash !== suitesFingerprint(suites)) return { reuse: false, reason: 'SUITE_PLAN_MISMATCH' };
+  if (!resultHash || meta.resultHash !== resultHash) return { reuse: false, reason: 'RESULT_HASH_MISMATCH' };
+  return { reuse: true, reason: null };
+}
+
+/**
+ * Exit code do lote REUSADO, derivado do relatório — nunca presumido.
+ * O relatório do Jest declara `success`; confiar em `0` fixo transformava
+ * "relatório reaproveitado" em "lote aprovado".
+ */
+function exitCodeDoRelatorioReusado(json) {
+  if (!json || typeof json !== 'object') return 1;
+  if (json.success === true) return 0;
+  return 1;
+}
+
 function batchReportPath(batchIndex) {
   return path.join(batchReportDir(), `batch-${batchIndex}.json`);
 }
@@ -227,8 +304,89 @@ function awaitConnectionDrain({ threshold = 40, timeoutMs = Number(process.env.R
   };
 }
 
+// ── CEIFA DO GRUPO DO LOTE COM PROVA DE SAÍDA (Fase 6) ───────────────────────────
+//
+// `SIGTERM` NÃO é prova de que o processo morreu: o sinal pode ser ignorado, a
+// suíte pode estar em estado não-interrompível e o grupo pode ter sobreviventes
+// segurando conexões — exatamente o que envenena o lote seguinte. A versão anterior
+// chamava isto de "reaped" apenas por ter ENVIADO o sinal, e o relatório não tinha
+// como distinguir "morreu" de "recebeu o pedido".
+//
+// Aqui a ceifa é verificada: TERM -> confere quem sobrou -> KILL -> confere de novo,
+// e o resultado (`exitProof`) vai para a evidência.
+/**
+ * Processos VIVOS do grupo (exclui zumbis).
+ *
+ * MEDIDO (2026-10-11): `ps -o pid= -g <pgid>` lista também processos em estado Z —
+ * um filho morto que ainda não foi colhido pelo pai aparece como "sobrevivente" e
+ * faria a ceifa declarar SURVIVORS com o grupo já morto (falso positivo que
+ * esconderia a informação real). O estado vem do próprio `ps` (`stat`): `Z` = zumbi.
+ */
+/** Parse da saída de `ps -o pid=,stat=` — PURA, para a regra do zumbi ser testável. */
+function parsePidsVivos(stdout) {
+  return String(stdout || '')
+    .split('\n')
+    .map((linha) => String(linha).trim())
+    .filter(Boolean)
+    .map((linha) => {
+      const [pid, stat] = linha.split(/\s+/);
+      return { pid: Number(pid), zombie: String(stat || '').startsWith('Z') };
+    })
+    .filter((item) => Number.isInteger(item.pid) && item.pid > 0 && !item.zombie)
+    .map((item) => item.pid);
+}
+
+function pidsNoGrupo(pgid) {
+  const ps = spawnSync('ps', ['-o', 'pid=,stat=', '-g', String(pgid)], { encoding: 'utf8' });
+  if (ps.status !== 0) return [];
+  return parsePidsVivos(ps.stdout);
+}
+
+function esperarGrupoMorrer(pgid, timeoutMs) {
+  const inicio = Date.now();
+  let restantes = pidsNoGrupo(pgid);
+  while (restantes.length > 0 && Date.now() - inicio < timeoutMs) {
+    spawnSync('sleep', ['0.2'], { encoding: 'utf8' });
+    restantes = pidsNoGrupo(pgid);
+  }
+  return restantes;
+}
+
+function ceifarGrupoDoLote(pgid, { termTimeoutMs = 8000, killTimeoutMs = 5000 } = {}) {
+  const registro = {
+    pgid,
+    termEnviado: false,
+    sobreviventesAposTerm: null,
+    killEnviado: false,
+    sobreviventesAposKill: null,
+    exitProof: 'NONE',
+  };
+  if (!pgid) return registro;
+  const inicial = pidsNoGrupo(pgid);
+  if (inicial.length === 0) {
+    // O grupo já não existe: a saída é provada por ausência, não por sinal.
+    registro.sobreviventesAposTerm = 0;
+    registro.exitProof = 'ALREADY_GONE';
+    return registro;
+  }
+  try { process.kill(-pgid, 'SIGTERM'); registro.termEnviado = true; } catch (_) { /* já saiu */ }
+  let restantes = esperarGrupoMorrer(pgid, termTimeoutMs);
+  registro.sobreviventesAposTerm = restantes.length;
+  if (restantes.length === 0) {
+    registro.exitProof = 'TERM';
+    return registro;
+  }
+  try { process.kill(-pgid, 'SIGKILL'); registro.killEnviado = true; } catch (_) { /* já saiu */ }
+  restantes = esperarGrupoMorrer(pgid, killTimeoutMs);
+  registro.sobreviventesAposKill = restantes.length;
+  registro.sobreviventesPids = restantes.slice(0, 10);
+  registro.exitProof = restantes.length === 0 ? 'KILL' : 'SURVIVORS';
+  return registro;
+}
+
 function runJestBatch(suites, batchIndex) {
   const outputFile = batchReportPath(batchIndex);
+  let reap = null;
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   if (fs.existsSync(outputFile)) fs.rmSync(outputFile, { force: true });
   const args = buildJestArgs(suites, outputFile);
@@ -248,7 +406,14 @@ function runJestBatch(suites, batchIndex) {
   // `detached:true` acima garante que este grupo é só do lote (nunca o do pipeline).
   let reaped = false;
   if (result.pid) {
-    try { process.kill(-result.pid, 'SIGTERM'); reaped = true; } catch (_) { /* já saiu */ }
+    // Prova de SAÍDA, não de intenção: TERM -> confere sobreviventes -> KILL ->
+    // confere de novo. `reaped` só é verdadeiro quando o grupo de fato não existe
+    // mais (ou já não existia).
+    reap = ceifarGrupoDoLote(result.pid);
+    reaped = reap.exitProof === 'TERM' || reap.exitProof === 'KILL' || reap.exitProof === 'ALREADY_GONE';
+    if (reap.exitProof === 'SURVIVORS') {
+      console.warn(`[release-suites] lote ${batchIndex}: ${reap.sobreviventesAposKill} processo(s) sobreviveram ao SIGKILL (pids ${(reap.sobreviventesPids || []).join(',')}) — o lote seguinte pode herdar conexões`);
+    }
   }
   const raw = fs.existsSync(outputFile) ? fs.readFileSync(outputFile, 'utf8') : null;
   let json = null;
@@ -260,11 +425,29 @@ function runJestBatch(suites, batchIndex) {
       parseError = err.message;
     }
   }
+  // SIDECAR DE BINDING: é o que permite (ou proíbe) reusar esta evidência depois.
+  // Sem ele, a reutilização é recusada por construção — evidência sem procedência
+  // verificável não sustenta um run.
+  try {
+    const identidade = currentBuildIdentity();
+    fs.writeFileSync(batchMetaPath(batchIndex), JSON.stringify({
+      ...identidade,
+      suitesHash: suitesFingerprint(suites),
+      resultHash: raw ? sha256De(raw) : null,
+      exitCode: result.status,
+      signal: result.signal || null,
+      generatedAt: new Date().toISOString(),
+      outputFile,
+    }, null, 2));
+  } catch (err) {
+    console.warn(`[release-suites] não foi possível gravar o binding do lote ${batchIndex}: ${err.message}`);
+  }
   return {
     suites,
     exitCode: result.status,
     signal: result.signal || null,
     spawnError: result.error ? result.error.message : null,
+    reap,
     json,
     parseError,
     reportPath: outputFile,
@@ -357,6 +540,13 @@ function batchPaths(suites, { exclusiveGroups = [] } = {}) {
 /** Registro auditável das drenagens entre lotes (prova de isolamento). */
 const drainRecords = [];
 
+/**
+ * Reusos RECUSADOS nesta execução: lote cuja evidência em disco não confere com o
+ * run/source/plano atual. Fica no relatório final — reuso recusado é informação de
+ * auditoria, não ruído (foi o silêncio aqui que produzia o falso verde).
+ */
+const reuseRejections = [];
+
 function runJest(suites, { exclusiveGroups = [] } = {}) {
   const { batches, groups } = batchPaths(suites, { exclusiveGroups });
   const reuse = ['1', 'true'].includes(String(process.env.RELEASE_SUITES_REUSE_BATCHES || ''));
@@ -369,19 +559,47 @@ function runJest(suites, { exclusiveGroups = [] } = {}) {
     if (runs.length > 0) drainRecords.push(awaitConnectionDrain());
     const outputFile = batchReportPath(index);
     if (reuse && fs.existsSync(outputFile)) {
-      try {
+      const motivo = (() => {
+        let raw = null;
+        let json = null;
+        try {
+          raw = fs.readFileSync(outputFile, 'utf8');
+          json = JSON.parse(raw);
+        } catch (_) {
+          return { reuse: false, reason: 'RESULT_UNREADABLE' };
+        }
+        let meta = null;
+        try {
+          meta = JSON.parse(fs.readFileSync(batchMetaPath(index), 'utf8'));
+        } catch (_) {
+          return { reuse: false, reason: 'META_MISSING' };
+        }
+        return avaliarReusoDeLote({
+          meta,
+          identidade: currentBuildIdentity(),
+          suites: batch,
+          resultHash: sha256De(raw),
+        });
+      })();
+      if (motivo.reuse) {
+        const json = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
         runs.push({
           suites: batch,
-          exitCode: 0,
+          // Derivado do relatório: um relatório com falhas NÃO vira lote aprovado.
+          exitCode: exitCodeDoRelatorioReusado(json),
           signal: null,
           spawnError: null,
-          json: JSON.parse(fs.readFileSync(outputFile, 'utf8')),
+          json,
           parseError: null,
           stderrTail: '',
           reused: true,
+          reuseBinding: 'VERIFIED',
         });
         continue;
-      } catch (_) { /* relatório de lote ilegível ⇒ executa de novo */ }
+      }
+      // Recusa registrada e VISÍVEL: o lote será executado de novo, e a razão
+      // fica no relatório final (nada de reuso silencioso).
+      reuseRejections.push({ batchIndex: index, suites: batch, reason: motivo.reason });
     }
     runs.push({ ...runJestBatch(batch, index), reused: false });
   }
@@ -506,8 +724,11 @@ function main() {
   const collected = collectBatchResults(batchRuns);
   report.suites = collected.suites;
   report.batchFailures = collected.batchFailures;
-  report.batches = batchRuns.map((b) => ({ suites: b.suites.length, exitCode: b.exitCode, producedReport: Boolean(b.json), reused: Boolean(b.reused) }));
+  report.batches = batchRuns.map((b) => ({ suites: b.suites.length, exitCode: b.exitCode, producedReport: Boolean(b.json), reused: Boolean(b.reused), reuseBinding: b.reuseBinding || null, reap: b.reap || null }));
   report.reusedBatches = batchRuns.some((b) => b.reused);
+  // Reusos recusados: a evidência em disco não conferia com este run/source/plano.
+  // Publicar é obrigatório — recusar em silêncio esconderia a reexecução do lote.
+  report.reuseRejections = reuseRejections;
 
   // Cauda legível de uma saída de lote. MEDIDO (2026-10-05): com `--json --outputFile` o Jest manda
   // o resumo legível para o STDERR e o stdout fica legitimamente VAZIO. Reportar só o stdout fez a
@@ -561,4 +782,6 @@ if (require.main === module) main();
 
 module.exports = {
   mapSuiteResult, batchPaths, buildExclusiveIndex, buildJestArgs, collectBatchExitCodeViolations,
+  avaliarReusoDeLote, suitesFingerprint, exitCodeDoRelatorioReusado, currentBuildIdentity,
+  pidsNoGrupo, ceifarGrupoDoLote, parsePidsVivos,
 };
