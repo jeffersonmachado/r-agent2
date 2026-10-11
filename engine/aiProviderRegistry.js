@@ -146,14 +146,18 @@ const AI_PROVIDERS = {
     label: 'Qwen (Alibaba Cloud)',
     kind: 'openai-compatible',
     baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
-    defaultModel: 'qwen3-max',
+    // MEDIDO contra o endpoint real em 2026-10-11 (credential do tenant `system`,
+    // `GET /models` -> 200 com 99 modelos): `qwen3-max` e `qwen3-coder-plus`
+    // respondiam **404 "Model not exist."**. Nao existem neste endpoint, entao nao
+    // podem ser o default (V2-35 ficava UNPROVEN por defeito NOSSO, nao por
+    // impedimento externo) nem constar do picker. Os quatro abaixo responderam 200
+    // com completude valida.
+    defaultModel: 'qwen-max',
     models: [
-      { value: 'qwen3-max', label: 'Qwen3 Max' },
-      { value: 'qwen3-coder-plus', label: 'Qwen3 Coder Plus' },
-      { value: 'qwen3-coder-flash', label: 'Qwen3 Coder Flash' },
       { value: 'qwen-max', label: 'Qwen Max' },
       { value: 'qwen-plus', label: 'Qwen Plus' },
       { value: 'qwen-turbo', label: 'Qwen Turbo' },
+      { value: 'qwen3-coder-flash', label: 'Qwen3 Coder Flash' },
     ],
   },
 };

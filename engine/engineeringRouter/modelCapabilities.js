@@ -163,22 +163,22 @@ const MODEL_CAPABILITIES = Object.freeze({
   // (falha real recente do modelId específico registrada em `modelAvailabilityStore`) — os
   // mesmos quatro filtros aplicados a todos os providers em `modelSelector.evaluateCandidate`.
   // Nenhum destes nomes é referenciado em código de roteamento: o Router resolve por capability.
-  'qwen:qwen3-coder-plus': entry({
-    roles: ['CODER'],
-    capabilities: [...CODING_CORE, 'TEST_GENERATION', 'LONG_CONTEXT', 'FRONTEND'],
-    contextClass: 'LONG',
-    costClass: 'MEDIUM',
-  }),
+  // `qwen:qwen3-coder-plus` foi REMOVIDO em 2026-10-11: medido contra o endpoint
+  // real, responde 404 "Model not exist.". Como este mapa e allowlist de
+  // roteamento, manter a entrada fazia o Router considerar um modelo que sempre
+  // falha (e degradava a cadeia sem causa real).
   'qwen:qwen3-coder-flash': entry({
     roles: ['CODER'],
     capabilities: ['CODING', 'DEBUGGING', 'TEST_GENERATION'],
     contextClass: 'STANDARD',
     costClass: 'LOW',
   }),
-  // qwen3-max: modelo generalista de raciocínio — cobre CODER, REVIEWER e ENRICHER, o que dá ao
-  // Mission Compiler uma opção Qwen real quando a policy exigir enriquecimento por provider
-  // diferente do coder.
-  'qwen:qwen3-max': entry({
+  // Generalista de raciocinio — cobre CODER, REVIEWER e ENRICHER, o que da ao
+  // Mission Compiler uma opcao Qwen real quando a policy exigir enriquecimento por
+  // provider diferente do coder.
+  // ID CORRIGIDO em 2026-10-11: era `qwen:qwen3-max`, que o endpoint real rejeita
+  // com 404 "Model not exist.". `qwen-max` responde 200 com completude valida.
+  'qwen:qwen-max': entry({
     roles: ['CODER', 'REVIEWER', 'ENRICHER'],
     capabilities: [...CODING_CORE, ...REVIEW_CORE, 'TEST_GENERATION', 'LONG_CONTEXT', 'DATABASE', 'FRONTEND'],
     contextClass: 'EXTENDED',
