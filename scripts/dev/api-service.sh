@@ -110,6 +110,30 @@ cmd_install() {
 
 cmd_restart() { require_systemd; reap_strays; systemctl --user reset-failed "$UNIT_NAME" >/dev/null 2>&1 || true; systemctl --user restart "$UNIT_NAME"; info "reiniciada"; }
 
+# `stop` existe porque quem precisa da PORTA 3001 livre (ex.: o smoke prod-like que
+# sobe a stack Docker) NÃO pode simplesmente matar o processo: com `Restart=always`
+# o systemd o revive em 3 s, a porta volta a ficar ocupada e o consumidor falha
+# (medido: o smoke é pré-requisito bloqueante do `consolidate` da selagem).
+cmd_stop() {
+  require_systemd
+  systemctl --user stop "$UNIT_NAME"
+  info "API parada pela unidade — :3001 liberada (religue com: $0 start)"
+}
+
+cmd_start() {
+  require_systemd
+  reap_strays
+  systemctl --user reset-failed "$UNIT_NAME" >/dev/null 2>&1 || true
+  systemctl --user start "$UNIT_NAME"
+  local i code
+  for i in $(seq 1 30); do
+    code="$(health_code)"
+    [ "$code" = "200" ] && { info "API no ar (health 200)"; return 0; }
+    sleep 1
+  done
+  fail "API não respondeu 200 em 30s após start (último código: $code)"
+}
+
 cmd_status() {
   require_systemd
   systemctl --user status "$UNIT_NAME" --no-pager 2>&1 | head -14 || true
@@ -164,16 +188,21 @@ cmd_uninstall() {
 case "${1:-}" in
   install) cmd_install ;;
   restart) cmd_restart ;;
+  start) cmd_start ;;
+  stop) cmd_stop ;;
   status) cmd_status ;;
   logs) shift; cmd_logs "${1:-60}" ;;
   check) cmd_check ;;
   uninstall) cmd_uninstall ;;
   *)
     cat <<'USAGE'
-uso: bash scripts/dev/api-service.sh <install|restart|status|logs|check|uninstall>
+uso: bash scripts/dev/api-service.sh <install|restart|start|stop|status|logs|check|uninstall>
 
   install    renderiza a unit versionada, habilita no boot e sobe a API supervisionada
   restart    reinicia a API (após mudança de código do backend)
+  start      sobe a API pela unidade e espera health 200
+  stop       PARA a API pela unidade (é isto que libera a porta 3001 — matar o PID
+             não resolve: Restart=always a revive em 3s)
   status     estado da unit, health e resíduos fora do serviço
   logs [n]   últimas n linhas do log da API (default 60)
   check      health 200? se não, restaura via systemd (exit != 0 se não conseguir)

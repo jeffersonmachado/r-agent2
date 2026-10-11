@@ -71,11 +71,39 @@ reachable() {
 # apenas depois do gate de política (agendamento explicitamente habilitado).
 stop_dev_services() {
   log "STOP dev services (liberando 3001/5173/8001 para a stack Docker)"
-  pkill -f "node api/server\.js" 2>/dev/null && log "  API dev encerrada" || log "  API dev não estava rodando"
+  # A API de dev é SUPERVISIONADA (systemd --user `ragent2-api-dev`, Restart=always):
+  # matar o PROCESSO não libera :3001 — o systemd o revive em ~3 s, a porta volta a
+  # ficar ocupada e a stack prod-like não consegue expor a API (o smoke vira SKIP/
+  # NO_GO). E este smoke é pré-requisito BLOQUEANTE do `consolidate` da selagem.
+  # Quem manda na API é a UNIDADE, então é ela que precisa ser parada — e religada
+  # no fim (ver restore_dev_api).
+  if systemctl --user cat ragent2-api-dev >/dev/null 2>&1; then
+    if bash "$PROJECT_ROOT/scripts/dev/api-service.sh" stop >/dev/null 2>&1; then
+      log "  API dev PARADA pela unidade (ragent2-api-dev)"
+    else
+      log "  AVISO: não consegui parar a unidade — :3001 pode permanecer ocupada"
+    fi
+  else
+    # Sem unidade instalada, o processo é solto e o pkill é o único caminho.
+    pkill -f "node api/server\.js" 2>/dev/null && log "  API dev encerrada" || log "  API dev não estava rodando"
+  fi
   pkill -f "vite --configLoader" 2>/dev/null && log "  frontend Vite encerrado" || log "  frontend Vite não estava rodando"
   pkill -f "uvicorn main:app" 2>/dev/null && log "  RAG uvicorn encerrado" || log "  RAG uvicorn não estava rodando"
   # SIGTERM é assíncrono: aguarda as portas serem liberadas antes do reachability.
   sleep 2
+}
+
+# Devolve a API de dev ao operador. Sem isto, TODO smoke agendado deixaria o ambiente
+# sem API (antes disso o serviço era solto; com supervisão seria incoerente parar a
+# unidade e não subir de volta).
+restore_dev_api() {
+  if systemctl --user cat ragent2-api-dev >/dev/null 2>&1; then
+    if bash "$PROJECT_ROOT/scripts/dev/api-service.sh" start >/dev/null 2>&1; then
+      log "API dev REATIVADA pela unidade (ragent2-api-dev)"
+    else
+      log "AVISO: API dev não voltou — rode: npm run dev:api:service start"
+    fi
+  fi
 }
 
 # ── Alinhamento com a política de agendamento do QA Mesh ──
@@ -193,6 +221,9 @@ else
   node scripts/smoke/qa-waves-scheduled-operational-smoke.js >> "$LOG_FILE" 2>&1
 fi
 EXIT_CODE=$?
+
+# Devolve a API de dev (parada em stop_dev_services para liberar :3001 à stack).
+restore_dev_api
 
 if [[ $EXIT_CODE -eq 0 ]]; then
   log "END status=GO exit=0"

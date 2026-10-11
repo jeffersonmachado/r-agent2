@@ -184,4 +184,28 @@ describe('supervisão da API dev — a queda por terminal deixa de ser possível
       expect(alvo.indice).toBeGreaterThan(flag);
     }
   });
+
+  test('o smoke prod-like para e RELIGA a API pela unidade (não por pkill)', () => {
+    // Sem isto, a supervisão e o smoke brigam: o systemd revive a API em 3 s e a
+    // stack Docker não consegue bindar :3001 — e o smoke é pré-requisito bloqueante
+    // do `consolidate` da selagem (medido 2026-10-11).
+    const smoke = fs.readFileSync(
+      path.join(ROOT, 'scripts', 'smoke', 'run-scheduled-production-health-smoke.sh'),
+      'utf8',
+    );
+    const smokeCode = semComentarios(smoke);
+    expect(smokeCode).toMatch(/api-service\.sh"?\s+stop/);
+    expect(smokeCode).toMatch(/api-service\.sh"?\s+start/);
+    // Se houver pkill da API no script, ele só pode existir DEPOIS da checagem da
+    // unidade (ramo de fallback, quando a supervisão não está instalada).
+    const linhas = smokeCode.split('\n');
+    const checagemUnidade = linhas.findIndex((linha) => linha.includes('systemctl --user cat ragent2-api-dev'));
+    expect(checagemUnidade).toBeGreaterThan(-1);
+    const pkills = linhas
+      .map((linha, indice) => ({ linha, indice }))
+      .filter(({ linha }) => /pkill -f "node api\/server/.test(linha));
+    for (const kill of pkills) {
+      expect(kill.indice).toBeGreaterThan(checagemUnidade);
+    }
+  });
 });
