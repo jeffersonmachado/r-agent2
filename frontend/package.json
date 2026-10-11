@@ -46,10 +46,16 @@
     "happy-dom": "^20.0.11",
     "jest-environment-jsdom": "^30.2.0",
     "jsdom": "^27.0.1",
-    "postcss": "^8.5.6",
+    "postcss": "^8.5.23",
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.3",
     "vite-plugin-pwa": "^1.0.3",
     "vitest": "^2.1.4"
+  },
+  "comment-overrides": "Correcoes de CVE que o range declarado pelos consumidores nao alcanca: styled-components@6 traz postcss 8.4.49 aninhado (GHSA-6g55-p6wh-862q / GHSA-r28c-9q8g-f849), postcss 8.5.6 traz nanoid 3.3.11 (GHSA-xwg4-73v4-xw9w) e source-map-js 1.2.1 (GHSA-68fv-2mgg-jv7q). Alvos conferidos no advisories do proprio repositorio (security-intel), 2026-10-11.",
+  "overrides": {
+    "nanoid": "^3.3.18",
+    "postcss": "^8.5.23",
+    "source-map-js": "^1.2.2"
   }
 }

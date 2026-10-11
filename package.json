@@ -271,6 +271,8 @@
     "dev:nolog": "SEQUELIZE_LOGGING=false ./scripts/start-dev.sh",
     "dev:api": "./scripts/start-dev-nodemon.sh",
     "dev:api-only": "nodemon api/server.js",
+    "dev:api:service": "bash scripts/dev/api-service.sh",
+    "dev:api:service:check": "bash scripts/dev/api-service.sh check",
     "dev:frontend": "cd frontend && npm start",
     "test:project-management:smoke": "node ./scripts/smoke/project-management-smoke-api.js",
     "frontend:install": "npm run install:base --prefix frontend",
@@ -437,7 +439,7 @@
     "sharp": "^0.33.5",
     "tesseract.js": "^5.1.1",
     "umzug": "^3.2.1",
-    "uuid": "^9.0.0",
+    "uuid": "^11.1.1",
     "web-push": "^3.6.7",
     "whatsapp-web.js": "https://github.com/pedroslopez/whatsapp-web.js/archive/942d236a11ad68807308b058303ba5256915979c.tar.gz",
     "ws": "^8.18.3"
@@ -453,6 +455,7 @@
     "encoding-sniffer": "1.0.2",
     "@rushstack/ts-command-line": "5.3.4",
     "@rushstack/terminal": "0.22.3",
-    "@rushstack/node-core-library": "5.20.3"
+    "@rushstack/node-core-library": "5.20.3",
+    "uuid": "^11.1.1"
   }
 }

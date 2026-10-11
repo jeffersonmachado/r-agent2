@@ -1,6 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from '../components/Toast';
 import { buildWaiverOptions } from '../shared/securityIntel/waiverOptions';
+import {
+  indexWaiversByFinding,
+  selectPendingFindings,
+  semCorrecaoPublicada,
+  summarizePendingFindings,
+} from '../shared/securityIntel/pendingFindings';
 import {
   approveSecurityWaiver,
   createSecurityPatchMission,
@@ -206,10 +212,11 @@ export function SecurityIntelligencePage() {
   const [inventorySearch, setInventorySearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
   const [onlyKev, setOnlyKev] = useState(false);
-  // Filtro "apenas pendências": restringe a lista ao que EXIGE ação humana —
-  // achado sem correção publicada (só sai por waiver/controle compensatório) ou
-  // de severidade bloqueante. O cálculo é sobre os achados CARREGADOS: a lista é
-  // paginada pelo backend, e o total carregado é declarado na própria tela.
+  // Filtro "apenas pendências": restringe a lista ao que EXIGE DECISÃO HUMANA —
+  // achado sem correção publicada (`NO_FIX_AVAILABLE`, só sai por isenção) ou com
+  // isenção aguardando aprovação. Severidade alta COM correção disponível NÃO
+  // entra: isso é missão de correção, não pendência de decisão. O cálculo é sobre
+  // os achados CARREGADOS (a lista é paginada pelo backend) e a tela declara isso.
   const [onlyPending, setOnlyPending] = useState(false);
   // Achados descartados por VEX (não afetado / falso positivo) são registros
   // auditáveis, mas NÃO são risco: ficam fora da contagem por padrão, como no KPI.
@@ -224,6 +231,11 @@ export function SecurityIntelligencePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // Refs de navegação interna: a ação "Isentar" do grid leva o operador até o
+  // formulário de isenção e foca o motivo. Sem esse retorno visível o clique
+  // parece não fazer nada (foi o defeito relatado).
+  const waiverFormRef = useRef(null);
+  const waiverReasonRef = useRef(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -298,18 +310,46 @@ export function SecurityIntelligencePage() {
   }, [inventorySearch, showToast]);
 
   /**
-   * Achados exibidos. Com "Apenas pendências" ligado, mostra só o que EXIGE ação
-   * humana: sem correção publicada (só sai por waiver/controle compensatório) ou
-   * de severidade bloqueante. A contagem é sobre o que foi CARREGADO — a lista é
-   * paginada, e a tela diz isso em vez de sugerir cobertura total.
+   * Achados exibidos com "Apenas pendências".
+   *
+   * O CRITÉRIO vive no módulo puro `shared/securityIntel/pendingFindings.js`
+   * (testado fora do React) — não reimplemente aqui. Resumo: pendência é o que
+   * exige decisão humana AGORA — achado sem correção publicada
+   * (`NO_FIX_AVAILABLE`) ou com isenção aguardando aprovação. Severidade alta COM
+   * correção disponível NÃO é pendência: é missão de correção.
    */
-  const BLOCKING_SEVERITIES = ['CRITICAL', 'HIGH'];
-  const pendingFindings = useMemo(() => (findings.items || []).filter((row) => {
-    const semCorrecao = String(row.status || '').toUpperCase() === 'NO_FIX_AVAILABLE';
-    const bloqueante = BLOCKING_SEVERITIES.includes(String(row.severity || '').toUpperCase());
-    return semCorrecao || bloqueante;
-  }), [findings]);
+  const pendingFindings = useMemo(
+    () => selectPendingFindings({ findings, waivers }),
+    [findings, waivers],
+  );
+  const pendingSummary = useMemo(
+    () => summarizePendingFindings({ loaded: findings.items, pending: pendingFindings }),
+    [findings, pendingFindings],
+  );
   const visibleFindings = onlyPending ? pendingFindings : (findings.items || []);
+
+  /**
+   * Índices que permitem decidir NA LINHA do grid, sem caçar a decisão em outra
+   * tabela: isenção (pendente ou vigente) por achado e candidato de correção por
+   * pacote. Um pacote pode ter vários achados — a mesma correção resolve todos.
+   */
+  const waiversByFinding = useMemo(() => indexWaiversByFinding(waivers), [waivers]);
+
+  const patchesByPackage = useMemo(() => {
+    const map = new Map();
+    (patches.items || []).forEach((candidate) => {
+      const name = candidate.package_name;
+      if (!name) return;
+      const atual = map.get(name);
+      if (!atual) {
+        map.set(name, candidate);
+        return;
+      }
+      // Preferir o candidato ainda SEM missão: é o que continua acionável.
+      if (atual.mission_id && !candidate.mission_id) map.set(name, candidate);
+    });
+    return map;
+  }, [patches]);
 
   // Opções do seletor de achado para isenção: os achados de decisão vêm da FILA
   // (sempre completos) e o filtro só estreita os demais — nenhum corte silencioso.
@@ -426,6 +466,25 @@ export function SecurityIntelligencePage() {
       setBusy(false);
     }
   }, [loadAll, showToast]);
+
+  /**
+   * Ação "Isentar" do grid: pré-seleciona o achado no formulário de isenção e
+   * leva o operador até ele. A isenção nasce como SOLICITAÇÃO (`PENDING_APPROVAL`)
+   * e não vigora enquanto outro usuário não aprovar — o texto diz isso na tela.
+   */
+  const handleRequestWaiverFor = useCallback((row) => {
+    const key = row.finding_key || row.findingKey;
+    setWaiverForm((prev) => ({ ...prev, findingKey: key }));
+    showToast(
+      `Achado selecionado para isenção: ${row.package_name}@${row.installed_version || '—'} · ${row.advisory_id}. `
+      + 'Nasce como SOLICITAÇÃO — só vigora com aprovação de outro usuário.',
+      'info',
+    );
+    requestAnimationFrame(() => {
+      waiverFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      waiverReasonRef.current?.focus();
+    });
+  }, [showToast]);
 
   const handleCreateMission = useCallback(async (candidate) => {
     setBusy(true);
@@ -563,6 +622,21 @@ export function SecurityIntelligencePage() {
           </div>
         </div>
 
+        {/* Feedback do filtro: sem isto o operador liga "Apenas pendências", a
+            lista continua longa e parece que nada aconteceu — reportado assim. */}
+        {onlyPending && (
+          <p className="mb-3 text-sm text-text-secondary" data-testid="findings-pending-summary">
+            Exibindo <strong className="text-text-primary">{pendingSummary.pendingTotal}</strong> de{' '}
+            {pendingSummary.loadedTotal} achados carregados:{' '}
+            {pendingSummary.semCorrecao} sem correção publicada e{' '}
+            {pendingSummary.aguardandoAprovacao} com isenção aguardando aprovação.
+            {' '}Destes, <strong className="text-text-primary">{pendingSummary.bloqueantes}</strong> bloqueiam
+            o release e {pendingSummary.devOnly} são de dependência de build/teste
+            (o gate os trata como aviso, não bloqueio).
+            {' '}Desmarque para ver todos.
+          </p>
+        )}
+
         <div className={TABLE_WRAP}>
           <table className="w-full">
             <thead>
@@ -578,7 +652,10 @@ export function SecurityIntelligencePage() {
               </tr>
             </thead>
             <tbody>
-              {visibleFindings.map((row) => (
+              {visibleFindings.map((row) => {
+                const waiverEntry = waiversByFinding.get(row.finding_key || row.findingKey);
+                const patchCandidate = patchesByPackage.get(row.package_name);
+                return (
                 <tr key={row.finding_key}>
                   <td className={TD}>
                     <Badge tone={SEVERITY_TONES[row.severity]}>{SEVERITY_LABELS[row.severity] || row.severity}</Badge>
@@ -592,6 +669,11 @@ export function SecurityIntelligencePage() {
                     {row.applicability === 'UNKNOWN' && (
                       <span className="block text-xs text-text-secondary">aplicabilidade não confirmada</span>
                     )}
+                    {row.dev_only === true && (
+                      <span className="block text-xs text-text-secondary" data-testid={`finding-dev-only-${row.finding_key}`}>
+                        dev-only (build/teste) — não bloqueia o release
+                      </span>
+                    )}
                   </td>
                   <td className={TD}>
                     {(row.fixed_versions || []).length > 0
@@ -600,12 +682,91 @@ export function SecurityIntelligencePage() {
                   </td>
                   <td className={TD}>{row.cvss_score ?? '—'} / {row.epss ?? '—'}</td>
                   <td className={TD}>
-                    <button type="button" className={BTN_SMALL} onClick={() => showTimeline(row.finding_key)}>
-                      Histórico
-                    </button>
+                    {/*
+                      Decisão NA LINHA (defeito relatado: as ações não estavam no
+                      grid inicial e não havia como saber o que fazer com cada
+                      achado). Só aparece ação que aquele achado realmente admite:
+                      isenção (solicitar / aprovar / revogar) e correção.
+                    */}
+                    <div className="flex flex-col items-start gap-1" data-testid={`finding-actions-${row.finding_key}`}>
+                      <button type="button" className={BTN_SMALL} onClick={() => showTimeline(row.finding_key)}>
+                        Histórico
+                      </button>
+
+                      {waiverEntry?.pending && (
+                        <>
+                          <span className="text-xs text-amber-500">isenção aguardando aprovação</span>
+                          <button
+                            type="button"
+                            className={BTN_PRIMARY}
+                            onClick={() => handleApproveWaiver(waiverEntry.pending)}
+                            disabled={busy}
+                            data-testid={`finding-approve-${row.finding_key}`}
+                          >
+                            Aprovar isenção
+                          </button>
+                        </>
+                      )}
+
+                      {!waiverEntry?.pending && waiverEntry?.active && (
+                        <>
+                          <span className="text-xs text-text-secondary">
+                            isenção vigente até {formatDate(waiverEntry.active.expires_at)}
+                          </span>
+                          <button
+                            type="button"
+                            className={BTN_SMALL}
+                            onClick={() => handleRevokeWaiver(waiverEntry.active)}
+                            disabled={busy}
+                            data-testid={`finding-revoke-${row.finding_key}`}
+                          >
+                            Revogar isenção
+                          </button>
+                        </>
+                      )}
+
+                      {!waiverEntry?.pending && !waiverEntry?.active && (
+                        <button
+                          type="button"
+                          className={BTN_SMALL}
+                          onClick={() => handleRequestWaiverFor(row)}
+                          disabled={busy}
+                          title="Solicita isenção com prazo para este achado. Nasce PENDENTE e exige aprovação de outro usuário."
+                          data-testid={`finding-waive-${row.finding_key}`}
+                        >
+                          Isentar (solicitar)
+                        </button>
+                      )}
+
+                      {patchCandidate && (
+                        patchCandidate.mission_id ? (
+                          <span className="text-xs text-text-secondary">
+                            correção já enviada ao roteador
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className={BTN_SMALL}
+                            onClick={() => handleCreateMission(patchCandidate)}
+                            disabled={busy}
+                            title={`Cria missão de correção ${patchCandidate.current_version || '—'} → ${patchCandidate.target_version || '—'} (${patchCandidate.kind}). Não aplica nada sozinho.`}
+                            data-testid={`finding-patch-${row.finding_key}`}
+                          >
+                            Criar missão de correção
+                          </button>
+                        )
+                      )}
+
+                      {!patchCandidate && semCorrecaoPublicada(row) && (
+                        <span className="text-xs text-text-secondary">
+                          sem versão corrigida publicada — a saída é isenção com prazo ou controle compensatório
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {visibleFindings.length === 0 && (
                 <tr>
                   <td colSpan={8} className="p-4 text-center text-sm text-text-secondary">
@@ -878,7 +1039,7 @@ export function SecurityIntelligencePage() {
         )}
       </section>
 
-      <section className="mb-8">
+      <section className="mb-8" ref={waiverFormRef}>
         <h2 className="text-lg font-bold text-text-primary mb-4">Waivers de risco (isenção formal com prazo)</h2>
         <p className="text-xs text-text-secondary mb-4">
           Nada é isentado por padrão. A isenção vale <strong className="text-text-primary">com prazo</strong>
@@ -942,6 +1103,7 @@ export function SecurityIntelligencePage() {
             <label className="flex flex-col gap-1 md:col-span-2">
               <span className="text-xs text-text-secondary">Motivo da aceitação (mínimo 20 caracteres)</span>
               <textarea
+                ref={waiverReasonRef}
                 className={FIELD}
                 rows={2}
                 value={waiverForm.reason}

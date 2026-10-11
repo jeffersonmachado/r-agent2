@@ -1,0 +1,41 @@
+# r-agent2 API de desenvolvimento — unit de USUÁRIO do systemd.
+#
+# POR QUE EXISTE: a API subida por terminal (`cmd && setsid nohup node api/server.js &`)
+# morre quando o terminal é reutilizado/limpo — o `&` aplica-se à CADEIA inteira e o
+# shell manda SIGTERM ao job. A queda é SILENCIOSA e enganosa: o log termina no meio
+# de um tick, sem stack trace (assinatura de sinal, não de exceção), e o proxy do Vite
+# passa a devolver 500, o que parece defeito de página. Medido em 2026-10-01 e de novo
+# em 2026-10-11 (durante uma regressão de ~22 min, que ficou sem API no meio).
+#
+# Aqui o processo NÃO depende de terminal nenhum e o systemd o reinicia sozinho, então
+# a classe inteira desse acidente deixa de existir — não é preciso "lembrar da regra".
+#
+# Este arquivo é o TEMPLATE versionado. A cópia em ~/.config/systemd/user é gerada por
+# `npm run dev:api:service install` (scripts/dev/api-service.sh) — não edite a cópia.
+[Unit]
+Description=r-agent2 API dev (supervisionada, sobrevive a limpeza de terminal)
+After=network-online.target
+# Tempestade de reinícios vira `failed` (visível no status) em vez de loop infinito
+# silencioso: se a API não sobe por causa própria, o operador precisa SABER.
+# ATENÇÃO: `StartLimitIntervalSec`/`StartLimitBurst` são chaves de [Unit], NÃO de
+# [Service] — em [Service] o systemd as IGNORA em silêncio e a trava não existe.
+# Erro real cometido em 2026-10-11 e pego por `systemd-analyze verify` (coberto por
+# tests/unit/dev/apiServiceUnit.test.js, que roda o verify no template renderizado).
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Service]
+Type=simple
+WorkingDirectory={{ROOT}}
+ExecStart={{NODE}} --env-file-if-exists=.env api/server.js
+Environment=NODE_ENV=development
+# Supervisão real: cair deixa de ser um estado permanente.
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+# Log em arquivo fora do workspace, como manda a regra de evidência/runtime.
+StandardOutput=append:{{LOG}}
+StandardError=append:{{LOG}}
+
+[Install]
+WantedBy=default.target

@@ -206,23 +206,33 @@ normalize_local_service_urls
 # Função para matar processos relacionados ao projeto
 kill_project_processes() {
     echo -e "${YELLOW}Matando processos relacionados ao projeto...${NC}"
-    
-    # Mata processos nodemon relacionados ao server.js no diretório do projeto
-    local nodemon_pids=$(ps aux | grep -E "nodemon.*server.js" | grep "$PROJECT_ROOT" | grep -v grep | awk '{print $2}')
-    if [ -n "$nodemon_pids" ]; then
-        echo -e "${BLUE}  Encontrados processos nodemon:${NC}"
-        ps aux | grep -E "nodemon.*server.js" | grep "$PROJECT_ROOT" | grep -v grep | awk '{print "    PID", $2, "-", $11, $12, $13, $14}'
-        echo "$nodemon_pids" | xargs kill -9 2>/dev/null
-        sleep 1
-    fi
-    
-    # Mata processos node relacionados ao server.js no diretório do projeto
-    local node_pids=$(ps aux | grep -E "node.*server.js" | grep "$PROJECT_ROOT" | grep -v grep | awk '{print $2}')
-    if [ -n "$node_pids" ]; then
-        echo -e "${BLUE}  Encontrados processos node:${NC}"
-        ps aux | grep -E "node.*server.js" | grep "$PROJECT_ROOT" | grep -v grep | awk '{print "    PID", $2, "-", $11, $12, $13, $14}'
-        echo "$node_pids" | xargs kill -9 2>/dev/null
-        sleep 1
+
+    # A API **NÃO** é morta aqui de propósito.
+    #
+    # DEFEITO REAL (corrigido em 2026-10-11): este bloco matava `node.*server.js`
+    # do projeto com `kill -9` e, logo abaixo, subia `npx nodemon api/server.js &`
+    # — API PRESA AO TERMINAL. Como o `&` do script se aplica à cadeia, qualquer
+    # reaproveitamento/limpeza de terminal levava SIGTERM ao processo: o log
+    # terminava no MEIO de um tick, sem stack trace, e o proxy do Vite passava a
+    # devolver 500 (parecia defeito de página). Foi assim que a API caiu em
+    # 2026-10-01 e de novo em 2026-10-11, no meio de uma regressão de 22 min.
+    #
+    # Agora a API é supervisionada pelo systemd (`scripts/dev/api-service.sh`), que
+    # a reinicia sozinha e não depende de terminal. Matá-la aqui só destruiria a
+    # supervisão — a garantia está travada por
+    # tests/unit/dev/apiServiceUnit.test.js.
+    if [ -n "${RAGENT2_MANAGE_API:-}" ]; then
+        echo -e "${YELLOW}  RAGENT2_MANAGE_API definido: o dono da API nesta execução é o próprio script (modo legado).${NC}"
+        local nodemon_pids=$(ps aux | grep -E "nodemon.*server.js" | grep "$PROJECT_ROOT" | grep -v grep | awk '{print $2}')
+        if [ -n "$nodemon_pids" ]; then
+            echo "$nodemon_pids" | xargs kill -9 2>/dev/null
+            sleep 1
+        fi
+        local node_pids=$(ps aux | grep -E "node.*server.js" | grep "$PROJECT_ROOT" | grep -v grep | awk '{print $2}')
+        if [ -n "$node_pids" ]; then
+            echo "$node_pids" | xargs kill -9 2>/dev/null
+            sleep 1
+        fi
     fi
     
     # Mata processos uvicorn do RAG service no diretório do projeto
@@ -563,20 +573,20 @@ elif [ -f "api/data/config.json" ]; then
     fi
 fi
 
-# Mata processos na porta da API se estiver em uso
-kill_port $API_PORT "API"
-
-# Inicia a API com nodemon em background (para auto-reload)
-echo -e "${GREEN}Iniciando API com nodemon na porta $API_PORT...${NC}"
-npx --yes nodemon api/server.js &
-API_PID=$!
-
-# Aguarda um pouco para a API iniciar
-sleep 2
-
-# Verifica se a API está rodando
-if ! kill -0 $API_PID 2>/dev/null; then
-    echo -e "${RED}Erro: API não iniciou corretamente${NC}"
+# A API é do systemd, não deste terminal.
+#
+# DEFEITO REAL (corrigido em 2026-10-11): aqui rodava `kill_port $API_PORT` e
+# `npx nodemon api/server.js &`. Além de matar a API supervisionada, recriava a API
+# presa a ESTE terminal — a queda silenciosa (log cortado no meio do tick, sem stack,
+# Vite devolvendo 500) vinha daí. Agora `npm run dev` garante a API pelo serviço.
+echo -e "${GREEN}API sob systemd (supervisionada) — nada é subido neste terminal.${NC}"
+if ! bash "$PROJECT_ROOT/scripts/dev/api-service.sh" check >/dev/null 2>&1; then
+    bash "$PROJECT_ROOT/scripts/dev/api-service.sh" install
+fi
+API_PID=""
+if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:${API_PORT}/health" 2>/dev/null)" != "200" ]; then
+    echo -e "${RED}Erro: API não responde 200 em http://127.0.0.1:${API_PORT}/health${NC}"
+    echo -e "${YELLOW}Diagnóstico: npm run dev:api:service status | logs${NC}"
     exit 1
 fi
 

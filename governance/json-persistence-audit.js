@@ -136,6 +136,13 @@ const BASENAME_CLASSIFIED = {
   // reconstruíveis a cada execução, nunca estado.
   'market-discovery-gate-fixture.sample.json': 'TEMPORARY_CACHE',
   'market-discovery-gate-fixture.run-export.json': 'TEMPORARY_CACHE',
+  // Fila oficial de missão (AI_MEMORY/hardening-queue.json): o alvo é montado
+  // como `path.join('AI_MEMORY', 'hardening-queue.json')` em
+  // api/services/devGovernance/pendenciesService.js — sem base resolvida, logo o
+  // scanner só enxerga o basename. A API APENAS LÊ esta fila (nenhuma escrita em
+  // runtime); a mutação é feita por commit, como manda a constituição. É
+  // portanto configuração declarativa versionada, não estado mutável de runtime.
+  'hardening-queue.json': 'STATIC_VERSIONED_CONFIG',
 };
 
 // Caminhos de runtime que NÃO devem conter escritas JSON não classificadas.
