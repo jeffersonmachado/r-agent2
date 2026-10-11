@@ -208,4 +208,20 @@ describe('supervisão da API dev — a queda por terminal deixa de ser possível
       expect(kill.indice).toBeGreaterThan(checagemUnidade);
     }
   });
+
+  test('o preflight do ciclo longo SOBE a API pela unidade (não só aconselha)', () => {
+    // "API viva no health" não distingue API supervisionada de API solta: uma API
+    // presa ao terminal passa no preflight e pode morrer no meio do run (medido
+    // 2026-10-11 — 22 min de regressão sem API). O preflight precisa AGIR.
+    const converge = fs.readFileSync(
+      path.join(ROOT, 'scripts', 'governance', 'converge-governance.sh'),
+      'utf8',
+    );
+    const convergeCode = semComentarios(converge);
+    expect(convergeCode).toContain('systemctl --user is-active --quiet ragent2-api-dev');
+    expect(convergeCode).toMatch(/api-service\.sh"?\s+start/);
+    // O texto antigo afirmava "API sem supervisor" como se fosse o estado desejado —
+    // era o oposto do que a medição mostrou.
+    expect(convergeCode).not.toContain('API sem supervisor');
+  });
 });

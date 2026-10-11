@@ -109,16 +109,34 @@ preflight() {
   echo "[preflight] validando runtime obrigatório (API, frontend SPA, RAG, PBX, dist)"
 
   if curl -sf -m 10 -o /dev/null "${api_url}/health"; then _ok "API viva em ${api_url}"
-  else _bad "API não responde em ${api_url}/health — suba 'node api/server.js' (repo root)"; fi
+  else _bad "API não responde em ${api_url}/health — suba pela supervisão: npm run dev:api:service install"; fi
 
-  # nodemon observa `api`,`engine`,`src`,`qa-mesh`: qualquer escrita nessas
-  # árvores no meio do mesh reinicia a API e o cenário morre com
-  # `fetch failed (cause: UND_ERR_SOCKET)` (medido 2026-09-24 no
-  # business-core-biz-flows-editor). Aviso, não falha: o supervisor é útil em dev.
-  if pgrep -f "nodemon api/server.js" >/dev/null 2>&1 || pgrep -f "nodemon.*api" >/dev/null 2>&1; then
-    echo "  ⚠ API supervisionada por nodemon — reinício no meio do run causa UND_ERR_SOCKET; para o ciclo de governança rode 'node --env-file-if-exists=.env api/server.js' direto"
+  # SUPERVISÃO DA API — encadeada, não apenas aconselhada.
+  #
+  # Medido em 2026-10-11: uma regressão de 22 min perdeu a API no meio (log cortado
+  # sem stack trace, Vite devolvendo 500) porque a API era filha de um terminal.
+  # "API viva" no health NÃO distingue isso: uma API solta passa aqui e pode morrer
+  # durante o run, falhando longe da causa.
+  #
+  # Ordem de precedência: systemd > nodemon > solta.
+  #   - systemd (`ragent2-api-dev`, Restart=always): queda deixa de ser permanente;
+  #     se a unidade existir e estiver inativa, este preflight a SOBE (ação, não aviso);
+  #   - nodemon observa `api`,`engine`,`src`,`qa-mesh`: escrita nessas árvores no meio
+  #     do mesh reinicia a API e o cenário morre com `fetch failed (cause:
+  #     UND_ERR_SOCKET)` (medido 2026-09-24) — aviso com o remédio;
+  #   - solta: aviso explícito de que a queda será permanente.
+  if systemctl --user cat ragent2-api-dev >/dev/null 2>&1; then
+    if systemctl --user is-active --quiet ragent2-api-dev; then
+      _ok "API supervisionada por systemd (ragent2-api-dev, Restart=always)"
+    elif bash scripts/dev/api-service.sh start >/dev/null 2>&1; then
+      _ok "API estava inativa e foi SUBIDA pela unidade (ragent2-api-dev)"
+    else
+      echo "  ⚠ unidade ragent2-api-dev existe mas não subiu — rode: npm run dev:api:service status"
+    fi
+  elif pgrep -f "nodemon api/server.js" >/dev/null 2>&1 || pgrep -f "nodemon.*api" >/dev/null 2>&1; then
+    echo "  ⚠ API supervisionada por nodemon — reinício no meio do run causa UND_ERR_SOCKET; para o ciclo de governança use a unidade: npm run dev:api:service install"
   else
-    _ok "API sem supervisor (sem reinício acidental)"
+    echo "  ⚠ API SEM supervisão — se ela cair, este run segue sem API e falha longe da causa; suba pela unidade: npm run dev:api:service install"
   fi
 
   # A rota canônica `/workspace` precisa ser servida pelo FRONTEND. Em
