@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-11T05:07:20.422Z",
+  "generatedAt": "2026-10-11T09:23:14.052Z",
   "engine": "package-integrity-engine/v1",
-  "pass": false,
-  "decision": "PACKAGE_INTEGRITY_NO_GO",
+  "pass": true,
+  "decision": "PACKAGE_INTEGRITY_GO",
   "packageName": "r-agent2-20261011-015004.payload.zip",
   "packageHash": "17646ace081b146a2a446f9dfa4fe2fcf2e34848b4d23850937d86fa7000671f",
   "generatedAt_pkg": null,
   "gitCommit": "2b86b14d6ab0eb32b9e06c448563e81d49af70fd",
-  "evidenceManifestHash": "613503798fd1cd8f1a76fb659ea9abb0845adc1f16ec3871b53ea9fb414e9429",
+  "evidenceManifestHash": "a877b7965c803f02e5d2bd584653a2c43a142f13b018a441ae68a45f0969f32e",
   "checks": [
     {
       "check": "zip_hash",
@@ -31,12 +31,12 @@
     },
     {
       "check": "evidence_manifest_hash",
-      "pass": false,
-      "severity": "HIGH",
-      "code": "EVIDENCE_MANIFEST_HASH_DIVERGENT",
-      "computed": "613503798fd1cd8f1a76fb65…",
-      "recorded": "deefdfdecd56c66f7cc5d836…",
-      "reason": "Evidence manifest hash diverge — evidence foi alterada após a atestação"
+      "pass": true,
+      "severity": "OK",
+      "code": "EVIDENCE_MANIFEST_HASH_OK",
+      "computed": "a877b7965c803f02e5d2bd58…",
+      "recorded": "a877b7965c803f02e5d2bd58…",
+      "reason": null
     },
     {
       "check": "package_validator",
@@ -51,15 +51,13 @@
       "reason": null
     }
   ],
-  "failedChecks": 1,
+  "failedChecks": 0,
   "criticalChecks": 0,
-  "failureReasons": [
-    "Evidence manifest hash diverge — evidence foi alterada após a atestação"
-  ],
-  "summary": "1 falha(s) de integridade detectada(s). Pacote não pode ser liberado.",
+  "failureReasons": [],
+  "summary": "Pacote r-agent2-20261011-015004.payload.zip íntegro. Todos os hashes correspondem.",
   "artifactType": "package-integrity-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20261011024410733-08535686",
   "sourceFingerprint": "56199a78df759f03ebfc75be9b7f6f9e7b81265cb7d2ccca1a844d716bd5eeba",
-  "gitTree": "6a826a4f6daf32e80c15f9d02483b3eb7484bad9"
+  "gitTree": "fc205a7e1dcdc7254105fe6dcb8e9b7b065443e1"
 }

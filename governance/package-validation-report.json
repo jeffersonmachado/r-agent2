@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-11T05:07:19.907Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261011-015004.payload.zip",
+  "generatedAt": "2026-10-11T09:23:13.322Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20261011-015004.payload.zip",
   "zipName": "r-agent2-20261011-015004.payload.zip",
   "zipSha256": "17646ace081b146a2a446f9dfa4fe2fcf2e34848b4d23850937d86fa7000671f",
   "payloadCentric": true,
   "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261011-015004.payload.zip",
   "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261011-015004.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20261011-015004.payload.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {

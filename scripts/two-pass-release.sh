@@ -234,6 +234,34 @@ materialize_payload_governance() {
     && ok "package-validation FINAL real gravado para o payload entregue" \
     || fail "package-validator reprovou o payload saneado — release bloqueada"
 
+  # ATESTAÇÃO RE-EMITIDA AQUI (P1-15) — e a posição é o ponto do defeito.
+  #
+  # Este estágio roda DEPOIS do rebind do PASS 4 (`4d`) e, logo acima, o
+  # `exportGovernanceArtifacts` REEscreveu membros da chain (`evidence-manifest`,
+  # `final-proof`, `final-governance`, `final-consistency`) — o mesmo vale para o
+  # `package-validation-report` gravado pelo package-validator. Ou seja: há
+  # escritas em membros da chain DEPOIS da atestação do PASS 4.
+  #
+  # Sem re-atestar, o `consistency.packageImmutability.evidenceManifestHash`
+  # registrado continua sendo o de uma versão ANTERIOR do manifesto, e o
+  # `package-integrity-engine` (logo abaixo) reprova com
+  # `EVIDENCE_MANIFEST_HASH_DIVERGENT` — ou seja, o PACOTE ATESTAVA UM MANIFESTO
+  # DIFERENTE DO QUE ENVIA. MEDIDO em 2026-10-11: computed=613503798fd1cd8f…
+  # != recorded=deefdfdecd56c66f…, com a fase `candidate` bloqueando o release.
+  #
+  # A re-atestação é feita pelo PRÓPRIO `update-package-binding`: ele recorta os
+  # membros ATUAIS da chain, reconstrói a chain e re-assina
+  # (`buildChain`/`writeChain`/`signAll`), então nada fica órfão e a assinatura
+  # final do PASS 5 (re-emitida mais abaixo, após todas as escritas) continua
+  # sendo a última palavra.
+  #
+  # Isto NÃO afrouxa o check: o `package-integrity-engine` continua exigindo que
+  # o manifesto enviado seja exatamente o atestado. A ordem é que estava errada.
+  step "Re-atestando package binding após as escritas da materialização..."
+  node_with_workspace_env "$PROJECT_ROOT/governance/update-package-binding.js" >/dev/null 2>&1 \
+    && ok "Atestação re-emitida — cobre o manifesto efetivamente enviado" \
+    || fail "update-package-binding falhou na materialização — atestação não cobriria o manifesto enviado"
+
   # Package integrity FINAL real contra o payload + manifest pós-saneamento
   # (mesmo princípio: resultado de engine, nunca escrita sintética).
   step "Reavaliando package-integrity contra o payload entregue..."
