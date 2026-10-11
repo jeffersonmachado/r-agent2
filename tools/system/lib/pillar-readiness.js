@@ -1,5 +1,39 @@
 'use strict';
 
+const { evaluateArtifactFreshness, STATUS } = require('../../../governance/lib/evidence-freshness');
+
+/**
+ * Avalia o RESUMO de evidência de smoke — pilares E frescor.
+ *
+ * Achado P1-14 (auditoria 2026-10-10): `tools/system/go-no-go.js` decidia GO/NO_GO
+ * chamando `evaluatePillars(smokeSummary.smokes)`, que olha apenas o `status` de cada
+ * pilar. Nenhuma checagem de IDADE. Medido: `qa/smoke-evidence.json` com 50,8 dias
+ * (statuses de 2026-08-21) passava pelo gate de decisão da fase de consolidação do
+ * selo sem nenhum sinal de que a evidência era de dois meses antes.
+ *
+ * É a MESMA classe de defeito corrigida no evidence-manifest (P1-12), então reusa a
+ * MESMA decisão pura (`governance/lib/evidence-freshness.js`, TTL canônico de 7 dias)
+ * em vez de inventar uma regra nova aqui.
+ *
+ * `evaluatePillars` fica intacto: quem depende só dos pilares continua funcionando.
+ */
+function evaluateSmokeSummary(summary, opts = {}) {
+  const freshness = evaluateArtifactFreshness({
+    timestamp: summary ? (summary.generatedAt || summary.timestamp) : null,
+    now: opts.now,
+    maxAgeMs: opts.maxAgeMs,
+  });
+  const pillars = evaluatePillars(summary ? summary.smokes : null);
+  const reasons = [...pillars.reasons];
+  if (freshness.status === STATUS.STALE) reasons.push('smoke_evidence_stale');
+  return {
+    ok: reasons.length === 0,
+    reasons,
+    pillars: pillars.pillars,
+    freshness,
+  };
+}
+
 function hasTruthy(v) {
   return !(v == null || v === false || v === '');
 }
@@ -103,4 +137,5 @@ function evaluatePillars(smokes) {
 
 module.exports = {
   evaluatePillars,
+  evaluateSmokeSummary,
 };

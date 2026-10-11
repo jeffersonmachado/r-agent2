@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { evaluatePillars } = require('./lib/pillar-readiness');
+const { evaluateSmokeSummary } = require('./lib/pillar-readiness');
 const { runtimeAwarePath, resolveWorkspacePath, resolveEvidenceCandidates } = require('./lib/runtime-paths');
 const { buildReport: buildPlatformReadinessReport, persistReport: persistPlatformReadinessReport } = require('./platform-readiness');
 const {
@@ -254,13 +254,16 @@ function main() {
       };
       report.reasons.push('smoke_evidence_missing');
     } else {
-      const smokeCheck = evaluatePillars(smokeSummary.smokes);
+      const smokeCheck = evaluateSmokeSummary(smokeSummary);
       report.checks.smoke = {
         path: SMOKE_EVIDENCE_SUMMARY_PATH,
         loaded: true,
         status: smokeCheck.ok ? 'pass' : 'fail',
         pbx: smokeCheck.pillars.pbx.l03,
         pillars: smokeCheck.pillars,
+        // Frescor exposto para auditoria: `smoke_evidence_stale` em `reasons` sem
+        // a idade ao lado obrigaria o leitor a reabrir o arquivo para entender.
+        freshness: smokeCheck.freshness,
         reasons: smokeCheck.reasons,
       };
       if (!smokeCheck.ok) {
