@@ -660,9 +660,13 @@ export function SecurityIntelligencePage() {
           </div>
         </div>
 
-        {/* Efeito do agrupamento declarado: sem número o operador não sabe se
-            perdeu achado ou se só parou de ver o mesmo pacote repetido. */}
-        {groupByPackage && collapseSummary.repetidos > 0 && (
+        {/* Efeito do agrupamento declarado SEMPRE que o agrupamento está ligado.
+            DEFEITO MEDIDO (2026-10-11, relatado pelo operador): com "Apenas
+            pendências" ligado, os pacotes restantes ficam com UM advisory cada e
+            este resumo desaparecia (a condição exigia `repetidos > 0`) — o grid
+            parecia desagrupado com o checkbox ainda marcado. Declarar 0 pacotes
+            repetidos é informação, não ruído. */}
+        {groupByPackage && collapseSummary.pacotes > 0 && (
           <p className="mb-3 text-sm text-text-secondary" data-testid="findings-group-summary">
             <strong className="text-text-primary">{collapseSummary.pacotes}</strong> pacotes exibidos
             {' '}— {collapseSummary.achados} achados no total, {collapseSummary.repetidos} pacote(s)
@@ -705,7 +709,13 @@ export function SecurityIntelligencePage() {
                 const waiverEntry = waiversByFinding.get(row.finding_key || row.findingKey);
                 const patchCandidate = patchesByPackage.get(row.package_name);
                 const groupInfo = findingsGroups.get(`${row.service || '?'}::${row.package_name}@${row.installed_version || '?'}`);
-                const grupo = groupInfo && groupInfo.count > 1 ? groupInfo : null;
+                // DEFEITO MEDIDO (2026-10-11): o grupo só era renderizado quando
+                // `count > 1`. Com o filtro de pendências cada pacote fica com UM
+                // advisory, então NENHUM resumo/toggle aparecia e o grid parecia
+                // desagrupado embora `groupByPackage` continuasse ligado. O grupo
+                // (com o resumo agregado) vale para todo pacote; só o TOGGLE é que
+                // só faz sentido quando há mais de um advisory para ocultar.
+                const grupo = groupByPackage ? groupInfo || null : null;
                 const grupoAberto = grupo ? expandedGroups.has(grupo.key) : false;
                 return (
                 <tr key={row.finding_key}>
@@ -716,7 +726,7 @@ export function SecurityIntelligencePage() {
                   <td className={TD}>{row.package_name}@{row.installed_version || '—'}</td>
                   <td className={TD}>
                     {row.service || '—'}
-                    {grupo && (
+                    {grupo && grupo.count > 1 && (
                       <button
                         type="button"
                         className="block mt-1 text-xs text-blue-500 hover:underline"

@@ -168,4 +168,39 @@ describe('SecurityIntelligencePage — ações no grid inicial', () => {
     expect(resumo).toContain('1 sem correção publicada');
     expect(resumo).toContain('1 com isenção aguardando aprovação');
   });
+
+  // DEFEITO RELATADO E MEDIDO (2026-10-11): com "Apenas pendências" ligado, o grid
+  // ficava visualmente DESAGRUPADO — o resumo do grupo e o toggle só eram
+  // renderizados quando o pacote tinha mais de um advisory, e o filtro deixa
+  // exatamente um por pacote. Resultado: checkbox "Agrupar por pacote" marcado, mas
+  // zero resumos na tela (medido no browser: 28 grupos -> 0).
+  it('com o filtro de pendências o agrupamento continua REPRESENTADO (1 advisory por pacote)', async () => {
+    const user = userEvent.setup();
+    render(<SecurityIntelligencePage />);
+    await waitFor(() => expect(screen.getByText('Achados de segurança')).toBeTruthy());
+
+    // Sem filtro: 3 pacotes distintos, cada um com 1 advisory (não há repetição).
+    const agrupar = screen.getByTestId('findings-group-by-package');
+    expect(agrupar.checked).toBe(true);
+    expect(screen.queryAllByTestId(/^finding-group-summary-/)).toHaveLength(3);
+
+    await user.click(screen.getByTestId('findings-only-pending'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId(`finding-actions-${COM_CORRECAO}`)).toBeNull();
+    });
+
+    // O resumo do grupo continua na tela, mesmo sem repetição: é ele que diz que o
+    // grid está agrupado e o que o pacote contém.
+    const resumos = screen.queryAllByTestId(/^finding-group-summary-/);
+    expect(resumos.length).toBeGreaterThan(0);
+    expect(resumos.map((no) => no.textContent.replace(/\s+/g, ' ')).join(' | '))
+      .toContain('1 advisory(s)');
+
+    // E o sumário do colapso declara 0 pacotes repetidos em vez de sumir.
+    expect(screen.getByTestId('findings-group-summary').textContent).toContain('pacotes exibidos');
+
+    // O toggle "+N" continua ausente quando não há o que ocultar.
+    expect(screen.queryAllByTestId(/^finding-group-toggle-/)).toHaveLength(0);
+  });
 });
