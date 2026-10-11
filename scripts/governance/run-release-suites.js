@@ -158,6 +158,75 @@ function buildJestArgs(suites, outputFile) {
   return ['jest', ...suites, '--runInBand', '--no-coverage', '--bail=0', '--json', `--outputFile=${outputFile}`];
 }
 
+/**
+ * ISOLAMENTO ENTRE LOTES — drenagem do pool de conexões.
+ *
+ * DEFEITO MEDIDO em 2026-10-11: o lote 3 do runner autoritativo falhou (2 suítes)
+ * com `Error:` **SEM MENSAGEM** em `tests/helpers/purgeTestFindings.js:156`
+ * (`Finding.destroy`), e as MESMAS 6 suítes, executadas isoladas
+ * (`--runInBand --no-coverage --bail=0`), passaram: **6/6, 86 testes, 0 falhas**.
+ *
+ * Causa: suítes de integração deixam processos-filho (Engineering Runner / worker do
+ * laço de bugs) e conexões abertas ao terminar. O Postgres tem
+ * `max_connections=100`; medido em repouso o banco fica com ~9. Ao longo do run os
+ * lotes acumulam conexões e o lote seguinte estoura o pool — e estouro de pool no
+ * Sequelize se manifesta como erro VAZIO, que se confunde com "flake" e faz a
+ * conclusão errada ("a suíte é instável") em vez da correta ("o lote herdou
+ * conexões").
+ *
+ * Aqui esperamos o pool drenar entre lotes. É BOUNDED e NÃO-FATAL de propósito: se
+ * não drenar no prazo, o run continua e o motivo fica registrado em
+ * `connectionDrains` — nunca se converte a espera num PASS falso.
+ */
+function connectionProbeScript() {
+  return `
+    (async () => {
+      const { Client } = require('pg');
+      let dsn;
+      try { dsn = process.env.DATABASE_URL || require(${JSON.stringify(
+        require('path').join(ROOT, 'api', 'utils', 'config'),
+      )}).getDatabaseUrl(); } catch (_) { dsn = process.env.DATABASE_URL; }
+      if (!dsn) { process.stdout.write('unknown'); process.exit(0); }
+      const c = new Client({ connectionString: dsn, connectionTimeoutMillis: 5000 });
+      try {
+        await c.connect();
+        const r = await c.query("SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = current_database()");
+        process.stdout.write(String(r.rows[0].n));
+      } catch (e) {
+        process.stdout.write('unknown');
+      } finally {
+        await c.end().catch(() => {});
+      }
+    })();
+  `;
+}
+
+function currentDbConnections() {
+  const probe = spawnSync('node', ['-e', connectionProbeScript()], {
+    cwd: ROOT, encoding: 'utf8', timeout: 20000, maxBuffer: 4 * 1024 * 1024,
+  });
+  const raw = String(probe.stdout || '').trim();
+  return /^\d+$/.test(raw) ? Number(raw) : null;
+}
+
+function awaitConnectionDrain({ threshold = 40, timeoutMs = Number(process.env.RELEASE_SUITES_DRAIN_TIMEOUT_MS || 180000) } = {}) {
+  const startedAt = Date.now();
+  const samples = [];
+  let last = currentDbConnections();
+  while (last !== null && last > threshold && Date.now() - startedAt < timeoutMs) {
+    samples.push(last);
+    spawnSync('sleep', ['2'], { encoding: 'utf8' });
+    last = currentDbConnections();
+  }
+  return {
+    drained: last !== null && last <= threshold,
+    threshold,
+    finalConnections: last,
+    peakDuringWait: samples.length ? Math.max(...samples) : last,
+    waitedMs: Date.now() - startedAt,
+  };
+}
+
 function runJestBatch(suites, batchIndex) {
   const outputFile = batchReportPath(batchIndex);
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
@@ -168,7 +237,19 @@ function runJestBatch(suites, batchIndex) {
     env: { ...process.env, RELEASE_AUTHORITATIVE: process.env.RELEASE_AUTHORITATIVE || '1' },
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
+    // Grupo de processos PRÓPRIO: permite ceifar o que o lote deixar vivo. Um lote que
+    // termina (ou morre por timeout) pode deixar filhos segurando conexões do Postgres,
+    // e é isso que envenena os lotes seguintes (ver `awaitConnectionDrain`).
+    detached: true,
   });
+
+  // CEIFA O GRUPO DO LOTE. Sem isto, filho órfão sobrevive ao lote e segue consumindo
+  // o pool — a causa medida da falha do lote 3. Sinal negativo = grupo inteiro; o
+  // `detached:true` acima garante que este grupo é só do lote (nunca o do pipeline).
+  let reaped = false;
+  if (result.pid) {
+    try { process.kill(-result.pid, 'SIGTERM'); reaped = true; } catch (_) { /* já saiu */ }
+  }
   const raw = fs.existsSync(outputFile) ? fs.readFileSync(outputFile, 'utf8') : null;
   let json = null;
   let parseError = null;
@@ -189,6 +270,8 @@ function runJestBatch(suites, batchIndex) {
     reportPath: outputFile,
     reportPresent: raw !== null,
     reportBytes: raw === null ? 0 : Buffer.byteLength(raw, 'utf8'),
+    // Prova de que o grupo do lote foi ceifado (isola vazamento para o lote seguinte).
+    processGroupReaped: reaped,
     // O stdout do Jest carrega o resumo (`Test Suites:`/`Tests:`) mesmo quando o JSON não chega;
     // preservá-lo é o que permite distinguir "falhou" de "não rodou" sem adivinhação.
     stdoutTail: (result.stdout || '').split('\n').slice(-40).join('\n'),
@@ -271,14 +354,23 @@ function batchPaths(suites, { exclusiveGroups = [] } = {}) {
  * reexecutar tudo. O relatório final registra `reusedBatches: true` — nunca é apresentado como
  * execução nova.
  */
+/** Registro auditável das drenagens entre lotes (prova de isolamento). */
+const drainRecords = [];
+
 function runJest(suites, { exclusiveGroups = [] } = {}) {
   const { batches, groups } = batchPaths(suites, { exclusiveGroups });
   const reuse = ['1', 'true'].includes(String(process.env.RELEASE_SUITES_REUSE_BATCHES || ''));
-  return batches.map(({ index, suites: batch }) => {
+  const runs = [];
+  for (const { index, suites: batch } of batches) {
+    // ANTES de cada lote (exceto o primeiro), espera o pool drenar o que o lote
+    // anterior deixou. Medido: sem isto o lote seguinte falha com `Error:` vazio em
+    // chamadas Sequelize, e as mesmas suítes passam isoladas — o sintoma se
+    // disfarça de "suíte instável".
+    if (runs.length > 0) drainRecords.push(awaitConnectionDrain());
     const outputFile = batchReportPath(index);
     if (reuse && fs.existsSync(outputFile)) {
       try {
-        return {
+        runs.push({
           suites: batch,
           exitCode: 0,
           signal: null,
@@ -287,11 +379,13 @@ function runJest(suites, { exclusiveGroups = [] } = {}) {
           parseError: null,
           stderrTail: '',
           reused: true,
-        };
+        });
+        continue;
       } catch (_) { /* relatório de lote ilegível ⇒ executa de novo */ }
     }
-    return { ...runJestBatch(batch, index), reused: false };
-  });
+    runs.push({ ...runJestBatch(batch, index), reused: false });
+  }
+  return runs;
 }
 
 function collectBatchResults(batchRuns) {
@@ -341,6 +435,8 @@ function main() {
     manifestVersion: manifest.manifestVersion,
     manifestConfig: 'config/canonical-release-suites.json',
     authoritativeMode: process.env.RELEASE_AUTHORITATIVE === '1' || process.env.RELEASE_AUTHORITATIVE === 'true',
+    // Prova de isolamento entre lotes: quantas conexões havia e quanto se esperou.
+    connectionDrains: drainRecords,
     environment: { envFileLoaded: envFile.loaded, envFileKeys: envFile.keys, envFileNote: envFile.reason },
     status: 'FAIL',
     manifestViolations: manifest.violations,
