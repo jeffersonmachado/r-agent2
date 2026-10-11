@@ -764,6 +764,10 @@ function AppWithAuth() {
       '/dev/qa-gaps': '🧭 QA Gaps Operacionais',
       '/dev/benchmark-research': '🔬 Pesquisa de Benchmark',
       '/dev/security-intel': '🛡️ Versões e Segurança',
+      // Governança de engenharia: sem entrada aqui, a resolução cai no prefixo
+      // mais curto (`/dev`) e a aba passa a mentir o nome da tela.
+      '/dev/pendencies': '📋 Pendências',
+      '/dev/release': '🚀 Release',
       '/dev/qa-waves/operational-health': 'QA Waves Operational Health',
       '/dev/qa-waves/enterprise-governance': 'QA Waves Enterprise Governance',
       '/dev-dashboard': '🛠️ Dashboard de Desenvolvimento',
