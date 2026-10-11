@@ -67,12 +67,19 @@ function commandOf(group, bucket) {
   // quem executa (CLI: usuário do SO) ou do token autenticado (API). Declarar
   // identidade é recusado pelo backend — ver approvalAuthority.js.
   const identityNote = '  # aprovador = quem executa o comando (identidade não é declarada)';
+  // `waive` é SOLICITAÇÃO, não isenção vigente: dizer aqui que "o aprovador é quem
+  // executa o comando" contradizia a segregação de funções do próprio fluxo em duas
+  // etapas (quem solicita não pode aprovar) e induzia o operador a achar que o
+  // achado já estava isentado. A nota abaixo é a verdade executável do contrato.
+  const waiverRequestNote = '  # SOLICITA a isenção (nasce PENDING_APPROVAL e NÃO vigora):'
+    + ' aprove com `node scripts/security-intel.js waive-approve --waiver <chave>` executado por OUTRO usuário'
+    + ' — quem solicita não pode aprovar.';
   if (bucket === BUCKETS.WAIVER_OR_COMPENSATING_CONTROL) {
     const findingKey = (group.withoutFixFindingKeys || [])[0] || (group.findingKeys || [])[0] || '<findingKey>';
     return `node scripts/security-intel.js waive --finding "${findingKey}"`
       + ' --days <prazo ≤ máximo>'
       + ' --reason "<motivo>" --control "<controle compensatório>"'
-      + identityNote;
+      + waiverRequestNote;
   }
   const approvalNote = bucket === BUCKETS.HUMAN_APPROVAL ? identityNote : '';
   if (candidateKey) {

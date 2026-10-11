@@ -198,6 +198,22 @@ describe('triageDossier — ordenação, totais e honestidade', () => {
     expect(md).toMatch(/waive --finding/);
   });
 
+  // A orientação ao operador NÃO pode contradizer o enforcement. `waive` é
+  // SOLICITAÇÃO: o achado só é isentado após `waive-approve` por OUTRO usuário
+  // (segregação de funções). A versão anterior deste comando anexava
+  // "aprovador = quem executa o comando" ao pedido de isenção, o que induzia a
+  // ler a solicitação como isenção vigente — medido em 2026-10-11 (introduzido
+  // pelo commit 0c15e658b, do mesmo ciclo que criou o fluxo em duas etapas).
+  it('o comando de isenção declara que é SOLICITAÇÃO e que a aprovação exige outro usuário', () => {
+    const md = renderTriageMarkdown(dossier([
+      group({ packageName: 'sem-fix', fullyClearable: false, advisoriesWithoutFix: 4, recommendedVersion: null, severity: 'CRITICAL' }),
+    ]));
+    expect(md).toMatch(/waive-approve --waiver <chave>/);
+    expect(md).toMatch(/OUTRO usuário/);
+    expect(md).toMatch(/quem solicita não pode aprovar/);
+    expect(md).not.toMatch(/aprovador = quem executa o comando/);
+  });
+
   it('mede a cobertura da fila por PACOTE (critério do gate), não por subtração de contagens', () => {
     // A primeira versão deste campo subtraía contagens de unidades diferentes
     // (achado × cópia física do gate vs. achado do inventário) e produzia uma
