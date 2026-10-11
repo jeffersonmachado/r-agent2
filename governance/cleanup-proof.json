@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-11T05:05:22.682Z",
+  "generatedAt": "2026-10-11T11:11:44.979Z",
   "runtimeClean": true,
   "workspaceClean": true,
-  "runtimeCheck": "\u001b[0;34m[runtime-clean] Inspecionando resíduos operacionais no workspace\u001b[0m\n\u001b[0;32m  ✓ limpeza concluída; resíduos removidos: 0\u001b[0m\n",
+  "runtimeCheck": "\u001b[0;34m[runtime-clean] Inspecionando resíduos operacionais no workspace\u001b[0m\n\u001b[0;32m  ✓ removido: qa-mesh/meshEvidence\u001b[0m\n\u001b[0;32m  ✓ removido: replays\u001b[0m\n\u001b[0;32m  ✓ removido: rag-service/data/adaptive_learning/system_learning.json\u001b[0m\n\u001b[0;32m  ✓ limpeza concluída; resíduos removidos: 3\u001b[0m\n",
   "workspaceArtifacts": []
 }

@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-10-11T05:05:22.502Z
-- Canonical mesh execution: mesh-2026-10-11T03-51-25-990Z
+- Generated at: 2026-10-11T11:11:44.798Z
+- Canonical mesh execution: mesh-2026-10-11T10-32-59-815Z
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]]
+- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -13,7 +13,7 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-11T03-51-25-990Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-11T10-32-59-815Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json
