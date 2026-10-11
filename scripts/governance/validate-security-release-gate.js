@@ -31,6 +31,12 @@
  */
 
 const path = require('path');
+// `fs` era usado na checagem de proveniência (leitura do run corrente) sem
+// estar no escopo do módulo — o `ReferenceError` era engolido pelo catch
+// fail-closed e virava `SECURITY_GATE_UNAVAILABLE: fs is not defined` em TODA
+// execução, mascarando o veredito real da correlação. Defeito medido em
+// 2026-10-11 e corrigido aqui.
+const fs = require('fs');
 
 const {
   writeReport,
@@ -78,7 +84,16 @@ async function collectFacts({ tenantKey, policy }) {
   const { connect, getSequelize } = require('../../api/db/sequelize');
 
   // Produz a própria entrada: correlação offline (idempotente) contra o banco.
+  // O scan agora avalia SOMENTE o inventário corrente (run de descoberta mais
+  // recente); sem isso, versões já removidas seguiam casando advisories e o
+  // gate nunca convergia.
   const scan = await scanComponents({ tenantKey, scope: 'installed', actor: 'security-release-gate' });
+  // Ausência de evidência NÃO é ausência de risco: um scan que avaliou ZERO
+  // componentes (inventário vazio, run de descoberta ausente ou escopo sem
+  // match) faz `openRisks` nascer vazio e o check `no_blocking_severity`
+  // passar sem medir nada. O gate tem de tratar isso como evidência FALTANTE.
+  const scannedComponents = Number(scan && scan.componentsScanned) || 0;
+  const scanHasEvidence = scannedComponents > 0;
 
   if (!getSequelize()) await connect(3, 500);
   const Finding = getSecurityFinding();
@@ -118,8 +133,10 @@ async function collectFacts({ tenantKey, policy }) {
   return {
     scan,
     findings: {
-      available: true,
+      available: scanHasEvidence,
       source: 'security_findings',
+      scannedComponents,
+      inventoryRunId: scan ? scan.inventoryRunId || null : null,
       items: findings.map((row) => ({
         findingKey: row.finding_key,
         advisoryId: row.advisory_id,

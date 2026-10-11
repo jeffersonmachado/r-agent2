@@ -2,6 +2,9 @@
   "name": "chatbot-engine",
   "version": "1.0.0",
   "private": true,
+  "overrides": {
+    "fast-uri": "^3.1.8"
+  },
   "description": "Engine de fluxo de chatbot (Node.js) com execução determinística e replay.",
   "scripts": {
     "inventory:build": "node scripts/build-system-inventory.js",
@@ -422,7 +425,7 @@
     "ioredis": "^5.3.2",
     "mysql2": "^3.16.3",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^10.1.0",
     "openai": "^6.32.0",
     "pdf-parse": "^1.1.4",
     "pdfjs-dist": "^5.4.624",
