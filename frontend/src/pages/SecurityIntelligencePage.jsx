@@ -7,6 +7,7 @@ import {
   semCorrecaoPublicada,
   summarizePendingFindings,
 } from '../shared/securityIntel/pendingFindings';
+import { collapseFindingsByPackage, summarizeCollapse } from '../shared/securityIntel/findingsGroups';
 import {
   approveSecurityWaiver,
   createSecurityPatchMission,
@@ -218,6 +219,11 @@ export function SecurityIntelligencePage() {
   // entra: isso é missão de correção, não pendência de decisão. O cálculo é sobre
   // os achados CARREGADOS (a lista é paginada pelo backend) e a tela declara isso.
   const [onlyPending, setOnlyPending] = useState(false);
+  // Agrupado por PACOTE por padrão: a decisão é por pacote (é como o gate conta) e
+  // sem agrupar a tabela repete o mesmo pacote uma vez por advisory (medido em
+  // 2026-10-11: 130 achados = 39 pacotes, com um pacote ocupando 14 linhas).
+  const [groupByPackage, setGroupByPackage] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set());
   // Achados descartados por VEX (não afetado / falso positivo) são registros
   // auditáveis, mas NÃO são risco: ficam fora da contagem por padrão, como no KPI.
   const [includeVex, setIncludeVex] = useState(false);
@@ -327,6 +333,20 @@ export function SecurityIntelligencePage() {
     [findings, pendingFindings],
   );
   const visibleFindings = onlyPending ? pendingFindings : (findings.items || []);
+
+  /**
+   * Colapso por pacote. `rows` é o que a tabela renderiza; `groups` diz, por
+   * pacote, quantos advisories existem (para o "+N advisories" e o botão de abrir).
+   * Nenhum achado é descartado: o grupo aberto devolve todos os membros.
+   */
+  const { rows: findingsRows, groups: findingsGroups } = useMemo(() => {
+    if (!groupByPackage) return { rows: visibleFindings, groups: new Map() };
+    return collapseFindingsByPackage(visibleFindings, { expandedKeys: expandedGroups });
+  }, [groupByPackage, visibleFindings, expandedGroups]);
+  const collapseSummary = useMemo(
+    () => summarizeCollapse({ items: visibleFindings, groups: findingsGroups }),
+    [visibleFindings, findingsGroups],
+  );
 
   /**
    * Índices que permitem decidir NA LINHA do grid, sem caçar a decisão em outra
@@ -619,8 +639,31 @@ export function SecurityIntelligencePage() {
               />
               Incluir descartados por VEX (auditoria)
             </label>
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={groupByPackage}
+                onChange={(event) => {
+                  setGroupByPackage(event.target.checked);
+                  setExpandedGroups(new Set());
+                }}
+                data-testid="findings-group-by-package"
+              />
+              Agrupar por pacote
+            </label>
           </div>
         </div>
+
+        {/* Efeito do agrupamento declarado: sem número o operador não sabe se
+            perdeu achado ou se só parou de ver o mesmo pacote repetido. */}
+        {groupByPackage && collapseSummary.repetidos > 0 && (
+          <p className="mb-3 text-sm text-text-secondary" data-testid="findings-group-summary">
+            <strong className="text-text-primary">{collapseSummary.pacotes}</strong> pacotes exibidos
+            {' '}— {collapseSummary.achados} achados no total, {collapseSummary.repetidos} pacote(s)
+            com mais de um advisory (abra o pacote para ver cada um).
+            {' '}Desmarque "Agrupar por pacote" para listar advisory por advisory.
+          </p>
+        )}
 
         {/* Feedback do filtro: sem isto o operador liga "Apenas pendências", a
             lista continua longa e parece que nada aconteceu — reportado assim. */}
@@ -652,9 +695,12 @@ export function SecurityIntelligencePage() {
               </tr>
             </thead>
             <tbody>
-              {visibleFindings.map((row) => {
+              {findingsRows.map((row) => {
                 const waiverEntry = waiversByFinding.get(row.finding_key || row.findingKey);
                 const patchCandidate = patchesByPackage.get(row.package_name);
+                const groupInfo = findingsGroups.get(`${row.service || '?'}::${row.package_name}@${row.installed_version || '?'}`);
+                const grupo = groupInfo && groupInfo.count > 1 ? groupInfo : null;
+                const grupoAberto = grupo ? expandedGroups.has(grupo.key) : false;
                 return (
                 <tr key={row.finding_key}>
                   <td className={TD}>
@@ -662,7 +708,23 @@ export function SecurityIntelligencePage() {
                     {row.kev && <Badge tone="bg-red-500/15 text-red-500 border-red-500/30" className="ml-1">KEV</Badge>}
                   </td>
                   <td className={TD}>{row.package_name}@{row.installed_version || '—'}</td>
-                  <td className={TD}>{row.service || '—'}</td>
+                  <td className={TD}>
+                    {row.service || '—'}
+                    {grupo && (
+                      <button
+                        type="button"
+                        className="block mt-1 text-xs text-blue-500 hover:underline"
+                        onClick={() => setExpandedGroups((prev) => {
+                          const proximo = new Set(prev);
+                          if (proximo.has(grupo.key)) proximo.delete(grupo.key); else proximo.add(grupo.key);
+                          return proximo;
+                        })}
+                        data-testid={`finding-group-toggle-${grupo.key}`}
+                      >
+                        {grupoAberto ? `ocultar os ${grupo.count - 1} demais` : `+${grupo.count - 1} advisory(s) neste pacote`}
+                      </button>
+                    )}
+                  </td>
                   <td className={TD}>{row.advisory_id}</td>
                   <td className={TD}>
                     {STATUS_LABELS[row.status] || row.status}
@@ -760,6 +822,12 @@ export function SecurityIntelligencePage() {
                       {!patchCandidate && semCorrecaoPublicada(row) && (
                         <span className="text-xs text-text-secondary">
                           sem versão corrigida publicada — a saída é isenção com prazo ou controle compensatório
+                        </span>
+                      )}
+
+                      {grupo && (
+                        <span className="text-xs text-text-secondary">
+                          pacote com {grupo.count} advisories — a isenção é POR ADVISORY: abra o pacote para isentar cada um
                         </span>
                       )}
                     </div>
