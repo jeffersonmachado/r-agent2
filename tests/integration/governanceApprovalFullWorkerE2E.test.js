@@ -206,7 +206,11 @@ afterAll(async () => {
 }, 60000);
 
 describe('GOVERNANCE_APPROVAL — o worker autônomo bloqueia sem aval e conclui o ciclo com ele', () => {
-  jest.setTimeout(900000);
+  // O timeout da SUÍTE tem de ser MAIOR que a soma dos orçamentos internos
+  // (triage + close). Com `setTimeout(900000)` e um `closeDeadline` de 900000 o Jest
+  // disparava primeiro e o teste morria por timeout em vez de chegar ao diagnóstico
+  // do ciclo — o orçamento interno precisa caber dentro do externo.
+  jest.setTimeout(1800000);
 
   test('self-modification: nada executa sem aval humano; após o aval o worker fecha o finding sozinho', async () => {
     if (skipIfInfraMissing(dbAvailable, `postgres_unreachable (${dbReason})`, 'postgres')) return;
@@ -299,7 +303,14 @@ describe('GOVERNANCE_APPROVAL — o worker autônomo bloqueia sem aval e conclui
     // ── 5. O MESMO WORKER, SOZINHO, CONCLUI O CICLO ───────────────────────────────────────────
     // Nada é chamado pelo teste daqui para frente: `runFixLoop`, `runBugLoopSweep` e
     // `handleAnomaly` NÃO aparecem neste arquivo. O teste só lê o banco.
-    const closeDeadline = Date.now() + Number(process.env.GOV_APPROVAL_CLOSE_WAIT_MS || 200000);
+    //
+    // ORÇAMENTO × CARGA (medido 2026-10-11): isolada esta suíte fecha o ciclo em 68 s, mas no LOTE
+    // autoritativo (`run-release-suites.js`, 6 suítes com `--runInBand` compartilhando o Engineering
+    // Runner) ela estourou o antigo teto de 200 s e devolveu `closed=null` — flake de CARGA, não
+    // defeito de código (reproduzida isolada: PASS). Mesmo remédio já aplicado à suíte irmã
+    // (`ENGINEERING_E2E_WORKER_WAIT_MS`, 900 s): o orçamento cresce, a ASSERÇÃO não muda —
+    // `expect(closed).toBeTruthy()` continua exigindo que o worker feche o finding sozinho.
+    const closeDeadline = Date.now() + Number(process.env.GOV_APPROVAL_CLOSE_WAIT_MS || 900000);
     let closed = null;
     while (Date.now() < closeDeadline && !closed) {
       await sleep(1000);
