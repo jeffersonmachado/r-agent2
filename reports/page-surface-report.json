@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-10-11T11:10:48.027Z",
-  "commit": "72f52f91f5bd74653447d1a2e8a8cf93d8ab14ba",
+  "generatedAt": "2026-10-11T20:53:45.418Z",
+  "commit": "4bf3ab98574ad65f771efd87b9f08e612783ff56",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 149,
+    "items": 151,
     "byState": {
-      "VALIDATED": 149
+      "VALIDATED": 151
     }
   },
   "status": "PASS",
@@ -2111,6 +2111,53 @@
       }
     },
     {
+      "id": "page:/dev/pendencies",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
       "id": "page:/dev/qa-audit",
       "state": "VALIDATED",
       "assertions": [
@@ -2300,6 +2347,53 @@
     },
     {
       "id": "page:/dev/qa-waves/operational-health",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/release",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -5635,8 +5729,8 @@
       }
     }
   ],
-  "runId": "rap-governed-20261011100514459-d8656ee8",
-  "sourceFingerprint": "93a0466744ac47073c9a5ae321f40da08493da8310a135f767df00a7a1e6ba41",
+  "runId": "rap-governed-20261011200839603-6ca7e4fd",
+  "sourceFingerprint": "00e1604955e58399ea125e481715255a537ed7a767abe7ecf028e70c71f3266c",
   "artifactType": "page-surface-report",
   "artifactVersion": "1.0.0"
 }

@@ -1,0 +1,29 @@
+# r-agent2 frontend dev (Vite) — unit de USUÁRIO do systemd.
+#
+# POR QUE EXISTE: o dev server do Vite era subido no terminal. Quando o terminal é
+# reaproveitado/limpo o processo morre, e o preflight do converge passa a reprovar
+# ("GET /workspace devolveu 000") por uma causa que nada tem a ver com o código — além
+# de deixar a superfície de desenvolvimento fora do ar sem ninguém perceber.
+#
+# Renderizado por scripts/dev/service.sh (não editar a cópia em ~/.config).
+[Unit]
+Description=r-agent2 frontend dev (Vite, supervisionado)
+After=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Service]
+Type=simple
+WorkingDirectory={{SERVICE_DIR}}
+# Cache do Vite fora do workspace (mesma escolha do `npm start` do frontend): evita
+# escrever no repositório e poluir o `zip:release`, que é fail-closed em worktree sujo.
+Environment=VITE_CACHE_DIR=/tmp/r-agent2-vite
+ExecStart={{NPM}} start
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+StandardOutput=append:{{LOG}}
+StandardError=append:{{LOG}}
+
+[Install]
+WantedBy=default.target

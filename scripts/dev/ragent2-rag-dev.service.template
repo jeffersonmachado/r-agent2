@@ -1,0 +1,28 @@
+# r-agent2 RAG de desenvolvimento — unit de USUÁRIO do systemd.
+#
+# POR QUE EXISTE: o uvicorn de dev era subido no terminal; quando o terminal é
+# reaproveitado/limpo o processo leva SIGTERM e some sem aviso. O smoke prod-like e o
+# preflight do converge precisam do :8001 — serviço que morre sozinho transforma uma
+# dependência viva em falha intermitente ("relatório de segregação UNREACHABLE").
+#
+# Renderizado por scripts/dev/service.sh (não editar a cópia em ~/.config).
+[Unit]
+Description=r-agent2 RAG dev (supervisionada)
+After=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Service]
+Type=simple
+WorkingDirectory={{SERVICE_DIR}}
+# O .env do rag-service é OPCIONAL (o serviço tem defaults) — `-` não falha se ausente.
+EnvironmentFile=-{{SERVICE_DIR}}/.env
+ExecStart={{UVICORN}} main:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+StandardOutput=append:{{LOG}}
+StandardError=append:{{LOG}}
+
+[Install]
+WantedBy=default.target

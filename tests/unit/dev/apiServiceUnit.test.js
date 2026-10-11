@@ -27,9 +27,15 @@ const { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const TEMPLATE = path.join(ROOT, 'scripts', 'dev', 'ragent2-api-dev.service.template');
 const SCRIPT = path.join(ROOT, 'scripts', 'dev', 'api-service.sh');
+// A implementação é ÚNICA e vive em `service.sh` (api + rag + frontend). O
+// `api-service.sh` continua existindo como wrapper de compatibilidade (smoke,
+// converge e start-dev chamam esse caminho), então as asserções de política são
+// feitas sobre o script real — validar o wrapper não provaria nada.
+const SERVICE_SCRIPT = path.join(ROOT, 'scripts', 'dev', 'service.sh');
 
 const template = fs.readFileSync(TEMPLATE, 'utf8');
 const script = fs.readFileSync(SCRIPT, 'utf8');
+const serviceScript = fs.readFileSync(SERVICE_SCRIPT, 'utf8');
 
 /**
  * Código sem comentários.
@@ -45,7 +51,7 @@ function semComentarios(texto) {
     .join('\n');
 }
 
-const scriptCode = semComentarios(script);
+const scriptCode = semComentarios(serviceScript);
 
 /** Seção REAL de uma unit (a linha `[Service]`, não a menção em comentário). */
 function secaoDaUnit(conteudo, nome) {
@@ -104,8 +110,9 @@ describe('supervisão da API dev — a queda por terminal deixa de ser possível
   test('o script remove resíduo FORA do serviço (senão a porta 3001 fica de outro dono)', () => {
     expect(scriptCode).toContain('MainPID');
     expect(scriptCode).toContain('/proc/');
-    // A limpeza é por PID com confirmação na cmdline — nunca `pkill` por substring,
-    // que casa com o próprio shell que executa a busca (armadilha já medida).
+    // A limpeza é por PID com confirmação de identidade (cwd da instalação e
+    // ControlGroup da unidade) — nunca `pkill` por substring, que casa com o
+    // próprio shell que executa a busca (armadilha já medida).
     expect(scriptCode).not.toMatch(/\bpkill\b/);
     expect(scriptCode).not.toMatch(/\bfuser\s+-k\b/);
   });
@@ -120,6 +127,16 @@ describe('supervisão da API dev — a queda por terminal deixa de ser possível
     expect(erro).not.toBeNull();
     expect(erro.status).toBe(2);
     expect(String(erro.stdout)).toContain('install');
+  });
+
+  test('o wrapper delega para a implementação única (sem duplicar política)', () => {
+    // Dois scripts com a mesma política divergem com o tempo — foi assim que o
+    // teardown do smoke passou a discordar do restore. O wrapper só encaminha.
+    const wrapperCode = semComentarios(script);
+    expect(wrapperCode).toMatch(/exec\s+bash\s+"\$AQUI\/service\.sh"/);
+    expect(wrapperCode).toMatch(/\bapi\b/);
+    expect(wrapperCode).not.toContain('systemctl');
+    expect(wrapperCode).not.toContain('MainPID');
   });
 
   test('systemd-analyze verify aceita a unit RENDERIZADA (pega erro de seção/chave)', () => {
@@ -185,8 +202,8 @@ describe('supervisão da API dev — a queda por terminal deixa de ser possível
     }
   });
 
-  test('o smoke prod-like para e RELIGA a API pela unidade (não por pkill)', () => {
-    // Sem isto, a supervisão e o smoke brigam: o systemd revive a API em 3 s e a
+  test('o smoke prod-like para e RELIGA os serviços de dev pela UNIDADE (não por pkill)', () => {
+    // Sem isto, a supervisão e o smoke brigam: o systemd revive o serviço em 3 s e a
     // stack Docker não consegue bindar :3001 — e o smoke é pré-requisito bloqueante
     // do `consolidate` da selagem (medido 2026-10-11).
     const smoke = fs.readFileSync(
@@ -194,16 +211,19 @@ describe('supervisão da API dev — a queda por terminal deixa de ser possível
       'utf8',
     );
     const smokeCode = semComentarios(smoke);
-    expect(smokeCode).toMatch(/api-service\.sh"?\s+stop/);
-    expect(smokeCode).toMatch(/api-service\.sh"?\s+start/);
-    // Se houver pkill da API no script, ele só pode existir DEPOIS da checagem da
-    // unidade (ramo de fallback, quando a supervisão não está instalada).
+    expect(smokeCode).toMatch(/service\.sh"?\s+"\$1"\s+"\$2"/);
+    expect(smokeCode).toContain('stop');
+    expect(smokeCode).toContain('start');
+    // A identidade do serviço vem do módulo compartilhado (uma fonte da verdade).
+    expect(smokeCode).toContain('dev_unidade');
+    // Se houver pkill no script, ele só pode existir DEPOIS da checagem da unidade
+    // (ramo de fallback, quando a supervisão não está instalada).
     const linhas = smokeCode.split('\n');
-    const checagemUnidade = linhas.findIndex((linha) => linha.includes('systemctl --user cat ragent2-api-dev'));
+    const checagemUnidade = linhas.findIndex((linha) => /unidade_instalada|systemctl --user cat/.test(linha));
     expect(checagemUnidade).toBeGreaterThan(-1);
     const pkills = linhas
       .map((linha, indice) => ({ linha, indice }))
-      .filter(({ linha }) => /pkill -f "node api\/server/.test(linha));
+      .filter(({ linha }) => /\bpkill\b/.test(linha));
     for (const kill of pkills) {
       expect(kill.indice).toBeGreaterThan(checagemUnidade);
     }

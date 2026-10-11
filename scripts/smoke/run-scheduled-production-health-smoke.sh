@@ -65,46 +65,125 @@ reachable() {
   [[ "$code" != "000" && -n "$code" ]]
 }
 
-# Derruba os serviços de dev (API node, frontend Vite, RAG uvicorn) para liberar
-# as portas :3001/:5173/:8001 antes do prod-like validar a stack Docker — sem
-# isso o Docker não consegue expor a API em :3001 (conflito de porta). Chamado
-# apenas depois do gate de política (agendamento explicitamente habilitado).
+# ── Governança do ambiente de execução (Fase 2) ────────────────────────────────
+#
+# O smoke prod-like precisa de :3001/:5173/:8001 LIVRES, mas NÃO pode deixar o
+# ambiente do operador danificado depois. Duas armadilhas já custaram ciclos:
+#   1. Matar o PROCESSO não libera a porta — os serviços de dev são supervisionados
+#      (systemd --user, Restart=always) e voltam em segundos. Quem manda é a UNIDADE.
+#   2. Parar e não religar (ou religar o que ESTAVA DESLIGADO) desloca o estado do
+#      ambiente. Um smoke agendado não pode escolher por quem opera.
+#
+# Política: SNAPSHOT do que estava no ar → parar SÓ o que estava no ar → restaurar
+# SÓ o que foi parado, inclusive em saída antecipada (trap EXIT/INT/TERM).
+#
+# Reconciliação (SIGKILL/host crash — o trap NÃO roda): o estado desejado volta com
+#   npm run dev:services:start all   (ou: bash scripts/dev/service.sh start all)
+# e o desvio residual é detectável por `service.sh status <svc>`
+# (`residuos_fora_da_unidade` > 0) e pelo preflight do converge.
+SERVICOS_DEV="api rag frontend"
+SNAPSHOT_ARQUIVO=""
+RESTORE_CONCLUIDO=0
+
+# Política de estado compartilhada com `service.sh` (deve_parar/deve_restaurar):
+# mantê-la em um único lugar evita que teardown e restauração discordem sobre o que
+# significa "estava no ar" — foi exatamente essa discordância que religou o RAG que
+# o operador havia deixado parado (medido em 2026-10-11).
+# shellcheck source=../dev/lib/servicos-dev-state.sh
+. "$PROJECT_ROOT/scripts/dev/lib/servicos-dev-state.sh"
+
+dev_service_cmd() { bash "$PROJECT_ROOT/scripts/dev/service.sh" "$1" "$2"; }
+
+# Unidade instalada? Sem unidade o serviço é solto (modelo legado) e não há como
+# reconhecer "estava no ar sob supervisão" — nesse caso não mexemos no que não
+# podemos restaurar de forma determinística.
+unidade_instalada() { systemctl --user cat "$(dev_unidade "$1")" >/dev/null 2>&1; }
+
+# ATENÇÃO (2ª ocorrência do mesmo defeito, medida em 2026-10-11): `systemctl is-active`
+# imprime "inactive" E retorna 3 — um `|| echo unknown` acrescenta uma SEGUNDA linha
+# ("inactive\nunknown"), que entra no snapshot como campo fantasma e fazia o loop
+# processar um serviço inexistente. Capturar e normalizar, nunca encadear com `||`.
+estado_unidade() {
+  local e
+  e="$(systemctl --user is-active "$(dev_unidade "$1")" 2>/dev/null)"
+  [ -n "$e" ] || e="unknown"
+  printf '%s' "$e"
+}
+
+snapshot_dev_state() {
+  SNAPSHOT_ARQUIVO="$(mktemp -t ragent2-smoke-snapshot.XXXXXX)"
+  local s ativo health
+  for s in $SERVICOS_DEV; do
+    if unidade_instalada "$s"; then
+      ativo="$(estado_unidade "$s")"
+      [ -n "$ativo" ] || ativo="unknown"
+    else
+      ativo="sem_unidade"
+    fi
+    case "$s" in
+      api) health="$(curl -s -o /dev/null --max-time 3 -w '%{http_code}' http://127.0.0.1:3001/health 2>/dev/null)" ;;
+      rag) health="$(curl -s -o /dev/null --max-time 3 -w '%{http_code}' http://127.0.0.1:8001/health 2>/dev/null)" ;;
+      frontend) health="$(curl -s -o /dev/null --max-time 3 -w '%{http_code}' http://127.0.0.1:5173/ 2>/dev/null)" ;;
+    esac
+    # `|` como delimitador: campos nunca contêm vazio ambíguo e o `read` não desloca
+    # colunas (a comparação frágil com a string "000" foi removida junto).
+    printf '%s|%s|%s\n' "$s" "$ativo" "${health:-000}" >> "$SNAPSHOT_ARQUIVO"
+  done
+  log "SNAPSHOT dev services: $(tr '\n' ';' < "$SNAPSHOT_ARQUIVO")"
+}
+
 stop_dev_services() {
   log "STOP dev services (liberando 3001/5173/8001 para a stack Docker)"
-  # A API de dev é SUPERVISIONADA (systemd --user `ragent2-api-dev`, Restart=always):
-  # matar o PROCESSO não libera :3001 — o systemd o revive em ~3 s, a porta volta a
-  # ficar ocupada e a stack prod-like não consegue expor a API (o smoke vira SKIP/
-  # NO_GO). E este smoke é pré-requisito BLOQUEANTE do `consolidate` da selagem.
-  # Quem manda na API é a UNIDADE, então é ela que precisa ser parada — e religada
-  # no fim (ver restore_dev_api).
-  if systemctl --user cat ragent2-api-dev >/dev/null 2>&1; then
-    if bash "$PROJECT_ROOT/scripts/dev/api-service.sh" stop >/dev/null 2>&1; then
-      log "  API dev PARADA pela unidade (ragent2-api-dev)"
-    else
-      log "  AVISO: não consegui parar a unidade — :3001 pode permanecer ocupada"
+  : > "${SNAPSHOT_ARQUIVO}.parados"
+  local s estado health
+  while IFS='|' read -r s estado health; do
+    [ -n "$s" ] || continue
+    if ! deve_parar "$estado" "$health"; then
+      log "  [$s] PRESERVADO ($(descrever_estado "$estado" "$health")) — já estava parado/ausente; não será religado"
+      continue
     fi
-  else
-    # Sem unidade instalada, o processo é solto e o pkill é o único caminho.
-    pkill -f "node api/server\.js" 2>/dev/null && log "  API dev encerrada" || log "  API dev não estava rodando"
-  fi
-  pkill -f "vite --configLoader" 2>/dev/null && log "  frontend Vite encerrado" || log "  frontend Vite não estava rodando"
-  pkill -f "uvicorn main:app" 2>/dev/null && log "  RAG uvicorn encerrado" || log "  RAG uvicorn não estava rodando"
+    if dev_service_cmd stop "$s" >/dev/null 2>&1; then
+      printf '%s|parado|%s|%s\n' "$s" "$estado" "$health" >> "${SNAPSHOT_ARQUIVO}.parados"
+      log "  [$s] PARADO pela unidade ($(descrever_estado "$estado" "$health"))"
+    else
+      log "  AVISO: [$s] não consegui parar pela unidade — a porta pode seguir ocupada"
+    fi
+  done < "$SNAPSHOT_ARQUIVO"
   # SIGTERM é assíncrono: aguarda as portas serem liberadas antes do reachability.
   sleep 2
 }
 
-# Devolve a API de dev ao operador. Sem isto, TODO smoke agendado deixaria o ambiente
-# sem API (antes disso o serviço era solto; com supervisão seria incoerente parar a
-# unidade e não subir de volta).
-restore_dev_api() {
-  if systemctl --user cat ragent2-api-dev >/dev/null 2>&1; then
-    if bash "$PROJECT_ROOT/scripts/dev/api-service.sh" start >/dev/null 2>&1; then
-      log "API dev REATIVADA pela unidade (ragent2-api-dev)"
+# Restauração IDEMPOTENTE: chamada no fim normal e pelo trap. Só religa o que ESTE
+# smoke parou — serviço que já estava desligado permanece desligado.
+restore_dev_state() {
+  [ "$RESTORE_CONCLUIDO" = "1" ] && return 0
+  RESTORE_CONCLUIDO=1
+  [ -n "$SNAPSHOT_ARQUIVO" ] && [ -f "$SNAPSHOT_ARQUIVO.parados" ] || return 0
+  local s marca estado health code
+  while IFS='|' read -r s marca estado health; do
+    [ -n "$s" ] || continue
+    deve_restaurar "$marca" || continue
+    if dev_service_cmd start "$s" >/dev/null 2>&1; then
+      case "$s" in
+        api) code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' http://127.0.0.1:3001/health 2>/dev/null)" ;;
+        rag) code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' http://127.0.0.1:8001/health 2>/dev/null)" ;;
+        frontend) code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' http://127.0.0.1:5173/ 2>/dev/null)" ;;
+      esac
+      log "  [$s] RESTAURADO (health=${code:-000}) — estado inicial era $(descrever_estado "$estado" "$health")"
     else
-      log "AVISO: API dev não voltou — rode: npm run dev:api:service start"
+      log "  AVISO: [$s] NÃO voltou — rode: npm run dev:services:start $s"
     fi
-  fi
+  done < "${SNAPSHOT_ARQUIVO}.parados"
 }
+
+# Saída antecipada (SKIP) ou interrupção: o ambiente do operador volta como estava.
+on_exit() {
+  local rc=$?
+  restore_dev_state
+  rm -f "$SNAPSHOT_ARQUIVO" "${SNAPSHOT_ARQUIVO}.parados" 2>/dev/null || true
+  return $rc
+}
+trap on_exit EXIT INT TERM
 
 # ── Alinhamento com a política de agendamento do QA Mesh ──
 # O smoke contínuo é uma execução agendada; respeita a MESMA política do
@@ -171,6 +250,7 @@ if [[ "$proxy_code" != "200" ]]; then
 fi
 
 # ── Stack confirmado: agora sim libera as portas para o prod-like ──
+snapshot_dev_state
 stop_dev_services
 
 if ! reachable "$API_URL/"; then
@@ -222,8 +302,10 @@ else
 fi
 EXIT_CODE=$?
 
-# Devolve a API de dev (parada em stop_dev_services para liberar :3001 à stack).
-restore_dev_api
+# Devolve ao operador os serviços de dev que ESTE smoke parou (api/rag/frontend).
+# O trap on_exit cobre também as saídas antecipadas; aqui é a saída normal, para o
+# log registrar a restauração ANTES do veredito final.
+restore_dev_state
 
 if [[ $EXIT_CODE -eq 0 ]]; then
   log "END status=GO exit=0"
