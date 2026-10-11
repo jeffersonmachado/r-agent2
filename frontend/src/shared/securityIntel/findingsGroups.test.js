@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   collapseFindingsByPackage,
+  describeGroup,
   packageGroupKey,
   severityRank,
   summarizeCollapse,
@@ -135,5 +136,84 @@ describe('severityRank', () => {
     expect(severityRank('INFORMATIONAL')).toBeGreaterThan(severityRank('HIGH'));
     expect(severityRank(null)).toBe(9);
     expect(severityRank('SEI-LA')).toBe(9);
+  });
+});
+
+// ── Fase 4.3: o resumo do grupo precisa representar TODOS os advisories ──────────
+//
+// DEFEITO: o grupo calculava `kev`/`devOnly`/`semCorrecaoPublicada` sobre os membros,
+// mas os SELOS exibidos na linha vinham do REPRESENTANTE. Um pacote com um crítico
+// dev-only e um médio de runtime podia aparecer descrito pelo representante errado,
+// e o operador não tinha como saber quais pacotes realmente bloqueiam o release.
+describe('resumo agregado do grupo (Fase 4.3)', () => {
+  it('separa runtime de dev-only e conta KEV — nada é inferido do representante', () => {
+    const items = [
+      achado({ package_name: 'misto', advisory_id: 'GHSA-crit-dev', severity: 'CRITICAL', dev_only: true, kev: true }),
+      achado({ package_name: 'misto', advisory_id: 'GHSA-medio-runtime', severity: 'MEDIUM' }),
+      achado({ package_name: 'misto', advisory_id: 'GHSA-baixo-runtime', severity: 'LOW' }),
+    ];
+    const { groups } = collapseFindingsByPackage(items);
+    const grupo = groups.get(packageGroupKey(items[0]));
+    expect(grupo.count).toBe(3);
+    expect(grupo.devOnlyCount).toBe(1);
+    expect(grupo.runtimeCount).toBe(2);
+    expect(grupo.kevCount).toBe(1);
+    // O grupo NÃO é dev-only: há risco de runtime dentro dele.
+    expect(grupo.devOnly).toBe(false);
+    // E o crítico dev-only NÃO bloqueia o release (não vai a produção); os de
+    // runtime são MEDIUM/LOW, que também não são bloqueantes por severidade.
+    expect(grupo.bloqueantes).toBe(0);
+  });
+
+  it('conta como bloqueante só o que é grave, de runtime e SEM isenção vigente', () => {
+    const alto = achado({ package_name: 'p', advisory_id: 'GHSA-alto', severity: 'HIGH' });
+    const criticoIsento = achado({ package_name: 'p', advisory_id: 'GHSA-crit-isento', severity: 'CRITICAL' });
+    const devOnly = achado({ package_name: 'p', advisory_id: 'GHSA-dev', severity: 'CRITICAL', dev_only: true });
+    const items = [alto, criticoIsento, devOnly];
+    const waiversByFinding = new Map([[criticoIsento.finding_key, { active: true }]]);
+
+    const semIsencao = collapseFindingsByPackage(items).groups.get(packageGroupKey(alto));
+    expect(semIsencao.bloqueantes).toBe(2); // alto + crítico (o dev-only não conta)
+
+    const comIsencao = collapseFindingsByPackage(items, { waiversByFinding }).groups.get(packageGroupKey(alto));
+    expect(comIsencao.bloqueantes).toBe(1); // só o alto
+    expect(comIsencao.isentosCount).toBe(1);
+  });
+
+  it('severidade do grupo é a mais grave entre TODOS os membros', () => {
+    const items = [
+      achado({ package_name: 'q', advisory_id: 'GHSA-a', severity: 'LOW' }),
+      achado({ package_name: 'q', advisory_id: 'GHSA-b', severity: 'CRITICAL' }),
+    ];
+    const { groups } = collapseFindingsByPackage(items);
+    expect(groups.get(packageGroupKey(items[0])).maxSeverity).toBe('CRITICAL');
+  });
+
+  it('conta quantos membros têm correção publicada e só diz "sem correção" se TODOS estiverem sem', () => {
+    const items = [
+      achado({ package_name: 'r', advisory_id: 'GHSA-1', status: 'NO_FIX_AVAILABLE', fixed_versions: [] }),
+      achado({ package_name: 'r', advisory_id: 'GHSA-2', status: 'FIX_AVAILABLE', fixed_versions: ['2.0.0'] }),
+    ];
+    const { groups } = collapseFindingsByPackage(items);
+    const grupo = groups.get(packageGroupKey(items[0]));
+    expect(grupo.semCorrecaoCount).toBe(1);
+    expect(grupo.semCorrecaoPublicada).toBe(false);
+    expect(grupo.hasFix).toBe(true);
+  });
+
+  it('a frase do resumo declara o agregado (e não promete bloqueio quando não há)', () => {
+    const devOnly = achado({ package_name: 's', advisory_id: 'GHSA-d', severity: 'CRITICAL', dev_only: true, kev: true });
+    const runtime = achado({ package_name: 's', advisory_id: 'GHSA-r', severity: 'LOW' });
+    const grupo = collapseFindingsByPackage([devOnly, runtime]).groups.get(packageGroupKey(devOnly));
+    const texto = describeGroup(grupo);
+    expect(texto).toContain('2 advisory(s)');
+    expect(texto).toContain('1 de runtime');
+    expect(texto).toContain('1 dev-only');
+    expect(texto).toContain('1 KEV');
+    expect(texto).toContain('nenhum bloqueia o release');
+
+    const bloqueante = achado({ package_name: 't', advisory_id: 'GHSA-x', severity: 'HIGH' });
+    const grupoBloqueante = collapseFindingsByPackage([bloqueante]).groups.get(packageGroupKey(bloqueante));
+    expect(describeGroup(grupoBloqueante)).toContain('1 bloqueia(m) o release');
   });
 });

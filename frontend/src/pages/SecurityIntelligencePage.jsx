@@ -7,7 +7,7 @@ import {
   semCorrecaoPublicada,
   summarizePendingFindings,
 } from '../shared/securityIntel/pendingFindings';
-import { collapseFindingsByPackage, summarizeCollapse } from '../shared/securityIntel/findingsGroups';
+import { collapseFindingsByPackage, describeGroup, summarizeCollapse } from '../shared/securityIntel/findingsGroups';
 import {
   approveSecurityWaiver,
   createSecurityPatchMission,
@@ -341,8 +341,14 @@ export function SecurityIntelligencePage() {
    */
   const { rows: findingsRows, groups: findingsGroups } = useMemo(() => {
     if (!groupByPackage) return { rows: visibleFindings, groups: new Map() };
-    return collapseFindingsByPackage(visibleFindings, { expandedKeys: expandedGroups });
-  }, [groupByPackage, visibleFindings, expandedGroups]);
+    // As isenções entram no colapso para o resumo do grupo poder dizer quantos
+    // advisories já estão isentos — sem isso o resumo afirmaria que o pacote
+    // bloqueia o release mesmo com a isenção vigente na tela.
+    return collapseFindingsByPackage(visibleFindings, {
+      expandedKeys: expandedGroups,
+      waiversByFinding: indexWaiversByFinding(waivers),
+    });
+  }, [groupByPackage, visibleFindings, expandedGroups, waivers]);
   const collapseSummary = useMemo(
     () => summarizeCollapse({ items: visibleFindings, groups: findingsGroups }),
     [visibleFindings, findingsGroups],
@@ -723,6 +729,17 @@ export function SecurityIntelligencePage() {
                       >
                         {grupoAberto ? `ocultar os ${grupo.count - 1} demais` : `+${grupo.count - 1} advisory(s) neste pacote`}
                       </button>
+                    )}
+                    {grupo && (
+                      <span
+                        className="block mt-1 text-xs text-text-secondary"
+                        data-testid={`finding-group-summary-${grupo.key}`}
+                      >
+                        {describeGroup(grupo)}
+                        {grupo.semCorrecaoPublicada && (
+                          <span className="block text-amber-500">nenhum advisory deste pacote tem correção publicada</span>
+                        )}
+                      </span>
                     )}
                   </td>
                   <td className={TD}>{row.advisory_id}</td>
