@@ -130,9 +130,9 @@
     {
       "id": "P1-13",
       "title": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
-      "status": "blocked",
-      "blocked_reason": "O artefato e `packageRequired: true` no manifesto (spec smoke_summary, domain foundation) mas seu UNICO produtor — scripts/system-autotest-stack.sh, que escreve o resumo L01..L06 — e invocado apenas por .github/workflows-disabled/stack-test.yml, e .github/workflows-disabled/README.md declara que o GitHub Actions foi desativado de proposito ('operacao migrada para gate local no servidor') SEM equivalente local no pipeline de release. Consequencia: o artefato decai para sempre, que e precisamente o que o P1-12 agora TORNA VISIVEL em vez de silenciar. NAO executado aqui de proposito: o script faz `docker compose -f docker-compose.test.yml up` e DERRUBA a stack no final (set -euo pipefail), o que destruiria a stack viva que a selagem exige — e o CLAUDE.md do repo exige confirmacao antes de `docker compose down`. Decisao de politica necessaria do usuario: (a) dar produtor local ao artefato no pipeline de release, ou (b) retirar a exigencia, o que e REDUCAO de gate e por isso nao pode ser feita pela IA sem decisao explicita.",
-      "evidence": "scripts/system-autotest-stack.sh:95 (unico writer) | .github/workflows-disabled/stack-test.yml:104 (unico invocador) | .github/workflows-disabled/README.md (motivo da desativacao) | medicao: 50,8 dias de idade em 2026-10-10"
+      "status": "done",
+      "commit": "d7cdaa555",
+      "evidence": "RESOLVIDO sem tocar na parte destrutiva: o unico produtor (scripts/system-autotest-stack.sh) faz `docker compose up` e derruba a stack no final, e seu unico invocador e' um workflow deliberadamente desabilitado. Os 6 smokes REAIS foram rodados individualmente (scripts/test-physical-queue-smoke.js, test-ura-publish-rollback-smoke.js, test-pbx-voice-tts-asr-smoke.js, test-pbx-call-events-runtime-smoke.js, test-inbox-runtime-smoke.js, test-bpmn-editor-smoke.js — exatamente os que o script roda) e o fan-in foi feito pela PROPRIA funcao `write_smoke_evidence_summary` extraida por `sed` do script canonico (nenhuma logica reescrita); status vem do exit code real com o mesmo mapeamento (0 -> pass). Resultado: as DUAS copias (runtime root 2026-08-21 e workspace 2026-09-30) substituidas por generatedAt=2026-10-10T21:25:30Z com l01..l06=pass; prova de nao-fabricacao: qa/l06-bpmn-editor-evidence.json traz pageLoad/xmlExported/internalFlow(15 nos) e qa/l01-physical-queue-evidence.json traz queueId/ticketId/transicoes reais. Efeito medido no gate: `npm run system:go-no-go` passou de NO_GO com `smoke_evidence_stale` (idade 1220 h) para GO."
     },
     {
       "id": "P1-10",
@@ -144,8 +144,16 @@
     {
       "id": "P1-11",
       "title": "Destravar empacotamento e selagem (ciclo release:seal completo)",
-      "status": "pending",
-      "evidence": "dist/ sem ZIPs; exige worktree limpo, dist/release e dist/candidate vazios, PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct e branch publicada para proveniencia remota"
+      "status": "blocked",
+      "blocked_reason": "O ciclo avancou ATE a fase candidate e bloqueou em `package-integrity-engine reprovou o payload entregue` (SEAL_EXIT=1) pelo check `EVIDENCE_MANIFEST_HASH_DIVERGENT` (computed=613503798fd1cd8f... != recorded=deefdfdecd56c66f...). NAO e' regressao e NAO deve ser contornado: `scripts/two-pass-release.sh:223` (PASS 5) chama `exportGovernanceArtifacts()`, que REEscreve `governance/evidence-manifest.json`, e o check roda na linha 240 do MESMO passo, enquanto a atestacao (`update-package-binding.js`) so' roda na linha 1111 — DEPOIS. Como `evidence-manifest.json` e' MEMBRO da chain (`governance/governance-chain.js:60`), isso viola o invariante que o proprio script documenta na linha 1092: 'NAO chamar nada que escreva membros da chain DEPOIS do rebind'. O baseline registrado e' de ciclo ANTERIOR e nada o rebinda antes do check. O check estava VACUOSO ate o P0-2 (commit 6f8e56349) criar o produtor do baseline — ou seja, o hardening REVELOU um defeito real de ordenacao do pipeline. Fix exige mudar a ordem do PASS 5 (export -> atestacao+rebind -> package-validator -> package-integrity -> stamp) e validar num ciclo 2-pass completo (~40 min por tentativa), por isso fica BLOCKED com decisao explicita e nao como patch apressado no fim de sessao.",
+      "evidence": "Tudo o mais ficou verde no ciclo: selo V2 status=GO passos=21 falhas-obrigatorias=0 (V2SEAL_EXIT=0); validate:v2-seal-freshness PASS; fase prepare com 'seal-time-gate: SEAL_PENDING' + commit + push OK; 89/89 suites autoritativas (997 testes, 15/15 lotes verdes); validate:required-tests status=PASS {PROVEN:68}; wave api-surface VALIDATED=881 FAILED=0 BLOCKED=0. Evidencia do bloqueio: governance/package-integrity-report.json (check evidence_manifest_hash) e /tmp/seal-release/zip-candidate.log ('BLOQUEADO: package-integrity-engine reprovou o payload entregue'). Detalhe completo em /memories/repo/r-agent2-pass5-escreve-membro-da-chain-apos-atestacao.md."
+    },
+    {
+      "id": "P1-15",
+      "title": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
+      "status": "blocked",
+      "blocked_reason": "Defeito de ORDENACAO do pipeline de release, exposto pelo P0-2. Fix proposto: em `scripts/two-pass-release.sh` PASS 5, ou (a) mover a chamada de `exportGovernanceArtifacts()` para ANTES da sequencia de atestacao, ou (b) reinserir `update-package-binding.js` + `rebind-to-current-package.js` imediatamente APOS o export e ANTES de `package-validator`/`package-integrity-engine`. Em nenhum caso enfraquecer o check: ele esta CERTO — o pacote estava atestando um manifesto diferente do que envia. Validacao obrigatoria: ciclo 2-pass completo.",
+      "evidence": "scripts/two-pass-release.sh:223 (export) | :240 (package-integrity) | :1092 (invariante documentado) | :1111 (update-package-binding) | governance/governance-chain.js:60 (evidence_manifest e' membro da chain)"
     },
     {
       "id": "P2-2",
