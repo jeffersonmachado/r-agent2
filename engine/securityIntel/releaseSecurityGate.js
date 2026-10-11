@@ -19,6 +19,71 @@
 
 const DECISIONS = Object.freeze({ GO: 'GO', NO_GO: 'NO_GO' });
 
+/**
+ * ESTADO do veredito — mais específico que a decisão binária.
+ *
+ * DEFEITO MEDIDO (2026-10-11): o gate respondia apenas GO/NO_GO, então
+ * "encontrei risco real de release", "a evidência não foi coletada" e "a análise
+ * ficou parcial" saíam TODOS como o mesmo NO_GO. Para quem opera isso é
+ * indistinguível: um NO_GO causado por banco fora do ar parece o mesmo que um
+ * NO_GO por vulnerabilidade crítica aberta, e a ação corretiva é outra.
+ *
+ * O contrato antigo é preservado (`decision` continua GO/NO_GO, fail-closed); o
+ * estado é ADICIONADO. Nada aqui transforma bloqueio em sucesso.
+ */
+const STATES = Object.freeze({
+  GO: 'GO',
+  NO_GO: 'NO_GO',
+  INCOMPLETE: 'INCOMPLETE',
+  EVIDENCE_UNAVAILABLE: 'EVIDENCE_UNAVAILABLE',
+});
+
+/** Risco REAL de release (o achado existe e afeta o artefato). */
+const RISK_BLOCKING_CODES = Object.freeze(new Set([
+  'OPEN_VULNERABILITY',
+  'KEV_WITHOUT_FIX',
+  'SBOM_INVALID',
+  'VECTOR_INDEX_INVALID',
+]));
+
+/** Análise PARCIAL: mediu menos do que a política exige. */
+const INCOMPLETE_BLOCKING_CODES = Object.freeze(new Set([
+  'COVERAGE_BELOW_MINIMUM',
+  'ADVISORY_BASE_STALE',
+]));
+
+/** Evidência AUSENTE/não vinculada ao source que está sendo liberado. */
+const EVIDENCE_BLOCKING_CODES = Object.freeze(new Set([
+  'SECURITY_EVIDENCE_MISSING',
+  'SBOM_MISSING',
+  'ADVISORY_BASE_MISSING',
+  'SECURITY_GATE_UNAVAILABLE',
+  'SECURITY_GATE_NO_GOVERNED_RUN',
+  'SECURITY_GATE_STALE_EVIDENCE',
+  'SECURITY_GATE_FOREIGN_RUN',
+  'SECURITY_EVIDENCE_UNBOUND',
+  'WAIVERS_UNAVAILABLE',
+]));
+
+/**
+ * Estado a partir dos bloqueios. Código DESCONHECIDO ⇒ NO_GO (fail-closed): um
+ * bloqueio que não sabemos classificar não pode virar "estado mais brando".
+ */
+function resolveState({ decision, blocking = [] } = {}) {
+  if (decision === DECISIONS.GO) return { state: STATES.GO, stateReasons: [] };
+  const codigos = blocking.map((item) => item && item.code).filter(Boolean);
+  if (codigos.some((codigo) => RISK_BLOCKING_CODES.has(codigo))) {
+    return { state: STATES.NO_GO, stateReasons: codigos.filter((c) => RISK_BLOCKING_CODES.has(c)) };
+  }
+  if (codigos.some((codigo) => EVIDENCE_BLOCKING_CODES.has(codigo))) {
+    return { state: STATES.EVIDENCE_UNAVAILABLE, stateReasons: codigos.filter((c) => EVIDENCE_BLOCKING_CODES.has(c)) };
+  }
+  if (codigos.some((codigo) => INCOMPLETE_BLOCKING_CODES.has(codigo))) {
+    return { state: STATES.INCOMPLETE, stateReasons: codigos.filter((c) => INCOMPLETE_BLOCKING_CODES.has(c)) };
+  }
+  return { state: STATES.NO_GO, stateReasons: codigos };
+}
+
 const SEVERITY_RANK = Object.freeze({ CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFORMATIONAL: 4 });
 
 /** Estados que NÃO representam risco aberto (VEX/terminal). */
@@ -199,22 +264,30 @@ function evaluateReleaseSecurity({
   }
 
   const decision = blocking.length === 0 ? DECISIONS.GO : DECISIONS.NO_GO;
+  const { state, stateReasons } = resolveState({ decision, blocking });
   return {
     decision,
+    state,
+    stateReasons,
     blocking,
     warnings,
     checks,
     summary: decision === DECISIONS.GO
       ? `GO: ${checks.filter((item) => item.ok).length} verificação(ões) satisfeita(s), ${warnings.length} aviso(s)`
-      : `NO_GO: ${blocking.map((item) => item.code).join(', ')}`,
+      : `${state === DECISIONS.NO_GO ? 'NO_GO' : state}: ${blocking.map((item) => item.code).join(', ')}`,
   };
 }
 
 module.exports = {
   DECISIONS,
+  STATES,
   SEVERITY_RANK,
   NON_RISK_STATUSES,
+  RISK_BLOCKING_CODES,
+  INCOMPLETE_BLOCKING_CODES,
+  EVIDENCE_BLOCKING_CODES,
   isOpenRisk,
   waiverExemption,
+  resolveState,
   evaluateReleaseSecurity,
 };

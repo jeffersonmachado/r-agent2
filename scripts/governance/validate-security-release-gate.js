@@ -45,6 +45,10 @@ const {
 
 const ROOT = path.join(__dirname, '..', '..');
 
+// Composição do estado em módulo PURO (testável sem banco): risco real vs
+// evidência indisponível vs análise parcial deixam de sair como o mesmo NO_GO.
+const { composeGateState } = require('./lib/security-gate-state');
+
 function loadPolicy() {
   // `readJson` (helper de governança) resolve o caminho a partir da raiz e é
   // reconhecido pelo auditor de persistência como LEITURA — não como alvo de
@@ -256,14 +260,33 @@ async function main() {
     });
   }
 
-  const finalDecision = provenanceIssues.length > 0 ? 'NO_GO' : evaluation.decision;
+  // ── ESTADO DO VEREDITO (H8) ──────────────────────────────────────────────────────────────────
+  // Combina o que o MOTOR concluiu com o que NÃO foi possível medir aqui. A regra
+  // (módulo puro `lib/security-gate-state`) é sempre fail-closed e nunca promove
+  // para GO: risco real ⇒ NO_GO; evidência ausente/não vinculada ⇒
+  // EVIDENCE_UNAVAILABLE; análise parcial ⇒ INCOMPLETE; o mais grave manda.
+  const composicao = composeGateState({
+    evaluationState: evaluation.state || (evaluation.decision === 'GO' ? 'GO' : 'NO_GO'),
+    evaluationReasons: evaluation.stateReasons || [],
+    provenanceIssues,
+    collectError,
+    waiversError,
+  });
+  const finalState = composicao.state;
+  const stateReasons = new Set(composicao.reasons);
+  const exitCode = composicao.exitCode;
+
+  const finalDecision = finalState === 'GO' ? 'GO' : 'NO_GO';
   const report = withLineage({
-    status: finalDecision,
+    status: finalState,
     decision: finalDecision,
+    state: finalState,
+    stateReasons: [...stateReasons],
+    exitCode,
     mode: informative ? 'advisory' : 'blocking',
     tenantKey,
-    summary: provenanceIssues.length > 0
-      ? `NO_GO: ${provenanceIssues.map((item) => item.code).join(', ')} (motor: ${evaluation.summary})`
+    summary: stateReasons.size > 0
+      ? `${finalState}: ${[...stateReasons].join(', ')} (motor: ${evaluation.summary})`
       : evaluation.summary,
     blocking: [...(evaluation.blocking || []), ...provenanceIssues],
     warnings: evaluation.warnings,
@@ -298,19 +321,20 @@ async function main() {
 
   writeReport('security-release-gate-report.json', report);
 
-  console.log(`[security-release-gate] mode=${report.mode} decision=${finalDecision}`);
+  console.log(`[security-release-gate] mode=${report.mode} state=${finalState} decision=${finalDecision} exit=${exitCode}`);
+  if (stateReasons.size > 0) console.log(`[security-release-gate] motivos do estado: ${[...stateReasons].join(', ')}`);
   console.log(`[security-release-gate] waivers vigentes=${waivers.length}${waiversError ? ` (leitura falhou: ${waiversError})` : ''}`);
   for (const item of evaluation.blocking) console.log(`  ✗ ${item.code}: ${item.message}`);
   for (const item of evaluation.warnings) console.log(`  ! ${item.code}: ${item.message}`);
   if (collectError) console.log(`  ! coleta falhou: ${collectError}`);
   console.log(`[security-release-gate] ${evaluation.summary}`);
 
-  if (finalDecision === 'GO') return 0;
+  if (finalState === 'GO') return 0;
   if (informative) {
-    console.log('[security-release-gate] modo advisory: exit 0, mas a decisão real é NO_GO');
+    console.log(`[security-release-gate] modo advisory: exit 0, mas o estado real é ${finalState}`);
     return 0;
   }
-  return 1;
+  return exitCode;
 }
 
 main()

@@ -14,6 +14,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawn, spawnSync, execFileSync } = require('child_process');
 
 const { configureRuntimeRoot } = require('../../utils/runtimePaths');
 
@@ -150,5 +151,162 @@ describe('releaseActionService — persistência do histórico', () => {
 
   it('exporta o teto de retenção do histórico persistido', () => {
     expect(service.MAX_PERSISTED_JOBS).toBeGreaterThan(0);
+  });
+});
+
+// ── H4: exclusividade REAL entre processos ──────────────────────────────────────
+//
+// DEFEITO MEDIDO (2026-10-11): o single-flight era um `Map` em memória — valia só
+// dentro do próprio processo. Com DUAS instâncias da API, duas requisições
+// iniciavam a mesma ação mutante (`seal`, `publish-tag`), que mexe em `dist/`, em
+// tag de git e no repositório. Exclusividade que não atravessa processos não é
+// exclusividade; e lock em memória também não sobrevive a restart.
+//
+// A exclusividade agora é do SO (`flock`), mantida pelo processo enquanto o
+// comando roda: atômica entre processos, liberada pelo kernel quando o dono morre
+// (sem lock órfão e sem limpeza manual para errar) e com fencing de graça — não
+// existe "execução superada" capaz de seguir mutando.
+describe('releaseActionService — exclusividade entre instâncias (H4)', () => {
+  let cenario;
+  let alvo;
+
+  beforeEach(() => {
+    cenario = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-h4-'));
+    configureRuntimeRoot(cenario);
+    jest.resetModules();
+    service = require('./releaseActionService');
+    alvo = path.join(cenario, 'efeito-colateral.txt');
+  });
+
+  afterEach(() => {
+    configureRuntimeRoot(null);
+    try { fs.rmSync(cenario, { recursive: true, force: true }); } catch (_) { /* best effort */ }
+  });
+
+  /** Executa a spec REAL do serviço, como o spawn de produção faz. */
+  function executarSpec(definition) {
+    const spec = service.buildExecutionSpec(definition);
+    return spawnSync(spec.command, spec.args, { encoding: 'utf8' });
+  }
+
+  /** Grava um registro no runtime do CENÁRIO (o helper do describe vizinho usa o
+   * diretório dele — reutilizá-lo aqui gravava no lugar errado e o teste media
+   * outra coisa). */
+  function gravarNoCenario(registro) {
+    const dir = path.join(cenario, 'logs', 'dev-governance');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${registro.id}.job.json`), JSON.stringify(registro));
+  }
+
+  it('o comando roda sob o lock do SO, com código próprio para conflito', () => {
+    const spec = service.buildExecutionSpec({ command: 'npm', args: ['run', 'verify'], mutates: false });
+    expect(spec.lockMode).toBe('flock');
+    expect(spec.command).toBe('flock');
+    expect(spec.args.slice(0, 3)).toEqual(['-n', '-E', String(service.FLOCK_CONFLICT_EXIT)]);
+    expect(spec.args[3]).toBe(service.releaseLockPath());
+    // O lock vive FORA do workspace (runtime root), como o resto do estado.
+    expect(service.releaseLockPath().startsWith(cenario)).toBe(true);
+    // E o comando canônico (com TODOS os argumentos) vai depois do lock.
+    expect(spec.args.slice(4)).toEqual(['npm', 'run', 'verify']);
+  });
+
+  it('a tag do release entra ANTES do lock (regressão: spec montado cedo demais)', () => {
+    const args = ['scripts/create-release-tag.sh', 'r-agent2-20261011-000000'];
+    const spec = service.buildExecutionSpec(
+      { command: 'bash', args: ['scripts/create-release-tag.sh'], mutates: true },
+      ['r-agent2-20261011-000000'],
+    );
+    expect(spec.args.slice(-2)).toEqual(args);
+  });
+
+  it('prova real: com o lock ocupado o comando NÃO executa e sai com o código de conflito', () => {
+    // Um "outro processo" (outra instância) segura o lock.
+    const dono = spawn('flock', ['-n', service.releaseLockPath(), 'sleep', '4']);
+    try {
+      // Espera o dono adquirir (polling curto e limitado pela própria API do SO).
+      const inicio = Date.now();
+      while (service.lockIsHeld() !== true && Date.now() - inicio < 3000) {
+        execFileSync('sleep', ['0.05']);
+      }
+      expect(service.lockIsHeld()).toBe(true);
+
+      const resultado = executarSpec({ command: 'touch', args: [alvo], mutates: false });
+      expect(resultado.status).toBe(service.FLOCK_CONFLICT_EXIT);
+      // O efeito colateral NÃO aconteceu: o comando não foi iniciado.
+      expect(fs.existsSync(alvo)).toBe(false);
+    } finally {
+      // Mata o dono E o comando que ele iniciou (o filho herda o fd do lock — é
+      // justamente isso que garante exclusividade real enquanto a ação roda).
+      try { execFileSync('pkill', ['-P', String(dono.pid)]); } catch (_) { /* já saiu */ }
+      dono.kill('SIGKILL');
+    }
+  });
+
+  it('prova real: o lock é liberado quando o comando TERMINA, sem limpeza manual', () => {
+    const dono = spawn('flock', ['-n', service.releaseLockPath(), 'sleep', '0.6']);
+    const inicio = Date.now();
+    while (service.lockIsHeld() !== true && Date.now() - inicio < 3000) {
+      execFileSync('sleep', ['0.05']);
+    }
+    expect(service.lockIsHeld()).toBe(true);
+
+    // O comando termina sozinho e o kernel libera o lock: nenhum lock órfão.
+    const limite = Date.now();
+    while (service.lockIsHeld() !== false && Date.now() - limite < 5000) {
+      execFileSync('sleep', ['0.05']);
+    }
+    expect(service.lockIsHeld()).toBe(false);
+
+    const resultado = executarSpec({ command: 'touch', args: [alvo], mutates: false });
+    expect(resultado.status).toBe(0);
+    expect(fs.existsSync(alvo)).toBe(true);
+    dono.kill('SIGKILL');
+  });
+
+  it('registro persistido VIVO de outra instância bloqueia nova ação (não só o Map local)', async () => {
+    gravarNoCenario({
+      id: 'job-de-outra-instancia',
+      actionId: 'seal',
+      status: 'running',
+      startedAt: new Date().toISOString(),
+      lease_token: 'token-de-outra-instancia',
+      lease_expires_at: new Date(Date.now() + 60000).toISOString(),
+      logPath: path.join(dirJobs(), 'release-seal-outra.log'),
+    });
+    await expect(service.runReleaseAction({ actionId: 'verify' }))
+      .rejects.toThrow(/release_action_in_flight/);
+  });
+
+  it('registro persistido com lease VENCIDO não bloqueia (não inventa execução)', async () => {
+    gravarNoCenario({
+      id: 'job-morto',
+      actionId: 'seal',
+      status: 'running',
+      startedAt: '2026-10-01T00:00:00.000Z',
+      lease_token: 'token-morto',
+      lease_expires_at: '2026-10-01T00:01:00.000Z',
+      logPath: path.join(dirJobs(), 'release-seal-morto.log'),
+    });
+    // Sem `flock` no PATH a ação mutante é recusada por INFRAESTRUTURA — o que
+    // prova que a checagem de exclusividade vem antes da de estado e que o lease
+    // vencido não fabricou um "em execução".
+    await expect(service.runReleaseAction({ actionId: 'seal', confirm: true }))
+      .rejects.not.toThrow(/release_action_in_flight/);
+  });
+
+  it('sem flock, ação MUTANTE é recusada fail-closed (nunca roda sem a garantia)', () => {
+    // A regra é testada por DECISÃO: a detecção de `flock` é condição de ambiente
+    // (a resolução de executáveis usa o ambiente C do processo, congelado no boot),
+    // então simular ausência mudando `PATH` em runtime mentiria. A detecção real é
+    // provada por execução nos dois testes de lock acima.
+    const mutante = { command: 'bash', args: ['x.sh'], mutates: true };
+    const leitura = { command: 'npm', args: ['run', 'verify'], mutates: false };
+
+    expect(() => service.assertExclusivityAvailable({ definition: mutante, flockDisponivel: false }))
+      .toThrow(/release_action_lock_unavailable/);
+    expect(service.assertExclusivityAvailable({ definition: leitura, flockDisponivel: false }))
+      .toBe('none');
+    expect(service.assertExclusivityAvailable({ definition: mutante, flockDisponivel: true }))
+      .toBe('flock');
   });
 });

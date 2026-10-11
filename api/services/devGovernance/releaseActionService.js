@@ -20,7 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const logger = require('../../utils/logger');
 const { resolveRuntimePath } = require('../../utils/runtimePaths');
@@ -104,6 +104,106 @@ const JOB_HEARTBEAT_MS = Number(process.env.DEV_GOVERNANCE_HEARTBEAT_MS) || 3000
 
 function jobDir() {
   return resolveRuntimePath('logs', 'dev-governance');
+}
+
+// ── EXCLUSIVIDADE REAL ENTRE INSTÂNCIAS (H4) ────────────────────────────────────
+//
+// DEFEITO MEDIDO (2026-10-11): o single-flight era um `Map` em MEMÓRIA
+// (`runningJob()`), ou seja, valia só dentro do próprio processo. Com duas
+// instâncias da API (ou uma reiniciada no meio), duas requisições iniciavam a
+// MESMA ação mutante — e `seal`/`publish-tag` mexem em `dist/`, em tag de git e
+// no repositório. Exclusividade que não atravessa processos não é exclusividade.
+//
+// A exclusividade agora é do SISTEMA OPERACIONAL: `flock(2)` sobre um arquivo no
+// runtime root, mantido pelo processo do `flock` enquanto o comando roda.
+//
+//   - É atômico e vale entre processos/instâncias (não é estado em memória).
+//   - É liberado pelo kernel quando o processo morre — inclusive SIGKILL. Não
+//     existe lock órfão, então não há "limpeza manual de lock" para errar.
+//   - FENCING vem de graça: uma execução que perdeu o lock simplesmente não
+//     existe mais; não há duas execuções capazes de mutar o repositório.
+//
+// `-E <n>` faz o `flock` sair com um código PRÓPRIO quando não consegue o lock,
+// o que permite distinguir "não adquiri exclusividade" de "o comando falhou com
+// o mesmo código" (a checagem de log vazio abaixo fecha o resto da ambiguidade).
+const LOCK_BASENAME = 'exclusive-action.lock';
+const FLOCK_CONFLICT_EXIT = 75;
+
+function releaseLockPath() {
+  return path.join(jobDir(), LOCK_BASENAME);
+}
+
+/** `flock` é do util-linux; sem ele não há exclusividade entre processos. */
+function flockAvailable() {
+  try {
+    execFileSync('flock', ['--version'], { stdio: 'ignore' });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Monta o comando REAL a executar.
+ *
+ * Recebe a DEFINIÇÃO e apenas os argumentos EXTRA (ex.: a tag), compondo a lista
+ * final aqui: a versão anterior recebia a lista pronta, então passar a lista
+ * incompleta "funcionava" e silenciosamente deixava os argumentos canônicos de
+ * fora — um jeito fácil de rodar o comando errado.
+ *
+ * Com `flock`: `flock -n -E 75 <lock> <cmd> <args…>` — o lock vive enquanto o
+ * comando roda. Sem `flock`: devolve o comando cru e o chamador decide (ação
+ * mutante é RECUSADA, ação de leitura segue com o modo declarado).
+ */
+function buildExecutionSpec(definition, extraArgs = []) {
+  const args = [...(definition.args || []), ...extraArgs];
+  if (!flockAvailable()) return { command: definition.command, args, lockMode: 'none' };
+  return {
+    command: 'flock',
+    args: ['-n', '-E', String(FLOCK_CONFLICT_EXIT), releaseLockPath(), definition.command, ...args],
+    lockMode: 'flock',
+    innerCommand: definition.command,
+    innerArgs: args,
+  };
+}
+
+/**
+ * Ação pode rodar com a exclusividade disponível?
+ *
+ * PURA de propósito: a indisponibilidade de `flock` é uma condição de AMBIENTE e
+ * não dá para simular de forma confiável mudando `PATH` em runtime (a resolução
+ * de executáveis usa o ambiente C do processo, congelado no boot — medido em
+ * 2026-10-11). Com a regra isolada, ela é testada por decisão, e a detecção real
+ * é provada por execução quando `flock` existe.
+ *
+ * Fail-closed: ação MUTANTE sem exclusividade entre processos não inicia — o
+ * repo não pode ser alterado sob uma garantia que o serviço apenas anuncia.
+ */
+function assertExclusivityAvailable({ definition, flockDisponivel }) {
+  if (flockDisponivel === true) return 'flock';
+  if (definition && definition.mutates === true) {
+    throw codedError(
+      'release_action_lock_unavailable',
+      'flock indisponível: sem lock entre processos uma ação que muta o repositório não pode ser iniciada com segurança',
+      503,
+    );
+  }
+  logger.warn('[dev-governance] flock indisponível: ação de leitura roda sem exclusividade entre processos');
+  return 'none';
+}
+
+/**
+ * O lock está ocupado AGORA? Rotina de DIAGNÓSTICO (mensagem 409 e relatório) —
+ * a exclusividade que vale é a do spawn, não esta consulta.
+ */
+function lockIsHeld() {
+  if (!flockAvailable()) return null;
+  try {
+    execFileSync('flock', ['-n', '-E', String(FLOCK_CONFLICT_EXIT), releaseLockPath(), 'true'], { stdio: 'ignore' });
+    return false;
+  } catch (error) {
+    return error && error.status === FLOCK_CONFLICT_EXIT;
+  }
 }
 
 function jobRecordPath(jobId) {
@@ -248,9 +348,20 @@ function pruneJobs() {
   for (const job of ordered.slice(0, jobs.size - MAX_JOBS)) jobs.delete(job.id);
 }
 
+/**
+ * Existe ação em execução? Considera ESTE processo (Map) e as instâncias
+ * vizinhas/anteriores (registros persistidos com lease VÁLIDO).
+ *
+ * Antes olhava só o Map: com duas instâncias da API, cada uma via o mundo vazio e
+ * ambas disparavam a mesma ação mutante (H4). A resposta definitiva continua sendo
+ * o lock do SO no momento do spawn; isto aqui é a recusa ANTECIPADA com motivo.
+ */
 function runningJob() {
   for (const job of jobs.values()) {
     if (job.status === 'running') return job;
+  }
+  for (const record of readPersistedJobs()) {
+    if (record && record.status === 'running') return record;
   }
   return null;
 }
@@ -301,15 +412,27 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
     throw codedError('release_action_in_flight', `já existe uma ação em execução (${current.actionId} ${current.id})`, 409);
   }
 
-  const state = await assertPreconditions(actionId, { rootDir });
-  const args = definition.args.slice();
+  // Capacidade de exclusividade é pré-requisito de INFRA (não de estado): sem
+  // `flock` não há exclusividade ENTRE processos, e ação mutante mexe no
+  // repositório.
+  assertExclusivityAvailable({ definition, flockDisponivel: flockAvailable() });
 
+  const state = await assertPreconditions(actionId, { rootDir });
+
+  let extraArgs = [];
   if (actionId === ACTION_IDS.PUBLISH_TAG) {
     const releaseName = state.releaseName;
     if (!releaseName || !RELEASE_NAME_PATTERN.test(releaseName)) {
       throw codedError('release_name_invalid', 'nome do release indisponível ou fora do padrão esperado', 409);
     }
-    args.push(releaseName);
+    extraArgs = [releaseName];
+  }
+
+  // O lock envolve o comando COM os argumentos finais (a tag entra antes).
+  const spec = buildExecutionSpec(definition, extraArgs);
+  const args = [...(definition.args || []), ...extraArgs];
+  if (lockIsHeld() === true) {
+    throw codedError('release_action_in_flight', `o lock de exclusividade está ocupado (${releaseLockPath()}) — outra instância está executando uma ação`, 409);
   }
 
   const logDir = jobDir();
@@ -327,6 +450,8 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
     exitCode: null,
     logPath,
     releaseName: state.releaseName || null,
+    lockMode: spec.lockMode,
+    lockPath: spec.lockMode === 'flock' ? releaseLockPath() : null,
     ...newLease(),
   };
   jobs.set(job.id, job);
@@ -337,7 +462,7 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
   try {
     const fd = openLog(logPath);
     stream = fs.createWriteStream(null, { fd });
-    const child = spawn(definition.command, args, {
+    const child = spawn(spec.command, spec.args, {
       cwd: rootDir,
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: false,
@@ -372,7 +497,19 @@ async function runReleaseAction({ actionId, confirm = false, rootDir = DEFAULT_R
       stopLeaseHeartbeat(job);
       job.exitCode = typeof code === 'number' ? code : null;
       job.signal = signal || null;
-      job.status = code === 0 ? 'succeeded' : 'failed';
+      // `flock -E 75`: 75 só significa "não adquiri o lock" se o COMANDO não tiver
+      // produzido nada (senão seria um exit 75 legítimo do próprio comando).
+      const semSaidaDoComando = (() => {
+        try { return fs.statSync(logPath).size === 0; } catch (_) { return true; }
+      })();
+      if (job.lockMode === 'flock' && code === FLOCK_CONFLICT_EXIT && semSaidaDoComando) {
+        job.lockState = 'NOT_ACQUIRED';
+        job.status = 'failed';
+        job.error = `outra execução detém o lock de exclusividade (${releaseLockPath()}) — a ação não foi iniciada`;
+      } else {
+        job.lockState = job.lockMode === 'flock' ? 'ACQUIRED' : 'UNAVAILABLE';
+        job.status = code === 0 ? 'succeeded' : 'failed';
+      }
       job.finishedAt = new Date().toISOString();
       persistJob(job);
       stream.end();
@@ -431,4 +568,10 @@ module.exports = {
   projectRecordState,
   JOB_LEASE_TTL_MS,
   jobRecordPath,
+  releaseLockPath,
+  buildExecutionSpec,
+  assertExclusivityAvailable,
+  flockAvailable,
+  lockIsHeld,
+  FLOCK_CONFLICT_EXIT,
 };
