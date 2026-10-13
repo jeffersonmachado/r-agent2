@@ -543,6 +543,26 @@ phase_consolidate() {
     fail "QA_WAVES_SCHEDULED_EVIDENCE_STALE no consolidate — o TTL venceu durante o ciclo; renove o smoke agendado e retome com --from consolidate"
   fi
 
+  # GUARD: regenera as evidências de TTL curto ANTES do agregado.
+  #
+  # MEDIDO em 2026-10-13 (ciclo de ~1h30): o `consolidate` roda o agregado no FIM,
+  # mas dois validadores dependem de evidência gerada no INÍCIO do ciclo —
+  # `validate:governance-summary` reprovou com `replayIntegrity: STALE` (33 min) e
+  # `validate:security-release-gate` reprovou com `SECURITY_GATE_STALE_EVIDENCE`
+  # (exit 3: SBOM ANTERIOR ao `startedAt` do run). O ciclo sabotava a si mesmo e a
+  # saída eram DUAS retomadas manuais.
+  #
+  # Diferente do smoke contínuo (que exige renovação EXTERNA e por isso só pode
+  # falhar aqui), estas duas evidências têm produtor determinístico e local:
+  # regenerar é a ação correta. Não afrouxa nada — o script confere o frescor
+  # DEPOIS e sai != 0 se continuar fora de validade.
+  node "$ROOT/scripts/governance/refresh-short-ttl-evidence.js" > "$LOG_DIR/short-ttl.log" 2>&1
+  if [ $? -ne 0 ]; then
+    tail -6 "$LOG_DIR/short-ttl.log" | sed 's/^/    /'
+    fail "evidência de TTL curto fora de validade no início do consolidate — agregado abortaria depois de ~25 min" "$LOG_DIR/short-ttl.log" consolidate
+  fi
+  ok "evidências de TTL curto regeneradas (replay-governance + SBOM)"
+
   local alog="$LOG_DIR/aggregate.log"
   timeout 3000 npm run validate:governance-enforcement > "$alog" 2>&1
   local rc=$?
