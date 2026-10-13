@@ -226,3 +226,64 @@ describe('motor puro — o estado acompanha a evidência real', () => {
     }
   });
 });
+
+/**
+ * D7. A ÚLTIMA linha do gate tem de ser o VEREDITO, nunca a avaliação de risco.
+ *
+ * Defeito medido em 2026-10-13: o gate imprimia `evaluation.summary` (que
+ * descreve APENAS risco: "GO: 5 verificação(ões) satisfeita(s), 94 aviso(s)")
+ * como última linha de uma execução com `state=EVIDENCE_UNAVAILABLE` e **exit
+ * 3**. Quem lê o log (operador ou agente) conclui "GO" e o pipeline falha — a
+ * pior forma de falso verde, porque a mensagem contradiz o próprio exit code.
+ *
+ * A prova é feita EXECUTANDO o gate de verdade: qualquer que seja o estado do
+ * ambiente, o veredito impresso tem de casar com o exit code.
+ */
+describe('D7 — veredito impresso casa com o exit code', () => {
+  jest.setTimeout(600000);
+
+  const GATE = path.join(ROOT, 'scripts', 'governance', 'validate-security-release-gate.js');
+
+  /** Roda o gate real e devolve { exit, ultimaLinhaVeredito, linhas }. */
+  function rodarGate() {
+    const { spawnSync } = require('child_process');
+    const r = spawnSync(process.execPath, [GATE], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout: 540000,
+      env: { ...process.env },
+    });
+    const saida = `${r.stdout || ''}\n${r.stderr || ''}`;
+    const linhas = saida.split('\n').filter((l) => l.startsWith('[security-release-gate]'));
+    const veredito = [...linhas].reverse().find((l) => l.includes('VEREDITO:'));
+    return { exit: r.status, linhas, veredito: veredito || null };
+  }
+
+  it('o resumo do engine vem ROTULADO como avaliação de risco (não como veredito)', () => {
+    const codigo = fs.readFileSync(GATE, 'utf8');
+    expect(codigo).toContain('avaliação de risco (engine):');
+    const posRisco = codigo.indexOf('avaliação de risco (engine):');
+    const posVeredito = codigo.indexOf('VEREDITO:');
+    // O veredito é impresso DEPOIS do resumo de risco (é a última palavra).
+    expect(posVeredito).toBeGreaterThan(posRisco);
+    // E a summary do engine não é mais impressa como linha crua do gate.
+    expect(codigo).not.toMatch(/console\.log\(`\[security-release-gate\] \$\{evaluation\.summary\}`\)/);
+  });
+
+  it('EXECUÇÃO REAL: a última linha é o veredito e casa com o exit code', () => {
+    const { exit, veredito } = rodarGate();
+    expect(veredito).not.toBeNull();
+    const esperadoPorExit = {
+      0: 'GO',
+      1: 'NO_GO',
+      2: 'INCOMPLETE',
+      3: 'EVIDENCE_UNAVAILABLE',
+    };
+    const esperado = esperadoPorExit[exit];
+    expect(esperado).toBeDefined();
+    expect(veredito).toContain(`VEREDITO: ${esperado}`);
+    expect(veredito).toContain(`exit ${exit}`);
+    // O que NUNCA pode acontecer: exit != 0 com a última palavra sendo GO.
+    if (exit !== 0) expect(veredito).not.toMatch(/VEREDITO: GO\b/);
+  });
+});

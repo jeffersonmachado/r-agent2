@@ -327,7 +327,18 @@ async function main() {
   for (const item of evaluation.blocking) console.log(`  ✗ ${item.code}: ${item.message}`);
   for (const item of evaluation.warnings) console.log(`  ! ${item.code}: ${item.message}`);
   if (collectError) console.log(`  ! coleta falhou: ${collectError}`);
-  console.log(`[security-release-gate] ${evaluation.summary}`);
+  // A `summary` do engine descreve apenas a avaliação de RISCO (bloqueios de
+  // risco x avisos). Ela NÃO é o veredito: a autoridade é o `state`, que também
+  // considera evidência ausente/stale/parcial. Imprimi-la sem rótulo como última
+  // linha do gate colocava "GO: 5 verificação(ões) satisfeita(s)" no fim de uma
+  // execução que saía com exit 3 — o operador (e o agente) liam GO e o pipeline
+  // falhava (defeito medido em 2026-10-13, state=EVIDENCE_UNAVAILABLE).
+  console.log(`[security-release-gate] avaliação de risco (engine): ${evaluation.summary}`);
+  // Veredito SEMPRE por último e sempre coerente com o exit code.
+  const veredito = finalState === 'GO'
+    ? 'GO (exit 0)'
+    : `${finalState} (exit ${exitCode})${stateReasons.size > 0 ? ` — motivos: ${[...stateReasons].join(', ')}` : ''}`;
+  console.log(`[security-release-gate] VEREDITO: ${veredito}`);
 
   if (finalState === 'GO') return 0;
   if (informative) {
