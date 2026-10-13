@@ -85,9 +85,18 @@ function contractError(code, message, statusCode = 400) {
  * Só o que produz patch exige escopo: análise/revisão/auditoria não escrevem
  * arquivo, e exigir escopo delas seria burocracia sem efeito.
  */
-function assertTaskContract({ taskType, allowedPaths } = {}) {
+function assertTaskContract({ taskType, allowedPaths, scopeDeferred = false } = {}) {
   const produzPatch = PATCH_PRODUCING_TASK_TYPES.has(String(taskType || ''));
   if (!produzPatch) return;
+  // `scopeDeferred`: o escopo desta task é resolvido DEPOIS, no planejamento da
+  // missão (spec nasce com `allowedPaths: []` e é enriquecido na execução).
+  // Medido em 2026-10-13: sem esta saída explícita, a checagem derrubava o fluxo
+  // canônico de missão (`compileMission` → `approve` → `startExecution`) em 11
+  // testes autoritativos de lease/review — o registro era recusado ANTES de a
+  // missão conseguir planejar o escopo. A flag é DECLARADA pelo chamador (nunca
+  // inferida): criação direta via API/UI continua fail-closed, e a garantia de
+  // escopo no patch segue no ponto onde ela é efetiva (reviewer/contextBuilder).
+  if (scopeDeferred === true) return;
   const escopo = Array.isArray(allowedPaths) ? allowedPaths.filter((p) => typeof p === 'string' && p.trim() !== '') : [];
   if (escopo.length === 0) {
     throw contractError(
@@ -103,7 +112,7 @@ function assertTaskContract({ taskType, allowedPaths } = {}) {
  * deterministicamente e persiste. Idempotente por `idempotencyKey`: uma segunda chamada com a
  * mesma chave retorna a task já existente em vez de duplicar.
  */
-async function createTask(input = {}, { createdBy = null, idempotencyKey = null } = {}) {
+async function createTask(input = {}, { createdBy = null, idempotencyKey = null, scopeDeferred = false } = {}) {
   const Model = getEngineeringTaskModel();
   if (!Model || typeof Model.create !== 'function') throw persistenceRequiredError('EngineeringTask model indisponível');
 
@@ -117,6 +126,7 @@ async function createTask(input = {}, { createdBy = null, idempotencyKey = null 
   assertTaskContract({
     taskType: input.taskType || classification.taskType,
     allowedPaths: input.allowedPaths,
+    scopeDeferred: scopeDeferred === true,
   });
   const maxIterations = resolveMaxIterations(classification.taskType, input.maxIterations);
 

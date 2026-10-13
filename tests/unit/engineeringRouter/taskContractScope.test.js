@@ -46,6 +46,45 @@ describe('assertTaskContract — task insatisfazível não pode ser criada', () 
     })).not.toThrow();
   });
 
+  /**
+   * D8. O fluxo CANÔNICO de missão nasce SEM escopo.
+   *
+   * Medido em 2026-10-13 (suíte autoritativa de release, 86/89): o compilador
+   * cria o spec com `allowedPaths: []` e o orquestrador repassa isso à task.
+   * Com a checagem incondicional, `compileMission → approve → startExecution`
+   * era recusado ANTES de a missão planejar o escopo — 11 testes de lease,
+   * fencing e review enforcement caíram. A saída é DECLARADA pelo chamador
+   * (`scopeDeferred: true`), nunca inferida: criação direta via API/UI continua
+   * fail-closed.
+   */
+  it('escopo DIFERIDO explícito é aceito (fluxo de missão em descoberta)', () => {
+    for (const taskType of PATCH_PRODUCING_TASK_TYPES) {
+      expect(() => assertTaskContract({ taskType, allowedPaths: [], scopeDeferred: true }))
+        .not.toThrow();
+      expect(() => assertTaskContract({ taskType, allowedPaths: undefined, scopeDeferred: true }))
+        .not.toThrow();
+    }
+  });
+
+  it('a flag é ESTRITA: só `true` libera (string/truthy NÃO libera)', () => {
+    for (const valor of ['true', 1, {}, [], 'sim']) {
+      expect(() => assertTaskContract({ taskType: 'CODE_GENERATION', allowedPaths: [], scopeDeferred: valor }))
+        .toThrow(/TASK_CONTRACT_INVALID/);
+    }
+  });
+
+  it('os DOIS chamadores de missão declaram o escopo diferido (não há porta dos fundos)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const raiz = path.resolve(__dirname, '..', '..', '..');
+    const orquestrador = fs.readFileSync(
+      path.join(raiz, 'api', 'services', 'engineeringMission', 'missionOrchestratorService.js'), 'utf8');
+    const bugLoop = fs.readFileSync(
+      path.join(raiz, 'api', 'services', 'engineeringMission', 'bugLoopCoordinatorService.js'), 'utf8');
+    expect(orquestrador).toContain('scopeDeferred: true');
+    expect(bugLoop).toContain('scopeDeferred: true');
+  });
+
   it('task de ANÁLISE não exige escopo (não escreve arquivo)', () => {
     for (const taskType of ['REPOSITORY_AUDIT', 'CODE_REVIEW', 'SECURITY_REVIEW', 'GOVERNANCE', 'RELEASE']) {
       expect(PATCH_PRODUCING_TASK_TYPES.has(taskType)).toBe(false);

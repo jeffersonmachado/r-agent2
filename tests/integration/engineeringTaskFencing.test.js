@@ -27,7 +27,16 @@ function skipIfNoDatabase() {
 }
 
 async function newTask() {
-  const task = await taskService.createTask({ title: `Task de fencing ${Date.now()}`, objective: 'Provar fencing de EngineeringTask' }, { createdBy: 'jest-task-fencing' });
+  // Esta suíte exercita LEASE/FENCING pelo caminho DIRETO de criação (não é task de
+  // missão, cujo escopo é diferido). Como o objetivo classifica como produção de
+  // patch, o contrato exige escopo declarado (Fase 9) — sem ele a criação é
+  // recusada com TASK_CONTRACT_INVALID e os 5 casos de fencing nem chegam a rodar
+  // (medido em 2026-10-13 na suíte autoritativa de release).
+  const task = await taskService.createTask({
+    title: `Task de fencing ${Date.now()}`,
+    objective: 'Provar fencing de EngineeringTask',
+    allowedPaths: ['api/services/engineeringRouter/'],
+  }, { createdBy: 'jest-task-fencing' });
   created.push(task.id);
   return task;
 }

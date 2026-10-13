@@ -166,7 +166,11 @@ async function startExecutionHeld(missionId, { actor, tenantId, guard }) {
       sourceRef: missionSource.integrationBranch,
       sourceMissionFence: missionSource.fence,
     }),
-    { createdBy: actor, idempotencyKey: `mission:${missionId}:v${spec.version}` },
+    // `scopeDeferred`: o spec da missão NASCE sem escopo (`allowedPaths: []`) e o
+    // conjunto de arquivos é resolvido no planejamento/enriquecimento. Sem esta
+    // declaração, o contrato de escopo recusaria a criação da task e a missão
+    // nunca começaria (medido em 2026-10-13 na suíte autoritativa de release).
+    { createdBy: actor, idempotencyKey: `mission:${missionId}:v${spec.version}`, scopeDeferred: true },
   );
 
   // VÍNCULO VERIFICÁVEL (§22): a task passa a declarar DE QUAL versão da MissionSpec ela veio.

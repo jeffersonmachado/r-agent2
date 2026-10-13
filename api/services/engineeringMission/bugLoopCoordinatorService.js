@@ -513,6 +513,11 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
         const created = await engineeringTaskService.createTask(contract, {
           createdBy: actor,
           idempotencyKey: `mission:${missionId}:postbug:${findingId || 'na'}`,
+          // Mesma natureza da task inicial da missão: o spec nasce com
+          // `allowedPaths: []` e o escopo é resolvido no planejamento. Sem a
+          // declaração, a retomada pós-bug não conseguiria criar a task
+          // substituta (regressão medida em 2026-10-13).
+          scopeDeferred: true,
         });
         replacementTaskId = created.id;
         // UMA TASK CRIADA ANTES DA INTEGRAÇÃO PRECISA SER REANCORADA. A idempotência da chave acima

@@ -90,6 +90,20 @@ async function fabricateExecutedTaskArtifacts(taskId, { patchDiff, acceptanceCri
     exit_code: 0,
     stdout_excerpt: 'DR-ENGINEERING_MEMORY_REUSE ok',
   });
+  // EVIDÊNCIA DE INTEGRAÇÃO DISTINTA (H3, 2026-10-11): o gate `integration` NÃO
+  // aceita teste unitário como substituto — sem um comando classificado como
+  // integração o gate fica não-PASS (`INTEGRATION_EVIDENCE_ABSENT`) e o Meta
+  // Reviewer marca MR-06 (GATES_EXECUTED) como BLOCKER. Medido em 2026-10-13: o
+  // fixture só criava o run unitário, então a revisão da "missão limpa" saía FAIL
+  // em vez de INCOMPLETE. O Router real roda as duas categorias; o fixture passa a
+  // emular isso em vez de afirmar um GREEN sem evidência de integração.
+  await m.TestRun.create({
+    attempt_id: attempt.id,
+    command: 'npx jest tests/integration/engineeringMissionReviewEnforcement.test.js --no-coverage',
+    status: 'PASS',
+    exit_code: 0,
+    stdout_excerpt: 'integration ok',
+  });
   await m.ReviewRow.create({
     attempt_id: attempt.id,
     reviewer_provider: 'mistral',
