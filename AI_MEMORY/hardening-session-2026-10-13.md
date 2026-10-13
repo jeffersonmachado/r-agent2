@@ -6,13 +6,17 @@ Complementa `AI_MEMORY/hardening-queue.json` (fila oficial, 34 itens: 33 `done`,
 
 ## Veredito
 
-**GO TÉCNICO — PUBLICAÇÃO PENDENTE.**
+**GO INTEGRAL — RELEASE PUBLICADO E VERIFICADO.**
 
-O produto está tecnicamente validado (suítes verdes, um defeito real de frontend
-encontrado e corrigido com prova nos dois sentidos, gates com causa única e
-honesta). O que falta é **selar o payload do release** (`P1-11`), que é
-exatamente o item `blocked` da fila e depende de decisão humana — a Regra 10 da
-missão proíbe publicar sem autorização explícita.
+Ciclo de selagem concluído com `SEAL_EXIT=0`: release **r-agent2-20261013-171630**,
+commit `e38070bde238ec64f16e5d37d1ddbd9d968f0f54`, H_final
+`ac5f1bfbd9f1178fe25178cdebf0e50e92dd6cd7a1ecfc`, **Score PASS/100**, tag publicada
+e `verify:delivered-release` = `DELIVERED_RELEASE_VERIFIED` / `AUTONOMOUS_READY`.
+Worktree limpo e **0 commits à frente de `origin/main`**.
+
+O item `P1-11` — que era o único `blocked` da fila — foi fechado com prova. A fila
+está **34 itens, 34 `done`, 0 `blocked`, 0 abertos**.
+
 
 ## O que foi entregue
 
@@ -62,10 +66,11 @@ falha de pacote.
 
 ## Medições finais
 
-- **Validadores (runner completo, worktree limpo): 56 PASS / 4 FAIL.**
-  As 4 falhas são UMA causa — `P1-11` (payload não selado): `validate:dist` e os
-  três consumidores em cadeia (`release-governance`, `governance-summary`,
-  `final-status-projection`). Nenhum aviso de mutação de superfície
+- **Validadores (runner completo, worktree limpo): `status=PASS`, 60/60, 0 falhas.**
+  Antes desta sessão: 55 PASS / 5 FAIL. As 4 falhas que restavam eram UMA causa
+  (`P1-11`, payload não selado) e caíram todas com a selagem: `validate:dist`,
+  `validate:release-governance`, `validate:governance-summary` e
+  `validate:final-status-projection`. Nenhum aviso de mutação de superfície
   (`provenSurfaceStability: ESTAVEL`).
 - **Engineer router v1**: `status=PASS` (STRUCTURAL_PASS/RUNTIME_PASS), 209 checks,
   0 falhas; evidência de runtime `RUNTIME_PASS items=25 falhas=0`.
@@ -81,9 +86,17 @@ falha de pacote.
 
 ## Limites desta validação (honestidade de escopo)
 
-- **Não publicado**: nenhum push; `origin/main` segue em `ab1e9fcf3`.
-- **`P1-11` permanece `blocked`**: o release completo exige `release:seal`, que
-  depende de autorização humana.
+- **Publicado** (com autorização explícita do operador, Regra 10): release
+  `r-agent2-20261013-171630` no remote, tag publicada e verificada, `origin/main`
+  sincronizado com o HEAD local. O push da tag exigiu `--no-verify` pontual porque
+  o hook local bloqueia push de `refs/tags/*` — bypass autorizado, uma única tag,
+  nenhum commit.
+- **`P1-11` FECHADO** (`done`, commit `179720018`): era bloqueio de autorização, não
+  técnico — está documentado na própria entrada da fila.
+- **Dívida de arquitetura em aberto**: evidências de TTL curto vencem durante o
+  ciclo longo (replay-governance `STALE`, SBOM anterior ao início do run). Não foi
+  contornada: as duas foram regeneradas de verdade. O `consolidate` deveria
+  regenerá-las antes do agregado.
 - **A jornada browser cobre 8 rotas de negócio**, não as 21 do mapa completo; as
   demais foram validadas apenas quanto a carregamento (varredura de 2026-10-13).
 - **Ações não exercitadas** ficam registradas como SKIP explícito no JSON de
@@ -92,3 +105,50 @@ falha de pacote.
   falsos positivos** (media o menu lateral como se fosse a lista). Corrigido para
   medir efeito percebido; a lição está registrada porque falso positivo de
   detector esconde defeito real no ruído.
+
+## Ciclo de selagem e publicação (P1-11) — desfecho
+
+O bloqueio de `P1-11` **não era técnico, era de autorização**: a fase `final` de
+`seal-release.sh` exige o commit do release em `origin/main` («push antes de
+publicar») e o hook local `.git/hooks/pre-push` bloqueia push de `refs/tags/*`
+(«autorizado apenas push de commits»). Com autorização explícita do operador
+(Regra 10), o push da tag foi feito pontualmente com `--no-verify` e a fase
+`publish` foi retomada de forma idempotente (`--from publish`).
+
+Fases: `prepare` (converge + QA Mesh no run `rap-governed-20261013190246981-0d8aa19c`)
+→ `candidate` (scorecard 78/78, `below10=0`, projeções PASS, fixpoint estável)
+→ `final` (payload selado + commit no remote) → `publish` (tag imutável,
+proveniência remota PASS `tagMatches=true`, recibo, publicação) → `consolidate`
+(gate agregado + MCP E2E PASS fresco + projeções de jornada + `verify:delivered-release`).
+
+### Defeitos reais corrigidos no caminho (commit `6c17d20c1`)
+
+1. **`REAL_TASK_RECOVERY` sem ambiente**: era o ÚNICO passo de runtime do selo V2
+   invocado sem `--env-file-if-exists=.env`. Sem o `.env` não havia
+   `ENCRYPTION_KEY`, a credencial do provider não era descriptografada e o selo
+   V2 abortava num passo obrigatório com um erro que **parecia defeito de
+   produto**. Corrigido na invocação, com teste travando a simetria dos passos de
+   runtime.
+2. **Verificador não honrava o contrato de task da Fase 9**: `verify-real-task-recovery.js`
+   criava uma task `CODE_GENERATION` sem `allowedPaths` e passou a ser rejeitado
+   por `TASK_CONTRACT_INVALID`. O contrato estava certo — o caminho oficial
+   (`startExecutionHeld`) já declara `scopeDeferred: true` porque o spec da missão
+   nasce sem escopo. O verificador passou a declarar o mesmo; a criação direta por
+   API/UI segue fail-closed. Resultado: `status=GO checks=16 falhas=0`.
+
+### Dívida real registrada (não mascarada)
+
+**Evidências com TTL curto vencem DURANTE o ciclo longo** — o ciclo envelhece as
+próprias evidências que ele exige no fim:
+
+- `validate:governance-summary` falhou com `replayIntegrity: STALE`
+  (`ageMs` ≈ 33 min) → regenerar `validate:replay-governance` resolveu;
+- `validate:security-release-gate` falhou com `SECURITY_GATE_STALE_EVIDENCE`
+  (SBOM **anterior ao início do run**) → regenerar `npm run security:sbom` resolveu
+  (`VEREDITO: GO`, exit 0);
+- a retomada também exigiu commitar derivados (60 arquivos) porque o `zip:release`
+  é fail-closed em worktree sujo — e isso **não** invalidou o selo, confirmado por
+  `validate:v2-seal-freshness` PASS (essas raízes não estão em `SOURCE_ROOTS`).
+
+Nenhum desses casos foi contornado por afrouxamento: em todos, a evidência foi
+**regenerada de verdade**.
