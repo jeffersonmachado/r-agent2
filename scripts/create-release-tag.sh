@@ -13,7 +13,10 @@
 #   - Push NUNCA usa --force (non-fast-forward é recusado pelo próprio git).
 #   - Pós-push: `git ls-remote` deve confirmar target == commit → senão exit 1.
 #
-# Exit 0 = tag criada/pushada (ou já existente no mesmo commit); Exit 1 = erro.
+# Exit 0 = tag criada/pushada (ou já existente no mesmo commit).
+# Exit 1 = erro real (conflito de tag, commit ausente, falha de push).
+# Exit 3 = BLOQUEIO DE POLITICA LOCAL no push da tag (hook pre-push) — ação humana
+#          necessária; ver a mensagem acionável na saída.
 set -euo pipefail
 
 TAG="${1:-}"
@@ -90,7 +93,35 @@ if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>&1; then
   echo "[release-tag] tag anotada $TAG criada em $COMMIT"
 fi
 
-git push "$REMOTE" "refs/tags/$TAG"
+PUSH_LOG="$(mktemp)"
+PUSH_RC=0
+if ! git push "$REMOTE" "refs/tags/$TAG" >"$PUSH_LOG" 2>&1; then
+  PUSH_RC=$?
+  cat "$PUSH_LOG" >&2
+  # BLOQUEIO DE POLÍTICA ≠ ERRO. MEDIDO (2026-10-13): neste repositório existe um
+  # hook local `.git/hooks/pre-push` que recusa `refs/tags/*`
+  # ("[guard-local] push de TAG bloqueado … autorizado apenas push de commits"),
+  # coerente com o AGENTS.md (a tag é criada FORA do pipeline; o push dela é ação
+  # HUMANA). Sem esta distinção o ciclo de release abortava com "criação da tag
+  # falhou" — uma mensagem que manda o operador procurar defeito de rede ou de
+  # permissão quando o que falta é uma decisão dele.
+  if grep -qE 'guard-local|push de TAG bloqueado|pre-push|refs/tags' "$PUSH_LOG"; then
+    echo "" >&2
+    echo "[release-tag] BLOQUEIO DE POLITICA LOCAL — NAO e erro de rede nem de permissao." >&2
+    echo "[release-tag] O hook .git/hooks/pre-push deste clone recusa push de refs/tags/*." >&2
+    echo "[release-tag] A tag '$TAG' JA EXISTE localmente apontando para $COMMIT." >&2
+    echo "[release-tag] Publicacao da tag e ACAO HUMANA — com autorizacao explicita, rode:" >&2
+    echo "[release-tag]   git push --no-verify $REMOTE refs/tags/$TAG" >&2
+    echo "[release-tag] e retome o ciclo com:" >&2
+    echo "[release-tag]   bash scripts/governance/seal-release.sh --from publish" >&2
+    rm -f "$PUSH_LOG"
+    exit 3
+  fi
+  rm -f "$PUSH_LOG"
+  echo "[release-tag] ERRO: push da tag falhou (exit $PUSH_RC) — ver a saida do git acima" >&2
+  exit 1
+fi
+rm -f "$PUSH_LOG"
 echo "[release-tag] push $REMOTE refs/tags/$TAG concluído"
 
 # ── Verificação pós-push ─────────────────────────────────────────────────────
