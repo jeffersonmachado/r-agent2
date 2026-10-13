@@ -231,4 +231,21 @@ Regra de leitura de grid nesta plataforma: **contar `tbody tr` da página inteir
 soma TODAS as tabelas** (medido: 157 linhas contra 4 reais). Para medir o grid de
 achados, contar as linhas da tabela do componente, nunca o documento.
 
+### Varredura de áreas (21 rotas, mesma sessão)
+
+Lote 1 — operação: `/workspace` (Painel), `/inbox` (Caixa de Entrada),
+`/support` (Central de Atendimento), `/crm` (Painel CRM com KPIs reais: Contas 0,
+Contatos 4, Leads 4, Oportunidades 0), `/cases` (Chamados), `/knowledge-base`
+(empty-state explícito "Nenhum artigo encontrado"), `/supervisor`, `/editor`
+(Editor de Fluxos montado: Validar/Simular/Testar/Fit/Duplicar — a medição
+precoce de 477 chars era espera de montagem, não tela quebrada), `/config`.
+
+Lote 2 — engenharia/QA/RPA: `/qa`, `/qa/stability`, `/qa-mesh`, `/dev`,
+`/dev/engineering`, `/dev/engineering/tasks`, `missions`, `findings`, `models`,
+`/dev/engineering/release-closure`, `/dev/release`, `/rpa-replays`.
+
+Resultado: **21/21 rotas carregam com 0 erros de console e 0 falhas de rede**
+(4xx/5xx contra a API); nenhuma permanece em "Carregando...". Nenhum defeito novo
+encontrado nesta varredura.
+
 
