@@ -112,7 +112,14 @@ async function main() {
     check('MISSION_CREATED', Boolean(missionId), `missionId=${missionId}`);
 
     // 2. Task REAL criada e VINCULADA — o vínculo é o que permite o recovery saber o que retomar.
-    const task = await taskService.createTask({ title: `Task real de recovery ${Date.now()}`, objective: 'Executar fase material e sobreviver ao crash do worker' }, { createdBy: 'verify-real-task-recovery' });
+    //
+    // `scopeDeferred: true` — MESMO motivo do caminho oficial (`startExecutionHeld` em
+    // `missionOrchestratorService`): o spec da missão NASCE sem escopo e o escopo é definido na
+    // EXECUÇÃO. Sem esta flag o contrato de task (Fase 9) rejeita com `TASK_CONTRACT_INVALID`,
+    // porque uma task `CODE_GENERATION` que produz patch sem `allowedPaths` nasceria
+    // insatisfazível — comportamento CORRETO do contrato, e que este verificador precisa honrar
+    // como o produto honra. A criação DIRETA por API/UI continua fail-closed (não passa a flag).
+    const task = await taskService.createTask({ title: `Task real de recovery ${Date.now()}`, objective: 'Executar fase material e sobreviver ao crash do worker' }, { createdBy: 'verify-real-task-recovery', scopeDeferred: true });
     taskId = task.id;
     await missionStore.linkTask({ missionId, taskId });
     const linked = await missionStore.getMission(missionId);

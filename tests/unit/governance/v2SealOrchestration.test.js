@@ -66,6 +66,45 @@ describe('seal V2 — orquestração', () => {
       const step = STEPS.find((s) => s.id === 'REAL_TASK_RECOVERY');
       expect(step.command).toContain('verify-real-task-recovery');
     });
+
+    it('o passo de recuperação REAL de task carrega o .env (senão falha por configuração, não por produto)', () => {
+      // DEFEITO MEDIDO (2026-10-13): `REAL_TASK_RECOVERY` era o ÚNICO passo de runtime invocado
+      // sem `--env-file-if-exists=.env`. Sem o `.env` o processo não tem `ENCRYPTION_KEY`, não
+      // descriptografa a credencial do provider e o selo V2 ABORTA num passo obrigatório com
+      // `Erro ao descriptografar: ENCRYPTION_KEY não configurada` — diagnóstico que aponta para o
+      // produto quando o problema é a invocação. Os irmãos (V1_RUNTIME_EVIDENCE,
+      // TIMEOUT_ARCHITECTURE_E2E) já carregavam o `.env`.
+      const step = STEPS.find((s) => s.id === 'REAL_TASK_RECOVERY');
+      expect(step.command).toContain('--env-file-if-exists=.env');
+      // E a simetria que fecha o defeito de verdade: todo passo de runtime que exercita
+      // infraestrutura real precisa do mesmo ambiente.
+      for (const id of ['V1_RUNTIME_EVIDENCE', 'TIMEOUT_ARCHITECTURE_E2E', 'REAL_TASK_RECOVERY']) {
+        const s = STEPS.find((x) => x.id === id);
+        expect(s.command).toContain('--env-file-if-exists=.env');
+      }
+    });
+
+    it('o verificador de recuperação REAL de task declara escopo diferido (contrato da Fase 9)', () => {
+      // DEFEITO MEDIDO (2026-10-13): depois do contrato de task da Fase 9, o verificador passou a
+      // reprovar com `TASK_CONTRACT_INVALID: task do tipo CODE_GENERATION produz patch e exige
+      // 'allowedPaths' declarado`. O contrato está CERTO (uma task que produz patch sem escopo
+      // nasceria insatisfazível) e o caminho OFICIAL já declara `scopeDeferred: true`
+      // (`startExecutionHeld`), porque o spec da missão nasce sem escopo. O verificador — que
+      // simula exatamente esse fluxo — precisa declarar o mesmo.
+      const fs = require('fs');
+      const path = require('path');
+      const codigo = fs.readFileSync(
+        path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'verify-real-task-recovery.js'),
+        'utf8',
+      );
+      expect(codigo).toContain('scopeDeferred: true');
+      // E a outra ponta: a criação DIRETA segue fail-closed (o default continua false).
+      const servico = fs.readFileSync(
+        path.join(__dirname, '..', '..', '..', 'api', 'services', 'engineeringRouter', 'engineeringTaskService.js'),
+        'utf8',
+      );
+      expect(servico).toMatch(/scopeDeferred = false/);
+    });
   });
 
   describe('detecção de violação de ordem (não-vacuidade)', () => {

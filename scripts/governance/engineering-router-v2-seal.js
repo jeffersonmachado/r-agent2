@@ -129,7 +129,12 @@ const STEPS = Object.freeze([
   // justamente o defeito: um requisito obrigatório que o pipeline não enxerga não governa nada.
   { id: 'REQUIRED_TESTS_V2', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/validate-engineering-router-v2-required-tests.js', detail: `os ${REQUIRED_TESTS_TOTAL} testes obrigatórios provados individualmente (IDs do manifesto versionado)`, produces: ['reports/engineering-router-v2-required-tests-report.json'], dependsOn: ['SUITE_EXECUTION'] },
   { id: 'MISSION_CRASH_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/verify-mission-crash-recovery.js', detail: 'crash real do worker (SIGKILL) retomado por varredura automática', produces: ['reports/mission-crash-recovery-report.json'] },
-  { id: 'REAL_TASK_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/verify-real-task-recovery.js', detail: 'crash real no MEIO da execução da TASK, retomada sem comando humano', produces: ['reports/real-task-recovery-report.json'] },
+  // `--env-file-if-exists=.env`: sem ele o processo NÃO tem `ENCRYPTION_KEY`, não descriptografa a
+  // credencial do provider e falha por CONFIGURAÇÃO, não por produto — medido em 2026-10-13:
+  // `[FAIL] REAL_TASK_RECOVERY` com `Erro ao descriptografar: ENCRYPTION_KEY não configurada`.
+  // Os passos irmãos de runtime (V1_RUNTIME_EVIDENCE, TIMEOUT_ARCHITECTURE_E2E) já carregavam o
+  // `.env`; este era o único que não carregava, e por isso o selo V2 abortava num passo obrigatório.
+  { id: 'REAL_TASK_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node --env-file-if-exists=.env scripts/governance/verify-real-task-recovery.js', detail: 'crash real no MEIO da execução da TASK, retomada sem comando humano', produces: ['reports/real-task-recovery-report.json'] },
   // TIMEOUT_ARCHITECTURE entra no PIPELINE do selo (missão 2026-09-28). Antes, a arquitetura de
   // timeouts vivia em um script lateral de governança: o selo podia ser GO sem que lease,
   // heartbeat, fence, deadline e detecção de ausência de progresso estivessem provados no runtime.
