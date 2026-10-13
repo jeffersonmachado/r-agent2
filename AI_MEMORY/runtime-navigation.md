@@ -207,4 +207,28 @@ Gap conhecido: a lista de achados é paginada pelo backend; o filtro "Apenas
 pendências" de `/dev/security-intel` opera sobre os achados CARREGADOS e a tela
 declara isso em vez de sugerir cobertura total.
 
+## Validação de navegação 2026-10-13 (jornada real, browser)
+
+Login real: `/login` → modal "Selecione o Tenant" → tenant `system` (System /
+SYSTEM / enterprise) → **Acessar** → `/workspace` (título "Painel").
+Super Admin `systemadmin` enxerga a área **Dev** com a navegação secundária
+completa (Qualidade 3, Dev 1, Engineering 9).
+
+| Rota | Medição |
+|---|---|
+| `/dev/security-intel` | 39 grupos (`finding-group-summary-*`) para 130 achados; 28 pacotes com mais de 1 advisory; **0 erros de console** |
+| `/dev/security-intel` + "Apenas pendências" | **continua AGRUPADO**: 4 grupos, resumo "4 pacotes exibidos — 4 achados no total" e explicação do critério (4 sem correção publicada, 1 bloqueante, 3 dev-only) |
+| grupo expandido (11 advisories) | resumo representa TODOS os membros: `11 advisory(s) · 11 de runtime · 10 isento(s)`; isenção é POR ADVISORY |
+| `/dev/pendencies` | contadores 1 / 1 / 0 / 0 / 22 (exigem ação, bloqueados, aguardando, bloqueios, concluídos); 1 linha (P1-11); **0 erros de console** |
+
+Gap registrado (honesto, não mascarado): `/dev/pendencies` mostra
+**"Fonte indisponível — relatório `reports/delivered-release-verification-report.json`
+ausente ou ilegível"** porque não existe pacote entregue para o HEAD atual. Mesma
+causa raiz do `package_validation_not_ok` do gate de release; a tela declara a
+lista como possivelmente incompleta em vez de sugerir cobertura total.
+
+Regra de leitura de grid nesta plataforma: **contar `tbody tr` da página inteira
+soma TODAS as tabelas** (medido: 157 linhas contra 4 reais). Para medir o grid de
+achados, contar as linhas da tabela do componente, nunca o documento.
+
 
