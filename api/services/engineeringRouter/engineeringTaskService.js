@@ -47,6 +47,58 @@ function persistenceRequiredError(detail) {
 }
 
 /**
+ * Tipos de task que PRODUZEM patch (escrevem em arquivo).
+ *
+ * DEFEITO MEDIDO (2026-10-11, exercitando a jornada real pela UI): uma task de
+ * CODE/BUG criada sem `allowedPaths` era ACEITA, executava, chamava o provider,
+ * gerava um patch e o validador o rejeitava com `NO_PATCH_SCOPE` (ausência total de
+ * escopo declarado é reject explícito, ER-V1-FINAL-003). Com `max_iterations: 1` a
+ * task esgotava na primeira tentativa e terminava RED com a mensagem
+ * `ENGINEERING_TASK_EXHAUSTED: Esgotadas 1 tentativas` — que descreve o SINTOMA
+ * (tentativas esgotadas) e não a CAUSA (contrato insatisfazível por construção).
+ *
+ * Uma task em que NENHUM patch pode ser aceito não deve ser criada: recusar no
+ * contrato evita gastar tentativa, evita o provider desnecessário e devolve ao
+ * operador a informação correta.
+ */
+const PATCH_PRODUCING_TASK_TYPES = Object.freeze(new Set([
+  'CODE_GENERATION',
+  'BUG_FIX',
+  'COMPLEX_BUG_FIX',
+  'REFACTOR',
+  'TEST_GENERATION',
+  'DATABASE_CHANGE',
+  'FRONTEND',
+  'DOCKER_INFRA',
+]));
+
+function contractError(code, message, statusCode = 400) {
+  const erro = new Error(`${code}: ${message}`);
+  erro.code = code;
+  erro.statusCode = statusCode;
+  return erro;
+}
+
+/**
+ * O contrato desta task pode ser satisfeito? (PURA — testável sem banco.)
+ *
+ * Só o que produz patch exige escopo: análise/revisão/auditoria não escrevem
+ * arquivo, e exigir escopo delas seria burocracia sem efeito.
+ */
+function assertTaskContract({ taskType, allowedPaths } = {}) {
+  const produzPatch = PATCH_PRODUCING_TASK_TYPES.has(String(taskType || ''));
+  if (!produzPatch) return;
+  const escopo = Array.isArray(allowedPaths) ? allowedPaths.filter((p) => typeof p === 'string' && p.trim() !== '') : [];
+  if (escopo.length === 0) {
+    throw contractError(
+      'TASK_CONTRACT_INVALID',
+      `task do tipo ${taskType} produz patch e exige 'allowedPaths' declarado (sem escopo nenhum patch pode ser aceito — a task nasceria insatisfazível)`,
+      400,
+    );
+  }
+}
+
+/**
  * Cria uma EngineeringTask a partir de um Task Contract (parcial), classifica
  * deterministicamente e persiste. Idempotente por `idempotencyKey`: uma segunda chamada com a
  * mesma chave retorna a task já existente em vez de duplicar.
@@ -61,6 +113,11 @@ async function createTask(input = {}, { createdBy = null, idempotencyKey = null 
   }
 
   const classification = classify(input, { failingTests: input.failingTests || [] });
+  // Contrato validado ANTES de persistir: task insatisfazível não chega a existir.
+  assertTaskContract({
+    taskType: input.taskType || classification.taskType,
+    allowedPaths: input.allowedPaths,
+  });
   const maxIterations = resolveMaxIterations(classification.taskType, input.maxIterations);
 
   let row;
@@ -721,6 +778,8 @@ module.exports = {
   TASK_TYPES,
   RISK_LEVELS,
   TASK_SCOPES,
+  PATCH_PRODUCING_TASK_TYPES,
+  assertTaskContract,
   createTask,
   updateTaskFields,
   TASK_METADATA_FIELDS,

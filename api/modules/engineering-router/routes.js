@@ -90,6 +90,12 @@ function createEngineeringRouterRoutes({ buildDeps }) {
       });
       deps.sendJson(res, 201, task);
     } catch (err) {
+      // Erro de CONTRATO é do cliente (400), não falha interna: sem isto o operador
+      // via 500 em algo que ele mesmo pode corrigir (declarar allowedPaths).
+      if (err && err.statusCode && err.statusCode >= 400 && err.statusCode < 500) {
+        deps.sendJson(res, err.statusCode, { error: err.code || 'bad_request', message: err.message });
+        return;
+      }
       deps.logger.error('[engineering-router] create task', err);
       deps.sendJson(res, 500, { error: 'internal_error', message: err.message });
     }
