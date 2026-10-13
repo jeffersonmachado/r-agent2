@@ -155,6 +155,17 @@ preflight() {
   if command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -qF "${PBX_ODBC_PORT:-15432}"; then _ok "ponte host<->Asterisk escutando (${PBX_ODBC_PORT:-15432})"
   else _bad "ponte host<->Asterisk ausente — rode 'set -a && . ./.env && set +a && bash scripts/pbx-host-db-bridge.sh start' (sem ela o CDR do Asterisk nunca chega ao banco da API)"; fi
 
+  # A PORTA DE PÉ NÃO PROVA QUE O CDR GRAVA (defeito medido 2026-10-13, ciclo de
+  # ~40 min perdido): quando o Postgres não responde no boot do container, o
+  # backend `cdr_adaptive_odbc` sai do engine EM SILÊNCIO e não volta sozinho —
+  # a ponte segue escutando, este preflight passava, e o passo 1/12 reprovava com
+  # `pbxProdLike.cdr=false`. O sinal correto é o backend REGISTRADO
+  # (`cdr show status` → "Adaptive ODBC"). Ver scripts/pbx-cdr-health.sh.
+  if [ -x scripts/pbx-cdr-health.sh ] && command -v docker >/dev/null 2>&1; then
+    if bash scripts/pbx-cdr-health.sh check >/dev/null 2>&1; then _ok "CDR do Asterisk com backend registrado (Adaptive ODBC)"
+    else _bad "CDR do Asterisk DEGRADADO (backend fora do engine — a porta está de pé, mas nenhum CDR é gravado): rode 'bash scripts/pbx-cdr-health.sh ensure'"; fi
+  fi
+
   # tmpfs do Asterisk: o container copia /etc/asterisk-static SÓ no start; se o
   # tenants.conf do host for mais novo, o contexto de tenant não está em vigor.
   local host_tc="pbx/asterisk/etc/asterisk/conf/tenants.conf"
