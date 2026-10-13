@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-10-13T22:59:15.338Z
-- Canonical mesh execution: mesh-2026-10-13T19-27-40-290Z
+- Generated at: 2026-10-13T23:45:35.058Z
+- Canonical mesh execution: mesh-2026-10-13T23-09-31-559Z
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:BLOCKING_GAPS
+- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -13,7 +13,7 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-13T19-27-40-290Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-13T23-09-31-559Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Sem bloqueadores ativos.
