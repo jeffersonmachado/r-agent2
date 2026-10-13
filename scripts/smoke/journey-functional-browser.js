@@ -93,6 +93,22 @@ async function snapshotDaTela(page) {
         colunas: t.querySelectorAll(':scope > thead > tr > th').length,
       }));
 
+    // MEDIÇÃO CORRIGIDA (2026-10-13): NENHUMA das rotas de negócio do produto usa
+    // `<table>` — as listas são divs/cards. Medir só tabela dizia "0 linhas" em
+    // todas as telas, o que é indistinguível de "lista vazia" e tornaria a jornada
+    // cega. Conta os contêineres de lista mais comuns e reporta o MAIOR, que é a
+    // lista principal; e só conta o que tem TEXTO (senão containers vazios de
+    // layout inflam o número).
+    const SELETORES_LISTA = ['[role="row"]', 'li', 'article', '[data-testid*="item"]', '[data-testid*="row"]', '.card'];
+    const itensPorSeletor = {};
+    for (const sel of SELETORES_LISTA) {
+      itensPorSeletor[sel] = Array.from(document.querySelectorAll(sel))
+        .filter(visivel)
+        .filter((el) => ((el.innerText || '').trim().length > 1)).length;
+    }
+    const itensLista = Object.values(itensPorSeletor).reduce((m, n) => Math.max(m, n), 0);
+    const melhorSeletor = Object.entries(itensPorSeletor).sort((a, b) => b[1] - a[1])[0] || ['-', 0];
+
     const inputs = Array.from(
       document.querySelectorAll('input[type="search"], input[type="text"], input:not([type])')
     )
@@ -118,24 +134,84 @@ async function snapshotDaTela(page) {
 
     const texto = (document.body.innerText || '').replace(/\s+/g, ' ').trim();
 
+    // MEDIÇÃO DE EFEITO (corrigida em 2026-10-13): contar `li`/`card`/`role=row`
+    // como "itens da lista" mede o MENU lateral em vez da lista da tela — o
+    // `/crm` filtrou de verdade (1922 -> 1170 chars) e a jornada acusou "busca não
+    // filtra" porque `li` seguiu 9 (são os `li` do menu). Falso positivo de
+    // detector é tão perigoso quanto falso negativo: esconde o defeito real no
+    // ruído. O efeito passa a ser medido por mudança de TEXTO VISÍVEL e de
+    // tamanho, que é o que o usuário percebe.
+    const visivelTxt = (el) => {
+      const r = el.getBoundingClientRect();
+      const st = window.getComputedStyle(el);
+      return r.width > 4 && r.height > 4 && st.visibility !== 'hidden' && st.display !== 'none';
+    };
+    const textos = new Set();
+    for (const el of document.querySelectorAll('button, a, h1, h2, h3, h4, label, [role="menuitem"], [role="tab"], th, td, li, p, span')) {
+      if (!visivelTxt(el)) continue;
+      const t = (el.innerText || '').replace(/\s+/g, ' ').trim();
+      if (t.length > 1 && t.length < 60) textos.add(t);
+    }
+
     return {
       tabelas,
-      maxLinhas: tabelas.reduce((m, t) => Math.max(m, t.linhas), 0),
+      itensPorSeletor,
+      itensLista,
+      melhorSeletor,
+      maxLinhas: Math.max(
+        tabelas.reduce((m, t) => Math.max(m, t.linhas), 0),
+        itensLista
+      ),
+      textos: [...textos],
+      camposVisiveis: Array.from(document.querySelectorAll('input, textarea, select')).filter(visivelTxt).length,
+      menuDeOpcoesVisivel: Array.from(document.querySelectorAll('[role="menu"], [role="listbox"], [aria-expanded="true"]')).some(visivelTxt),
       inputs,
       botoes: Array.from(new Set(botoes)).slice(0, 40),
       paginacao,
       textoLen: texto.length,
       vazio: /nenhum|nenhuma|sem resultados|sem registros|nada encontrado|lista vazia/i.test(texto),
       marcadorIndisponivel: /fonte indispon[ií]vel|indispon[ií]vel|erro ao carregar|falha ao carregar/i.test(texto),
+      chips: Array.from(document.querySelectorAll('button, [role="tab"], [role="radio"]'))
+        .filter(visivel)
+        .map((el) => (el.innerText || '').replace(/\s+/g, ' ').trim())
+        .filter((t) => t.length > 1 && t.length <= 24)
+        .slice(0, 25),
     };
   });
 }
 
+/**
+ * Efeito OBSERVÁVEL de uma ação, medido por mudança de tela — a mesma leitura que
+ * o usuário faz. É o critério único de "a ação funcionou", válido para busca,
+ * filtro e abertura de formulário (modal, menu, painel inline ou navegação).
+ */
+function compararTelas(antes, depois) {
+  const setAntes = new Set(antes.textos || []);
+  const novos = (depois.textos || []).filter((t) => !setAntes.has(t));
+  const deltaChars = depois.textoLen - antes.textoLen;
+  const deltaCampos = depois.camposVisiveis - antes.camposVisiveis;
+  const proporcional = antes.textoLen > 0 ? Math.abs(deltaChars) / antes.textoLen : 0;
+  return {
+    mudou: novos.length > 0 || proporcional > 0.08 || deltaCampos !== 0 || !!depois.menuDeOpcoesVisivel,
+    novosTextos: novos.slice(0, 8),
+    deltaChars,
+    deltaCampos,
+  };
+}
+
 /** Digita um termo no primeiro campo de busca visível e mede o EFEITO. */
 async function exercitarBusca(page, snap) {
-  const candidato = snap.inputs.find((i) => /buscar|pesquisar|search|filtro|filtrar/i.test(`${i.placeholder} ${i.aria} ${i.name}`))
-    || snap.inputs[0];
-  if (!candidato) return { executado: false, motivo: 'nenhum campo de busca/filtro visível' };
+  // A busca do MENU aparece em TODAS as rotas e não filtra conteúdo: usá-la faria
+  // a jornada "provar" um filtro que não é o da tela. Excluída explicitamente.
+  const doMenu = (i) => /buscar no menu/i.test(`${i.placeholder} ${i.aria}`);
+  // Só vale como BUSCA o campo que se ANUNCIA como busca/filtro. Sem este
+  // critério o fallback pegava qualquer input da tela (medido: "Session ID (ex:
+  // sess-123)" no editor, que é carga de sessão) e a jornada acusava "busca não
+  // filtra" num campo que nunca foi filtro — falso positivo que esconde defeito
+  // real no meio do ruído.
+  const ehBusca = (i) => /buscar|pesquisar|search|filtrar|filtro/i.test(`${i.placeholder} ${i.aria} ${i.name}`);
+  const candidato = snap.inputs.filter((i) => !doMenu(i)).find(ehBusca);
+  if (!candidato) return { executado: false, motivo: 'a tela não oferece campo de busca/filtro de conteúdo' };
 
   const seletor = candidato.placeholder
     ? `input[placeholder="${candidato.placeholder}"]`
@@ -151,9 +227,10 @@ async function exercitarBusca(page, snap) {
   await page.waitForTimeout(1800);
   const apos = await snapshotDaTela(page);
 
-  // EFEITO esperado: ou a lista zera (filtro aplicado) ou o estado vazio aparece, ou
-  // a contagem muda. Se NADA muda com um termo impossível, o filtro não está ligado.
-  const mudou = apos.maxLinhas !== snap.maxLinhas || (apos.vazio && !snap.vazio);
+  // EFEITO esperado: a tela muda — a lista filtra (reduz), ou passa a mostrar o
+  // estado vazio. Se NADA muda com um termo impossível, o filtro não está ligado.
+  const efeito = compararTelas(snap, apos);
+  const mudou = efeito.mudou || (apos.vazio && !snap.vazio);
   await campo.fill('');
   await page.waitForTimeout(800);
 
@@ -162,18 +239,132 @@ async function exercitarBusca(page, snap) {
     campo: candidato.placeholder || candidato.aria || '(sem rótulo)',
     linhasAntes: snap.maxLinhas,
     linhasDepois: apos.maxLinhas,
+    charsAntes: snap.textoLen,
+    charsDepois: apos.textoLen,
     estadoVazioDepois: apos.vazio,
     efeitoObservado: mudou,
   };
 }
 
+/**
+ * Clica um chip de filtro da tela (ex.: "Ativos", "Em risco") e mede o efeito.
+ *
+ * Só considera chips de FILTRO de verdade: os grupos de menu da lateral também
+ * são `<button>` e clicá-los só abre/fecha a navegação — o que faria a jornada
+ * "provar" uma filtragem que nunca ocorreu.
+ */
+async function exercitarFiltroChip(page, snap) {
+  // Grupos de menu da lateral e rótulos de usuário também são `<button>`: clicá-los
+  // só abre/fecha navegação e a jornada "provaria" uma filtragem que não ocorreu.
+  // A âncora `^` era insuficiente: "SA 99+ Super Admin ▼" começa com "SA " e
+  // escapava de `^super admin` — o filtro acabava tentando clicar no menu de
+  // usuário. Agora casa em QUALQUER posição.
+  const doMenu = /recolher menu|atalhos|super admin|\bsa \d|atendimento|canais|modelagem|execu|assistentes|monitoramento|an[aá]lises|administra|governan|suporte da|relacionamento|construtor|espa[çc]o de trabalho|^crm$|^conhecimento$|^dev$|^admin$|^ops$/i;
+  const candidato = snap.chips.find((t) => !doMenu.test(t) && !/^[<>‹›←→]/.test(t) && t.length <= 20);
+  if (!candidato) return { executado: false, motivo: 'nenhum chip de filtro identificável' };
+
+  const alvo = page.getByRole('button', { name: candidato }).first();
+  if (!(await alvo.count())) return { executado: false, motivo: `chip "${candidato}" não instanciável` };
+
+  try {
+    await alvo.click({ timeout: 5000 });
+    await page.waitForTimeout(1800);
+  } catch (error) {
+    return { executado: true, chip: candidato, aplicou: false, motivo: String(error.message).slice(0, 120) };
+  }
+
+  const apos = await snapshotDaTela(page);
+  const efeito = compararTelas(snap, apos);
+  return {
+    executado: true,
+    chip: candidato,
+    itensAntes: snap.maxLinhas,
+    itensDepois: apos.maxLinhas,
+    deltaChars: efeito.deltaChars,
+    novosTextos: efeito.novosTextos.slice(0, 4),
+    aplicou: efeito.mudou,
+  };
+}
+
+/**
+ * Abre o formulário de criação e FECHA sem submeter.
+ *
+ * Por que abrir e não criar: criar deixaria lixo no tenant de QA e o próximo run
+ * mediria um estado diferente do que mediu agora — a jornada precisa ser
+ * repetível. O que se prova aqui é o que costuma quebrar: o modal abre, tem
+ * campos utilizáveis e fecha sem erro de console.
+ */
+async function exercitarModalDeCriacao(page, snap) {
+  const doMenu = /^(recolher menu|atalhos|atendimento|canais|modelagem|execu|assistentes|monitoramento|an|lises|administra|governan|suporte da|super admin|atualizar|recarregar|salvar|descartar|reiniciar)/i;
+  const candidato = snap.botoes.find((t) => /^(novo|nova|criar|adicionar|\+)/i.test(t) && !doMenu.test(t));
+  if (!candidato) return { executado: false, motivo: 'nenhum botão de criação visível' };
+
+  const alvo = page.getByRole('button', { name: candidato, exact: false }).first();
+  if (!(await alvo.count())) return { executado: false, motivo: `botão "${candidato}" não instanciável` };
+
+  const urlAntesModal = page.url();
+  let erroClique = null;
+  try {
+    await alvo.click({ timeout: 5000 });
+  } catch (error) {
+    // Engolir o erro do clique cegava o diagnóstico: a ação era reportada como
+    // "não produz efeito" tanto quando o produto não reagia QUANTO quando o
+    // próprio clique falhava (elemento coberto, fora da viewport, detached).
+    erroClique = String(error.message).slice(0, 160);
+  }
+  await page.waitForTimeout(2500);
+
+  // "Abrir" não é só modal: um botão de criação pode abrir um MENU de opções,
+  // revelar um formulário INLINE ou navegar para a tela de criação. Exigir
+  // `[role=dialog]/.modal/form` com tamanho > 100px acusava defeito em botão que
+  // FUNCIONAVA — medido no browser em 2026-10-13: "Criar entidade rápida"
+  // (/workspace) revelou formulário inline com "Cliente Workspace 174706 /
+  // Telefone ...," "Criar tarefa" (/tasks) abriu modal com "Informe um título" e
+  // "Novo" (/editor) abriu "Criar Novo Fluxo / Selecione um modelo" com a lista
+  // de modelos. O critério passa a ser o efeito percebido na tela.
+  const depois = await snapshotDaTela(page);
+  const efeito = compararTelas(snap, depois);
+  const navegou = page.url() !== urlAntesModal;
+  const abriu = efeito.mudou || navegou;
+
+  // Fecha sem submeter: Escape primeiro; se resistir, botão de cancelar/fechar.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(900);
+  const fechou = await page.evaluate(() => {
+    const visivel = (el) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 100 && r.height > 100;
+    };
+    return !Array.from(document.querySelectorAll('[role="dialog"], .modal')).some(visivel);
+  });
+
+  return {
+    executado: true,
+    botao: candidato,
+    abriu,
+    erroClique,
+    via: erroClique
+      ? `clique falhou: ${erroClique}`
+      : navegou
+        ? `navegou para ${page.url().replace(BASE, '')}`
+        : depois.menuDeOpcoesVisivel
+          ? 'menu/dropdown'
+          : efeito.deltaCampos !== 0
+            ? `formulário inline (${efeito.deltaCampos >= 0 ? '+' : ''}${efeito.deltaCampos} campos)`
+            : `conteúdo mudou (${efeito.deltaChars} chars)`,
+    novosTextos: efeito.novosTextos.slice(0, 5),
+    fechouSemSubmeter: fechou,
+  };
+}
+
 /** Abre o detalhe do primeiro registro da lista, se houver um caminho visível. */
 async function exercitarDetalhe(page, snap) {
-  if (snap.maxLinhas === 0) return { executado: false, motivo: 'lista sem linhas para abrir' };
+  if (snap.maxLinhas === 0) return { executado: false, motivo: 'lista sem itens para abrir' };
 
-  const seletor = 'table tbody tr td a, table tbody tr td button, table tbody tr[role="button"], table tbody tr';
+  const seletor = 'table tbody tr td a, table tbody tr td button, table tbody tr[role="button"], table tbody tr, [role="row"][tabindex], li[role="button"] a, [data-testid*="item"] a, [data-testid*="item"] button, .card a, .card button, li a, li button';
   const alvo = page.locator(seletor).first();
-  if (!(await alvo.count())) return { executado: false, motivo: 'linha não clicável' };
+  if (!(await alvo.count())) return { executado: false, motivo: 'item não clicável' };
 
   const urlAntes = page.url();
   const textoAntes = (await page.evaluate(() => (document.body.innerText || '').length));
@@ -184,6 +375,8 @@ async function exercitarDetalhe(page, snap) {
     return { executado: true, abriu: false, motivo: `clique falhou: ${String(error.message).slice(0, 120)}` };
   }
 
+  const depois = await snapshotDaTela(page);
+  const efeito = compararTelas(snap, depois);
   const urlDepois = page.url();
   const modalAberto = await page.evaluate(() => {
     const d = document.querySelector('[role="dialog"], .modal, [data-detail], aside[aria-label]');
@@ -191,13 +384,12 @@ async function exercitarDetalhe(page, snap) {
     const r = d.getBoundingClientRect();
     return r.width > 100 && r.height > 100;
   });
-  const textoDepois = await page.evaluate(() => (document.body.innerText || '').length);
-  const abriu = modalAberto || urlDepois !== urlAntes || Math.abs(textoDepois - textoAntes) > 400;
+  const abriu = modalAberto || urlDepois !== urlAntes || efeito.mudou;
 
   return {
     executado: true,
     abriu,
-    via: modalAberto ? 'modal/painel' : urlDepois !== urlAntes ? `navegou para ${urlDepois.replace(BASE, '')}` : 'mudança de conteúdo',
+    via: modalAberto ? 'modal/painel' : urlDepois !== urlAntes ? `navegou para ${urlDepois.replace(BASE, '')}` : `mudança de conteúdo (${efeito.deltaChars} chars)`,
     letrasAntes: textoAntes,
   };
 }
@@ -262,9 +454,11 @@ async function run() {
       registro.tela = {
         url: page.url().replace(BASE, ''),
         linhas: snap.maxLinhas,
+        viaLista: snap.melhorSeletor[0],
         tabelas: snap.tabelas.length,
         inputs: snap.inputs.length,
         botoes: snap.botoes.slice(0, 12),
+        chips: snap.chips.slice(0, 10),
         paginacao: snap.paginacao,
         caracteres: snap.textoLen,
       };
@@ -277,14 +471,38 @@ async function run() {
 
       if (EXPLORE) {
         console.log(`\n── ${rota}`);
-        console.log(`   tabelas=${snap.tabelas.length} maxLinhas=${snap.maxLinhas} inputs=${snap.inputs.length} paginacao=${snap.paginacao.length}`);
+        console.log(`   itens=${snap.maxLinhas} (via ${snap.melhorSeletor[0]}) inputs=${snap.inputs.length} chips=${snap.chips.length} paginacao=${snap.paginacao.length} chars=${snap.textoLen}`);
         console.log(`   inputs: ${snap.inputs.map((i) => i.placeholder || i.aria || '(sem rótulo)').join(' | ') || '(nenhum)'}`);
-        console.log(`   botoes: ${snap.botoes.slice(0, 15).join(' | ') || '(nenhum)'}`);
+        console.log(`   chips: ${snap.chips.slice(0, 12).join(' | ') || '(nenhum)'}`);
       } else {
+        // Cada ação roda sobre a tela RECÉM-carregada; recarrega antes da próxima
+        // para que o efeito medido seja da ação e não do estado deixado pela anterior.
         registro.acoes.busca = await exercitarBusca(page, snap);
-        registro.acoes.detalhe = await exercitarDetalhe(page, snap);
         await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
         await page.waitForTimeout(1500);
+        const snap2 = await snapshotDaTela(page);
+        registro.acoes.filtroChip = await exercitarFiltroChip(page, snap2);
+        await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForTimeout(1500);
+        const snap3 = await snapshotDaTela(page);
+        registro.acoes.modalCriacao = await exercitarModalDeCriacao(page, snap3);
+        await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await page.waitForTimeout(1500);
+        const snap4 = await snapshotDaTela(page);
+        registro.acoes.detalhe = await exercitarDetalhe(page, snap4);
+
+        // Veredito das AÇÕES (não do carregamento): a tela oferecia a ação e ela
+        // não produziu efeito? Isso é defeito. Ação inexistente é SKIP registrado,
+        // nunca sucesso silencioso.
+        const b = registro.acoes.busca;
+        if (b.executado && !b.efeitoObservado) registro.defeitos.push(`busca "${b.campo}" não filtra (${b.linhasAntes} -> ${b.linhasDepois} itens)`);
+        const f = registro.acoes.filtroChip;
+        if (f.executado && !f.aplicou) registro.defeitos.push(`filtro "${f.chip}" não altera a lista (${f.itensAntes} -> ${f.itensDepois})`);
+        const m = registro.acoes.modalCriacao;
+        if (m.executado && !m.abriu) registro.defeitos.push(`botão "${m.botao}" não produz efeito (nem modal, nem menu, nem navegação)`);
+        if (m.executado && m.abriu && m.fechouSemSubmeter === false) registro.defeitos.push(`formulário de "${m.botao}" não fecha sem submeter`);
+        const d = registro.acoes.detalhe;
+        if (d.executado && d.abriu === false) registro.defeitos.push('item da lista não abre detalhe');
       }
 
       const novos = consoleErrors.slice(errosAntes);

@@ -169,6 +169,26 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
     }
   };
 
+  // Tags disponíveis para filtro.
+  //
+  // REGRA DE HOOKS: este `useMemo` PRECISA ficar antes dos `return` antecipados
+  // (`selectedTemplate`, `loading`, `error`). Ele estava DEPOIS deles e, na
+  // primeira renderização, `loading === true` retornava antes de chegar aqui; ao
+  // terminar o fetch, a render seguinte chamava UM HOOK A MAIS que a anterior e o
+  // React abortava o componente:
+  //   "Rendered more hooks than during the previous render"
+  //   "React has detected a change in the order of Hooks called by FlowTemplateSelector"
+  // Efeito medido no browser (jornada funcional de 2026-10-13): a tela `/editor`
+  // registrava 2 erros de console + 3 pageerror e o botão "Novo" não abria o
+  // seletor de modelos — a tela ficava sem a ação de criar fluxo.
+  const availableTags = useMemo(() => {
+    const set = new Set();
+    for (const t of templates) {
+      for (const tag of (t.tags || [])) set.add(tag);
+    }
+    return Array.from(set).sort();
+  }, [templates]);
+
   if (selectedTemplate) {
     return (
       <Dialog
@@ -276,14 +296,6 @@ export function FlowTemplateSelector({ onTemplateSelected, onCancel, refreshTrig
       </Dialog>
     );
   }
-
-  const availableTags = useMemo(() => {
-    const set = new Set();
-    for (const t of templates) {
-      for (const tag of (t.tags || [])) set.add(tag);
-    }
-    return Array.from(set).sort();
-  }, [templates]);
 
   // Filtra templates baseado no texto de busca
   const filteredTemplates = templates.filter((template) => {
