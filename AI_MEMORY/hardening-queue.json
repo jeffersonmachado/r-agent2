@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-10T21:15:00Z",
+  "updatedAt": "2026-10-13T17:06:46Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -184,6 +184,55 @@
       "status": "done",
       "evidence": "GATE: GO (exit 0) — \"[security-release-gate] GO: 5 verificacao(oes) satisfeita(s), 94 aviso(s)\". Bloqueantes medidos na historia do item: 47 -> 20 -> 7 -> 1 -> 0. Prova: reports/security-release-gate-report.json. ISENCOES (SoD preservada: solicitante != aprovador): 14 waiver ACTIVE aprovados por systemadmin; os 13 pedidos anteriores foram solicitados pelo CLI (usuario do SO jmachado) e o 14o (PYSEC-2026-139|pypi:torch@2.10.0+cpu) foi solicitado e aprovado na rodada de 2026-10-11. Nenhuma isencao foi aplicada sem aprovacao humana explicita. Os 94 avisos restantes sao DEV_ONLY_VULNERABILITY (cadeia de build/teste), nao bloqueio. A tela de engenharia passou a expor `dev_only` (mesma fonte do gate: SecurityComponent) e separa o que bloqueia do que e aviso. CORRECOES APLICADAS (alvos conferidos nos advisories do proprio repositorio): nanoid 3.3.11->3.3.20; postcss 8.4.49/8.5.6->8.5.29 (override alcanca a copia aninhada do styled-components); source-map-js 1.2.1->1.2.2 (frontend/package.json overrides); uuid 8.3.2/9.0.1->11.1.1 (overrides na raiz, com require(\"uuid\").v4 verificado); torch 2.9.1+cpu->2.10.0+cpu (rag-service/requirements.txt + venv; pytest 156 passed; optimum.onnxruntime importa OK). REGRESSAO: npm run test:unit 995 suites / 8240 testes / 0 falhas; frontend com 16 testes novos verdes; RAP-078 (mutable json state) 5/5 com unknown=0. COMMIT DO FECHAMENTO: c8db637fb.",
       "commit": "c8db637fb"
+    },
+    {
+      "id": "H9-IDENTIDADE-PORTA",
+      "title": "D5/D6: unidade ativa que nao serve + porta ocupada por processo estranho (supervisao dev)",
+      "status": "done",
+      "commit": "3ea58a1cc",
+      "evidence": "Defeito medido: `service.sh start` dava OK com a unidade `active` cujo processo nao respondia (health!=identidade) e nao detectava a porta 8080 ocupada por mock orfao de teste (a unidade nao servia, mas o smoke passava por outro processo). Corrigido: `scripts/dev/lib/servicos-dev-state.sh` (dev_porta, dev_pids_na_porta, dev_pid_no_cgroup, porta_pertence_a_unidade fail-closed por ControlGroup) + `esperar_identidade` no start (health E identidade, 1 restart, falha explicita nomeando os pids). Prova: tests/unit/dev/devServicesSupervision.test.js (25 casos) e smoke agendado com RESTORE_FALHAS / exit 3 RESTORE_INCOMPLETO quando a identidade nao e restaurada."
+    },
+    {
+      "id": "H10-VEREDITO-GATE-SEGURANCA",
+      "title": "Veredito do Security Release Gate deixa de ser mascarado pela avaliacao de risco",
+      "status": "done",
+      "commit": "63cdd7f07",
+      "evidence": "Defeito medido: a ultima linha do relatorio imprimia a avaliacao de risco (engine) como se fosse o veredito — podia dizer GO/`exit 0` enquanto o processo saia !=0, ou o inverso, tornando a falha invisivel para quem lesse o tail. Corrigido: `avaliacao de risco (engine):` separada e ultima linha sempre `VEREDITO: <state> (exit N) — motivos: ...`, coerente com o codigo de saida. Prova: tests/unit/governance/securityGateState.test.js (26 casos) + execucao real com EVIDENCE_UNAVAILABLE (exit 3)."
+    },
+    {
+      "id": "H11-ESCOPO-DIFERIDO",
+      "title": "Regressao da Fase 9: escopo diferido explicito + fixtures com evidencia de integracao",
+      "status": "done",
+      "commit": "3bf7d8bc2",
+      "evidence": "Regressao introduzida pelo proprio contrato da Fase 9 (scope vazio rejeitado) quebrou 11 testes de integracao do engineering-router e o gate `integration` do MR-06 (ATTESTED->BLOCKER). Corrigido sem afrouxar o contrato: `assertTaskContract({scopeDeferred})` — a criacao DIRETA por API/UI segue fail-closed; apenas `startExecutionHeld` e o replacement do bugLoop (que preenchem o escopo depois, por engenharia) passam `scopeDeferred:true` literal; a fixture de review executa um TestRun de integracao real. Prova: suite autoritativa 86/89 -> 89/89 PASS (reports/release-suite-execution.json) + tests/unit/engineeringRouter/taskContractScope.test.js (10 casos)."
+    },
+    {
+      "id": "H12-RAG-REPARO",
+      "title": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
+      "status": "done",
+      "commit": "6cdcc9c72",
+      "evidence": "Defeito medido: `validate:rag-index-health` NO_GO com 2 documentos failed (ECONNREFUSED no reindex, servico fora durante o lote). Reparado sem mascarar: reindexado para HEALTHY — documentos indexados 3237 -> 3239, chunks 8618 -> 8621, violations 0, failed 0. Prova: reports/rag-index-health-report.json + reports/rag-failed-reindex-report.json (commit de evidencias 6cdcc9c72)."
+    },
+    {
+      "id": "H13-RUNNER-COMPLETO",
+      "title": "Agregado deixa de mascarar falhas: runner completo dos validadores",
+      "status": "done",
+      "commit": "8169f3d70",
+      "evidence": "Defeito medido: `validate:governance-enforcement` e uma cadeia `&&` fail-fast — a PRIMEIRA falha escondia as outras 8 (foram descobertas 9 falhas reais que o agregado reportava como \"1\"). Corrigido aditivo: `npm run validate:all-validators` (scripts/governance/run-all-validators.js + lib/governance-enforcement-plan.js) roda TODOS, escreve reports/governance-enforcement-full-report.json, e revalida apenas falhas causadas pelo carimbo de lineage (revalidatedAfterStamp). Medicao: 66 validadores, 57 PASS / 4 FAIL (todas de P1-11). Prova: tests/unit/governance/allValidatorsRunner.test.js (13 casos)."
+    },
+    {
+      "id": "H14-CDR-SUPERVISIONADO",
+      "title": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
+      "status": "done",
+      "commit": "ec85f48b7",
+      "evidence": "Defeito medido (custo de um ciclo de ~40 min em 2026-10-13): o preflight do converge validava so a PORTA 15432 da ponte; quando o Postgres nao responde no boot do container, o backend `cdr_adaptive_odbc` sai do engine de CDR em SILENCIO (porta de pe, nenhum CDR gravado) e o passo 1/12 reprova. Corrigido: `scripts/pbx-cdr-health.sh` (`check` 0/1 e `ensure` que recarrega res_odbc.so + cdr_adaptive_odbc.so) e preflight passa a exigir BACKEND registrado (sinal obtido por medicao: `cdr show status` -> Registered Backends; `Use Count` e 0 ate saudavel e nao serve de sinal). Prova: tests/unit/pbx/pbxCdrHealth.test.js (7 casos, com dubles — nenhum socat real)."
+    },
+    {
+      "id": "H15-DIST-RECIBO-STALE",
+      "title": "Higiene do dist/: recibo do verifier STALE deixa de poluir a avaliacao",
+      "status": "done",
+      "commit": "ec85f48b7",
+      "evidence": "Defeito medido: `validate:dist` falhava com 3 motivos, sendo 1 espurio — `STALE_VERIFIER_RESULT` de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 (r-agent2-20261011-083027.payload.zip) ja ARQUIVADO. A politica exige recibo vinculado ao PAYLOAD ATUAL. Removido (copia preservada em dist/archive/pre-seal-20261010/). Medicao DEPOIS: o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\" e o validate:dist falha por UMA causa unica — ausencia de payload selado — em vez de 3 sintomas. A tentativa inversa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
     }
   ]
 }
