@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-13T22:07:35Z",
+  "updatedAt": "2026-10-13T22:34:45Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -262,6 +262,14 @@
       "status": "done",
       "commit": "ec85f48b7",
       "evidence": "Antes: 3 motivos de FAIL, sendo 1 espurio — STALE_VERIFIER_RESULT de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 ja arquivado. Removido (copia preservada em dist/archive/pre-seal-20261010/), o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\". Depois: 2 sintomas de UMA causa (payload nao selado = P1-11): \"Nenhum PAYLOAD encontrado em dist/release/*.payload.zip\" e \"verify-enterprise-governance-v2.sh FAIL\". A alternativa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
+    },
+    {
+      "id": "DIV-PUREZA-ENGINE",
+      "title": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
+      "status": "blocked",
+      "blocked_reason": "NAO e meia-correcao: exige ciclo DEDICADO, com regressao de replay e build do frontend a cada arquivo. MEDIDO em 2026-10-13 (baseline do AGENTS.md estava desatualizado em 118): o gate acusa 83 issues, das quais ~13 sao FALSOS POSITIVOS — 44 ocorrencias de `new Date` se dividem em 31 LEITURAS de relogio (`new Date()`) e 13 CONVERSOES deterministicas (`new Date(x)`). Somam-se 5 `Math.random` usados apenas como FALLBACK de parametro injetavel (ex.: executionDeadline, que se declara PURO). Violacoes reais ~70. A metade \"mover para api/services\" do plano do AGENTS.md NAO se aplica aos dois maiores ofensores: `persistenceServices.js` (11) e `fallbackController.js` (7) sao consumidos POR DENTRO de engine/ (`engine/runner.js`, `engine/nodes/fallbackNode.js`, `engine/nodes/persistenceNodes.js`) — mover inverteria a dependencia engine->api. Nenhum dos dois e usado pelo frontend (medido: 0 ocorrencias em frontend/src). A classe relogio/aleatorio (31 leituras em engine/nodes/*, runner.js, executeStep.js, flowSimulation.js) toca DETERMINISMO DE REPLAY, que e gate bloqueante. `engine/` tambem e compartilhado com o frontend. Exige: (a) injecao de relogio/aleatorio/logger nos modulos de fluxo com default explicito no CALLER, nunca no modulo provado; (b) refinar a regra do detector para nao acusar `new Date(arg)` — CORRECAO de falso positivo, nao afrouxamento, com o cuidado de que `new Date(variavel)` possivelmente `undefined` VOLTA a ler o relogio (ex.: nodes/systemNodes.js:307). Nunca baixar a regra para fechar o gate.",
+      "commit": null,
+      "evidence": "Diagnostico medido em 2026-10-13: reports/layer-conventions-report.json (83 issues) + analise linha a linha das 44 ocorrencias de `new Date` + mapa de consumidores. Plano e armadilhas em AI_MEMORY/layer-purity (memoria do repo r-agent2-layer-purity-backlog.md)."
     }
   ]
 }

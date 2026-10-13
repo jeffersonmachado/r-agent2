@@ -152,3 +152,43 @@ próprias evidências que ele exige no fim:
 
 Nenhum desses casos foi contornado por afrouxamento: em todos, a evidência foi
 **regenerada de verdade**.
+
+## Itens N1–N4 (melhorias escolhidas após o release publicado)
+
+### N1 — `consolidate` regenera evidências de TTL curto (FEITO, `ad0cc3228`)
+O ciclo envelhecia as evidências que ele mesmo exige no fim. Agora
+`refresh-short-ttl-evidence.js` roda no `consolidate`, antes do agregado, e o
+frescor é conferido depois (fail-closed). Módulo puro
+`lib/short-ttl-evidence.js` + 11 casos em `shortTtlEvidence.test.js`.
+**Defeito achado no próprio guard durante a verificação:** o relatório de replay
+declara TTL de **7 dias**, mas o consumidor (`governance-summary`) aplica **24h**.
+Validar pelo TTL do relatório fazia o guard ACEITAR evidência que o gate reprova —
+um guard mais frouxo que o gate é pior que nenhum. O TTL efetivo passou a ser o
+MENOR entre os dois. O teste de fail-closed também pegou um `TypeError` real
+(`Number(replay.maxAgeMs)` com `replay` nulo).
+
+### N2 — jornada funcional no perfil de engenharia (FEITO, `11490584b`)
+`JOURNEY_PROFILE=negocio|engenharia|all`. Engenharia: 7/7 rotas PASS. Duas
+correções de métrica, as duas medidas: `/qa-mesh` media 539 chars com espera fixa e
+**19.070** com espera por estabilidade; `/dev/release` exibe "Evidência indisponível
+— não foi lida: reports/delivered-release-verification-report.json" JUNTO do
+diagnóstico correto de que o entregue é válido no commit dele — é a tela RELATANDO
+um estado de governança, não defeito. Virou OBSERVAÇÃO.
+
+### N3 — bloqueio de política ≠ erro no push da tag (FEITO, `15ea827a6`)
+`create-release-tag.sh` agora sai **3** (código próprio) com mensagem acionável
+quando o hook `pre-push` recusa a tag, em vez do genérico "criação da tag falhou".
+Teste de integração real: repo temporário + hook + remote bare, com controle
+positivo (sem hook, publica e sai 0) e idempotência.
+
+### N4 — dívida de pureza de `engine/`: DIAGNÓSTICO, não correção (bloqueado)
+Medido: **83 issues** (o `AGENTS.md` repete 118, desatualizado). Das 44 ocorrências
+de `new Date`, **31 são leitura de relógio** e **13 são conversão** (`new Date(x)`,
+determinística) — falso positivo do detector; idem `Math.random` como fallback de
+parâmetro injetável. Violações reais ≈ 70.
+A metade "mover para `api/services`" do plano **não se aplica** aos dois maiores
+ofensores: `persistenceServices.js` (11) e `fallbackController.js` (7) são
+consumidos **por dentro** de `engine/` — mover inverteria a dependência engine→api.
+A classe relógio/aleatório toca determinismo de replay (gate bloqueante). Fica
+registrado como `DIV-PUREZA-ENGINE` (`blocked`) com o plano e as armadilhas, para um
+ciclo dedicado — **não** foi feita meia-correção nem baixada a regra do gate.
