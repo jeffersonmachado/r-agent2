@@ -178,6 +178,7 @@
     "security:vector-index": "node scripts/security-intel.js vector-index",
     "security:patches": "node scripts/security-intel.js patches",
     "validate:security-release-gate": "node --env-file-if-exists=.env scripts/governance/validate-security-release-gate.js",
+    "validate:postgres-budget": "node scripts/governance/check-postgres-budget.js",
     "validate:governance-summary": "node scripts/governance/governance-summary.js",
     "validate:ai-memory-consistency": "node scripts/governance/validate-ai-memory-consistency.js",
     "validate:layer-conventions": "node scripts/governance/validate-layer-conventions.js",

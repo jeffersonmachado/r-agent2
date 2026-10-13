@@ -63,6 +63,15 @@ function createSequelize() {
   // Configuração de dialect options
   const dialectOptions = {
     connectTimeout: 10000,
+    // IDENTIDADE DA CONEXÃO (Fase 10 — orçamento de conexões).
+    //
+    // DEFEITO MEDIDO (2026-10-11): as conexões chegavam ao Postgres com
+    // `application_name` VAZIO, então era impossível atribuir consumo a um workload —
+    // `pg_stat_activity` mostrava tudo como anônimo (usuário `postgres`) e qualquer
+    // orçamento por classe viraria ficção: não havia como dizer quem consumiu o quê.
+    // Com o nome declarado aqui, o gate `check-postgres-budget.js` consegue medir por
+    // classe e cobrar o orçamento. Sobrescrevível por env para instrumentar runners.
+    application_name: process.env.PGAPPNAME || 'rap-api',
   };
 
   // Adiciona SSL se configurado

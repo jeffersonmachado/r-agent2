@@ -1,0 +1,79 @@
+{
+  "policyId": "POSTGRES-CONNECTION-BUDGET",
+  "version": "1.0.0",
+  "rationale": "Orçamento de conexões declarado POR CLASSE e POR CENÁRIO. Sem isto, cada workload (API, suíte autoritativa, runner de engineering, mesh, RAG) dimensiona o próprio pool isoladamente e a soma teórica dos máximos excede `max_connections` — o estouro aparece como erro VAZIO do Sequelize e é mal diagnosticado como 'suíte instável'. A regra é não aumentar `max_connections` às cegas: primeiro declarar o orçamento e medir o consumo.",
+  "database": {
+    "maxConnections": 100,
+    "superuserReservedConnections": 3,
+    "safetyMargin": 10,
+    "source": "medido em 2026-10-11 (SHOW max_connections no Postgres do ambiente de dev)",
+    "notes": "superuserReserved é o `superuser_reserved_connections` do servidor; safetyMargin é a folga para ferramentas operacionais (psql, backups, migrations)."
+  },
+  "classes": {
+    "api": {
+      "max": 40,
+      "declaredBy": ".env DB_POOL_MAX=40 (DB_POOL_MIN=0)",
+      "notes": "Pool da API (Sequelize). DB_POOL_MIN=0 evita manter conexões ociosas."
+    },
+    "engineering_runner": {
+      "max": 20,
+      "declaredBy": "services/engineering-runner (pool próprio, processo separado)",
+      "notes": "Runner de execução de tasks; roda lotes que abrem conexões próprias."
+    },
+    "jest_authoritative": {
+      "max": 20,
+      "declaredBy": "scripts/governance/run-release-suites.js (processo do lote)",
+      "notes": "Lotes da suíte autoritativa; entre lotes o pool é drenado (awaitConnectionDrain)."
+    },
+    "qa_mesh": {
+      "max": 12,
+      "declaredBy": "pipeline/entrypoints/runQaMesh.js",
+      "notes": "Malha de cenários: execuções concorrentes limitadas."
+    },
+    "rag_service": {
+      "max": 10,
+      "declaredBy": "rag-service (serviço Python separado)",
+      "notes": "pgvector via pool próprio do serviço Python."
+    },
+    "tools": {
+      "max": 5,
+      "declaredBy": "scripts de governança / CLIs",
+      "notes": "Consultas pontuais (validação, relatórios)."
+    }
+  },
+  "scenarios": {
+    "dev_local": {
+      "simultaneous": ["api", "rag_service", "tools"],
+      "max": 55,
+      "notes": "Estação de desenvolvimento: API + RAG sob supervisão + ferramentas."
+    },
+    "dev_authoritative": {
+      "simultaneous": ["api", "jest_authoritative", "rag_service", "tools"],
+      "max": 75,
+      "notes": "Runner autoritativo rodando NA estação (foi o cenário que revelou a contenção entre lotes)."
+    },
+    "ci_authoritative": {
+      "simultaneous": ["engineering_runner", "jest_authoritative", "qa_mesh"],
+      "max": 52,
+      "notes": "CI: sem API de desenvolvimento; runner + lotes + mesh."
+    },
+    "production": {
+      "simultaneous": ["api", "rag_service", "engineering_runner", "tools"],
+      "max": 75,
+      "notes": "Compose de produção: API + RAG + runner + ferramentas operacionais."
+    }
+  },
+  "invariants": {
+    "scenarioMustFit": "soma(classes simultâneas do cenário) <= maxConnections - superuserReservedConnections - safetyMargin",
+    "neverRaiseMaxConnectionsBlindly": "Aumentar `max_connections` só é permitido depois de medir consumo por classe; PgBouncer apenas se a medição justificar multiplexação.",
+    "measuredBudget": "O consumo medido por classe nunca pode exceder o `max` declarado da classe no cenário ativo."
+  },
+  "measuredAt": "2026-10-11T23:36:23Z",
+  "measurementEvidence": {
+    "maxConnectionsObserved": 100,
+    "connectionsInUse": 10,
+    "activeQueries": 1,
+    "workloadRunning": "npm run test:unit (suíte unit completa)",
+    "report": "reports/postgres-budget-report.json"
+  }
+}
