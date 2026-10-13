@@ -25,8 +25,15 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPTS_DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 LOG_DIR="${RAGENT2_LOG_DIR:-$HOME/seal-logs}"
+
+# Política COMPARTILHADA de estado (porta canônica, identidade de quem responde
+# e decisões de parar/restaurar) — fonte única também consumida pelo smoke
+# prod-like: scripts/dev/lib/servicos-dev-state.sh.
+# shellcheck source=scripts/dev/lib/servicos-dev-state.sh
+. "$SCRIPTS_DEV_DIR/lib/servicos-dev-state.sh"
 
 # ── Tabela de serviços ────────────────────────────────────────────────────────────
 # Campos: unidade | diretório | template | log | health URL | descrição
@@ -239,6 +246,19 @@ esperar_health() {
   return 1
 }
 
+# A porta do serviço é servida por um processo DESTA unidade? (identidade, não
+# health: ver scripts/dev/lib/servicos-dev-state.sh — D5/H9.)
+# Tentativas configuráveis (RAGENT2_IDENTIDADE_TENTATIVAS) para provar o caminho
+# sem esperar 15s por tentativa nos testes.
+esperar_identidade() {
+  local servico="$1" tentativas="${2:-${RAGENT2_IDENTIDADE_TENTATIVAS:-15}}" i
+  for i in $(seq 1 "$tentativas"); do
+    porta_pertence_a_unidade "$servico" && return 0
+    sleep 1
+  done
+  return 1
+}
+
 cmd_install() {
   local servico="$1"
   require_systemd
@@ -265,8 +285,34 @@ cmd_start() {
   reap_strays "$servico"
   systemctl --user reset-failed "$(svc_unit "$servico")" >/dev/null 2>&1 || true
   systemctl --user start "$(svc_unit "$servico")"
-  esperar_health "$servico" 30 || fail "[$servico] não respondeu após start."
-  info "[$servico] no ar (health $(health_code "$servico"))"
+  # Sucesso exige as DUAS coisas: alguém responde (health) E quem responde é a
+  # unidade (identidade). Só health declarava "no ar" com o container da stack
+  # prod-like atendendo a porta e a unidade parada (defeito medido 2026-10-13).
+  if esperar_health "$servico" 30 && esperar_identidade "$servico" 15; then
+    info "[$servico] no ar (health $(health_code "$servico"))"
+    return 0
+  fi
+  if ! porta_pertence_a_unidade "$servico" && [ "$(health_code "$servico")" != "000" ]; then
+    warn "[$servico] a porta $(dev_porta "$servico") responde, mas quem atende não é a unidade $(svc_unit "$servico") (pids: $(dev_pids_na_porta "$(dev_porta "$servico")" | tr '\n' ' '))"
+  fi
+  # EADDRINUSE não mata o processo: o `listen` falha, o node continua VIVO e o
+  # systemd considera a unidade "active" — ela fica ATIVA SEM SERVIR e nunca
+  # reinicia sozinha. Medido em 2026-10-13: `ragent2-api-dev` em "active
+  # (running)" há 1min42s, porta 3001 sem ninguém escutando, health 000, após
+  # `[ERROR] [WebSocketService] listen EADDRINUSE: address already in use
+  # :::3001` (a unidade foi religada enquanto a stack Docker ocupava a porta).
+  # Um restart ÚNICO religa o bind quando a porta já está livre; se não
+  # resolver, o erro diz exatamente o que verificar.
+  warn "[$servico] subiu mas não responde (health $(health_code "$servico")) — reiniciando a unidade uma vez (bind pode ter falhado com porta ocupada)"
+  systemctl --user restart "$(svc_unit "$servico")"
+  if esperar_health "$servico" 30 && esperar_identidade "$servico" 15; then
+    info "[$servico] no ar após restart (health $(health_code "$servico"))"
+    return 0
+  fi
+  if ! porta_pertence_a_unidade "$servico"; then
+    fail "[$servico] NÃO atende a porta $(dev_porta "$servico"): quem responde ali não é a unidade $(svc_unit "$servico") (pids: $(dev_pids_na_porta "$(dev_porta "$servico")" | tr '\n' ' ')). Libere a porta (stack Docker? outro processo?) e rode de novo"
+  fi
+  fail "[$servico] não respondeu após start+restart. Veja: journalctl --user -u $(svc_unit "$servico") -n 80"
 }
 
 # `stop` existe porque quem precisa da PORTA livre (o smoke prod-like) não pode apenas

@@ -248,3 +248,244 @@ describe('D4 — filho do serviço não é resíduo', () => {
     }
   });
 });
+
+/**
+ * D5. `health` prova que ALGUÉM responde — não prova QUEM.
+ *
+ * Medido em 2026-10-13 durante prova de execução do smoke agendado: o log disse
+ *
+ *   [api] RESTAURADO (health=200) — estado inicial era unidade=active health=200
+ *
+ * com a unidade de dev PARADA; quem respondia em 127.0.0.1:3001 era o container
+ * `chatbot-api` da stack prod-like. O smoke declarava "ambiente restaurado" e
+ * saía 0 — falso verde, e a unidade de dev ficava em loop de EADDRINUSE sem
+ * nenhum erro aparecer. A restauração agora exige IDENTIDADE (ControlGroup) e
+ * restauração incompleta tem estado terminal próprio (exit 3), nunca GO.
+ */
+describe('D5 — identidade de quem responde na porta', () => {
+  /** Roda um snippet bash com a lib carregada, devolvendo stdout. */
+  function rodarComLib(script) {
+    return execFileSync('bash', ['-c', `source "${LIB}"\n${script}`], {
+      encoding: 'utf8',
+      timeout: 20000,
+    }).trim();
+  }
+
+  test('a lib expõe porta canônica, PIDs da porta e identidade (fonte única)', () => {
+    expect(libCode).toContain('dev_porta()');
+    expect(libCode).toContain('dev_pids_na_porta()');
+    expect(libCode).toContain('dev_pid_no_cgroup()');
+    expect(libCode).toContain('porta_pertence_a_unidade()');
+  });
+
+  test('porta canônica: 3001/8001/5173 e serviço desconhecido falha', () => {
+    expect(rodarComLib('dev_porta api')).toBe('3001');
+    expect(rodarComLib('dev_porta rag')).toBe('8001');
+    expect(rodarComLib('dev_porta frontend')).toBe('5173');
+    expect(rodarComLib('dev_porta inexistente; echo "rc=$?"')).toBe('rc=1');
+  });
+
+  test('EXECUÇÃO: processo REAL fora da unidade => identidade NÃO comprovada (fail-closed)', async () => {
+    const porta = 39117;
+    const servidor = require('http').createServer((_req, res) => res.end('ok'));
+    await new Promise((resolve) => servidor.listen(porta, '127.0.0.1', resolve));
+    try {
+      const pidReal = String(process.pid);
+      // 1) o PID que escuta É encontrado;
+      const pids = rodarComLib(`dev_pids_na_porta ${porta}`);
+      expect(pids.split('\n')).toContain(pidReal);
+
+      // 2) mas NÃO pertence ao ControlGroup da unidade (cgroup do processo de
+      // teste não é o da unidade de dev) => decisão fail-closed.
+      const fora = rodarComLib(
+        `dev_pid_no_cgroup ${pidReal} ragent2-api-dev; echo "rc=$?"`
+      );
+      expect(fora).toBe('rc=1');
+
+      const decisao = rodarComLib(
+        [
+          `dev_porta() { printf '${porta}'; }`,
+          `dev_unidade() { printf 'ragent2-api-dev'; }`,
+          'porta_pertence_a_unidade api',
+          'echo "rc=$?"',
+        ].join('\n')
+      );
+      expect(decisao).toBe('rc=1');
+    } finally {
+      await new Promise((resolve) => servidor.close(resolve));
+    }
+  });
+
+  test('identidade COMPROVADA quando o cgroup do PID é o da unidade', async () => {
+    const porta = 39118;
+    const servidor = require('http').createServer((_req, res) => res.end('ok'));
+    await new Promise((resolve) => servidor.listen(porta, '127.0.0.1', resolve));
+    try {
+      const cgroupReal = execFileSync(
+        'bash',
+        ['-c', `sed -n 's/^0:://p' /proc/${process.pid}/cgroup | head -n1`],
+        { encoding: 'utf8' }
+      ).trim();
+      expect(cgroupReal).not.toBe('');
+      const decisao = rodarComLib(
+        [
+          `dev_porta() { printf '${porta}'; }`,
+          `dev_unidade() { printf 'ragent2-api-dev'; }`,
+          // dublê de systemctl devolvendo o ControlGroup REAL deste processo de
+          // teste: é exatamente o que a unidade devolveria para o seu próprio PID.
+          `systemctl() { printf '%s\\n' '${cgroupReal}'; }`,
+          'porta_pertence_a_unidade api',
+          'echo "rc=$?"',
+        ].join('\n')
+      );
+      expect(decisao).toBe('rc=0');
+    } finally {
+      await new Promise((resolve) => servidor.close(resolve));
+    }
+  });
+
+  test('sem evidência (nada escutando / cgroup ilegível) => NÃO comprovado', () => {
+    expect(rodarComLib('dev_pids_na_porta 39999; echo "fim"')).toBe('fim');
+    expect(rodarComLib('dev_pid_no_cgroup 999999 ragent2-api-dev; echo "rc=$?"')).toBe('rc=1');
+    expect(rodarComLib('dev_pid_no_cgroup "" ragent2-api-dev; echo "rc=$?"')).toBe('rc=1');
+  });
+
+  test('restore do smoke NÃO declara RESTAURADO sem identidade comprovada', () => {
+    const posStart = smokeCode.indexOf('restore_dev_state() {');
+    const posFim = smokeCode.indexOf('# Saída antecipada', posStart);
+    const corpo = smokeCode.slice(posStart, posFim);
+    const posIdentidade = corpo.indexOf('porta_pertence_a_unidade "$s"');
+    const posLogOk = corpo.indexOf('RESTAURADO');
+    // A verificação de identidade precede o log de sucesso.
+    expect(posIdentidade).toBeGreaterThan(-1);
+    expect(posLogOk).toBeGreaterThan(posIdentidade);
+    // O ramo "identidade OK" é o ÚNICO que pode dizer RESTAURADO; o ramo de
+    // conflito (else) diz explicitamente que a unidade NÃO atende a porta.
+    const posElse = corpo.indexOf('else', posIdentidade);
+    expect(posElse).toBeGreaterThan(posIdentidade);
+    const ramoOk = corpo.slice(posIdentidade, posElse);
+    const ramoConflito = corpo.slice(posElse, posElse + 700);
+    expect(ramoOk).toContain('RESTAURADO');
+    expect(ramoConflito).not.toContain('RESTAURADO');
+    expect(ramoConflito).toContain('NÃO é servida pela unidade');
+  });
+
+  test('restauração incompleta tem estado terminal próprio (exit 3), nunca GO', () => {
+    expect(smokeCode).toContain('RESTORE_FALHAS=0');
+    expect(smokeCode).toContain('RESTORE_FALHAS=$((RESTORE_FALHAS + RESTORE_FALHAS_LOCAL))');
+    expect(smokeCode).toContain('status=RESTORE_INCOMPLETO exit=3');
+    // O veredito GO só sai com restauração íntegra.
+    const posGuard = smokeCode.indexOf('[[ $EXIT_CODE -eq 0 ]] && [[ $RESTORE_FALHAS -gt 0 ]]');
+    const posGo = smokeCode.indexOf('END status=GO exit=0');
+    expect(posGuard).toBeGreaterThan(-1);
+    expect(posGo).toBeGreaterThan(posGuard);
+    // E o trap aplica a mesma regra na saída antecipada.
+    const posTrap = smokeCode.indexOf('on_exit() {');
+    expect(smokeCode.slice(posTrap, posTrap + 500)).toContain('RESTORE_FALHAS');
+  });
+});
+
+/**
+ * D6. "Ativa sem servir": com `EADDRINUSE` no `listen`, o processo NÃO morre e o
+ * systemd considera a unidade `active` — ela fica no ar sem atender porta
+ * nenhuma e nunca reinicia sozinha.
+ *
+ * Medido em 2026-10-13: `ragent2-api-dev` em "active (running)" há 1min42s, porta
+ * 3001 sem ninguém escutando e health 000, após
+ * `[ERROR] [WebSocketService] listen EADDRINUSE: address already in use :::3001`
+ * (a unidade foi religada enquanto a stack Docker ocupava a porta). O `start`
+ * antigo só olhava `health`, então declarava sucesso apoiado no 200 de QUEM
+ * respondesse — ou falhava sem dizer a causa.
+ */
+describe('D6 — start exige identidade e recupera "ativa sem servir"', () => {
+  test('o service.sh consome a MESMA política de estado (fonte única, sem duplicar portas)', () => {
+    expect(serviceCode).toContain('lib/servicos-dev-state.sh');
+    expect(serviceCode).toContain('esperar_identidade()');
+    expect(serviceCode).toContain('porta_pertence_a_unidade');
+    expect(serviceCode).toContain('dev_pids_na_porta');
+    // A porta não é reescrita como literal dentro do start.
+    const corpo = serviceCode.slice(
+      serviceCode.indexOf('cmd_start() {'),
+      serviceCode.indexOf('cmd_stop() {')
+    );
+    expect(corpo).toContain('dev_porta "$servico"');
+  });
+
+  test('start só declara sucesso com health E identidade; senão reinicia uma vez e falha explicando', () => {
+    const corpo = serviceCode.slice(
+      serviceCode.indexOf('cmd_start() {'),
+      serviceCode.indexOf('cmd_stop() {')
+    );
+    // Caminho feliz exige as duas condições.
+    expect(corpo).toMatch(/esperar_health "\$servico" 30 && esperar_identidade "\$servico"/);
+    // Recuperação de bind falho: restart único.
+    expect(corpo).toContain('systemctl --user restart');
+    expect(corpo).toContain('reiniciando a unidade uma vez');
+    // Falha terminal aponta a porta e quem responde ali.
+    expect(corpo).toContain('NÃO atende a porta');
+    const posFail = corpo.indexOf('NÃO atende a porta');
+    const posHealth = corpo.indexOf('esperar_health "$servico" 30');
+    expect(posFail).toBeGreaterThan(posHealth);
+  });
+
+  test('PROVA FUNCIONAL: porta servida por outro processo => start FALHA (antes: "no ar")', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-svc-dubles-'));
+    const net = require('net');
+    const cgroupFalso = '/fake.slice/unidade-alheia.service';
+    const servidor = net.createServer(() => {});
+    servidor.listen(39119, '127.0.0.1');
+    const portaFalsa = 39119;
+    fs.writeFileSync(
+      path.join(tmp, 'ss'),
+      `#!/usr/bin/env bash\nprintf 'LISTEN 0 511 127.0.0.1:${portaFalsa} 0.0.0.0:* users:(("node",pid=${process.pid},fd=1))\\n'\n`
+    );
+    fs.writeFileSync(
+      path.join(tmp, 'systemctl'),
+      [
+        '#!/usr/bin/env bash',
+        'case "$*" in',
+        `  *"show -p ControlGroup --value"*) printf '%s\\n' '${cgroupFalso}' ;;`,
+        '  *is-active*) printf "active\\n" ;;',
+        '  *"cat"*) exit 0 ;;',
+        'esac',
+        'exit 0',
+        '',
+      ].join('\n')
+    );
+    // curl devolve 200 em qualquer porta: "alguém responde", sem ser a unidade.
+    fs.writeFileSync(path.join(tmp, 'curl'), '#!/usr/bin/env bash\nprintf \'200\'\n');
+    for (const bin of ['ss', 'systemctl', 'curl']) {
+      fs.chmodSync(path.join(tmp, bin), 0o755);
+    }
+    let resultado;
+    try {
+      resultado = execFileSync(
+        'bash',
+        [path.join(ROOT, 'scripts', 'dev', 'service.sh'), 'start', 'api'],
+        {
+          encoding: 'utf8',
+          timeout: 60000,
+          env: {
+            ...process.env,
+            PATH: `${tmp}:${process.env.PATH}`,
+            RAGENT2_IDENTIDADE_TENTATIVAS: '1',
+          },
+        }
+      );
+      resultado = { status: 0, saida: resultado };
+    } catch (erro) {
+      resultado = {
+        status: erro.status,
+        saida: `${erro.stdout || ''}${erro.stderr || ''}`,
+      };
+    } finally {
+      servidor.close();
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+    // Não pode sair 0 nem dizer "no ar": quem atende a porta não é a unidade.
+    expect(resultado.status).toBe(1);
+    expect(resultado.saida).toContain('quem atende não é a unidade');
+    expect(resultado.saida).toContain('NÃO atende a porta');
+    expect(resultado.saida).not.toMatch(/\[api\] no ar/);
+  });
+});

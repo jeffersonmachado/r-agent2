@@ -84,6 +84,11 @@ reachable() {
 SERVICOS_DEV="api rag frontend"
 SNAPSHOT_ARQUIVO=""
 RESTORE_CONCLUIDO=0
+# Serviços que ESTE smoke parou e que NÃO voltaram para a unidade (porta servida
+# por outro processo/stack, ou unidade que não subiu). Restauração incompleta
+# invalida o "GO": o smoke não pode declarar sucesso deixando o ambiente do
+# operador em estado diferente do inicial.
+RESTORE_FALHAS=0
 
 # Política de estado compartilhada com `service.sh` (deve_parar/deve_restaurar):
 # mantê-la em um único lugar evita que teardown e restauração discordem sobre o que
@@ -160,6 +165,7 @@ restore_dev_state() {
   RESTORE_CONCLUIDO=1
   [ -n "$SNAPSHOT_ARQUIVO" ] && [ -f "$SNAPSHOT_ARQUIVO.parados" ] || return 0
   local s marca estado health code
+  local RESTORE_FALHAS_LOCAL=0
   while IFS='|' read -r s marca estado health; do
     [ -n "$s" ] || continue
     deve_restaurar "$marca" || continue
@@ -169,11 +175,26 @@ restore_dev_state() {
         rag) code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' http://127.0.0.1:8001/health 2>/dev/null)" ;;
         frontend) code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' http://127.0.0.1:5173/ 2>/dev/null)" ;;
       esac
-      log "  [$s] RESTAURADO (health=${code:-000}) — estado inicial era $(descrever_estado "$estado" "$health")"
+      # `health` prova que ALGUÉM responde na porta — não prova QUEM (defeito
+      # medido em 2026-10-13: aqui o 200 vinha do container `chatbot-api` da
+      # stack prod-like, com a unidade de dev parada). Só declarar RESTAURADO
+      # quando a porta for servida por um processo DA UNIDADE.
+      if porta_pertence_a_unidade "$s"; then
+        log "  [$s] RESTAURADO (health=${code:-000}) — estado inicial era $(descrever_estado "$estado" "$health")"
+      else
+        RESTORE_FALHAS_LOCAL=$((RESTORE_FALHAS_LOCAL + 1))
+        log "  FALHA: [$s] health=${code:-000}, mas a porta $(dev_porta "$s") NÃO é servida pela unidade $(dev_unidade "$s") — respondendo ali: pids [$(dev_pids_na_porta "$(dev_porta "$s")" | tr '\n' ' ')]. A unidade NÃO está atendendo o operador (EADDRINUSE enquanto a porta estiver ocupada)"
+      fi
     else
+      RESTORE_FALHAS_LOCAL=$((RESTORE_FALHAS_LOCAL + 1))
       log "  AVISO: [$s] NÃO voltou — rode: npm run dev:services:start $s"
     fi
   done < "${SNAPSHOT_ARQUIVO}.parados"
+  if [ "$RESTORE_FALHAS_LOCAL" -gt 0 ]; then
+    RESTORE_FALHAS=$((RESTORE_FALHAS + RESTORE_FALHAS_LOCAL))
+    log "  RESTAURAÇÃO INCOMPLETA: $RESTORE_FALHAS_LOCAL serviço(s) não voltaram para a unidade (ambiente do operador NÃO restaurado)"
+  fi
+  return 0
 }
 
 # Saída antecipada (SKIP) ou interrupção: o ambiente do operador volta como estava.
@@ -181,6 +202,10 @@ on_exit() {
   local rc=$?
   restore_dev_state
   rm -f "$SNAPSHOT_ARQUIVO" "${SNAPSHOT_ARQUIVO}.parados" 2>/dev/null || true
+  # Mesma regra da saída normal: restauração incompleta não pode sair como 0.
+  if [ "$rc" -eq 0 ] && [ "$RESTORE_FALHAS" -gt 0 ]; then
+    rc=3
+  fi
   return $rc
 }
 trap on_exit EXIT INT TERM
@@ -307,8 +332,16 @@ EXIT_CODE=$?
 # log registrar a restauração ANTES do veredito final.
 restore_dev_state
 
+# Restauração incompleta é estado terminal próprio (3): o check pode ter passado,
+# mas o ambiente do operador NÃO voltou — declarar GO aqui seria falso verde.
+if [[ $EXIT_CODE -eq 0 ]] && [[ $RESTORE_FALHAS -gt 0 ]]; then
+  EXIT_CODE=3
+fi
+
 if [[ $EXIT_CODE -eq 0 ]]; then
   log "END status=GO exit=0"
+elif [[ $EXIT_CODE -eq 3 ]]; then
+  log "END status=RESTORE_INCOMPLETO exit=3 falhas=$RESTORE_FALHAS"
 else
   log "END status=NO_GO exit=$EXIT_CODE"
 fi

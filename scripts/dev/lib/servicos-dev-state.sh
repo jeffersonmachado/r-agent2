@@ -65,3 +65,60 @@ descrever_estado() {
   local estado="${1:-}" health="${2:-}"
   printf 'unidade=%s health=%s' "${estado:-desconhecido}" "${health:-000}"
 }
+
+# ── Identidade de QUEM responde na porta (H9) ──────────────────────────────────
+#
+# Defeito medido em 2026-10-13, por prova de execução do smoke agendado:
+# o `restore_dev_state` declarou "[api] RESTAURADO (health=200)" enquanto quem
+# respondia em 127.0.0.1:3001 era o CONTAINER `chatbot-api` da stack prod-like —
+# a unidade de dev estava parada. `health` prova que ALGUÉM responde; NÃO prova
+# quem. Restaurar (ou parar) sem conferir identidade é falso verde: o ambiente do
+# operador fica com a porta servida por outro processo/stack e a unidade de dev
+# entra em loop de EADDRINUSE, sem nenhum erro aparecer no log.
+#
+# A identidade é decidida pelo ControlGroup da unidade (mesma semântica de
+# `proc_no_cgroup_da_unidade` em scripts/dev/service.sh) e é FAIL-CLOSED: sem
+# `ss`, sem cgroup legível ou sem PID escutando, a resposta é "NÃO comprovado".
+
+# Porta TCP canônica de cada serviço de dev (fonte única — snapshot, restore e
+# diagnóstico usam esta função em vez de repetir literais).
+dev_porta() {
+  case "$1" in
+    api) printf '3001' ;;
+    rag) printf '8001' ;;
+    frontend) printf '5173' ;;
+    *) return 1 ;;
+  esac
+}
+
+# PIDs que ESCUTAM a porta TCP (vazio = ninguém). Saída observável: o chamador
+# não pode distinguir "sem processo" de "sem ss" — por isso ambas as situações
+# resultam em "identidade não comprovada" em porta_pertence_a_unidade.
+dev_pids_na_porta() {
+  local porta="${1:-}"
+  [ -n "$porta" ] || return 0
+  ss -ltnpH "sport = :$porta" 2>/dev/null | grep -oE 'pid=[0-9]+' | cut -d= -f2 | sort -u
+}
+
+# O PID pertence ao ControlGroup da unidade informada?
+dev_pid_no_cgroup() {
+  local pid="${1:-}" unidade="${2:-}" cg do_pid
+  [ -n "$pid" ] && [ -n "$unidade" ] || return 1
+  cg="$(systemctl --user show -p ControlGroup --value "$unidade" 2>/dev/null)"
+  [ -n "$cg" ] || return 1
+  do_pid="$(sed -n 's/^0:://p' "/proc/$pid/cgroup" 2>/dev/null | head -n1)"
+  [ -n "$do_pid" ] || return 1
+  [ "$do_pid" = "$cg" ]
+}
+
+# A porta do serviço é servida por um processo DA UNIDADE deste serviço?
+# 0 = identidade COMPROVADA | 1 = outra origem ou indeterminado (fail-closed).
+porta_pertence_a_unidade() {
+  local svc="${1:-}" unidade porta pid
+  unidade="$(dev_unidade "$svc")" || return 1
+  porta="$(dev_porta "$svc")" || return 1
+  for pid in $(dev_pids_na_porta "$porta"); do
+    dev_pid_no_cgroup "$pid" "$unidade" && return 0
+  done
+  return 1
+}
