@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-11T20:55:04.193Z",
+  "generatedAt": "2026-10-13T03:09:21.392Z",
   "ok": false,
   "zipPath": null,
   "zipName": null,
@@ -36,8 +36,20 @@
   "status": "DEFERRED",
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261011200839603-6ca7e4fd",
-  "sourceFingerprint": "00e1604955e58399ea125e481715255a537ed7a767abe7ecf028e70c71f3266c",
-  "gitCommit": "4bf3ab98574ad65f771efd87b9f08e612783ff56",
-  "gitTree": "3a96950583ec2360652524a2c627f046e4f0513f"
+  "runId": "rap-governed-20261013022011020-a588efa3",
+  "sourceFingerprint": "b2624f38e8f02a8791d58d74a4b4fcd5548d74ecebb6e0e30858f0b505361c3b",
+  "sourceCommit": "3ea58a1ccc3bf494aee47a75ab3a5cac253493d8",
+  "candidateCommit": null,
+  "environmentFingerprint": "0c838255efef37a482660c334a43658ae2bfb6fa9867e9a44412bf2250f074c4",
+  "configurationHash": "2134f9eca1743dfcd3689c6067c6443768b1c773163d6c694fb8b2ea5b3d2770",
+  "policyVersion": "1.0.4",
+  "testPlanHash": null,
+  "testResultHash": null,
+  "evidenceManifestHash": null,
+  "startedAt": "2026-10-13T03:09:01.472Z",
+  "finishedAt": "2026-10-13T03:09:21.393Z",
+  "producer": "tools/system/platform-readiness.js",
+  "gitCommit": "3ea58a1ccc3bf494aee47a75ab3a5cac253493d8",
+  "gitTree": "d9e017fb4a9ddb57a354950c06abbda2de0f57d0",
+  "blockingFindings": []
 }
