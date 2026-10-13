@@ -248,4 +248,51 @@ Resultado: **21/21 rotas carregam com 0 erros de console e 0 falhas de rede**
 (4xx/5xx contra a API); nenhuma permanece em "Carregando...". Nenhum defeito novo
 encontrado nesta varredura.
 
+## Jornada FUNCIONAL 2026-10-13 (ações reais, não só carregamento)
+
+Detector: `scripts/smoke/journey-functional-browser.js` (reusa
+`tests/helpers/playwrightAuth.js`). Diferente da varredura acima, que só prova que
+a tela CARREGA, esta jornada AGE: busca, filtro por chip, abre formulário de
+criação e detalhe, e mede o EFEITO percebido.
+
+Rotas exercitadas (8 PRODUCTION de negócio): `/workspace`, `/inbox`, `/cases`,
+`/crm`, `/knowledge-base`, `/tasks`, `/editor`, `/config`.
+
+Resultado: **0 erros de console, 0 pageerror, 0 requisições falhas**. Ações com
+efeito comprovado:
+
+| Rota | Ação | Efeito medido |
+|---|---|---|
+| `/workspace` | busca "Buscar cliente, telefone ou email" | 8083 → 792 chars (filtrou) |
+| `/workspace` | chip de filtro | lista muda |
+| `/workspace` | "Criar entidade rápida" | formulário inline (novos textos de cliente) |
+| `/inbox` | busca de conversa | filtra |
+| `/crm` | busca "Buscar por nome ou descrição" | 1922 → 1170 chars |
+| `/knowledge-base` | busca por título/conteúdo | filtra |
+| `/tasks` | "Criar tarefa" | modal com "Informe um título" |
+| `/editor` | "Novo" | abre "Criar Novo Fluxo / Selecione um modelo" |
+
+**Defeito REAL encontrado e corrigido nesta jornada**: `FlowTemplateSelector`
+chamava `useMemo` DEPOIS dos `return` antecipados de `selectedTemplate`/`loading`/
+`error` → "Rendered more hooks than during the previous render" (3 pageerror +
+2 erros de console em `/editor`) e o botão "Novo" não abria o seletor: a ação de
+criar fluxo sumia. Corrigido movendo o hook para antes dos returns; teste em
+`frontend/src/components/FlowTemplateSelector.test.jsx` (falha no código antigo,
+passa com o fix). Commit `dcc97cbed`.
+
+### Regra de medição (aprendida na marra, vale para qualquer detector)
+
+Efeito se mede por **mudança de tela** (diff de textos visíveis + delta de chars +
+delta de campos visíveis + `aria-expanded`), nunca por contagem de nós genéricos:
+
+- contar `table tbody tr`/`li`/`.card` como "itens da lista" mede o **menu
+  lateral** e o layout, não o conteúdo — o `/crm` filtrou e o detector acusou
+  "busca não filtra" porque os 9 `li` eram do menu;
+- exigir `[role="dialog"]`/`.modal` acusava defeito em botão que **funciona**
+  ("Criar entidade rápida" abre formulário inline, "Criar tarefa" abre modal);
+- **falso positivo é tão perigoso quanto falso negativo**: enche o relatório de
+  ruído e esconde o defeito real (foi exatamente o caso — a quebra de hooks só
+  apareceu quando os falsos positivos saíram do caminho).
+
+
 

@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-13T17:06:46Z",
+  "updatedAt": "2026-10-13T17:57:35Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -233,6 +233,34 @@
       "status": "done",
       "commit": "ec85f48b7",
       "evidence": "Defeito medido: `validate:dist` falhava com 3 motivos, sendo 1 espurio — `STALE_VERIFIER_RESULT` de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 (r-agent2-20261011-083027.payload.zip) ja ARQUIVADO. A politica exige recibo vinculado ao PAYLOAD ATUAL. Removido (copia preservada em dist/archive/pre-seal-20261010/). Medicao DEPOIS: o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\" e o validate:dist falha por UMA causa unica — ausencia de payload selado — em vez de 3 sintomas. A tentativa inversa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
+    },
+    {
+      "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
+      "title": "Runner atribui falha causada por mutacao da superficie provada durante o run",
+      "status": "done",
+      "commit": "1cb7fafe1",
+      "evidence": "Defeito medido: durante um run real do validate:all-validators criei um arquivo em scripts/smoke/ (raiz de SOURCE_ROOTS); a evidencia de runtime foi coletada antes (fingerprint bae797d5...) e validada depois (a6454061...) e o validate:engineering-router-v1:runtime reprovou com RUNTIME_EVIDENCE_FRESH, cascateando 4 falhas num run de ~40 min — parecendo defeito de produto. O gate estava CERTO; faltava ATRIBUICAO. Corrigido: mapearSuperficieProvada (walkSourceFiles + sha256 canonicos), compararSuperficieProvada (ESTAVEL/MUTADA_DURANTE_O_RUN com arquivo e tipo) e atribuirMutacaoDaSuperficie (marca attributedToSourceMutation SO em falhas de obsolescencia; falha de pacote NUNCA e atribuida), com provenSurfaceStability no relatorio. Prova: tests/unit/governance/allValidatorsRunner.test.js (18 casos, +5 novos) e a coleta revalidada depois com worktree limpo: RUNTIME_PASS items=25 falhas=0 commit=1cb7fafe1 fingerprint=a9f8c4c0..., status=PASS checks=209."
+    },
+    {
+      "id": "H17-HOOKS-EDITOR",
+      "title": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
+      "status": "done",
+      "commit": "dcc97cbed",
+      "evidence": "DEFEITO REAL achado pela jornada funcional no browser: /editor com 2 erros de console + 3 pageerror (\"Rendered more hooks than during the previous render\" em FlowTemplateSelector) e o botao \"Novo\" nao abria o seletor — a acao de criar fluxo sumia. Causa: useMemo das tags DEPOIS dos returns antecipados de selectedTemplate/loading/error; na 1a render (loading=true) o hook nao rodava e na seguinte rodava um hook a mais. Corrigido movendo o hook para antes dos returns. PROVA NOS DOIS SENTIDOS: com o codigo antigo (git stash push do .jsx) o teste falha com o erro exato do browser; com o fix, frontend/src/components/FlowTemplateSelector.test.jsx 4/4 e suite frontend 136 arquivos / 1035 testes PASS (EXIT=0). Prova no browser depois do fix: /editor com 0 console errors, 0 pageerror e \"Novo\" abrindo \"Criar Novo Fluxo / Selecione um modelo\"."
+    },
+    {
+      "id": "H18-JORNADA-FUNCIONAL-BROWSER",
+      "title": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
+      "status": "done",
+      "commit": "dcc97cbed",
+      "evidence": "Novo scripts/smoke/journey-functional-browser.js: exerce ACOES reais (busca, filtro por chip, abrir formulario de criacao, detalhe) em 8 rotas PRODUCTION de negocio e mede o EFEITO. Reusa tests/helpers/playwrightAuth.js (regra do repo). Evidencia em qa/evidence/journey-functional-latest.json (transitoria, nao versionada). Resultado medido: 0 erros de console, 0 pageerror, 0 requisicoes falhas; /workspace busca 8083->792 chars; /crm busca 1922->1170; chips de filtro aplicam; \"Criar entidade rapida\", \"Criar tarefa\" e \"Novo\" abrem. LIÇÃO incorporada: a 1a versao media itens por table/li/card e produziu 5 FALSOS POSITIVOS (media o menu lateral, nao a lista) — falso positivo de detector esconde o defeito real no ruido. Efeito passa a ser diff de textos visiveis + delta de chars + delta de campos."
+    },
+    {
+      "id": "H19-DIST-CAUSA-UNICA",
+      "title": "validate:dist reduzido a causa unica (payload ausente = P1-11)",
+      "status": "done",
+      "commit": "ec85f48b7",
+      "evidence": "Antes: 3 motivos de FAIL, sendo 1 espurio — STALE_VERIFIER_RESULT de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 ja arquivado. Removido (copia preservada em dist/archive/pre-seal-20261010/), o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\". Depois: 2 sintomas de UMA causa (payload nao selado = P1-11): \"Nenhum PAYLOAD encontrado em dist/release/*.payload.zip\" e \"verify-enterprise-governance-v2.sh FAIL\". A alternativa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
     }
   ]
 }
