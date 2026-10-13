@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T19:54:00.175Z",
+  "generatedAt": "2026-10-13T20:09:05.595Z",
   "engine": "replay-hardening-engine/v2",
   "pass": true,
   "decision": "REPLAY_HARDENING_GO",
@@ -150,5 +150,6 @@
   "runId": "rap-governed-20261013190246981-0d8aa19c",
   "sourceFingerprint": "68c5c70b53ced423bd6b4bdd388ad0e6e390760ea9a7080a010413972e7ec9cf",
   "artifactType": "replay-hardening-report",
-  "artifactVersion": "1.0.0"
+  "artifactVersion": "1.0.0",
+  "reboundAt": "2026-10-13T20:13:47.854Z"
 }
