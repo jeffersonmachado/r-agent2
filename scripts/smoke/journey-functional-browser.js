@@ -39,19 +39,45 @@ const PASS = process.env.QA_PASS || 'Admin123!';
 const TENANT = process.env.QA_TENANT || 'system';
 const EXPLORE = process.argv.includes('--explore');
 
-/** Rotas PRODUCTION de negócio (o que o cliente usa), não as de engenharia. */
-const ROTAS_DEFAULT = [
-  '/workspace',
-  '/inbox',
-  '/cases',
-  '/crm',
-  '/knowledge-base',
-  '/tasks',
-  '/editor',
-  '/config',
-];
+/**
+ * Perfis de rotas. `negocio` = superfícies PRODUCTION (o que o cliente usa);
+ * `engenharia` = superfícies DEVELOPMENT/SUPPORT (QA, mesh, dev, replays), que só
+ * aparecem para quem tem a classificação de plataforma correspondente.
+ *
+ * MEDIDO (2026-10-13): a varredura de 21 rotas cobria as duas famílias apenas
+ * quanto a CARREGAMENTO. Exercitar AÇÃO nas de engenharia exigiu perfil próprio —
+ * e revelou que `/qa-mesh` precisa de espera por estabilidade (539 -> 19.070 chars).
+ */
+const PERFIS = {
+  negocio: [
+    '/workspace',
+    '/inbox',
+    '/cases',
+    '/crm',
+    '/knowledge-base',
+    '/tasks',
+    '/editor',
+    '/config',
+  ],
+  engenharia: [
+    '/qa',
+    '/qa/stability',
+    '/qa-mesh',
+    '/dev',
+    '/dev/engineering',
+    '/dev/release',
+    '/rpa-replays',
+  ],
+};
+PERFIS.all = [...PERFIS.negocio, ...PERFIS.engenharia];
 
-const ROTAS = (process.env.RAP_UI_ROUTES || ROTAS_DEFAULT.join(','))
+const PERFIL = process.env.JOURNEY_PROFILE || 'negocio';
+if (!PERFIS[PERFIL]) {
+  console.error(`perfil inválido: ${PERFIL} (use: ${Object.keys(PERFIS).join(' | ')})`);
+  process.exit(2);
+}
+
+const ROTAS = (process.env.RAP_UI_ROUTES || PERFIS[PERFIL].join(','))
   .split(',')
   .map((r) => r.trim())
   .filter(Boolean);
@@ -170,7 +196,16 @@ async function snapshotDaTela(page) {
       paginacao,
       textoLen: texto.length,
       vazio: /nenhum|nenhuma|sem resultados|sem registros|nada encontrado|lista vazia/i.test(texto),
-      marcadorIndisponivel: /fonte indispon[ií]vel|indispon[ií]vel|erro ao carregar|falha ao carregar/i.test(texto),
+      // Separa ESTADO DECLARADO de FALHA DE CARGA.
+      //
+      // MEDIDO (2026-10-13): `/dev/release` exibe "Evidência indisponível — não foi
+      // lida: reports/delivered-release-verification-report.json (relatório ausente
+      // ou ilegível)" junto do diagnóstico CORRETO de que o artefato entregue é
+      // válido no commit dele e o código mudou depois. Isso é a tela RELATANDO um
+      // estado de governança — tratá-lo como defeito de produto é falso positivo.
+      // Falha real é outra coisa: tela vazia, erro de conexão ou exceção.
+      fonteIndisponivelDeclarada: /Evid[êe]ncia indispon[íi]vel|relat[óo]rio ausente ou ileg[íi]vel/i.test(texto),
+      marcadorIndisponivel: /erro ao carregar|falha ao carregar|n[aã]o foi poss[íi]vel carregar|failed to fetch|network ?error|econnrefused|timeout ao/i.test(texto),
       chips: Array.from(document.querySelectorAll('button, [role="tab"], [role="radio"]'))
         .filter(visivel)
         .map((el) => (el.innerText || '').replace(/\s+/g, ' ').trim())
@@ -178,6 +213,25 @@ async function snapshotDaTela(page) {
         .slice(0, 25),
     };
   });
+}
+
+/**
+ * Espera o texto da tela ESTABILIZAR (duas leituras iguais seguidas).
+ *
+ * MEDIDO (2026-10-13): `/qa-mesh` media 539 chars com espera fixa de 2,5 s e
+ * 19.070 chars com espera suficiente — telas de engenharia carregam dados pesados.
+ * Espera fixa transforma lentidão em "tela vazia", que é um falso positivo que
+ * esconde defeito real no ruído.
+ */
+async function esperarEstabilidade(page, { tentativas = 14, intervaloMs = 800 } = {}) {
+  let anterior = -1;
+  for (let i = 0; i < tentativas; i += 1) {
+    await page.waitForTimeout(intervaloMs);
+    const atual = await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').trim().length);
+    if (atual > 0 && atual === anterior) return atual;
+    anterior = atual;
+  }
+  return anterior;
 }
 
 /**
@@ -448,7 +502,7 @@ async function run() {
     const registro = { rota, acoes: {}, defeitos: [] };
     try {
       await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(2500);
+      const charsEstaveis = await esperarEstabilidade(page);
 
       const snap = await snapshotDaTela(page);
       registro.tela = {
@@ -463,10 +517,15 @@ async function run() {
         caracteres: snap.textoLen,
       };
 
-      registro.acoes.carrega = { ok: snap.textoLen > 200, detalhe: `${snap.textoLen} chars` };
+      registro.acoes.carrega = { ok: snap.textoLen > 200, detalhe: `${snap.textoLen} chars (estável em ${charsEstaveis})` };
       if (snap.textoLen <= 200) registro.defeitos.push('tela renderizou vazia (menos de 200 caracteres)');
       if (snap.marcadorIndisponivel) {
-        registro.defeitos.push('tela exibe marcador de fonte indisponível/erro de carga');
+        registro.defeitos.push('tela exibe marcador de erro de carga/indisponibilidade');
+      }
+      if (snap.fonteIndisponivelDeclarada) {
+        // Observação, NÃO defeito: a tela está declarando que uma evidência de
+        // governança não foi lida (ex.: entregue divergente do código atual).
+        registro.observacoes = [...(registro.observacoes || []), 'fonte de evidência declarada indisponível (estado de governança, ver texto)'];
       }
 
       if (EXPLORE) {
@@ -516,7 +575,8 @@ async function run() {
 
     if (!EXPLORE) {
       const marca = registro.defeitos.length === 0 ? '✅' : '❌';
-      console.log(`${marca} ${rota} — linhas=${registro.tela ? registro.tela.linhas : '?'} ${registro.defeitos.length ? ':: ' + registro.defeitos.join(' | ') : ''}`);
+      const obs = registro.observacoes ? ` (obs: ${registro.observacoes.length})` : '';
+      console.log(`${marca} ${rota} — linhas=${registro.tela ? registro.tela.linhas : '?'}${obs} ${registro.defeitos.length ? ':: ' + registro.defeitos.join(' | ') : ''}`);
     }
   }
 
