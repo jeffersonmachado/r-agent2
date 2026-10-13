@@ -106,6 +106,85 @@ function filtrarValidadores(nomes, only) {
   return nomes.filter((n) => selecionados.includes(n));
 }
 
+/**
+ * O runner NÃO pode ficar cego à mutação da própria superfície que ele prova.
+ *
+ * DEFEITO MEDIDO (2026-10-13): durante uma execução deste runner, um arquivo NOVO
+ * foi criado em `scripts/smoke/` — raiz que está em `SOURCE_ROOTS` do
+ * fingerprint chain. A evidência de runtime do engineering-router foi coletada
+ * ANTES da criação e validada DEPOIS, contra um fingerprint já diferente, e o
+ * `validate:engineering-router-v1:runtime` reprovou com
+ * `RUNTIME_EVIDENCE_FRESH`/"evidência de runtime obsoleta". O gate estava CERTO
+ * (evidência de uma superfície que mudou não vale), mas o operador recebia isso
+ * como se fosse falha de produto, no fim de um run de ~40 min, sem nenhuma
+ * pista de que o motivo era uma edição feita durante o próprio run.
+ *
+ * Aqui o runner passa a MEDIR a superfície provada antes e depois do loop e a
+ * ATRIBUIR as falhas de obsolescência à mutação — explicitamente, com a lista de
+ * arquivos. Não mascara nada: o exit continua refletindo as falhas; muda só a
+ * explicação, e o relatório passa a dizer que a ação correta é estabilizar o
+ * worktree e recoletar (não "consertar um defeito" que não existe).
+ */
+const MOTIVOS_OBSOLESCENCIA_POR_MUTACAO = [
+  /RUNTIME_EVIDENCE_FRESH/i,
+  /evid[eê]ncia de runtime obsoleta/i,
+  /sourceFingerprint/i,
+  /fingerprint.*(diverg|mudou|obsolet)/i,
+];
+
+/** Mapa {arquivo -> hash} da superfície provada, via mecanismos canônicos. */
+function mapearSuperficieProvada(rootDir) {
+  const path = require('path');
+  const fs = require('fs');
+  const { walkSourceFiles } = require(path.join(rootDir, 'governance', 'proof-engine', 'fingerprint-chain'));
+  const { sha256 } = require(path.join(rootDir, 'qa', 'coverage', 'fingerprints'));
+
+  const mapa = {};
+  for (const rel of walkSourceFiles(rootDir)) {
+    try {
+      mapa[rel] = sha256(fs.readFileSync(path.join(rootDir, rel), 'utf8'));
+    } catch (_) {
+      mapa[rel] = 'ILEGIVEL';
+    }
+  }
+  return mapa;
+}
+
+/** Diferença entre duas fotografias da superfície provada. */
+function compararSuperficieProvada(antes, depois) {
+  const mapAntes = antes || {};
+  const mapDepois = depois || {};
+  const alterados = [];
+  for (const [rel, hash] of Object.entries(mapDepois)) {
+    if (!(rel in mapAntes)) alterados.push({ arquivo: rel, tipo: 'criado' });
+    else if (mapAntes[rel] !== hash) alterados.push({ arquivo: rel, tipo: 'modificado' });
+  }
+  for (const rel of Object.keys(mapAntes)) {
+    if (!(rel in mapDepois)) alterados.push({ arquivo: rel, tipo: 'removido' });
+  }
+  alterados.sort((a, b) => a.arquivo.localeCompare(b.arquivo));
+  return { estabilidade: alterados.length === 0 ? 'ESTAVEL' : 'MUTADA_DURANTE_O_RUN', alterados };
+}
+
+/**
+ * Marca, sem apagar, quais falhas são EXPLICADAS pela mutação da superfície.
+ * Uma falha só é atribuída quando (a) a superfície realmente mudou e (b) o motivo
+ * da falha é de obsolescência — nunca por conveniência.
+ */
+function atribuirMutacaoDaSuperficie(resultados, estabilidade) {
+  const mutada = estabilidade && estabilidade.estabilidade === 'MUTADA_DURANTE_O_RUN';
+  if (!mutada) return [];
+  const atribuidos = [];
+  for (const r of resultados) {
+    if (r.exitCode === 0) continue;
+    const motivo = (r.summary || []).join(' ');
+    if (!MOTIVOS_OBSOLESCENCIA_POR_MUTACAO.some((re) => re.test(motivo))) continue;
+    r.attributedToSourceMutation = true;
+    atribuidos.push(r.name);
+  }
+  return atribuidos;
+}
+
 module.exports = {
   listarValidadores,
   resumirSaida,
@@ -113,4 +192,8 @@ module.exports = {
   calcularExit,
   filtrarValidadores,
   deveRevalidarAposCarimbo,
+  mapearSuperficieProvada,
+  compararSuperficieProvada,
+  atribuirMutacaoDaSuperficie,
+  MOTIVOS_OBSOLESCENCIA_POR_MUTACAO,
 };

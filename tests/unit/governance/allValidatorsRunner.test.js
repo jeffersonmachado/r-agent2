@@ -175,3 +175,91 @@ describe('EXECUÇÃO REAL — exit do runner é fail-closed', () => {
     expect(saida).toMatch(/fora do agregado/);
   });
 });
+
+describe('o runner não fica cego à mutação da superfície que ele prova', () => {
+  /**
+   * DEFEITO MEDIDO (2026-10-13): durante uma execução real do runner, um arquivo
+   * NOVO foi criado em `scripts/smoke/` — raiz de `SOURCE_ROOTS`. A evidência de
+   * runtime foi coletada antes e validada depois, contra um fingerprint já
+   * diferente: `validate:engineering-router-v1:runtime` reprovou com
+   * RUNTIME_EVIDENCE_FRESH e o operador recebia isso como falha de produto, no
+   * fim de um run de ~40 min, sem pista de que a causa era uma edição feita
+   * durante o próprio run.
+   */
+  const {
+    mapearSuperficieProvada,
+    compararSuperficieProvada,
+    atribuirMutacaoDaSuperficie,
+  } = require('../../../scripts/governance/lib/governance-enforcement-plan');
+
+  it('a superfície provada é lida pelo mecanismo canônico (não por um walk paralelo)', () => {
+    const superficie = mapearSuperficieProvada(ROOT);
+    // `scripts/smoke` e `scripts/governance` ESTÃO em SOURCE_ROOTS: foi por isso
+    // que criar um arquivo em scripts/smoke invalidou a evidência de runtime.
+    expect(Object.keys(superficie).length).toBeGreaterThan(1000);
+    expect(Object.keys(superficie).some((f) => f.startsWith('scripts/smoke/'))).toBe(true);
+    expect(Object.keys(superficie).some((f) => f.startsWith('scripts/governance/'))).toBe(true);
+    // Ruído de execução NUNCA entra: reports/ não é superfície provada.
+    expect(Object.keys(superficie).some((f) => f.startsWith('reports/'))).toBe(false);
+  });
+
+  it('fotografia igual a si mesma é ESTAVEL; alteração é MUTADA (com o arquivo identificado)', () => {
+    const superficie = mapearSuperficieProvada(ROOT);
+    expect(compararSuperficieProvada(superficie, superficie).estabilidade).toBe('ESTAVEL');
+    expect(compararSuperficieProvada(superficie, superficie).alterados).toEqual([]);
+
+    const modificada = { ...superficie };
+    const primeiro = Object.keys(modificada)[0];
+    modificada[primeiro] = 'hash-diferente';
+    modificada['scripts/smoke/arquivo-criado-durante-o-run.js'] = 'novo';
+
+    const est = compararSuperficieProvada(superficie, modificada);
+    expect(est.estabilidade).toBe('MUTADA_DURANTE_O_RUN');
+    expect(est.alterados).toContainEqual({ arquivo: primeiro, tipo: 'modificado' });
+    expect(est.alterados).toContainEqual({ arquivo: 'scripts/smoke/arquivo-criado-durante-o-run.js', tipo: 'criado' });
+
+    const removida = { ...superficie };
+    delete removida[primeiro];
+    expect(compararSuperficieProvada(superficie, removida).alterados).toContainEqual({ arquivo: primeiro, tipo: 'removido' });
+  });
+
+  it('atribui SOMENTE falhas de obsolescência (nunca por conveniência)', () => {
+    const superficie = mapearSuperficieProvada(ROOT);
+    const mutada = { ...superficie, 'scripts/smoke/x.js': 'novo' };
+    const est = compararSuperficieProvada(superficie, mutada);
+
+    const resultados = [
+      { name: 'validate:engineering-router-v1:runtime', exitCode: 1, summary: ['RUNTIME_MODEL_CATALOG_GOVERNANCE: evidência de runtime obsoleta (ver RUNTIME_EVIDENCE_FRESH)'] },
+      { name: 'validate:release-governance', exitCode: 1, summary: ['package_validation_not_ok: package-validation-report.json is not ok.'] },
+      { name: 'validate:dist', exitCode: 1, summary: ['check_dist_clean_failed: scripts/check-dist-clean.sh failed.'] },
+      { name: 'validate:release-dag', exitCode: 0, summary: [] },
+    ];
+
+    const atribuidos = atribuirMutacaoDaSuperficie(resultados, est);
+    // A falha de pacote NÃO pode ser atribuída à mutação: é causa independente.
+    expect(atribuidos).toEqual(['validate:engineering-router-v1:runtime']);
+    expect(resultados[1].attributedToSourceMutation).toBeUndefined();
+    expect(resultados[2].attributedToSourceMutation).toBeUndefined();
+  });
+
+  it('superfície ESTAVEL não atribui nenhuma falha', () => {
+    const superficie = mapearSuperficieProvada(ROOT);
+    const estavel = compararSuperficieProvada(superficie, superficie);
+    const resultados = [
+      { name: 'validate:engineering-router-v1:runtime', exitCode: 1, summary: ['evidência de runtime obsoleta'] },
+    ];
+    expect(atribuirMutacaoDaSuperficie(resultados, estavel)).toEqual([]);
+    expect(resultados[0].attributedToSourceMutation).toBeUndefined();
+  });
+
+  it('o runner mede a superfície ANTES e DEPOIS e publica a atribuição no relatório', () => {
+    const codigo = fs.readFileSync(path.join(ROOT, 'scripts', 'governance', 'run-all-validators.js'), 'utf8');
+    // Antes do loop e depois do loop, com o resultado no relatório.
+    expect(codigo).toContain('mapearSuperficieProvada(ROOT)');
+    expect(codigo).toContain('provenSurfaceStability');
+    expect(codigo).toContain('attributedToSourceMutation');
+    // A medição precisa vir ANTES de rodar os validadores (senão a mutação
+    // durante o run passa despercebida) — é o que fecha o defeito.
+    expect(codigo.indexOf('mapearSuperficieProvada(ROOT)')).toBeLessThan(codigo.indexOf('for (const name of alvos)'));
+  });
+});

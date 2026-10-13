@@ -36,6 +36,9 @@ const {
   calcularExit,
   filtrarValidadores,
   deveRevalidarAposCarimbo,
+  mapearSuperficieProvada,
+  compararSuperficieProvada,
+  atribuirMutacaoDaSuperficie,
 } = require('./lib/governance-enforcement-plan');
 const { resolveRunLineage, applyOriginLineage } = require('./lib/resolve-run-lineage');
 
@@ -111,6 +114,12 @@ function main() {
   const alvos = filtrarValidadores(todos, ONLY);
 
   console.log(`[all-validators] executando ${alvos.length} de ${todos.length} validador(es)`);
+  // Fotografia da superfície PROVADA antes de rodar. Se ela mudar durante o run,
+  // as falhas de obsolescência (ex.: RUNTIME_EVIDENCE_FRESH) têm causa EXTERNA ao
+  // produto — alguém editou um arquivo provado no meio da execução — e o
+  // operador precisa saber disso, com a lista de arquivos, em vez de caçar um
+  // defeito que não existe.
+  const superficieAntes = mapearSuperficieProvada(ROOT);
   const resultados = [];
   for (const name of alvos) {
     const inicio = Date.now();
@@ -136,10 +145,15 @@ function main() {
     console.log(`  ${marca} ${name} (exit=${exitCode}, ${(duracaoMs / 1000).toFixed(1)}s)`);
   }
 
+  const estabilidade = compararSuperficieProvada(superficieAntes, mapearSuperficieProvada(ROOT));
+  const atribuidos = atribuirMutacaoDaSuperficie(resultados, estabilidade);
+
   const relatorio = applyOriginLineage(
     comporRelatorio(resultados),
     resolveRunLineage(ROOT),
   );
+  relatorio.provenSurfaceStability = estabilidade;
+  if (atribuidos.length > 0) relatorio.attributedToSourceMutation = atribuidos;
   if (STAMP) {
     const stamp = carimbarLineage();
     if (stamp) {
@@ -168,6 +182,15 @@ function main() {
   fs.writeFileSync(destino, `${JSON.stringify(relatorio, null, 2)}\n`);
 
   console.log(`[all-validators] status=${relatorio.status} pass=${relatorio.pass} fail=${relatorio.fail}`);
+  if (estabilidade.estabilidade !== 'ESTAVEL') {
+    console.log(`[all-validators] ATENCAO: a superficie PROVADA mudou DURANTE este run (${estabilidade.alterados.length} arquivo(s)):`);
+    for (const a of estabilidade.alterados.slice(0, 10)) console.log(`  ~ ${a.tipo}: ${a.arquivo}`);
+    if (estabilidade.alterados.length > 10) console.log(`  ~ ... e mais ${estabilidade.alterados.length - 10}`);
+    console.log('[all-validators] evidencia validada contra a superficie de ANTES nasce obsoleta — estabilize o worktree e rode de novo (nao e defeito de produto).');
+  }
+  if (atribuidos.length > 0) {
+    console.log(`[all-validators] falhas ATRIBUIDAS a essa mutacao (nao ao produto): ${atribuidos.join(', ')}`);
+  }
   if (relatorio.fail > 0) {
     console.log(`[all-validators] FALHARAM: ${relatorio.falhas.join(', ')}`);
     for (const f of relatorio.results.filter((r) => r.exitCode !== 0)) {
