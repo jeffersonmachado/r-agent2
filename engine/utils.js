@@ -1,3 +1,5 @@
+const rng = require('./shared/random');
+const clock = require('./shared/clock');
 /**
  * Funções utilitárias genéricas usadas pela engine.
  * Mantidas em módulo separado para evitar duplicação
@@ -11,7 +13,7 @@
  * @returns {string}
  */
 function nowIso() {
-  return new Date().toISOString();
+  return clock.nowIso();
 }
 
 /**
@@ -32,7 +34,7 @@ function createEngineEvent(base) {
   return {
     // Importante: o ID pode (e deve) ser sobrescrito pelo chamador
     // se ele tiver uma estratégia global de geração de IDs (ex: UUID).
-    id: `${sessionId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: `${sessionId}-${clock.nowMs()}-${rng.random().toString(16).slice(2)}`,
     timestamp: nowIso(),
     sessionId,
     flowId,

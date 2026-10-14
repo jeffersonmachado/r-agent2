@@ -21,8 +21,12 @@
  * AbortSignal é criado pela borda (api/), que passa `signal` para o transporte.
  */
 
-const fs = require('fs');
 const path = require('path');
+// Portas injetáveis (mesma política do clock): a leitura do registry de política e
+// o jitter aleatório entram pela borda, então esta unidade não faz I/O direto nem
+// depende do ambiente — o comentário de PUREZA acima passa a valer de fato.
+const fsPort = require('./fileSystem');
+const rng = require('./random');
 
 /**
  * Categorias de expiração/falha. `TIMEOUT` genérico é PROIBIDO: a missão exige
@@ -71,7 +75,7 @@ function loadPolicyRegistry(policyPath) {
   if (registryCache && !policyPath) return registryCache;
   const target = policyPath || path.join(__dirname, '..', '..', 'config', 'timeout-policy.json');
   try {
-    const parsed = JSON.parse(fs.readFileSync(target, 'utf8'));
+    const parsed = JSON.parse(fsPort.readFileSync(target, 'utf8'));
     if (!policyPath) registryCache = parsed;
     return parsed;
   } catch {
@@ -258,7 +262,7 @@ function classifyOperationError(err, { operation = null } = {}) {
 /** Backoff exponencial com jitter e teto (anti retry-storm). */
 function computeBackoffMs({ attempt = 1, baseMs = 1000, multiplier = 2, maxMs = 60000, jitterRatio = 0.2, random = null } = {}) {
   const exp = Math.min(baseMs * (multiplier ** Math.max(0, attempt - 1)), maxMs);
-  const rnd = typeof random === 'function' ? random() : Math.random();
+  const rnd = typeof random === 'function' ? random() : rng.random();
   const jitter = exp * jitterRatio * (rnd * 2 - 1);
   return Math.max(0, Math.round(exp + jitter));
 }

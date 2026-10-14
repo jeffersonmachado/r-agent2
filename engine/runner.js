@@ -1,3 +1,5 @@
+const timers = require('./shared/scheduler');
+const clock = require('./shared/clock');
 /**
  * Runner principal da engine de fluxo.
  *
@@ -160,7 +162,7 @@ async function runStep(flow, state, registry, input, deps = null) {
     return Promise.race([
       handlerCall,
       new Promise((_, reject) => {
-        setTimeout(() => {
+        timers.setTimeout(() => {
           const err = new Error(`Node handler timed out after ${timeoutMs}ms`);
           // Marcamos um campo interno para identificação, se necessário.
           // @ts-ignore
@@ -302,7 +304,7 @@ async function runStep(flow, state, registry, input, deps = null) {
               message: lastError && lastError.message ? lastError.message : String(lastError),
               nodeId: node.id,
               nodeType: node.type,
-              timestamp: new Date().toISOString(),
+              timestamp: clock.nowIso(),
             },
           },
         };

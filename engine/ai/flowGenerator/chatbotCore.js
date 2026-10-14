@@ -1,8 +1,10 @@
+const envPort = require('../../shared/runtimeEnv');
+const clock = require('../../shared/clock');
 const path = require('path');
 const { loadPromptFile, safeJsonParse, toValidationWarnings, defaultLogger } = require('./utils');
 const { normalizeFlow } = require('../../flowNormalizer');
 
-const DEFAULT_PROMPT_PATH = path.resolve(process.cwd(), 'prompts/chatbot.generator.prompt.md');
+const DEFAULT_PROMPT_PATH = path.resolve(envPort.cwd(), 'prompts/chatbot.generator.prompt.md');
 
 /**
  * Core injetável: gera FlowDefinition (chatbot) a partir de descrição.
@@ -77,7 +79,7 @@ async function generateChatbotFlowCore({ description, tenantId, options = {}, de
   const nodes = Array.isArray(plan.nodes) ? plan.nodes : [];
   const flowDefinition = {
     tenantId,
-    id: options.flowId || options.id || `flow-${Date.now()}`,
+    id: options.flowId || options.id || `flow-${clock.nowMs()}`,
     name: (plan.metadata && plan.metadata.name) || options.flowName || options.name || 'Fluxo Gerado',
     version: 1,
     nodes,
@@ -86,7 +88,7 @@ async function generateChatbotFlowCore({ description, tenantId, options = {}, de
       generatedBy: 'ai',
       status: 'draft',
       requiresReview: true,
-      generatedAt: new Date().toISOString(),
+      generatedAt: clock.nowIso(),
     },
   };
 

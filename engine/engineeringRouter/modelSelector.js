@@ -1,5 +1,7 @@
 'use strict';
 
+
+const clock = require('../shared/clock');
 /**
  * engine/engineeringRouter/modelSelector.js
  *
@@ -268,7 +270,7 @@ function selectCoderAndReviewer(availableModels, {
     independentReviewRequired,
     independentReviewApplied,
     policyVersion,
-    selectedAt: new Date().toISOString(),
+    selectedAt: clock.nowIso(),
   };
 }
 

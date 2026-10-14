@@ -1,3 +1,4 @@
+const clock = require('./shared/clock');
 /**
  * Função de alto nível para executar UM passo do fluxo compilado.
  *
@@ -165,7 +166,7 @@ async function executeStep(state, compiledFlow, options) {
   const stepIndex = resolveExecutionStepIndex(state);
   const nodeId = state && state.currentNodeId ? String(state.currentNodeId) : null;
   const nodeType = nodeId ? resolveNodeType(compiledFlow, nodeId) : null;
-  const stepStartedAt = new Date();
+  const stepStartedAt = clock.now();
 
   // Regras de multi-tenant:
   // - Todo fluxo pertence a um tenant (compiledFlow.tenantId).
@@ -228,7 +229,7 @@ async function executeStep(state, compiledFlow, options) {
           stepIndex,
           status: 'error',
           startedAt: stepStartedAt,
-          finishedAt: new Date(),
+          finishedAt: clock.now(),
           input: sanitizedInput,
           output: {},
           stateBefore: buildLedgerStateSnapshot(state),
@@ -296,7 +297,7 @@ async function executeStep(state, compiledFlow, options) {
         stepIndex,
         status: 'ok',
         startedAt: stepStartedAt,
-        finishedAt: new Date(),
+        finishedAt: clock.now(),
         input: sanitizedInput,
         output: sanitizedOutput,
         stateBefore: buildLedgerStateSnapshot(state),

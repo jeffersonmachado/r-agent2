@@ -1,3 +1,4 @@
+const clock = require('./shared/clock');
 /**
  * Conversor de Fluxo para Gravação RPA
  * 
@@ -59,7 +60,7 @@ function convertFlowToRpaRecording(flow, options = {}) {
 
   // Cria a gravação RPA
   const recording = {
-    id: `rpa-${flow.id}-${Date.now()}`,
+    id: `rpa-${flow.id}-${clock.nowMs()}`,
     name: `Teste RPA - ${flow.name}`,
     flowId: flow.id,
     flowName: flow.name,
@@ -73,7 +74,7 @@ function convertFlowToRpaRecording(flow, options = {}) {
     },
     metadata: {
       generated: true,
-      generatedAt: new Date().toISOString(),
+      generatedAt: clock.nowIso(),
       generatedBy: 'flow-to-rpa-converter',
       dependenciasResolvidas: options.dependencyResolution?.allSatisfied || false,
       seedsExecutados: options.executedSeeds || [],
@@ -105,7 +106,7 @@ function convertNodeToSteps(node, flow, steps, visitedNodes, path) {
   path.push({
     nodeId: node.id,
     nodeType: node.type,
-    timestamp: new Date().toISOString(),
+    timestamp: clock.nowIso(),
   });
 
   // Converte o nó atual em passos RPA

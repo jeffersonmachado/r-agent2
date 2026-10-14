@@ -1,3 +1,6 @@
+const rng = require('../shared/random');
+const timers = require('../shared/scheduler');
+const clock = require('../shared/clock');
 /**
  * Handlers de nós de sistema (utilitários).
  * 
@@ -39,7 +42,7 @@ async function getCurrentTimeNodeHandler(node, state, input, deps = null) {
   const timezone = node.config?.timezone;
 
   try {
-    const now = new Date();
+    const now = clock.now();
     let formattedTime;
 
     switch (format.toUpperCase()) {
@@ -230,7 +233,7 @@ async function delayNodeHandler(node, state, input, deps = null) {
   if (!isTestMode) {
     // Em produção, aguarda o tempo real
     try {
-      await new Promise(resolve => setTimeout(resolve, duration));
+      await new Promise(resolve => timers.setTimeout(resolve, duration));
     } catch (err) {
       const error = new Error(`Delay node "${node.id}" falhou ao aguardar: ${err.message}`);
       // @ts-ignore
@@ -443,7 +446,7 @@ async function randomNumberNodeHandler(node, state, input, deps = null) {
   }
 
   try {
-    const random = Math.floor(Math.random() * (max - min + 1)) + min;
+    const random = rng.randomInt(max, min);
     nextState.variables[outputVariable] = random;
 
     const successEvent = createEngineEvent({

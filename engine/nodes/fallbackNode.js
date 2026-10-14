@@ -1,3 +1,4 @@
+const clock = require('../shared/clock');
 /**
  * Handler do nó FallbackNode.
  * 
@@ -63,7 +64,7 @@ function updateFallbackHistory(state, nodeId) {
   const history = getFallbackHistory(state);
   const updatedHistory = [
     ...history.slice(-4), // Mantém últimos 4
-    { nodeId, timestamp: Date.now() },
+    { nodeId, timestamp: clock.nowMs() },
   ].slice(-5); // Mantém no máximo 5
   
   const nextState = cloneState(state);
@@ -247,7 +248,7 @@ async function fallbackNodeHandler(node, state, input, deps = null) {
           ...stateWithHistory.metadata,
           humanEscalation: {
             mode: 'ticket',
-            timestamp: new Date().toISOString(),
+            timestamp: clock.nowIso(),
             reason: fallbackResult.metadata.fallbackType,
             attempt: fallbackResult.metadata.attempt,
             safeReturnNode,
@@ -264,7 +265,7 @@ async function fallbackNodeHandler(node, state, input, deps = null) {
           ...stateWithHistory.metadata,
           humanEscalation: {
             mode: 'human',
-            timestamp: new Date().toISOString(),
+            timestamp: clock.nowIso(),
             reason: fallbackResult.metadata.fallbackType,
             attempt: fallbackResult.metadata.attempt,
             safeReturnNode,

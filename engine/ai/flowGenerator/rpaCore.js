@@ -1,7 +1,9 @@
+const envPort = require('../../shared/runtimeEnv');
+const clock = require('../../shared/clock');
 const path = require('path');
 const { loadPromptFile, safeJsonParse, toValidationWarnings, defaultLogger } = require('./utils');
 
-const DEFAULT_PROMPT_PATH = path.resolve(process.cwd(), 'prompts/rpa.generator.prompt.md');
+const DEFAULT_PROMPT_PATH = path.resolve(envPort.cwd(), 'prompts/rpa.generator.prompt.md');
 
 /**
  * Core injetável: gera um plano/teste RPA a partir de descrição.
@@ -36,7 +38,7 @@ async function generateRpaTestCore({ description, tenantId, options = {}, deps =
   const callModel = deps.callModel || (async () => {
     // fallback determinístico mínimo (para testes/uso sem provider)
     return JSON.stringify({
-      id: `test-${Date.now()}`,
+      id: `test-${clock.nowMs()}`,
       name: 'IA - Teste RPA (fallback)',
       version: '1.0',
       type: 'rpa_test_plan',

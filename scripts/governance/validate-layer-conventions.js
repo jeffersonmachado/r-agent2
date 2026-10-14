@@ -115,16 +115,52 @@ function checkEnginePurity() {
   const ioAllowedFiles = [
     'engine/ai/aiEnvelope.js',
     'engine/ai/aiEnvelopeSchema.js',
+    // Ponte de TEMPO: a engine não lê o relógio espalhada por 20+ arquivos; ela lê
+    // AQUI, e a borda (API/CLI/replay/teste) injeta o provider — inclusive um
+    // relógio congelado, que é o que torna o replay determinístico de fato.
+    // MEDIDO em 2026-10-13: eram 31 `new Date()` + 25 `Date.now()` no engine/.
+    // Concentrar a porta é o oposto de espalhar exceção: mantém o resto puro.
+    'engine/shared/clock.js',
+    // MESMA POLÍTICA para as demais dependências de ambiente. Cada uma é PORTa
+    // única e injetável (`setXProvider`), com default idêntico ao comportamento
+    // anterior — a engine declara a dependência, a borda decide o valor.
+    // Importar como NAMESPACE (`clock.nowMs()`, `timers.setTimeout()`), nunca como
+    // nome solto: 7 arquivos do engine já declaram `now`/`nowIso`/`random` locais e
+    // nome solto produziu recursão infinita + TDZ (medido em `engine/utils.js`).
+    'engine/shared/random.js',   // aleatório  → `rng.random()`   (determinismo de replay)
+    'engine/shared/logger.js',   // log        → `logPort.info()`  (observabilidade da borda)
+    'engine/shared/scheduler.js',// timers     → `timers.setTimeout()`
+    'engine/shared/fileSystem.js',// leitura   → `fsPort.readFileSync()`
+    'engine/shared/runtimeEnv.js',// cwd/env   → `envPort.cwd()`
   ];
 
   const ioPatterns = [
     { pattern: /\brequire\s*\(\s*['"](?:fs|http|https|net|dgram|child_process|process|os)['"]/, name: 'require(fs/http/process)' },
-    { pattern: /\bfs\./, name: 'fs.*' },
+    { pattern: /(?<![.\w])fs\./, name: 'fs.*' },
     { pattern: /\bprocess\.(?!env\.NODE_ENV)/, name: 'process.* (não NODE_ENV)' },
     { pattern: /\bconsole\.(?:log|error|warn|info|debug)/, name: 'console.log' },
-    { pattern: /\b(setTimeout|setInterval|setImmediate)\s*\(/, name: 'timer (side effect)' },
-    { pattern: /\bMath\.random\b/, name: 'Math.random (não determinístico)' },
-    { pattern: /\bnew\s+Date\b/, name: 'new Date (não determinístico)' },
+    // PRECISÃO: `timers.setTimeout(...)` é a PORTA injetável, não efeito direto —
+    // o `\b` anterior casava a chamada qualificada por namespace e acusava a própria
+    // correção. A lookbehind mantém a acusação para a chamada GLOBAL (`setTimeout(`),
+    // que é a que cria efeito fora do controle da engine.
+    { pattern: /(?<![.\w])(setTimeout|setInterval|setImmediate)\s*\(/, name: 'timer (side effect)' },
+    { pattern: /(?<![.\w])Math\.random\b/, name: 'Math.random (não determinístico)' },
+    // LEITURA DE RELÓGIO — a regra precisa distinguir `new Date()` de `new Date(arg)`.
+    //
+    // MEDIDO em 2026-10-13 (engine/, fora de testes): 35 `new Date()` (leitura),
+    // 16 `new Date(x)` (CONVERSÃO de valor — determinística) e **35 `Date.now()`
+    // que a regra NÃO acusava**. Ou seja, a regra antiga (`/\bnew\s+Date\b/`) era ao
+    // mesmo tempo IMPRECISA (16 falsos positivos) e INCOMPLETA (35 pontos cegos numa
+    // classe que ela diz cobrir). Esta versão corrige os dois lados: acusa quem LÊ o
+    // relógio (`new Date()` e `Date.now()`) e para de acusar quem apenas CONVERTE um
+    // valor já conhecido (`new Date(ms)`).
+    //
+    // Atenção: `new Date(variavel)` com variável possivelmente `undefined` VOLTA a
+    // ler o relógio. Esse é um defeito de TRATAMENTO DE ENTRADA (o valor deveria ser
+    // validado antes), não de pureza determinística — e tratá-lo aqui faria a regra
+    // voltar a acusar conversões legítimas. Fica registrado como classe própria.
+    { pattern: /\bnew\s+Date\s*\(\s*\)/, name: 'new Date() — lê o relógio (não determinístico)' },
+    { pattern: /\bDate\.now\s*\(\s*\)/, name: 'Date.now() — lê o relógio (não determinístico)' },
   ];
 
   scanFiles('engine', 'js', (file, line, text, fullContent) => {

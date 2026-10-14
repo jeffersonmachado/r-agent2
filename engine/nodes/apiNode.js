@@ -1,3 +1,4 @@
+const timers = require('../shared/scheduler');
 /**
  * Handler do nó "api" - Faz chamadas HTTP para APIs externas
  * 
@@ -154,7 +155,7 @@ async function apiNodeHandler(node, state, input, deps = null) {
       // Em produção, faz chamada HTTP real
       // Cria um AbortController para timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const timeoutId = timers.setTimeout(() => controller.abort(), timeout);
 
       // Faz a chamada HTTP
       // Nota: fetch está disponível no Node.js 18+
@@ -163,7 +164,7 @@ async function apiNodeHandler(node, state, input, deps = null) {
         signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
+      timers.clearTimeout(timeoutId);
     }
 
     // Lê a resposta

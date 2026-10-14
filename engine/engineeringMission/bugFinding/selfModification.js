@@ -1,5 +1,7 @@
 'use strict';
 
+
+const clock = require('../../shared/clock');
 /**
  * engine/engineeringMission/bugFinding/selfModification.js
  *
@@ -463,7 +465,7 @@ function assessGovernanceChangeAuthorization({
       afterHash: afterHash || null,
       missionId: missionId || null,
       findingId: findingId || null,
-      timestamp: new Date().toISOString(),
+      timestamp: clock.nowIso(),
     },
   };
 }

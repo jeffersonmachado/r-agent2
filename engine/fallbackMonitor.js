@@ -1,3 +1,5 @@
+const rng = require('./shared/random');
+const clock = require('./shared/clock');
 /**
  * Sistema de monitoramento de fallbacks.
  * 
@@ -55,7 +57,7 @@ const alertHistory = new Map();
  * Limpa contadores antigos (mantém apenas últimos 60 minutos)
  */
 function cleanupOldCounts() {
-  const now = Date.now();
+  const now = clock.nowMs();
   const oneHourAgo = now - (60 * 60 * 1000);
   
   for (const [type, counts] of fallbackCounts.entries()) {
@@ -79,11 +81,11 @@ function cleanupOldCounts() {
 function recordFallback(fallbackType, metadata = {}) {
   try {
     // Limpa contadores antigos periodicamente
-    if (Math.random() < 0.1) { // 10% de chance a cada chamada
+    if (rng.random() < 0.1) { // 10% de chance a cada chamada
       cleanupOldCounts();
     }
     
-    const now = Date.now();
+    const now = clock.nowMs();
     const minute = Math.floor(now / 60000) * 60000; // Arredonda para o minuto
     
     // Incrementa contador
@@ -122,7 +124,7 @@ function recordFallback(fallbackType, metadata = {}) {
  * @param {Object} metadata - Metadados
  */
 function checkAndAlert(fallbackType, count, threshold, metadata) {
-  const now = Date.now();
+  const now = clock.nowMs();
   const alertKey = `${fallbackType}:${Math.floor(now / 60000)}`;
   
   // Evita spam de alertas (máximo 1 alerta por minuto por tipo)
@@ -157,7 +159,7 @@ function checkAndAlert(fallbackType, count, threshold, metadata) {
  * @returns {Object} Métricas agregadas
  */
 function getFallbackMetrics() {
-  const now = Date.now();
+  const now = clock.nowMs();
   const oneMinuteAgo = now - 60000;
   const fiveMinutesAgo = now - (5 * 60000);
   const oneHourAgo = now - (60 * 60 * 1000);

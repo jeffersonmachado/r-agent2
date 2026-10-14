@@ -1,3 +1,4 @@
+const clock = require('./shared/clock');
 /**
  * Controles auxiliares de segurança para a engine.
  *
@@ -186,7 +187,7 @@ function canAccessReplay(ctx, dataTenantId) {
  * @returns {AdminAuditEvent}
  */
 function buildAdminAuditEvent(ctx, data) {
-  const now = new Date().toISOString();
+  const now = clock.nowIso();
 
   return {
     id: `${ctx.tenantId}:${ctx.actorId}:${data.action}:${now}`,

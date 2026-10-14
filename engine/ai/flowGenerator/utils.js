@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fsPort = require('../../shared/fileSystem');
 const path = require('path');
 
 function defaultLogger() {
@@ -8,7 +8,7 @@ function defaultLogger() {
 function loadPromptFile(absPath, { logger } = {}) {
   const log = logger || defaultLogger();
   try {
-    return fs.readFileSync(absPath, 'utf8');
+    return fsPort.readFileSync(absPath, 'utf8');
   } catch (err) {
     log.error?.('[flowGenerator] Falha ao carregar prompt', { path: absPath, error: err.message });
     throw new Error(`Falha ao carregar prompt: ${path.basename(absPath)}`);

@@ -1,3 +1,4 @@
+const logPort = require('../shared/logger');
 /**
  * Handler de nó "ai_task".
  *
@@ -101,7 +102,7 @@ async function aiTaskNodeHandler(node, state, input, deps = null) {
         if (tenantContext && task === SUPPORTED_TASKS.intent_classification) {
           // Log para debug (apenas em desenvolvimento)
           if (process.env.NODE_ENV === 'development') {
-            console.log(`[aiTaskNode] Tenant context carregado para classificação de intenção:`, {
+            logPort.info(`[aiTaskNode] Tenant context carregado para classificação de intenção:`, {
               tenantId,
               ramo_atividade: tenantContext.ramo_atividade?.substring(0, 50),
             });
@@ -109,7 +110,7 @@ async function aiTaskNodeHandler(node, state, input, deps = null) {
         }
       } catch (err) {
         // Se falhar ao carregar tenant_context, continua sem ele (não bloqueia)
-        console.warn(`[aiTaskNode] Erro ao carregar tenant context:`, err.message);
+        logPort.warn(`[aiTaskNode] Erro ao carregar tenant context:`, err.message);
       }
     }
 

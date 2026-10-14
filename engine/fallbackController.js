@@ -1,3 +1,5 @@
+const logPort = require('./shared/logger');
+const clock = require('./shared/clock');
 /**
  * Sistema centralizado de controle de fallback (versão engine/CommonJS).
  * 
@@ -72,7 +74,7 @@ function logEvent(eventType, payload) {
   // Por enquanto, apenas console.log estruturado
   if (process.env.NODE_ENV !== 'production') {
     // eslint-disable-next-line no-console
-    console.log(`[FALLBACK_EVENT] ${eventType}`, JSON.stringify(payload, null, 2));
+    logPort.info(`[FALLBACK_EVENT] ${eventType}`, JSON.stringify(payload, null, 2));
   }
 }
 
@@ -132,7 +134,7 @@ function decideFallbackAction(fallbackType, context, config = {}) {
       attempt,
       nodeId: context.nodeId,
       sessionId: context.sessionId,
-      timestamp: new Date().toISOString(),
+      timestamp: clock.nowIso(),
     });
     return FALLBACK_ACTIONS.HUMAN;
   }
@@ -145,7 +147,7 @@ function decideFallbackAction(fallbackType, context, config = {}) {
       nodeId: context.nodeId,
       sessionId: context.sessionId,
       userMessage: userMessage?.substring(0, 100), // Limita tamanho
-      timestamp: new Date().toISOString(),
+      timestamp: clock.nowIso(),
     });
     return FALLBACK_ACTIONS.HUMAN;
   }
@@ -158,7 +160,7 @@ function decideFallbackAction(fallbackType, context, config = {}) {
       maxAttempts,
       nodeId: context.nodeId,
       sessionId: context.sessionId,
-      timestamp: new Date().toISOString(),
+      timestamp: clock.nowIso(),
     });
     return FALLBACK_ACTIONS.HUMAN;
   }
@@ -209,7 +211,7 @@ function processFallback(fallbackType, context, config = {}) {
     sessionId: context.sessionId,
     action,
     escalationMode: finalEscalationMode,
-    timestamp: new Date().toISOString(),
+    timestamp: clock.nowIso(),
     hasLoop: detectLoop(context),
     hasFrustration: detectFrustration(context.userMessage),
     severity,
@@ -232,7 +234,7 @@ function processFallback(fallbackType, context, config = {}) {
     // Não falha se monitoramento não estiver disponível
     // eslint-disable-next-line no-console
     if (process.env.NODE_ENV !== 'production') {
-      console.debug('[FallbackController] Monitoramento não disponível', monitorError.message);
+      logPort.debug('[FallbackController] Monitoramento não disponível', monitorError.message);
     }
   }
   
@@ -244,7 +246,7 @@ function processFallback(fallbackType, context, config = {}) {
       attempt: context.attempt || 1,
       nodeId: context.nodeId,
       sessionId: context.sessionId,
-      timestamp: new Date().toISOString(),
+      timestamp: clock.nowIso(),
     },
   };
 }
@@ -266,7 +268,7 @@ function createFallbackContext(sessionId, nodeId, userMessage = null, previousFa
   // Mantém histórico recente (últimos 5 fallbacks)
   const recentFallbacks = [
     ...previousFallbacks.slice(-4),
-    { nodeId, timestamp: Date.now() },
+    { nodeId, timestamp: clock.nowMs() },
   ].slice(-5);
   
   return {

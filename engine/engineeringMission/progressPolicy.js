@@ -1,5 +1,7 @@
 'use strict';
 
+
+const clock = require('../shared/clock');
 /**
  * engine/engineeringMission/progressPolicy.js — POLÍTICA DE PROGRESSO (núcleo puro).
  *
@@ -116,7 +118,7 @@ function recordProgress(record, { signal, atMs, detail = null } = {}) {
         : `sinal "${signal}" não é progresso significativo`,
     };
   }
-  const at = Number.isFinite(atMs) ? atMs : Date.now();
+  const at = Number.isFinite(atMs) ? atMs : clock.nowMs();
   const previous = toMs(base.lastMeaningfulProgressAt);
   // Progresso só AVANÇA: um sinal atrasado/fora de ordem não retrocede o marco
   // (senão um evento antigo reenviado faria a task parecer travada).

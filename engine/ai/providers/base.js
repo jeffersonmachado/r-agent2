@@ -1,3 +1,5 @@
+const timers = require('../../shared/scheduler');
+const clock = require('../../shared/clock');
 /**
  * Interface base para providers de LLM.
  * 
@@ -46,7 +48,7 @@ function withTimeout(promise, timeoutMs) {
   return Promise.race([
     promise,
     new Promise((_, reject) => {
-      setTimeout(() => {
+      timers.setTimeout(() => {
         reject(new Error(`Timeout após ${timeoutMs}ms`));
       }, timeoutMs);
     })
@@ -78,7 +80,7 @@ async function withRetry(fn, options = {}) {
       });
 
       if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        await new Promise(resolve => timers.setTimeout(resolve, retryDelay * attempt));
       }
     }
   }
@@ -105,7 +107,7 @@ function createBaseProvider(provider, config = {}) {
     id: provider.id,
     
     async generate(prompt, options = {}) {
-      const startTime = Date.now();
+      const startTime = clock.nowMs();
       logger.debug('[LLM Provider] Iniciando geração', {
         providerId: provider.id,
         promptLength: prompt?.length || 0,
@@ -128,7 +130,7 @@ function createBaseProvider(provider, config = {}) {
         );
 
         // Log depois do gate
-        const duration = Date.now() - startTime;
+        const duration = clock.nowMs() - startTime;
         logger.debug('[LLM Provider] Após o gate', {
           providerId: provider.id,
           duration,
@@ -137,7 +139,7 @@ function createBaseProvider(provider, config = {}) {
 
         return result;
       } catch (error) {
-        const duration = Date.now() - startTime;
+        const duration = clock.nowMs() - startTime;
         logger.error('[LLM Provider] Erro na geração', {
           providerId: provider.id,
           duration,

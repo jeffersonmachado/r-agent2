@@ -1,5 +1,7 @@
 'use strict';
 
+
+const clock = require('./shared/clock');
 /**
  * AI Control Plane Resilience — núcleo determinístico de resiliência.
  *
@@ -107,7 +109,7 @@ function createCircuitBreaker(options = {}) {
     ? options.resetMs : 30000;
   const recoveryProbeSuccessThreshold = Number.isFinite(options.recoveryProbeSuccessThreshold) && options.recoveryProbeSuccessThreshold > 0
     ? options.recoveryProbeSuccessThreshold : 2;
-  const now = typeof options.now === 'function' ? options.now : () => Date.now();
+  const now = typeof options.now === 'function' ? options.now : () => clock.nowMs();
 
   const state = {
     state: BREAKER_STATE.CLOSED,
@@ -468,13 +470,13 @@ function validateSnapshotIntegrity(snapshot, options = {}) {
  *
  * @param {*} snapshot
  * @param {object} [options]
- * @param {number} [options.now=Date.now()]
+ * @param {number} [options.now=clock.nowMs()]
  * @param {number} [options.freshMaxMs] idade máxima p/ FRESH
  * @param {number} [options.acceptableMaxMs] idade máxima p/ STALE_ACCEPTABLE
  * @returns {string} SNAPSHOT_STALENESS
  */
 function classifySnapshotStaleness(snapshot, options = {}) {
-  const now = Number.isFinite(options.now) ? options.now : Date.now();
+  const now = Number.isFinite(options.now) ? options.now : clock.nowMs();
   const freshMaxMs = Number.isFinite(options.freshMaxMs) ? options.freshMaxMs : 5 * 60 * 1000;
   const acceptableMaxMs = Number.isFinite(options.acceptableMaxMs) ? options.acceptableMaxMs : 24 * 60 * 60 * 1000;
 

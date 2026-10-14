@@ -1,3 +1,4 @@
+const fsPort = require('../shared/fileSystem');
 /**
  * Gate de validação obrigatória para planos gerados por IA.
  * 
@@ -188,11 +189,10 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
     // REGRA 4: Rejeitar qualquer action que NÃO esteja em rpa.actions.json
     // (Esta validação já é feita em validateRpaPlan, mas garantimos aqui também)
     if (plan.steps && Array.isArray(plan.steps)) {
-      const fs = require('fs');
       const path = require('path');
       const actionsPath = path.join(__dirname, '../../api/data/rag/rpa/rpa.actions.json');
       try {
-        const actions = JSON.parse(fs.readFileSync(actionsPath, 'utf8'));
+        const actions = JSON.parse(fsPort.readFileSync(actionsPath, 'utf8'));
         for (let i = 0; i < plan.steps.length; i++) {
           const step = plan.steps[i];
           if (step.action && !actions.allowed.includes(step.action)) {

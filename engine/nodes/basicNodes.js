@@ -1,3 +1,4 @@
+const clock = require('../shared/clock');
 /**
  * Handlers de nós básicos da engine.
  *
@@ -83,7 +84,7 @@ async function startNodeHandler(node, state, input, deps = null) {
   // Marca início explícito do fluxo
   nextState.metadata = nextState.metadata || {};
   nextState.metadata.flowStarted = true;
-  nextState.metadata.flowStartTime = new Date().toISOString();
+  nextState.metadata.flowStartTime = clock.nowIso();
 
   /** @type {EngineStepOutput} */
   const result = {
@@ -762,7 +763,7 @@ async function endNodeHandler(node, state, input, deps = null) {
   nextState.currentNodeId = null;
   nextState.metadata = nextState.metadata || {};
   nextState.metadata.flowEnded = true;
-  nextState.metadata.flowEndTime = new Date().toISOString();
+  nextState.metadata.flowEndTime = clock.nowIso();
   
   // Bloqueia execução posterior
   nextState.metadata.executionBlocked = true;
@@ -812,7 +813,7 @@ async function scheduleRouterNodeHandler(node, state, input, deps = null) {
 
   try {
     // Obtém data/hora atual considerando timezone
-    const now = new Date();
+    const now = clock.now();
     let currentDate;
     
     if (timezone !== 'UTC') {
@@ -820,7 +821,7 @@ async function scheduleRouterNodeHandler(node, state, input, deps = null) {
       const dateStr = now.toLocaleString('en-US', { timeZone: timezone });
       currentDate = new Date(dateStr);
     } else {
-      currentDate = new Date();
+      currentDate = clock.now();
     }
 
     // Obtém dia da semana (0 = domingo, 6 = sábado)
@@ -1283,11 +1284,11 @@ async function subflowNodeHandler(node, state, input, deps = null) {
     let stepCount = 0;
     const allSubflowEvents = [];
 
-    const startTime = Date.now();
+    const startTime = clock.nowMs();
 
     while (currentSubflowState.currentNodeId && stepCount < MAX_SUBFLOW_STEPS) {
       // Verifica timeout
-      if (Date.now() - startTime > timeout) {
+      if (clock.nowMs() - startTime > timeout) {
         const error = new Error(`Subfluxo "${subflowId}" excedeu timeout de ${timeout}ms.`);
         // @ts-ignore
         error.code = 'ENGINE_SUBFLOW_TIMEOUT';

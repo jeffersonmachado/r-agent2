@@ -1,3 +1,5 @@
+const logPort = require('../shared/logger');
+const fsPort = require('../shared/fileSystem');
 /**
  * Validador de Capacidades (CDR - Capability-Driven Responses)
  * 
@@ -7,8 +9,6 @@
  * Regra Fundamental: O chatbot NUNCA deve responder como se fosse capaz
  * de executar uma ação que não esteja explicitamente declarada e implementada.
  */
-
-const fs = require('fs');
 const path = require('path');
 
 let capabilitiesCache = null;
@@ -24,11 +24,11 @@ function loadCapabilities() {
 
   try {
     const capabilitiesPath = path.join(__dirname, '../../capabilities.json');
-    const capabilitiesContent = fs.readFileSync(capabilitiesPath, 'utf8');
+    const capabilitiesContent = fsPort.readFileSync(capabilitiesPath, 'utf8');
     capabilitiesCache = JSON.parse(capabilitiesContent);
     return capabilitiesCache;
   } catch (error) {
-    console.error('[capabilityValidator] Erro ao carregar capabilities.json:', error.message);
+    logPort.error('[capabilityValidator] Erro ao carregar capabilities.json:', error.message);
     return null;
   }
 }

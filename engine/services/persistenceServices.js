@@ -1,3 +1,5 @@
+const logPort = require('../shared/logger');
+const clock = require('../shared/clock');
 /**
  * Serviços de persistência disponíveis para nós (DB-only).
  *
@@ -46,8 +48,8 @@ function mapTicketRow(row) {
     category: row.category || null,
     messages: Array.isArray(row.messages) ? row.messages : [],
     context: row.context || {},
-    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
-    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || clock.nowIso()),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || clock.nowIso()),
   };
 }
 
@@ -64,7 +66,7 @@ async function getFlows() {
     return rows.map(mapFlowRow);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao ler flows do PostgreSQL:', err.message);
+    logPort.error('[PersistenceServices] Erro ao ler flows do PostgreSQL:', err.message);
     return [];
   }
 }
@@ -91,7 +93,7 @@ async function getFlow(flowId) {
     return row ? mapFlowRow(row) : null;
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao buscar fluxo:', err.message);
+    logPort.error('[PersistenceServices] Erro ao buscar fluxo:', err.message);
     return null;
   }
 }
@@ -127,7 +129,7 @@ async function findFlows(criteria = {}) {
     });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao buscar fluxos:', err.message);
+    logPort.error('[PersistenceServices] Erro ao buscar fluxos:', err.message);
     return [];
   }
 }
@@ -155,7 +157,7 @@ async function getAllTickets() {
     return rows.map(mapTicketRow);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao ler tickets do PostgreSQL:', err.message);
+    logPort.error('[PersistenceServices] Erro ao ler tickets do PostgreSQL:', err.message);
     return [];
   }
 }
@@ -188,7 +190,7 @@ async function getQueueTickets(queueName, options = {}) {
     return rows.map(mapTicketRow);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao buscar tickets:', err.message);
+    logPort.error('[PersistenceServices] Erro ao buscar tickets:', err.message);
     return [];
   }
 }
@@ -222,7 +224,7 @@ async function getQueueInfo(queueName) {
     };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao obter info da fila:', err.message);
+    logPort.error('[PersistenceServices] Erro ao obter info da fila:', err.message);
     return { exists: false, ticketCount: 0, activeTickets: 0, closedTickets: 0 };
   }
 }
@@ -238,7 +240,7 @@ async function listQueues() {
     return Object.keys(data.queues || {});
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao listar filas:', err.message);
+    logPort.error('[PersistenceServices] Erro ao listar filas:', err.message);
     return [];
   }
 }
@@ -253,7 +255,7 @@ async function getConfig() {
     return config.getAll();
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao ler config:', err.message);
+    logPort.error('[PersistenceServices] Erro ao ler config:', err.message);
     return {};
   }
 }
@@ -270,7 +272,7 @@ async function getConfigValue(path, defaultValue = undefined) {
     return config.get(path, defaultValue);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[PersistenceServices] Erro ao obter valor de config:', err.message);
+    logPort.error('[PersistenceServices] Erro ao obter valor de config:', err.message);
     return defaultValue;
   }
 }

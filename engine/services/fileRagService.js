@@ -1,3 +1,4 @@
+const clock = require('../shared/clock');
 /**
  * Serviço para indexar arquivos do chat no RAG
  */
@@ -36,7 +37,7 @@ async function indexFilesInRag(files, tenantId, options = {}) {
           fileName: file.name,
           fileType: file.type,
           fileSize: file.size,
-          uploadedAt: new Date().toISOString(),
+          uploadedAt: clock.nowIso(),
           ...options.metadata,
         },
         autoIndex: options.autoIndex !== false, // Indexa por padrão

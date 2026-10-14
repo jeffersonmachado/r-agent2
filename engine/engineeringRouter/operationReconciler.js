@@ -1,5 +1,7 @@
 'use strict';
 
+
+const clock = require('../shared/clock');
 /**
  * engine/engineeringRouter/operationReconciler.js — ER-V1-SEAL-002 (Full Durable Resume).
  *
@@ -30,7 +32,7 @@ const DEFAULT_STALE_RUNNING_MS = 10 * 60 * 1000; // 10min — acima disso, RUNNI
  * @param {{existingOperation: object|null, nowMs?: number, staleRunningMs?: number}} params
  * @returns {{action: string, reason?: string}}
  */
-function reconcileOperation({ existingOperation, nowMs = Date.now(), staleRunningMs = DEFAULT_STALE_RUNNING_MS }) {
+function reconcileOperation({ existingOperation, nowMs = clock.nowMs(), staleRunningMs = DEFAULT_STALE_RUNNING_MS }) {
   if (!existingOperation) {
     return { action: 'RUN' };
   }

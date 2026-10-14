@@ -1,3 +1,4 @@
+const logPort = require('./shared/logger');
 /**
  * Validador estático de fluxos de chatbot.
  *
@@ -309,7 +310,7 @@ function buildEdges(flow) {
 
   // Debug: log das arestas construídas
   if (edges.length === 0 && (flow.nodes || []).length > 0) {
-    console.warn('[validator] buildEdges - Nenhuma aresta construída', {
+    logPort.warn('[validator] buildEdges - Nenhuma aresta construída', {
       nodeCount: (flow.nodes || []).length,
       nodes: (flow.nodes || []).map(n => ({
         id: n.id,
@@ -395,7 +396,7 @@ function validateDisconnectedNodes(flow, edges) {
   if (disconnected.length === 0) return [];
 
   // Debug: log detalhado quando há nós desconectados
-  console.warn('[validator] validateDisconnectedNodes - Nós desconectados detectados', {
+  logPort.warn('[validator] validateDisconnectedNodes - Nós desconectados detectados', {
     disconnectedCount: disconnected.length,
     disconnectedNodes: disconnected,
     entryNodes: entries,

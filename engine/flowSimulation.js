@@ -1,3 +1,5 @@
+const envPort = require('./shared/runtimeEnv');
+const clock = require('./shared/clock');
 /**
  * Simulador de fluxo para o modo "preview"/"teste".
  *
@@ -202,14 +204,14 @@ async function simulateFlow(flow, options) {
 
   // Inicializa replay
   const replay = new ReplaySystem({
-    storagePath: path.join(process.cwd(), 'replays', 'simulation'),
+    storagePath: path.join(envPort.cwd(), 'replays', 'simulation'),
     context: 'simulation',
     enableScreenshots: false,
   });
 
   // Recording visual é opcional. Em simulação (especialmente em testes),
   // usamos um recorder no-op para evitar falhas por dependências ausentes.
-  const recordingId = `recording-${flow.id}-${Date.now()}`;
+  const recordingId = `recording-${flow.id}-${clock.nowMs()}`;
   const recording = {
     recordAction: () => {},
     recordCustom: () => {},
@@ -217,7 +219,7 @@ async function simulateFlow(flow, options) {
     save: () => null,
   };
 
-  const replayId = `simulate-${flow.id}-${Date.now()}`;
+  const replayId = `simulate-${flow.id}-${clock.nowMs()}`;
   replay.start(replayId, {
     flowId: flow.id,
     flowName: flow.name,
@@ -244,7 +246,7 @@ async function simulateFlow(flow, options) {
   /** @type {ConversationState} */
   let state = {
     tenantId: flow.tenantId,
-    sessionId: `sim-${flow.tenantId}-${flow.id}-${Date.now()}`,
+    sessionId: `sim-${flow.tenantId}-${flow.id}-${clock.nowMs()}`,
     flowId: flow.id,
     flowVersion: compiled.version,
     currentNodeId: startNodeId,
@@ -260,7 +262,7 @@ async function simulateFlow(flow, options) {
   // Importante: mantém o comportamento do simulador mesmo sem DB.
   let executionLedgerAdapter = null;
   try {
-    if (process.env.ENABLE_EXECUTION_LEDGER !== 'false') {
+    if (envPort.getEnv('ENABLE_EXECUTION_LEDGER') !== 'false') {
       // eslint-disable-next-line global-require
       const { startFlowExecution, buildExecutionLedgerAdapter } = require('../api/services/flowExecutionLedgerService');
       const started = await startFlowExecution({
@@ -329,7 +331,7 @@ async function simulateFlow(flow, options) {
       currentNodeId: before.currentNodeId,
     });
     
-    const stepStartTime = new Date().toISOString();
+    const stepStartTime = clock.nowIso();
     let result;
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -349,7 +351,7 @@ async function simulateFlow(flow, options) {
       replay.recordError(err, 'simulation_step_failed');
       break;
     }
-    const stepEndTime = new Date().toISOString();
+    const stepEndTime = clock.nowIso();
 
     const step = {
       index: i,

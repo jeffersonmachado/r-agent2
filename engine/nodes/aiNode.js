@@ -1,3 +1,5 @@
+const logPort = require('../shared/logger');
+const clock = require('../shared/clock');
 /**
  * Handler de nó de IA.
  *
@@ -124,9 +126,9 @@ try {
   // RAG será desabilitado
   // Logger fallback
   logger = {
-    error: (msg, data) => console.error(`[aiNode] ${msg}`, data || ''),
+    error: (msg, data) => logPort.error(`[aiNode] ${msg}`, data || ''),
     debug: (msg, data) => {},
-    info: (msg, data) => console.log(`[aiNode] ${msg}`, data || ''),
+    info: (msg, data) => logPort.info(`[aiNode] ${msg}`, data || ''),
   };
 }
 
@@ -445,11 +447,11 @@ async function aiNodeHandler(node, state, input, deps = null) {
       );
 
       const historyItem = {
-        id: `${state.sessionId}-ai-${Date.now()}`,
+        id: `${state.sessionId}-ai-${clock.nowMs()}`,
         role: 'bot',
         type: 'message',
         text: fallbackText,
-        timestamp: new Date().toISOString(),
+        timestamp: clock.nowIso(),
         nodeId: node.id,
         payload: {
           aiUnavailable: true,
@@ -602,11 +604,11 @@ async function aiNodeHandler(node, state, input, deps = null) {
     );
 
     const historyItem = {
-      id: `${state.sessionId}-ai-${Date.now()}`,
+      id: `${state.sessionId}-ai-${clock.nowMs()}`,
       role: 'bot',
       type: 'message',
       text: fallbackText,
-      timestamp: new Date().toISOString(),
+      timestamp: clock.nowIso(),
       nodeId: node.id,
       payload: {
         aiError: true,
@@ -635,11 +637,11 @@ async function aiNodeHandler(node, state, input, deps = null) {
   const textForUser = typeof parsed === 'string' ? parsed : rawResponse;
 
   const historyItem = {
-    id: `${state.sessionId}-ai-${Date.now()}`,
+    id: `${state.sessionId}-ai-${clock.nowMs()}`,
     role: 'bot',
     type: 'message',
     text: textForUser,
-    timestamp: new Date().toISOString(),
+    timestamp: clock.nowIso(),
     nodeId: node.id,
     payload: {
       rawResponse,
