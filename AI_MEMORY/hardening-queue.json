@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-13T22:34:45Z",
+  "updatedAt": "2026-10-14T01:08:09Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -270,6 +270,13 @@
       "blocked_reason": "NAO e meia-correcao: exige ciclo DEDICADO, com regressao de replay e build do frontend a cada arquivo. MEDIDO em 2026-10-13 (baseline do AGENTS.md estava desatualizado em 118): o gate acusa 83 issues, das quais ~13 sao FALSOS POSITIVOS — 44 ocorrencias de `new Date` se dividem em 31 LEITURAS de relogio (`new Date()`) e 13 CONVERSOES deterministicas (`new Date(x)`). Somam-se 5 `Math.random` usados apenas como FALLBACK de parametro injetavel (ex.: executionDeadline, que se declara PURO). Violacoes reais ~70. A metade \"mover para api/services\" do plano do AGENTS.md NAO se aplica aos dois maiores ofensores: `persistenceServices.js` (11) e `fallbackController.js` (7) sao consumidos POR DENTRO de engine/ (`engine/runner.js`, `engine/nodes/fallbackNode.js`, `engine/nodes/persistenceNodes.js`) — mover inverteria a dependencia engine->api. Nenhum dos dois e usado pelo frontend (medido: 0 ocorrencias em frontend/src). A classe relogio/aleatorio (31 leituras em engine/nodes/*, runner.js, executeStep.js, flowSimulation.js) toca DETERMINISMO DE REPLAY, que e gate bloqueante. `engine/` tambem e compartilhado com o frontend. Exige: (a) injecao de relogio/aleatorio/logger nos modulos de fluxo com default explicito no CALLER, nunca no modulo provado; (b) refinar a regra do detector para nao acusar `new Date(arg)` — CORRECAO de falso positivo, nao afrouxamento, com o cuidado de que `new Date(variavel)` possivelmente `undefined` VOLTA a ler o relogio (ex.: nodes/systemNodes.js:307). Nunca baixar a regra para fechar o gate.",
       "commit": null,
       "evidence": "Diagnostico medido em 2026-10-13: reports/layer-conventions-report.json (83 issues) + analise linha a linha das 44 ocorrencias de `new Date` + mapa de consumidores. Plano e armadilhas em AI_MEMORY/layer-purity (memoria do repo r-agent2-layer-purity-backlog.md)."
+    },
+    {
+      "id": "N5-REENTREGA",
+      "title": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
+      "status": "done",
+      "commit": "bc76e28b3",
+      "evidence": "CICLO CONCLUIDO: `release:seal` SEAL_EXIT=0, release r-agent2-20261013-213820 commit d7036f0aecb9bf2487b0424fef537f4af27037d0 | H_final 0b1488f76308c903735bf0806734f33009a3e6a02be77c | Score PASS/100. Tag publicada: objeto 9d6901712..., alvo (`^{}`) d7036f0aecb9... — `tagMatches=true`, recibo PUBLISHED_VERIFIED, verify:release-publication 8 checks PASS. `verify:delivered-release` = DELIVERED_RELEASE_VERIFIED / AUTONOMOUS_READY (\"arvore atual == artefato entregue\"); worktree limpo e 0 commits a frente de origin/main. PROVA DE CAMPO DO N1 (fix das evidencias de TTL curto): o consolidate registrou \"✓ evidencias de TTL curto regeneradas (replay-governance + SBOM)\" SEM intervencao manual, e o gate agregado saiu \"EXIT 0\" na PRIMEIRA tentativa — antes isso exigia retomada manual e reparos de lineage/projecao. PROVA DE CAMPO DO N3 (guard de tag): o bloqueio do hook pre-push produziu a mensagem acionavel com o comando exato (`git push --no-verify origin refs/tags/...` + `--from publish`) em vez do generico \"criacao da tag falhou\". A acao humana foi cumprida seguindo a propria mensagem. ARMADILHAS PERCORRIDAS (4 rodadas, todas agora documentadas na memoria do repo): (1) dist/ com sobra de ciclo anterior; (2) worktree sujo por derivados (~60 arquivos por fase abortada); (3) SEAL_FOREIGN_RUN apos o prepare criar run novo por RUN_SOURCE_DRIFT — exigiu re-selar o V2; (4) \"criacao da tag falhou\" pelo hook local. FLAKE CONFIRMADO, NAO REGRESSAO: o selo V2 falhou uma vez em SUITE_EXECUTION com tests/integration/missionSourceStaleReplanFullRouterE2E.test.js (que passa isolado em 64s e tem jest.setTimeout(900000)); a re-execucao do selo deu status=GO 21/21. Um unico FAIL nao e prova de defeito, assim como um unico PASS nao e prova de reprodutibilidade."
     }
   ]
 }

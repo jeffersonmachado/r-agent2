@@ -192,3 +192,39 @@ consumidos **por dentro** de `engine/` — mover inverteria a dependência engin
 A classe relógio/aleatório toca determinismo de replay (gate bloqueante). Fica
 registrado como `DIV-PUREZA-ENGINE` (`blocked`) com o plano e as armadilhas, para um
 ciclo dedicado — **não** foi feita meia-correção nem baixada a regra do gate.
+
+## N5 — reentrega do release (FEITO, `bc76e28b3`)
+
+Depois de N1–N3 (commits em `SOURCE_ROOTS`), o entregue passou a
+`DELIVERED_SOURCE_MISMATCH`. Reentregue com `release:seal`:
+**`SEAL_EXIT=0`**, release **r-agent2-20261013-213820**, commit
+`d7036f0aecb9`, H_final `0b1488f76308`, **Score PASS/100**, tag publicada
+(`tagMatches=true`), `PUBLISHED_VERIFIED`, `verify:delivered-release` =
+`DELIVERED_RELEASE_VERIFIED` / `AUTONOMOUS_READY`, worktree limpo e 0 commits à
+frente de `origin/main`.
+
+### Os dois itens desta sessão provados EM CAMPO neste ciclo
+
+- **N1**: o `consolidate` registrou `✓ evidências de TTL curto regeneradas
+  (replay-governance + SBOM)` **sem intervenção manual** e o gate agregado saiu
+  `EXIT 0` na **primeira** tentativa — antes isso exigia retomada manual e os
+  reparos de lineage/projeção eram rotina.
+- **N3**: o bloqueio do hook emitiu a mensagem acionável com o comando exato
+  (`git push --no-verify origin refs/tags/…` + `--from publish`); a ação humana foi
+  cumprida copiando a própria mensagem.
+
+### Armadilhas percorridas (4 rodadas) — todas documentadas na memória do repo
+
+1. `dist/` com sobra de ciclo anterior (preflight do converge reprova);
+2. worktree sujo por derivados (~60 arquivos por fase abortada);
+3. `SEAL_FOREIGN_RUN` depois que o `prepare` criou run novo por
+   `RUN_SOURCE_DRIFT` — exigiu **re-selar o V2**;
+4. `criação da tag falhou` pelo hook local.
+
+### Flake confirmado — não era regressão minha
+
+O selo V2 falhou **uma vez** em `SUITE_EXECUTION`
+(`missionSourceStaleReplanFullRouterE2E.test.js`, que **passa isolado em 64s** e tem
+`jest.setTimeout(900000)`); a re-execução deu `status=GO`, 21/21. **Um único FAIL
+não é prova de defeito** — assim como um único PASS não é prova de reprodutibilidade
+(a memória do repo já dizia isso; agora vale nos dois sentidos).
