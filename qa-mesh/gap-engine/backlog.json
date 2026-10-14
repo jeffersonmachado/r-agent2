@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-functional_failure-support-inbox-nota-ui",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
+        "support-inbox-nota-ui"
+      ],
+      "sampleError": "2 erro(s) críticos detectados na página"
+    },
+    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+  }
+]

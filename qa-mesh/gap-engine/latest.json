@@ -1,8 +1,28 @@
 {
-  "generatedAt": "2026-10-14T06:18:11.991Z",
-  "status": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-10-14T10:02:53.536Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-functional_failure-support-inbox-nota-ui",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "support-inbox-nota-ui"
+        ],
+        "sampleError": "2 erro(s) críticos detectados na página"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    }
+  ],
+  "blocking": 1,
   "nonBlocking": 0
 }
