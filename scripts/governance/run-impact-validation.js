@@ -32,7 +32,6 @@ const { selectValidation, NIVEIS } = require('../../qa/coverage/impactSelection'
 
 const RAIZ = path.resolve(__dirname, '..', '..');
 const GRAFO = path.join(RAIZ, 'reports', 'impact-graph.json');
-const INVENTARIO = path.join(RAIZ, 'config', 'system-inventory.json');
 const MESH = path.join(RAIZ, 'qa-mesh', 'meshRegistry.json');
 const VIZINHANCA = path.join(RAIZ, 'config', 'impact-neighborhood.json');
 const SAIDA = path.join(RAIZ, 'reports', 'impact-validation-report.json');
@@ -82,24 +81,22 @@ function arquivosAlterados(base) {
 }
 
 /**
- * jornadas por arquivo, derivadas do inventário (elo arquivo→jornada).
+ * jornadas por arquivo, vindas do ARTEFATO do grafo.
+ *
+ * O runner NÃO lê `config/system-inventory.json`: o `build-impact-graph` é o
+ * único ponto que toca o inventário e publica `journeysByFile` no artefato.
+ * Fazer o runner ler o inventário criava um par (writeFileSync +
+ * system-inventory.json) no mesmo arquivo, que o auditor de persistência
+ * classifica como UNKNOWN_JSON_WRITE_TARGET — falso positivo que derrubou
+ * `verify:no-mutable-json-state`, `audit:json-persistence` e, em cascata,
+ * `validate:required-tests` (TEMPORAL-06).
+ *
+ * @param {object} grafo
  * @returns {Object<string, string[]>}
  */
-function jornadasPorArquivo() {
-  const mapa = {};
-  try {
-    const inv = lerJsonObrigatorio(INVENTARIO, 'inventário');
-    for (const item of inv.items || []) {
-      const src = item.source ? normalizar(item.source) : null;
-      if (!src) continue;
-      const j = item.linkedJourneys || [];
-      if (j.length === 0) continue;
-      mapa[src] = [...new Set([...(mapa[src] || []), ...j])].sort();
-    }
-  } catch {
-    /* inventário ilegível não bloqueia: a camada 2 fica vazia e o fail-closed cobre */
-  }
-  return mapa;
+function jornadasPorArquivo(grafo) {
+  const doArtefato = grafo && grafo.journeysByFile;
+  return doArtefato && typeof doArtefato === 'object' ? doArtefato : {};
 }
 
 /**
@@ -256,7 +253,7 @@ function main(argv = process.argv.slice(2)) {
   const selecao = selectValidation({
     changedFiles: deteccao.files,
     reverse: grafo.reverse || {},
-    journeysByFile: jornadasPorArquivo(),
+    journeysByFile: jornadasPorArquivo(grafo),
     scenariosByJourney: cenariosPorJornada(),
     neighborhoodRules: regrasVizinhanca(),
     collectDependents,

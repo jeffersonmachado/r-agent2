@@ -18,9 +18,11 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const { buildImportGraph, isTestFile, normalizar } = require('../../qa/coverage/impactGraph');
+const { readJson } = require('./common');
 
 const RAIZ = path.resolve(__dirname, '..', '..');
 const SAIDA_PADRAO = path.join(RAIZ, 'reports', 'impact-graph.json');
+const INVENTARIO_REL = 'config/system-inventory.json';
 const EXT_RE = /\.(js|jsx|mjs|cjs)$/;
 const TAMANHO_MAX_FONTE = 2 * 1024 * 1024; // ignora fontes patológicas
 
@@ -68,6 +70,38 @@ function lerFontes(caminhos) {
 }
 
 /**
+ * jornadas por arquivo, derivadas do inventário do sistema.
+ *
+ * Vive AQUI (e não no runner) de propósito: o `build-impact-graph` é o produtor
+ * do artefato e o único ponto que toca o inventário (3999 itens). O runner fica
+ * com uma dependência só — o artefato que ele lê — e o auditor de persistência
+ * (`governance/json-persistence-audit.js`) deixa de ver o par
+ * (writeFileSync + system-inventory.json) no mesmo arquivo, que era um falso
+ * positivo de UNKNOWN_JSON_WRITE_TARGET.
+ *
+ * @returns {Object<string, string[]>}
+ */
+function jornadasPorArquivo() {
+  const mapa = {};
+  // `readJson` (helper canônico) resolve relativo à raiz e é reconhecido como
+  // LEITOR pelo auditor de persistência. Montar o caminho com `path.join` numa
+  // const fazia o auditor ver um par (writeFileSync + inventário) no mesmo
+  // arquivo e classificar como UNKNOWN_JSON_WRITE_TARGET — falso positivo que
+  // derrubou verify:no-mutable-json-state e, em cascata, validate:required-tests.
+  const inv = readJson(INVENTARIO_REL, null);
+  if (!inv) return mapa; // inventário ausente/ilegível: camada 2 vazia, fail-closed cobre
+
+  for (const item of inv.items || []) {
+    const src = item.source ? normalizar(item.source) : null;
+    if (!src) continue;
+    const j = item.linkedJourneys || [];
+    if (j.length === 0) continue;
+    mapa[src] = [...new Set([...(mapa[src] || []), ...j])].sort();
+  }
+  return mapa;
+}
+
+/**
  * Constrói o artefato serializável.
  * @returns {object}
  */
@@ -75,6 +109,7 @@ function construir() {
   const caminhos = listarArquivos();
   const arquivos = lerFontes(caminhos);
   const grafo = buildImportGraph({ files: arquivos });
+  const jornadas = jornadasPorArquivo();
 
   const testeFiles = grafo.nodes.filter(isTestFile);
   const producao = grafo.nodes.filter((n) => !isTestFile(n));
@@ -91,9 +126,11 @@ function construir() {
       productionFiles: producao.length,
       testFiles: testeFiles.length,
       productionFilesWithDependents: alcancamAlgo.length,
+      filesWithJourneys: Object.keys(jornadas).length,
     },
     reverse: grafo.reverse,
     edges: grafo.edges,
+    journeysByFile: jornadas,
   };
 }
 
@@ -141,4 +178,4 @@ if (require.main === module) {
   process.exit(main());
 }
 
-module.exports = { construir, listarArquivos, lerFontes, main, SAIDA_PADRAO };
+module.exports = { construir, listarArquivos, lerFontes, jornadasPorArquivo, main, SAIDA_PADRAO };
