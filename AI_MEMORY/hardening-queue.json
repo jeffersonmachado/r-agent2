@@ -3,7 +3,7 @@
  "repository": "jeffersonmachado/r-agent2",
  "branch": "mission/p0p1-hardening-20261010",
  "baseline": "2f1795454",
- "updatedAt": "2026-10-14T19:56:50.393Z",
+ "updatedAt": "2026-10-14T20:02:36.149Z",
  "consumers": [
   ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
  ],
@@ -315,9 +315,9 @@
    "id": "MISSAO-A-L1-IMPACTO",
    "title": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
    "status": "done",
-   "commit": "8ef4af5cd",
-   "evidence": "qa/coverage/impactGraph.js + qa/coverage/impactSelection.js + scripts/governance/{build-impact-graph,run-impact-validation}.js; 36 testes (tests/unit/coverage/impact{Graph,Selection}.test.js); artefato reports/impact-graph.json (4126 nós, 9370 arestas, MD5 estável em 2 gerações); L1 executado de verdade: 219 testes, 6m51s",
-   "resolution": "Auditoria MEDIDA antes de escrever código: qa/impact-map.json (usado por qa:mesh:impact) cobre 28/2488 arquivos = 1,13%; inventário por source exato 14,80%; path->module 12,21%; módulo->jornada->cenário 9,0%; 91,0% dos arquivos sem qualquer seleção possível. Vocabulários incompatíveis: impact-map produz 7 escopos, os 144 cenários declaram 26, interseção 4; 133/144 declaram ci/telemetry, então o filtro por impacto seleciona ~92% ou 1-3%, nunca o alvo. O módulo queue nem existe no inventário — o commit 9f0f6fda8 era invisível a todos os mecanismos. Solução: derivar o elo dos próprios require/import (determinístico), com fecho transitivo reverso (73,6% dos arquivos alcançam >=1 teste; 77,3% têm dependentes) e FAIL-CLOSED (arquivo não classificado ESCALA, nunca devolve \"nenhum teste afetado\"). Dois bugs meus foram pegos pelos próprios testes: marcar todo alterado como classificado (anulava o fail-closed) e checar pertencimento a dependents em vez de existir em reverse."
+   "commit": "69a67e631",
+   "evidence": "qa/coverage/impactGraph.js + qa/coverage/impactSelection.js + scripts/governance/{build-impact-graph,run-impact-validation}.js + engineering-validation-orchestrator.js; 48 testes (impactGraph 18, impactSelection 19, impactRunner 11); artefato reports/impact-graph.json (4126 nós, 9370 arestas, MD5 estável); L1 executado de verdade 2×; tests/unit/coverage/ 282 testes PASS",
+   "resolution": "Auditoria MEDIDA antes de escrever código: qa/impact-map.json (usado por qa:mesh:impact) cobre 28/2488 arquivos = 1,13%; inventário por source exato 14,80%; path->module 12,21%; módulo->jornada->cenário 9,0%; 91,0% dos arquivos sem qualquer seleção. Vocabulários incompatíveis: impact-map produz 7 escopos, os 144 cenários declaram 26 (interseção 4); 133/144 declaram ci/telemetry, então o filtro por impacto seleciona ~92% ou 1-3%, nunca o alvo. O módulo queue nem existe no inventário — o commit 9f0f6fda8 era invisível a todos os mecanismos. Solução: derivar o elo dos próprios require/import (determinístico), com fecho transitivo reverso (77,3% dos arquivos de produção têm dependentes) e FAIL-CLOSED (arquivo não classificado ESCALA). Quatro defeitos MEUS foram pegos exercitando o caminho real, todos corrigidos com prova no commit 69a67e631: (a) falso verde no orquestrador (dry-run caía no else => GREEN_AT_L2 sem executar); (b) bug de parsing slice(+3 em vez de +1) que fazia --files= ser ignorado em silêncio e cair no git diff; (c) falso vermelho (teste Vitest executado pelo Jest, que não tem frontend nos roots); (d) arquivo de teste alterado não entrava na seleção."
   },
   {
    "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
@@ -338,9 +338,9 @@
   {
    "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
    "title": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
-   "status": "pending",
-   "commit": null,
-   "evidence": null,
+   "status": "in_progress",
+   "commit": "69a67e631",
+   "evidence": "scripts/governance/engineering-validation-orchestrator.js criado; cascata L1->L2->L3 decidida por statusParaOutcome (nenhum nível não-executado vira verde); L1 provado ponta a ponta (verde real e escalação real). Falta: execução REAL do L2 (npm run test:release-authoritative, ~20min) e do L3 (validate:all-validators) para provar o reuso.",
    "resolution": null
   }
  ]
