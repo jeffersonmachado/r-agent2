@@ -3,7 +3,7 @@
  "repository": "jeffersonmachado/r-agent2",
  "branch": "mission/p0p1-hardening-20261010",
  "baseline": "2f1795454",
- "updatedAt": "2026-10-14T21:01:52.779Z",
+ "updatedAt": "2026-10-14T21:03:02.068Z",
  "consumers": [
   ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
  ],
@@ -368,6 +368,15 @@
    "commit": "c6c02cfc4",
    "evidence": "scripts/governance/validate-governance-chain.js + reports/governance-chain-report.json — recálculo real executado: status=FAIL links=10 stored=d1f60719634d… recomputado=ed55cd3edd97…, 9 divergências nomeadas (evidence_manifest/final_proof_report/final_readiness/proof_signature/package_validation = hash_mismatch; consistency/cross_report/blocker_engine = cumulative_hash_broken; chain_root = chain_root_mismatch)",
    "resolution": "A cadeia SHA-256 encadeada JÁ existia (governance/governance-chain.js, 10 camadas, cumulativeHash + chainRoot, com verifyChain que RECOMPUTA os hashes e detecta hash_mismatch/file_deleted/cumulative_hash_broken/chain_root_mismatch). O gap era de ENFORCEMENT: verifyChain não era chamado por nenhum gate; validate-self-proving.js apenas faz `governanceChain.valid === true`, isto é, confia no campo gravado em disco; e não existia script npm com \"chain\". Criado o gate que RECALCULA. Ele NÃO entrou no agregado de propósito: o recálculo na árvore atual acusa 9/10 camadas divergentes por ORDEM DE FASES, não por adulteração — governance-chain.json é de 13:50 e evidence-manifest/final-readiness-report de 14:12 (a varredura agregada regenera esses relatórios DEPOIS da cadeia e a invalida). O próprio two-pass-release.sh:294 já documenta a armadilha (\"regravam esses relatórios — assinar antes quebraria a governance-chain\"), e scripts/verify-enterprise-governance-v2.sh:297 valida a vinculação externa (GOV_HASH == PAYLOAD_SHA). DÍVIDA REGISTRADA (não resolvida, de propósito): a cadeia é válida apenas imediatamente após a selagem; qualquer execução posterior do agregado a quebra. Enquanto isso, colocar o gate no agregado produziria falso vermelho e \"consertar\" o self-proving para recomputar tornaria o release impossível. O gate fica disponível para uso NA FASE CORRETA (pós-selagem) e o achado está documentado."
+  },
+  {
+   "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
+   "title": "B9: CI do GitHub bloqueado por budget — release-governance.yml nao protege publicacao",
+   "status": "blocked_external",
+   "commit": null,
+   "evidence": "gh run list + gh run view (2026-10-14T21:01Z): os 5 workflows disparam e falham em 3-5s SEM iniciar job. Anotacao literal do run 38637023121: \"The job was not started because an Actions budget is preventing further use.\" Workflows afetados: Jest, E2E Playwright, Frontend Tests, RAG Service Tests e \"Release Governance — ENVELOPE + PAYLOAD\". Reconfirmado: ja estava assim em 2026-09-29 e 2026-10-07 (16 dias). Enforcement local verificado: .git/hooks/pre-push (723 bytes, NAO versionado) recusa refs/tags/*.",
+   "resolution": null,
+   "blocked_reason": "BLOQUEIO EXTERNO — depende de acao do usuario (pagamento/limite de gastos do GitHub Actions), nao de codigo. Enquanto o budget estiver bloqueado: (a) TODO push em main aparece como \"failure\" nos checks SEM executar nada, o que pode ser lido como regressao de codigo e NAO e (sempre ler a anotacao antes de culpar o codigo); (b) o workflow \"Release Governance — ENVELOPE + PAYLOAD\" NAO roda, entao o GitHub NAO bloqueia publicacao de tag — a protecao real e o hook local .git/hooks/pre-push, que e NAO VERSIONADO (nao sobrevive a um clone) e contornavel com --no-verify. Nao adicionei workflow do L1: workflow que nao roda nao e gate, e adicionar daria falsa sensacao de protecao. O enforcement efetivo hoje e LOCAL: 62 validadores no agregado + fluxo de selagem (verify:delivered-release, recibo PUBLISHED_VERIFIED). Acao para desbloquear: aumentar o limite de gastos do GitHub Actions (ou aguardar o ciclo do orcamento); em seguida, revalidar os 5 workflows."
   }
  ]
 }
