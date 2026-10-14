@@ -3,7 +3,7 @@
  "repository": "jeffersonmachado/r-agent2",
  "branch": "mission/p0p1-hardening-20261010",
  "baseline": "2f1795454",
- "updatedAt": "2026-10-14T21:04:04.010Z",
+ "updatedAt": "2026-10-14T21:52:48.863Z",
  "consumers": [
   ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
  ],
@@ -345,12 +345,12 @@
   },
   {
    "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
-   "title": "engineeringMissionFullE2E falha sob carga no lote do L2 e passa isolado",
-   "status": "blocked",
-   "commit": "92de2b9e9",
-   "evidence": "isolado: tests/integration/engineeringMissionFullE2E.test.js => 8/8 PASS em 41,2s (medido). no lote do L2: reports/release-suite-execution.json (generatedAt 2026-10-14T20:22Z, finishedAt 2026-10-14T20:50Z) => state FAIL, 1 de 8 testes falharam, batchExitCodes[1]=1.",
+   "title": "engineeringMissionFullE2E flaky sob carga BLOQUEIA o agregado e a selagem",
+   "status": "blocked_external",
+   "commit": "db328dea5",
+   "evidence": "isolado: 8/8 PASS em 41,2s. Reproducao com o lote 0 + a suite (7 suites, 40 testes, --runInBand --bail=0): TODOS PASS em 177s — NAO reproduziu, logo e INTERMITENTE. no L2: reports/release-suite-execution.json (20:22->20:50Z) => batchExitCodes[0]=1, suite engineeringMissionFullE2E state=FAIL \"1 teste(s) falharam\" (sem mensagem no relatorio). ENCADEAMENTO MEDIDO: validate:required-tests LE reports/release-suite-execution.json (linha 28 do validador) e por isso reporta \"[FAILED] V2-01 — suite(s) com falha: engineeringMissionFullE2E\" — ou seja a flakiness derruba o AGREGADO, nao apenas o L2.",
    "resolution": null,
-   "blocked_reason": "FLAKINESS SOB CARGA, não defeito determinístico: a suíte passa 8/8 isolada (41s) e falhou no lote (6 suítes com --runInBand contra o mesmo Postgres). O candidato é o teste 6 (\"o loop real do Router chega a GREEN\"), que sozinho leva ~33s e depende do loop real do Router + DB + WS sob concorrência. Não é corregível por inspeção: exige investigar isolamento de execução (orçamento de conexões, DB por suíte, timeout do teste 6) e reproduzir a carga, o que é trabalho de uma sessão própria e não pode ser validado por um único run. Corrigir \"no escuro\" violaria a proibição de mascarar flakiness. Registrado como blocked com evidência nos dois sentidos em vez de declarar L2 verde."
+   "blocked_reason": "CORRECAO DE CLASSIFICACAO (era `blocked` com a afirmacao de que \"nao bloqueia a selagem\" — ERRADO, verificado agora): o validate:required-tests consome o relatorio do L2, entao esta flakiness torna `validate:governance-enforcement` VERMELHO e a selagem (seal-release.sh:567 roda o agregado) FALHA. E bloqueador de release. Causa provavel identificada (nao confirmada): CONTENCAO NO GIT, nao na IA. O teste 6 chama o loop real do Router (orquestrador.runMissionTask), que cria WORKTREE isolado; o lote 0 do manifesto e composto por suites do mesmo dominio que tambem operam git (bugRegressionCommandContamination, bugWorkerBoot*, engineeringBugAutonomousLoopE2E, engineeringBugLoop, engineeringBugLoopNaturalPathE2E). A credencial e FAKE (CODER_PROVIDER=anthropic + saveAICredentials com jest-fixture-fake-key), entao o caminho do Router e deterministico — nao ha dependencia de rede. Nao e timeout: o teste declara jest.setTimeout(180000) e leva ~33s. Acao necessaria: isolar as suites que usam git worktree do mesmo lote (ou serializar o acesso ao worktree), com reproducao sob carga real do manifesto — trabalho de sessao propria, que nao pode ser validado por um unico run porque a falha e intermitente. Mitigacao imediata aplicada: relancar o test:release-authoritative para regenerar reports/release-suite-execution.json; se o lote 0 passar, o agregado volta a verde."
   },
   {
    "id": "MISSAO-B8-ESTADOS-FILA",
