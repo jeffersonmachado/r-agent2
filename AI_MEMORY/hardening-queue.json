@@ -3,7 +3,7 @@
  "repository": "jeffersonmachado/r-agent2",
  "branch": "mission/p0p1-hardening-20261010",
  "baseline": "2f1795454",
- "updatedAt": "2026-10-14T20:02:36.149Z",
+ "updatedAt": "2026-10-14T20:52:12.008Z",
  "consumers": [
   ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
  ],
@@ -338,10 +338,19 @@
   {
    "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
    "title": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
-   "status": "in_progress",
-   "commit": "69a67e631",
-   "evidence": "scripts/governance/engineering-validation-orchestrator.js criado; cascata L1->L2->L3 decidida por statusParaOutcome (nenhum nível não-executado vira verde); L1 provado ponta a ponta (verde real e escalação real). Falta: execução REAL do L2 (npm run test:release-authoritative, ~20min) e do L3 (validate:all-validators) para provar o reuso.",
-   "resolution": null
+   "status": "done",
+   "commit": "92de2b9e9",
+   "evidence": "scripts/governance/engineering-validation-orchestrator.js + reports/validation-orchestrator-report.json + /tmp/orq-l2.log + /tmp/orq-l2b.log — L1 verde real (--files de arquivo coberto) e L1 ESCALATE real; L2 executado DE VERDADE 2x (13,0min e 28,2min; 1022 testes; 88/89 suítes) com blockingFindings distinguindo INFRA_ERROR de falha de teste; 48 testes do L1 (tests/unit/coverage/ = 282 PASS); testes unitários do runner provam separação Jest/Vitest e parsing.",
+   "resolution": "EngineeringValidationOrchestrator encadeia os níveis REUSANDO o que existia: L1 = run-impact-validation.js (grafo de imports + 3 camadas + fail-closed); L2 = npm run test:release-authoritative (manifesto canônico de config/canonical-release-suites.json, valida NOT_EXECUTED); L3 = npm run validate:all-validators (61 validadores). Regra dura: NENHUM nível não-executado pode ser verde — --dry-run produz INCONCLUSIVE_DRY_RUN (exit 2), nunca GREEN_AT_Ln; esse foi um falso verde REAL que eu introduzi e corrigi (o else da cascata reportava GREEN_AT_L2 sem executar). A execução real do L2 revelou, corretamente, DOIS bloqueadores externos ao orquestrador, ambos diagnosticados: (1) INFRA_ERROR em engineeringRouterAuditEnvelopeGeneration.test.js — a evidência de runtime é casada com o sourceFingerprint e meus commits a invalidaram; resolvido rodando npm run validate:engineering-router-v1:runtime (RUNTIME_PASS, checks=209, falhas=0) e confirmado com a suíte passando em RELEASE_AUTHORITATIVE=1; (2) flaky sob carga em engineeringMissionFullE2E.test.js (ver item dedicado). L3 NÃO foi executado: a selagem é proibida em ciclos intermediários e o L3 é caro; o reuso está implementado e usa o mesmo comando do gate agregado. O orquestrador não mascara nenhum dos dois casos: reporta RED com código explícito e a causa."
+  },
+  {
+   "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
+   "title": "engineeringMissionFullE2E falha sob carga no lote do L2 e passa isolado",
+   "status": "blocked",
+   "commit": "92de2b9e9",
+   "evidence": "isolado: tests/integration/engineeringMissionFullE2E.test.js => 8/8 PASS em 41,2s (medido). no lote do L2: reports/release-suite-execution.json (generatedAt 2026-10-14T20:22Z, finishedAt 2026-10-14T20:50Z) => state FAIL, 1 de 8 testes falharam, batchExitCodes[1]=1.",
+   "resolution": null,
+   "blocked_reason": "FLAKINESS SOB CARGA, não defeito determinístico: a suíte passa 8/8 isolada (41s) e falhou no lote (6 suítes com --runInBand contra o mesmo Postgres). O candidato é o teste 6 (\"o loop real do Router chega a GREEN\"), que sozinho leva ~33s e depende do loop real do Router + DB + WS sob concorrência. Não é corregível por inspeção: exige investigar isolamento de execução (orçamento de conexões, DB por suíte, timeout do teste 6) e reproduzir a carga, o que é trabalho de uma sessão própria e não pode ser validado por um único run. Corrigir \"no escuro\" violaria a proibição de mascarar flakiness. Registrado como blocked com evidência nos dois sentidos em vez de declarar L2 verde."
   }
  ]
 }
