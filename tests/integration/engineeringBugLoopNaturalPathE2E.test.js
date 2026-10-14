@@ -42,6 +42,10 @@ const missionStore = require('../../api/services/engineeringMission/missionStore
 const bugFindingService = require('../../api/services/engineeringMission/bugFindingService');
 const engineeringTaskService = require('../../api/services/engineeringRouter/engineeringTaskService');
 const bugLoopWorker = require('../../api/services/engineeringMission/bugLoopWorker');
+// Drenagem do worker antes de fechar o banco: `stopBugLoopWorker()` só faz clearInterval e o ciclo
+// em curso chamava o Sequelize já fechado ("getConnection after close"), derrubando o LOTE com
+// 0 testes falhados e exit != 0. Ver tests/helpers/drainEngineeringWorker.js.
+const { stopWorkerAndDrain } = require('../helpers/drainEngineeringWorker');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const FIXTURE_FILE = 'tests/fixtures/engineering-router-sandbox/mathUtils.js';
@@ -174,7 +178,7 @@ afterAll(async () => {
   if (!dbAvailable) return;
   clearAiProviderConfig();
   const index = require('../../api/db/models');
-  bugLoopWorker.stopBugLoopWorker();
+  await stopWorkerAndDrain();
   try {
     for (const taskId of created.tasks) {
       deleteCandidateBranchIfExists(taskId);
