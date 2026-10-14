@@ -286,6 +286,14 @@
       "commit": "a80ea7e8b",
       "evidence": "tests/helpers/drainEngineeringWorker.js + lote 11 do selo (6/6 suites, 89/89 testes, EXIT=0)",
       "resolution": "DEFEITO REAL medido no lote 11 do selo V2: governanceApprovalFullWorkerE2E marcada failed com 0 testes falhados e exit=1. Causa no batch JSON (nao no resumo do gate): \"ConnectionManager.getConnection was called after the connection manager was closed!\" — o afterAll chamava stopBugLoopWorker() (que so faz clearInterval, NAO espera o ciclo) e logo depois sequelize.close(); o ciclo em curso consultava o banco fechado. Passava ISOLADA e falhava no LOTE porque e corrida de tempo. Correcao: tests/helpers/drainEngineeringWorker.js aguarda cycleRunning===false, fail-closed. Aplicado nas 2 suites que usam startBugLoopWorker (as duas tinham o defeito). Prova no lote real: antes success:false exit=1 -> depois 6/6 suites, 89/89 testes, EXIT=0."
+    },
+    {
+      "id": "DEF-WS-AUTH-POS-LOGIN",
+      "title": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
+      "status": "done",
+      "commit": "48e5c167c",
+      "evidence": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx (5 testes) + browser real + servidor (Broadcast 0 -> 1 cliente)",
+      "resolution": "DEFEITO REAL de producao, encontrado exercitando a jornada no browser (nao havia teste cobrindo). Evidencia que separou a causa: servidor 3300 conexoes/2115 autenticadas/ZERO invalid_token; browser instrumentado mostrou >60s com ping saindo e NENHUM auth; WebSocket puro fora do React autenticou em 6ms e ficou OPEN => o servidor esta correto, o defeito e do cliente. Causa: socket aberto uma vez no mount ANTES do login; a autenticacao dependia de um efeito que so reagia a connected/authenticated/authFailed (o login nao muda nenhum) e de um setInterval de 2s cujo authenticateWebSocket retornava false EM SILENCIO quando o socket nao estava utilizavel, sem reconectar. Corrigido: consumo de AuthContext + efeito de SESSAO (login autentica), reconexao imediata quando o socket nao serve, warn no lugar do silencio, reset do isIntentionalCloseRef (podia prender em true e desligar watchdog e recovery), fechamento de socket em CONNECTING no unmount (orfaos) e REMOCAO do setInterval de 2s (proibido). Prova: browser \"Falha de auth\" -> \"Conectado\" sem F5 com auth+subscribe enviados; servidor Broadcast 0 -> 1 cliente; frontend 137 arquivos/1040 testes PASS."
     }
   ]
 }
