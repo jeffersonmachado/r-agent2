@@ -228,3 +228,62 @@ O selo V2 falhou **uma vez** em `SUITE_EXECUTION`
 `jest.setTimeout(900000)`); a re-execução deu `status=GO`, 21/21. **Um único FAIL
 não é prova de defeito** — assim como um único PASS não é prova de reprodutibilidade
 (a memória do repo já dizia isso; agora vale nos dois sentidos).
+
+## FECHAMENTO da dívida de pureza da `engine/` (FEITO, `60b978ca0`)
+
+O item `DIV-PUREZA-ENGINE` estava `blocked` com a justificativa de que exigia ciclo
+dedicado. O ciclo foi feito — e o bloqueio não era legítimo: **a correção completa
+coube em uma rodada**, sem mover arquivo e sem tocar API pública.
+
+**O defeito não era estético.** `createEngineEvent` (base de toda execução e do
+replay) monta o `id` com relógio + aleatório. O MESMO fluxo executado duas vezes
+gerava ids diferentes, então o hash de replay deixava de ser comparável — a
+impureza corroía justamente a garantia que o gate protege.
+
+### O que foi feito
+
+- **6 portas injetáveis** em `engine/shared/`: `clock`, `random`, `logger`,
+  `scheduler`, `fileSystem`, `runtimeEnv`. Cada uma é `setXProvider`/
+  `resetXProvider`/`hasInjectedX` com default IDÊNTICO ao comportamento anterior.
+- **28 arquivos migrados**, sempre por NAMESPACE (`clock.nowIso()`,
+  `timers.setTimeout()`).
+
+### As duas armadilhas que custaram rodadas
+
+1. **Nome solto quebra call sites de forma silenciosa.** `const { now, nowIso } =
+   require(...)` colidiu com declarações locais: 7 arquivos do `engine/` já têm
+   `now`/`nowIso` (`engine/utils.js` tem a PRÓPRIA `nowIso()`). Resultado medido:
+   `return nowIso();` = **RECURSÃO INFINITA** e `const now = now()` = **TDZ**.
+   Revertido e refeito com namespace — a classe inteira de defeito desaparece por
+   construção.
+2. **Mismatch entre o nome gerado e o exportado.** O migrador produzia
+   `logPort.info(...)` enquanto a ponte exportava `logInfo`, e `timers.setTimeout`
+   enquanto exportava `scheduleTimeout`. **Os 18 call sites de log estavam
+   quebrados** e a suíte antiga não pegou (nada exercitava o caminho). Só apareceu
+   porque o teste novo toca a porta. Correção: exportar o nome que o call site usa
+   e — em `scheduler.js` — usar `globalThis.setTimeout` no default, senão o wrapper
+   chamaria a si mesmo.
+
+### A regra estava errada nos DOIS sentidos
+
+`/\bnew\s+Date\b/` acusava `new Date(valor)` (conversão determinística — **16
+falsos positivos**) e **não acusava `Date.now()`** (35 pontos cegos numa classe que
+ela dizia cobrir). Agora são dois padrões precisos. Também deixou de casar chamada
+qualificada por namespace (`timers.setTimeout` era acusado — a própria correção
+virava violação).
+
+**Progressão medida: 83 → 95 → 39 → 16 → 0 issues.**
+
+### Prova
+
+`tests/unit/engine/enginePurityPorts.test.js` congela as portas e exige
+determinismo (`createEngineEvent` idêntico em duas chamadas), e faz uma **varredura
+INDEPENDENTE do relatório do gate** — se a regra for enfraquecida amanhã, o teste
+continua acusando. A varredura acusou 5 arquivos na 1ª versão e **todos eram
+comentários** (`fallbackController.js`, `flowTypes.js`, `governance/pendenciesModel.js`,
+`leasePolicy.js`): o gate estava certo, o teste é que precisava remover comentários
+antes de procurar padrão.
+
+Validado: unit **1007 suítes/8426 testes PASS**, flow (replay/determinismo) **264
+PASS**, build backend+frontend OK, **gate agregado EXIT=0**.
+
