@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-14T10-36-43-764Z",
+  "executionId": "mesh-2026-10-14T11-59-21-336Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "NO_GO",
+  "gate": "GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-14T10-36-43-764Z",
+    "executionId": "mesh-2026-10-14T11-59-21-336Z",
     "tenantId": "system",
-    "timestamp": "2026-10-14T10:36:43.765Z",
+    "timestamp": "2026-10-14T11:59:21.336Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,9 +31,9 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 143,
+    "passed": 144,
     "fallbackPassed": 0,
-    "failed": 1,
+    "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -81,9 +81,9 @@
         "total": 2
       },
       "core": {
-        "passed": 89,
+        "passed": 90,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -171,21 +171,10 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "CRITICAL_DOMAIN_FAILED:core",
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "core": {
-        "total": 1,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1
-        },
-        "successRate": 0.9888888888888889
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -199,6 +188,12 @@
         "successRate": 1
       },
       "clinic": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -253,47 +248,37 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "functional_failure": 1
-    },
-    "topErrors": [
-      {
-        "message": "Fila não foi removida: a fila continua na listagem após DELETE",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-14T10-36-43-764Z",
-      "startedAt": "2026-10-14T10:36:43.765Z",
+      "executionId": "mesh-2026-10-14T11-59-21-336Z",
+      "startedAt": "2026-10-14T11:59:21.336Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-14T11:07:06.349Z",
+      "promotedAt": "2026-10-14T12:27:08.907Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [
-    "CRITICAL_DOMAIN_FAILED:core",
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-14T10-36-43-764Z",
-    "startedAt": "2026-10-14T10:36:43.765Z",
+    "executionId": "mesh-2026-10-14T11-59-21-336Z",
+    "startedAt": "2026-10-14T11:59:21.336Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-14T11:07:06.349Z",
+    "promotedAt": "2026-10-14T12:27:08.907Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "artifactType": "release-gate-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261014102723523-79a2ff21",
-  "sourceFingerprint": "25186bc367c8bcd869249bfd486f99dda5e3551ab4d605b9df9e2dd49b6ec961",
-  "sourceCommit": "b2fd2d9893bc117025b4a6d8ede72580148138eb",
-  "sourceTree": "214aae6a4cfb3b7909c6cebfaa861bb2d6d1de98",
-  "generatedAt": "2026-10-14T11:07:06.351Z"
+  "runId": "rap-governed-20261014115049678-cb183049",
+  "sourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
+  "sourceCommit": "37b6a49147dda9d7fde3be57faaa6ff183fa4811",
+  "sourceTree": "5fa0faa730e262fea11756c60445b0ca91280be8",
+  "generatedAt": "2026-10-14T12:27:08.910Z"
 }
