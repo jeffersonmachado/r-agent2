@@ -103,6 +103,35 @@ Hubs de importação (`api/db/models/index.js`, `api/__tests__/*`) inflam o alca
 alterar `api/modules/queue/service.js` seleciona 219 testes. É conservador por
 desenho (na dúvida, validar mais), mas a priorização por hub é melhoria pendente.
 
+## Pré-requisito do L2: evidência vinculada ao `sourceFingerprint`
+
+Medido em 2026-10-14. O L2 pode terminar **RED sem nenhum teste falhar**:
+
+```
+blockingFindings: [{ code: 'MANIFEST_SUITE_NOT_PASS:INFRA_ERROR',
+  suite: 'tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js',
+  detail: 'infraestrutura obrigatória ausente (RELEASE_AUTHORITATIVE exige falha explícita)' }]
+coverage: { covered: 88, total: 89 }   totals: { testsExecuted: 1022, failedSuites: 0 }
+```
+
+`tests/helpers/infraGate.js` (`skipOrFail`): em dev, falta de evidência vira
+`NOT_EXECUTED` com motivo e a suíte passa; em `RELEASE_AUTHORITATIVE=1` **lança
+INFRA_ERROR** — o gate não pode passar sem sinal real. O teste exige evidência
+casada com o `sourceFingerprint` **atual**; alterar código em `SOURCE_ROOTS`
+**invalida** a evidência.
+
+Remédio antes de rodar o L2/L3 (ou selar):
+
+```bash
+export PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct
+npm run validate:engineering-router-v1:runtime      # regenera RUNTIME_PASS
+```
+
+**Leitura obrigatória do resultado**: `INFRA_ERROR` com `failedSuites: 0` e
+cobertura `< total` significa **suíte não executada por pré-requisito**, não
+regressão. Um teste que passa isolado pode falhar no modo autoritativo — o modo faz
+parte do contrato.
+
 ## Defeitos encontrados por esta camada
 
 - `DEF-TIMEBOMB-EVOSYNC-JANELA30D` — na primeira execução real do L1 (1 de 219
