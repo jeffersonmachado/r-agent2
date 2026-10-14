@@ -1,15 +1,15 @@
 {
   "artifactType": "final-governance-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-14T12:40:06.984Z",
+  "generatedAt": "2026-10-14T14:49:20.245Z",
   "runId": "rap-governed-20261014115049678-cb183049",
   "sourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "autonomousReady": false,
-  "allChecksPass": false,
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "autonomousReady": true,
+  "allChecksPass": true,
   "checks": [
     {
       "id": "agent_policy_compliance",
@@ -19,9 +19,9 @@
     },
     {
       "id": "master_scorecard",
-      "pass": false,
-      "status": "DEFERRED",
-      "reason": "dimensionsBelow10=9 (pending: PENDING_PHASE+PRE_PACKAGE_DEFERRED+PENDING_PHASE+PRE_PACKAGE_DEFERRED+DELIVERED_PHASE)"
+      "pass": true,
+      "status": "PASS",
+      "reason": "dimensionsBelow10=0"
     },
     {
       "id": "source_integrity",
