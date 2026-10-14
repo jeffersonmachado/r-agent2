@@ -3,8 +3,7 @@
 /**
  * Hook de continuidade da missao (eventos SessionStart e Stop).
  *
- * Fonte de verdade: AI_MEMORY/hardening-queue.json (itens com status
- * `pending` / `in_progress`).
+ * Fonte de verdade: AI_MEMORY/hardening-queue.json.
  *
  * Objetivo: o agente NAO pode encerrar o turno enquanto houver item aberto,
  * desde que esteja produzindo progresso. Sem progresso (HEAD/worktree/fila
@@ -24,7 +23,38 @@ const { execFileSync } = require('node:child_process');
 
 const QUEUE_PATH = 'AI_MEMORY/hardening-queue.json';
 const STATE_PATH = '.github/hooks/.continue-state.json';
-const OPEN_STATUSES = new Set(['pending', 'in_progress']);
+
+/**
+ * Estados canonicos da fila (MISSAO B / B8).
+ *
+ * CLOSED = o item nao exige mais acao do agente. Tudo o que NAO esta aqui conta
+ * como ABERTO — inclusive estado escrito errado ou estado novo ainda nao
+ * tratado. Fail-closed: um typo (`verifyed`) ou `fixed_unverified` NAO pode
+ * liberar o encerramento em silencio.
+ *
+ * DEFEITO CORRIGIDO (2026-10-14): a logica anterior era o INVERSO —
+ * `OPEN_STATUSES = {pending, in_progress}` — entao qualquer outro valor caia no
+ * ramo "fechado". Um item marcado `failed` ou `fixed_unverified` (corrigido mas
+ * NAO verificado) encerrava o loop como se estivesse concluido, que e
+ * exatamente o falso verde que a fila existe para impedir.
+ */
+const CLOSED_STATUSES = new Set([
+  'done', // legado: concluido e verificado, com commit + evidence no item
+  'verified', // corrigido E verificado por execucao (exige evidence)
+  'prevention_active', // verificado E com prevencao executavel ativa (exige evidence)
+  'ready_for_approval', // trabalho tecnico concluido; aguarda aprovacao humana
+  'blocked', // legado: impossivel, com blocked_reason escrito
+  'blocked_external', // bloqueio externo, com blocked_reason escrito
+]);
+
+/** Estados que o modelo B8 nomeia explicitamente e que continuam ABERTOS. */
+const KNOWN_OPEN_STATUSES = new Set([
+  'pending',
+  'in_progress',
+  'failed',
+  'fixed_unverified',
+]);
+
 const MAX_CONSECUTIVE_BLOCKS = Number(process.env.MISSION_MAX_CONTINUES || 50);
 
 function readStdin() {
@@ -54,8 +84,32 @@ function readQueue() {
   }
 }
 
+/**
+ * Itens que ainda exigem acao. Fail-closed: so considerado fechado o status
+ * explicitamente reconhecido em CLOSED_STATUSES.
+ * @param {object} queue
+ * @returns {object[]}
+ */
 function openItems(queue) {
-  return queue.items.filter((item) => item && OPEN_STATUSES.has(String(item.status || '').toLowerCase()));
+  return queue.items.filter((item) => {
+    const status = String((item && item.status) || '').toLowerCase();
+    return !CLOSED_STATUSES.has(status);
+  });
+}
+
+/**
+ * Rotulo legivel do motivo de o item estar aberto (para a mensagem do hook).
+ * @param {string} status
+ * @returns {string}
+ */
+function openReason(status) {
+  const s = String(status || '').toLowerCase();
+  if (s === 'fixed_unverified') return 'corrigido mas NAO verificado';
+  if (s === 'failed') return 'falhou';
+  if (s === 'pending') return 'nao iniciado';
+  if (s === 'in_progress') return 'em andamento';
+  if (KNOWN_OPEN_STATUSES.has(s)) return s;
+  return `status nao reconhecido ("${status}") tratado como ABERTO`;
 }
 
 function git(args) {
@@ -107,7 +161,7 @@ function emit(payload) {
 }
 
 function describe(items) {
-  return items.map((item) => `${item.id} — ${item.title} [${item.status}]`).join('; ');
+  return items.map((item) => `${item.id} — ${item.title} [${item.status}: ${openReason(item.status)}]`).join('; ');
 }
 
 function release(reason) {

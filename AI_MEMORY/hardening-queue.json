@@ -3,7 +3,7 @@
  "repository": "jeffersonmachado/r-agent2",
  "branch": "mission/p0p1-hardening-20261010",
  "baseline": "2f1795454",
- "updatedAt": "2026-10-14T20:52:12.008Z",
+ "updatedAt": "2026-10-14T20:59:10.971Z",
  "consumers": [
   ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
  ],
@@ -351,6 +351,15 @@
    "evidence": "isolado: tests/integration/engineeringMissionFullE2E.test.js => 8/8 PASS em 41,2s (medido). no lote do L2: reports/release-suite-execution.json (generatedAt 2026-10-14T20:22Z, finishedAt 2026-10-14T20:50Z) => state FAIL, 1 de 8 testes falharam, batchExitCodes[1]=1.",
    "resolution": null,
    "blocked_reason": "FLAKINESS SOB CARGA, não defeito determinístico: a suíte passa 8/8 isolada (41s) e falhou no lote (6 suítes com --runInBand contra o mesmo Postgres). O candidato é o teste 6 (\"o loop real do Router chega a GREEN\"), que sozinho leva ~33s e depende do loop real do Router + DB + WS sob concorrência. Não é corregível por inspeção: exige investigar isolamento de execução (orçamento de conexões, DB por suíte, timeout do teste 6) e reproduzir a carga, o que é trabalho de uma sessão própria e não pode ser validado por um único run. Corrigir \"no escuro\" violaria a proibição de mascarar flakiness. Registrado como blocked com evidência nos dois sentidos em vez de declarar L2 verde."
+  },
+  {
+   "id": "MISSAO-B8-ESTADOS-FILA",
+   "title": "B8: modelo de estados da fila com hook fail-closed e validador",
+   "status": "prevention_active",
+   "commit": "PENDENTE",
+   "evidence": "scripts/governance/validate-hardening-queue.js + reports/hardening-queue-report.json; prova do hook em /tmp/provar-b8.sh (11/11 casos: fixed_unverified/failed/pending/in_progress/typo/desconhecido BLOQUEIAM; verified/prevention_active/done/blocked/blocked_external LIBERAM); prova do validador (7/7 casos: fila real PASS; detecta fixed_unverified-com-evidence, verified-sem-evidence, blocked_external-sem-razao, typo, duplicado)",
+   "resolution": "DEFEITO REAL encontrado em .github/hooks/continue-until-done.cjs: a logica era `OPEN_STATUSES = {pending, in_progress}`, ou seja TUDO o que nao estivesse nesses dois valores contava como FECHADO. Consequencia: um item marcado `failed` ou `fixed_unverified` (corrigido mas NAO verificado) encerrava o loop como se estivesse concluido — o mesmo falso verde que a fila existe para impedir. Corrigido por INVERSao para fail-closed: `CLOSED_STATUSES` explicito (done, verified, prevention_active, ready_for_approval, blocked, blocked_external) e TODO o resto ABERTO, inclusive typo e estado novo. Adotados os 8 estados do modelo da missao (PENDING/IN_PROGRESS/FAILED/FIXED_UNVERIFIED/VERIFIED/PREVENTION_ACTIVE/BLOCKED_EXTERNAL/READY_FOR_APPROVAL, em minusculas) com requisitos por estado: verified/prevention_active/ready_for_approval/done exigem commit+evidence; blocked/blocked_external exigem blocked_reason; failed exige failure_reason; fixed_unverified exige fix_note e PROIBE evidence (com evidencia o estado correto e verified); prevention_active exige tambem prevention. A mensagem do hook passou a nomear o motivo (openReason), para o bloqueio explicar POR QUE o item esta aberto em vez de so listar o status.",
+   "prevention": "validate:hardening-queue como 62o validador BLOQUEANTE do agregado: nenhum item pode ser marcado verified/prevention_active/ready_for_approval/done sem commit+evidence, nem blocked* sem razao, nem fixed_unverified COM evidence, e estado desconhecido e VIOLACAO."
   }
  ]
 }
