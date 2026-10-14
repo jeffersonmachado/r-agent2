@@ -343,4 +343,42 @@ com `exitCode != 0` no `.meta.json`, ler a mensagem, e reproduzir o **lote intei
    `proof-engine` e `reports/` estão fora de `SOURCE_ROOTS`; `validate:v2-seal-freshness`
    conferido PASS depois do commit, não presumido).
 
+## TERCEIRA REENTREGA — 3 defeitos reais achados pela jornada (FEITO, `r-agent2-20261014-114927`)
+
+Release **`r-agent2-20261014-114927`** (commit `64cb97987`), `SEAL_EXIT=0`,
+**Score PASS/100**, `PUBLISHED_VERIFIED` 8/8, aprovação de deploy GO,
+`AUTONOMOUS_READY` / `DELIVERED_RELEASE_VERIFIED`, worktree limpo e 0 à frente.
+
+Esta rodada começou exercitando a **jornada real no browser** (não a suíte) e
+encontrou **3 defeitos de produção que nenhum teste cobria** — todos com prova:
+
+| defeito | como apareceu | prova |
+|---|---|---|
+| **WebSocket não autenticava após o login** (usuário sem tempo real até F5) | "Falha de auth" na Central de Atendimento | servidor: `Broadcast 0 → 1 cliente`; browser: `auth`+`subscribe` enviados |
+| **`removeChild` (React)** por enhancement de header que movia nós do React | QA Mesh reprovou `support-inbox-nota-ui` (omnichannel, BLOCKING) | `removeChild` 20× no mesh e **ZERO em 10 meshes anteriores** |
+| **DELETE `/queues` não removia** fila existente só no banco | QA Mesh reprovou `business-core-biz-queues` (core, BLOCKING) | 253 filas de teste acumuladas desde 10/10, **5 ainda ativas** |
+
+### Métodos que valeram mais que a intuição
+
+- **Separar cliente de servidor com um socket "puro"**: um `WebSocket` aberto via
+  `page.evaluate` autenticou em 6 ms e ficou OPEN — provou que o defeito era do
+  cliente, não do servidor. Instrumentar `WebSocket.prototype.send` foi o que
+  revelou que o app **nunca enviava** o token (só `ping`).
+- **Comparar com o histórico para provar regressão**: `grep -c removeChild` nos
+  `meshHistory/*.json` deu 0 em 10 meshes e 20 no único posterior ao commit. Isso
+  troca "acho que fui eu" por evidência — e evita caçar fantasma quando o cenário
+  que falha **muda a cada execução**.
+- **Achar a causa no `batch-N.json`, não no resumo do gate**.
+
+### Armadilha NOVA do ciclo (custou uma rodada)
+
+Depois de commitar correções (em `SOURCE_ROOTS`) com o ciclo já iniciado, a retomada
+com `--from candidate` morreu em **`STALE_SEAL_SOURCE` + `SEAL_FOREIGN_RUN`**: o
+`prepare` detecta `RUN_SOURCE_DRIFT` e cria run novo, mas o **selo V2 continua sendo
+do source anterior**. Ordem correta: commitar → `create-governed-run` →
+`engineering-router:v2-seal` → `validate:v2-seal-freshness` PASS → commit dos
+derivados → retomar. **Re-selar o V2 é obrigatório sempre que o source muda entre
+fases**, não só no primeiro prepare.
+
+
 
