@@ -1,32 +1,41 @@
 {
-  "generatedAt": "2026-10-14T00:51:30.496Z",
+  "generatedAt": "2026-10-14T05:43:25.043Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20261013-213820.zip",
-  "zipHash": "c48463b23ea35e56e64036f6b8374c60cf9c658bc4cb89f6292edeb3d7a5156a",
-  "manifestHash": "40f38d3edb22612a199e10859cfcb09b720a20fa8f8937e638a85833f3d36f74",
-  "replayHash": "acd6e879104695a64605608f0077f0635f0db5e9a4967f09f74fa352010d9a4f",
-  "governanceHash": "f04c76e7bf083c9a9e44ae9bcea061b696d966b12b11cd308716d52a94d93d76",
-  "readinessHash": "0e16a1cb4f0554028dd90bfb970ceb6a9a3adecd2a76d5dd17f3696e482245fa",
-  "consistencyHash": "50b33bec906d1a202d5f327aaa555293867edd1be46540a9a24eb0055f2415b2",
-  "contaminationHash": "c166196ac818c330ca2b12d42899cd7daea8b18c884d62b4dc6341c4c6875016",
-  "packageIntegrityHash": "ab131ede9d0c5445d482236c1696967458fb03099b655ecb500c6c56d469f9dd",
+  "zipName": "r-agent2-20261014-022832.zip",
+  "zipHash": "b75505e95383f1f657a2861ee025729b90ab23025c59f0d4a3f065e40b7d7420",
+  "manifestHash": "99c23047ca85697814a246c5a9093fb455e0e1a5be580977544d791939fd46f1",
+  "replayHash": "964b1303c947b3258fa632b74c377802a564ca4a0d2a06316dcb1aab197994de",
+  "governanceHash": "d2c69a39fd8261e6df9b40e5423c4b21d5a95873626728293d12b296e815a19b",
+  "readinessHash": "b285eac1da0e48dc39952a6338ede696388045df68c9a2b585ce20553f8221f8",
+  "consistencyHash": "162eecf6cfae8fcde225bd9adbcea4b8ee3598c212c9c0bb7ba541f7ad6f88e4",
+  "contaminationHash": "cd1910615974702150687b2cd9b74989fe7bc410b4218ff48d3109fb73be2a79",
+  "packageIntegrityHash": "4f370f86868494c906fbbe1159c3f3e28e4fc1b143aab7b74b2b8a422fe3c19f",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "8a9e76a4e4fdabe8fbc3bbbc8e3b2307d664b5a0ad1580cb981d003e22fad8eb",
+  "gateHash": "4db4d1c8d6414472b6f36e26951ccc9f4e7f20e8dc89bd0edaa1eb3f68901168",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "AUTONOMOUS_READY_GO",
-    "readiness": "AUTONOMOUS_READY_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]",
+    "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
-  "autonomousReady": true,
-  "mandatoryFailures": [],
-  "ok": true,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20261013-213820.zip. Package: ÍNTEGRO. Validadores falhos: 0."
+  "autonomousReady": false,
+  "mandatoryFailures": [
+    {
+      "engine": "finalGovernance",
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]"
+    },
+    {
+      "engine": "readiness",
+      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    }
+  ],
+  "ok": false,
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20261014-022832.zip. Package: ÍNTEGRO. Validadores falhos: 2."
 }
