@@ -145,11 +145,55 @@ async function upsertQueue(queueData) {
   return { success: true, queue: queues.get(queue.id) };
 }
 
+/**
+ * Desativa (soft delete) a definição persistida de uma fila, de forma DIRETA e
+ * IDEMPOTENTE.
+ *
+ * Existe porque o `deleteQueue` do módulo de filas não pode depender do serviço
+ * legado (Map em MEMÓRIA, volátil) para tirar a fila da superfície: quando a
+ * definição existia apenas no banco, a fila continuava `active=true` e REAPARECIA
+ * na listagem (que mescla memória + banco) — defeito medido no cenário
+ * `business-core-biz-queues` no QA Mesh ("Fila não foi removida...") e causa das
+ * 253 filas de teste acumuladas desde 10/10.
+ *
+ * Não cria registro quando a fila não existe (só atualiza o que já existe) e
+ * desativar duas vezes devolve o mesmo resultado.
+ *
+ * @param {string} tenantId
+ * @param {string} name
+ * @returns {Promise<{success: boolean, deactivated: boolean, error?: string}>}
+ */
+async function deactivateQueue(tenantId, name) {
+  if (!dbAvailable()) return { success: false, deactivated: false, error: 'db_unavailable' };
+
+  const tenant = safeTrim(tenantId || '');
+  const nome = safeTrim(name || '');
+  if (!tenant || !nome) {
+    return { success: false, deactivated: false, error: 'tenantId e name são obrigatórios' };
+  }
+
+  const QueueModel = typeof QueueGetter === 'function' ? QueueGetter() : QueueGetter;
+  const [afetadas] = await QueueModel.update(
+    { active: false, updated_at: new Date() },
+    { where: { tenant_key: tenant, name: nome, active: true } }
+  );
+
+  // Mantém o cache coerente quando ele já conhece a fila (sem repovoá-lo).
+  for (const [id, q] of queues.entries()) {
+    if (q.tenantId === tenant && String(q.name).toLowerCase() === nome.toLowerCase()) {
+      queues.set(id, { ...q, active: false });
+    }
+  }
+
+  return { success: true, deactivated: afetadas > 0 };
+}
+
 module.exports = {
   initialize,
   listQueues,
   getQueueById,
   getQueueByName,
   upsertQueue,
+  deactivateQueue,
 };
 

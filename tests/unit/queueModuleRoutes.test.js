@@ -100,6 +100,51 @@ describe('queue module', () => {
     expect(deps.sendJson).toHaveBeenCalledWith(res, 200, expect.objectContaining({ success: true }));
   });
 
+  test('DEFEITO: legado NÃO encontra a fila mas a definição persistida é desativada (fila sai da listagem)', async () => {
+    // Medido em 2026-10-14 (QA Mesh, cenário `business-core-biz-queues`): o serviço
+    // legado opera num Map EM MEMÓRIA, que o reinício da API esvazia. A fila existia
+    // SÓ no banco; o deleteQueue legado devolvia success=false e a desativação —
+    // condicionada a `result.success` — NÃO rodava. A fila continuava `active=true` e
+    // REAPARECIA na listagem (que mescla memória + banco): "Fila não foi removida: a
+    // fila continua na listagem após DELETE". Foram 253 filas de teste acumuladas.
+    const deps = makeDeps({
+      deleteQueue: jest.fn(() => ({ success: false, message: 'Fila não encontrada' })),
+      queueDefinitionService: {
+        listQueues: jest.fn(() => []),
+        deactivateQueue: jest.fn(async () => ({ success: true, deactivated: true })),
+      },
+    });
+    const service = createQueueService({ deps });
+    const controller = createQueueController({ service, deps });
+    const req = makeReq({ params: { queueName: 'qa_flow_queue_x' }, url: '/queues/qa_flow_queue_x' });
+    const res = {};
+
+    await controller.remove(req, res);
+
+    expect(deps.queueDefinitionService.deactivateQueue).toHaveBeenCalledWith('tenant-1', 'qa_flow_queue_x');
+    // A remoção efetiva aconteceu (a fila sai da listagem): o resultado é sucesso,
+    // reportar falha aqui seria mentir sobre o efeito real.
+    expect(deps.sendJson).toHaveBeenCalledWith(res, 200, expect.objectContaining({ success: true }));
+  });
+
+  test('não reporta sucesso quando NADA foi removido (sem legado e sem definição persistida)', async () => {
+    const deps = makeDeps({
+      deleteQueue: jest.fn(() => ({ success: false, message: 'Fila não encontrada' })),
+      queueDefinitionService: {
+        listQueues: jest.fn(() => []),
+        deactivateQueue: jest.fn(async () => ({ success: true, deactivated: false })),
+      },
+    });
+    const service = createQueueService({ deps });
+    const controller = createQueueController({ service, deps });
+    const req = makeReq({ params: { queueName: 'inexistente' }, url: '/queues/inexistente' });
+    const res = {};
+
+    await controller.remove(req, res);
+
+    expect(deps.sendJson).toHaveBeenCalledWith(res, expect.any(Number), expect.objectContaining({ success: false }));
+  });
+
   test('controller create preserva auditoria e status 201', async () => {
     const deps = makeDeps({
       parseJsonBody: jest.fn(async () => ({ name: 'VIP' })),
