@@ -11,9 +11,9 @@
   "entries": [
     {
       "file": "frontend/src/context/WebSocketContext.jsx",
-      "allowedIntervals": 4,
+      "allowedIntervals": 3,
       "classification": "infrastructure",
-      "reason": "ping de keepalive, watchdog de reconexão e duas verificações de mudança de token do próprio provedor de WebSocket."
+      "reason": "ping de keepalive (linha 362), watchdog de reconexão (linha 650) e verificação de mudança de token do provedor de WebSocket (linha 752). Eram 4 até 2026-10-14, quando o setInterval de 2000ms que reintentava autenticação foi removido (DEF-WS-AUTH-POS-LOGIN) e trocado por um efeito de sessão que reage à mudança de autenticação."
     },
     {
       "file": "frontend/src/hooks/useWebSocket.js",

@@ -302,10 +302,22 @@ describe('EVO → RAP: sincronização real contra Postgres', () => {
     });
     // Entradas importadas: 2026-09-01 e 2026-09-03.
     expect(history.total).toBe(2);
-    expect(history.frequency30d).toBe(2);
-    // A janela de 7 dias é calculada em tempo real: as entradas importadas têm
-    // mais de 7 dias na data de execução, então NÃO entram — a agregação é real,
-    // não um eco do import.
+    // As janelas de 7/30 dias são MÓVEIS: calculadas contra o relógio de execução
+    // (`fitnessAttendanceService.getAttendanceHistory` compara com `agora - N dias`).
+    // Fixar `frequency30d` em 2 produziu um time bomb: as entradas de 01-03/09/2026
+    // saíram da janela de 30 dias em 2026-10-03 e o teste passou a falhar sozinho
+    // (medido em 2026-10-14, que é como este defeito foi descoberto). A expectativa
+    // é derivada da semântica da janela sobre os itens REALMENTE retornados, e
+    // combinada com invariantes que valem em qualquer data de execução.
+    const agoraMs = Date.now();
+    const dentroDaJanela = (dias) =>
+      history.items.filter((a) => new Date(a.checked_in_at).getTime() >= agoraMs - dias * 24 * 60 * 60 * 1000).length;
+    expect(history.frequency30d).toBe(dentroDaJanela(30));
+    expect(history.frequency7d).toBe(dentroDaJanela(7));
+    // Invariantes estruturais: 7d ⊆ 30d ⊆ total, e a agregação é real (não um eco
+    // do import) — com estas datas, a janela curta é estritamente menor.
+    expect(history.frequency7d).toBeLessThanOrEqual(history.frequency30d);
+    expect(history.frequency30d).toBeLessThanOrEqual(history.total);
     expect(history.frequency7d).toBe(0);
     expect(history.items.map((a) => a.checked_in_at.toISOString())).toEqual([
       '2026-09-03T18:10:00.000Z',
