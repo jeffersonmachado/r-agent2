@@ -53,8 +53,21 @@ describe('selectValidation — camada transitiva', () => {
 
   test('alterar um arquivo de teste seleciona esse próprio teste', () => {
     const r = selectValidation(base({ changedFiles: ['tests/unit/queueDefinition.test.js'] }));
-    // o alvo É teste: não há dependentes, mas o arquivo não fica "não classificado"
+    // Forte de propósito: ninguém "importa" um arquivo de teste, então o fecho
+    // reverso nunca o traria. A verificação fraca anterior (apenas "não ficou
+    // não classificado") deixou passar o defeito de alterar um teste e não
+    // executá-lo — medido em 2026-10-14.
+    expect(r.tests).toContain('tests/unit/queueDefinition.test.js');
+    expect(r.layers.transitiva).toContain('tests/unit/queueDefinition.test.js');
     expect(r.unclassified).toEqual([]);
+    expect(r.escalate).toBe(false);
+  });
+
+  test('arquivo de teste alterado NÃO arrasta o fecho dos seus imports', () => {
+    // Alterar um teste não deve executar a árvore inteira que ele importa:
+    // o alvo é o próprio teste.
+    const r = selectValidation(base({ changedFiles: ['engine/__tests__/executeStep.test.js'] }));
+    expect(r.tests).toEqual(['engine/__tests__/executeStep.test.js']);
   });
 });
 

@@ -59,10 +59,21 @@ function camadaTransitiva({ changed, reverse }, acc, collectDependents) {
   // (`reverse` tem entradas) ou quando ele próprio é um arquivo de teste.
   // Marcar incondicionalmente anularia o fail-closed (defeito pego por
   // `impactSelection.test.js`).
+  //
+  // Arquivo de TESTE alterado executa a si mesmo: ninguém o "importa", então o
+  // fecho reverso nunca o traria, e a alteração no próprio teste ficaria sem
+  // validação. Medido em 2026-10-14: alterar um arquivo de teste devolvia
+  // seleção vazia para ele.
   for (const c of changed) {
     const n = normalizar(c);
+    if (isTestFile(n)) {
+      acc.classified.add(n);
+      acc.tests.add(n);
+      acc.layers.transitiva.add(n);
+      continue;
+    }
     const temDependentes = (reverse[n] || []).length > 0;
-    if (isTestFile(n) || temDependentes) acc.classified.add(n);
+    if (temDependentes) acc.classified.add(n);
   }
 
   return { tests, dependents };

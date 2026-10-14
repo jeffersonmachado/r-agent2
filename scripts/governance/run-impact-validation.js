@@ -159,14 +159,76 @@ function executarJest(suites, outJson) {
 }
 
 /**
+ * Separa a seleção pelo runner competente.
+ *
+ * DEFEITO REAL medido em 2026-10-14: `jest.config.cjs` tem
+ * `roots = [engine, api, tests, qa, qa-mesh, lib]` — `frontend/` NÃO está lá.
+ * Passar um teste de frontend ao Jest faz o L1 reportar "VERMELHO: 1 teste(s)
+ * falharam" para um teste que passa (falso vermelho), porque o Jest simplesmente
+ * não encontra o arquivo. O frontend roda em Vitest (`frontend/vitest.config.mjs`).
+ *
+ * @param {string[]} testes
+ * @returns {{jest: string[], vitest: string[]}}
+ */
+function separarPorRunner(testes = []) {
+  const jest = [];
+  const vitest = [];
+  for (const t of testes) {
+    const n = normalizar(t);
+    if (n.startsWith('frontend/') && !n.startsWith('frontend-e2e/')) vitest.push(n);
+    else jest.push(n);
+  }
+  return { jest: jest.sort(), vitest: vitest.sort() };
+}
+
+/**
+ * Executa os testes de frontend no Vitest (cwd em `frontend/`, paths relativos).
+ * @param {string[]} suites caminhos a partir da raiz do repositório
+ * @returns {{exitCode: number|null, signal: string|null, spawnError: string|null, totalTests: number|null, failedTests: number|null}}
+ */
+function executarVitest(suites) {
+  const relativos = suites.map((s) => s.replace(/^frontend\//, ''));
+  const args = ['vitest', 'run', '--config', 'vitest.config.mjs', ...relativos];
+  const r = spawnSync('npx', args, {
+    cwd: path.join(RAIZ, 'frontend'),
+    encoding: 'utf8',
+    stdio: 'pipe',
+    maxBuffer: 64 * 1024 * 1024,
+    env: { ...process.env, VITE_CACHE_DIR: process.env.VITE_CACHE_DIR || '/tmp/r-agent2-vite' },
+  });
+  const saida = `${r.stdout || ''}\n${r.stderr || ''}`;
+  const passa = saida.match(/Tests\s+(\d+)\s+passed/);
+  const falha = saida.match(/Tests\s+(\d+)\s+failed/);
+  const total = passa ? Number(passa[1]) : null;
+  return {
+    exitCode: r.status,
+    signal: r.signal,
+    spawnError: r.error ? r.error.message : null,
+    totalTests: total === null ? null : total + (falha ? Number(falha[1]) : 0),
+    failedTests: falha ? Number(falha[1]) : 0,
+  };
+}
+
+/**
  * Executa o L1.
  * @param {string[]} argv
  * @returns {number} exit code
  */
 function main(argv = process.argv.slice(2)) {
+  // Aceita `--nome=valor` E `--nome valor`: o orquestrador e os demais gates do
+  // RAP usam a forma com `=` (ex.: run-all-validators.js `--only=a,b`). Aceitar
+  // só a forma separada fazia `--files=x` ser ignorado EM SILÊNCIO e o runner
+  // cair no `git diff` do working tree — medido em 2026-10-14, produzia
+  // escalação espúria com arquivos que o operador não pediu.
   const arg = (nome, padrao = null) => {
+    // `nome` inclui os `--`. A chave é `nome.length + 1` (só o `=`); usar +3
+    // cortava também os 2 primeiros caracteres do valor ("engine/utils.js" virava
+    // "ine/utils.js"), o caminho não batia com nada e o `--files` era ignorado em
+    // silêncio. Medido em 2026-10-14.
+    const comIgual = argv.find((a) => a.startsWith(`${nome}=`));
+    if (comIgual !== undefined) return comIgual.slice(nome.length + 1);
     const i = argv.indexOf(nome);
-    return i >= 0 && argv[i + 1] ? argv[i + 1] : padrao;
+    return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : padrao;
   };
   const dryRun = argv.includes('--dry-run');
   const base = arg('--base', 'HEAD');
@@ -247,40 +309,96 @@ function main(argv = process.argv.slice(2)) {
     return EXIT.GREEN;
   }
 
-  // 4. execução
-  const outJson = path.join(path.dirname(out), 'impact-jest.json');
-  const run = executarJest(selecao.tests, outJson);
-  relatorio.execution = {
-    exitCode: run.exitCode,
-    signal: run.signal,
-    spawnError: run.spawnError,
-    jestReport: fs.existsSync(outJson) ? path.relative(RAIZ, outJson) : null,
-  };
+  // 4. execução — cada grupo no runner competente
+  const grupos = separarPorRunner(selecao.tests);
+  relatorio.selection.byRunner = { jest: grupos.jest.length, vitest: grupos.vitest.length };
 
   let falhas = 0;
-  if (fs.existsSync(outJson)) {
-    try {
-      const j = JSON.parse(fs.readFileSync(outJson, 'utf8'));
-      falhas = j.numFailedTests || 0;
-      relatorio.execution.numTotalTests = j.numTotalTests || 0;
-      relatorio.execution.numFailedTestSuites = j.numFailedTestSuites || 0;
-    } catch {
-      /* relatório ilegível conta como falha de infraestrutura abaixo */
+  let totalExecutado = 0;
+  let erroExecucao = null;
+  const execucoes = [];
+
+  if (grupos.jest.length > 0) {
+    const outJson = path.join(path.dirname(out), 'impact-jest.json');
+    const run = executarJest(grupos.jest, outJson);
+    let numTotal = 0;
+    let numFalhas = 0;
+    let numSuitesFalhas = 0;
+    let temRelatorio = false;
+    if (fs.existsSync(outJson)) {
+      try {
+        const j = JSON.parse(fs.readFileSync(outJson, 'utf8'));
+        numTotal = j.numTotalTests || 0;
+        numFalhas = j.numFailedTests || 0;
+        numSuitesFalhas = j.numFailedTestSuites || 0;
+        temRelatorio = true;
+      } catch {
+        /* relatório ilegível -> infra abaixo */
+      }
     }
+    execucoes.push({
+      runner: 'jest',
+      suites: grupos.jest.length,
+      exitCode: run.exitCode,
+      signal: run.signal,
+      spawnError: run.spawnError,
+      numTotalTests: numTotal,
+      numFailedTests: numFalhas,
+      numFailedTestSuites: numSuitesFalhas,
+      report: temRelatorio ? path.relative(RAIZ, outJson) : null,
+    });
+    falhas += numFalhas;
+    totalExecutado += numTotal;
+    if (run.spawnError) erroExecucao = run.spawnError;
+    else if (!temRelatorio) erroExecucao = `jest exit=${run.exitCode} sem relatório`;
+    else if (run.exitCode !== 0 && numFalhas === 0) erroExecucao = `jest exit=${run.exitCode} com 0 falhas relatadas`;
   }
+
+  if (grupos.vitest.length > 0) {
+    const run = executarVitest(grupos.vitest);
+    execucoes.push({
+      runner: 'vitest',
+      suites: grupos.vitest.length,
+      exitCode: run.exitCode,
+      signal: run.signal,
+      spawnError: run.spawnError,
+      numTotalTests: run.totalTests,
+      numFailedTests: run.failedTests,
+      report: null,
+    });
+    falhas += run.failedTests || 0;
+    totalExecutado += run.totalTests || 0;
+    if (run.spawnError) erroExecucao = run.spawnError;
+    else if (run.exitCode !== 0 && !run.failedTests) erroExecucao = `vitest exit=${run.exitCode} sem falhas relatadas`;
+  }
+
+  relatorio.execution = {
+    runners: execucoes,
+    numTotalTests: totalExecutado,
+    numFailedTests: falhas,
+    byRunner: relatorio.selection.byRunner,
+  };
 
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(relatorio, null, 1), 'utf8');
 
-  if (run.spawnError || (run.exitCode !== 0 && falhas === 0 && !relatorio.execution.numTotalTests)) {
-    process.stderr.write(`[L1] ERRO de execução: ${run.spawnError || `exit=${run.exitCode} sem relatório`}\n`);
+  if (erroExecucao) {
+    process.stderr.write(`[L1] ERRO de execução: ${erroExecucao}\n`);
     return EXIT.INFRA;
   }
-  if (falhas > 0 || run.exitCode === 1) {
-    process.stderr.write(`[L1] VERMELHO: ${falhas} teste(s) falharam\n`);
+  // Nada executado não é verde: significa que a seleção não produziu evidência.
+  if (totalExecutado === 0 && selecao.tests.length > 0) {
+    process.stderr.write(`[L1] ERRO: ${selecao.tests.length} suíte(s) selecionada(s) e 0 teste executado\n`);
+    return EXIT.INFRA;
+  }
+  if (falhas > 0) {
+    process.stderr.write(`[L1] VERMELHO: ${falhas} de ${totalExecutado} teste(s) falharam\n`);
     return EXIT.RED;
   }
-  process.stdout.write(`[L1] VERDE: ${relatorio.execution.numTotalTests} teste(s)\n`);
+  process.stdout.write(
+    `[L1] VERDE: ${totalExecutado} teste(s) ` +
+      `(jest=${grupos.jest.length} suíte(s), vitest=${grupos.vitest.length} suíte(s))\n`
+  );
   return EXIT.GREEN;
 }
 
@@ -288,4 +406,13 @@ if (require.main === module) {
   process.exit(main());
 }
 
-module.exports = { main, EXIT, arquivosAlterados, jornadasPorArquivo, cenariosPorJornada, executarJest };
+module.exports = {
+  main,
+  EXIT,
+  arquivosAlterados,
+  jornadasPorArquivo,
+  cenariosPorJornada,
+  executarJest,
+  executarVitest,
+  separarPorRunner,
+};
