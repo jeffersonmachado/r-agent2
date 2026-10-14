@@ -7,7 +7,11 @@ import * as authApi from '../api/auth';
 import { getTenantCapabilities, updateTenantCapabilities, DEFAULT_TENANT_CAPABILITIES } from '../api/tenantCapabilities';
 import logger from '../utils/logger';
 
-const AuthContext = createContext(null);
+// Exportado para consumidores que precisam reagir ao estado de sessão sem depender
+// do hook `useAuth` (que lança quando não há AuthProvider, como nos testes do
+// WebSocketContext). Ver WebSocketContext: a autenticação do socket passa a ser
+// disparada pelo LOGIN, e não por varredura periódica do localStorage.
+export const AuthContext = createContext(null);
 
 /**
  * Provider de autenticação.

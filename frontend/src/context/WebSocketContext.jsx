@@ -9,6 +9,7 @@ import React, { createContext, useContext, useCallback, useEffect, useMemo, useR
 import { getToken } from '../api/auth';
 import logger from '../utils/logger';
 import { buildWebSocketUrl } from '../utils/wsUrl';
+import { AuthContext } from './authContext';
 
 const WebSocketContext = createContext(null);
 
@@ -16,6 +17,12 @@ const WebSocketContext = createContext(null);
  * Provider de WebSocket que gerencia uma única conexão compartilhada.
  */
 export function WebSocketProvider({ children }) {
+  // Estado de sessão lido DIRETAMENTE do contexto (tolerante a ausência do
+  // AuthProvider, como nos testes deste provider). É o gatilho determinístico da
+  // autenticação do socket: antes o login não disparava nada e a página ficava em
+  // "Falha de auth" até um F5.
+  const authContext = useContext(AuthContext);
+  const sessaoAtiva = authContext ? authContext.isAuthenticated === true : false;
   const [connected, setConnected] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [authFailed, setAuthFailed] = useState(false);
@@ -135,6 +142,17 @@ export function WebSocketProvider({ children }) {
   // Tenta autenticar o WebSocket com o token atual
   const authenticateWebSocket = useCallback(() => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      // NÃO retornar mudo. Sem socket utilizável não existe caminho para autenticar,
+      // e o silêncio aqui é o DEFEITO medido em 2026-10-14: após o login o socket
+      // aberto ANTES do login seguia vivo (o servidor não o fecha) mas não servia,
+      // nada o substituía e a página ficava em "Falha de auth" até um F5 — com o app
+      // chamando esta função a cada 2s sem nenhum envio.
+      logger.warn('[WebSocketContext] Sem socket aberto para autenticar; reconectando', {
+        readyState: wsRef.current ? wsRef.current.readyState : 'ausente',
+      });
+      if (!reconnectTimeoutRef.current && !isConnectingRef.current) {
+        connectRef.current();
+      }
       return false;
     }
 
@@ -252,6 +270,14 @@ export function WebSocketProvider({ children }) {
       logger.debug('[WebSocketContext] Já está conectando, ignorando nova tentativa');
       return;
     }
+
+    // O flag significa "estou fechando de propósito AGORA". Ele podia ficar preso em
+    // `true`: o cleanup do unmount armava o flag com o socket em CONNECTING sem
+    // fechá-lo, então o `onclose` que o resetaria nunca chegava — e com o flag preso
+    // o watchdog e o trigger de recuperação saíam de imediato, desligando toda a
+    // recuperação de conexão. Abrir uma conexão é, por definição, o fim da intenção
+    // de fechar.
+    isIntentionalCloseRef.current = false;
 
     // Limpa timeout de reconexão pendente
     if (reconnectTimeoutRef.current) {
@@ -656,17 +682,33 @@ export function WebSocketProvider({ children }) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (wsRef.current) {
         const currentState = wsRef.current.readyState;
-        // Só fecha se não estiver em estado CONNECTING (que causaria erro)
+        // O flag marca fechamento intencional EM ANDAMENTO e só é armado quando de
+        // fato fechamos. Armar sem fechar o deixava preso em `true` para sempre (o
+        // `onclose` que o resetaria nunca chegava), desligando watchdog e recuperação.
         if (currentState !== WebSocket.CONNECTING) {
-          isIntentionalCloseRef.current = true; // Marca como fechamento intencional
+          isIntentionalCloseRef.current = true;
           try {
             wsRef.current.close(1000, 'Provider unmounted');
           } catch (err) {
-            // Ignora erros
+            isIntentionalCloseRef.current = false;
           }
         } else {
-          // Se está conectando, apenas remove os handlers para evitar reconexão
-          isIntentionalCloseRef.current = true;
+          // Ainda em CONNECTING: fechar agora lançaria erro. Agenda o fechamento para
+          // quando abrir, para não deixar SOCKET ÓRFÃO no servidor — era disso que
+          // vinham as conexões penduradas que nunca autenticavam (o app as abandonava
+          // e o servidor as mantinha vivas).
+          try {
+            const socketOrfao = wsRef.current;
+            socketOrfao.addEventListener('open', () => {
+              try {
+                socketOrfao.close(1000, 'Provider unmounted (late)');
+              } catch (_) {
+                // Ignora erros
+              }
+            }, { once: true });
+          } catch (_) {
+            // Ignora erros
+          }
         }
         wsRef.current = null;
       }
@@ -748,31 +790,56 @@ export function WebSocketProvider({ children }) {
     // Escuta mudanças no localStorage (incluindo de outras abas)
     window.addEventListener('storage', handleStorageChange);
 
-    // Verifica periodicamente se o token mudou (para a mesma aba - após login)
-    // Isso é necessário porque o evento 'storage' só dispara em outras abas
-    // Nota: para de tentar se authFailed=true (tentativa anterior falhou - deve aguardar novo login)
-    const checkTokenInterval = setInterval(() => {
-      if (!connected || authenticated) {
-        return;
-      }
-
-      // Token já reprovado pelo servidor: não insiste até haver novo login.
-      if (authFailedRef.current) {
-        return;
-      }
-
-      const token = getToken();
-      if (token) {
-        logger.debug('[WebSocketContext] Token detectado (mesma aba), tentando autenticar...');
-        authenticateWebSocket();
-      }
-    }, 2000); // Verifica a cada 2s (detecta login rápido sem martelar o servidor)
-
+    // O POLLING de token desta aba foi REMOVIDO. Sincronizar estado por intervalo é
+    // proibido no projeto e, medido em 2026-10-14, era ineficaz: chamava a
+    // autenticação a cada 2s enquanto o socket não estava utilizável, sem nunca
+    // reconectar — o usuário ficava em "Falha de auth" até um F5. O gatilho passou a
+    // ser o estado de SESSÃO (efeito abaixo), que é determinístico.
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(checkTokenInterval);
     };
   }, [connected, authenticated, authFailed, authenticateWebSocket]);
+
+  // GATILHO DETERMINÍSTICO DE SESSÃO — o login autentica o socket.
+  //
+  // O provider já vive DENTRO do AuthProvider (main.jsx), então reagimos ao estado
+  // de sessão em vez de sondar o storage. Ao ficar autenticado, garantimos que
+  // existe socket ABERTO e que a autenticação é enviada; se o socket atual não
+  // servir (o que foi aberto antes do login, por exemplo), reconectamos de forma
+  // explícita — com log, nunca em silêncio.
+  useEffect(() => {
+    if (!sessaoAtiva || authenticated) {
+      return undefined;
+    }
+
+    const token = getToken();
+    if (!token) {
+      logger.debug('[WebSocketContext] Sessão ativa sem token disponível no storage');
+      return undefined;
+    }
+
+    const estado = wsRef.current ? wsRef.current.readyState : 'ausente';
+    if (estado !== WebSocket.OPEN) {
+      // Reconecta IMEDIATAMENTE: o login é uma mudança de estado do usuário e não
+      // deve esperar o backoff de uma queda anterior. Sem cancelar o agendamento
+      // pendente, o login ficava à mercê do atraso do backoff (e, se o backoff
+      // tivesse sido abortado, não haveria reconexão nenhuma).
+      logger.info('[WebSocketContext] Sessão ativa sem socket utilizável; reconectando para autenticar', { readyState: estado });
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (!isConnectingRef.current) {
+        connectRef.current();
+      }
+      return undefined;
+    }
+
+    const timeoutId = setTimeout(() => {
+      authenticateWebSocket();
+    }, 150);
+    return () => clearTimeout(timeoutId);
+  }, [sessaoAtiva, connected, authenticated, authFailed, authenticateWebSocket]);
 
   const value = useMemo(() => ({
     connected,
