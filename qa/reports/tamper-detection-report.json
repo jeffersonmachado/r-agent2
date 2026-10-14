@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-14T00:33:01.944Z",
-  "artifact": "r-agent2-20261013-212323.zip",
+  "generatedAt": "2026-10-14T00:49:25.159Z",
+  "artifact": "r-agent2-20261013-213820.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20261013-212323.zip",
-        "computedHash": "a3bcc9337f38c5affdf0f6dfa7046ebbdd6fc3c7bdc71a4795959800cfa21cb0",
-        "recordedHash": "a3bcc9337f38c5affdf0f6dfa7046ebbdd6fc3c7bdc71a4795959800cfa21cb0",
+        "zipName": "r-agent2-20261013-213820.zip",
+        "computedHash": "c48463b23ea35e56e64036f6b8374c60cf9c658bc4cb89f6292edeb3d7a5156a",
+        "recordedHash": "c48463b23ea35e56e64036f6b8374c60cf9c658bc4cb89f6292edeb3d7a5156a",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20261013-212323.manifest.json"
+        "subject": "r-agent2-20261013-213820.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20261013-212323.zip"
+        "subject": "r-agent2-20261013-213820.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "bbe17439591a2cbdc622254c…"
+        "storedChainRoot": "a9a1c595c4904cf12ecef502…"
       }
     },
     {
@@ -103,5 +103,5 @@
   "sourceFingerprint": "09f805e35002e28f03432a836ca76b7f0477c09295717c2bb6e1c117a97b050c",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-10-14T00:35:00.430Z"
+  "reboundAt": "2026-10-14T00:51:27.429Z"
 }
