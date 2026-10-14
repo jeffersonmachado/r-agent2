@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-14T22:41:31.348Z",
+  "generatedAt": "2026-10-14T22:55:24.211Z",
   "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
-  "runId": "rap-governed-20261014115049678-cb183049",
+  "runId": "rap-governed-20261014225313467-b865323b",
   "sourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
   "artifactType": "evidence-manifest",
   "artifactVersion": "1.0.0",
@@ -22,7 +22,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 350161025,
+        "ageMs": 350993888,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -48,7 +48,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 37072941,
+        "ageMs": 37905804,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -74,7 +74,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 37058798,
+        "ageMs": 37891661,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -93,14 +93,14 @@
       "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "84ee902fd43afd8e9015574b7bcf9d9d421a4694ae33ea0299fcf6058e4d048f",
-      "checksum": "84ee902fd43afd8e9015574b7bcf9d9d421a4694ae33ea0299fcf6058e4d048f",
-      "timestamp": "2026-10-14T14:49:58.534Z",
+      "hash": "8435d0074ee04f0d8064e3b03ed1a3ffd0af10fc2ea19c8254f2399448388c21",
+      "checksum": "8435d0074ee04f0d8064e3b03ed1a3ffd0af10fc2ea19c8254f2399448388c21",
+      "timestamp": "2026-10-14T22:54:59.597Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 28292815,
+        "ageMs": 24614,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -119,14 +119,14 @@
       "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "b62d869a85cfa44b7c638afe179494e1d4c597b49ccc9407588434bc1712a09f",
-      "checksum": "b62d869a85cfa44b7c638afe179494e1d4c597b49ccc9407588434bc1712a09f",
-      "timestamp": "2026-10-14T14:50:05.841Z",
+      "hash": "3e8d637990d66fe82515bf5728f49d0a6205fd3a6b488d12997252075f7e5b5c",
+      "checksum": "3e8d637990d66fe82515bf5728f49d0a6205fd3a6b488d12997252075f7e5b5c",
+      "timestamp": "2026-10-14T22:55:02.777Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 28285508,
+        "ageMs": 21434,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -145,14 +145,14 @@
       "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "2124b7ec0cefe87ac1965670f4284217cbc184c660fd6a81e3152393ac621201",
-      "checksum": "2124b7ec0cefe87ac1965670f4284217cbc184c660fd6a81e3152393ac621201",
-      "timestamp": "2026-10-14T14:50:08.067Z",
+      "hash": "07f85f404ee8c5bb7ba16cd31d58dc2ef881411956984920984db46918d8cdf6",
+      "checksum": "07f85f404ee8c5bb7ba16cd31d58dc2ef881411956984920984db46918d8cdf6",
+      "timestamp": "2026-10-14T22:55:04.932Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 28283282,
+        "ageMs": 19279,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -178,7 +178,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 160929662,
+        "ageMs": 161762522,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -197,14 +197,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-full-validation.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "f80b7678342c3596c3385a56f895d467d78bc43ab7eaa82384a325ed93fd2002",
-      "checksum": "f80b7678342c3596c3385a56f895d467d78bc43ab7eaa82384a325ed93fd2002",
-      "timestamp": "2026-10-14T14:49:52.306Z",
+      "hash": "93f48968221319b2cb526510ed61641d874f1695319e5de27fbb89e1a3385a26",
+      "checksum": "93f48968221319b2cb526510ed61641d874f1695319e5de27fbb89e1a3385a26",
+      "timestamp": "2026-10-14T22:53:17.843Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 28299096,
+        "ageMs": 126419,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -227,14 +227,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "05a2d5a4c36a417592372f7e3927a09b8b7dae7b9504c4c942eeb30f9f556f10",
-      "checksum": "05a2d5a4c36a417592372f7e3927a09b8b7dae7b9504c4c942eeb30f9f556f10",
-      "timestamp": "2026-10-14T22:41:13.043Z",
+      "hash": "b4e21080495aea878fdd4ed6fbd10e97a69f44c5b3e33d1a4cfbc304e2b6a4b7",
+      "checksum": "b4e21080495aea878fdd4ed6fbd10e97a69f44c5b3e33d1a4cfbc304e2b6a4b7",
+      "timestamp": "2026-10-14T22:55:06.579Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 18366,
+        "ageMs": 17684,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -257,14 +257,16 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-voice-flow-prod-like.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "7dceddd6209dc07d977c76ce553be781135543ab753d7ce1ace34c10abc233a7",
-      "checksum": "7dceddd6209dc07d977c76ce553be781135543ab753d7ce1ace34c10abc233a7",
-      "timestamp": "2026-10-14T14:50:09.585Z",
-      "proofStatus": "valid",
-      "semanticViolations": [],
+      "hash": "64c6223498a5b06bf29239d2600096f045b0545cd7f2e5f96daaabfe5930df62",
+      "checksum": "64c6223498a5b06bf29239d2600096f045b0545cd7f2e5f96daaabfe5930df62",
+      "timestamp": "2026-10-14T22:55:06.306Z",
+      "proofStatus": "invalid",
+      "semanticViolations": [
+        "ok_false"
+      ],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 28281824,
+        "ageMs": 17957,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -287,14 +289,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "24ddcd8da3ca4d117cfdac56e9e5b653f0e3c0c90159987cdbdee563372428e8",
-      "checksum": "24ddcd8da3ca4d117cfdac56e9e5b653f0e3c0c90159987cdbdee563372428e8",
-      "timestamp": "2026-10-14T22:41:12.962Z",
+      "hash": "dfc3565649c0599c3831e54ae9553fdfc4c073629f14c775e54d9534640a5c77",
+      "checksum": "dfc3565649c0599c3831e54ae9553fdfc4c073629f14c775e54d9534640a5c77",
+      "timestamp": "2026-10-14T22:55:06.484Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 18447,
+        "ageMs": 17779,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -317,14 +319,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "a8572cb2a7d24f2017c19ec329d2b126dfb41007160adfe5b006241f0623bcb0",
-      "checksum": "a8572cb2a7d24f2017c19ec329d2b126dfb41007160adfe5b006241f0623bcb0",
-      "timestamp": "2026-10-14T22:41:12.962Z",
+      "hash": "4198d5eab9ba50fd5bb1b1b08e703cb645d4f40b67b61da920c7a48f219396e0",
+      "checksum": "4198d5eab9ba50fd5bb1b1b08e703cb645d4f40b67b61da920c7a48f219396e0",
+      "timestamp": "2026-10-14T22:55:06.484Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 18447,
+        "ageMs": 17779,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -347,14 +349,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "4797d80e228800c2399a9ab2471cca74eeaa9ba2eaaf3de34ca0b6264314c224",
-      "checksum": "4797d80e228800c2399a9ab2471cca74eeaa9ba2eaaf3de34ca0b6264314c224",
-      "timestamp": "2026-10-14T22:41:12.963Z",
+      "hash": "c498f143f88660f5823b146e60e86f54aed8a0cad1e04d8298fcefd48c538cbc",
+      "checksum": "c498f143f88660f5823b146e60e86f54aed8a0cad1e04d8298fcefd48c538cbc",
+      "timestamp": "2026-10-14T22:55:06.484Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 18446,
+        "ageMs": 17779,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -377,14 +379,16 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-unified-replay.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "d10d72387607c930379f524b16bf06f2a3c6d26a84c035cf00babcffd9054f3b",
-      "checksum": "d10d72387607c930379f524b16bf06f2a3c6d26a84c035cf00babcffd9054f3b",
-      "timestamp": "2026-10-14T14:50:09.586Z",
-      "proofStatus": "valid",
-      "semanticViolations": [],
+      "hash": "90d7a2b208ebcdd700fd88d1e473514b4df56aa159aa5390ac14964d676c627b",
+      "checksum": "90d7a2b208ebcdd700fd88d1e473514b4df56aa159aa5390ac14964d676c627b",
+      "timestamp": "2026-10-14T22:55:06.308Z",
+      "proofStatus": "invalid",
+      "semanticViolations": [
+        "ok_false"
+      ],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 28281823,
+        "ageMs": 17955,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -407,14 +411,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "c5b68f94c8bc3a5bbb820245df96eccb9a1d678476305556bb41de211b7c3d1f",
-      "checksum": "c5b68f94c8bc3a5bbb820245df96eccb9a1d678476305556bb41de211b7c3d1f",
-      "timestamp": "2026-10-14T22:41:12.975Z",
+      "hash": "1f26829990bcee21ae1bb1c5cf16834bdd1cbf1b4e6877d86985d629811ce46b",
+      "checksum": "1f26829990bcee21ae1bb1c5cf16834bdd1cbf1b4e6877d86985d629811ce46b",
+      "timestamp": "2026-10-14T22:55:06.503Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 18435,
+        "ageMs": 17760,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -437,14 +441,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "bc42af320fed18bd16de7f1be1fec3f294144e29d6ff98893c1ce5640630464b",
-      "checksum": "bc42af320fed18bd16de7f1be1fec3f294144e29d6ff98893c1ce5640630464b",
-      "timestamp": "2026-10-14T22:41:12.993Z",
+      "hash": "64f69c6764076ad6273a5d8cc099f84bc68c532691ebfe5d2f755619a5a455ee",
+      "checksum": "64f69c6764076ad6273a5d8cc099f84bc68c532691ebfe5d2f755619a5a455ee",
+      "timestamp": "2026-10-14T22:55:06.523Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "FRESH",
-        "ageMs": 18417,
+        "ageMs": 17741,
         "maxAgeMs": 604800000,
         "exempt": false,
         "reason": null
@@ -470,7 +474,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 19750103,
+        "ageMs": 20582956,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -489,14 +493,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "08b0e87e94c070ea014c9b882498016f4b691511cb827292c75a397eda605c2a",
-      "checksum": "08b0e87e94c070ea014c9b882498016f4b691511cb827292c75a397eda605c2a",
-      "timestamp": "2026-10-14T22:41:13.047Z",
+      "hash": "5ccf36b0e17b15c0d6060fadf6d8ed8128fb2e53ec52339d62b9ae2f7d562747",
+      "checksum": "5ccf36b0e17b15c0d6060fadf6d8ed8128fb2e53ec52339d62b9ae2f7d562747",
+      "timestamp": "2026-10-14T22:55:06.584Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 18364,
+        "ageMs": 17680,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -515,14 +519,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "6f9739a6c3275c84bab740b5a8899bde88787a8ceee72798256f1681fe92d2e0",
-      "checksum": "6f9739a6c3275c84bab740b5a8899bde88787a8ceee72798256f1681fe92d2e0",
-      "timestamp": "2026-10-14T22:41:13.155Z",
+      "hash": "99372f79e0d546d9724777c8baca1094a932bd160b00d30a77df8587b65c27a3",
+      "checksum": "99372f79e0d546d9724777c8baca1094a932bd160b00d30a77df8587b65c27a3",
+      "timestamp": "2026-10-14T22:55:06.671Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 18256,
+        "ageMs": 17593,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -541,14 +545,14 @@
       "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
       "exists": true,
       "packageRequired": true,
-      "hash": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
-      "checksum": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
-      "timestamp": "2026-10-14T22:32:18.758Z",
+      "hash": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
+      "checksum": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
+      "timestamp": "2026-10-14T22:41:32.938Z",
       "proofStatus": "valid",
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 552657,
+        "ageMs": 831329,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -574,7 +578,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 741325,
+        "ageMs": 1574177,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -600,7 +604,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 741326,
+        "ageMs": 1574178,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -626,7 +630,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 741240,
+        "ageMs": 1574092,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -652,7 +656,7 @@
       "semanticViolations": [],
       "freshness": {
         "status": "UNKNOWN",
-        "ageMs": 741237,
+        "ageMs": 1574089,
         "maxAgeMs": 604800000,
         "exempt": true,
         "reason": "dominio governance (fonte): resolvido por conteudo na fingerprint chain"
@@ -675,15 +679,15 @@
   "scorecardEvidence": {
     "artifactType": "scorecard-evidence-proof",
     "artifactVersion": "1.0.0",
-    "generatedAt": "2026-10-14T22:41:32.818Z",
-    "runId": "rap-governed-20261014115049678-cb183049",
-    "sourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-    "runStartedAt": "2026-10-14T11:50:49.867Z",
+    "generatedAt": "2026-10-14T22:55:25.292Z",
+    "runId": "rap-governed-20261014225313467-b865323b",
+    "sourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
+    "runStartedAt": "2026-10-14T22:53:13.599Z",
     "total": 315,
     "summary": {
       "total": 315,
       "missing": 0,
-      "preRun": 0,
+      "preRun": 311,
       "unknownTemporal": 0,
       "unclassified": 0,
       "notAccepted": 0,
@@ -709,7 +713,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-001",
@@ -729,7 +733,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-001",
@@ -739,17 +743,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-001",
@@ -769,7 +773,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-002",
@@ -789,7 +793,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-002",
@@ -809,7 +813,7 @@
         "generatedAt": "2026-10-14T12:39:13.689Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-002",
@@ -829,7 +833,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-002",
@@ -849,7 +853,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-003",
@@ -869,7 +873,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-003",
@@ -889,7 +893,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-003",
@@ -899,17 +903,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-003",
@@ -929,7 +933,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-004",
@@ -949,7 +953,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-004",
@@ -969,7 +973,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-004",
@@ -979,17 +983,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-004",
@@ -1009,7 +1013,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-005",
@@ -1029,7 +1033,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-005",
@@ -1049,7 +1053,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-005",
@@ -1059,17 +1063,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-005",
@@ -1089,7 +1093,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-006",
@@ -1109,7 +1113,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-006",
@@ -1119,17 +1123,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
+        "sha256": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:31:59.357Z",
+        "generatedAt": "2026-10-14T22:41:12.913Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-006",
@@ -1149,7 +1153,7 @@
         "generatedAt": "2026-10-14T16:50:19.151Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-006",
@@ -1169,7 +1173,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-007",
@@ -1189,7 +1193,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-007",
@@ -1209,7 +1213,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-007",
@@ -1229,7 +1233,7 @@
         "generatedAt": "2026-10-14T16:35:57.023Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-007",
@@ -1249,7 +1253,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-008",
@@ -1269,7 +1273,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-008",
@@ -1289,7 +1293,7 @@
         "generatedAt": "2026-10-14T12:28:49.103Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-008",
@@ -1309,7 +1313,7 @@
         "generatedAt": "2026-10-14T22:28:24.624Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-008",
@@ -1329,7 +1333,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-009",
@@ -1349,7 +1353,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-009",
@@ -1359,17 +1363,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
+        "sha256": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:31:59.357Z",
+        "generatedAt": "2026-10-14T22:41:12.913Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-009",
@@ -1379,17 +1383,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-009",
@@ -1409,7 +1413,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-010",
@@ -1429,7 +1433,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-010",
@@ -1449,7 +1453,7 @@
         "generatedAt": "2026-10-14T12:39:32.576Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-010",
@@ -1469,7 +1473,7 @@
         "generatedAt": "2026-10-14T16:35:57.023Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-010",
@@ -1489,7 +1493,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-011",
@@ -1509,7 +1513,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-011",
@@ -1529,7 +1533,7 @@
         "generatedAt": "2026-10-14T16:35:57.023Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-011",
@@ -1549,7 +1553,7 @@
         "generatedAt": "2026-10-14T16:35:57.023Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-011",
@@ -1569,7 +1573,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-012",
@@ -1589,7 +1593,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-012",
@@ -1609,7 +1613,7 @@
         "generatedAt": "2026-10-14T16:35:57.023Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-012",
@@ -1629,7 +1633,7 @@
         "generatedAt": "2026-10-14T16:35:57.023Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-012",
@@ -1649,7 +1653,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-013",
@@ -1669,7 +1673,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-013",
@@ -1689,7 +1693,7 @@
         "generatedAt": "2026-10-14T12:39:14.341Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-013",
@@ -1709,7 +1713,7 @@
         "generatedAt": "2026-10-14T12:39:14.341Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-013",
@@ -1729,7 +1733,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-014",
@@ -1749,7 +1753,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-014",
@@ -1769,7 +1773,7 @@
         "generatedAt": "2026-10-14T22:28:24.624Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-014",
@@ -1789,7 +1793,7 @@
         "generatedAt": "2026-10-14T22:28:24.624Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-014",
@@ -1809,7 +1813,7 @@
         "generatedAt": "2026-10-14T22:28:25.205Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-014",
@@ -1829,7 +1833,7 @@
         "generatedAt": "2026-10-14T22:28:39.518Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-014",
@@ -1849,7 +1853,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-015",
@@ -1869,7 +1873,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-015",
@@ -1889,7 +1893,7 @@
         "generatedAt": "2026-10-14T16:46:46.639Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-015",
@@ -1909,7 +1913,7 @@
         "generatedAt": "2026-10-14T16:35:56.301Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-015",
@@ -1929,7 +1933,7 @@
         "generatedAt": "2026-10-14T22:28:25.205Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-015",
@@ -1949,7 +1953,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-016",
@@ -1969,7 +1973,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-016",
@@ -1989,7 +1993,7 @@
         "generatedAt": "2026-10-14T16:46:46.639Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-016",
@@ -2009,7 +2013,7 @@
         "generatedAt": "2026-10-14T16:35:56.301Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-016",
@@ -2029,7 +2033,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-017",
@@ -2049,7 +2053,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-017",
@@ -2069,7 +2073,7 @@
         "generatedAt": "2026-10-14T16:46:46.639Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-017",
@@ -2089,7 +2093,7 @@
         "generatedAt": "2026-10-14T16:35:56.301Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-017",
@@ -2109,7 +2113,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-018",
@@ -2129,7 +2133,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-018",
@@ -2139,17 +2143,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "7a43c6673c20530ce42c377e9b15b4cc39b18b30f1e391a2018fcc51de958b26",
+        "sha256": "e32f264469594bda6214f39ca03796597c219153b7cf3ef6b76fd3657074ec02",
         "bindingKind": "SELF_PROJECTION_EXCLUDING_SCORECARD_EVIDENCE",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:16.755Z",
+        "generatedAt": "2026-10-14T22:41:31.348Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-018",
@@ -2169,7 +2173,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-018",
@@ -2189,7 +2193,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-019",
@@ -2209,7 +2213,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-019",
@@ -2229,7 +2233,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-019",
@@ -2249,7 +2253,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-019",
@@ -2269,7 +2273,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-020",
@@ -2289,7 +2293,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-020",
@@ -2309,7 +2313,7 @@
         "generatedAt": "2026-10-14T12:31:10.722Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-020",
@@ -2329,7 +2333,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-020",
@@ -2349,7 +2353,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-021",
@@ -2369,7 +2373,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-021",
@@ -2379,17 +2383,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-021",
@@ -2399,17 +2403,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-021",
@@ -2429,7 +2433,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-022",
@@ -2449,7 +2453,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-022",
@@ -2469,7 +2473,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-022",
@@ -2489,7 +2493,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-022",
@@ -2509,7 +2513,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-023",
@@ -2529,7 +2533,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-023",
@@ -2549,7 +2553,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-023",
@@ -2569,7 +2573,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-023",
@@ -2589,7 +2593,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-024",
@@ -2609,7 +2613,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-024",
@@ -2629,7 +2633,7 @@
         "generatedAt": "2026-10-14T12:27:08.909Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-024",
@@ -2649,7 +2653,7 @@
         "generatedAt": "2026-10-14T22:28:23.287Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-024",
@@ -2669,7 +2673,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-025",
@@ -2689,7 +2693,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-025",
@@ -2709,7 +2713,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-025",
@@ -2729,7 +2733,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-025",
@@ -2749,7 +2753,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-026",
@@ -2769,7 +2773,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-026",
@@ -2789,7 +2793,7 @@
         "generatedAt": "2026-10-14T12:27:08.909Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-026",
@@ -2809,7 +2813,7 @@
         "generatedAt": "2026-10-14T12:27:08.909Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-026",
@@ -2829,7 +2833,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-027",
@@ -2849,7 +2853,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-027",
@@ -2869,7 +2873,7 @@
         "generatedAt": "2026-10-14T17:12:21.011Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-027",
@@ -2889,7 +2893,7 @@
         "generatedAt": "2026-10-14T17:12:21.011Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-027",
@@ -2909,7 +2913,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-028",
@@ -2929,7 +2933,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-028",
@@ -2949,7 +2953,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-028",
@@ -2969,7 +2973,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-028",
@@ -2989,7 +2993,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-029",
@@ -3009,7 +3013,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-029",
@@ -3029,7 +3033,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-029",
@@ -3049,7 +3053,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-029",
@@ -3069,7 +3073,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-030",
@@ -3089,7 +3093,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-030",
@@ -3109,7 +3113,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-030",
@@ -3129,7 +3133,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-030",
@@ -3149,7 +3153,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-031",
@@ -3169,7 +3173,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-031",
@@ -3189,7 +3193,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-031",
@@ -3209,7 +3213,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-031",
@@ -3229,7 +3233,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-032",
@@ -3249,7 +3253,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-032",
@@ -3269,7 +3273,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-032",
@@ -3289,7 +3293,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-032",
@@ -3309,7 +3313,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-033",
@@ -3329,7 +3333,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-033",
@@ -3349,7 +3353,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-033",
@@ -3369,7 +3373,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-033",
@@ -3389,7 +3393,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-034",
@@ -3409,7 +3413,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-034",
@@ -3429,7 +3433,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-034",
@@ -3449,7 +3453,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-034",
@@ -3469,7 +3473,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-035",
@@ -3489,7 +3493,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-035",
@@ -3509,7 +3513,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-035",
@@ -3529,7 +3533,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-035",
@@ -3549,7 +3553,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-036",
@@ -3569,7 +3573,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-036",
@@ -3589,7 +3593,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-036",
@@ -3609,7 +3613,7 @@
         "generatedAt": "2026-10-14T19:49:22.131Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-036",
@@ -3629,7 +3633,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-037",
@@ -3649,7 +3653,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-037",
@@ -3659,17 +3663,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
+        "sha256": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:31:59.357Z",
+        "generatedAt": "2026-10-14T22:41:12.913Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-037",
@@ -3679,17 +3683,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-037",
@@ -3709,7 +3713,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-038",
@@ -3729,7 +3733,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-038",
@@ -3739,17 +3743,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
+        "sha256": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:31:59.357Z",
+        "generatedAt": "2026-10-14T22:41:12.913Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-038",
@@ -3759,17 +3763,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-038",
@@ -3789,7 +3793,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-039",
@@ -3809,7 +3813,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-039",
@@ -3829,7 +3833,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-039",
@@ -3839,17 +3843,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-039",
@@ -3869,7 +3873,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-040",
@@ -3889,7 +3893,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-040",
@@ -3909,7 +3913,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-040",
@@ -3929,7 +3933,7 @@
         "generatedAt": "2026-10-14T22:28:26.819Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-040",
@@ -3949,7 +3953,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-041",
@@ -3969,7 +3973,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-041",
@@ -3979,17 +3983,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-041",
@@ -3999,17 +4003,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-041",
@@ -4029,7 +4033,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-042",
@@ -4049,7 +4053,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-042",
@@ -4059,17 +4063,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "7a43c6673c20530ce42c377e9b15b4cc39b18b30f1e391a2018fcc51de958b26",
+        "sha256": "e32f264469594bda6214f39ca03796597c219153b7cf3ef6b76fd3657074ec02",
         "bindingKind": "SELF_PROJECTION_EXCLUDING_SCORECARD_EVIDENCE",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:16.755Z",
+        "generatedAt": "2026-10-14T22:41:31.348Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-042",
@@ -4079,17 +4083,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-042",
@@ -4109,7 +4113,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-043",
@@ -4129,7 +4133,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-043",
@@ -4139,17 +4143,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "7a43c6673c20530ce42c377e9b15b4cc39b18b30f1e391a2018fcc51de958b26",
+        "sha256": "e32f264469594bda6214f39ca03796597c219153b7cf3ef6b76fd3657074ec02",
         "bindingKind": "SELF_PROJECTION_EXCLUDING_SCORECARD_EVIDENCE",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:16.755Z",
+        "generatedAt": "2026-10-14T22:41:31.348Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-043",
@@ -4159,17 +4163,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-043",
@@ -4189,7 +4193,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-044",
@@ -4209,7 +4213,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-044",
@@ -4219,17 +4223,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-044",
@@ -4239,17 +4243,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-044",
@@ -4269,7 +4273,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-045",
@@ -4289,7 +4293,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-045",
@@ -4299,17 +4303,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-045",
@@ -4319,17 +4323,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-045",
@@ -4349,7 +4353,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-046",
@@ -4369,7 +4373,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-046",
@@ -4379,17 +4383,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-046",
@@ -4399,17 +4403,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-046",
@@ -4429,7 +4433,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-047",
@@ -4449,7 +4453,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-047",
@@ -4469,7 +4473,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-047",
@@ -4479,17 +4483,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-047",
@@ -4509,7 +4513,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-048",
@@ -4529,7 +4533,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-048",
@@ -4549,7 +4553,7 @@
         "generatedAt": "2026-10-14T16:50:19.151Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-048",
@@ -4569,7 +4573,7 @@
         "generatedAt": "2026-10-14T16:50:19.151Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-048",
@@ -4589,7 +4593,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-049",
@@ -4609,7 +4613,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-049",
@@ -4619,17 +4623,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
+        "sha256": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:31:59.357Z",
+        "generatedAt": "2026-10-14T22:41:12.913Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-049",
@@ -4639,17 +4643,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
+        "sha256": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:31:59.357Z",
+        "generatedAt": "2026-10-14T22:41:12.913Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-049",
@@ -4669,7 +4673,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-050",
@@ -4689,7 +4693,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-050",
@@ -4699,17 +4703,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "47118a5c3b60e359ae5b4e425cac65cac0da0a62170bb5959b3f3a448924a600",
+        "sha256": "ee973e21d9b15c34596c67d8452a797aba5e1052168fb13e11381b6ff8674e23",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:31:59.357Z",
+        "generatedAt": "2026-10-14T22:41:12.913Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-050",
@@ -4729,7 +4733,7 @@
         "generatedAt": "2026-10-14T16:50:19.151Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-050",
@@ -4749,7 +4753,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-051",
@@ -4769,7 +4773,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-051",
@@ -4789,7 +4793,7 @@
         "generatedAt": "2026-10-14T16:50:15.940Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-051",
@@ -4809,7 +4813,7 @@
         "generatedAt": "2026-10-14T16:50:15.940Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-051",
@@ -4829,7 +4833,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-052",
@@ -4849,7 +4853,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-052",
@@ -4859,17 +4863,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "5b3b5037eacbd3c7143638d3e67434e1b01d72b597d40ced7ba74dee47bb0db6",
+        "sha256": "47817b0176b7b4f4369e5d54a7e102bf1318b13120a0863f5a130cf7a1791dc5",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.407Z",
+        "generatedAt": "2026-10-14T22:41:32.820Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-052",
@@ -4889,7 +4893,7 @@
         "generatedAt": "2026-10-14T16:50:14.463Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-052",
@@ -4909,7 +4913,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-053",
@@ -4929,7 +4933,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-053",
@@ -4949,7 +4953,7 @@
         "generatedAt": "2026-10-14T16:50:14.463Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-053",
@@ -4969,7 +4973,7 @@
         "generatedAt": "2026-10-14T16:50:14.463Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-053",
@@ -4989,7 +4993,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-054",
@@ -5009,7 +5013,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-054",
@@ -5019,17 +5023,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "5b3b5037eacbd3c7143638d3e67434e1b01d72b597d40ced7ba74dee47bb0db6",
+        "sha256": "47817b0176b7b4f4369e5d54a7e102bf1318b13120a0863f5a130cf7a1791dc5",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.407Z",
+        "generatedAt": "2026-10-14T22:41:32.820Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-054",
@@ -5039,17 +5043,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-054",
@@ -5069,7 +5073,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-055",
@@ -5089,7 +5093,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-055",
@@ -5099,14 +5103,14 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "2b3eb042671b5f9d769c6320e5950d67e6745264e3d5965b510f764908ef4269",
+        "sha256": "2c463da13f7bb1b399b8186d6ff53abda26e974fffd986be854fdb4ed932c0d1",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": true,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:41:11.700Z",
+        "generatedAt": "2026-10-14T22:53:14.576Z",
         "artifactRunId": null,
         "artifactSourceFingerprint": null,
         "temporalValidity": "SAME_RUN"
@@ -5119,14 +5123,14 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "2b3eb042671b5f9d769c6320e5950d67e6745264e3d5965b510f764908ef4269",
+        "sha256": "2c463da13f7bb1b399b8186d6ff53abda26e974fffd986be854fdb4ed932c0d1",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": true,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:41:11.700Z",
+        "generatedAt": "2026-10-14T22:53:14.576Z",
         "artifactRunId": null,
         "artifactSourceFingerprint": null,
         "temporalValidity": "SAME_RUN"
@@ -5149,7 +5153,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-056",
@@ -5169,7 +5173,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-056",
@@ -5179,14 +5183,14 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "2b3eb042671b5f9d769c6320e5950d67e6745264e3d5965b510f764908ef4269",
+        "sha256": "2c463da13f7bb1b399b8186d6ff53abda26e974fffd986be854fdb4ed932c0d1",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": true,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:41:11.700Z",
+        "generatedAt": "2026-10-14T22:53:14.576Z",
         "artifactRunId": null,
         "artifactSourceFingerprint": null,
         "temporalValidity": "SAME_RUN"
@@ -5199,17 +5203,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-056",
@@ -5229,7 +5233,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-057",
@@ -5249,7 +5253,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-057",
@@ -5269,7 +5273,7 @@
         "generatedAt": "2026-10-14T16:50:15.940Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-057",
@@ -5289,7 +5293,7 @@
         "generatedAt": "2026-10-14T16:50:15.940Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-057",
@@ -5309,7 +5313,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-058",
@@ -5329,7 +5333,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-058",
@@ -5349,7 +5353,7 @@
         "generatedAt": "2026-10-14T16:35:57.023Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-058",
@@ -5369,7 +5373,7 @@
         "generatedAt": "2026-10-14T12:39:32.576Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-058",
@@ -5389,7 +5393,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-059",
@@ -5409,7 +5413,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-059",
@@ -5429,7 +5433,7 @@
         "generatedAt": "2026-10-14T14:50:10.430Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-059",
@@ -5439,17 +5443,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-059",
@@ -5469,7 +5473,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-060",
@@ -5489,7 +5493,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-060",
@@ -5509,7 +5513,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-060",
@@ -5519,17 +5523,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-060",
@@ -5549,7 +5553,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-061",
@@ -5569,7 +5573,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-061",
@@ -5589,7 +5593,7 @@
         "generatedAt": "2026-10-14T12:28:49.103Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-061",
@@ -5609,7 +5613,7 @@
         "generatedAt": "2026-10-14T12:28:49.103Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-061",
@@ -5629,7 +5633,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-062",
@@ -5649,7 +5653,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-062",
@@ -5669,7 +5673,7 @@
         "generatedAt": "2026-10-14T12:30:39.253Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-062",
@@ -5689,7 +5693,7 @@
         "generatedAt": "2026-10-14T12:30:39.253Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-062",
@@ -5709,7 +5713,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-063",
@@ -5729,7 +5733,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-063",
@@ -5749,7 +5753,7 @@
         "generatedAt": "2026-10-14T16:35:01.944Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-063",
@@ -5769,7 +5773,7 @@
         "generatedAt": "2026-10-14T16:35:01.944Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-063",
@@ -5789,7 +5793,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-064",
@@ -5809,7 +5813,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-064",
@@ -5829,7 +5833,7 @@
         "generatedAt": "2026-10-14T16:35:06.024Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-064",
@@ -5849,7 +5853,7 @@
         "generatedAt": "2026-10-14T16:43:38.936Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-064",
@@ -5869,7 +5873,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-065",
@@ -5889,7 +5893,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-065",
@@ -5909,7 +5913,7 @@
         "generatedAt": "2026-10-14T16:35:12.548Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-065",
@@ -5929,7 +5933,7 @@
         "generatedAt": "2026-10-14T16:35:12.548Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-065",
@@ -5949,7 +5953,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-066",
@@ -5969,7 +5973,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-066",
@@ -5989,7 +5993,7 @@
         "generatedAt": "2026-10-14T16:35:15.451Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-066",
@@ -6009,7 +6013,7 @@
         "generatedAt": "2026-10-14T12:30:39.253Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-066",
@@ -6029,7 +6033,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-067",
@@ -6049,7 +6053,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-067",
@@ -6069,7 +6073,7 @@
         "generatedAt": "2026-10-14T16:35:22.705Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-067",
@@ -6079,17 +6083,17 @@
         "classification": "CERTIFICATION_ARTIFACT",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "d27695cbaa503f4584472858241c1174ffcbdd5feecd363b25b2ee88c2c7776f",
+        "sha256": "aeaf7f3adb8ba936a5df5cb9af0b2cd1c4f1f2839dd2fadc44e996d7c5705fe3",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T22:32:18.634Z",
+        "generatedAt": "2026-10-14T22:41:32.837Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-067",
@@ -6109,7 +6113,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-068",
@@ -6129,7 +6133,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-068",
@@ -6139,16 +6143,16 @@
         "classification": "RUNTIME_EVIDENCE",
         "classificationAuthoritative": true,
         "exists": true,
-        "sha256": "7dceddd6209dc07d977c76ce553be781135543ab753d7ce1ace34c10abc233a7",
+        "sha256": "64c6223498a5b06bf29239d2600096f045b0545cd7f2e5f96daaabfe5930df62",
         "bindingKind": "FILE_BYTES",
         "result": "PASS",
         "resultAccepted": true,
         "selfProduced": false,
         "reason": "Todas as evidências obrigatórias passaram.",
         "dimensionScore": 10,
-        "generatedAt": "2026-10-14T14:50:09.585Z",
-        "artifactRunId": "rap-governed-20261014115049678-cb183049",
-        "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
+        "generatedAt": "2026-10-14T22:55:06.306Z",
+        "artifactRunId": "rap-governed-20261014225313467-b865323b",
+        "artifactSourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
         "temporalValidity": "SAME_RUN"
       },
       {
@@ -6169,7 +6173,7 @@
         "generatedAt": "2026-10-14T17:12:21.011Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-068",
@@ -6189,7 +6193,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-069",
@@ -6209,7 +6213,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-069",
@@ -6229,7 +6233,7 @@
         "generatedAt": "2026-10-14T16:35:27.136Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-069",
@@ -6249,7 +6253,7 @@
         "generatedAt": "2026-10-14T12:28:49.103Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-069",
@@ -6269,7 +6273,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-070",
@@ -6289,7 +6293,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-070",
@@ -6309,7 +6313,7 @@
         "generatedAt": "2026-10-14T16:35:33.105Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-070",
@@ -6329,7 +6333,7 @@
         "generatedAt": "2026-10-14T16:35:33.105Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-070",
@@ -6349,7 +6353,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-071",
@@ -6369,7 +6373,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-071",
@@ -6389,7 +6393,7 @@
         "generatedAt": "2026-10-14T16:35:36.572Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-071",
@@ -6409,7 +6413,7 @@
         "generatedAt": "2026-10-14T16:50:14.463Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-071",
@@ -6429,7 +6433,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-072",
@@ -6449,7 +6453,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-072",
@@ -6469,7 +6473,7 @@
         "generatedAt": "2026-10-14T16:35:39.300Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-072",
@@ -6489,7 +6493,7 @@
         "generatedAt": "2026-10-14T16:35:39.300Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-072",
@@ -6509,7 +6513,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-073",
@@ -6529,7 +6533,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-073",
@@ -6549,7 +6553,7 @@
         "generatedAt": "2026-10-14T16:35:42.499Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-073",
@@ -6569,7 +6573,7 @@
         "generatedAt": "2026-10-14T12:39:32.576Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-073",
@@ -6589,7 +6593,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-074",
@@ -6609,7 +6613,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-074",
@@ -6629,7 +6633,7 @@
         "generatedAt": "2026-10-14T12:30:39.253Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-074",
@@ -6649,7 +6653,7 @@
         "generatedAt": "2026-10-14T12:30:39.253Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-074",
@@ -6669,7 +6673,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-075",
@@ -6689,7 +6693,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-075",
@@ -6709,7 +6713,7 @@
         "generatedAt": "2026-10-14T16:35:48.675Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-075",
@@ -6729,7 +6733,7 @@
         "generatedAt": "2026-10-14T16:35:48.675Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-075",
@@ -6749,7 +6753,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-076",
@@ -6769,7 +6773,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-076",
@@ -6789,7 +6793,7 @@
         "generatedAt": "2026-10-14T16:35:49.640Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-076",
@@ -6809,7 +6813,7 @@
         "generatedAt": "2026-10-14T16:35:49.640Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-076",
@@ -6829,7 +6833,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-077",
@@ -6849,7 +6853,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-077",
@@ -6869,7 +6873,7 @@
         "generatedAt": "2026-10-14T14:50:52.209Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-077",
@@ -6889,7 +6893,7 @@
         "generatedAt": "2026-10-14T14:50:52.209Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-077",
@@ -6909,7 +6913,7 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-078",
@@ -6929,7 +6933,7 @@
         "generatedAt": "2026-10-14T14:50:59.805Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-078",
@@ -6949,7 +6953,7 @@
         "generatedAt": "2026-10-14T22:28:34.636Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-078",
@@ -6969,7 +6973,7 @@
         "generatedAt": "2026-10-14T22:28:34.636Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       },
       {
         "dimensionId": "RAP-078",
@@ -6989,14 +6993,265 @@
         "generatedAt": "2026-10-14T14:50:59.806Z",
         "artifactRunId": "rap-governed-20261014115049678-cb183049",
         "artifactSourceFingerprint": "7e0370e56d26c8b3b63cfd84cb86c6d30b3d9b1dccf04240477e2f08005112ce",
-        "temporalValidity": "SAME_RUN"
+        "temporalValidity": "PRE_RUN"
       }
     ],
     "verdict": {
-      "ok": true,
+      "ok": false,
       "checked": 315,
-      "violations": [],
-      "violationCount": 0
+      "violations": [
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/critical-journey-evidence.json",
+          "detail": "generatedAt=2026-10-14T14:50:10.430Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-proof-report.json",
+          "detail": "generatedAt=2026-10-14T22:41:32.837Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/page-surface-report.json",
+          "detail": "generatedAt=2026-10-14T12:39:13.689Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/coverage-gate-report.json",
+          "detail": "generatedAt=2026-10-14T22:28:26.819Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/critical-journey-evidence.json",
+          "detail": "generatedAt=2026-10-14T14:50:10.430Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-proof-report.json",
+          "detail": "generatedAt=2026-10-14T22:41:32.837Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/critical-journey-evidence.json",
+          "detail": "generatedAt=2026-10-14T14:50:10.430Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-proof-report.json",
+          "detail": "generatedAt=2026-10-14T22:41:32.837Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/critical-journey-evidence.json",
+          "detail": "generatedAt=2026-10-14T14:50:10.430Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-proof-report.json",
+          "detail": "generatedAt=2026-10-14T22:41:32.837Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-readiness-report.json",
+          "detail": "generatedAt=2026-10-14T22:41:12.913Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-governance-report.json",
+          "detail": "generatedAt=2026-10-14T16:50:19.151Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/critical-journey-evidence.json",
+          "detail": "generatedAt=2026-10-14T14:50:10.430Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/system-scope-audit.json",
+          "detail": "generatedAt=2026-10-14T16:35:57.023Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/api-surface-report.json",
+          "detail": "generatedAt=2026-10-14T12:28:49.103Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/visibility-policy-report.json",
+          "detail": "generatedAt=2026-10-14T22:28:24.624Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-readiness-report.json",
+          "detail": "generatedAt=2026-10-14T22:41:12.913Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/final-proof-report.json",
+          "detail": "generatedAt=2026-10-14T22:41:32.837Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/tenant-isolation-report.json",
+          "detail": "generatedAt=2026-10-14T12:39:32.576Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/system-scope-audit.json",
+          "detail": "generatedAt=2026-10-14T16:35:57.023Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/system-scope-audit.json",
+          "detail": "generatedAt=2026-10-14T16:35:57.023Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/system-scope-audit.json",
+          "detail": "generatedAt=2026-10-14T16:35:57.023Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/system-scope-audit.json",
+          "detail": "generatedAt=2026-10-14T16:35:57.023Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "governance/system-scope-audit.json",
+          "detail": "generatedAt=2026-10-14T16:35:57.023Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-regression-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.806Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/master-scorecard-test-report.json",
+          "detail": "generatedAt=2026-10-14T14:50:59.805Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        },
+        {
+          "code": "STALE_ARTIFACT",
+          "path": "reports/rag-domain-segregation-report.json",
+          "detail": "generatedAt=2026-10-14T12:39:14.341Z < runStartedAt=2026-10-14T22:53:13.599Z"
+        }
+      ],
+      "violationCount": 311
     }
   }
 }
