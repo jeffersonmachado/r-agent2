@@ -146,6 +146,7 @@
     "validate:required-tests": "node scripts/governance/validate-engineering-router-v2-required-tests.js",
     "validate:no-date-bombs": "node scripts/governance/validate-no-date-bombs.js",
     "validate:hardening-queue": "node scripts/governance/validate-hardening-queue.js",
+    "validate:governance-chain": "node scripts/governance/validate-governance-chain.js",
     "validate:impact-graph": "node scripts/governance/build-impact-graph.js --check",
     "validate:bug-autonomous-loop": "node scripts/governance/validate-bug-autonomous-loop.js",
     "rag:repair-failed": "node --env-file-if-exists=.env scripts/reindex-failed-rag-documents.js",
