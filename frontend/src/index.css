@@ -3249,6 +3249,22 @@ div:has(svg[data-testid="connection"]) {
   flex-wrap: wrap;
 }
 
+/* Header com o botão de voltar injetado por `main.jsx` → `enhanceSupportHeaders`.
+   O botão é IRMÃO do <h1>: os filhos do título pertencem ao React e NÃO podem ser
+   movidos/substituídos por manipulação direta de DOM — isso deixava a árvore de
+   fibers inconsistente e o commit seguinte do React falhava com
+   "Failed to execute 'removeChild' on 'Node'" (cenário support-inbox-nota-ui). */
+.support-header-with-back {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.support-header-with-back > h1 {
+  margin: 0;
+}
+
 .support-header-title-text {
   display: inline-flex;
   align-items: center;

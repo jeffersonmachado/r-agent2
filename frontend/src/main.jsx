@@ -5,6 +5,7 @@ import { EditorProvider } from './state/editorStore';
 import { ThemeProvider } from './styles/themeContext';
 import { AuthProvider, useAuth } from './context/authContext';
 import { WebSocketProvider } from './context/WebSocketContext';
+import { enhanceSupportHeaders } from './utils/supportHeaderEnhancement';
 import { FileUploadProvider } from './context/FileUploadContext';
 // Páginas públicas do primeiro paint ficam estáticas (login + landing SaaS);
 // todas as demais são carregadas sob demanda via React.lazy (code splitting por rota).
@@ -238,39 +239,6 @@ function setupAutoCollapsibleFilters(root) {
 
   const shouldExpand = root.dataset.autoFilterExpanded === '1';
   applyGlobalFilterToggleState(root, sections, shouldExpand);
-}
-
-function enhanceSupportHeaders({ navigate, currentPath }) {
-  const headers = Array.from(document.querySelectorAll('.support-header'));
-  for (const header of headers) {
-    if (!(header instanceof HTMLElement)) continue;
-    const title = header.querySelector('h1');
-    if (!(title instanceof HTMLElement)) continue;
-    if (title.querySelector('.support-back-button')) continue;
-
-    const titleContent = document.createElement('span');
-    titleContent.className = 'support-header-title-text';
-    while (title.firstChild) {
-      titleContent.appendChild(title.firstChild);
-    }
-
-    const backButton = document.createElement('button');
-    backButton.type = 'button';
-    backButton.className = 'support-back-button';
-    backButton.textContent = '<';
-    backButton.setAttribute('aria-label', 'Voltar para a pagina anterior');
-    backButton.title = 'Voltar';
-    backButton.addEventListener('click', () => {
-      if (window.history.length > 1) {
-        window.history.back();
-        return;
-      }
-      navigate(currentPath === '/dashboard' ? '/workspace' : '/dashboard');
-    });
-
-    title.classList.add('support-header-title');
-    title.replaceChildren(backButton, titleContent);
-  }
 }
 
 /**
