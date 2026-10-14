@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-10-14T05:43:23.933Z",
+  "generatedAt": "2026-10-14T06:01:58.742Z",
   "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
   "artifactVersion": "2.0.0",
   "runId": "rap-governed-20261014034148228-d63c0a05",
   "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
   "strictMode": true,
-  "finalDecision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]",
-  "autonomousReady": false,
-  "allChecksPass": false,
-  "criticalBlocked": true,
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "autonomousReady": true,
+  "allChecksPass": true,
+  "criticalBlocked": false,
   "checks": [
     {
       "id": "run_context",
@@ -27,15 +27,15 @@
         "sourceCommit": "8bd35ae2111ceb15e51c21207a277f70d418d849",
         "sourceTree": "bee822bb5188420fc80489e25ce545cf990717a9",
         "startedAt": "2026-10-14T03:41:48.364Z",
-        "generatedAt": "2026-10-14T05:43:21.487Z",
-        "status": "RUNNING",
+        "generatedAt": "2026-10-14T06:01:56.322Z",
+        "status": "COMPLETED",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
         "policyId": "RAP-AGENT-CONSTITUTION",
         "policyVersion": "1.0.4",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
         "lastGovernedStage": "final-governance",
-        "lastSourceVerificationAt": "2026-10-14T05:43:21.487Z",
+        "lastSourceVerificationAt": "2026-10-14T06:01:56.322Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -56,32 +56,45 @@
             "stage": "final-governance",
             "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
             "verifiedAt": "2026-10-14T05:43:21.487Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
+            "verifiedAt": "2026-10-14T05:59:22.189Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
+            "verifiedAt": "2026-10-14T05:59:52.638Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
+            "verifiedAt": "2026-10-14T05:59:53.436Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
+            "verifiedAt": "2026-10-14T06:01:56.322Z"
           }
-        ]
+        ],
+        "completedAt": "2026-10-14T05:46:27.581Z"
       }
     },
     {
       "id": "master_scorecard",
       "gateId": "master_scorecard",
       "mandatory": true,
-      "status": "FAIL",
-      "pass": false,
-      "severity": "CRITICAL",
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
       "runId": "rap-governed-20261014034148228-d63c0a05",
       "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
-      "reason": "MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3",
+      "reason": null,
       "dimensions": 78,
-      "dimensionsAt10": 76,
-      "below10": 2,
-      "failures": [
-        "RAP-055: score=6 target=10",
-        "RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap",
-        "RAP-055: open gaps=2",
-        "RAP-056: score=6 target=10",
-        "RAP-056: mandatory requirement failures=runtime-validated,no-known-gap",
-        "RAP-056: open gaps=1",
-        "scorecard: open gaps=3"
-      ]
+      "dimensionsAt10": 78,
+      "below10": 0,
+      "failures": []
     },
     {
       "id": "self_proof",
@@ -116,13 +129,13 @@
       "id": "final_proof",
       "gateId": "final_proof",
       "mandatory": true,
-      "status": "FAIL",
-      "pass": false,
-      "severity": "CRITICAL",
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
       "runId": "rap-governed-20261014034148228-d63c0a05",
       "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
-      "reason": "FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE",
-      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+      "reason": null,
+      "decision": "AUTONOMOUS_READY_GO",
       "fingerprintStatus": "FRESH",
       "blockerCount": 0
     },
@@ -130,29 +143,21 @@
       "id": "final_readiness",
       "gateId": "final_readiness",
       "mandatory": true,
-      "status": "FAIL",
-      "pass": false,
-      "severity": "CRITICAL",
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
       "runId": "rap-governed-20261014034148228-d63c0a05",
       "sourceFingerprint": "7a1dc229ff64236ca9dfe0b1801bb1396f98aa94681d6a642f6b1394525a6e81",
-      "reason": "FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE",
-      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+      "reason": null,
+      "decision": "AUTONOMOUS_READY_GO",
       "blockerCount": 0
     },
     {
       "id": "child_gate_direction",
-      "pass": false,
-      "severity": "CRITICAL",
-      "reason": "FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)",
-      "violations": [
-        {
-          "code": "PARENT_GO_WITH_CHILD_NO_GO",
-          "parent": "FINAL_GOVERNANCE",
-          "child": "PLATFORM_READINESS",
-          "childDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-          "detail": "FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)"
-        }
-      ]
+      "pass": true,
+      "severity": "OK",
+      "reason": null,
+      "violations": []
     },
     {
       "id": "mesh_go_no_go",
@@ -190,9 +195,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20261014-022832.zip",
-      "computed": "b75505e95383f1f657a2861e…",
-      "recorded": "b75505e95383f1f657a2861e…",
+      "zipName": "r-agent2-20261014-024655.zip",
+      "computed": "d25fe32f1b8fc25a7647a9f0…",
+      "recorded": "d25fe32f1b8fc25a7647a9f0…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },
@@ -209,7 +214,7 @@
       "pass": true,
       "severity": "OK",
       "preRunAuthoritativeArtifacts": 0,
-      "sameRunArtifacts": 56,
+      "sameRunArtifacts": 61,
       "temporalViolations": [],
       "reason": null
     },
@@ -220,24 +225,7 @@
       "reason": null
     }
   ],
-  "criticalFailed": [
-    {
-      "id": "master_scorecard",
-      "reason": "MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3"
-    },
-    {
-      "id": "final_proof",
-      "reason": "FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE"
-    },
-    {
-      "id": "final_readiness",
-      "reason": "FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE"
-    },
-    {
-      "id": "child_gate_direction",
-      "reason": "FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)"
-    }
-  ],
+  "criticalFailed": [],
   "highFailed": [],
-  "summary": "4 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]"
+  "summary": "Governança limpa. Decisão: AUTONOMOUS_READY_GO"
 }
