@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-14T01:06:09.635Z",
-  "status": "AUTONOMOUS_READY_GO",
+  "generatedAt": "2026-10-14T05:28:07.406Z",
+  "status": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "platformMaturity": "autonomous-ready",
   "backlog": [],
   "blocking": 0,
