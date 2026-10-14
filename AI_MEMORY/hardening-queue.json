@@ -1,315 +1,347 @@
 {
-  "mission": "MISSAO P0/P1 DE HARDENING DEFINITIVO",
-  "repository": "jeffersonmachado/r-agent2",
-  "branch": "mission/p0p1-hardening-20261010",
-  "baseline": "2f1795454",
-  "updatedAt": "2026-10-14T01:08:09Z",
-  "consumers": [
-    ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
+ "mission": "MISSAO P0/P1 DE HARDENING DEFINITIVO",
+ "repository": "jeffersonmachado/r-agent2",
+ "branch": "mission/p0p1-hardening-20261010",
+ "baseline": "2f1795454",
+ "updatedAt": "2026-10-14T19:56:50.393Z",
+ "consumers": [
+  ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
+ ],
+ "rules": {
+  "openStatuses": [
+   "pending",
+   "in_progress"
   ],
-  "rules": {
-    "openStatuses": [
-      "pending",
-      "in_progress"
-    ],
-    "closedStatuses": [
-      "done",
-      "blocked"
-    ],
-    "blockedRequires": "blocked_reason escrito",
-    "doneRequires": [
-      "commit",
-      "evidence"
-    ],
-    "note": "O hook de continuidade bloqueia o fim do turno enquanto houver item pending/in_progress E houver progresso desde o ultimo bloqueio. Item so muda para done com commit e evidencia reais."
+  "closedStatuses": [
+   "done",
+   "blocked"
+  ],
+  "blockedRequires": "blocked_reason escrito",
+  "doneRequires": [
+   "commit",
+   "evidence"
+  ],
+  "note": "O hook de continuidade bloqueia o fim do turno enquanto houver item pending/in_progress E houver progresso desde o ultimo bloqueio. Item so muda para done com commit e evidencia reais."
+ },
+ "items": [
+  {
+   "id": "P0-1",
+   "title": "Identidade de aprovacao derivada do ator autenticado",
+   "status": "done",
+   "commit": "0c15e658b",
+   "evidence": "tests/unit/securityIntel/approvalAuthority.test.js (16) + routes fail-closed 403 route_action_undeclared"
   },
-  "items": [
-    {
-      "id": "P0-1",
-      "title": "Identidade de aprovacao derivada do ator autenticado",
-      "status": "done",
-      "commit": "0c15e658b",
-      "evidence": "tests/unit/securityIntel/approvalAuthority.test.js (16) + routes fail-closed 403 route_action_undeclared"
-    },
-    {
-      "id": "P0-2",
-      "title": "Evidencia ausente nunca e PASS (imutabilidade do evidence manifest)",
-      "status": "done",
-      "commit": "6f8e56349",
-      "evidence": "governance/lib/evidence-manifest-hash-baseline.js + tests/unit/governance/evidenceManifestHashBaseline.test.js (9); check real mudou de PASS para FAIL"
-    },
-    {
-      "id": "P0-3",
-      "title": "Proveniencia do Security Gate consegue falhar (fail-closed)",
-      "status": "done",
-      "commit": "065b66cba",
-      "evidence": "teste negativo de proveniencia do Security Gate"
-    },
-    {
-      "id": "P0-4",
-      "title": "Waiver em duas etapas com segregacao de funcoes e escopo",
-      "status": "done",
-      "commit": "89a86c22b",
-      "evidence": "api/services/securityIntel/waiverService.js + tests/unit/securityIntel/waiverService.test.js (25)"
-    },
-    {
-      "id": "P0-5",
-      "title": "Suite E2E do Security Gate contra Postgres real",
-      "status": "done",
-      "commit": "c3e0dd004",
-      "evidence": "tests/integration/securityWaiverApprovalE2E.test.js (7) vs Postgres real"
-    },
-    {
-      "id": "P1-1",
-      "title": "Gates unit/integration declaram a CATEGORIA da evidencia",
-      "status": "done",
-      "commit": "63ee55ad2",
-      "evidence": "engine/engineeringMission/testSuiteClassifier.js + tests/unit/engineeringMission/testSuiteClassifier.test.js"
-    },
-    {
-      "id": "P1-2",
-      "title": "Revisao independente verificavel (vinculada a tentativa + independencia nos dados)",
-      "status": "done",
-      "commit": "e9b8c009d",
-      "evidence": "api/services/engineeringMission/missionReviewService.js + E2E Engineering Router 20/20"
-    },
-    {
-      "id": "P1-3",
-      "title": "Promocao verificada obrigatoria para GREEN",
-      "status": "done",
-      "commit": "66c64c060",
-      "evidence": "engine/engineeringMission/metaReview.js REQUIRED_GATES_FOR_GREEN"
-    },
-    {
-      "id": "P1-4",
-      "title": "Regra preventiva exige teste EXECUTADO e regras ativas passam a ser consultadas",
-      "status": "done",
-      "commit": "085c203ec",
-      "evidence": "engine/engineeringMission/bugFinding/preventiveRules.js + getActivePreventiveRules + 416 testes"
-    },
-    {
-      "id": "P1-5",
-      "title": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
-      "status": "done",
-      "commit": "8624e5594",
-      "evidence": "rag-service/services/hybrid_search.py + rag-service 156 passed"
-    },
-    {
-      "id": "P1-6",
-      "title": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
-      "status": "done",
-      "commit": "73e76535d",
-      "evidence": "rag-service/config/settings.py (AliasChoices) + 156 passed / 0 skipped (antes: isolamento 100% SKIPPED)"
-    },
-    {
-      "id": "P1-7",
-      "title": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
-      "status": "done",
-      "commit": "1d78fb4ad",
-      "evidence": "engine/securityIntel/triageDossier.js summarizeRemediation + triageService + 7 testes"
-    },
-    {
-      "id": "P1-8",
-      "title": "Inventario do sistema regenerado",
-      "status": "done",
-      "commit": "64091e5eb",
-      "evidence": "config/system-inventory.json + reports/inventory-report.json"
-    },
-    {
-      "id": "P2-1",
-      "title": "Proveniencia remota verifica o commit do RUN, nao o HEAD",
-      "status": "done",
-      "commit": "b1eaeef80",
-      "evidence": "scripts/governance/verify-remote-provenance.js + tests/unit/governance/remoteProvenanceAuthority.test.js (5)"
-    },
-    {
-      "id": "P1-9",
-      "title": "Contrato unico de evidencias (campos obrigatorios, runId/lineage, FAIL vs INCOMPLETE)",
-      "status": "done",
-      "commit": "f218a7c48",
-      "evidence": "governance/lib/evidence-contract.js + scripts/governance/report-evidence-contract.js + tests/unit/governance/evidenceContract.test.js (11 passed); reports/evidence-contract-report.json (enforced:false) mede 0/24 conformes e 10 campos ausentes em 24/24"
-    },
-    {
-      "id": "P1-12",
-      "title": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
-      "status": "done",
-      "commit": "cd7b2da9c",
-      "evidence": "governance/lib/evidence-freshness.js (decisao PURA, FRESH|STALE|UNKNOWN) + wiring em governance/proof-engine/index.js::buildEvidenceManifestArtifact (exportada para ser testada no MESMO codigo da producao). 23 testes (tests/unit/governance/evidenceFreshness.test.js + evidenceManifestFreshnessWiring.test.js) e regressao completa de governanca 122 suites/1188 passed/0 failed. Medicao ANTES do fix nos 24 artefatos do manifesto: 1 viola o TTL canonico de 7 dias (smoke_summary, 50,8d) e 2 sao anteriores ao inicio do run; ZERO falso positivo. TTL reusado dos 3 lugares que ja o definem (master-scorecard-registry 7d, applyWaveReportStaleness 7d, bridge do smoke agendado 48h) — nenhuma politica nova. Raio de impacto medido: evidenceManifestValid so alimenta enterpriseReadiness.evidenceBased, que NAO tem consumidor; proofCoverage conta `exists`, nao proofStatus ⇒ nenhum gate duro mudou de veredito."
-    },
-    {
-      "id": "P1-13",
-      "title": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
-      "status": "done",
-      "commit": "d7cdaa555",
-      "evidence": "RESOLVIDO sem tocar na parte destrutiva: o unico produtor (scripts/system-autotest-stack.sh) faz `docker compose up` e derruba a stack no final, e seu unico invocador e' um workflow deliberadamente desabilitado. Os 6 smokes REAIS foram rodados individualmente (scripts/test-physical-queue-smoke.js, test-ura-publish-rollback-smoke.js, test-pbx-voice-tts-asr-smoke.js, test-pbx-call-events-runtime-smoke.js, test-inbox-runtime-smoke.js, test-bpmn-editor-smoke.js — exatamente os que o script roda) e o fan-in foi feito pela PROPRIA funcao `write_smoke_evidence_summary` extraida por `sed` do script canonico (nenhuma logica reescrita); status vem do exit code real com o mesmo mapeamento (0 -> pass). Resultado: as DUAS copias (runtime root 2026-08-21 e workspace 2026-09-30) substituidas por generatedAt=2026-10-10T21:25:30Z com l01..l06=pass; prova de nao-fabricacao: qa/l06-bpmn-editor-evidence.json traz pageLoad/xmlExported/internalFlow(15 nos) e qa/l01-physical-queue-evidence.json traz queueId/ticketId/transicoes reais. Efeito medido no gate: `npm run system:go-no-go` passou de NO_GO com `smoke_evidence_stale` (idade 1220 h) para GO."
-    },
-    {
-      "id": "P1-10",
-      "title": "Self-engineering E2E governado (relatorio agregado obsoleto)",
-      "status": "done",
-      "commit": "52c0d0837",
-      "evidence": "NAO era defeito de gate: o unico consumidor do agregado e o proprio produtor (os passos do selo regeram via --axis em toda execucao), logo nao havia leitor de copia velha. Nao-vacuidade verificada: 11 suites de prova declaradas em config/canonical-release-suites.json e state=PASS em reports/release-suite-execution.json com contagem real (4,5,32,4 / 6,17,1 / 12,22,5,30). Defeito REAL encontrado no caminho: os 4 relatorios nasciam SEM runId/sourceFingerprint; corrigido com withLineage na origem (prova: runId=rap-governed-20261010045617268-19ce0cbd igual ao .current-run.json em agregado e por eixo; --axis invalido segue exit 2). Orcamento de custo/tokens JA EXISTE: config/timeout-policy.json:113-114 + api/services/engineeringRouter/engineeringRouterService.js:964-965 + tests/unit/engineeringRouterProviderChainPolicy.test.js — nao reimplementar."
-    },
-    {
-      "id": "P1-11",
-      "title": "Destravar empacotamento e selagem (ciclo release:seal completo)",
-      "status": "done",
-      "blocked_reason": "O ciclo ATRAVESSOU TUDO: prepare (SEAL_PENDING), candidate (scorecard 78/78, below10=0, AUTONOMOUS_READY, projecoes PASS, fixpoint estavel) e final com `[seal:final] pacote final (SEAL_GO, exit 0)` — release r-agent2-20261011-083027, commit ac61d46cca600add104f7d355eb37dc2ce653697, H_final deb1d888c47cf1db57e116a3b01f337ca340c0c529d9b2, ZIP 62 MB selado em dist/release. O ciclo parou na UNICA coisa que nao cabe a IA decidir: a fase `publish` tenta publicar a TAG de release e o guard local do usuario (.git/hooks/pre-push, NAO versionado, escrito em 2026-10-10) BLOQUEIA push de tag de proposito ('autorizado apenas push de commits; tag de release fica para decisao posterior'). A tag `r-agent2-20261011-083027` esta CRIADA LOCALMENTE no commit do release; falta apenas autorizar/publicar. NAO contornei o guard (nem removi o hook): e decisao explicita do usuario. Para concluir apos a decisao: `bash scripts/governance/seal-release.sh --from publish` (a fase publish faz create-release-tag -> verify-remote-provenance --manifest -> recibo -> verify:release-publication; depois a `consolidate` fecha com o gate agregado). ATUALIZACAO MEDIDA (2026-10-11, sessao de orientacao de UI): o release acima foi SUPERADO. Depois dele entraram as mudancas de dependencia do P1-17 (npm audit fix, overrides fast-uri ^3.1.8, nodemailer ^10.1.0) e as correcoes do Security Release Gate. `npm run verify:delivered-release` passou a retornar DELIVERED_RELEASE_NO_GO com DELIVERED_SOURCE_MISMATCH: source from manifest = 93a0466744ac47073c9a5ae321f40da0, source from worktree = 4b1954d295496783ca28fe498eb68acc, mais STALE_PROOF na chain de fingerprints. Consequencia pratica: publicar a tag ANTIGA nao fecha nada -- o artefato e valido apenas no commit dele (a propria mensagem do verificador diz isso: \"o release entregue e valido NO COMMIT DELE; commit posterior exige novo ciclo de selagem\"). Caminho correto: NOVO ciclo de selagem. E como a fase `consolidate` roda o agregado e ABORTA se ele falhar, o novo ciclo SO FECHA depois que o Security Release Gate estiver GO (ver P1-17: 13 waivers em PENDING_APPROVAL + 7 acionaveis). Ordem recomendada: (1) decisao humana de seguranca em /dev/security-intel -> agregado verde; (2) novo `npm run release:seal`; (3) `npm run verify:delivered-release`; (4) publicar a tag (decisao do usuario; o guard .git/hooks/pre-push continua bloqueando tag por padrao).",
-      "evidence": "CICLO DE SELAGEM CONCLUIDO — `npm run release:seal` SEAL_EXIT=0 (5 fases: prepare -> candidate -> final -> publish -> consolidate). Release r-agent2-20261013-171630 | commit e38070bde238ec64f16e5d37d1ddbd9d968f0f54 | H_final ac5f1bfbd9f1178fe25178cdebf0e50e92dd6cd7a1ecfc | Score PASS/100. PAYLOAD selado: dist/release/r-agent2-20261013-171630.payload.zip (+ manifest + delivered.identity.json). TAG publicada e verificada no remote: objeto 22503b52a4e0..., alvo (`^{}`) e38070bde238... — conferido com `git ls-remote --tags`. `verify:delivered-release` = DELIVERED_RELEASE_VERIFIED / AUTONOMOUS_READY (fingerprint do manifest == worktree: 68c5c70b53ced4...). `MCP_RESEARCH_DOCKER_E2E` PASS fresco, commit+push da consolidacao OK, worktree limpo e 0 commits a frente de origin/main. AS 4 FALHAS QUE ERAM ATRIBUIDAS A ESTE ITEM CAIRAM: validate:dist PASS; validate:release-governance PASS; validate:final-status-projection PASS; validate:governance-summary PASS. BLOQUEIO ERA DE AUTORIZACAO, NAO TECNICO: a fase `final` de seal-release.sh exige o commit do release em origin/main (\"push antes de publicar\"), e o hook local .git/hooks/pre-push bloqueia push de refs/tags/* (\"autorizado apenas push de commits\"). Com autorizacao explicita do operador (Regra 10), o push da tag foi feito pontualmente com --no-verify e a fase publish retomada (`--from publish`) de forma idempotente. DEFEITOS REAIS DESCOBERTOS E CORRIGIDOS NO CAMINHO: (a) REAL_TASK_RECOVERY era o unico passo de runtime sem --env-file-if-exists=.env e falhava por ENCRYPTION_KEY ausente; (b) o verificador de recuperacao real de task nao honrava o contrato da Fase 9 (faltava scopeDeferred: true, como o caminho oficial) — commit 6c17d20c1, com 2 testes novos em tests/unit/governance/v2SealOrchestration.test.js (16/16). DIVIDA REGISTRADA (nao mascarada): evidencias com TTL curto vencem DURANTE o ciclo longo — replay-governance ficou STALE (ageMs ~33 min) e o SBOM ficou ANTERIOR ao inicio do run (SECURITY_GATE_STALE_EVIDENCE). Ambas foram regeneradas antes de retomar; o ciclo nao deve depender disso.",
-      "commit": "179720018"
-    },
-    {
-      "id": "P1-15",
-      "title": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
-      "status": "done",
-      "commit": "25cf2e259",
-      "evidence": "CORRIGIDO e PROVADO em ciclo real. Fix: em `scripts/two-pass-release.sh::materialize_payload_governance`, a atestacao (`update-package-binding.js`) passou a ser RE-EMITIDA imediatamente antes do `package-integrity-engine` e depois de todas as escritas que ele deve cobrir (`exportGovernanceArtifacts` + `package-validator`). Prova do mecanismo (mesmo payload): antes `EVIDENCE_MANIFEST_HASH_DIVERGENT` exit 1 (computed=a877b7965c803f02e5d2bd58 != recorded=deefdfdecd56c66f7cc5d836); depois `EVIDENCE_MANIFEST_HASH_OK` exit 0 (computed == recorded). PROVA EM CICLO REAL: `npm run release:seal` atravessou a fase `final` e o envelope com `[seal:final] pacote final (SEAL_GO, exit 0)`, release r-agent2-20261011-083027, H_final deb1d888c47cf1db57e116a3b01f337ca340c0c529d9b2, ZIP de 62 MB em dist/release. O check NAO foi afrouxado — a ordem estava errada."
-    },
-    {
-      "id": "P1-16",
-      "title": "Lotes do runner autoritativo nao se isolavam (conexoes e processos-filho vazavam)",
-      "status": "done",
-      "commit": "9cf698ff4",
-      "evidence": "Achado: o lote 3 falhou em 2 suites com `Error:` SEM MENSAGEM em tests/helpers/purgeTestFindings.js:156 (Finding.destroy); as MESMAS 6 suites passaram ISOLADAS (6/6, 86 testes, 0 falhas). Causa medida: Postgres com max_connections=100 (~9 em repouso) e lotes acumulando conexoes/processos-filho; estouro de pool no Sequelize aparece como erro VAZIO, o que faz concluir 'suite instavel' em vez de 'o lote herdou conexoes'. Fix: `detached:true` por lote + ceifa do grupo (`process.kill(-pid)`) e `awaitConnectionDrain()` antes de cada lote (sonda o pg_stat_activity pelo DSN canonico; bounded e nao-fatal, registrado em `connectionDrains`). PROVA: 14 drenagens, todas `drained=true`, pico durante a espera 42 (contra o teto de 100), espera maxima 6,9 s; selo V2 seguinte com SUITE_EXECUTION PASS (21 passos, 0 falhas obrigatorias)."
-    },
-    {
-      "id": "P2-2",
-      "title": "Divergencia de lineage nos relatorios",
-      "status": "done",
-      "commit": "7d10d7720",
-      "evidence": "Medicao ANTES: dos 154 relatorios em reports/, 120 sem runId; dos 36 produtores que usam writeReport, so 5 chamavam withLineage. Corrigido na ORIGEM COMUM (scripts/governance/common.js::writeReport) em vez de 31 patches: todo relatorio do helper nasce com runId/sourceFingerprint/artifactVersion e artifactType derivado do nome do arquivo (convencao medida: 42/52 relatorios declaram artifactType igual ao nome). Medicao DEPOIS ao regerar 4 validadores: com runId 34 -> 38; o restante sobe conforme cada produtor roda. Teste tests/unit/governance/reportWriteLineage.test.js (6 passed, root temporario para nao vandalizar reports/) + regressao 123 suites/1194 passed/0 failed."
-    },
-    {
-      "id": "P1-17",
-      "title": "Dívida de segurança do Security Release Gate (47 -> 0 bloqueantes; gate GO)",
-      "status": "done",
-      "evidence": "GATE: GO (exit 0) — \"[security-release-gate] GO: 5 verificacao(oes) satisfeita(s), 94 aviso(s)\". Bloqueantes medidos na historia do item: 47 -> 20 -> 7 -> 1 -> 0. Prova: reports/security-release-gate-report.json. ISENCOES (SoD preservada: solicitante != aprovador): 14 waiver ACTIVE aprovados por systemadmin; os 13 pedidos anteriores foram solicitados pelo CLI (usuario do SO jmachado) e o 14o (PYSEC-2026-139|pypi:torch@2.10.0+cpu) foi solicitado e aprovado na rodada de 2026-10-11. Nenhuma isencao foi aplicada sem aprovacao humana explicita. Os 94 avisos restantes sao DEV_ONLY_VULNERABILITY (cadeia de build/teste), nao bloqueio. A tela de engenharia passou a expor `dev_only` (mesma fonte do gate: SecurityComponent) e separa o que bloqueia do que e aviso. CORRECOES APLICADAS (alvos conferidos nos advisories do proprio repositorio): nanoid 3.3.11->3.3.20; postcss 8.4.49/8.5.6->8.5.29 (override alcanca a copia aninhada do styled-components); source-map-js 1.2.1->1.2.2 (frontend/package.json overrides); uuid 8.3.2/9.0.1->11.1.1 (overrides na raiz, com require(\"uuid\").v4 verificado); torch 2.9.1+cpu->2.10.0+cpu (rag-service/requirements.txt + venv; pytest 156 passed; optimum.onnxruntime importa OK). REGRESSAO: npm run test:unit 995 suites / 8240 testes / 0 falhas; frontend com 16 testes novos verdes; RAP-078 (mutable json state) 5/5 com unknown=0. COMMIT DO FECHAMENTO: c8db637fb.",
-      "commit": "c8db637fb"
-    },
-    {
-      "id": "H9-IDENTIDADE-PORTA",
-      "title": "D5/D6: unidade ativa que nao serve + porta ocupada por processo estranho (supervisao dev)",
-      "status": "done",
-      "commit": "3ea58a1cc",
-      "evidence": "Defeito medido: `service.sh start` dava OK com a unidade `active` cujo processo nao respondia (health!=identidade) e nao detectava a porta 8080 ocupada por mock orfao de teste (a unidade nao servia, mas o smoke passava por outro processo). Corrigido: `scripts/dev/lib/servicos-dev-state.sh` (dev_porta, dev_pids_na_porta, dev_pid_no_cgroup, porta_pertence_a_unidade fail-closed por ControlGroup) + `esperar_identidade` no start (health E identidade, 1 restart, falha explicita nomeando os pids). Prova: tests/unit/dev/devServicesSupervision.test.js (25 casos) e smoke agendado com RESTORE_FALHAS / exit 3 RESTORE_INCOMPLETO quando a identidade nao e restaurada."
-    },
-    {
-      "id": "H10-VEREDITO-GATE-SEGURANCA",
-      "title": "Veredito do Security Release Gate deixa de ser mascarado pela avaliacao de risco",
-      "status": "done",
-      "commit": "63cdd7f07",
-      "evidence": "Defeito medido: a ultima linha do relatorio imprimia a avaliacao de risco (engine) como se fosse o veredito — podia dizer GO/`exit 0` enquanto o processo saia !=0, ou o inverso, tornando a falha invisivel para quem lesse o tail. Corrigido: `avaliacao de risco (engine):` separada e ultima linha sempre `VEREDITO: <state> (exit N) — motivos: ...`, coerente com o codigo de saida. Prova: tests/unit/governance/securityGateState.test.js (26 casos) + execucao real com EVIDENCE_UNAVAILABLE (exit 3)."
-    },
-    {
-      "id": "H11-ESCOPO-DIFERIDO",
-      "title": "Regressao da Fase 9: escopo diferido explicito + fixtures com evidencia de integracao",
-      "status": "done",
-      "commit": "3bf7d8bc2",
-      "evidence": "Regressao introduzida pelo proprio contrato da Fase 9 (scope vazio rejeitado) quebrou 11 testes de integracao do engineering-router e o gate `integration` do MR-06 (ATTESTED->BLOCKER). Corrigido sem afrouxar o contrato: `assertTaskContract({scopeDeferred})` — a criacao DIRETA por API/UI segue fail-closed; apenas `startExecutionHeld` e o replacement do bugLoop (que preenchem o escopo depois, por engenharia) passam `scopeDeferred:true` literal; a fixture de review executa um TestRun de integracao real. Prova: suite autoritativa 86/89 -> 89/89 PASS (reports/release-suite-execution.json) + tests/unit/engineeringRouter/taskContractScope.test.js (10 casos)."
-    },
-    {
-      "id": "H12-RAG-REPARO",
-      "title": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
-      "status": "done",
-      "commit": "6cdcc9c72",
-      "evidence": "Defeito medido: `validate:rag-index-health` NO_GO com 2 documentos failed (ECONNREFUSED no reindex, servico fora durante o lote). Reparado sem mascarar: reindexado para HEALTHY — documentos indexados 3237 -> 3239, chunks 8618 -> 8621, violations 0, failed 0. Prova: reports/rag-index-health-report.json + reports/rag-failed-reindex-report.json (commit de evidencias 6cdcc9c72)."
-    },
-    {
-      "id": "H13-RUNNER-COMPLETO",
-      "title": "Agregado deixa de mascarar falhas: runner completo dos validadores",
-      "status": "done",
-      "commit": "8169f3d70",
-      "evidence": "Defeito medido: `validate:governance-enforcement` e uma cadeia `&&` fail-fast — a PRIMEIRA falha escondia as outras 8 (foram descobertas 9 falhas reais que o agregado reportava como \"1\"). Corrigido aditivo: `npm run validate:all-validators` (scripts/governance/run-all-validators.js + lib/governance-enforcement-plan.js) roda TODOS, escreve reports/governance-enforcement-full-report.json, e revalida apenas falhas causadas pelo carimbo de lineage (revalidatedAfterStamp). Medicao: 66 validadores, 57 PASS / 4 FAIL (todas de P1-11). Prova: tests/unit/governance/allValidatorsRunner.test.js (13 casos)."
-    },
-    {
-      "id": "H14-CDR-SUPERVISIONADO",
-      "title": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
-      "status": "done",
-      "commit": "ec85f48b7",
-      "evidence": "Defeito medido (custo de um ciclo de ~40 min em 2026-10-13): o preflight do converge validava so a PORTA 15432 da ponte; quando o Postgres nao responde no boot do container, o backend `cdr_adaptive_odbc` sai do engine de CDR em SILENCIO (porta de pe, nenhum CDR gravado) e o passo 1/12 reprova. Corrigido: `scripts/pbx-cdr-health.sh` (`check` 0/1 e `ensure` que recarrega res_odbc.so + cdr_adaptive_odbc.so) e preflight passa a exigir BACKEND registrado (sinal obtido por medicao: `cdr show status` -> Registered Backends; `Use Count` e 0 ate saudavel e nao serve de sinal). Prova: tests/unit/pbx/pbxCdrHealth.test.js (7 casos, com dubles — nenhum socat real)."
-    },
-    {
-      "id": "H15-DIST-RECIBO-STALE",
-      "title": "Higiene do dist/: recibo do verifier STALE deixa de poluir a avaliacao",
-      "status": "done",
-      "commit": "ec85f48b7",
-      "evidence": "Defeito medido: `validate:dist` falhava com 3 motivos, sendo 1 espurio — `STALE_VERIFIER_RESULT` de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 (r-agent2-20261011-083027.payload.zip) ja ARQUIVADO. A politica exige recibo vinculado ao PAYLOAD ATUAL. Removido (copia preservada em dist/archive/pre-seal-20261010/). Medicao DEPOIS: o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\" e o validate:dist falha por UMA causa unica — ausencia de payload selado — em vez de 3 sintomas. A tentativa inversa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
-    },
-    {
-      "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
-      "title": "Runner atribui falha causada por mutacao da superficie provada durante o run",
-      "status": "done",
-      "commit": "1cb7fafe1",
-      "evidence": "Defeito medido: durante um run real do validate:all-validators criei um arquivo em scripts/smoke/ (raiz de SOURCE_ROOTS); a evidencia de runtime foi coletada antes (fingerprint bae797d5...) e validada depois (a6454061...) e o validate:engineering-router-v1:runtime reprovou com RUNTIME_EVIDENCE_FRESH, cascateando 4 falhas num run de ~40 min — parecendo defeito de produto. O gate estava CERTO; faltava ATRIBUICAO. Corrigido: mapearSuperficieProvada (walkSourceFiles + sha256 canonicos), compararSuperficieProvada (ESTAVEL/MUTADA_DURANTE_O_RUN com arquivo e tipo) e atribuirMutacaoDaSuperficie (marca attributedToSourceMutation SO em falhas de obsolescencia; falha de pacote NUNCA e atribuida), com provenSurfaceStability no relatorio. Prova: tests/unit/governance/allValidatorsRunner.test.js (18 casos, +5 novos) e a coleta revalidada depois com worktree limpo: RUNTIME_PASS items=25 falhas=0 commit=1cb7fafe1 fingerprint=a9f8c4c0..., status=PASS checks=209."
-    },
-    {
-      "id": "H17-HOOKS-EDITOR",
-      "title": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
-      "status": "done",
-      "commit": "dcc97cbed",
-      "evidence": "DEFEITO REAL achado pela jornada funcional no browser: /editor com 2 erros de console + 3 pageerror (\"Rendered more hooks than during the previous render\" em FlowTemplateSelector) e o botao \"Novo\" nao abria o seletor — a acao de criar fluxo sumia. Causa: useMemo das tags DEPOIS dos returns antecipados de selectedTemplate/loading/error; na 1a render (loading=true) o hook nao rodava e na seguinte rodava um hook a mais. Corrigido movendo o hook para antes dos returns. PROVA NOS DOIS SENTIDOS: com o codigo antigo (git stash push do .jsx) o teste falha com o erro exato do browser; com o fix, frontend/src/components/FlowTemplateSelector.test.jsx 4/4 e suite frontend 136 arquivos / 1035 testes PASS (EXIT=0). Prova no browser depois do fix: /editor com 0 console errors, 0 pageerror e \"Novo\" abrindo \"Criar Novo Fluxo / Selecione um modelo\"."
-    },
-    {
-      "id": "H18-JORNADA-FUNCIONAL-BROWSER",
-      "title": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
-      "status": "done",
-      "commit": "dcc97cbed",
-      "evidence": "Novo scripts/smoke/journey-functional-browser.js: exerce ACOES reais (busca, filtro por chip, abrir formulario de criacao, detalhe) em 8 rotas PRODUCTION de negocio e mede o EFEITO. Reusa tests/helpers/playwrightAuth.js (regra do repo). Evidencia em qa/evidence/journey-functional-latest.json (transitoria, nao versionada). Resultado medido: 0 erros de console, 0 pageerror, 0 requisicoes falhas; /workspace busca 8083->792 chars; /crm busca 1922->1170; chips de filtro aplicam; \"Criar entidade rapida\", \"Criar tarefa\" e \"Novo\" abrem. LIÇÃO incorporada: a 1a versao media itens por table/li/card e produziu 5 FALSOS POSITIVOS (media o menu lateral, nao a lista) — falso positivo de detector esconde o defeito real no ruido. Efeito passa a ser diff de textos visiveis + delta de chars + delta de campos."
-    },
-    {
-      "id": "H19-DIST-CAUSA-UNICA",
-      "title": "validate:dist reduzido a causa unica (payload ausente = P1-11)",
-      "status": "done",
-      "commit": "ec85f48b7",
-      "evidence": "Antes: 3 motivos de FAIL, sendo 1 espurio — STALE_VERIFIER_RESULT de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 ja arquivado. Removido (copia preservada em dist/archive/pre-seal-20261010/), o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\". Depois: 2 sintomas de UMA causa (payload nao selado = P1-11): \"Nenhum PAYLOAD encontrado em dist/release/*.payload.zip\" e \"verify-enterprise-governance-v2.sh FAIL\". A alternativa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
-    },
-    {
-      "id": "DIV-PUREZA-ENGINE",
-      "title": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
-      "status": "done",
-      "commit": "60b978ca0",
-      "evidence": "tests/unit/engine/enginePurityPorts.test.js + reports/layer-conventions-report.json",
-      "resolution": "CORRIGIDO (nao mais bloqueado). O ciclo dedicado que o blocked_reason exigia foi feito. 6 portas injetaveis em engine/shared/ (clock, random, logger, scheduler, fileSystem, runtimeEnv). 28 arquivos migrados por NAMESPACE — nome solto produzia recursao infinita em engine/utils.js. checkEnginePurity corrigido nos dois sentidos: 16 falsos positivos (new Date(valor)) e 35 pontos cegos (Date.now()). validate:layer-conventions: 83 -> 0 issues. unit 1007 suites/8426 testes PASS; flow 264 PASS; build OK; gate agregado EXIT=0. A metade \"mover para api/services\" do plano NAO foi usada: os ofensores sao consumidos POR DENTRO da engine; a porta injetavel preserva a API publica e entrega o que a regra quer (determinismo de replay).",
-      "previous_blocked_reason": "NAO e meia-correcao: exige ciclo DEDICADO, com regressao de replay e build do frontend a cada arquivo. MEDIDO em 2026-10-13 (baseline do AGENTS.md estava desatualizado em 118): o gate acusa 83 issues, das quais ~13 sao FALSOS POSITIVOS — 44 ocorrencias de `new Date` se dividem em 31 LEITURAS de relogio (`new Date()`) e 13 CONVERSOES deterministicas (`new Date(x)`). Somam-se 5 `Math.random` usados apenas como FALLBACK de parametro injetavel (ex.: executionDeadline, que se declara PURO). Violacoes reais ~70. A metade \"mover para api/services\" do plano do AGENTS.md NAO se aplica aos dois maiores ofensores: `persistenceServices.js` (11) e `fallbackController.js` (7) sao consumidos POR DENTRO de engine/ (`engine/runner.js`, `engine/nodes/fallbackNode.js`, `engine/nodes/persistenceNodes.js`) — mover inverteria a dependencia engine->api. Nenhum dos dois e usado pelo frontend (medido: 0 ocorrencias em frontend/src). A classe relogio/aleatorio (31 leituras em engine/nodes/*, runner.js, executeStep.js, flowSimulation.js) toca DETERMINISMO DE REPLAY, que e gate bloqueante. `engine/` tambem e compartilhado com o frontend. Exige: (a) injecao de relogio/aleatorio/logger nos modulos de fluxo com default explicito no CALLER, nunca no modulo provado; (b) refinar a regra do detector para nao acusar `new Date(arg)` — CORRECAO de falso positivo, nao afrouxamento, com o cuidado de que `new Date(variavel)` possivelmente `undefined` VOLTA a ler o relogio (ex.: nodes/systemNodes.js:307). Nunca baixar a regra para fechar o gate."
-    },
-    {
-      "id": "N5-REENTREGA",
-      "title": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
-      "status": "done",
-      "commit": "bc76e28b3",
-      "evidence": "CICLO CONCLUIDO: `release:seal` SEAL_EXIT=0, release r-agent2-20261013-213820 commit d7036f0aecb9bf2487b0424fef537f4af27037d0 | H_final 0b1488f76308c903735bf0806734f33009a3e6a02be77c | Score PASS/100. Tag publicada: objeto 9d6901712..., alvo (`^{}`) d7036f0aecb9... — `tagMatches=true`, recibo PUBLISHED_VERIFIED, verify:release-publication 8 checks PASS. `verify:delivered-release` = DELIVERED_RELEASE_VERIFIED / AUTONOMOUS_READY (\"arvore atual == artefato entregue\"); worktree limpo e 0 commits a frente de origin/main. PROVA DE CAMPO DO N1 (fix das evidencias de TTL curto): o consolidate registrou \"✓ evidencias de TTL curto regeneradas (replay-governance + SBOM)\" SEM intervencao manual, e o gate agregado saiu \"EXIT 0\" na PRIMEIRA tentativa — antes isso exigia retomada manual e reparos de lineage/projecao. PROVA DE CAMPO DO N3 (guard de tag): o bloqueio do hook pre-push produziu a mensagem acionavel com o comando exato (`git push --no-verify origin refs/tags/...` + `--from publish`) em vez do generico \"criacao da tag falhou\". A acao humana foi cumprida seguindo a propria mensagem. ARMADILHAS PERCORRIDAS (4 rodadas, todas agora documentadas na memoria do repo): (1) dist/ com sobra de ciclo anterior; (2) worktree sujo por derivados (~60 arquivos por fase abortada); (3) SEAL_FOREIGN_RUN apos o prepare criar run novo por RUN_SOURCE_DRIFT — exigiu re-selar o V2; (4) \"criacao da tag falhou\" pelo hook local. FLAKE CONFIRMADO, NAO REGRESSAO: o selo V2 falhou uma vez em SUITE_EXECUTION com tests/integration/missionSourceStaleReplanFullRouterE2E.test.js (que passa isolado em 64s e tem jest.setTimeout(900000)); a re-execucao do selo deu status=GO 21/21. Um unico FAIL nao e prova de defeito, assim como um unico PASS nao e prova de reprodutibilidade."
-    },
-    {
-      "id": "DEF-TEARDOWN-DRAIN-WORKER",
-      "title": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
-      "status": "done",
-      "commit": "a80ea7e8b",
-      "evidence": "tests/helpers/drainEngineeringWorker.js + lote 11 do selo (6/6 suites, 89/89 testes, EXIT=0)",
-      "resolution": "DEFEITO REAL medido no lote 11 do selo V2: governanceApprovalFullWorkerE2E marcada failed com 0 testes falhados e exit=1. Causa no batch JSON (nao no resumo do gate): \"ConnectionManager.getConnection was called after the connection manager was closed!\" — o afterAll chamava stopBugLoopWorker() (que so faz clearInterval, NAO espera o ciclo) e logo depois sequelize.close(); o ciclo em curso consultava o banco fechado. Passava ISOLADA e falhava no LOTE porque e corrida de tempo. Correcao: tests/helpers/drainEngineeringWorker.js aguarda cycleRunning===false, fail-closed. Aplicado nas 2 suites que usam startBugLoopWorker (as duas tinham o defeito). Prova no lote real: antes success:false exit=1 -> depois 6/6 suites, 89/89 testes, EXIT=0."
-    },
-    {
-      "id": "DEF-WS-AUTH-POS-LOGIN",
-      "title": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
-      "status": "done",
-      "commit": "48e5c167c",
-      "evidence": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx (5 testes) + browser real + servidor (Broadcast 0 -> 1 cliente)",
-      "resolution": "DEFEITO REAL de producao, encontrado exercitando a jornada no browser (nao havia teste cobrindo). Evidencia que separou a causa: servidor 3300 conexoes/2115 autenticadas/ZERO invalid_token; browser instrumentado mostrou >60s com ping saindo e NENHUM auth; WebSocket puro fora do React autenticou em 6ms e ficou OPEN => o servidor esta correto, o defeito e do cliente. Causa: socket aberto uma vez no mount ANTES do login; a autenticacao dependia de um efeito que so reagia a connected/authenticated/authFailed (o login nao muda nenhum) e de um setInterval de 2s cujo authenticateWebSocket retornava false EM SILENCIO quando o socket nao estava utilizavel, sem reconectar. Corrigido: consumo de AuthContext + efeito de SESSAO (login autentica), reconexao imediata quando o socket nao serve, warn no lugar do silencio, reset do isIntentionalCloseRef (podia prender em true e desligar watchdog e recovery), fechamento de socket em CONNECTING no unmount (orfaos) e REMOCAO do setInterval de 2s (proibido). Prova: browser \"Falha de auth\" -> \"Conectado\" sem F5 com auth+subscribe enviados; servidor Broadcast 0 -> 1 cliente; frontend 137 arquivos/1040 testes PASS."
-    },
-    {
-      "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
-      "title": "removeChild (React) por enhancement de header que movia/substituia nos do React",
-      "status": "done",
-      "commit": "5ba668f2d",
-      "evidence": "frontend/src/__tests__/supportHeaderEnhancement.test.js (6 testes) + mesh 144 cenarios",
-      "resolution": "Reprovou o QA Mesh no cenario support-inbox-nota-ui (omnichannel, BLOCKING): NotFoundError removeChild em commitDeletionEffectsOnFiber. Regressao confirmada por metodo barato: removeChild aparece 20x no mesh de 09:33 e ZERO em 10 meshes anteriores (desde 03/10), todos 144/144. Causa raiz: main.jsx enhanceSupportHeaders movia os filhos do <h1> (que pertencem ao React) para um span e depois chamava title.replaceChildren -> arvore de fibers inconsistente -> o commit seguinte do React removia no inexistente. Defeito LATENTE exposto pelo aumento de re-renders (WebSocketProvider no topo). Corrigido: funcao extraida para src/utils/supportHeaderEnhancement.js (ESM, testavel sem bootstrap), o botao entra como IRMAO do <h1> (insertBefore) e o layout foi para CSS (.support-header-with-back). REGRA: em no do React, ADICIONAR irmao e seguro; mover/substituir/remover nos conhecidos nao e."
-    },
-    {
-      "id": "DEF-QUEUE-DELETE-DB-ONLY",
-      "title": "DELETE /queues nao removia fila existente so no banco (reaparecia na listagem)",
-      "status": "done",
-      "commit": "9f0f6fda8",
-      "evidence": "tests/unit/queueModuleRoutes.test.js (2 casos novos) + limpeza de 244 filas residuais",
-      "resolution": "Reprovou o QA Mesh no cenario business-core-biz-queues (core, BLOCKING): \"Fila nao foi removida\". Causa: a desativacao da definicao persistida estava condicionada ao sucesso do servico LEGADO, que opera num Map EM MEMORIA (volatil). Fila existente so no banco nunca era desativada -> continuava active=true e reaparecia, porque listQueues MESCLA memoria + banco. Prova no banco: 253 filas qa_flow_queue_* acumuladas desde 10/10, 5 ainda ATIVAS. Corrigido: nova deactivateQueue (UPDATE direto e idempotente, sem cache/memoria, sem criar registro inexistente) usada independentemente do resultado legado; reporta sucesso quando a definicao existia e foi desativada, e mantem falha quando nada foi removido. Higiene: 244 filas residuais de teste removidas (9 filas nao-teste preservadas)."
-    }
-  ]
+  {
+   "id": "P0-2",
+   "title": "Evidencia ausente nunca e PASS (imutabilidade do evidence manifest)",
+   "status": "done",
+   "commit": "6f8e56349",
+   "evidence": "governance/lib/evidence-manifest-hash-baseline.js + tests/unit/governance/evidenceManifestHashBaseline.test.js (9); check real mudou de PASS para FAIL"
+  },
+  {
+   "id": "P0-3",
+   "title": "Proveniencia do Security Gate consegue falhar (fail-closed)",
+   "status": "done",
+   "commit": "065b66cba",
+   "evidence": "teste negativo de proveniencia do Security Gate"
+  },
+  {
+   "id": "P0-4",
+   "title": "Waiver em duas etapas com segregacao de funcoes e escopo",
+   "status": "done",
+   "commit": "89a86c22b",
+   "evidence": "api/services/securityIntel/waiverService.js + tests/unit/securityIntel/waiverService.test.js (25)"
+  },
+  {
+   "id": "P0-5",
+   "title": "Suite E2E do Security Gate contra Postgres real",
+   "status": "done",
+   "commit": "c3e0dd004",
+   "evidence": "tests/integration/securityWaiverApprovalE2E.test.js (7) vs Postgres real"
+  },
+  {
+   "id": "P1-1",
+   "title": "Gates unit/integration declaram a CATEGORIA da evidencia",
+   "status": "done",
+   "commit": "63ee55ad2",
+   "evidence": "engine/engineeringMission/testSuiteClassifier.js + tests/unit/engineeringMission/testSuiteClassifier.test.js"
+  },
+  {
+   "id": "P1-2",
+   "title": "Revisao independente verificavel (vinculada a tentativa + independencia nos dados)",
+   "status": "done",
+   "commit": "e9b8c009d",
+   "evidence": "api/services/engineeringMission/missionReviewService.js + E2E Engineering Router 20/20"
+  },
+  {
+   "id": "P1-3",
+   "title": "Promocao verificada obrigatoria para GREEN",
+   "status": "done",
+   "commit": "66c64c060",
+   "evidence": "engine/engineeringMission/metaReview.js REQUIRED_GATES_FOR_GREEN"
+  },
+  {
+   "id": "P1-4",
+   "title": "Regra preventiva exige teste EXECUTADO e regras ativas passam a ser consultadas",
+   "status": "done",
+   "commit": "085c203ec",
+   "evidence": "engine/engineeringMission/bugFinding/preventiveRules.js + getActivePreventiveRules + 416 testes"
+  },
+  {
+   "id": "P1-5",
+   "title": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
+   "status": "done",
+   "commit": "8624e5594",
+   "evidence": "rag-service/services/hybrid_search.py + rag-service 156 passed"
+  },
+  {
+   "id": "P1-6",
+   "title": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
+   "status": "done",
+   "commit": "73e76535d",
+   "evidence": "rag-service/config/settings.py (AliasChoices) + 156 passed / 0 skipped (antes: isolamento 100% SKIPPED)"
+  },
+  {
+   "id": "P1-7",
+   "title": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
+   "status": "done",
+   "commit": "1d78fb4ad",
+   "evidence": "engine/securityIntel/triageDossier.js summarizeRemediation + triageService + 7 testes"
+  },
+  {
+   "id": "P1-8",
+   "title": "Inventario do sistema regenerado",
+   "status": "done",
+   "commit": "64091e5eb",
+   "evidence": "config/system-inventory.json + reports/inventory-report.json"
+  },
+  {
+   "id": "P2-1",
+   "title": "Proveniencia remota verifica o commit do RUN, nao o HEAD",
+   "status": "done",
+   "commit": "b1eaeef80",
+   "evidence": "scripts/governance/verify-remote-provenance.js + tests/unit/governance/remoteProvenanceAuthority.test.js (5)"
+  },
+  {
+   "id": "P1-9",
+   "title": "Contrato unico de evidencias (campos obrigatorios, runId/lineage, FAIL vs INCOMPLETE)",
+   "status": "done",
+   "commit": "f218a7c48",
+   "evidence": "governance/lib/evidence-contract.js + scripts/governance/report-evidence-contract.js + tests/unit/governance/evidenceContract.test.js (11 passed); reports/evidence-contract-report.json (enforced:false) mede 0/24 conformes e 10 campos ausentes em 24/24"
+  },
+  {
+   "id": "P1-12",
+   "title": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
+   "status": "done",
+   "commit": "cd7b2da9c",
+   "evidence": "governance/lib/evidence-freshness.js (decisao PURA, FRESH|STALE|UNKNOWN) + wiring em governance/proof-engine/index.js::buildEvidenceManifestArtifact (exportada para ser testada no MESMO codigo da producao). 23 testes (tests/unit/governance/evidenceFreshness.test.js + evidenceManifestFreshnessWiring.test.js) e regressao completa de governanca 122 suites/1188 passed/0 failed. Medicao ANTES do fix nos 24 artefatos do manifesto: 1 viola o TTL canonico de 7 dias (smoke_summary, 50,8d) e 2 sao anteriores ao inicio do run; ZERO falso positivo. TTL reusado dos 3 lugares que ja o definem (master-scorecard-registry 7d, applyWaveReportStaleness 7d, bridge do smoke agendado 48h) — nenhuma politica nova. Raio de impacto medido: evidenceManifestValid so alimenta enterpriseReadiness.evidenceBased, que NAO tem consumidor; proofCoverage conta `exists`, nao proofStatus ⇒ nenhum gate duro mudou de veredito."
+  },
+  {
+   "id": "P1-13",
+   "title": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
+   "status": "done",
+   "commit": "d7cdaa555",
+   "evidence": "RESOLVIDO sem tocar na parte destrutiva: o unico produtor (scripts/system-autotest-stack.sh) faz `docker compose up` e derruba a stack no final, e seu unico invocador e' um workflow deliberadamente desabilitado. Os 6 smokes REAIS foram rodados individualmente (scripts/test-physical-queue-smoke.js, test-ura-publish-rollback-smoke.js, test-pbx-voice-tts-asr-smoke.js, test-pbx-call-events-runtime-smoke.js, test-inbox-runtime-smoke.js, test-bpmn-editor-smoke.js — exatamente os que o script roda) e o fan-in foi feito pela PROPRIA funcao `write_smoke_evidence_summary` extraida por `sed` do script canonico (nenhuma logica reescrita); status vem do exit code real com o mesmo mapeamento (0 -> pass). Resultado: as DUAS copias (runtime root 2026-08-21 e workspace 2026-09-30) substituidas por generatedAt=2026-10-10T21:25:30Z com l01..l06=pass; prova de nao-fabricacao: qa/l06-bpmn-editor-evidence.json traz pageLoad/xmlExported/internalFlow(15 nos) e qa/l01-physical-queue-evidence.json traz queueId/ticketId/transicoes reais. Efeito medido no gate: `npm run system:go-no-go` passou de NO_GO com `smoke_evidence_stale` (idade 1220 h) para GO."
+  },
+  {
+   "id": "P1-10",
+   "title": "Self-engineering E2E governado (relatorio agregado obsoleto)",
+   "status": "done",
+   "commit": "52c0d0837",
+   "evidence": "NAO era defeito de gate: o unico consumidor do agregado e o proprio produtor (os passos do selo regeram via --axis em toda execucao), logo nao havia leitor de copia velha. Nao-vacuidade verificada: 11 suites de prova declaradas em config/canonical-release-suites.json e state=PASS em reports/release-suite-execution.json com contagem real (4,5,32,4 / 6,17,1 / 12,22,5,30). Defeito REAL encontrado no caminho: os 4 relatorios nasciam SEM runId/sourceFingerprint; corrigido com withLineage na origem (prova: runId=rap-governed-20261010045617268-19ce0cbd igual ao .current-run.json em agregado e por eixo; --axis invalido segue exit 2). Orcamento de custo/tokens JA EXISTE: config/timeout-policy.json:113-114 + api/services/engineeringRouter/engineeringRouterService.js:964-965 + tests/unit/engineeringRouterProviderChainPolicy.test.js — nao reimplementar."
+  },
+  {
+   "id": "P1-11",
+   "title": "Destravar empacotamento e selagem (ciclo release:seal completo)",
+   "status": "done",
+   "blocked_reason": "O ciclo ATRAVESSOU TUDO: prepare (SEAL_PENDING), candidate (scorecard 78/78, below10=0, AUTONOMOUS_READY, projecoes PASS, fixpoint estavel) e final com `[seal:final] pacote final (SEAL_GO, exit 0)` — release r-agent2-20261011-083027, commit ac61d46cca600add104f7d355eb37dc2ce653697, H_final deb1d888c47cf1db57e116a3b01f337ca340c0c529d9b2, ZIP 62 MB selado em dist/release. O ciclo parou na UNICA coisa que nao cabe a IA decidir: a fase `publish` tenta publicar a TAG de release e o guard local do usuario (.git/hooks/pre-push, NAO versionado, escrito em 2026-10-10) BLOQUEIA push de tag de proposito ('autorizado apenas push de commits; tag de release fica para decisao posterior'). A tag `r-agent2-20261011-083027` esta CRIADA LOCALMENTE no commit do release; falta apenas autorizar/publicar. NAO contornei o guard (nem removi o hook): e decisao explicita do usuario. Para concluir apos a decisao: `bash scripts/governance/seal-release.sh --from publish` (a fase publish faz create-release-tag -> verify-remote-provenance --manifest -> recibo -> verify:release-publication; depois a `consolidate` fecha com o gate agregado). ATUALIZACAO MEDIDA (2026-10-11, sessao de orientacao de UI): o release acima foi SUPERADO. Depois dele entraram as mudancas de dependencia do P1-17 (npm audit fix, overrides fast-uri ^3.1.8, nodemailer ^10.1.0) e as correcoes do Security Release Gate. `npm run verify:delivered-release` passou a retornar DELIVERED_RELEASE_NO_GO com DELIVERED_SOURCE_MISMATCH: source from manifest = 93a0466744ac47073c9a5ae321f40da0, source from worktree = 4b1954d295496783ca28fe498eb68acc, mais STALE_PROOF na chain de fingerprints. Consequencia pratica: publicar a tag ANTIGA nao fecha nada -- o artefato e valido apenas no commit dele (a propria mensagem do verificador diz isso: \"o release entregue e valido NO COMMIT DELE; commit posterior exige novo ciclo de selagem\"). Caminho correto: NOVO ciclo de selagem. E como a fase `consolidate` roda o agregado e ABORTA se ele falhar, o novo ciclo SO FECHA depois que o Security Release Gate estiver GO (ver P1-17: 13 waivers em PENDING_APPROVAL + 7 acionaveis). Ordem recomendada: (1) decisao humana de seguranca em /dev/security-intel -> agregado verde; (2) novo `npm run release:seal`; (3) `npm run verify:delivered-release`; (4) publicar a tag (decisao do usuario; o guard .git/hooks/pre-push continua bloqueando tag por padrao).",
+   "evidence": "CICLO DE SELAGEM CONCLUIDO — `npm run release:seal` SEAL_EXIT=0 (5 fases: prepare -> candidate -> final -> publish -> consolidate). Release r-agent2-20261013-171630 | commit e38070bde238ec64f16e5d37d1ddbd9d968f0f54 | H_final ac5f1bfbd9f1178fe25178cdebf0e50e92dd6cd7a1ecfc | Score PASS/100. PAYLOAD selado: dist/release/r-agent2-20261013-171630.payload.zip (+ manifest + delivered.identity.json). TAG publicada e verificada no remote: objeto 22503b52a4e0..., alvo (`^{}`) e38070bde238... — conferido com `git ls-remote --tags`. `verify:delivered-release` = DELIVERED_RELEASE_VERIFIED / AUTONOMOUS_READY (fingerprint do manifest == worktree: 68c5c70b53ced4...). `MCP_RESEARCH_DOCKER_E2E` PASS fresco, commit+push da consolidacao OK, worktree limpo e 0 commits a frente de origin/main. AS 4 FALHAS QUE ERAM ATRIBUIDAS A ESTE ITEM CAIRAM: validate:dist PASS; validate:release-governance PASS; validate:final-status-projection PASS; validate:governance-summary PASS. BLOQUEIO ERA DE AUTORIZACAO, NAO TECNICO: a fase `final` de seal-release.sh exige o commit do release em origin/main (\"push antes de publicar\"), e o hook local .git/hooks/pre-push bloqueia push de refs/tags/* (\"autorizado apenas push de commits\"). Com autorizacao explicita do operador (Regra 10), o push da tag foi feito pontualmente com --no-verify e a fase publish retomada (`--from publish`) de forma idempotente. DEFEITOS REAIS DESCOBERTOS E CORRIGIDOS NO CAMINHO: (a) REAL_TASK_RECOVERY era o unico passo de runtime sem --env-file-if-exists=.env e falhava por ENCRYPTION_KEY ausente; (b) o verificador de recuperacao real de task nao honrava o contrato da Fase 9 (faltava scopeDeferred: true, como o caminho oficial) — commit 6c17d20c1, com 2 testes novos em tests/unit/governance/v2SealOrchestration.test.js (16/16). DIVIDA REGISTRADA (nao mascarada): evidencias com TTL curto vencem DURANTE o ciclo longo — replay-governance ficou STALE (ageMs ~33 min) e o SBOM ficou ANTERIOR ao inicio do run (SECURITY_GATE_STALE_EVIDENCE). Ambas foram regeneradas antes de retomar; o ciclo nao deve depender disso.",
+   "commit": "179720018"
+  },
+  {
+   "id": "P1-15",
+   "title": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
+   "status": "done",
+   "commit": "25cf2e259",
+   "evidence": "CORRIGIDO e PROVADO em ciclo real. Fix: em `scripts/two-pass-release.sh::materialize_payload_governance`, a atestacao (`update-package-binding.js`) passou a ser RE-EMITIDA imediatamente antes do `package-integrity-engine` e depois de todas as escritas que ele deve cobrir (`exportGovernanceArtifacts` + `package-validator`). Prova do mecanismo (mesmo payload): antes `EVIDENCE_MANIFEST_HASH_DIVERGENT` exit 1 (computed=a877b7965c803f02e5d2bd58 != recorded=deefdfdecd56c66f7cc5d836); depois `EVIDENCE_MANIFEST_HASH_OK` exit 0 (computed == recorded). PROVA EM CICLO REAL: `npm run release:seal` atravessou a fase `final` e o envelope com `[seal:final] pacote final (SEAL_GO, exit 0)`, release r-agent2-20261011-083027, H_final deb1d888c47cf1db57e116a3b01f337ca340c0c529d9b2, ZIP de 62 MB em dist/release. O check NAO foi afrouxado — a ordem estava errada."
+  },
+  {
+   "id": "P1-16",
+   "title": "Lotes do runner autoritativo nao se isolavam (conexoes e processos-filho vazavam)",
+   "status": "done",
+   "commit": "9cf698ff4",
+   "evidence": "Achado: o lote 3 falhou em 2 suites com `Error:` SEM MENSAGEM em tests/helpers/purgeTestFindings.js:156 (Finding.destroy); as MESMAS 6 suites passaram ISOLADAS (6/6, 86 testes, 0 falhas). Causa medida: Postgres com max_connections=100 (~9 em repouso) e lotes acumulando conexoes/processos-filho; estouro de pool no Sequelize aparece como erro VAZIO, o que faz concluir 'suite instavel' em vez de 'o lote herdou conexoes'. Fix: `detached:true` por lote + ceifa do grupo (`process.kill(-pid)`) e `awaitConnectionDrain()` antes de cada lote (sonda o pg_stat_activity pelo DSN canonico; bounded e nao-fatal, registrado em `connectionDrains`). PROVA: 14 drenagens, todas `drained=true`, pico durante a espera 42 (contra o teto de 100), espera maxima 6,9 s; selo V2 seguinte com SUITE_EXECUTION PASS (21 passos, 0 falhas obrigatorias)."
+  },
+  {
+   "id": "P2-2",
+   "title": "Divergencia de lineage nos relatorios",
+   "status": "done",
+   "commit": "7d10d7720",
+   "evidence": "Medicao ANTES: dos 154 relatorios em reports/, 120 sem runId; dos 36 produtores que usam writeReport, so 5 chamavam withLineage. Corrigido na ORIGEM COMUM (scripts/governance/common.js::writeReport) em vez de 31 patches: todo relatorio do helper nasce com runId/sourceFingerprint/artifactVersion e artifactType derivado do nome do arquivo (convencao medida: 42/52 relatorios declaram artifactType igual ao nome). Medicao DEPOIS ao regerar 4 validadores: com runId 34 -> 38; o restante sobe conforme cada produtor roda. Teste tests/unit/governance/reportWriteLineage.test.js (6 passed, root temporario para nao vandalizar reports/) + regressao 123 suites/1194 passed/0 failed."
+  },
+  {
+   "id": "P1-17",
+   "title": "Dívida de segurança do Security Release Gate (47 -> 0 bloqueantes; gate GO)",
+   "status": "done",
+   "evidence": "GATE: GO (exit 0) — \"[security-release-gate] GO: 5 verificacao(oes) satisfeita(s), 94 aviso(s)\". Bloqueantes medidos na historia do item: 47 -> 20 -> 7 -> 1 -> 0. Prova: reports/security-release-gate-report.json. ISENCOES (SoD preservada: solicitante != aprovador): 14 waiver ACTIVE aprovados por systemadmin; os 13 pedidos anteriores foram solicitados pelo CLI (usuario do SO jmachado) e o 14o (PYSEC-2026-139|pypi:torch@2.10.0+cpu) foi solicitado e aprovado na rodada de 2026-10-11. Nenhuma isencao foi aplicada sem aprovacao humana explicita. Os 94 avisos restantes sao DEV_ONLY_VULNERABILITY (cadeia de build/teste), nao bloqueio. A tela de engenharia passou a expor `dev_only` (mesma fonte do gate: SecurityComponent) e separa o que bloqueia do que e aviso. CORRECOES APLICADAS (alvos conferidos nos advisories do proprio repositorio): nanoid 3.3.11->3.3.20; postcss 8.4.49/8.5.6->8.5.29 (override alcanca a copia aninhada do styled-components); source-map-js 1.2.1->1.2.2 (frontend/package.json overrides); uuid 8.3.2/9.0.1->11.1.1 (overrides na raiz, com require(\"uuid\").v4 verificado); torch 2.9.1+cpu->2.10.0+cpu (rag-service/requirements.txt + venv; pytest 156 passed; optimum.onnxruntime importa OK). REGRESSAO: npm run test:unit 995 suites / 8240 testes / 0 falhas; frontend com 16 testes novos verdes; RAP-078 (mutable json state) 5/5 com unknown=0. COMMIT DO FECHAMENTO: c8db637fb.",
+   "commit": "c8db637fb"
+  },
+  {
+   "id": "H9-IDENTIDADE-PORTA",
+   "title": "D5/D6: unidade ativa que nao serve + porta ocupada por processo estranho (supervisao dev)",
+   "status": "done",
+   "commit": "3ea58a1cc",
+   "evidence": "Defeito medido: `service.sh start` dava OK com a unidade `active` cujo processo nao respondia (health!=identidade) e nao detectava a porta 8080 ocupada por mock orfao de teste (a unidade nao servia, mas o smoke passava por outro processo). Corrigido: `scripts/dev/lib/servicos-dev-state.sh` (dev_porta, dev_pids_na_porta, dev_pid_no_cgroup, porta_pertence_a_unidade fail-closed por ControlGroup) + `esperar_identidade` no start (health E identidade, 1 restart, falha explicita nomeando os pids). Prova: tests/unit/dev/devServicesSupervision.test.js (25 casos) e smoke agendado com RESTORE_FALHAS / exit 3 RESTORE_INCOMPLETO quando a identidade nao e restaurada."
+  },
+  {
+   "id": "H10-VEREDITO-GATE-SEGURANCA",
+   "title": "Veredito do Security Release Gate deixa de ser mascarado pela avaliacao de risco",
+   "status": "done",
+   "commit": "63cdd7f07",
+   "evidence": "Defeito medido: a ultima linha do relatorio imprimia a avaliacao de risco (engine) como se fosse o veredito — podia dizer GO/`exit 0` enquanto o processo saia !=0, ou o inverso, tornando a falha invisivel para quem lesse o tail. Corrigido: `avaliacao de risco (engine):` separada e ultima linha sempre `VEREDITO: <state> (exit N) — motivos: ...`, coerente com o codigo de saida. Prova: tests/unit/governance/securityGateState.test.js (26 casos) + execucao real com EVIDENCE_UNAVAILABLE (exit 3)."
+  },
+  {
+   "id": "H11-ESCOPO-DIFERIDO",
+   "title": "Regressao da Fase 9: escopo diferido explicito + fixtures com evidencia de integracao",
+   "status": "done",
+   "commit": "3bf7d8bc2",
+   "evidence": "Regressao introduzida pelo proprio contrato da Fase 9 (scope vazio rejeitado) quebrou 11 testes de integracao do engineering-router e o gate `integration` do MR-06 (ATTESTED->BLOCKER). Corrigido sem afrouxar o contrato: `assertTaskContract({scopeDeferred})` — a criacao DIRETA por API/UI segue fail-closed; apenas `startExecutionHeld` e o replacement do bugLoop (que preenchem o escopo depois, por engenharia) passam `scopeDeferred:true` literal; a fixture de review executa um TestRun de integracao real. Prova: suite autoritativa 86/89 -> 89/89 PASS (reports/release-suite-execution.json) + tests/unit/engineeringRouter/taskContractScope.test.js (10 casos)."
+  },
+  {
+   "id": "H12-RAG-REPARO",
+   "title": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
+   "status": "done",
+   "commit": "6cdcc9c72",
+   "evidence": "Defeito medido: `validate:rag-index-health` NO_GO com 2 documentos failed (ECONNREFUSED no reindex, servico fora durante o lote). Reparado sem mascarar: reindexado para HEALTHY — documentos indexados 3237 -> 3239, chunks 8618 -> 8621, violations 0, failed 0. Prova: reports/rag-index-health-report.json + reports/rag-failed-reindex-report.json (commit de evidencias 6cdcc9c72)."
+  },
+  {
+   "id": "H13-RUNNER-COMPLETO",
+   "title": "Agregado deixa de mascarar falhas: runner completo dos validadores",
+   "status": "done",
+   "commit": "8169f3d70",
+   "evidence": "Defeito medido: `validate:governance-enforcement` e uma cadeia `&&` fail-fast — a PRIMEIRA falha escondia as outras 8 (foram descobertas 9 falhas reais que o agregado reportava como \"1\"). Corrigido aditivo: `npm run validate:all-validators` (scripts/governance/run-all-validators.js + lib/governance-enforcement-plan.js) roda TODOS, escreve reports/governance-enforcement-full-report.json, e revalida apenas falhas causadas pelo carimbo de lineage (revalidatedAfterStamp). Medicao: 66 validadores, 57 PASS / 4 FAIL (todas de P1-11). Prova: tests/unit/governance/allValidatorsRunner.test.js (13 casos)."
+  },
+  {
+   "id": "H14-CDR-SUPERVISIONADO",
+   "title": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
+   "status": "done",
+   "commit": "ec85f48b7",
+   "evidence": "Defeito medido (custo de um ciclo de ~40 min em 2026-10-13): o preflight do converge validava so a PORTA 15432 da ponte; quando o Postgres nao responde no boot do container, o backend `cdr_adaptive_odbc` sai do engine de CDR em SILENCIO (porta de pe, nenhum CDR gravado) e o passo 1/12 reprova. Corrigido: `scripts/pbx-cdr-health.sh` (`check` 0/1 e `ensure` que recarrega res_odbc.so + cdr_adaptive_odbc.so) e preflight passa a exigir BACKEND registrado (sinal obtido por medicao: `cdr show status` -> Registered Backends; `Use Count` e 0 ate saudavel e nao serve de sinal). Prova: tests/unit/pbx/pbxCdrHealth.test.js (7 casos, com dubles — nenhum socat real)."
+  },
+  {
+   "id": "H15-DIST-RECIBO-STALE",
+   "title": "Higiene do dist/: recibo do verifier STALE deixa de poluir a avaliacao",
+   "status": "done",
+   "commit": "ec85f48b7",
+   "evidence": "Defeito medido: `validate:dist` falhava com 3 motivos, sendo 1 espurio — `STALE_VERIFIER_RESULT` de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 (r-agent2-20261011-083027.payload.zip) ja ARQUIVADO. A politica exige recibo vinculado ao PAYLOAD ATUAL. Removido (copia preservada em dist/archive/pre-seal-20261010/). Medicao DEPOIS: o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\" e o validate:dist falha por UMA causa unica — ausencia de payload selado — em vez de 3 sintomas. A tentativa inversa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
+  },
+  {
+   "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
+   "title": "Runner atribui falha causada por mutacao da superficie provada durante o run",
+   "status": "done",
+   "commit": "1cb7fafe1",
+   "evidence": "Defeito medido: durante um run real do validate:all-validators criei um arquivo em scripts/smoke/ (raiz de SOURCE_ROOTS); a evidencia de runtime foi coletada antes (fingerprint bae797d5...) e validada depois (a6454061...) e o validate:engineering-router-v1:runtime reprovou com RUNTIME_EVIDENCE_FRESH, cascateando 4 falhas num run de ~40 min — parecendo defeito de produto. O gate estava CERTO; faltava ATRIBUICAO. Corrigido: mapearSuperficieProvada (walkSourceFiles + sha256 canonicos), compararSuperficieProvada (ESTAVEL/MUTADA_DURANTE_O_RUN com arquivo e tipo) e atribuirMutacaoDaSuperficie (marca attributedToSourceMutation SO em falhas de obsolescencia; falha de pacote NUNCA e atribuida), com provenSurfaceStability no relatorio. Prova: tests/unit/governance/allValidatorsRunner.test.js (18 casos, +5 novos) e a coleta revalidada depois com worktree limpo: RUNTIME_PASS items=25 falhas=0 commit=1cb7fafe1 fingerprint=a9f8c4c0..., status=PASS checks=209."
+  },
+  {
+   "id": "H17-HOOKS-EDITOR",
+   "title": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
+   "status": "done",
+   "commit": "dcc97cbed",
+   "evidence": "DEFEITO REAL achado pela jornada funcional no browser: /editor com 2 erros de console + 3 pageerror (\"Rendered more hooks than during the previous render\" em FlowTemplateSelector) e o botao \"Novo\" nao abria o seletor — a acao de criar fluxo sumia. Causa: useMemo das tags DEPOIS dos returns antecipados de selectedTemplate/loading/error; na 1a render (loading=true) o hook nao rodava e na seguinte rodava um hook a mais. Corrigido movendo o hook para antes dos returns. PROVA NOS DOIS SENTIDOS: com o codigo antigo (git stash push do .jsx) o teste falha com o erro exato do browser; com o fix, frontend/src/components/FlowTemplateSelector.test.jsx 4/4 e suite frontend 136 arquivos / 1035 testes PASS (EXIT=0). Prova no browser depois do fix: /editor com 0 console errors, 0 pageerror e \"Novo\" abrindo \"Criar Novo Fluxo / Selecione um modelo\"."
+  },
+  {
+   "id": "H18-JORNADA-FUNCIONAL-BROWSER",
+   "title": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
+   "status": "done",
+   "commit": "dcc97cbed",
+   "evidence": "Novo scripts/smoke/journey-functional-browser.js: exerce ACOES reais (busca, filtro por chip, abrir formulario de criacao, detalhe) em 8 rotas PRODUCTION de negocio e mede o EFEITO. Reusa tests/helpers/playwrightAuth.js (regra do repo). Evidencia em qa/evidence/journey-functional-latest.json (transitoria, nao versionada). Resultado medido: 0 erros de console, 0 pageerror, 0 requisicoes falhas; /workspace busca 8083->792 chars; /crm busca 1922->1170; chips de filtro aplicam; \"Criar entidade rapida\", \"Criar tarefa\" e \"Novo\" abrem. LIÇÃO incorporada: a 1a versao media itens por table/li/card e produziu 5 FALSOS POSITIVOS (media o menu lateral, nao a lista) — falso positivo de detector esconde o defeito real no ruido. Efeito passa a ser diff de textos visiveis + delta de chars + delta de campos."
+  },
+  {
+   "id": "H19-DIST-CAUSA-UNICA",
+   "title": "validate:dist reduzido a causa unica (payload ausente = P1-11)",
+   "status": "done",
+   "commit": "ec85f48b7",
+   "evidence": "Antes: 3 motivos de FAIL, sendo 1 espurio — STALE_VERIFIER_RESULT de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 ja arquivado. Removido (copia preservada em dist/archive/pre-seal-20261010/), o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\". Depois: 2 sintomas de UMA causa (payload nao selado = P1-11): \"Nenhum PAYLOAD encontrado em dist/release/*.payload.zip\" e \"verify-enterprise-governance-v2.sh FAIL\". A alternativa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity."
+  },
+  {
+   "id": "DIV-PUREZA-ENGINE",
+   "title": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
+   "status": "done",
+   "commit": "60b978ca0",
+   "evidence": "tests/unit/engine/enginePurityPorts.test.js + reports/layer-conventions-report.json",
+   "resolution": "CORRIGIDO (nao mais bloqueado). O ciclo dedicado que o blocked_reason exigia foi feito. 6 portas injetaveis em engine/shared/ (clock, random, logger, scheduler, fileSystem, runtimeEnv). 28 arquivos migrados por NAMESPACE — nome solto produzia recursao infinita em engine/utils.js. checkEnginePurity corrigido nos dois sentidos: 16 falsos positivos (new Date(valor)) e 35 pontos cegos (Date.now()). validate:layer-conventions: 83 -> 0 issues. unit 1007 suites/8426 testes PASS; flow 264 PASS; build OK; gate agregado EXIT=0. A metade \"mover para api/services\" do plano NAO foi usada: os ofensores sao consumidos POR DENTRO da engine; a porta injetavel preserva a API publica e entrega o que a regra quer (determinismo de replay).",
+   "previous_blocked_reason": "NAO e meia-correcao: exige ciclo DEDICADO, com regressao de replay e build do frontend a cada arquivo. MEDIDO em 2026-10-13 (baseline do AGENTS.md estava desatualizado em 118): o gate acusa 83 issues, das quais ~13 sao FALSOS POSITIVOS — 44 ocorrencias de `new Date` se dividem em 31 LEITURAS de relogio (`new Date()`) e 13 CONVERSOES deterministicas (`new Date(x)`). Somam-se 5 `Math.random` usados apenas como FALLBACK de parametro injetavel (ex.: executionDeadline, que se declara PURO). Violacoes reais ~70. A metade \"mover para api/services\" do plano do AGENTS.md NAO se aplica aos dois maiores ofensores: `persistenceServices.js` (11) e `fallbackController.js` (7) sao consumidos POR DENTRO de engine/ (`engine/runner.js`, `engine/nodes/fallbackNode.js`, `engine/nodes/persistenceNodes.js`) — mover inverteria a dependencia engine->api. Nenhum dos dois e usado pelo frontend (medido: 0 ocorrencias em frontend/src). A classe relogio/aleatorio (31 leituras em engine/nodes/*, runner.js, executeStep.js, flowSimulation.js) toca DETERMINISMO DE REPLAY, que e gate bloqueante. `engine/` tambem e compartilhado com o frontend. Exige: (a) injecao de relogio/aleatorio/logger nos modulos de fluxo com default explicito no CALLER, nunca no modulo provado; (b) refinar a regra do detector para nao acusar `new Date(arg)` — CORRECAO de falso positivo, nao afrouxamento, com o cuidado de que `new Date(variavel)` possivelmente `undefined` VOLTA a ler o relogio (ex.: nodes/systemNodes.js:307). Nunca baixar a regra para fechar o gate."
+  },
+  {
+   "id": "N5-REENTREGA",
+   "title": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
+   "status": "done",
+   "commit": "bc76e28b3",
+   "evidence": "CICLO CONCLUIDO: `release:seal` SEAL_EXIT=0, release r-agent2-20261013-213820 commit d7036f0aecb9bf2487b0424fef537f4af27037d0 | H_final 0b1488f76308c903735bf0806734f33009a3e6a02be77c | Score PASS/100. Tag publicada: objeto 9d6901712..., alvo (`^{}`) d7036f0aecb9... — `tagMatches=true`, recibo PUBLISHED_VERIFIED, verify:release-publication 8 checks PASS. `verify:delivered-release` = DELIVERED_RELEASE_VERIFIED / AUTONOMOUS_READY (\"arvore atual == artefato entregue\"); worktree limpo e 0 commits a frente de origin/main. PROVA DE CAMPO DO N1 (fix das evidencias de TTL curto): o consolidate registrou \"✓ evidencias de TTL curto regeneradas (replay-governance + SBOM)\" SEM intervencao manual, e o gate agregado saiu \"EXIT 0\" na PRIMEIRA tentativa — antes isso exigia retomada manual e reparos de lineage/projecao. PROVA DE CAMPO DO N3 (guard de tag): o bloqueio do hook pre-push produziu a mensagem acionavel com o comando exato (`git push --no-verify origin refs/tags/...` + `--from publish`) em vez do generico \"criacao da tag falhou\". A acao humana foi cumprida seguindo a propria mensagem. ARMADILHAS PERCORRIDAS (4 rodadas, todas agora documentadas na memoria do repo): (1) dist/ com sobra de ciclo anterior; (2) worktree sujo por derivados (~60 arquivos por fase abortada); (3) SEAL_FOREIGN_RUN apos o prepare criar run novo por RUN_SOURCE_DRIFT — exigiu re-selar o V2; (4) \"criacao da tag falhou\" pelo hook local. FLAKE CONFIRMADO, NAO REGRESSAO: o selo V2 falhou uma vez em SUITE_EXECUTION com tests/integration/missionSourceStaleReplanFullRouterE2E.test.js (que passa isolado em 64s e tem jest.setTimeout(900000)); a re-execucao do selo deu status=GO 21/21. Um unico FAIL nao e prova de defeito, assim como um unico PASS nao e prova de reprodutibilidade."
+  },
+  {
+   "id": "DEF-TEARDOWN-DRAIN-WORKER",
+   "title": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
+   "status": "done",
+   "commit": "a80ea7e8b",
+   "evidence": "tests/helpers/drainEngineeringWorker.js + lote 11 do selo (6/6 suites, 89/89 testes, EXIT=0)",
+   "resolution": "DEFEITO REAL medido no lote 11 do selo V2: governanceApprovalFullWorkerE2E marcada failed com 0 testes falhados e exit=1. Causa no batch JSON (nao no resumo do gate): \"ConnectionManager.getConnection was called after the connection manager was closed!\" — o afterAll chamava stopBugLoopWorker() (que so faz clearInterval, NAO espera o ciclo) e logo depois sequelize.close(); o ciclo em curso consultava o banco fechado. Passava ISOLADA e falhava no LOTE porque e corrida de tempo. Correcao: tests/helpers/drainEngineeringWorker.js aguarda cycleRunning===false, fail-closed. Aplicado nas 2 suites que usam startBugLoopWorker (as duas tinham o defeito). Prova no lote real: antes success:false exit=1 -> depois 6/6 suites, 89/89 testes, EXIT=0."
+  },
+  {
+   "id": "DEF-WS-AUTH-POS-LOGIN",
+   "title": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
+   "status": "done",
+   "commit": "48e5c167c",
+   "evidence": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx (5 testes) + browser real + servidor (Broadcast 0 -> 1 cliente)",
+   "resolution": "DEFEITO REAL de producao, encontrado exercitando a jornada no browser (nao havia teste cobrindo). Evidencia que separou a causa: servidor 3300 conexoes/2115 autenticadas/ZERO invalid_token; browser instrumentado mostrou >60s com ping saindo e NENHUM auth; WebSocket puro fora do React autenticou em 6ms e ficou OPEN => o servidor esta correto, o defeito e do cliente. Causa: socket aberto uma vez no mount ANTES do login; a autenticacao dependia de um efeito que so reagia a connected/authenticated/authFailed (o login nao muda nenhum) e de um setInterval de 2s cujo authenticateWebSocket retornava false EM SILENCIO quando o socket nao estava utilizavel, sem reconectar. Corrigido: consumo de AuthContext + efeito de SESSAO (login autentica), reconexao imediata quando o socket nao serve, warn no lugar do silencio, reset do isIntentionalCloseRef (podia prender em true e desligar watchdog e recovery), fechamento de socket em CONNECTING no unmount (orfaos) e REMOCAO do setInterval de 2s (proibido). Prova: browser \"Falha de auth\" -> \"Conectado\" sem F5 com auth+subscribe enviados; servidor Broadcast 0 -> 1 cliente; frontend 137 arquivos/1040 testes PASS."
+  },
+  {
+   "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
+   "title": "removeChild (React) por enhancement de header que movia/substituia nos do React",
+   "status": "done",
+   "commit": "5ba668f2d",
+   "evidence": "frontend/src/__tests__/supportHeaderEnhancement.test.js (6 testes) + mesh 144 cenarios",
+   "resolution": "Reprovou o QA Mesh no cenario support-inbox-nota-ui (omnichannel, BLOCKING): NotFoundError removeChild em commitDeletionEffectsOnFiber. Regressao confirmada por metodo barato: removeChild aparece 20x no mesh de 09:33 e ZERO em 10 meshes anteriores (desde 03/10), todos 144/144. Causa raiz: main.jsx enhanceSupportHeaders movia os filhos do <h1> (que pertencem ao React) para um span e depois chamava title.replaceChildren -> arvore de fibers inconsistente -> o commit seguinte do React removia no inexistente. Defeito LATENTE exposto pelo aumento de re-renders (WebSocketProvider no topo). Corrigido: funcao extraida para src/utils/supportHeaderEnhancement.js (ESM, testavel sem bootstrap), o botao entra como IRMAO do <h1> (insertBefore) e o layout foi para CSS (.support-header-with-back). REGRA: em no do React, ADICIONAR irmao e seguro; mover/substituir/remover nos conhecidos nao e."
+  },
+  {
+   "id": "DEF-QUEUE-DELETE-DB-ONLY",
+   "title": "DELETE /queues nao removia fila existente so no banco (reaparecia na listagem)",
+   "status": "done",
+   "commit": "9f0f6fda8",
+   "evidence": "tests/unit/queueModuleRoutes.test.js (2 casos novos) + limpeza de 244 filas residuais",
+   "resolution": "Reprovou o QA Mesh no cenario business-core-biz-queues (core, BLOCKING): \"Fila nao foi removida\". Causa: a desativacao da definicao persistida estava condicionada ao sucesso do servico LEGADO, que opera num Map EM MEMORIA (volatil). Fila existente so no banco nunca era desativada -> continuava active=true e reaparecia, porque listQueues MESCLA memoria + banco. Prova no banco: 253 filas qa_flow_queue_* acumuladas desde 10/10, 5 ainda ATIVAS. Corrigido: nova deactivateQueue (UPDATE direto e idempotente, sem cache/memoria, sem criar registro inexistente) usada independentemente do resultado legado; reporta sucesso quando a definicao existia e foi desativada, e mantem falha quando nada foi removido. Higiene: 244 filas residuais de teste removidas (9 filas nao-teste preservadas)."
+  },
+  {
+   "id": "MISSAO-A-L1-IMPACTO",
+   "title": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
+   "status": "done",
+   "commit": "8ef4af5cd",
+   "evidence": "qa/coverage/impactGraph.js + qa/coverage/impactSelection.js + scripts/governance/{build-impact-graph,run-impact-validation}.js; 36 testes (tests/unit/coverage/impact{Graph,Selection}.test.js); artefato reports/impact-graph.json (4126 nós, 9370 arestas, MD5 estável em 2 gerações); L1 executado de verdade: 219 testes, 6m51s",
+   "resolution": "Auditoria MEDIDA antes de escrever código: qa/impact-map.json (usado por qa:mesh:impact) cobre 28/2488 arquivos = 1,13%; inventário por source exato 14,80%; path->module 12,21%; módulo->jornada->cenário 9,0%; 91,0% dos arquivos sem qualquer seleção possível. Vocabulários incompatíveis: impact-map produz 7 escopos, os 144 cenários declaram 26, interseção 4; 133/144 declaram ci/telemetry, então o filtro por impacto seleciona ~92% ou 1-3%, nunca o alvo. O módulo queue nem existe no inventário — o commit 9f0f6fda8 era invisível a todos os mecanismos. Solução: derivar o elo dos próprios require/import (determinístico), com fecho transitivo reverso (73,6% dos arquivos alcançam >=1 teste; 77,3% têm dependentes) e FAIL-CLOSED (arquivo não classificado ESCALA, nunca devolve \"nenhum teste afetado\"). Dois bugs meus foram pegos pelos próprios testes: marcar todo alterado como classificado (anulava o fail-closed) e checar pertencimento a dependents em vez de existir em reverse."
+  },
+  {
+   "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
+   "title": "Teste evoSyncIntegration fixava frequency30d e venceu sozinho em 03/10/2026",
+   "status": "done",
+   "commit": "8ef4af5cd",
+   "evidence": "tests/integration/evoSyncIntegration.test.js (10/10 PASS); varredura da classe em 1307 arquivos de teste achou apenas esta instância",
+   "resolution": "Encontrado pela PRIMEIRA execução do L1 (1 de 219 testes). O teste fixava expect(frequency30d).toBe(2) sobre entradas de 01-03/09/2026; a janela é móvel (agora - 30d, confirmado em api/services/vertical/fitnessAttendanceService.js:349) e o corte passou a ser 14/09 em 14/10/2026. O código de produção está CERTO (frequency30d=0); a expectativa é que era time bomb. Quebrava sozinho desde ~03/10/2026 e nenhum gate o executa (não está em config/canonical-release-suites.json). Corrigido derivando a janela dos itens retornados + invariantes (7d ⊆ 30d ⊆ total) e documentando a armadilha no próprio teste."
+  },
+  {
+   "id": "DEF-STATESYNC-EXEMPTION-STALE",
+   "title": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
+   "status": "done",
+   "commit": "8ef4af5cd",
+   "evidence": "config/state-sync-exemptions.json + validate:layer-conventions 0 issues (era 1 warning)",
+   "resolution": "Resíduo do DEF-WS-AUTH-POS-LOGIN: ao remover o setInterval de 2000ms que reintentava autenticação, a contagem caiu de 4 para 3 mas a isenção continuou declarando 4. O gate acusou \"isenção superdimensionada\". Corrigido para 3 com as linhas reais (362 ping, 650 watchdog, 752 verificação de token) e registro da data da mudança."
+  },
+  {
+   "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
+   "title": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
+   "status": "pending",
+   "commit": null,
+   "evidence": null,
+   "resolution": null
+  }
+ ]
 }
