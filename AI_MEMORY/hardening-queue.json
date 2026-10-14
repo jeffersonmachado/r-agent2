@@ -3,7 +3,7 @@
  "repository": "jeffersonmachado/r-agent2",
  "branch": "mission/p0p1-hardening-20261010",
  "baseline": "2f1795454",
- "updatedAt": "2026-10-14T21:03:02.068Z",
+ "updatedAt": "2026-10-14T21:03:43.556Z",
  "consumers": [
   ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
  ],
@@ -377,6 +377,30 @@
    "evidence": "gh run list + gh run view (2026-10-14T21:01Z): os 5 workflows disparam e falham em 3-5s SEM iniciar job. Anotacao literal do run 38637023121: \"The job was not started because an Actions budget is preventing further use.\" Workflows afetados: Jest, E2E Playwright, Frontend Tests, RAG Service Tests e \"Release Governance — ENVELOPE + PAYLOAD\". Reconfirmado: ja estava assim em 2026-09-29 e 2026-10-07 (16 dias). Enforcement local verificado: .git/hooks/pre-push (723 bytes, NAO versionado) recusa refs/tags/*.",
    "resolution": null,
    "blocked_reason": "BLOQUEIO EXTERNO — depende de acao do usuario (pagamento/limite de gastos do GitHub Actions), nao de codigo. Enquanto o budget estiver bloqueado: (a) TODO push em main aparece como \"failure\" nos checks SEM executar nada, o que pode ser lido como regressao de codigo e NAO e (sempre ler a anotacao antes de culpar o codigo); (b) o workflow \"Release Governance — ENVELOPE + PAYLOAD\" NAO roda, entao o GitHub NAO bloqueia publicacao de tag — a protecao real e o hook local .git/hooks/pre-push, que e NAO VERSIONADO (nao sobrevive a um clone) e contornavel com --no-verify. Nao adicionei workflow do L1: workflow que nao roda nao e gate, e adicionar daria falsa sensacao de protecao. O enforcement efetivo hoje e LOCAL: 62 validadores no agregado + fluxo de selagem (verify:delivered-release, recibo PUBLISHED_VERIFIED). Acao para desbloquear: aumentar o limite de gastos do GitHub Actions (ou aguardar o ciclo do orcamento); em seguida, revalidar os 5 workflows."
+  },
+  {
+   "id": "MISSAO-B3-REUSO-PROVENIENCIA",
+   "title": "B3: reuso de lotes — verificado, NAO e defeito (rigor por desenho)",
+   "status": "verified",
+   "commit": "21b95c57e",
+   "evidence": "scripts/governance/run-release-suites.js:186 (avaliarReusoDeLote) + :207 (exitCodeDoRelatorioReusado) — leitura direta do codigo; analise registrada em /memories/repo/r-agent2-b4-independencia-revisao.md",
+   "resolution": "O mapa de exploracao apontou \"compara com .current-run.json local, nao com proveniencia remota\" como gap. Verificacao direta do codigo: avaliarReusoDeLote (funcao PURA, de proposito) exige SETE condicoes antes de reusar, cada uma com codigo proprio — META_MISSING, NO_GOVERNED_RUN, RUN_MISMATCH, SOURCE_COMMIT_MISMATCH, SOURCE_FINGERPRINT_MISMATCH, SUITE_PLAN_MISMATCH, RESULT_HASH_MISMATCH. O exit code do lote reusado e DERIVADO do relatorio (exitCodeDoRelatorioReusado le json.success), nunca presumido como 0 — foi o defeito historico, ja corrigido. O reuso ocorre DENTRO do mesmo run governado (e o que RUN_MISMATCH garante), entao comparar com o run local e o desenho correto; proveniencia REMOTA e gate separado (validate:remote-provenance, fail-closed antes do SEAL_GO) e exigir isso no reuso validaria no momento errado. NAO e defeito — e rigor."
+  },
+  {
+   "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
+   "title": "B4: revisao independente — verificado, NAO e defeito (rigor maximo)",
+   "status": "verified",
+   "commit": "21b95c57e",
+   "evidence": "api/services/engineeringMission/missionReviewService.js:157-165 — leitura direta; analise registrada em /memories/repo/r-agent2-b4-independencia-revisao.md",
+   "resolution": "O mapa apontou \"independencia = so provider diferente\" como gap. Verificacao direta: a independencia e CONFERIDA CONTRA OS DADOS, nao aceita por declaracao — o campo independent_of_coder (gravado pelo Router) e cruzado com coder_provider vs reviewer_provider, com codigo de acusacao INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER; confiar so no campo seria confiar no atestado do proprio executor (corrigido em 2026-10-08). O criterio \"provider precisa diferir\" escolhe o RIGOR MAXIMO: mesmo provider com modelos diferentes e BLOQUEADO de proposito, porque compartilham infraestrutura e linhagem de treino. Abrir o criterio (aceitar mesmo provider) REDUZIRIA a garantia. Nao ha caminho de falso PASS. NAO e defeito — e rigor. Melhoria legitima registrada (sem reduzir rigor): expor coderModel/reviewerModel lado a lado no relatorio para auditoria."
+  },
+  {
+   "id": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
+   "title": "B5: vinculo defeito -> commit -> prevencao executavel",
+   "status": "verified",
+   "commit": "4248e8c7b",
+   "evidence": "scripts/governance/validate-no-date-bombs.js (prevencao) + tests/integration/evoSyncIntegration.test.js (correcao) + AI_MEMORY/hardening-queue.json (rastreabilidade) — prova bidirecional do detector: corrigido => PASS/0; assercao original de volta => FAIL/1 na linha 315; restaurado => 0",
+   "resolution": "Cadeia completa demonstrada em um caso real, medida ponta a ponta: (1) o L1 encontrou o defeito na PRIMEIRA execucao real (tests/integration/evoSyncIntegration.test.js, time bomb de janela movel vencido em 03/10/2026); (2) a causa raiz foi confirmada no codigo (fitnessAttendanceService.js:349, janela = agora - 30d) e NAO no teste; (3) a correcao foi registrada com commit + evidence no item DEF-TIMEBOMB-EVOSYNC-JANELA30D; (4) a CLASSE foi varrida (1307 arquivos de teste, 1 instancia) e fechada com prevencao EXECUTAVEL bloqueante (validate:no-date-bombs como 61o validador do agregado). O detector distingue o que realmente vence (toBe(N>0) sobre campo movel) do que nao vence (toBe(0), que fica MAIS verdadeiro com o tempo) — sem essa distincao o gate teria falso positivo e seria desligado. Diferente do modelo antigo da fila (estado unico `done`), o item agora distingue o que foi apenas corrigido do que tem prevencao ativa (estados do B8)."
   }
  ]
 }
