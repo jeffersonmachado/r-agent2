@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-14T10:02:53.536Z",
+  "generatedAt": "2026-10-14T11:07:07.101Z",
   "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
   "platformMaturity": "enterprise-partial",
   "backlog": [
@@ -10,15 +10,15 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-omnichannel-functional_failure-support-inbox-nota-ui",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-queues",
       "severity": "high",
       "area": "qa-mesh",
-      "title": "Falha aberta no dominio omnichannel",
+      "title": "Falha aberta no dominio core",
       "evidence": {
         "scenarios": [
-          "support-inbox-nota-ui"
+          "business-core-biz-queues"
         ],
-        "sampleError": "2 erro(s) críticos detectados na página"
+        "sampleError": "Fila não foi removida: a fila continua na listagem após DELETE"
       },
       "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     }

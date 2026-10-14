@@ -1,30 +1,28 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-14T09-33-19-995Z",
+  "executionId": "mesh-2026-10-14T10-36-43-764Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "NO_GO",
   "reasons": [
-    "BLOCKING_SCENARIO_FAILED",
-    "CRITICAL_DOMAIN_FAILED:omnichannel",
-    "BASELINE_PASS_RATE_REGRESSION",
-    "BASELINE_BLOCKING_REGRESSION"
+    "CRITICAL_DOMAIN_FAILED:core",
+    "BASELINE_PASS_RATE_REGRESSION"
   ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-14T09-33-19-995Z",
-    "startedAt": "2026-10-14T09:33:19.996Z",
+    "executionId": "mesh-2026-10-14T10-36-43-764Z",
+    "startedAt": "2026-10-14T10:36:43.765Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-14T10:02:52.252Z",
+    "promotedAt": "2026-10-14T11:07:06.349Z",
     "registryTotal": 144,
     "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-14T09-33-19-995Z",
+    "executionId": "mesh-2026-10-14T10-36-43-764Z",
     "tenantId": "system",
-    "timestamp": "2026-10-14T09:33:19.996Z",
+    "timestamp": "2026-10-14T10:36:43.765Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -82,9 +80,9 @@
         "total": 2
       },
       "core": {
-        "passed": 90,
+        "passed": 89,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -132,9 +130,9 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 3,
+        "passed": 4,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -174,20 +172,18 @@
     },
     "goNoGo": "NO_GO",
     "reasons": [
-      "BLOCKING_SCENARIO_FAILED",
-      "CRITICAL_DOMAIN_FAILED:omnichannel",
-      "BASELINE_PASS_RATE_REGRESSION",
-      "BASELINE_BLOCKING_REGRESSION"
+      "CRITICAL_DOMAIN_FAILED:core",
+      "BASELINE_PASS_RATE_REGRESSION"
     ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "omnichannel": {
+      "core": {
         "total": 1,
-        "blocking": 1,
+        "blocking": 0,
         "byType": {
           "functional_failure": 1
         },
-        "successRate": 0.75
+        "successRate": 0.9888888888888889
       },
       "beauty": {
         "total": 0,
@@ -202,12 +198,6 @@
         "successRate": 1
       },
       "clinic": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -237,6 +227,12 @@
         "byType": {},
         "successRate": 1
       },
+      "omnichannel": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "pbx": {
         "total": 0,
         "blocking": 0,
@@ -261,20 +257,18 @@
     },
     "topErrors": [
       {
-        "message": "2 erro(s) críticos detectados na página",
+        "message": "Fila não foi removida: a fila continua na listagem após DELETE",
         "count": 1
       }
     ],
-    "blockingDomains": [
-      "omnichannel"
-    ],
+    "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-14T09-33-19-995Z",
-      "startedAt": "2026-10-14T09:33:19.996Z",
+      "executionId": "mesh-2026-10-14T10-36-43-764Z",
+      "startedAt": "2026-10-14T10:36:43.765Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-14T10:02:52.252Z",
+      "promotedAt": "2026-10-14T11:07:06.349Z",
       "registryTotal": 144,
       "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
@@ -282,9 +276,9 @@
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261014090455439-6b8d30ae",
-  "sourceFingerprint": "7440bba3f0e7f71a70798e9bd4c8c4a43db361b38dcd2dcfdda15d6662cb5e3a",
-  "sourceCommit": "48e5c167c9bf154c2c05a8e89ba2c88e805749c4",
-  "sourceTree": "6ef340793ebe5f44a67cf754040f859fc232c801",
-  "generatedAt": "2026-10-14T10:02:52.254Z"
+  "runId": "rap-governed-20261014102723523-79a2ff21",
+  "sourceFingerprint": "25186bc367c8bcd869249bfd486f99dda5e3551ab4d605b9df9e2dd49b6ec961",
+  "sourceCommit": "b2fd2d9893bc117025b4a6d8ede72580148138eb",
+  "sourceTree": "214aae6a4cfb3b7909c6cebfaa861bb2d6d1de98",
+  "generatedAt": "2026-10-14T11:07:06.350Z"
 }

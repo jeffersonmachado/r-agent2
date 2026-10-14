@@ -294,6 +294,22 @@
       "commit": "48e5c167c",
       "evidence": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx (5 testes) + browser real + servidor (Broadcast 0 -> 1 cliente)",
       "resolution": "DEFEITO REAL de producao, encontrado exercitando a jornada no browser (nao havia teste cobrindo). Evidencia que separou a causa: servidor 3300 conexoes/2115 autenticadas/ZERO invalid_token; browser instrumentado mostrou >60s com ping saindo e NENHUM auth; WebSocket puro fora do React autenticou em 6ms e ficou OPEN => o servidor esta correto, o defeito e do cliente. Causa: socket aberto uma vez no mount ANTES do login; a autenticacao dependia de um efeito que so reagia a connected/authenticated/authFailed (o login nao muda nenhum) e de um setInterval de 2s cujo authenticateWebSocket retornava false EM SILENCIO quando o socket nao estava utilizavel, sem reconectar. Corrigido: consumo de AuthContext + efeito de SESSAO (login autentica), reconexao imediata quando o socket nao serve, warn no lugar do silencio, reset do isIntentionalCloseRef (podia prender em true e desligar watchdog e recovery), fechamento de socket em CONNECTING no unmount (orfaos) e REMOCAO do setInterval de 2s (proibido). Prova: browser \"Falha de auth\" -> \"Conectado\" sem F5 com auth+subscribe enviados; servidor Broadcast 0 -> 1 cliente; frontend 137 arquivos/1040 testes PASS."
+    },
+    {
+      "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
+      "title": "removeChild (React) por enhancement de header que movia/substituia nos do React",
+      "status": "done",
+      "commit": "5ba668f2d",
+      "evidence": "frontend/src/__tests__/supportHeaderEnhancement.test.js (6 testes) + mesh 144 cenarios",
+      "resolution": "Reprovou o QA Mesh no cenario support-inbox-nota-ui (omnichannel, BLOCKING): NotFoundError removeChild em commitDeletionEffectsOnFiber. Regressao confirmada por metodo barato: removeChild aparece 20x no mesh de 09:33 e ZERO em 10 meshes anteriores (desde 03/10), todos 144/144. Causa raiz: main.jsx enhanceSupportHeaders movia os filhos do <h1> (que pertencem ao React) para um span e depois chamava title.replaceChildren -> arvore de fibers inconsistente -> o commit seguinte do React removia no inexistente. Defeito LATENTE exposto pelo aumento de re-renders (WebSocketProvider no topo). Corrigido: funcao extraida para src/utils/supportHeaderEnhancement.js (ESM, testavel sem bootstrap), o botao entra como IRMAO do <h1> (insertBefore) e o layout foi para CSS (.support-header-with-back). REGRA: em no do React, ADICIONAR irmao e seguro; mover/substituir/remover nos conhecidos nao e."
+    },
+    {
+      "id": "DEF-QUEUE-DELETE-DB-ONLY",
+      "title": "DELETE /queues nao removia fila existente so no banco (reaparecia na listagem)",
+      "status": "done",
+      "commit": "9f0f6fda8",
+      "evidence": "tests/unit/queueModuleRoutes.test.js (2 casos novos) + limpeza de 244 filas residuais",
+      "resolution": "Reprovou o QA Mesh no cenario business-core-biz-queues (core, BLOCKING): \"Fila nao foi removida\". Causa: a desativacao da definicao persistida estava condicionada ao sucesso do servico LEGADO, que opera num Map EM MEMORIA (volatil). Fila existente so no banco nunca era desativada -> continuava active=true e reaparecia, porque listQueues MESCLA memoria + banco. Prova no banco: 253 filas qa_flow_queue_* acumuladas desde 10/10, 5 ainda ATIVAS. Corrigido: nova deactivateQueue (UPDATE direto e idempotente, sem cache/memoria, sem criar registro inexistente) usada independentemente do resultado legado; reporta sucesso quando a definicao existia e foi desativada, e mantem falha quando nada foi removido. Higiene: 244 filas residuais de teste removidas (9 filas nao-teste preservadas)."
     }
   ]
 }
