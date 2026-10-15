@@ -228,6 +228,14 @@ function runStep(step) {
   });
 
   const stderrTail = (result.stderr || '').split('\n').filter(Boolean).slice(-6).join(' | ');
+  // MOTIVO AUDITÁVEL NO RELATÓRIO. Passos como o coletor de evidência de runtime
+  // (V1_RUNTIME_EVIDENCE) escrevem a falha em STDOUT. Capturando só stderr, o
+  // passo reprovava com `stderrTail: ""` e um ciclo de ~40 min morria SEM causa
+  // aparente — medido em 2026-10-14: `exit=1` no passo, relatório sem uma linha
+  // de diagnóstico, obrigando a reproduzir o passo à mão para descobrir que era
+  // transitório. O `stdoutTail` entra APENAS no caminho de FAIL para não inchar o
+  // relatório dos passos que passam (o QA Mesh, por exemplo, imprime muito).
+  const stdoutTail = (result.stdout || '').split('\n').filter(Boolean).slice(-6).join(' | ');
   if (result.status === 0) return { status: SEAL_STATUS.PASS, detail: 'exit=0', stderrTail };
 
   // Ausência de credencial externa é ESTADO declarado, nunca FAIL por motivo errado nem PASS.
@@ -235,7 +243,7 @@ function runStep(step) {
   if (/CREDENTIAL_UNAVAILABLE|no credential|sem credencial|401|403/.test(combined) && step.credentialDependent) {
     return { status: SEAL_STATUS.NOT_APPLICABLE, detail: 'credencial externa ausente', stderrTail };
   }
-  return { status: SEAL_STATUS.FAIL, detail: `exit=${result.status}${result.signal ? ` signal=${result.signal}` : ''}`, stderrTail };
+  return { status: SEAL_STATUS.FAIL, detail: `exit=${result.status}${result.signal ? ` signal=${result.signal}` : ''}`, stderrTail, stdoutTail };
 }
 
 function main() {
@@ -387,4 +395,4 @@ function deriveSealStatus(steps = []) {
 
 if (require.main === module) main();
 
-module.exports = { STEPS, PHASES, validateOrder, SEAL_STATUS, deriveSealStatus };
+module.exports = { STEPS, PHASES, validateOrder, SEAL_STATUS, deriveSealStatus, runStep };
