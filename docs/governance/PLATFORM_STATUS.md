@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-10-14T23:47:10.282Z
+- Generated at: 2026-10-15T15:00:20.925Z
 - Canonical mesh execution: mesh-2026-10-14T23-07-04-941Z
 - Canonical mesh decision: GO
-- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
+- Readiness decision: AUTONOMOUS_READY_GO
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
