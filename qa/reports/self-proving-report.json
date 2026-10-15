@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-15T14:57:09.824Z",
+  "generatedAt": "2026-10-15T15:15:12.638Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20261015-114237.zip",
+  "artifact": "r-agent2-20261015-120046.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/r-agent2-20261015-114237.zip",
+  "packageInsideDistPath": "dist/r-agent2-20261015-120046.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/r-agent2-20261015-114237.manifest.json",
+  "manifestInsideDistPath": "dist/r-agent2-20261015-120046.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "bef16f8a5bf9ca6b1c7b4151b0603363",
+    "chainRoot": "0d8ed8a6a017511e42c28b74e78f3eca",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    "finalDecision": "AUTONOMOUS_READY_GO"
   },
   "replayValidation": {
     "pass": true,
@@ -82,8 +82,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "438a501af776f677cdcee561d3cdeb5744fd72ad9ca85dbac424d25e38eef25b",
-    "zipName": "r-agent2-20261015-114237.zip",
+    "sidecarHash": "6f71e044786ef38e0dbf4aefa41e250efd1693681aea57fa895a183059a243c3",
+    "zipName": "r-agent2-20261015-120046.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -126,7 +126,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20261015-114237.zip",
+    "zipName": "r-agent2-20261015-120046.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -137,7 +137,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "bef16f8a5bf9ca6b1c7b4151b0603363",
+    "chainRoot": "0d8ed8a6a017511e42c28b74e78f3eca",
     "signatures": [
       {
         "name": "governance.sig",
@@ -186,13 +186,13 @@
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    "finalDecision": "AUTONOMOUS_READY_GO"
   },
   "attestationIntegrity": {
     "pass": true,
     "attestationValid": true,
     "governanceLevel": "LEVEL_4_IMMUTABLE",
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "finalDecision": "AUTONOMOUS_READY_GO",
     "autonomousReady": true,
     "selfContained": true
   },
@@ -215,12 +215,12 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "438a501af776f677cdcee561d3cdeb5744fd72ad9ca85dbac424d25e38eef25b",
-    "zipName": "r-agent2-20261015-114237.zip",
+    "sidecarHash": "6f71e044786ef38e0dbf4aefa41e250efd1693681aea57fa895a183059a243c3",
+    "zipName": "r-agent2-20261015-120046.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20261015-114237.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20261015-120046.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20261014225313467-b865323b",
@@ -233,10 +233,10 @@
   "testPlanHash": null,
   "testResultHash": null,
   "evidenceManifestHash": null,
-  "startedAt": "2026-10-15T14:56:57.680Z",
-  "finishedAt": "2026-10-15T14:57:09.824Z",
+  "startedAt": "2026-10-15T15:15:00.049Z",
+  "finishedAt": "2026-10-15T15:15:12.638Z",
   "producer": "governance/rebind-to-current-package.js",
-  "gitCommit": "b1a48c4be969e22d8b990a063e56c8e531dd79dc",
-  "gitTree": "17379c8dc31b5ec764dafbad9352770898b7b915",
+  "gitCommit": "7442713dbd545fc116e55df70772ce5de3800845",
+  "gitTree": "c8bc81f096b231cdeeffbcedc8767b3c11f12643",
   "blockingFindings": []
 }

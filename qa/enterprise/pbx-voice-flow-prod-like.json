@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-15T14:43:17.445Z",
+  "generatedAt": "2026-10-15T15:01:25.678Z",
   "ok": true,
   "warnings": [],
   "evidencePaths": [
@@ -11,13 +11,13 @@
   "sources": {
     "l03": {
       "smoke": "L-03",
-      "generatedAt": "2026-10-15T14:43:07.878Z",
+      "generatedAt": "2026-10-15T15:01:17.232Z",
       "ok": true,
       "authMode": "rpa_scoped",
       "tenantId": "debug-e2e-engineering-router",
-      "flowId": "flow-voice-tts-asr-smoke-1792075381186",
-      "callId": "call-voice-tts-asr-1792075381186",
-      "extension": "1186",
+      "flowId": "flow-voice-tts-asr-smoke-1792076469843",
+      "callId": "call-voice-tts-asr-1792076469843",
+      "extension": "1143",
       "selftestExtension": "9191",
       "dialplanSignature": "f1c5bf4cddabe91f86fb5f91",
       "runtime": {
@@ -31,16 +31,16 @@
       },
       "realCall": {
         "attempted": true,
-        "click2callId": "cc_c2c-1792075381311-4bb1e6f85c52",
+        "click2callId": "cc_c2c-1792076470094-3ec83e8efb28",
         "click2callStatus": "originated",
         "synthetic": false,
         "cdrFound": true,
         "cdr": {
-          "uniqueid": "1792075381.16",
+          "uniqueid": "1792076470.20",
           "disposition": "ANSWERED",
           "src": "9191",
           "dst": "9191",
-          "calldate": "2026-10-15T14:43:02.474Z"
+          "calldate": "2026-10-15T15:01:11.308Z"
         }
       },
       "ttsPrompts": [
@@ -73,12 +73,12 @@
         {
           "nodeId": "prompt-1",
           "phase": "prompt",
-          "recordingUrl": "recordings://call-voice-tts-asr-1792075381186/prompt.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1792076469843/prompt.wav"
         },
         {
           "nodeId": "asr-1",
           "phase": "asr",
-          "recordingUrl": "recordings://call-voice-tts-asr-1792075381186/asr.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1792076469843/asr.wav"
         }
       ],
       "selftestStatus": "WARN",
@@ -86,13 +86,13 @@
     },
     "l04": {
       "smoke": "L-04",
-      "generatedAt": "2026-10-15T14:43:12.940Z",
+      "generatedAt": "2026-10-15T15:01:22.974Z",
       "ok": true,
       "authMode": "rpa_scoped",
       "tenantId": "debug-e2e-engineering-router",
       "cdr": {
-        "id": "cdr-l04-1792075390931",
-        "uniqueid": "l04-1792075390931",
+        "id": "cdr-l04-1792076479919",
+        "uniqueid": "l04-1792076479919",
         "source": "synthetic_insert"
       },
       "trigger": {
@@ -105,24 +105,24 @@
           "scanned": 1,
           "emitted": 3,
           "cursor": {
-            "calldate": "2026-10-15T14:44:12.135Z",
-            "cdrId": "cdr-l04-1792075390931"
+            "calldate": "2026-10-15T15:02:20.407Z",
+            "cdrId": "cdr-l04-1792076479919"
           },
           "inboxBridged": 0,
           "recordingsUpserted": 0
         },
         "eventIds": [
-          "evt-1792075392608-cbe4d3383edf",
-          "evt-1792075392630-a9bf60fcbe11",
-          "evt-1792075392635-edf2a8cc77c8"
+          "evt-1792076480890-003d8a10ff21",
+          "evt-1792076480929-6c1a55d7f89d",
+          "evt-1792076480935-0ce4bccb0a59"
         ],
         "queue": null
       },
       "flow": {
-        "flowId": "flow-pbx-call-events-runtime-smoke-1792075390931",
-        "executionId": "fx-1792075392831-1f0b695ba1d7",
+        "flowId": "flow-pbx-call-events-runtime-smoke-1792076479919",
+        "executionId": "fx-1792076481177-8054a9452b39",
         "status": "done",
-        "latencyMs": 8,
+        "latencyMs": 5,
         "nodesCount": 3
       },
       "dispatch": {

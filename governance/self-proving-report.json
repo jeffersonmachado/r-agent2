@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-15T14:59:46.978Z",
+  "generatedAt": "2026-10-15T15:18:33.229Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20261015-114237.payload.zip",
+  "artifact": "r-agent2-20261015-120046.payload.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/release/r-agent2-20261015-114237.payload.zip",
+  "packageInsideDistPath": "dist/release/r-agent2-20261015-120046.payload.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/release/r-agent2-20261015-114237.manifest.json",
+  "manifestInsideDistPath": "dist/release/r-agent2-20261015-120046.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "3d463e36b5b961bf35ba28bffa7c6b55",
+    "chainRoot": "59dbfb1038f5ed4f63efc4dac4c7f7f1",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    "finalDecision": "AUTONOMOUS_READY_GO"
   },
   "replayValidation": {
     "pass": true,
@@ -82,8 +82,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "038cd8bc1817bdd9699b6c9a08d8be584132ffe6388e30da850303c28c26144f",
-    "zipName": "r-agent2-20261015-114237.payload.zip",
+    "sidecarHash": "8656b8cc1b3dec3727bb233d7ea2ed6febd1a1f320532e1eaa322ce29c1f8ba4",
+    "zipName": "r-agent2-20261015-120046.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -126,7 +126,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20261015-114237.payload.zip",
+    "zipName": "r-agent2-20261015-120046.payload.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -137,7 +137,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "3d463e36b5b961bf35ba28bffa7c6b55",
+    "chainRoot": "59dbfb1038f5ed4f63efc4dac4c7f7f1",
     "signatures": [
       {
         "name": "governance.sig",
@@ -186,12 +186,12 @@
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    "finalDecision": "AUTONOMOUS_READY_GO"
   },
   "attestationIntegrity": {
     "pass": true,
     "attestationValid": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "finalDecision": "AUTONOMOUS_READY_GO",
     "selfContained": false
   },
   "tamperDetection": {
@@ -213,12 +213,12 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "038cd8bc1817bdd9699b6c9a08d8be584132ffe6388e30da850303c28c26144f",
-    "zipName": "r-agent2-20261015-114237.payload.zip",
+    "sidecarHash": "8656b8cc1b3dec3727bb233d7ea2ed6febd1a1f320532e1eaa322ce29c1f8ba4",
+    "zipName": "r-agent2-20261015-120046.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20261015-114237.payload.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20261015-120046.payload.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20261014225313467-b865323b",
@@ -231,10 +231,10 @@
   "testPlanHash": null,
   "testResultHash": null,
   "evidenceManifestHash": null,
-  "startedAt": "2026-10-15T14:59:45.467Z",
-  "finishedAt": "2026-10-15T14:59:46.978Z",
+  "startedAt": "2026-10-15T15:18:31.427Z",
+  "finishedAt": "2026-10-15T15:18:33.230Z",
   "producer": "governance/self-proving-report.js",
-  "gitCommit": "b1a48c4be969e22d8b990a063e56c8e531dd79dc",
-  "gitTree": "17379c8dc31b5ec764dafbad9352770898b7b915",
+  "gitCommit": "7442713dbd545fc116e55df70772ce5de3800845",
+  "gitTree": "c8bc81f096b231cdeeffbcedc8767b3c11f12643",
   "blockingFindings": []
 }
