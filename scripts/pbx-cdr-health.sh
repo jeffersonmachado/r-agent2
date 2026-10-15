@@ -18,6 +18,13 @@
 #               de CDR, então nenhum CDR é gravado mesmo com call em curso).
 #   O `Use Count` do módulo é 0 mesmo no estado SAUDÁVEL — não serve de sinal.
 #
+# SEGUNDO SINAL (medido em 2026-10-14): o backend REGISTRADO **não basta**.
+#   "Last fail connection attempt" presente em `odbc show <DSN>` ⇒ DEGRADADO,
+#   mesmo com backend registrado e 1 conexão ativa (o CDR para em silêncio).
+#   Ver `falha_conexao_odbc()` para a evidência e a política fail-closed.
+#   Os dois sinais são independentes: um cobre "backend não registrado", o outro
+#   "backend registrado sobre uma conexão que falhou".
+#
 # Uso:
 #   bash scripts/pbx-cdr-health.sh check    # 0 = saudável | 1 = degradado (imprime motivo)
 #   bash scripts/pbx-cdr-health.sh ensure   # garante ponte + recupera o backend
@@ -63,6 +70,26 @@ conexoes_odbc() {
     | sed -n 's/.*Number of active connections: \([0-9]\+\).*/\1/p' | head -n1
 }
 
+# Última tentativa FALHA de conexão do DSN (string vazia = nenhuma registrada).
+#
+# SEGUNDO SINAL, medido em 2026-10-14 (recorrência do defeito de 2026-10-13):
+# o backend pode estar REGISTRADO e com 1 conexão ativa e MESMO ASSIM não gravar
+# CDR. O container reiniciou às 21:05:26, `odbc show` registrou a falha no MESMO
+# instante do boot e o passo 1/12 do converge reprovou com
+# `pbxProdLike.cdr=false` / `hangupCauses=false` / `omnichannel.pbx=false` —
+# enquanto este script dizia `status=OK` (backend registrado + 1 conexão), ou
+# seja: o sinal do backend sozinho NÃO distingue o estado degradado. O
+# `module reload` de res_odbc/cdr_adaptive_odbc LIMPA a linha e o CDR volta na
+# hora (smoke enterprise ok=true, 11/11 sinais).
+#
+# Política fail-closed: uma tentativa falha registrada torna o caminho NÃO
+# confiável até o reload. O custo de recarregar é ~1 s e é a recuperação
+# documentada; o de ignorar é perder um ciclo de selagem de ~40 min.
+falha_conexao_odbc() {
+  docker exec "$CONTAINER" asterisk -rx "odbc show $DSN" 2>/dev/null \
+    | sed -n 's/.*Last fail connection attempt: \(.*\)$/\1/p' | head -n1 | tr -d '\r'
+}
+
 recuperar() {
   achado "aplicando reload de res_odbc.so + cdr_adaptive_odbc.so (recuperação do backend)"
   docker exec "$CONTAINER" asterisk -rx "module reload res_odbc.so" 2>&1 | sed 's/^/[pbx-cdr]   /'
@@ -88,13 +115,19 @@ diagnosticar() {
     achado "motivo=cdr_backend_nao_registrado (Adaptive ODBC ausente em 'cdr show status'; conexões ODBC=$cx)"
     return 1
   fi
+  local ultima_falha
+  ultima_falha="$(falha_conexao_odbc)"
+  if [ -n "$ultima_falha" ]; then
+    achado "motivo=odbc_ultima_tentativa_falhou ($ultima_falha) — backend registrado, mas a conexão ODBC não é confiável: o CDR para de gravar em silêncio"
+    return 1
+  fi
   return 0
 }
 
 case "$ACAO" in
   check)
     if diagnosticar; then
-      achado "status=OK backend=AdaptiveODBC porta=$PORTA"
+      achado "status=OK backend=AdaptiveODBC porta=$PORTA odbc=sem_falha_registrada"
       exit 0
     fi
     achado "status=DEGRADED — recupere com: bash scripts/pbx-cdr-health.sh ensure"
@@ -110,7 +143,7 @@ case "$ACAO" in
       fi
     fi
     if diagnosticar; then
-      achado "status=OK backend=AdaptiveODBC porta=$PORTA (nada a fazer)"
+      achado "status=OK backend=AdaptiveODBC porta=$PORTA odbc=sem_falha_registrada (nada a fazer)"
       exit 0
     fi
     recuperar

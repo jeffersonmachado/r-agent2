@@ -29,7 +29,8 @@ const SCRIPT = path.join(ROOT, 'scripts', 'pbx-cdr-health.sh');
 
 /**
  * Monta um ambiente com dublês.
- * @param {{ponte?: boolean, backendRegistrado?: boolean, registraAposReload?: boolean, dockerOk?: boolean}} cenario
+ * @param {{ponte?: boolean, backendRegistrado?: boolean, registraAposReload?: boolean, dockerOk?: boolean,
+ *          conexoes?: number, lastFail?: string|null, limpaFalhaAposReload?: boolean}} cenario
  */
 function montarCenario(cenario = {}) {
   const {
@@ -37,11 +38,16 @@ function montarCenario(cenario = {}) {
     backendRegistrado = true,
     registraAposReload = true,
     dockerOk = true,
+    conexoes = 0,
+    lastFail = null,
+    limpaFalhaAposReload = true,
   } = cenario;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pbx-cdr-'));
   const estado = path.join(dir, 'estado');
+  const falha = path.join(dir, 'falha');
   const log = path.join(dir, 'docker.log');
   fs.writeFileSync(estado, backendRegistrado ? 'registrado' : 'ausente');
+  fs.writeFileSync(falha, lastFail || '');
   fs.writeFileSync(log, '');
 
   fs.writeFileSync(path.join(dir, 'ss'), `#!/usr/bin/env bash\n${ponte ? 'printf "LISTEN 0 5 0.0.0.0:15432 0.0.0.0:*\\n"' : 'exit 0'}\n`);
@@ -59,13 +65,19 @@ if [ "$1" = "exec" ]; then
     *"core show uptime"*) printf "System uptime: 1 hour\\n"; exit 0 ;;
     *"module reload"*)
       ${registraAposReload ? `printf 'registrado\\n' > ${JSON.stringify(estado)}` : ':'}
+      ${limpaFalhaAposReload ? `: > ${JSON.stringify(falha)}` : ':'}
       printf "Module reloaded successfully.\\n"; exit 0 ;;
     *"cdr show status"*)
       printf "  Logging: Enabled\\n\\n* Registered Backends\\n  -------------------\\n"
       if [ "$(cat ${JSON.stringify(estado)})" = "registrado" ]; then printf "    Adaptive ODBC\\n"; fi
       printf "    cdr-custom\\n"
       exit 0 ;;
-    *"odbc show"*) printf "    Number of active connections: 0 (out of 1)\\n"; exit 0 ;;
+    *"odbc show"*)
+      printf "    Number of active connections: ${conexoes} (out of 1)\\n"
+      if [ -s ${JSON.stringify(falha)} ]; then
+        printf "    Last fail connection attempt: %s\\n" "$(cat ${JSON.stringify(falha)})"
+      fi
+      exit 0 ;;
   esac
   exit 0
 fi
@@ -182,6 +194,56 @@ describe('pbx-cdr-health — sinal é o BACKEND registrado, não a porta', () =>
       const check = rodar(cenario, 'check');
       expect(check.status).toBe(1);
       expect(check.saida).toContain('motivo=container_ausente');
+    } finally {
+      limpar(cenario);
+    }
+  });
+
+  // ── SEGUNDO SINAL (medido em 2026-10-14) ──────────────────────────────────
+  // O backend registrado NÃO basta: com 1 conexão ativa e "Last fail connection
+  // attempt" no boot, o CDR para de gravar em silêncio e o passo 1/12 do converge
+  // reprova com `pbxProdLike.cdr=false` — enquanto o script dizia `status=OK`.
+  it('backend REGISTRADO + 1 conexão + Last fail ⇒ DEGRADED (falso negativo medido em 2026-10-14)', () => {
+    const cenario = montarCenario({
+      backendRegistrado: true,
+      conexoes: 1,
+      lastFail: '2026-10-14 21:05:26',
+    });
+    try {
+      const check = rodar(cenario, 'check');
+      expect(check.status).toBe(1);
+      expect(check.saida).toContain('status=DEGRADED');
+      expect(check.saida).toContain('motivo=odbc_ultima_tentativa_falhou');
+      // O timestamp é parte do diagnóstico auditável.
+      expect(check.saida).toContain('2026-10-14 21:05:26');
+    } finally {
+      limpar(cenario);
+    }
+  });
+
+  it('ensure RECUPERA o estado de conexão falha (reload limpa o Last fail e sai RECOVERED)', () => {
+    const cenario = montarCenario({
+      backendRegistrado: true,
+      conexoes: 1,
+      lastFail: '2026-10-14 21:05:26',
+    });
+    try {
+      const ensure = rodar(cenario, 'ensure');
+      expect(ensure.status).toBe(0);
+      expect(ensure.saida).toContain('status=RECOVERED');
+      expect(ensure.log).toContain('module reload res_odbc.so');
+      expect(ensure.log).toContain('module reload cdr_adaptive_odbc.so');
+    } finally {
+      limpar(cenario);
+    }
+  });
+
+  it('sem Last fail: check OK (o sinal novo não gera falso positivo no caminho saudável)', () => {
+    const cenario = montarCenario({ backendRegistrado: true, conexoes: 1, lastFail: null });
+    try {
+      const check = rodar(cenario, 'check');
+      expect(check.status).toBe(0);
+      expect(check.saida).toContain('odbc=sem_falha_registrada');
     } finally {
       limpar(cenario);
     }
