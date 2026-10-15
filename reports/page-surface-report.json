@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-14T23:46:17.294Z",
-  "commit": "bbdc392063bdc08e71d91943294c0c4df742b6bf",
+  "generatedAt": "2026-10-15T17:53:50.397Z",
+  "commit": "268e7f2d908f24f6f676fac9de94d2513c8e2e7d",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
@@ -734,7 +734,7 @@
         {
           "name": "pageLoads",
           "passed": true,
-          "detail": "falha de carregamento para papel PRODUCTION: console.error=100 pageerror=0 | NOT_APPLICABLE — isenção justificada: Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado. (aprovada por jeffersonmachado em 2026-07-28)",
+          "detail": "página carregou são para papel PRODUCTION | NOT_APPLICABLE — isenção justificada: Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado. (aprovada por jeffersonmachado em 2026-07-28)",
           "notApplicable": true
         }
       ],
@@ -759,13 +759,8 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "consoleErrors": 100,
-          "pageErrors": 0,
-          "errorSamples": [
-            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
-            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
-            "unhandled error in event listener Error: Tried to access di from the businessObject. The di is available through the diagram element only. For more information, see https://github.com/bpmn-io/bpmn-js/"
-          ]
+          "consoleErrors": 0,
+          "pageErrors": 0
         },
         "p3": "skipped"
       }
@@ -5729,8 +5724,8 @@
       }
     }
   ],
-  "runId": "rap-governed-20261014225313467-b865323b",
-  "sourceFingerprint": "1d3a2f4b04d35989503ea5ad3a4e687564b6fafb83ab3572238b19886e0b2920",
+  "runId": "rap-governed-20261015165452704-c3f2f925",
+  "sourceFingerprint": "e60b829c9fc6ea9ce7c54374e45ff7270a5901def19e0090fd930acd0951a33d",
   "artifactType": "page-surface-report",
   "artifactVersion": "1.0.0"
 }

@@ -6,7 +6,7 @@
   },
   "accepted": true,
   "bestKnown": {
-    "executionId": "mesh-2026-10-14T23-07-04-941Z",
+    "executionId": "mesh-2026-10-15T17-04-56-031Z",
     "passRate": 1,
     "blockingFailures": 0,
     "infraErrors": 0,
@@ -14,9 +14,16 @@
     "passed": 144,
     "failed": 0,
     "flaky": 0,
-    "updatedAt": "2026-10-14T23:35:55.480Z"
+    "updatedAt": "2026-10-15T17:37:41.450Z"
   },
   "history": [
+    {
+      "executionId": "mesh-2026-10-15T17-04-56-031Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-10-15T17:37:41.450Z"
+    },
     {
       "executionId": "mesh-2026-10-14T23-07-04-941Z",
       "passRate": 1,
@@ -149,13 +156,6 @@
       "blockingFailures": 0,
       "infraErrors": 0,
       "at": "2026-10-07T03:32:10.991Z"
-    },
-    {
-      "executionId": "mesh-2026-10-06T22-15-53-224Z",
-      "passRate": 1,
-      "blockingFailures": 0,
-      "infraErrors": 0,
-      "at": "2026-10-06T22:50:45.709Z"
     }
   ]
 }
