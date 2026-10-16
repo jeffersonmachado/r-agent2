@@ -230,6 +230,22 @@ git log -1 --format=%H -- AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md   # commit do e
 disco, significa que houve mudança (ou adulteração) e a auditoria deve ser refeita.
 Regenerar: `node tools/audit/generate-audit-entrypoint.js [--aggregate-log <log> --aggregate-head <sha>]`.
 
+## Checkpoints de desenvolvimento (auditoria incremental por commit)
+
+Desenvolvimento com auditoria externa incremental acontece em **`dev/engineering-hardening`**
+(nunca commit direto na `main`, nunca tag, nunca force-push). Cada correção independente vira um
+checkpoint:
+
+```bash
+node tools/audit/checkpoint.js --title "area: o que mudou" --problem "problema real" \
+  --tests "npx jest <teste relevante>" [--tests "<outro>"]
+```
+
+O gravador deriva branch, SHA de base, arquivos e testes (exit code, duração, sha256 da saída) do
+estado real, e **se recusa a escrever se qualquer teste falhar** — não existe checkpoint verde
+nascido de teste vermelho. Registro versionado: `AI_MEMORY/evidence/checkpoints.md`.
+Protocolo completo: `AI_MEMORY/operational-checklists/checkpoint-protocol.md`.
+
 Atenção: os ponteiros de fechamento na raiz (`FINAL_RAP_RELEASE_CLOSURE.json`,
 `FINAL_RELEASE_CLOSURE.md`, `ENGINEERING_ROUTER_V1_*.md/json`) são **históricos/stale** — nenhum
 gate os mantém e eles congelaram em 2026-09-22/24. Não os use como estado corrente.

@@ -96,3 +96,63 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT a39ae4670bbf — governanca: protocolo de checkpoint institucionalizado (runbook + ponteiro no AGENTS.md)
+
+- **Quando**: 2026-10-16T19:23:42.203Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `3bbf51ac7d7d7b547a4a2ceee40699fac5a94a61`
+- **id** (sha256 do conteúdo do checkpoint): `a39ae4670bbf0ce743c041f60c74816d5902a34a5871df20e1ad93db3d019e40`
+
+**Problema corrigido:** a disciplina de checkpoint incremental existia apenas como ferramenta: sem runbook e sem ponteiro nos arquivos que os agentes leem, ela morreria com a sessao e o proximo agente voltaria a commitar sem teste, sem SHA de base e sem registro auditavel
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AGENTS.md`
+- `AI_MEMORY/operational-checklists/checkpoint-protocol.md`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npm run validate:agent-adherence` | 0 | 0.3 s | 1348b707e58b |
+| `npm run validate:ai-memory` | 0 | 0.4 s | 1b58e3c48c8d |
+| `npx jest tests/unit/audit/` | 0 | 8.0 s | 1e5b381d85f5 |
+
+<details><summary>últimas linhas — <code>npm run validate:agent-adherence</code></summary>
+
+```
+> chatbot-engine@1.0.0 validate:agent-adherence
+> node scripts/governance/validate-agent-adherence.js
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npm run validate:ai-memory</code></summary>
+
+```
+> chatbot-engine@1.0.0 validate:ai-memory
+> node scripts/governance/validate-ai-memory.js
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/audit/</code></summary>
+
+```
+  AUDIT_ENTRYPOINT.md — invariantes do ponto de entrada de auditoria
+    ✓ o artefato existe, declara auditEpoch e traz o payload JSON embutido parseável (108 ms)
+    ✓ todo proof registrado tem veredito e sha256 — nenhuma linha oca (128 ms)
+    ✓ o auditEpoch é RECALCULÁVEL de forma independente a partir do payload (108 ms)
+    ✓ audit:json-persistence --check segue PASS (trava da regressão do agg8) (1399 ms)
+Test Suites: 2 passed, 2 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        4.798 s
+Ran all test suites matching /tests\/unit\/audit\//i.
+[jest-global-teardown] Engineering Runner (pid 91076) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---
