@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-16T06:22:22.155Z",
+  "generatedAt": "2026-10-16T09:37:43.762Z",
   "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261016-025650.payload.zip",
   "zipName": "r-agent2-20261016-025650.payload.zip",
   "zipSha256": "127ec90a3e5f514f3ae995dffb38dc692689ea177d4c4b1084fcfa3e15fa0d99",
@@ -68,10 +68,10 @@
   "testPlanHash": null,
   "testResultHash": null,
   "evidenceManifestHash": null,
-  "startedAt": "2026-10-16T06:22:01.679Z",
-  "finishedAt": "2026-10-16T06:22:22.155Z",
-  "producer": "tools/system/platform-readiness.js",
-  "gitCommit": "097b0e4c4e85d4921f1ec59c5ab0798a7d9097bc",
-  "gitTree": "aae830c99f0cb566b04dfde0350c12382c430ccf",
+  "startedAt": "2026-10-16T09:37:22.769Z",
+  "finishedAt": "2026-10-16T09:37:43.762Z",
+  "producer": "tools/system/go-no-go.js",
+  "gitCommit": "30bfb8a1ff66c720d928daacb492a53518564101",
+  "gitTree": "75524da2ee1467568ade1124edb8fc63bbdc750b",
   "blockingFindings": []
 }
