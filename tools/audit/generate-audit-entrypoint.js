@@ -251,6 +251,22 @@ const agregado = {
   provasComRunIdCorrente: provas.filter((p) => p.runId && run.runId && p.runId === run.runId).length,
   provasSemCampoRunId: provas.filter((p) => !p.runId).map((p) => p.path),
   provasDeOutroRun: provas.filter((p) => p.runId && run.runId && p.runId !== run.runId).map((p) => p.path),
+  ultimaExecucaoMedida: (() => {
+    const rel = 'AI_MEMORY/evidence/aggregate-enforcement-last-run.json';
+    const d = lerJson(path.join(ROOT, rel));
+    if (!d) return { path: rel, existe: false, nota: 'grave com tools/audit/record-aggregate-run.js --log <log> --head <sha>' };
+    return {
+      path: rel,
+      existe: true,
+      veredito: d.veredito,
+      exitCode: d.exitCode,
+      headAtRun: d.execucao ? d.execucao.headAtRun : null,
+      logFinishedAt: d.execucao ? d.execucao.logFinishedAt : null,
+      logPath: d.execucao ? d.execucao.logPath : null,
+      logSha256: d.execucao ? d.execucao.logSha256 : null,
+      diagnostico: d.diagnostico || null,
+    };
+  })(),
 };
 const payload = {
   git: {
@@ -376,6 +392,14 @@ if (agregado.relatorioProprio.aviso) {
   linhas.push(`> ${agregado.relatorioProprio.aviso}`);
   linhas.push('');
 }
+if (agregado.ultimaExecucaoMedida.existe) {
+  const u = agregado.ultimaExecucaoMedida;
+  linhas.push(`- **Última execução medida**: \`${u.veredito}\` (exit ${u.exitCode}) — HEAD \`${u.headAtRun || 'não informado'}\`, log \`${u.logPath}\` encerrado em ${u.logFinishedAt}, sha256 do log \`${String(u.logSha256).slice(0, 16)}\``);
+  linhas.push(`- Diagnóstico do log: ${u.diagnostico.passLines} linhas \`status=PASS\`, ${u.diagnostico.failLines} \`status=FAIL\`, ${u.diagnostico.noGoLines} \`status=NO_GO\` (diagnóstico, não veredito)`);
+} else {
+  linhas.push('- **Última execução medida**: não gravada — use `node tools/audit/record-aggregate-run.js --log <log> --head <sha>` após rodar o agregado');
+}
+linhas.push('');
 linhas.push('## Provas canônicas (hash do arquivo em disco)');
 linhas.push('');
 linhas.push('| prova | veredito | runId | sha256 (12) | no git |');

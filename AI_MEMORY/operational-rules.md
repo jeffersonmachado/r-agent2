@@ -57,5 +57,22 @@ Canonical source: `scripts/stack-versions.js`.
   artifact, every field is derived from live sources.
 - The generator lives in `tools/audit/`, deliberately outside `SOURCE_ROOTS`, so regenerating and
   committing it does **not** change the `sourceFingerprint` and does not invalidate a sealed release.
+- Record the aggregate verdict (it persists no report of its own) with
+  `node tools/audit/record-aggregate-run.js --log <log> --head <sha>`.
+
+## Frozen worktree while gates run (measured 2026-10-16)
+
+- **Never commit, edit files or regenerate artifacts while `npm run validate:governance-enforcement`
+  (or the seal) is running.** The Engineering Router promotion derives `expectedBaseCommit` from the
+  real branch HEAD and computes git tree hashes in worktrees; if HEAD/working tree move mid-run,
+  `expected != validated` and promotion is refused — the E2E task ends in `READY_FOR_PROMOTION` and
+  the gate goes red for a reason that has nothing to do with the code.
+- Measured timeline: aggregate run finished 15:37:17 while commits landed at 15:30:42 and 15:32:18;
+  the failing item (RED_TO_FIX) asserted `Expected: "GREEN" / Received: "READY_FOR_PROMOTION"`.
+  Proof it was **not** a code regression: identical `sourceFingerprint` to the previous green run,
+  only files outside `SOURCE_ROOTS` touched, and the test passes in isolation (50.9 s).
+- When the runtime-evidence gate fails, **read the `stderr do filho` section of the log**: its summary
+  line can say "não pôde ser parseada como JSON (crash antes do reporter)" even when the test failed
+  by a clean assertion.
 
 

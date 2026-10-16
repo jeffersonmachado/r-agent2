@@ -580,6 +580,28 @@
       "commit": "602a00a1c",
       "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md (secao \"Ponteiros stale na raiz\") + FINAL_RAP_RELEASE_CLOSURE.json (marcado SUPERSEDED) + AGENTS.md (secao de auditoria externa)",
       "prevention": "Medido 2026-10-16: FINAL_RAP_RELEASE_CLOSURE.json (2026-09-24, headNow b0665b767, worktreeClean=false), FINAL_RELEASE_CLOSURE.md, ENGINEERING_ROUTER_V1_SEAL_REPORT.json e ENGINEERING_ROUTER_V1_FINAL_SEAL.md congelaram em 2026-09-22/24. Varredura completa do repositorio: nenhum script os produz nem os valida — sao ponteiros orfaos. Um auditor externo que os leia como estado atual audita o passado. Prevencao ativa: o entrypoint os mede e avisa em toda geracao; FINAL_RAP_RELEASE_CLOSURE.json foi marcado SUPERSEDED com o conteudo original preservado integralmente; AGENTS.md e AI_MEMORY/operational-rules.md apontam para o entrypoint e proibem usa-los como estado corrente."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
+      "title": "Gate agregado exige worktree CONGELADO — commitar durante o run quebra a promocao do E2E",
+      "status": "prevention_active",
+      "commit": "__COMMIT__",
+      "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json + /tmp/agg7.log (linha RED_TO_FIX) + timeline medida",
+      "prevention": "REGRA: nao commitar, nao editar arquivos e nao regenerar artefatos enquanto `npm run validate:governance-enforcement` roda. MEDICAO 2026-10-16 (nao hipotese): o agg7 falhou com `[runtime-evidence] RUNTIME_FAIL falhas=1` no item RED_TO_FIX (tests/integration/engineeringRouterFullLoopE2E.test.js), com assercao real `Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\"`. Linha do tempo: agg7 terminou 15:37:17; eu commitei 602a00a1c as 15:30:42 e afb5e1eaf as 15:32:18 — DURANTE o run. Mecanismo: a promocao do Engineering Router deriva `expectedBaseCommit` do HEAD REAL do branch de trabalho e calcula tree hashes (git add -A/write-tree em worktrees); com o HEAD se movendo e o working tree mudando no meio, expected != validated => promocao recusada => task termina em READY_FOR_PROMOTION (mesma classe documentada em promotionService.js, ER-V1-SEAL-001/002). PROVA de que NAO e regressao de codigo: (a) o proprio gate registrou fingerprint=1c10ffa62e169a18…, IDENTICO ao agg6 que passou; (b) os commits desta janela so tocaram AI_MEMORY/docs/tools-audit, todos FORA de SOURCE_ROOTS; (c) o teste passa isolado (PASS em 50,9 s)."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
+      "title": "runtime-evidence reporta \"crash antes do reporter\" quando o teste falha por assercao",
+      "status": "blocked",
+      "blocked_reason": "Correcao exige editar scripts/governance/** (SOURCE_ROOTS) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16: no agg7 o item RED_TO_FIX falhou e o gate reportou \"saida do Jest nao pode ser parseada como JSON (crash antes do reporter)\", mas o Jest terminou normalmente e imprimiu a assercao real no stderr do filho (`Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\"`, engineeringRouterFullLoopE2E.test.js:218) + resumo completo (\"Test Suites: 1 failed, 1 total / Time: 28.241 s\"). O veredito do gate (item falhou) esta CORRETO; o diagnostico e que engana quem le so a linha resumida, e a causa real exige ler a secao \"stderr do filho\".",
+      "evidence": {
+        "measuredAt": "2026-10-16",
+        "gate": "collect:engineering-router-runtime-evidence (via validate:governance-enforcement)",
+        "log": "/tmp/agg7.log",
+        "realAssertion": "Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\" em tests/integration/engineeringRouterFullLoopE2E.test.js:218",
+        "misleadingMessage": "saida do Jest nao pode ser parseada como JSON (crash antes do reporter)",
+        "mitigation": "Ao investigar falha do runtime-evidence, ler SEMPRE a secao \"stderr do filho\" do log antes de aceitar a linha resumida do gate. Este item esta registrado para que a proxima sessao nao repita o diagnostico errado."
+      }
     }
   ]
 }

@@ -1,26 +1,30 @@
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T18:31:58.489Z",
+  "generatedAt": "2026-10-16T18:41:02.767Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "c138757e0c1d02aee16d681eedf40e31e6b271b2fde231a0409de7f437da0300",
+    "valor": "16aa68bbd6458101a18722c1a293877ebdbecb5c463089392b0af106bbd7d42e",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "hardening/p0-certificacao",
-      "headAtGeneration": "602a00a1c8da480d1638f5ae802bb094f8980960",
-      "headAssunto": "docs(auditoria): ponto de entrada unico para auditoria externa via git (AUDIT_ENTRYPOINT)",
-      "headData": "2026-10-16T15:30:42-03:00",
-      "remoteHead": "602a00a1c8da480d1638f5ae802bb094f8980960",
+      "headAtGeneration": "afb5e1eafa54c228dc6ec071ce7f0ac0ead16bc3",
+      "headAssunto": "chore(governanca): fila oficial com 3 itens novos da auditoria externa + entrypoint atualizado",
+      "headData": "2026-10-16T15:32:18-03:00",
+      "remoteHead": "afb5e1eafa54c228dc6ec071ce7f0ac0ead16bc3",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
+        "M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json",
+        "M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md",
         "M AI_MEMORY/hardening-queue.json",
-        "M tools/audit/generate-audit-entrypoint.js"
+        "M AI_MEMORY/operational-rules.md",
+        "M tools/audit/generate-audit-entrypoint.js",
+        "tools/audit/record-aggregate-run.js"
       ],
       "commitsNaoEnviados": 0
     },
@@ -108,7 +112,12 @@
         "reports/mcp-research-docker-e2e-report.json",
         "reports/hardening-queue-report.json"
       ],
-      "provasDeOutroRun": []
+      "provasDeOutroRun": [],
+      "ultimaExecucaoMedida": {
+        "path": "AI_MEMORY/evidence/aggregate-enforcement-last-run.json",
+        "existe": false,
+        "nota": "grave com tools/audit/record-aggregate-run.js --log <log> --head <sha>"
+      }
     },
     "provas": [
       {
@@ -198,8 +207,8 @@
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T18:31:52.926Z",
-        "sha256": "79ecad7fbb1c7e56b08521211f53113727f31478bb898e1df27c7efa53e5d322"
+        "generatedAt": "2026-10-16T18:41:00.517Z",
+        "sha256": "1535acf8277f953495b01fca882eb03a69b54942d8a44154b29bf7e3d02e9fe7"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -265,7 +274,7 @@
       }
     ],
     "fila": {
-      "total": 72,
+      "total": 74,
       "naoFechados": [
         {
           "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -276,6 +285,11 @@
           "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
           "status": "blocked",
           "motivo": "Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO."
+        },
+        {
+          "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
+          "status": "blocked",
+          "motivo": "Correcao exige editar scripts/governance/** (SOURCE_ROOTS) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16: no agg7 o item RED_TO_FIX falhou e o gate reportou \"saida do Jest nao pode ser parseada como JSON (crash antes do reporter)\", mas o Jest terminou normalmente e imprimiu a assercao real no stderr do filho (`Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\"`, engineeringRouterFullLoopE2E.test.js:218) + resumo completo (\"Test Suites: 1 failed, 1 total / Time: 28.241 s\"). O veredito do gate (item falhou) esta CORRETO; o diagnostico e que engana quem le so a linha resumida, e a causa real exige ler a secao \"stderr do filho\"."
         }
       ]
     },

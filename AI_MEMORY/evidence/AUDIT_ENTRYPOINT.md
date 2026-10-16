@@ -3,9 +3,9 @@
 > Artefato DERIVADO (nada escrito à mão). Gerado por `tools/audit/generate-audit-entrypoint.js`.
 > Regenerar: `node tools/audit/generate-audit-entrypoint.js`.
 
-- **Gerado em**: 2026-10-16T18:31:58.489Z
-- **auditEpoch**: `c138757e0c1d02aee16d681eedf40e31e6b271b2fde231a0409de7f437da0300`
-- **Branch / HEAD**: `hardening/p0-certificacao` / `602a00a1c8da480d1638f5ae802bb094f8980960`
+- **Gerado em**: 2026-10-16T18:41:02.767Z
+- **auditEpoch**: `16aa68bbd6458101a18722c1a293877ebdbecb5c463089392b0af106bbd7d42e`
+- **Branch / HEAD**: `hardening/p0-certificacao` / `afb5e1eafa54c228dc6ec071ce7f0ac0ead16bc3`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -42,6 +42,8 @@ npm run validate:final-status-projection
 
 > DESATUALIZADO: existe, mas NÃO é do run corrente — o alias `validate:governance-enforcement` não usa run-all-validators.js, logo não o regrava. Não use este arquivo como veredito do agregado; use o exit code da cadeia + as provas canônicas abaixo.
 
+- **Última execução medida**: não gravada — use `node tools/audit/record-aggregate-run.js --log <log> --head <sha>` após rodar o agregado
+
 ## Provas canônicas (hash do arquivo em disco)
 
 | prova | veredito | runId | sha256 (12) | no git |
@@ -54,7 +56,7 @@ npm run validate:final-status-projection
 | `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | af759c681d62 | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | 1bf3ac59e6f1 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | 79ecad7fbb1c | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | 1535acf8277f | não (ignorado) |
 | `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 78aeb8597332 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | 815d35350a3b | não (ignorado) |
@@ -75,6 +77,7 @@ Nota de semântica: `blocked`/`blocked_external` são estados FECHADOS para o ag
 
 - `HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA` — **blocked** — Decisao de POLITICA (dono do produto), nao mecânica. Medicao 2026-10-16: o fail-open e LATENTE, nao ativo no caminho verde — a execucao canonica da malha no run corrente tem 144 resultados (isCanonicalExecution=true, runId/sourceFingerprint/sourceCommit corretos). Risco real: o produtor grava artefato governado mesmo com executedResults=0 e o gate nao distingue "executou 0 cenarios" de "executou e passou". Duas direcoes validas com semanticas diferentes: (a) produtor marca artefato vazio como NAO-evidencia, ou (b) a malha falha ANTES de gravar. CUSTO MEDIDO de aplicar agora: qa-mesh/*.js e scripts/governance/* estao em SOURCE_ROOTS (governance/proof-engine/fingerprint-chain.js:54-70,106-112), portanto qualquer edicao muda o fingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem.
 - `HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO` — **blocked** — Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO.
+- `HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO` — **blocked** — Correcao exige editar scripts/governance/** (SOURCE_ROOTS) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16: no agg7 o item RED_TO_FIX falhou e o gate reportou "saida do Jest nao pode ser parseada como JSON (crash antes do reporter)", mas o Jest terminou normalmente e imprimiu a assercao real no stderr do filho (`Expected: "GREEN" / Received: "READY_FOR_PROMOTION"`, engineeringRouterFullLoopE2E.test.js:218) + resumo completo ("Test Suites: 1 failed, 1 total / Time: 28.241 s"). O veredito do gate (item falhou) esta CORRETO; o diagnostico e que engana quem le so a linha resumida, e a causa real exige ler a secao "stderr do filho".
 
 ## Ponteiros stale na raiz do repositório — NÃO use como estado atual
 
