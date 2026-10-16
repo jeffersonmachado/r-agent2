@@ -406,3 +406,42 @@ declaração "verde" desta missão só foi escrita depois de o comando correspon
 `reports/*.json` correspondente existir; e foi por isso que três verdades incômodas (§16 com
 agregado vermelho, o item de política em §17.4 e o bloqueio externo de §14) ficaram registradas
 em vez de suavizadas.
+
+### 17.6 Auditoria externa via git: o ponto de entrada e os dois vermelhos que ele me custou
+
+Pedido do operador: *o auditor externo (ChatGPT) lê o repositório via git e precisa conseguir
+detectar que algo mudou para disparar nova auditoria.* O que foi medido e entregue:
+
+- **A prova não estava no git.** `reports/*.json` e `governance/*.json` são ignorados
+  (`.gitignore` 118/124). Ponto de entrada único criado: `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+  (gerado por `tools/audit/generate-audit-entrypoint.js`), com `auditEpoch` (sha256 do payload),
+  SHA-256 de 13 provas em disco, artefatos físicos do release e a fila oficial. Detecção de
+  mudança: `git log -1 --format=%H -- AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`.
+- **Quatro ponteiros de fechamento na raiz são órfãos** (2026-09-22/24; nenhum script os produz):
+  `FINAL_RAP_RELEASE_CLOSURE.json`, `FINAL_RELEASE_CLOSURE.md`,
+  `ENGINEERING_ROUTER_V1_SEAL_REPORT.json`, `ENGINEERING_ROUTER_V1_FINAL_SEAL.md`. Um auditor que
+  os leia como estado atual audita o passado. O principal foi marcado `SUPERSEDED` (conteúdo
+  original preservado) e o artefato mede e avisa sobre todos a cada geração.
+- **Correção de imprecisão minha:** "31 validadores PASS" era contagem de linhas de log. O alias é
+  uma **cadeia de 63 passos** com `&&` — o que prova é o **exit 0**.
+
+Três execuções do gate agregado, todas registradas (nenhuma escondida):
+
+| Run | Veredito | Causa medida |
+|---|---|---|
+| agg6 | exit 0 | referência verde |
+| agg7 | **exit 1** | **commits meus DURANTE o run** (15:30:42/15:32:18, fim 15:37:17). A promoção do Engineering Router deriva `expectedBaseCommit` do HEAD real; HEAD/worktree em movimento ⇒ `expected != validated` ⇒ `READY_FOR_PROMOTION`. Não era regressão: fingerprint idêntico ao agg6, só arquivos fora de `SOURCE_ROOTS`, teste passa isolado (50,9 s) |
+| agg8 | **exit 1** | **meu código**: `audit:json-persistence` reprovou com `unknown=2`, e os dois alvos UNKNOWN eram exatamente `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json` e `.../aggregate-enforcement-last-run.json`. `classifyByPattern()` cobre `qa/`, `qa-mesh/`, `governance/`, `reports/`, `docs/` — **não** `AI_MEMORY/evidence/`, que é o análogo de `qa/evidence/` (classificada `ARTIFACT_STORAGE`) |
+| agg9 | **exit 0** | worktree congelado em `32426bc19`, nenhum `.json` escrito por `tools/audit/` |
+
+Mitigação aplicada sem tocar em `SOURCE_ROOTS` (preserva o release selado): o ponto de entrada
+virou **um Markdown** com o payload JSON íntegro embutido em bloco cercado, e o log completo do
+agregado verde foi persistido em `AI_MEMORY/evidence/aggregate-enforcement-2026-10-16.log` para o
+auditor conferir o hash offline. `sourceFingerprint` permaneceu `1c10ffa62e169a18` antes e depois.
+A lacuna de taxonomia está na fila como `blocked` (classificar o diretório exige editar
+`governance/**` ⇒ novo fingerprint ⇒ re-selagem; decisão do dono).
+
+Padrão que se repetiu três vezes nesta sessão e vale como regra: **motivo enganoso de gate**. O
+`runtime-evidence` reportou "crash antes do reporter" quando houve asserção limpa; o handshake
+reportou `FENCE_AVANCOU antes=undefined` quando um log alheio virou handshake. Em ambos, a linha
+resumida mentia e a seção de stderr/detalhe é que dizia a verdade.
