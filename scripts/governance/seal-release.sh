@@ -287,6 +287,17 @@ phase_prepare() {
     warn "RUN_SOURCE_DRIFT detectado — criando run governado do fingerprint atual"
     node scripts/governance/create-governed-run.js > "$LOG_DIR/create-run.log" 2>&1 || \
       fail "falha ao criar run governado" "$LOG_DIR/create-run.log" prepare
+
+    # PREFLIGHT fail-fast (P1-11): as 3 waves tecnicas passaram a ser conferidas
+    # contra o run corrente pelo validate-coverage-gate. Waves carimbadas com o
+    # run ANTERIOR degradam para STALE. Sem esta checagem o problema so
+    # apareceria no fim da converge (~35 min de QA Mesh) e o operador teria de
+    # reiniciar o ciclo — mesmo padrao do H17-PREFLIGHT-ASK-AI-TTL.
+    if ! node scripts/governance/check-wave-evidence-same-run.js > "$LOG_DIR/wave-same-run.log" 2>&1; then
+      cat "$LOG_DIR/wave-same-run.log" >&2 || true
+      fail "waves tecnicas pertencem a OUTRO run — regenere as waves DENTRO do run corrente (comandos no log) e rode novamente com --from prepare" "$LOG_DIR/wave-same-run.log" prepare
+    fi
+    ok "waves tecnicas conferem com o run corrente (SAME_RUN)"
     # DEFEITO MEDIDO (2026-10-06): o refresh acima roda ANTES de o run existir.
     # O proof set do scorecard exige evidência SAME_RUN, então o relatório
     # renascia com generatedAt < run.startedAt e a fase `candidate` reprovava em

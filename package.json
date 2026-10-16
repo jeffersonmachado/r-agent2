@@ -144,6 +144,7 @@
     "validate:migrations": "node --env-file-if-exists=.env scripts/governance/validate-migrations-applied.js",
     "validate:audit-items": "node scripts/governance/validate-engineering-router-v2-audit-items.js",
     "validate:branch-protection": "node scripts/governance/verify-branch-protection.js",
+    "validate:wave-same-run": "node scripts/governance/check-wave-evidence-same-run.js",
     "branch-protection:apply": "node scripts/governance/verify-branch-protection.js --apply",
     "validate:required-tests": "node scripts/governance/validate-engineering-router-v2-required-tests.js",
     "validate:no-date-bombs": "node scripts/governance/validate-no-date-bombs.js",
