@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T19:26:30.375Z
-- **auditEpoch**: `be08d1d05fa1bce80e619fd4377c6c1e9b8153b389a12a25f6eb3718a7a443bd`
-- **Branch / HEAD**: `dev/engineering-hardening` / `58ce559ef3438835222f71e6c92e1175be5b48f0`
+- **Gerado em**: 2026-10-16T19:47:32.630Z
+- **auditEpoch**: `8357cc568f3da5eb8a22362760814908152e2dcd24edd8f3ee6b984b1ea1f5c6`
+- **Branch / HEAD**: `dev/engineering-hardening` / `6221b7cca3554d3de616f2a0ad8044f12d1c80b4`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -46,23 +46,23 @@ npm run validate:final-status-projection
 
 > DESATUALIZADO: existe, mas NÃO é do run corrente — o alias `validate:governance-enforcement` não usa run-all-validators.js, logo não o regrava. Não use este arquivo como veredito do agregado; use o exit code da cadeia + as provas canônicas abaixo.
 
-- **Última execução medida**: `PASS` (exit 0) — HEAD `32426bc19`, log `AI_MEMORY/evidence/aggregate-enforcement-2026-10-16.log` encerrado em 2026-10-16T19:01:57.631Z, sha256 do log `0d8683c7e4fda9f5`
+- **Última execução medida**: `PASS` (exit 0) — HEAD `6221b7cca`, log `AI_MEMORY/evidence/aggregate-enforcement-2026-10-16-dev-branch.log` encerrado em 2026-10-16T19:47:30.518Z, sha256 do log `31f7454ac4af38f1`
 - Diagnóstico do log: 31 linhas `status=PASS`, 0 `status=FAIL`, 0 `status=NO_GO` (diagnóstico, não veredito)
 
 ## Provas canônicas (hash do arquivo em disco)
 
 | prova | veredito | runId | sha256 (12) | no git |
 |---|---|---|---|---|
-| `reports/governance-score.json` | **PASS** | 085-033e1239 | d05c1a022c7c | não (ignorado) |
-| `reports/coverage-gate-report.json` | **GO** | 085-033e1239 | 99feb7bdb1e2 | não (ignorado) |
-| `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 90021d590d61 | não (ignorado) |
+| `reports/governance-score.json` | **PASS** | 085-033e1239 | c52b54c55f56 | não (ignorado) |
+| `reports/coverage-gate-report.json` | **GO** | 085-033e1239 | b0cf907251bd | não (ignorado) |
+| `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 866d49051349 | não (ignorado) |
 | `reports/source-remote-provenance-report.json` | **PASS** | 085-033e1239 | 53d33ad9e843 | não (ignorado) |
-| `reports/final-status-projection-report.json` | **PASS** | — | af57566b2128 | não (ignorado) |
-| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | b3df7b6f1a10 | não (ignorado) |
+| `reports/final-status-projection-report.json` | **PASS** | — | 9584da4fe46a | não (ignorado) |
+| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 141ba96f383e | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
-| `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | afc20e35c6c6 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | dab6bf393b6b | não (ignorado) |
-| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 91be08411708 | não (ignorado) |
+| `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | b9f50cf9d256 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | 9ce2ffa25a13 | não (ignorado) |
+| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 271622357033 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | 815d35350a3b | não (ignorado) |
 | `governance/.current-run.json` | **COMPLETED** | 085-033e1239 | 47d0a433361e | não (ignorado) |
@@ -115,26 +115,24 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T19:26:30.375Z",
+  "generatedAt": "2026-10-16T19:47:32.630Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "be08d1d05fa1bce80e619fd4377c6c1e9b8153b389a12a25f6eb3718a7a443bd",
+    "valor": "8357cc568f3da5eb8a22362760814908152e2dcd24edd8f3ee6b984b1ea1f5c6",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "dev/engineering-hardening",
-      "headAtGeneration": "58ce559ef3438835222f71e6c92e1175be5b48f0",
-      "headAssunto": "audit(branches): inventario executavel + funcoes puras testadas (5/5)",
-      "headData": "2026-10-16T16:25:54-03:00",
-      "remoteHead": "58ce559ef3438835222f71e6c92e1175be5b48f0",
+      "headAtGeneration": "6221b7cca3554d3de616f2a0ad8044f12d1c80b4",
+      "headAssunto": "chore(governanca): fila oficial com os 3 entregaveis de auditoria + entrypoint regerado",
+      "headData": "2026-10-16T16:26:53-03:00",
+      "remoteHead": "6221b7cca3554d3de616f2a0ad8044f12d1c80b4",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
-      "worktreeCleanExcluindoEsteArtefato": false,
-      "uncommittedPaths": [
-        "M AI_MEMORY/hardening-queue.json"
-      ],
+      "worktreeCleanExcluindoEsteArtefato": true,
+      "uncommittedPaths": [],
       "commitsNaoEnviados": 0
     },
     "releaseGovernado": {
@@ -228,11 +226,11 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "exitCode": 0,
         "semantica": "exit 0 numa cadeia && encadeada prova que TODOS os passos passaram. As contagens de linhas são diagnóstico de formatação de cada gate, NÃO o veredito (não correspondem 1:1 ao número de passos da cadeia).",
-        "headAtRun": "32426bc19",
-        "logPath": "AI_MEMORY/evidence/aggregate-enforcement-2026-10-16.log",
-        "logSha256": "0d8683c7e4fda9f5388de70f615117f6d49bc03fa86387b8f258de66df619043",
-        "logBytes": 72203,
-        "logFinishedAt": "2026-10-16T19:01:57.631Z",
+        "headAtRun": "6221b7cca",
+        "logPath": "AI_MEMORY/evidence/aggregate-enforcement-2026-10-16-dev-branch.log",
+        "logSha256": "31f7454ac4af38f11da0472273f4cdf16a333b05ff4d072f59d02b0740cbeb36",
+        "logBytes": 72206,
+        "logFinishedAt": "2026-10-16T19:47:30.518Z",
         "diagnostico": {
           "passLines": 31,
           "failLines": 0,
@@ -249,8 +247,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T19:01:12.343Z",
-        "sha256": "d05c1a022c7c0e09b8c36e90a773d0d5dd362484e7e4d0d44669c31edb2bae00"
+        "generatedAt": "2026-10-16T19:33:30.383Z",
+        "sha256": "c52b54c55f5677541a256ae3a44c298a10aca06744664154f4033169c41d541e"
       },
       {
         "path": "reports/coverage-gate-report.json",
@@ -259,8 +257,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "GO",
         "campoVeredito": "status",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T19:01:02.775Z",
-        "sha256": "99feb7bdb1e241bdf2a2be878359a19cb984a8edbbfb9944a2f4d60524a4722d"
+        "generatedAt": "2026-10-16T19:33:22.122Z",
+        "sha256": "b0cf907251bd56ce369017d68dd1b0f231a75442394284275869756574fcc68a"
       },
       {
         "path": "reports/release-artifact-identity-report.json",
@@ -269,8 +267,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "RELEASE_ARTIFACT_IDENTITY_VERIFIED",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T18:53:03.366Z",
-        "sha256": "90021d590d6142acf679cb7dfbb4d49b9da349509cbe262ec409f673f6b2405c"
+        "generatedAt": "2026-10-16T19:27:17.562Z",
+        "sha256": "866d490513497626f06b2cbaa8e513067c19d21f6a114fd68514402ca8831278"
       },
       {
         "path": "reports/source-remote-provenance-report.json",
@@ -289,8 +287,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:01:12.582Z",
-        "sha256": "af57566b21282106cc06ea181b358d49cbf80ae320f786ad9c47c3ee80c8a2a4"
+        "generatedAt": "2026-10-16T19:33:30.690Z",
+        "sha256": "9584da4fe46a6bb986225db882be26f87442a19ab0b41f0e8223537444a465a0"
       },
       {
         "path": "reports/security-release-gate-report.json",
@@ -299,8 +297,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "GO",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T19:01:12.176Z",
-        "sha256": "b3df7b6f1a10e7edbe98ebab33773dac34277770a7d13d76e34653d5a8dd50c6"
+        "generatedAt": "2026-10-16T19:33:30.241Z",
+        "sha256": "141ba96f383ee8e92069f3dffd96a3c036f98a65e2dfc7645fca8836d51a790e"
       },
       {
         "path": "reports/security-intel-report.json",
@@ -319,8 +317,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:01:23.230Z",
-        "sha256": "afc20e35c6c67c73766a6020e95612ec406d6a4ba3fbf634b422fb55cc918413"
+        "generatedAt": "2026-10-16T19:33:42.562Z",
+        "sha256": "b9f50cf9d256bfd95ae5e7bb4070daa444639261e4054f6ac5d7e0020c91e2a5"
       },
       {
         "path": "reports/hardening-queue-report.json",
@@ -329,8 +327,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:26:25.054Z",
-        "sha256": "dab6bf393b6b583269848ff8b119c6eca76ace86d16c63ff3081000b15e11ef5"
+        "generatedAt": "2026-10-16T19:33:57.805Z",
+        "sha256": "9ce2ffa25a1379bebb9b873ee965617aa50969743f326df888aa22815a4ba2d9"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -339,8 +337,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T18:53:02.688Z",
-        "sha256": "91be0841170885db5087da57d2172b624f9f09a7c7247ed6c7ded8d3dadfe0bc"
+        "generatedAt": "2026-10-16T19:27:15.028Z",
+        "sha256": "2716223570334cb781a51ec0758771ec39a3d441940dca8583697470010918f1"
       },
       {
         "path": "governance/evidence-manifest.json",

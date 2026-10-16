@@ -260,3 +260,53 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 89ce1f33eb54 — governanca: validacao obrigatoria verde no branch de desenvolvimento (agregado exit 0 em 6221b7cca)
+
+- **Quando**: 2026-10-16T19:47:32.753Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `6221b7cca3554d3de616f2a0ad8044f12d1c80b4`
+- **id** (sha256 do conteúdo do checkpoint): `89ce1f33eb545d5dd73411ba8713dc397bf951488e382b73977c2f5c0a3d3048`
+
+**Problema corrigido:** a validacao obrigatoria do PR nao tinha sido medida no HEAD do branch de desenvolvimento: sem ela nao se pode afirmar que o agente entregou codigo validado, e o veredito do agregado nao e persistido pelo proprio alias em relatorio proprio
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/audit/` | 0 | 6.3 s | 7bed1949065d |
+| `node scripts/governance/validate-hardening-queue.js` | 0 | 0.1 s | e3ba56d8d232 |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/audit/</code></summary>
+
+```
+    ✓ familiaDe agrupa pelos dois primeiros segmentos (102 ms)
+    ✓ classificar: só o fixture sandbox => sandbox_only (descartável) (101 ms)
+    ✓ classificar: qualquer arquivo fora do fixture => toca_outros (exige revisão) (104 ms)
+    ✓ classificar: nenhum arquivo => sem_arquivos (branch vazia em relação a main) (102 ms)
+    ✓ o fixture é o artefato do sandbox do Engineering Router — não um arquivo de produto (103 ms)
+Test Suites: 3 passed, 3 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        3.982 s, estimated 6 s
+Ran all test suites matching /tests\/unit\/audit\//i.
+[jest-global-teardown] Engineering Runner (pid 163369) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-hardening-queue.js</code></summary>
+
+```
+[hardening-queue] 78 itens — done:51 blocked_external:3 prevention_active:13 verified:7 blocked:4
+[hardening-queue] abertos: (nenhum)
+[hardening-queue] PASS
+```
+
+</details>
+
+---
