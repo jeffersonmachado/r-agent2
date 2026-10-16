@@ -123,8 +123,20 @@ commit_and_push() {
     warn "push pulado (--skip-push)"
     return 0
   fi
-  git push origin main -q || return 1
-  ok "push ok"
+  # DEFEITO MEDIDO (2026-10-16): aqui era `git push origin main`, INCONDICIONAL. Com o
+  # selo rodando fora da `main`, isso empurrava a ref local `main` (parada) e imprimia
+  # "push ok" sem que o commit da branch em uso tivesse ido ao remoto — prova: `main`
+  # local e `origin/main` no mesmo SHA enquanto o HEAD estava 35 commits à frente, e 7
+  # commits `chore(governanca)` das fases do selo ficaram SÓ locais. "push ok" sem prova
+  # é falso relato. Agora publica a branch EM USO, nunca uma ref fixa.
+  local branch_atual
+  branch_atual="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)"
+  if [ "$branch_atual" = "HEAD" ]; then
+    warn "push pulado (HEAD destacado — não há branch para publicar)"
+    return 0
+  fi
+  git push origin "$branch_atual" -q || return 1
+  ok "push ok (branch $branch_atual)"
 }
 
 # ── Preflight ---------------------------------------------------------------
@@ -425,18 +437,25 @@ phase_candidate() {
   ok "cadeia FINAL reexecutada e estampada dentro do run"
 
   local vlog="$LOG_DIR/verify-delivered.log"
-  timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-  if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-    ok "verify:delivered-release: $(grep -oE 'DELIVERED_[A-Z_]+' "$vlog" | tail -1)"
+  # Juiz fail-closed da ENTREGA (P1 2026-10-16). DEFEITO MEDIDO: aqui se fazia
+  #   `timeout 900 npm run verify:delivered-release > "$vlog" 2>&1`
+  # com o EXIT CODE DESCARTADO e o veredito vindo de
+  #   `grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"`,
+  # ou seja: (a) exit != 0 com texto positivo passava; (b) `DELIVERED_PENDING_SCORECARD`
+  # — estado PRÉ-pacote no vocabulário canônico — era aceito como entrega; (c) TEXTO de
+  # log era autoridade. Agora o veredito vem de `verify-delivery-strict.js`, que exige
+  # exit 0 + relatório estruturado + decisão permitida + identidade correspondente +
+  # cadeia RECALCULADA íntegra + gates PASS. O log é só diagnóstico.
+  if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+    ok "entrega verificada pelo juiz estrito"
   else
     # Armadilha: lineage de experience-segregation clobberado por varredura prévia.
-    warn "delivered não verificado — tentando reparar lineage e repetir"
+    warn "entrega não verificada — tentando reparar lineage e repetir"
     node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp-repair.log" 2>&1
-    timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-    if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-      ok "verify:delivered-release: reparado por stamp-report-lineage"
+    if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+      ok "entrega verificada após reparo de lineage"
     else
-      fail "verify:delivered-release falhou" "$vlog" candidate
+      fail "entrega NÃO verificada pelo juiz estrito (ver o `code=` do motivo)" "$vlog" candidate
     fi
   fi
 
@@ -812,21 +831,28 @@ phase_certify() {
 # reabrir a decisão de certificar.
 phase_verify_delivery() {
   # Etapa final: verificação do release entregue. Nada de rodar o agregado depois.
+  # Mesmo juiz fail-closed da fase `candidate` (ver comentário lá): exit code +
+  # relatório estruturado + decisão permitida + identidade + cadeia recalculada.
   local vlog="$LOG_DIR/verify-final.log"
-  timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-  if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-    ok "verify:delivered-release: $(grep -oE 'DELIVERED_[A-Z_]+' "$vlog" | tail -1)"
+  if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+    ok "entrega verificada pelo juiz estrito ($(grep -oE 'code=[A-Z_]+' "$vlog" | tail -1 || echo ''))"
   else
-    warn "verify:delivered-release falhou — repetindo o reparo de lineage"
+    warn "entrega não verificada — repetindo o reparo de lineage"
     node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp2.log" 2>&1
     git add -A >/dev/null 2>&1
     git commit -q -m "fix(governance): re-stampa lineage clobberado pela varredura agregada" >/dev/null 2>&1
-    git push origin main -q >/dev/null 2>&1
-    timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-    if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-      ok "verify:delivered-release: reparado"
+    # O reparo persiste na branch ATUAL. Sem push embutido para `main`: o selo não
+    # publica em branch protegida nem empurra ref que não seja a que está em uso
+    # (era `git push origin main` — medido e removido em 2026-10-16).
+    local branch_atual
+    branch_atual="$(git rev-parse --abbrev-ref HEAD)"
+    if [ "$branch_atual" != "main" ] && [ "$branch_atual" != "master" ] && [ "$branch_atual" != "HEAD" ]; then
+      git push origin "$branch_atual" -q >/dev/null 2>&1 || warn "push do reparo de lineage falhou (não bloqueante)"
+    fi
+    if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+      ok "entrega verificada após reparo de lineage"
     else
-      fail "verify:delivered-release falhou após reparo" "$vlog" verify-delivery
+      fail "entrega NÃO verificada pelo juiz estrito após reparo" "$vlog" verify-delivery
     fi
   fi
 

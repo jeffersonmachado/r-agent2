@@ -559,3 +559,45 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 072914193103 — P1: entrega verificada por juiz fail-closed (exit code + resultado estruturado) e fim do push no-op para main
+
+- **Quando**: 2026-10-16T23:49:29.796Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `77d337449a02b5426eaafb3e281b082798c2fc8d`
+- **id** (sha256 do conteúdo do checkpoint): `072914193103a5047b8ef8356974a694a9f0f8cf22e07ad183cefd30be2b9b14`
+
+**Problema corrigido:** a fase verify-delivery do selo descartava o EXIT CODE do verificador e decidia por grep de texto positivo, alem de aceitar DELIVERED_PENDING_SCORECARD (estado PRE-pacote); e commit_and_push fazia 'git push origin main' incondicional, que com o selo fora da main empurrava uma ref parada e imprimia 'push ok' sem publicar o commit da branch em uso (7 commits chore(governanca) ficaram so locais)
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M scripts/governance/seal-release.sh`
+- `scripts/governance/lib/delivery-verification.js`
+- `scripts/governance/verify-delivery-strict.js`
+- `tests/unit/governance/deliveryVerification.test.js`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/governance/deliveryVerification.test.js` | 0 | 3.9 s | 5fcdb7a2962f |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/deliveryVerification.test.js</code></summary>
+
+```
+    ✓ cadeia adulterada ⇒ BLOQUEIA (103 ms)
+    ✓ cadeia não verificada ⇒ BLOQUEIA (não aprovar sem integridade) (103 ms)
+    ✓ gate bloqueante no relatório ⇒ BLOQUEIA (só PASS avança) (111 ms)
+    ✓ gate ilegível ⇒ BLOQUEIA (100 ms)
+    ✓ relatório sem gates declarados ⇒ BLOQUEIA (100 ms)
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        1.989 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/deliveryVerification.test.js/i.
+[jest-global-teardown] Engineering Runner (pid 460973) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---
