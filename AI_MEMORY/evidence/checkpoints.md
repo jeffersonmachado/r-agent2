@@ -362,3 +362,54 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 7e30ad90b9a2 — auditoria: relatorio da FASE A/B persistido (914 testes executados, 2 achados reais abertos)
+
+- **Quando**: 2026-10-16T19:56:09.233Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `5e4f7408bceb1cba20e16923fa0a5dd6bf52d76f`
+- **id** (sha256 do conteúdo do checkpoint): `7e30ad90b9a291d72c05d95b2b0f61a974fc590613fd222fa4133a454fa89df7`
+
+**Problema corrigido:** a auditoria profunda exigida pela missao nao tinha artefato versionado: os resultados de 914 testes executados em 8 comandos, o inventario da branch e os 2 achados reais (cadeia criptografica fora do agregado e escrita fantasma no inventario de persistencia) existiam apenas na conversa
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+- `AI_MEMORY/evidence/auditoria-fase-b-2026-10-16.md`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/audit/` | 0 | 8.4 s | bdefa430ca8e |
+| `node scripts/governance/validate-hardening-queue.js` | 0 | 0.1 s | 87446097870f |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/audit/</code></summary>
+
+```
+  AUDIT_ENTRYPOINT.md — invariantes do ponto de entrada de auditoria
+    ✓ o artefato existe, declara auditEpoch e traz o payload JSON embutido parseável (105 ms)
+    ✓ todo proof registrado tem veredito e sha256 — nenhuma linha oca (110 ms)
+    ✓ o auditEpoch é RECALCULÁVEL de forma independente a partir do payload (112 ms)
+    ✓ audit:json-persistence está PASS e sem alvos UNKNOWN (trava da regressão do agg8) (108 ms)
+Test Suites: 3 passed, 3 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        3.69 s, estimated 4 s
+Ran all test suites matching /tests\/unit\/audit\//i.
+[jest-global-teardown] Engineering Runner (pid 177206) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-hardening-queue.js</code></summary>
+
+```
+[hardening-queue] 81 itens — done:52 blocked_external:3 prevention_active:13 verified:7 blocked:6
+[hardening-queue] abertos: (nenhum)
+[hardening-queue] PASS
+```
+
+</details>
+
+---

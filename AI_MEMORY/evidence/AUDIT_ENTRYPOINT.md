@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T19:50:45.000Z
-- **auditEpoch**: `b4d6b3f055ed315785774edddc4390baa32ef8fca8d0cdf0b8dd36a240313f81`
-- **Branch / HEAD**: `dev/engineering-hardening` / `60558fba49c898c9a8acbe540efc712101a6b5c5`
+- **Gerado em**: 2026-10-16T19:56:09.050Z
+- **auditEpoch**: `98e345991cf3e2acdfc0cb448d511e6fe0a3d7a986a9d616241230846e110907`
+- **Branch / HEAD**: `dev/engineering-hardening` / `5e4f7408bceb1cba20e16923fa0a5dd6bf52d76f`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -61,7 +61,7 @@ npm run validate:final-status-projection
 | `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 141ba96f383e | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | b9f50cf9d256 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | 2a2fe78a4f89 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | d93bca9603f3 | não (ignorado) |
 | `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 271622357033 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | f52a8e66fc51 | não (ignorado) |
@@ -117,26 +117,25 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T19:50:45.000Z",
+  "generatedAt": "2026-10-16T19:56:09.050Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "b4d6b3f055ed315785774edddc4390baa32ef8fca8d0cdf0b8dd36a240313f81",
+    "valor": "98e345991cf3e2acdfc0cb448d511e6fe0a3d7a986a9d616241230846e110907",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "dev/engineering-hardening",
-      "headAtGeneration": "60558fba49c898c9a8acbe540efc712101a6b5c5",
-      "headAssunto": "checkpoint(governanca): validacao obrigatoria verde no branch de dev (agregado exit 0)",
-      "headData": "2026-10-16T16:47:48-03:00",
-      "remoteHead": "60558fba49c898c9a8acbe540efc712101a6b5c5",
+      "headAtGeneration": "5e4f7408bceb1cba20e16923fa0a5dd6bf52d76f",
+      "headAssunto": "fix(audit): teste nao regrava artefato governado + registra 2 achados da FASE B",
+      "headData": "2026-10-16T16:51:00-03:00",
+      "remoteHead": "5e4f7408bceb1cba20e16923fa0a5dd6bf52d76f",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
-        "M AI_MEMORY/hardening-queue.json",
-        "M tests/unit/audit/auditEntrypointArtifact.test.js"
+        "AI_MEMORY/evidence/auditoria-fase-b-2026-10-16.md"
       ],
       "commitsNaoEnviados": 0
     },
@@ -332,8 +331,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:50:43.179Z",
-        "sha256": "2a2fe78a4f89a98305ebe785f8cf90a7e5af49b802d90c11844c4713c6f25e9f"
+        "generatedAt": "2026-10-16T19:50:52.336Z",
+        "sha256": "d93bca9603f30a192ee170c6d683914ed3edbead770f8ccfa700539e8753710a"
       },
       {
         "path": "reports/release-dag-report.json",
