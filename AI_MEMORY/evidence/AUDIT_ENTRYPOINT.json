@@ -1,32 +1,27 @@
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T18:41:02.767Z",
+  "generatedAt": "2026-10-16T18:41:15.659Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "16aa68bbd6458101a18722c1a293877ebdbecb5c463089392b0af106bbd7d42e",
+    "valor": "c782185291d1a5fefaef4b32fe5fb923c30ac45ae318143e7d1581f92938b4b1",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "hardening/p0-certificacao",
-      "headAtGeneration": "afb5e1eafa54c228dc6ec071ce7f0ac0ead16bc3",
-      "headAssunto": "chore(governanca): fila oficial com 3 itens novos da auditoria externa + entrypoint atualizado",
-      "headData": "2026-10-16T15:32:18-03:00",
+      "headAtGeneration": "c27d4bbc5de3337d7da713d5ed3d5649219c9165",
+      "headAssunto": "fix(auditoria): registra achado real do agg7 vermelho — commit durante o agregado quebra a promocao do E2E",
+      "headData": "2026-10-16T15:41:13-03:00",
       "remoteHead": "afb5e1eafa54c228dc6ec071ce7f0ac0ead16bc3",
       "tronco": "origin/main",
-      "headEmSincroniaComRemote": true,
+      "headEmSincroniaComRemote": false,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
-        "M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json",
-        "M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md",
-        "M AI_MEMORY/hardening-queue.json",
-        "M AI_MEMORY/operational-rules.md",
-        "M tools/audit/generate-audit-entrypoint.js",
-        "tools/audit/record-aggregate-run.js"
+        "M AI_MEMORY/hardening-queue.json"
       ],
-      "commitsNaoEnviados": 0
+      "commitsNaoEnviados": 1
     },
     "releaseGovernado": {
       "runId": "rap-governed-20261016144931085-033e1239",

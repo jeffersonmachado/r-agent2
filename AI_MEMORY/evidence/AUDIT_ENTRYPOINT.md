@@ -3,11 +3,11 @@
 > Artefato DERIVADO (nada escrito à mão). Gerado por `tools/audit/generate-audit-entrypoint.js`.
 > Regenerar: `node tools/audit/generate-audit-entrypoint.js`.
 
-- **Gerado em**: 2026-10-16T18:41:02.767Z
-- **auditEpoch**: `16aa68bbd6458101a18722c1a293877ebdbecb5c463089392b0af106bbd7d42e`
-- **Branch / HEAD**: `hardening/p0-certificacao` / `afb5e1eafa54c228dc6ec071ce7f0ac0ead16bc3`
-- **HEAD sincronizado com o remote**: sim
-- **Commits não enviados**: 0
+- **Gerado em**: 2026-10-16T18:41:15.659Z
+- **auditEpoch**: `c782185291d1a5fefaef4b32fe5fb923c30ac45ae318143e7d1581f92938b4b1`
+- **Branch / HEAD**: `hardening/p0-certificacao` / `c27d4bbc5de3337d7da713d5ed3d5649219c9165`
+- **HEAD sincronizado com o remote**: NÃO
+- **Commits não enviados**: 1
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
 - **Publicado**: NÃO (sem tag, sem promoção)
 

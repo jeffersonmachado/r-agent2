@@ -585,7 +585,7 @@
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
       "title": "Gate agregado exige worktree CONGELADO — commitar durante o run quebra a promocao do E2E",
       "status": "prevention_active",
-      "commit": "__COMMIT__",
+      "commit": "c27d4bbc5",
       "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json + /tmp/agg7.log (linha RED_TO_FIX) + timeline medida",
       "prevention": "REGRA: nao commitar, nao editar arquivos e nao regenerar artefatos enquanto `npm run validate:governance-enforcement` roda. MEDICAO 2026-10-16 (nao hipotese): o agg7 falhou com `[runtime-evidence] RUNTIME_FAIL falhas=1` no item RED_TO_FIX (tests/integration/engineeringRouterFullLoopE2E.test.js), com assercao real `Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\"`. Linha do tempo: agg7 terminou 15:37:17; eu commitei 602a00a1c as 15:30:42 e afb5e1eaf as 15:32:18 — DURANTE o run. Mecanismo: a promocao do Engineering Router deriva `expectedBaseCommit` do HEAD REAL do branch de trabalho e calcula tree hashes (git add -A/write-tree em worktrees); com o HEAD se movendo e o working tree mudando no meio, expected != validated => promocao recusada => task termina em READY_FOR_PROMOTION (mesma classe documentada em promotionService.js, ER-V1-SEAL-001/002). PROVA de que NAO e regressao de codigo: (a) o proprio gate registrou fingerprint=1c10ffa62e169a18…, IDENTICO ao agg6 que passou; (b) os commits desta janela so tocaram AI_MEMORY/docs/tools-audit, todos FORA de SOURCE_ROOTS; (c) o teste passa isolado (PASS em 50,9 s)."
     },
