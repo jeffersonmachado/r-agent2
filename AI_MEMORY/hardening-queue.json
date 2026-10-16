@@ -602,6 +602,33 @@
         "misleadingMessage": "saida do Jest nao pode ser parseada como JSON (crash antes do reporter)",
         "mitigation": "Ao investigar falha do runtime-evidence, ler SEMPRE a secao \"stderr do filho\" do log antes de aceitar a linha resumida do gate. Este item esta registrado para que a proxima sessao nao repita o diagnostico errado."
       }
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
+      "title": "AI_MEMORY/evidence/ fora da taxonomia canônica de persistência JSON",
+      "status": "blocked",
+      "blocked_reason": "Classificar AI_MEMORY/evidence/ exige editar governance/json-persistence-audit.js, que esta em FILTERED_SOURCE_ROOTS (governance/**/*.js em governance/proof-engine/fingerprint-chain.js:106-112) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16 (prova dura): o passo bloqueante `audit:json-persistence` (node governance/json-persistence-audit.js --check) reprovou com exit 1 e unknown=2 no agg8, e os dois alvos UNKNOWN eram exatamente os artefatos que eu havia criado: `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json` e `AI_MEMORY/evidence/aggregate-enforcement-last-run.json`. Nao era flake: `classifyByPattern()` (json-persistence-audit.js:249-251) auto-classifica qa/, qa-mesh/, governance/, reports/ e docs/, mas NAO AI_MEMORY/evidence/ — que e exatamente o analogo de qa/evidence/ (essa sim classificada como ARTIFACT_STORAGE). MITIGACAO ATIVA (ja aplicada): o ponto de entrada passou a ser UM arquivo Markdown com o payload JSON embutido em bloco cercado; nenhum `.json` e escrito por tools/audit/. Comprovado: `audit:json-persistence --check` voltou a EXIT=0 e o sourceFingerprint permaneceu 1c10ffa62e169a18 (tools/audit/ esta fora de SOURCE_ROOTS).",
+      "evidence": {
+        "measuredAt": "2026-10-16",
+        "gateStep": "audit:json-persistence (node governance/json-persistence-audit.js --check)",
+        "before": {
+          "exit": 1,
+          "unknown": 2,
+          "targets": [
+            "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json",
+            "AI_MEMORY/evidence/aggregate-enforcement-last-run.json"
+          ]
+        },
+        "after": {
+          "exit": 0,
+          "unknown": 0,
+          "mitigation": "Markdown com payload JSON embutido; nenhum .json escrito"
+        },
+        "taxonomyRule": "governance/json-persistence-audit.js:249-251 (classifyByPattern) e CLASSIFIED/BASENAME_CLASSIFIED",
+        "analogousClassifiedDir": "qa/evidence/ => ARTIFACT_STORAGE",
+        "fingerprintUnchanged": "1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e",
+        "sourceRootsEvidence": "governance/proof-engine/fingerprint-chain.js:106-112"
+      }
     }
   ]
 }

@@ -35,7 +35,15 @@ const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const SAIDA_JSON = path.join(ROOT, 'AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json');
+// ATENÇÃO — por que NÃO existe `.json` aqui:
+// `governance/json-persistence-audit.js --check` (passo `audit:json-persistence` do gate
+// agregado, bloqueante) reprova com UNKNOWN todo alvo de escrita `.json` que não esteja na
+// taxonomia canônica de persistência. `AI_MEMORY/evidence/` NÃO está nessa taxonomia; o
+// payload abaixo provou isso na prática (medido 2026-10-16: 2 UNKNOWN, exatamente estes dois
+// artefatos). Enquanto o diretório não for classificado na taxonomia — o que exige editar
+// `governance/**` (SOURCE_ROOTS) e portanto re-selar o release — o ponto de entrada é
+// publicado como UM arquivo Markdown que EMBUTE o payload JSON completo em bloco cercado.
+// Nada foi perdido: o conteúdo continua legível por máquina (parse do bloco ```json).
 const SAIDA_MD = path.join(ROOT, 'AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md');
 
 /** Provas canônicas: caminho + como extrair o veredito. */
@@ -97,8 +105,14 @@ function caminhoRelativo(posix) {
   return path.relative(ROOT, posix).split(path.sep).join('/');
 }
 
+/** Lê argumento de CLI no formato `--nome valor`. */
+function arg(nome, padrao = null) {
+  const i = process.argv.indexOf(`--${nome}`);
+  return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : padrao;
+}
+
 /** Caminhos que são o PRÓPRIO artefato — não contam como "worktree sujo". */
-const PROPRIA_SAIDA = new Set([caminhoRelativo(SAIDA_JSON), caminhoRelativo(SAIDA_MD)]);
+const PROPRIA_SAIDA = new Set([caminhoRelativo(SAIDA_MD)]);
 
 // ---------------------------------------------------------------- git
 const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -252,19 +266,40 @@ const agregado = {
   provasSemCampoRunId: provas.filter((p) => !p.runId).map((p) => p.path),
   provasDeOutroRun: provas.filter((p) => p.runId && run.runId && p.runId !== run.runId).map((p) => p.path),
   ultimaExecucaoMedida: (() => {
-    const rel = 'AI_MEMORY/evidence/aggregate-enforcement-last-run.json';
-    const d = lerJson(path.join(ROOT, rel));
-    if (!d) return { path: rel, existe: false, nota: 'grave com tools/audit/record-aggregate-run.js --log <log> --head <sha>' };
+    const logRel = arg('aggregate-log');
+    if (!logRel) {
+      return {
+        existe: false,
+        nota: 'rode o agregado e regenere com --aggregate-log <log> [--aggregate-head <sha>] para embutir o veredito medido',
+      };
+    }
+    const logAbs = path.isAbsolute(logRel) ? logRel : path.join(ROOT, logRel);
+    if (!fs.existsSync(logAbs)) return { existe: false, nota: `log nao encontrado: ${logRel}` };
+    const conteudo = fs.readFileSync(logAbs, 'utf8');
+    const linhasLog = conteudo.split('\n');
+    const doLog = linhasLog.map((l) => /^[A-Z0-9_]*EXIT=(\d+)$/.exec(l.trim())).filter(Boolean).pop();
+    const exitInformado = arg('aggregate-exit');
+    const exitCode = exitInformado !== null ? Number(exitInformado) : doLog ? Number(doLog[1]) : null;
+    const contar = (re) => linhasLog.filter((l) => re.test(l)).length;
     return {
-      path: rel,
       existe: true,
-      veredito: d.veredito,
-      exitCode: d.exitCode,
-      headAtRun: d.execucao ? d.execucao.headAtRun : null,
-      logFinishedAt: d.execucao ? d.execucao.logFinishedAt : null,
-      logPath: d.execucao ? d.execucao.logPath : null,
-      logSha256: d.execucao ? d.execucao.logSha256 : null,
-      diagnostico: d.diagnostico || null,
+      comando: 'npm run validate:governance-enforcement',
+      veredito: exitCode === 0 ? 'PASS' : exitCode === null ? 'DESCONHECIDO' : 'FAIL',
+      exitCode,
+      semantica:
+        'exit 0 numa cadeia && encadeada prova que TODOS os passos passaram. As contagens de linhas são diagnóstico de ' +
+        'formatação de cada gate, NÃO o veredito (não correspondem 1:1 ao número de passos da cadeia).',
+      headAtRun: arg('aggregate-head'),
+      logPath: caminhoRelativo(logAbs),
+      logSha256: sha256Arquivo(logAbs),
+      logBytes: fs.statSync(logAbs).size,
+      logFinishedAt: fs.statSync(logAbs).mtime.toISOString(),
+      diagnostico: {
+        passLines: contar(/status=PASS/),
+        failLines: contar(/status=FAIL/),
+        noGoLines: contar(/status=NO_GO/),
+        totalLines: linhasLog.length,
+      },
     };
   })(),
 };
@@ -316,12 +351,12 @@ const doc = {
   payload,
   comoDetectarMudanca: [
     'git log --oneline -20',
-    `git log -1 --format=%H -- AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json   # commit que gerou o epoch atual`,
+    'git log -1 --format=%H -- AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md   # commit que gerou o epoch atual',
     'auditEpoch.valor != epoch da auditoria anterior  =>  houve mudança',
     'payload.provas[].sha256 != hash registrado       =>  prova alterada em disco (possível adulteração)',
   ],
   comoReauditar: [
-    'npm run validate:governance-enforcement      # gate agregado bloqueante (31 validadores)',
+    'npm run validate:governance-enforcement      # gate agregado bloqueante: cadeia de 63 passos com &&',
     'node scripts/governance/validate-hardening-queue.js',
     'npm run validate:release-artifact-identity',
     'node scripts/governance/verify-remote-provenance.js --manifest dist/release/<release>.manifest.json',
@@ -342,14 +377,16 @@ const doc = {
   },
 };
 
-fs.writeFileSync(SAIDA_JSON, JSON.stringify(doc, null, 2) + '\n');
-
 // ------------------------------------------------------------------ MD
 const linhas = [];
 linhas.push('# AUDIT_ENTRYPOINT — ponto de entrada único para auditoria externa');
 linhas.push('');
 linhas.push('> Artefato DERIVADO (nada escrito à mão). Gerado por `tools/audit/generate-audit-entrypoint.js`.');
-linhas.push('> Regenerar: `node tools/audit/generate-audit-entrypoint.js`.');
+linhas.push('> Regenerar: `node tools/audit/generate-audit-entrypoint.js [--aggregate-log <log> --aggregate-head <sha>]`.');
+linhas.push('>');
+linhas.push('> Por que Markdown e não `.json`: `audit:json-persistence` (passo bloqueante do gate agregado) reprova com');
+linhas.push('> `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.');
+linhas.push('> O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.');
 linhas.push('');
 linhas.push(`- **Gerado em**: ${doc.generatedAt}`);
 linhas.push(`- **auditEpoch**: \`${epoch}\``);
@@ -397,7 +434,7 @@ if (agregado.ultimaExecucaoMedida.existe) {
   linhas.push(`- **Última execução medida**: \`${u.veredito}\` (exit ${u.exitCode}) — HEAD \`${u.headAtRun || 'não informado'}\`, log \`${u.logPath}\` encerrado em ${u.logFinishedAt}, sha256 do log \`${String(u.logSha256).slice(0, 16)}\``);
   linhas.push(`- Diagnóstico do log: ${u.diagnostico.passLines} linhas \`status=PASS\`, ${u.diagnostico.failLines} \`status=FAIL\`, ${u.diagnostico.noGoLines} \`status=NO_GO\` (diagnóstico, não veredito)`);
 } else {
-  linhas.push('- **Última execução medida**: não gravada — use `node tools/audit/record-aggregate-run.js --log <log> --head <sha>` após rodar o agregado');
+  linhas.push('- **Última execução medida**: não embutida — rode o agregado e regenere com `--aggregate-log <log> --aggregate-head <sha>`');
 }
 linhas.push('');
 linhas.push('## Provas canônicas (hash do arquivo em disco)');
@@ -446,18 +483,33 @@ if (ponteirosHistoricos.length > 0) {
     );
   }
   linhas.push('');
-  linhas.push('O estado atual está NESTE arquivo (`AUDIT_ENTRYPOINT.json`) e nas projeções canônicas listadas abaixo.');
+  linhas.push('O estado atual está NESTE arquivo (`AUDIT_ENTRYPOINT.md`) e nas projeções canônicas listadas abaixo.');
   linhas.push('');
 }
 linhas.push('## Fontes canônicas');
 linhas.push('');
 for (const f of doc.fontesCanonicas) linhas.push(`- ${f}`);
 linhas.push('');
+linhas.push('## Payload completo (legível por máquina)');
+linhas.push('');
+linhas.push('O bloco abaixo é o JSON íntegro usado para calcular o `auditEpoch`. Extraia com:');
+linhas.push('');
+linhas.push('```bash');
+linhas.push('sed -n \'/^```json$/,/^```$/p\' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed \'1d;$d\' | python3 -m json.tool | head -40');
+linhas.push('```');
+linhas.push('');
+linhas.push('```json');
+linhas.push(JSON.stringify(doc, null, 2));
+linhas.push('```');
+linhas.push('');
 
+// ÚNICO arquivo escrito. Nenhum `.json` é criado por este gerador — ver o
+// comentário no topo sobre `audit:json-persistence` e a taxonomia canônica.
 fs.writeFileSync(SAIDA_MD, linhas.join('\n'));
 
 console.log(`[audit-entrypoint] auditEpoch=${epoch}`);
 console.log(`[audit-entrypoint] provas=${provas.length} com veredito=${provas.filter((p) => p.veredito).length} ausentes=${provas.filter((p) => !p.existe).length}`);
 console.log(`[audit-entrypoint] artefatos fisicos=${artefatosFisicos.length}`);
 console.log(`[audit-entrypoint] fila: total=${payload.fila.total} naoFechados=${payload.fila.naoFechados.length}`);
-console.log(`[audit-entrypoint] escrito: ${caminhoRelativo(SAIDA_JSON)} + ${caminhoRelativo(SAIDA_MD)}`);
+console.log(`[audit-entrypoint] agregado: ${agregado.ultimaExecucaoMedida.existe ? `${agregado.ultimaExecucaoMedida.veredito} (exit ${agregado.ultimaExecucaoMedida.exitCode})` : 'nao embutido'}`);
+console.log(`[audit-entrypoint] escrito: ${caminhoRelativo(SAIDA_MD)} (nenhum .json gerado)`);

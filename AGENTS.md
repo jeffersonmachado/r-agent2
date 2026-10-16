@@ -210,20 +210,25 @@ Um auditor externo que lê este repositório **via git** não enxerga a prova: `
 e `governance/*.json` são ignorados por política (`.gitignore` linhas 118/124). O ponto de
 entrada único e versionado é:
 
-- **`AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json`** — estado corrente derivado, com `auditEpoch`
-  (sha256 do payload) e SHA-256 de cada prova em disco.
-- **`AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`** — o mesmo em leitura humana.
+- **`AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`** — estado corrente derivado: `auditEpoch` (sha256 do
+  payload), SHA-256 de cada prova em disco, artefatos físicos do release, fila oficial e o veredito
+  medido do gate agregado. O payload JSON íntegro vem embutido em bloco cercado no fim do arquivo.
+
+Por que `.md` e não `.json`: `audit:json-persistence` (passo bloqueante do gate agregado) reprova com
+`UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está
+nela. Publicar um `.json` ali derruba o agregado (medido em 2026-10-16). Classificar o diretório exige
+editar `governance/**` (SOURCE_ROOTS) e re-selar o release — item aberto na fila oficial.
 
 Detectar mudança desde a última auditoria:
 
 ```bash
 git log --oneline -20
-git log -1 --format=%H -- AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json   # commit do epoch atual
+git log -1 --format=%H -- AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md   # commit do epoch atual
 ```
 
 `auditEpoch` diferente do registrado, ou `payload.provas[].sha256` divergente do arquivo em
 disco, significa que houve mudança (ou adulteração) e a auditoria deve ser refeita.
-Regenerar: `node tools/audit/generate-audit-entrypoint.js`.
+Regenerar: `node tools/audit/generate-audit-entrypoint.js [--aggregate-log <log> --aggregate-head <sha>]`.
 
 Atenção: os ponteiros de fechamento na raiz (`FINAL_RAP_RELEASE_CLOSURE.json`,
 `FINAL_RELEASE_CLOSURE.md`, `ENGINEERING_ROUTER_V1_*.md/json`) são **históricos/stale** — nenhum

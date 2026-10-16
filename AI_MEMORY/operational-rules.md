@@ -47,18 +47,18 @@ Canonical source: `scripts/stack-versions.js`.
 
 ## Audit Entry Point (external audit via git)
 
-- The single versioned entry point for external audit is `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json`
-  (human-readable: `AUDIT_ENTRYPOINT.md`). It carries `auditEpoch` (sha256 of its payload) plus the
-  SHA-256 of every canonical proof on disk.
-- Why it exists: `reports/*.json` and `governance/*.json` are git-ignored, so an auditor reading only
-  git cannot see the proof; the root closure pointers are stale and maintained by no gate.
+- The single versioned entry point for external audit is `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+  (human summary + the full JSON payload embedded in a fenced block, so it stays machine-readable).
+- Why no `.json` there: `audit:json-persistence` (blocking step of the aggregate gate) fails with
+  `UNKNOWN` for any `.json` write target outside the canonical persistence taxonomy, and
+  `AI_MEMORY/evidence/` is not in it. A `.json` in that directory reddens the aggregate (measured
+  2026-10-16). Classifying the directory requires editing `governance/**` (SOURCE_ROOTS), which
+  invalidates the sealed release — tracked as an open queue item.
 - **After any governance-relevant change** (new governed run, new seal, gate result change, queue
-  change), regenerate it: `node tools/audit/generate-audit-entrypoint.js` — never hand-edit the
-  artifact, every field is derived from live sources.
-- The generator lives in `tools/audit/`, deliberately outside `SOURCE_ROOTS`, so regenerating and
-  committing it does **not** change the `sourceFingerprint` and does not invalidate a sealed release.
-- Record the aggregate verdict (it persists no report of its own) with
-  `node tools/audit/record-aggregate-run.js --log <log> --head <sha>`.
+  change), regenerate it: `node tools/audit/generate-audit-entrypoint.js [--aggregate-log <log>
+  --aggregate-head <sha>]` — never hand-edit the artifact, every field is derived from live sources.
+- Embed the aggregate verdict with `--aggregate-log <log> --aggregate-head <sha>` when regenerating
+  (the alias persists no report of its own; what proves it is the exit 0 of its `&&` chain).
 
 ## Frozen worktree while gates run (measured 2026-10-16)
 
