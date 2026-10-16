@@ -682,6 +682,55 @@ phase_consolidate() {
     fail "falha ao gerar a aprovação de deploy (system:go-no-go / system:release-manifest)" "$LOG_DIR/release-manifest.log" consolidate
   fi
 
+  # ── CERTIFICAÇÃO DA CADEIA CRIPTOGRÁFICA (P0-2) ─────────────────────────────
+  #
+  # DEFEITO MEDIDO (2026-10-16): a cadeia (`governance/governance-chain.json` — 10
+  # camadas, cada uma com o hash dos BYTES de um membro) é construída na fase
+  # `final`, dentro do two-pass. O `consolidate` reescreve 4-5 desses membros DEPOIS
+  # disso: `system:go-no-go` (→ platform-readiness) regrava
+  # `evidence-manifest.json`, `final-proof-report.json`, `final-readiness-report.json`
+  # e `package-validation-report.json`; `materialize-proof-artifacts` regrava
+  # `proof-signature.json`. Nenhum passo reconstruía a cadeia aqui, então TODO ciclo
+  # terminava com a cadeia estruturalmente INVÁLIDA:
+  # `governance-chain.js --verify` acusava 9 divergências (hash_mismatch ×5,
+  # cumulative_hash_broken ×3, chain_root_mismatch ×1) — e o único gate que recomputa
+  # (`validate:governance-chain`) não estava em nenhum lugar do pipeline. A
+  # verificação existia e ninguém a executava.
+  #
+  # A reconstrução usa o caminho SANCIONADO (`governance/sign-governance.js` →
+  # `preSign`: buildChain + atestação ligada à raiz definitiva + assinaturas), nunca
+  # um "conserto" manual da cadeia. `--env-file-if-exists=.env` é OBRIGATÓRIO: sem
+  # ele o `deriveGovernanceKey` fica sem a raiz de assinatura e o preSign aborta com
+  # `REPLAY_SIGNING_KEY_REQUIRED` DEPOIS de gravar a cadeia — deixando o par
+  # cadeia↔atestado divergente, pior que não rodar (medido).
+  step consolidate "congela e certifica a cadeia criptográfica (raiz definitiva)"
+  if node --env-file-if-exists=.env governance/sign-governance.js > "$LOG_DIR/chain-sign.log" 2>&1; then
+    ok "cadeia reconstruída e assinada ($(grep -oE 'chainRoot=[0-9a-f]{16}' "$LOG_DIR/chain-sign.log" | tail -1))"
+  else
+    fail "reconstrução/assinatura da cadeia falhou — o selo não certifica uma cadeia inválida" "$LOG_DIR/chain-sign.log" consolidate
+  fi
+
+  # O sign-governance grava o atestado em `dist/governance-artifacts/`; a cópia do
+  # workspace (lida pelo self-proving) ficaria apontando para a raiz ANTIGA. Mesma
+  # propagação do two-pass — uma regra só, sem implementação paralela.
+  for src in "$ROOT/dist/governance-artifacts/governance-attestation.json" "$ROOT/dist/governance-attestation.json"; do
+    if [ -f "$src" ]; then
+      cp "$src" "$ROOT/governance/governance-attestation.json"
+      ok "atestado propagado para o workspace (ligado à raiz definitiva)"
+      break
+    fi
+  done
+
+  # O gate RECALCULA os bytes atuais e compara com a cadeia gravada. Bloqueante: uma
+  # cadeia que não fecha significa que algum documento certificado mudou depois do
+  # hash — exatamente a classe de defeito que este bloco existe para impedir.
+  local clog="$LOG_DIR/chain-verify.log"
+  if node scripts/governance/validate-governance-chain.js > "$clog" 2>&1; then
+    ok "cadeia verificada: $(grep -oE 'status=[A-Z_]+' "$clog" | tail -1)"
+  else
+    fail "cadeia criptográfica INVÁLIDA após a certificação — os hashes não correspondem à raiz definitiva" "$clog" consolidate
+  fi
+
   # MCP_RESEARCH_DOCKER_E2E: no agregado o gate sai 0 com REQUIRES_DOCKER_RUNTIME
   # quando não há docker — correto para CI/dev, mas não é prova de release. Aqui
   # o relatório tem de estar PASS e FRESCO (o agregado acabou de rodar o gate).
@@ -711,6 +760,18 @@ phase_consolidate() {
     else
       fail "verify:delivered-release falhou após reparo" "$vlog" consolidate
     fi
+  fi
+
+  # FECHO DA CERTIFICAÇÃO (P0-2): o requisito é "qualquer alteração POSTERIOR ao
+  # congelamento provoca NO_GO". Como o gate recalcula os BYTES atuais, reexecutá-lo
+  # no último ponto do ciclo prova que nada — nem o `verify:delivered-release`, nem o
+  # repasse de lineage logo acima — mexeu em documento certificado. Sem este fecho, a
+  # certificação do meio da fase seria uma promessa, não uma verificação.
+  local clogf="$LOG_DIR/chain-verify-final.log"
+  if node scripts/governance/validate-governance-chain.js > "$clogf" 2>&1; then
+    ok "cadeia íntegra no fecho (nada alterado após o congelamento)"
+  else
+    fail "documento certificado foi MODIFICADO depois do congelamento — cadeia inválida no fecho do ciclo" "$clogf" consolidate
   fi
 
   echo
