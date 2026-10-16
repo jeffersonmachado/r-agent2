@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-15T17:54:09.289Z",
+  "generatedAt": "2026-10-16T05:11:13.481Z",
   "status": "PASS",
   "artifactType": "tenant-isolation-report",
   "artifactVersion": "1.0.0",
@@ -15,6 +15,6 @@
   "testsPending": 0,
   "violations": 0,
   "failingSuites": [],
-  "runId": "rap-governed-20261015165452704-c3f2f925",
-  "sourceFingerprint": "e60b829c9fc6ea9ce7c54374e45ff7270a5901def19e0090fd930acd0951a33d"
+  "runId": "rap-governed-20261016041828305-ae81e3ee",
+  "sourceFingerprint": "6ae89a8fb0f2da6245692436d1377a84987feae580a606e87fcea127b2e15035"
 }
