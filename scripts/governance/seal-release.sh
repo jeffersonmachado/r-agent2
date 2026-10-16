@@ -202,6 +202,39 @@ preflight() {
       exit 1
     fi
   fi
+
+  # Pré-requisito BLOQUEANTE da fase `consolidate`: evidência de runtime do Ask-AI
+  # dentro do TTL (7 dias).
+  #
+  # MESMA classe do smoke contínuo acima, com custo MAIOR: medido em 2026-10-15, o
+  # ciclo inteiro rodou (QA Mesh real, empacotamento, tag PUBLICADA) e abortou no
+  # `consolidate` com `ASK_AI_RUNTIME_EVIDENCE_STALE` (177,8 h de 168 h) — ~2 h
+  # perdidas e a tag já publicada. O produtor é manual
+  # (`npm run verify:ask-ai-copilot:runtime`, exige API viva + credencial de
+  # verificação), logo nada o renova sozinho: checar na ENTRADA é o único modo de
+  # não descobrir no fim. Autoridade única do TTL: o mesmo módulo que o validador
+  # do agregado usa (sem duplicar threshold).
+  local askai_state askai_rc
+  askai_state="$(node "$ROOT/scripts/governance/ask-ai-runtime-evidence-ttl-preflight.js" 2>/dev/null)"
+  askai_rc=$?
+
+  if [ "$askai_rc" = "0" ] && [ "$askai_state" = "OK" ]; then
+    ok "evidência de runtime do Ask-AI dentro da validade"
+  elif [ "$askai_rc" = "2" ] || [ -z "$askai_state" ]; then
+    bad "não foi possível avaliar a evidência de runtime do Ask-AI"
+    echo "      (falha ao carregar a lib de avaliação — verifique node_modules antes do ciclo)"
+    [ "$DRY_RUN" = "1" ] || exit 1
+  else
+    bad "evidência de runtime do Ask-AI vencida/inválida — o agregado ABORTA na fase consolidate"
+    echo "      avaliação: ${askai_state}"
+    echo "      renove com o produtor canônico (exige a API viva em :3001):"
+    echo "        ASKAI_VERIFY_USER=... ASKAI_VERIFY_PASSWORD=... npm run verify:ask-ai-copilot:runtime"
+    if [ "$DRY_RUN" = "1" ]; then
+      warn "dry-run: seguindo só para imprimir o plano (um ciclo real abortaria aqui)"
+    else
+      exit 1
+    fi
+  fi
 }
 
 # ── Fase 1: prepare ---------------------------------------------------------
@@ -541,6 +574,23 @@ phase_consolidate() {
     warn "smoke contínuo das QA Waves FORA da validade no início do consolidate"
     printf '%s\n' "$consolidate_qa_state" | tail -6 | sed 's/^/    /'
     fail "QA_WAVES_SCHEDULED_EVIDENCE_STALE no consolidate — o TTL venceu durante o ciclo; renove o smoke agendado e retome com --from consolidate"
+  fi
+
+  # GUARD (mesma classe): reavalia o TTL da evidência de runtime do Ask-AI antes
+  # do agregado.
+  #
+  # MEDIDO em 2026-10-15: o ciclo inteiro rodou (QA Mesh, empacotamento, tag
+  # publicada) e o agregado reprovou com `ASK_AI_RUNTIME_EVIDENCE_STALE` (177,8 h
+  # de 168 h), obrigando a interromper a fase, regenerar a evidência e retomar
+  # `--from consolidate`. A checagem troca ~20 min de varredura perdida por falha
+  # imediata com o comando exato. Não afrouxa nada: evidência vencida ⇒ o ciclo PARA.
+  local consolidate_askai_state consolidate_askai_rc
+  consolidate_askai_state="$(node "$ROOT/scripts/governance/ask-ai-runtime-evidence-ttl-preflight.js" 2>&1)"
+  consolidate_askai_rc=$?
+  if [ "$consolidate_askai_rc" != "0" ]; then
+    warn "evidência de runtime do Ask-AI FORA da validade no início do consolidate"
+    printf '%s\n' "$consolidate_askai_state" | tail -6 | sed 's/^/    /'
+    fail "ASK_AI_RUNTIME_EVIDENCE_STALE no consolidate — renove com o produtor canônico e retome com --from consolidate"
   fi
 
   # GUARD: regenera as evidências de TTL curto ANTES do agregado.
