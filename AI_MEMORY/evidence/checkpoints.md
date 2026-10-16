@@ -413,3 +413,57 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 400faf39548c — audit(cadeia): estado da cadeia criptografica derivado e classificado por elo (corrige analise exagerada do A2)
+
+- **Quando**: 2026-10-16T20:17:27.073Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `107b1b540161573eb42e3a9a08d8145f17a8142d`
+- **id** (sha256 do conteúdo do checkpoint): `400faf39548c3a4b2089735ce83b56e07510306480cb49624f100167b0951067`
+
+**Problema corrigido:** o A2 foi reportado como P0 de integridade aberto, mas a leitura do pipeline mostrou que o seal ja reconstroi/assina e verifica a cadeia bloqueantemente na fase certify; o residual real e que o agregado nao expoe o estado da cadeia e que a divergencia se confunde com adulteracao. Sem classificacao por elo, hash_mismatch em relatorio derivado vira ruido indistinguivel de adulteracao do artefato certificado
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+- `M AI_MEMORY/evidence/auditoria-fase-b-2026-10-16.md`
+- `M AI_MEMORY/hardening-queue.json`
+- `M tests/unit/audit/auditEntrypointArtifact.test.js`
+- `M tools/audit/generate-audit-entrypoint.js`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/audit/` | 0 | 5.3 s | 789fc1357492 |
+| `node scripts/governance/validate-hardening-queue.js` | 0 | 0.1 s | 8a9302160c17 |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/audit/</code></summary>
+
+```
+    ✓ familiaDe agrupa pelos dois primeiros segmentos (108 ms)
+    ✓ classificar: só o fixture sandbox => sandbox_only (descartável) (103 ms)
+    ✓ classificar: qualquer arquivo fora do fixture => toca_outros (exige revisão) (101 ms)
+    ✓ classificar: nenhum arquivo => sem_arquivos (branch vazia em relação a main) (102 ms)
+    ✓ o fixture é o artefato do sandbox do Engineering Router — não um arquivo de produto (102 ms)
+Test Suites: 3 passed, 3 total
+Tests:       15 passed, 15 total
+Snapshots:   0 total
+Time:        3 s, estimated 4 s
+Ran all test suites matching /tests\/unit\/audit\//i.
+[jest-global-teardown] Engineering Runner (pid 203610) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-hardening-queue.js</code></summary>
+
+```
+[hardening-queue] 81 itens — done:53 blocked_external:3 prevention_active:13 verified:7 blocked:5
+[hardening-queue] abertos: (nenhum)
+[hardening-queue] PASS
+```
+
+</details>
+
+---

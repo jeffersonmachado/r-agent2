@@ -664,28 +664,12 @@
     },
     {
       "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
-      "title": "Cadeia criptografica nao esta no gate agregado e diverge so por rodar o agregado",
-      "status": "blocked",
-      "blocked_reason": "DEFEITO DE DESENHO (P0), exige decisao de politica + mudanca de fonte. MEDIDO 2026-10-16: (a) `validate-governance-chain` NAO esta na cadeia do agregado (conferido em package.json: \"no agregado: NAO\"), portanto o agregado fica verde com a cadeia quebrada — agg10 deu exit 0 e a validacao seguinte da cadeia deu exit 1; (b) a divergencia e 3: blocker_engine=cumulative_hash_broken, package_validation=hash_mismatch (governance/package-validation-report.json), chain_root=chain_root_mismatch; (c) mtimes: governance-chain.json 13:49:00 (do selo) x package-validation-report.json 16:33:29 (reescrito DENTRO do agg10) — isto e, o proprio agregado regrava artefato coberto pela cadeia, entao a cadeia so pode estar valida imediatamente apos a certificacao e nunca depois de um ciclo de validacao. Correcao proposta: incluir `validate:governance-chain` no agregado (editar package.json, que NAO esta em SOURCE_ROOTS) E fixar a ordem do ciclo — a cadeia precisa ser reconstruida/certificada DEPOIS do ultimo passo que escreve artefato, senao o agregado fica permanentemente vermelho. A segunda parte toca scripts/governance/** (SOURCE_ROOTS) => novo fingerprint => re-selagem. Decisao do dono.",
-      "evidence": {
-        "measuredAt": "2026-10-16",
-        "chainValidator": "scripts/governance/validate-governance-chain.js (alias validate:governance-chain)",
-        "chainInAggregate": false,
-        "aggregateVerdict": "AGG10_EXIT=0 (com a cadeia quebrada)",
-        "divergences": [
-          "blocker_engine — cumulative_hash_broken",
-          "package_validation — hash_mismatch (governance/package-validation-report.json)",
-          "chain_root — chain_root_mismatch"
-        ],
-        "mtimes": {
-          "governance/governance-chain.json": "13:49:00 (selo)",
-          "governance/package-validation-report.json": "16:33:29 (dentro do agg10)"
-        },
-        "proposedFixParts": [
-          "adicionar validate:governance-chain ao agregado (package.json, fora de SOURCE_ROOTS)",
-          "fixar a ordem do ciclo: certificar a cadeia apos o ultimo escritor de artefato (scripts/governance/**, exige re-selagem)"
-        ]
-      }
+      "title": "Cadeia criptografica: analise corrigida — elos derivados vs imutaveis, e estado exposto na auditoria",
+      "status": "done",
+      "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md (bloco cadeiaCriptografica) + AI_MEMORY/evidence/auditoria-fase-b-2026-10-16.md (A2 corrigido) + tests/unit/audit/auditEntrypointArtifact.test.js",
+      "commit": "107b1b540",
+      "detail": "CORRECAO DE ANALISE (mesma sessao, apos ler o pipeline): minha primeira leitura era EXAGERADA. A fase `certify` do seal-release.sh JA reconstroi e assina a cadeia pelo caminho sancionado (governance/sign-governance.js) e a verifica BLOQUEANTEMENTE em seguida — o proprio arquivo documenta este defeito medido em 2026-10-16 (9 divergencias) e e a correcao dele. Logo a cadeia E VALIDA imediatamente apos um selo; o que a torna divergente depois e a regravacao LEGITIMA dos elos derivados pelo ciclo. MEDICAO CLASSIFICADA (validador rodando de verdade, derivado no ponto de entrada): das 9 divergencias, TODAS as 5 com elo nomeado sao elos DERIVADOS (evidence-manifest, final-proof-report, final-readiness-report, proof-signature, package-validation-report); as outras 4 sao consequencias estruturais (cumulative_hash_broken x3, chain_root_mismatch). NENHUM elo IMUTAVEL divergiu: o artefato certificado (payload.zip, commit d9c469e6) NAO foi alterado. RESIDUAL REAL (menor): (i) validate:governance-chain nao esta no agregado, entao um ciclo de validacao podia deixar a cadeia divergente com o agregado verde — agora EXPLICITADO no AUDIT_ENTRYPOINT.md, que traz estado, raizes, classificacao por elo e o remedio (novo ciclo de selagem, nunca \"conserto\" manual); (ii) a cadeia cobre elos que o proprio ciclo regrava, o que a torna valida apenas no snapshot pos-selo — propriedade de desenho, agora documentada. NAO adicionei o gate ao agregado de proposito: a frio ele ficaria permanentemente vermelho, porque o proprio agregado regrava elos cobertos.",
+      "prevention": "REGRA: ao ver \"cadeia quebrada\", classificar PRIMEIRO por elo — divergencia em elo derivado (regravado pelo ciclo) exige novo ciclo de selagem; divergencia em elo IMUTAVEL e a classe grave (adulteracao). Nunca declarar adulteracao a partir de hash_mismatch em relatorio derivado, e nunca \"consertar\" a cadeia a mao (o caminho sancionado e governance/sign-governance.js dentro da fase certify)."
     },
     {
       "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",

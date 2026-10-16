@@ -303,6 +303,86 @@ const agregado = {
     };
   })(),
 };
+// ---------------------------------------------- cadeia criptográfica
+//
+// Medição 2026-10-16 (com o defeito já documentado em `seal-release.sh`, bloco
+// P0-2): a cadeia tem 10 elos e a fase `certify` do selo a RECONSTRÓI e ASSINA
+// pelo caminho sancionado (`governance/sign-governance.js`) depois de verificar
+// bloqueantemente. Logo a cadeia é válida imediatamente após um selo — e deixa de
+// ser assim que o ciclo regrava um dos elos DERIVADOS, o que é legítimo. Sem esta
+// distinção, "cadeia quebrada" vira ruído e esconde o caso que importa: elo
+// IMUTÁVEL alterado depois da certificação.
+const ELOS_DERIVADOS = new Map([
+  ['governance/evidence-manifest.json', 'regravado por system:go-no-go (platform-readiness) dentro do ciclo'],
+  ['governance/final-proof-report.json', 'regravado por system:go-no-go dentro do ciclo'],
+  ['governance/final-readiness-report.json', 'regravado por system:go-no-go dentro do ciclo'],
+  ['governance/final-consistency-report.json', 'regravado por system:go-no-go dentro do ciclo'],
+  ['governance/package-validation-report.json', 'regravado por system:go-no-go dentro do ciclo'],
+  ['governance/proof-signature.json', 'regravado por materialize-proof-artifacts dentro do ciclo'],
+]);
+
+const CADEIA_REL = 'reports/governance-chain-report.json';
+
+function analisarCadeia() {
+  // O validador é read-only quanto à cadeia (só grava o próprio relatório em
+  // `reports/`, que é ignorado pelo git) — conferido por mtime em 2026-10-16.
+  try {
+    execFileSync(process.execPath, ['scripts/governance/validate-governance-chain.js'], {
+      cwd: ROOT,
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+  } catch (e) {
+    /* exit 1 é resultado esperado quando a cadeia diverge; o relatório é a fonte */
+  }
+  const d = lerJson(path.join(ROOT, CADEIA_REL));
+  if (!d) return { relatorio: CADEIA_REL, existe: false };
+
+  const falhas = (d.failures || []).map((f) => ({
+    id: f.id,
+    reason: f.reason,
+    path: f.path || null,
+    eloDerivado: f.path ? ELOS_DERIVADOS.has(f.path) : null,
+    motivoDerivado: f.path ? ELOS_DERIVADOS.get(f.path) || null : null,
+  }));
+  const imutaveisQuebrados = falhas.filter((f) => f.path && !ELOS_DERIVADOS.has(f.path));
+  const derivadosQuebrados = falhas.filter((f) => f.path && ELOS_DERIVADOS.has(f.path));
+  const estruturais = falhas.filter((f) => !f.path);
+
+  let estado;
+  if (d.status === 'PASS') estado = 'PASS';
+  else if (imutaveisQuebrados.length > 0) estado = 'ARTEFATO_CERTIFICADO_ALTERADO';
+  else estado = 'RECERTIFICACAO_NECESSARIA';
+
+  return {
+    relatorio: CADEIA_REL,
+    existe: true,
+    statusDoValidador: d.status,
+    estado,
+    verificada: d.verified === true,
+    elosVerificados: d.checkedLinks || null,
+    raizPersistida: d.storedChainRoot || null,
+    raizRecalculada: d.computedRoot || null,
+    raizConfere: d.chainRootValid === true,
+    tampered: d.tampered === true,
+    gitCommitDaCadeia: d.gitCommit || null,
+    artefatoDaCadeia: d.artifact || null,
+    falhas,
+    imutaveisQuebrados,
+    derivadosQuebrados,
+    estruturais,
+    interpretacao:
+      estado === 'PASS'
+        ? 'Cadeia recomputada confere com a persistida: nenhum elo foi alterado desde a certificação.'
+        : estado === 'RECERTIFICACAO_NECESSARIA'
+          ? 'As divergências atingem APENAS elos derivados, que o próprio ciclo regrava (ver motivoDerivado). O artefato certificado NÃO foi alterado; o que existe é uma cadeia construída para um snapshot anterior — remedio: novo ciclo de selagem (fase certify), nunca "conserto" manual da cadeia.'
+          : 'DIVERGÊNCIA EM ELO IMUTÁVEL: o artefato certificado (ou sua assinatura) mudou depois da certificação. Isto é a classe grave — trate como adulteração até prova em contrário.',
+    notaDeFase:
+      'A fase `certify` do selo reconstrói e assina a cadeia e depois a verifica de forma BLOQUEANTE (medido em seal-release.sh). Portanto a cadeia é válida imediatamente após um selo; rodar qualquer passo que regrave um elo derivado depois disso a torna divergente de forma legítima.',
+  };
+}
+
+const cadeia = analisarCadeia();
+
 const payload = {
   git: {
     branch,
@@ -327,6 +407,7 @@ const payload = {
   },
   closureCommits: CLOSURE_COMMITS,
   agregado,
+  cadeiaCriptografica: cadeia,
   provas,
   artefatosFisicos,
   fila: {
@@ -437,8 +518,30 @@ if (agregado.ultimaExecucaoMedida.existe) {
   linhas.push('- **Última execução medida**: não embutida — rode o agregado e regenere com `--aggregate-log <log> --aggregate-head <sha>`');
 }
 linhas.push('');
-linhas.push('## Provas canônicas (hash do arquivo em disco)');
+linhas.push('## Cadeia criptográfica — estado derivado (recomputado)');
 linhas.push('');
+if (!cadeia.existe) {
+  linhas.push(`- Relatório do validador ausente (\`${CADEIA_REL}\`) — cadeia não analisada nesta geração.`);
+} else {
+  linhas.push(`- **Estado**: **${cadeia.estado}** (validador: \`${cadeia.statusDoValidador}\`, verificado=${cadeia.verificada}, elos=${cadeia.elosVerificados})`);
+  linhas.push(`- Raiz persistida \`${String(cadeia.raizPersistida).slice(0, 16)}…\` × recalculada \`${String(cadeia.raizRecalculada).slice(0, 16)}…\` — conferem? **${cadeia.raizConfere ? 'sim' : 'NÃO'}** · \`tampered\`=${cadeia.tampered}`);
+  linhas.push(`- Cadeia construída para o commit \`${String(cadeia.gitCommitDaCadeia).slice(0, 12)}\` / artefato \`${cadeia.artefatoDaCadeia}\``);
+  linhas.push('');
+  linhas.push(`> ${cadeia.interpretacao}`);
+  linhas.push('');
+  linhas.push(`> ${cadeia.notaDeFase}`);
+  linhas.push('');
+  if (cadeia.falhas.length > 0) {
+    linhas.push('| divergência | elo | classificação | motivo do elo derivado |');
+    linhas.push('|---|---|---|---|');
+    for (const f of cadeia.falhas) {
+      const classe = !f.path ? 'estrutural (consequência)' : f.eloDerivado ? 'elo DERIVADO' : '**elo IMUTÁVEL**';
+      linhas.push(`| \`${f.id}\` ${f.reason} | ${f.path ? `\`${f.path}\`` : '—'} | ${classe} | ${f.motivoDerivado || '—'} |`);
+    }
+    linhas.push('');
+  }
+}
+linhas.push('## Provas canônicas (hash do arquivo em disco)');linhas.push('');
 linhas.push('| prova | veredito | runId | sha256 (12) | no git |');
 linhas.push('|---|---|---|---|---|');
 for (const p of provas) {

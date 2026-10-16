@@ -68,6 +68,27 @@ tem o comando e o exit code correspondente.
 - **Exige decisão do dono**: sem a segunda parte, ligar o gate deixa o agregado permanentemente
   vermelho.
 
+### A2 — CADEIA: análise corrigida na mesma sessão (importante)
+
+A primeira leitura de A2 acima estava **exagerada** e foi corrigida depois de ler o próprio pipeline:
+
+- A fase `certify` do `seal-release.sh` **já reconstrói e assina** a cadeia pelo caminho sancionado
+  (`governance/sign-governance.js`) e a **verifica bloqueantemente** em seguida. O comentário no
+  arquivo documenta este mesmo defeito, medido em 2026-10-16 (9 divergências), e é a correção dele.
+- Portanto a cadeia **é válida imediatamente após um selo**. Ela deixa de ser assim quando o ciclo
+  regrava um elo **derivado** — e isso é legítimo, não adulteração.
+- Classificação medida (derivada no ponto de entrada, com o validador rodando de verdade): das 9
+  divergências, **todas as 5 com elo nomeado são elos DERIVADOS**
+  (`evidence-manifest`, `final-proof-report`, `final-readiness-report`, `proof-signature`,
+  `package-validation-report`); as outras 4 são consequências estruturais
+  (`cumulative_hash_broken` ×3, `chain_root_mismatch`). **Nenhum elo IMUTÁVEL divergiu** — o
+  artefato certificado (`…payload.zip`, commit `d9c469e6`) **não foi alterado**.
+- **Residual real, menor do que a primeira leitura:** (i) `validate:governance-chain` não está no
+  agregado, então um ciclo de validação pode deixar a cadeia divergente com o agregado verde — agora
+  **explicitado** no `AUDIT_ENTRYPOINT.md`, que traz o estado da cadeia, a classificação por elo e o
+  remédio (novo ciclo de selagem, nunca "conserto" manual); (ii) a cadeia cobre elos que o próprio
+  ciclo regrava, o que a torna válida apenas no snapshot pós-selo.
+
 ### A3 — escrita fantasma no inventário de persistência (P1) — ABERTO
 
 - Único alvo sob `AI_MEMORY/` no inventário: `AI_MEMORY/hardening-queue.json`, categoria

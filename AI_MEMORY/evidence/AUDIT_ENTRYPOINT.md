@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T19:56:09.050Z
-- **auditEpoch**: `98e345991cf3e2acdfc0cb448d511e6fe0a3d7a986a9d616241230846e110907`
-- **Branch / HEAD**: `dev/engineering-hardening` / `5e4f7408bceb1cba20e16923fa0a5dd6bf52d76f`
+- **Gerado em**: 2026-10-16T20:17:27.018Z
+- **auditEpoch**: `fa639b7f6e1dcd64b83acde4d5608417589265d40b57e2d029d22bbebbe24f12`
+- **Branch / HEAD**: `dev/engineering-hardening` / `107b1b540161573eb42e3a9a08d8145f17a8142d`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -49,6 +49,28 @@ npm run validate:final-status-projection
 - **Última execução medida**: `PASS` (exit 0) — HEAD `6221b7cca`, log `AI_MEMORY/evidence/aggregate-enforcement-2026-10-16-dev-branch.log` encerrado em 2026-10-16T19:47:30.518Z, sha256 do log `31f7454ac4af38f1`
 - Diagnóstico do log: 31 linhas `status=PASS`, 0 `status=FAIL`, 0 `status=NO_GO` (diagnóstico, não veredito)
 
+## Cadeia criptográfica — estado derivado (recomputado)
+
+- **Estado**: **RECERTIFICACAO_NECESSARIA** (validador: `FAIL`, verificado=true, elos=10)
+- Raiz persistida `d22cf8fa6b8035c7…` × recalculada `e03b9a0df5d5a8af…` — conferem? **NÃO** · `tampered`=true
+- Cadeia construída para o commit `d9c469e677ee` / artefato `r-agent2-20261016-133323.payload.zip`
+
+> As divergências atingem APENAS elos derivados, que o próprio ciclo regrava (ver motivoDerivado). O artefato certificado NÃO foi alterado; o que existe é uma cadeia construída para um snapshot anterior — remedio: novo ciclo de selagem (fase certify), nunca "conserto" manual da cadeia.
+
+> A fase `certify` do selo reconstrói e assina a cadeia e depois a verifica de forma BLOQUEANTE (medido em seal-release.sh). Portanto a cadeia é válida imediatamente após um selo; rodar qualquer passo que regrave um elo derivado depois disso a torna divergente de forma legítima.
+
+| divergência | elo | classificação | motivo do elo derivado |
+|---|---|---|---|
+| `evidence_manifest` hash_mismatch | `governance/evidence-manifest.json` | elo DERIVADO | regravado por system:go-no-go (platform-readiness) dentro do ciclo |
+| `final_proof_report` hash_mismatch | `governance/final-proof-report.json` | elo DERIVADO | regravado por system:go-no-go dentro do ciclo |
+| `final_readiness` hash_mismatch | `governance/final-readiness-report.json` | elo DERIVADO | regravado por system:go-no-go dentro do ciclo |
+| `consistency_report` cumulative_hash_broken | — | estrutural (consequência) | — |
+| `cross_report` cumulative_hash_broken | — | estrutural (consequência) | — |
+| `proof_signature` hash_mismatch | `governance/proof-signature.json` | elo DERIVADO | regravado por materialize-proof-artifacts dentro do ciclo |
+| `blocker_engine` cumulative_hash_broken | — | estrutural (consequência) | — |
+| `package_validation` hash_mismatch | `governance/package-validation-report.json` | elo DERIVADO | regravado por system:go-no-go dentro do ciclo |
+| `chain_root` chain_root_mismatch | — | estrutural (consequência) | — |
+
 ## Provas canônicas (hash do arquivo em disco)
 
 | prova | veredito | runId | sha256 (12) | no git |
@@ -61,7 +83,7 @@ npm run validate:final-status-projection
 | `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 141ba96f383e | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | b9f50cf9d256 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | d93bca9603f3 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | b219369628d3 | não (ignorado) |
 | `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 271622357033 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | f52a8e66fc51 | não (ignorado) |
@@ -84,7 +106,6 @@ Nota de semântica: `blocked`/`blocked_external` são estados FECHADOS para o ag
 - `HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO` — **blocked** — Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO.
 - `HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO` — **blocked** — Correcao exige editar scripts/governance/** (SOURCE_ROOTS) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16: no agg7 o item RED_TO_FIX falhou e o gate reportou "saida do Jest nao pode ser parseada como JSON (crash antes do reporter)", mas o Jest terminou normalmente e imprimiu a assercao real no stderr do filho (`Expected: "GREEN" / Received: "READY_FOR_PROMOTION"`, engineeringRouterFullLoopE2E.test.js:218) + resumo completo ("Test Suites: 1 failed, 1 total / Time: 28.241 s"). O veredito do gate (item falhou) esta CORRETO; o diagnostico e que engana quem le so a linha resumida, e a causa real exige ler a secao "stderr do filho".
 - `HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE` — **blocked** — Classificar AI_MEMORY/evidence/ exige editar governance/json-persistence-audit.js, que esta em FILTERED_SOURCE_ROOTS (governance/**/*.js em governance/proof-engine/fingerprint-chain.js:106-112) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16 (prova dura): o passo bloqueante `audit:json-persistence` (node governance/json-persistence-audit.js --check) reprovou com exit 1 e unknown=2 no agg8, e os dois alvos UNKNOWN eram exatamente os artefatos que eu havia criado: `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json` e `AI_MEMORY/evidence/aggregate-enforcement-last-run.json`. Nao era flake: `classifyByPattern()` (json-persistence-audit.js:249-251) auto-classifica qa/, qa-mesh/, governance/, reports/ e docs/, mas NAO AI_MEMORY/evidence/ — que e exatamente o analogo de qa/evidence/ (essa sim classificada como ARTIFACT_STORAGE). MITIGACAO ATIVA (ja aplicada): o ponto de entrada passou a ser UM arquivo Markdown com o payload JSON embutido em bloco cercado; nenhum `.json` e escrito por tools/audit/. Comprovado: `audit:json-persistence --check` voltou a EXIT=0 e o sourceFingerprint permaneceu 1c10ffa62e169a18 (tools/audit/ esta fora de SOURCE_ROOTS).
-- `AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO` — **blocked** — DEFEITO DE DESENHO (P0), exige decisao de politica + mudanca de fonte. MEDIDO 2026-10-16: (a) `validate-governance-chain` NAO esta na cadeia do agregado (conferido em package.json: "no agregado: NAO"), portanto o agregado fica verde com a cadeia quebrada — agg10 deu exit 0 e a validacao seguinte da cadeia deu exit 1; (b) a divergencia e 3: blocker_engine=cumulative_hash_broken, package_validation=hash_mismatch (governance/package-validation-report.json), chain_root=chain_root_mismatch; (c) mtimes: governance-chain.json 13:49:00 (do selo) x package-validation-report.json 16:33:29 (reescrito DENTRO do agg10) — isto e, o proprio agregado regrava artefato coberto pela cadeia, entao a cadeia so pode estar valida imediatamente apos a certificacao e nunca depois de um ciclo de validacao. Correcao proposta: incluir `validate:governance-chain` no agregado (editar package.json, que NAO esta em SOURCE_ROOTS) E fixar a ordem do ciclo — a cadeia precisa ser reconstruida/certificada DEPOIS do ultimo passo que escreve artefato, senao o agregado fica permanentemente vermelho. A segunda parte toca scripts/governance/** (SOURCE_ROOTS) => novo fingerprint => re-selagem. Decisao do dono.
 - `AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA` — **blocked** — DEFEITO MENOR (P1), sem impacto em gate. MEDIDO 2026-10-16: o unico alvo sob AI_MEMORY/ no inventario e `AI_MEMORY/hardening-queue.json`, classificado como STATIC_VERSIONED_CONFIG, com writer `tools/audit/generate-audit-entrypoint.js` — mas esse gerador apenas LE a fila. O scanner trata o caminho como alvo de escrita porque ele aparece no mesmo arquivo que escreve o .md. Dois problemas reais: (1) alvo de escrita fantasma; (2) classificacao impropria, porque a fila e MUTAVEL (agentes escrevem nela) e nao "configuracao versionada estatica". Correcao exige editar governance/json-persistence-audit.js (SOURCE_ROOTS) => novo fingerprint => re-selagem. Como o alvo esta classificado, nenhum gate reprova por isso — risco atual: baixo, mas o inventario mente.
 
 ## Ponteiros stale na raiz do repositório — NÃO use como estado atual
@@ -117,25 +138,29 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T19:56:09.050Z",
+  "generatedAt": "2026-10-16T20:17:27.018Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "98e345991cf3e2acdfc0cb448d511e6fe0a3d7a986a9d616241230846e110907",
+    "valor": "fa639b7f6e1dcd64b83acde4d5608417589265d40b57e2d029d22bbebbe24f12",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "dev/engineering-hardening",
-      "headAtGeneration": "5e4f7408bceb1cba20e16923fa0a5dd6bf52d76f",
-      "headAssunto": "fix(audit): teste nao regrava artefato governado + registra 2 achados da FASE B",
-      "headData": "2026-10-16T16:51:00-03:00",
-      "remoteHead": "5e4f7408bceb1cba20e16923fa0a5dd6bf52d76f",
+      "headAtGeneration": "107b1b540161573eb42e3a9a08d8145f17a8142d",
+      "headAssunto": "audit(fase-b): relatorio versionado da auditoria profunda (FASE A inventario + FASE B execucoes)",
+      "headData": "2026-10-16T16:56:22-03:00",
+      "remoteHead": "107b1b540161573eb42e3a9a08d8145f17a8142d",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
-        "AI_MEMORY/evidence/auditoria-fase-b-2026-10-16.md"
+        "M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md",
+        "M AI_MEMORY/evidence/auditoria-fase-b-2026-10-16.md",
+        "M AI_MEMORY/hardening-queue.json",
+        "M tests/unit/audit/auditEntrypointArtifact.test.js",
+        "M tools/audit/generate-audit-entrypoint.js"
       ],
       "commitsNaoEnviados": 0
     },
@@ -243,6 +268,155 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         }
       }
     },
+    "cadeiaCriptografica": {
+      "relatorio": "reports/governance-chain-report.json",
+      "existe": true,
+      "statusDoValidador": "FAIL",
+      "estado": "RECERTIFICACAO_NECESSARIA",
+      "verificada": true,
+      "elosVerificados": 10,
+      "raizPersistida": "d22cf8fa6b8035c7f54dd2e27a82f3a0df6beae03fb9e75984bf88ed8a4056f9",
+      "raizRecalculada": "e03b9a0df5d5a8afb8cb18c4ba8accf8552252ec9e6b5ed5f27ab13081b8a480",
+      "raizConfere": false,
+      "tampered": true,
+      "gitCommitDaCadeia": "d9c469e677eee10fd998fefdf9f5a0d61c6d37a0",
+      "artefatoDaCadeia": "r-agent2-20261016-133323.payload.zip",
+      "falhas": [
+        {
+          "id": "evidence_manifest",
+          "reason": "hash_mismatch",
+          "path": "governance/evidence-manifest.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go (platform-readiness) dentro do ciclo"
+        },
+        {
+          "id": "final_proof_report",
+          "reason": "hash_mismatch",
+          "path": "governance/final-proof-report.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go dentro do ciclo"
+        },
+        {
+          "id": "final_readiness",
+          "reason": "hash_mismatch",
+          "path": "governance/final-readiness-report.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go dentro do ciclo"
+        },
+        {
+          "id": "consistency_report",
+          "reason": "cumulative_hash_broken",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        },
+        {
+          "id": "cross_report",
+          "reason": "cumulative_hash_broken",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        },
+        {
+          "id": "proof_signature",
+          "reason": "hash_mismatch",
+          "path": "governance/proof-signature.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por materialize-proof-artifacts dentro do ciclo"
+        },
+        {
+          "id": "blocker_engine",
+          "reason": "cumulative_hash_broken",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        },
+        {
+          "id": "package_validation",
+          "reason": "hash_mismatch",
+          "path": "governance/package-validation-report.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go dentro do ciclo"
+        },
+        {
+          "id": "chain_root",
+          "reason": "chain_root_mismatch",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        }
+      ],
+      "imutaveisQuebrados": [],
+      "derivadosQuebrados": [
+        {
+          "id": "evidence_manifest",
+          "reason": "hash_mismatch",
+          "path": "governance/evidence-manifest.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go (platform-readiness) dentro do ciclo"
+        },
+        {
+          "id": "final_proof_report",
+          "reason": "hash_mismatch",
+          "path": "governance/final-proof-report.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go dentro do ciclo"
+        },
+        {
+          "id": "final_readiness",
+          "reason": "hash_mismatch",
+          "path": "governance/final-readiness-report.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go dentro do ciclo"
+        },
+        {
+          "id": "proof_signature",
+          "reason": "hash_mismatch",
+          "path": "governance/proof-signature.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por materialize-proof-artifacts dentro do ciclo"
+        },
+        {
+          "id": "package_validation",
+          "reason": "hash_mismatch",
+          "path": "governance/package-validation-report.json",
+          "eloDerivado": true,
+          "motivoDerivado": "regravado por system:go-no-go dentro do ciclo"
+        }
+      ],
+      "estruturais": [
+        {
+          "id": "consistency_report",
+          "reason": "cumulative_hash_broken",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        },
+        {
+          "id": "cross_report",
+          "reason": "cumulative_hash_broken",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        },
+        {
+          "id": "blocker_engine",
+          "reason": "cumulative_hash_broken",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        },
+        {
+          "id": "chain_root",
+          "reason": "chain_root_mismatch",
+          "path": null,
+          "eloDerivado": null,
+          "motivoDerivado": null
+        }
+      ],
+      "interpretacao": "As divergências atingem APENAS elos derivados, que o próprio ciclo regrava (ver motivoDerivado). O artefato certificado NÃO foi alterado; o que existe é uma cadeia construída para um snapshot anterior — remedio: novo ciclo de selagem (fase certify), nunca \"conserto\" manual da cadeia.",
+      "notaDeFase": "A fase `certify` do selo reconstrói e assina a cadeia e depois a verifica de forma BLOQUEANTE (medido em seal-release.sh). Portanto a cadeia é válida imediatamente após um selo; rodar qualquer passo que regrave um elo derivado depois disso a torna divergente de forma legítima."
+    },
     "provas": [
       {
         "path": "reports/governance-score.json",
@@ -331,8 +505,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:50:52.336Z",
-        "sha256": "d93bca9603f30a192ee170c6d683914ed3edbead770f8ccfa700539e8753710a"
+        "generatedAt": "2026-10-16T20:17:25.106Z",
+        "sha256": "b219369628d3cb1322d174821750aefafe6accaded2734ab3cff8bcbe407183a"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -419,11 +593,6 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
           "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
           "status": "blocked",
           "motivo": "Classificar AI_MEMORY/evidence/ exige editar governance/json-persistence-audit.js, que esta em FILTERED_SOURCE_ROOTS (governance/**/*.js em governance/proof-engine/fingerprint-chain.js:106-112) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16 (prova dura): o passo bloqueante `audit:json-persistence` (node governance/json-persistence-audit.js --check) reprovou com exit 1 e unknown=2 no agg8, e os dois alvos UNKNOWN eram exatamente os artefatos que eu havia criado: `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json` e `AI_MEMORY/evidence/aggregate-enforcement-last-run.json`. Nao era flake: `classifyByPattern()` (json-persistence-audit.js:249-251) auto-classifica qa/, qa-mesh/, governance/, reports/ e docs/, mas NAO AI_MEMORY/evidence/ — que e exatamente o analogo de qa/evidence/ (essa sim classificada como ARTIFACT_STORAGE). MITIGACAO ATIVA (ja aplicada): o ponto de entrada passou a ser UM arquivo Markdown com o payload JSON embutido em bloco cercado; nenhum `.json` e escrito por tools/audit/. Comprovado: `audit:json-persistence --check` voltou a EXIT=0 e o sourceFingerprint permaneceu 1c10ffa62e169a18 (tools/audit/ esta fora de SOURCE_ROOTS)."
-        },
-        {
-          "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
-          "status": "blocked",
-          "motivo": "DEFEITO DE DESENHO (P0), exige decisao de politica + mudanca de fonte. MEDIDO 2026-10-16: (a) `validate-governance-chain` NAO esta na cadeia do agregado (conferido em package.json: \"no agregado: NAO\"), portanto o agregado fica verde com a cadeia quebrada — agg10 deu exit 0 e a validacao seguinte da cadeia deu exit 1; (b) a divergencia e 3: blocker_engine=cumulative_hash_broken, package_validation=hash_mismatch (governance/package-validation-report.json), chain_root=chain_root_mismatch; (c) mtimes: governance-chain.json 13:49:00 (do selo) x package-validation-report.json 16:33:29 (reescrito DENTRO do agg10) — isto e, o proprio agregado regrava artefato coberto pela cadeia, entao a cadeia so pode estar valida imediatamente apos a certificacao e nunca depois de um ciclo de validacao. Correcao proposta: incluir `validate:governance-chain` no agregado (editar package.json, que NAO esta em SOURCE_ROOTS) E fixar a ordem do ciclo — a cadeia precisa ser reconstruida/certificada DEPOIS do ultimo passo que escreve artefato, senao o agregado fica permanentemente vermelho. A segunda parte toca scripts/governance/** (SOURCE_ROOTS) => novo fingerprint => re-selagem. Decisao do dono."
         },
         {
           "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",

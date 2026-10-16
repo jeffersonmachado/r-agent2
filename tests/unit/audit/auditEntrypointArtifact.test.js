@@ -58,6 +58,26 @@ describe('AUDIT_ENTRYPOINT.md — invariantes do ponto de entrada de auditoria',
     expect(md).toContain('audit:json-persistence');
   });
 
+  test('o estado da cadeia criptografica vem derivado, com classificacao por elo', () => {
+    // Trava do achado A2: sem isto, "cadeia quebrada" volta a ser ruído indistinguível
+    // de "artefato certificado alterado". O bloco precisa nomear estado, raízes e elos.
+    const doc = extrairPayload(fs.readFileSync(ARTEFATO, 'utf8'));
+    const c = doc.payload.cadeiaCriptografica;
+    expect(c).toBeTruthy();
+    expect(['PASS', 'RECERTIFICACAO_NECESSARIA', 'ARTEFATO_CERTIFICADO_ALTERADO']).toContain(c.estado);
+    expect(typeof c.interpretacao).toBe('string');
+    expect(c.interpretacao.length).toBeGreaterThan(20);
+    // Se divergir, todo elo com caminho precisa ter sido classicado (derivado ou imutável).
+    for (const f of c.falhas || []) {
+      if (f.path) expect(typeof f.eloDerivado).toBe('boolean');
+    }
+    // Elo IMUTÁVEL divergente é a classe grave: se isso ocorrer, o estado NÃO pode
+    // ser RECERTIFICACAO_NECESSARIA (tem de ser ARTEFATO_CERTIFICADO_ALTERADO).
+    if ((c.imutaveisQuebrados || []).length > 0) {
+      expect(c.estado).toBe('ARTEFATO_CERTIFICADO_ALTERADO');
+    }
+  });
+
   test('todo proof registrado tem veredito e sha256 — nenhuma linha oca', () => {
     const doc = extrairPayload(fs.readFileSync(ARTEFATO, 'utf8'));
     for (const p of doc.payload.provas) {
