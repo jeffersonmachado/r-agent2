@@ -1,7 +1,7 @@
 {
   "artifactType": "outbound-reliability-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T16:03:02.969Z",
+  "generatedAt": "2026-10-16T16:33:41.074Z",
   "runId": "rap-governed-20261016144931085-033e1239",
   "sourceFingerprint": "1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e",
   "status": "PASS",

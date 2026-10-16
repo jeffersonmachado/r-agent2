@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-16T14:36:49.085Z",
+  "updatedAt": "2026-10-16T17:10:36.118Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -505,10 +505,9 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
       "title": "Criar run governado novo torna o CANDIDATO entregue um artefato de outro run",
-      "status": "blocked",
-      "commit": "c20433341",
-      "evidence": "MEDIDO no agregado apos o destravamento: [release-identity] status=FAIL decision=RELEASE_ARTIFACT_IDENTITY_INVALID — \"FALHA FOREIGN_RUN_ARTIFACT: candidate.governanceRunId (rap-governed-20261016041828305-ae81e3ee) != run corrente (rap-governed-20261016125224166-7833cff3)\". Efeito de estrutura, nao defeito de codigo: o candidato em dist/candidate/ (release r-agent2-20261016-025650) foi produzido no run anterior. Antes desta operacao o agregado tinha 1 violacao (evidencia da malha pos-run); depois delatambem tem 1 violacao, porem TRUTHFUL e explicita: o run corrente ainda nao produziu candidato. Todos os demais validadores seguem verdes, inclusive validate:qa-evidence-same-run 6/6.",
-      "blocked_reason": "Resolver exige a fase `candidate` (e seguintes) do ciclo de release no run corrente — producao de release, fora da autoridade desta missao (nao publicar release / nao promover codigo). O fechamento se da por: bash scripts/governance/seal-release.sh --from prepare (o prepare nao criara run novo porque o fingerprint ja coincide; o converge roda o mesh canonico no run, o stamp reaplica lineage e a fase candidate reconstroi o candidato no run corrente)."
+      "status": "verified",
+      "commit": "d9c469e67",
+      "evidence": "RESOLVIDO por ciclo completo e provado: (1) selo V2 21/21 dentro do run R3 rap-governed-20261016144931085-033e1239 (apos corrigir o defeito do handshake ambiguo, commit a5449d15e); (2) candidato r-agent2-20261016-130247 selado (exit 1 intencional/DEFERRED); (3) validate:release-artifact-identity -> PASS RELEASE_ARTIFACT_IDENTITY_VERIFIED (a violacao FOREIGN_RUN_ARTIFACT original deixou de existir, nao foi tolerada); (4) verify:delivered-release -> DELIVERED_RELEASE_VERIFIED; scorecard 78/78 com below10=0, openGaps=0, openBlockers=0; projecoes canonicas PASS; (5) zip:release final -> SEAL_GO r-agent2-20261016-133323 com PAYLOAD_GOVERNANCE_VERIFIED; (6) npm run validate:governance-enforcement -> AGG_EXIT=0 com 31 validadores PASS (antes: exit 1 por evidencia/identidade e exit 3 por SECURITY_GATE_STALE_EVIDENCE, resolvido regenerando o SBOM dentro da janela do run: npm run security:sbom). Publicacao (tag/release) NAO executada — aguarda autorizacao explicita."
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -525,6 +524,22 @@
       "commit": "a5449d15e",
       "evidence": "DEFEITO MEDIDO: selo V2 abortou num passo OBRIGATORIO com `[FAIL] FENCE_AVANCOU — antes=undefined depois=2` (passo REAL_TASK_RECOVERY, exit=1), enquanto o mesmo passo passava ISOLADO (`status=GO checks=16`). Causa raiz: `scripts/governance/verify-real-task-recovery.js` aceitava como handshake qualquer linha JSON com `state` string (`if (!parsed || typeof parsed.state !== \"string\") continue;`), e o filho (`tests/helpers/taskLeaseWorkerChild.js`) roda o CAMINHO REAL do produto, que tambem LOGA JSON no stdout. Sob carga, um LOG era adotado como handshake, o filho era morto no lugar errado e o payload sem `taskFence` fazia `2 > undefined` (falso) — reprovacao com motivo ENGANOSO (\"o fence nao avancou\", quando avancou). Prova de que era log: o handshake legitimo SEMPRE traz `taskFence` (nulo no pior caso), nunca `undefined`. Correcao: marcador inequivoco (`__TASK_LEASE_HANDSHAKE__`) na linha do handshake + caminho legado exigindo campo exclusivo (`taskFence`/`taskLeaseToken`) + `FENCE_INICIAL_LEGIVEL` com fallback canonico no banco e comparacao numerica explicita. Prova: 6/6 testes novos e passo re-executado com `status=GO checks=17` (FENCE_INICIAL_LEGIVEL fenceA=1, FENCE_AVANCOU antes=1 depois=2).",
       "prevention": "tests/unit/governance/taskLeaseHandshakeParsing.test.js trava as tres regras: log JSON com `state` NAO e handshake; caminho legado exige campo exclusivo; `fenceLegivel()` recusa undefined/null/NaN (o valor que produzia o veredito errado). A lib pura `scripts/governance/lib/task-lease-handshake.js` e o unico ponto de parsing, usado pelo harness e pelo filho."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
+      "title": "FENCE_AVANCOU com antes=undefined: log JSON do produto confundido com handshake (selo V2 abortado)",
+      "status": "prevention_active",
+      "commit": "a5449d15e",
+      "evidence": "DEFEITO MEDIDO: passo OBRIGATORIO REAL_TASK_RECOVERY do selo V2 abortava com `[FAIL] FENCE_AVANCOU — antes=undefined depois=2` (exit=1) e passava ISOLADO (GO 16 checks). Causa raiz: verify-real-task-recovery.js aceitava como handshake qualquer linha JSON com `state` string, e o filho roda o caminho real do produto (que tambem loga JSON); sob carga o parser adotava um LOG como handshake, matava o worker no lugar errado e o payload sem taskFence fazia `2 > undefined` (falso) — reprovacao com motivo engamoso. Prova de que era log: o handshake legitimo sempre traz taskFence (nulo no pior caso). Correcao: marcador inequivoco __TASK_LEASE_HANDSHAKE__ + caminho legado exigindo campo exclusivo + FENCE_INICIAL_LEGIVEL com fallback canonico no banco e comparacao numerica explicita. Provas: tests/unit/governance/taskLeaseHandshakeParsing.test.js 6/6; passo re-executado GO 17 checks; selo V2 21/21 (antes abortava).",
+      "prevention": "tests/unit/governance/taskLeaseHandshakeParsing.test.js trava as tres regras (log JSON com state nao e handshake; caminho legado exige campo exclusivo; fenceLegivel() recusa undefined/null/NaN). A lib pura scripts/governance/lib/task-lease-handshake.js e o unico ponto de parsing, usado pelo harness e pelo filho."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
+      "title": "SBOM anterior ao startedAt do run derruba o security gate (exit 3) mesmo com risco GO",
+      "status": "prevention_active",
+      "commit": "a5449d15e",
+      "evidence": "MEDIDO: `[security-release-gate] state=EVIDENCE_UNAVAILABLE decision=NO_GO exit=3 — SECURITY_GATE_STALE_EVIDENCE` enquanto o proprio motor de risco dizia GO (5 verificacoes satisfeitas). Regra (scripts/governance/lib/security-gate-provenance.js:56-62): o SBOM precisa de generatedAt posterior ao startedAt do run. Remedio aplicado: `npm run security:sbom` (produtor) DENTRO do run R3 (startedAt 14:49:31) -> `validate:security-release-gate` passou a state=GO decision=GO exit=0. Efeito no agregado: AGG_EXIT 3 -> 0 (31 validadores PASS).",
+      "prevention": "A regra ja e enforcement executavel (security-gate-provenance + security-gate-state classificam o codigo como PROVENANCE_EVIDENCE_CODE) e o selo tem preflight de evidencia de TTL curto (short-ttl-evidence.js, referenciado em seal-release.sh:621). O que faltava era a acao operacional de REGENERAR o SBOM dentro da janela do run — agora registrada aqui e no relatorio da missao."
     }
   ]
 }
