@@ -203,3 +203,28 @@ mudaram) desde o último bloqueio. Sem progresso ele libera, para não entrar em
 infinito, e há um teto de continuidades consecutivas (`MISSION_MAX_CONTINUES`, default 50).
 Isso é enforcement executável, não prosa: **não remova, não relaxe e não contorne** alterando
 a fila para esvaziá-la sem prova real.
+
+## Auditoria externa: como detectar que o estado mudou
+
+Um auditor externo que lê este repositório **via git** não enxerga a prova: `reports/*.json`
+e `governance/*.json` são ignorados por política (`.gitignore` linhas 118/124). O ponto de
+entrada único e versionado é:
+
+- **`AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json`** — estado corrente derivado, com `auditEpoch`
+  (sha256 do payload) e SHA-256 de cada prova em disco.
+- **`AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`** — o mesmo em leitura humana.
+
+Detectar mudança desde a última auditoria:
+
+```bash
+git log --oneline -20
+git log -1 --format=%H -- AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json   # commit do epoch atual
+```
+
+`auditEpoch` diferente do registrado, ou `payload.provas[].sha256` divergente do arquivo em
+disco, significa que houve mudança (ou adulteração) e a auditoria deve ser refeita.
+Regenerar: `node tools/audit/generate-audit-entrypoint.js`.
+
+Atenção: os ponteiros de fechamento na raiz (`FINAL_RAP_RELEASE_CLOSURE.json`,
+`FINAL_RELEASE_CLOSURE.md`, `ENGINEERING_ROUTER_V1_*.md/json`) são **históricos/stale** — nenhum
+gate os mantém e eles congelaram em 2026-09-22/24. Não os use como estado corrente.

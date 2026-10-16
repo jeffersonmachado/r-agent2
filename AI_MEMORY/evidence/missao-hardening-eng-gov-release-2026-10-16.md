@@ -318,7 +318,7 @@ nada foi publicado, nada foi promovido. O que mudou foi o estado de PROVA.
 | Scorecard mestre | `run-persisted-scorecard` | **78/78**, `below10=0`, `openGaps=0`, `openBlockers=0` |
 | Projeções canônicas | `validate:final-status-projection` | `PASS issues=0` |
 | Selagem final | `seal-time-gate` / `zip:release` | **SEAL_GO** · `PAYLOAD_GOVERNANCE_VERIFIED` |
-| Gate agregado | `validate:governance-enforcement` | **exit 0** · **31 validadores PASS** |
+| Gate agregado | `validate:governance-enforcement` | **exit 0** em cadeia de **63 passos** encadeados com `&&` |
 | Fila oficial | `validate:hardening-queue` | **69 itens, 0 abertos**, `PASS` |
 
 Release selado: **`r-agent2-20261016-133323`** (`finalPayloadHash=515e94adc6…`, fingerprint
@@ -385,9 +385,16 @@ Um único item da fila **não** está fechado:
 
 **SELADO_E_VERIFICADO — PRONTO PARA PUBLICAÇÃO, aguardando autorização explícita.**
 
-O que está provado: agregado **exit 0 com 31 validadores PASS** no HEAD final, selo V2 21/21,
-scorecard 78/78, identidade/lineage do artefato verificada, fila oficial com 0 abertos, e todos
-os P0 corrigíveis corrigidos e provados nos dois sentidos.
+O que está provado: agregado **exit 0** no HEAD final (cadeia de 63 passos ligados por `&&`, logo todos
+passaram), selo V2 21/21, scorecard 78/78, identidade/lineage do artefato verificada, fila oficial com
+0 abertos, e todos os P0 corrigíveis corrigidos e provados nos dois sentidos.
+
+**Correção de imprecisão desta sessão:** em §17.1 e na primeira version desta seção eu escrevi
+"31 validadores PASS". Esse número era a contagem de **linhas `status=PASS` no log** (artefato de
+formatação de cada gate), NÃO o número de validadores: a cadeia tem **63 passos** (62 via `npm run`
++ 1 `node scripts/governance/stamp-report-lineage.js`). O que realmente prova o agregado é o
+**exit 0** — numa cadeia `&&`, um único passo vermelho tornaria o exit diferente de zero. Registrado
+no `AUDIT_ENTRYPOINT.json` (bloco `agregado.semantica`) para não se repetir.
 
 O que **não** foi feito, por estar fora da autorização: **nenhuma tag criada, nenhuma release
 publicada, nenhum código promovido para produção.** O passo de publicação é
