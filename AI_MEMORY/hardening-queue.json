@@ -423,6 +423,13 @@
       "status": "done",
       "commit": "9b72a3613",
       "evidence": "Defeito medido em 2026-10-14: o passo obrigatorio V1_RUNTIME_EVIDENCE (coletor `collect-engineering-router-runtime-evidence.js`) saiu exit=1 e o relatorio `reports/engineering-router-v2-seal-execution.json` ficou com stderrTail vazio, porque o coletor escreve o motivo em STDOUT. O selo abortou sem causa auditavel e so a reproducao manual do passo mostrou que a falha era transitoria (passou na execucao seguinte; a reexecucao do V2 seal deu status=GO com 21 passos). Correcao: o caminho de FAIL do `runStep` carrega `stdoutTail` (ultimas 6 linhas nao vazias) e o caminho de PASS NAO carrega, para nao inchar o relatorio com a saida do QA Mesh; `runStep` foi exportado para o teste exercitar o MESMO executor do selo. Prova: tests/unit/governance/v2SealStepDiagnostics.test.js (4 casos) + prova BIDIRECIONAL (removido o stdoutTail, 2 failed/2 passed; restaurado, 4/4)."
+    },
+    {
+      "id": "H17-PREFLIGHT-ASK-AI-TTL",
+      "title": "Preflight do selo checa o TTL da evidencia do Ask-AI (fail-fast em 4 s)",
+      "status": "done",
+      "commit": "1e7528d35",
+      "evidence": "Defeito medido em 2026-10-15 (ciclo de ~2 h perdido): o validador `validate:ask-ai-runtime-evidence` roda DENTRO do gate agregado, que roda na ULTIMA fase (`consolidate`). A evidencia tem TTL de 7 dias e produtor MANUAL (`npm run verify:ask-ai-copilot:runtime`, exige API viva + credencial de verificacao), entao nada a renova sozinho: o ciclo inteiro rodou (QA Mesh real ~40 min, empacotamento, tag JA PUBLICADA) e abortou no fim com `ASK_AI_RUNTIME_EVIDENCE_STALE` (177,8 h de 168 h), exigindo interromper a fase, regenerar de verdade (10/10 verificacoes em runtime real) e retomar `--from consolidate`. O preflight ja fazia esse fail-fast para o smoke continuo das QA Waves; faltava a MESMA protecao aqui — onde o custo de descobrir no fim e maior (a tag ja foi publicada). Correcao: novo `scripts/governance/ask-ai-runtime-evidence-ttl-preflight.js` com AUTORIDADE UNICA do TTL (chama `evaluateRuntimeEvidence`, a mesma funcao do validador — limiar nunca duplicado), exit 0=OK / 1=vencida-invalida-ausente / 2=nao avaliavel (fail-closed), chamado na ENTRADA do ciclo e de novo no inicio do `consolidate`. Prova: tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js (6 casos, incluindo o mesmo 177,8 h medido, evidencia ausente, ausencia de prova de geracao e a assercao de que o selo chama o preflight nos DOIS pontos) + prova E2E medida: com a evidencia envelhecida para 177,8 h o selo aborta na entrada em 4 s com o remedio exato (antes levava ~2 h para descobrir no fim); restaurada a evidencia fresca, o preflight volta a OK."
     }
   ]
 }
