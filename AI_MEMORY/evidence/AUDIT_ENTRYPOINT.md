@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T18:52:41.295Z
-- **auditEpoch**: `3883d685cd053f50fb1b1caa501f3e997e1ab9b7d114dc08b8d06581e57f12f5`
-- **Branch / HEAD**: `hardening/p0-certificacao` / `0aad65b5c9f0a7438458c7afb59448018245e91a`
+- **Gerado em**: 2026-10-16T19:01:59.616Z
+- **auditEpoch**: `c132a09dde2cc78dcfe4eacbd288b5b327c51a13190995eb51ffacf0e5518ea3`
+- **Branch / HEAD**: `hardening/p0-certificacao` / `32426bc1971f2a82ae5ba927a70f013f9fc15dcc`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -41,27 +41,28 @@ npm run validate:final-status-projection
 - Passos que não são `npm run`: `node scripts/governance/stamp-report-lineage.js`
 - A cadeia usa && encadeado: exit 0 no alias PROVA que TODOS os passos passaram (qualquer falha aborta com exit != 0). Isso é mais forte e mais simples que contar linhas "status=PASS" no log, que é artefato de formatação de cada gate e não corresponde 1:1 ao número de passos.
 - Relatório próprio do agregado: `reports/governance-enforcement-full-report.json` — existe, gerado em 2026-10-14T22:29:09.605Z, runId corrente? **NÃO**
-- Provas acima com o runId corrente: **8 de 13**
-- Provas que não registram campo `runId` (não é violação, o campo não existe nelas): `reports/coverage-gate-report.json`, `reports/final-status-projection-report.json`, `reports/security-intel-report.json`, `reports/mcp-research-docker-e2e-report.json`, `reports/hardening-queue-report.json`
+- Provas acima com o runId corrente: **9 de 13**
+- Provas que não registram campo `runId` (não é violação, o campo não existe nelas): `reports/final-status-projection-report.json`, `reports/security-intel-report.json`, `reports/mcp-research-docker-e2e-report.json`, `reports/hardening-queue-report.json`
 
 > DESATUALIZADO: existe, mas NÃO é do run corrente — o alias `validate:governance-enforcement` não usa run-all-validators.js, logo não o regrava. Não use este arquivo como veredito do agregado; use o exit code da cadeia + as provas canônicas abaixo.
 
-- **Última execução medida**: não embutida — rode o agregado e regenere com `--aggregate-log <log> --aggregate-head <sha>`
+- **Última execução medida**: `PASS` (exit 0) — HEAD `32426bc19`, log `AI_MEMORY/evidence/aggregate-enforcement-2026-10-16.log` encerrado em 2026-10-16T19:01:57.631Z, sha256 do log `0d8683c7e4fda9f5`
+- Diagnóstico do log: 31 linhas `status=PASS`, 0 `status=FAIL`, 0 `status=NO_GO` (diagnóstico, não veredito)
 
 ## Provas canônicas (hash do arquivo em disco)
 
 | prova | veredito | runId | sha256 (12) | no git |
 |---|---|---|---|---|
-| `reports/governance-score.json` | **PASS** | 085-033e1239 | 496ac724821f | não (ignorado) |
-| `reports/coverage-gate-report.json` | **GO** | — | 9d124dacda42 | não (ignorado) |
-| `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 65d01d7511dd | não (ignorado) |
+| `reports/governance-score.json` | **PASS** | 085-033e1239 | d05c1a022c7c | não (ignorado) |
+| `reports/coverage-gate-report.json` | **GO** | 085-033e1239 | 99feb7bdb1e2 | não (ignorado) |
+| `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 90021d590d61 | não (ignorado) |
 | `reports/source-remote-provenance-report.json` | **PASS** | 085-033e1239 | 53d33ad9e843 | não (ignorado) |
-| `reports/final-status-projection-report.json` | **PASS** | — | e9d7a6913abb | não (ignorado) |
-| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | af759c681d62 | não (ignorado) |
+| `reports/final-status-projection-report.json` | **PASS** | — | af57566b2128 | não (ignorado) |
+| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | b3df7b6f1a10 | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
-| `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | 1bf3ac59e6f1 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | 2d3c8aeeb8fd | não (ignorado) |
-| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 0cf020c8bcfc | não (ignorado) |
+| `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | afc20e35c6c6 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | 4438f7ba2152 | não (ignorado) |
+| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 91be08411708 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | 815d35350a3b | não (ignorado) |
 | `governance/.current-run.json` | **COMPLETED** | 085-033e1239 | 47d0a433361e | não (ignorado) |
@@ -117,32 +118,24 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T18:52:41.295Z",
+  "generatedAt": "2026-10-16T19:01:59.616Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "3883d685cd053f50fb1b1caa501f3e997e1ab9b7d114dc08b8d06581e57f12f5",
+    "valor": "c132a09dde2cc78dcfe4eacbd288b5b327c51a13190995eb51ffacf0e5518ea3",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "hardening/p0-certificacao",
-      "headAtGeneration": "0aad65b5c9f0a7438458c7afb59448018245e91a",
-      "headAssunto": "chore(governanca): commit real no item de prevencao do worktree congelado",
-      "headData": "2026-10-16T15:41:16-03:00",
-      "remoteHead": "0aad65b5c9f0a7438458c7afb59448018245e91a",
+      "headAtGeneration": "32426bc1971f2a82ae5ba927a70f013f9fc15dcc",
+      "headAssunto": "fix(auditoria): ponto de entrada vira .md unico — os 2 JSON eram alvos UNKNOWN do audit:json-persistence",
+      "headData": "2026-10-16T15:52:51-03:00",
+      "remoteHead": "32426bc1971f2a82ae5ba927a70f013f9fc15dcc",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
-      "worktreeCleanExcluindoEsteArtefato": false,
-      "uncommittedPaths": [
-        "M AGENTS.md",
-        "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json",
-        "M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md",
-        "M AI_MEMORY/hardening-queue.json",
-        "M AI_MEMORY/operational-rules.md",
-        "M tools/audit/generate-audit-entrypoint.js",
-        "D tools/audit/record-aggregate-run.js"
-      ],
+      "worktreeCleanExcluindoEsteArtefato": true,
+      "uncommittedPaths": [],
       "commitsNaoEnviados": 0
     },
     "releaseGovernado": {
@@ -222,9 +215,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "escritor": "scripts/governance/run-all-validators.js",
         "aviso": "DESATUALIZADO: existe, mas NÃO é do run corrente — o alias `validate:governance-enforcement` não usa run-all-validators.js, logo não o regrava. Não use este arquivo como veredito do agregado; use o exit code da cadeia + as provas canônicas abaixo."
       },
-      "provasComRunIdCorrente": 8,
+      "provasComRunIdCorrente": 9,
       "provasSemCampoRunId": [
-        "reports/coverage-gate-report.json",
         "reports/final-status-projection-report.json",
         "reports/security-intel-report.json",
         "reports/mcp-research-docker-e2e-report.json",
@@ -232,8 +224,22 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
       ],
       "provasDeOutroRun": [],
       "ultimaExecucaoMedida": {
-        "existe": false,
-        "nota": "rode o agregado e regenere com --aggregate-log <log> [--aggregate-head <sha>] para embutir o veredito medido"
+        "existe": true,
+        "comando": "npm run validate:governance-enforcement",
+        "veredito": "PASS",
+        "exitCode": 0,
+        "semantica": "exit 0 numa cadeia && encadeada prova que TODOS os passos passaram. As contagens de linhas são diagnóstico de formatação de cada gate, NÃO o veredito (não correspondem 1:1 ao número de passos da cadeia).",
+        "headAtRun": "32426bc19",
+        "logPath": "AI_MEMORY/evidence/aggregate-enforcement-2026-10-16.log",
+        "logSha256": "0d8683c7e4fda9f5388de70f615117f6d49bc03fa86387b8f258de66df619043",
+        "logBytes": 72203,
+        "logFinishedAt": "2026-10-16T19:01:57.631Z",
+        "diagnostico": {
+          "passLines": 31,
+          "failLines": 0,
+          "noGoLines": 0,
+          "totalLines": 1159
+        }
       }
     },
     "provas": [
@@ -244,8 +250,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T17:47:22.281Z",
-        "sha256": "496ac724821f03482fd9e6c241a7188fa0ccfc9431818467663ccf9ad73d96f3"
+        "generatedAt": "2026-10-16T19:01:12.343Z",
+        "sha256": "d05c1a022c7c0e09b8c36e90a773d0d5dd362484e7e4d0d44669c31edb2bae00"
       },
       {
         "path": "reports/coverage-gate-report.json",
@@ -253,9 +259,9 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "existe": true,
         "veredito": "GO",
         "campoVeredito": "status",
-        "runId": null,
-        "generatedAt": "2026-10-16T18:49:28.156Z",
-        "sha256": "9d124dacda429e799784e22ff42ec3025c68059d3dd48d685ad5282bccec64ff"
+        "runId": "rap-governed-20261016144931085-033e1239",
+        "generatedAt": "2026-10-16T19:01:02.775Z",
+        "sha256": "99feb7bdb1e241bdf2a2be878359a19cb984a8edbbfb9944a2f4d60524a4722d"
       },
       {
         "path": "reports/release-artifact-identity-report.json",
@@ -264,8 +270,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "RELEASE_ARTIFACT_IDENTITY_VERIFIED",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T18:41:32.852Z",
-        "sha256": "65d01d7511ddfdb9ade47db7ba14d1f55870d7401b569dd1401c6f0c2049f905"
+        "generatedAt": "2026-10-16T18:53:03.366Z",
+        "sha256": "90021d590d6142acf679cb7dfbb4d49b9da349509cbe262ec409f673f6b2405c"
       },
       {
         "path": "reports/source-remote-provenance-report.json",
@@ -284,8 +290,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T18:27:37.668Z",
-        "sha256": "e9d7a6913abbda448803d378e7095e197eeff17a98dfd4e4798e582b2fcb520d"
+        "generatedAt": "2026-10-16T19:01:12.582Z",
+        "sha256": "af57566b21282106cc06ea181b358d49cbf80ae320f786ad9c47c3ee80c8a2a4"
       },
       {
         "path": "reports/security-release-gate-report.json",
@@ -294,8 +300,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "GO",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T17:47:22.053Z",
-        "sha256": "af759c681d621d5049072771684c88a686ed22b5b53478215ec67ebe74cff67e"
+        "generatedAt": "2026-10-16T19:01:12.176Z",
+        "sha256": "b3df7b6f1a10e7edbe98ebab33773dac34277770a7d13d76e34653d5a8dd50c6"
       },
       {
         "path": "reports/security-intel-report.json",
@@ -314,8 +320,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T17:47:33.661Z",
-        "sha256": "1bf3ac59e6f1dc73c85d5c9e1f56df8fc577e52ae0d44fd94d3e4dae49107b1b"
+        "generatedAt": "2026-10-16T19:01:23.230Z",
+        "sha256": "afc20e35c6c67c73766a6020e95612ec406d6a4ba3fbf634b422fb55cc918413"
       },
       {
         "path": "reports/hardening-queue-report.json",
@@ -324,8 +330,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T18:52:39.617Z",
-        "sha256": "2d3c8aeeb8fd22cbff72dfca321e4809f99af1580db8d4c95a49463bfa2b1a51"
+        "generatedAt": "2026-10-16T19:01:38.892Z",
+        "sha256": "4438f7ba215293fe8507a8640fae687952deb498deaeb10b598ff0290aa81512"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -334,8 +340,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T18:41:31.470Z",
-        "sha256": "0cf020c8bcfc5bd42564c3f489e98ecfe24d5f604110081df33678ea464e7e17"
+        "generatedAt": "2026-10-16T18:53:02.688Z",
+        "sha256": "91be0841170885db5087da57d2172b624f9f09a7c7247ed6c7ded8d3dadfe0bc"
       },
       {
         "path": "governance/evidence-manifest.json",
