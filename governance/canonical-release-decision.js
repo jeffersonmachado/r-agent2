@@ -29,7 +29,7 @@
  */
 
 /** Versão do vocabulário/decisão. Muda quando a semântica dos estados mudar. */
-const DECISION_VERSION = '1.0.0';
+const DECISION_VERSION = '1.1.0';
 
 /** Estados canônicos. Conjunto FECHADO — nada fora daqui é decisão válida. */
 const STATES = Object.freeze({
@@ -50,6 +50,30 @@ const GATE_STATUS = Object.freeze({
   BLOCKED: 'BLOCKED',
   PENDING: 'PENDING',
 });
+
+/**
+ * POLÍTICA EXPLÍCITA (P0 corrigido): só o que está AQUI permite avanço.
+ *
+ * DEFEITO MEDIDO (2026-10-16, reproduzido): a versão anterior usava LISTA DE
+ * BLOQUEIO (FAIL/DEFERRED/BLOCKED/PENDING) e deixava cair no `return
+ * CERTIFIED_GO` tudo o que não estivesse nela — inclusive `NOT_EXECUTED`,
+ * `UNKNOWN`, `SKIPPED`, `BLOCKED_EXTERNAL` e qualquer literal arbitrário. Ou
+ * seja: um gate que nunca rodou era tratado como aprovado, porque o estado
+ * desconhecido era implicitamente aceitável.
+ *
+ * Agora a regra é invertida: gate obrigatório só avança se o status estiver em
+ * `GATE_STATUS_PERMITIDOS`. Todo o resto — conhecido ou não — bloqueia.
+ */
+const GATE_STATUS_PERMITIDOS = Object.freeze([GATE_STATUS.PASS]);
+
+/** Estados de gate conhecidos (vocabulário fechado). */
+const GATE_STATUS_CONHECIDOS = Object.freeze(Object.values(GATE_STATUS));
+
+/**
+ * Estados que representam "ainda não concluído" — não certificam, mas também não
+ * são falha declarada (viram RUNNING). Ausência de status cai aqui.
+ */
+const GATE_STATUS_EM_ANDAMENTO = Object.freeze([GATE_STATUS.PENDING, '']);
 
 /** Somente estes dois estados são GO DEFINITIVO. */
 const FINAL_GO_STATES = Object.freeze([STATES.CERTIFIED_GO, STATES.PUBLISHED_VERIFIED]);
@@ -166,6 +190,33 @@ function clasificar(input = {}) {
 
   if (obrigatorios.length === 0) return decidir(STATES.NOT_STARTED, 'SEM_GATES_DECLARADOS');
 
+  // ── Estrutura: gate sem id não é gate ───────────────────────────────────────
+  const semId = obrigatorios.filter((g) => String(g.id == null ? '' : g.id).trim() === '');
+  if (semId.length > 0) return decidir(STATES.NO_GO, `GATE_OBRIGATORIO_SEM_ID:${semId.length}`);
+
+  // ── Existência: gates esperados que não vieram ──────────────────────────────
+  // Só é cobrado quando o chamador DECLARA o conjunto esperado; sem isso, não há
+  // como inventar ausência.
+  const esperados = Array.isArray(input.gatesEsperados) ? input.gatesEsperados.map(String) : null;
+  if (esperados && esperados.length > 0) {
+    const presentes = new Set(obrigatorios.map((g) => String(g.id)));
+    const ausentes = esperados.filter((id) => !presentes.has(id));
+    if (ausentes.length > 0) return decidir(STATES.NO_GO, `GATE_OBRIGATORIO_AUSENTE:${ausentes.join(',')}`);
+  }
+
+  // ── Identidade do gate: relatório de OUTRO run não conta ─────────────────────
+  const identidadeAtual = input.identidade || null;
+  if (identidadeAtual) {
+    const deOutroRun = obrigatorios.filter((g) => {
+      const runDoGate = g.runId == null ? '' : String(g.runId);
+      const runAtual = identidadeAtual.runId == null ? '' : String(identidadeAtual.runId);
+      return runDoGate !== '' && runAtual !== '' && runDoGate !== runAtual;
+    });
+    if (deOutroRun.length > 0) {
+      return decidir(STATES.NO_GO, `GATE_DE_OUTRO_RUN:${deOutroRun.map((g) => g.id).join(',')}`);
+    }
+  }
+
   const falhos = porStatus(GATE_STATUS.FAIL);
   if (falhos.length > 0) return decidir(STATES.NO_GO, `GATE_OBRIGATORIO_FALHOU:${ids(falhos)}`);
 
@@ -175,11 +226,27 @@ function clasificar(input = {}) {
   const bloqueados = porStatus(GATE_STATUS.BLOCKED);
   if (bloqueados.length > 0) return decidir(STATES.BLOCKED, `GATE_OBRIGATORIO_BLOQUEADO:${ids(bloqueados)}`);
 
-  const pendentes = obrigatorios.filter((g) => {
-    const s = String(g.status || '').toUpperCase();
-    return s === GATE_STATUS.PENDING || s === '';
-  });
-  if (pendentes.length > 0) return decidir(STATES.RUNNING, `GATES_PENDENTES:${pendentes.length}`);
+  const emAndamento = obrigatorios.filter((g) =>
+    GATE_STATUS_EM_ANDAMENTO.includes(String(g.status == null ? '' : g.status).toUpperCase())
+  );
+  if (emAndamento.length > 0) return decidir(STATES.RUNNING, `GATES_PENDENTES:${emAndamento.length}`);
+
+  // ── POLÍTICA EXPLÍCITA: qualquer status fora dos PERMITIDOS bloqueia ────────
+  // Cobre NOT_EXECUTED, UNKNOWN, SKIPPED, BLOCKED_EXTERNAL e literais arbitrários.
+  // Não existe mais caminho implícito para CERTIFIED_GO.
+  const naoPermitidos = obrigatorios.filter(
+    (g) => !GATE_STATUS_PERMITIDOS.includes(String(g.status == null ? '' : g.status).toUpperCase())
+  );
+  if (naoPermitidos.length > 0) {
+    const desconhecidos = naoPermitidos.filter(
+      (g) => !GATE_STATUS_CONHECIDOS.includes(String(g.status == null ? '' : g.status).toUpperCase())
+    );
+    const detalhe = naoPermitidos.map((g) => `${g.id}=${String(g.status)}`).join(',');
+    return decidir(
+      STATES.NO_GO,
+      `${desconhecidos.length > 0 ? 'GATE_STATUS_NAO_PERMITIDO' : 'GATE_OBRIGATORIO_NAO_APROVADO'}:${detalhe}`
+    );
+  }
 
   if (!input.selado) return decidir(STATES.PRE_PACKAGE_PASS, 'PACOTE_NAO_SELADO');
   if (!input.certificado) return decidir(STATES.PRE_PACKAGE_PASS, 'NAO_CERTIFICADO');
@@ -192,17 +259,70 @@ function clasificar(input = {}) {
   return decidir(STATES.CERTIFIED_GO, 'CERTIFICADO');
 }
 
-const IDENTITY_FIELDS = Object.freeze(['runId', 'sourceCommit', 'sourceFingerprint', 'releaseId']);
+const CAMPOS_IDENTIDADE_OBRIGATORIOS = Object.freeze(['runId', 'sourceCommit', 'sourceFingerprint']);
+const CAMPOS_IDENTIDADE_OPCIONAIS = Object.freeze(['releaseId']);
+const IDENTITY_FIELDS = Object.freeze([...CAMPOS_IDENTIDADE_OBRIGATORIOS, ...CAMPOS_IDENTIDADE_OPCIONAIS]);
+
+/** Formato mínimo esperado por campo ("presente e válido", não só não-nulo). */
+const PADRAO_IDENTIDADE = Object.freeze({
+  runId: /^[A-Za-z0-9._:-]{8,}$/,
+  sourceCommit: /^[0-9a-f]{7,40}$/i,
+  sourceFingerprint: /^[0-9a-f]{64}$/i,
+});
+
+const IDENTIDADE_VAZIA = Object.freeze({});
+
+function _preenchido(v) {
+  return v !== undefined && v !== null && String(v).trim() !== '';
+}
+
+/**
+ * Avalia uma identidade isoladamente: presente E válida?
+ *
+ * @param {object|null|undefined} id
+ * @returns {{completa: boolean, faltantes: string[], invalidos: string[], vazia: boolean}}
+ */
+function validarIdentidade(id) {
+  const obj = id && typeof id === 'object' ? id : IDENTIDADE_VAZIA;
+  const faltantes = [];
+  const invalidos = [];
+  for (const campo of CAMPOS_IDENTIDADE_OBRIGATORIOS) {
+    if (!_preenchido(obj[campo])) {
+      faltantes.push(campo);
+      continue;
+    }
+    const padrao = PADRAO_IDENTIDADE[campo];
+    if (padrao && !padrao.test(String(obj[campo]).trim())) invalidos.push(campo);
+  }
+  const algumPreenchido = IDENTITY_FIELDS.some((c) => _preenchido(obj[c]));
+  return {
+    completa: faltantes.length === 0 && invalidos.length === 0,
+    faltantes,
+    invalidos,
+    vazia: !algumPreenchido,
+  };
+}
 
 /**
  * A decisão é da MESMA identidade do candidato corrente?
  *
- * Identidade incompatível invalida o GO: uma decisão de outro run/commit é prova de
- * OUTRO artefato.
+ * DEFEITO MEDIDO (2026-10-16, reproduzido): a versão anterior pulava o campo
+ * quando qualquer lado estava ausente (`continue`) e devolvia `ok: true` com
+ * `divergentes: []`. Com isso, decisão SEM identidade contra identidade atual
+ * VAZIA era considerada "coerente" — ou seja, a ausência de identidade valia como
+ * identidade. Pior: um `.current-run.json` ausente aprovava tudo.
+ *
+ * Agora há TRÊS condições separadas, e só a primeira sustenta certificação:
+ *   1. `COERENTE`   — todos os campos obrigatórios presentes e VÁLIDOS nos dois
+ *                     lados, e nenhum campo divergente.  (`ok: true`)
+ *   2. `DIVERGENTE` — identidade presente mas incompatível. (`ok: false`)
+ *   3. `INCOMPLETA` / `AUSENTE` — falta campo obrigatório de um dos lados ou o
+ *                     valor não tem formato válido.         (`ok: false`)
  *
  * @param {{identity?: object}|object} decision decisão (com `identity`) ou a própria identidade
  * @param {object} identidadeAtual
- * @returns {{ok: boolean, divergentes: string[]}}
+ * @returns {{ok: boolean, estado: string, divergentes: string[], faltantes: string[],
+ *   invalidos: string[], camposObrigatorios: readonly string[]}}
  */
 function identidadeCoerente(decision, identidadeAtual = {}) {
   const daDecisao = (decision && decision.identity) || {};
@@ -210,23 +330,52 @@ function identidadeCoerente(decision, identidadeAtual = {}) {
   for (const campo of IDENTITY_FIELDS) {
     const a = daDecisao[campo];
     const b = identidadeAtual[campo];
-    if (a == null || b == null || a === '' || b === '') continue;
-    if (String(a) !== String(b)) divergentes.push(campo);
+    // Só compara quando AMBOS declaram. Ausência não é igualdade — é tratada abaixo.
+    if (!_preenchido(a) || !_preenchido(b)) continue;
+    if (String(a).trim() !== String(b).trim()) divergentes.push(campo);
   }
-  return { ok: divergentes.length === 0, divergentes };
+
+  const avalDecisao = validarIdentidade(daDecisao);
+  const avalAtual = validarIdentidade(identidadeAtual);
+  const faltantes = [...new Set([...avalDecisao.faltantes, ...avalAtual.faltantes])].sort();
+  const invalidos = [...new Set([...avalDecisao.invalidos, ...avalAtual.invalidos])].sort();
+
+  let estado;
+  if (!avalDecisao.completa || !avalAtual.completa) {
+    estado = avalDecisao.vazia && avalAtual.vazia && invalidos.length === 0 ? 'AUSENTE' : 'INCOMPLETA';
+  } else if (divergentes.length > 0) {
+    estado = 'DIVERGENTE';
+  } else {
+    estado = 'COERENTE';
+  }
+
+  return {
+    ok: estado === 'COERENTE',
+    estado,
+    divergentes,
+    faltantes,
+    invalidos,
+    camposObrigatorios: CAMPOS_IDENTIDADE_OBRIGATORIOS,
+  };
 }
 
 module.exports = {
   DECISION_VERSION,
   STATES,
   GATE_STATUS,
+  GATE_STATUS_PERMITIDOS,
+  GATE_STATUS_CONHECIDOS,
+  GATE_STATUS_EM_ANDAMENTO,
   FINAL_GO_STATES,
   RELEASE_DECISION_LITERALS,
   IDENTITY_FIELDS,
+  CAMPOS_IDENTIDADE_OBRIGATORIOS,
+  CAMPOS_IDENTIDADE_OPCIONAIS,
   isReleaseDecisionLiteral,
   classifyReleaseDecision,
   isFinalGo,
   exigirGoFinal,
   clasificar,
   identidadeCoerente,
+  validarIdentidade,
 };

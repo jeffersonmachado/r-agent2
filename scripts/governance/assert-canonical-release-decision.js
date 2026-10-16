@@ -12,9 +12,11 @@
  *
  *   1. os três relatórios de decisão (final-governance, final-readiness, final-proof)
  *      estão em estado FINAL (não em pré-pacote como `PASS_WITH_DEFERRED_PACKAGE_GATE`);
- *   2. a cadeia criptográfica persistida está íntegra (`valid === true`);
- *   3. as IDENTIDADES coincidem com o run governado corrente (runId/sourceFingerprint)
- *      — GO de outro candidato não vale para este;
+ *   2. a cadeia criptográfica é RECALCULADA a partir dos bytes atuais e fecha (nunca
+ *      pelo campo `valid` gravado — ver `verificarCadeiaPadrao`);
+ *   3. as IDENTIDADES estão PRESENTES, VÁLIDAS e coincidem com o run governado
+ *      corrente — `.current-run.json` ausente ou incompleto BLOQUEIA (ausência de
+ *      identidade não é identidade coerente);
  *   4. a composição canônica resulta em GO definitivo (CERTIFIED_GO ou
  *      PUBLISHED_VERIFIED), nunca PRE_PACKAGE_PASS/RUNNING/BLOCKED/NO_GO.
  *
@@ -31,9 +33,11 @@ const {
   clasificar,
   exigirGoFinal,
   identidadeCoerente,
+  validarIdentidade,
   isFinalGo,
   DECISION_VERSION,
 } = require('../../governance/canonical-release-decision');
+const { verifyChain } = require('../../governance/governance-chain');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
@@ -45,7 +49,31 @@ function ler(rel, rootDir = ROOT) {
   }
 }
 
-function avaliar(rootDir = ROOT) {
+/**
+ * Verificação da cadeia: RECALCULA os bytes atuais.
+ *
+ * DEFEITO MEDIDO (2026-10-16): este avaliador fazia `chain.valid === true`, isto é,
+ * confiava no campo GRAVADO no JSON — a mesma classe de falso verde que
+ * `scripts/governance/validate-governance-chain.js` documenta no topo dele. Regravar
+ * `governance-chain.json` com `valid: true` depois de alterar um artefato mantinha o
+ * GO. Agora o veredito vem de `verifyChain` sobre o conteúdo persistido.
+ */
+function verificarCadeiaPadrao(chainPersistido) {
+  if (!chainPersistido) {
+    return { valid: false, motivo: 'CADEIA_AUSENTE', failures: [] };
+  }
+  const r = verifyChain(chainPersistido);
+  return {
+    valid: r && r.valid === true,
+    motivo: r && r.valid === true ? 'CADEIA_RECOMPUTADA_INTEGRA' : 'CADEIA_RECOMPUTADA_INVALIDA',
+    chainRootValid: !!(r && r.chainRootValid),
+    tampered: !!(r && r.tampered),
+    failures: (r && r.failures) || [],
+  };
+}
+
+function avaliar(rootDir = ROOT, opcoes = {}) {
+  const verificarCadeia = opcoes.verificarCadeia || verificarCadeiaPadrao;
   const gov = ler('governance/final-governance-report.json', rootDir);
   const readiness = ler('governance/final-readiness-report.json', rootDir);
   const proof = ler('governance/final-proof-report.json', rootDir);
@@ -58,42 +86,89 @@ function avaliar(rootDir = ROOT) {
     { id: 'final_proof', valor: proof && proof.finalDecision, artefato: proof },
   ].map((item) => ({ ...item, avaliacao: exigirGoFinal(item.valor, { consumidor: item.id }) }));
 
+  const vereditoCadeia = verificarCadeia(chain);
+
+  // ── Identidade: TRÊS condições separadas, e só a primeira sustenta certificação ──
+  // 1) presente e correspondente  2) presente e divergente  3) ausente/incompleta
+  //
+  // A condição entra como GATE na decisão canônica (abaixo). Antes ela só zerava
+  // `ok`, deixando `state` em CERTIFIED_GO — e um consumidor que lê `state` (em vez de
+  // `ok`) enxergava GO com identidade AUSENTE. Estado e veredito têm de concordar.
+  const divergencias = [];
+  let estadoDaIdentidade = 'AUSENTE';
+
+  if (!run) {
+    // Ausência de `.current-run.json` NÃO é identidade coerente — bloqueia.
+    estadoDaIdentidade = 'AUSENTE';
+    divergencias.push('run_corrente:artefato_ausente');
+  } else {
+    const avalRun = validarIdentidade(run);
+    estadoDaIdentidade = avalRun.completa ? 'PRESENTE' : 'INCOMPLETA';
+    if (!avalRun.completa) {
+      divergencias.push(
+        `run_corrente:incompleta${avalRun.faltantes.length ? `:faltantes=${avalRun.faltantes.join('|')}` : ''}` +
+          `${avalRun.invalidos.length ? `:invalidos=${avalRun.invalidos.join('|')}` : ''}`
+      );
+    }
+  }
+
+  const identidadeAtual = run
+    ? { runId: run.runId, sourceCommit: run.sourceCommit, sourceFingerprint: run.sourceFingerprint }
+    : {};
+
+  const identidadesDosRelatorios = [];
+  for (const item of relatorios) {
+    if (!item.artefato) {
+      divergencias.push(`${item.id}:artefato_ausente`);
+      identidadesDosRelatorios.push({ id: item.id, estado: 'AUSENTE' });
+      continue;
+    }
+    const check = identidadeCoerente({ identity: item.artefato }, identidadeAtual);
+    identidadesDosRelatorios.push({ id: item.id, estado: check.estado, faltantes: check.faltantes, invalidos: check.invalidos });
+    if (!check.ok) {
+      const detalhe = check.divergentes.length
+        ? `divergentes=${check.divergentes.join('|')}`
+        : `faltantes=${(check.faltantes || []).join('|')}`;
+      divergencias.push(`${item.id}:${check.estado}:${detalhe}`);
+    }
+  }
+
   const gates = relatorios.map((item) => ({
     id: item.id,
     status: item.avaliacao.ok ? 'PASS' : 'FAIL',
   }));
-  gates.push({ id: 'governance_chain', status: chain && chain.valid === true ? 'PASS' : 'FAIL' });
+  gates.push({ id: 'governance_chain', status: vereditoCadeia.valid ? 'PASS' : 'FAIL' });
+  // Gate EXPLÍCITO de identidade: identidade ausente/incompleta/divergente bloqueia a
+  // decisão (e o motivo nomeia o gate), em vez de apenas zerar um booleano paralelo.
+  gates.push({ id: 'identidade', status: divergencias.length === 0 ? 'PASS' : 'FAIL' });
 
   const decisao = clasificar({ gates, selado: true, certificado: true, identidade: run || null });
-
-  // Identidade: cada relatório de decisão precisa ser do MESMO candidato do run corrente.
-  const identidadeAtual = run
-    ? { runId: run.runId, sourceCommit: run.sourceCommit, sourceFingerprint: run.sourceFingerprint }
-    : {};
-  const divergencias = [];
-  for (const item of relatorios) {
-    if (!item.artefato) {
-      divergencias.push(`${item.id}:artefato_ausente`);
-      continue;
-    }
-    const check = identidadeCoerente({ identity: item.artefato }, identidadeAtual);
-    if (!check.ok) divergencias.push(`${item.id}:${check.divergentes.join('|')}`);
-  }
 
   const naoFinal = relatorios
     .filter((item) => !item.avaliacao.ok)
     .map((item) => `${item.id}=${item.valor || '(ausente)'}→${item.avaliacao.state}`);
 
+  // Invariantes: `ok` e `state` não podem discordar.
   const ok = isFinalGo(decisao.state) && divergencias.length === 0;
+  const estadoConcordaComVeredito = isFinalGo(decisao.state) === ok;
 
   return {
     ok,
+    estadoConcordaComVeredito,
     state: decisao.state,
     version: DECISION_VERSION,
     reason: decisao.reason,
     gates: gates.map((g) => `${g.id}:${g.status}`),
     decisoesNaoFinais: naoFinal,
     divergenciasDeIdentidade: divergencias,
+    estadoDaIdentidadeDoRun: estadoDaIdentidade,
+    identidadesDosRelatorios,
+    cadeia: {
+      veredito: vereditoCadeia.motivo,
+      raizRecalculadaConfere: vereditoCadeia.chainRootValid === true,
+      tampered: vereditoCadeia.tampered === true,
+      divergencias: (vereditoCadeia.failures || []).length,
+    },
     chainRoot: chain ? String(chain.chainRoot || '').slice(0, 16) : null,
   };
 }
@@ -108,15 +183,25 @@ if (require.main === module) {
     );
   } else {
     process.stderr.write(`[canonical-decision] NAO E GO DEFINITIVO: state=${r.state} motivo=${r.reason}\n`);
+    process.stderr.write(
+      `  identidade do run: ${r.estadoDaIdentidadeDoRun} | relatórios: ${r.identidadesDosRelatorios
+        .map((i) => `${i.id}=${i.estado}`)
+        .join(', ')}\n`,
+    );
+    process.stderr.write(
+      `  cadeia: ${r.cadeia.veredito} (divergências=${r.cadeia.divergencias}, raizConfere=${r.cadeia.raizRecalculadaConfere})\n`,
+    );
     if (r.decisoesNaoFinais.length) {
       process.stderr.write(`  decisões não finais: ${r.decisoesNaoFinais.join(', ')}\n`);
     }
     if (r.divergenciasDeIdentidade.length) {
-      process.stderr.write(`  identidade divergente: ${r.divergenciasDeIdentidade.join(', ')}\n`);
+      process.stderr.write(`  identidade insuficiente/divergente: ${r.divergenciasDeIdentidade.join(', ')}\n`);
     }
-    process.stderr.write('  a publicação exige GO definitivo dos três relatórios + cadeia íntegra + mesma identidade\n');
+    process.stderr.write(
+      '  a publicação exige GO definitivo dos três relatórios + cadeia RECALCULADA íntegra + identidade PRESENTE e correspondente\n',
+    );
   }
   process.exit(r.ok ? 0 : 1);
 }
 
-module.exports = { avaliar };
+module.exports = { avaliar, verificarCadeiaPadrao };

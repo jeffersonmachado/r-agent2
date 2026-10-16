@@ -467,3 +467,45 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT b7dd1f078ac3 — P0: elimina falso GO com NOT_EXECUTED/UNKNOWN e exige identidade PRESENTE para certificar
+
+- **Quando**: 2026-10-16T23:28:42.918Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `39604807541b1c4c4c54880359d440f90982b0a9`
+- **id** (sha256 do conteúdo do checkpoint): `b7dd1f078ac36adbf7f82f89b52d6a816dbf8250f751cf98f5ac6726c289588b`
+
+**Problema corrigido:** reproduzido: clasificar() usava lista de BLOQUEIO, entao gate NOT_EXECUTED/UNKNOWN/SKIPPED/BLOCKED_EXTERNAL/WAT caiam no return CERTIFIED_GO (6 casos medidos); identidadeCoerente() pulava campo ausente e devolvia ok=true, ou seja ausencia de identidade valia como identidade (4 casos medidos, incluindo .current-run.json ausente aprovando tudo no avaliador); e o avaliador confiava no campo chain.valid GRAVADO em vez de recalcular a cadeia
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M governance/canonical-release-decision.js`
+- `M scripts/governance/assert-canonical-release-decision.js`
+- `M tests/unit/governance/assertCanonicalReleaseDecision.test.js`
+- `M tests/unit/governance/canonicalReleaseDecision.test.js`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/governance/canonicalReleaseDecision.test.js tests/unit/governance/assertCanonicalReleaseDecision.test.js` | 0 | 9.1 s | 28cb12019a74 |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/canonicalReleaseDecision.test.js tests/unit/governance/assertCanonicalReleaseDecision.test.js</code></summary>
+
+```
+    ✓ runId AUSENTE no run corrente ⇒ BLOQUEIA com o campo nomeado (105 ms)
+    ✓ sourceFingerprint com formato inválido ⇒ BLOQUEIA como inválido (não como ausente) (106 ms)
+    ✓ relatório SEM identidade (mas run completo) ⇒ BLOQUEIA por relatório incompleto (104 ms)
+    ✓ identidade divergente do run ⇒ NÃO é GO definitivo, com o campo nomeado (105 ms)
+    ✓ o estado devolvido é sempre do vocabulário canônico (113 ms)
+Test Suites: 2 passed, 2 total
+Tests:       61 passed, 61 total
+Snapshots:   0 total
+Time:        6.943 s, estimated 7 s
+Ran all test suites matching /tests\/unit\/governance\/canonicalReleaseDecision.test.js|tests\/unit\/governance\/assertCanonicalReleaseDecision.test.js/i.
+[jest-global-teardown] Engineering Runner (pid 432578) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---

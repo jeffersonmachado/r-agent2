@@ -208,23 +208,151 @@ describe('clasificar — precedência fail-closed a partir dos fatos', () => {
 });
 
 describe('identidadeCoerente — GO de outro candidato não vale', () => {
-  const atual = { runId: 'R1', sourceCommit: 'C1', sourceFingerprint: 'F1', releaseId: 'REL1' };
+  // Fixtures COMPLETAS e VÁLIDAS: identidade presente mas malformada é INCOMPLETA,
+  // não é "coerente". (Os testes anteriores usavam 'C1'/'F1', que não têm formato
+  // de commit/fingerprint e por isso legitimavam identidade inválida.)
+  const atual = {
+    runId: 'rap-governed-20261016144931085-033e1239',
+    sourceCommit: '5efce7924932822c23888de97efc6243981da75e',
+    sourceFingerprint: '1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e',
+    releaseId: 'r-agent2-20261016-133323',
+  };
 
-  it('identidade idêntica é coerente', () => {
-    expect(identidadeCoerente({ identity: atual }, atual)).toEqual({ ok: true, divergentes: [] });
+  it('identidade idêntica E COMPLETA é coerente', () => {
+    const r = identidadeCoerente({ identity: atual }, atual);
+    expect(r.ok).toBe(true);
+    expect(r.estado).toBe('COERENTE');
+    expect(r.divergentes).toEqual([]);
+    expect(r.faltantes).toEqual([]);
   });
 
-  it('cada campo divergente é nomeado', () => {
+  it('cada campo divergente é nomeado e o estado é DIVERGENTE', () => {
     for (const campo of ['runId', 'sourceCommit', 'sourceFingerprint', 'releaseId']) {
-      const outra = { ...atual, [campo]: 'OUTRO' };
+      const outra = { ...atual, [campo]: campo === 'sourceCommit' ? 'a'.repeat(40) : 'b'.repeat(64) };
       const r = identidadeCoerente({ identity: outra }, atual);
       expect(r.ok).toBe(false);
+      expect(r.estado).toBe('DIVERGENTE');
       expect(r.divergentes).toContain(campo);
     }
   });
 
-  it('campo ausente de um dos lados não gera divergência falsa (não é comparação de undefined)', () => {
-    expect(identidadeCoerente({ identity: { runId: 'R1' } }, atual).ok).toBe(true);
-    expect(identidadeCoerente({ identity: {} }, atual).ok).toBe(true);
+  // ── P0 CORRIGIDO (2026-10-16): ausência de identidade NÃO é identidade ───────
+  it('decisão SEM identidade contra identidade atual completa ⇒ AUSENTE e ok=false', () => {
+    const r = identidadeCoerente({ identity: {} }, atual);
+    expect(r.ok).toBe(false);
+    expect(r.estado).toBe('INCOMPLETA');
+    expect(r.faltantes).toContain('runId');
+    expect(r.faltantes).toContain('sourceCommit');
+    expect(r.faltantes).toContain('sourceFingerprint');
+  });
+
+  it('identidade atual AUSENTE (ex.: .current-run.json inexistente) ⇒ ok=false', () => {
+    const r = identidadeCoerente({ identity: atual }, {});
+    expect(r.ok).toBe(false);
+    expect(r.estado).toBe('INCOMPLETA');
+  });
+
+  it('os DOIS lados vazios ⇒ AUSENTE e ok=false (ausência nunca é coerência)', () => {
+    const r = identidadeCoerente({ identity: {} }, {});
+    expect(r.ok).toBe(false);
+    expect(r.estado).toBe('AUSENTE');
+  });
+
+  it('identidade parcial (só runId) ⇒ INCOMPLETA e ok=false', () => {
+    const r = identidadeCoerente({ identity: { runId: atual.runId } }, atual);
+    expect(r.ok).toBe(false);
+    expect(r.estado).toBe('INCOMPLETA');
+    expect(r.faltantes).toContain('sourceCommit');
+    expect(r.faltantes).toContain('sourceFingerprint');
+  });
+
+  it('campo presente mas com formato inválido ⇒ INCOMPLETA e ok=false', () => {
+    const r = identidadeCoerente({ identity: { ...atual, sourceFingerprint: 'nao-e-hash' } }, atual);
+    expect(r.ok).toBe(false);
+    expect(r.estado).toBe('INCOMPLETA');
+    expect(r.invalidos).toContain('sourceFingerprint');
+  });
+
+  it('campo ausente de um dos lados não é divergência — é ausência (não compara undefined)', () => {
+    const r = identidadeCoerente({ identity: { ...atual, releaseId: undefined } }, atual);
+    expect(r.divergentes).toEqual([]);
+    expect(r.ok).toBe(true); // releaseId é opcional; os 3 obrigatórios batem
+  });
+});
+
+describe('clasificar — POLÍTICA EXPLÍCITA de gate (P0 corrigido 2026-10-16)', () => {
+  const base = { selado: true, certificado: true };
+  const gate = (status, id = 'G1') => ({ id, status, obrigatorio: true });
+
+  it('todos os gates PASS ⇒ CERTIFIED_GO (positivo)', () => {
+    expect(clasificar({ ...base, gates: [gate('PASS'), gate('PASS', 'G2')] }).state).toBe(STATES.CERTIFIED_GO);
+  });
+
+  // Matriz negativa obrigatória: NENHUM destes pode produzir GO final.
+  const NAO_APROVADOS = [
+    ['NOT_EXECUTED', 'GATE_STATUS_NAO_PERMITIDO'],
+    ['UNKNOWN', 'GATE_STATUS_NAO_PERMITIDO'],
+    ['SKIPPED', 'GATE_STATUS_NAO_PERMITIDO'],
+    ['BLOCKED_EXTERNAL', 'GATE_STATUS_NAO_PERMITIDO'],
+    ['WAT', 'GATE_STATUS_NAO_PERMITIDO'],
+    ['not_executed', 'GATE_STATUS_NAO_PERMITIDO'],
+    ['FAIL', 'GATE_OBRIGATORIO_FALHOU'],
+    ['DEFERRED', 'GATE_OBRIGATORIO_DIFERIDO'],
+  ];
+  for (const [status, prefixoDoMotivo] of NAO_APROVADOS) {
+    it(`gate obrigatório "${status}" bloqueia e não é GO final`, () => {
+      const r = clasificar({ ...base, gates: [gate('PASS'), gate(status, 'G2')] });
+      expect(isFinalGo(r.state)).toBe(false);
+      expect(r.state).toBe(STATES.NO_GO);
+      expect(r.reason.startsWith(prefixoDoMotivo)).toBe(true);
+    });
+  }
+
+  it('gate BLOCKED ⇒ BLOCKED (não é GO final)', () => {
+    const r = clasificar({ ...base, gates: [gate('PASS'), gate('BLOCKED', 'G2')] });
+    expect(isFinalGo(r.state)).toBe(false);
+    expect(r.state).toBe(STATES.BLOCKED);
+  });
+
+  it('gate PENDING e gate sem status ⇒ RUNNING (não é GO final)', () => {
+    for (const status of ['PENDING', null, undefined]) {
+      const r = clasificar({ ...base, gates: [gate('PASS'), gate(status, 'G2')] });
+      expect(isFinalGo(r.state)).toBe(false);
+      expect(r.state).toBe(STATES.RUNNING);
+    }
+  });
+
+  it('lista de gates vazia ⇒ NOT_STARTED (não é GO final)', () => {
+    const r = clasificar({ ...base, gates: [] });
+    expect(isFinalGo(r.state)).toBe(false);
+    expect(r.state).toBe(STATES.NOT_STARTED);
+  });
+
+  it('gate obrigatório SEM id ⇒ NO_GO (não existe gate anônimo)', () => {
+    const r = clasificar({ ...base, gates: [{ status: 'PASS', obrigatorio: true }] });
+    expect(r.state).toBe(STATES.NO_GO);
+    expect(r.reason).toContain('GATE_OBRIGATORIO_SEM_ID');
+  });
+
+  it('gate obrigatório AUSENTE do conjunto esperado ⇒ NO_GO', () => {
+    const r = clasificar({ ...base, gates: [gate('PASS')], gatesEsperados: ['G1', 'G9'] });
+    expect(r.state).toBe(STATES.NO_GO);
+    expect(r.reason).toContain('GATE_OBRIGATORIO_AUSENTE');
+    expect(r.reason).toContain('G9');
+  });
+
+  it('gate pertencente a OUTRO run ⇒ NO_GO (relatório de outro ciclo não vale)', () => {
+    const r = clasificar({
+      ...base,
+      identidade: { runId: 'rap-governed-AAA' },
+      gates: [{ id: 'G1', status: 'PASS', obrigatorio: true, runId: 'rap-governed-BBB' }],
+    });
+    expect(r.state).toBe(STATES.NO_GO);
+    expect(r.reason).toContain('GATE_DE_OUTRO_RUN');
+  });
+
+  it('gate não obrigatório em estado desconhecido não bloqueia o GO dos obrigatórios', () => {
+    const r = clasificar({ ...base, gates: [gate('PASS'), { id: 'G9', status: 'UNKNOWN', obrigatorio: false }] });
+    expect(r.state).toBe(STATES.CERTIFIED_GO);
   });
 });
