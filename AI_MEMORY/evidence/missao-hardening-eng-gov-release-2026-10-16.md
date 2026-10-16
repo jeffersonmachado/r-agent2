@@ -108,7 +108,7 @@ P1-11 **315/315**.
 | `validate:coverage-gate`/waves (3 técnicas) | frescor por TTL válido, sem degradação |
 | **runtime-evidence (Engineering Mission)** | **`RUNTIME_PASS items=25 falhas=0`** contra `commit=f499134e9` — inclui `ACTUAL_PATCH_APPLY`, `DETERMINISTIC_FAILING_TEST_RED`, `RED_TO_FIX`, `REVIEWER_REJECTION_RECODE`, `INDEPENDENT_REVIEW`, `REGRESSION_EXECUTION`, `GOVERNANCE_EXECUTION` |
 | `validate:engineering-router-v1` (com runtime) | `PASS (STRUCTURAL_PASS/RUNTIME_PASS) checks=209 falhas=0` |
-| **`npm run validate:governance-enforcement` (agregado)** | **AGG_EXIT=1 — 1 violação**: `QA_EVIDENCE_LINEAGE_MISSING: qa-mesh/intelligence/latest.json` (ver seção 12-A; todos os demais validadores verdes) |
+| **`npm run validate:governance-enforcement` (agregado)** | **AGG_EXIT=1 — 1 violação, agora TRUTHFUL**: `FOREIGN_RUN_ARTIFACT` no `candidate` (o candidato entregue pertence ao run anterior). A violação ORIGINAL de evidência (`QA_EVIDENCE_SAME_RUN_VIOLATION` / `QA_EVIDENCE_LINEAGE_MISSING`) foi **resolvida**: `validate:qa-evidence-same-run` → `PASS artefatos=6/6 same-run-ok=6 violacoes=0`. Ver 8.1 e 8.2. |
 
 ### 8.1 Agregado: a violação encontrada e o que ela revelou
 
@@ -131,14 +131,29 @@ escreve `latest-ungoverned.json` e **preserva `latest.json` byte a byte**, com a
 explicando como produzir evidência governada. Provas: 4/4 casos, incluindo a regressão
 exata do envenenamento e o caso de lineage parcial.
 
-Depois disso o artefato foi regenerado por uma execução **real** da malha dentro do run
-governado corrente: `QA_EVIDENCE_LINEAGE_MISSING` desapareceu e o gate passou a apontar
-`QA_EVIDENCE_SAME_RUN_VIOLATION — artefato produzido DEPOIS do run que o reivindica`.
-Ou seja: **evidência runtime só vale se produzida DENTRO da janela de um run aberto**, e o
-run corrente já está fechado. Isso é propriedade de sequenciamento do ciclo de release (não
-defeito de código): destravar exige criar um **novo run governado** e regenerar waves +
-malha **dentro dele** — operação de ciclo que esta missão não executa (proibido publicar
-promover release). Item registrado na fila oficial como `blocked`, com runbook.
+### 8.2 Destravamento OPERADO e verificado (evidência same-run)
+
+A violação original foi eliminada por operação real, não por waiver:
+
+| Passo | Comando | Resultado medido |
+|---|---|---|
+| 1. run novo do fingerprint da árvore | `node scripts/governance/create-governed-run.js` | `rap-governed-20261016125224166-7833cff3` (fp `9abe82f0`) |
+| 2. preflight no fluxo real | `npm run validate:wave-same-run` | **FAIL** com `3× WAVE_EVIDENCE_FOREIGN_RUN` + remédio (prova bidirecional do gate) |
+| 3. regenerar as waves DENTRO do run | `npm run wave:db-integrity` / `wave:api-surface` / `wave:page-surface` | `FAILED=0` nas três (`916` rotas, `151` páginas) |
+| 4. carimbar lineage (passo 9 do converge) | `node scripts/governance/stamp-report-lineage.js` | `stamped=3` — waves `SAME_RUN` |
+| 5. malha DENTRO do run | `GOVERNANCE_RUN_ID=… node qa-mesh/meshRunner.js` | artefato com `runId` do run corrente, `isGovernedEvidence=true` |
+| 6. gate que estava vermelho | `npm run validate:qa-evidence-same-run` | **PASS** `artefatos=6/6 same-run-ok=6 violacoes=0` |
+
+Preflight final: `[wave-same-run] status=PASS run=rap-governed-20261016125224166-7833cff3`.
+
+**Consequência estrutural, medida e declarada (não escondida):** criar um run novo torna o
+**candidato** entregue (`dist/candidate/`, release `r-agent2-20261016-025650`) um artefato de
+OUTRO run — `[release-identity] FAIL RELEASE_ARTIFACT_IDENTITY_INVALID: FOREIGN_RUN_ARTIFACT:
+candidate.governanceRunId (R1) != run corrente (R2)`. O agregado continua com **exatamente 1
+violação**, agora explícita e verdadeira: o run corrente ainda não produziu candidato. Isso é o
+estado esperado de um ciclo recém-iniciado; resolve-se na fase `candidate` do próximo ciclo, que
+esta missão não executa (produção de release).
+
 
 
 ## 9. Prova de integridade criptográfica
@@ -212,18 +227,27 @@ Medição corrigiu a hipótese inicial (que era "independência apenas declarati
    não implementado).
 4. Evidência de release entregue continua sujeita a `DELIVERED_SOURCE_MISMATCH` ao
    editar `scripts/**` — esperado e por desenho.
-5. **Evidência runtime dentro da janela do run** (novo, medido): o agregado fica vermelho
-   com 1 violação (`QA_EVIDENCE_SAME_RUN_VIOLATION`) enquanto as evidências runtime não
-   forem produzidas **dentro de um run governado aberto**. Runbook de destravamento:
+5. **Evidência runtime dentro da janela do run** — **OPERADO e VERIFICADO** (ver 8.2): as 3 waves e
+   o artefato da malha pertencem ao run `rap-governed-20261016125224166-7833cff3` e
+   `validate:qa-evidence-same-run` está `PASS 6/6`. O procedimento provado é:
    ```bash
-   node scripts/governance/create-governed-run.js          # novo run (fingerprint da árvore)
+   node scripts/governance/create-governed-run.js          # run do fingerprint da árvore
    npm run wave:db-integrity && npm run wave:api-surface && npm run wave:page-surface
-   node --env-file-if-exists=.env qa-mesh/meshRunner.js    # malha DENTRO do run
-   npm run validate:governance-enforcement                 # deve fechar verde
+   node scripts/governance/stamp-report-lineage.js         # passo 9 do converge (DERIVED_REPORT)
+   GOVERNANCE_RUN_ID=… GOVERNANCE_SOURCE_FINGERPRINT=… node --env-file-if-exists=.env qa-mesh/meshRunner.js
+   npm run validate:wave-same-run && npm run validate:qa-evidence-same-run
    ```
-   Combinado com a vinculação por **runId** do P1-11 (ativa), isso é intencional: cada novo
-   run exige evidência regenerada dentro da sua janela. A vinculação por
-   `sourceFingerprint` segue inativa (decisão de política registrada).
+   Para RUNTIME_EVIDENCE o carimbo retroativo é recusado pelo próprio repo (exige lineage **na
+   origem**) — comportamento correto, confirmado na leitura de `stamp-report-lineage.js`.
+6. **Candidato pertence ao run anterior** (novo, medido): `FOREIGN_RUN_ARTIFACT` no `candidate`
+   enquanto o run corrente não produzir candidato novo. Resolve-se na fase `candidate` do próximo
+   ciclo (`bash scripts/governance/seal-release.sh --from prepare`; o prepare não cria outro run
+   porque o fingerprint já coincide). Fora da autoridade desta missão.
+7. **Malha grava artefato governado com execução vazia** (novo, medido): `--scenario-id` de wave não
+   casa com `platformScenarioIds` da malha ⇒ `results=0`, exit 1, e ainda assim
+   `qa-mesh/intelligence/latest.json` sai com `isGovernedEvidence=true` (`clusters=0`) e é aceito pelo
+   gate, que é lineage-only. O caminho substantivo é o **mesh canônico dentro do run** (fase prepare do
+   selo, ~35 min). Registrado na fila; a prevenção exige decisão de política no par produtor/gate.
 
 ## 14. Bloqueadores externos
 
@@ -260,16 +284,13 @@ O que está provado e verde:
 O que NÃO está verde, e por quê (sem maquiagem):
 
 - `npm run validate:governance-enforcement` → **AGG_EXIT=1**, com **1** violação:
-  `QA_EVIDENCE_SAME_RUN_VIOLATION: qa-mesh/intelligence/latest.json` — "artefato produzido
-  DEPOIS do run que o reivindica".
-- A **causa raiz de código** dessa violação foi corrigida (execução sem lineage não pode
-  mais destruir a evidência governada — commit `1e0f5d0f8`, 4/4 provas). O que resta é
-  **sequenciamento de ciclo**: a evidência precisa ser produzida dentro da janela de um run
-  governado **aberto**, e o run corrente está fechado. Destravar exige a operação de ciclo
-  descrita na seção 13.5 (runbook), que envolve iniciar um novo run governado e regenerar
-  waves + malha — isto é, **executar a parte operacional do ciclo de release**, explicitamente
-  fora do que esta missão autoriza (não publicar release, não promover código). O item está
-  registrado na fila como `blocked` com `blocked_reason` escrito, **nunca como `done`**.
+  `FOREIGN_RUN_ARTIFACT` no `candidate` — o candidato entregue (`r-agent2-20261016-025650`)
+  pertence ao run ANTERIOR ao corrente. A violação ORIGINAL (evidência runtime fora da janela do
+  run) foi **resolvida por operação real**: `validate:qa-evidence-same-run` → `PASS 6/6`.
+- Não existe caminho para agregado verde sem **produzir o candidato no run corrente**, isto é,
+  executar a fase `candidate` (e seguintes) do ciclo de release — explicitamente fora do que esta
+  missão autoriza (não publicar release, não promover código). Item registrado na fila como
+  `blocked` com `blocked_reason` escrito, **nunca como `done`**.
 
 Nenhuma release foi publicada, nenhuma tag criada, nenhum código promovido para produção.
 Cada afirmação acima aponta para um comando, um relatório `reports/*.json`, um commit ou um

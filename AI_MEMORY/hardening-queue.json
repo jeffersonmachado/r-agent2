@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-16T12:47:52.042Z",
+  "updatedAt": "2026-10-16T13:06:56.569Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -498,10 +498,25 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
       "title": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
+      "status": "verified",
+      "commit": "c20433341",
+      "evidence": "OPERADO e VERIFICADO em 2026-10-16: (1) `node scripts/governance/create-governed-run.js` criou o run rap-governed-20261016125224166-7833cff3; (2) o preflight novo (`npm run validate:wave-same-run`) disparou no fluxo real com 3x WAVE_EVIDENCE_FOREIGN_RUN e o remedio — prova bidirecional do gate; (3) as 3 waves foram regeneradas DENTRO do run e carimbadas pelo passo canonico `node scripts/governance/stamp-report-lineage.js` (stamped=3) — waves agora db-integrity/api-surface/page-surface SAME_RUN; (4) a malha foi executada dentro do run com GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT da origem e o artefato qa-mesh/intelligence/latest.json nasceu com lineage do run corrente (isGovernedEvidence=true); (5) RESULTADO: `validate:qa-evidence-same-run` status=PASS artefatos=6/6 same-run-ok=6 violacoes=0 (antes: FAIL com 1 violacao). O preflight evitou tambem o desperdicio do ciclo de ~35 min do mesh."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
+      "title": "Criar run governado novo torna o CANDIDATO entregue um artefato de outro run",
       "status": "blocked",
-      "commit": "1e0f5d0f8",
-      "evidence": "Depois de eliminar o QA_EVIDENCE_LINEAGE_MISSING (artefato regenerado por execucao REAL da malha dentro do run rap-governed-20261016041828305-ae81e3ee), o gate passou a apontar QA_EVIDENCE_SAME_RUN_VIOLATION — \"artefato produzido DEPOIS do run que o reivindica\": o run corrente ja esta FECHADO, logo nenhuma evidencia nova pode pertencer a ele. Estado do agregado: AGG_EXIT=1 com 1 violacao, e TODOS os demais validadores verdes (release-dag PASS, release-artifact-identity PASS, route-mounts 63/63, runtime-evidence RUNTIME_PASS 25/25 itens 0 falhas, engineering-router-v1 RUNTIME_PASS 209 checks).",
-      "blocked_reason": "Destravar exige operacao de ciclo de release (nao autorizada nesta missao): criar NOVO run governado e regenerar as waves e a malha DENTRO dele — npm run wave:db-integrity && npm run wave:api-surface && npm run wave:page-surface && node qa-mesh/meshRunner.js — e depois rodar npm run validate:governance-enforcement. Combinado com a vinculacao por RUN do P1-11 (ativa), isso e intencional e mais estrito: cada novo run exige evidencia regenerada dentro da sua janela."
+      "commit": "c20433341",
+      "evidence": "MEDIDO no agregado apos o destravamento: [release-identity] status=FAIL decision=RELEASE_ARTIFACT_IDENTITY_INVALID — \"FALHA FOREIGN_RUN_ARTIFACT: candidate.governanceRunId (rap-governed-20261016041828305-ae81e3ee) != run corrente (rap-governed-20261016125224166-7833cff3)\". Efeito de estrutura, nao defeito de codigo: o candidato em dist/candidate/ (release r-agent2-20261016-025650) foi produzido no run anterior. Antes desta operacao o agregado tinha 1 violacao (evidencia da malha pos-run); depois delatambem tem 1 violacao, porem TRUTHFUL e explicita: o run corrente ainda nao produziu candidato. Todos os demais validadores seguem verdes, inclusive validate:qa-evidence-same-run 6/6.",
+      "blocked_reason": "Resolver exige a fase `candidate` (e seguintes) do ciclo de release no run corrente — producao de release, fora da autoridade desta missao (nao publicar release / nao promover codigo). O fechamento se da por: bash scripts/governance/seal-release.sh --from prepare (o prepare nao criara run novo porque o fingerprint ja coincide; o converge roda o mesh canonico no run, o stamp reaplica lineage e a fase candidate reconstroi o candidato no run corrente)."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
+      "title": "Malha grava artefato governado mesmo executando ZERO resultados (--scenario-id da wave nao casa)",
+      "status": "blocked",
+      "commit": "c20433341",
+      "evidence": "MEDIDO: `node qa-mesh/meshRunner.js --scenario-id=beauty-campanha-lead-pagamento` com lineage governado produziu executionId=mesh-2026-10-16T13-05-18-231Z com results=0 passed=0 failed=0, exit code 1, e AINDA ASSIM gravou qa-mesh/intelligence/latest.json com clusters=0 e isGovernedEvidence=true — aceito por validate:qa-evidence-same-run (que e lineage-only). A causa do 0: `--scenario-id` espera ids presentes em platformScenarioIds da malha (meshRunner:464-465) e o id de cenario de wave nao casa; a execucao vira nao-canonica (manual_replay) sem resultados. Risco: evidencia \"governada\" derivada de execucao vazia.",
+      "blocked_reason": "Prevencao requer decidir politica no par produtor/gate (artefato com executedResults=0 nao deveria ser evidencia valida, ou a malha deveria falhar ANTES de gravar) — mudanca em gate de governanca com impacto no pipeline; exige aval do dono. Nesta missao foi evitado mascarar: o caminho substantivo e o mesh canonico DENTRO do run (fase prepare do selo, ~35 min), que o selo ja executa."
     }
   ]
 }
