@@ -629,6 +629,30 @@
         "fingerprintUnchanged": "1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e",
         "sourceRootsEvidence": "governance/proof-engine/fingerprint-chain.js:106-112"
       }
+    },
+    {
+      "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
+      "title": "Checkpoints incrementais auditáveis (gravador executável + runbook + ponteiro)",
+      "status": "done",
+      "commit": "58ce559ef",
+      "evidence": "tools/audit/checkpoint.js + tests/unit/audit/checkpointTool.test.js + AI_MEMORY/evidence/checkpoints.md + AI_MEMORY/operational-checklists/checkpoint-protocol.md",
+      "detail": "Cada commit de desenvolvimento passa a carregar: branch, SHA de base, arquivos modificados, testes EXECUTADOS com exit code/duração/sha256 da saída e o problema corrigido. O gravador recusa escrever quando qualquer teste falha (prova bidirecional em tests/unit/audit/checkpointTool.test.js, 5/5), recusa rodar em main/master e recusa sem --tests. Instituído em dev/engineering-hardening (nunca main, nunca tag, nunca force)."
+    },
+    {
+      "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
+      "title": "Travas do ponto de entrada de auditoria (regressão do agg8 + epoch recalculável)",
+      "status": "done",
+      "commit": "3bbf51ac7",
+      "evidence": "tests/unit/audit/auditEntrypointArtifact.test.js + AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md",
+      "detail": "Um teste roda audit:json-persistence --check e exige PASS/unknown=0 — trava direta da regressão que reprovou o agg8 (escrita .json fora da taxonomia em AI_MEMORY/evidence/). Outro recalcula o auditEpoch com stringify canônico REIMPLEMENTADO (verificador independente, não compartilha código com o produtor). O artefato passou a ter UMA cerca json (a dica de extração citava a mesma marcação e quebrava parser ingênuo)."
+    },
+    {
+      "id": "AUDITORIA-BRANCH-INVENTORY",
+      "title": "Inventário auditável das 2497 branches locais (2468 do loop autônomo)",
+      "status": "done",
+      "commit": "58ce559ef",
+      "evidence": "tools/audit/branch-inventory.js + tests/unit/audit/branchInventory.test.js + AI_MEMORY/evidence/branch-inventory-2026-10-16.md",
+      "detail": "Medição 2026-10-16: 2497 branches locais, 2112 já contidas em origin/main, 385 exigem decisão (360 de engineering/missions + 18 de engineering-router/candidates + branches de feature/fix). Classifica cada não-mergeada por arquivos tocados (sandbox_only vs toca_outros) e imprime o comando dry-run. NÃO apaga nada: poda continua decisão explícita do dono."
     }
   ]
 }

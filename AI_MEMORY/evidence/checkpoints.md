@@ -209,3 +209,54 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 09ababdcfb19 — governanca: fila oficial com os 3 entregaveis de auditoria (checkpoint, travas, inventario)
+
+- **Quando**: 2026-10-16T19:26:30.542Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `58ce559ef3438835222f71e6c92e1175be5b48f0`
+- **id** (sha256 do conteúdo do checkpoint): `09ababdcfb19f4c5a724f2765925d6987a5b8a2f6621e5a0a637276f7ccd0cb6`
+
+**Problema corrigido:** os entregaveis de auditoria incremental desta sessao nao existiam na fila oficial, que e a unica fonte de verdade sobre o que foi feito: sem item com commit+evidence, a proxima sessao nao saberia que o gravador de checkpoint, as travas do entrypoint e o inventario de branches existem
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+- `M AI_MEMORY/hardening-queue.json`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `node scripts/governance/validate-hardening-queue.js` | 0 | 0.1 s | e3ba56d8d232 |
+| `npx jest tests/unit/audit/` | 0 | 10.6 s | 8aa174eff968 |
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-hardening-queue.js</code></summary>
+
+```
+[hardening-queue] 78 itens — done:51 blocked_external:3 prevention_active:13 verified:7 blocked:4
+[hardening-queue] abertos: (nenhum)
+[hardening-queue] PASS
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/audit/</code></summary>
+
+```
+    ✓ familiaDe agrupa pelos dois primeiros segmentos (105 ms)
+    ✓ classificar: só o fixture sandbox => sandbox_only (descartável) (102 ms)
+    ✓ classificar: qualquer arquivo fora do fixture => toca_outros (exige revisão) (102 ms)
+    ✓ classificar: nenhum arquivo => sem_arquivos (branch vazia em relação a main) (102 ms)
+    ✓ o fixture é o artefato do sandbox do Engineering Router — não um arquivo de produto (101 ms)
+Test Suites: 3 passed, 3 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        5.228 s
+Ran all test suites matching /tests\/unit\/audit\//i.
+[jest-global-teardown] Engineering Runner (pid 96840) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---

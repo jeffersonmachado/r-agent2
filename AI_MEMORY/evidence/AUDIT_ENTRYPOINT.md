@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T19:22:15.861Z
-- **auditEpoch**: `df9d3b9ac30f10d6a98477a069817a4d51f272cb6af767f40317f796fe99b77d`
-- **Branch / HEAD**: `dev/engineering-hardening` / `f47f3fc5ace11b1f39e83d0ef8b3064e96b82c70`
+- **Gerado em**: 2026-10-16T19:26:30.375Z
+- **auditEpoch**: `be08d1d05fa1bce80e619fd4377c6c1e9b8153b389a12a25f6eb3718a7a443bd`
+- **Branch / HEAD**: `dev/engineering-hardening` / `58ce559ef3438835222f71e6c92e1175be5b48f0`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -61,7 +61,7 @@ npm run validate:final-status-projection
 | `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | b3df7b6f1a10 | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | afc20e35c6c6 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | c6933050f331 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | dab6bf393b6b | não (ignorado) |
 | `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 91be08411708 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | 815d35350a3b | não (ignorado) |
@@ -115,26 +115,25 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T19:22:15.861Z",
+  "generatedAt": "2026-10-16T19:26:30.375Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "df9d3b9ac30f10d6a98477a069817a4d51f272cb6af767f40317f796fe99b77d",
+    "valor": "be08d1d05fa1bce80e619fd4377c6c1e9b8153b389a12a25f6eb3718a7a443bd",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "dev/engineering-hardening",
-      "headAtGeneration": "f47f3fc5ace11b1f39e83d0ef8b3064e96b82c70",
-      "headAssunto": "audit(checkpoint): gravador de checkpoint executavel + prova bidirecional (5/5)",
-      "headData": "2026-10-16T16:21:07-03:00",
-      "remoteHead": "f47f3fc5ace11b1f39e83d0ef8b3064e96b82c70",
+      "headAtGeneration": "58ce559ef3438835222f71e6c92e1175be5b48f0",
+      "headAssunto": "audit(branches): inventario executavel + funcoes puras testadas (5/5)",
+      "headData": "2026-10-16T16:25:54-03:00",
+      "remoteHead": "58ce559ef3438835222f71e6c92e1175be5b48f0",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
-        "M tools/audit/generate-audit-entrypoint.js",
-        "tests/unit/audit/auditEntrypointArtifact.test.js"
+        "M AI_MEMORY/hardening-queue.json"
       ],
       "commitsNaoEnviados": 0
     },
@@ -330,8 +329,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:02:36.212Z",
-        "sha256": "c6933050f331870277f7eeb09764505e7beabc06b4bdbf0fa254726d185b270c"
+        "generatedAt": "2026-10-16T19:26:25.054Z",
+        "sha256": "dab6bf393b6b583269848ff8b119c6eca76ace86d16c63ff3081000b15e11ef5"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -397,7 +396,7 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
       }
     ],
     "fila": {
-      "total": 75,
+      "total": 78,
       "naoFechados": [
         {
           "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
