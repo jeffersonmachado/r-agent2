@@ -17,6 +17,8 @@
  *   1 = L1 executado e VERMELHO (teste falhou de verdade)
  *   2 = ESCALATE (não é falha: é insuficiência de evidência para decidir)
  *   3 = erro de infraestrutura (artefato ausente, git indisponível)
+ *   4 = NOT_EXECUTED (dry-run: simulou a seleção e NÃO executou nada — nunca
+ *       reportar isto como verde; P0-5, medido 2026-10-16)
  *
  * Uso:
  *   node scripts/governance/run-impact-validation.js [--base <ref>] [--files a,b]
@@ -29,6 +31,7 @@ const { spawnSync, execFileSync } = require('child_process');
 
 const { collectDependents, normalizar } = require('../../qa/coverage/impactGraph');
 const { selectValidation, NIVEIS } = require('../../qa/coverage/impactSelection');
+const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 
 const RAIZ = path.resolve(__dirname, '..', '..');
 const GRAFO = path.join(RAIZ, 'reports', 'impact-graph.json');
@@ -36,7 +39,7 @@ const MESH = path.join(RAIZ, 'qa-mesh', 'meshRegistry.json');
 const VIZINHANCA = path.join(RAIZ, 'config', 'impact-neighborhood.json');
 const SAIDA = path.join(RAIZ, 'reports', 'impact-validation-report.json');
 
-const EXIT = Object.freeze({ GREEN: 0, RED: 1, ESCALATE: 2, INFRA: 3 });
+const EXIT = Object.freeze({ GREEN: 0, RED: 1, ESCALATE: 2, INFRA: 3, NOT_EXECUTED: 4 });
 
 /**
  * Lê um JSON com falha explícita (nunca silenciosa).
@@ -49,6 +52,30 @@ function lerJsonObrigatorio(caminho, rotulo) {
     throw new Error(`${rotulo} ausente em ${path.relative(RAIZ, caminho)}`);
   }
   return JSON.parse(fs.readFileSync(caminho, 'utf8'));
+}
+
+/**
+ * Extrai o ÚLTIMO objeto JSON impresso por um subprocesso.
+ *
+ * O CLI do mesh (`qa-mesh/meshRunner.js`) imprime logs e, no fim, o resumo em JSON
+ * indentado. Ler o arquivo de saída não serve: execução por `scenarioIds` é
+ * NÃO-canônica de propósito (`isCanonicalRegistryExecution` exige o registry
+ * completo), logo o runner não grava `go-no-go-report.json` — e não gravar é
+ * exatamente o que impede esta execução de contaminar a evidência governada.
+ *
+ * @param {string} saida
+ * @returns {object|null}
+ */
+function extrairUltimoJson(saida) {
+  const texto = String(saida || '');
+  const inicio = texto.lastIndexOf('\n{');
+  const candidato = inicio >= 0 ? texto.slice(inicio + 1) : (texto.trim().startsWith('{') ? texto.trim() : null);
+  if (!candidato) return null;
+  try {
+    return JSON.parse(candidato);
+  } catch (_) {
+    return null;
+  }
 }
 
 /**
@@ -230,13 +257,51 @@ function main(argv = process.argv.slice(2)) {
   const dryRun = argv.includes('--dry-run');
   const base = arg('--base', 'HEAD');
   const out = arg('--out', SAIDA);
+  // Caminho do grafo injetável: permite exercitar o vínculo de identidade (P0-5) em
+  // teste SEM tocar o artefato real de `reports/`.
+  const grafoPath = arg('--graph', GRAFO);
 
-  // 1. grafo
-  if (!fs.existsSync(GRAFO)) {
+  // 1. grafo — existência, INTEGRIDADE e VÍNCULO com o source analisado (P0-5).
+  if (!fs.existsSync(grafoPath)) {
     process.stderr.write(`[L1] ERRO: artefato do grafo ausente. Rode: node scripts/governance/build-impact-graph.js\n`);
     return EXIT.INFRA;
   }
-  const grafo = JSON.parse(fs.readFileSync(GRAFO, 'utf8'));
+  let grafo;
+  try {
+    grafo = JSON.parse(fs.readFileSync(grafoPath, 'utf8'));
+  } catch (err) {
+    process.stderr.write(`[L1] ESCALATE: artefato do grafo ilegível (${err.message}) — rode: npm run impact:build\n`);
+    return EXIT.ESCALATE;
+  }
+  // DEFEITO CORRIGIDO (P0-5, medido 2026-10-16): o artefato era lido e usado sem
+  // conferir se descrevia o source ATUAL. Um grafo de outro commit levava a seleção a
+  // decidir sobre uma árvore que não é a analisada, em silêncio. Ausência de
+  // vínculo, vínculo divergente ou artefato estruturalmente inútil ⇒ ESCALATE
+  // (nunca "seleção vazia ⇒ verde").
+  const problemasGrafo = [];
+  if (!grafo || typeof grafo !== 'object') problemasGrafo.push('artefato não é objeto');
+  if (grafo && (!grafo.reverse || typeof grafo.reverse !== 'object')) {
+    problemasGrafo.push('artefato sem `reverse` (grafo inutilizável)');
+  }
+  if (grafo && grafo.kind !== 'impact-graph') problemasGrafo.push(`kind inesperado: ${String(grafo.kind)}`);
+  let fingerprintAtual = null;
+  try {
+    fingerprintAtual = String(computeSourceFingerprint(RAIZ));
+  } catch (err) {
+    problemasGrafo.push(`não foi possível calcular o fingerprint do source: ${err.message}`);
+  }
+  if (grafo && !grafo.sourceFingerprint) {
+    problemasGrafo.push('artefato sem `sourceFingerprint` (não declara de qual source foi construído)');
+  } else if (grafo && fingerprintAtual && grafo.sourceFingerprint !== fingerprintAtual) {
+    problemasGrafo.push(
+      `grafo de OUTRO source (artefato=${String(grafo.sourceFingerprint).slice(0, 16)}… atual=${fingerprintAtual.slice(0, 16)}…)`,
+    );
+  }
+  if (problemasGrafo.length > 0) {
+    for (const p of problemasGrafo) process.stderr.write(`[L1] ESCALATE: ${p}\n`);
+    process.stderr.write('[L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build\n');
+    return EXIT.ESCALATE;
+  }
 
   // 2. arquivos alterados
   const explicitos = arg('--files');
@@ -299,11 +364,16 @@ function main(argv = process.argv.slice(2)) {
   }
 
   if (dryRun) {
-    relatorio.execution = { dryRun: true };
+    // DEFEITO CORRIGIDO (P0-5, medido 2026-10-16): a simulação devolvia `GREEN` (0).
+    // Um chamador que olhasse só o exit code concluía "L1 validado" sem UMA suíte
+    // executada — simulação representada como validação aprovada. Agora o estado é
+    // explícito no relatório E o código de saída é próprio (4 = NOT_EXECUTED), que
+    // nenhum consumidor pode confundir com verde.
+    relatorio.execution = { dryRun: true, state: 'NOT_EXECUTED', testsExecuted: 0 };
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, JSON.stringify(relatorio, null, 1), 'utf8');
-    process.stdout.write('[L1] dry-run: nenhuma suíte executada\n');
-    return EXIT.GREEN;
+    process.stdout.write('[L1] dry-run: NENHUMA suíte executada — estado NOT_EXECUTED (não é validação)\n');
+    return EXIT.NOT_EXECUTED;
   }
 
   // 4. execução — cada grupo no runner competente
@@ -369,16 +439,68 @@ function main(argv = process.argv.slice(2)) {
     else if (run.exitCode !== 0 && !run.failedTests) erroExecucao = `vitest exit=${run.exitCode} sem falhas relatadas`;
   }
 
+  // 4b. QA Mesh — os cenários PERTINENTES são EXECUTADOS e entram no gate (P0-5).
+  //
+  // DEFEITO CORRIGIDO (medido 2026-10-16): o relatório só REGISTRAVA
+  // `selection.meshScenarios`. Os cenários eram listados e nunca executados, então um
+  // `L1 VERDE` podia conviver com uma jornada quebrada — a jornada só é exercitada
+  // pelo mesh, não por suíte Jest/Vitest alguma. Registrar identificador não é prova.
+  // A execução usa a MESMA autoridade do pipeline (`qa-mesh/meshRunner.js`, CLI com
+  // `--scenario-id=`), por subprocesso, como os demais runners daqui. Ela é
+  // NÃO-canônica por construção (o runner exige o registry completo para escrever
+  // `go-no-go-report.json`), logo a evidência governada do mesh NÃO é sobrescrita.
+  // Cenário selecionado que não puder ser executado ⇒ ESCALATE explícito: nunca
+  // verde por ausência de prova.
+  const cenariosMesh = Array.isArray(selecao.meshScenarios) ? selecao.meshScenarios : [];
+  let mesh = { selected: cenariosMesh.length, executed: false, goNoGo: null, scenarios: cenariosMesh };
+  let meshIndisponivel = null;
+  if (cenariosMesh.length > 0) {
+    const runMeshProc = spawnSync(
+      process.execPath,
+      [path.join('qa-mesh', 'meshRunner.js'), ...cenariosMesh.map((id) => `--scenario-id=${id}`)],
+      { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+    );
+    const resumo = extrairUltimoJson(runMeshProc.stdout);
+    if (!resumo || !resumo.goNoGo) {
+      const erro = String(runMeshProc.stderr || '').trim().split('\n').filter(Boolean).slice(-2).join(' | ');
+      meshIndisponivel = `mesh não emitiu veredito (exit=${runMeshProc.status})${erro ? `: ${erro}` : ''}`;
+    } else {
+      mesh = {
+        selected: cenariosMesh.length,
+        executed: true,
+        goNoGo: resumo.goNoGo,
+        reasons: resumo.reasons || [],
+        scenarios: cenariosMesh,
+        exitCode: runMeshProc.status,
+      };
+      if (resumo.goNoGo === 'NO_GO') falhas += 1;
+    }
+  }
+
   relatorio.execution = {
     runners: execucoes,
     numTotalTests: totalExecutado,
     numFailedTests: falhas,
     byRunner: relatorio.selection.byRunner,
+    mesh,
   };
+  if (meshIndisponivel) {
+    // Estado explícito no relatório ANTES de sair: quem ler a evidência vê que o
+    // nível não decidiu, e por quê.
+    relatorio.level = NIVEIS.L2;
+    relatorio.decision.escalate = true;
+    relatorio.decision.escalateReason = 'MESH_NOT_EXECUTED';
+    relatorio.decision.meshDetail = meshIndisponivel;
+  }
 
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(relatorio, null, 1), 'utf8');
 
+  if (meshIndisponivel) {
+    process.stderr.write(`[L1] ESCALATE: ${meshIndisponivel}\n`);
+    process.stderr.write('[L1] cenário de mesh selecionado sem execução não sustenta L1 — nível seguinte deve cobrir\n');
+    return EXIT.ESCALATE;
+  }
   if (erroExecucao) {
     process.stderr.write(`[L1] ERRO de execução: ${erroExecucao}\n`);
     return EXIT.INFRA;
@@ -394,7 +516,8 @@ function main(argv = process.argv.slice(2)) {
   }
   process.stdout.write(
     `[L1] VERDE: ${totalExecutado} teste(s) ` +
-      `(jest=${grupos.jest.length} suíte(s), vitest=${grupos.vitest.length} suíte(s))\n`
+      `(jest=${grupos.jest.length} suíte(s), vitest=${grupos.vitest.length} suíte(s))` +
+      `${mesh.executed ? `, mesh=${mesh.selected} cenário(s) ${mesh.goNoGo}` : ''}\n`
   );
   return EXIT.GREEN;
 }
@@ -403,9 +526,12 @@ if (require.main === module) {
   process.exit(main());
 }
 
+// `extrairUltimoJson` exportado para teste: é a parte que decide se o nível
+// EXECUTOU a jornada do mesh ou apenas a listou (P0-5).
 module.exports = {
   main,
   EXIT,
+  extrairUltimoJson,
   arquivosAlterados,
   jornadasPorArquivo,
   cenariosPorJornada,

@@ -208,3 +208,61 @@ describe('selectValidation — determinismo e contrato', () => {
     expect(r.changedFiles).toEqual(['engine/utils.js']);
   });
 });
+
+// ── P0-5 (medido 2026-10-16): DEPENDENTES NÃO SÃO COBERTURA ─────────────────────
+//
+// Defeito: a camada transitiva classificava o arquivo alterado quando `reverse[n]`
+// tinha QUALQUER entrada. Um serviço de produção importado só por outro arquivo de
+// produção (que nenhum teste alcança) era dado como coberto — e, se OUTRO alvo da
+// mesma alteração produzisse testes, a seleção ficava não-vazia, o nível ficava L1 e
+// o run saía `L1 GREEN` com esse arquivo exercitado por NADA. Ter dependentes não é
+// ter testes: a classificação agora exige fecho reverso alcançando ≥1 teste.
+describe('selectValidation — P0-5: dependentes NÃO são prova de cobertura', () => {
+  // Fixture própria (não mexe no grafo dos outros testes): uma cadeia COM teste
+  // alcançável e outra SEM — a segunda é o caso do falso verde.
+  const FONTES = [
+    { path: 'engine/utils.js', source: '' },
+    { path: 'engine/executeStep.js', source: "require('./utils');" },
+    { path: 'engine/__tests__/executeStep.test.js', source: "require('../executeStep');" },
+    { path: 'api/services/orphanService.js', source: '' },
+    { path: 'api/modules/orphan/routes.js', source: "require('../../services/orphanService');" },
+  ];
+  const g = buildImportGraph({ files: FONTES });
+  const sel = (changedFiles) => selectValidation({ reverse: g.reverse, collectDependents, changedFiles });
+
+  test('o dependente de produção existe no grafo (a premissa do defeito é real)', () => {
+    expect(g.reverse['api/services/orphanService.js']).toEqual(['api/modules/orphan/routes.js']);
+    // E nenhum teste alcança esse arquivo: o fecho reverso a partir dele é vazio.
+    expect(collectDependents({ reverse: g.reverse, targets: ['api/services/orphanService.js'] }).tests).toEqual([]);
+  });
+
+  test('arquivo com dependentes mas SEM teste alcançável NÃO é dado como coberto', () => {
+    const r = sel(['api/services/orphanService.js']);
+    expect(r.escalate).toBe(true);
+    expect(r.escalateReason).toBe('UNCLASSIFIED_CHANGED_FILES');
+    expect(r.unclassified).toContain('api/services/orphanService.js');
+    expect(r.tests).toEqual([]);
+    expect(r.level).toBe(NIVEIS.L2);
+  });
+
+  test('o FALSO VERDE medido: um alvo COM teste não esconde o alvo SEM cobertura', () => {
+    // Antes: `tests` não-vazio (por engine/utils.js) + orphanService "classificado"
+    // ⇒ `escalate=false` e `L1 GREEN`, com orphanService coberto por nada.
+    const r = sel(['api/services/orphanService.js', 'engine/utils.js']);
+    expect(r.tests.length).toBeGreaterThan(0);
+    expect(r.escalate).toBe(true);
+    expect(r.escalateReason).toBe('UNCLASSIFIED_CHANGED_FILES');
+    expect(r.unclassified).toContain('api/services/orphanService.js');
+  });
+
+  test('a cobertura pode ser DECLARADA na vizinhança (com reason) — e aí não escala', () => {
+    const r = selectValidation(base({
+      changedFiles: ['api/services/orphanService.js'],
+      neighborhoodRules: [{ prefix: 'api/services', tests: ['tests/unit/orphanService.test.js'], reason: 'cobertura declarada para o serviço' }],
+    }));
+    expect(r.escalate).toBe(false);
+    expect(r.level).toBe(NIVEIS.L1);
+    expect(r.tests).toContain('tests/unit/orphanService.test.js');
+    expect(r.layers.vizinhanca).toContain('tests/unit/orphanService.test.js');
+  });
+});

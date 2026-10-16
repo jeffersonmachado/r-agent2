@@ -54,16 +54,21 @@ function camadaTransitiva({ changed, reverse }, acc, collectDependents) {
     acc.layers.transitiva.add(t);
   }
 
-  // Um arquivo alterado é dado por "classificado" pela camada transitiva quando
-  // ela REALMENTE alcançou algo a partir dele — isto é, quando alguém o importa
-  // (`reverse` tem entradas) ou quando ele próprio é um arquivo de teste.
-  // Marcar incondicionalmente anularia o fail-closed (defeito pego por
-  // `impactSelection.test.js`).
+  // Um arquivo alterado é dado por "classificado" pela camada transitiva quando o
+  // fecho reverso A PARTIR DELE alcança pelo menos um arquivo de TESTE.
   //
-  // Arquivo de TESTE alterado executa a si mesmo: ninguém o "importa", então o
-  // fecho reverso nunca o traria, e a alteração no próprio teste ficaria sem
-  // validação. Medido em 2026-10-14: alterar um arquivo de teste devolvia
-  // seleção vazia para ele.
+  // P0-5 (medido 2026-10-16): a regra anterior classificava o arquivo quando
+  // `reverse[n]` tinha QUALQUER entrada — inclusive dependentes de produção que
+  // nenhum teste alcança. TER DEPENDENTES NÃO É TER TESTES. Consequência medida: com
+  // outra alteração qualquer produzindo testes, a seleção ficava não-vazia, o nível
+  // ficava L1 e este arquivo era dado como coberto por NADA — o `L1 GREEN` escondia
+  // que ele não foi exercitado por suíte alguma. Agora, sem teste alcançável, ele
+  // permanece `unclassified` e a decisão escala (fail-closed); quem quiser fechá-lo
+  // declara a cobertura na camada de vizinhança, com `reason` explícito.
+  //
+  // Arquivo de TESTE alterado executa a si mesmo: ninguém o "importa", então o fecho
+  // reverso nunca o traria, e a alteração no próprio teste ficaria sem validação.
+  // Medido em 2026-10-14: alterar um arquivo de teste devolvia seleção vazia para ele.
   for (const c of changed) {
     const n = normalizar(c);
     if (isTestFile(n)) {
@@ -72,8 +77,8 @@ function camadaTransitiva({ changed, reverse }, acc, collectDependents) {
       acc.layers.transitiva.add(n);
       continue;
     }
-    const temDependentes = (reverse[n] || []).length > 0;
-    if (temDependentes) acc.classified.add(n);
+    const alcancados = collectDependents({ reverse, targets: [n] });
+    if ((alcancados.tests || []).length > 0) acc.classified.add(n);
   }
 
   return { tests, dependents };
