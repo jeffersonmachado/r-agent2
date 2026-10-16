@@ -30,6 +30,7 @@ const engineeringTaskService = require('./engineeringTaskService');
 const getEngineeringReviewModel = require('../../db/models/EngineeringReview');
 const { ROOT } = require('./contextBuilderService');
 const { readRunContext } = require('../../../governance/shared/run-context');
+const { exigirGoFinal } = require('../../../governance/canonical-release-decision');
 const logger = require('../../utils/logger');
 
 function readJsonSafe(relPath) {
@@ -96,7 +97,12 @@ async function getReleaseClosure() {
   else if (currentRun && !goNoGoSameRun) lockReasons.push('QA_MESH_EVIDENCE_FOREIGN_RUN');
 
   if (!finalReadiness) lockReasons.push('FINAL_READINESS_MISSING');
-  else if (!String(finalReadiness.finalDecision || '').startsWith('PASS')) lockReasons.push('FINAL_READINESS_NOT_PASS');
+  // AUTORIDADE ÚNICA (P0-4, medido 2026-10-16): `startsWith('PASS')` aceitava
+  // `PASS_WITH_DEFERRED_PACKAGE_GATE` — estado PRÉ-pacote — como fechamento limpo,
+  // ou seja, o serviço declarava release "limpo" antes da certificação. O predicado
+  // passa a ser o vocabulário canônico (só GO definitivo fecha o release); o código
+  // da razão é mantido para não quebrar consumidores que o exibem.
+  else if (!exigirGoFinal(finalReadiness.finalDecision, { consumidor: 'releaseClosureService' }).ok) lockReasons.push('FINAL_READINESS_NOT_PASS');
   else if (currentRun && !finalReadinessSameRun) lockReasons.push('FINAL_READINESS_EVIDENCE_FOREIGN_RUN');
 
   // Final Consistency Gate já agrega replay/readiness/package/governance/contamination/

@@ -1,6 +1,7 @@
 'use strict';
 
 const { failIfNeeded, readJson, statusFromIssues, writeReport } = require('./common');
+const { exigirGoFinal } = require('../../governance/canonical-release-decision');
 
 const issues = [];
 const governanceChain = readJson('governance/governance-chain.json', {});
@@ -25,8 +26,20 @@ if (runtime.status !== 'PASS') {
 if (qa.status !== 'PASS' && qa.status !== 'GO') {
   issues.push({ code: 'qa_chain_invalid', message: 'QA chain is missing or not GO.' });
 }
-if (/NO_GO/i.test(String(readiness.finalDecision || readiness.status || ''))) {
-  issues.push({ code: 'final_readiness_no_go', message: `Final readiness is ${readiness.finalDecision || readiness.status}.` });
+// AUTORIDADE ÚNICA (P0-4): antes este gate rejeitava apenas `/NO_GO/i`. Passavam
+// como aprovados, portanto, `PASS_WITH_DEFERRED_PACKAGE_GATE` (estado PRÉ-pacote),
+// `DELIVERED_PENDING_SCORECARD` e `CONTROLLED_PILOT` — um gate de self-proving
+// aceitando o que ainda NÃO é GO definitivo. Agora o predicado é o vocabulário
+// canônico: só `CERTIFIED_GO`/`PUBLISHED_VERIFIED` (ou os literais finais
+// declarados) passam; qualquer outra coisa reprova, inclusive literal desconhecido.
+const decisaoReadiness = exigirGoFinal(readiness.finalDecision || readiness.status, {
+  consumidor: 'validate-self-proving',
+});
+if (!decisaoReadiness.ok) {
+  issues.push({
+    code: 'final_readiness_nao_final',
+    message: `Final readiness is ${readiness.finalDecision || readiness.status} (estado canônico ${decisaoReadiness.state}; exigido GO definitivo ${decisaoReadiness.version}).`,
+  });
 }
 
 const report = {

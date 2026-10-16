@@ -762,6 +762,21 @@ phase_certify() {
     fail "cadeia criptográfica INVÁLIDA após a certificação — os hashes não correspondem à raiz definitiva" "$clog" certify
   fi
 
+  # ASSERTIVA CANÔNICA (P0-4): a pergunta que a PUBLICAÇÃO exige não é "algum gate
+  # disse GO?", e sim "este artefato está em GO DEFINITIVO segundo a autoridade
+  # única?". Os gates checavam isso com vocabulários próprios, e estado pré-pacote
+  # (`PASS_WITH_DEFERRED_PACKAGE_GATE`, `AUTONOMOUS_READY` sem `_GO`) passava como
+  # aprovado em três consumidores medidos. Aqui a resposta vem de um lugar só
+  # (`governance/canonical-release-decision.js`), sobre os artefatos REAIS do selo,
+  # com versão do vocabulário e checagem de identidade: GO de outro candidato não vale.
+  # Bloqueante — sem GO definitivo, a fase `publish` nem começa.
+  local dlog="$LOG_DIR/canonical-decision.log"
+  if node --env-file-if-exists=.env scripts/governance/assert-canonical-release-decision.js > "$dlog" 2>&1; then
+    ok "decisão canônica: $(tail -1 "$dlog")"
+  else
+    fail "artefato selado NÃO está em GO definitivo — a publicação fica impedida (cadeia: decisão canônica P0-4)" "$dlog" certify
+  fi
+
   # MCP_RESEARCH_DOCKER_E2E: no agregado o gate sai 0 com REQUIRES_DOCKER_RUNTIME
   # quando não há docker — correto para CI/dev, mas não é prova de release. Aqui
   # o relatório tem de estar PASS e FRESCO (o agregado acabou de rodar o gate).
