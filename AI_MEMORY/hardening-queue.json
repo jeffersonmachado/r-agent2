@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-14T21:52:48.863Z",
+  "updatedAt": "2026-10-16T12:47:52.042Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -430,6 +430,78 @@
       "status": "done",
       "commit": "1e7528d35",
       "evidence": "Defeito medido em 2026-10-15 (ciclo de ~2 h perdido): o validador `validate:ask-ai-runtime-evidence` roda DENTRO do gate agregado, que roda na ULTIMA fase (`consolidate`). A evidencia tem TTL de 7 dias e produtor MANUAL (`npm run verify:ask-ai-copilot:runtime`, exige API viva + credencial de verificacao), entao nada a renova sozinho: o ciclo inteiro rodou (QA Mesh real ~40 min, empacotamento, tag JA PUBLICADA) e abortou no fim com `ASK_AI_RUNTIME_EVIDENCE_STALE` (177,8 h de 168 h), exigindo interromper a fase, regenerar de verdade (10/10 verificacoes em runtime real) e retomar `--from consolidate`. O preflight ja fazia esse fail-fast para o smoke continuo das QA Waves; faltava a MESMA protecao aqui — onde o custo de descobrir no fim e maior (a tag ja foi publicada). Correcao: novo `scripts/governance/ask-ai-runtime-evidence-ttl-preflight.js` com AUTORIDADE UNICA do TTL (chama `evaluateRuntimeEvidence`, a mesma funcao do validador — limiar nunca duplicado), exit 0=OK / 1=vencida-invalida-ausente / 2=nao avaliavel (fail-closed), chamado na ENTRADA do ciclo e de novo no inicio do `consolidate`. Prova: tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js (6 casos, incluindo o mesmo 177,8 h medido, evidencia ausente, ausencia de prova de geracao e a assercao de que o selo chama o preflight nos DOIS pontos) + prova E2E medida: com a evidencia envelhecida para 177,8 h o selo aborta na entrada em 4 s com o remedio exato (antes levava ~2 h para descobrir no fim); restaurada a evidencia fresca, o preflight volta a OK."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
+      "title": "Reuso de lote do runner autoritativo nao pode mascarar exit code divergente",
+      "status": "prevention_active",
+      "commit": "4ed63b7e3",
+      "evidence": "avaliarReusoDeLote recusa reuso quando meta.exitCode!==0 (ORIGINAL_EXIT_CODE_NONZERO) ou resultExitCode!==0 (RESULT_REPORT_NOT_SUCCESS); o ramo de reuso passa a carregar o exitCode REAL; isenção de reused===true removida de collectBatchExitCodeViolations. Prova: suite do runner 42/42 + provado nos dois sentidos (reuso com falha => violacao).",
+      "prevention": "tests/unit/governance/releaseSuiteRunner.test.js (suite do runner autoritativo, 42 casos) falha se o reuso de lote voltar a aceitar exit code divergente: cobre meta.exitCode!==0, resultExitCode!==0 e o exitCode REAL no ramo de reuso. Prova nos dois sentidos executada na sessao."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-5",
+      "title": "Eliminar falsos verdes de cobertura (L1) e fazer a malha REALMENTE executar",
+      "status": "prevention_active",
+      "commit": "64e32e32a",
+      "evidence": "camadaTransitiva so marca arquivo de producao como classificado se houver teste dependente (collectDependents reverse>0). Quantificado no repo real: 187 de 2127 arquivos (8.8%) eram falsamente cobertos. run-impact-validation ganhou EXIT {GREEN,RED,ESCALATE,INFRA,NOT_EXECUTED}, checagem de integridade de grafo/fingerprint e o bloco de malha que EXECUTA qa-mesh/meshRunner (antes: nao executava e ainda assim reportava verde). Prova: 296/296 testes de coverage + run real da malha (71 testes + 1 cenario GO).",
+      "prevention": "tests/unit/coverage/impactSelection.test.js + tests/unit/coverage/impactRunnerBinding.test.js (296/296 com tests/unit/coverage) travam a regra \"arquivo de producao so esta classificado se houver teste dependente\" e o binding de grafo/fingerprint do run-impact-validation (EXIT NOT_EXECUTED/ESCALATE)."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
+      "title": "Cadeia criptografica reconstruida e assinada a cada ciclo (selo imutavel)",
+      "status": "prevention_active",
+      "commit": "08e554a05",
+      "evidence": "Causa raiz medida: consolidate/system:go-no-go reescrevem evidence-manifest, final-proof-report, final-readiness-report, package-validation-report e proof-signature DEPOIS da cadeia existir; nada reconstruia. Agora a fase certify reconstroi+assina a cadeia (sign-governance.js com .env) e propaga a atestacao, com validate-governance-chain BLOQUEANTE. Prova E2E: status=PASS links=10 stored=f05ed75aaaad == recomputado=f05ed75aaaad, EXIT=0; testes 9/9 + prova bidirecional.",
+      "prevention": "tests/unit/governance/governanceChainCertification.test.js (9 casos) + `validate:governance-chain` BLOQUEANTE dentro da fase certify do release:seal. A cadeia e reconstruida/assinada depois de TODAS as escritas e a divergencia stored!=recomputado aborta o selo."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-3",
+      "title": "Certificar ANTES de publicar (ordem de fase do selo)",
+      "status": "prevention_active",
+      "commit": "2994245d9",
+      "evidence": "Fases reordenadas para prepare->candidate->final->consolidate->certify->publish->verify-delivery, com dispatch_phase. Antes, a tag podia ser publicada antes dos gates (3 ciclos abortados na sessao anterior, com a tag ja publicada). Prova: sealPhaseOrder.test.js 6/6 + regressao de 111 testes PASS.",
+      "prevention": "tests/unit/governance/sealPhaseOrder.test.js (6 casos) falha se a ordem das fases regredir: teste de ordem garantida (certify antes de publish); nenhuma tag pode ser publicada antes dos gates."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-4",
+      "title": "Autoridade unica de decisao de release (fim da comparacao por substring)",
+      "status": "prevention_active",
+      "commit": "3adae4ff4",
+      "evidence": "governance/canonical-release-decision.js: vocabulario versionado (1.0.0), 7 estados, FINAL_GO_STATES=[CERTIFIED_GO,PUBLISHED_VERIFIED], literal desconhecido => PRE_PACKAGE_PASS (fail-closed), identidade por runId/sourceCommit/sourceFingerprint/releaseId. Consumidores migrados (validate-self-proving, releaseClosureService) e assertiva BLOQUEANTE na fase certify do selo. Prova: 27/27 + 7/7 testes, execucao real state=CERTIFIED_GO EXIT=0, sabotagem => EXIT=1.",
+      "prevention": "tests/unit/governance/canonicalReleaseDecision.test.js (27) + assertCanonicalReleaseDecision.test.js (7) e a assertiva BLOQUEANTE scripts/governance/assert-canonical-release-decision.js na fase certify: literal desconhecido => PRE_PACKAGE_PASS (fail-closed), nunca GO final."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
+      "title": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
+      "status": "blocked_external",
+      "commit": "57167fb62",
+      "evidence": "MEDIDO: main protected=false; GET /branches/main/protection e /rulesets => HTTP 403 \"Upgrade to GitHub Pro or make this repository public\" (repo privado, plano User/Free). Entregue gate executavel: governance/branch-protection.config.json (allow_force_pushes=false, allow_deletions=false) + scripts/governance/verify-branch-protection.js (mede, grava reports/branch-protection-report.json, UNKNOWN nunca vira PASS; --apply quando o plano permitir). Prova: 12/12 testes (o caso de versionamento falhava antes da excecao no .gitignore e passa depois); medicao real status=BLOCKED_EXTERNAL. RESOLUCAO EXIGE TERCEIRO: plano pago ou repositorio publico.",
+      "blocked_reason": "A API do GitHub recusa ativar protecao de branch em repositorio privado no plano Free (HTTP 403). Nao existe mitigacao local equivalente a protecao server-side."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
+      "title": "TTL/frescor de evidencia: autoridade unica com 5 regras e vinculacao por run",
+      "status": "prevention_active",
+      "commit": "f499134e9",
+      "evidence": "DEFEITO REPRODUZIDO: TTL era Number(env) || 7d; com \"Infinity\"/\"1e999\" o limiar virava Infinity e idade > Infinity e sempre falso => nenhuma evidencia vencia (fail-open de L1). governance/evidence-ttl.js rejeita TTL ausente/nao-finito/nao-positivo, timestamp ausente/invalido/futuro (idade negativa nao e frescor), evidencia expirada, evidencia que expira DURANTE o processamento e evidencia de outro commit/run/fingerprint. Integrado nos 3 loaders de wave (reason/ageMs propagados) e vinculacao por RUN ativa. Provas: 19/19 testes novos (inclui a reproducao do defeito original), 296/296 regressao de coverage, gate real EXIT=0 (technicalCoverage=99%, stale=0) => sem falso vermelho. Consequencia intencional documentada: novo run governado torna as waves de OUTRO run (remedio: regenerar as 3 waves; reports/ nao participa de SOURCE_ROOTS, medido, logo nao ha laco).",
+      "prevention": "tests/unit/governance/evidenceTtl.test.js (19 casos, inclui a reproducao do defeito `Number(\"Infinity\") || 7d`) + integracao real nos 3 loaders de wave do validate:coverage-gate, que degradam para STALE com motivo nomeado; o TTL declarado invalido nao cai mais no default em silencio."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
+      "title": "Execucao da malha sem lineage destruia a evidencia governada (agregado em vermelho)",
+      "status": "prevention_active",
+      "commit": "1e0f5d0f8",
+      "evidence": "MEDIDO no gate agregado: [qa-evidence-same-run] status=FAIL violacoes=1 — QA_EVIDENCE_LINEAGE_MISSING: qa-mesh/intelligence/latest.json. Causa raiz em duas camadas: (1) meshRunner.resolveOriginLineage() le apenas GOVERNANCE_* do ambiente, entao execucao manual produz execution com lineage nulo; (2) failureIntelligence ja carimbava lineage mas escrevia no caminho da evidencia governada com valores nulos — a correcao anterior era INERTE (o dado nunca chegava). Efeito: rodar a malha localmente (acao legitima) destruia evidencia governada. Correcao: execucao sem lineage (ou com lineage parcial) escreve latest-ungoverned.json e PRESERVA latest.json byte a byte, com aviso. Provas: tests/unit/qa-mesh/failureIntelligenceLineage.test.js 4/4 (inclui a regressao exata do envenenamento).",
+      "prevention": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js trava a regra \"sem lineage nao escreve no caminho da evidencia governada\" e o caso de lineage parcial (so runId, sem fingerprint) nao conta como governado; a preservacao e verificada byte a byte."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+      "title": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
+      "status": "blocked",
+      "commit": "1e0f5d0f8",
+      "evidence": "Depois de eliminar o QA_EVIDENCE_LINEAGE_MISSING (artefato regenerado por execucao REAL da malha dentro do run rap-governed-20261016041828305-ae81e3ee), o gate passou a apontar QA_EVIDENCE_SAME_RUN_VIOLATION — \"artefato produzido DEPOIS do run que o reivindica\": o run corrente ja esta FECHADO, logo nenhuma evidencia nova pode pertencer a ele. Estado do agregado: AGG_EXIT=1 com 1 violacao, e TODOS os demais validadores verdes (release-dag PASS, release-artifact-identity PASS, route-mounts 63/63, runtime-evidence RUNTIME_PASS 25/25 itens 0 falhas, engineering-router-v1 RUNTIME_PASS 209 checks).",
+      "blocked_reason": "Destravar exige operacao de ciclo de release (nao autorizada nesta missao): criar NOVO run governado e regenerar as waves e a malha DENTRO dele — npm run wave:db-integrity && npm run wave:api-surface && npm run wave:page-surface && node qa-mesh/meshRunner.js — e depois rodar npm run validate:governance-enforcement. Combinado com a vinculacao por RUN do P1-11 (ativa), isso e intencional e mais estrito: cada novo run exige evidencia regenerada dentro da sua janela."
     }
   ]
 }
