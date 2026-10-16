@@ -19,7 +19,6 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawnSync } = require('child_process');
 
 const RAIZ = path.resolve(__dirname, '..', '..', '..');
 const ARTEFATO = path.join(RAIZ, 'AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md');
@@ -75,16 +74,28 @@ describe('AUDIT_ENTRYPOINT.md — invariantes do ponto de entrada de auditoria',
     expect(doc.auditEpoch.valor).toBe(recalculado);
   });
 
-  test('audit:json-persistence --check segue PASS (trava da regressão do agg8)', () => {
-    const r = spawnSync(process.execPath, ['governance/json-persistence-audit.js', '--check'], {
-      cwd: RAIZ,
-      encoding: 'utf8',
-    });
-    expect(r.status).toBe(0);
-    // Com --check o script imprime o resumo compacto: status/unknown na RAIZ.
-    const saida = JSON.parse(`${r.stdout}${r.stderr}`.trim().split('\n').pop());
-    expect(saida.status).toBe('PASS');
-    expect(saida.unknown).toBe(0);
-    expect(saida.deprecated).toBe(0);
+  test('audit:json-persistence está PASS e sem alvos UNKNOWN (trava da regressão do agg8)', () => {
+    // ATENÇÃO — por que este teste NÃO executa `json-persistence-audit.js`:
+    // aquele script grava `governance/json-persistence-audit.json` ANTES de checar a flag
+    // (`fs.writeFileSync` incondicional em main()). Esse arquivo é artefato AUTORITATIVO do
+    // run governado: regravá-lo fora da janela do run faz
+    // `validate:current-run-temporal-integrity` reprovar com
+    // INVALID_AUTHORITATIVE_ARTIFACT — medido de verdade em 2026-10-16 (mtime 16:47:39 contra
+    // fim do agregado 16:33:58, causado por este próprio teste). Um teste de unidade NÃO pode
+    // mutar evidência governada. A trava continua: o artefato é regenerado a cada ciclo de
+    // validação, então exigir PASS/unknown=0 aqui pega a regressão sem efeito colateral.
+    const artefato = path.join(RAIZ, 'governance/json-persistence-audit.json');
+    expect(fs.existsSync(artefato)).toBe(true);
+    const d = JSON.parse(fs.readFileSync(artefato, 'utf8'));
+    expect(d.summary.status).toBe('PASS');
+    expect(d.summary.unknown).toBe(0);
+    expect(d.summary.deprecated).toBe(0);
+    // Nenhum alvo sob AI_MEMORY/ pode ficar UNKNOWN (é isso que reprova o gate).
+    // Observação medida em 2026-10-16: existe 1 alvo `AI_MEMORY/hardening-queue.json`
+    // classificado como STATIC_VERSIONED_CONFIG, e ele é FALSO POSITIVO do scanner —
+    // `tools/audit/generate-audit-entrypoint.js` apenas LÊ a fila; o caminho aparece no
+    // mesmo arquivo que escreve o .md e o scanner o trata como alvo de escrita.
+    const alvosUnknown = (d.entries || []).filter((e) => /^AI_MEMORY\//.test(e.target) && e.category === 'UNKNOWN');
+    expect(alvosUnknown).toHaveLength(0);
   });
 });

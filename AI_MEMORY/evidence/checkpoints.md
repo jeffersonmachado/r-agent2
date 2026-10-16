@@ -310,3 +310,55 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 8dca002650cc — fix(audit): teste nao regrava mais artefato governado + registro dos 2 achados P0/P1 da FASE B
+
+- **Quando**: 2026-10-16T19:50:45.067Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `60558fba49c898c9a8acbe540efc712101a6b5c5`
+- **id** (sha256 do conteúdo do checkpoint): `8dca002650cc07425d46302abf6c9cedf1bb97589dddc95d26c4d2d2e8528041`
+
+**Problema corrigido:** meu teste de unidade chamava json-persistence-audit.js --check, que grava governance/json-persistence-audit.json incondicionalmente; isso invalidou a integridade temporal do run governado (INVALID_AUTHORITATIVE_ARTIFACT). A FASE B tambem revelou que validate-governance-chain nao esta no agregado e que a cadeia so pode estar valida logo apos a certificacao, porque o proprio agregado regrava artefato coberto por ela
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+- `M AI_MEMORY/hardening-queue.json`
+- `M tests/unit/audit/auditEntrypointArtifact.test.js`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/audit/` | 0 | 6.2 s | aa533090543e |
+| `node scripts/governance/validate-hardening-queue.js` | 0 | 0.2 s | 87446097870f |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/audit/</code></summary>
+
+```
+    ✓ familiaDe agrupa pelos dois primeiros segmentos (103 ms)
+    ✓ classificar: só o fixture sandbox => sandbox_only (descartável) (103 ms)
+    ✓ classificar: qualquer arquivo fora do fixture => toca_outros (exige revisão) (103 ms)
+    ✓ classificar: nenhum arquivo => sem_arquivos (branch vazia em relação a main) (103 ms)
+    ✓ o fixture é o artefato do sandbox do Engineering Router — não um arquivo de produto (103 ms)
+Test Suites: 3 passed, 3 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        3.774 s, estimated 5 s
+Ran all test suites matching /tests\/unit\/audit\//i.
+[jest-global-teardown] Engineering Runner (pid 168133) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-hardening-queue.js</code></summary>
+
+```
+[hardening-queue] 81 itens — done:52 blocked_external:3 prevention_active:13 verified:7 blocked:6
+[hardening-queue] abertos: (nenhum)
+[hardening-queue] PASS
+```
+
+</details>
+
+---

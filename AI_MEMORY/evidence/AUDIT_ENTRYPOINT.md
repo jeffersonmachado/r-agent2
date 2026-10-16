@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T19:47:32.630Z
-- **auditEpoch**: `8357cc568f3da5eb8a22362760814908152e2dcd24edd8f3ee6b984b1ea1f5c6`
-- **Branch / HEAD**: `dev/engineering-hardening` / `6221b7cca3554d3de616f2a0ad8044f12d1c80b4`
+- **Gerado em**: 2026-10-16T19:50:45.000Z
+- **auditEpoch**: `b4d6b3f055ed315785774edddc4390baa32ef8fca8d0cdf0b8dd36a240313f81`
+- **Branch / HEAD**: `dev/engineering-hardening` / `60558fba49c898c9a8acbe540efc712101a6b5c5`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -61,10 +61,10 @@ npm run validate:final-status-projection
 | `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 141ba96f383e | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | b9f50cf9d256 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | 9ce2ffa25a13 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | 2a2fe78a4f89 | não (ignorado) |
 | `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 271622357033 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
-| `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | 815d35350a3b | não (ignorado) |
+| `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | f52a8e66fc51 | não (ignorado) |
 | `governance/.current-run.json` | **COMPLETED** | 085-033e1239 | 47d0a433361e | não (ignorado) |
 
 ## Artefatos físicos do release (prova por hash, fora do git)
@@ -84,6 +84,8 @@ Nota de semântica: `blocked`/`blocked_external` são estados FECHADOS para o ag
 - `HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO` — **blocked** — Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO.
 - `HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO` — **blocked** — Correcao exige editar scripts/governance/** (SOURCE_ROOTS) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16: no agg7 o item RED_TO_FIX falhou e o gate reportou "saida do Jest nao pode ser parseada como JSON (crash antes do reporter)", mas o Jest terminou normalmente e imprimiu a assercao real no stderr do filho (`Expected: "GREEN" / Received: "READY_FOR_PROMOTION"`, engineeringRouterFullLoopE2E.test.js:218) + resumo completo ("Test Suites: 1 failed, 1 total / Time: 28.241 s"). O veredito do gate (item falhou) esta CORRETO; o diagnostico e que engana quem le so a linha resumida, e a causa real exige ler a secao "stderr do filho".
 - `HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE` — **blocked** — Classificar AI_MEMORY/evidence/ exige editar governance/json-persistence-audit.js, que esta em FILTERED_SOURCE_ROOTS (governance/**/*.js em governance/proof-engine/fingerprint-chain.js:106-112) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16 (prova dura): o passo bloqueante `audit:json-persistence` (node governance/json-persistence-audit.js --check) reprovou com exit 1 e unknown=2 no agg8, e os dois alvos UNKNOWN eram exatamente os artefatos que eu havia criado: `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json` e `AI_MEMORY/evidence/aggregate-enforcement-last-run.json`. Nao era flake: `classifyByPattern()` (json-persistence-audit.js:249-251) auto-classifica qa/, qa-mesh/, governance/, reports/ e docs/, mas NAO AI_MEMORY/evidence/ — que e exatamente o analogo de qa/evidence/ (essa sim classificada como ARTIFACT_STORAGE). MITIGACAO ATIVA (ja aplicada): o ponto de entrada passou a ser UM arquivo Markdown com o payload JSON embutido em bloco cercado; nenhum `.json` e escrito por tools/audit/. Comprovado: `audit:json-persistence --check` voltou a EXIT=0 e o sourceFingerprint permaneceu 1c10ffa62e169a18 (tools/audit/ esta fora de SOURCE_ROOTS).
+- `AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO` — **blocked** — DEFEITO DE DESENHO (P0), exige decisao de politica + mudanca de fonte. MEDIDO 2026-10-16: (a) `validate-governance-chain` NAO esta na cadeia do agregado (conferido em package.json: "no agregado: NAO"), portanto o agregado fica verde com a cadeia quebrada — agg10 deu exit 0 e a validacao seguinte da cadeia deu exit 1; (b) a divergencia e 3: blocker_engine=cumulative_hash_broken, package_validation=hash_mismatch (governance/package-validation-report.json), chain_root=chain_root_mismatch; (c) mtimes: governance-chain.json 13:49:00 (do selo) x package-validation-report.json 16:33:29 (reescrito DENTRO do agg10) — isto e, o proprio agregado regrava artefato coberto pela cadeia, entao a cadeia so pode estar valida imediatamente apos a certificacao e nunca depois de um ciclo de validacao. Correcao proposta: incluir `validate:governance-chain` no agregado (editar package.json, que NAO esta em SOURCE_ROOTS) E fixar a ordem do ciclo — a cadeia precisa ser reconstruida/certificada DEPOIS do ultimo passo que escreve artefato, senao o agregado fica permanentemente vermelho. A segunda parte toca scripts/governance/** (SOURCE_ROOTS) => novo fingerprint => re-selagem. Decisao do dono.
+- `AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA` — **blocked** — DEFEITO MENOR (P1), sem impacto em gate. MEDIDO 2026-10-16: o unico alvo sob AI_MEMORY/ no inventario e `AI_MEMORY/hardening-queue.json`, classificado como STATIC_VERSIONED_CONFIG, com writer `tools/audit/generate-audit-entrypoint.js` — mas esse gerador apenas LE a fila. O scanner trata o caminho como alvo de escrita porque ele aparece no mesmo arquivo que escreve o .md. Dois problemas reais: (1) alvo de escrita fantasma; (2) classificacao impropria, porque a fila e MUTAVEL (agentes escrevem nela) e nao "configuracao versionada estatica". Correcao exige editar governance/json-persistence-audit.js (SOURCE_ROOTS) => novo fingerprint => re-selagem. Como o alvo esta classificado, nenhum gate reprova por isso — risco atual: baixo, mas o inventario mente.
 
 ## Ponteiros stale na raiz do repositório — NÃO use como estado atual
 
@@ -115,24 +117,27 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T19:47:32.630Z",
+  "generatedAt": "2026-10-16T19:50:45.000Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "8357cc568f3da5eb8a22362760814908152e2dcd24edd8f3ee6b984b1ea1f5c6",
+    "valor": "b4d6b3f055ed315785774edddc4390baa32ef8fca8d0cdf0b8dd36a240313f81",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "dev/engineering-hardening",
-      "headAtGeneration": "6221b7cca3554d3de616f2a0ad8044f12d1c80b4",
-      "headAssunto": "chore(governanca): fila oficial com os 3 entregaveis de auditoria + entrypoint regerado",
-      "headData": "2026-10-16T16:26:53-03:00",
-      "remoteHead": "6221b7cca3554d3de616f2a0ad8044f12d1c80b4",
+      "headAtGeneration": "60558fba49c898c9a8acbe540efc712101a6b5c5",
+      "headAssunto": "checkpoint(governanca): validacao obrigatoria verde no branch de dev (agregado exit 0)",
+      "headData": "2026-10-16T16:47:48-03:00",
+      "remoteHead": "60558fba49c898c9a8acbe540efc712101a6b5c5",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
-      "worktreeCleanExcluindoEsteArtefato": true,
-      "uncommittedPaths": [],
+      "worktreeCleanExcluindoEsteArtefato": false,
+      "uncommittedPaths": [
+        "M AI_MEMORY/hardening-queue.json",
+        "M tests/unit/audit/auditEntrypointArtifact.test.js"
+      ],
       "commitsNaoEnviados": 0
     },
     "releaseGovernado": {
@@ -327,8 +332,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:33:57.805Z",
-        "sha256": "9ce2ffa25a1379bebb9b873ee965617aa50969743f326df888aa22815a4ba2d9"
+        "generatedAt": "2026-10-16T19:50:43.179Z",
+        "sha256": "2a2fe78a4f89a98305ebe785f8cf90a7e5af49b802d90c11844c4713c6f25e9f"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -357,8 +362,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "DELIVERED_RELEASE_VERIFIED",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T16:31:46.578Z",
-        "sha256": "815d35350a3b68ed8cd1c0ed898ae56fe26703389264c7177a08fe0102b7be5f"
+        "generatedAt": "2026-10-16T19:48:43.323Z",
+        "sha256": "f52a8e66fc516353e51daed328cdff05fcf46691d1bec7bcd5b7850414d3e1b0"
       },
       {
         "path": "governance/.current-run.json",
@@ -394,7 +399,7 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
       }
     ],
     "fila": {
-      "total": 78,
+      "total": 81,
       "naoFechados": [
         {
           "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -415,6 +420,16 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
           "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
           "status": "blocked",
           "motivo": "Classificar AI_MEMORY/evidence/ exige editar governance/json-persistence-audit.js, que esta em FILTERED_SOURCE_ROOTS (governance/**/*.js em governance/proof-engine/fingerprint-chain.js:106-112) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16 (prova dura): o passo bloqueante `audit:json-persistence` (node governance/json-persistence-audit.js --check) reprovou com exit 1 e unknown=2 no agg8, e os dois alvos UNKNOWN eram exatamente os artefatos que eu havia criado: `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json` e `AI_MEMORY/evidence/aggregate-enforcement-last-run.json`. Nao era flake: `classifyByPattern()` (json-persistence-audit.js:249-251) auto-classifica qa/, qa-mesh/, governance/, reports/ e docs/, mas NAO AI_MEMORY/evidence/ — que e exatamente o analogo de qa/evidence/ (essa sim classificada como ARTIFACT_STORAGE). MITIGACAO ATIVA (ja aplicada): o ponto de entrada passou a ser UM arquivo Markdown com o payload JSON embutido em bloco cercado; nenhum `.json` e escrito por tools/audit/. Comprovado: `audit:json-persistence --check` voltou a EXIT=0 e o sourceFingerprint permaneceu 1c10ffa62e169a18 (tools/audit/ esta fora de SOURCE_ROOTS)."
+        },
+        {
+          "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+          "status": "blocked",
+          "motivo": "DEFEITO DE DESENHO (P0), exige decisao de politica + mudanca de fonte. MEDIDO 2026-10-16: (a) `validate-governance-chain` NAO esta na cadeia do agregado (conferido em package.json: \"no agregado: NAO\"), portanto o agregado fica verde com a cadeia quebrada — agg10 deu exit 0 e a validacao seguinte da cadeia deu exit 1; (b) a divergencia e 3: blocker_engine=cumulative_hash_broken, package_validation=hash_mismatch (governance/package-validation-report.json), chain_root=chain_root_mismatch; (c) mtimes: governance-chain.json 13:49:00 (do selo) x package-validation-report.json 16:33:29 (reescrito DENTRO do agg10) — isto e, o proprio agregado regrava artefato coberto pela cadeia, entao a cadeia so pode estar valida imediatamente apos a certificacao e nunca depois de um ciclo de validacao. Correcao proposta: incluir `validate:governance-chain` no agregado (editar package.json, que NAO esta em SOURCE_ROOTS) E fixar a ordem do ciclo — a cadeia precisa ser reconstruida/certificada DEPOIS do ultimo passo que escreve artefato, senao o agregado fica permanentemente vermelho. A segunda parte toca scripts/governance/** (SOURCE_ROOTS) => novo fingerprint => re-selagem. Decisao do dono."
+        },
+        {
+          "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
+          "status": "blocked",
+          "motivo": "DEFEITO MENOR (P1), sem impacto em gate. MEDIDO 2026-10-16: o unico alvo sob AI_MEMORY/ no inventario e `AI_MEMORY/hardening-queue.json`, classificado como STATIC_VERSIONED_CONFIG, com writer `tools/audit/generate-audit-entrypoint.js` — mas esse gerador apenas LE a fila. O scanner trata o caminho como alvo de escrita porque ele aparece no mesmo arquivo que escreve o .md. Dois problemas reais: (1) alvo de escrita fantasma; (2) classificacao impropria, porque a fila e MUTAVEL (agentes escrevem nela) e nao \"configuracao versionada estatica\". Correcao exige editar governance/json-persistence-audit.js (SOURCE_ROOTS) => novo fingerprint => re-selagem. Como o alvo esta classificado, nenhum gate reprova por isso — risco atual: baixo, mas o inventario mente."
         }
       ]
     },

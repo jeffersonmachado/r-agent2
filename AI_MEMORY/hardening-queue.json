@@ -653,6 +653,53 @@
       "commit": "58ce559ef",
       "evidence": "tools/audit/branch-inventory.js + tests/unit/audit/branchInventory.test.js + AI_MEMORY/evidence/branch-inventory-2026-10-16.md",
       "detail": "Medição 2026-10-16: 2497 branches locais, 2112 já contidas em origin/main, 385 exigem decisão (360 de engineering/missions + 18 de engineering-router/candidates + branches de feature/fix). Classifica cada não-mergeada por arquivos tocados (sandbox_only vs toca_outros) e imprime o comando dry-run. NÃO apaga nada: poda continua decisão explícita do dono."
+    },
+    {
+      "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
+      "title": "Teste de unidade regravava artefato governado e derrubava a integridade temporal",
+      "status": "done",
+      "commit": "60558fba4",
+      "evidence": "tests/unit/audit/auditEntrypointArtifact.test.js + mtime de governance/json-persistence-audit.json",
+      "detail": "DEFEITO MEU, medido: meu teste chamava `json-persistence-audit.js --check`, e esse script grava `governance/json-persistence-audit.json` de forma INCONDICIONAL antes de checar a flag (fs.writeFileSync em main()). Esse arquivo é artefato AUTORITATIVO do run governado, então regravá-lo fora da janela invalidou o run: `validate:current-run-temporal-integrity` passou a reprovar com INVALID_AUTHORITATIVE_ARTIFACT (mtime 16:47:39 do artefato contra fim do agregado 16:33:58). Correção: o teste passou a LER o artefato (PASS/unknown=0/sem alvo UNKNOWN sob AI_MEMORY/) em vez de reexecutar o produtor. PROVA do fix: mtime 16:47:39 idêntico antes e depois da suíte, com 14/14 PASS."
+    },
+    {
+      "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+      "title": "Cadeia criptografica nao esta no gate agregado e diverge so por rodar o agregado",
+      "status": "blocked",
+      "blocked_reason": "DEFEITO DE DESENHO (P0), exige decisao de politica + mudanca de fonte. MEDIDO 2026-10-16: (a) `validate-governance-chain` NAO esta na cadeia do agregado (conferido em package.json: \"no agregado: NAO\"), portanto o agregado fica verde com a cadeia quebrada — agg10 deu exit 0 e a validacao seguinte da cadeia deu exit 1; (b) a divergencia e 3: blocker_engine=cumulative_hash_broken, package_validation=hash_mismatch (governance/package-validation-report.json), chain_root=chain_root_mismatch; (c) mtimes: governance-chain.json 13:49:00 (do selo) x package-validation-report.json 16:33:29 (reescrito DENTRO do agg10) — isto e, o proprio agregado regrava artefato coberto pela cadeia, entao a cadeia so pode estar valida imediatamente apos a certificacao e nunca depois de um ciclo de validacao. Correcao proposta: incluir `validate:governance-chain` no agregado (editar package.json, que NAO esta em SOURCE_ROOTS) E fixar a ordem do ciclo — a cadeia precisa ser reconstruida/certificada DEPOIS do ultimo passo que escreve artefato, senao o agregado fica permanentemente vermelho. A segunda parte toca scripts/governance/** (SOURCE_ROOTS) => novo fingerprint => re-selagem. Decisao do dono.",
+      "evidence": {
+        "measuredAt": "2026-10-16",
+        "chainValidator": "scripts/governance/validate-governance-chain.js (alias validate:governance-chain)",
+        "chainInAggregate": false,
+        "aggregateVerdict": "AGG10_EXIT=0 (com a cadeia quebrada)",
+        "divergences": [
+          "blocker_engine — cumulative_hash_broken",
+          "package_validation — hash_mismatch (governance/package-validation-report.json)",
+          "chain_root — chain_root_mismatch"
+        ],
+        "mtimes": {
+          "governance/governance-chain.json": "13:49:00 (selo)",
+          "governance/package-validation-report.json": "16:33:29 (dentro do agg10)"
+        },
+        "proposedFixParts": [
+          "adicionar validate:governance-chain ao agregado (package.json, fora de SOURCE_ROOTS)",
+          "fixar a ordem do ciclo: certificar a cadeia apos o ultimo escritor de artefato (scripts/governance/**, exige re-selagem)"
+        ]
+      }
+    },
+    {
+      "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
+      "title": "Inventario de persistencia registra escrita fantasma da fila oficial (falso positivo do scanner)",
+      "status": "blocked",
+      "blocked_reason": "DEFEITO MENOR (P1), sem impacto em gate. MEDIDO 2026-10-16: o unico alvo sob AI_MEMORY/ no inventario e `AI_MEMORY/hardening-queue.json`, classificado como STATIC_VERSIONED_CONFIG, com writer `tools/audit/generate-audit-entrypoint.js` — mas esse gerador apenas LE a fila. O scanner trata o caminho como alvo de escrita porque ele aparece no mesmo arquivo que escreve o .md. Dois problemas reais: (1) alvo de escrita fantasma; (2) classificacao impropria, porque a fila e MUTAVEL (agentes escrevem nela) e nao \"configuracao versionada estatica\". Correcao exige editar governance/json-persistence-audit.js (SOURCE_ROOTS) => novo fingerprint => re-selagem. Como o alvo esta classificado, nenhum gate reprova por isso — risco atual: baixo, mas o inventario mente.",
+      "evidence": {
+        "measuredAt": "2026-10-16",
+        "target": "AI_MEMORY/hardening-queue.json",
+        "category": "STATIC_VERSIONED_CONFIG",
+        "writer": "tools/audit/generate-audit-entrypoint.js",
+        "reality": "o gerador apenas le a fila; a escrita real e feita por scripts de sessao fora do repositorio",
+        "artifact": "governance/json-persistence-audit.json"
+      }
     }
   ]
 }
