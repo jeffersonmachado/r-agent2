@@ -143,6 +143,8 @@
     "validate:gate-direction": "node scripts/governance/validate-gate-direction.js",
     "validate:migrations": "node --env-file-if-exists=.env scripts/governance/validate-migrations-applied.js",
     "validate:audit-items": "node scripts/governance/validate-engineering-router-v2-audit-items.js",
+    "validate:branch-protection": "node scripts/governance/verify-branch-protection.js",
+    "branch-protection:apply": "node scripts/governance/verify-branch-protection.js --apply",
     "validate:required-tests": "node scripts/governance/validate-engineering-router-v2-required-tests.js",
     "validate:no-date-bombs": "node scripts/governance/validate-no-date-bombs.js",
     "validate:hardening-queue": "node scripts/governance/validate-hardening-queue.js",

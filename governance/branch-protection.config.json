@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "purpose": "Estado desejado de protecao da branch main (P0-7). Fonte unica consumida por scripts/governance/verify-branch-protection.js.",
+  "repository": "jeffersonmachado/r-agent2",
+  "branch": "main",
+  "why": [
+    "Sem protecao, a historia de main pode ser reescrita (force-push) ou deletada, o que quebra lineage de release, sourceCommit/sourceFingerprint e a cadeia de prova inteira (governance-chain.json fica irrecuperavel).",
+    "A protecao e do lado SERVIDOR: nao existe mitigacao local equivalente (hook local nao impede push de outro clone/maquina)."
+  ],
+  "desired": {
+    "enforce_admins": false,
+    "required_status_checks": null,
+    "required_pull_request_reviews": null,
+    "restrictions": null,
+    "required_linear_history": false,
+    "allow_force_pushes": false,
+    "allow_deletions": false,
+    "required_conversation_resolution": false,
+    "lock_branch": false
+  },
+  "rationale": {
+    "allow_force_pushes": "false = impede reescrita da historia (risco principal do P0-7).",
+    "allow_deletions": "false = impede remocao de main.",
+    "required_status_checks": "null de proposito: o projeto opera 'main direto' (sprint de finalizacao). Exigir status check bloquearia push direto e quebraria o fluxo declarado; o enforcement de gate permanece no pre-push/CI local e no selo.",
+    "enforce_admins": "false de proposito: manter capacidade de recuperacao manual pelo owner; a protecao contra force-push/delecao permanece ativa mesmo assim."
+  },
+  "external_blocker_observed": {
+    "measured_at": "2026-10-11",
+    "visibility": "private",
+    "plan": "User (Free)",
+    "probe_get_branch_protection": "HTTP 403 - Upgrade to GitHub Pro or make this repository public to enable this feature.",
+    "probe_rulesets": "HTTP 403 - Upgrade to GitHub Pro or make this repository public to enable this feature.",
+    "measured_protected": false,
+    "resolution": "Requires a paid plan (Pro/Team/Enterprise) OR making the repository public. Both are out of the agent's authority."
+  }
+}

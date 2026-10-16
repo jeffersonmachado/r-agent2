@@ -116,6 +116,10 @@ qa-mesh/scheduler-activity.log
 
 # Artefatos locais de QA / release (auto-gerados, não versionar)
 governance/*.json
+# Exceção: estado DESEJADO versionado da proteção da branch main (P0-7), fonte
+# única consumida por scripts/governance/verify-branch-protection.js. Sem esta
+# exceção o config canônico fica fora do git e o gate perde a fonte de verdade.
+!governance/branch-protection.config.json
 governance/locks/
 reports/*
 # Exceção: evidência baseline de isolamento de tenant, consumida pelo
