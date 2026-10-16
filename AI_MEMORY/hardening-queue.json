@@ -514,8 +514,17 @@
       "title": "Malha grava artefato governado mesmo executando ZERO resultados (--scenario-id da wave nao casa)",
       "status": "blocked",
       "commit": "c20433341",
-      "evidence": "MEDIDO: `node qa-mesh/meshRunner.js --scenario-id=beauty-campanha-lead-pagamento` com lineage governado produziu executionId=mesh-2026-10-16T13-05-18-231Z com results=0 passed=0 failed=0, exit code 1, e AINDA ASSIM gravou qa-mesh/intelligence/latest.json com clusters=0 e isGovernedEvidence=true — aceito por validate:qa-evidence-same-run (que e lineage-only). A causa do 0: `--scenario-id` espera ids presentes em platformScenarioIds da malha (meshRunner:464-465) e o id de cenario de wave nao casa; a execucao vira nao-canonica (manual_replay) sem resultados. Risco: evidencia \"governada\" derivada de execucao vazia.",
-      "blocked_reason": "Prevencao requer decidir politica no par produtor/gate (artefato com executedResults=0 nao deveria ser evidencia valida, ou a malha deveria falhar ANTES de gravar) — mudanca em gate de governanca com impacto no pipeline; exige aval do dono. Nesta missao foi evitado mascarar: o caminho substantivo e o mesh canonico DENTRO do run (fase prepare do selo, ~35 min), que o selo ja executa."
+      "evidence": {
+        "measuredAt": "2026-10-16",
+        "meshArtifact": "qa-mesh/meshHistory/mesh-2026-10-16T14-56-29-025Z.json",
+        "executedResults": 144,
+        "isCanonicalExecution": true,
+        "runId": "rap-governed-20261016144931085-033e1239",
+        "sourceFingerprint": "1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e",
+        "sourceRootsEvidence": "governance/proof-engine/fingerprint-chain.js:54-70 e 106-112",
+        "requiresPolicyDecision": true
+      },
+      "blocked_reason": "Decisao de POLITICA (dono do produto), nao mecânica. Medicao 2026-10-16: o fail-open e LATENTE, nao ativo no caminho verde — a execucao canonica da malha no run corrente tem 144 resultados (isCanonicalExecution=true, runId/sourceFingerprint/sourceCommit corretos). Risco real: o produtor grava artefato governado mesmo com executedResults=0 e o gate nao distingue \"executou 0 cenarios\" de \"executou e passou\". Duas direcoes validas com semanticas diferentes: (a) produtor marca artefato vazio como NAO-evidencia, ou (b) a malha falha ANTES de gravar. CUSTO MEDIDO de aplicar agora: qa-mesh/*.js e scripts/governance/* estao em SOURCE_ROOTS (governance/proof-engine/fingerprint-chain.js:54-70,106-112), portanto qualquer edicao muda o fingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem."
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",

@@ -269,6 +269,10 @@ Medição corrigiu a hipótese inicial (que era "independência apenas declarati
 
 ## 16. Decisão final
 
+> **SUPERSEDIDA PELA SEÇÃO 17.** A decisão abaixo foi tomada quando o agregado ainda estava
+> vermelho e o candidato pertencia ao run anterior. Ambos foram resolvidos por operação real
+> (a fase `candidate` foi executada DENTRO do run governado). A decisão vigente é a da seção 17.
+
 **READY_FOR_RELEASE_REVIEW — com o agregado vermelho por 1 item operacional, explicitado.**
 
 O que está provado e verde:
@@ -295,3 +299,103 @@ O que NÃO está verde, e por quê (sem maquiagem):
 Nenhuma release foi publicada, nenhuma tag criada, nenhum código promovido para produção.
 Cada afirmação acima aponta para um comando, um relatório `reports/*.json`, um commit ou um
 teste que falha quando a correção é removida: **o RAP prova o que declara.**
+
+## 17. Fechamento operado (vigente)
+
+A condição que §16 declarava impossível — "não existe caminho para agregado verde sem produzir
+o candidato no run corrente" — **foi executada**. Produzir o candidato é *packaging* governado
+(`npm run zip:release` / fase `candidate` do selo), não publicação: nenhuma tag foi criada,
+nada foi publicado, nada foi promovido. O que mudou foi o estado de PROVA.
+
+### 17.1 Cadeia completa medida, um elo por vez
+
+| Etapa | Comando/artefato | Resultado medido |
+|---|---|---|
+| Selo V2 dentro do run | `seal-release.sh` fase certify | **21/21 PASS** |
+| Candidato do run corrente | `dist/candidate/*.candidate.manifest.json` | `governanceRunId=rap-governed-20261016144931085-033e1239` |
+| Identidade/lineage física | `validate:release-artifact-identity` | `PASS` · `RELEASE_ARTIFACT_IDENTITY_VERIFIED` |
+| Verificação do entregue | `verify:delivered-release` | `DELIVERED_RELEASE_VERIFIED` |
+| Scorecard mestre | `run-persisted-scorecard` | **78/78**, `below10=0`, `openGaps=0`, `openBlockers=0` |
+| Projeções canônicas | `validate:final-status-projection` | `PASS issues=0` |
+| Selagem final | `seal-time-gate` / `zip:release` | **SEAL_GO** · `PAYLOAD_GOVERNANCE_VERIFIED` |
+| Gate agregado | `validate:governance-enforcement` | **exit 0** · **31 validadores PASS** |
+| Fila oficial | `validate:hardening-queue` | **69 itens, 0 abertos**, `PASS` |
+
+Release selado: **`r-agent2-20261016-133323`** (`finalPayloadHash=515e94adc6…`, fingerprint
+`1c10ffa62e169a18`, commit de origem `d9c469e6`). Branch `hardening/p0-certificacao`,
+HEAD **`77a8b826e`** (pushed), worktree limpo.
+
+### 17.2 Defeitos REAIS encontrados e corrigidos depois de §16
+
+Nenhum foi contornado: todos viraram correção + teste + registro na fila.
+
+1. **Handshake ambíguo derrubava o selo (commit `a5449d15e`, CRÍTICO).** O passo
+   **obrigatório** `REAL_TASK_RECOVERY` abortava o selo V2 com
+   `[FAIL] FENCE_AVANCOU — antes=undefined depois=2` e **passava isolado** (`GO 16 checks`).
+   Causa raiz: o harness aceitava como handshake *qualquer* linha JSON com `state`, e o filho
+   executa o caminho real do produto, que **também loga JSON** — sob carga um log era adotado
+   como handshake, o worker era morto no momento errado e `taskFence` vinha ausente →
+   `2 > undefined` (falso) reprovava com **motivo enganoso**. Prova de que era log: o handshake
+   legítimo sempre carrega `taskFence` (no pior caso `null`).
+   Correção: marcador `__TASK_LEASE_HANDSHAKE__`, caminho legado exigindo campo exclusivo e
+   `FENCE_INICIAL_LEGIVEL` com fallback canônico no banco — **6 testes**, selo V2 21/21 depois.
+2. **SBOM fora da janela do run (`SECURITY_GATE_STALE_EVIDENCE`).** O gate de segurança
+   devolvia `exit 3` / `NO_GO` mesmo com o motor de risco dizendo GO, porque `generatedAt` do
+   SBOM era anterior ao `startedAt` do run. Correção: regenerar o produtor (`security:sbom`)
+   **dentro** da janela → `state=GO decision=GO exit=0`.
+
+Padrão sistêmico medido: todo artefato de prova carrega **duas identidades** — fingerprint do
+*conteúdo do código* (não do git) e `runId` do run governado — e o run nasce no
+`PRE_PACKAGE`. Cada tentativa revelava um elo novo; em **todos** os casos o remédio correto foi
+**reexecutar o produtor** (16 vindos da taxonomia canônica, 0 hardcoded), **nunca** carimbar à
+mão nem afrouxar guarda. Medição que evitou um laço perverso: **commitar não invalida o selo**
+(fingerprint de conteúdo: `1c10ffa6…` idêntico antes e depois dos commits).
+
+### 17.3 Residual de §16 fechado (não por narrativa, por medição)
+
+O item `HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN` — que §16 registrava como
+`blocked` — está **`verified`** com prova de hash real:
+
+- `reports/release-artifact-identity-report.json` → `PASS`,
+  `RELEASE_ARTIFACT_IDENTITY_VERIFIED`, com os quatro checks **executados** (não
+  `PENDING_PHASE`): `candidate_identity`, `delivered_identity`, `lineage_chain` e
+  `candidate_hash_binding`, todos `valid: true`.
+- `candidateHash == parentCandidateHash == 3ff273c1ec76ca93…` (conferidos contra os **bytes**
+  do zip), `finalPayloadHash = 515e94adc60ab35e…`.
+- Cadeia de lineage completa: `SOURCE_FINGERPRINT → CANDIDATE_HASH → FINAL_PAYLOAD_HASH →
+  PACKAGE_MANIFEST → SIGNATURE → PUBLICATION`.
+
+### 17.4 Item aberto remanescente (decisão de política — escalado, não mascarado)
+
+Um único item da fila **não** está fechado:
+
+- `HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA` → `blocked`.
+- Medição do estado atual: a execução canônica da malha no run corrente tem **144 resultados**,
+  `isCanonicalExecution=true`, com `runId`/`sourceFingerprint`/`sourceCommit` corretos — ou seja
+  o **fail-open é latente**, não ativo no caminho verde.
+- O risco é real: o produtor grava artefato governado mesmo com `executedResults=0`, e o gate
+  não distingue "malha executou 0 cenários" de "malha executou e passou".
+- **Por que não foi corrigido agora:** exige escolher entre duas direções com semânticas
+  diferentes (o produtor marcar artefato vazio como não-evidência **ou** a malha falhar antes de
+  gravar), e `qa-mesh/*.js` + `scripts/governance/*` estão em `SOURCE_ROOTS` — qualquer alteração
+  muda o fingerprint `1c10ffa6…` e **invalida o release já selado**, exigindo novo ciclo de
+  selagem. Essa troca é decisão do dono do produto, não do agente.
+
+### 17.5 Decisão final vigente
+
+**SELADO_E_VERIFICADO — PRONTO PARA PUBLICAÇÃO, aguardando autorização explícita.**
+
+O que está provado: agregado **exit 0 com 31 validadores PASS** no HEAD final, selo V2 21/21,
+scorecard 78/78, identidade/lineage do artefato verificada, fila oficial com 0 abertos, e todos
+os P0 corrigíveis corrigidos e provados nos dois sentidos.
+
+O que **não** foi feito, por estar fora da autorização: **nenhuma tag criada, nenhuma release
+publicada, nenhum código promovido para produção.** O passo de publicação é
+`scripts/create-release-tag.sh` + `verify-remote-provenance --require-tag`, e aguarda o "pode
+publicar" do usuário.
+
+**Regra final honrada:** o RAP não declara que está correto — ele prova. Foi por isso que cada
+declaração "verde" desta missão só foi escrita depois de o comando correspondente rodar e o
+`reports/*.json` correspondente existir; e foi por isso que três verdades incômodas (§16 com
+agregado vermelho, o item de política em §17.4 e o bloqueio externo de §14) ficaram registradas
+em vez de suavizadas.
