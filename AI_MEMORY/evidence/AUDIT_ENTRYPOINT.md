@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T19:01:59.616Z
-- **auditEpoch**: `c132a09dde2cc78dcfe4eacbd288b5b327c51a13190995eb51ffacf0e5518ea3`
-- **Branch / HEAD**: `hardening/p0-certificacao` / `32426bc1971f2a82ae5ba927a70f013f9fc15dcc`
+- **Gerado em**: 2026-10-16T19:22:15.861Z
+- **auditEpoch**: `df9d3b9ac30f10d6a98477a069817a4d51f272cb6af767f40317f796fe99b77d`
+- **Branch / HEAD**: `dev/engineering-hardening` / `f47f3fc5ace11b1f39e83d0ef8b3064e96b82c70`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -61,7 +61,7 @@ npm run validate:final-status-projection
 | `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | b3df7b6f1a10 | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | afc20e35c6c6 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | 4438f7ba2152 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | c6933050f331 | não (ignorado) |
 | `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 91be08411708 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | 815d35350a3b | não (ignorado) |
@@ -108,34 +108,34 @@ O estado atual está NESTE arquivo (`AUDIT_ENTRYPOINT.md`) e nas projeções can
 
 ## Payload completo (legível por máquina)
 
-O bloco abaixo é o JSON íntegro usado para calcular o `auditEpoch`. Extraia com:
-
-```bash
-sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$d' | python3 -m json.tool | head -40
-```
+O **último** bloco cercado deste arquivo (marcado como `json`) é o payload íntegro usado para
+calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônico para conferir.
 
 ```json
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T19:01:59.616Z",
+  "generatedAt": "2026-10-16T19:22:15.861Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "c132a09dde2cc78dcfe4eacbd288b5b327c51a13190995eb51ffacf0e5518ea3",
+    "valor": "df9d3b9ac30f10d6a98477a069817a4d51f272cb6af767f40317f796fe99b77d",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
-      "branch": "hardening/p0-certificacao",
-      "headAtGeneration": "32426bc1971f2a82ae5ba927a70f013f9fc15dcc",
-      "headAssunto": "fix(auditoria): ponto de entrada vira .md unico — os 2 JSON eram alvos UNKNOWN do audit:json-persistence",
-      "headData": "2026-10-16T15:52:51-03:00",
-      "remoteHead": "32426bc1971f2a82ae5ba927a70f013f9fc15dcc",
+      "branch": "dev/engineering-hardening",
+      "headAtGeneration": "f47f3fc5ace11b1f39e83d0ef8b3064e96b82c70",
+      "headAssunto": "audit(checkpoint): gravador de checkpoint executavel + prova bidirecional (5/5)",
+      "headData": "2026-10-16T16:21:07-03:00",
+      "remoteHead": "f47f3fc5ace11b1f39e83d0ef8b3064e96b82c70",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
-      "worktreeCleanExcluindoEsteArtefato": true,
-      "uncommittedPaths": [],
+      "worktreeCleanExcluindoEsteArtefato": false,
+      "uncommittedPaths": [
+        "M tools/audit/generate-audit-entrypoint.js",
+        "tests/unit/audit/auditEntrypointArtifact.test.js"
+      ],
       "commitsNaoEnviados": 0
     },
     "releaseGovernado": {
@@ -330,8 +330,8 @@ sed -n '/^```json$/,/^```$/p' AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md | sed '1d;$
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T19:01:38.892Z",
-        "sha256": "4438f7ba215293fe8507a8640fae687952deb498deaeb10b598ff0290aa81512"
+        "generatedAt": "2026-10-16T19:02:36.212Z",
+        "sha256": "c6933050f331870277f7eeb09764505e7beabc06b4bdbf0fa254726d185b270c"
       },
       {
         "path": "reports/release-dag-report.json",
