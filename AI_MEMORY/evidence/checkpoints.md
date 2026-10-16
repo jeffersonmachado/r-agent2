@@ -156,3 +156,56 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 563a864596aa — auditoria: inventario executavel das 2497 branches locais (2468 do loop autonomo)
+
+- **Quando**: 2026-10-16T19:25:16.769Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `842cc332914a900a7f2f14d3e02bd56c1fdb1c4c`
+- **id** (sha256 do conteúdo do checkpoint): `563a864596aa569b1b5c5d0ac5d3b930006612df4b54cecbcef1be2ca5bebf5e`
+
+**Problema corrigido:** o repositorio acumulou 2497 branches locais, 2468 delas da familia engineering/missions criadas pelo loop autonomo do Engineering Router, sem nenhum inventario derivado do estado real: a decisao de podar virava chute e um auditor externo via milhares de branches sem saber o que sao
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `AI_MEMORY/evidence/branch-inventory-2026-10-16.md`
+- `tests/unit/audit/branchInventory.test.js`
+- `tools/audit/branch-inventory.js`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/audit/` | 0 | 7.5 s | 27e30b12e44f |
+| `node tools/audit/branch-inventory.js` | 0 | 19.9 s | 57c82ee07ffa |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/audit/</code></summary>
+
+```
+  AUDIT_ENTRYPOINT.md — invariantes do ponto de entrada de auditoria
+    ✓ o artefato existe, declara auditEpoch e traz o payload JSON embutido parseável (105 ms)
+    ✓ todo proof registrado tem veredito e sha256 — nenhuma linha oca (110 ms)
+    ✓ o auditEpoch é RECALCULÁVEL de forma independente a partir do payload (106 ms)
+    ✓ audit:json-persistence --check segue PASS (trava da regressão do agg8) (880 ms)
+Test Suites: 3 passed, 3 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        4.77 s, estimated 7 s
+Ran all test suites matching /tests\/unit\/audit\//i.
+[jest-global-teardown] Engineering Runner (pid 93829) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>node tools/audit/branch-inventory.js</code></summary>
+
+```
+[branch-inventory] locais=2497 mergeadas=2112 naoMergeadas=385
+[branch-inventory] familias=13 (top: engineering/missions=2468, engineering-router/candidates=18, dev/engineering-hardening=1)
+[branch-inventory] escrito: AI_MEMORY/evidence/branch-inventory-2026-10-16.md
+[branch-inventory] nada foi apagado
+```
+
+</details>
+
+---
