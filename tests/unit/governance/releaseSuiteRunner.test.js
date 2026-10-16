@@ -189,8 +189,20 @@ describe('run-release-suites — exit code do lote é autoridade (H1)', () => {
     expect(violacoes).toEqual([]);
   });
 
-  it('lote REUTILIZADO não conta como processo executado (contrato próprio)', () => {
-    expect(collectBatchExitCodeViolations({ batchRuns: [{ exitCode: 1, reused: true }] })).toEqual([]);
+  // P0-6 (2026-10-16): a isenção `reused === true` foi REMOVIDA. Ela existia porque o
+  // lote reusado declarava `exitCode` derivado do JSON — não havia código real para
+  // conferir. Com o contrato exigindo `exitCode === 0` do sidecar e o lote carregando
+  // o valor real, a regra passa a valer nos DOIS caminhos: uma regressão futura no
+  // contrato de reuso é pega aqui em vez de passar em silêncio.
+  it('lote REUTILIZADO com exit != 0 É violação (isenção removida no P0-6)', () => {
+    const violacoes = collectBatchExitCodeViolations({ batchRuns: [{ exitCode: 1, reused: true }] });
+    expect(violacoes).toHaveLength(1);
+    expect(violacoes[0].code).toBe('BATCH_EXIT_CODE_NONZERO');
+    expect(violacoes[0].batchIndex).toBe(0);
+  });
+
+  it('lote REUTILIZADO com exit 0 (o único que o contrato permite) não gera violação', () => {
+    expect(collectBatchExitCodeViolations({ batchRuns: [{ exitCode: 0, reused: true }] })).toEqual([]);
   });
 
   it('a violação é suficiente para impedir PASS (não-vacuidade do gate)', () => {
@@ -216,9 +228,18 @@ describe('run-release-suites — contrato de reuso de lote (Fase 6)', () => {
     ...identidade,
     suitesHash: suitesFingerprint(suites),
     resultHash: 'HASH-DO-RESULTADO',
+    // Código REAL do processo do lote, gravado no sidecar desde 2026-10-11. É exigido
+    // pelo contrato de reuso desde o P0-6 (2026-10-16).
+    exitCode: 0,
   };
   const avaliar = (extra = {}) => avaliarReusoDeLote({
-    meta: metaValido, identidade, suites, resultHash: 'HASH-DO-RESULTADO', ...extra,
+    meta: metaValido,
+    identidade,
+    suites,
+    resultHash: 'HASH-DO-RESULTADO',
+    // Relatório do lote declarando sucesso (`json.success === true`).
+    resultExitCode: 0,
+    ...extra,
   });
 
   it('sem sidecar de binding NÃO reusa (fail-closed: procedência desconhecida)', () => {
@@ -255,11 +276,41 @@ describe('run-release-suites — contrato de reuso de lote (Fase 6)', () => {
     expect(avaliar({ resultHash: null }).reason).toBe('RESULT_HASH_MISMATCH');
   });
 
-  it('com binding completo e idêntico, reusa', () => {
-    expect(avaliar()).toEqual({ reuse: true, reason: null });
+  it('com binding completo e idêntico, reusa — e atesta o exit code real', () => {
+    expect(avaliar()).toEqual({ reuse: true, reason: null, exitCode: 0 });
   });
 
-  it('o exit code do lote reusado vem do RELATÓRIO, nunca fixo em 0', () => {
+  // ── P0-6 (medido 2026-10-16): o CÓDIGO DE SAÍDA do processo original ────────────
+  // O JSON do Jest é escrito ANTES do teardown: um lote cujo processo morreu depois
+  // (handle aberto, rejeição não tratada, forceExit, sinal) deixa JSON verde com
+  // `status != 0`. O contrato conferia run/commit/fingerprint/plano/hash e NUNCA o
+  // código real — o falso verde era propagado para o run corrente.
+  it('processo original com exit != 0 NÃO reusa (o JSON verde não cancela o processo)', () => {
+    expect(avaliar({ meta: { ...metaValido, exitCode: 1 } }).reason).toBe('ORIGINAL_EXIT_CODE_NONZERO');
+    expect(avaliar({ meta: { ...metaValido, exitCode: 130 } }).reason).toBe('ORIGINAL_EXIT_CODE_NONZERO');
+  });
+
+  it('lote morto por SINAL (exit null) NÃO reusa', () => {
+    expect(avaliar({ meta: { ...metaValido, exitCode: null, signal: 'SIGKILL' } }).reason)
+      .toBe('ORIGINAL_EXIT_CODE_NONZERO');
+  });
+
+  it('sidecar do formato ANTERIOR (sem o campo) NÃO reusa — fail-closed, não presumido limpo', () => {
+    const semCampo = { ...metaValido };
+    delete semCampo.exitCode;
+    expect(avaliar({ meta: semCampo }).reason).toBe('ORIGINAL_EXIT_CODE_NONZERO');
+  });
+
+  it('relatório do lote SEM `success: true` NÃO reusa (coerência relatório↔processo)', () => {
+    // O processo prova que nada falhou DEPOIS dos testes; o relatório prova que os
+    // testes passaram. Nenhum dos dois substitui o outro.
+    expect(avaliar({ resultExitCode: 1 }).reason).toBe('RESULT_REPORT_NOT_SUCCESS');
+  });
+
+  // Esta função deixou de ser a fonte do `exitCode` do lote reusado (hoje é o valor
+  // REAL do sidecar, validado pelo contrato); ela segue sendo a checagem de COERÊNCIA
+  // do relatório dentro do contrato (`RESULT_REPORT_NOT_SUCCESS`).
+  it('exitCodeDoRelatorioReusado: relatório sem sucesso nunca vale 0', () => {
     expect(exitCodeDoRelatorioReusado({ success: true })).toBe(0);
     expect(exitCodeDoRelatorioReusado({ success: false })).toBe(1);
     expect(exitCodeDoRelatorioReusado({})).toBe(1);

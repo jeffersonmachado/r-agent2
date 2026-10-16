@@ -184,7 +184,7 @@ function suitesFingerprint(suites) {
  *
  * @returns {{reuse: boolean, reason: string|null}}
  */
-function avaliarReusoDeLote({ meta, identidade, suites, resultHash } = {}) {
+function avaliarReusoDeLote({ meta, identidade, suites, resultHash, resultExitCode } = {}) {
   if (!meta || typeof meta !== 'object') return { reuse: false, reason: 'META_MISSING' };
   if (!identidade || !identidade.runId || !identidade.sourceFingerprint) {
     return { reuse: false, reason: 'NO_GOVERNED_RUN' };
@@ -196,7 +196,28 @@ function avaliarReusoDeLote({ meta, identidade, suites, resultHash } = {}) {
   }
   if (meta.suitesHash !== suitesFingerprint(suites)) return { reuse: false, reason: 'SUITE_PLAN_MISMATCH' };
   if (!resultHash || meta.resultHash !== resultHash) return { reuse: false, reason: 'RESULT_HASH_MISMATCH' };
-  return { reuse: true, reason: null };
+  // CÓDIGO DE SAÍDA ORIGINAL (P0-6, medido 2026-10-16).
+  //
+  // O JSON do Jest é escrito ANTES do teardown, então um lote cujo PROCESSO morreu
+  // depois — handle aberto, rejeição não tratada, `forceExit`, morte por sinal —
+  // deixa um JSON todo verde com `status != 0`. A regra que pega exatamente isso na
+  // execução NOVA (`collectBatchExitCodeViolations` → `BATCH_EXIT_CODE_NONZERO`)
+  // isentava lote reusado, e o contrato de reuso conferia run, commit, fingerprint,
+  // plano e hash do JSON — mas NUNCA o código real do processo, que o sidecar grava
+  // em `exitCode` desde 2026-10-11. Resultado: o falso verde era propagado para o
+  // run corrente, exatamente a classe que a Fase 6 existe para impedir.
+  // Sidecar sem o campo (formato anterior) é recusado por fail-closed, não presumido
+  // limpo. Não são aceitos atalhos por flag: a exigência é sobre o dado, não sobre
+  // quem chamou.
+  if (meta.exitCode !== 0) return { reuse: false, reason: 'ORIGINAL_EXIT_CODE_NONZERO' };
+  // COERÊNCIA RELATÓRIO ↔ PROCESSO: os dois são exigidos e nenhum substitui o outro.
+  // O processo prova que nada falhou depois dos testes (teardown, rejeição não tratada,
+  // sinal); o relatório prova que os TESTES passaram. Um JSON com `success !== true`
+  // não sustenta reuso, mesmo que o processo tenha saído 0.
+  if (resultExitCode !== 0) return { reuse: false, reason: 'RESULT_REPORT_NOT_SUCCESS' };
+  // `exitCode` sai daqui VALIDADO (=0): quem decide o reuso é quem pode atestá-lo,
+  // e o chamador carrega esse valor real no lote em vez de derivá-lo do JSON.
+  return { reuse: true, reason: null, exitCode: meta.exitCode };
 }
 
 /**
@@ -579,14 +600,18 @@ function runJest(suites, { exclusiveGroups = [] } = {}) {
           identidade: currentBuildIdentity(),
           suites: batch,
           resultHash: sha256De(raw),
+          // Coerência relatório↔processo: derivado do `json.success` do lote.
+          resultExitCode: exitCodeDoRelatorioReusado(json),
         });
       })();
       if (motivo.reuse) {
         const json = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
         runs.push({
           suites: batch,
-          // Derivado do relatório: um relatório com falhas NÃO vira lote aprovado.
-          exitCode: exitCodeDoRelatorioReusado(json),
+          // CÓDIGO REAL do processo original, já validado como 0 pelo contrato de
+          // reuso (`motivo.exitCode`). Derivá-lo do `json.success` — como era antes —
+          // apagava a única evidência de que o PROCESSO do lote terminou limpo.
+          exitCode: motivo.exitCode,
           signal: null,
           spawnError: null,
           json,
@@ -649,9 +674,13 @@ function collectBatchResults(batchRuns) {
  * suítes seguintes do lote podem não ter rodado.
  *
  * Sem exceção por flag, de propósito: uma lista de exceções seria o mesmo defeito com
- * outro nome. `reused` fica fora (o lote não foi executado agora; a reutilização tem
- * contrato próprio) e lotes já reportados como `BATCH_REPORT_MISSING` não são
- * duplicados.
+ * outro nome. Lotes já reportados como `BATCH_REPORT_MISSING` não são duplicados.
+ *
+ * SEM ISENÇÃO PARA LOTE REUSADO (P0-6, medido 2026-10-16): a isenção existia porque o
+ * lote reusado declarava `exitCode` derivado do JSON — não havia código real para
+ * conferir. Agora o contrato de reuso exige `exitCode === 0` do sidecar e o lote
+ * carrega esse valor REAL, então a regra vale nos dois caminhos: se algum dia o
+ * contrato voltar a deixar passar um processo sujo, esta varredura o pega.
  *
  * @param {{batchRuns?: Array, batchFailures?: Array}} input
  * @returns {Array<{code: string, batchIndex: number, detail: string}>}
@@ -662,7 +691,7 @@ function collectBatchExitCodeViolations({ batchRuns, batchFailures } = {}) {
   const jaViolados = new Set(failures.map((failure) => failure && failure.batchIndex));
   const violacoes = [];
   runs.forEach((run, index) => {
-    if (!run || run.reused === true) return;
+    if (!run) return;
     if (jaViolados.has(index)) return;
     if (run.exitCode === 0) return;
     violacoes.push({
