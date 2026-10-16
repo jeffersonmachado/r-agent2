@@ -720,6 +720,24 @@
       "evidence": "scripts/governance/assert-canonical-release-decision.js (gate de identidade + invariante estadoConcordaComVeredito)",
       "detail": "CAUSA-RAIZ: a condicao de identidade so zerava o booleano `ok`; o `state` devolvido por `clasificar()` continuava CERTIFIED_GO porque nenhum gate o representava. Um consumidor que decidisse por `state` (em vez de `ok`) veria GO com identidade AUSENTE. FOI O PROPRIO TESTE que expos a discordancia. CORRECAO: cada condicao de bloqueio entra como GATE na decisao (o motivo nomeia o gate) e o retorno expoe `estadoConcordaComVeredito`, com teste de invariante.",
       "prevention": "REGRA: uma API de decisao nao pode ter duas fontes de verdade (booleano paralelo + estado). Toda condicao de bloqueio tem de virar GATE no estado, e o teste deve afirmar a CONSISTENCIA entre os dois campos — nao apenas o valor de um deles."
+    },
+    {
+      "id": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
+      "title": "Verificacao de ENTREGA descartava o exit code e usava grep de texto positivo como autoridade",
+      "status": "verified",
+      "commit": "c99ccd551",
+      "evidence": "scripts/governance/lib/delivery-verification.js + scripts/governance/verify-delivery-strict.js + tests/unit/governance/deliveryVerification.test.js (17 casos)",
+      "detail": "CAUSA-RAIZ (medida no seal-release.sh, fases `candidate` e `verify-delivery`): `timeout 900 npm run verify:delivered-release > \"$vlog\" 2>&1` com o EXIT CODE DESCARTADO, seguido de `if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' \"$vlog\"`. Tres defeitos numa linha: (a) exit != 0 com texto positivo passava; (b) DELIVERED_PENDING_SCORECARD — estado PRE-pacote no vocabulario canonico (PRE_PACKAGE_PASS) — era aceito como entrega verificada; (c) TEXTO de log como autoridade de certificacao. CORRECAO: juiz puro e fail-closed exigindo exit ZERO + relatorio ESTRUTURADO + decisao em lista PERMITIDA + identidade presente e correspondente + cadeia RECALCULADA + gates so PASS; o log virou diagnostico (ha teste que prova exit!=0 com log prometendo sucesso). Fiacao nas duas fases do selo.",
+      "prevention": "REGRA: nunca decidir por TEXTO de log — decidir por EXIT CODE + RESULTADO ESTRUTURADO. E nunca aceitar como final um estado que o vocabulario canonico classifica como PRE-pacote (PENDING_SCORECARD, DEFERRED, AUTONOMOUS_READY etc.)."
+    },
+    {
+      "id": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
+      "title": "Selo publicava ref fixa (main) e imprimia \"push ok\" sem publicar o commit da branch em uso",
+      "status": "verified",
+      "commit": "c99ccd551",
+      "evidence": "scripts/governance/seal-release.sh (commit_and_push) + medicao main local == origin/main com HEAD 36 a frente",
+      "detail": "CAUSA-RAIZ: `commit_and_push()` fazia `git push origin main -q || return 1` INCONDICIONALMENTE. Com o selo rodando fora da main, isso empurrava a ref LOCAL `main` (parada) e imprimia \"push ok\" — o commit da branch em uso nunca ia ao remoto. PROVA MEDIDA: `main` local == `origin/main` == 3f619de2a enquanto o HEAD estava 36 commits a frente, e 7 commits `chore(governanca)` gerados pelas fases do selo ficaram SO locais (entrei com push manual depois). A mesma ref fixa aparecia no reparo de lineage da fase `verify-delivery`. CORRECAO: publica a branch EM USO (`git push origin \"$branch_atual\"`), pula HEAD destacado e nunca empurra ref fixa; o reparo de lineage tambem deixou de fazer push para main.",
+      "prevention": "REGRA: automacao que reporta \"push ok\" precisa publicar a ref que o chamador espera (a branch em uso), nunca uma ref fixa. Mensagem de sucesso de publicacao sem prova (SHA no remoto) e falso relato — conferir `origin/<branch>` == HEAD depois do push."
     }
   ]
 }

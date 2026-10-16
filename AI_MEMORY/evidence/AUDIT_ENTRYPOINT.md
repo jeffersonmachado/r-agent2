@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T23:29:57.282Z
-- **auditEpoch**: `b8f89557f67aeeadd921a1c9f6be5e1defcc6d6e9c6e13c3489dcbf69dbf256f`
-- **Branch / HEAD**: `dev/engineering-hardening` / `494f802b4986f598f7d4737db003f444e067895b`
+- **Gerado em**: 2026-10-16T23:50:17.155Z
+- **auditEpoch**: `5f711ac2d0c7dda6e1c9972de9be8386a7a741df463edcda6adb6db47d51f084`
+- **Branch / HEAD**: `dev/engineering-hardening` / `c99ccd551f83b3a070c4d76af26c4c229aa1c7fa`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -40,7 +40,7 @@ npm run validate:final-status-projection
 - Passos na cadeia: **63** (62 via `npm run`)
 - Passos que não são `npm run`: `node scripts/governance/stamp-report-lineage.js`
 - A cadeia usa && encadeado: exit 0 no alias PROVA que TODOS os passos passaram (qualquer falha aborta com exit != 0). Isso é mais forte e mais simples que contar linhas "status=PASS" no log, que é artefato de formatação de cada gate e não corresponde 1:1 ao número de passos.
-- Relatório próprio do agregado: `reports/governance-enforcement-full-report.json` — existe, gerado em 2026-10-16T23:21:46.099Z, runId corrente? **sim**
+- Relatório próprio do agregado: `reports/governance-enforcement-full-report.json` — existe, gerado em 2026-10-16T23:46:21.941Z, runId corrente? **sim**
 - Provas acima com o runId corrente: **9 de 13**
 - Provas que não registram campo `runId` (não é violação, o campo não existe nelas): `reports/final-status-projection-report.json`, `reports/security-intel-report.json`, `reports/mcp-research-docker-e2e-report.json`, `reports/hardening-queue-report.json`
 
@@ -80,11 +80,11 @@ npm run validate:final-status-projection
 | `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 866d49051349 | não (ignorado) |
 | `reports/source-remote-provenance-report.json` | **PASS** | 085-033e1239 | 53d33ad9e843 | não (ignorado) |
 | `reports/final-status-projection-report.json` | **PASS** | — | 9584da4fe46a | não (ignorado) |
-| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 029c38d87c1a | não (ignorado) |
+| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 175aaa43c658 | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | b9f50cf9d256 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | d9f5af5ea9a1 | não (ignorado) |
-| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | f1ea2c024fdd | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | 3f4d10a2f958 | não (ignorado) |
+| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 9200c55d9eca | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | f52a8e66fc51 | não (ignorado) |
 | `governance/.current-run.json` | **COMPLETED** | 085-033e1239 | 47d0a433361e | não (ignorado) |
@@ -138,25 +138,24 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T23:29:57.282Z",
+  "generatedAt": "2026-10-16T23:50:17.155Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "b8f89557f67aeeadd921a1c9f6be5e1defcc6d6e9c6e13c3489dcbf69dbf256f",
+    "valor": "5f711ac2d0c7dda6e1c9972de9be8386a7a741df463edcda6adb6db47d51f084",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "dev/engineering-hardening",
-      "headAtGeneration": "494f802b4986f598f7d4737db003f444e067895b",
-      "headAssunto": "fix(P0): elimina falso GO com NOT_EXECUTED/UNKNOWN e exige identidade PRESENTE para certificar",
-      "headData": "2026-10-16T20:29:10-03:00",
-      "remoteHead": "494f802b4986f598f7d4737db003f444e067895b",
+      "headAtGeneration": "c99ccd551f83b3a070c4d76af26c4c229aa1c7fa",
+      "headAssunto": "fix(P1): juiz fail-closed da ENTREGA e fim do push no-op para main no selo",
+      "headData": "2026-10-16T20:49:53-03:00",
+      "remoteHead": "c99ccd551f83b3a070c4d76af26c4c229aa1c7fa",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
-        "M AI_MEMORY/evidence/checkpoints.md",
         "M AI_MEMORY/hardening-queue.json"
       ],
       "commitsNaoEnviados": 0
@@ -232,7 +231,7 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
       "relatorioProprio": {
         "path": "reports/governance-enforcement-full-report.json",
         "existe": true,
-        "generatedAt": "2026-10-16T23:21:46.099Z",
+        "generatedAt": "2026-10-16T23:46:21.941Z",
         "runId": "rap-governed-20261016144931085-033e1239",
         "doRunCorrente": true,
         "escritor": "scripts/governance/run-all-validators.js",
@@ -472,8 +471,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "GO",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T23:21:53.368Z",
-        "sha256": "029c38d87c1a8974e8f60838857921bdcf9cab10bd8218d616153afa870f5390"
+        "generatedAt": "2026-10-16T23:46:39.373Z",
+        "sha256": "175aaa43c658857940c9a809d3962c8f1ff048430289c1db35329356a3f7ecd4"
       },
       {
         "path": "reports/security-intel-report.json",
@@ -502,8 +501,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T23:29:38.330Z",
-        "sha256": "d9f5af5ea9a194f18b32907adf20f145543d62b0817b8d9914f6a4a0b7b65b6c"
+        "generatedAt": "2026-10-16T23:50:14.951Z",
+        "sha256": "3f4d10a2f9587ce01aae6ba7fe288d43ae480637d181bc5bf8387de736403061"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -512,8 +511,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T23:21:45.079Z",
-        "sha256": "f1ea2c024fdd57303f1d507df717e16cef397219b38ab956b4af2f346d869194"
+        "generatedAt": "2026-10-16T23:46:20.740Z",
+        "sha256": "9200c55d9eca29c7c6f851639371f39da13d457ca7450c6bd5229d497b8afcab"
       },
       {
         "path": "governance/evidence-manifest.json",
@@ -569,7 +568,7 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
       }
     ],
     "fila": {
-      "total": 85,
+      "total": 87,
       "naoFechados": [
         {
           "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",

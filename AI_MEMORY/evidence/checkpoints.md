@@ -601,3 +601,54 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 208ae7ed3c5f — memory(FASE 5): causa-raiz e prevencao da entrega por grep e do push no-op para main
+
+- **Quando**: 2026-10-16T23:50:17.227Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `c99ccd551f83b3a070c4d76af26c4c229aa1c7fa`
+- **id** (sha256 do conteúdo do checkpoint): `208ae7ed3c5f16ec9a9143ac6931cc2f1654e6fe1610faf573f6be813eaa095c`
+
+**Problema corrigido:** os dois defeitos de verificacao de entrega (exit descartado + grep como autoridade; push para ref fixa com 'push ok' falso) nao estavam registrados com causa-raiz e prevencao na Engineering Memory, unica fonte de verdade sobre o que foi corrigido
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+- `M AI_MEMORY/hardening-queue.json`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `node scripts/governance/validate-hardening-queue.js` | 0 | 0.0 s | a6d43bbd4e50 |
+| `npx jest tests/unit/governance/deliveryVerification.test.js` | 0 | 4.6 s | 7acde2edfa5c |
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-hardening-queue.js</code></summary>
+
+```
+[hardening-queue] 87 itens — done:53 blocked_external:3 prevention_active:13 verified:13 blocked:5
+[hardening-queue] abertos: (nenhum)
+[hardening-queue] PASS
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/deliveryVerification.test.js</code></summary>
+
+```
+    ✓ cadeia adulterada ⇒ BLOQUEIA (104 ms)
+    ✓ cadeia não verificada ⇒ BLOQUEIA (não aprovar sem integridade) (102 ms)
+    ✓ gate bloqueante no relatório ⇒ BLOQUEIA (só PASS avança) (102 ms)
+    ✓ gate ilegível ⇒ BLOQUEIA (101 ms)
+    ✓ relatório sem gates declarados ⇒ BLOQUEIA (102 ms)
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        2.186 s
+Ran all test suites matching /tests\/unit\/governance\/deliveryVerification.test.js/i.
+[jest-global-teardown] Engineering Runner (pid 462478) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---
