@@ -684,6 +684,42 @@
         "reality": "o gerador apenas le a fila; a escrita real e feita por scripts de sessao fora do repositorio",
         "artifact": "governance/json-persistence-audit.json"
       }
+    },
+    {
+      "id": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
+      "title": "Falso GO: gate com status nao permitido (NOT_EXECUTED/UNKNOWN/SKIPPED/arbitrario) certificava",
+      "status": "verified",
+      "commit": "494f802b4",
+      "evidence": "governance/canonical-release-decision.js + tests/unit/governance/canonicalReleaseDecision.test.js (matriz negativa)",
+      "detail": "CAUSA-RAIZ: `clasificar()` usava LISTA DE BLOQUEIO (FAIL/DEFERRED/BLOCKED/PENDING) e o fluxo caia no `return CERTIFIED_GO` para todo status fora dela. REPRODUCAO MEDIDA: 6 casos devolvendo GO FINAL — NOT_EXECUTED, UNKNOWN, SKIPPED, BLOCKED_EXTERNAL, literal arbitrario (WAT) e `not_executed` minusculo. CORRECAO: politica explicita por PERMITIDOS (GATE_STATUS_PERMITIDOS = [PASS]); qualquer outro status bloqueia com motivo nomeado; gate sem id, gate ausente (`gatesEsperados`) e gate de OUTRO run tambem bloqueiam. DECISION_VERSION 1.0.0 -> 1.1.0. PROVA: matriz negativa no teste (6->0 casos de GO indevido).",
+      "prevention": "REGRA: em classificador de decisao, NUNCA usar lista de bloqueio — usar politica de PERMITIDOS. Estado desconhecido tem de ser fail-closed por construcao, nao por enumeracao (a enumeracao sempre fica incompleta). Vale para gate, identidade, papel, permissao."
+    },
+    {
+      "id": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
+      "title": "Identidade ausente era tratada como identidade coerente (aprovava sem runId/commit/fingerprint)",
+      "status": "verified",
+      "commit": "494f802b4",
+      "evidence": "governance/canonical-release-decision.js (identidadeCoerente/validarIdentidade) + tests/unit/governance/*",
+      "detail": "CAUSA-RAIZ: `identidadeCoerente()` fazia `if (a == null || b == null || a === \"\" || b === \"\") continue;` e devolvia `ok: divergentes.length === 0`. Ausencia nao entrava na lista de divergentes, entao ausencia virava coerencia. REPRODUCAO MEDIDA: 4 casos ok=true com identidade ausente/incompleta, incluindo no avaliador canonico, onde `.current-run.json` ausente virava `{}` e aprovava tudo. CORRECAO: tres condicoes explicitas — COERENTE (unica com ok=true) / DIVERGENTE / INCOMPLETA-AUSENTE — exigindo os 3 campos obrigatorios PRESENTES e com formato valido (runId, sourceCommit 40-hex, sourceFingerprint 64-hex); releaseId segue opcional. No avaliador, identidade passou a entrar como GATE.",
+      "prevention": "REGRA: \"ausente\" nunca e igual a \"igual\". Comparacao campo-a-campo que pula ausencia produz aprovacao por omissao. Exigir PRESENCA e VALIDADE dos campos obrigatorios e tratar ausencia/incompleto como estado proprio (que bloqueia)."
+    },
+    {
+      "id": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+      "title": "Avaliador canonico confiava no campo chain.valid GRAVADO em vez de recalcular a cadeia",
+      "status": "verified",
+      "commit": "494f802b4",
+      "evidence": "scripts/governance/assert-canonical-release-decision.js (verificarCadeiaPadrao) + teste com valid:true e hashes que nao fecham",
+      "detail": "CAUSA-RAIZ: `gates.push({ id: \"governance_chain\", status: chain && chain.valid === true ? \"PASS\" : \"FAIL\" })` — o veredito vinha do CAMPO GRAVADO no JSON. Regravar `governance-chain.json` com `valid: true` depois de alterar um artefato mantinha o GO. E a MESMA classe que o topo de `scripts/governance/validate-governance-chain.js` documenta como defeito ja corrigido por ele (que entao nao era chamado por ninguem). CORRECAO: veredito vem de `verifyChain` (recomputa os bytes atuais); cadeia ausente => CADEIA_AUSENTE e gate FAIL. PROVA: teste que grava `valid: true` com hashes que nao fecham e exige FAIL.",
+      "prevention": "REGRA: campo de veredito PERSISTIDO nunca e autoridade — a autoridade e o RECALCULO sobre os bytes atuais. Ao encontrar `x.valid === true`, `x.ok === true`, `x.status === \"PASS\"` lidos de JSON em decisao de gate, tratar como suspeito e substituir por verificacao."
+    },
+    {
+      "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+      "title": "state=CERTIFIED_GO coexistindo com veredito nao-ok (consumidor que le state via GO falso)",
+      "status": "verified",
+      "commit": "494f802b4",
+      "evidence": "scripts/governance/assert-canonical-release-decision.js (gate de identidade + invariante estadoConcordaComVeredito)",
+      "detail": "CAUSA-RAIZ: a condicao de identidade so zerava o booleano `ok`; o `state` devolvido por `clasificar()` continuava CERTIFIED_GO porque nenhum gate o representava. Um consumidor que decidisse por `state` (em vez de `ok`) veria GO com identidade AUSENTE. FOI O PROPRIO TESTE que expos a discordancia. CORRECAO: cada condicao de bloqueio entra como GATE na decisao (o motivo nomeia o gate) e o retorno expoe `estadoConcordaComVeredito`, com teste de invariante.",
+      "prevention": "REGRA: uma API de decisao nao pode ter duas fontes de verdade (booleano paralelo + estado). Toda condicao de bloqueio tem de virar GATE no estado, e o teste deve afirmar a CONSISTENCIA entre os dois campos — nao apenas o valor de um deles."
     }
   ]
 }

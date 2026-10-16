@@ -509,3 +509,53 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 67ec634fdd5a — memory(P0): causa-raiz e prevencao dos 4 padroes de falso GO registradas na fila oficial
+
+- **Quando**: 2026-10-16T23:29:37.460Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `494f802b4986f598f7d4737db003f444e067895b`
+- **id** (sha256 do conteúdo do checkpoint): `67ec634fdd5a0f8c0daf385667742be2287daef319f9ef232aaa40aa23de6a6d`
+
+**Problema corrigido:** as correcoes dos P0 nao estavam registradas como causa-raiz + prevencao na Engineering Memory, que e a unica fonte de verdade sobre o que foi corrigido: sem isso a proxima sessao repete os mesmos padroes (lista de bloqueio, ausencia lida como coerencia, campo valid gravado como autoridade, state discordando do veredito)
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/hardening-queue.json`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `node scripts/governance/validate-hardening-queue.js` | 0 | 0.0 s | 4ca0753a5eff |
+| `npx jest tests/unit/governance/canonicalReleaseDecision.test.js tests/unit/governance/assertCanonicalReleaseDecision.test.js` | 0 | 8.5 s | b2711c41dcda |
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-hardening-queue.js</code></summary>
+
+```
+[hardening-queue] 85 itens — done:53 blocked_external:3 prevention_active:13 verified:11 blocked:5
+[hardening-queue] abertos: (nenhum)
+[hardening-queue] PASS
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/canonicalReleaseDecision.test.js tests/unit/governance/assertCanonicalReleaseDecision.test.js</code></summary>
+
+```
+    ✓ runId AUSENTE no run corrente ⇒ BLOQUEIA com o campo nomeado (102 ms)
+    ✓ sourceFingerprint com formato inválido ⇒ BLOQUEIA como inválido (não como ausente) (102 ms)
+    ✓ relatório SEM identidade (mas run completo) ⇒ BLOQUEIA por relatório incompleto (103 ms)
+    ✓ identidade divergente do run ⇒ NÃO é GO definitivo, com o campo nomeado (103 ms)
+    ✓ o estado devolvido é sempre do vocabulário canônico (105 ms)
+Test Suites: 2 passed, 2 total
+Tests:       61 passed, 61 total
+Snapshots:   0 total
+Time:        6.714 s, estimated 7 s
+Ran all test suites matching /tests\/unit\/governance\/canonicalReleaseDecision.test.js|tests\/unit\/governance\/assertCanonicalReleaseDecision.test.js/i.
+[jest-global-teardown] Engineering Runner (pid 434166) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---

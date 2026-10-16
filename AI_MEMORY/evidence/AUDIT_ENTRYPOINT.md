@@ -7,9 +7,9 @@
 > `UNKNOWN` todo alvo de escrita `.json` fora da taxonomia canônica, e `AI_MEMORY/evidence/` não está nela.
 > O payload JSON completo vai embutido no bloco cercado ao fim deste arquivo — nada foi perdido.
 
-- **Gerado em**: 2026-10-16T20:17:27.018Z
-- **auditEpoch**: `fa639b7f6e1dcd64b83acde4d5608417589265d40b57e2d029d22bbebbe24f12`
-- **Branch / HEAD**: `dev/engineering-hardening` / `107b1b540161573eb42e3a9a08d8145f17a8142d`
+- **Gerado em**: 2026-10-16T23:29:57.282Z
+- **auditEpoch**: `b8f89557f67aeeadd921a1c9f6be5e1defcc6d6e9c6e13c3489dcbf69dbf256f`
+- **Branch / HEAD**: `dev/engineering-hardening` / `494f802b4986f598f7d4737db003f444e067895b`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -40,11 +40,11 @@ npm run validate:final-status-projection
 - Passos na cadeia: **63** (62 via `npm run`)
 - Passos que não são `npm run`: `node scripts/governance/stamp-report-lineage.js`
 - A cadeia usa && encadeado: exit 0 no alias PROVA que TODOS os passos passaram (qualquer falha aborta com exit != 0). Isso é mais forte e mais simples que contar linhas "status=PASS" no log, que é artefato de formatação de cada gate e não corresponde 1:1 ao número de passos.
-- Relatório próprio do agregado: `reports/governance-enforcement-full-report.json` — existe, gerado em 2026-10-14T22:29:09.605Z, runId corrente? **NÃO**
+- Relatório próprio do agregado: `reports/governance-enforcement-full-report.json` — existe, gerado em 2026-10-16T23:21:46.099Z, runId corrente? **sim**
 - Provas acima com o runId corrente: **9 de 13**
 - Provas que não registram campo `runId` (não é violação, o campo não existe nelas): `reports/final-status-projection-report.json`, `reports/security-intel-report.json`, `reports/mcp-research-docker-e2e-report.json`, `reports/hardening-queue-report.json`
 
-> DESATUALIZADO: existe, mas NÃO é do run corrente — o alias `validate:governance-enforcement` não usa run-all-validators.js, logo não o regrava. Não use este arquivo como veredito do agregado; use o exit code da cadeia + as provas canônicas abaixo.
+> Relatório do agregado é do run corrente.
 
 - **Última execução medida**: `PASS` (exit 0) — HEAD `6221b7cca`, log `AI_MEMORY/evidence/aggregate-enforcement-2026-10-16-dev-branch.log` encerrado em 2026-10-16T19:47:30.518Z, sha256 do log `31f7454ac4af38f1`
 - Diagnóstico do log: 31 linhas `status=PASS`, 0 `status=FAIL`, 0 `status=NO_GO` (diagnóstico, não veredito)
@@ -80,11 +80,11 @@ npm run validate:final-status-projection
 | `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 866d49051349 | não (ignorado) |
 | `reports/source-remote-provenance-report.json` | **PASS** | 085-033e1239 | 53d33ad9e843 | não (ignorado) |
 | `reports/final-status-projection-report.json` | **PASS** | — | 9584da4fe46a | não (ignorado) |
-| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 141ba96f383e | não (ignorado) |
+| `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | 029c38d87c1a | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | b9f50cf9d256 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | b219369628d3 | não (ignorado) |
-| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 271622357033 | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | d9f5af5ea9a1 | não (ignorado) |
+| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | f1ea2c024fdd | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | f52a8e66fc51 | não (ignorado) |
 | `governance/.current-run.json` | **COMPLETED** | 085-033e1239 | 47d0a433361e | não (ignorado) |
@@ -138,29 +138,26 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T20:17:27.018Z",
+  "generatedAt": "2026-10-16T23:29:57.282Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "fa639b7f6e1dcd64b83acde4d5608417589265d40b57e2d029d22bbebbe24f12",
+    "valor": "b8f89557f67aeeadd921a1c9f6be5e1defcc6d6e9c6e13c3489dcbf69dbf256f",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "dev/engineering-hardening",
-      "headAtGeneration": "107b1b540161573eb42e3a9a08d8145f17a8142d",
-      "headAssunto": "audit(fase-b): relatorio versionado da auditoria profunda (FASE A inventario + FASE B execucoes)",
-      "headData": "2026-10-16T16:56:22-03:00",
-      "remoteHead": "107b1b540161573eb42e3a9a08d8145f17a8142d",
+      "headAtGeneration": "494f802b4986f598f7d4737db003f444e067895b",
+      "headAssunto": "fix(P0): elimina falso GO com NOT_EXECUTED/UNKNOWN e exige identidade PRESENTE para certificar",
+      "headData": "2026-10-16T20:29:10-03:00",
+      "remoteHead": "494f802b4986f598f7d4737db003f444e067895b",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
-        "M AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md",
-        "M AI_MEMORY/evidence/auditoria-fase-b-2026-10-16.md",
-        "M AI_MEMORY/hardening-queue.json",
-        "M tests/unit/audit/auditEntrypointArtifact.test.js",
-        "M tools/audit/generate-audit-entrypoint.js"
+        "M AI_MEMORY/evidence/checkpoints.md",
+        "M AI_MEMORY/hardening-queue.json"
       ],
       "commitsNaoEnviados": 0
     },
@@ -235,11 +232,11 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
       "relatorioProprio": {
         "path": "reports/governance-enforcement-full-report.json",
         "existe": true,
-        "generatedAt": "2026-10-14T22:29:09.605Z",
-        "runId": "rap-governed-20261014115049678-cb183049",
-        "doRunCorrente": false,
+        "generatedAt": "2026-10-16T23:21:46.099Z",
+        "runId": "rap-governed-20261016144931085-033e1239",
+        "doRunCorrente": true,
         "escritor": "scripts/governance/run-all-validators.js",
-        "aviso": "DESATUALIZADO: existe, mas NÃO é do run corrente — o alias `validate:governance-enforcement` não usa run-all-validators.js, logo não o regrava. Não use este arquivo como veredito do agregado; use o exit code da cadeia + as provas canônicas abaixo."
+        "aviso": "Relatório do agregado é do run corrente."
       },
       "provasComRunIdCorrente": 9,
       "provasSemCampoRunId": [
@@ -475,8 +472,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "GO",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T19:33:30.241Z",
-        "sha256": "141ba96f383ee8e92069f3dffd96a3c036f98a65e2dfc7645fca8836d51a790e"
+        "generatedAt": "2026-10-16T23:21:53.368Z",
+        "sha256": "029c38d87c1a8974e8f60838857921bdcf9cab10bd8218d616153afa870f5390"
       },
       {
         "path": "reports/security-intel-report.json",
@@ -505,8 +502,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T20:17:25.106Z",
-        "sha256": "b219369628d3cb1322d174821750aefafe6accaded2734ab3cff8bcbe407183a"
+        "generatedAt": "2026-10-16T23:29:38.330Z",
+        "sha256": "d9f5af5ea9a194f18b32907adf20f145543d62b0817b8d9914f6a4a0b7b65b6c"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -515,8 +512,8 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
         "veredito": "RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T19:27:15.028Z",
-        "sha256": "2716223570334cb781a51ec0758771ec39a3d441940dca8583697470010918f1"
+        "generatedAt": "2026-10-16T23:21:45.079Z",
+        "sha256": "f1ea2c024fdd57303f1d507df717e16cef397219b38ab956b4af2f346d869194"
       },
       {
         "path": "governance/evidence-manifest.json",
@@ -572,7 +569,7 @@ calcular o `auditEpoch` — extraia-o e recalcule o sha256 do stringify canônic
       }
     ],
     "fila": {
-      "total": 81,
+      "total": 85,
       "naoFechados": [
         {
           "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
