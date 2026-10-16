@@ -1,28 +1,26 @@
 {
   "artifactType": "rap-audit-entrypoint",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T18:30:12.698Z",
+  "generatedAt": "2026-10-16T18:31:58.489Z",
   "generatedBy": "tools/audit/generate-audit-entrypoint.js",
   "auditEpoch": {
-    "valor": "8b2f8df77d84580d733d76b1c1d23f1b0bb992eaa0aceabd7f64764845225e87",
+    "valor": "c138757e0c1d02aee16d681eedf40e31e6b271b2fde231a0409de7f437da0300",
     "definicao": "sha256 do bloco \"payload\" em stringify canônico — muda quando qualquer prova, veredito, commit ou artefato muda",
     "comoUsar": "compare este valor e os sha256 de payload.provas[] com os da auditoria anterior; diferença = houve mudança, reaudite"
   },
   "payload": {
     "git": {
       "branch": "hardening/p0-certificacao",
-      "headAtGeneration": "36cd7fc06c72fef84543e60c300e43ac2618a494",
-      "headAssunto": "docs(governanca): fechamento da missao de hardening — release SELADO e agregado verde no HEAD final",
-      "headData": "2026-10-16T14:48:24-03:00",
-      "remoteHead": "36cd7fc06c72fef84543e60c300e43ac2618a494",
+      "headAtGeneration": "602a00a1c8da480d1638f5ae802bb094f8980960",
+      "headAssunto": "docs(auditoria): ponto de entrada unico para auditoria externa via git (AUDIT_ENTRYPOINT)",
+      "headData": "2026-10-16T15:30:42-03:00",
+      "remoteHead": "602a00a1c8da480d1638f5ae802bb094f8980960",
       "tronco": "origin/main",
       "headEmSincroniaComRemote": true,
       "worktreeCleanExcluindoEsteArtefato": false,
       "uncommittedPaths": [
-        "M AGENTS.md",
-        "M AI_MEMORY/operational-rules.md",
-        "M FINAL_RAP_RELEASE_CLOSURE.json",
-        "tools/audit/"
+        "M AI_MEMORY/hardening-queue.json",
+        "M tools/audit/generate-audit-entrypoint.js"
       ],
       "commitsNaoEnviados": 0
     },
@@ -140,8 +138,8 @@
         "veredito": "RELEASE_ARTIFACT_IDENTITY_VERIFIED",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T17:48:37.017Z",
-        "sha256": "100830d85c0aba2ad926a44c5b6ff2d84fb826f5749df6203acdf46afa14254f"
+        "generatedAt": "2026-10-16T18:31:05.562Z",
+        "sha256": "988284492afc854472f90c6f99fdb1381215633659205d28c84b2e0c8baa07d3"
       },
       {
         "path": "reports/source-remote-provenance-report.json",
@@ -200,8 +198,8 @@
         "veredito": "PASS",
         "campoVeredito": "status",
         "runId": null,
-        "generatedAt": "2026-10-16T17:48:37.996Z",
-        "sha256": "c54cd24b823c42a57b7d05253a66372320c7d1a4d6e10182d75f5f0d43499c40"
+        "generatedAt": "2026-10-16T18:31:52.926Z",
+        "sha256": "79ecad7fbb1c7e56b08521211f53113727f31478bb898e1df27c7efa53e5d322"
       },
       {
         "path": "reports/release-dag-report.json",
@@ -210,8 +208,8 @@
         "veredito": "RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE",
         "campoVeredito": "decision",
         "runId": "rap-governed-20261016144931085-033e1239",
-        "generatedAt": "2026-10-16T17:39:09.230Z",
-        "sha256": "41e2084c75ed66d8649616ed5cf32797f697f16283b3b6dfd3081a4a245d3870"
+        "generatedAt": "2026-10-16T18:31:03.860Z",
+        "sha256": "78aeb859733257f35c2a6c7fa0bfb1d2a5116b7f23e5f646bc3ceef22294f452"
       },
       {
         "path": "governance/evidence-manifest.json",
@@ -267,12 +265,17 @@
       }
     ],
     "fila": {
-      "total": 69,
+      "total": 72,
       "naoFechados": [
         {
           "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
           "status": "blocked",
           "motivo": "Decisao de POLITICA (dono do produto), nao mecânica. Medicao 2026-10-16: o fail-open e LATENTE, nao ativo no caminho verde — a execucao canonica da malha no run corrente tem 144 resultados (isCanonicalExecution=true, runId/sourceFingerprint/sourceCommit corretos). Risco real: o produtor grava artefato governado mesmo com executedResults=0 e o gate nao distingue \"executou 0 cenarios\" de \"executou e passou\". Duas direcoes validas com semanticas diferentes: (a) produtor marca artefato vazio como NAO-evidencia, ou (b) a malha falha ANTES de gravar. CUSTO MEDIDO de aplicar agora: qa-mesh/*.js e scripts/governance/* estao em SOURCE_ROOTS (governance/proof-engine/fingerprint-chain.js:54-70,106-112), portanto qualquer edicao muda o fingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem."
+        },
+        {
+          "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
+          "status": "blocked",
+          "motivo": "Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO."
         }
       ]
     },
@@ -280,8 +283,8 @@
       {
         "path": "FINAL_RAP_RELEASE_CLOSURE.json",
         "gitTracked": true,
-        "ultimoCommit": "570bbd0c4",
-        "ultimaData": "2026-09-24T04:32:06-03:00",
+        "ultimoCommit": "602a00a1c",
+        "ultimaData": "2026-10-16T15:30:42-03:00",
         "geradoEm": "2026-09-24T07:31:39.421Z",
         "headRegistrado": "b0665b7672e9d8eeb4633c9210e3b53e834613f1",
         "statusRegistrado": "SUPERSEDED",

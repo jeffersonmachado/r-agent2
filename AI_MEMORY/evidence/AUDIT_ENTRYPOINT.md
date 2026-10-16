@@ -3,9 +3,9 @@
 > Artefato DERIVADO (nada escrito à mão). Gerado por `tools/audit/generate-audit-entrypoint.js`.
 > Regenerar: `node tools/audit/generate-audit-entrypoint.js`.
 
-- **Gerado em**: 2026-10-16T18:30:12.698Z
-- **auditEpoch**: `8b2f8df77d84580d733d76b1c1d23f1b0bb992eaa0aceabd7f64764845225e87`
-- **Branch / HEAD**: `hardening/p0-certificacao` / `36cd7fc06c72fef84543e60c300e43ac2618a494`
+- **Gerado em**: 2026-10-16T18:31:58.489Z
+- **auditEpoch**: `c138757e0c1d02aee16d681eedf40e31e6b271b2fde231a0409de7f437da0300`
+- **Branch / HEAD**: `hardening/p0-certificacao` / `602a00a1c8da480d1638f5ae802bb094f8980960`
 - **HEAD sincronizado com o remote**: sim
 - **Commits não enviados**: 0
 - **Release governado**: `rap-governed-20261016144931085-033e1239` · fingerprint `1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e`
@@ -48,14 +48,14 @@ npm run validate:final-status-projection
 |---|---|---|---|---|
 | `reports/governance-score.json` | **PASS** | 085-033e1239 | 496ac724821f | não (ignorado) |
 | `reports/coverage-gate-report.json` | **GO** | 085-033e1239 | d7bec9ae4de3 | não (ignorado) |
-| `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 100830d85c0a | não (ignorado) |
+| `reports/release-artifact-identity-report.json` | **RELEASE_ARTIFACT_IDENTITY_VERIFIED** | 085-033e1239 | 988284492afc | não (ignorado) |
 | `reports/source-remote-provenance-report.json` | **PASS** | 085-033e1239 | 53d33ad9e843 | não (ignorado) |
 | `reports/final-status-projection-report.json` | **PASS** | — | e9d7a6913abb | não (ignorado) |
 | `reports/security-release-gate-report.json` | **GO** | 085-033e1239 | af759c681d62 | não (ignorado) |
 | `reports/security-intel-report.json` | **PASS** | — | e655c73cd0fe | não (ignorado) |
 | `reports/mcp-research-docker-e2e-report.json` | **PASS** | — | 1bf3ac59e6f1 | não (ignorado) |
-| `reports/hardening-queue-report.json` | **PASS** | — | c54cd24b823c | não (ignorado) |
-| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 41e2084c75ed | não (ignorado) |
+| `reports/hardening-queue-report.json` | **PASS** | — | 79ecad7fbb1c | não (ignorado) |
+| `reports/release-dag-report.json` | **RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE** | 085-033e1239 | 78aeb8597332 | não (ignorado) |
 | `governance/evidence-manifest.json` | **PASS** | 085-033e1239 | 1dda610313aa | sim |
 | `governance/delivered-release-verification-report.json` | **DELIVERED_RELEASE_VERIFIED** | 085-033e1239 | 815d35350a3b | não (ignorado) |
 | `governance/.current-run.json` | **COMPLETED** | 085-033e1239 | 47d0a433361e | não (ignorado) |
@@ -69,9 +69,12 @@ npm run validate:final-status-projection
 | `dist/release/r-agent2-20261016-133323.payload.zip` | 64396675 | 515e94adc60ab35e |
 | `dist/release/r-agent2-20261016-133323.zip` | 64472381 | ab827c21bd6876af |
 
-## Itens abertos na fila oficial
+## Itens que aguardam decisão do dono (fila oficial)
+
+Nota de semântica: `blocked`/`blocked_external` são estados FECHADOS para o agente (ele não deve agir), mas continuam exigindo decisão humana — por isso aparecem aqui.
 
 - `HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA` — **blocked** — Decisao de POLITICA (dono do produto), nao mecânica. Medicao 2026-10-16: o fail-open e LATENTE, nao ativo no caminho verde — a execucao canonica da malha no run corrente tem 144 resultados (isCanonicalExecution=true, runId/sourceFingerprint/sourceCommit corretos). Risco real: o produtor grava artefato governado mesmo com executedResults=0 e o gate nao distingue "executou 0 cenarios" de "executou e passou". Duas direcoes validas com semanticas diferentes: (a) produtor marca artefato vazio como NAO-evidencia, ou (b) a malha falha ANTES de gravar. CUSTO MEDIDO de aplicar agora: qa-mesh/*.js e scripts/governance/* estao em SOURCE_ROOTS (governance/proof-engine/fingerprint-chain.js:54-70,106-112), portanto qualquer edicao muda o fingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem.
+- `HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO` — **blocked** — Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO.
 
 ## Ponteiros stale na raiz do repositório — NÃO use como estado atual
 
@@ -79,7 +82,7 @@ Estes arquivos existem na raiz, são versionados e NENHUM gate os mantém — el
 
 | arquivo | gerado em | HEAD que ele registra | último commit que o tocou |
 |---|---|---|---|
-| `FINAL_RAP_RELEASE_CLOSURE.json` | 2026-09-24T07:31:39.421Z | `b0665b7672` | `570bbd0c4` 2026-09-24 |
+| `FINAL_RAP_RELEASE_CLOSURE.json` | 2026-09-24T07:31:39.421Z | `b0665b7672` | `602a00a1c` 2026-10-16 |
 | `FINAL_RELEASE_CLOSURE.md` | — | — | `570bbd0c4` 2026-09-24 |
 | `ENGINEERING_ROUTER_V1_SEAL_REPORT.json` | 2026-09-23T16:46:58.938Z | — | `0a69bdaed` 2026-09-23 |
 | `ENGINEERING_ROUTER_V1_FINAL_SEAL.md` | — | — | `330478f54` 2026-09-22 |

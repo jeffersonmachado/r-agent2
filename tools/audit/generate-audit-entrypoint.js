@@ -394,7 +394,12 @@ for (const a of artefatosFisicos) {
   linhas.push(`| \`${a.path}\` | ${a.bytes} | ${a.sha256 ? a.sha256.slice(0, 16) : '—'} |`);
 }
 linhas.push('');
-linhas.push('## Itens abertos na fila oficial');
+linhas.push('## Itens que aguardam decisão do dono (fila oficial)');
+linhas.push('');
+linhas.push(
+  'Nota de semântica: `blocked`/`blocked_external` são estados FECHADOS para o agente (ele não deve agir), ' +
+    'mas continuam exigindo decisão humana — por isso aparecem aqui.'
+);
 linhas.push('');
 if (naoFechados.length === 0) {
   linhas.push('Nenhum.');

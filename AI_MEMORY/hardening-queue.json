@@ -549,6 +549,37 @@
       "commit": "a5449d15e",
       "evidence": "MEDIDO: `[security-release-gate] state=EVIDENCE_UNAVAILABLE decision=NO_GO exit=3 — SECURITY_GATE_STALE_EVIDENCE` enquanto o proprio motor de risco dizia GO (5 verificacoes satisfeitas). Regra (scripts/governance/lib/security-gate-provenance.js:56-62): o SBOM precisa de generatedAt posterior ao startedAt do run. Remedio aplicado: `npm run security:sbom` (produtor) DENTRO do run R3 (startedAt 14:49:31) -> `validate:security-release-gate` passou a state=GO decision=GO exit=0. Efeito no agregado: AGG_EXIT 3 -> 0 (31 validadores PASS).",
       "prevention": "A regra ja e enforcement executavel (security-gate-provenance + security-gate-state classificam o codigo como PROVENANCE_EVIDENCE_CODE) e o selo tem preflight de evidencia de TTL curto (short-ttl-evidence.js, referenciado em seal-release.sh:621). O que faltava era a acao operacional de REGENERAR o SBOM dentro da janela do run — agora registrada aqui e no relatorio da missao."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
+      "title": "Auditoria externa via git: ponto de entrada unico derivado",
+      "status": "done",
+      "commit": "602a00a1c",
+      "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json + AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md + tools/audit/generate-audit-entrypoint.js",
+      "detail": "Prova viva de que o dedo e a prova chegam ao auditor que so le git: reports/*.json e governance/*.json sao ignorados (.gitignore 118/124). auditEpoch = sha256 do payload; 13 provas canonicas com SHA-256 em disco; artefatos fisicos do release; fila oficial; veredito derivado do agregado. tools/audit/ esta FORA de SOURCE_ROOTS: comprovado 1c10ffa62e169a18 identico antes e depois do commit (nao invalida o release selado)."
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
+      "title": "O gate agregado nao persiste veredito proprio do run corrente",
+      "status": "blocked",
+      "blocked_reason": "Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO.",
+      "evidence": {
+        "measuredAt": "2026-10-16",
+        "report": "reports/governance-enforcement-full-report.json",
+        "reportGeneratedAt": "2026-10-14T22:29:09.605Z",
+        "writer": "scripts/governance/run-all-validators.js",
+        "aliasSteps": 63,
+        "aliasStepsViaNpmRun": 62,
+        "documentedIn": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json (bloco agregado)"
+      }
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
+      "title": "Ponteiros de fechamento na raiz estao stale e nenhum gate os mantem",
+      "status": "prevention_active",
+      "commit": "602a00a1c",
+      "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md (secao \"Ponteiros stale na raiz\") + FINAL_RAP_RELEASE_CLOSURE.json (marcado SUPERSEDED) + AGENTS.md (secao de auditoria externa)",
+      "prevention": "Medido 2026-10-16: FINAL_RAP_RELEASE_CLOSURE.json (2026-09-24, headNow b0665b767, worktreeClean=false), FINAL_RELEASE_CLOSURE.md, ENGINEERING_ROUTER_V1_SEAL_REPORT.json e ENGINEERING_ROUTER_V1_FINAL_SEAL.md congelaram em 2026-09-22/24. Varredura completa do repositorio: nenhum script os produz nem os valida — sao ponteiros orfaos. Um auditor externo que os leia como estado atual audita o passado. Prevencao ativa: o entrypoint os mede e avisa em toda geracao; FINAL_RAP_RELEASE_CLOSURE.json foi marcado SUPERSEDED com o conteudo original preservado integralmente; AGENTS.md e AI_MEMORY/operational-rules.md apontam para o entrypoint e proibem usa-los como estado corrente."
     }
   ]
 }
