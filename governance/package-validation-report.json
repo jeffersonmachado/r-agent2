@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-15T18:47:48.413Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20261015-152452.payload.zip",
-  "zipName": "r-agent2-20261015-152452.payload.zip",
-  "zipSha256": "7bb0b36bf78840523008cd6c2a9aee7acacdf6af1d9ab50d17629cea1cbbf9cb",
+  "generatedAt": "2026-10-15T19:19:06.837Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261015-154958.payload.zip",
+  "zipName": "r-agent2-20261015-154958.payload.zip",
+  "zipSha256": "c6ae6bc4323048d8120b2934a016364949b6103602f6a79a899950363f47bd62",
   "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261015-152452.payload.zip",
-  "selectionMode": "explicit",
+  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261015-154958.zip",
+  "selectionMode": "audited",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20261015-152452.payload.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20261015-154958.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -50,8 +50,8 @@
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20261015-152452.payload.zip",
-    "sha256": "7bb0b36bf78840523008cd6c2a9aee7acacdf6af1d9ab50d17629cea1cbbf9cb",
+    "boundTo": "r-agent2-20261015-154958.payload.zip",
+    "sha256": "c6ae6bc4323048d8120b2934a016364949b6103602f6a79a899950363f47bd62",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
@@ -68,10 +68,10 @@
   "testPlanHash": null,
   "testResultHash": null,
   "evidenceManifestHash": null,
-  "startedAt": "2026-10-15T18:47:45.459Z",
-  "finishedAt": "2026-10-15T18:47:48.188Z",
-  "producer": "governance/package-validator.js",
-  "gitCommit": "759cc626921a09f174e6a2c05f71698433b26597",
-  "gitTree": "c239302dc3941b5b3e72452b36d400d9271cd5a7",
+  "startedAt": "2026-10-15T19:18:34.615Z",
+  "finishedAt": "2026-10-15T19:19:06.838Z",
+  "producer": "tools/system/platform-readiness.js",
+  "gitCommit": "ec8c5d3be6cb4c7444ee63459f802e0bbaef99c7",
+  "gitTree": "c2801c4c43ea6a6d6f82b104e193b69a4e53c286",
   "blockingFindings": []
 }
