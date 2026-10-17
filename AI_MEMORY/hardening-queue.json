@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T12:53:37.118Z",
+  "updatedAt": "2026-10-17T13:14:08.452Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1096,15 +1096,22 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
       "title": "O gate agregado nao persiste veredito proprio do run corrente",
-      "status": "pending",
-      "evidence": "CORRIGIDO 2026-10-17: scripts/governance/run-governance-enforcement.js executa a cadeia canonica (validate:governance-enforcement:chain, 64 passos) preservando fail-fast e gravando reports/governance-enforcement-verdict.json com runId/sourceFingerprint/sourceCommit, passos executados, exit codes, sha256 da saida e motivo. Identidade incompleta => BLOCKED; exit null => FAIL.",
+      "status": "done",
+      "evidence": "CORRIGIDO 2026-10-17: scripts/governance/run-governance-enforcement.js executa a cadeia canonica (validate:governance-enforcement:chain, 64 passos) preservando fail-fast e gravando reports/governance-enforcement-verdict.json com runId/sourceFingerprint/sourceCommit, passos executados, exit codes, sha256 da saida e motivo. Identidade incompleta => BLOCKED; exit null => FAIL. VERIFICADO: tests/unit/governance/aggregateVerdict.test.js exit=0 em arvore limpa (261095f66ade, 8 casos).",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "agregado nao persiste veredito proprio do run: veredito deixa de ser provavel/auditavel",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/governance/aggregateVerdict.test.js"
+      "regressionTest": "tests/unit/governance/aggregateVerdict.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T13:14:08.451Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "261095f66ade",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/aggregateVerdict.test.js exit=0 em 261095f66ade",
+      "commit": "261095f66ade",
+      "blocked_reason": "RESOLVIDO 2026-10-17: o custo alegado (mudar sourceFingerprint invalida o release selado) deixou de ser bloqueio — o release sera re-selado apos o fechamento dos P0/P1; a correcao e aditiva e nao altera o veredito."
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
