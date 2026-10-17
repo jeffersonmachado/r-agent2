@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T21:51:19.095Z",
+  "updatedAt": "2026-10-17T22:38:46.698Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1065,15 +1065,20 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
       "title": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
-      "status": "pending",
-      "commit": "57167fb62",
-      "evidence": "MEDIDO: main protected=false; GET /branches/main/protection e /rulesets => HTTP 403 \"Upgrade to GitHub Pro or make this repository public\" (repo privado, plano User/Free). Entregue gate executavel: governance/branch-protection.config.json (allow_force_pushes=false, allow_deletions=false) + scripts/governance/verify-branch-protection.js (mede, grava reports/branch-protection-report.json, UNKNOWN nunca vira PASS; --apply quando o plano permitir). Prova: 12/12 testes (o caso de versionamento falhava antes da excecao no .gitignore e passa depois); medicao real status=BLOCKED_EXTERNAL. RESOLUCAO EXIGE TERCEIRO: plano pago ou repositorio publico.",
+      "status": "done",
+      "commit": "9458c7132ac2",
+      "evidence": "RESOLVIDO E MEDIDO EM 9458c7132ac2: `node scripts/governance/verify-branch-protection.js --apply` => status=PASS protected=true divergencias=0 blocking=false. A premissa de bloqueio externo estava OBSOLETA: o repositorio ja e publico (visibility=PUBLIC, planBlocksProtection=false); o que impedia era defeito no payload do apply (omitia required_status_checks/required_pull_request_reviews/restrictions => HTTP 422), corrigido com corpo JSON e null explicito. Regressao: tests/unit/governance/branchProtectionApplyPayload.test.js (4 testes) + reports/branch-protection-report.json.",
       "blocked_reason": null,
       "severity": "P0",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "blocked_external",
-      "regressionTest": "tests/unit/governance/branchProtectionApplyPayload.test.js"
+      "regressionTest": "tests/unit/governance/branchProtectionApplyPayload.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T22:38:46.698Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "9458c7132ac2e151ebc7b0a6e9a4c0928d2d0289",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/branchProtectionApplyPayload.test.js exit=0 em 9458c7132ac2"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
