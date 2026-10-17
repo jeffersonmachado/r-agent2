@@ -610,16 +610,17 @@
     {
       "id": "DEF-TEARDOWN-DRAIN-WORKER",
       "title": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
-      "status": "done",
+      "status": "pending",
       "commit": "a80ea7e8b",
       "evidence": "tests/helpers/drainEngineeringWorker.js + lote 11 do selo (6/6 suites, 89/89 testes, EXIT=0)",
       "resolution": "DEFEITO REAL medido no lote 11 do selo V2: governanceApprovalFullWorkerE2E marcada failed com 0 testes falhados e exit=1. Causa no batch JSON (nao no resumo do gate): \"ConnectionManager.getConnection was called after the connection manager was closed!\" — o afterAll chamava stopBugLoopWorker() (que so faz clearInterval, NAO espera o ciclo) e logo depois sequelize.close(); o ciclo em curso consultava o banco fechado. Passava ISOLADA e falhava no LOTE porque e corrida de tempo. Correcao: tests/helpers/drainEngineeringWorker.js aguarda cycleRunning===false, fail-closed. Aplicado nas 2 suites que usam startBugLoopWorker (as duas tinham o defeito). Prova no lote real: antes success:false exit=1 -> depois 6/6 suites, 89/89 testes, EXIT=0.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done",
+      "legacyStatus": "pending",
       "severityBasis": "exit code nao confiavel no lote (0 falhas + exit=1) bloqueava selo sem defeito real",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js"
     },
     {
       "id": "DEF-WS-AUTH-POS-LOGIN",
