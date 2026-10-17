@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T11:42:22.552Z",
+  "updatedAt": "2026-10-17T12:30:21.517Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -295,11 +295,13 @@
       "status": "done",
       "commit": "3ea58a1cc",
       "evidence": "Defeito medido: `service.sh start` dava OK com a unidade `active` cujo processo nao respondia (health!=identidade) e nao detectava a porta 8080 ocupada por mock orfao de teste (a unidade nao servia, mas o smoke passava por outro processo). Corrigido: `scripts/dev/lib/servicos-dev-state.sh` (dev_porta, dev_pids_na_porta, dev_pid_no_cgroup, porta_pertence_a_unidade fail-closed por ControlGroup) + `esperar_identidade` no start (health E identidade, 1 restart, falha explicita nomeando os pids). Prova: tests/unit/dev/devServicesSupervision.test.js (25 casos) e smoke agendado com RESTORE_FALHAS / exit 3 RESTORE_INCOMPLETO quando a identidade nao e restaurada.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/dev/devServicesSupervision.test.js"
+      "regressionTest": "tests/unit/dev/devServicesSupervision.test.js",
+      "severityBasis": "ferramenta de supervisao de dev; classe \"declara OK sem servir\", fora do caminho de release",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H10-VEREDITO-GATE-SEGURANCA",
@@ -307,11 +309,13 @@
       "status": "done",
       "commit": "63cdd7f07",
       "evidence": "Defeito medido: a ultima linha do relatorio imprimia a avaliacao de risco (engine) como se fosse o veredito — podia dizer GO/`exit 0` enquanto o processo saia !=0, ou o inverso, tornando a falha invisivel para quem lesse o tail. Corrigido: `avaliacao de risco (engine):` separada e ultima linha sempre `VEREDITO: <state> (exit N) — motivos: ...`, coerente com o codigo de saida. Prova: tests/unit/governance/securityGateState.test.js (26 casos) + execucao real com EVIDENCE_UNAVAILABLE (exit 3).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/governance/securityGateState.test.js"
+      "regressionTest": "tests/unit/governance/securityGateState.test.js",
+      "severityBasis": "relatorio de gate OBRIGATORIO mascarava o proprio veredito; exit code seguia correto, logo sem falso GO automatico",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H11-ESCOPO-DIFERIDO",
@@ -319,11 +323,13 @@
       "status": "done",
       "commit": "3bf7d8bc2",
       "evidence": "Regressao introduzida pelo proprio contrato da Fase 9 (scope vazio rejeitado) quebrou 11 testes de integracao do engineering-router e o gate `integration` do MR-06 (ATTESTED->BLOCKER). Corrigido sem afrouxar o contrato: `assertTaskContract({scopeDeferred})` — a criacao DIRETA por API/UI segue fail-closed; apenas `startExecutionHeld` e o replacement do bugLoop (que preenchem o escopo depois, por engenharia) passam `scopeDeferred:true` literal; a fixture de review executa um TestRun de integracao real. Prova: suite autoritativa 86/89 -> 89/89 PASS (reports/release-suite-execution.json) + tests/unit/engineeringRouter/taskContractScope.test.js (10 casos).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/engineeringRouter/taskContractScope.test.js"
+      "regressionTest": "tests/unit/engineeringRouter/taskContractScope.test.js",
+      "severityBasis": "regressao de contrato quebrou 11 testes de integracao do engineering-router (validacao do router)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H12-RAG-REPARO",
@@ -331,10 +337,12 @@
       "status": "done",
       "commit": "6cdcc9c72",
       "evidence": "Defeito medido: `validate:rag-index-health` NO_GO com 2 documentos failed (ECONNREFUSED no reindex, servico fora durante o lote). Reparado sem mascarar: reindexado para HEALTHY — documentos indexados 3237 -> 3239, chunks 8618 -> 8621, violations 0, failed 0. Prova: reports/rag-index-health-report.json + reports/rag-failed-reindex-report.json (commit de evidencias 6cdcc9c72).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "estado de indice RAG (2 docs failed por ECONNREFUSED); reparo de dados, sem defeito de codigo",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H13-RUNNER-COMPLETO",
@@ -342,11 +350,13 @@
       "status": "done",
       "commit": "8169f3d70",
       "evidence": "Defeito medido: `validate:governance-enforcement` e uma cadeia `&&` fail-fast — a PRIMEIRA falha escondia as outras 8 (foram descobertas 9 falhas reais que o agregado reportava como \"1\"). Corrigido aditivo: `npm run validate:all-validators` (scripts/governance/run-all-validators.js + lib/governance-enforcement-plan.js) roda TODOS, escreve reports/governance-enforcement-full-report.json, e revalida apenas falhas causadas pelo carimbo de lineage (revalidatedAfterStamp). Medicao: 66 validadores, 57 PASS / 4 FAIL (todas de P1-11). Prova: tests/unit/governance/allValidatorsRunner.test.js (13 casos).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/governance/allValidatorsRunner.test.js"
+      "regressionTest": "tests/unit/governance/allValidatorsRunner.test.js",
+      "severityBasis": "agregado mascarava 8 de 9 falhas (fail-fast); nao gerava falso GO, mas escondia vermelho",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H14-CDR-SUPERVISIONADO",
@@ -354,11 +364,13 @@
       "status": "done",
       "commit": "ec85f48b7",
       "evidence": "Defeito medido (custo de um ciclo de ~40 min em 2026-10-13): o preflight do converge validava so a PORTA 15432 da ponte; quando o Postgres nao responde no boot do container, o backend `cdr_adaptive_odbc` sai do engine de CDR em SILENCIO (porta de pe, nenhum CDR gravado) e o passo 1/12 reprova. Corrigido: `scripts/pbx-cdr-health.sh` (`check` 0/1 e `ensure` que recarrega res_odbc.so + cdr_adaptive_odbc.so) e preflight passa a exigir BACKEND registrado (sinal obtido por medicao: `cdr show status` -> Registered Backends; `Use Count` e 0 ate saudavel e nao serve de sinal). Prova: tests/unit/pbx/pbxCdrHealth.test.js (7 casos, com dubles — nenhum socat real).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/pbx/pbxCdrHealth.test.js"
+      "regressionTest": "tests/unit/pbx/pbxCdrHealth.test.js",
+      "severityBasis": "perda silenciosa de CDR em producao quando o backend nao responde (dados)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H15-DIST-RECIBO-STALE",
@@ -366,10 +378,12 @@
       "status": "done",
       "commit": "ec85f48b7",
       "evidence": "Defeito medido: `validate:dist` falhava com 3 motivos, sendo 1 espurio — `STALE_VERIFIER_RESULT` de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 (r-agent2-20261011-083027.payload.zip) ja ARQUIVADO. A politica exige recibo vinculado ao PAYLOAD ATUAL. Removido (copia preservada em dist/archive/pre-seal-20261010/). Medicao DEPOIS: o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\" e o validate:dist falha por UMA causa unica — ausencia de payload selado — em vez de 3 sintomas. A tentativa inversa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "higiene do dist: recibo stale causava FAIL espurio (falso NO_GO), nao falso GO",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
@@ -377,11 +391,13 @@
       "status": "done",
       "commit": "1cb7fafe1",
       "evidence": "Defeito medido: durante um run real do validate:all-validators criei um arquivo em scripts/smoke/ (raiz de SOURCE_ROOTS); a evidencia de runtime foi coletada antes (fingerprint bae797d5...) e validada depois (a6454061...) e o validate:engineering-router-v1:runtime reprovou com RUNTIME_EVIDENCE_FRESH, cascateando 4 falhas num run de ~40 min — parecendo defeito de produto. O gate estava CERTO; faltava ATRIBUICAO. Corrigido: mapearSuperficieProvada (walkSourceFiles + sha256 canonicos), compararSuperficieProvada (ESTAVEL/MUTADA_DURANTE_O_RUN com arquivo e tipo) e atribuirMutacaoDaSuperficie (marca attributedToSourceMutation SO em falhas de obsolescencia; falha de pacote NUNCA e atribuida), com provenSurfaceStability no relatorio. Prova: tests/unit/governance/allValidatorsRunner.test.js (18 casos, +5 novos) e a coleta revalidada depois com worktree limpo: RUNTIME_PASS items=25 falhas=0 commit=1cb7fafe1 fingerprint=a9f8c4c0..., status=PASS checks=209.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/governance/allValidatorsRunner.test.js"
+      "regressionTest": "tests/unit/governance/allValidatorsRunner.test.js",
+      "severityBasis": "atribuicao errada de causa (mutacao de superficie durante o run)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H17-HOOKS-EDITOR",
@@ -389,10 +405,12 @@
       "status": "done",
       "commit": "dcc97cbed",
       "evidence": "DEFEITO REAL achado pela jornada funcional no browser: /editor com 2 erros de console + 3 pageerror (\"Rendered more hooks than during the previous render\" em FlowTemplateSelector) e o botao \"Novo\" nao abria o seletor — a acao de criar fluxo sumia. Causa: useMemo das tags DEPOIS dos returns antecipados de selectedTemplate/loading/error; na 1a render (loading=true) o hook nao rodava e na seguinte rodava um hook a mais. Corrigido movendo o hook para antes dos returns. PROVA NOS DOIS SENTIDOS: com o codigo antigo (git stash push do .jsx) o teste falha com o erro exato do browser; com o fix, frontend/src/components/FlowTemplateSelector.test.jsx 4/4 e suite frontend 136 arquivos / 1035 testes PASS (EXIT=0). Prova no browser depois do fix: /editor com 0 console errors, 0 pageerror e \"Novo\" abrindo \"Criar Novo Fluxo / Selecione um modelo\".",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "capacidade CORE do produto quebrada: botao \"Novo\" nao abria seletor de fluxo + 3 pageerror",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H18-JORNADA-FUNCIONAL-BROWSER",
@@ -400,10 +418,12 @@
       "status": "done",
       "commit": "dcc97cbed",
       "evidence": "Novo scripts/smoke/journey-functional-browser.js: exerce ACOES reais (busca, filtro por chip, abrir formulario de criacao, detalhe) em 8 rotas PRODUCTION de negocio e mede o EFEITO. Reusa tests/helpers/playwrightAuth.js (regra do repo). Evidencia em qa/evidence/journey-functional-latest.json (transitoria, nao versionada). Resultado medido: 0 erros de console, 0 pageerror, 0 requisicoes falhas; /workspace busca 8083->792 chars; /crm busca 1922->1170; chips de filtro aplicam; \"Criar entidade rapida\", \"Criar tarefa\" e \"Novo\" abrem. LIÇÃO incorporada: a 1a versao media itens por table/li/card e produziu 5 FALSOS POSITIVOS (media o menu lateral, nao a lista) — falso positivo de detector esconde o defeito real no ruido. Efeito passa a ser diff de textos visiveis + delta de chars + delta de campos.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "novo detector de jornada (infra de teste), nao e defeito",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H19-DIST-CAUSA-UNICA",
@@ -411,10 +431,12 @@
       "status": "done",
       "commit": "ec85f48b7",
       "evidence": "Antes: 3 motivos de FAIL, sendo 1 espurio — STALE_VERIFIER_RESULT de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 ja arquivado. Removido (copia preservada em dist/archive/pre-seal-20261010/), o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\". Depois: 2 sintomas de UMA causa (payload nao selado = P1-11): \"Nenhum PAYLOAD encontrado em dist/release/*.payload.zip\" e \"verify-enterprise-governance-v2.sh FAIL\". A alternativa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "validate:dist com motivo espurio (falso NO_GO); causa unica",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DIV-PUREZA-ENGINE",
@@ -424,11 +446,13 @@
       "evidence": "tests/unit/engine/enginePurityPorts.test.js + reports/layer-conventions-report.json",
       "resolution": "CORRIGIDO (nao mais bloqueado). O ciclo dedicado que o blocked_reason exigia foi feito. 6 portas injetaveis em engine/shared/ (clock, random, logger, scheduler, fileSystem, runtimeEnv). 28 arquivos migrados por NAMESPACE — nome solto produzia recursao infinita em engine/utils.js. checkEnginePurity corrigido nos dois sentidos: 16 falsos positivos (new Date(valor)) e 35 pontos cegos (Date.now()). validate:layer-conventions: 83 -> 0 issues. unit 1007 suites/8426 testes PASS; flow 264 PASS; build OK; gate agregado EXIT=0. A metade \"mover para api/services\" do plano NAO foi usada: os ofensores sao consumidos POR DENTRO da engine; a porta injetavel preserva a API publica e entrega o que a regra quer (determinismo de replay).",
       "previous_blocked_reason": "NAO e meia-correcao: exige ciclo DEDICADO, com regressao de replay e build do frontend a cada arquivo. MEDIDO em 2026-10-13 (baseline do AGENTS.md estava desatualizado em 118): o gate acusa 83 issues, das quais ~13 sao FALSOS POSITIVOS — 44 ocorrencias de `new Date` se dividem em 31 LEITURAS de relogio (`new Date()`) e 13 CONVERSOES deterministicas (`new Date(x)`). Somam-se 5 `Math.random` usados apenas como FALLBACK de parametro injetavel (ex.: executionDeadline, que se declara PURO). Violacoes reais ~70. A metade \"mover para api/services\" do plano do AGENTS.md NAO se aplica aos dois maiores ofensores: `persistenceServices.js` (11) e `fallbackController.js` (7) sao consumidos POR DENTRO de engine/ (`engine/runner.js`, `engine/nodes/fallbackNode.js`, `engine/nodes/persistenceNodes.js`) — mover inverteria a dependencia engine->api. Nenhum dos dois e usado pelo frontend (medido: 0 ocorrencias em frontend/src). A classe relogio/aleatorio (31 leituras em engine/nodes/*, runner.js, executeStep.js, flowSimulation.js) toca DETERMINISMO DE REPLAY, que e gate bloqueante. `engine/` tambem e compartilhado com o frontend. Exige: (a) injecao de relogio/aleatorio/logger nos modulos de fluxo com default explicito no CALLER, nunca no modulo provado; (b) refinar a regra do detector para nao acusar `new Date(arg)` — CORRECAO de falso positivo, nao afrouxamento, com o cuidado de que `new Date(variavel)` possivelmente `undefined` VOLTA a ler o relogio (ex.: nodes/systemNodes.js:307). Nunca baixar a regra para fechar o gate.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/engine/enginePurityPorts.test.js"
+      "regressionTest": "tests/unit/engine/enginePurityPorts.test.js",
+      "severityBasis": "divida arquitetural em engine/; validate:layer-conventions NAO e bloqueante por decisao de projeto",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "N5-REENTREGA",
@@ -436,11 +460,13 @@
       "status": "done",
       "commit": "bc76e28b3",
       "evidence": "CICLO CONCLUIDO: `release:seal` SEAL_EXIT=0, release r-agent2-20261013-213820 commit d7036f0aecb9bf2487b0424fef537f4af27037d0 | H_final 0b1488f76308c903735bf0806734f33009a3e6a02be77c | Score PASS/100. Tag publicada: objeto 9d6901712..., alvo (`^{}`) d7036f0aecb9... — `tagMatches=true`, recibo PUBLISHED_VERIFIED, verify:release-publication 8 checks PASS. `verify:delivered-release` = DELIVERED_RELEASE_VERIFIED / AUTONOMOUS_READY (\"arvore atual == artefato entregue\"); worktree limpo e 0 commits a frente de origin/main. PROVA DE CAMPO DO N1 (fix das evidencias de TTL curto): o consolidate registrou \"✓ evidencias de TTL curto regeneradas (replay-governance + SBOM)\" SEM intervencao manual, e o gate agregado saiu \"EXIT 0\" na PRIMEIRA tentativa — antes isso exigia retomada manual e reparos de lineage/projecao. PROVA DE CAMPO DO N3 (guard de tag): o bloqueio do hook pre-push produziu a mensagem acionavel com o comando exato (`git push --no-verify origin refs/tags/...` + `--from publish`) em vez do generico \"criacao da tag falhou\". A acao humana foi cumprida seguindo a propria mensagem. ARMADILHAS PERCORRIDAS (4 rodadas, todas agora documentadas na memoria do repo): (1) dist/ com sobra de ciclo anterior; (2) worktree sujo por derivados (~60 arquivos por fase abortada); (3) SEAL_FOREIGN_RUN apos o prepare criar run novo por RUN_SOURCE_DRIFT — exigiu re-selar o V2; (4) \"criacao da tag falhou\" pelo hook local. FLAKE CONFIRMADO, NAO REGRESSAO: o selo V2 falhou uma vez em SUITE_EXECUTION com tests/integration/missionSourceStaleReplanFullRouterE2E.test.js (que passa isolado em 64s e tem jest.setTimeout(900000)); a re-execucao do selo deu status=GO 21/21. Um unico FAIL nao e prova de defeito, assim como um unico PASS nao e prova de reprodutibilidade.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js"
+      "regressionTest": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+      "severityBasis": "tarefa de processo (reentregar release), nao defeito de codigo",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DEF-TEARDOWN-DRAIN-WORKER",
@@ -449,10 +475,12 @@
       "commit": "a80ea7e8b",
       "evidence": "tests/helpers/drainEngineeringWorker.js + lote 11 do selo (6/6 suites, 89/89 testes, EXIT=0)",
       "resolution": "DEFEITO REAL medido no lote 11 do selo V2: governanceApprovalFullWorkerE2E marcada failed com 0 testes falhados e exit=1. Causa no batch JSON (nao no resumo do gate): \"ConnectionManager.getConnection was called after the connection manager was closed!\" — o afterAll chamava stopBugLoopWorker() (que so faz clearInterval, NAO espera o ciclo) e logo depois sequelize.close(); o ciclo em curso consultava o banco fechado. Passava ISOLADA e falhava no LOTE porque e corrida de tempo. Correcao: tests/helpers/drainEngineeringWorker.js aguarda cycleRunning===false, fail-closed. Aplicado nas 2 suites que usam startBugLoopWorker (as duas tinham o defeito). Prova no lote real: antes success:false exit=1 -> depois 6/6 suites, 89/89 testes, EXIT=0.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "exit code nao confiavel no lote (0 falhas + exit=1) bloqueava selo sem defeito real",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DEF-WS-AUTH-POS-LOGIN",
@@ -461,10 +489,12 @@
       "commit": "48e5c167c",
       "evidence": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx (5 testes) + browser real + servidor (Broadcast 0 -> 1 cliente)",
       "resolution": "DEFEITO REAL de producao, encontrado exercitando a jornada no browser (nao havia teste cobrindo). Evidencia que separou a causa: servidor 3300 conexoes/2115 autenticadas/ZERO invalid_token; browser instrumentado mostrou >60s com ping saindo e NENHUM auth; WebSocket puro fora do React autenticou em 6ms e ficou OPEN => o servidor esta correto, o defeito e do cliente. Causa: socket aberto uma vez no mount ANTES do login; a autenticacao dependia de um efeito que so reagia a connected/authenticated/authFailed (o login nao muda nenhum) e de um setInterval de 2s cujo authenticateWebSocket retornava false EM SILENCIO quando o socket nao estava utilizavel, sem reconectar. Corrigido: consumo de AuthContext + efeito de SESSAO (login autentica), reconexao imediata quando o socket nao serve, warn no lugar do silencio, reset do isIntentionalCloseRef (podia prender em true e desligar watchdog e recovery), fechamento de socket em CONNECTING no unmount (orfaos) e REMOCAO do setInterval de 2s (proibido). Prova: browser \"Falha de auth\" -> \"Conectado\" sem F5 com auth+subscribe enviados; servidor Broadcast 0 -> 1 cliente; frontend 137 arquivos/1040 testes PASS.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "producao: sem tempo real ate F5 apos login",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
@@ -473,10 +503,12 @@
       "commit": "5ba668f2d",
       "evidence": "frontend/src/__tests__/supportHeaderEnhancement.test.js (6 testes) + mesh 144 cenarios",
       "resolution": "Reprovou o QA Mesh no cenario support-inbox-nota-ui (omnichannel, BLOCKING): NotFoundError removeChild em commitDeletionEffectsOnFiber. Regressao confirmada por metodo barato: removeChild aparece 20x no mesh de 09:33 e ZERO em 10 meshes anteriores (desde 03/10), todos 144/144. Causa raiz: main.jsx enhanceSupportHeaders movia os filhos do <h1> (que pertencem ao React) para um span e depois chamava title.replaceChildren -> arvore de fibers inconsistente -> o commit seguinte do React removia no inexistente. Defeito LATENTE exposto pelo aumento de re-renders (WebSocketProvider no topo). Corrigido: funcao extraida para src/utils/supportHeaderEnhancement.js (ESM, testavel sem bootstrap), o botao entra como IRMAO do <h1> (insertBefore) e o layout foi para CSS (.support-header-with-back). REGRA: em no do React, ADICIONAR irmao e seguro; mover/substituir/remover nos conhecidos nao e.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "crash de UI (removeChild) reprovando cenario BLOCKING do QA Mesh",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DEF-QUEUE-DELETE-DB-ONLY",
@@ -485,11 +517,13 @@
       "commit": "9f0f6fda8",
       "evidence": "tests/unit/queueModuleRoutes.test.js (2 casos novos) + limpeza de 244 filas residuais",
       "resolution": "Reprovou o QA Mesh no cenario business-core-biz-queues (core, BLOCKING): \"Fila nao foi removida\". Causa: a desativacao da definicao persistida estava condicionada ao sucesso do servico LEGADO, que opera num Map EM MEMORIA (volatil). Fila existente so no banco nunca era desativada -> continuava active=true e reaparecia, porque listQueues MESCLA memoria + banco. Prova no banco: 253 filas qa_flow_queue_* acumuladas desde 10/10, 5 ainda ATIVAS. Corrigido: nova deactivateQueue (UPDATE direto e idempotente, sem cache/memoria, sem criar registro inexistente) usada independentemente do resultado legado; reporta sucesso quando a definicao existia e foi desativada, e mantem falha quando nada foi removido. Higiene: 244 filas residuais de teste removidas (9 filas nao-teste preservadas).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/queueModuleRoutes.test.js"
+      "regressionTest": "tests/unit/queueModuleRoutes.test.js",
+      "severityBasis": "API de producao com efeito incorreto (DELETE nao removia fila so-DB)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-A-L1-IMPACTO",
@@ -498,10 +532,12 @@
       "commit": "69a67e631",
       "evidence": "qa/coverage/impactGraph.js + qa/coverage/impactSelection.js + scripts/governance/{build-impact-graph,run-impact-validation}.js + engineering-validation-orchestrator.js; 48 testes (impactGraph 18, impactSelection 19, impactRunner 11); artefato reports/impact-graph.json (4126 nós, 9370 arestas, MD5 estável); L1 executado de verdade 2×; tests/unit/coverage/ 282 testes PASS",
       "resolution": "Auditoria MEDIDA antes de escrever código: qa/impact-map.json (usado por qa:mesh:impact) cobre 28/2488 arquivos = 1,13%; inventário por source exato 14,80%; path->module 12,21%; módulo->jornada->cenário 9,0%; 91,0% dos arquivos sem qualquer seleção. Vocabulários incompatíveis: impact-map produz 7 escopos, os 144 cenários declaram 26 (interseção 4); 133/144 declaram ci/telemetry, então o filtro por impacto seleciona ~92% ou 1-3%, nunca o alvo. O módulo queue nem existe no inventário — o commit 9f0f6fda8 era invisível a todos os mecanismos. Solução: derivar o elo dos próprios require/import (determinístico), com fecho transitivo reverso (77,3% dos arquivos de produção têm dependentes) e FAIL-CLOSED (arquivo não classificado ESCALA). Quatro defeitos MEUS foram pegos exercitando o caminho real, todos corrigidos com prova no commit 69a67e631: (a) falso verde no orquestrador (dry-run caía no else => GREEN_AT_L2 sem executar); (b) bug de parsing slice(+3 em vez de +1) que fazia --files= ser ignorado em silêncio e cair no git diff; (c) falso vermelho (teste Vitest executado pelo Jest, que não tem frontend nos roots); (d) arquivo de teste alterado não entrava na seleção.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "feature (selecao por impacto)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
@@ -510,11 +546,13 @@
       "commit": "8ef4af5cd",
       "evidence": "tests/integration/evoSyncIntegration.test.js (10/10 PASS); varredura da classe em 1307 arquivos de teste achou apenas esta instância",
       "resolution": "Encontrado pela PRIMEIRA execução do L1 (1 de 219 testes). O teste fixava expect(frequency30d).toBe(2) sobre entradas de 01-03/09/2026; a janela é móvel (agora - 30d, confirmado em api/services/vertical/fitnessAttendanceService.js:349) e o corte passou a ser 14/09 em 14/10/2026. O código de produção está CERTO (frequency30d=0); a expectativa é que era time bomb. Quebrava sozinho desde ~03/10/2026 e nenhum gate o executa (não está em config/canonical-release-suites.json). Corrigido derivando a janela dos itens retornados + invariantes (7d ⊆ 30d ⊆ total) e documentando a armadilha no próprio teste.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/integration/evoSyncIntegration.test.js"
+      "regressionTest": "tests/integration/evoSyncIntegration.test.js",
+      "severityBasis": "teste com data fixa apodrece e gera falso vermelho futuro",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DEF-STATESYNC-EXEMPTION-STALE",
@@ -523,10 +561,12 @@
       "commit": "8ef4af5cd",
       "evidence": "config/state-sync-exemptions.json + validate:layer-conventions 0 issues (era 1 warning)",
       "resolution": "Resíduo do DEF-WS-AUTH-POS-LOGIN: ao remover o setInterval de 2000ms que reintentava autenticação, a contagem caiu de 4 para 3 mas a isenção continuou declarando 4. O gate acusou \"isenção superdimensionada\". Corrigido para 3 com as linhas reais (362 ping, 650 watchdog, 752 verificação de token) e registro da data da mudança.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "residuo de isencao (contagem 4 vs 3)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
@@ -535,10 +575,12 @@
       "commit": "92de2b9e9",
       "evidence": "scripts/governance/engineering-validation-orchestrator.js + reports/validation-orchestrator-report.json + /tmp/orq-l2.log + /tmp/orq-l2b.log — L1 verde real (--files de arquivo coberto) e L1 ESCALATE real; L2 executado DE VERDADE 2x (13,0min e 28,2min; 1022 testes; 88/89 suítes) com blockingFindings distinguindo INFRA_ERROR de falha de teste; 48 testes do L1 (tests/unit/coverage/ = 282 PASS); testes unitários do runner provam separação Jest/Vitest e parsing.",
       "resolution": "EngineeringValidationOrchestrator encadeia os níveis REUSANDO o que existia: L1 = run-impact-validation.js (grafo de imports + 3 camadas + fail-closed); L2 = npm run test:release-authoritative (manifesto canônico de config/canonical-release-suites.json, valida NOT_EXECUTED); L3 = npm run validate:all-validators (61 validadores). Regra dura: NENHUM nível não-executado pode ser verde — --dry-run produz INCONCLUSIVE_DRY_RUN (exit 2), nunca GREEN_AT_Ln; esse foi um falso verde REAL que eu introduzi e corrigi (o else da cascata reportava GREEN_AT_L2 sem executar). A execução real do L2 revelou, corretamente, DOIS bloqueadores externos ao orquestrador, ambos diagnosticados: (1) INFRA_ERROR em engineeringRouterAuditEnvelopeGeneration.test.js — a evidência de runtime é casada com o sourceFingerprint e meus commits a invalidaram; resolvido rodando npm run validate:engineering-router-v1:runtime (RUNTIME_PASS, checks=209, falhas=0) e confirmado com a suíte passando em RELEASE_AUTHORITATIVE=1; (2) flaky sob carga em engineeringMissionFullE2E.test.js (ver item dedicado). L3 NÃO foi executado: a selagem é proibida em ciclos intermediários e o L3 é caro; o reuso está implementado e usa o mesmo comando do gate agregado. O orquestrador não mascara nenhum dos dois casos: reporta RED com código explícito e a causa.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "feature (orquestrador L2/L3)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
@@ -548,10 +590,12 @@
       "evidence": "isolado: 8/8 PASS em 41,2s. Reproducao com o lote 0 + a suite (7 suites, 40 testes, --runInBand --bail=0): TODOS PASS em 177s — NAO reproduziu, logo e INTERMITENTE. no L2: reports/release-suite-execution.json (20:22->20:50Z) => batchExitCodes[0]=1, suite engineeringMissionFullE2E state=FAIL \"1 teste(s) falharam\" (sem mensagem no relatorio). ENCADEAMENTO MEDIDO: validate:required-tests LE reports/release-suite-execution.json (linha 28 do validador) e por isso reporta \"[FAILED] V2-01 — suite(s) com falha: engineeringMissionFullE2E\" — ou seja a flakiness derruba o AGREGADO, nao apenas o L2.",
       "resolution": null,
       "blocked_reason": "CORRECAO DE CLASSIFICACAO (era `blocked` com a afirmacao de que \"nao bloqueia a selagem\" — ERRADO, verificado agora): o validate:required-tests consome o relatorio do L2, entao esta flakiness torna `validate:governance-enforcement` VERMELHO e a selagem (seal-release.sh:567 roda o agregado) FALHA. E bloqueador de release. Causa provavel identificada (nao confirmada): CONTENCAO NO GIT, nao na IA. O teste 6 chama o loop real do Router (orquestrador.runMissionTask), que cria WORKTREE isolado; o lote 0 do manifesto e composto por suites do mesmo dominio que tambem operam git (bugRegressionCommandContamination, bugWorkerBoot*, engineeringBugAutonomousLoopE2E, engineeringBugLoop, engineeringBugLoopNaturalPathE2E). A credencial e FAKE (CODER_PROVIDER=anthropic + saveAICredentials com jest-fixture-fake-key), entao o caminho do Router e deterministico — nao ha dependencia de rede. Nao e timeout: o teste declara jest.setTimeout(180000) e leva ~33s. Acao necessaria: isolar as suites que usam git worktree do mesmo lote (ou serializar o acesso ao worktree), com reproducao sob carga real do manifesto — trabalho de sessao propria, que nao pode ser validado por um unico run porque a falha e intermitente. Mitigacao imediata aplicada: relancar o test:release-authoritative para regenerar reports/release-suite-execution.json; se o lote 0 passar, o agregado volta a verde.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "BLOCKED_EXTERNAL",
-      "legacyStatus": "blocked_external"
+      "legacyStatus": "blocked_external",
+      "severityBasis": "flakiness bloqueia agregado e selagem (release instavel)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-B8-ESTADOS-FILA",
@@ -561,10 +605,12 @@
       "evidence": "scripts/governance/validate-hardening-queue.js + reports/hardening-queue-report.json; prova do hook em /tmp/provar-b8.sh (11/11 casos: fixed_unverified/failed/pending/in_progress/typo/desconhecido BLOQUEIAM; verified/prevention_active/done/blocked/blocked_external LIBERAM); prova do validador (7/7 casos: fila real PASS; detecta fixed_unverified-com-evidence, verified-sem-evidence, blocked_external-sem-razao, typo, duplicado)",
       "resolution": "DEFEITO REAL encontrado em .github/hooks/continue-until-done.cjs: a logica era `OPEN_STATUSES = {pending, in_progress}`, ou seja TUDO o que nao estivesse nesses dois valores contava como FECHADO. Consequencia: um item marcado `failed` ou `fixed_unverified` (corrigido mas NAO verificado) encerrava o loop como se estivesse concluido — o mesmo falso verde que a fila existe para impedir. Corrigido por INVERSao para fail-closed: `CLOSED_STATUSES` explicito (done, verified, prevention_active, ready_for_approval, blocked, blocked_external) e TODO o resto ABERTO, inclusive typo e estado novo. Adotados os 8 estados do modelo da missao (PENDING/IN_PROGRESS/FAILED/FIXED_UNVERIFIED/VERIFIED/PREVENTION_ACTIVE/BLOCKED_EXTERNAL/READY_FOR_APPROVAL, em minusculas) com requisitos por estado: verified/prevention_active/ready_for_approval/done exigem commit+evidence; blocked/blocked_external exigem blocked_reason; failed exige failure_reason; fixed_unverified exige fix_note e PROIBE evidence (com evidencia o estado correto e verified); prevention_active exige tambem prevention. A mensagem do hook passou a nomear o motivo (openReason), para o bloqueio explicar POR QUE o item esta aberto em vez de so listar o status.",
       "prevention": "validate:hardening-queue como 62o validador BLOQUEANTE do agregado: nenhum item pode ser marcado verified/prevention_active/ready_for_approval/done sem commit+evidence, nem blocked* sem razao, nem fixed_unverified COM evidence, e estado desconhecido e VIOLACAO.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "severityBasis": "modelo de estados com hook fail-closed; defeito original na logica do hook",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
@@ -573,10 +619,12 @@
       "commit": "c6c02cfc4",
       "evidence": "scripts/governance/validate-governance-chain.js + reports/governance-chain-report.json — recálculo real executado: status=FAIL links=10 stored=d1f60719634d… recomputado=ed55cd3edd97…, 9 divergências nomeadas (evidence_manifest/final_proof_report/final_readiness/proof_signature/package_validation = hash_mismatch; consistency/cross_report/blocker_engine = cumulative_hash_broken; chain_root = chain_root_mismatch)",
       "resolution": "A cadeia SHA-256 encadeada JÁ existia (governance/governance-chain.js, 10 camadas, cumulativeHash + chainRoot, com verifyChain que RECOMPUTA os hashes e detecta hash_mismatch/file_deleted/cumulative_hash_broken/chain_root_mismatch). O gap era de ENFORCEMENT: verifyChain não era chamado por nenhum gate; validate-self-proving.js apenas faz `governanceChain.valid === true`, isto é, confia no campo gravado em disco; e não existia script npm com \"chain\". Criado o gate que RECALCULA. Ele NÃO entrou no agregado de propósito: o recálculo na árvore atual acusa 9/10 camadas divergentes por ORDEM DE FASES, não por adulteração — governance-chain.json é de 13:50 e evidence-manifest/final-readiness-report de 14:12 (a varredura agregada regenera esses relatórios DEPOIS da cadeia e a invalida). O próprio two-pass-release.sh:294 já documenta a armadilha (\"regravam esses relatórios — assinar antes quebraria a governance-chain\"), e scripts/verify-enterprise-governance-v2.sh:297 valida a vinculação externa (GOV_HASH == PAYLOAD_SHA). DÍVIDA REGISTRADA (não resolvida, de propósito): a cadeia é válida apenas imediatamente após a selagem; qualquer execução posterior do agregado a quebra. Enquanto isso, colocar o gate no agregado produziria falso vermelho e \"consertar\" o self-proving para recomputar tornaria o release impossível. O gate fica disponível para uso NA FASE CORRETA (pós-selagem) e o achado está documentado.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P0",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "severityBasis": "integridade criptografica: cadeia existia e NENHUM gate recalculava (falso GO de integridade)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
@@ -586,11 +634,13 @@
       "evidence": "gh run list + gh run view (2026-10-14T21:01Z): os 5 workflows disparam e falham em 3-5s SEM iniciar job. Anotacao literal do run 38637023121: \"The job was not started because an Actions budget is preventing further use.\" Workflows afetados: Jest, E2E Playwright, Frontend Tests, RAG Service Tests e \"Release Governance — ENVELOPE + PAYLOAD\". Reconfirmado: ja estava assim em 2026-09-29 e 2026-10-07 (16 dias). Enforcement local verificado: .git/hooks/pre-push (723 bytes, NAO versionado) recusa refs/tags/*. | AMPLIADO 2026-10-16: mesmo bloqueio reconfirmado — `gh run view 38881780959` (push de main, 2026-10-16T09:37Z) mostra os dois jobs do Jest com 2 s e a anotacao literal \"The job was not started because an Actions budget is preventing further use.\". ACHADO NOVO: nenhum workflow disparava para `dev/engineering-hardening` (`gh run list --branch dev/engineering-hardening` -> []), isto e, a branch de auditoria incremental nao tinha CI algum. Implementado o que nao depende do budget (commit 952185277): .github/workflows/dev-branch-ci.yml (dispara na branch, permissions contents: read, sem secrets, sem tag/release/deploy/push, falha o job em passo vermelho, anexa evidencia nomeada pelo SHA) e o runner local versionado scripts/ci/dev-branch-gate.js, que executa os MESMOS passos AGORA (L0 npm test + L1 cadeia/self-proving/DAG/decisao canonica/fila/memoria/aderencia) e publica AI_MEMORY/evidence/dev-branch-ci-<sha>.md com comando, exit code, duracao e sha256 por passo. Tripwires em tests/unit/governance/devBranchCiGate.test.js (13 casos). O que CONTINUA bloqueado externamente e a EXECUCAO no GitHub, que depende do limite de gastos da conta.",
       "resolution": null,
       "blocked_reason": "BLOQUEIO EXTERNO — depende de acao do usuario (pagamento/limite de gastos do GitHub Actions), nao de codigo. Enquanto o budget estiver bloqueado: (a) TODO push em main aparece como \"failure\" nos checks SEM executar nada, o que pode ser lido como regressao de codigo e NAO e (sempre ler a anotacao antes de culpar o codigo); (b) o workflow \"Release Governance — ENVELOPE + PAYLOAD\" NAO roda, entao o GitHub NAO bloqueia publicacao de tag — a protecao real e o hook local .git/hooks/pre-push, que e NAO VERSIONADO (nao sobrevive a um clone) e contornavel com --no-verify. Nao adicionei workflow do L1: workflow que nao roda nao e gate, e adicionar daria falsa sensacao de protecao. O enforcement efetivo hoje e LOCAL: 62 validadores no agregado + fluxo de selagem (verify:delivered-release, recibo PUBLISHED_VERIFIED). Acao para desbloquear: aumentar o limite de gastos do GitHub Actions (ou aguardar o ciclo do orcamento); em seguida, revalidar os 5 workflows.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "blocked_external",
-      "regressionTest": "tests/unit/governance/devBranchCiGate.test.js"
+      "regressionTest": "tests/unit/governance/devBranchCiGate.test.js",
+      "severityBasis": "CI remoto nao protege publicacao (budget externo); gate local e a protecao efetiva",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-B3-REUSO-PROVENIENCIA",
@@ -599,10 +649,12 @@
       "commit": "21b95c57e",
       "evidence": "scripts/governance/run-release-suites.js:186 (avaliarReusoDeLote) + :207 (exitCodeDoRelatorioReusado) — leitura direta do codigo; analise registrada em /memories/repo/r-agent2-b4-independencia-revisao.md",
       "resolution": "O mapa de exploracao apontou \"compara com .current-run.json local, nao com proveniencia remota\" como gap. Verificacao direta do codigo: avaliarReusoDeLote (funcao PURA, de proposito) exige SETE condicoes antes de reusar, cada uma com codigo proprio — META_MISSING, NO_GOVERNED_RUN, RUN_MISMATCH, SOURCE_COMMIT_MISMATCH, SOURCE_FINGERPRINT_MISMATCH, SUITE_PLAN_MISMATCH, RESULT_HASH_MISMATCH. O exit code do lote reusado e DERIVADO do relatorio (exitCodeDoRelatorioReusado le json.success), nunca presumido como 0 — foi o defeito historico, ja corrigido. O reuso ocorre DENTRO do mesmo run governado (e o que RUN_MISMATCH garante), entao comparar com o run local e o desenho correto; proveniencia REMOTA e gate separado (validate:remote-provenance, fail-closed antes do SEAL_GO) e exigir isso no reuso validaria no momento errado. NAO e defeito — e rigor.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "severityBasis": "verificado: nao e defeito (rigor por desenho)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
@@ -611,10 +663,12 @@
       "commit": "21b95c57e",
       "evidence": "api/services/engineeringMission/missionReviewService.js:157-165 — leitura direta; analise registrada em /memories/repo/r-agent2-b4-independencia-revisao.md",
       "resolution": "O mapa apontou \"independencia = so provider diferente\" como gap. Verificacao direta: a independencia e CONFERIDA CONTRA OS DADOS, nao aceita por declaracao — o campo independent_of_coder (gravado pelo Router) e cruzado com coder_provider vs reviewer_provider, com codigo de acusacao INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER; confiar so no campo seria confiar no atestado do proprio executor (corrigido em 2026-10-08). O criterio \"provider precisa diferir\" escolhe o RIGOR MAXIMO: mesmo provider com modelos diferentes e BLOQUEADO de proposito, porque compartilham infraestrutura e linhagem de treino. Abrir o criterio (aceitar mesmo provider) REDUZIRIA a garantia. Nao ha caminho de falso PASS. NAO e defeito — e rigor. Melhoria legitima registrada (sem reduzir rigor): expor coderModel/reviewerModel lado a lado no relatorio para auditoria.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "severityBasis": "verificado: nao e defeito (rigor maximo)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
@@ -623,11 +677,13 @@
       "commit": "4248e8c7b",
       "evidence": "scripts/governance/validate-no-date-bombs.js (prevencao) + tests/integration/evoSyncIntegration.test.js (correcao) + AI_MEMORY/hardening-queue.json (rastreabilidade) — prova bidirecional do detector: corrigido => PASS/0; assercao original de volta => FAIL/1 na linha 315; restaurado => 0",
       "resolution": "Cadeia completa demonstrada em um caso real, medida ponta a ponta: (1) o L1 encontrou o defeito na PRIMEIRA execucao real (tests/integration/evoSyncIntegration.test.js, time bomb de janela movel vencido em 03/10/2026); (2) a causa raiz foi confirmada no codigo (fitnessAttendanceService.js:349, janela = agora - 30d) e NAO no teste; (3) a correcao foi registrada com commit + evidence no item DEF-TIMEBOMB-EVOSYNC-JANELA30D; (4) a CLASSE foi varrida (1307 arquivos de teste, 1 instancia) e fechada com prevencao EXECUTAVEL bloqueante (validate:no-date-bombs como 61o validador do agregado). O detector distingue o que realmente vence (toBe(N>0) sobre campo movel) do que nao vence (toBe(0), que fica MAIS verdadeiro com o tempo) — sem essa distincao o gate teria falso positivo e seria desligado. Diferente do modelo antigo da fila (estado unico `done`), o item agora distingue o que foi apenas corrigido do que tem prevencao ativa (estados do B8).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "regressionTest": "tests/integration/evoSyncIntegration.test.js"
+      "regressionTest": "tests/integration/evoSyncIntegration.test.js",
+      "severityBasis": "rastreabilidade defeito->commit->prevencao (governanca, nao controle inegociavel)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "MISSAO-DEMO-SELF-ENGINEERING",
@@ -636,10 +692,12 @@
       "commit": "8de30dea7",
       "evidence": "Os 6 defeitos abaixo foram encontrados PELO PROPRIO SISTEMA durante esta sessao, com prova reproduzivel: (1) DEF-TIMEBOMB-EVOSYNC-JANELA30D — encontrado pela 1a execucao real do L1 (1 de 219 testes); prova: passa isolado 8/8 apos correcao, e estava quebrado desde 03/10/2026; (2) DEF-WS-AUTH-POS-LOGIN, (3) DEF-REMOVECHILD-HEADER-ENHANCEMENT, (4) DEF-QUEUE-DELETE-DB-ONLY — encontrados por QA Mesh/browser antes; (5) MISSAO-B8-ESTADOS-FILA — o hook tratava estado desconhecido como FECHADO (fail-open); prova: 11/11 casos no hook antes/depois; (6) MISSAO-B1-CADEIA-CRIPTOGRAFICA — verifyChain existia e NAO era chamado por gate algum; prova: o gate novo acusa 9/10 camadas divergentes com as failures nomeadas. Incidentes de processo que o proprio sistema expos: orquestrador com falso verde (dry-run => GREEN_AT_L2 sem executar), bug de parsing que ignorava --files em silencio, falso vermelho (teste Vitest executado pelo Jest), arquivo de teste alterado fora da selecao, e evidencia de runtime obsoleta por mudanca de fingerprint.",
       "resolution": "A demonstracao pedida pela missao (missao auto-gerada, executada e validada pelo proprio RAP sem intervencao humana) ocorreu de fato, pelo caminho mais forte possivel: NAO por um piloto sintetico, e sim porque cada mecanismo construido foi exercitado contra a arvore real e revelou defeitos que TODOS os gates anteriores haviam deixado passar. Os dois mais relevantes sao de classes opostas: o time bomb (um teste que passou a falhar sozinho pela passagem do tempo, invisivel porque nenhum gate o executava) e o fail-open do hook (um estado desconhecido que fechava o loop da missao — o proprio mecanismo de continuidade tinha um falso verde). Nenhum foi encontrado por inspecao: todos exigiram EXECUTAR o caminho real. Isso valida a regra da missao de que a release deve ser consequencia de codigo validado e nunca o mecanismo de descobrir defeitos — os 6 defeitos foram encontrados ANTES de qualquer release, e o release entregue (r-agent2-20261014-114927, PASS/100) permanece valido no commit dele. Limite honesto: a demonstracao NAO foi um ciclo autonomo completo do engineeringRouter (coder/reviewer providers) sobre um defeito novo; foi o sistema encontrando e fechando defeitos reais, com prevencao executavel em 3 dos casos (validate:no-date-bombs, validate:hardening-queue, hook fail-closed).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "severityBasis": "demonstracao; agrega defeitos individuais",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H15-CDR-LAST-FAIL",
@@ -647,11 +705,13 @@
       "status": "done",
       "commit": "274419ad9",
       "evidence": "Defeito medido em 2026-10-14 (recorrencia do H14, com sinal NOVO): o container do Asterisk reiniciou as 21:05:26, `odbc show asterisk_pg` registrou \"Last fail connection attempt\" no MESMO instante do boot e o `cdr_adaptive_odbc` parou de gravar — mas o backend seguia REGISTRADO em `cdr show status` e com 1 conexao ativa, entao `scripts/pbx-cdr-health.sh check` dizia status=OK. O passo 1/12 do converge reprovou com pbxProdLike.cdr=false/hangupCauses=false e omnichannelUnifiedReplay.pbx=false (ciclo de ~40 min perdido). Correcao: segundo sinal fail-closed em `falha_conexao_odbc()` (\"Last fail connection attempt\" presente => DEGRADED) e `ensure` aplica o reload de res_odbc.so + cdr_adaptive_odbc.so, que limpa a linha e restaura o CDR (smoke enterprise ok=true, 11/11 sinais). Prova: tests/unit/pbx/pbxCdrHealth.test.js (10 casos) + prova BIDIRECIONAL (neutralizado o sinal, exatamente os 2 casos novos falham: 2 failed/8 passed; restaurado, 10/10). Conferido tambem contra o Asterisk real: check OK exit 0 com odbc=sem_falha_registrada.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/pbx/pbxCdrHealth.test.js"
+      "regressionTest": "tests/unit/pbx/pbxCdrHealth.test.js",
+      "severityBasis": "perda silenciosa de CDR (recorrencia do H14) com sinal novo",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H16-V2SEAL-PASSO-SEM-MOTIVO",
@@ -659,11 +719,13 @@
       "status": "done",
       "commit": "9b72a3613",
       "evidence": "Defeito medido em 2026-10-14: o passo obrigatorio V1_RUNTIME_EVIDENCE (coletor `collect-engineering-router-runtime-evidence.js`) saiu exit=1 e o relatorio `reports/engineering-router-v2-seal-execution.json` ficou com stderrTail vazio, porque o coletor escreve o motivo em STDOUT. O selo abortou sem causa auditavel e so a reproducao manual do passo mostrou que a falha era transitoria (passou na execucao seguinte; a reexecucao do V2 seal deu status=GO com 21 passos). Correcao: o caminho de FAIL do `runStep` carrega `stdoutTail` (ultimas 6 linhas nao vazias) e o caminho de PASS NAO carrega, para nao inchar o relatorio com a saida do QA Mesh; `runStep` foi exportado para o teste exercitar o MESMO executor do selo. Prova: tests/unit/governance/v2SealStepDiagnostics.test.js (4 casos) + prova BIDIRECIONAL (removido o stdoutTail, 2 failed/2 passed; restaurado, 4/4).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/governance/v2SealStepDiagnostics.test.js"
+      "regressionTest": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "severityBasis": "passo obrigatorio do selo falhava sem motivo no relatorio (diagnostico de gate obrigatorio)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "H17-PREFLIGHT-ASK-AI-TTL",
@@ -671,11 +733,13 @@
       "status": "done",
       "commit": "1e7528d35",
       "evidence": "Defeito medido em 2026-10-15 (ciclo de ~2 h perdido): o validador `validate:ask-ai-runtime-evidence` roda DENTRO do gate agregado, que roda na ULTIMA fase (`consolidate`). A evidencia tem TTL de 7 dias e produtor MANUAL (`npm run verify:ask-ai-copilot:runtime`, exige API viva + credencial de verificacao), entao nada a renova sozinho: o ciclo inteiro rodou (QA Mesh real ~40 min, empacotamento, tag JA PUBLICADA) e abortou no fim com `ASK_AI_RUNTIME_EVIDENCE_STALE` (177,8 h de 168 h), exigindo interromper a fase, regenerar de verdade (10/10 verificacoes em runtime real) e retomar `--from consolidate`. O preflight ja fazia esse fail-fast para o smoke continuo das QA Waves; faltava a MESMA protecao aqui — onde o custo de descobrir no fim e maior (a tag ja foi publicada). Correcao: novo `scripts/governance/ask-ai-runtime-evidence-ttl-preflight.js` com AUTORIDADE UNICA do TTL (chama `evaluateRuntimeEvidence`, a mesma funcao do validador — limiar nunca duplicado), exit 0=OK / 1=vencida-invalida-ausente / 2=nao avaliavel (fail-closed), chamado na ENTRADA do ciclo e de novo no inicio do `consolidate`. Prova: tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js (6 casos, incluindo o mesmo 177,8 h medido, evidencia ausente, ausencia de prova de geracao e a assercao de que o selo chama o preflight nos DOIS pontos) + prova E2E medida: com a evidencia envelhecida para 177,8 h o selo aborta na entrada em 4 s com o remedio exato (antes levava ~2 h para descobrir no fim); restaurada a evidencia fresca, o preflight volta a OK.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js"
+      "regressionTest": "tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js",
+      "severityBasis": "fail-fast de TTL no preflight (economia de ciclo, nao correcao de veredito)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
@@ -768,11 +832,13 @@
       "commit": "1e0f5d0f8",
       "evidence": "MEDIDO no gate agregado: [qa-evidence-same-run] status=FAIL violacoes=1 — QA_EVIDENCE_LINEAGE_MISSING: qa-mesh/intelligence/latest.json. Causa raiz em duas camadas: (1) meshRunner.resolveOriginLineage() le apenas GOVERNANCE_* do ambiente, entao execucao manual produz execution com lineage nulo; (2) failureIntelligence ja carimbava lineage mas escrevia no caminho da evidencia governada com valores nulos — a correcao anterior era INERTE (o dado nunca chegava). Efeito: rodar a malha localmente (acao legitima) destruia evidencia governada. Correcao: execucao sem lineage (ou com lineage parcial) escreve latest-ungoverned.json e PRESERVA latest.json byte a byte, com aviso. Provas: tests/unit/qa-mesh/failureIntelligenceLineage.test.js 4/4 (inclui a regressao exata do envenenamento).",
       "prevention": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js trava a regra \"sem lineage nao escreve no caminho da evidencia governada\" e o caso de lineage parcial (so runId, sem fingerprint) nao conta como governado; a preservacao e verificada byte a byte.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P0",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
-      "regressionTest": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js"
+      "regressionTest": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+      "severityBasis": "evidencia governada destruida por execucao sem lineage (integridade da prova)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
@@ -780,10 +846,12 @@
       "status": "verified",
       "commit": "c20433341",
       "evidence": "OPERADO e VERIFICADO em 2026-10-16: (1) `node scripts/governance/create-governed-run.js` criou o run rap-governed-20261016125224166-7833cff3; (2) o preflight novo (`npm run validate:wave-same-run`) disparou no fluxo real com 3x WAVE_EVIDENCE_FOREIGN_RUN e o remedio — prova bidirecional do gate; (3) as 3 waves foram regeneradas DENTRO do run e carimbadas pelo passo canonico `node scripts/governance/stamp-report-lineage.js` (stamped=3) — waves agora db-integrity/api-surface/page-surface SAME_RUN; (4) a malha foi executada dentro do run com GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT da origem e o artefato qa-mesh/intelligence/latest.json nasceu com lineage do run corrente (isGovernedEvidence=true); (5) RESULTADO: `validate:qa-evidence-same-run` status=PASS artefatos=6/6 same-run-ok=6 violacoes=0 (antes: FAIL com 1 violacao). O preflight evitou tambem o desperdicio do ciclo de ~35 min do mesh.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P0",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "severityBasis": "proveniencia: evidencia runtime so vale dentro da janela do run (identidade da prova)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
@@ -791,10 +859,12 @@
       "status": "verified",
       "commit": "d9c469e67",
       "evidence": "RESOLVIDO por ciclo completo e provado: (1) selo V2 21/21 dentro do run R3 rap-governed-20261016144931085-033e1239 (apos corrigir o defeito do handshake ambiguo, commit a5449d15e); (2) candidato r-agent2-20261016-130247 selado (exit 1 intencional/DEFERRED); (3) validate:release-artifact-identity -> PASS RELEASE_ARTIFACT_IDENTITY_VERIFIED (a violacao FOREIGN_RUN_ARTIFACT original deixou de existir, nao foi tolerada); (4) verify:delivered-release -> DELIVERED_RELEASE_VERIFIED; scorecard 78/78 com below10=0, openGaps=0, openBlockers=0; projecoes canonicas PASS; (5) zip:release final -> SEAL_GO r-agent2-20261016-133323 com PAYLOAD_GOVERNANCE_VERIFIED; (6) npm run validate:governance-enforcement -> AGG_EXIT=0 com 31 validadores PASS (antes: exit 1 por evidencia/identidade e exit 3 por SECURITY_GATE_STALE_EVIDENCE, resolvido regenerando o SBOM dentro da janela do run: npm run security:sbom). Publicacao (tag/release) NAO executada — aguarda autorizacao explicita.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P0",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "severityBasis": "artefato de OUTRO run aceito como candidato entregue (identidade de artefato)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -812,10 +882,12 @@
         "requiresPolicyDecision": true
       },
       "blocked_reason": "Decisao de POLITICA (dono do produto), nao mecânica. Medicao 2026-10-16: o fail-open e LATENTE, nao ativo no caminho verde — a execucao canonica da malha no run corrente tem 144 resultados (isCanonicalExecution=true, runId/sourceFingerprint/sourceCommit corretos). Risco real: o produtor grava artefato governado mesmo com executedResults=0 e o gate nao distingue \"executou 0 cenarios\" de \"executou e passou\". Duas direcoes validas com semanticas diferentes: (a) produtor marca artefato vazio como NAO-evidencia, ou (b) a malha falha ANTES de gravar. CUSTO MEDIDO de aplicar agora: qa-mesh/*.js e scripts/governance/* estao em SOURCE_ROOTS (governance/proof-engine/fingerprint-chain.js:54-70,106-112), portanto qualquer edicao muda o fingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "OPEN",
-      "legacyStatus": "blocked"
+      "legacyStatus": "blocked",
+      "severityBasis": "fail-open LATENTE: malha grava evidencia governada com ZERO resultados; nao ativo no caminho verde, decisao de politica pendente",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
@@ -824,10 +896,12 @@
       "commit": "a5449d15e",
       "evidence": "DEFEITO MEDIDO: selo V2 abortou num passo OBRIGATORIO com `[FAIL] FENCE_AVANCOU — antes=undefined depois=2` (passo REAL_TASK_RECOVERY, exit=1), enquanto o mesmo passo passava ISOLADO (`status=GO checks=16`). Causa raiz: `scripts/governance/verify-real-task-recovery.js` aceitava como handshake qualquer linha JSON com `state` string (`if (!parsed || typeof parsed.state !== \"string\") continue;`), e o filho (`tests/helpers/taskLeaseWorkerChild.js`) roda o CAMINHO REAL do produto, que tambem LOGA JSON no stdout. Sob carga, um LOG era adotado como handshake, o filho era morto no lugar errado e o payload sem `taskFence` fazia `2 > undefined` (falso) — reprovacao com motivo ENGANOSO (\"o fence nao avancou\", quando avancou). Prova de que era log: o handshake legitimo SEMPRE traz `taskFence` (nulo no pior caso), nunca `undefined`. Correcao: marcador inequivoco (`__TASK_LEASE_HANDSHAKE__`) na linha do handshake + caminho legado exigindo campo exclusivo (`taskFence`/`taskLeaseToken`) + `FENCE_INICIAL_LEGIVEL` com fallback canonico no banco e comparacao numerica explicita. Prova: 6/6 testes novos e passo re-executado com `status=GO checks=17` (FENCE_INICIAL_LEGIVEL fenceA=1, FENCE_AVANCOU antes=1 depois=2).",
       "prevention": "tests/unit/governance/taskLeaseHandshakeParsing.test.js trava as tres regras: log JSON com `state` NAO e handshake; caminho legado exige campo exclusivo; `fenceLegivel()` recusa undefined/null/NaN (o valor que produzia o veredito errado). A lib pura `scripts/governance/lib/task-lease-handshake.js` e o unico ponto de parsing, usado pelo harness e pelo filho.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "severityBasis": "handshake ambiguo aceitava log JSON do produto; poderia mascarar ausencia de worker de lease",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
@@ -836,11 +910,13 @@
       "commit": "a5449d15e",
       "evidence": "DEFEITO MEDIDO: passo OBRIGATORIO REAL_TASK_RECOVERY do selo V2 abortava com `[FAIL] FENCE_AVANCOU — antes=undefined depois=2` (exit=1) e passava ISOLADO (GO 16 checks). Causa raiz: verify-real-task-recovery.js aceitava como handshake qualquer linha JSON com `state` string, e o filho roda o caminho real do produto (que tambem loga JSON); sob carga o parser adotava um LOG como handshake, matava o worker no lugar errado e o payload sem taskFence fazia `2 > undefined` (falso) — reprovacao com motivo engamoso. Prova de que era log: o handshake legitimo sempre traz taskFence (nulo no pior caso). Correcao: marcador inequivoco __TASK_LEASE_HANDSHAKE__ + caminho legado exigindo campo exclusivo + FENCE_INICIAL_LEGIVEL com fallback canonico no banco e comparacao numerica explicita. Provas: tests/unit/governance/taskLeaseHandshakeParsing.test.js 6/6; passo re-executado GO 17 checks; selo V2 21/21 (antes abortava).",
       "prevention": "tests/unit/governance/taskLeaseHandshakeParsing.test.js trava as tres regras (log JSON com state nao e handshake; caminho legado exige campo exclusivo; fenceLegivel() recusa undefined/null/NaN). A lib pura scripts/governance/lib/task-lease-handshake.js e o unico ponto de parsing, usado pelo harness e pelo filho.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
-      "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
+      "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "severityBasis": "FENCE_AVANCOU com antes=undefined: mesmo defeito de parsing de handshake",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
@@ -849,10 +925,12 @@
       "commit": "a5449d15e",
       "evidence": "MEDIDO: `[security-release-gate] state=EVIDENCE_UNAVAILABLE decision=NO_GO exit=3 — SECURITY_GATE_STALE_EVIDENCE` enquanto o proprio motor de risco dizia GO (5 verificacoes satisfeitas). Regra (scripts/governance/lib/security-gate-provenance.js:56-62): o SBOM precisa de generatedAt posterior ao startedAt do run. Remedio aplicado: `npm run security:sbom` (produtor) DENTRO do run R3 (startedAt 14:49:31) -> `validate:security-release-gate` passou a state=GO decision=GO exit=0. Efeito no agregado: AGG_EXIT 3 -> 0 (31 validadores PASS).",
       "prevention": "A regra ja e enforcement executavel (security-gate-provenance + security-gate-state classificam o codigo como PROVENANCE_EVIDENCE_CODE) e o selo tem preflight de evidencia de TTL curto (short-ttl-evidence.js, referenciado em seal-release.sh:621). O que faltava era a acao operacional de REGENERAR o SBOM dentro da janela do run — agora registrada aqui e no relatorio da missao.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "severityBasis": "SBOM anterior ao run derrubava security gate (falso NO_GO)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
@@ -861,10 +939,12 @@
       "commit": "602a00a1c",
       "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json + AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md + tools/audit/generate-audit-entrypoint.js",
       "detail": "Prova viva de que o dedo e a prova chegam ao auditor que so le git: reports/*.json e governance/*.json sao ignorados (.gitignore 118/124). auditEpoch = sha256 do payload; 13 provas canonicas com SHA-256 em disco; artefatos fisicos do release; fila oficial; veredito derivado do agregado. tools/audit/ esta FORA de SOURCE_ROOTS: comprovado 1c10ffa62e169a18 identico antes e depois do commit (nao invalida o release selado).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "done",
+      "severityBasis": "auditabilidade externa (ponto de entrada unico); nao bloqueia release",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
@@ -880,10 +960,12 @@
         "aliasStepsViaNpmRun": 62,
         "documentedIn": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json (bloco agregado)"
       },
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "OPEN",
-      "legacyStatus": "blocked"
+      "legacyStatus": "blocked",
+      "severityBasis": "agregado nao persiste veredito proprio do run: veredito deixa de ser provavel/auditavel",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
@@ -892,10 +974,12 @@
       "commit": "602a00a1c",
       "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md (secao \"Ponteiros stale na raiz\") + FINAL_RAP_RELEASE_CLOSURE.json (marcado SUPERSEDED) + AGENTS.md (secao de auditoria externa)",
       "prevention": "Medido 2026-10-16: FINAL_RAP_RELEASE_CLOSURE.json (2026-09-24, headNow b0665b767, worktreeClean=false), FINAL_RELEASE_CLOSURE.md, ENGINEERING_ROUTER_V1_SEAL_REPORT.json e ENGINEERING_ROUTER_V1_FINAL_SEAL.md congelaram em 2026-09-22/24. Varredura completa do repositorio: nenhum script os produz nem os valida — sao ponteiros orfaos. Um auditor externo que os leia como estado atual audita o passado. Prevencao ativa: o entrypoint os mede e avisa em toda geracao; FINAL_RAP_RELEASE_CLOSURE.json foi marcado SUPERSEDED com o conteudo original preservado integralmente; AGENTS.md e AI_MEMORY/operational-rules.md apontam para o entrypoint e proibem usa-los como estado corrente.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "severityBasis": "ponteiros stale na raiz (risco de leitura errada de estado)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
@@ -904,10 +988,12 @@
       "commit": "c27d4bbc5",
       "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json + /tmp/agg7.log (linha RED_TO_FIX) + timeline medida",
       "prevention": "REGRA: nao commitar, nao editar arquivos e nao regenerar artefatos enquanto `npm run validate:governance-enforcement` roda. MEDICAO 2026-10-16 (nao hipotese): o agg7 falhou com `[runtime-evidence] RUNTIME_FAIL falhas=1` no item RED_TO_FIX (tests/integration/engineeringRouterFullLoopE2E.test.js), com assercao real `Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\"`. Linha do tempo: agg7 terminou 15:37:17; eu commitei 602a00a1c as 15:30:42 e afb5e1eaf as 15:32:18 — DURANTE o run. Mecanismo: a promocao do Engineering Router deriva `expectedBaseCommit` do HEAD REAL do branch de trabalho e calcula tree hashes (git add -A/write-tree em worktrees); com o HEAD se movendo e o working tree mudando no meio, expected != validated => promocao recusada => task termina em READY_FOR_PROMOTION (mesma classe documentada em promotionService.js, ER-V1-SEAL-001/002). PROVA de que NAO e regressao de codigo: (a) o proprio gate registrou fingerprint=1c10ffa62e169a18…, IDENTICO ao agg6 que passou; (b) os commits desta janela so tocaram AI_MEMORY/docs/tools-audit, todos FORA de SOURCE_ROOTS; (c) o teste passa isolado (PASS em 50,9 s).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "severityBasis": "commitar durante o run quebra promocao do E2E (processo/diagnostico)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
@@ -922,10 +1008,12 @@
         "misleadingMessage": "saida do Jest nao pode ser parseada como JSON (crash antes do reporter)",
         "mitigation": "Ao investigar falha do runtime-evidence, ler SEMPRE a secao \"stderr do filho\" do log antes de aceitar a linha resumida do gate. Este item esta registrado para que a proxima sessao nao repita o diagnostico errado."
       },
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "OPEN",
-      "legacyStatus": "blocked"
+      "legacyStatus": "blocked",
+      "severityBasis": "diagnostico enganoso (\"crash antes do reporter\" em falha de assercao)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
@@ -953,10 +1041,12 @@
         "fingerprintUnchanged": "1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e",
         "sourceRootsEvidence": "governance/proof-engine/fingerprint-chain.js:106-112"
       },
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "OPEN",
-      "legacyStatus": "blocked"
+      "legacyStatus": "blocked",
+      "severityBasis": "taxonomia de persistencia JSON (higiene; hoje contornado com .md)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
@@ -965,11 +1055,13 @@
       "commit": "58ce559ef",
       "evidence": "tools/audit/checkpoint.js + tests/unit/audit/checkpointTool.test.js + AI_MEMORY/evidence/checkpoints.md + AI_MEMORY/operational-checklists/checkpoint-protocol.md",
       "detail": "Cada commit de desenvolvimento passa a carregar: branch, SHA de base, arquivos modificados, testes EXECUTADOS com exit code/duração/sha256 da saída e o problema corrigido. O gravador recusa escrever quando qualquer teste falha (prova bidirecional em tests/unit/audit/checkpointTool.test.js, 5/5), recusa rodar em main/master e recusa sem --tests. Instituído em dev/engineering-hardening (nunca main, nunca tag, nunca force).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/audit/checkpointTool.test.js"
+      "regressionTest": "tests/unit/audit/checkpointTool.test.js",
+      "severityBasis": "ferramenta/runbook de checkpoints (auditoria incremental)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
@@ -978,11 +1070,13 @@
       "commit": "3bbf51ac7",
       "evidence": "tests/unit/audit/auditEntrypointArtifact.test.js + AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md",
       "detail": "Um teste roda audit:json-persistence --check e exige PASS/unknown=0 — trava direta da regressão que reprovou o agg8 (escrita .json fora da taxonomia em AI_MEMORY/evidence/). Outro recalcula o auditEpoch com stringify canônico REIMPLEMENTADO (verificador independente, não compartilha código com o produtor). O artefato passou a ter UMA cerca json (a dica de extração citava a mesma marcação e quebrava parser ingênuo).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/audit/auditEntrypointArtifact.test.js"
+      "regressionTest": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "severityBasis": "travas do ponto de entrada de auditoria: se quebram, o auditor externo perde a prova",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "AUDITORIA-BRANCH-INVENTORY",
@@ -991,11 +1085,13 @@
       "commit": "58ce559ef",
       "evidence": "tools/audit/branch-inventory.js + tests/unit/audit/branchInventory.test.js + AI_MEMORY/evidence/branch-inventory-2026-10-16.md",
       "detail": "Medição 2026-10-16: 2497 branches locais, 2112 já contidas em origin/main, 385 exigem decisão (360 de engineering/missions + 18 de engineering-router/candidates + branches de feature/fix). Classifica cada não-mergeada por arquivos tocados (sandbox_only vs toca_outros) e imprime o comando dry-run. NÃO apaga nada: poda continua decisão explícita do dono.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/audit/branchInventory.test.js"
+      "regressionTest": "tests/unit/audit/branchInventory.test.js",
+      "severityBasis": "inventario de branches locais (higiene)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
@@ -1004,11 +1100,13 @@
       "commit": "60558fba4",
       "evidence": "tests/unit/audit/auditEntrypointArtifact.test.js + mtime de governance/json-persistence-audit.json",
       "detail": "DEFEITO MEU, medido: meu teste chamava `json-persistence-audit.js --check`, e esse script grava `governance/json-persistence-audit.json` de forma INCONDICIONAL antes de checar a flag (fs.writeFileSync em main()). Esse arquivo é artefato AUTORITATIVO do run governado, então regravá-lo fora da janela invalidou o run: `validate:current-run-temporal-integrity` passou a reprovar com INVALID_AUTHORITATIVE_ARTIFACT (mtime 16:47:39 do artefato contra fim do agregado 16:33:58). Correção: o teste passou a LER o artefato (PASS/unknown=0/sem alvo UNKNOWN sob AI_MEMORY/) em vez de reexecutar o produtor. PROVA do fix: mtime 16:47:39 idêntico antes e depois da suíte, com 14/14 PASS.",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/audit/auditEntrypointArtifact.test.js"
+      "regressionTest": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "severityBasis": "teste regravava artefato governado e derrubava a integridade temporal (falso FAIL de governanca)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
@@ -1018,11 +1116,13 @@
       "commit": "107b1b540",
       "detail": "CORRECAO DE ANALISE (mesma sessao, apos ler o pipeline): minha primeira leitura era EXAGERADA. A fase `certify` do seal-release.sh JA reconstroi e assina a cadeia pelo caminho sancionado (governance/sign-governance.js) e a verifica BLOQUEANTEMENTE em seguida — o proprio arquivo documenta este defeito medido em 2026-10-16 (9 divergencias) e e a correcao dele. Logo a cadeia E VALIDA imediatamente apos um selo; o que a torna divergente depois e a regravacao LEGITIMA dos elos derivados pelo ciclo. MEDICAO CLASSIFICADA (validador rodando de verdade, derivado no ponto de entrada): das 9 divergencias, TODAS as 5 com elo nomeado sao elos DERIVADOS (evidence-manifest, final-proof-report, final-readiness-report, proof-signature, package-validation-report); as outras 4 sao consequencias estruturais (cumulative_hash_broken x3, chain_root_mismatch). NENHUM elo IMUTAVEL divergiu: o artefato certificado (payload.zip, commit d9c469e6) NAO foi alterado. RESIDUAL REAL (menor): (i) validate:governance-chain nao esta no agregado, entao um ciclo de validacao podia deixar a cadeia divergente com o agregado verde — agora EXPLICITADO no AUDIT_ENTRYPOINT.md, que traz estado, raizes, classificacao por elo e o remedio (novo ciclo de selagem, nunca \"conserto\" manual); (ii) a cadeia cobre elos que o proprio ciclo regrava, o que a torna valida apenas no snapshot pos-selo — propriedade de desenho, agora documentada. NAO adicionei o gate ao agregado de proposito: a frio ele ficaria permanentemente vermelho, porque o proprio agregado regrava elos cobertos.",
       "prevention": "REGRA: ao ver \"cadeia quebrada\", classificar PRIMEIRO por elo — divergencia em elo derivado (regravado pelo ciclo) exige novo ciclo de selagem; divergencia em elo IMUTAVEL e a classe grave (adulteracao). Nunca declarar adulteracao a partir de hash_mismatch em relatorio derivado, e nunca \"consertar\" a cadeia a mao (o caminho sancionado e governance/sign-governance.js dentro da fase certify).",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P3",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/audit/auditEntrypointArtifact.test.js"
+      "regressionTest": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "severityBasis": "correcao de ANALISE sobre a cadeia (documentacao/leitura)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
@@ -1037,10 +1137,12 @@
         "reality": "o gerador apenas le a fila; a escrita real e feita por scripts de sessao fora do repositorio",
         "artifact": "governance/json-persistence-audit.json"
       },
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "OPEN",
-      "legacyStatus": "blocked"
+      "legacyStatus": "blocked",
+      "severityBasis": "falso positivo do scanner de persistencia (registra escrita fantasma da fila)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
@@ -1143,10 +1245,12 @@
       "detail": "EXIGENCIA DA MISSAO (FASE 6): \"Se a correcao alterar o fingerprint, gere um novo candidato e execute nova certificacao. Preserve o candidato anterior como historico.\" MEDIDO: sourceFingerprint 1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e (run rap-governed-20261016144931085-033e1239) -> 53977d2dc113687ed5b5325f57af783a65ef42e6b0be5407fd30e32c8e60c96b (worktree). Mudou porque governance/**/*.js e scripts/governance/** pertencem a SOURCE_ROOTS/FILTERED_SOURCE_ROOTS. Candidato atual (release r-agent2-20261016-133323) esta em dist/candidate/ e NAO corresponde ao source corrigido. SEQUENCIAMENTO DELIBERADO: gerar UM ciclo de selo no congelamento (FASE 9/10), porque FASE 7 (CI) e FASE 8 (varredura transversal) tambem podem alterar o fingerprint — dois ciclos de ~90 min cada produziriam um candidato ja obsoleto. PASSOS: (1) arquivar dist/candidate/r-agent2-20261016-133323.candidate.zip + manifesto em dist/archive/r-agent2-20261016-133323.candidate/ (historico); (2) limpar o estado transitorio de dist/ conforme a exigencia do converge-governance.sh (dist/candidate/*, dist/release/*, dist/*.manifest.json, dist/governance-artifacts/*), preservando dist/archive/; (3) npm run release:seal --from candidate ate verify-delivery. NAO e release publicada: nenhuma tag, nenhum merge na main, sem push de artefato. | ATUALIZADO 2026-10-16: apos as correcoes da FASE 6, FASE 7 e da identidade canonica, o fingerprint do worktree passou a f8e2c0a1d2d7b1272edc9053dc78b48ef931c4695e977db61932ce7e327b50d5 (cadeia: 1c10ffa6… do run rap-governed-20261016144931085-033e1239 -> 53977d2d… apos a FASE 6 -> f8e2c0a1… apos scripts/ci + scripts/governance). O candidato r-agent2-20261016-133323 continua sem correspondencia com o source corrigido. O ciclo novo tambem e necessario porque: (a) o run governado corrente nao tem git_commit (runIdentityCommit), entao o estampador de lineage agora RECUSA estampar (fail-closed) ate existir run criado pelo caminho corrigido; (b) validate:current-run-temporal-integrity acusa 4 INVALID_AUTHORITATIVE_ARTIFACT (P2-TESTES-REGRAVAM-…) que so o run novo regenera+estampa dentro da janela; (c) assert-canonical-release-decision esta NO_GO por identidade INCOMPLETA (sourceCommit) — e essa e a evidencia que a correcao da identidade precisa para provar que o GO passa a ser alcancavel. | CONCLUIDO 2026-10-17: cadeia executada na ORDEM CORRETA e medida — (A) run rap-governed-20261017045258622-8d8b0d7d do fingerprint bfbabde34663… com sourceCommit 90226a6b0… e branch dev/engineering-hardening; (A.1) waves DENTRO do run: db-integrity exit 0, api-surface exit 0 (888 VALIDATED / 7 VISITED / 0 FAILED), page-surface exit 0 (151 VALIDATED / 0 FAILED); (B) converge exit 0; (C) engineering-router:v2-seal exit 0 status=GO 21 passos 0 falhas; (D) commit da evidencia (worktree 0); (E) npm run zip:release -> \"CANDIDATO DELIVERED SELADO — DECISAO DEFERRED VERDADEIRA\" (exit 1 e o esperado da fase candidato; a fase DELIVERED fica SEAL_PENDING com below10=[RAP-055,RAP-056]); (F) sign-governance -> chainRoot 99e1de118ee4f399… 8 artefatos assinados; (G) validate-governance-chain -> PASS 10 elos 0 divergencias, 3 canonicos / 7 derivados. ARTEFATO NOVO: r-agent2-20261017-040050 (manifest git_commit 8bfbb61b…, git_branch dev/engineering-hardening, sourceFingerprint bfbabde34663…, audit=passed). ORDEM APRENDIDA (estava errada antes): as waves tecnicas tem de rodar DEPOIS da criacao do run — o coverage gate compara report.runId com o runId corrente e, se as waves forem de um run anterior, degrada VALIDATED->STALE e da NO_GO (medido 21,4% de cobertura tecnica contra 99% com as waves no run certo). NADA PUBLICADO: sem tag, sem merge, sem push de artefato; o candidato nao corresponde a GO definitivo (decisao canonica segue NO_GO ate a fase DELIVERED).",
       "commit": "8bfbb61bd9",
       "evidence": "dist/candidate/r-agent2-20261017-040050.candidate.zip + dist/release/r-agent2-20261017-040050.{zip,manifest.json,payload.zip,delivered.identity.json} + governance/governance-chain.json (root 99e1de118ee4f399…) + reports/governance-chain-report.json + dist/archive/r-agent2-20261016-133323{,.payload,.candidate}/ (historico preservado)",
-      "severity": null,
-      "severityStatus": "NAO_DECLARADA",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "severityBasis": "candidato/certificacao desatualizados apos mudanca de fingerprint (risco de GO sobre artefato antigo)",
+      "severitySource": "analise-tecnica-2026-10-17"
     },
     {
       "id": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
@@ -1202,6 +1306,19 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/producerLineageIdentity.test.js"
+    },
+    {
+      "id": "H20-RUN-ORFAO-PROJECAO-STALE",
+      "title": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
+      "status": "pending",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "lineage local: projecao de readiness deixa de refletir o run corrente; teste convergenceFixpoint detecta, sem falso GO",
+      "severitySource": "analise-tecnica-2026-10-17",
+      "state": "OPEN",
+      "legacyStatus": "pending",
+      "evidence": "MEDIDO 2026-10-17: governance/.current-run.json runId=rap-governed-20261017111858007-5d93eee8 (createdAt 11:18:58Z) vs dev/platform-readiness/latest.json runId=rap-governed-20261017053314590-3558e6f4 (generatedAt 11:12:00Z) — MESMO sourceCommit aa2db65fb. Causa: create-governed-run de um ciclo de selagem interrompido antes da fase que regenera a projecao. Nova deteccao: check A9-lineage-run-projecao do scripts/ci/dev-branch-gate.js.",
+      "regressionTest": "tests/unit/governance/convergenceFixpoint.test.js"
     }
   ],
   "schemaVersion": 2,
