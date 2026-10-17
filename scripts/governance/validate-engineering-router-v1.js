@@ -27,6 +27,7 @@ const { computeSourceFingerprint } = require('../../governance/proof-engine/fing
 // divergir por esquecimento).
 const { RUNTIME_ITEMS } = require('./collect-engineering-router-runtime-evidence');
 const REQUIRED_RUNTIME_ITEM_IDS = Object.freeze(RUNTIME_ITEMS.map((item) => item.id));
+const { resolverCadeiaEfetiva } = require('./lib/effective-aggregate-chain');
 
 /**
  * ERV1-CLOSE-010: gate must FAIL se a evidência de runtime estiver ausente, velha (fingerprint
@@ -681,12 +682,22 @@ function main() {
     id: 'MANDATORY_RUNTIME_GATE_IN_OFFICIAL_PIPELINE',
     ok: (() => {
       const pkg = JSON.parse(readText('package.json'));
-      const script = pkg.scripts && pkg.scripts['validate:governance-enforcement'];
-      return typeof script === 'string'
-        && script.includes('npm run validate:engineering-router-v1:runtime')
-        && !/validate:engineering-router-v1 &&/.test(script);
+      // P1 (agregado com veredito próprio): o topo virou WRAPPER e a cadeia `&&` canônica
+      // passou a viver em `:chain`. Ler só o topo atestava a forma antiga e reprovava um
+      // pipeline que CONTINUA chamando o gate runtime — medido: a missão ia a RED na fase
+      // GOVERNANCE e o sintoma se disfarçava de "flakiness sob carga".
+      const { resolverCadeiaEfetiva } = require('./lib/effective-aggregate-chain');
+      const resolvido = resolverCadeiaEfetiva(pkg.scripts || {}, {
+        lerFonteRunner: () => readText('scripts/governance/run-governance-enforcement.js'),
+      });
+      if (!resolvido.cadeia) return false;
+      const cadeiaEfetiva = resolvido.cadeia;
+      const temRuntime = cadeiaEfetiva.includes('npm run validate:engineering-router-v1:runtime');
+      // Nenhuma ocorrência da forma structural-only (sem `:runtime`) na cadeia efetiva.
+      const semStructuralOnly = !/validate:engineering-router-v1(?!:runtime)/.test(cadeiaEfetiva);
+      return temRuntime && semStructuralOnly;
     })(),
-    reason: 'validate:governance-enforcement precisa chamar validate:engineering-router-v1:runtime (nunca a versão structural-only) — é a autoridade que scripts/governance/seal-release.sh usa para selar releases',
+    reason: 'validate:governance-enforcement (ou a cadeia que ele executa) precisa chamar validate:engineering-router-v1:runtime (nunca a versão structural-only) — é a autoridade que scripts/governance/seal-release.sh usa para selar releases',
   });
   // ER-V1-FINAL-005 — Durable Resume: transitionTask(...).catch(()=>{}) cego (engole QUALQUER
   // erro, não só a retomada idempotente esperada) nunca pode reaparecer no loop principal —

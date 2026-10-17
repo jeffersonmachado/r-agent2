@@ -46,10 +46,17 @@ function runGate({ runtime = true } = {}) {
 describe('ER-V1-FINAL-004 — Mandatory Runtime Gate', () => {
   test('package.json: validate:governance-enforcement exige RUNTIME (nunca structural sozinho)', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-    const script = pkg.scripts['validate:governance-enforcement'];
-    expect(script).toContain('npm run validate:engineering-router-v1:runtime');
+    // A cadeia efetiva pode estar no próprio script (forma DIRETA) ou em `:chain` quando o
+    // topo é o wrapper que persiste veredito próprio. O que não pode mudar é o CONTEÚDO
+    // executado: o passo de runtime precisa estar lá.
+    const { resolverCadeiaEfetiva } = require('../../scripts/governance/lib/effective-aggregate-chain');
+    const resolvido = resolverCadeiaEfetiva(pkg.scripts || {}, {
+      lerFonteRunner: () => fs.readFileSync(path.join(ROOT, 'scripts', 'governance', 'run-governance-enforcement.js'), 'utf8'),
+    });
+    expect(resolvido.motivos).toEqual([]);
+    expect(resolvido.cadeia).toContain('npm run validate:engineering-router-v1:runtime');
     // Nunca o comando SEM :runtime isolado — só como prefixo do :runtime (correto), não solto.
-    expect(script).not.toMatch(/validate:engineering-router-v1 &&/);
+    expect(resolvido.cadeia).not.toMatch(/validate:engineering-router-v1(?!:runtime)/);
   });
 
   test('checkGovernance() do loop ao vivo NUNCA passa por package.json/npm — continua sem --runtime (sem deadlock de bootstrap)', () => {
