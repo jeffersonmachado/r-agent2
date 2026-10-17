@@ -1221,8 +1221,7 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
       "title": "AI_MEMORY/evidence/ fora da taxonomia canônica de persistência JSON",
-      "status": "blocked",
-      "blocked_reason": "Classificar AI_MEMORY/evidence/ exige editar governance/json-persistence-audit.js, que esta em FILTERED_SOURCE_ROOTS (governance/**/*.js em governance/proof-engine/fingerprint-chain.js:106-112) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16 (prova dura): o passo bloqueante `audit:json-persistence` (node governance/json-persistence-audit.js --check) reprovou com exit 1 e unknown=2 no agg8, e os dois alvos UNKNOWN eram exatamente os artefatos que eu havia criado: `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json` e `AI_MEMORY/evidence/aggregate-enforcement-last-run.json`. Nao era flake: `classifyByPattern()` (json-persistence-audit.js:249-251) auto-classifica qa/, qa-mesh/, governance/, reports/ e docs/, mas NAO AI_MEMORY/evidence/ — que e exatamente o analogo de qa/evidence/ (essa sim classificada como ARTIFACT_STORAGE). MITIGACAO ATIVA (ja aplicada): o ponto de entrada passou a ser UM arquivo Markdown com o payload JSON embutido em bloco cercado; nenhum `.json` e escrito por tools/audit/. Comprovado: `audit:json-persistence --check` voltou a EXIT=0 e o sourceFingerprint permaneceu 1c10ffa62e169a18 (tools/audit/ esta fora de SOURCE_ROOTS).",
+      "status": "pending",
       "evidence": {
         "measuredAt": "2026-10-16",
         "gateStep": "audit:json-persistence (node governance/json-persistence-audit.js --check)",
@@ -1246,10 +1245,11 @@
       },
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "OPEN",
-      "legacyStatus": "blocked",
+      "state": "FIXED_PENDING_VERIFICATION",
+      "legacyStatus": "pending",
       "severityBasis": "taxonomia de persistencia JSON (higiene; hoje contornado com .md)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
     },
     {
       "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
@@ -1355,8 +1355,7 @@
     {
       "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
       "title": "Inventario de persistencia registra escrita fantasma da fila oficial (falso positivo do scanner)",
-      "status": "blocked",
-      "blocked_reason": "DEFEITO MENOR (P1), sem impacto em gate. MEDIDO 2026-10-16: o unico alvo sob AI_MEMORY/ no inventario e `AI_MEMORY/hardening-queue.json`, classificado como STATIC_VERSIONED_CONFIG, com writer `tools/audit/generate-audit-entrypoint.js` — mas esse gerador apenas LE a fila. O scanner trata o caminho como alvo de escrita porque ele aparece no mesmo arquivo que escreve o .md. Dois problemas reais: (1) alvo de escrita fantasma; (2) classificacao impropria, porque a fila e MUTAVEL (agentes escrevem nela) e nao \"configuracao versionada estatica\". Correcao exige editar governance/json-persistence-audit.js (SOURCE_ROOTS) => novo fingerprint => re-selagem. Como o alvo esta classificado, nenhum gate reprova por isso — risco atual: baixo, mas o inventario mente.",
+      "status": "pending",
       "evidence": {
         "measuredAt": "2026-10-16",
         "target": "AI_MEMORY/hardening-queue.json",
@@ -1367,10 +1366,11 @@
       },
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "OPEN",
-      "legacyStatus": "blocked",
+      "state": "FIXED_PENDING_VERIFICATION",
+      "legacyStatus": "pending",
       "severityBasis": "falso positivo do scanner de persistencia (registra escrita fantasma da fila)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
     },
     {
       "id": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",

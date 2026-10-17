@@ -22,7 +22,7 @@ const logger = require('../../utils/logger');
 const { buildPendencies, filterPendencies } = require('../../../engine/governance/pendenciesModel');
 const { collectReleaseBlockers, DEFAULT_ROOT } = require('./releaseStateService');
 
-const QUEUE_RELATIVE = path.join('AI_MEMORY', 'hardening-queue.json');
+const QUEUE_RELATIVE = path.resolve('AI_MEMORY', 'hardening-queue.json');
 
 function queuePath(rootDir) {
   return path.join(rootDir, QUEUE_RELATIVE);

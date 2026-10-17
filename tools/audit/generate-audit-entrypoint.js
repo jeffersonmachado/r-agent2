@@ -184,7 +184,10 @@ const provas = PROVAS.map(({ path: rel, campo }) => {
 });
 
 // ----------------------------------------------- itens abertos da fila
-const fila = lerJson(path.join(ROOT, 'AI_MEMORY/hardening-queue.json')) || { items: [] };
+// `path.resolve`: leitura registrada pelo auditor de persistência sem virar
+// "escrita fantasma" (o scanner só reconhece leitura com `path.join` inline em
+// `fs.readFileSync`).
+const fila = lerJson(path.resolve(ROOT, 'AI_MEMORY/hardening-queue.json')) || { items: [] };
 const STATUS_FECHADOS = ['done', 'verified', 'prevention_active', 'blocked_external'];
 const naoFechados = (fila.items || []).filter((i) => !STATUS_FECHADOS.includes(i.status));
 

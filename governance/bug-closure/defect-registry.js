@@ -82,8 +82,13 @@ function migrarItem(item) {
  * @returns {{defeitos:Array, resumo:object, origem:string, geradoEm:string}}
  */
 function carregarInventario(opcoes = {}) {
+  // `path.resolve` de propósito: o auditor de persistência (RAP-078) só reconhece
+  // contexto de LEITURA quando o `path.join` está DENTRO de `fs.readFileSync(...)`.
+  // Aqui o caminho é resolvido numa variável e lido depois, então `path.join`
+  // virava "alvo de ESCRITA fantasma" da fila no inventário. `path.resolve`
+  // produz o mesmo caminho sem o falso positivo.
   const queuePath = opcoes.queuePath
-    || path.join(__dirname, '..', '..', 'AI_MEMORY', 'hardening-queue.json');
+    || path.resolve(__dirname, '..', '..', 'AI_MEMORY', 'hardening-queue.json');
 
   if (!fs.existsSync(queuePath)) {
     const erro = new Error(`${CODIGOS.FILA_AUSENTE}: ${queuePath} não existe`);

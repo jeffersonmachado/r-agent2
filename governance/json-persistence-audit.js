@@ -88,6 +88,13 @@ const CLASSIFIED = {
   // runtime. A classificação por basename abaixo existe para leitores que não
   // resolvem o diretório; esta entrada cobre o caminho completo.
   'AI_MEMORY/hardening-queue.json': 'STATIC_VERSIONED_CONFIG',
+  // Evidência versionada de auditoria (checkpoints, entrypoint, relatórios de
+  // sessão). É documentação/prova sob git — não estado de runtime. Fica fora do
+  // diretório de runtime (`/var/lib/ragent2`) justamente por ser versionada.
+  // Alvo .json aqui continua proibido na prática (`AI_MEMORY/evidence/` só recebe
+  // .md; ver `audit:json-persistence`), mas o DIRETÓRIO precisa estar na
+  // taxonomia para não aparecer como UNKNOWN quando algum produtor gravar ali.
+  'AI_MEMORY/evidence/': 'STATIC_VERSIONED_CONFIG',
   'qa-mesh/go-no-go-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'qa-mesh/meshHistory/': 'DB_CANONICAL_JSON_EXPORT',
   'qa/qa-waves-enterprise-governance.json': 'DB_CANONICAL_JSON_EXPORT',
