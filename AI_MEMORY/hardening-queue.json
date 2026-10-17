@@ -303,13 +303,14 @@
     {
       "id": "P1-15",
       "title": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
-      "status": "done",
+      "status": "pending",
       "commit": "25cf2e259",
       "evidence": "CORRIGIDO e PROVADO em ciclo real. Fix: em `scripts/two-pass-release.sh::materialize_payload_governance`, a atestacao (`update-package-binding.js`) passou a ser RE-EMITIDA imediatamente antes do `package-integrity-engine` e depois de todas as escritas que ele deve cobrir (`exportGovernanceArtifacts` + `package-validator`). Prova do mecanismo (mesmo payload): antes `EVIDENCE_MANIFEST_HASH_DIVERGENT` exit 1 (computed=a877b7965c803f02e5d2bd58 != recorded=deefdfdecd56c66f7cc5d836); depois `EVIDENCE_MANIFEST_HASH_OK` exit 0 (computed == recorded). PROVA EM CICLO REAL: `npm run release:seal` atravessou a fase `final` e o envelope com `[seal:final] pacote final (SEAL_GO, exit 0)`, release r-agent2-20261011-083027, H_final deb1d888c47cf1db57e116a3b01f337ca340c0c529d9b2, ZIP de 62 MB em dist/release. O check NAO foi afrouxado — a ordem estava errada.",
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "pending",
+      "regressionTest": "tests/unit/governance/attestationOrder.test.js"
     },
     {
       "id": "P1-16",
@@ -1013,25 +1014,16 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
       "title": "Malha grava artefato governado mesmo executando ZERO resultados (--scenario-id da wave nao casa)",
-      "status": "blocked",
+      "status": "pending",
       "commit": "c20433341",
-      "evidence": {
-        "measuredAt": "2026-10-16",
-        "meshArtifact": "qa-mesh/meshHistory/mesh-2026-10-16T14-56-29-025Z.json",
-        "executedResults": 144,
-        "isCanonicalExecution": true,
-        "runId": "rap-governed-20261016144931085-033e1239",
-        "sourceFingerprint": "1c10ffa62e169a18db1cd22e935fb41420fd5a865da58dd576b36a0f355d971e",
-        "sourceRootsEvidence": "governance/proof-engine/fingerprint-chain.js:54-70 e 106-112",
-        "requiresPolicyDecision": true
-      },
-      "blocked_reason": "Decisao de POLITICA (dono do produto), nao mecânica. Medicao 2026-10-16: o fail-open e LATENTE, nao ativo no caminho verde — a execucao canonica da malha no run corrente tem 144 resultados (isCanonicalExecution=true, runId/sourceFingerprint/sourceCommit corretos). Risco real: o produtor grava artefato governado mesmo com executedResults=0 e o gate nao distingue \"executou 0 cenarios\" de \"executou e passou\". Duas direcoes validas com semanticas diferentes: (a) produtor marca artefato vazio como NAO-evidencia, ou (b) a malha falha ANTES de gravar. CUSTO MEDIDO de aplicar agora: qa-mesh/*.js e scripts/governance/* estao em SOURCE_ROOTS (governance/proof-engine/fingerprint-chain.js:54-70,106-112), portanto qualquer edicao muda o fingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem.",
+      "evidence": "CORRIGIDO 2026-10-17: podePromoverCanonico() rebaixa a promocao canonica quando results.length===0 (code MESH_SEM_RESULTADOS) — artefatos governados nao sao gravados e o motivo vai para summary.reasons/canonicalPromotion + log CANONICAL_PROMOTION_REFUSED. Medicao original: execucao com --scenario-id que nao casa grava qa-mesh/go-no-go-report.json, release-gate.json e inteligencia sem executar cenario algum.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "OPEN",
-      "legacyStatus": "blocked",
+      "state": "FIXED_PENDING_VERIFICATION",
+      "legacyStatus": "pending",
       "severityBasis": "fail-open LATENTE: malha grava evidencia governada com ZERO resultados; nao ativo no caminho verde, decisao de politica pendente",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
