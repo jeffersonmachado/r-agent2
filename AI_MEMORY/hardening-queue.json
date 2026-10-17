@@ -1139,16 +1139,17 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
       "title": "Auditoria externa via git: ponto de entrada unico derivado",
-      "status": "done",
+      "status": "pending",
       "commit": "602a00a1c",
       "evidence": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json + AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md + tools/audit/generate-audit-entrypoint.js",
       "detail": "Prova viva de que o dedo e a prova chegam ao auditor que so le git: reports/*.json e governance/*.json sao ignorados (.gitignore 118/124). auditEpoch = sha256 do payload; 13 provas canonicas com SHA-256 em disco; artefatos fisicos do release; fila oficial; veredito derivado do agregado. tools/audit/ esta FORA de SOURCE_ROOTS: comprovado 1c10ffa62e169a18 identico antes e depois do commit (nao invalida o release selado).",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done",
+      "legacyStatus": "pending",
       "severityBasis": "auditabilidade externa (ponto de entrada unico); nao bloqueia release",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/audit/auditEntrypointArtifact.test.js"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
