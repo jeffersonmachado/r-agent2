@@ -580,15 +580,16 @@
     {
       "id": "H18-JORNADA-FUNCIONAL-BROWSER",
       "title": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
-      "status": "done",
+      "status": "pending",
       "commit": "dcc97cbed",
       "evidence": "Novo scripts/smoke/journey-functional-browser.js: exerce ACOES reais (busca, filtro por chip, abrir formulario de criacao, detalhe) em 8 rotas PRODUCTION de negocio e mede o EFEITO. Reusa tests/helpers/playwrightAuth.js (regra do repo). Evidencia em qa/evidence/journey-functional-latest.json (transitoria, nao versionada). Resultado medido: 0 erros de console, 0 pageerror, 0 requisicoes falhas; /workspace busca 8083->792 chars; /crm busca 1922->1170; chips de filtro aplicam; \"Criar entidade rapida\", \"Criar tarefa\" e \"Novo\" abrem. LIÇÃO incorporada: a 1a versao media itens por table/li/card e produziu 5 FALSOS POSITIVOS (media o menu lateral, nao a lista) — falso positivo de detector esconde o defeito real no ruido. Efeito passa a ser diff de textos visiveis + delta de chars + delta de campos.",
       "severity": "P3",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done",
+      "legacyStatus": "pending",
       "severityBasis": "novo detector de jornada (infra de teste), nao e defeito",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/journeyDetectors.test.js"
     },
     {
       "id": "H19-DIST-CAUSA-UNICA",
