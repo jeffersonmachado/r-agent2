@@ -1201,22 +1201,15 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
       "title": "runtime-evidence reporta \"crash antes do reporter\" quando o teste falha por assercao",
-      "status": "blocked",
-      "blocked_reason": "Correcao exige editar scripts/governance/** (SOURCE_ROOTS) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. MEDICAO 2026-10-16: no agg7 o item RED_TO_FIX falhou e o gate reportou \"saida do Jest nao pode ser parseada como JSON (crash antes do reporter)\", mas o Jest terminou normalmente e imprimiu a assercao real no stderr do filho (`Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\"`, engineeringRouterFullLoopE2E.test.js:218) + resumo completo (\"Test Suites: 1 failed, 1 total / Time: 28.241 s\"). O veredito do gate (item falhou) esta CORRETO; o diagnostico e que engana quem le so a linha resumida, e a causa real exige ler a secao \"stderr do filho\".",
-      "evidence": {
-        "measuredAt": "2026-10-16",
-        "gate": "collect:engineering-router-runtime-evidence (via validate:governance-enforcement)",
-        "log": "/tmp/agg7.log",
-        "realAssertion": "Expected: \"GREEN\" / Received: \"READY_FOR_PROMOTION\" em tests/integration/engineeringRouterFullLoopE2E.test.js:218",
-        "misleadingMessage": "saida do Jest nao pode ser parseada como JSON (crash antes do reporter)",
-        "mitigation": "Ao investigar falha do runtime-evidence, ler SEMPRE a secao \"stderr do filho\" do log antes de aceitar a linha resumida do gate. Este item esta registrado para que a proxima sessao nao repita o diagnostico errado."
-      },
+      "status": "pending",
+      "evidence": "CORRIGIDO 2026-10-17: collect-engineering-router-runtime-evidence.js deixou de fazer JSON.parse(stdout) cru; extrairJsonDoJest tenta JSON puro, ultima linha e bloco final. Logs do teste antes do JSON nao viram mais \"crash antes do reporter\".",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "OPEN",
-      "legacyStatus": "blocked",
+      "state": "FIXED_PENDING_VERIFICATION",
+      "legacyStatus": "pending",
       "severityBasis": "diagnostico enganoso (\"crash antes do reporter\" em falha de assercao)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/runtimeEvidenceDiagnosis.test.js"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
