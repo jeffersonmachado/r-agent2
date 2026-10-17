@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T12:46:15.331Z",
+  "updatedAt": "2026-10-17T12:48:32.241Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1484,7 +1484,7 @@
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "lineage local: projecao de readiness deixa de refletir o run corrente; teste convergenceFixpoint detecta, sem falso GO",
       "severitySource": "analise-tecnica-2026-10-17",
-      "state": "OPEN",
+      "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "pending",
       "evidence": "MEDIDO 2026-10-17: governance/.current-run.json runId=rap-governed-20261017111858007-5d93eee8 (createdAt 11:18:58Z) vs dev/platform-readiness/latest.json runId=rap-governed-20261017053314590-3558e6f4 (generatedAt 11:12:00Z) — MESMO sourceCommit aa2db65fb. Causa: create-governed-run de um ciclo de selagem interrompido antes da fase que regenera a projecao. Nova deteccao: check A9-lineage-run-projecao do scripts/ci/dev-branch-gate.js.",
       "regressionTest": "tests/unit/governance/convergenceFixpoint.test.js"
