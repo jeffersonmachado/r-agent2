@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T15:06:09.904Z",
+  "updatedAt": "2026-10-17T15:11:09.240Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -180,24 +180,26 @@
     {
       "id": "P1-5",
       "title": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
-      "status": "done",
+      "status": "pending",
       "commit": "8624e5594",
       "evidence": "rag-service/services/hybrid_search.py + rag-service 156 passed",
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "pending",
+      "regressionTest": "rag-service/tests/test_hybrid_search.py"
     },
     {
       "id": "P1-6",
       "title": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
-      "status": "done",
+      "status": "pending",
       "commit": "73e76535d",
       "evidence": "rag-service/config/settings.py (AliasChoices) + 156 passed / 0 skipped (antes: isolamento 100% SKIPPED)",
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "pending",
+      "regressionTest": "rag-service/tests/test_hybrid_isolation_real_db.py"
     },
     {
       "id": "P1-7",

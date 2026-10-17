@@ -87,12 +87,16 @@ function classificar(exitCode, saida) {
 
 function executarTeste(arquivo) {
   const inicio = Date.now();
-  // Testes de frontend rodam em VITEST (frontend/vitest.config.mjs), não em Jest:
-  // executá-los com Jest daria FAIL falso e impediria a verificação correta.
+  // Três runners legítimos no repo: Jest (backend), Vitest (frontend) e pytest
+  // (rag-service). Rodar um teste Python com Jest daria FAIL falso e impediria a
+  // verificação correta.
   const ehFrontend = String(arquivo).startsWith('frontend/');
-  const comando = ehFrontend
-    ? `cd frontend && npx vitest run ${String(arquivo).replace(/^frontend\//, '')}`
-    : `npx jest ${arquivo} --bail=0`;
+  const ehPython = String(arquivo).startsWith('rag-service/');
+  const comando = ehPython
+    ? `cd rag-service && ./venv/bin/pytest ${String(arquivo).replace(/^rag-service\//, '')} -q`
+    : ehFrontend
+      ? `cd frontend && npx vitest run ${String(arquivo).replace(/^frontend\//, '')}`
+      : `npx jest ${arquivo} --bail=0`;
   const r = spawnSync(comando, {
     cwd: ROOT,
     encoding: 'utf8',
@@ -109,7 +113,7 @@ function executarTeste(arquivo) {
     || /Tests:\s+(\d+) passed,\s+(\d+) total/.exec(saida);
   return {
     arquivo,
-    runner: ehFrontend ? 'vitest' : 'jest',
+    runner: ehPython ? 'pytest' : (ehFrontend ? 'vitest' : 'jest'),
     comando,
     exitCode,
     timeout: r.status === null,
