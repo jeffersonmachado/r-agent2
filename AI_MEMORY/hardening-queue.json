@@ -1096,23 +1096,15 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
       "title": "O gate agregado nao persiste veredito proprio do run corrente",
-      "status": "blocked",
-      "blocked_reason": "Correcao exige editar scripts/governance/** (SOURCE_ROOTS em governance/proof-engine/fingerprint-chain.js:54-70) => muda o sourceFingerprint 1c10ffa62e169a18 e invalida o release ja selado (r-agent2-20261016-133323), exigindo novo ciclo de selagem. Decisao de custo/beneficio do dono. Medicao 2026-10-16: reports/governance-enforcement-full-report.json e de 2026-10-14T22:29:09.605Z e tem runId de OUTRO run; ele e escrito por scripts/governance/run-all-validators.js, que o alias validate:governance-enforcement NAO usa — o alias e uma cadeia direta de 63 passos (62 npm run + 1 node scripts/governance/stamp-report-lineage.js). Mitigacao ativa desde ja: o AUDIT_ENTRYPOINT documenta que o que prova o agregado e o exit 0 da cadeia && (nao a contagem de linhas status=PASS) e marca esse relatorio como DESATUALIZADO.",
-      "evidence": {
-        "measuredAt": "2026-10-16",
-        "report": "reports/governance-enforcement-full-report.json",
-        "reportGeneratedAt": "2026-10-14T22:29:09.605Z",
-        "writer": "scripts/governance/run-all-validators.js",
-        "aliasSteps": 63,
-        "aliasStepsViaNpmRun": 62,
-        "documentedIn": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json (bloco agregado)"
-      },
+      "status": "pending",
+      "evidence": "CORRIGIDO 2026-10-17: scripts/governance/run-governance-enforcement.js executa a cadeia canonica (validate:governance-enforcement:chain, 64 passos) preservando fail-fast e gravando reports/governance-enforcement-verdict.json com runId/sourceFingerprint/sourceCommit, passos executados, exit codes, sha256 da saida e motivo. Identidade incompleta => BLOCKED; exit null => FAIL.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "OPEN",
-      "legacyStatus": "blocked",
+      "state": "FIXED_PENDING_VERIFICATION",
+      "legacyStatus": "pending",
       "severityBasis": "agregado nao persiste veredito proprio do run: veredito deixa de ser provavel/auditavel",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/aggregateVerdict.test.js"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
