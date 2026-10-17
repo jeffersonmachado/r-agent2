@@ -299,14 +299,15 @@
     {
       "id": "P1-13",
       "title": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
-      "status": "blocked_external",
+      "status": "pending",
       "commit": "d7cdaa555",
       "evidence": "RESOLVIDO sem tocar na parte destrutiva: o unico produtor (scripts/system-autotest-stack.sh) faz `docker compose up` e derruba a stack no final, e seu unico invocador e' um workflow deliberadamente desabilitado. Os 6 smokes REAIS foram rodados individualmente (scripts/test-physical-queue-smoke.js, test-ura-publish-rollback-smoke.js, test-pbx-voice-tts-asr-smoke.js, test-pbx-call-events-runtime-smoke.js, test-inbox-runtime-smoke.js, test-bpmn-editor-smoke.js — exatamente os que o script roda) e o fan-in foi feito pela PROPRIA funcao `write_smoke_evidence_summary` extraida por `sed` do script canonico (nenhuma logica reescrita); status vem do exit code real com o mesmo mapeamento (0 -> pass). Resultado: as DUAS copias (runtime root 2026-08-21 e workspace 2026-09-30) substituidas por generatedAt=2026-10-10T21:25:30Z com l01..l06=pass; prova de nao-fabricacao: qa/l06-bpmn-editor-evidence.json traz pageLoad/xmlExported/internalFlow(15 nos) e qa/l01-physical-queue-evidence.json traz queueId/ticketId/transicoes reais. Efeito medido no gate: `npm run system:go-no-go` passou de NO_GO com `smoke_evidence_stale` (idade 1220 h) para GO.",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "BLOCKED_EXTERNAL",
-      "legacyStatus": "done",
-      "blocked_reason": "BLOQUEIO OBJETIVO (infra): o unico produtor de qa/smoke-evidence.json e scripts/system-autotest-stack.sh, que sobe e derruba a stack completa (docker compose up/down) e cujo unico invocador e um workflow deliberadamente desabilitado. Regenerar a evidencia exige stack viva (Docker + Postgres + API) — processo longo, proibido enquanto houver P0/P1 bloqueante (missao §9). Evidencia atual: qa/smoke-evidence.json de 2026-10-10. Acao necessaria: rodar os 6 smokes reais com a stack de pe dentro de um run governado."
+      "state": "FIXED_PENDING_VERIFICATION",
+      "legacyStatus": "pending",
+      "blocked_reason": null,
+      "regressionTest": "tests/unit/governance/smokeEvidenceSummary.test.js"
     },
     {
       "id": "P1-10",
