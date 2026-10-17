@@ -782,6 +782,22 @@ phase_certify() {
     fi
   done
 
+  # ── STAGING TRANSITÓRIO (DEFEITO MEDIDO 2026-10-16) ────────────────────────
+  #
+  # `sign-governance.js` RECRIA `dist/governance-artifacts/` — o staging que o
+  # empacotamento inclui no ZIP. Medido: essa sobra derruba o agregado no passo
+  # `validate:dist`, porque `scripts/check-dist-clean.sh` acusa
+  #   "Arquivos/dirs inesperados na raiz de dist/: governance-artifacts"
+  # (o ZIP já foi construído na fase `candidate`, e o `release-package.sh`
+  # remove o staging ao final do empacotamento).
+  #
+  # A limpeza aqui é a MESMA operação do empacotamento ("Remover
+  # governance-artifacts/ de releases anteriores"), não um relaxamento de gate:
+  # o atestado já foi propagado para o workspace e nenhum passo entre `certify` e
+  # `verify-delivery` lê o staging (`verify-delivered-release` lê o manifesto e os
+  # relatórios canônicos).
+  rm -rf "$ROOT/dist/governance-artifacts"
+
   # O gate RECALCULA os bytes atuais e compara com a cadeia gravada. Bloqueante: uma
   # cadeia que não fecha significa que algum documento certificado mudou depois do
   # hash — exatamente a classe de defeito que este bloco existe para impedir.

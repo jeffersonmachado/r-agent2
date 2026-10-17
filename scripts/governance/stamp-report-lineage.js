@@ -143,6 +143,16 @@ function stamp(relativePath, run) {
     ...report,
     runId: run.run_id,
     sourceFingerprint: run.source_fingerprint,
+    // DEFEITO MEDIDO (2026-10-16): o estampador gravava runId e fingerprint e
+    // NUNCA o commit. Como a decisão canônica exige `sourceCommit` como campo
+    // OBRIGATÓRIO de identidade (governance/canonical-release-decision.js,
+    // CAMPOS_IDENTIDADE_OBRIGATORIOS), os três relatórios finais ficavam com
+    // identidade INCOMPLETA para sempre:
+    //   identidade insuficiente: final_governance:INCOMPLETA:faltantes=sourceCommit
+    //   (idem final_readiness e final_proof)  =>  decisão nunca podia ser GO.
+    // O commit vem do RUN (fonte única), nunca do HEAD do worktree — o worktree
+    // pode ter avançado depois do congelamento.
+    sourceCommit: run.git_commit,
     generatedAt: report.generatedAt,
     artifactType,
     artifactVersion,
@@ -155,6 +165,19 @@ async function main() {
   await connect();
   const run = await getRun().findOne({ order: [['created_at', 'DESC']] });
   if (!run) throw new Error('governance_run_missing');
+
+  // FAIL-CLOSED: identidade canônica exige runId + sourceCommit + sourceFingerprint.
+  // Um run sem `git_commit` (medido em 2026-10-16 na base real: null) produziria
+  // relatórios com identidade INCOMPLETA — estampar aqui fabricaria uma
+  // identidade que não existe. A correção é recriar o run pelo caminho oficial
+  // (`scripts/governance/create-governed-run.js`, que agora grava o commit).
+  if (!run.git_commit) {
+    throw new Error(
+      'RUN_SEM_SOURCE_COMMIT: o run ' + run.run_id + ' não tem git_commit; a identidade canônica ' +
+      'exige sourceCommit (runId + sourceCommit + sourceFingerprint). Recrie o run com o caminho ' +
+      'oficial para que a estampagem tenha commit a propagar.'
+    );
+  }
 
   // FONTE ÚNICA da lista: a taxonomia (config/runtime-evidence-artifacts.json).
   // Manter a lista aqui criava um segundo registry, que divergia do classificado —
@@ -175,6 +198,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     runId: run.run_id,
     sourceFingerprint: run.source_fingerprint,
+    sourceCommit: run.git_commit,
     runStartedAt: run.started_at,
     totals: {
       considered: results.length,
