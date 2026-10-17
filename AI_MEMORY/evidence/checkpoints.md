@@ -652,3 +652,70 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 8aba6b1e8d86 — fix(FASE 6): a cadeia nao pode manter aparencia de valida depois de alterada
+
+- **Quando**: 2026-10-17T00:04:32.620Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `56f459260e2526b79364a4ad9bc81691ea48ce3e`
+- **id** (sha256 do conteúdo do checkpoint): `8aba6b1e8d86d10a4a3840e1fc61960b69f55fa2ea32de95259ef03625922d35`
+
+**Problema corrigido:** buildChain gravava valid=completeChain (válido = arquivo existe) e validate:self-proving aprovava lendo esse campo: artefato declarando valid=true com 9 divergencias reais de hash e 6 elos escritos ate 9869s depois da certificacao
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M governance/governance-attestation.json`
+- `M governance/governance-chain.js`
+- `M governance/governance-chain.json`
+- `M governance/governance-maturity.js`
+- `M governance/governance.sig`
+- `M governance/rebind-to-current-package.js`
+- `M governance/sign-governance.js`
+- `M scripts/governance/validate-governance-chain.js`
+- `M scripts/governance/validate-self-proving.js`
+- `tests/unit/governance/governanceChainAppearance.test.js`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `node scripts/governance/validate-governance-chain.js` | 0 | 0.6 s | 02f6bc55b631 |
+| `node scripts/governance/validate-self-proving.js` | 0 | 0.4 s | e3b0c44298fc |
+| `npx jest tests/unit/governance/governanceChainAppearance.test.js` | 0 | 4.3 s | 8e891120dcd1 |
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-governance-chain.js</code></summary>
+
+```
+[governance-chain] status=PASS links=10 stored=01575f228a36… recomputado=01575f228a36…
+[governance-chain] elos: canonicos=3 derivados=7 imutaveisPosSelo=3
+[governance-chain] PASS: cadeia recomputada confere com a persistida e a declaração é auditável
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>node scripts/governance/validate-self-proving.js</code></summary>
+
+```
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/governanceChainAppearance.test.js</code></summary>
+
+```
+  fiação — os gates consomem o veredito recalculado, nunca o campo persistido
+    ✓ validate:self-proving recalcula e compara declaração com realidade (103 ms)
+    ✓ o gate da cadeia publica os códigos de aparência de validade no relatório (103 ms)
+    ✓ o caminho canônico de assinatura certifica antes de assinar (102 ms)
+    ✓ verifyChain continua sendo a autoridade de hash usada pela avaliação (102 ms)
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        2.518 s
+Ran all test suites matching /tests\/unit\/governance\/governanceChainAppearance.test.js/i.
+[jest-global-teardown] Engineering Runner (pid 484896) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---

@@ -372,7 +372,7 @@ function phase2_rebuildChain(ctx) {
     const artifact = resolveArtifact();
     const chain    = buildChain(artifact);
     writeChain(chain);
-    ok(`chainRoot=${chain.chainRoot.slice(0, 24)}… chainLength=${chain.chainLength} valid=${chain.valid}`);
+    ok(`chainRoot=${chain.chainRoot.slice(0, 24)}… chainLength=${chain.chainLength} completa=${chain.completeChain} (build não verifica; a fase 3 certifica)`);
     ctx.chain = chain;
     return chain;
   } catch (e) {

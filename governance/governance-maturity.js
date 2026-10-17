@@ -17,6 +17,8 @@
 const fs   = require('fs');
 const path = require('path');
 
+const { avaliarEstadoDaCadeia } = require('./governance-chain');
+
 const ROOT = path.join(__dirname, '..');
 
 const LEVELS = {
@@ -46,6 +48,13 @@ function evaluateCriteria() {
   const consistency = readJsonSafe('governance/final-consistency-report.json')       || {};
   const crossReport = readJsonSafe('governance/cross-report-validation.json')        || {};
   const chain       = readJsonSafe('governance/governance-chain.json')               || {};
+  // FASE 6 (2026-10-16): `chain.valid` era LIDO de disco. Ele significava apenas
+  // "todos os arquivos existem" enquanto o artefato tinha 9 divergências reais.
+  // Aqui o veredito é RECALCULADO dos bytes atuais.
+  const estadoCadeia = Object.keys(chain).length
+    ? avaliarEstadoDaCadeia(chain)
+    : { status: 'FAIL', recalculadaIntegra: false, autoDeclaracao: 'AUSENTE', codes: ['CADEIA_AUSENTE'] };
+  const chainRecalc = estadoCadeia.recalc || { valid: false, failures: [] };
   const relSig      = readJsonSafe('dist/release.sig')                               || {};
   const govSig      = readJsonSafe('dist/governance.sig')                            || {};
   const attestation = readJsonSafe('dist/governance-attestation.json')               || {};
@@ -97,7 +106,9 @@ function evaluateCriteria() {
       criteria: [
         { id: 'chain_js',       pass: exists('governance/governance-chain.js'),   label: 'Governance Chain Engine presente' },
         { id: 'chain_json',     pass: exists('governance/governance-chain.json'), label: 'Governance Chain JSON gerada' },
-        { id: 'chain_valid',    pass: chain.valid === true,                       label: 'Cadeia válida (chainRoot verificado)' },
+        { id: 'chain_valid',    pass: chainRecalc.valid === true,                 label: 'Cadeia válida (hash RECALCULADO dos bytes atuais)' },
+        { id: 'chain_declaracao_honesta', pass: estadoCadeia.autoDeclaracao !== 'FALSA', label: 'Declaração de validade não contradiz a recalculação' },
+        { id: 'chain_sem_escrita_posterior', pass: (estadoCadeia.escritasPosteriores?.ids || []).length === 0, label: 'Nenhum elo gravado depois da certificação' },
         { id: 'chain_complete', pass: chain.completeChain === true,               label: 'Cadeia completa (sem camadas ausentes)' },
         { id: 'sign_engine',    pass: exists('governance/sign-governance.js'),    label: 'Sign Engine presente' },
         { id: 'release_sig',    pass: exists('dist/release.sig'),                 label: 'dist/release.sig presente' },

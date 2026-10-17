@@ -68,6 +68,38 @@ function buildChainLayers(artifact) {
   ];
 }
 
+// ─── Classificação canônica dos elos (FASE 6 / 2026-10-16) ───────────────────
+//
+// PROBLEMA REAL (medido 2026-10-16): a cadeia tratava como equivalentes elos de
+// naturezas opostas — o ZIP/manifesto/engine (fontes CANÔNICAS, imutáveis depois
+// do selo) e relatórios DERIVADOS que a própria maquinaria de governança reescreve
+// (`system:go-no-go`, `circular-projection`, `converge-governance`, validator de
+// QA, materialização de proofs). Resultado: qualquer execução de governança
+// quebrava 6 dos 10 elos, e o artefato continuava declarando `valid: true`.
+//
+// A classificação é DECLARATIVA e verificável: `escritor` é o produtor legítimo,
+// `imutavelPosSelo` diz se o elo pode ser reescrito depois do selo sem exigir
+// recertificação. Elo derivado reescrito NÃO invalida a evidência, mas exige nova
+// certificação (nunca pode permanecer com aparência de certificado).
+const CLASSIFICACAO_ELOS = {
+  package:            { classe: 'CANONICO', escritor: 'scripts/release-package.sh (empacotamento)',            imutavelPosSelo: true  },
+  sidecar_manifest:   { classe: 'CANONICO', escritor: 'scripts/release-package.sh (manifesto sidecar)',        imutavelPosSelo: true  },
+  blocker_engine:     { classe: 'CANONICO', escritor: 'versionado em git (fonte)',                             imutavelPosSelo: true  },
+  evidence_manifest:  { classe: 'DERIVADO', escritor: 'governance/package-validator.js + tools/system',        imutavelPosSelo: false },
+  final_proof_report: { classe: 'DERIVADO', escritor: 'governance/circular-projection.js + system:go-no-go',   imutavelPosSelo: false },
+  final_readiness:    { classe: 'DERIVADO', escritor: 'governance/circular-projection.js + system:go-no-go',   imutavelPosSelo: false },
+  consistency_report: { classe: 'DERIVADO', escritor: 'governance/governance-consistency-engine.js',           imutavelPosSelo: false },
+  cross_report:       { classe: 'DERIVADO', escritor: 'governance/governance-consistency-engine.js',           imutavelPosSelo: false },
+  proof_signature:    { classe: 'DERIVADO', escritor: 'governance/materialize-proof-artifacts.js',             imutavelPosSelo: false },
+  package_validation: { classe: 'DERIVADO', escritor: 'governance/package-validator.js',                       imutavelPosSelo: false },
+};
+
+const CLASSE_DESCONHECIDA = { classe: 'DESCONHECIDA', escritor: null, imutavelPosSelo: null };
+
+function classificarElo(id) {
+  return CLASSIFICACAO_ELOS[id] || CLASSE_DESCONHECIDA;
+}
+
 // ─── Construção da cadeia ─────────────────────────────────────────────────────
 function buildChain(artifact) {
   const layers     = buildChainLayers(artifact);
@@ -78,6 +110,7 @@ function buildChain(artifact) {
   for (const layer of layers) {
     const hash = sha256File(layer.path);
     const exists = hash !== null;
+    const classificacao = classificarElo(layer.id);
 
     // cumulativeHash = SHA256(prevCumHash + ':' + currentHash)
     const newCumHash = exists
@@ -89,7 +122,11 @@ function buildChain(artifact) {
       id:             layer.id,
       label:          layer.label,
       path:           path.relative(ROOT, layer.path),
+      existe:         exists,
       exists,
+      classe:         classificacao.classe,
+      escritor:       classificacao.escritor,
+      imutavelPosSelo: classificacao.imutavelPosSelo,
       hash:           hash || null,
       previousHash:   prevHash,
       cumulativeHash: newCumHash,
@@ -112,9 +149,161 @@ function buildChain(artifact) {
     chainRoot,
     completeChain,
     missingLayers,
-    valid:       completeChain,
-    links:       chainLinks,
+
+    // DEFEITO MEDIDO (2026-10-16): aqui havia `valid: completeChain`. Isto é, o
+    // construtor rotulava "CADEIA VÁLIDA" a partir de uma medição de EXISTÊNCIA,
+    // sem recalcular um único hash — e o rótulo era persistido em disco e LIDO
+    // como veredito por `validate-self-proving` (PASS no agregado) enquanto o
+    // mesmo artefato tinha 9 divergências reais. `valid` agora só é `true` depois
+    // de `certifyChain()`/`verifyChain()` recalcular e aprovar; o build declara
+    // explicitamente que NÃO verificou.
+    valid:        false,
+    verification: 'NAO_VERIFICADA_PELO_BUILD',
+    certification: null,
+    links:        chainLinks,
   };
+}
+
+// ─── Certificação (recalcula e grava o veredito MEDIDO) ───────────────────────
+/**
+ * Recalcula os hashes dos elos a partir dos artefatos em disco e grava o
+ * veredito medido no próprio artefato.
+ *
+ * `valid: true` só é gravado quando a recalculação aprova. Caso contrário o
+ * artefato passa a declarar `DIVERGENTE` com a lista de divergências — de modo
+ * que ele nunca mantenha aparência de válido depois de um elo ser alterado.
+ */
+function certifyChain(chain, opcoes = {}) {
+  const { origem = 'nao-informada', agora = new Date().toISOString() } = opcoes;
+  const resultado  = verifyChain(chain);
+  const certificada = resultado.valid === true;
+
+  chain.valid        = certificada;
+  chain.verification = certificada ? 'RECALCULADA_INTEGRA' : 'RECALCULADA_DIVERGENTE';
+  chain.certification = {
+    state:        certificada ? 'CERTIFICADA' : 'DIVERGENTE',
+    origem,
+    checkedAt:    agora,
+    certifiedAt:  certificada ? agora : null,
+    chainRoot:    chain.chainRoot,
+    computedRoot: resultado.computedRoot,
+    checkedLinks: resultado.checkedLinks,
+    divergencias: (resultado.failures || []).map((f) => ({
+      id: f.id, reason: f.reason, path: f.path || null,
+    })),
+  };
+
+  return Object.assign({}, resultado, { certificada, chain });
+}
+
+// ─── Estado da cadeia: aparência x realidade (FASE 6) ────────────────────────
+/**
+ * Compara o veredito DECLARADO no artefato com a realidade MEDIDA nos arquivos.
+ *
+ * Implementa a regra canônica: "uma cadeia certificada nunca permaneça com
+ * aparência de válida após a alteração de qualquer elemento obrigatório".
+ *
+ * Motivos de FAIL (nunca rebaixados para aviso):
+ *  - CADEIA_DIVERGENTE                    — recalculação encontra divergências;
+ *  - AUTO_DECLARACAO_DE_VALIDADE_FALSA    — artefato se declara válido/certificado
+ *                                           e a recalculação o contradiz;
+ *  - AUTO_DECLARACAO_DE_VALIDADE_SEM_CERTIFICACAO — declara validade, mas não
+ *                                           declara quem/quando certificou;
+ *  - CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA — elo gravado DEPOIS da certificação
+ *                                           (a cadeia aparenta estar certificada
+ *                                           sobre um conteúdo que já não é o dela).
+ */
+function avaliarEstadoDaCadeia(chain, opcoes = {}) {
+  const lerMtime = opcoes.lerMtime || ((rel) => {
+    const abs = path.join(ROOT, rel);
+    return fs.existsSync(abs) ? fs.statSync(abs).mtimeMs : null;
+  });
+
+  const recalc = verifyChain(chain);
+  const motivos = [];
+
+  if (!recalc.valid) {
+    motivos.push({
+      code: 'CADEIA_DIVERGENTE',
+      message: `${recalc.failures.length} divergência(s): ${recalc.failures.map((f) => `${f.id}:${f.reason}`).join(', ')}`,
+      divergencias: recalc.failures,
+    });
+  }
+
+  const declaraValidade = chain.valid === true || chain.chainValid === true
+    || (chain.certification && chain.certification.state === 'CERTIFICADA');
+  const temCertificacao = !!(chain.certification && chain.certification.state);
+
+  let autoDeclaracao = 'AUSENTE';
+  if (declaraValidade) {
+    if (!recalc.valid) {
+      autoDeclaracao = 'FALSA';
+      motivos.push({
+        code: 'AUTO_DECLARACAO_DE_VALIDADE_FALSA',
+        message: `artefato declara validade (valid=${chain.valid}, estado=${chain.certification ? chain.certification.state : 'sem certification'}) mas a recalculação encontrou ${recalc.failures.length} divergência(s)`,
+      });
+    } else if (!temCertificacao) {
+      autoDeclaracao = 'SEM_CERTIFICACAO';
+      motivos.push({
+        code: 'AUTO_DECLARACAO_DE_VALIDADE_SEM_CERTIFICACAO',
+        message: 'artefato declara validade sem declarar certificação (quem/quando certificou) — declaração não auditável',
+      });
+    } else {
+      autoDeclaracao = 'VALIDA';
+    }
+  }
+
+  // Escritas posteriores à certificação: a aparência de certificado sobreviveu
+  // à alteração de conteúdo que a invalidou.
+  const referenciaMs = chain.certification && (chain.certification.checkedAt || chain.certification.certifiedAt)
+    ? Date.parse(chain.certification.checkedAt || chain.certification.certifiedAt)
+    : (chain.generatedAt ? Date.parse(chain.generatedAt) : null);
+
+  const escritasPosteriores = { ids: [], detalhes: [] };
+  if (Number.isFinite(referenciaMs)) {
+    for (const link of chain.links || []) {
+      const ms = lerMtime(link.path);
+      if (ms === null || ms === undefined) continue;
+      if (ms > referenciaMs) {
+        escritasPosteriores.ids.push(link.id);
+        escritasPosteriores.detalhes.push({
+          id: link.id,
+          classe: link.classe || null,
+          path: link.path,
+          segundosDepois: Math.round((ms - referenciaMs) / 1000),
+        });
+      }
+    }
+  }
+
+  if (escritasPosteriores.ids.length > 0) {
+    motivos.push({
+      code: 'CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA',
+      message: `${escritasPosteriores.ids.length} elo(s) gravado(s) depois da referência de certificação: ${escritasPosteriores.ids.join(', ')}`,
+      detalhes: escritasPosteriores.detalhes,
+    });
+  }
+
+  return {
+    status: motivos.length === 0 ? 'PASS' : 'FAIL',
+    recalc,
+    recalculadaIntegra: recalc.valid === true,
+    autoDeclaracao,
+    temCertificacao,
+    declaracaoReferenciaMs: Number.isFinite(referenciaMs) ? referenciaMs : null,
+    escritasPosteriores,
+    classes: (chain.links || []).reduce((acc, l) => {
+      const c = l.classe || 'DESCONHECIDA';
+      acc[c] = (acc[c] || 0) + 1;
+      return acc;
+    }, {}),
+    motivos,
+    codes: motivos.map((m) => m.code),
+  };
+}
+
+function elosPorClasse(chain, classe) {
+  return (chain.links || []).filter((l) => (l.classe || 'DESCONHECIDA') === classe).map((l) => l.id);
 }
 
 // ─── Verificação da cadeia existente ──────────────────────────────────────────
@@ -220,9 +409,14 @@ function writeChain(chain) {
 
 module.exports = {
   GENESIS_HASH,
+  CLASSIFICACAO_ELOS,
+  classificarElo,
+  elosPorClasse,
   sha256File,
   sha256String,
   buildChain,
+  certifyChain,
+  avaliarEstadoDaCadeia,
   verifyChain,
   loadChain,
   writeChain,
@@ -249,7 +443,13 @@ if (require.main === module) {
   const artifact = resolveArtifact();
   const chain    = buildChain(artifact);
   writeChain(chain);
+  // Exit code continua ligado a COMPLETUDE (o build não é verificação, e alterar
+  // isto quebraria o empacotamento que só quer saber se todas as camadas existem).
+  // O que muda é o rótulo: o artefato não declara mais validade que não mediu.
   // eslint-disable-next-line no-console
-  console.log(`[governance-chain] chainRoot=${chain.chainRoot.slice(0, 16)}… valid=${chain.valid} links=${chain.chainLength}`);
-  process.exit(chain.valid ? 0 : 1);
+  console.log(
+    `[governance-chain] chainRoot=${chain.chainRoot.slice(0, 16)}… ` +
+    `completa=${chain.completeChain} valid=NAO_VERIFICADA (build não verifica; use --verify) links=${chain.chainLength}`
+  );
+  process.exit(chain.completeChain ? 0 : 1);
 }
