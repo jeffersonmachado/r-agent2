@@ -65,7 +65,6 @@ const GATE_STATUS = Object.freeze({
  * `GATE_STATUS_PERMITIDOS`. Todo o resto — conhecido ou não — bloqueia.
  */
 const GATE_STATUS_PERMITIDOS = Object.freeze([GATE_STATUS.PASS]);
-
 /** Estados de gate conhecidos (vocabulário fechado). */
 const GATE_STATUS_CONHECIDOS = Object.freeze(Object.values(GATE_STATUS));
 
@@ -248,6 +247,21 @@ function clasificar(input = {}) {
     );
   }
 
+  // ── CONJUNTO MÍNIMO DE GATES ───────────────────────────────────────────────
+  // DEFEITO MEDIDO (missão 2026-10-17, §7 e §11 #12):
+  //   clasificar({ gates: [{ id: 'qualquer', status: 'PASS' }], selado: true,
+  //               certificado: true })  ->  CERTIFIED_GO
+  // isto é, UM gate aprovado produzia certificação completa. O conjunto
+  // obrigatório passa a ser explícito e verificado: sem os três relatórios
+  // finais não existe CERTIFIED_GO, por mais verde que esteja o resto.
+  if (input.certificado) {
+    const idsPresentes = new Set(obrigatorios.map((g) => String(g.id || '')));
+    const ausentes = GATES_OBRIGATORIOS_CERTIFICACAO.filter((id) => !idsPresentes.has(id));
+    if (ausentes.length > 0) {
+      return decidir(STATES.NO_GO, `GATES_MINIMOS_AUSENTES:${ausentes.join(',')}`);
+    }
+  }
+
   if (!input.selado) return decidir(STATES.PRE_PACKAGE_PASS, 'PACOTE_NAO_SELADO');
   if (!input.certificado) return decidir(STATES.PRE_PACKAGE_PASS, 'NAO_CERTIFICADO');
   if (input.publicado && !input.entregaVerificada) {
@@ -258,6 +272,13 @@ function clasificar(input = {}) {
   }
   return decidir(STATES.CERTIFIED_GO, 'CERTIFICADO');
 }
+
+/** Gates sem os quais NÃO existe CERTIFIED_GO (conjunto mínimo verificável). */
+const GATES_OBRIGATORIOS_CERTIFICACAO = Object.freeze([
+  'final_governance',
+  'final_readiness',
+  'final_proof',
+]);
 
 const CAMPOS_IDENTIDADE_OBRIGATORIOS = Object.freeze(['runId', 'sourceCommit', 'sourceFingerprint']);
 const CAMPOS_IDENTIDADE_OPCIONAIS = Object.freeze(['releaseId']);

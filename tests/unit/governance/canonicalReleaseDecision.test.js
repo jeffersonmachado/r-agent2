@@ -143,7 +143,15 @@ describe('exigirGoFinal — o predicado que os consumidores devem usar', () => {
 });
 
 describe('clasificar — precedência fail-closed a partir dos fatos', () => {
-  const gatesOk = [{ id: 'g1', status: GATE_STATUS.PASS }];
+  // Desde 2026-10-17 a decisão canônica exige os TRÊS gates finais presentes:
+  // um único gate PASS não certifica (missão §11 #12). As fixtures positivas
+  // incluem o trio; as negativas não precisam dele para recusar.
+  const GATES_FINAIS = [
+    { id: 'final_governance', status: GATE_STATUS.PASS },
+    { id: 'final_readiness', status: GATE_STATUS.PASS },
+    { id: 'final_proof', status: GATE_STATUS.PASS },
+  ];
+  const gatesOk = [{ id: 'g1', status: GATE_STATUS.PASS }, ...GATES_FINAIS];
 
   it('sem gates ⇒ NOT_STARTED', () => {
     expect(clasificar({}).state).toBe(STATES.NOT_STARTED);
@@ -283,9 +291,14 @@ describe('identidadeCoerente — GO de outro candidato não vale', () => {
 describe('clasificar — POLÍTICA EXPLÍCITA de gate (P0 corrigido 2026-10-16)', () => {
   const base = { selado: true, certificado: true };
   const gate = (status, id = 'G1') => ({ id, status, obrigatorio: true });
+  const GATES_FINAIS = () => [
+    gate('PASS', 'final_governance'),
+    gate('PASS', 'final_readiness'),
+    gate('PASS', 'final_proof'),
+  ];
 
   it('todos os gates PASS ⇒ CERTIFIED_GO (positivo)', () => {
-    expect(clasificar({ ...base, gates: [gate('PASS'), gate('PASS', 'G2')] }).state).toBe(STATES.CERTIFIED_GO);
+    expect(clasificar({ ...base, gates: [gate('PASS'), gate('PASS', 'G2'), ...GATES_FINAIS()] }).state).toBe(STATES.CERTIFIED_GO);
   });
 
   // Matriz negativa obrigatória: NENHUM destes pode produzir GO final.
@@ -352,7 +365,7 @@ describe('clasificar — POLÍTICA EXPLÍCITA de gate (P0 corrigido 2026-10-16)'
   });
 
   it('gate não obrigatório em estado desconhecido não bloqueia o GO dos obrigatórios', () => {
-    const r = clasificar({ ...base, gates: [gate('PASS'), { id: 'G9', status: 'UNKNOWN', obrigatorio: false }] });
+    const r = clasificar({ ...base, gates: [gate('PASS'), ...GATES_FINAIS(), { id: 'G9', status: 'UNKNOWN', obrigatorio: false }] });
     expect(r.state).toBe(STATES.CERTIFIED_GO);
   });
 });

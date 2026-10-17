@@ -26,6 +26,7 @@ const path = require('path');
 const {
   verifyChain,
   GENESIS_HASH,
+  ORDEM_CANONICA,
   sha256File,
   sha256String,
 } = require('../../../governance/governance-chain');
@@ -39,53 +40,81 @@ const SELO = path.join(ROOT, 'scripts', 'governance', 'seal-release.sh');
 const ALVO_REL = 'reports/__chain-cert-test.json';
 const ALVO_ABS = path.join(ROOT, ALVO_REL);
 
-/** Monta uma cadeia de 1 link com os hashes EXATAMENTE como `verifyChain` calcula. */
-function cadeiaDeUmLink(caminhoRel, conteudo) {
+/**
+ * Monta a cadeia ESTRUTURALMENTE canônica (10 elos, ordem do contrato) em que o
+ * PRIMEIRO elo (id `package`) aponta para `caminhoRel`.
+ *
+ * Antes era uma cadeia de 1 elo com id `alvo`: a matemática de hash passava, mas
+ * a cadeia não era a cadeia canônica. Depois de 2026-10-17 `verifyChain` aplica
+ * também o contrato estrutural (10 elos obrigatórios, ordem fixa) — uma cadeia
+ * curta não pode ser declarada válida.
+ */
+function cadeiaCanonica(caminhoRel, conteudo) {
+  fs.mkdirSync(path.dirname(path.join(ROOT, caminhoRel)), { recursive: true });
   fs.writeFileSync(path.join(ROOT, caminhoRel), conteudo);
-  const hash = sha256File(path.join(ROOT, caminhoRel));
-  const cumulativeHash = sha256String(`${GENESIS_HASH}:${hash}`);
+
+  let cumHash = GENESIS_HASH;
+  const links = ORDEM_CANONICA.map((id, i) => {
+    const rel = i === 0 ? caminhoRel : `${caminhoRel}.${id}`;
+    if (i > 0) fs.writeFileSync(path.join(ROOT, rel), JSON.stringify({ elo: id }));
+    const hash = sha256File(path.join(ROOT, rel));
+    const cumulativeHash = sha256String(`${cumHash}:${hash}`);
+    const link = {
+      index: i,
+      id,
+      path: rel,
+      exists: true,
+      hash,
+      previousHash: i === 0 ? GENESIS_HASH : null,
+      cumulativeHash,
+    };
+    cumHash = cumulativeHash;
+    return link;
+  });
+
   return {
-    chainRoot: cumulativeHash,
-    chainLength: 1,
+    chainRoot: cumHash,
+    chainLength: links.length,
+    completeChain: true,
+    missingLayers: [],
     valid: true,
-    links: [
-      {
-        id: 'alvo',
-        path: caminhoRel,
-        exists: true,
-        hash,
-        previousHash: GENESIS_HASH,
-        cumulativeHash,
-      },
-    ],
+    links,
   };
 }
 
+/** Remove os arquivos auxiliares criados por `cadeiaCanonica` (não versionados). */
+function limparCadeia(caminhoRel) {
+  fs.rmSync(path.join(ROOT, caminhoRel), { force: true });
+  for (const id of ORDEM_CANONICA.slice(1)) {
+    fs.rmSync(path.join(ROOT, `${caminhoRel}.${id}`), { force: true });
+  }
+}
+
 afterAll(() => {
-  fs.rmSync(ALVO_ABS, { force: true });
+  limparCadeia(ALVO_REL);
 });
 
 describe('cadeia criptográfica — o hash cobre os BYTES do documento', () => {
   it('cadeia íntegra verifica (não-vacuidade: o teste não aprova por construção)', () => {
-    const cadeia = cadeiaDeUmLink(ALVO_REL, JSON.stringify({ estado: 'congelado' }));
+    const cadeia = cadeiaCanonica(ALVO_REL, JSON.stringify({ estado: 'congelado' }));
     const r = verifyChain(cadeia);
     expect(r.valid).toBe(true);
     expect(r.failures).toEqual([]);
   });
 
   it('ALTERAR o documento depois do hash ⇒ FAIL com hash_mismatch (critério da missão)', () => {
-    const cadeia = cadeiaDeUmLink(ALVO_REL, JSON.stringify({ estado: 'congelado' }));
+    const cadeia = cadeiaCanonica(ALVO_REL, JSON.stringify({ estado: 'congelado' }));
     // A alteração posterior — exatamente o que o `consolidate` fazia com os membros
     // certificados ao regravá-los depois da construção da cadeia.
     fs.writeFileSync(ALVO_ABS, JSON.stringify({ estado: 'MODIFICADO depois do hash' }));
     const r = verifyChain(cadeia);
     expect(r.valid).toBe(false);
     expect(r.failures.map((f) => f.reason)).toContain('hash_mismatch');
-    expect(r.failures[0].id).toBe('alvo');
+    expect(r.failures[0].id).toBe(ORDEM_CANONICA[0]);
   });
 
   it('documento certificado REMOVIDO ⇒ file_deleted', () => {
-    const cadeia = cadeiaDeUmLink(ALVO_REL, 'conteudo');
+    const cadeia = cadeiaCanonica(ALVO_REL, 'conteudo');
     fs.rmSync(ALVO_ABS, { force: true });
     const r = verifyChain(cadeia);
     expect(r.valid).toBe(false);

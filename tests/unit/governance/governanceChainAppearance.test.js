@@ -29,6 +29,7 @@ const path = require('path');
 const {
   GENESIS_HASH,
   CLASSIFICACAO_ELOS,
+  ORDEM_CANONICA,
   buildChain,
   certifyChain,
   verifyChain,
@@ -47,21 +48,29 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'chain-appearance-'));
 const alvoRel = (nome) => path.relative(ROOT, path.join(TMP, nome));
 const alvoAbs = (nome) => path.join(TMP, nome);
 
-/** Monta uma cadeia de 2 links com os hashes EXATAMENTE como `verifyChain` calcula. */
+/** Monta a cadeia ESTRUTURALMENTE canônica (10 elos, ordem do contrato) com os
+ * hashes EXATAMENTE como `verifyChain` calcula.
+ *
+ * Antes esta fixture montava 2 elos arbitrários ('a','b'): passava na matemática
+ * de hash e reprovava no contrato estrutural — a mesma classe de "aparência de
+ * validade" que este arquivo combate (cadeia curta não é cadeia completa).
+ * Os dois primeiros elos continuam gravados como `a.json`/`b.json` porque os
+ * testes de adulteração escrevem nesses arquivos.
+ */
 function cadeiaCoerente({ certificada = false, checkedAt = '2026-10-16T00:00:00.000Z' } = {}) {
-  const arquivos = [
-    ['a.json', JSON.stringify({ elo: 'a', v: 1 })],
-    ['b.json', JSON.stringify({ elo: 'b', v: 1 })],
-  ];
+  const arquivos = ORDEM_CANONICA.map((id, i) => {
+    const nome = i === 0 ? 'a.json' : i === 1 ? 'b.json' : `elo-${id}.json`;
+    return [id, nome, JSON.stringify({ elo: id, v: 1 })];
+  });
 
   let cumHash = GENESIS_HASH;
-  const links = arquivos.map(([nome, conteudo], i) => {
+  const links = arquivos.map(([id, nome, conteudo], i) => {
     fs.writeFileSync(alvoAbs(nome), conteudo);
     const hash = sha256File(alvoAbs(nome));
     const cumulativeHash = sha256String(`${cumHash}:${hash}`);
     const link = {
       index: i,
-      id: nome.replace('.json', ''),
+      id,
       path: alvoRel(nome),
       exists: true,
       hash,
@@ -225,7 +234,7 @@ describe('(3) TEMPO — escritas posteriores à certificação', () => {
     const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
     expect(estado.status).toBe('PASS');
     expect(estado.codes).not.toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
-    expect(estado.escritasPosteriores.ids.sort()).toEqual(['a', 'b']);
+    expect(estado.escritasPosteriores.ids.sort()).toEqual(['blocker_engine', 'consistency_report', 'cross_report', 'evidence_manifest', 'final_proof_report', 'final_readiness', 'package', 'package_validation', 'proof_signature', 'sidecar_manifest'].sort());
     expect(estado.escritasPosteriores.comConteudoAlterado).toEqual([]);
     expect(estado.escritasPosteriores.detalhes.every((d) => d.conteudoIdentico)).toBe(true);
   });
@@ -237,7 +246,7 @@ describe('(3) TEMPO — escritas posteriores à certificação', () => {
     const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
     expect(estado.status).toBe('FAIL');
     expect(estado.codes).toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
-    expect(estado.escritasPosteriores.comConteudoAlterado).toEqual(['b']);
+    expect(estado.escritasPosteriores.comConteudoAlterado).toEqual(['sidecar_manifest']);
     expect(estado.codes).toContain('CADEIA_DIVERGENTE');
   });
 
@@ -272,7 +281,7 @@ describe('certifyChain — recalcula antes de rotular', () => {
     expect(chain.verification).toBe('RECALCULADA_DIVERGENTE');
     expect(chain.certification.state).toBe('DIVERGENTE');
     expect(chain.certification.certifiedAt).toBeNull();
-    expect(chain.certification.divergencias.map((d) => d.id)).toContain('a');
+    expect(chain.certification.divergencias.map((d) => d.id)).toContain('package');
   });
 
   it('certificar não é tautológico: o veredito deriva dos bytes, não do rótulo de entrada', () => {

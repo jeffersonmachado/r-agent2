@@ -221,18 +221,25 @@ function certifyChain(chain, opcoes = {}) {
  *                                           produz falso NO_GO (medido).
  */
 function avaliarEstadoDaCadeia(chain, opcoes = {}) {
+  // `verificar` é seam de TESTE: os testes da lógica de aparência/tempo usam a
+  // matemática de hash (`verifyChainHashes`) para isolar o que medem; o contrato
+  // estrutural tem suíte própria e é o que roda em produção (default).
+  const verificar = typeof opcoes.verificar === 'function' ? opcoes.verificar : verifyChain;
   const lerMtime = opcoes.lerMtime || ((rel) => {
     const abs = path.join(ROOT, rel);
     return fs.existsSync(abs) ? fs.statSync(abs).mtimeMs : null;
   });
 
-  const recalc = verifyChain(chain);
+  const recalc = verificar(chain);
   const motivos = [];
 
   if (!recalc.valid) {
+    const estruturais = (recalc.structuralFailures || []).length;
     motivos.push({
-      code: 'CADEIA_DIVERGENTE',
-      message: `${recalc.failures.length} divergência(s): ${recalc.failures.map((f) => `${f.id}:${f.reason}`).join(', ')}`,
+      code: estruturais > 0 ? 'CADEIA_ESTRUTURA_INVALIDA' : 'CADEIA_DIVERGENTE',
+      message: estruturais > 0
+        ? `contrato estrutural violado (${estruturais}): ${(recalc.structuralFailures || []).map((f) => `${f.id}:${f.reason}`).join(', ')}`
+        : `${recalc.failures.length} divergência(s): ${recalc.failures.map((f) => `${f.id}:${f.reason}`).join(', ')}`,
       divergencias: recalc.failures,
     });
   }
@@ -325,8 +332,15 @@ function elosPorClasse(chain, classe) {
   return (chain.links || []).filter((l) => (l.classe || 'DESCONHECIDA') === classe).map((l) => l.id);
 }
 
-// ─── Verificação da cadeia existente ──────────────────────────────────────────
-function verifyChain(storedChain) {
+// ─── Verificação de HASH (matemática da cadeia, sem contrato estrutural) ─────
+/**
+ * Recalcula hashes, cumulativeHash e chainRoot a partir dos arquivos atuais.
+ *
+ * NÃO é o contrato de certificação — é a matemática. Um elo ausente entra como
+ * marcador `missing:<id>` e a conta fecha; por isso esta função sozinha não pode
+ * autorizar certificação (ver `verifyChain`).
+ */
+function verifyChainHashes(storedChain) {
   if (!storedChain || !Array.isArray(storedChain.links)) {
     return { valid: false, error: 'chain_missing_or_malformed' };
   }
@@ -412,8 +426,134 @@ function verifyChain(storedChain) {
   };
 }
 
+// ─── Contrato ESTRUTURAL da cadeia (P0-A/P0-B — missão 2026-10-17) ───────────
+//
+// DEFEITOS MEDIDOS na implementação anterior (reproduzidos em teste):
+//   P0-A `verifyChain({ links: [] , chainRoot: '0'.repeat(64) })` devolvia
+//        `valid: true` — a raiz vazia coincide com o GENESIS_HASH, então uma
+//        cadeia SEM NENHUM elo era aprovada.
+//   P0-B um elo com `exists: false` entrava na conta como `missing:<id>` e NÃO
+//        gerava failure; uma cadeia inteira de elos ausentes podia fechar a raiz
+//        e ser aprovada.
+//   Consequência: `valid: true` era possível SEM evidência nenhuma — e esse campo
+//   é consumido por gates de certificação.
+//
+// Correção: o contrato exige o CONJUNTO CANÔNICO completo (obtido da arquitetura,
+// não do JSON que se está verificando), na ordem canônica, sem duplicação, com
+// existência declarada E arquivo presente. Elos ausentes continuam
+// REPRESENTÁVEIS como diagnóstico (`diagnostics`), mas nunca certificam.
+const ORDEM_CANONICA = Object.freeze([
+  'package',
+  'sidecar_manifest',
+  'evidence_manifest',
+  'final_proof_report',
+  'final_readiness',
+  'consistency_report',
+  'cross_report',
+  'proof_signature',
+  'blocker_engine',
+  'package_validation',
+]);
+
+/**
+ * Verifica o CONTRATO ESTRUTURAL (independente de hash).
+ * @returns {Array<{id:string, reason:string}>}
+ */
+function verificarContratoEstrutural(chain) {
+  const failures = [];
+  const links = chain && Array.isArray(chain.links) ? chain.links : null;
+
+  if (!links) return [{ id: 'chain', reason: 'chain_missing_or_malformed' }];
+  if (links.length === 0) return [{ id: 'chain', reason: 'chain_empty' }];
+
+  const ids = links.map((l) => String((l && l.id) || ''));
+
+  // Duplicação de elo (o mesmo id duas vezes infla a cadeia).
+  const vistos = new Set();
+  for (const id of ids) {
+    if (vistos.has(id)) failures.push({ id, reason: 'duplicate_link' });
+    vistos.add(id);
+  }
+
+  // Conjunto canônico: obrigatórios presentes, e nada fora do contrato.
+  for (const requerido of ORDEM_CANONICA) {
+    if (!ids.includes(requerido)) failures.push({ id: requerido, reason: 'required_link_absent' });
+  }
+  for (const id of ids) {
+    if (!ORDEM_CANONICA.includes(id)) failures.push({ id, reason: 'unexpected_link' });
+  }
+
+  // Quantidade exata.
+  if (ids.length !== ORDEM_CANONICA.length) {
+    failures.push({
+      id: 'chain',
+      reason: 'links_count_mismatch',
+      expected: ORDEM_CANONICA.length,
+      actual: ids.length,
+    });
+  }
+
+  // Ordem canônica (posições estritamente crescentes).
+  const conhecidos = ids.filter((id) => ORDEM_CANONICA.includes(id));
+  for (let i = 1; i < conhecidos.length; i += 1) {
+    if (ORDEM_CANONICA.indexOf(conhecidos[i]) <= ORDEM_CANONICA.indexOf(conhecidos[i - 1])) {
+      failures.push({ id: conhecidos[i], reason: 'link_order_invalid' });
+      break;
+    }
+  }
+
+  // Existência DECLARADA e arquivo presente. `exists:false` num elo obrigatório
+  // é falha bloqueante — o marcador `missing` existe só para diagnóstico.
+  for (const link of links) {
+    if (!link || link.exists !== true) {
+      failures.push({ id: String((link && link.id) || 'desconhecido'), reason: 'required_link_missing_file' });
+    }
+  }
+
+  return failures;
+}
+
+/**
+ * CONTRATO DE CERTIFICAÇÃO da cadeia: estrutura canônica + hashes reais.
+ *
+ * `valid` só é `true` quando a estrutura está completa E os bytes conferem. Uma
+ * cadeia vazia, incompleta, fora de ordem, duplicada ou com elo ausente NUNCA é
+ * válida — mesmo que a aritmética de `cumulativeHash` feche.
+ */
+function verifyChain(storedChain) {
+  const base = verifyChainHashes(storedChain);
+  if (base.error) {
+    return {
+      ...base,
+      valid: false,
+      certifiable: false,
+      structuralFailures: [{ id: 'chain', reason: base.error }],
+      hashFailures: [],
+      failures: [{ id: 'chain', reason: base.error }],
+    };
+  }
+
+  const structuralFailures = verificarContratoEstrutural(storedChain);
+  const hashFailures = base.failures || [];
+  const failures = [...structuralFailures, ...hashFailures];
+
+  // Diagnóstico explícito dos elos ausentes (representáveis, não certificáveis).
+  const diagnostics = (storedChain.links || [])
+    .filter((l) => !l || l.exists !== true)
+    .map((l) => ({ id: String((l && l.id) || 'desconhecido'), state: 'MISSING', path: (l && l.path) || null }));
+
+  return {
+    ...base,
+    valid: failures.length === 0,
+    certifiable: failures.length === 0,
+    structuralFailures,
+    hashFailures,
+    failures,
+    diagnostics,
+  };
+}
+
 function loadChain() {
-  if (!fs.existsSync(CHAIN_PATH)) return null;
   try {
     return JSON.parse(fs.readFileSync(CHAIN_PATH, 'utf8'));
   } catch (_) {
@@ -428,6 +568,7 @@ function writeChain(chain) {
 
 module.exports = {
   GENESIS_HASH,
+  ORDEM_CANONICA,
   CLASSIFICACAO_ELOS,
   classificarElo,
   elosPorClasse,
@@ -436,7 +577,9 @@ module.exports = {
   buildChain,
   certifyChain,
   avaliarEstadoDaCadeia,
+  verificarContratoEstrutural,
   verifyChain,
+  verifyChainHashes,
   loadChain,
   writeChain,
   resolveArtifact,
