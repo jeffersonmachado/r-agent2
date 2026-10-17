@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T12:42:55.929Z",
+  "updatedAt": "2026-10-17T12:43:16.840Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -66,9 +66,14 @@
       "evidence": "teste negativo de proveniencia do Security Gate | REGRESSION TEST vinculado 2026-10-17: tests/unit/securityIntel/securityGateProvenance.test.js (8 testes, 4 CONTROLES POSITIVOS: STALE_EVIDENCE, FOREIGN_RUN, NO_GOVERNED_RUN, UNAVAILABLE).",
       "severity": "P0",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "done",
-      "regressionTest": "tests/unit/securityIntel/securityGateProvenance.test.js"
+      "regressionTest": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T12:43:16.839Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "9308a01d944eac08b98dd3b7861c39be81ac90e8",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/securityGateProvenance.test.js exit=0 em 9308a01d944e"
     },
     {
       "id": "P0-4",
