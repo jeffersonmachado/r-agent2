@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T15:03:55.639Z",
+  "updatedAt": "2026-10-17T15:06:09.904Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -213,14 +213,19 @@
     {
       "id": "P1-8",
       "title": "Inventario do sistema regenerado",
-      "status": "pending",
-      "commit": "64091e5eb",
+      "status": "done",
+      "commit": "f8b28264914a",
       "evidence": "config/system-inventory.json + reports/inventory-report.json | MEDIDO 2026-10-17: `node scripts/build-system-inventory.js` regenerado — counts IDENTICOS (total 3999; api 916, field 2477, model 223, page 151, relation 9, table 223; PRODUCTION 3695/DEVELOPMENT 212/SUPPORT 92; orphaned 34), 0 ids novos, 0 removidos (apenas generatedAt muda): regeneracao idempotente.",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
-      "regressionTest": "tests/unit/qa/systemInventoryIntegrity.test.js"
+      "regressionTest": "tests/unit/qa/systemInventoryIntegrity.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:06:09.902Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "f8b28264914a5d6c2658cf4be852886dc7480fbf",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/qa/systemInventoryIntegrity.test.js exit=0 em f8b28264914a"
     },
     {
       "id": "P2-1",
