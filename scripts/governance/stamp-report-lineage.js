@@ -42,6 +42,22 @@ const {
   runStartMs,
 } = require('./lib/runtime-evidence-artifacts');
 
+const CAMPOS_HASH_PROPRIO = ['reportHash', 'selfHash', 'contentHash', 'integrityHash'];
+const CAMPOS_ASSINATURA_PROPRIA = ['governanceSignature', 'enterpriseGovernanceSignature'];
+
+/**
+ * Artefato que PROVA O PRÓPRIO CONTEÚDO (hash e/ou assinatura sobre si mesmo).
+ * Reescrevê-lo (nem que seja só para acrescentar lineage) invalida a própria prova.
+ * @param {object} report
+ * @returns {boolean}
+ */
+function artefatoAutoReferencial(report) {
+  if (!report || typeof report !== 'object') return false;
+  const temHash = CAMPOS_HASH_PROPRIO.some((campo) => Boolean(report[campo]));
+  const temAssinatura = CAMPOS_ASSINATURA_PROPRIA.some((campo) => Boolean(report[campo]));
+  return temHash && temAssinatura;
+}
+
 function stamp(relativePath, run) {
   // Fail-closed: artefato de execução exige lineage NA ORIGEM (o produtor
   // recebe runId/sourceFingerprint ANTES de executar). Estampar aqui seria
@@ -77,6 +93,26 @@ function stamp(relativePath, run) {
   }
   if (!report || typeof report !== 'object') return { path: relativePath, stamped: false, reason: 'invalid_object' };
 
+  // ── ARTEFATO AUTO-REFERENCIAL (P0 medido 2026-10-17) ────────────────────────
+  //
+  // DEFEITO: `qa/qa-waves-enterprise-governance.json` embute `reportHash` (sha256
+  // do próprio conteúdo) e `enterpriseGovernanceSignature` (HMAC sobre o próprio
+  // conteúdo). O produtor
+  // (`tools/system/qa-waves-enterprise-governance-bridge.js`) JÁ resolve o lineage
+  // na origem (`report.runId = readCurrentRunLineage().runId`). Este estampador
+  // injetava runId/sourceFingerprint/artifactType/artifactVersion DEPOIS da
+  // assinatura, e o resultado media-se assim:
+  //   [replay-integrity] pass=false issues=1
+  //     enterprise_replay_governance_invalid: qa_waves_enterprise_report_hash_invalid,
+  //     qa_waves_enterprise_signature_invalid
+  //   ✗ BLOQUEADO: Replay integrity falhou   (npm run zip:release)
+  //
+  // Regra: quem embute o próprio hash/assinatura NÃO pode ser reescrito por
+  // estampagem. Se o lineage já é o do run, preserva-se o arquivo intacto; se o
+  // lineage é de outro run, RECUSA-se (estampar quebraria a prova — reexecute o
+  // produtor). Estampar aqui fabricaria uma prova que o próprio arquivo refuta.
+  const CAMPOS_HASH_PROPRIO = ['reportHash', 'selfHash', 'contentHash', 'integrityHash'];
+  const CAMPOS_ASSINATURA_PROPRIA = ['governanceSignature', 'enterpriseGovernanceSignature'];
   // REGRA TEMPORAL (missão 2026-10-05): generatedAt >= run.startedAt.
   //
   // O defeito real: `governance/mutable-json-state-validation-report.json` e
@@ -139,6 +175,32 @@ function stamp(relativePath, run) {
 
   const artifactType = report.artifactType || path.basename(relativePath, '.json');
   const artifactVersion = report.artifactVersion || '1.0.0';
+
+  // Detecta auto-referência ANTES de qualquer escrita (ver bloco acima).
+  const autoReferencial = artefatoAutoReferencial(report);
+
+  if (autoReferencial) {
+    const lineageNoRun = report.runId === run.run_id
+      && report.sourceFingerprint === run.source_fingerprint;
+    if (lineageNoRun) {
+      return {
+        path: relativePath,
+        stamped: false,
+        preserved: true,
+        classification,
+        reason: 'SELF_REFERENTIAL_LINEAGE_ALREADY_AT_SOURCE',
+        detail: 'artefato embute o proprio hash/assinatura e ja traz o lineage do run: preservado byte a byte (estampar quebraria reportHash/assinatura)',
+      };
+    }
+    return {
+      path: relativePath,
+      stamped: false,
+      classification,
+      reason: REASONS.REJECTED_STALE_ARTIFACT,
+      detail: 'artefato auto-referencial com lineage de OUTRO run: reexecute o produtor (estampar destruiria o hash/assinatura que ele mesmo prova)',
+    };
+  }
+
   const next = {
     ...report,
     runId: run.run_id,
@@ -234,4 +296,4 @@ if (require.main === module) {
   main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => close().catch(() => {}));
 }
 
-module.exports = { stamp };
+module.exports = { stamp, artefatoAutoReferencial };
