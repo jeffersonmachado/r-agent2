@@ -68,8 +68,16 @@ describe('corpus RAG — ponto cego do estado `indexing`', () => {
     // MEDIDO 2026-10-06: o gate reportou HEALTHY com 11 documentos em `indexing` ORFAO
     // (o reparo os tirou de `failed`, o processo morreu e o estado ficou no meio). O
     // estado simplesmente não era olhado — verde por omissão.
+    //
+    // 2026-10-17: a REGRA saiu para `scripts/governance/lib/rag-index-health-policy.js`
+    // (função pura, testada em ragIndexHealthPolicy.test.js). A asserção passa a exigir
+    // a LIGAÇÃO: o validador precisa consultar a política que emite o código — senão o
+    // código existiria num módulo que ninguém chama.
     const gate = read('scripts/governance/validate-rag-index-health.js');
-    expect(gate).toContain('RAG_INDEXING_STUCK');
+    const policy = read('scripts/governance/lib/rag-index-health-policy.js');
+    expect(gate).toContain("require('./lib/rag-index-health-policy')");
+    expect(gate).toContain('avaliarSaudeDoIndice');
+    expect(policy).toContain('RAG_INDEXING_STUCK');
     expect(gate).toContain('STUCK_INDEXING_MINUTES');
     expect(gate).toContain("index_status = 'indexing'");
   });
