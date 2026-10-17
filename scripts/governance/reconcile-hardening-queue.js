@@ -87,7 +87,13 @@ function classificar(exitCode, saida) {
 
 function executarTeste(arquivo) {
   const inicio = Date.now();
-  const r = spawnSync(`npx jest ${arquivo} --bail=0`, {
+  // Testes de frontend rodam em VITEST (frontend/vitest.config.mjs), não em Jest:
+  // executá-los com Jest daria FAIL falso e impediria a verificação correta.
+  const ehFrontend = String(arquivo).startsWith('frontend/');
+  const comando = ehFrontend
+    ? `cd frontend && npx vitest run ${String(arquivo).replace(/^frontend\//, '')}`
+    : `npx jest ${arquivo} --bail=0`;
+  const r = spawnSync(comando, {
     cwd: ROOT,
     encoding: 'utf8',
     shell: true,
@@ -98,10 +104,13 @@ function executarTeste(arquivo) {
   const saida = `${r.stdout || ''}${r.stderr || ''}`;
   const exitCode = r.status === null ? null : r.status;
 
-  const testes = /Tests:\s+(\d+) failed,\s+(\d+) passed,\s+(\d+) total/.exec(saida)
+  const testes = /Test Files\s+(\d+) (?:failed|passed).*/i.exec(saida)
+    || /Tests:\s+(\d+) failed,\s+(\d+) passed,\s+(\d+) total/.exec(saida)
     || /Tests:\s+(\d+) passed,\s+(\d+) total/.exec(saida);
   return {
     arquivo,
+    runner: ehFrontend ? 'vitest' : 'jest',
+    comando,
     exitCode,
     timeout: r.status === null,
     duracaoMs: Date.now() - inicio,
