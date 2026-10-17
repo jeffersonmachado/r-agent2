@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T15:14:55.409Z",
+  "updatedAt": "2026-10-17T15:15:41.385Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -214,14 +214,19 @@
     {
       "id": "P1-7",
       "title": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
-      "status": "pending",
-      "commit": "1d78fb4ad",
+      "status": "done",
+      "commit": "6c5b105469be",
       "evidence": "engine/securityIntel/triageDossier.js summarizeRemediation + triageService + 7 testes",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
-      "regressionTest": "tests/unit/securityIntel/triageRemediation.test.js"
+      "regressionTest": "tests/unit/securityIntel/triageRemediation.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:15:41.384Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "6c5b105469beba5647f2d523676c6bbd3f9edcad",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/triageRemediation.test.js exit=0 em 6c5b105469be"
     },
     {
       "id": "P1-8",
