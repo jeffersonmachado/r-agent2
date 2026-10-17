@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T15:48:35.970Z",
+  "updatedAt": "2026-10-17T15:50:54.515Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1221,7 +1221,7 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
       "title": "AI_MEMORY/evidence/ fora da taxonomia canônica de persistência JSON",
-      "status": "pending",
+      "status": "done",
       "evidence": {
         "measuredAt": "2026-10-16",
         "gateStep": "audit:json-persistence (node governance/json-persistence-audit.js --check)",
@@ -1245,11 +1245,17 @@
       },
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "taxonomia de persistencia JSON (higiene; hoje contornado com .md)",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
+      "regressionTest": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:50:54.514Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "ffc746419a72d6d507e518047c9538523ab94b3e",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js exit=0 em ffc746419a72",
+      "commit": "ffc746419a72"
     },
     {
       "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
@@ -1355,7 +1361,7 @@
     {
       "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
       "title": "Inventario de persistencia registra escrita fantasma da fila oficial (falso positivo do scanner)",
-      "status": "pending",
+      "status": "done",
       "evidence": {
         "measuredAt": "2026-10-16",
         "target": "AI_MEMORY/hardening-queue.json",
@@ -1366,11 +1372,17 @@
       },
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "falso positivo do scanner de persistencia (registra escrita fantasma da fila)",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
+      "regressionTest": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:50:54.515Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "ffc746419a72d6d507e518047c9538523ab94b3e",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js exit=0 em ffc746419a72",
+      "commit": "ffc746419a72"
     },
     {
       "id": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
