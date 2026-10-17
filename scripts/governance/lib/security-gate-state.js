@@ -46,6 +46,9 @@ const SEVERIDADE_ESTADO = Object.freeze({
 const PROVENANCE_EVIDENCE_CODES = Object.freeze(new Set([
   'SECURITY_GATE_UNAVAILABLE',
   'SECURITY_GATE_NO_GOVERNED_RUN',
+  // Run encerrado (SUPERSEDED/ABANDONED) não é run corrente: é medição a refazer
+  // (o bloqueio continua, mas o motivo é "não existe run aberto", não risco).
+  'SECURITY_GATE_RUN_CLOSED',
   'SECURITY_GATE_STALE_EVIDENCE',
   'SECURITY_GATE_FOREIGN_RUN',
   'SECURITY_EVIDENCE_UNBOUND',

@@ -85,7 +85,13 @@ describe('corpus RAG — ponto cego do estado `indexing`', () => {
 describe('gate agregado — ordem do stamp de lineage', () => {
   const chain = () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-    const raw = String(pkg.scripts['validate:governance-enforcement'] || '');
+    // A cadeia canônica está em `:chain`; `validate:governance-enforcement` é o
+    // wrapper que a executa e persiste veredito próprio.
+    const raw = String(
+      pkg.scripts['validate:governance-enforcement:chain']
+      || pkg.scripts['validate:governance-enforcement']
+      || ''
+    );
     return raw.split('&&').map((step) => step.trim());
   };
 
