@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T13:15:15.322Z",
+  "updatedAt": "2026-10-17T15:03:55.639Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -338,14 +338,19 @@
     {
       "id": "P1-16",
       "title": "Lotes do runner autoritativo nao se isolavam (conexoes e processos-filho vazavam)",
-      "status": "pending",
-      "commit": "9cf698ff4",
+      "status": "done",
+      "commit": "1de31fa4a176",
       "evidence": "Achado: o lote 3 falhou em 2 suites com `Error:` SEM MENSAGEM em tests/helpers/purgeTestFindings.js:156 (Finding.destroy); as MESMAS 6 suites passaram ISOLADAS (6/6, 86 testes, 0 falhas). Causa medida: Postgres com max_connections=100 (~9 em repouso) e lotes acumulando conexoes/processos-filho; estouro de pool no Sequelize aparece como erro VAZIO, o que faz concluir 'suite instavel' em vez de 'o lote herdou conexoes'. Fix: `detached:true` por lote + ceifa do grupo (`process.kill(-pid)`) e `awaitConnectionDrain()` antes de cada lote (sonda o pg_stat_activity pelo DSN canonico; bounded e nao-fatal, registrado em `connectionDrains`). PROVA: 14 drenagens, todas `drained=true`, pico durante a espera 42 (contra o teto de 100), espera maxima 6,9 s; selo V2 seguinte com SUITE_EXECUTION PASS (21 passos, 0 falhas obrigatorias). | REGRESSION TEST vinculado 2026-10-17: tests/unit/governance/releaseSuiteRunner.test.js (42 casos incl. ceifa do grupo: SIGTERM ignorado -> SIGKILL; detached por lote; connectionDrains).",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
-      "regressionTest": "tests/unit/governance/releaseSuiteRunner.test.js"
+      "regressionTest": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:03:55.638Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "1de31fa4a17687b29c475c1af9c426d6c4b2c220",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/releaseSuiteRunner.test.js exit=0 em 1de31fa4a176"
     },
     {
       "id": "P2-2",
