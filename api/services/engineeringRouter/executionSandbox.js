@@ -261,6 +261,17 @@ function resolveGraceMs(graceMs) {
 }
 
 async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = 'none', graceMs = null, signal = null }) {
+  // ── BUG CLOSURE FIRST (2026-10-17) ────────────────────────────────────────
+  // O Sandbox do Router é um caminho ALTERNATIVO de execução: sem esta guarda,
+  // um comando extensivo (`validate:governance-enforcement`, `qa:mesh`,
+  // `release:seal`, `zip:release`…) rodaria aqui sem passar pela elegibilidade.
+  // Testes direcionados (`npx jest …`) continuam livres — é o laço de correção.
+  {
+    const { avaliarComando, erroDeBloqueio } = require('../../../governance/bug-closure/command-policy');
+    const avaliacao = avaliarComando({ command: executable, args, actor: 'engineeringRouter/executionSandbox' });
+    if (!avaliacao.permitido) throw erroDeBloqueio(avaliacao);
+  }
+
   if (!isSandboxAvailable()) {
     const error = new Error('SANDBOX_UNAVAILABLE: Docker daemon inacessível — execução recusada (fail-closed, nunca cai de volta para spawn sem sandbox)');
     error.code = 'SANDBOX_UNAVAILABLE';
@@ -275,8 +286,7 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
   // ROOT nem um caminho que o contenha — fail-closed explícito, nunca silencioso.
   const resolvedCwd = path.resolve(cwd || '');
   const isRootItself = resolvedCwd === ROOT;
-  const isRootAncestorOfCwd = ROOT.startsWith(`${resolvedCwd}${path.sep}`);
-  if (isRootItself || isRootAncestorOfCwd) {
+  const isRootAncestorOfCwd = ROOT.startsWith(`${resolvedCwd}${path.sep}`);  if (isRootItself || isRootAncestorOfCwd) {
     const error = new Error(`SANDBOX_INVALID_WORKSPACE: cwd "${cwd}" é o repositório principal (ou um ancestral dele) — recusado para nunca operar sobre o código-fonte real fora de um workspace isolado`);
     error.code = 'SANDBOX_INVALID_WORKSPACE';
     throw error;

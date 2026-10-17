@@ -230,6 +230,17 @@ function main(argv = process.argv.slice(2)) {
     totalElapsedMs: 0,
   };
 
+  // ── BUG CLOSURE FIRST (2026-10-17) ────────────────────────────────────────
+  // L2/L3 são extensivos; L1 é amplo. A autorização vem ANTES de qualquer
+  // execução, e `--dry-run` segue livre (planejar não executa suíte).
+  if (!opts.dryRun) {
+    const { exigirElegibilidade } = require('../../governance/bug-closure/require-eligibility');
+    const operacao = opts.nivel === 'l2' || opts.nivel === 'l3'
+      ? 'L2_L3_EXTENSIVO'
+      : 'L1_AMPLO';
+    exigirElegibilidade(operacao, { actor: 'scripts/governance/engineering-validation-orchestrator.js' });
+  }
+
   const t0 = Date.now();
   process.stdout.write('[orq] nível L1 — validação direcionada por impacto\n');
   const l1 = nivelL1(opts);

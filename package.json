@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "overrides": {
-    "fast-uri": "^3.1.8"
+    "encoding-sniffer": "1.0.2",
+    "@rushstack/ts-command-line": "5.3.4",
+    "@rushstack/terminal": "0.22.3",
+    "@rushstack/node-core-library": "5.20.3",
+    "uuid": "^11.1.1"
   },
   "description": "Engine de fluxo de chatbot (Node.js) com execução determinística e replay.",
   "scripts": {
@@ -429,7 +433,9 @@
     "engineering-router:v2-seal": "node scripts/governance/engineering-router-v2-seal.js",
     "engineering-router:v2-seal:plan": "node scripts/governance/engineering-router-v2-seal.js --plan",
     "validate:v2-seal-freshness": "node scripts/governance/verify-v2-seal-freshness.js",
-    "validate:final-snapshot-coherence": "node scripts/governance/validate-final-snapshot-coherence.js"
+    "validate:final-snapshot-coherence": "node scripts/governance/validate-final-snapshot-coherence.js",
+    "validate:bug-closure-risk": "node scripts/governance/validate-bug-closure-risk.js",
+    "reconcile:queue": "node scripts/governance/reconcile-hardening-queue.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",
@@ -472,12 +478,5 @@
     "nodemon": "^3.0.0",
     "sequelize-cli": "^6.6.2",
     "smtp-server": "^3.19.2"
-  },
-  "overrides": {
-    "encoding-sniffer": "1.0.2",
-    "@rushstack/ts-command-line": "5.3.4",
-    "@rushstack/terminal": "0.22.3",
-    "@rushstack/node-core-library": "5.20.3",
-    "uuid": "^11.1.1"
   }
 }

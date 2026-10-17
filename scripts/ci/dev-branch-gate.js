@@ -314,6 +314,37 @@ function preVoo({ esperaSha, requerLimpo, sha, branch }) {
     registrarNota('A8-evidencia-anterior', true, 'não existe relatório anterior');
   }
 
+  // A9 — coerência de LINEAGE local: `governance/.current-run.json` (run aberto)
+  // vs `dev/platform-readiness/latest.json` (projeção).
+  //
+  // INVESTIGAÇÃO 2026-10-17 (não presumir "drift ambiental"): o incidente que
+  // deixou o teste `convergenceFixpoint` vermelho tinha causa concreta —
+  // `create-governed-run` criou um run novo (11:18:58) e a projeção continuava
+  // do run anterior (11:12:00); o ciclo de selagem foi interrompido ANTES da
+  // fase que regenera a projeção. O invariante "projeção.runId == run.runId"
+  // só vale depois que o produtor canônico roda — então o gate passa a MEDIR e
+  // NOMEAR esse estado em vez de deixá-lo silencioso.
+  try {
+    const caminhoRun = path.join(ROOT, 'governance', '.current-run.json');
+    const caminhoProjecao = path.join(ROOT, 'dev', 'platform-readiness', 'latest.json');
+    if (fs.existsSync(caminhoRun) && fs.existsSync(caminhoProjecao)) {
+      const run = JSON.parse(fs.readFileSync(caminhoRun, 'utf8'));
+      const projecao = JSON.parse(fs.readFileSync(caminhoProjecao, 'utf8'));
+      const coerente = run.runId === projecao.runId;
+      registrarNota(
+        'A9-lineage-run-projecao',
+        coerente,
+        coerente
+          ? `projeção no run corrente (${run.runId})`
+          : `PROJECAO_STALE: projeção=${projecao.runId} run=${run.runId} — rode 'node tools/system/platform-readiness.js' antes de concluir o ciclo`
+      );
+    } else {
+      registrarNota('A9-lineage-run-projecao', true, 'sem run aberto ou sem projeção (nada a comparar)');
+    }
+  } catch (erro) {
+    registrarNota('A9-lineage-run-projecao', false, `ilegível: ${String(erro.message || erro).slice(0, 120)}`);
+  }
+
   return {
     sha, branch, checks, achados,
     arvoreSuja: sujo,

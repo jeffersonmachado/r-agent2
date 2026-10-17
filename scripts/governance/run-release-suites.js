@@ -704,6 +704,10 @@ function collectBatchExitCodeViolations({ batchRuns, batchFailures } = {}) {
 }
 
 function main() {
+  // BUG CLOSURE FIRST (2026-10-17): suíte autoritativa de release é L2.
+  require('../../governance/bug-closure/require-eligibility')
+    .exigirElegibilidade('L2_L3_EXTENSIVO', { actor: 'scripts/governance/run-release-suites.js' });
+
   const manifest = resolveManifest();
   // Determinismo do ambiente: o `.env` é carregado ANTES de qualquer suíte (ver `loadEnvFile`).
   const envFile = loadEnvFile();

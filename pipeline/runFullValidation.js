@@ -453,6 +453,11 @@ async function main() {
 }
 
 if (require.main === module) {
+  // BUG CLOSURE FIRST (2026-10-17): o pipeline completo executa validação
+  // extensiva (L2/L3 + QA Mesh). Não começa com P0/P1 bloqueante aberto.
+  require('../governance/bug-closure/require-eligibility')
+    .exigirElegibilidade('L2_L3_EXTENSIVO', { actor: 'pipeline/runFullValidation.js' });
+
   main().catch((err) => {
     clearPipelineLock();
     ensureDir(REPORTS_DIR);
