@@ -522,15 +522,16 @@
     {
       "id": "H15-DIST-RECIBO-STALE",
       "title": "Higiene do dist/: recibo do verifier STALE deixa de poluir a avaliacao",
-      "status": "done",
+      "status": "blocked_external",
       "commit": "ec85f48b7",
       "evidence": "Defeito medido: `validate:dist` falhava com 3 motivos, sendo 1 espurio — `STALE_VERIFIER_RESULT` de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 (r-agent2-20261011-083027.payload.zip) ja ARQUIVADO. A politica exige recibo vinculado ao PAYLOAD ATUAL. Removido (copia preservada em dist/archive/pre-seal-20261010/). Medicao DEPOIS: o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\" e o validate:dist falha por UMA causa unica — ausencia de payload selado — em vez de 3 sintomas. A tentativa inversa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "done",
       "severityBasis": "higiene do dist: recibo stale causava FAIL espurio (falso NO_GO), nao falso GO",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release): validate:dist falha hoje em verify-enterprise-governance-v2.sh com SCORECARD_EVIDENCE_MISSING (governance/delivered-release-verification-report.json) porque o dist/ contem entrega ANTERIOR ao codigo atual. Provar a higiene exige novo ciclo de selagem+empacotamento, que a elegibilidade NEGA enquanto houver P0/P1 aberto. Medido 2026-10-17: validate:dist -> check_dist_clean_failed."
     },
     {
       "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
@@ -586,15 +587,16 @@
     {
       "id": "H19-DIST-CAUSA-UNICA",
       "title": "validate:dist reduzido a causa unica (payload ausente = P1-11)",
-      "status": "done",
+      "status": "blocked_external",
       "commit": "ec85f48b7",
       "evidence": "Antes: 3 motivos de FAIL, sendo 1 espurio — STALE_VERIFIER_RESULT de dist/verifier/verify-result.json, recibo do payload de 2026-10-11 ja arquivado. Removido (copia preservada em dist/archive/pre-seal-20261010/), o check passa a reportar \"dist/verifier/ sem verify-result.json pre-empacotado (sera escrito pelo passo 6)\". Depois: 2 sintomas de UMA causa (payload nao selado = P1-11): \"Nenhum PAYLOAD encontrado em dist/release/*.payload.zip\" e \"verify-enterprise-governance-v2.sh FAIL\". A alternativa (restaurar o payload antigo) foi rejeitada por projeto: geraria FOREIGN_RUN_ARTIFACT em validate:release-artifact-identity.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "done",
       "severityBasis": "validate:dist com motivo espurio (falso NO_GO); causa unica",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release): validate:dist falha hoje em verify-enterprise-governance-v2.sh com SCORECARD_EVIDENCE_MISSING (governance/delivered-release-verification-report.json) porque o dist/ contem entrega ANTERIOR ao codigo atual. Provar a higiene exige novo ciclo de selagem+empacotamento, que a elegibilidade NEGA enquanto houver P0/P1 aberto. Medido 2026-10-17: validate:dist -> check_dist_clean_failed."
     },
     {
       "id": "DIV-PUREZA-ENGINE",
@@ -750,16 +752,17 @@
     {
       "id": "DEF-STATESYNC-EXEMPTION-STALE",
       "title": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
-      "status": "done",
+      "status": "pending",
       "commit": "8ef4af5cd",
       "evidence": "config/state-sync-exemptions.json + validate:layer-conventions 0 issues (era 1 warning)",
       "resolution": "Resíduo do DEF-WS-AUTH-POS-LOGIN: ao remover o setInterval de 2000ms que reintentava autenticação, a contagem caiu de 4 para 3 mas a isenção continuou declarando 4. O gate acusou \"isenção superdimensionada\". Corrigido para 3 com as linhas reais (362 ping, 650 watchdog, 752 verificação de token) e registro da data da mudança.",
       "severity": "P3",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done",
+      "legacyStatus": "pending",
       "severityBasis": "residuo de isencao (contagem 4 vs 3)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/frontend/stateSyncExemptionExactness.test.js"
     },
     {
       "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
