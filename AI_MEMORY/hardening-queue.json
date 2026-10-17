@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T15:11:09.240Z",
+  "updatedAt": "2026-10-17T15:14:55.409Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -180,26 +180,36 @@
     {
       "id": "P1-5",
       "title": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
-      "status": "pending",
-      "commit": "8624e5594",
-      "evidence": "rag-service/services/hybrid_search.py + rag-service 156 passed",
+      "status": "done",
+      "commit": "2f35742d23c7",
+      "evidence": "rag-service/services/hybrid_search.py + rag-service 156 passed VERIFICADO: rag-service/tests/test_hybrid_search.py exit=0 em arvore limpa (2f35742d23c7).",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
-      "regressionTest": "rag-service/tests/test_hybrid_search.py"
+      "regressionTest": "rag-service/tests/test_hybrid_search.py",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:14:55.407Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "2f35742d23c7c551e4d978ca0516bb6dde88842c",
+      "verificationNote": "reconcile-hardening-queue.js: rag-service/tests/test_hybrid_search.py exit=0 em 2f35742d23c7"
     },
     {
       "id": "P1-6",
       "title": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
-      "status": "pending",
-      "commit": "73e76535d",
-      "evidence": "rag-service/config/settings.py (AliasChoices) + 156 passed / 0 skipped (antes: isolamento 100% SKIPPED)",
+      "status": "done",
+      "commit": "2f35742d23c7",
+      "evidence": "rag-service/config/settings.py (AliasChoices) + 156 passed / 0 skipped (antes: isolamento 100% SKIPPED) VERIFICADO: rag-service/tests/test_hybrid_isolation_real_db.py exit=0 em arvore limpa (2f35742d23c7).",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
-      "regressionTest": "rag-service/tests/test_hybrid_isolation_real_db.py"
+      "regressionTest": "rag-service/tests/test_hybrid_isolation_real_db.py",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:14:55.408Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "2f35742d23c7c551e4d978ca0516bb6dde88842c",
+      "verificationNote": "reconcile-hardening-queue.js: rag-service/tests/test_hybrid_isolation_real_db.py exit=0 em 2f35742d23c7"
     },
     {
       "id": "P1-7",
