@@ -1065,14 +1065,15 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
       "title": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
-      "status": "blocked_external",
+      "status": "pending",
       "commit": "57167fb62",
       "evidence": "MEDIDO: main protected=false; GET /branches/main/protection e /rulesets => HTTP 403 \"Upgrade to GitHub Pro or make this repository public\" (repo privado, plano User/Free). Entregue gate executavel: governance/branch-protection.config.json (allow_force_pushes=false, allow_deletions=false) + scripts/governance/verify-branch-protection.js (mede, grava reports/branch-protection-report.json, UNKNOWN nunca vira PASS; --apply quando o plano permitir). Prova: 12/12 testes (o caso de versionamento falhava antes da excecao no .gitignore e passa depois); medicao real status=BLOCKED_EXTERNAL. RESOLUCAO EXIGE TERCEIRO: plano pago ou repositorio publico.",
-      "blocked_reason": "A API do GitHub recusa ativar protecao de branch em repositorio privado no plano Free (HTTP 403). Nao existe mitigacao local equivalente a protecao server-side.",
+      "blocked_reason": null,
       "severity": "P0",
       "severityStatus": "DECLARADA",
-      "state": "BLOCKED_EXTERNAL",
-      "legacyStatus": "blocked_external"
+      "state": "FIXED_PENDING_VERIFICATION",
+      "legacyStatus": "blocked_external",
+      "regressionTest": "tests/unit/governance/branchProtectionApplyPayload.test.js"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
