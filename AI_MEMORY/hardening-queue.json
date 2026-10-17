@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T12:45:42.974Z",
+  "updatedAt": "2026-10-17T12:46:15.331Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -498,11 +498,16 @@
       "evidence": "DEFEITO REAL achado pela jornada funcional no browser: /editor com 2 erros de console + 3 pageerror (\"Rendered more hooks than during the previous render\" em FlowTemplateSelector) e o botao \"Novo\" nao abria o seletor — a acao de criar fluxo sumia. Causa: useMemo das tags DEPOIS dos returns antecipados de selectedTemplate/loading/error; na 1a render (loading=true) o hook nao rodava e na seguinte rodava um hook a mais. Corrigido movendo o hook para antes dos returns. PROVA NOS DOIS SENTIDOS: com o codigo antigo (git stash push do .jsx) o teste falha com o erro exato do browser; com o fix, frontend/src/components/FlowTemplateSelector.test.jsx 4/4 e suite frontend 136 arquivos / 1035 testes PASS (EXIT=0). Prova no browser depois do fix: /editor com 0 console errors, 0 pageerror e \"Novo\" abrindo \"Criar Novo Fluxo / Selecione um modelo\".",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "done",
       "severityBasis": "capacidade CORE do produto quebrada: botao \"Novo\" nao abria seletor de fluxo + 3 pageerror",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "frontend/src/components/FlowTemplateSelector.test.jsx"
+      "regressionTest": "frontend/src/components/FlowTemplateSelector.test.jsx",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T12:46:15.330Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
+      "verificationNote": "reconcile-hardening-queue.js: frontend/src/components/FlowTemplateSelector.test.jsx exit=0 em 3a824ad53d87"
     },
     {
       "id": "H18-JORNADA-FUNCIONAL-BROWSER",
@@ -588,11 +593,16 @@
       "resolution": "DEFEITO REAL de producao, encontrado exercitando a jornada no browser (nao havia teste cobrindo). Evidencia que separou a causa: servidor 3300 conexoes/2115 autenticadas/ZERO invalid_token; browser instrumentado mostrou >60s com ping saindo e NENHUM auth; WebSocket puro fora do React autenticou em 6ms e ficou OPEN => o servidor esta correto, o defeito e do cliente. Causa: socket aberto uma vez no mount ANTES do login; a autenticacao dependia de um efeito que so reagia a connected/authenticated/authFailed (o login nao muda nenhum) e de um setInterval de 2s cujo authenticateWebSocket retornava false EM SILENCIO quando o socket nao estava utilizavel, sem reconectar. Corrigido: consumo de AuthContext + efeito de SESSAO (login autentica), reconexao imediata quando o socket nao serve, warn no lugar do silencio, reset do isIntentionalCloseRef (podia prender em true e desligar watchdog e recovery), fechamento de socket em CONNECTING no unmount (orfaos) e REMOCAO do setInterval de 2s (proibido). Prova: browser \"Falha de auth\" -> \"Conectado\" sem F5 com auth+subscribe enviados; servidor Broadcast 0 -> 1 cliente; frontend 137 arquivos/1040 testes PASS.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "done",
       "severityBasis": "producao: sem tempo real ate F5 apos login",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx"
+      "regressionTest": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T12:46:15.330Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
+      "verificationNote": "reconcile-hardening-queue.js: frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx exit=0 em 3a824ad53d87"
     },
     {
       "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
@@ -603,11 +613,16 @@
       "resolution": "Reprovou o QA Mesh no cenario support-inbox-nota-ui (omnichannel, BLOCKING): NotFoundError removeChild em commitDeletionEffectsOnFiber. Regressao confirmada por metodo barato: removeChild aparece 20x no mesh de 09:33 e ZERO em 10 meshes anteriores (desde 03/10), todos 144/144. Causa raiz: main.jsx enhanceSupportHeaders movia os filhos do <h1> (que pertencem ao React) para um span e depois chamava title.replaceChildren -> arvore de fibers inconsistente -> o commit seguinte do React removia no inexistente. Defeito LATENTE exposto pelo aumento de re-renders (WebSocketProvider no topo). Corrigido: funcao extraida para src/utils/supportHeaderEnhancement.js (ESM, testavel sem bootstrap), o botao entra como IRMAO do <h1> (insertBefore) e o layout foi para CSS (.support-header-with-back). REGRA: em no do React, ADICIONAR irmao e seguro; mover/substituir/remover nos conhecidos nao e.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "done",
       "severityBasis": "crash de UI (removeChild) reprovando cenario BLOCKING do QA Mesh",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "frontend/src/__tests__/supportHeaderEnhancement.test.js"
+      "regressionTest": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T12:46:15.330Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
+      "verificationNote": "reconcile-hardening-queue.js: frontend/src/__tests__/supportHeaderEnhancement.test.js exit=0 em 3a824ad53d87"
     },
     {
       "id": "DEF-QUEUE-DELETE-DB-ONLY",
