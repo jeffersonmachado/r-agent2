@@ -49,9 +49,14 @@ function carregarConfig() {
   return cfg;
 }
 
-function gh(args) {
+function gh(args, opcoes = {}) {
   try {
-    const out = execFileSync('gh', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const out = execFileSync('gh', args, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: [opcoes.input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
+      ...(opcoes.input === undefined ? {} : { input: opcoes.input }),
+    });
     return { ok: true, out: out.trim(), status: 0 };
   } catch (err) {
     const stderr = (err.stderr || '').toString();
@@ -152,25 +157,28 @@ function decidir({ medicao, divergencias = [], aplicarFlag = false, aplicado = n
 }
 
 function aplicar(repo, branch, desired, ghRunner = gh) {
-  const args = ['api', '-X', 'PUT', `repos/${repo}/branches/${branch}/protection`];
-  const mapa = {
-    enforce_admins: 'enforce_admins',
-    required_status_checks: 'required_status_checks',
-    required_pull_request_reviews: 'required_pull_request_reviews',
-    restrictions: 'restrictions',
-    required_linear_history: 'required_linear_history',
-    allow_force_pushes: 'allow_force_pushes',
-    allow_deletions: 'allow_deletions',
-    required_conversation_resolution: 'required_conversation_resolution',
-    lock_branch: 'lock_branch',
+  // DEFEITO MEDIDO (2026-10-17): a API de proteção exige explicitamente
+  // `required_status_checks`, `required_pull_request_reviews` e `restrictions` no corpo do
+  // PUT — omitir as chaves devolve HTTP 422 "...weren't supplied" e o `--apply` NUNCA
+  // funcionava (falhava calado: relatório dizia `applied.ok=false`). Aqui o corpo é
+  // enviado como JSON, com `null` EXPLÍCITO nas três quando não há exigência.
+  const payload = {
+    required_status_checks: desired.required_status_checks === undefined ? null : desired.required_status_checks,
+    required_pull_request_reviews: desired.required_pull_request_reviews === undefined ? null : desired.required_pull_request_reviews,
+    restrictions: desired.restrictions === undefined ? null : desired.restrictions,
+    enforce_admins: desired.enforce_admins === true,
+    allow_force_pushes: desired.allow_force_pushes === true,
+    allow_deletions: desired.allow_deletions === true,
   };
-  for (const [chave, campo] of Object.entries(mapa)) {
-    const valor = desired[chave];
-    if (valor === null) continue;
-    args.push('-F', `${campo}=${valor === true ? 'true' : 'false'}`);
+  for (const chave of ['required_linear_history', 'required_conversation_resolution', 'lock_branch']) {
+    if (desired[chave] !== undefined) payload[chave] = desired[chave] === true;
   }
-  const r = ghRunner(args);
-  return { ok: r.ok, status: r.status, out: r.out.slice(0, 300) };
+
+  const r = ghRunner(
+    ['api', '-X', 'PUT', `repos/${repo}/branches/${branch}/protection`, '--input', '-'],
+    { input: JSON.stringify(payload) },
+  );
+  return { ok: r.ok, status: r.status, out: r.out.slice(0, 300), payload };
 }
 
 function escrever(relatorio) {
