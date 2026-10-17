@@ -83,6 +83,23 @@ const SMOKES = [
   },
 ];
 
+/**
+ * O smoke L04 insere um CDR sintético e verifica o disparo de flow. Ele nasceu acoplado ao
+ * compose (`docker compose exec api`). No runtime de desenvolvimento a API roda como processo
+ * no HOST, e o smoke falhava com `service "api" is not running` — falha de TOPOLOGIA, não de
+ * produto. O próprio smoke já prevê o modo `direct` (usa o banco da aplicação) e exige intenção
+ * explícita para escrever nele; aqui a escolha é derivada da topologia REAL, nunca fixa.
+ */
+function modoDeInsercaoDoCdr() {
+  const explicito = String(process.env.PBX_CALL_EVENTS_RUNTIME_INSERT_MODE || '').trim();
+  if (explicito) return explicito.toLowerCase();
+  const ps = spawnSync('docker', ['compose', '-f', 'docker-compose.test.yml', 'ps', '--services', '--status', 'running'], {
+    cwd: ROOT, encoding: 'utf8', timeout: 15000,
+  });
+  const servicos = String(ps.stdout || '').split('\n').map((s) => s.trim()).filter(Boolean);
+  return servicos.includes('api') ? 'compose_exec' : 'direct';
+}
+
 async function alcancavel(url) {
   try {
     const resposta = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(5000) });
@@ -109,6 +126,8 @@ async function main() {
     process.exit(2);
   }
 
+  const modoCdr = modoDeInsercaoDoCdr();
+  process.stdout.write(`[smoke-evidence] modo de insercao do CDR (l04): ${modoCdr}\n`);
   const ambiente = {
     ...process.env,
     TEST_BASE_URL: API,
@@ -117,6 +136,10 @@ async function main() {
     FRONTEND_URL: FRONTEND,
     TEST_TENANT_ID: process.env.TEST_TENANT_ID || 'system',
     RPA_IGNORE_API_CONSOLE_ERRORS: 'true',
+    PBX_CALL_EVENTS_RUNTIME_INSERT_MODE: modoCdr,
+    // Intenção explícita exigida pelo próprio smoke para escrever no banco da
+    // aplicação (modo direct). Sem isto ele recusa — e deve recusar.
+    ...(modoCdr === 'direct' ? { PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK: '1' } : {}),
   };
 
   const smokes = {};
