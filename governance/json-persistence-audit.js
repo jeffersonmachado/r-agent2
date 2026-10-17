@@ -80,6 +80,9 @@ const CLASSIFIED = {
   // estes dois são EXPORT regenerável a cada execução dos validadores.
   'reports/bug-closure-status.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/hardening-queue-migration.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Veredito PRÓPRIO do gate agregado (P1: antes só existia o exit code do
+  // processo que invocava a cadeia `&&`).
+  'reports/governance-enforcement-verdict.json': 'DB_CANONICAL_JSON_EXPORT',
   // Fila oficial de pendências: configuração DECLARATIVA versionada (lida e
   // escrita por `scripts/governance/migrate-hardening-queue.js`), não estado de
   // runtime. A classificação por basename abaixo existe para leitores que não
