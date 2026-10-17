@@ -216,20 +216,35 @@ describe('(2) CONTRADIÇÃO — declarar validade contra a recalculação é FAI
   });
 });
 
-describe('(3) TEMPO — elo gravado depois da certificação invalida a certificação', () => {
-  it('hash confere mas o arquivo foi reescrito DEPOIS ⇒ CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA', () => {
+describe('(3) TEMPO — escritas posteriores à certificação', () => {
+  it('conteúdo IDÊNTICO reescrito depois ⇒ registra a informação e NÃO reprova', () => {
+    // MEDIDO 2026-10-16: `git checkout` restaurou bytes idênticos e a regra
+    // antiga reprovava. Conteúdo comprovadamente igual (mesmo hash) não invalida
+    // certificação alguma — reprovar ali é falso NO_GO.
     const chain = cadeiaCoerente({ certificada: true, checkedAt: '2026-10-16T00:00:00.000Z' });
-    // Conteúdo idêntico (hash confere) — só o TEMPO denuncia a reescrita.
+    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
+    expect(estado.status).toBe('PASS');
+    expect(estado.codes).not.toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
+    expect(estado.escritasPosteriores.ids.sort()).toEqual(['a', 'b']);
+    expect(estado.escritasPosteriores.comConteudoAlterado).toEqual([]);
+    expect(estado.escritasPosteriores.detalhes.every((d) => d.conteudoIdentico)).toBe(true);
+  });
+
+  it('conteúdo ALTERADO depois da certificação ⇒ CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA', () => {
+    const chain = cadeiaCoerente({ certificada: true, checkedAt: '2026-10-16T00:00:00.000Z' });
+    // Bytes realmente trocados DEPOIS da certificação, e mtime posterior.
+    fs.writeFileSync(alvoAbs('b.json'), JSON.stringify({ elo: 'b', v: 'TROCADO' }));
     const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
     expect(estado.status).toBe('FAIL');
     expect(estado.codes).toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
-    expect(estado.escritasPosteriores.ids.sort()).toEqual(['a', 'b']);
-    expect(estado.recalculadaIntegra).toBe(true);
+    expect(estado.escritasPosteriores.comConteudoAlterado).toEqual(['b']);
+    expect(estado.codes).toContain('CADEIA_DIVERGENTE');
   });
 
   it('a referência de tempo é a da CERTIFICAÇÃO, não a do build', () => {
     const chain = cadeiaCoerente({ certificada: true, checkedAt: '2026-10-16T00:00:00.000Z' });
     chain.generatedAt = '2026-01-01T00:00:00.000Z';
+    fs.writeFileSync(alvoAbs('a.json'), '{ "elo": "a", "v": 9 }');
     const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
     expect(estado.codes).toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
   });

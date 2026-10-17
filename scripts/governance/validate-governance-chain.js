@@ -141,11 +141,13 @@ function main(argv = process.argv.slice(2)) {
       );
     }
     if (relatorio.escritasPosteriores && relatorio.escritasPosteriores.ids.length) {
+      const alterados = relatorio.escritasPosteriores.comConteudoAlterado || [];
       process.stdout.write(
-        `[governance-chain] CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA: ${relatorio.escritasPosteriores.ids.length} elo(s) gravado(s) depois da certificação\n`
+        `[governance-chain] escritas posteriores a certificacao: ${relatorio.escritasPosteriores.ids.length} elo(s) ` +
+        `(${alterados.length} com CONTEUDO ALTERADO)\n`
       );
       relatorio.escritasPosteriores.detalhes.slice(0, 10).forEach((d) => {
-        process.stdout.write(`  ${d.id} (${d.classe}) +${d.segundosDepois}s\n`);
+        process.stdout.write(`  ${d.id} (${d.classe}) +${d.segundosDepois}s conteudoIdentico=${d.conteudoIdentico}\n`);
       });
     }
     if (relatorio.classificacaoElos) {

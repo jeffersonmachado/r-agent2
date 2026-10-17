@@ -209,9 +209,16 @@ function certifyChain(chain, opcoes = {}) {
  *                                           e a recalculação o contradiz;
  *  - AUTO_DECLARACAO_DE_VALIDADE_SEM_CERTIFICACAO — declara validade, mas não
  *                                           declara quem/quando certificou;
- *  - CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA — elo gravado DEPOIS da certificação
- *                                           (a cadeia aparenta estar certificada
- *                                           sobre um conteúdo que já não é o dela).
+ *  - CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA — elo reescrito depois da certificação
+ *                                           COM CONTEÚDO DIFERENTE (a cadeia
+ *                                           aparenta estar certificada sobre um
+ *                                           conteúdo que já não é o dela).
+ *                                           Reescrita com conteúdo idêntico
+ *                                           (git checkout, touch, regeneração
+ *                                           idempotente) é registrada em
+ *                                           `escritasPosteriores` como informação
+ *                                           e NÃO reprova — trata-la como falha
+ *                                           produz falso NO_GO (medido).
  */
 function avaliarEstadoDaCadeia(chain, opcoes = {}) {
   const lerMtime = opcoes.lerMtime || ((rel) => {
@@ -259,28 +266,40 @@ function avaliarEstadoDaCadeia(chain, opcoes = {}) {
     ? Date.parse(chain.certification.checkedAt || chain.certification.certifiedAt)
     : (chain.generatedAt ? Date.parse(chain.generatedAt) : null);
 
-  const escritasPosteriores = { ids: [], detalhes: [] };
+  const escritasPosteriores = { ids: [], detalhes: [], comConteudoAlterado: [] };
   if (Number.isFinite(referenciaMs)) {
     for (const link of chain.links || []) {
       const ms = lerMtime(link.path);
       if (ms === null || ms === undefined) continue;
       if (ms > referenciaMs) {
+        // Conteudo IDENTICO ao certificado (mesmo hash) nao invalida nada: um
+        // `git checkout`, um `touch` ou uma regeneracao idempotente reescrevem
+        // bytes iguais. MEDIDO 2026-10-16: tratar isso como falha produzia
+        // FALSO NO_GO (raiz recomputada == raiz armazenada e, ainda assim, FAIL).
+        // A invalidacao real e a escrita que MUDA o conteudo — e essa continua
+        // bloqueante aqui e tambem em CADEIA_DIVERGENTE.
+        const hashAtual = sha256File(path.join(ROOT, link.path));
+        const conteudoIdentico = hashAtual !== null && hashAtual === link.hash;
         escritasPosteriores.ids.push(link.id);
         escritasPosteriores.detalhes.push({
           id: link.id,
           classe: link.classe || null,
           path: link.path,
           segundosDepois: Math.round((ms - referenciaMs) / 1000),
+          conteudoIdentico,
         });
+        if (!conteudoIdentico) escritasPosteriores.comConteudoAlterado.push(link.id);
       }
     }
   }
 
-  if (escritasPosteriores.ids.length > 0) {
+  // BLOQUEANTE apenas quando a escrita posterior mudou o conteudo: a certificacao
+  // passou a cobrir bytes que nao sao os que estao em disco.
+  if (escritasPosteriores.comConteudoAlterado.length > 0) {
     motivos.push({
       code: 'CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA',
-      message: `${escritasPosteriores.ids.length} elo(s) gravado(s) depois da referência de certificação: ${escritasPosteriores.ids.join(', ')}`,
-      detalhes: escritasPosteriores.detalhes,
+      message: `${escritasPosteriores.comConteudoAlterado.length} elo(s) reescrito(s) com CONTEUDO DIFERENTE depois da certificação: ${escritasPosteriores.comConteudoAlterado.join(', ')}`,
+      detalhes: escritasPosteriores.detalhes.filter((d) => !d.conteudoIdentico),
     });
   }
 
