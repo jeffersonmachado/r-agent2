@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T15:55:26.634Z",
+  "updatedAt": "2026-10-17T16:01:50.042Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -752,17 +752,22 @@
     {
       "id": "DEF-STATESYNC-EXEMPTION-STALE",
       "title": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
-      "status": "pending",
-      "commit": "8ef4af5cd",
+      "status": "done",
+      "commit": "df8a47f65a71",
       "evidence": "config/state-sync-exemptions.json + validate:layer-conventions 0 issues (era 1 warning)",
       "resolution": "Resíduo do DEF-WS-AUTH-POS-LOGIN: ao remover o setInterval de 2000ms que reintentava autenticação, a contagem caiu de 4 para 3 mas a isenção continuou declarando 4. O gate acusou \"isenção superdimensionada\". Corrigido para 3 com as linhas reais (362 ping, 650 watchdog, 752 verificação de token) e registro da data da mudança.",
       "severity": "P3",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "residuo de isencao (contagem 4 vs 3)",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/frontend/stateSyncExemptionExactness.test.js"
+      "regressionTest": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T16:01:50.042Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "df8a47f65a710b56506f0d257efc3f2787a59eec",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/frontend/stateSyncExemptionExactness.test.js exit=0 em df8a47f65a71"
     },
     {
       "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
