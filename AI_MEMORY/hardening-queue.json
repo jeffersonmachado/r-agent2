@@ -471,15 +471,16 @@
     {
       "id": "H12-RAG-REPARO",
       "title": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
-      "status": "done",
+      "status": "pending",
       "commit": "6cdcc9c72",
       "evidence": "Defeito medido: `validate:rag-index-health` NO_GO com 2 documentos failed (ECONNREFUSED no reindex, servico fora durante o lote). Reparado sem mascarar: reindexado para HEALTHY — documentos indexados 3237 -> 3239, chunks 8618 -> 8621, violations 0, failed 0. Prova: reports/rag-index-health-report.json + reports/rag-failed-reindex-report.json (commit de evidencias 6cdcc9c72).",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done",
+      "legacyStatus": "pending",
       "severityBasis": "estado de indice RAG (2 docs failed por ECONNREFUSED); reparo de dados, sem defeito de codigo",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/ragIndexHealthPolicy.test.js"
     },
     {
       "id": "H13-RUNNER-COMPLETO",
