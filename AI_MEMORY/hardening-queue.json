@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T15:50:54.515Z",
+  "updatedAt": "2026-10-17T15:52:30.848Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1201,15 +1201,21 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
       "title": "runtime-evidence reporta \"crash antes do reporter\" quando o teste falha por assercao",
-      "status": "pending",
+      "status": "done",
       "evidence": "CORRIGIDO 2026-10-17: collect-engineering-router-runtime-evidence.js deixou de fazer JSON.parse(stdout) cru; extrairJsonDoJest tenta JSON puro, ultima linha e bloco final. Logs do teste antes do JSON nao viram mais \"crash antes do reporter\".",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "diagnostico enganoso (\"crash antes do reporter\" em falha de assercao)",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/governance/runtimeEvidenceDiagnosis.test.js"
+      "regressionTest": "tests/unit/governance/runtimeEvidenceDiagnosis.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T15:52:30.847Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "92e7410464fda6890aa7ad8633b6ea27c8778c5a",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/runtimeEvidenceDiagnosis.test.js exit=0 em 92e7410464fd",
+      "commit": "92e7410464fd"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
