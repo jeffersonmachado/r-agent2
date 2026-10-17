@@ -53,6 +53,23 @@ function resolveSecurityProvenance({ lineage = null, currentRun = null, sbom = n
     return issues;
   }
 
+  // RUN ENCERRADO não é run corrente (defeito medido 2026-10-17, família do H20).
+  // `close-run-context.js` marca o run como SUPERSEDED/ABANDONED. Usar o
+  // `startedAt` dele como "início do run corrente" fazia toda evidência de
+  // segurança parecer ANTERIOR e o gate saía sempre com
+  // SECURITY_GATE_STALE_EVIDENCE — culpando o SBOM por um estado que na verdade é
+  // "não existe run aberto para certificar". O bloqueio continua (fail-closed),
+  // com o motivo certo.
+  const statusRun = String(currentRun.status || '').toUpperCase();
+  if (statusRun === 'SUPERSEDED' || statusRun === 'ABANDONED') {
+    issues.push({
+      code: 'SECURITY_GATE_RUN_CLOSED',
+      message: `run ${currentRun.runId} está ${statusRun} — não há run aberto para certificar; `
+        + 'inicie um run governado antes de avaliar evidência de segurança',
+    });
+    return issues;
+  }
+
   const sbomGeneratedAt = sbom && sbom.generatedAt ? new Date(sbom.generatedAt) : null;
   const runStartedAt = currentRun.startedAt ? new Date(currentRun.startedAt) : null;
   const generatedAtValid = sbomGeneratedAt !== null && !Number.isNaN(sbomGeneratedAt.getTime());
