@@ -720,31 +720,169 @@ function compactRawStatus(rawStatus) {
 }
 
 /**
- * Promoção canônica é permitida?
+ * Estados de resultado que NÃO provam execução. Qualquer outro é outcome real.
  *
- * Defeito medido (2026-10-17): execução canônica com ZERO resultados gravava
- * `go-no-go-report.json`, `release-gate.json` e o pacote de inteligência —
- * artefatos governados consumidos como prova de execução por quem nunca
- * executou cenário nenhum. Função pura para que a decisão seja testável sem
- * subir a malha inteira.
- *
- * @param {boolean} habilitado — requisitos de pipeline/origem/registry atendidos
- * @param {Array} results — resultados REALMENTE executados
- * @returns {{permitido: boolean, motivo: object|null}}
+ * Defeito medido (2026-10-17): um array não vazio era aceito como prova. Lista
+ * com 144 objetos `SKIPPED`, ou com um único objeto fabricado à mão, promovia
+ * `go-no-go-report.json`/`release-gate.json` exatamente como uma execução real.
  */
-function podePromoverCanonico(habilitado, results) {
-  if (!habilitado) return { permitido: false, motivo: null };
-  if (!Array.isArray(results) || results.length === 0) {
-    return {
-      permitido: false,
-      motivo: {
-        code: 'MESH_SEM_RESULTADOS',
-        detail: 'execução canônica com ZERO resultados (nenhum cenário executado) — '
-          + 'artefatos governados NÃO foram gravados; corrida não é prova de execução',
-      },
-    };
+const STATUS_NAO_EXECUTADOS = new Set([
+  'SKIPPED', 'SKIP', 'NOT_EXECUTED', 'NOTEXECUTED', 'NOT_RUN', 'UNKNOWN',
+  'PENDING', 'MISSING', 'BLOCKED', 'DECLARED', 'IMPORTED', 'REUSED',
+]);
+
+const ISO_VALIDO = (valor) => {
+  if (typeof valor !== 'string' || !valor.trim()) return false;
+  const ms = Date.parse(valor);
+  return Number.isFinite(ms);
+};
+
+/** Identidade de execução tem de vir dos produtores canônicos (env do run). */
+function identidadeDeExecucaoValida(identidade = {}) {
+  const faltantes = [];
+  if (!identidade.executionId || String(identidade.executionId).trim() === '') faltantes.push('executionId');
+  if (!identidade.runId) faltantes.push('runId');
+  if (!identidade.sourceFingerprint) faltantes.push('sourceFingerprint');
+  if (!identidade.sourceCommit) faltantes.push('sourceCommit');
+  if (identidade.sourceCommit && !/^[0-9a-f]{40}$/i.test(String(identidade.sourceCommit))) {
+    faltantes.push('sourceCommit_formato');
   }
-  return { permitido: true, motivo: null };
+  return { valida: faltantes.length === 0, faltantes };
+}
+
+/**
+ * Um resultado é PROVA de execução?
+ *
+ * Critérios (todos obrigatórios):
+ *  1. bem formado (id de cenário);
+ *  2. status de outcome real (nem SKIPPED/NOT_EXECUTED/UNKNOWN/PENDING/BLOCKED);
+ *  3. janela temporal executada (startedAt/finishedAt válidos, started <= finished);
+ *  4. evidência de execução (evidencePath ou replayArtifact ou logs);
+ *  5. não declarado sintético/importado/reaproveitado;
+ *  6. identidade de run, quando declarada no resultado, é a MESMA da execução.
+ *
+ * @returns {Array<{code:string, scenarioId:string|null, detail:string}>}
+ */
+function validarResultadoExecutado(resultado, identidade = {}) {
+  const achados = [];
+  const id = resultado && (resultado.id || resultado.scenarioId);
+
+  if (!resultado || typeof resultado !== 'object' || Array.isArray(resultado)) {
+    return [{ code: 'MESH_RESULTADO_MALFORMADO', scenarioId: null, detail: 'resultado não é objeto' }];
+  }
+  if (!id || String(id).trim() === '') {
+    achados.push({ code: 'MESH_RESULTADO_SEM_ID', scenarioId: null, detail: 'resultado sem id de cenário' });
+  }
+
+  const status = String(resultado.status || '').toUpperCase();
+  if (!status) {
+    achados.push({ code: 'MESH_RESULTADO_MALFORMADO', scenarioId: id || null, detail: 'resultado sem status' });
+  } else if (STATUS_NAO_EXECUTADOS.has(status)) {
+    achados.push({ code: 'MESH_RESULTADO_STATUS_NAO_EXECUTADO', scenarioId: id || null, detail: `status ${status} não prova execução` });
+  }
+
+  if (resultado.synthetic === true || resultado.imported === true || resultado.reused === true
+      || resultado.importedFrom || resultado.reusedFrom) {
+    achados.push({
+      code: 'MESH_RESULTADO_REAPROVEITADO',
+      scenarioId: id || null,
+      detail: 'resultado sintético/importado/reaproveitado não é execução deste run',
+    });
+  }
+
+  const inicioOk = ISO_VALIDO(resultado.startedAt);
+  const fimOk = ISO_VALIDO(resultado.finishedAt);
+  if (!inicioOk || !fimOk) {
+    achados.push({
+      code: 'MESH_RESULTADO_SEM_IDENTIDADE',
+      scenarioId: id || null,
+      detail: 'sem janela de execução (startedAt/finishedAt válidos)',
+    });
+  } else if (Date.parse(resultado.startedAt) > Date.parse(resultado.finishedAt)) {
+    achados.push({ code: 'MESH_RESULTADO_MALFORMADO', scenarioId: id || null, detail: 'startedAt posterior a finishedAt' });
+  }
+
+  const temEvidencia = Boolean(resultado.evidencePath || resultado.replayArtifact
+    || (Array.isArray(resultado.logs) && resultado.logs.length > 0)
+    || (Array.isArray(resultado.artifacts) && resultado.artifacts.length > 0));
+  if (!temEvidencia) {
+    achados.push({ code: 'MESH_RESULTADO_SEM_EVIDENCIA', scenarioId: id || null, detail: 'sem evidência de execução (logs/artifacts/replay/evidencePath)' });
+  }
+
+  for (const campo of ['runId', 'sourceFingerprint', 'sourceCommit']) {
+    const valor = resultado[campo];
+    if (!valor) continue; // ausência é coberta pela identidade da execução
+    if (!identidade[campo] || String(valor) !== String(identidade[campo])) {
+      achados.push({
+        code: 'MESH_RESULTADO_RUN_ESTRANGEIRO',
+        scenarioId: id || null,
+        detail: `${campo} do resultado (${String(valor).slice(0, 16)}) difere da execução (${String(identidade[campo] || 'ausente').slice(0, 16)})`,
+      });
+    }
+  }
+
+  return achados;
+}
+
+/**
+ * Decisão de promoção canônica (função PURA — testável sem subir a malha).
+ *
+ * `permitido` exige: identidade de execução completa, ≥ 1 resultado, e TODO
+ * resultado sendo prova de execução. Lista vazia, lista de `SKIPPED`, objeto
+ * fabricado ou resultado de outro run não promovem nada.
+ *
+ * @param {{habilitado:boolean, results:Array, identidade:object}} entrada
+ * @returns {{permitido:boolean, motivos:Array, totalResultados:number, resultadosExecutados:number}}
+ */
+function avaliarPromocaoCanonica({ habilitado, results, identidade } = {}) {
+  const lista = Array.isArray(results) ? results : [];
+  if (!habilitado) {
+    return { permitido: false, motivos: [], totalResultados: lista.length, resultadosExecutados: 0 };
+  }
+
+  const motivos = [];
+  const idExec = identidadeDeExecucaoValida(identidade || {});
+  if (!idExec.valida) {
+    motivos.push({
+      code: 'MESH_SEM_IDENTIDADE_DE_EXECUCAO',
+      scenarioId: null,
+      detail: `identidade do run incompleta (${idExec.faltantes.join(',')}) — sem ela nenhum artefato é prova`,
+    });
+  }
+
+  if (lista.length === 0) {
+    motivos.push({
+      code: 'MESH_SEM_RESULTADOS',
+      scenarioId: null,
+      detail: 'execução canônica com ZERO resultados — corrida não é prova de execução',
+    });
+  } else {
+    for (const resultado of lista) {
+      motivos.push(...validarResultadoExecutado(resultado, identidade || {}));
+    }
+  }
+
+  // Resultado cuja execução começou ANTES do run não é prova deste run.
+  const inicioRun = identidade && ISO_VALIDO(identidade.startedAt) ? Date.parse(identidade.startedAt) : null;
+  if (inicioRun !== null) {
+    for (const resultado of lista) {
+      if (!resultado || !ISO_VALIDO(resultado.startedAt)) continue;
+      if (Date.parse(resultado.startedAt) < inicioRun - 60 * 1000) {
+        motivos.push({
+          code: 'MESH_RESULTADO_ANTERIOR_AO_RUN',
+          scenarioId: resultado.id || resultado.scenarioId || null,
+          detail: 'resultado iniciado antes do run corrente (evidência reaproveitada)',
+        });
+      }
+    }
+  }
+
+  return {
+    permitido: motivos.length === 0,
+    motivos,
+    totalResultados: lista.length,
+    resultadosExecutados: lista.filter((r) => r && !STATUS_NAO_EXECUTADOS.has(String(r.status || '').toUpperCase())).length,
+  };
 }
 
 function writeJson(filePath, payload) {
@@ -2539,11 +2677,24 @@ async function runMeshInner(options = {}, tenantId = 'system') {
   // mas NÃO toca artefato governado, e o motivo fica declarado.
   let promocaoRebaixada = null;
   {
-    const decisao = podePromoverCanonico(writeCanonicalOutputs, results);
+    const decisao = avaliarPromocaoCanonica({
+      habilitado: writeCanonicalOutputs,
+      results,
+      identidade: { executionId, startedAt, ...resolveOriginLineage() },
+    });
     if (!decisao.permitido && writeCanonicalOutputs) {
       writeCanonicalOutputs = false;
-      promocaoRebaixada = { ...decisao.motivo, executionId, scenariosSelecionados: registryTotal };
-      summary.reasons = [...new Set([...(summary.reasons || []), decisao.motivo.detail])];
+      promocaoRebaixada = {
+        code: decisao.motivos[0] ? decisao.motivos[0].code : 'MESH_PROMOCAO_RECUSADA',
+        detail: decisao.motivos.length
+          ? `${decisao.motivos.length} resultado(s)/identidade não sustentam promoção: ${decisao.motivos[0].detail}`
+          : 'promoção canônica recusada',
+        executionId,
+        scenariosSelecionados: registryTotal,
+        resultadosExecutados: decisao.resultadosExecutados,
+        motivos: decisao.motivos.slice(0, 40),
+      };
+      summary.reasons = [...new Set([...(summary.reasons || []), promocaoRebaixada.detail])];
       if (typeof appendLog === 'function') appendLog('CANONICAL_PROMOTION_REFUSED', 'warn', promocaoRebaixada);
     }
   }
@@ -2791,7 +2942,15 @@ module.exports = {
   REPORT_PATH,
   HISTORY_DIR,
   EVIDENCE_DIR,
-  podePromoverCanonico,
+  podePromoverCanonico: (habilitado, results) => avaliarPromocaoCanonica({
+    habilitado,
+    results,
+    identidade: { executionId: 'legacy-wrapper', startedAt: new Date(0).toISOString(), runId: 'r', sourceFingerprint: 'f'.repeat(64), sourceCommit: 'a'.repeat(40) },
+  }).permitido,
+  avaliarPromocaoCanonica,
+  validarResultadoExecutado,
+  identidadeDeExecucaoValida,
+  STATUS_NAO_EXECUTADOS,
   buildRegistry,
   scenarioRequiresOfficialPipeline,
   refreshRegistry,
