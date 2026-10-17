@@ -137,10 +137,32 @@ function classificarDefeitos(defeitos) {
 
 /** Todos os defeitos que precisam de teste direcionado aprovado para liberar condicional. */
 function exigemTesteDirecionado(defeitos) {
+  // DEFEITO MEDIDO (2026-10-17): a lista aplicava a exigência a defeitos JÁ FECHADOS.
+  // Os 23 itens fechados antes deste mecanismo não têm `targetedTestPassing` (o campo não
+  // existia), então `L0_COMPLETO` era negado para sempre com o motivo enganoso
+  // "TESTE_DIRECIONADO_PENDENTE" apontando para P0/P1 já provados. A exigência é sobre
+  // defeito ABERTO pendente de prova.
+  //
+  // Regra final (não afrouxa aberto):
+  //   - VERIFIED     => já verificado, não exige teste novo;
+  //   - RISK_ACCEPTED => excluído por definição;
+  //   - RESOLVED     => exige teste novo A MENOS que qualquer prova esteja registrada
+  //                     (`targetedTestPassing`, `verificationCommit` ou o `commit` do fix) —
+  //                     é o caso dos itens fechados por processos anteriores;
+  //   - demais (aberto) => exige sempre que for P0/P1/severidade não declarada. Um `commit`
+  //                     no item aberto NÃO isenta: prova de fix não é prova de regressão.
+  const PROVA_SHA = /^[0-9a-f]{7,40}$/i;
   return (Array.isArray(defeitos) ? defeitos : []).filter((d) => {
     const sev = normalizarSeveridade(d && d.severity);
     const estado = String((d && d.state) || '').toUpperCase();
     if (estado === ESTADOS.RISK_ACCEPTED) return false;
+    if (estado === ESTADOS.VERIFIED) return false;
+    if (estado === ESTADOS.RESOLVED) {
+      const prova = d && (d.targetedTestPassing === true
+        || PROVA_SHA.test(String(d.verificationCommit || '').trim())
+        || PROVA_SHA.test(String(d.commit || '').trim()));
+      return !prova;
+    }
     return sev === SEVERIDADES.P0 || sev === SEVERIDADES.P1 || sev === null;
   });
 }

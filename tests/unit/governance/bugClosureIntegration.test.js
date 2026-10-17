@@ -24,6 +24,15 @@ const {
   classificarComando, avaliarComando, erroDeBloqueio,
 } = require('../../../governance/bug-closure/command-policy');
 
+const FIXTURE_P0 = path.join(RAIZ, 'tests', 'fixtures', 'bug-closure', 'queue-with-open-p0.json');
+
+// DETERMINISMO: estes testes provam RECUSA, então precisam de um inventário com P0 aberto.
+// Antes dependiam da fila REAL — o que os deixava vermelhos exatamente quando todos os
+// defeitos eram realmente fechados (medido em 2026-10-17). O hook só troca o CAMINHO do
+// inventário; a política continua a mesma.
+beforeEach(() => { process.env.BUG_CLOSURE_INVENTORY_PATH = FIXTURE_P0; });
+afterEach(() => { delete process.env.BUG_CLOSURE_INVENTORY_PATH; });
+
 describe('(1) política de comando — lista fechada e auditável', () => {
   const CASOS_EXTENSIVOS = [
     [['npm', 'run', 'validate:governance-enforcement'], 'L2_L3_EXTENSIVO'],
@@ -57,10 +66,11 @@ describe('(1) política de comando — lista fechada e auditável', () => {
     }
   });
 
-  it('nega com a fila real (P0/P1 abertos) e libera o teste direcionado', () => {
+  it('nega com inventário contendo P0 aberto e libera o teste direcionado', () => {
     const negado = avaliarComando({ command: 'npm', args: ['run', 'qa:mesh'], actor: 'teste' });
     expect(negado.permitido).toBe(false);
     expect(negado.decisao.reasonCodes.length).toBeGreaterThan(0);
+    expect(negado.decisao.reasonCodes).toContain('P0_ABERTO');
 
     const livre = avaliarComando({ command: 'npx', args: ['jest', 'tests/unit/x.test.js'], actor: 'teste' });
     expect(livre.permitido).toBe(true);

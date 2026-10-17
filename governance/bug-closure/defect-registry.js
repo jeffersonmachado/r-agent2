@@ -88,6 +88,10 @@ function carregarInventario(opcoes = {}) {
   // virava "alvo de ESCRITA fantasma" da fila no inventário. `path.resolve`
   // produz o mesmo caminho sem o falso positivo.
   const queuePath = opcoes.queuePath
+    // Override EXPLÍCITO para testes: sem ele, testes de RECUSA passam a depender do
+    // estado vivo da fila e ficam vermelhos exatamente quando todos os defeitos são
+    // fechados (medido em 2026-10-17). A política não muda: só o CAMINHO do inventário.
+    || (process.env.BUG_CLOSURE_INVENTORY_PATH && String(process.env.BUG_CLOSURE_INVENTORY_PATH).trim())
     || path.resolve(__dirname, '..', '..', 'AI_MEMORY', 'hardening-queue.json');
 
   if (!fs.existsSync(queuePath)) {
