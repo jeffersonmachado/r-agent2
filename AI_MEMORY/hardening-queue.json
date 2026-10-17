@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T12:48:48.742Z",
+  "updatedAt": "2026-10-17T12:53:37.118Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -303,14 +303,19 @@
     {
       "id": "P1-15",
       "title": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
-      "status": "pending",
-      "commit": "25cf2e259",
-      "evidence": "CORRIGIDO e PROVADO em ciclo real. Fix: em `scripts/two-pass-release.sh::materialize_payload_governance`, a atestacao (`update-package-binding.js`) passou a ser RE-EMITIDA imediatamente antes do `package-integrity-engine` e depois de todas as escritas que ele deve cobrir (`exportGovernanceArtifacts` + `package-validator`). Prova do mecanismo (mesmo payload): antes `EVIDENCE_MANIFEST_HASH_DIVERGENT` exit 1 (computed=a877b7965c803f02e5d2bd58 != recorded=deefdfdecd56c66f7cc5d836); depois `EVIDENCE_MANIFEST_HASH_OK` exit 0 (computed == recorded). PROVA EM CICLO REAL: `npm run release:seal` atravessou a fase `final` e o envelope com `[seal:final] pacote final (SEAL_GO, exit 0)`, release r-agent2-20261011-083027, H_final deb1d888c47cf1db57e116a3b01f337ca340c0c529d9b2, ZIP de 62 MB em dist/release. O check NAO foi afrouxado — a ordem estava errada.",
+      "status": "done",
+      "commit": "c81f11081b77",
+      "evidence": "tests/unit/governance/attestationOrder.test.js exit=0 em arvore limpa (c81f11081b77, 5 casos): re-atestacao DEPOIS de exportGovernanceArtifacts/package-validator e ANTES de package-integrity-engine, falha bloqueando o release, assinatura final por ultimo. Fix original em scripts/two-pass-release.sh::materialize_payload_governance (medido: EVIDENCE_MANIFEST_HASH_DIVERGENT computed=613503798fd1 vs recorded=deefdfdecd56).",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
-      "regressionTest": "tests/unit/governance/attestationOrder.test.js"
+      "regressionTest": "tests/unit/governance/attestationOrder.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T12:53:37.118Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "c81f11081b77",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/attestationOrder.test.js exit=0 em c81f11081b77"
     },
     {
       "id": "P1-16",
@@ -1014,16 +1019,22 @@
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
       "title": "Malha grava artefato governado mesmo executando ZERO resultados (--scenario-id da wave nao casa)",
-      "status": "pending",
-      "commit": "c20433341",
-      "evidence": "CORRIGIDO 2026-10-17: podePromoverCanonico() rebaixa a promocao canonica quando results.length===0 (code MESH_SEM_RESULTADOS) — artefatos governados nao sao gravados e o motivo vai para summary.reasons/canonicalPromotion + log CANONICAL_PROMOTION_REFUSED. Medicao original: execucao com --scenario-id que nao casa grava qa-mesh/go-no-go-report.json, release-gate.json e inteligencia sem executar cenario algum.",
+      "status": "done",
+      "commit": "c81f11081b77",
+      "evidence": "CORRIGIDO 2026-10-17: podePromoverCanonico() rebaixa a promocao canonica quando results.length===0 (code MESH_SEM_RESULTADOS) — artefatos governados nao sao gravados e o motivo vai para summary.reasons/canonicalPromotion + log CANONICAL_PROMOTION_REFUSED. Medicao original: execucao com --scenario-id que nao casa grava qa-mesh/go-no-go-report.json, release-gate.json e inteligencia sem executar cenario algum. Verificado: tests/unit/qa-mesh/meshZeroResultsPromotion.test.js exit=0 em arvore limpa (c81f11081b77, 5 casos).",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "fail-open LATENTE: malha grava evidencia governada com ZERO resultados; nao ativo no caminho verde, decisao de politica pendente",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js"
+      "regressionTest": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T12:53:37.118Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "c81f11081b77",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/qa-mesh/meshZeroResultsPromotion.test.js exit=0 em c81f11081b77",
+      "blocked_reason": "RESOLVIDO 2026-10-17: a decisao de politica foi tomada no sentido mais restritivo (prova de execucao exige execucao); nao ha mais decisao pendente do dono."
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
