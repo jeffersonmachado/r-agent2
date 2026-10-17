@@ -39,6 +39,11 @@ function artifactBase(run, type) {
     artifactVersion: '1.0.0',
     generatedAt: new Date().toISOString(),
     runId: run.run_id,
+    // DEFEITO MEDIDO (2026-10-17): runId + sourceFingerprint sem sourceCommit
+    // deixava os relatórios finais com identidade INCOMPLETA para a decisão
+    // canônica (faltantes=sourceCommit) — GO definitivo impossível. O commit
+    // vem do RUN (congelado), não do HEAD vivo.
+    sourceCommit: run.git_commit || null,
     sourceFingerprint: run.source_fingerprint,
     policyId: run.policy_id,
     policyVersion: run.policy_version,

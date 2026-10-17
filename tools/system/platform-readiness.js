@@ -1531,6 +1531,8 @@ function buildReport() {
     // _platform-status-source.json) carregam runId/sourceFingerprint para o
     // gate FINAL_STATUS_PROJECTION_STALE detectar projeção de outro run.
     runId: proofReport?.runId || null,
+    // sourceCommit: terceiro campo obrigatório da identidade canônica.
+    sourceCommit: proofReport?.sourceCommit || null,
     sourceFingerprint: proofReport?.sourceFingerprint || null,
     finalDecision,
     // §P1 FINAL_PROOF_DECISION_SEMANTICS — MATURIDADE e DECISÃO são conceitos
@@ -1700,6 +1702,8 @@ function persistReport(report) {
   writeJson('governance/final-readiness-report.json', {
     generatedAt: report.generatedAt,
     runId: report.proofReport?.runId || null,
+    // sourceCommit: terceiro campo obrigatório da identidade canônica.
+    sourceCommit: report.proofReport?.sourceCommit || null,
     sourceFingerprint: report.proofReport?.sourceFingerprint || null,
     artifactType: 'final-readiness-report',
     artifactVersion: '2.0.0',

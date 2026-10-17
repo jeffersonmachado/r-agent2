@@ -1,11 +1,14 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]]
+- Decision: NO_GO:BLOCKING_GAPS
 - Canonical mesh execution: mesh-2026-10-17T05-55-05-230Z
-- Enterprise readiness: autonomous-ready
-- Production readiness: AUTONOMOUS_READY_GO
-- Blocking gaps: 0
+- Enterprise readiness: enterprise-ready
+- Production readiness: NO_GO:BLOCKING_GAPS
+- Blocking gaps: 4
 - Blocking domains: none
 
 ## Hard blockers
-- Nenhum
+- gap-proof-package-validation: ZIP de release nao contem todos os proofs obrigatorios (critical)
+- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
+- gap-cross-report-package_validation_failed: Contradição cross-report: package_validation_failed (critical)
+- current_run_temporal_integrity: Evidência autoritativa pré-run não pode sustentar a decisão do run (critical)

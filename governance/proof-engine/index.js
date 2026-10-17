@@ -23,6 +23,33 @@ function readCurrentRunId() {
   }
 }
 
+/**
+ * Lineage COMPLETO do run congelado (`.current-run.json`).
+ *
+ * DEFEITO MEDIDO (2026-10-17): os produtores gravavam `runId` + `sourceFingerprint`
+ * e NÃO gravavam `sourceCommit`. Como a decisão canônica exige os TRÊS campos
+ * (CAMPOS_IDENTIDADE_OBRIGATORIOS em governance/canonical-release-decision.js),
+ * os relatórios finais ficavam com identidade INCOMPLETA
+ * (`faltantes=sourceCommit`) e o release NUNCA alcançava GO definitivo — e pior:
+ * esses produtores rodam DEPOIS do estampador, sobrescrevendo o carimbo dele.
+ * O `.current-run.json` é a fonte: o commit é congelado na criação do run, não
+ * lido do HEAD vivo (o worktree pode ter avançado depois).
+ * @returns {{ runId: string|null, sourceFingerprint: string|null, sourceCommit: string|null, sourceBranch: string|null }}
+ */
+function readCurrentRunLineage() {
+  try {
+    const run = JSON.parse(fs.readFileSync(path.join(ROOT, 'governance', '.current-run.json'), 'utf8'));
+    return {
+      runId: run?.runId || null,
+      sourceFingerprint: run?.sourceFingerprint || null,
+      sourceCommit: run?.sourceCommit || null,
+      sourceBranch: run?.sourceBranch || null,
+    };
+  } catch (_) {
+    return { runId: null, sourceFingerprint: null, sourceCommit: null, sourceBranch: null };
+  }
+}
+
 // ─── Modelo de maturidade operacional estrito ────────────────────────────────
 // Cada nível requer prova operacional objetiva. Não há saltos.
 const STAGE_ORDER = [
@@ -966,6 +993,9 @@ function buildFinalProofReport(context = {}) {
     generatedAt: new Date().toISOString(),
     runtimeRoot: getRuntimeRootSafe(),
     runId: readCurrentRunId(),
+    // Identidade completa no artefato de evidência: os tres campos exigidos
+    // pela decisão canônica (runId + sourceCommit + sourceFingerprint).
+    sourceCommit: readCurrentRunLineage().sourceCommit,
     sourceFingerprint: null,
     artifactType: 'evidence-manifest',
     artifactVersion: '1.0.0',
@@ -1129,6 +1159,9 @@ function buildFinalProofReport(context = {}) {
   // manualmente. Usados na verificação do pacote (package manifest deve ter
   // sourceFingerprint idêntico ao registrado aqui no momento do empacotamento).
   const explicitFingerprints = {
+    // sourceCommit entra junto dos fingerprints: o proof report é um dos três
+    // relatórios cuja identidade a decisão canônica valida campo a campo.
+    sourceCommit:               readCurrentRunLineage().sourceCommit,
     sourceFingerprint:           fingerprintChain.sourceFingerprint || null,
     inventoryFingerprint:        fingerprintChain.inventoryFingerprint || null,
     scenarioFingerprint:         fingerprintChain.scenarioRegistryFingerprint || null,
