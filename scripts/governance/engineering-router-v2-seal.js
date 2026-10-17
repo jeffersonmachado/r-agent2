@@ -35,7 +35,6 @@ const { ROOT, writeReport } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 const { applyOriginLineage, resolveRunLineage } = require('./lib/resolve-run-lineage');
 const { captureFreeze, compareFreeze, assessInitialFreeze } = require('./lib/sourceFreezeGuard');
-
 // CONTAGEM DE TESTES OBRIGATÓRIOS V2 — DERIVADA DA FONTE, NUNCA ESCRITA À MÃO.
 // O manifesto versionado é a autoridade. Um número fixo no texto ("42") ficou ERRADO quando o
 // manifesto passou a ter 57 itens, e um gate que descreve a si mesmo com um número falso é pior do
@@ -261,6 +260,12 @@ function main() {
   }
 
   // BINDING DE RUN + BINDING DE SOURCE (dois conceitos, dois campos).
+  //
+  // BUG CLOSURE FIRST (2026-10-17): selo é operação CERTIFICANTE. Antes de
+  // qualquer passo, exige que não haja P0/P1 bloqueante aberto na fila oficial.
+  // `--plan` (acima) continua livre: planejar não certifica.
+  require('../../governance/bug-closure/require-eligibility')
+    .exigirElegibilidade('SELO_FINAL', { actor: 'scripts/governance/engineering-router-v2-seal.js' });
   //
   // DEFEITO DE CONTRATO medido em 2026-09-30: `applyOriginLineage` grava
   // `sourceFingerprint` com o valor do RUN GOVERNADO (`governance/.current-run.json`), enquanto o

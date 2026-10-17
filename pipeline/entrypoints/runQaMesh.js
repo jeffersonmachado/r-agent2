@@ -57,6 +57,12 @@ if (!isInPipeline()) {
   );
 }
 
+// BUG CLOSURE FIRST (2026-10-17): QA Mesh completo é operação EXTENSIVA. Não
+// começa enquanto existir P0/P1 bloqueante aberto na fila oficial. O guard
+// aborta com exit 3 (recusa por defeito ≠ falha de execução).
+require('../../governance/bug-closure/require-eligibility')
+  .exigirElegibilidade('QA_WAVES_COMPLETA', { actor: 'pipeline/entrypoints/runQaMesh.js' });
+
 const result = spawnSync('node', ['qa-mesh/meshRunner.js', ...process.argv.slice(2)], {
   cwd: ROOT,
   stdio: 'inherit',

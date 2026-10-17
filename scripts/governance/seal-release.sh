@@ -77,6 +77,15 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# ── BUG CLOSURE FIRST (2026-10-17) ─────────────────────────────────────────────
+# Selagem é operação CERTIFICANTE: publica decisão de release. Não começa com
+# P0/P1 bloqueante aberto. `--dry-run` (plano) continua livre: planejar não
+# certifica. Exit 3 = recusado por defeito.
+source "$ROOT/scripts/governance/lib/bug-closure-guard.sh"
+if [ "$DRY_RUN" -eq 0 ]; then
+  exigir_elegibilidade SELO_FINAL "scripts/governance/seal-release.sh" || exit 3
+fi
+
 cyan() { printf '\033[0;36m%s\033[0m\n' "$1"; }
 ok()   { printf '\033[0;32m  ✓ %s\033[0m\n' "$1"; }
 bad()  { printf '\033[0;31m  ✗ %s\033[0m\n' "$1"; }

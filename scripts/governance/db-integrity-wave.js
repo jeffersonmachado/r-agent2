@@ -255,6 +255,10 @@ function loadExemptions(exemptionsPath = EXEMPTIONS_PATH) {
 }
 
 async function main() {
+  // BUG CLOSURE FIRST (2026-10-17): wave técnica é operação extensiva.
+  require('../../governance/bug-closure/require-eligibility')
+    .exigirElegibilidade('QA_WAVES_COMPLETA', { actor: 'scripts/governance/db-integrity-wave.js' });
+
   const inventory = JSON.parse(fs.readFileSync(INVENTORY_PATH, 'utf8'));
   const models = collectModelStaticData({ inventoryItems: inventory.items });
   const relations = collectRelationStaticData({ inventoryItems: inventory.items });

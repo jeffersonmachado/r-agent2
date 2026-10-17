@@ -82,14 +82,15 @@ describe('(1) workflow do CI — cobre a branch de desenvolvimento com permissã
 });
 
 describe('(2) runner local — o gate efetivo enquanto o runner do GitHub não inicia', () => {
-  const { PASSOS } = require('../../../scripts/ci/dev-branch-gate.js');
+  const { PASSOS, AUTORIZACAO_DA_FASE } = require('../../../scripts/ci/dev-branch-gate.js');
+  const todos = Object.values(PASSOS).flat();
 
   it('define L0 e L1 obrigatórios, todos com id/nível/comando', () => {
-    expect(PASSOS.length).toBeGreaterThanOrEqual(6);
-    const niveis = new Set(PASSOS.map((p) => p.nivel));
+    expect(todos.length).toBeGreaterThanOrEqual(6);
+    const niveis = new Set(todos.map((p) => p.nivel));
     expect(niveis.has('L0')).toBe(true);
     expect(niveis.has('L1')).toBe(true);
-    for (const p of PASSOS) {
+    for (const p of todos) {
       expect(typeof p.id).toBe('string');
       expect(typeof p.comando).toBe('string');
       expect(typeof p.descricao).toBe('string');
@@ -98,9 +99,18 @@ describe('(2) runner local — o gate efetivo enquanto o runner do GitHub não i
   });
 
   it('o L1 inclui a cadeia criptográfica e o self-proving (o falso GO da FASE 6)', () => {
-    const comandos = PASSOS.map((p) => p.comando).join('\n');
+    const comandos = todos.map((p) => p.comando).join('\n');
     expect(comandos).toContain('validate-governance-chain.js');
     expect(comandos).toContain('validate-self-proving.js');
+  });
+
+  it('cada fase técnica tem operação de elegibilidade declarada (Bug Closure First)', () => {
+    expect(AUTORIZACAO_DA_FASE.C).toBe('L0_COMPLETO');
+    expect(AUTORIZACAO_DA_FASE.D).toBe('L1_AMPLO');
+    expect(AUTORIZACAO_DA_FASE.E).toBe('L2_L3_EXTENSIVO');
+    expect(AUTORIZACAO_DA_FASE.F).toBe('SELO_FINAL');
+    // Fase A é diagnóstico puro: nunca depende de autorização.
+    expect(AUTORIZACAO_DA_FASE.A).toBeNull();
   });
 
   it('recusa executar quando o SHA exigido não é o HEAD (evidência ligada ao commit errado)', () => {
@@ -134,6 +144,25 @@ describe('(2) runner local — o gate efetivo enquanto o runner do GitHub não i
   it('o veredito deriva do exit code dos passos (falha não vira narrativa de sucesso)', () => {
     const fonte = semComentarios(ler(RUNNER));
     expect(fonte).toContain("resultados.filter((r) => r.exitCode !== 0)");
-    expect(fonte).toContain("veredito === 'PASS' ? 0 : 1");
+    // Bloqueio por defeitos é um TERCEIRO estado (exit 2): não é PASS nem FAIL.
+    expect(fonte).toContain("'BLOQUEADO_POR_DEFEITOS'");
+    expect(fonte).toContain('if (veredito === \'BLOQUEADO_POR_DEFEITOS\') return 2;');
+    expect(fonte).toContain("if (veredito === 'FAIL') return 1;");
+  });
+
+  it('escopo parcial NUNCA produz PASS (modo rápido não parece validação completa)', () => {
+    const fonte = semComentarios(ler(RUNNER));
+    expect(fonte).toContain("'PASS_PARCIAL'");
+    expect(fonte).toContain('equivalenteAValidacaoCompleta');
+    // Só o veredito completo é PASS.
+    expect(fonte).toMatch(/escopoParcial\s*\)\s*veredito = 'PASS_PARCIAL'/);
+  });
+
+  it('consulta a elegibilidade ANTES de cada fase técnica e para no primeiro bloqueio', () => {
+    const fonte = semComentarios(ler(RUNNER));
+    expect(fonte).toContain('evaluateExecutionEligibility');
+    expect(fonte).toContain('AUTORIZACAO_DA_FASE[fase]');
+    expect(fonte).toContain("if (!autorizacao.allowed)");
+    expect(fonte).toContain('FASE_NAO_AUTORIZADA');
   });
 });
