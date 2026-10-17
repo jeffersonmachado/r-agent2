@@ -710,16 +710,17 @@
     {
       "id": "MISSAO-A-L1-IMPACTO",
       "title": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
-      "status": "done",
+      "status": "pending",
       "commit": "69a67e631",
       "evidence": "qa/coverage/impactGraph.js + qa/coverage/impactSelection.js + scripts/governance/{build-impact-graph,run-impact-validation}.js + engineering-validation-orchestrator.js; 48 testes (impactGraph 18, impactSelection 19, impactRunner 11); artefato reports/impact-graph.json (4126 nós, 9370 arestas, MD5 estável); L1 executado de verdade 2×; tests/unit/coverage/ 282 testes PASS",
       "resolution": "Auditoria MEDIDA antes de escrever código: qa/impact-map.json (usado por qa:mesh:impact) cobre 28/2488 arquivos = 1,13%; inventário por source exato 14,80%; path->module 12,21%; módulo->jornada->cenário 9,0%; 91,0% dos arquivos sem qualquer seleção. Vocabulários incompatíveis: impact-map produz 7 escopos, os 144 cenários declaram 26 (interseção 4); 133/144 declaram ci/telemetry, então o filtro por impacto seleciona ~92% ou 1-3%, nunca o alvo. O módulo queue nem existe no inventário — o commit 9f0f6fda8 era invisível a todos os mecanismos. Solução: derivar o elo dos próprios require/import (determinístico), com fecho transitivo reverso (77,3% dos arquivos de produção têm dependentes) e FAIL-CLOSED (arquivo não classificado ESCALA). Quatro defeitos MEUS foram pegos exercitando o caminho real, todos corrigidos com prova no commit 69a67e631: (a) falso verde no orquestrador (dry-run caía no else => GREEN_AT_L2 sem executar); (b) bug de parsing slice(+3 em vez de +1) que fazia --files= ser ignorado em silêncio e cair no git diff; (c) falso vermelho (teste Vitest executado pelo Jest, que não tem frontend nos roots); (d) arquivo de teste alterado não entrava na seleção.",
       "severity": "P3",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done",
+      "legacyStatus": "pending",
       "severityBasis": "feature (selecao por impacto)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/coverage/impactGraph.test.js"
     },
     {
       "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
@@ -758,16 +759,17 @@
     {
       "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
       "title": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
-      "status": "done",
+      "status": "pending",
       "commit": "92de2b9e9",
       "evidence": "scripts/governance/engineering-validation-orchestrator.js + reports/validation-orchestrator-report.json + /tmp/orq-l2.log + /tmp/orq-l2b.log — L1 verde real (--files de arquivo coberto) e L1 ESCALATE real; L2 executado DE VERDADE 2x (13,0min e 28,2min; 1022 testes; 88/89 suítes) com blockingFindings distinguindo INFRA_ERROR de falha de teste; 48 testes do L1 (tests/unit/coverage/ = 282 PASS); testes unitários do runner provam separação Jest/Vitest e parsing.",
       "resolution": "EngineeringValidationOrchestrator encadeia os níveis REUSANDO o que existia: L1 = run-impact-validation.js (grafo de imports + 3 camadas + fail-closed); L2 = npm run test:release-authoritative (manifesto canônico de config/canonical-release-suites.json, valida NOT_EXECUTED); L3 = npm run validate:all-validators (61 validadores). Regra dura: NENHUM nível não-executado pode ser verde — --dry-run produz INCONCLUSIVE_DRY_RUN (exit 2), nunca GREEN_AT_Ln; esse foi um falso verde REAL que eu introduzi e corrigi (o else da cascata reportava GREEN_AT_L2 sem executar). A execução real do L2 revelou, corretamente, DOIS bloqueadores externos ao orquestrador, ambos diagnosticados: (1) INFRA_ERROR em engineeringRouterAuditEnvelopeGeneration.test.js — a evidência de runtime é casada com o sourceFingerprint e meus commits a invalidaram; resolvido rodando npm run validate:engineering-router-v1:runtime (RUNTIME_PASS, checks=209, falhas=0) e confirmado com a suíte passando em RELEASE_AUTHORITATIVE=1; (2) flaky sob carga em engineeringMissionFullE2E.test.js (ver item dedicado). L3 NÃO foi executado: a selagem é proibida em ciclos intermediários e o L3 é caro; o reuso está implementado e usa o mesmo comando do gate agregado. O orquestrador não mascara nenhum dos dois casos: reporta RED com código explícito e a causa.",
       "severity": "P3",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done",
+      "legacyStatus": "pending",
       "severityBasis": "feature (orquestrador L2/L3)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/coverage/impactRunner.test.js"
     },
     {
       "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
