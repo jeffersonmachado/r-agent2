@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T21:00:12.487Z",
+  "updatedAt": "2026-10-17T21:02:41.594Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -471,16 +471,21 @@
     {
       "id": "H12-RAG-REPARO",
       "title": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
-      "status": "pending",
-      "commit": "6cdcc9c72",
-      "evidence": "Defeito medido: `validate:rag-index-health` NO_GO com 2 documentos failed (ECONNREFUSED no reindex, servico fora durante o lote). Reparado sem mascarar: reindexado para HEALTHY — documentos indexados 3237 -> 3239, chunks 8618 -> 8621, violations 0, failed 0. Prova: reports/rag-index-health-report.json + reports/rag-failed-reindex-report.json (commit de evidencias 6cdcc9c72).",
+      "status": "done",
+      "commit": "e8ee2116d731",
+      "evidence": "Medido 2026-10-17 em e8ee2116d731: validate:rag-index-health => status=HEALTHY indexed=3400 semTexto=4 failed=2 chunks=8943 violacoes=0. Os 2 failed sao fixtures sem tenant declaradas com motivo/origem (exemplo-invalido, host-inexistente-qa.invalid). Politica extraida para scripts/governance/lib/rag-index-health-policy.js e provada por tests/unit/governance/ragIndexHealthPolicy.test.js (10 testes). Relatorio: reports/rag-index-health-report.json.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "estado de indice RAG (2 docs failed por ECONNREFUSED); reparo de dados, sem defeito de codigo",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/governance/ragIndexHealthPolicy.test.js"
+      "regressionTest": "tests/unit/governance/ragIndexHealthPolicy.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T21:02:41.594Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "e8ee2116d73102a7935c036f6125bf90548088df",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/ragIndexHealthPolicy.test.js exit=0 em e8ee2116d731"
     },
     {
       "id": "H13-RUNNER-COMPLETO",
