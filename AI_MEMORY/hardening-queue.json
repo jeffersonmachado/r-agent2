@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T21:05:00.984Z",
+  "updatedAt": "2026-10-17T21:27:52.378Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -580,16 +580,21 @@
     {
       "id": "H18-JORNADA-FUNCIONAL-BROWSER",
       "title": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
-      "status": "pending",
-      "commit": "dcc97cbed",
-      "evidence": "Novo scripts/smoke/journey-functional-browser.js: exerce ACOES reais (busca, filtro por chip, abrir formulario de criacao, detalhe) em 8 rotas PRODUCTION de negocio e mede o EFEITO. Reusa tests/helpers/playwrightAuth.js (regra do repo). Evidencia em qa/evidence/journey-functional-latest.json (transitoria, nao versionada). Resultado medido: 0 erros de console, 0 pageerror, 0 requisicoes falhas; /workspace busca 8083->792 chars; /crm busca 1922->1170; chips de filtro aplicam; \"Criar entidade rapida\", \"Criar tarefa\" e \"Novo\" abrem. LIÇÃO incorporada: a 1a versao media itens por table/li/card e produziu 5 FALSOS POSITIVOS (media o menu lateral, nao a lista) — falso positivo de detector esconde o defeito real no ruido. Efeito passa a ser diff de textos visiveis + delta de chars + delta de campos.",
+      "status": "done",
+      "commit": "02f9367db40a",
+      "evidence": "VERIFICADO EM 02f9367db40a: jornada real no browser (stack viva API 3001 + Vite 5173) PASS 8/8 rotas PRODUCTION, 0 erros de console, 0 pageerror, 0 requisicoes falhas (qa/evidence/journey-functional-latest.json). Tres falsos positivos do proprio detector corrigidos e provados em tests/unit/governance/journeyDetectors.test.js (10 testes): /editor media \"Carregando...\" como tela vazia, /tasks usava o botao ACAO \"Atualizar\" como chip de filtro, /crm acusava cancelamento de fetch causado pela navegacao do proprio smoke.",
       "severity": "P3",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "novo detector de jornada (infra de teste), nao e defeito",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/governance/journeyDetectors.test.js"
+      "regressionTest": "tests/unit/governance/journeyDetectors.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T21:27:52.377Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "02f9367db40a00b32642cc13bf47fff5b18b1225",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/journeyDetectors.test.js exit=0 em 02f9367db40a"
     },
     {
       "id": "H19-DIST-CAUSA-UNICA",
