@@ -15,7 +15,21 @@
 const fs   = require('fs');
 const path = require('path');
 
+const { preservarArtefato } = require('../../helpers/preserveGovernedArtifact');
+
 const SCRIPT = path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'validate-model-driven-e2e.js');
+
+// O produtor real tem OUTPUT_PATH canônico (`governance/model-driven-e2e-report.json`).
+// Rodar este teste reescrevia esse artefato governado FORA do run e o pipeline
+// pagava a conta: temporal-integrity INVALID_AUTHORITATIVE_ARTIFACT -> TEMPORAL-01/04
+// UNPROVEN -> selo V2 NO_GO em REQUIRED_TESTS_V2 -> zip:release bloqueado.
+// Devolver os BYTES originais ao final preserva inclusive o lineage gravado dentro
+// do JSON (restaurar é diferente de redirecionar o caminho canônico do produtor).
+const RELATORIO = path.join(__dirname, '..', '..', '..', 'governance', 'model-driven-e2e-report.json');
+let guardaDoRelatorio = null;
+
+beforeAll(() => { guardaDoRelatorio = preservarArtefato(RELATORIO); });
+afterAll(() => { if (guardaDoRelatorio) guardaDoRelatorio.restaurar(); });
 
 describe('validate-model-driven-e2e — pipeline REAL, não simulação', () => {
 
