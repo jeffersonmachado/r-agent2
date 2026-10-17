@@ -1,59 +1,18 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-17T04:37:42.780Z",
-  "runId": "rap-governed-20261017025118328-3af45c75",
-  "sourceFingerprint": "34766bc7140b25f23e50c86f9ec2efe1ffc8b35a83dc2e304f1a3ddaac9fad6b",
-  "runStartedAt": "2026-10-17T02:51:18.502Z",
-  "decision": "REUSE",
-  "code": "MESH_REUSE_OK",
-  "detail": "execução canônica GO DESTE run cobre o registry corrente: reexecução suprimida",
+  "generatedAt": "2026-10-17T05:55:00.676Z",
+  "runId": "rap-governed-20261017053314590-3558e6f4",
+  "sourceFingerprint": "bfbabde34663cdd66a1105ef9c883d00b336cb535157430d6e9202a5a7c27080",
+  "runStartedAt": "2026-10-17T05:33:14.746Z",
+  "decision": "RERUN",
+  "code": "CANONICAL_HISTORY_MISSING",
+  "detail": "nenhuma execução de qa-mesh/meshHistory pertence a rap-governed-20261017053314590-3558e6f4",
   "registryScenarios": 144,
   "evidence": {
-    "goNoGoGeneratedAt": "2026-10-17T03:28:59.688Z",
+    "goNoGoGeneratedAt": "2026-10-17T05:32:13.285Z",
     "goNoGoStatus": "GO",
-    "historyEntry": "mesh-2026-10-17T02-59-40-299Z.json"
+    "historyEntry": null
   },
-  "checks": [
-    {
-      "code": "SAME_RUN_ID",
-      "ok": true,
-      "detail": "runId=rap-governed-20261017025118328-3af45c75"
-    },
-    {
-      "code": "SAME_SOURCE",
-      "ok": true,
-      "detail": "sourceFingerprint=34766bc7140b…"
-    },
-    {
-      "code": "RELEASE_GATE_BOUND",
-      "ok": true,
-      "detail": "qa-mesh/release-gate-report.json do run corrente"
-    },
-    {
-      "code": "CANONICAL_EXECUTION",
-      "ok": true,
-      "detail": "executionOrigin=pipeline"
-    },
-    {
-      "code": "CANONICAL_HISTORY",
-      "ok": true,
-      "detail": "qa-mesh/meshHistory/mesh-2026-10-17T02-59-40-299Z.json"
-    },
-    {
-      "code": "DECISION_GO",
-      "ok": true,
-      "detail": "status=GO"
-    },
-    {
-      "code": "SAME_RUN_TIME",
-      "ok": true,
-      "detail": "generatedAt=2026-10-17T03:28:59.688Z"
-    },
-    {
-      "code": "REGISTRY_COVERED",
-      "ok": true,
-      "detail": "144 cenários cobertos pelo run"
-    }
-  ]
+  "checks": []
 }
