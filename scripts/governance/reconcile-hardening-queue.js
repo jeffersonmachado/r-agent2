@@ -41,7 +41,23 @@ const RELATORIO = path.join(ROOT, 'reports', 'hardening-queue-reconciliation.jso
 
 const { ESTADOS } = require(path.join(ROOT, 'governance', 'bug-closure', 'defect-states'));
 
-const ORCAMENTO_MS = 240 * 1000;
+/**
+ * Orçamento PADRÃO por teste dirigido. 240s cobre a maioria das suítes unitárias, mas
+ * EXISTS directed verification que legitimamente leva mais (E2E de worker/E2E real de missão,
+ * medido: `governanceApprovalFullWorkerE2E` > 4 min). Sem um override EXPLÍCITO o item ficava
+ * eternamente INCONCLUSIVO e “pendente de janela” — um gate que nunca fecha por limitação do
+ * próprio verificador, não por defeito.
+ *
+ * Override por env, com TETO: nunca vira “espera infinita”. O valor efetivo vai no relatório
+ * (auditável); o default continua 240s.
+ */
+const ORCAMENTO_PADRAO_MS = 240 * 1000;
+const ORCAMENTO_MAXIMO_MS = 900 * 1000;
+const ORCAMENTO_MS = (() => {
+  const bruto = Number(process.env.RECONCILE_BUDGET_MS);
+  if (!Number.isFinite(bruto) || bruto <= 0) return ORCAMENTO_PADRAO_MS;
+  return Math.min(Math.round(bruto), ORCAMENTO_MAXIMO_MS);
+})();
 
 /** Marcadores de falha por AMBIENTE (não provam nem refutam a correção). */
 const MARCADORES_INFRA = [
@@ -182,6 +198,10 @@ function main(argv = process.argv.slice(2)) {
     commit: sha,
     arvoreSuja: sujo,
     aplicado: aplicar,
+    // Orçamento efetivo da verificação (auditável): 240s por padrão, teto 900s via
+    // RECONCILE_BUDGET_MS. Sem isso, um teste legitimamente longo ficava INCONCLUSIVO
+    // para sempre e o item nunca fechava por limitação do verificador.
+    orcamentoMs: ORCAMENTO_MS,
     alvos: alvos.length,
     porClasse,
     aplicados,
