@@ -222,16 +222,28 @@ async function snapshotDaTela(page) {
  * 19.070 chars com espera suficiente — telas de engenharia carregam dados pesados.
  * Espera fixa transforma lentidão em "tela vazia", que é um falso positivo que
  * esconde defeito real no ruído.
+ *
+ * MEDIDO (2026-10-17): `/editor` estabilizava em **13 chars** porque o estado
+ * `Carregando...` era, ele mesmo, estável por dois ciclos. A espera declarava
+ * "tela vazia" e acusava um defeito que não existe (o editor monta o canvas Rete
+ * e renderiza completo em seguida). Estabilizar NÃO é o mesmo que terminar de
+ * carregar: enquanto o texto for um marcador de loading, continuar esperando —
+ * com limite, para não virar espera infinita.
  */
-async function esperarEstabilidade(page, { tentativas = 14, intervaloMs = 800 } = {}) {
-  let anterior = -1;
+const MARCADOR_DE_CARREGAMENTO = /^(carregando|loading|aguarde|processando|inicializando)[\s.…!]*$/i;
+
+const detectores = require('./lib/journey-detectors');
+
+async function esperarEstabilidade(page, { tentativas = 14, intervaloMs = 800, extrasAposLoading = 12 } = {}) {
+  let estado = {};
   for (let i = 0; i < tentativas; i += 1) {
     await page.waitForTimeout(intervaloMs);
-    const atual = await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').trim().length);
-    if (atual > 0 && atual === anterior) return atual;
-    anterior = atual;
+    const texto = await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' ').trim());
+    const r = detectores.proximaLeituraDeEstabilidade(estado, { texto, extrasAposLoading, maxTentativas: tentativas });
+    estado = r.estado;
+    if (r.concluido) return r.chars;
   }
-  return anterior;
+  return Number(estado.anterior || 0);
 }
 
 /**
@@ -314,8 +326,19 @@ async function exercitarFiltroChip(page, snap) {
   // escapava de `^super admin` — o filtro acabava tentando clicar no menu de
   // usuário. Agora casa em QUALQUER posição.
   const doMenu = /recolher menu|atalhos|super admin|\bsa \d|atendimento|canais|modelagem|execu|assistentes|monitoramento|an[aá]lises|administra|governan|suporte da|relacionamento|construtor|espa[çc]o de trabalho|^crm$|^conhecimento$|^dev$|^admin$|^ops$/i;
-  const candidato = snap.chips.find((t) => !doMenu.test(t) && !/^[<>‹›←→]/.test(t) && t.length <= 20);
+  // MEDIDO (2026-10-17): em `/tasks` o "chip" escolhido foi **"Atualizar"** — um
+  // BOTÃO DE AÇÃO, não um filtro. A lista não tinha linhas, o efeito saía
+  // `undefined -> undefined` e o smoke acusava defeito de produto que não existe.
+  // A regra (com prova em tests/unit/governance/journeyDetectors.test.js) vive em
+  // `./lib/journey-detectors`.
+  const candidato = detectores.selecionarChipDeFiltro(snap.chips);
   if (!candidato) return { executado: false, motivo: 'nenhum chip de filtro identificável' };
+
+  // Lista VAZIA não tem efeito observável de filtro: medir seria declarar defeito
+  // por ausência de dado, não por ausência de comportamento.
+  if (!snap.maxLinhas) {
+    return { executado: false, motivo: 'lista vazia — efeito de filtro não é observável' };
+  }
 
   const alvo = page.getByRole('button', { name: candidato }).first();
   if (!(await alvo.count())) return { executado: false, motivo: `chip "${candidato}" não instanciável` };
@@ -458,16 +481,39 @@ async function run() {
   const { loginWithTenantSelection } = require(path.join(REPO, 'tests', 'helpers', 'playwrightAuth'));
 
   const consoleErrors = [];
+  const consoleCancelados = [];
   const pageErrors = [];
   const failedRequests = [];
   const resultados = [];
+
+  // MEDIDO (2026-10-17): o smoke recarrega a rota entre AÇÕES. O `fetch` que
+  // estava em voo quando a página é substituida é CANCELADO pelo browser e o
+  // componente loga "Failed to fetch" — que aparecia como erro de console e virava
+  // defeito de produto em `/crm`. Cancelamento causado pela própria navegação do
+  // teste não é defeito da tela; erro na tela ESTÁVEL continua contando.
+  const janelaDeNavegacao = { ate: 0 };
+  const PADRAO_CANCELAMENTO = /Failed to fetch|Load failed|AbortError|signal is aborted|The user aborted a request/i;
+
+  async function irPara(page, url) {
+    janelaDeNavegacao.ate = Date.now() + 2500;
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  }
 
   const browser = await chromium.launch({ headless: process.env.JOURNEY_HEADLESS !== '0' });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
 
   page.on('console', (msg) => {
-    if (msg.type() === 'error') consoleErrors.push(`${page.url().replace(BASE, '')} :: ${msg.text().slice(0, 200)}`);
+    if (msg.type() !== 'error') return;
+    const texto = msg.text().slice(0, 200);
+    const rota = page.url().replace(BASE, '');
+    const emNavegacao = Date.now() < janelaDeNavegacao.ate;
+    if (detectores.classificarErroDeConsole({ texto, emNavegacao }) === 'CANCELAMENTO_DECLARADO') {
+      // Registrado como CANCELAMENTO DECLARADO (não silencioso), fora do veredito.
+      consoleCancelados.push(`${rota} :: ${texto.slice(0, 120)}`);
+      return;
+    }
+    consoleErrors.push(`${rota} :: ${texto}`);
   });
   page.on('pageerror', (err) => pageErrors.push(`${page.url().replace(BASE, '')} :: ${String(err.message).slice(0, 200)}`));
   page.on('requestfailed', (req) => {
@@ -501,7 +547,7 @@ async function run() {
     const errosAntes = consoleErrors.length;
     const registro = { rota, acoes: {}, defeitos: [] };
     try {
-      await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await irPara(page, `${BASE}${rota}`);
       const charsEstaveis = await esperarEstabilidade(page);
 
       const snap = await snapshotDaTela(page);
@@ -537,15 +583,15 @@ async function run() {
         // Cada ação roda sobre a tela RECÉM-carregada; recarrega antes da próxima
         // para que o efeito medido seja da ação e não do estado deixado pela anterior.
         registro.acoes.busca = await exercitarBusca(page, snap);
-        await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await irPara(page, `${BASE}${rota}`);
         await page.waitForTimeout(1500);
         const snap2 = await snapshotDaTela(page);
         registro.acoes.filtroChip = await exercitarFiltroChip(page, snap2);
-        await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await irPara(page, `${BASE}${rota}`);
         await page.waitForTimeout(1500);
         const snap3 = await snapshotDaTela(page);
         registro.acoes.modalCriacao = await exercitarModalDeCriacao(page, snap3);
-        await page.goto(`${BASE}${rota}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await irPara(page, `${BASE}${rota}`);
         await page.waitForTimeout(1500);
         const snap4 = await snapshotDaTela(page);
         registro.acoes.detalhe = await exercitarDetalhe(page, snap4);
@@ -595,6 +641,10 @@ async function run() {
     modo: EXPLORE ? 'explore' : 'jornada',
     rotas: resultados,
     consoleErrors,
+    // Cancelamentos causados pela PRÓPRIA navegação do smoke (recarrega a rota
+    // entre ações). Declarados aqui para não virarem "erro de produto" nem
+    // desaparecerem sem registro.
+    consoleCanceladosPorNavegacao: consoleCancelados,
     pageErrors,
     failedRequests,
   };
