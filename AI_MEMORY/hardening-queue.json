@@ -214,13 +214,14 @@
     {
       "id": "P1-7",
       "title": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
-      "status": "done",
+      "status": "pending",
       "commit": "1d78fb4ad",
       "evidence": "engine/securityIntel/triageDossier.js summarizeRemediation + triageService + 7 testes",
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "FIXED_PENDING_VERIFICATION",
-      "legacyStatus": "done"
+      "legacyStatus": "pending",
+      "regressionTest": "tests/unit/securityIntel/triageRemediation.test.js"
     },
     {
       "id": "P1-8",
