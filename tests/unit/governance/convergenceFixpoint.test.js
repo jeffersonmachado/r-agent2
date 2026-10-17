@@ -241,6 +241,29 @@ describe('a sequência de convergência preserva o lineage canônico', () => {
     if (!fs.existsSync(currentRunPath) || !fs.existsSync(projectionPath)) return;
     const current = JSON.parse(fs.readFileSync(currentRunPath, 'utf8'));
     const projection = JSON.parse(fs.readFileSync(projectionPath, 'utf8'));
+
+    // ── RUN FECHADO (defeito H20, 2026-10-17) ─────────────────────────────
+    // O invariante "projeção pertence ao run corrente" só é verdadeiro enquanto
+    // existe um run ABERTO. Um ciclo interrompido entre `create-governed-run` e a
+    // fase que regenera a projeção deixava um run órfão para sempre — e o teste
+    // ficava vermelho dependendo de ONDE o ciclo parou, sem nada declarar isso.
+    //
+    // Agora o run pode ser ENCERRADO por `scripts/governance/close-run-context.js`
+    // (status SUPERSEDED|ABANDONED + closedAt/closedBy/closedReason/closedEvidence).
+    // Para run fechado exigimos o CONTRÁRIO do silêncio: que o fechamento esteja
+    // declarado por inteiro. Fechar não pode ser usado para esconder divergência.
+    const fechado = ['SUPERSEDED', 'ABANDONED'].includes(String(current.status || '').toUpperCase());
+    if (fechado) {
+      expect(current.closedAt).toBeTruthy();
+      expect(current.closedBy).toBeTruthy();
+      expect(current.closedReason).toBeTruthy();
+      expect(current.closedEvidence).toBeTruthy();
+      // A projeção continua sendo a do último ciclo CONCLUÍDO — e isso é aceitável
+      // porque o run que a "contradiria" está explicitamente encerrado.
+      expect(typeof projection.runId).toBe('string');
+      return;
+    }
+
     expect(projection.runId).toBe(current.runId);
   });
 

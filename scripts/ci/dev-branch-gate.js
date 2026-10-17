@@ -330,14 +330,28 @@ function preVoo({ esperaSha, requerLimpo, sha, branch }) {
     if (fs.existsSync(caminhoRun) && fs.existsSync(caminhoProjecao)) {
       const run = JSON.parse(fs.readFileSync(caminhoRun, 'utf8'));
       const projecao = JSON.parse(fs.readFileSync(caminhoProjecao, 'utf8'));
-      const coerente = run.runId === projecao.runId;
-      registrarNota(
-        'A9-lineage-run-projecao',
-        coerente,
-        coerente
-          ? `projeção no run corrente (${run.runId})`
-          : `PROJECAO_STALE: projeção=${projecao.runId} run=${run.runId} — rode 'node tools/system/platform-readiness.js' antes de concluir o ciclo`
-      );
+      const fechado = ['SUPERSEDED', 'ABANDONED'].includes(String(run.status || '').toUpperCase());
+      if (fechado) {
+        // Run encerrado (close-run-context.js): coerência não é exigível, mas o
+        // fechamento tem de estar DECLARADO — fechar não pode esconder divergência.
+        const declarado = Boolean(run.closedAt && run.closedBy && run.closedReason && run.closedEvidence);
+        registrarNota(
+          'A9-lineage-run-projecao',
+          declarado,
+          declarado
+            ? `run ${run.runId} FECHADO (${run.status}) com motivo e evidência declarados — projeção do último ciclo concluído`
+            : `run ${run.runId} marcado ${run.status} SEM closedAt/closedBy/closedReason/closedEvidence`
+        );
+      } else {
+        const coerente = run.runId === projecao.runId;
+        registrarNota(
+          'A9-lineage-run-projecao',
+          coerente,
+          coerente
+            ? `projeção no run corrente (${run.runId})`
+            : `PROJECAO_STALE: projeção=${projecao.runId} run=${run.runId} — conclua o ciclo (o produtor canônico regenera a projeção) ou encerre o run com scripts/governance/close-run-context.js`
+        );
+      }
     } else {
       registrarNota('A9-lineage-run-projecao', true, 'sem run aberto ou sem projeção (nada a comparar)');
     }
