@@ -38,7 +38,19 @@ const CODIGOS = Object.freeze({
 /** Migra um item legado para o contrato canônico de defeito. */
 function migrarItem(item) {
   const legacyStatus = String((item && item.status) || '').toLowerCase();
-  const estado = MIGRACAO_LEGADO[legacyStatus] || ESTADOS.OPEN;
+
+  // ── AUTORIDADE DO ESTADO (defeito medido 2026-10-17) ─────────────────────
+  // O `state` PERSISTIDO é a autoridade. Re-migrar a partir de `status` a cada
+  // leitura desfazia toda verificação gravada: um item com `state: VERIFIED` e
+  // `status: done` (legado preservado de propósito) voltava para
+  // FIXED_PENDING_VERIFICATION — 29 itens fechados com teste aprovado
+  // reapareciam como abertos. A migração só se aplica a item SEM `state`
+  // canônico.
+  const persistido = item && item.state ? String(item.state).toUpperCase() : null;
+  const stateCanonico = persistido && Object.prototype.hasOwnProperty.call(ESTADOS, persistido)
+    ? persistido
+    : null;
+  const estado = stateCanonico || MIGRACAO_LEGADO[legacyStatus] || ESTADOS.OPEN;
   const severity = severidadeDoItem(item);
 
   const defeito = {
@@ -51,6 +63,7 @@ function migrarItem(item) {
     evidence: item.evidence || null,
     regressionTest: item.regressionTest || null,
     verificationCommit: item.verificationCommit || null,
+    stateSource: stateCanonico ? 'PERSISTIDO' : 'MIGRADO_DO_STATUS',
     // Só é `true` quando alguém REGISTROU que o teste direcionado passou neste
     // código. Ausência não é sucesso (missão §3: relatório não substitui execução).
     targetedTestPassing: item.targetedTestPassing === true,
