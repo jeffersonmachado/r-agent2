@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T20:59:54.065Z",
+  "updatedAt": "2026-10-17T21:00:12.487Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -792,18 +792,23 @@
     {
       "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
       "title": "engineeringMissionFullE2E flaky sob carga BLOQUEIA o agregado e a selagem",
-      "status": "pending",
-      "commit": "db328dea5",
+      "status": "done",
+      "commit": "fd6cdeed4afa",
       "evidence": "AI_MEMORY/evidence/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.md",
       "resolution": null,
       "blocked_reason": "CAUSA RAIZ MEDIDA (deixa de ser bloqueio externo): o guard MANDATORY_RUNTIME_GATE_IN_OFFICIAL_PIPELINE lia pkg.scripts[validate:governance-enforcement] (agora o WRAPPER) em vez da cadeia efetiva (:chain), reprovando deterministicamente o gate de governanca — com o Router executando esse gate na fase GOVERNANCE, a missao ia a RED e o sintoma se disfarcava de flakiness sob carga. Corrigido com resolvedor de cadeia efetiva + teste de regressao.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "FIXED_PENDING_VERIFICATION",
+      "state": "VERIFIED",
       "legacyStatus": "pending",
       "severityBasis": "flakiness bloqueia agregado e selagem (release instavel)",
       "severitySource": "analise-tecnica-2026-10-17",
-      "regressionTest": "tests/unit/governance/effectiveAggregateChain.test.js"
+      "regressionTest": "tests/unit/governance/effectiveAggregateChain.test.js",
+      "targetedTestPassing": true,
+      "targetedTestAt": "2026-10-17T21:00:12.486Z",
+      "targetedTestExit": 0,
+      "verificationCommit": "fd6cdeed4afad932da4f8ada1c85af49115df429",
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/effectiveAggregateChain.test.js exit=0 em fd6cdeed4afa"
     },
     {
       "id": "MISSAO-B8-ESTADOS-FILA",
