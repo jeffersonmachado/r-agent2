@@ -719,6 +719,34 @@ function compactRawStatus(rawStatus) {
   };
 }
 
+/**
+ * Promoção canônica é permitida?
+ *
+ * Defeito medido (2026-10-17): execução canônica com ZERO resultados gravava
+ * `go-no-go-report.json`, `release-gate.json` e o pacote de inteligência —
+ * artefatos governados consumidos como prova de execução por quem nunca
+ * executou cenário nenhum. Função pura para que a decisão seja testável sem
+ * subir a malha inteira.
+ *
+ * @param {boolean} habilitado — requisitos de pipeline/origem/registry atendidos
+ * @param {Array} results — resultados REALMENTE executados
+ * @returns {{permitido: boolean, motivo: object|null}}
+ */
+function podePromoverCanonico(habilitado, results) {
+  if (!habilitado) return { permitido: false, motivo: null };
+  if (!Array.isArray(results) || results.length === 0) {
+    return {
+      permitido: false,
+      motivo: {
+        code: 'MESH_SEM_RESULTADOS',
+        detail: 'execução canônica com ZERO resultados (nenhum cenário executado) — '
+          + 'artefatos governados NÃO foram gravados; corrida não é prova de execução',
+      },
+    };
+  }
+  return { permitido: true, motivo: null };
+}
+
 function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   // RAP-078: espelho canônico em banco para stores mutáveis de Mesh.
@@ -2202,7 +2230,9 @@ async function runMeshInner(options = {}, tenantId = 'system') {
     && process.env.RUNNING_IN_PIPELINE === '1'
     && executionOrigin === 'pipeline'
     && isCanonicalRegistryExecution(options, registry, scenarios);
-  const writeCanonicalOutputs = isCanonicalExecution;
+  // `let`: a promoção canônica é REBAIXADA logo abaixo se a execução não produzir
+  // NENHUM resultado (defeito MESH-EXECUCAO-VAZIA, 2026-10-17).
+  let writeCanonicalOutputs = isCanonicalExecution;
   const registryTotal = scenarios.length;
   const executionId = options.executionId || `mesh-${new Date().toISOString().replace(/[:.]/g, '-')}`;
   const startedAt = nowIso();
@@ -2498,7 +2528,29 @@ async function runMeshInner(options = {}, tenantId = 'system') {
     executionKind,
     summary,
   });
+
+  // ── ZERO RESULTADOS NÃO PROMOVE (defeito medido 2026-10-17) ────────────────
+  // Com `--scenario-id` que não casava com o registry, a malha executava NADA e
+  // ainda gravava `go-no-go-report.json`, `release-gate.json` e o pacote de
+  // inteligência — artefatos GOVERN ADOS que os gates consumiam como prova de
+  // execução. Fail-open latente: era só o caminho verde que impedia o dano.
+  // Regra nova: promoção canônica exige pelo menos UM resultado executado.
+  // A execução continua registrada em `qa/evidence/<executionId>/` (auditável),
+  // mas NÃO toca artefato governado, e o motivo fica declarado.
+  let promocaoRebaixada = null;
+  {
+    const decisao = podePromoverCanonico(writeCanonicalOutputs, results);
+    if (!decisao.permitido && writeCanonicalOutputs) {
+      writeCanonicalOutputs = false;
+      promocaoRebaixada = { ...decisao.motivo, executionId, scenariosSelecionados: registryTotal };
+      summary.reasons = [...new Set([...(summary.reasons || []), decisao.motivo.detail])];
+      if (typeof appendLog === 'function') appendLog('CANONICAL_PROMOTION_REFUSED', 'warn', promocaoRebaixada);
+    }
+  }
   summary.canonicalPromotion = writeCanonicalOutputs ? canonicalPromotion : null;
+  if (promocaoRebaixada) {
+    summary.canonicalPromotion = { promoted: false, ...promocaoRebaixada };
+  }
 
   writeSummary(evidenceDir, summary);
   if (writeCanonicalOutputs) {
@@ -2739,6 +2791,7 @@ module.exports = {
   REPORT_PATH,
   HISTORY_DIR,
   EVIDENCE_DIR,
+  podePromoverCanonico,
   buildRegistry,
   scenarioRequiresOfficialPipeline,
   refreshRegistry,
