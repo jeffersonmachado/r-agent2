@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T12:43:16.840Z",
+  "updatedAt": "2026-10-17T12:45:42.974Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -501,7 +501,8 @@
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
       "severityBasis": "capacidade CORE do produto quebrada: botao \"Novo\" nao abria seletor de fluxo + 3 pageerror",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "frontend/src/components/FlowTemplateSelector.test.jsx"
     },
     {
       "id": "H18-JORNADA-FUNCIONAL-BROWSER",
@@ -590,7 +591,8 @@
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
       "severityBasis": "producao: sem tempo real ate F5 apos login",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx"
     },
     {
       "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
@@ -604,7 +606,8 @@
       "state": "FIXED_PENDING_VERIFICATION",
       "legacyStatus": "done",
       "severityBasis": "crash de UI (removeChild) reprovando cenario BLOCKING do QA Mesh",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "frontend/src/__tests__/supportHeaderEnhancement.test.js"
     },
     {
       "id": "DEF-QUEUE-DELETE-DB-ONLY",
