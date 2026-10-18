@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-16T05:00:38.232Z",
-  "commit": "4042af66691e9b38a65b08dd3e8a09885174b277",
+  "generatedAt": "2026-10-18T03:30:38.436Z",
+  "commit": "3f619de2a3e9ddabc1e3840f8930e5c2d4684803",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
@@ -11354,7 +11354,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "super_admin alcançou a rota (404)"
         }
       ],
       "probes": {
@@ -11367,7 +11367,7 @@
           "notFoundFallback": false
         },
         "p3": {
-          "status": 200,
+          "status": 404,
           "notFoundFallback": false
         }
       }
@@ -12513,7 +12513,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 500,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -25974,9 +25974,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20261016041828305-ae81e3ee",
-  "sourceFingerprint": "6ae89a8fb0f2da6245692436d1377a84987feae580a606e87fcea127b2e15035",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }
