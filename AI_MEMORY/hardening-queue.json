@@ -1643,7 +1643,7 @@
       "legacyStatus": "done",
       "severityBasis": "a divergencia produz NO_GO honesto (fail-closed), nunca falso GO; resolver exige ciclo de release completo para recertificar a cadeia",
       "severitySource": "medicao-2026-10-19-gate-fases-D-E",
-      "blocked_reason": "Recertificar a cadeia exige ciclo completo de selagem (prepare->candidate->final->publish->consolidate) e a Missao proibe selagem/publicacao reais. Medido 2026-10-19: L1-cadeia-criptografica exit=1 em 0.7s com CADEIA_DIVERGENTE (5 elos gravados 18.496s apos a certificacao de 2026-10-17 04:21), AUTO_DECLARACAO_DE_VALIDADE_FALSA e CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA. Nao e regressao das correcoes desta missao: a divergencia e anterior ao baseline 9758f828f.",
+      "blocked_reason": "Recertificar a cadeia exige ciclo completo de selagem (prepare->candidate->final->publish->consolidate) e a Missao proibe selagem/publicacao reais. Medido 2026-10-19: L1-cadeia-criptografica exit=1 em 0.7s com CADEIA_DIVERGENTE (5 elos gravados 18.496s apos a certificacao de 2026-10-17 04:21), AUTO_DECLARACAO_DE_VALIDADE_FALSA e CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA. Nao e regressao das correcoes desta missao: a divergencia e anterior ao baseline 9758f828f. MEDIDO 2026-10-19 (HEAD 5ad00b31d): `node tools/system/platform-readiness.js` recompoe a decisao real (NO_GO:BLOCKING_GAPS, 5 gaps bloqueantes) mas o gerador de projecoes RECUSA propagar porque governance/final-governance-report.json continua PASS_WITH_DEFERRED_PACKAGE_GATE de rap-governed-20261017053314590-3558e6f4 (canonical_divergence). Esse arquivo so e escrito por scripts/two-pass-release.sh dentro do ciclo release:seal — e scripts/governance/seal-release.sh exige branch `main` (linha 159) e COMMITA nela; a missao proibe commit/push em main. Logo: fechar L1/L2/L3 exige autorizacao explicita para rodar o selo a partir de main (ou mudar a politica de branch do selo).",
       "nextAction": "Executar ciclo release:seal completo em janela autorizada e re-rodar a fase D do gate."
     },
     {
@@ -1759,7 +1759,7 @@
       "id": "P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO",
       "title": "Projeções de status (docs) gravadas ANTES da decisão final: divergem da canônica do mesmo run e travam o L2",
       "status": "blocked_external",
-      "blocked_reason": "MEDIDO 2026-10-19 (L2-test-system, exit 1 em 13.1s): canônica governance/final-readiness-report.json diz PASS_WITH_DEFERRED_PACKAGE_GATE com sourceFingerprint bfbabde34663… (11:14:09), enquanto as projeções docs/governance/_platform-status-source.json e dev/platform-readiness/latest.json dizem NO_GO:BLOCKING_GAPS com 2c8f986c41ac… (11:12:00) — mesmo runId rap-governed-20261017053314590-3558e6f4, 2 minutos de diferenca. O gerador unico (scripts/governance/generate-final-status-projections.js) apenas COPIA finalDecision/sourceFingerprint da canônica, entao a divergencia so pode vir de projecao escrita antes da canônica final (ordem invertida no ciclo) — o run foi encerrado ABANDONED. Regenerar agora propagaria PASS_WITH_DEFERRED_PACKAGE_GATE (decisao de um run abandonado) para PLATFORM_STATUS.md, criando falso verde documental; recompor a canônica com o estado atual exige ciclo de selagem.",
+      "blocked_reason": "MEDIDO 2026-10-19 (L2-test-system, exit 1 em 13.1s): canônica governance/final-readiness-report.json diz PASS_WITH_DEFERRED_PACKAGE_GATE com sourceFingerprint bfbabde34663… (11:14:09), enquanto as projeções docs/governance/_platform-status-source.json e dev/platform-readiness/latest.json dizem NO_GO:BLOCKING_GAPS com 2c8f986c41ac… (11:12:00) — mesmo runId rap-governed-20261017053314590-3558e6f4, 2 minutos de diferenca. O gerador unico (scripts/governance/generate-final-status-projections.js) apenas COPIA finalDecision/sourceFingerprint da canônica, entao a divergencia so pode vir de projecao escrita antes da canônica final (ordem invertida no ciclo) — o run foi encerrado ABANDONED. Regenerar agora propagaria PASS_WITH_DEFERRED_PACKAGE_GATE (decisao de um run abandonado) para PLATFORM_STATUS.md, criando falso verde documental; recompor a canônica com o estado atual exige ciclo de selagem. MEDIDO 2026-10-19 (HEAD 5ad00b31d): `node tools/system/platform-readiness.js` recompoe a decisao real (NO_GO:BLOCKING_GAPS, 5 gaps bloqueantes) mas o gerador de projecoes RECUSA propagar porque governance/final-governance-report.json continua PASS_WITH_DEFERRED_PACKAGE_GATE de rap-governed-20261017053314590-3558e6f4 (canonical_divergence). Esse arquivo so e escrito por scripts/two-pass-release.sh dentro do ciclo release:seal — e scripts/governance/seal-release.sh exige branch `main` (linha 159) e COMMITA nela; a missao proibe commit/push em main. Logo: fechar L1/L2/L3 exige autorizacao explicita para rodar o selo a partir de main (ou mudar a politica de branch do selo). CORRECAO ESTRUTURAL JA FEITA: o produtor agora regenera e valida as projecoes na mesma execucao (commit 5ad00b31d), impedindo recaida.",
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "BLOCKED_EXTERNAL",
@@ -1772,7 +1772,7 @@
       "id": "P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3",
       "title": "Gate agregado nao tem identidade de run no branch de desenvolvimento e para em fail-closed (0/64 passos)",
       "status": "blocked_external",
-      "blocked_reason": "MEDIDO 2026-10-19 (L3-gate-agregado, exit 1 em 0.3s): '[agg] status=BLOCKED passos=0/64 motivo: identidade de run incompleta (runId,sourceFingerprint)'. Comportamento CORRETO (fail-closed), causa nao e o gate: nao existe run governado ativo — o ultimo (rap-governed-20261017111858007-5d93eee8) esta FECHADO/ABANDONED. Abrir run novo e parte do ciclo de selagem, proibido nesta missao.",
+      "blocked_reason": "MEDIDO 2026-10-19 (L3-gate-agregado, exit 1 em 0.3s): '[agg] status=BLOCKED passos=0/64 motivo: identidade de run incompleta (runId,sourceFingerprint)'. Comportamento CORRETO (fail-closed), causa nao e o gate: nao existe run governado ativo — o ultimo (rap-governed-20261017111858007-5d93eee8) esta FECHADO/ABANDONED. Abrir run novo e parte do ciclo de selagem, proibido nesta missao. MEDIDO 2026-10-19 (HEAD 5ad00b31d): `node tools/system/platform-readiness.js` recompoe a decisao real (NO_GO:BLOCKING_GAPS, 5 gaps bloqueantes) mas o gerador de projecoes RECUSA propagar porque governance/final-governance-report.json continua PASS_WITH_DEFERRED_PACKAGE_GATE de rap-governed-20261017053314590-3558e6f4 (canonical_divergence). Esse arquivo so e escrito por scripts/two-pass-release.sh dentro do ciclo release:seal — e scripts/governance/seal-release.sh exige branch `main` (linha 159) e COMMITA nela; a missao proibe commit/push em main. Logo: fechar L1/L2/L3 exige autorizacao explicita para rodar o selo a partir de main (ou mudar a politica de branch do selo).",
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "BLOCKED_EXTERNAL",
@@ -1812,6 +1812,22 @@
       "regressionTest": "tests/integration/crmTenantIsolation.postgres.test.js",
       "severityBasis": "violacao de isolamento multitenant com confidencialidade e integridade (OWASP A01)",
       "severitySource": "auditoria-2026-10-19-sha-511ae5249"
+    },
+    {
+      "id": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
+      "title": "Projecoes podiam ser gravadas antes da decisao canonica final e ficar stale sem nenhum gate perceber na hora",
+      "status": "done",
+      "commit": "5ad00b31d",
+      "evidence": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js + AI_MEMORY/evidence/p0-2026-10-19/produtor-canonico-recusa-divergencia.log",
+      "detail": "CAUSA-RAIZ: quem gravava a decisao canonica (tools/system/platform-readiness.js) nao regenerava as 5 projecoes; a sincronizacao dependia de alguem rodar generate-final-status-projections depois — janela que produziu o estado medido (projecao 11:12, canonica 11:14). CORRECAO: main() chama syncDerivedProjections() apos persistReport(); roda gerador E validador canonicos e derruba o produtor (exit 1) se qualquer um falhar. PROVA: 4 testes (ordem persistReport->sync, presenca das duas ferramentas, fail-closed, export) + execucao real que recusou propagar divergencia entre readiness e governance.",
+      "prevention": "REGRA: derivado de decisao so pode ser escrito pelo MESMO processo que escreve a decisao; se o derivado nao puder ser recomputado, o produtor falha — nunca deixa docs publicando decisao velha.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "done",
+      "regressionTest": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
+      "severityBasis": "docs publicavam decisao diferente da canonica (falso verde documental)",
+      "severitySource": "auditoria-2026-10-19-projecao-stale"
     }
   ],
   "schemaVersion": 2,
