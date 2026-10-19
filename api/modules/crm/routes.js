@@ -197,6 +197,9 @@ function createCrmRoutes({ buildDeps }) {
       id,
       tenantId,
       name: String(body.name || '').trim() || 'Sem nome',
+      // A tela de Contas tem filtro e coluna de Status; sem persistir o campo o
+      // filtro "Ativo" escondia TODAS as contas (medido em 2026-10-19).
+      status: String(body.status || 'active').trim().toLowerCase() || 'active',
       industry: body.industry || null,
       website: body.website || null,
       phone: body.phone || null,

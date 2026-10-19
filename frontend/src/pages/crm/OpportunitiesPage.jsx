@@ -85,9 +85,27 @@ export function OpportunitiesPage() {
       return;
     }
 
+    // A UI usa nomes de campo próprios; a API do CRM persiste `name`,
+    // `expectedCloseDate` e `notes`. Sem este mapeamento o título era descartado
+    // e a oportunidade nascia como "Nova Oportunidade" (medido em 2026-10-19).
+    const payload = {
+      name: formData.title,
+      pipelineId: formData.pipelineId,
+      stageId: formData.stageId,
+      accountId: formData.accountId,
+      contactId: formData.contactId,
+      value: Number(formData.value) || 0,
+      probability: formData.probability,
+      expectedCloseDate: formData.expectedClosureDate || null,
+      notes: formData.description || null,
+    };
+
     try {
-      const response = await upsertOpportunity(formData);
-      if (response.opportunity) {
+      const response = await upsertOpportunity(payload);
+      // Mesma classe de defeito da tela de Contas: a guarda esperava
+      // `response.opportunity`, a API devolve o registro direto.
+      const salva = response?.opportunity || (response?.id ? response : null);
+      if (salva) {
         await loadData();
         setIsModalOpen(false);
         showToast('Oportunidade salva com sucesso!', 'success');
@@ -118,14 +136,22 @@ export function OpportunitiesPage() {
   };
 
   const currentPipeline = pipelines.find((p) => p.id === selectedPipeline);
+  // A API devolve camelCase (`pipelineId`/`stageId`/`name`/`expectedCloseDate`).
+  // O kanban filtrava por snake_case (`pipeline_id`/`stage_id`) e lia `opp.title`:
+  // resultado medido em 2026-10-19 — coluna sempre (0) e card sem título, mesmo
+  // com a oportunidade gravada na API. `nomeDoCampo` cobre registros legados.
+  const pipelineIdDe = (opp) => opp.pipelineId || opp.pipeline_id;
+  const stageIdDe = (opp) => opp.stageId || opp.stage_id;
+  const tituloDe = (opp) => opp.name || opp.title || '—';
+
   const filteredOpportunities = opportunities.filter(
-    (opp) => opp.pipeline_id === selectedPipeline
+    (opp) => pipelineIdDe(opp) === selectedPipeline
   );
 
   const kanbanColumns = (currentPipeline?.stages || []).map((stage) => ({
     id: stage.id,
     name: stage.name,
-    opportunities: filteredOpportunities.filter((opp) => opp.stage_id === stage.id),
+    opportunities: filteredOpportunities.filter((opp) => stageIdDe(opp) === stage.id),
   }));
 
   return (
@@ -241,7 +267,19 @@ export function OpportunitiesPage() {
       {viewMode === 'kanban' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {kanbanColumns.map((column) => (
-            <div key={column.id} className="bg-bg-hover rounded-lg p-4">
+            <div
+              key={column.id}
+              className="bg-bg-hover rounded-lg p-4"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                // DEFEITO MEDIDO (2026-10-19): o card movia de etapa em QUALQUER
+                // `dragEnd` — arrastar e soltar no mesmo lugar adiantava o funil
+                // sem o usuário pedir. Mover agora exige soltar NA COLUNA.
+                e.preventDefault();
+                const id = e.dataTransfer.getData('text/plain');
+                if (id) handleMoveStage(id, column.id);
+              }}
+            >
               <h2 className="font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>
                 {column.name} ({column.opportunities.length})
               </h2>
@@ -255,15 +293,13 @@ export function OpportunitiesPage() {
                       cursor: 'grab'
                     }}
                     draggable
-                    onDragEnd={(e) => {
-                      const nextStage = kanbanColumns[(kanbanColumns.findIndex((c) => c.id === column.id) + 1) % kanbanColumns.length];
-                      if (nextStage) {
-                        handleMoveStage(opp.id, nextStage.id);
-                      }
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', opp.id);
+                      e.dataTransfer.effectAllowed = 'move';
                     }}
                   >
-                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>{opp.title}</h3>
-                    <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>{opp.description}</p>
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>{tituloDe(opp)}</h3>
+                    <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>{opp.notes || opp.description || ''}</p>
                     <div className="flex justify-between items-center mt-2">
                       <CrmBadge
                         label={`${opp.probability}%`}
@@ -311,7 +347,7 @@ export function OpportunitiesPage() {
             <tbody>
               {filteredOpportunities.map((opp) => (
                 <tr key={opp.id} className="border-b" style={{ borderColor: 'var(--color-border-default)' }}>
-                  <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.title}</td>
+                  <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{tituloDe(opp)}</td>
                   <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.stage_id}</td>
                   <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.value ? `R$ ${opp.value}` : '-'}</td>
                   <td className="px-4 py-2" style={{ color: 'var(--color-text-primary)' }}>{opp.probability}%</td>
@@ -319,7 +355,14 @@ export function OpportunitiesPage() {
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => {
-                          setFormData({ ...opp, pipelineId: opp.pipeline_id, stageId: opp.stage_id });
+                          setFormData({
+                            ...opp,
+                            title: tituloDe(opp),
+                            pipelineId: pipelineIdDe(opp),
+                            stageId: stageIdDe(opp),
+                            expectedClosureDate: opp.expectedCloseDate || opp.expectedClosureDate || '',
+                            description: opp.notes || opp.description || '',
+                          });
                           setIsModalOpen(true);
                         }}
                         className="text-accent-primary hover:text-accent-primary-hover transition-colors"
