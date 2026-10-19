@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-17T22:38:46.698Z",
+  "updatedAt": "2026-10-19T02:15:12.966Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -543,7 +543,7 @@
       "legacyStatus": "done",
       "severityBasis": "higiene do dist: recibo stale causava FAIL espurio (falso NO_GO), nao falso GO",
       "severitySource": "analise-tecnica-2026-10-17",
-      "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release): validate:dist falha hoje em verify-enterprise-governance-v2.sh com SCORECARD_EVIDENCE_MISSING (governance/delivered-release-verification-report.json) porque o dist/ contem entrega ANTERIOR ao codigo atual. Provar a higiene exige novo ciclo de selagem+empacotamento, que a elegibilidade NEGA enquanto houver P0/P1 aberto. Medido 2026-10-17: validate:dist -> check_dist_clean_failed."
+      "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release completo): medido em 2026-10-19, o dist/ e os elos de governanca sao de 2026-10-17 (ciclo ABANDONADO; governance/.current-run.json de 09:47). Provar a higiene exige novo ciclo de selagem+empacotamento. A elegibilidade JA NAO bloqueia (todos os P0/P1 fechados; evaluateExecutionEligibility libera L0..SELO) — o que impede e o escopo autorizado desta missao (V3 proibe selagem/publicacao real) somado a cadeia divergente medida: governance-chain 9 divergencias (CADEIA_DIVERGENTE, AUTO_DECLARACAO_DE_VALIDADE_FALSA, CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA)."
     },
     {
       "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
@@ -614,7 +614,7 @@
       "legacyStatus": "done",
       "severityBasis": "validate:dist com motivo espurio (falso NO_GO); causa unica",
       "severitySource": "analise-tecnica-2026-10-17",
-      "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release): validate:dist falha hoje em verify-enterprise-governance-v2.sh com SCORECARD_EVIDENCE_MISSING (governance/delivered-release-verification-report.json) porque o dist/ contem entrega ANTERIOR ao codigo atual. Provar a higiene exige novo ciclo de selagem+empacotamento, que a elegibilidade NEGA enquanto houver P0/P1 aberto. Medido 2026-10-17: validate:dist -> check_dist_clean_failed."
+      "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release completo): medido em 2026-10-19, o dist/ e os elos de governanca sao de 2026-10-17 (ciclo ABANDONADO; governance/.current-run.json de 09:47). Provar a higiene exige novo ciclo de selagem+empacotamento. A elegibilidade JA NAO bloqueia (todos os P0/P1 fechados; evaluateExecutionEligibility libera L0..SELO) — o que impede e o escopo autorizado desta missao (V3 proibe selagem/publicacao real) somado a cadeia divergente medida: governance-chain 9 divergencias (CADEIA_DIVERGENTE, AUTO_DECLARACAO_DE_VALIDADE_FALSA, CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA)."
     },
     {
       "id": "DIV-PUREZA-ENGINE",
@@ -1630,6 +1630,20 @@
       "verificationCommit": "3486717b0678",
       "verificationNote": "reconcile: convergenceFixpoint PASS em arvore limpa",
       "commit": "3486717b0678"
+    },
+    {
+      "id": "H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE",
+      "title": "Cadeia de governanca diverge do conteudo atual (escritas pos-certificacao) e projecoes de status divergem dos relatorios finais",
+      "status": "blocked_external",
+      "commit": "32ca4fb9b",
+      "evidence": "MEDIDO 2026-10-19 no gate de fases (dev-branch-gate --fases A,B,C,D,E): L0 verde 3x (1054 suites/8950 testes, exit 0) e entao L1-cadeia-criptografica exit=1 em 0,8s com 9 divergencias. Recalculo: evidence_manifest, final_proof_report, final_readiness, proof_signature e package_validation foram gravados 18.496 s (5h08) DEPOIS da certificacao de governance/governance-chain.json (2026-10-17 04:21:48 -> escritas 09:30:04), todos com conteudo alterado — codigos CADEIA_DIVERGENTE, AUTO_DECLARACAO_DE_VALIDADE_FALSA e CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA. Consequencias medidas no mesmo gate: L1-self-proving exit=1 (governance_chain_invalid + final_readiness nao definitivo), assert-canonical-release-decision exit=1 (identidade DIVERGENTE em runId/sourceCommit/sourceFingerprint), e L2 (npm run test:system) exit=1 com tests/governance/finalStatusProjection.test.js falhando em 6 issues: projecoes dizem NO_GO:BLOCKING_GAPS e fingerprint 2c8f986c…, relatorios canonicos dizem PASS_WITH_DEFERRED_PACKAGE_GATE e fingerprint bfbabde3…. Regenerar as projecoes (generate:final-status-projections) foi RECUSADO de proposito: alinharia PLATFORM_STATUS.md a PASS_WITH_DEFERRED e mascararia a cadeia divergente — verde artificial. L1-release-dag, validate:hardening-queue, validate:ai-memory e validate:agent-adherence: PASS.",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "BLOCKED_EXTERNAL",
+      "legacyStatus": "done",
+      "severityBasis": "a divergencia produz NO_GO honesto (fail-closed), nunca falso GO; resolver exige ciclo de release completo para recertificar a cadeia",
+      "severitySource": "medicao-2026-10-19-gate-fases-D-E",
+      "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release completo, fora do escopo autorizado desta missao): recertificar a cadeia exige nova selagem (--fases F / release:seal) que a missao V3 proibe executar; nenhuma correcao parcial e legitima — reescrever elos ou projecoes a mao produz exatamente o falso verde que o gate detecta."
     }
   ],
   "schemaVersion": 2,
