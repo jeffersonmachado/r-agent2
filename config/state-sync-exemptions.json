@@ -136,12 +136,6 @@
       "reason": "fila de manutenção em lote. MIGRAR: ticket.updated já existe; a página ainda usa timer para reprocessar a listagem."
     },
     {
-      "file": "frontend/src/pages/crm/CrmDashboardPage.jsx",
-      "allowedIntervals": 1,
-      "classification": "periodic_refresh_no_ws_event",
-      "reason": "métricas agregadas de CRM não são emitidas por evento (os eventos cobrem entidades, não os KPIs)."
-    },
-    {
       "file": "frontend/src/pages/qa/StabilityPage.jsx",
       "allowedIntervals": 1,
       "classification": "periodic_refresh_no_ws_event",

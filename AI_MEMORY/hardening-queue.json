@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-19T02:15:12.966Z",
+  "updatedAt": "2026-10-19T02:45:27.906Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1644,6 +1644,20 @@
       "severityBasis": "a divergencia produz NO_GO honesto (fail-closed), nunca falso GO; resolver exige ciclo de release completo para recertificar a cadeia",
       "severitySource": "medicao-2026-10-19-gate-fases-D-E",
       "blocked_reason": "BLOQUEIO OBJETIVO (ciclo de release completo, fora do escopo autorizado desta missao): recertificar a cadeia exige nova selagem (--fases F / release:seal) que a missao V3 proibe executar; nenhuma correcao parcial e legitima — reescrever elos ou projecoes a mao produz exatamente o falso verde que o gate detecta."
+    },
+    {
+      "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
+      "title": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
+      "status": "blocked_external",
+      "commit": "5d3e78d91",
+      "evidence": "Medido 2026-10-19 no browser real (systemadmin/tenant system): POST /api/crm/leads devolve 200 e o painel continua com Leads=4, porque o handler vivo de GET /api/crm/analytics/dashboard é o de api/modules/domain-operations/routes.js (agrega MarketingLead no banco), enquanto api/modules/crm/routes.js grava em Map por tenant em memória. Prova da volatilidade: um lead criado antes do restart do serviço ragent2-api-dev sumiu (DELETE devolveu 404 após reinício). O evento crm.metrics.updated é emitido e o painel refaz a leitura (medido: 1 refetch por mutação), mas o número não muda porque a fonte é outra.",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "BLOCKED_EXTERNAL",
+      "legacyStatus": "done",
+      "severityBasis": "produz tela que parece funcionar e não reflete a escrita; não gera falso GO de release",
+      "severitySource": "medicao-2026-10-19-browser-crm",
+      "blocked_reason": "BLOQUEIO DE ARQUITETURA (decisão pendente): exige escolher a fonte de verdade do CRM — persistir contas/contatos/leads/oportunidades em tabela própria (migrations + serviços) ou apontar o painel para o store. Fora do escopo da correção de realtime; decidir antes de migrar."
     }
   ],
   "schemaVersion": 2,
