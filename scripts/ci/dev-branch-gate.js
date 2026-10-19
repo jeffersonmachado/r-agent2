@@ -209,6 +209,9 @@ const ESTADOS_DE_FASE = Object.freeze({
   BLOCKED: 'BLOCKED',
   NOT_EXECUTED: 'NOT_EXECUTED',
   UNKNOWN: 'UNKNOWN',
+  // Fase sem trabalho por definição (ex.: B sem nenhum defeito aberto a regredir).
+  // Não é "não executada por falha": é ausência de objeto, declarada.
+  NOT_APPLICABLE: 'NOT_APPLICABLE',
 });
 
 /**
@@ -270,6 +273,12 @@ function avaliarEstadosPorFase({ fasesPedidas, faseA, resultados, bloqueio, time
 
     if (reais.length === 0) {
       const bloqueadoAqui = Boolean(bloqueio && bloqueio.fase === fase);
+      // B só é NOT_APPLICABLE quando o inventário NÃO tem defeito aberto: aí não
+      // existe regressão a executar. Com defeito aberto e sem teste declarado, é
+      // NOT_EXECUTED (a missão não pode passar sem a prova).
+      if (fase === 'B' && sinteticos.some((r) => r.naoAplicavel === true)) {
+        return { fase, estado: ESTADOS_DE_FASE.NOT_APPLICABLE, passosReais: 0, motivo: 'SEM_DEFEITOS_ABERTOS' };
+      }
       return {
         fase,
         estado: bloqueadoAqui ? ESTADOS_DE_FASE.BLOCKED : ESTADOS_DE_FASE.NOT_EXECUTED,
@@ -320,8 +329,9 @@ function avaliarEstadosPorFase({ fasesPedidas, faseA, resultados, bloqueio, time
 function decidirVeredito({ entradaInvalida, identidade, estados, bloqueio }) {
   const porFase = new Map((estados || []).map((e) => [e.fase, e.estado]));
   const faltantes = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA.filter((f) => !porFase.has(f));
+  const CUMPRIDA = new Set([ESTADOS_DE_FASE.PASS, ESTADOS_DE_FASE.NOT_APPLICABLE]);
   const naoPass = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA
-    .filter((f) => porFase.has(f) && porFase.get(f) !== ESTADOS_DE_FASE.PASS);
+    .filter((f) => porFase.has(f) && !CUMPRIDA.has(porFase.get(f)));
   const estadosPresentes = new Set((estados || []).map((e) => e.estado));
   const algumaNaoExecutada = estadosPresentes.has(ESTADOS_DE_FASE.NOT_EXECUTED);
   const algumaDesconhecida = estadosPresentes.has(ESTADOS_DE_FASE.UNKNOWN);
@@ -794,6 +804,8 @@ function main(argv = process.argv.slice(2)) {
           sha256Saida: sha256(''),
           saidaFinal: plano.semTeste.length ? `defeitos sem teste: ${plano.semTeste.join(',')}` : '',
           naoExecutado: true,
+          // Sem passos E sem defeito a cobrar: a fase não tem objeto (N/A).
+          naoAplicavel: plano.semTeste.length === 0,
         });
         process.stdout.write(`[dev-branch-gate] B sem testes direcionados declarados (não conta como verde)\n`);
         continue;
@@ -842,14 +854,20 @@ function finalizar({
   // Passo SINTÉTICO (`naoExecutado: true`) tem exitCode null por construção e NÃO é falha.
   const falhas = resultadosSeguros.filter((r) => r.naoExecutado !== true && r.timeout !== true && r.exitCode !== 0);
 
+  const inventario = faseA && faseA.inventario ? faseA.inventario : null;
+  const semDefeitosAbertos = Boolean(inventario
+    && Number(inventario.abertos || 0) === 0
+    && Number(inventario.bloqueantesParaCertificacao || 0) === 0);
   const estados = avaliarEstadosPorFase({
     fasesPedidas, faseA, resultados: resultadosSeguros, bloqueio, timeouts,
-    contexto: CONTEXTO_EXECUCAO,
+    contexto: { ...CONTEXTO_EXECUCAO, semDefeitosAbertos },
   });
   const veredito = decidirVeredito({ entradaInvalida, identidade, estados, bloqueio });
   const completo = veredito === 'PASS';
   const fasesFaltantes = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA.filter((f) => !fasesPedidas.includes(f));
-  const naoExecutadas = estados.filter((e) => e.estado !== ESTADOS_DE_FASE.PASS).map((e) => e.fase);
+  const naoExecutadas = estados
+    .filter((e) => ![ESTADOS_DE_FASE.PASS, ESTADOS_DE_FASE.NOT_APPLICABLE].includes(e.estado))
+    .map((e) => e.fase);
 
   const runner = sondarRunnerDoGithub(branch);
   const shaCurto = (sha || 'vazio').slice(0, 12);
@@ -889,6 +907,7 @@ function finalizar({
       branchValida: Boolean(identidade && identidade.branchOk),
     },
     fasesConcluidas: estados.filter((e) => e.estado === ESTADOS_DE_FASE.PASS).map((e) => e.fase),
+    fasesNaoAplicaveis: estados.filter((e) => e.estado === ESTADOS_DE_FASE.NOT_APPLICABLE).map((e) => e.fase),
     sha,
     shaCurto,
     branch,
