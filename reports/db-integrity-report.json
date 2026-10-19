@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-10-19T19:26:15.332Z",
+  "generatedAt": "2026-10-19T20:47:50.508Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "d85174d476f54220bb320bcb14e611b3e28ab100",
+  "commit": "f9af600e62c54fd4c100b9074fd1ffb6a4d8c962",
   "dbAvailable": true,
   "totals": {
-    "models": 223,
-    "validated": 223,
+    "models": 224,
+    "validated": 224,
     "visited": 0,
     "failed": 0,
     "warnings": 49
@@ -2197,6 +2197,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "11 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:CrmRecord",
+      "table": "crm_records",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/CrmRecord.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=crm_records"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20261019120000-create-crm-records.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'crm_records' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -12012,7 +12064,6 @@
       ]
     }
   ],
-  "runId": "rap-governed-20261019192244262-9cfccff1",
-  "sourceFingerprint": "552ada7da67ab409147dfa703179b6903bba3374b2075b6da10171a0e41b9ab2",
-  "sourceCommit": "d85174d476f54220bb320bcb14e611b3e28ab100"
+  "runId": "rap-governed-20261019204341124-06095b94",
+  "sourceFingerprint": "9bd590a9eafb70604242b18a9c69c85c92fb8aade3521bff380083541fde8a3d"
 }

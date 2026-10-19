@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-19T20:28:27.996Z",
-  "commit": "44f5834f031a2b5943b8a12cd7eedfe19f5071ef",
+  "generatedAt": "2026-10-19T20:52:34.256Z",
+  "commit": "f9af600e62c54fd4c100b9074fd1ffb6a4d8c962",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 916,
+    "items": 918,
     "byState": {
-      "VALIDATED": 888,
-      "NOT_APPLICABLE": 21,
-      "VISITED": 7
+      "VALIDATED": 887,
+      "VISITED": 10,
+      "NOT_APPLICABLE": 21
     }
   },
   "status": "PASS",
@@ -5198,10 +5198,7 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 200,
-          "notFoundFallback": false
-        },
+        "p2": "network-error",
         "p3": "skipped"
       }
     },
@@ -6274,7 +6271,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/executions",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6294,7 +6291,8 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "P3 com erro de rede",
+          "notEvaluated": true
         }
       ],
       "probes": {
@@ -6306,10 +6304,7 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": {
-          "status": 200,
-          "notFoundFallback": false
-        }
+        "p3": "network-error"
       }
     },
     {
@@ -14219,6 +14214,23 @@
           "status": 401,
           "notFoundFallback": false
         },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:PATCH:/api/crm/opportunities/:id",
+      "state": "VISITED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
+        }
+      ],
+      "probes": {
+        "p1": "skipped",
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -25323,6 +25335,23 @@
       }
     },
     {
+      "id": "api:PUT:/api/crm/opportunities/:id",
+      "state": "VISITED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
+        }
+      ],
+      "probes": {
+        "p1": "skipped",
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:PUT:/api/intelligence/goals/:id",
       "state": "VALIDATED",
       "assertions": [
@@ -25975,9 +26004,6 @@
       }
     }
   ],
-  "runId": "rap-governed-20261019192244262-9cfccff1",
-  "sourceFingerprint": "552ada7da67ab409147dfa703179b6903bba3374b2075b6da10171a0e41b9ab2",
-  "sourceCommit": "d85174d476f54220bb320bcb14e611b3e28ab100",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  "runId": "rap-governed-20261019204341124-06095b94",
+  "sourceFingerprint": "9bd590a9eafb70604242b18a9c69c85c92fb8aade3521bff380083541fde8a3d"
 }
