@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-19T02:45:27.906Z",
+  "updatedAt": "2026-10-19T03:06:04.112Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1650,7 +1650,7 @@
       "title": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
       "status": "blocked_external",
       "commit": "5d3e78d91",
-      "evidence": "Medido 2026-10-19 no browser real (systemadmin/tenant system): POST /api/crm/leads devolve 200 e o painel continua com Leads=4, porque o handler vivo de GET /api/crm/analytics/dashboard é o de api/modules/domain-operations/routes.js (agrega MarketingLead no banco), enquanto api/modules/crm/routes.js grava em Map por tenant em memória. Prova da volatilidade: um lead criado antes do restart do serviço ragent2-api-dev sumiu (DELETE devolveu 404 após reinício). O evento crm.metrics.updated é emitido e o painel refaz a leitura (medido: 1 refetch por mutação), mas o número não muda porque a fonte é outra.",
+      "evidence": "Medido 2026-10-19 no browser real (systemadmin/tenant system): POST /api/crm/leads devolve 200 e o painel continua com Leads=4, porque o handler vivo de GET /api/crm/analytics/dashboard é o de api/modules/domain-operations/routes.js (agrega MarketingLead no banco), enquanto api/modules/crm/routes.js grava em Map por tenant em memória. Prova da volatilidade: um lead criado antes do restart do serviço ragent2-api-dev sumiu (DELETE devolveu 404 após reinício). O evento crm.metrics.updated é emitido e o painel refaz a leitura (medido: 1 refetch por mutação), mas o número não muda porque a fonte é outra. MEDIÇÃO ADICIONAL (contatos, 2026-10-19): a tela lista contatos do BANCO (MarketingLead, 4 registros) mas POST /api/crm/contacts grava no Map em memória — o contato criado não aparece na lista; é a mesma cisão store×banco.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "BLOCKED_EXTERNAL",
