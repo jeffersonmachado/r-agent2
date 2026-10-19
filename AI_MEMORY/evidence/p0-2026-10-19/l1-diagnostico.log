@@ -1,0 +1,52 @@
+=== validate-governance-chain
+[governance-chain] status=FAIL links=10 stored=99e1de118ee4… recomputado=ecbc51614a92…
+[governance-chain] FAIL: 9 divergência(s)
+  evidence_manifest — hash_mismatch (governance/evidence-manifest.json)
+  final_proof_report — hash_mismatch (governance/final-proof-report.json)
+  final_readiness — hash_mismatch (governance/final-readiness-report.json)
+  consistency_report — cumulative_hash_broken
+  cross_report — cumulative_hash_broken
+  proof_signature — hash_mismatch (governance/proof-signature.json)
+  blocker_engine — cumulative_hash_broken
+  package_validation — hash_mismatch (governance/package-validation-report.json)
+  chain_root — chain_root_mismatch
+[governance-chain] a cadeia é RECALCULADA a partir dos artefatos: divergência = artefato alterado ou chain regravada
+[governance-chain] AUTO_DECLARACAO_DE_VALIDADE_FALSA: o artefato se declara válido (valid=true, estado=CERTIFICADA) mas a recalculação encontrou 9 divergência(s) — aparência de válida sobre conteúdo alterado
+[governance-chain] escritas posteriores a certificacao: 5 elo(s) (5 com CONTEUDO ALTERADO)
+  evidence_manifest (DERIVADO) +18496s conteudoIdentico=false
+  final_proof_report (DERIVADO) +18496s conteudoIdentico=false
+  final_readiness (DERIVADO) +18496s conteudoIdentico=false
+  proof_signature (DERIVADO) +18496s conteudoIdentico=false
+  package_validation (DERIVADO) +18496s conteudoIdentico=false
+[governance-chain] elos: canonicos=3 derivados=7 imutaveisPosSelo=3
+exit=1
+=== validate-self-proving
+[governance] validate-self-proving: FAIL
+ - governance_chain_invalid: Governance chain is not valid: CADEIA_DIVERGENTE, AUTO_DECLARACAO_DE_VALIDADE_FALSA, CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA
+ - governance_chain_auto_declaracao_falsa: A cadeia se DECLARA válida mas a recalculação a contradiz — aparência de válida sobre conteúdo alterado.
+ - governance_chain_certificacao_ultrapassada: Elo(s) gravado(s) depois da certificação: evidence_manifest, final_proof_report, final_readiness, proof_signature, package_validation — a certificação não cobre o conteúdo atual.
+ - final_readiness_nao_final: Final readiness is PASS_WITH_DEFERRED_PACKAGE_GATE (estado canônico PRE_PACKAGE_PASS; exigido GO definitivo 1.1.0).
+exit=1
+=== validate-release-dag
+[release-dag] status=PASS decision=RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE
+[release-dag] nós=29 artefatos=25 ciclos=0
+[release-dag] relatório: reports/release-dag-report.json
+exit=0
+=== assert-canonical-release-decision
+[canonical-decision] NAO E GO DEFINITIVO: state=NO_GO motivo=GATE_OBRIGATORIO_FALHOU:final_governance,final_readiness,final_proof,governance_chain,identidade
+  identidade do run: PRESENTE | relatórios: final_governance=DIVERGENTE, final_readiness=DIVERGENTE, final_proof=DIVERGENTE
+  cadeia: CADEIA_RECOMPUTADA_INVALIDA (divergências=9, raizConfere=false)
+  decisões não finais: final_governance=PASS_WITH_DEFERRED_PACKAGE_GATE→PRE_PACKAGE_PASS, final_readiness=PASS_WITH_DEFERRED_PACKAGE_GATE→PRE_PACKAGE_PASS, final_proof=PASS_WITH_DEFERRED_PACKAGE_GATE→PRE_PACKAGE_PASS
+  identidade insuficiente/divergente: final_governance:DIVERGENTE:divergentes=runId|sourceCommit|sourceFingerprint, final_readiness:DIVERGENTE:divergentes=runId|sourceCommit|sourceFingerprint, final_proof:DIVERGENTE:divergentes=runId|sourceCommit
+  a publicação exige GO definitivo dos três relatórios + cadeia RECALCULADA íntegra + identidade PRESENTE e correspondente
+exit=1
+=== validate-hardening-queue
+[hardening-queue] 106 itens — done:68 blocked_external:6 prevention_active:18 verified:14
+[hardening-queue] abertos: H15-DIST-RECIBO-STALE(blocked_external), H19-DIST-CAUSA-UNICA(blocked_external), MISSAO-B9-CI-GITHUB-ACTIONS(blocked_external), H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE(blocked_external), P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO(blocked_external), P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3(blocked_external)
+[hardening-queue] impedidos (blocked/blocked_external — NÃO são fechados): 6
+[hardening-queue] PASS
+exit=0
+=== validate-ai-memory
+exit=0
+=== validate-agent-adherence
+exit=0

@@ -1,0 +1,4 @@
+=== BASELINE 511ae5249 (código auditado: Model.upsert com PK apenas id) ===
+ANTES  (tenant A): {"id":"opp-1","tenant_key":"tenant-a","payload":{"name":"Contrato sigiloso de A","value":950000}}
+DEPOIS (ataque B): {"id":"opp-1","tenant_key":"tenant-b","payload":{"name":"SEQUESTRADO POR B","value":1}}
+RESULTADO: VULNERAVEL — tenant_key transferido para tenant-b
