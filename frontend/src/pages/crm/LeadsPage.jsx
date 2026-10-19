@@ -10,6 +10,16 @@ const LEAD_STATUS_LABELS = {
   contactado: 'Contactado',
   qualificado: 'Qualificado',
   perdido: 'Perdido',
+  // Etapas legadas de `marketing_leads` (valores em inglês que já existem na
+  // base). Sem rótulo, a coluna mostrava o valor cru (medido em 2026-10-19).
+  visitor: 'Visitante',
+  lead: 'Lead',
+  customer: 'Cliente',
+  opportunity: 'Oportunidade',
+  proposal: 'Proposta',
+  negotiation: 'Negociação',
+  won: 'Ganho',
+  lost: 'Perdido',
 };
 
 // DEFEITO MEDIDO (2026-10-19, jornada real em /crm/leads): o formulário enviava
@@ -23,6 +33,7 @@ const LEGACY_STATUS_ALIASES = {
   contacted: 'contactado',
   qualified: 'qualificado',
   lost: 'perdido',
+  contact: 'contato',
 };
 
 function normalizeLeadStatus(lead) {

@@ -235,15 +235,19 @@ describe('GET /api/crm/analytics/dashboard', () => {
 
   test('200 com contrato completo quando DB disponível', async () => {
     const seqMock = makeSequelizeMock([
-      [[{
-        total_leads: 50,
-        total_contacts: 40,
-        total_accounts: 10,
-        total_opportunities: 20,
-        won_count: 8,
-        lost_count: 4,
-        total_value: 250000,
-      }]],
+      // 1ª query: leads/contatos de `marketing_leads`.
+      [[{ total_leads: 50, total_contacts: 40 }]],
+      // 2ª query: contas/oportunidades/funis de `crm_records` — a MESMA tabela
+      // onde o CRM grava. Antes esses números eram derivados de atributos de
+      // marketing_leads e a escrita ia para um Map: contador não mexia.
+      [[
+        { entity: 'accounts', payload: { id: 'a1' } },
+        { entity: 'accounts', payload: { id: 'a2' } },
+        { entity: 'pipelines', payload: { id: 'p1', stages: [{ id: 's-won', name: 'Ganho' }, { id: 's-lost', name: 'Perdido' }, { id: 's-open', name: 'Proposta' }] } },
+        { entity: 'opportunities', payload: { id: 'o1', stageId: 's-won', value: 150000 } },
+        { entity: 'opportunities', payload: { id: 'o2', stageId: 's-lost', value: 50000 } },
+        { entity: 'opportunities', payload: { id: 'o3', stageId: 's-open', value: 50000 } },
+      ]],
     ]);
     const app = buildApp({ sequelizeCrm: seqMock });
     const res = await requestJson(app, 'GET', '/api/crm/analytics/dashboard');
@@ -253,16 +257,16 @@ describe('GET /api/crm/analytics/dashboard', () => {
     expect(res.body.dashboard.summary).toMatchObject({
       totalLeads: 50,
       totalContacts: 40,
-      totalAccounts: 10,
-      totalOpportunities: 20,
+      totalAccounts: 2,
+      totalOpportunities: 3,
     });
     expect(res.body.dashboard.opportunity.totalValue).toBe(250000);
-    // winRate = 8/(8+4) = 67%
-    expect(res.body.dashboard.opportunity.winRate).toBe('67%');
+    // winRate = 1 ganha / (1 ganha + 1 perdida) = 50%
+    expect(res.body.dashboard.opportunity.winRate).toBe('50%');
   });
 
   test('meta contém tenantId e generatedAt', async () => {
-    const seqMock = makeSequelizeMock([[[{ total_leads: 0, total_contacts: 0, total_accounts: 0, total_opportunities: 0, won_count: 0, lost_count: 0, total_value: 0 }]]]);
+    const seqMock = makeSequelizeMock([[[{ total_leads: 0, total_contacts: 0 }]], [[]]]);
     const app = buildApp({ tenantId: 'meu-tenant', sequelizeCrm: seqMock });
     const res = await requestJson(app, 'GET', '/api/crm/analytics/dashboard');
 
@@ -272,17 +276,20 @@ describe('GET /api/crm/analytics/dashboard', () => {
   });
 
   test('queries recebem tenantId correto como replacements', async () => {
-    const seqMock = makeSequelizeMock([[[{ total_leads: 0, total_contacts: 0, total_accounts: 0, total_opportunities: 0, won_count: 0, lost_count: 0, total_value: 0 }]]]);
+    const seqMock = makeSequelizeMock([[[{ total_leads: 0, total_contacts: 0 }]], [[]]]);
     const app = buildApp({ tenantId: 'tenant-xpto', sequelizeCrm: seqMock });
     await requestJson(app, 'GET', '/api/crm/analytics/dashboard');
 
-    expect(seqMock.query).toHaveBeenCalledTimes(1);
-    const firstCall = seqMock.query.mock.calls[0];
-    expect(firstCall[1]).toMatchObject({ replacements: { tenantId: 'tenant-xpto' } });
+    // Duas consultas: marketing_leads (leads/contatos) e crm_records
+    // (contas/oportunidades). Ambas escopadas por tenant.
+    expect(seqMock.query).toHaveBeenCalledTimes(2);
+    for (const chamada of seqMock.query.mock.calls) {
+      expect(chamada[1]).toMatchObject({ replacements: { tenantId: 'tenant-xpto' } });
+    }
   });
 
   test('winRate zero quando sem won/lost', async () => {
-    const seqMock = makeSequelizeMock([[[{ total_leads: 5, total_contacts: 5, total_accounts: 1, total_opportunities: 5, won_count: 0, lost_count: 0, total_value: 0 }]]]);
+    const seqMock = makeSequelizeMock([[[{ total_leads: 5, total_contacts: 5 }]], [[{ entity: 'accounts', payload: { id: 'a1' } }, { entity: 'opportunities', payload: { id: 'o1', stageId: 's1', value: 0 } }]]]);
     const app = buildApp({ sequelizeCrm: seqMock });
     const res = await requestJson(app, 'GET', '/api/crm/analytics/dashboard');
     expect(res.body.dashboard.opportunity.winRate).toBe('0%');

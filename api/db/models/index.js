@@ -109,6 +109,7 @@ const getLegacyMonHost = require('./LegacyMonHost');
 const getLegacyMonService = require('./LegacyMonService');
 const getLegacyMonOs = require('./LegacyMonOs');
 const getLegacyMonApp = require('./LegacyMonApp');
+const getCrmRecord = require('./CrmRecord');
 const getMarketingForm = require('./MarketingForm');
 const getMarketingLead = require('./MarketingLead');
 const getMarketingFormSubmission = require('./MarketingFormSubmission');
@@ -335,6 +336,7 @@ const LegacyMonHost = () => getLegacyMonHost();
 const LegacyMonService = () => getLegacyMonService();
 const LegacyMonOs = () => getLegacyMonOs();
 const LegacyMonApp = () => getLegacyMonApp();
+const CrmRecord = () => getCrmRecord();
 const MarketingForm = () => getMarketingForm();
 const MarketingLead = () => getMarketingLead();
 const MarketingFormSubmission = () => getMarketingFormSubmission();
@@ -1047,6 +1049,7 @@ module.exports = {
   LegacyMonService,
   LegacyMonOs,
   LegacyMonApp,
+  CrmRecord,
   MarketingForm,
   MarketingLead,
   MarketingFormSubmission,
@@ -1255,6 +1258,7 @@ module.exports = {
   getLegacyMonService,
   getLegacyMonOs,
   getLegacyMonApp,
+  getCrmRecord,
   getMarketingForm,
   getMarketingLead,
   getMarketingFormSubmission,
