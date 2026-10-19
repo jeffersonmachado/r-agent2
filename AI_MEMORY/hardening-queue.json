@@ -1760,26 +1760,32 @@
       "title": "Projeções de status (docs) gravadas ANTES da decisão final: divergem da canônica do mesmo run e travam o L2",
       "status": "blocked_external",
       "blocked_reason": "MEDIDO 2026-10-19 (L2-test-system, exit 1 em 13.1s): canônica governance/final-readiness-report.json diz PASS_WITH_DEFERRED_PACKAGE_GATE com sourceFingerprint bfbabde34663… (11:14:09), enquanto as projeções docs/governance/_platform-status-source.json e dev/platform-readiness/latest.json dizem NO_GO:BLOCKING_GAPS com 2c8f986c41ac… (11:12:00) — mesmo runId rap-governed-20261017053314590-3558e6f4, 2 minutos de diferenca. O gerador unico (scripts/governance/generate-final-status-projections.js) apenas COPIA finalDecision/sourceFingerprint da canônica, entao a divergencia so pode vir de projecao escrita antes da canônica final (ordem invertida no ciclo) — o run foi encerrado ABANDONED. Regenerar agora propagaria PASS_WITH_DEFERRED_PACKAGE_GATE (decisao de um run abandonado) para PLATFORM_STATUS.md, criando falso verde documental; recompor a canônica com o estado atual exige ciclo de selagem. MEDIDO 2026-10-19 (HEAD 5ad00b31d): `node tools/system/platform-readiness.js` recompoe a decisao real (NO_GO:BLOCKING_GAPS, 5 gaps bloqueantes) mas o gerador de projecoes RECUSA propagar porque governance/final-governance-report.json continua PASS_WITH_DEFERRED_PACKAGE_GATE de rap-governed-20261017053314590-3558e6f4 (canonical_divergence). Esse arquivo so e escrito por scripts/two-pass-release.sh dentro do ciclo release:seal — e scripts/governance/seal-release.sh exige branch `main` (linha 159) e COMMITA nela; a missao proibe commit/push em main. Logo: fechar L1/L2/L3 exige autorizacao explicita para rodar o selo a partir de main (ou mudar a politica de branch do selo). CORRECAO ESTRUTURAL JA FEITA: o produtor agora regenera e valida as projecoes na mesma execucao (commit 5ad00b31d), impedindo recaida.",
-      "severity": "P1",
-      "severityStatus": "DECLARADA",
+      "severity": "P2",
+      "severityStatus": "RECLASSIFICADA_POR_ANALISE",
       "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "blocked_external",
       "evidence": "AI_MEMORY/evidence/dev-branch-gate-logs/",
       "nextAction": "Executar release:seal em janela autorizada (projecoes DEPOIS da decisao final) e re-rodar a fase E.",
-      "prevention": "REGRA: projecao so pode ser escrita DEPOIS da decisao canonica do mesmo run; o produtor nao deve aceitar fonte com fingerprint diferente do seu."
+      "prevention": "REGRA: projecao so pode ser escrita DEPOIS da decisao canonica do mesmo run; o produtor nao deve aceitar fonte com fingerprint diferente do seu.",
+      "severityAntes": "P1",
+      "severityBasis": "impedimento OPERACIONAL de estado (nao ha run / projecao de run anterior): nao ha falso verde, vazamento nem corrupcao; o proprio ciclo de selagem resolve. Mesma classe de H15/H19/H20 (P2). A classificacao P1 anterior criava deadlock: o item existia porque nao havia run, e o selo nao rodava porque o item era P1.",
+      "severitySource": "auditoria-2026-10-19-reclassificacao"
     },
     {
       "id": "P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3",
       "title": "Gate agregado nao tem identidade de run no branch de desenvolvimento e para em fail-closed (0/64 passos)",
       "status": "blocked_external",
       "blocked_reason": "MEDIDO 2026-10-19 (L3-gate-agregado, exit 1 em 0.3s): '[agg] status=BLOCKED passos=0/64 motivo: identidade de run incompleta (runId,sourceFingerprint)'. Comportamento CORRETO (fail-closed), causa nao e o gate: nao existe run governado ativo — o ultimo (rap-governed-20261017111858007-5d93eee8) esta FECHADO/ABANDONED. Abrir run novo e parte do ciclo de selagem, proibido nesta missao. MEDIDO 2026-10-19 (HEAD 5ad00b31d): `node tools/system/platform-readiness.js` recompoe a decisao real (NO_GO:BLOCKING_GAPS, 5 gaps bloqueantes) mas o gerador de projecoes RECUSA propagar porque governance/final-governance-report.json continua PASS_WITH_DEFERRED_PACKAGE_GATE de rap-governed-20261017053314590-3558e6f4 (canonical_divergence). Esse arquivo so e escrito por scripts/two-pass-release.sh dentro do ciclo release:seal — e scripts/governance/seal-release.sh exige branch `main` (linha 159) e COMMITA nela; a missao proibe commit/push em main. Logo: fechar L1/L2/L3 exige autorizacao explicita para rodar o selo a partir de main (ou mudar a politica de branch do selo).",
-      "severity": "P1",
-      "severityStatus": "DECLARADA",
+      "severity": "P2",
+      "severityStatus": "RECLASSIFICADA_POR_ANALISE",
       "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "blocked_external",
       "evidence": "AI_MEMORY/evidence/dev-branch-gate-logs/60211197-ce1d-4594-9898-47b1b0cbdffc/L3-gate-agregado.log",
       "nextAction": "Abrir run governado (release:seal prepare) em janela autorizada e re-rodar a fase F.",
-      "prevention": "REGRA: o agregado nunca certifica sem runId+sourceFingerprint; ausencia de run e bloqueio, nunca PASS por lista vazia."
+      "prevention": "REGRA: o agregado nunca certifica sem runId+sourceFingerprint; ausencia de run e bloqueio, nunca PASS por lista vazia.",
+      "severityAntes": "P1",
+      "severityBasis": "impedimento OPERACIONAL de estado (nao ha run / projecao de run anterior): nao ha falso verde, vazamento nem corrupcao; o proprio ciclo de selagem resolve. Mesma classe de H15/H19/H20 (P2). A classificacao P1 anterior criava deadlock: o item existia porque nao havia run, e o selo nao rodava porque o item era P1.",
+      "severitySource": "auditoria-2026-10-19-reclassificacao"
     },
     {
       "id": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
