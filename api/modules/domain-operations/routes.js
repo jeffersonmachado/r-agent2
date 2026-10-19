@@ -405,72 +405,70 @@ function createDomainOperationsRoutes({ buildDeps }) {
         return;
       }
 
+      // LEADS e CONTATOS vêm de `marketing_leads` (é a fonte que a tela de
+      // contatos lista e que o CRM grava em /api/crm/leads e /api/crm/contacts).
       const [rows] = await sequelize.query(
         `SELECT
            COUNT(*)::int AS total_leads,
-           COUNT(DISTINCT NULLIF(TRIM(COALESCE(email, phone, id::text)), ''))::int AS total_contacts,
-           COUNT(DISTINCT NULLIF(TRIM(COALESCE(
-             attributes->>'accountId',
-             attributes->>'account_id',
-             attributes->>'companyId',
-             attributes->>'company_id',
-             attributes->>'company',
-             attributes->>'account'
-           )), ''))::int AS total_accounts,
-           COUNT(*) FILTER (
-             WHERE LOWER(COALESCE(stage, '')) IN ('opportunity', 'proposal', 'negotiation', 'won', 'closed_won', 'closed_lost', 'lost')
-           )::int AS total_opportunities,
-           COUNT(*) FILTER (
-             WHERE LOWER(COALESCE(stage, '')) IN ('won', 'closed_won', 'sale', 'converted')
-           )::int AS won_count,
-           COUNT(*) FILTER (
-             WHERE LOWER(COALESCE(stage, '')) IN ('lost', 'closed_lost')
-           )::int AS lost_count,
-           COALESCE(SUM(
-             CASE
-               WHEN COALESCE(
-                 attributes->>'dealValue',
-                 attributes->>'deal_value',
-                 attributes->>'opportunityValue',
-                 attributes->>'opportunity_value',
-                 attributes->>'value',
-                 attributes->>'amount'
-               ) ~ '^-?[0-9]+(\\.[0-9]+)?$'
-               THEN (
-                 COALESCE(
-                   attributes->>'dealValue',
-                   attributes->>'deal_value',
-                   attributes->>'opportunityValue',
-                   attributes->>'opportunity_value',
-                   attributes->>'value',
-                   attributes->>'amount'
-                 )::numeric
-               )
-               ELSE 0
-             END
-           ), 0)::float AS total_value
+           COUNT(DISTINCT NULLIF(TRIM(COALESCE(email, phone, id::text)), ''))::int AS total_contacts
          FROM marketing_leads
          WHERE tenant_key = :tenantId`,
         { replacements: { tenantId } }
       );
 
+      // CONTAS, OPORTUNIDADES e VALOR vêm de `crm_records` — a MESMA tabela em
+      // que /api/crm/accounts e /api/crm/opportunities gravam. Antes esses
+      // números eram derivados de atributos de marketing_leads enquanto a
+      // escrita ia para um Map em memória: criar conta/oportunidade não movia
+      // contador nenhum (medido em 2026-10-19, H21).
+      const [registros] = await sequelize.query(
+        `SELECT entity, payload
+           FROM crm_records
+          WHERE tenant_key = :tenantId
+            AND entity IN ('accounts', 'opportunities', 'pipelines')`,
+        { replacements: { tenantId } }
+      );
+
+      const listaRegistros = Array.isArray(registros) ? registros : [];
+      const contas = listaRegistros.filter((r) => r.entity === 'accounts');
+      const oportunidades = listaRegistros.filter((r) => r.entity === 'opportunities');
+      const pipelines = listaRegistros.filter((r) => r.entity === 'pipelines');
+
+      const nomeDaEtapa = new Map();
+      for (const pipeline of pipelines) {
+        const payload = pipeline.payload || {};
+        for (const etapa of (Array.isArray(payload.stages) ? payload.stages : [])) {
+          if (etapa && etapa.id) nomeDaEtapa.set(String(etapa.id), String(etapa.name || '').toLowerCase());
+        }
+      }
+
+      let totalValue = 0;
+      let ganhas = 0;
+      let perdidas = 0;
+      for (const oportunidade of oportunidades) {
+        const payload = oportunidade.payload || {};
+        const valor = Number(payload.value);
+        if (Number.isFinite(valor)) totalValue += valor;
+        const etapa = nomeDaEtapa.get(String(payload.stageId || '')) || '';
+        if (/ganho|won|fechad[oa]|convertid/.test(etapa)) ganhas += 1;
+        if (/perdid|lost|cancel/.test(etapa)) perdidas += 1;
+      }
+
       const row = Array.isArray(rows) && rows[0] ? rows[0] : {};
-      const won = Number(row.won_count || 0);
-      const lost = Number(row.lost_count || 0);
-      const winBase = won + lost;
-      const winRate = winBase > 0 ? `${Math.round((won / winBase) * 100)}%` : '0%';
+      const winBase = ganhas + perdidas;
+      const winRate = winBase > 0 ? `${Math.round((ganhas / winBase) * 100)}%` : '0%';
 
       ctx.sendJson(res, 200, {
         ok: true,
         dashboard: {
           summary: {
-            totalAccounts: Number(row.total_accounts || 0),
+            totalAccounts: contas.length,
             totalContacts: Number(row.total_contacts || 0),
             totalLeads: Number(row.total_leads || 0),
-            totalOpportunities: Number(row.total_opportunities || 0),
+            totalOpportunities: oportunidades.length,
           },
           opportunity: {
-            totalValue: Number(row.total_value || 0),
+            totalValue,
             winRate,
           },
         },

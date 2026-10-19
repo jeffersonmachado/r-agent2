@@ -1,31 +1,76 @@
 'use strict';
 
 /**
- * Módulo CRM — rotas CRUD com store in-memory por tenant.
+ * Módulo CRM — CRUD persistido por tenant.
  *
  * Entidades:
- *  - accounts      : empresas e organizações
- *  - contacts      : pessoas (proxy sobre MarketingLead quando disponível)
- *  - leads         : prospecção e qualificação
- *  - pipelines     : funis de vendas (com stages)
- *  - opportunities : negociações vinculadas a pipelines
- *  - activities    : log de interações (calls, reuniões, follow-ups)
+ *  - accounts      : empresas e organizações            → `crm_records`
+ *  - contacts      : pessoas (MarketingLead)            → `marketing_leads`
+ *  - leads         : prospecção e qualificação          → `marketing_leads`
+ *  - pipelines     : funis de vendas (com stages)       → `crm_records`
+ *  - opportunities : negociações vinculadas a pipelines → `crm_records`
+ *  - activities    : log de interações                  → `crm_records`
  *  - timeline      : leitura agregada de atividades por sujeito
+ *
+ * HISTÓRICO (medido em 2026-10-19, H21): todas as entidades viviam em um `Map`
+ * por processo. O registro era aceito com 200, não aparecia na lista seguinte
+ * (contatos liam o banco, leads liam o Map) e desaparecia no restart. Havia
+ * também fallback silencioso para memória quando o banco falhava — o que a regra
+ * do projeto proíbe: falha de persistência é erro explícito
+ * (`persistence_required`), nunca "funciona em memória".
+ *
+ * Leads e contatos compartilham `marketing_leads` porque é dela que o painel
+ * (`GET /api/crm/analytics/dashboard`, em `domain-operations`) sempre agregou
+ * esses números — antes o painel contava o banco e a escrita ia para o Map, e
+ * por isso criar um lead não movia contador nenhum.
  */
 
 const express = require('express');
 const crypto = require('crypto');
+const { emitEvent } = require('../../services/websocketService');
+const logger = require('../../utils/logger');
+const {
+  criarRegistro: criarRegistroStore,
+  atualizarRegistro: atualizarRegistroStore,
+  CrmConflictError,
+} = require('../../services/crm/crmRecordStore');
 
 // ---------------------------------------------------------------------------
-// In-memory store helpers
+// Realtime por PUSH (regra do projeto: PROIBIDO setInterval para sincronizar
+// estado). Toda mutação relevante de CRM emite `crm.metrics.updated`; as telas
+// apenas escutam o evento via WebSocket e refazem a leitura.
+// Best-effort: falha no emit JAMAIS bloqueia a escrita.
+// ---------------------------------------------------------------------------
+function emitCrmUpdated(tenantId, { entity, action, entityId }) {
+  try {
+    emitEvent(
+      'crm.metrics.updated',
+      { tenantId, entity, action, entityId: entityId || null },
+      { tenantId },
+    );
+  } catch (err) {
+    logger.warn('[CRM] Falha ao emitir crm.metrics.updated', { entity, action });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Persistência
 // ---------------------------------------------------------------------------
 
-const stores = {};
+function modeloDe(factory) {
+  return typeof factory === 'function' ? factory() : factory;
+}
 
-function getTenantStore(tenantId, entity) {
-  if (!stores[tenantId]) stores[tenantId] = {};
-  if (!stores[tenantId][entity]) stores[tenantId][entity] = new Map();
-  return stores[tenantId][entity];
+function models() {
+  return require('../../db/models');
+}
+
+function modelCrmRecord() {
+  return modeloDe(models().CrmRecord);
+}
+
+function modelMarketingLead() {
+  return modeloDe(models().MarketingLead);
 }
 
 function newId() {
@@ -36,17 +81,238 @@ function now() {
   return new Date().toISOString();
 }
 
-function paginateList(store, limit = 20, offset = 0) {
-  const items = Array.from(store.values()).sort((a, b) =>
-    (b.createdAt || '').localeCompare(a.createdAt || ''),
-  );
-  const total = items.length;
-  return { items: items.slice(offset, offset + limit), total, limit, offset };
-}
-
 function parseIntOrDefault(value, fallback) {
   const n = parseInt(String(value ?? ''), 10);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+/** Erro de persistência — vira 500 `persistence_required`, nunca fallback. */
+class PersistenceError extends Error {
+  constructor(causa) {
+    super(causa && causa.message ? causa.message : String(causa));
+    this.name = 'PersistenceError';
+    this.code = 'persistence_required';
+  }
+}
+
+async function comPersistencia(ctx, res, execucao) {
+  try {
+    await execucao();
+  } catch (err) {
+    // Conflito de identificador (P0-02): o id já existe — em qualquer tenant —
+    // e a criação NUNCA sobrescreve nem transfere propriedade. A resposta é
+    // idêntica nos dois casos, para não revelar a existência do registro alheio.
+    if (err && err.code === 'id_indisponivel') {
+      ctx.sendJson(res, 409, {
+        error: 'id_indisponivel',
+        message: 'Identificador já utilizado; use outro id.',
+      });
+      return;
+    }
+    if (err && err.code === 'dados_invalidos') {
+      ctx.sendJson(res, 400, { error: 'dados_invalidos', message: err.message });
+      return;
+    }
+    logger.error('[CRM] Falha de persistência', { erro: err && err.message });
+    ctx.sendJson(res, 500, {
+      error: 'persistence_required',
+      message: 'Falha ao acessar a persistência do CRM.',
+    });
+  }
+}
+
+/**
+ * Criação e atualização são OPERAÇÕES DISTINTAS (P0-02).
+ * Antes existia uma única `gravarRegistro` com `Model.upsert`, cuja chave
+ * primária é apenas `id`: quem enviasse o id de outro tenant sobrescrevia o
+ * registro alheio e mudava o `tenant_key` (transferência de propriedade).
+ */
+async function criarRegistro(tenantId, entity, item) {
+  try {
+    const { id, tenantId: _ignorado, ...payload } = item;
+    return await criarRegistroStore({ tenantId, entity, id, payload });
+  } catch (err) {
+    if (err && ['id_indisponivel', 'dados_invalidos'].includes(err.code)) throw err;
+    throw new PersistenceError(err);
+  }
+}
+
+/**
+ * Atualização escopada: `WHERE id AND tenant_key AND entity` na própria
+ * operação. Retorna `null` quando o registro não existe OU não pertence ao
+ * tenant — nunca cria, nunca transfere.
+ */
+async function atualizarRegistro(tenantId, entity, id, item) {
+  try {
+    const { id: _id, tenantId: _ignorado, ...payload } = item;
+    return await atualizarRegistroStore({ tenantId, entity, id, payload });
+  } catch (err) {
+    if (err && ['id_indisponivel', 'dados_invalidos'].includes(err.code)) throw err;
+    throw new PersistenceError(err);
+  }
+}
+
+async function lerRegistros(tenantId, entity, { limit = 20, offset = 0 } = {}) {
+  try {
+    const Model = modelCrmRecord();
+    const { rows, count } = await Model.findAndCountAll({
+      where: { tenant_key: String(tenantId), entity },
+      order: [['updated_at', 'DESC']],
+      limit,
+      offset,
+    });
+    const items = (rows || []).map((row) => {
+      const r = row.toJSON ? row.toJSON() : row;
+      return { id: r.id, ...(r.payload || {}) };
+    });
+    return { items, total: Number(count || 0), limit, offset };
+  } catch (err) {
+    throw new PersistenceError(err);
+  }
+}
+
+async function lerRegistro(tenantId, entity, id) {
+  try {
+    const Model = modelCrmRecord();
+    const row = await Model.findOne({ where: { id: String(id), tenant_key: String(tenantId), entity } });
+    if (!row) return null;
+    const r = row.toJSON ? row.toJSON() : row;
+    return { id: r.id, ...(r.payload || {}) };
+  } catch (err) {
+    throw new PersistenceError(err);
+  }
+}
+
+async function gravarRegistro(tenantId, entity, item) {
+  // REMOVIDO (P0-02): esta função fazia `Model.upsert` com PK apenas `id`, o que
+  // permitia a um tenant sobrescrever/transferir registro de outro. Substituída
+  // por `criarRegistro` (INSERT) e `atualizarRegistro` (UPDATE escopado).
+  throw new Error('gravarRegistro removido: use criarRegistro/atualizarRegistro (P0-02)');
+}
+
+async function removerRegistro(tenantId, entity, id) {
+  try {
+    const Model = modelCrmRecord();
+    const removidos = await Model.destroy({ where: { id: String(id), tenant_key: String(tenantId), entity } });
+    return removidos > 0;
+  } catch (err) {
+    throw new PersistenceError(err);
+  }
+}
+
+// ── Leads / contatos (marketing_leads) ─────────────────────────────────────
+
+function mapLead(linha) {
+  const r = linha && linha.toJSON ? linha.toJSON() : (linha || {});
+  const atributos = r.attributes && typeof r.attributes === 'object' ? r.attributes : {};
+  const crm = atributos.crm && typeof atributos.crm === 'object' ? atributos.crm : {};
+  return {
+    id: r.id,
+    name: r.name || null,
+    email: r.email || null,
+    phone: r.phone || null,
+    source: crm.source || null,
+    stage: r.stage || null,
+    score: r.score ?? 0,
+    notes: crm.notes || null,
+    department: atributos.department || null,
+    role: atributos.role || null,
+    attributes: atributos,
+    createdAt: r.created_at || r.createdAt || null,
+    updatedAt: r.updated_at || r.updatedAt || null,
+  };
+}
+
+async function lerPessoas(tenantId, { limit = 20, offset = 0, q = '' } = {}) {
+  try {
+    const Model = modelMarketingLead();
+    const { Op } = require('sequelize');
+    const where = { tenant_key: String(tenantId) };
+    const termo = String(q || '').trim();
+    if (termo) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${termo}%` } },
+        { email: { [Op.iLike]: `%${termo}%` } },
+        { phone: { [Op.iLike]: `%${termo}%` } },
+      ];
+    }
+    const { rows, count } = await Model.findAndCountAll({
+      where,
+      order: [['updated_at', 'DESC']],
+      limit,
+      offset,
+    });
+    return { items: (rows || []).map(mapLead), total: Number(count || 0), limit, offset };
+  } catch (err) {
+    throw new PersistenceError(err);
+  }
+}
+
+async function lerPessoa(tenantId, id) {
+  try {
+    const Model = modelMarketingLead();
+    const row = await Model.findOne({ where: { id: String(id), tenant_key: String(tenantId) } });
+    return row ? mapLead(row) : null;
+  } catch (err) {
+    throw new PersistenceError(err);
+  }
+}
+
+async function gravarPessoa(tenantId, item) {
+  try {
+    const Model = modelMarketingLead();
+    const id = item.id || newId();
+    const existente = await Model.findOne({ where: { id: String(id), tenant_key: String(tenantId) } });
+    const anterior = existente ? (existente.toJSON ? existente.toJSON() : existente) : null;
+    const atributosAnteriores = anterior && anterior.attributes && typeof anterior.attributes === 'object'
+      ? anterior.attributes : {};
+    const crmAnterior = atributosAnteriores.crm && typeof atributosAnteriores.crm === 'object'
+      ? atributosAnteriores.crm : {};
+    const atributosEntrada = item.attributes && typeof item.attributes === 'object' ? item.attributes : {};
+
+    const registro = {
+      id,
+      tenant_key: String(tenantId),
+      name: item.name != null ? (String(item.name).trim() || null) : (anterior ? anterior.name : null),
+      email: item.email != null ? (item.email || null) : (anterior ? anterior.email : null),
+      phone: item.phone != null ? (item.phone || null) : (anterior ? anterior.phone : null),
+      stage: item.stage || (anterior && anterior.stage) || 'novo',
+      score: item.score != null ? (Number(item.score) || 0) : ((anterior && anterior.score) || 0),
+      attributes: {
+        ...atributosAnteriores,
+        ...atributosEntrada,
+        crm: {
+          ...crmAnterior,
+          source: item.source !== undefined ? (item.source || null) : (crmAnterior.source || null),
+          notes: item.notes !== undefined ? (item.notes || null) : (crmAnterior.notes || null),
+        },
+      },
+      last_seen_at: new Date(),
+    };
+
+    if (existente) await existente.update(registro);
+    else await Model.create(registro);
+
+    return mapLead(registro);
+  } catch (err) {
+    // `marketing_leads` tem PK global `id`. Criar com o id de OUTRO tenant
+    // viola a unicidade — isso é conflito explícito (409), nunca 500, e nunca
+    // sobrescreve o registro alheio.
+    if (err && err.name === 'SequelizeUniqueConstraintError') {
+      throw new CrmConflictError(item && item.id);
+    }
+    throw new PersistenceError(err);
+  }
+}
+
+async function removerPessoa(tenantId, id) {
+  try {
+    const Model = modelMarketingLead();
+    const removidos = await Model.destroy({ where: { id: String(id), tenant_key: String(tenantId) } });
+    return removidos > 0;
+  } catch (err) {
+    throw new PersistenceError(err);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -74,59 +340,6 @@ function checkPermission(ctx, req, res, action) {
 }
 
 // ---------------------------------------------------------------------------
-// Shared contacts via MarketingLead (if available)
-// ---------------------------------------------------------------------------
-
-async function listContactsFromDb(tenantId, query) {
-  try {
-    const getModel = require('../../db/models/MarketingLead');
-    const Model = typeof getModel === 'function' ? getModel() : getModel;
-    if (!Model || !Model.findAll) return null;
-
-    const limit = parseIntOrDefault(query.limit, 20);
-    const offset = parseIntOrDefault(query.offset, 0);
-    const q = String(query.q || '').trim().toLowerCase();
-
-    const { Op } = require('sequelize');
-    const where = { tenant_key: String(tenantId) };
-    if (q) {
-      where[Op.or] = [
-        { name: { [Op.iLike]: `%${q}%` } },
-        { email: { [Op.iLike]: `%${q}%` } },
-        { phone: { [Op.iLike]: `%${q}%` } },
-      ];
-    }
-
-    const rows = await Model.findAll({
-      where,
-      order: [['updated_at', 'DESC']],
-      limit,
-      offset,
-    });
-
-    const items = (rows || []).map((row) => {
-      const r = row.toJSON ? row.toJSON() : row;
-      return {
-        id: r.id,
-        name: r.name || null,
-        email: r.email || null,
-        phone: r.phone || null,
-        stage: r.stage || null,
-        score: r.score ?? 0,
-        externalId: r.external_id || null,
-        attributes: r.attributes || {},
-        createdAt: r.created_at || null,
-        updatedAt: r.updated_at || null,
-      };
-    });
-
-    return { items, total: items.length, limit, offset };
-  } catch {
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
@@ -141,10 +354,13 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const limit = parseIntOrDefault(req.query.limit, 20);
-    const offset = parseIntOrDefault(req.query.offset, 0);
-    const store = getTenantStore(tenantId, 'accounts');
-    ctx.sendJson(res, 200, paginateList(store, limit, offset));
+    await comPersistencia(ctx, res, async () => {
+      const pagina = await lerRegistros(tenantId, 'accounts', {
+        limit: parseIntOrDefault(req.query.limit, 20),
+        offset: parseIntOrDefault(req.query.offset, 0),
+      });
+      ctx.sendJson(res, 200, pagina);
+    });
   });
 
   router.get('/api/crm/accounts/:id', async (req, res) => {
@@ -153,13 +369,14 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const store = getTenantStore(tenantId, 'accounts');
-    const item = store.get(req.params.id);
-    if (!item) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Conta não encontrada' });
-      return;
-    }
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      const item = await lerRegistro(tenantId, 'accounts', req.params.id);
+      if (!item) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Conta não encontrada' });
+        return;
+      }
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   router.post('/api/crm/accounts', async (req, res) => {
@@ -177,6 +394,9 @@ function createCrmRoutes({ buildDeps }) {
       id,
       tenantId,
       name: String(body.name || '').trim() || 'Sem nome',
+      // A tela de Contas tem filtro e coluna de Status; sem persistir o campo o
+      // filtro "Ativo" escondia TODAS as contas (medido em 2026-10-19).
+      status: String(body.status || 'active').trim().toLowerCase() || 'active',
       industry: body.industry || null,
       website: body.website || null,
       phone: body.phone || null,
@@ -189,8 +409,11 @@ function createCrmRoutes({ buildDeps }) {
       updatedAt: ts,
     };
 
-    getTenantStore(tenantId, 'accounts').set(id, item);
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      await criarRegistro(tenantId, 'accounts', item);
+      emitCrmUpdated(tenantId, { entity: 'accounts', action: 'created', entityId: id });
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   router.delete('/api/crm/accounts/:id', async (req, res) => {
@@ -199,16 +422,18 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'delete')) return;
 
-    const store = getTenantStore(tenantId, 'accounts');
-    if (!store.has(req.params.id)) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Conta não encontrada' });
-      return;
-    }
-    store.delete(req.params.id);
-    ctx.sendJson(res, 200, { ok: true });
+    await comPersistencia(ctx, res, async () => {
+      const removidos = await removerRegistro(tenantId, 'accounts', req.params.id);
+      if (!removidos) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Conta não encontrada' });
+        return;
+      }
+      emitCrmUpdated(tenantId, { entity: 'accounts', action: 'deleted', entityId: req.params.id });
+      ctx.sendJson(res, 200, { ok: true });
+    });
   });
 
-  // ── CONTACTS ────────────────────────────────────────────────────────────
+  // ── CONTACTS (marketing_leads) ───────────────────────────────────────────
 
   router.get('/api/crm/contacts', async (req, res) => {
     const ctx = buildDeps(req, res);
@@ -216,17 +441,14 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    // Tenta DB (MarketingLead) primeiro, senão usa store in-memory
-    const dbResult = await listContactsFromDb(tenantId, req.query);
-    if (dbResult) {
-      ctx.sendJson(res, 200, dbResult);
-      return;
-    }
-
-    const limit = parseIntOrDefault(req.query.limit, 20);
-    const offset = parseIntOrDefault(req.query.offset, 0);
-    const store = getTenantStore(tenantId, 'contacts');
-    ctx.sendJson(res, 200, paginateList(store, limit, offset));
+    await comPersistencia(ctx, res, async () => {
+      const pagina = await lerPessoas(tenantId, {
+        limit: parseIntOrDefault(req.query.limit, 20),
+        offset: parseIntOrDefault(req.query.offset, 0),
+        q: req.query.q,
+      });
+      ctx.sendJson(res, 200, pagina);
+    });
   });
 
   router.get('/api/crm/contacts/:id', async (req, res) => {
@@ -235,13 +457,14 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const store = getTenantStore(tenantId, 'contacts');
-    const item = store.get(req.params.id);
-    if (!item) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Contato não encontrado' });
-      return;
-    }
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      const item = await lerPessoa(tenantId, req.params.id);
+      if (!item) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Contato não encontrado' });
+        return;
+      }
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   router.post('/api/crm/contacts', async (req, res) => {
@@ -253,25 +476,29 @@ function createCrmRoutes({ buildDeps }) {
     let body;
     try { body = await ctx.parseJsonBody(req); } catch { ctx.badRequest(res, 'JSON inválido'); return; }
 
-    const id = body.id || newId();
-    const ts = now();
+    const atributos = body.attributes && typeof body.attributes === 'object' ? { ...body.attributes } : {};
+    if (body.department) atributos.department = body.department;
+    // A tela de Contatos tem o campo "Cargo": sem persistir, era descartado em
+    // silêncio (medido em 2026-10-19, junto com `department`).
+    if (body.role) atributos.role = body.role;
+
     const item = {
-      id,
-      tenantId,
+      id: body.id || newId(),
       name: String(body.name || '').trim() || 'Sem nome',
       email: body.email || null,
       phone: body.phone || null,
-      accountId: body.accountId || null,
-      role: body.role || null,
-      stage: body.stage || null,
+      stage: body.stage || 'contato',
       score: body.score ?? 0,
-      attributes: body.attributes || {},
-      createdAt: body.createdAt || ts,
-      updatedAt: ts,
+      source: body.source || null,
+      notes: body.notes || null,
+      attributes: atributos,
     };
 
-    getTenantStore(tenantId, 'contacts').set(id, item);
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      const salvo = await gravarPessoa(tenantId, item);
+      emitCrmUpdated(tenantId, { entity: 'contacts', action: 'created', entityId: salvo.id });
+      ctx.sendJson(res, 200, salvo);
+    });
   });
 
   router.delete('/api/crm/contacts/:id', async (req, res) => {
@@ -280,16 +507,18 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'delete')) return;
 
-    const store = getTenantStore(tenantId, 'contacts');
-    if (!store.has(req.params.id)) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Contato não encontrado' });
-      return;
-    }
-    store.delete(req.params.id);
-    ctx.sendJson(res, 200, { ok: true });
+    await comPersistencia(ctx, res, async () => {
+      const removidos = await removerPessoa(tenantId, req.params.id);
+      if (!removidos) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Contato não encontrado' });
+        return;
+      }
+      emitCrmUpdated(tenantId, { entity: 'contacts', action: 'deleted', entityId: req.params.id });
+      ctx.sendJson(res, 200, { ok: true });
+    });
   });
 
-  // ── LEADS ───────────────────────────────────────────────────────────────
+  // ── LEADS (marketing_leads) ──────────────────────────────────────────────
 
   router.get('/api/crm/leads', async (req, res) => {
     const ctx = buildDeps(req, res);
@@ -297,10 +526,14 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const limit = parseIntOrDefault(req.query.limit, 20);
-    const offset = parseIntOrDefault(req.query.offset, 0);
-    const store = getTenantStore(tenantId, 'leads');
-    ctx.sendJson(res, 200, paginateList(store, limit, offset));
+    await comPersistencia(ctx, res, async () => {
+      const pagina = await lerPessoas(tenantId, {
+        limit: parseIntOrDefault(req.query.limit, 20),
+        offset: parseIntOrDefault(req.query.offset, 0),
+        q: req.query.q,
+      });
+      ctx.sendJson(res, 200, pagina);
+    });
   });
 
   router.get('/api/crm/leads/:id', async (req, res) => {
@@ -309,13 +542,14 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const store = getTenantStore(tenantId, 'leads');
-    const item = store.get(req.params.id);
-    if (!item) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Lead não encontrado' });
-      return;
-    }
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      const item = await lerPessoa(tenantId, req.params.id);
+      if (!item) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Lead não encontrado' });
+        return;
+      }
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   router.post('/api/crm/leads', async (req, res) => {
@@ -327,27 +561,23 @@ function createCrmRoutes({ buildDeps }) {
     let body;
     try { body = await ctx.parseJsonBody(req); } catch { ctx.badRequest(res, 'JSON inválido'); return; }
 
-    const id = body.id || newId();
-    const ts = now();
     const item = {
-      id,
-      tenantId,
+      id: body.id || newId(),
       name: String(body.name || '').trim() || 'Sem nome',
       email: body.email || null,
       phone: body.phone || null,
       source: body.source || null,
       stage: body.stage || 'novo',
       score: body.score ?? 0,
-      ownerId: body.ownerId || null,
-      tags: Array.isArray(body.tags) ? body.tags : [],
       notes: body.notes || null,
-      attributes: body.attributes || {},
-      createdAt: body.createdAt || ts,
-      updatedAt: ts,
+      attributes: body.attributes && typeof body.attributes === 'object' ? body.attributes : {},
     };
 
-    getTenantStore(tenantId, 'leads').set(id, item);
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      const salvo = await gravarPessoa(tenantId, item);
+      emitCrmUpdated(tenantId, { entity: 'leads', action: 'created', entityId: salvo.id });
+      ctx.sendJson(res, 200, salvo);
+    });
   });
 
   router.delete('/api/crm/leads/:id', async (req, res) => {
@@ -356,13 +586,15 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'delete')) return;
 
-    const store = getTenantStore(tenantId, 'leads');
-    if (!store.has(req.params.id)) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Lead não encontrado' });
-      return;
-    }
-    store.delete(req.params.id);
-    ctx.sendJson(res, 200, { ok: true });
+    await comPersistencia(ctx, res, async () => {
+      const removidos = await removerPessoa(tenantId, req.params.id);
+      if (!removidos) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Lead não encontrado' });
+        return;
+      }
+      emitCrmUpdated(tenantId, { entity: 'leads', action: 'deleted', entityId: req.params.id });
+      ctx.sendJson(res, 200, { ok: true });
+    });
   });
 
   // ── PIPELINES ───────────────────────────────────────────────────────────
@@ -373,31 +605,33 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const limit = parseIntOrDefault(req.query.limit, 20);
-    const offset = parseIntOrDefault(req.query.offset, 0);
-    const store = getTenantStore(tenantId, 'pipelines');
+    await comPersistencia(ctx, res, async () => {
+      const limit = parseIntOrDefault(req.query.limit, 20);
+      const offset = parseIntOrDefault(req.query.offset, 0);
+      let pagina = await lerRegistros(tenantId, 'pipelines', { limit, offset });
 
-    // Garantir pipeline padrão se store vazio
-    if (store.size === 0) {
-      const defaultId = newId();
-      const defaultPipeline = {
-        id: defaultId,
-        tenantId,
-        name: 'Pipeline Padrão',
-        stages: [
-          { id: newId(), name: 'Prospecção', order: 0 },
-          { id: newId(), name: 'Qualificação', order: 1 },
-          { id: newId(), name: 'Proposta', order: 2 },
-          { id: newId(), name: 'Negociação', order: 3 },
-          { id: newId(), name: 'Fechamento', order: 4 },
-        ],
-        createdAt: now(),
-        updatedAt: now(),
-      };
-      store.set(defaultId, defaultPipeline);
-    }
+      if (pagina.total === 0 && offset === 0) {
+        const ts = now();
+        const padrao = {
+          id: newId(),
+          tenantId,
+          name: 'Pipeline Padrão',
+          stages: [
+            { id: newId(), name: 'Prospecção', order: 0 },
+            { id: newId(), name: 'Qualificação', order: 1 },
+            { id: newId(), name: 'Proposta', order: 2 },
+            { id: newId(), name: 'Negociação', order: 3 },
+            { id: newId(), name: 'Fechamento', order: 4 },
+          ],
+          createdAt: ts,
+          updatedAt: ts,
+        };
+        await criarRegistro(tenantId, 'pipelines', padrao);
+        pagina = await lerRegistros(tenantId, 'pipelines', { limit, offset });
+      }
 
-    ctx.sendJson(res, 200, paginateList(store, limit, offset));
+      ctx.sendJson(res, 200, pagina);
+    });
   });
 
   router.get('/api/crm/pipelines/:id', async (req, res) => {
@@ -406,13 +640,14 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const store = getTenantStore(tenantId, 'pipelines');
-    const item = store.get(req.params.id);
-    if (!item) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Pipeline não encontrado' });
-      return;
-    }
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      const item = await lerRegistro(tenantId, 'pipelines', req.params.id);
+      if (!item) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Pipeline não encontrado' });
+        return;
+      }
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   router.post('/api/crm/pipelines', async (req, res) => {
@@ -435,8 +670,11 @@ function createCrmRoutes({ buildDeps }) {
       updatedAt: ts,
     };
 
-    getTenantStore(tenantId, 'pipelines').set(id, item);
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      await criarRegistro(tenantId, 'pipelines', item);
+      emitCrmUpdated(tenantId, { entity: 'pipelines', action: 'created', entityId: id });
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   router.delete('/api/crm/pipelines/:id', async (req, res) => {
@@ -445,13 +683,15 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'delete')) return;
 
-    const store = getTenantStore(tenantId, 'pipelines');
-    if (!store.has(req.params.id)) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Pipeline não encontrado' });
-      return;
-    }
-    store.delete(req.params.id);
-    ctx.sendJson(res, 200, { ok: true });
+    await comPersistencia(ctx, res, async () => {
+      const removidos = await removerRegistro(tenantId, 'pipelines', req.params.id);
+      if (!removidos) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Pipeline não encontrado' });
+        return;
+      }
+      emitCrmUpdated(tenantId, { entity: 'pipelines', action: 'deleted', entityId: req.params.id });
+      ctx.sendJson(res, 200, { ok: true });
+    });
   });
 
   // ── OPPORTUNITIES ────────────────────────────────────────────────────────
@@ -462,10 +702,13 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const limit = parseIntOrDefault(req.query.limit, 20);
-    const offset = parseIntOrDefault(req.query.offset, 0);
-    const store = getTenantStore(tenantId, 'opportunities');
-    ctx.sendJson(res, 200, paginateList(store, limit, offset));
+    await comPersistencia(ctx, res, async () => {
+      const pagina = await lerRegistros(tenantId, 'opportunities', {
+        limit: parseIntOrDefault(req.query.limit, 20),
+        offset: parseIntOrDefault(req.query.offset, 0),
+      });
+      ctx.sendJson(res, 200, pagina);
+    });
   });
 
   router.get('/api/crm/opportunities/:id', async (req, res) => {
@@ -474,13 +717,14 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const store = getTenantStore(tenantId, 'opportunities');
-    const item = store.get(req.params.id);
-    if (!item) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
-      return;
-    }
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      const item = await lerRegistro(tenantId, 'opportunities', req.params.id);
+      if (!item) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   router.post('/api/crm/opportunities', async (req, res) => {
@@ -512,9 +756,81 @@ function createCrmRoutes({ buildDeps }) {
       updatedAt: ts,
     };
 
-    getTenantStore(tenantId, 'opportunities').set(id, item);
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      await criarRegistro(tenantId, 'opportunities', item);
+      emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'created', entityId: id });
+      ctx.sendJson(res, 200, item);
+    });
   });
+
+  /**
+   * ATUALIZAÇÃO de oportunidade (P1 medido em 2026-10-19): o formulário de
+   * edição enviava o payload sem `id` para o POST de criação — editar criava um
+   * registro novo. A atualização agora é explícita (PUT/PATCH), exige registro
+   * existente, valida tenant/permissão, preserva o ID e REJEITA id divergente.
+   * Nunca cria: ausência do registro é 404.
+   */
+  const atualizarOportunidade = async (req, res) => {
+    const ctx = buildDeps(req, res);
+    const tenantId = resolveAuth(ctx, req, res);
+    if (!tenantId) return;
+    if (!checkPermission(ctx, req, res, 'update')) return;
+
+    let body;
+    try { body = await ctx.parseJsonBody(req); } catch { ctx.badRequest(res, 'JSON inválido'); return; }
+
+    const idUrl = String(req.params.id || '').trim();
+    if (!idUrl) {
+      ctx.badRequest(res, 'id ausente na URL');
+      return;
+    }
+    if (body.id !== undefined && body.id !== null && String(body.id) !== idUrl) {
+      ctx.sendJson(res, 400, {
+        error: 'id_divergente',
+        message: 'O id do corpo difere do id da URL; atualização não pode trocar de registro.',
+      });
+      return;
+    }
+
+    await comPersistencia(ctx, res, async () => {
+      const atual = await lerRegistro(tenantId, 'opportunities', idUrl);
+      if (!atual) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
+
+      // Só campos conhecidos são aceitos; `id`, `tenantId` e `createdAt` são imutáveis.
+      const camposPermitidos = [
+        'name', 'accountId', 'contactId', 'pipelineId', 'stageId',
+        'value', 'probability', 'expectedCloseDate', 'ownerId', 'tags', 'notes',
+      ];
+      const alteracoes = {};
+      for (const campo of camposPermitidos) {
+        if (body[campo] !== undefined) alteracoes[campo] = body[campo];
+      }
+      if (alteracoes.name !== undefined) {
+        alteracoes.name = String(alteracoes.name || '').trim();
+        if (!alteracoes.name) {
+          ctx.badRequest(res, 'name não pode ficar vazio');
+          return;
+        }
+      }
+
+      const atualizado = { ...atual, ...alteracoes, id: atual.id, updatedAt: now() };
+      const salvo = await atualizarRegistro(tenantId, 'opportunities', atual.id, atualizado);
+      if (!salvo) {
+        // Corrida: o registro deixou de existir (ou de pertencer ao tenant) entre
+        // a leitura e a escrita. Atualização NUNCA cria — 404.
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
+      emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'updated', entityId: atual.id });
+      ctx.sendJson(res, 200, salvo);
+    });
+  };
+
+  router.put('/api/crm/opportunities/:id', atualizarOportunidade);
+  router.patch('/api/crm/opportunities/:id', atualizarOportunidade);
 
   router.post('/api/crm/opportunities/:id/move', async (req, res) => {
     const ctx = buildDeps(req, res);
@@ -525,16 +841,25 @@ function createCrmRoutes({ buildDeps }) {
     let body;
     try { body = await ctx.parseJsonBody(req); } catch { ctx.badRequest(res, 'JSON inválido'); return; }
 
-    const store = getTenantStore(tenantId, 'opportunities');
-    const item = store.get(req.params.id);
-    if (!item) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
-      return;
-    }
-
-    const updated = { ...item, stageId: body.toStageId || item.stageId, updatedAt: now() };
-    store.set(item.id, updated);
-    ctx.sendJson(res, 200, updated);
+    await comPersistencia(ctx, res, async () => {
+      const item = await lerRegistro(tenantId, 'opportunities', req.params.id);
+      if (!item) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
+      const atualizado = {
+        ...item,
+        stageId: body.toStageId || item.stageId,
+        updatedAt: now(),
+      };
+      const salvo = await atualizarRegistro(tenantId, 'opportunities', item.id, atualizado);
+      if (!salvo) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
+      emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'moved', entityId: item.id });
+      ctx.sendJson(res, 200, salvo);
+    });
   });
 
   router.delete('/api/crm/opportunities/:id', async (req, res) => {
@@ -543,13 +868,15 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'delete')) return;
 
-    const store = getTenantStore(tenantId, 'opportunities');
-    if (!store.has(req.params.id)) {
-      ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
-      return;
-    }
-    store.delete(req.params.id);
-    ctx.sendJson(res, 200, { ok: true });
+    await comPersistencia(ctx, res, async () => {
+      const removidos = await removerRegistro(tenantId, 'opportunities', req.params.id);
+      if (!removidos) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
+      emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'deleted', entityId: req.params.id });
+      ctx.sendJson(res, 200, { ok: true });
+    });
   });
 
   // ── ACTIVITIES ───────────────────────────────────────────────────────────
@@ -560,10 +887,13 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const limit = parseIntOrDefault(req.query.limit, 20);
-    const offset = parseIntOrDefault(req.query.offset, 0);
-    const store = getTenantStore(tenantId, 'activities');
-    ctx.sendJson(res, 200, paginateList(store, limit, offset));
+    await comPersistencia(ctx, res, async () => {
+      const pagina = await lerRegistros(tenantId, 'activities', {
+        limit: parseIntOrDefault(req.query.limit, 20),
+        offset: parseIntOrDefault(req.query.offset, 0),
+      });
+      ctx.sendJson(res, 200, pagina);
+    });
   });
 
   router.post('/api/crm/activities', async (req, res) => {
@@ -591,8 +921,11 @@ function createCrmRoutes({ buildDeps }) {
       updatedAt: ts,
     };
 
-    getTenantStore(tenantId, 'activities').set(id, item);
-    ctx.sendJson(res, 200, item);
+    await comPersistencia(ctx, res, async () => {
+      await criarRegistro(tenantId, 'activities', item);
+      emitCrmUpdated(tenantId, { entity: 'activities', action: 'created', entityId: id });
+      ctx.sendJson(res, 200, item);
+    });
   });
 
   // ── TIMELINE ─────────────────────────────────────────────────────────────
@@ -603,48 +936,22 @@ function createCrmRoutes({ buildDeps }) {
     if (!tenantId) return;
     if (!checkPermission(ctx, req, res, 'read')) return;
 
-    const subjectType = String(req.query.subjectType || '').trim();
-    const subjectId = String(req.query.subjectId || '').trim();
-    const limit = parseIntOrDefault(req.query.limit, 50);
+    await comPersistencia(ctx, res, async () => {
+      const subjectType = String(req.query.subjectType || '').trim();
+      const subjectId = String(req.query.subjectId || '').trim();
+      const limite = parseIntOrDefault(req.query.limit, 50);
 
-    const store = getTenantStore(tenantId, 'activities');
-    const items = Array.from(store.values())
-      .filter((a) => {
-        if (subjectType && a.subjectType !== subjectType) return false;
-        if (subjectId && a.subjectId !== subjectId) return false;
-        return true;
-      })
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-      .slice(0, limit);
+      const pagina = await lerRegistros(tenantId, 'activities', { limit: 500, offset: 0 });
+      const items = pagina.items
+        .filter((a) => {
+          if (subjectType && a.subjectType !== subjectType) return false;
+          if (subjectId && a.subjectId !== subjectId) return false;
+          return true;
+        })
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+        .slice(0, limite);
 
-    ctx.sendJson(res, 200, { items, total: items.length });
-  });
-
-  // ── ANALYTICS DASHBOARD ──────────────────────────────────────────────────
-
-  router.get('/api/crm/analytics/dashboard', async (req, res) => {
-    const ctx = buildDeps(req, res);
-    const tenantId = resolveAuth(ctx, req, res);
-    if (!tenantId) return;
-    if (!checkPermission(ctx, req, res, 'read')) return;
-
-    const accounts = getTenantStore(tenantId, 'accounts');
-    const contacts = getTenantStore(tenantId, 'contacts');
-    const leads = getTenantStore(tenantId, 'leads');
-    const opportunities = getTenantStore(tenantId, 'opportunities');
-
-    const opsList = Array.from(opportunities.values());
-    const totalPipeline = opsList.reduce((acc, o) => acc + (Number(o.value) || 0), 0);
-    const wonOpps = opsList.filter((o) => o.stageId === 'won' || o.stage === 'won');
-    const winRate = opsList.length > 0 ? Math.round((wonOpps.length / opsList.length) * 100) : 0;
-
-    ctx.sendJson(res, 200, {
-      accounts: accounts.size,
-      contacts: contacts.size,
-      leads: leads.size,
-      opportunities: opsList.length,
-      totalPipeline,
-      winRate,
+      ctx.sendJson(res, 200, { items, total: items.length });
     });
   });
 

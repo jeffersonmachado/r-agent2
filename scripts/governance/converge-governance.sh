@@ -53,6 +53,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# ── BUG CLOSURE FIRST (2026-10-17) ─────────────────────────────────────────────
+# Convergência completa é a operação mais extensiva do ciclo (12 etapas + QA Mesh).
+# Ela NÃO começa enquanto existir P0/P1 bloqueante aberto na fila oficial: o
+# resultado de uma convergência feita sobre código com defeito conhecido é um
+# veredito de qualidade sobre uma plataforma quebrada — exatamente o que a missão
+# proíbe. Exit 3 = recusado por defeito (distinto de falha de execução).
+# Sem bypass por variável de ambiente: desligar exige editar este arquivo versionado.
+source "scripts/governance/lib/bug-closure-guard.sh"
+exigir_elegibilidade CONVERGENCIA_COMPLETA "scripts/governance/converge-governance.sh" || exit 3
+
 # ── CARGA ÚNICA DO .env (mesmo contrato de scripts/governance/lib/loadEnvFile.js: o ambiente já
 #    presente VENCE) ──────────────────────────────────────────────────────────────────────────
 # DEFEITO REAL medido em 2026-10-02: o PREFLIGHT abaixo lê variáveis de SHELL

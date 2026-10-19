@@ -1,0 +1,15 @@
+=== platform-readiness no HEAD 5ad00b31d (estado real de 2026-10-19)
+[materialize-proof-artifacts] written=8
+[platform-readiness] FINAL_STATUS_PROJECTION_STALE — generate-final-status-projections.js falhou
+[final-status-projections] FAIL — projeções NÃO regeneradas
+  ✗ canonical_divergence: readiness=NO_GO:BLOCKING_GAPS (BLOCKED) governance=PASS_WITH_DEFERRED_PACKAGE_GATE (GO_FAMILY) [decision_family_divergence] — projeção recusada sobre canônica inconsistente
+{
+  "status": "NO_GO:BLOCKING_GAPS",
+  "readinessScore": 100,
+  "qaCoverage": 100,
+  "replayCoverage": 100,
+  "verticalCoverage": 100,
+  "blockingGaps": 5,
+  "proofDecision": "NO_GO:BLOCKING_GAPS",
+  "output": "governance/final-readiness-report.json"
+}

@@ -180,7 +180,12 @@ describe('STALE_CANDIDATE_AUTOMATIC_REPLAN', () => {
     const first = await coordinator.maybeReplanAfterSourceFailure({
       missionId: MISSION_ID, taskId: STALE_TASK_ID, result: STALE_RESULT, actor: 'SYSTEM:MISSION',
     });
-    expect(first.replanned).toBe(true);
+    // CONTRATO (2026-10-17): `replanned` declara EFEITO (`resumeOriginalMission`
+    // respondeu `resumed:true`); a TENTATIVA é declarada em `attempted`/`state`
+    // e é ela que consome o contador anti-laço. O que este cenário prova é o
+    // limite de tentativas, não que o resume teve sucesso.
+    expect(first.attempted).toBe(true);
+    expect(['REPLAN_RAN', 'REPLAN_NAO_EXECUTOU', 'REPLAN_SUCCEEDED']).toContain(first.state);
     expect(first.attempt).toBe(1);
 
     // Segunda tentativa: o contador PERSISTIDO é a autoridade (simula outro processo/restart).
@@ -194,7 +199,7 @@ describe('STALE_CANDIDATE_AUTOMATIC_REPLAN', () => {
     const second = await coordinator.maybeReplanAfterSourceFailure({
       missionId: MISSION_ID, taskId: 't-replan', result: STALE_RESULT, actor: 'SYSTEM:MISSION',
     });
-    expect(second.replanned).toBe(true);
+    expect(second.attempted).toBe(true);
     expect(second.attempt).toBe(2);
 
     // Terceira: o limite foi atingido ⇒ PARAR de insistir, com estado declarado.

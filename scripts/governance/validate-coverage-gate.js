@@ -88,8 +88,44 @@ const TENANT_REPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 // VALIDATED degradados para STALE — evidência vencida não conta como
 // cobertura válida (modelo de estados em qa/coverage/coverageStates.js).
 // Override via COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS (testes/ambientes).
-const WAVE_REPORT_MAX_AGE_MS = Number(process.env.COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS)
-  || 7 * 24 * 60 * 60 * 1000;
+// P1-11: o TTL declarado passa pela autoridade unica (governance/evidence-ttl.js).
+// Defeito medido na versao anterior: `Number(env) || 7d` aceitava Infinity
+// (ex.: COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS=Infinity, ou 1e999) e desativava o
+// frescor das waves em SILENCIO, porque `idade > Infinity` e sempre falso —
+// fail-open de L1. Valor declarado invalido agora NUNCA aumenta a validade.
+const { validarTtl, avaliarFrescor } = require(path.join(ROOT_DIR, 'governance', 'evidence-ttl.js'));
+const WAVE_REPORT_DEFAULT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const WAVE_REPORT_TTL_DECLARADO = validarTtl(process.env.COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS, {
+  defaultMs: WAVE_REPORT_DEFAULT_MAX_AGE_MS,
+  rotulo: 'COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS',
+});
+const WAVE_REPORT_MAX_AGE_MS = WAVE_REPORT_TTL_DECLARADO.ok
+  ? WAVE_REPORT_TTL_DECLARADO.ms
+  : WAVE_REPORT_DEFAULT_MAX_AGE_MS;
+
+/**
+ * Identidade do run governado corrente (P1-11). Evidência produzida em OUTRO
+ * run não é fresca por definição: ela descreve outro estado do sistema.
+ * Ausência do arquivo => null => a checagem de identidade não se aplica (nunca
+ * aprova por ausência: o frescor por tempo continua valendo).
+ *
+ * ATIVADO para o runId. A vinculação por sourceFingerprint está implementada e
+ * provada, mas deixada INATIVA de propósito: as 3 waves versionadas hoje são do
+ * MESMO run e de fingerprint ANTERIOR (medido: run_igual=true,
+ * fingerprint_igual=false), então ativá-la reprovaria todas as waves até que
+ * `npm run wave:db-integrity|api-surface|page-surface` seja reexecutado — decisão
+ * de política (evidência por run vs. por commit) que exige aval do dono.
+ */
+const CURRENT_RUN_PATH = path.join(ROOT_DIR, 'governance', '.current-run.json');
+function runCorrenteId() {
+  try {
+    const j = JSON.parse(fs.readFileSync(CURRENT_RUN_PATH, 'utf8'));
+    const id = j && (j.runId || j.id);
+    return typeof id === 'string' && id ? id : null;
+  } catch (_) {
+    return null;
+  }
+}
 const THRESHOLDS_CONFIG_PATH = path.join(ROOT_DIR, 'config', 'coverage-gate-thresholds.json');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'coverage-gate-report.json');
 // Relatório da Database Integrity Wave (scripts/governance/db-integrity-wave.js):
@@ -335,18 +371,42 @@ function applyMeshHistoryChainCheck(result, chainCheck) {
  */
 function applyWaveReportStaleness(executions, report, options = {}) {
   const nowMs = Number.isFinite(options.nowMs) ? options.nowMs : Date.now();
-  const maxAgeMs = Number.isFinite(options.maxAgeMs) ? options.maxAgeMs : WAVE_REPORT_MAX_AGE_MS;
-  const generatedAtMs = Date.parse(report && report.generatedAt);
-  const stale = !Number.isFinite(generatedAtMs) || (nowMs - generatedAtMs) > maxAgeMs;
-  if (!stale) {
-    return { executions, stale: false };
+
+  // TTL: valor declarado pelo chamador tem precedencia; se for INVALIDO a
+  // evidencia e REPROVADA (nao ha "cai no default em silencio").
+  const declarado = options.maxAgeMs !== undefined && options.maxAgeMs !== null
+    ? validarTtl(options.maxAgeMs, { defaultMs: WAVE_REPORT_DEFAULT_MAX_AGE_MS, rotulo: 'maxAgeMs' })
+    : WAVE_REPORT_TTL_DECLARADO;
+
+  const degradar = (lista) => lista.map((entry) => (
+    entry.state === 'VALIDATED' ? { ...entry, state: 'STALE' } : entry
+  ));
+
+  if (!declarado.ok) {
+    return { stale: true, reason: declarado.motivo, ageMs: null, executions: degradar(executions) };
   }
+
+  const avaliacao = avaliarFrescor({
+    generatedAt: report && report.generatedAt,
+    ttlMs: declarado.ms,
+    agoraMs: nowMs,
+    runEsperado: options.currentRunId,
+    runEvidencia: report && report.runId,
+    fingerprintEsperado: options.currentSourceFingerprint,
+    fingerprintEvidencia: report && report.sourceFingerprint,
+    commitEsperado: options.currentCommit,
+    commitEvidencia: report && report.sourceCommit,
+  });
+
+  if (avaliacao.ok) {
+    return { executions, stale: false, reason: null, ageMs: avaliacao.idadeMs };
+  }
+
   return {
     stale: true,
-    ageMs: Number.isFinite(generatedAtMs) ? nowMs - generatedAtMs : null,
-    executions: executions.map((entry) => (
-      entry.state === 'VALIDATED' ? { ...entry, state: 'STALE' } : entry
-    )),
+    reason: avaliacao.motivo,
+    ageMs: avaliacao.idadeMs,
+    executions: degradar(executions),
   };
 }
 
@@ -391,6 +451,8 @@ function loadDbIntegrityTechnicalExecutions(inventoryItems, options = {}) {
   return {
     executions: freshness.executions,
     stale: freshness.stale,
+    reason: freshness.reason || null,
+    ageMs: freshness.ageMs == null ? null : freshness.ageMs,
     source: `reports/db-integrity-report.json (${report.generatedAt || 'sem data'})`,
     dbAvailable: report.dbAvailable === true,
   };
@@ -423,6 +485,8 @@ function loadApiSurfaceTechnicalExecutions(inventoryItems, options = {}) {
   return {
     executions: freshness.executions,
     stale: freshness.stale,
+    reason: freshness.reason || null,
+    ageMs: freshness.ageMs == null ? null : freshness.ageMs,
     source: `reports/api-surface-report.json (${report.generatedAt || 'sem data'})`,
   };
 }
@@ -455,6 +519,8 @@ function loadPageSurfaceTechnicalExecutions(inventoryItems, options = {}) {
   return {
     executions: freshness.executions,
     stale: freshness.stale,
+    reason: freshness.reason || null,
+    ageMs: freshness.ageMs == null ? null : freshness.ageMs,
     source: `reports/page-surface-report.json (${report.generatedAt || 'sem data'})`,
   };
 }
@@ -650,9 +716,10 @@ function main() {
   const visibility = loadVisibilityViolations();
   const tenantIsolation = loadTenantIsolationViolations();
   const ragDomainSegregation = loadRagDomainSegregationViolations();
-  const dbIntegrity = loadDbIntegrityTechnicalExecutions(inventory.items);
-  const apiSurface = loadApiSurfaceTechnicalExecutions(inventory.items);
-  const pageSurface = loadPageSurfaceTechnicalExecutions(inventory.items);
+  const currentRunId = runCorrenteId();
+  const dbIntegrity = loadDbIntegrityTechnicalExecutions(inventory.items, { currentRunId });
+  const apiSurface = loadApiSurfaceTechnicalExecutions(inventory.items, { currentRunId });
+  const pageSurface = loadPageSurfaceTechnicalExecutions(inventory.items, { currentRunId });
   for (const [label, wave] of [['db-integrity', dbIntegrity], ['api-surface', apiSurface], ['page-surface', pageSurface]]) {
     if (wave.stale) {
       console.log(`[coverage-gate] AVISO: relatório ${label} STALE (limiar ${WAVE_REPORT_MAX_AGE_MS}ms excedido ou sem data) — estados VALIDATED degradados para STALE`);

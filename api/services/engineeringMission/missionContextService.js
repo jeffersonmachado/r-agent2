@@ -267,6 +267,29 @@ function scanRepository(keywords) {
  */
 async function lookupEngineeringMemory({ keywords = [], originalMissionHash = null } = {}) {
   const result = { previousOccurrences: 0, relatedTasks: [], relatedGaps: [] };
+
+  // ── BUG CLOSURE FIRST (2026-10-17) ────────────────────────────────────────
+  // A memória de engenharia NÃO pode apresentar `done` como correção provada.
+  // O estado canônico da fila é exposto junto do histórico: quem consome esta
+  // memória (missão/agente) vê os bloqueios reais e o que ainda não foi
+  // verificado no SHA corrente.
+  try {
+    const { carregarInventario } = require('../../../governance/bug-closure/defect-registry');
+    const inventario = carregarInventario();
+    const bloqueantes = inventario.defeitos.filter((d) => d.bloqueanteParaCertificacao);
+    result.bugClosure = {
+      fonte: 'AI_MEMORY/hardening-queue.json (estados canônicos)',
+      abertos: inventario.resumo.abertos,
+      bloqueantesParaCertificacao: inventario.resumo.bloqueantesParaCertificacao,
+      semTesteDeRegressao: inventario.defeitos.filter((d) => d.aberto && !d.regressionTest).length,
+      bloqueantes: bloqueantes.slice(0, 20).map((d) => ({ id: d.id, severity: d.severity, state: d.state })),
+      regra: 'done/blocked NAO sao prova: fechar exige regressionTest aprovado no SHA corrente',
+    };
+  } catch (erro) {
+    // Ausência de inventário é registrada como INCERTEZA, nunca como "sem defeitos".
+    result.bugClosure = { erro: String(erro && erro.message || erro), regra: 'inventario indisponivel: nao assumir ausencia de defeitos' };
+  }
+
   try {
     const index = require('../../db/models');
     const TaskModel = index.EngineeringTask();

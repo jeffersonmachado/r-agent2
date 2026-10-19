@@ -38,8 +38,11 @@ const ROOT = process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT
   ? path.resolve(process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT)
   : path.resolve(__dirname, '..', '..', '..');
 const SANDBOX_IMAGE = process.env.ENGINEERING_ROUTER_SANDBOX_IMAGE || 'r-agent2-engineering-router-sandbox:latest';
-const DEFAULT_MEMORY = process.env.ENGINEERING_ROUTER_SANDBOX_MEMORY || '512m';
-const DEFAULT_PIDS_LIMIT = process.env.ENGINEERING_ROUTER_SANDBOX_PIDS_LIMIT || '64';
+const DEFAULT_MEMORY = process.env.ENGINEERING_ROUTER_SANDBOX_MEMORY || '512m';// LIMITE DE PIDs: 64 era apertado demais para rodar `npx jest` DENTRO do container. Medido
+// (2026-10-18): o filho morria com `spawn /usr/local/bin/node EAGAIN` — EAGAIN em spawn é
+// falta de PID/thread, não erro do código testado. Com 128 a suíte roda e o controle
+// continua efetivo (o teste de segurança que tenta estourar o limite segue passando).
+const DEFAULT_PIDS_LIMIT = process.env.ENGINEERING_ROUTER_SANDBOX_PIDS_LIMIT || '128';
 const DEFAULT_CPUS = process.env.ENGINEERING_ROUTER_SANDBOX_CPUS || '1';
 const DEFAULT_TMPFS_SIZE = process.env.ENGINEERING_ROUTER_SANDBOX_TMPFS_SIZE || '64m';
 // UID/GID SEMPRE não-privilegiado e fixo — nunca o UID do processo host (que em produção real
@@ -209,6 +212,12 @@ function buildDockerArgs({ executable, args, cwd, env, containerName, network })
     '-e', 'GIT_CONFIG_COUNT=1',
     '-e', 'GIT_CONFIG_KEY_0=safe.directory',
     '-e', 'GIT_CONFIG_VALUE_0=*',
+    // WORKERS DO JEST DENTRO DO CONTAINER: o sandbox roda com `--cpus=1` e `--pids-limit=64`.
+    // `os.cpus()`/`os.availableParallelism()` leem a afinidade do HOST (não a quota do cgroup),
+    // então uma suíte Jest disparada aqui dentro tentava abrir N workers num container de 1 CPU
+    // — medido: `npx jest` dentro do sandbox passou a reportar FAIL (fork além do limite de
+    // PIDs). O teto é explícito e não depende de heurística.
+    '-e', 'JEST_MAX_WORKERS=1',
   ];
   for (const [key, value] of Object.entries(env || {})) {
     dockerArgs.push('-e', `${key}=${value}`);
@@ -260,7 +269,18 @@ function resolveGraceMs(graceMs) {
   }
 }
 
-async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = 'none', graceMs = null, signal = null }) {
+async function runSandboxOnce({ executable, args, cwd, env, timeoutMs, network = 'none', graceMs = null, signal = null }) {
+  // ── BUG CLOSURE FIRST (2026-10-17) ────────────────────────────────────────
+  // O Sandbox do Router é um caminho ALTERNATIVO de execução: sem esta guarda,
+  // um comando extensivo (`validate:governance-enforcement`, `qa:mesh`,
+  // `release:seal`, `zip:release`…) rodaria aqui sem passar pela elegibilidade.
+  // Testes direcionados (`npx jest …`) continuam livres — é o laço de correção.
+  {
+    const { avaliarComando, erroDeBloqueio } = require('../../../governance/bug-closure/command-policy');
+    const avaliacao = avaliarComando({ command: executable, args, actor: 'engineeringRouter/executionSandbox' });
+    if (!avaliacao.permitido) throw erroDeBloqueio(avaliacao);
+  }
+
   if (!isSandboxAvailable()) {
     const error = new Error('SANDBOX_UNAVAILABLE: Docker daemon inacessível — execução recusada (fail-closed, nunca cai de volta para spawn sem sandbox)');
     error.code = 'SANDBOX_UNAVAILABLE';
@@ -275,8 +295,7 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
   // ROOT nem um caminho que o contenha — fail-closed explícito, nunca silencioso.
   const resolvedCwd = path.resolve(cwd || '');
   const isRootItself = resolvedCwd === ROOT;
-  const isRootAncestorOfCwd = ROOT.startsWith(`${resolvedCwd}${path.sep}`);
-  if (isRootItself || isRootAncestorOfCwd) {
+  const isRootAncestorOfCwd = ROOT.startsWith(`${resolvedCwd}${path.sep}`);  if (isRootItself || isRootAncestorOfCwd) {
     const error = new Error(`SANDBOX_INVALID_WORKSPACE: cwd "${cwd}" é o repositório principal (ou um ancestral dele) — recusado para nunca operar sobre o código-fonte real fora de um workspace isolado`);
     error.code = 'SANDBOX_INVALID_WORKSPACE';
     throw error;
@@ -362,6 +381,36 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
       });
     });
   });
+}
+
+/**
+ * Wrapper com RETRY LIMITADO para falhas TRANSITÓRIAS do daemon/limites do Docker.
+ *
+ * MEDIDO (2026-10-18): com o lote oficial em 11 workers, suítes que abrem containers em paralelo
+ * falhavam de forma intermitente (`spawn ... EAGAIN`, `Cannot connect to the Docker daemon`) e o
+ * teste de redação caía porque NÃO HOUVE saída — falha de infraestrutura reportada como defeito de
+ * comportamento. Não é retry de teste: é retry de INFRA, com limite explícito, e depois disso o
+ * erro continua sendo erro (nunca vira PASS).
+ */
+const PADROES_TRANSITORIOS = /EAGAIN|resource temporarily unavailable|Cannot connect to the Docker daemon|is the docker daemon running\?|temporary failure|connection reset by peer|TLS handshake timeout/i;
+
+async function runInSandbox(entrada = {}) {
+  const maxTentativas = Math.max(1, Number(process.env.ENGINEERING_ROUTER_SANDBOX_RETRIES) || 3);
+  let ultimo = null;
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const resultado = await runSandboxOnce(entrada);
+    const stderr = String(resultado && resultado.stderr ? resultado.stderr : '');
+    const transitorio = (resultado.exitCode === null || resultado.exitCode === 125)
+      && PADROES_TRANSITORIOS.test(stderr);
+    ultimo = resultado;
+    if (!transitorio) return resultado;
+    if (tentativa === maxTentativas) break;
+    // Backoff curto e crescente: 250ms, 500ms... só para o daemon respirar.
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, 250 * tentativa));
+  }
+  return ultimo;
 }
 
 module.exports = {

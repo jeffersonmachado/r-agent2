@@ -1,0 +1,24 @@
+{
+  "artifactType": "hardening-queue-fixture",
+  "artifactVersion": "1.0.0",
+  "note": "FIXTURE de teste: um P0 ABERTO. Usada por testes que precisam provar a RECUSA do bug closure. Testes NÃO devem depender da fila real (AI_MEMORY/hardening-queue.json), cujo estado muda com o trabalho — dependência de dado vivo faz o teste virar vermelho/verde por motivo alheio ao contrato.",
+  "items": [
+    {
+      "id": "FIXTURE-P0-ABERTO",
+      "title": "fixture: P0 aberto (não é defeito real)",
+      "status": "pending",
+      "state": "OPEN",
+      "severity": "P0",
+      "severityStatus": "FIXTURE",
+      "evidence": "tests/fixtures/bug-closure/queue-with-open-p0.json"
+    },
+    {
+      "id": "FIXTURE-P2-FECHADO",
+      "title": "fixture: P2 verificado (controle negativo)",
+      "status": "done",
+      "state": "VERIFIED",
+      "severity": "P2",
+      "commit": "0000000000000000000000000000000000000000"
+    }
+  ]
+}

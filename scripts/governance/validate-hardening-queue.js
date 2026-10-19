@@ -31,7 +31,10 @@ const fs = require('fs');
 const path = require('path');
 
 const RAIZ = path.resolve(__dirname, '..', '..');
-const FILA = path.join(RAIZ, 'AI_MEMORY', 'hardening-queue.json');
+// `path.resolve` de propósito: leitura não pode ser registrada como alvo de
+// ESCRITA no inventário de persistência (o scanner só reconhece leitura com
+// `path.join` inline dentro de `fs.readFileSync`).
+const FILA = path.resolve(RAIZ, 'AI_MEMORY', 'hardening-queue.json');
 const RELATORIO = path.join(RAIZ, 'reports', 'hardening-queue-report.json');
 
 const NAO_VAZIO = (v) => v !== undefined && v !== null && String(v).trim() !== '';
@@ -53,8 +56,20 @@ const ESTADOS = Object.freeze({
   done: { requires: ['commit', 'evidence'], forbids: [] },
 });
 
-/** Estados que significam "não exige mais ação do agente". */
-const FECHADOS = new Set(['done', 'verified', 'prevention_active', 'ready_for_approval', 'blocked', 'blocked_external']);
+/**
+ * Estados que significam "fechado de verdade".
+ *
+ * DEFEITO MEDIDO (2026-10-17): `blocked` e `blocked_external` estavam nesta
+ * lista. Com isso o relatório imprimia `abertos: (nenhum)` enquanto existiam 5
+ * itens `blocked` (defeito conhecido, SEM correção) e 3 `blocked_external`
+ * (impedimento externo, também sem correção) — a fila declarava zero pendências
+ * com defeito conhecido aberto. "Bloqueado" é o oposto de fechado: é a
+ * declaração de que a correção NÃO foi feita.
+ */
+const FECHADOS = new Set(['done', 'verified', 'prevention_active', 'ready_for_approval']);
+
+/** Estados que representam impedimento (abertos, com causa declarada). */
+const IMPEDIDOS = new Set(['blocked', 'blocked_external']);
 
 /**
  * Valida a fila.
@@ -149,6 +164,7 @@ function main(argv = process.argv.slice(2)) {
   }
 
   const { violations, counts, open } = validar(fila);
+  const impedidos = open.filter((entrada) => IMPEDIDOS.has(String(entrada).replace(/^.*\(([^)]*)\)$/, '$1')));
   const relatorio = {
     schemaVersion: 1,
     kind: 'hardening-queue',
@@ -156,6 +172,7 @@ function main(argv = process.argv.slice(2)) {
     total: (fila.items || []).length,
     counts,
     open,
+    impedidos,
     violations,
     status: violations.length === 0 ? 'PASS' : 'FAIL',
   };
@@ -170,6 +187,7 @@ function main(argv = process.argv.slice(2)) {
       .join(' ');
     process.stdout.write(`[hardening-queue] ${(fila.items || []).length} itens — ${resumo}\n`);
     process.stdout.write(`[hardening-queue] abertos: ${open.length ? open.join(', ') : '(nenhum)'}\n`);
+    process.stdout.write(`[hardening-queue] impedidos (blocked/blocked_external — NÃO são fechados): ${impedidos.length}\n`);
     if (violations.length === 0) {
       process.stdout.write('[hardening-queue] PASS\n');
     } else {

@@ -45,3 +45,34 @@ Canonical source: `docs/architecture/timeout-architecture.md`, `config/timeout-p
 
 Canonical source: `scripts/stack-versions.js`.
 
+## Audit Entry Point (external audit via git)
+
+- The single versioned entry point for external audit is `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md`
+  (human summary + the full JSON payload embedded in a fenced block, so it stays machine-readable).
+- Why no `.json` there: `audit:json-persistence` (blocking step of the aggregate gate) fails with
+  `UNKNOWN` for any `.json` write target outside the canonical persistence taxonomy, and
+  `AI_MEMORY/evidence/` is not in it. A `.json` in that directory reddens the aggregate (measured
+  2026-10-16). Classifying the directory requires editing `governance/**` (SOURCE_ROOTS), which
+  invalidates the sealed release — tracked as an open queue item.
+- **After any governance-relevant change** (new governed run, new seal, gate result change, queue
+  change), regenerate it: `node tools/audit/generate-audit-entrypoint.js [--aggregate-log <log>
+  --aggregate-head <sha>]` — never hand-edit the artifact, every field is derived from live sources.
+- Embed the aggregate verdict with `--aggregate-log <log> --aggregate-head <sha>` when regenerating
+  (the alias persists no report of its own; what proves it is the exit 0 of its `&&` chain).
+
+## Frozen worktree while gates run (measured 2026-10-16)
+
+- **Never commit, edit files or regenerate artifacts while `npm run validate:governance-enforcement`
+  (or the seal) is running.** The Engineering Router promotion derives `expectedBaseCommit` from the
+  real branch HEAD and computes git tree hashes in worktrees; if HEAD/working tree move mid-run,
+  `expected != validated` and promotion is refused — the E2E task ends in `READY_FOR_PROMOTION` and
+  the gate goes red for a reason that has nothing to do with the code.
+- Measured timeline: aggregate run finished 15:37:17 while commits landed at 15:30:42 and 15:32:18;
+  the failing item (RED_TO_FIX) asserted `Expected: "GREEN" / Received: "READY_FOR_PROMOTION"`.
+  Proof it was **not** a code regression: identical `sourceFingerprint` to the previous green run,
+  only files outside `SOURCE_ROOTS` touched, and the test passes in isolation (50.9 s).
+- When the runtime-evidence gate fails, **read the `stderr do filho` section of the log**: its summary
+  line can say "não pôde ser parseada como JSON (crash antes do reporter)" even when the test failed
+  by a clean assertion.
+
+

@@ -13,6 +13,14 @@ import {
 } from '../../components/crm/CrmComponents';
 import { CrudPageBase } from '../../modules/crud-base';
 
+// Rótulos do Status da conta. A API persiste o valor em inglês (`active`,
+// `inactive`, `prospect`); a tabela mostrava o valor cru (medido em 2026-10-19).
+const ACCOUNT_STATUS_LABELS = {
+  active: 'Ativo',
+  inactive: 'Inativo',
+  prospect: 'Prospect',
+};
+
 export function AccountsPage() {
   const { accounts: allAccounts, setAccounts } = useCrm();
   const { listAccounts, upsertAccount, deleteAccount, loading } = useCrmApi();
@@ -95,7 +103,13 @@ export function AccountsPage() {
 
     try {
       const response = await upsertAccount(formData);
-      if (response.account) {
+      // DEFEITO MEDIDO (2026-10-19): a guarda era `response.account`, mas a API
+      // devolve a conta DIRETO (`{id, name, ...}`). O `if` nunca era verdadeiro:
+      // a conta era gravada, o modal continuava aberto, a lista não recarregava
+      // e nenhum toast aparecia — o usuário clicava "Salvar" de novo e criava
+      // duplicatas.
+      const salvo = response?.account || (response?.id ? response : null);
+      if (salvo) {
         await loadAccounts();
         setIsModalOpen(false);
         showToast('Conta salva com sucesso!', 'success');
@@ -125,7 +139,7 @@ export function AccountsPage() {
       label: 'Status',
       render: (status) => (
         <span className={status === 'active' ? 'text-status-success' : 'text-text-tertiary'}>
-          {status}
+          {ACCOUNT_STATUS_LABELS[status] || status || '—'}
         </span>
       ),
     },

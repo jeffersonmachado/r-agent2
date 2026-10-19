@@ -1,0 +1,6 @@
+=== CORRIGIDO (store: INSERT / UPDATE escopado, sem upsert) ===
+ANTES  (tenant A): {"id":"opp-1","tenant_key":"tenant-a","payload":{"name":"Contrato sigiloso de A","value":950000}}
+ATAQUE REJEITADO: id_indisponivel - id indisponível: opp-1
+UPDATE por tenant-b retornou: null
+DEPOIS (SQL): {"id":"opp-1","tenant_key":"tenant-a","payload":{"name":"Contrato sigiloso de A","value":950000}}
+RESULTADO: ISOLADO — registro de A intacto

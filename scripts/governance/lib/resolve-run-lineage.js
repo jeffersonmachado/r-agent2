@@ -56,7 +56,27 @@ function resolveGitIdentity(rootDir) {
       return null;
     }
   };
-  return { sourceCommit: read('rev-parse HEAD'), sourceTree: read('rev-parse HEAD^{tree}') };
+  // A branch NÃO passa pelo validador de SHA: `dev/engineering-hardening` não é
+  // 40-hex, e reusar `read` aqui devolvia null silenciosamente (medido hipótese
+  // errada de "branch ausente"). Leitura própria, também fail-closed.
+  const readTexto = (args) => {
+    try {
+      const out = execSync(`git ${args}`, {
+        cwd: rootDir,
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 10000,
+      }).toString('utf8').trim();
+      // `HEAD` destacado devolve a string literal "HEAD": não é branch, é ausência.
+      return out && out !== 'HEAD' ? out : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  return {
+    sourceCommit: read('rev-parse HEAD'),
+    sourceTree: read('rev-parse HEAD^{tree}'),
+    sourceBranch: readTexto('rev-parse --abbrev-ref HEAD'),
+  };
 }
 
 /**

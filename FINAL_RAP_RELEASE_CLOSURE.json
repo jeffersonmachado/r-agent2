@@ -124,5 +124,16 @@
     ],
     "criterion": "mesma fonte (sourceFingerprint + git_tree) e payload canônico idêntico quando o empacotamento é determinístico; diferenças permitidas apenas em campos voláteis (timestamp/nome do release)"
   },
-  "finalDecision": "PENDING"
+  "finalDecision": "PENDING",
+  "status": "SUPERSEDED",
+  "supersededAt": "2026-10-16T18:27:24.605Z",
+  "supersededBy": "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json",
+  "supersededReason": "Ponteiro ORFAO: nenhum script do repositorio o produz (medido 2026-10-16 por varredura completa) e ele congelou em 2026-09-24. Nao representa o estado corrente — um auditor que leia este arquivo como estado atual audita o passado. O estado corrente vive em AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json e nas projecoes canonicas (docs/governance/PLATFORM_STATUS.md, docs/architecture/RAP_MASTER_SCORECARD.md, dev/platform-readiness/latest.json).",
+  "supersededMeasurement": {
+    "measuredAt": "2026-10-16",
+    "lastCommitTouchingThisFile": "570bbd0c4",
+    "headRegistradoNesteArquivo": "b0665b7672e9d8eeb4633c9210e3b53e834613f1",
+    "worktreeCleanRegistrado": false,
+    "note": "O conteudo original abaixo foi PRESERVADO integralmente (nenhum campo removido)."
+  }
 }

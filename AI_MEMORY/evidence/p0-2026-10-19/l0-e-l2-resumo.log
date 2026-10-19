@@ -1,0 +1,16 @@
+=== L0 (npm test) — execucao final no HEAD 9356f9957
+Test Suites: 1063 passed, 1063 total
+Tests:       9066 passed, 9066 total
+Test Suites: 30 passed, 30 total
+Tests:       264 passed, 264 total
+Test Suites: 3 passed, 3 total
+Tests:       4 skipped, 7 passed, 11 total
+EXIT=0
+
+=== execucao anterior (mesmo HEAD-1): 1063/9066 exit 0
+
+=== L2 (npm run test:system)
+FAIL tests/governance/finalStatusProjection.test.js
+Test Suites: 1 failed, 10 passed, 11 of 18 total
+Tests:       1 failed, 97 passed, 98 total
+EXIT=1

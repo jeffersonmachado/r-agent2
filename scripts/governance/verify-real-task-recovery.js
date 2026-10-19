@@ -29,6 +29,13 @@ const { spawn } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const CHILD = path.join('tests', 'helpers', 'taskLeaseWorkerChild.js');
+
+// Handshake INEQUÍVOCO (marcador) — ver lib/task-lease-handshake.js.
+// DEFEITO MEDIDO (2026-10-16): aceitar qualquer JSON com `state` fazia um LOG do
+// produto ser adotado como handshake; o passo obrigatório do selo V2 reprovava
+// com `FENCE_AVANCOU — antes=undefined depois=2` (motivo ENGANOSO) e passava
+// isolado.
+const { parseHandshakeLine, fenceLegivel } = require(path.join(__dirname, 'lib', 'task-lease-handshake'));
 const REPORT = path.join(ROOT, 'reports', 'real-task-recovery-report.json');
 
 const checks = [];
@@ -66,20 +73,16 @@ function runChildAndKill(taskId, workerInstanceId, missionId) {
         const line = buffer.slice(0, nl).trim();
         buffer = buffer.slice(nl + 1);
         nl = buffer.indexOf('\n');
-        if (!line.startsWith('{') || settled) continue;
-        // O filho agora roda o CAMINHO REAL do produto, que LOGA objetos JSON multi-linha no stdout.
-        // Uma linha iniciada por `{` pode ser log, não handshake: só é handshake o que faz parse E
-        // traz `state`. Sem isso o harness morria com `SyntaxError` ao ler o log (medido 2026-09-28).
-        let parsed = null;
-        try {
-          parsed = JSON.parse(line);
-        } catch (_) {
-          continue;
-        }
-        if (!parsed || typeof parsed.state !== 'string') continue;
+        if (settled) continue;
+        // Handshake INEQUÍVOCO (marcador) — ver lib/task-lease-handshake.js.
+        // DEFEITO MEDIDO (2026-10-16): aceitar QUALQUER JSON com `state` fazia um LOG do
+        // produto ser adotado como handshake; o passo obrigatório do selo V2 reprovava com
+        // `FENCE_AVANCOU — antes=undefined depois=2` (motivo enganoso) e passava isolado.
+        const tentativa = parseHandshakeLine(line);
+        if (!tentativa.ok) continue;
         settled = true;
         clearTimeout(timer);
-        const handshake = parsed;
+        const handshake = tentativa.payload;
         const pid = child.pid;
         child.kill('SIGKILL');
         child.on('exit', (code, signal) => resolve({ handshake, pid, code, signal }));
@@ -136,8 +139,23 @@ async function main() {
     // 3. Worker A (processo separado) adquire o lease da TASK e entra em IMPLEMENTING.
     const killed = await runChildAndKill(taskId, 'task-worker-A', missionId);
     check('WORKER_A_HANDSHAKE', killed.handshake.state === 'READY', JSON.stringify(killed.handshake));
-    const fenceA = killed.handshake.taskFence;
-    detail.workerA = { pid: killed.pid, fence: fenceA };
+    let fenceA = killed.handshake.taskFence;
+    // Fallback canônico: o lease no banco. Sem isto, handshake sem `taskFence` fazia
+    // `2 > undefined` (falso) e o passo reprovava dizendo "o fence não avançou" — motivo
+    // ENGANOSO medido em 2026-10-16 no selo V2.
+    if (fenceLegivel(fenceA)) {
+      detail.workerA = { pid: killed.pid, fence: fenceA, fenceFonte: 'handshake' };
+    } else {
+      const leaseAposHandshake = await taskService.getTaskLease(taskId);
+      const fenceDb = leaseAposHandshake ? leaseAposHandshake.fence : null;
+      if (fenceLegivel(fenceDb)) {
+        fenceA = fenceDb;
+        detail.workerA = { pid: killed.pid, fence: fenceA, fenceFonte: 'db_pos_handshake' };
+      } else {
+        detail.workerA = { pid: killed.pid, fence: fenceA, fenceFonte: 'indisponivel' };
+      }
+    }
+    check('FENCE_INICIAL_LEGIVEL', fenceLegivel(fenceA), `fenceA=${fenceA} handshake=${JSON.stringify(killed.handshake)}`);
 
     // 4. MORTE SÚBITA.
     check('SIGKILL_REAL', killed.signal === 'SIGKILL', `signal=${killed.signal}`);
@@ -204,7 +222,7 @@ async function main() {
     //    as asserções acima (o recuperador concorrente continua trabalhando) e o relatório passaria
     //    a afirmar coisas sobre um estado diferente do que foi verificado.
     const newLease = leaseAtCheck;
-    check('FENCE_AVANCOU', Boolean(newLease) && newLease.fence > fenceA, `antes=${fenceA} depois=${newLease && newLease.fence}`);
+    check('FENCE_AVANCOU', fenceLegivel(fenceA) && Boolean(newLease) && Number(newLease.fence) > Number(fenceA), `antes=${fenceA} depois=${newLease && newLease.fence}`);
     check('LEASE_NAO_E_MAIS_DO_WORKER_MORTO', !newLease || newLease.workerInstanceId !== 'task-worker-A', `worker=${newLease && newLease.workerInstanceId}`);
 
     // 9. O worker morto não escreve mais.

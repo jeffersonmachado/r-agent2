@@ -36,6 +36,9 @@ const {
   AUTHORIZED_FILE,
   findDuplicatedPlaceholderLiterals,
 } = require('./rag-indexable-content-guard');
+// Política determinística (sem I/O) extraída para ser TESTÁVEL — a regra de HEALTHY/NO_GO
+// vivia inline em `main()` e não tinha prova executável.
+const { avaliarSaudeDoIndice } = require('./lib/rag-index-health-policy');
 
 const ROOT = path.join(__dirname, '..', '..');
 const REPORT_PATH = path.join(ROOT, 'reports', 'rag-index-health-report.json');
@@ -117,55 +120,20 @@ async function main() {
     { type: QueryTypes.SELECT, replacements: { minutes: STUCK_INDEXING_MINUTES } },
   );
 
-  const declaredIds = new Set(DECLARED_FAILED_EXCEPTIONS.map((entry) => entry.id));
-  const undeclaredFailed = failedDocs.filter((row) => !declaredIds.has(row.id));
-  const declaredButMissing = DECLARED_FAILED_EXCEPTIONS.filter((entry) => !failedDocs.some((row) => row.id === entry.id));
-
-  const violations = [];
-  if (indexedWithoutChunks.length > 0) {
-    violations.push({
-      code: 'INDEXED_WITHOUT_CHUNKS',
-      detail: `${indexedWithoutChunks.length} documento(s) marcados como indexed SEM chunks (documento inalcançável pelo retrieval)`,
-      ids: indexedWithoutChunks.slice(0, 10).map((row) => row.id),
-    });
-  }
-  if (undeclaredFailed.length > 0) {
-    violations.push({
-      code: 'UNDECLARED_FAILED_DOCUMENT',
-      detail: `${undeclaredFailed.length} documento(s) em failed SEM exceção declarada`,
-      ids: undeclaredFailed.slice(0, 10).map((row) => row.id),
-    });
-  }
-  if (noTextWithChunks.length > 0) {
-    violations.push({
-      code: 'NO_TEXT_DOCUMENT_WITH_CHUNKS',
-      detail: `${noTextWithChunks.length} documento(s) sem texto extraído COM chunks no índice (chunk fantasma — a invariante de conteúdo indexável foi furada)`,
-      ids: noTextWithChunks.slice(0, 10).map((row) => row.id),
-    });
-  }
-
-  // Invariante de FONTE ÚNICA da regra de conteúdo indexável (independe do
-  // banco): o literal do placeholder só pode existir em AUTHORIZED_FILE. Com o
-  // texto duplicado em dois caminhos, corrigir um deixa o defeito entrar pelo
-  // outro — foi exatamente o que aconteceu em 2026-10-08.
-  const duplicatedPlaceholderLiterals = findDuplicatedPlaceholderLiterals(ROOT);
-  if (duplicatedPlaceholderLiterals.length > 0) {
-    violations.push({
-      code: 'RAG_PLACEHOLDER_SOURCE_DUPLICATED',
-      detail: `placeholder de "sem texto extraído" declarado fora de ${AUTHORIZED_FILE} (regra de conteúdo indexável duplicada)`,
-      files: duplicatedPlaceholderLiterals,
-    });
-  }
-
-  if (stuckIndexing.length > 0) {
-    violations.push({
-      code: 'RAG_INDEXING_STUCK',
-      detail: `${stuckIndexing.length} documento(s) presos em indexing há mais de ${STUCK_INDEXING_MINUTES} min (inalcançáveis pelo retrieval; o processo que os marcou morreu) — reindexe pela rota oficial`,
-      ids: stuckIndexing.slice(0, 10).map((row) => row.id),
-    });
-  }
-
-  const statusByKey = Object.fromEntries(byStatus.map((row) => [row.index_status, row.total]));
+  const indice = avaliarSaudeDoIndice(
+    {
+      byStatus,
+      indexedWithoutChunks,
+      failedDocs,
+      noTextWithChunks,
+      stuckIndexing,
+      declaredExceptions: DECLARED_FAILED_EXCEPTIONS,
+      duplicatedPlaceholderLiterals: findDuplicatedPlaceholderLiterals(ROOT),
+    },
+    { stuckIndexingMinutes: STUCK_INDEXING_MINUTES },
+  );
+  const violations = indice.violations;
+  const statusByKey = indice.statusByKey;
   const report = {
     report: 'RAG_INDEX_HEALTH',
     generatedAt: new Date().toISOString(),
@@ -177,10 +145,10 @@ async function main() {
     failed: failedDocs.map((row) => ({ id: row.id, tenantKey: row.tenant_key })),
     notApplicableNoText: statusByKey.not_applicable_no_text || 0,
     noTextWithChunks: noTextWithChunks.map((row) => ({ id: row.id, chunks: row.chunks })),
-    placeholderSourceSingle: duplicatedPlaceholderLiterals.length === 0,
+    placeholderSourceSingle: violations.every((v) => v.code !== 'RAG_PLACEHOLDER_SOURCE_DUPLICATED'),
     placeholderSourceAuthorizedFile: AUTHORIZED_FILE,
     declaredExceptions: DECLARED_FAILED_EXCEPTIONS,
-    staleExceptions: declaredButMissing.map((entry) => entry.id),
+    staleExceptions: indice.staleExceptions,
     violations,
     note: 'Medição DIRETA do banco (runtime → medição → gate). Substitui a leitura do eixo estático do status report como fonte de decisão.',
   };

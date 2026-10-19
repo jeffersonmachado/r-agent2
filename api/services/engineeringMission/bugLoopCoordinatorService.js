@@ -613,9 +613,23 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
  * IDEMPOTENTE por task: a mesma task não dispara dois replans (o contador vive no `resume_metadata`
  * da missão, sobrevivendo a restart — é o que torna o limite efetivo entre processos).
  */
+/**
+ * O replan EXECUTOU de fato? (não apenas "foi tentado")
+ *
+ * `resumeOriginalMission` devolve `{resumed:false, reason, code}` quando a missão
+ * não é executável (política/aprovação) e pode lançar exceção. Nos dois casos a
+ * tentativa foi consumida — e o contador DEVE continuar subindo —, mas nada foi
+ * replanejado. Declarar `replanned: true` nesses casos é falso sucesso.
+ *
+ * @param {{resumed?: boolean, replacementTaskId?: string|null}|null} resumed
+ * @returns {boolean}
+ */
+function replanExecutou(resumed) {
+  return Boolean(resumed && resumed.resumed === true);
+}
+
 async function maybeReplanAfterSourceFailure({ missionId, taskId = null, result = null, actor = null, tenantId = null } = {}) {
   if (!missionId) return { replanned: false, reason: 'MISSION_ID_REQUIRED' };
-
   const { classifySourceFailure, planSourceReplan, SOURCE_REPLAN_POLICY } = require('../../../engine/engineeringMission/missionSource');
   const integration = (result && result.missionIntegration) || {};
   const sourceFailure = classifySourceFailure({
@@ -693,6 +707,16 @@ async function maybeReplanAfterSourceFailure({ missionId, taskId = null, result 
   loop.push({ attempt: nextAttempt, status: resumed && resumed.status || null, error });
 
   const succeeded = Boolean(resumed && resumed.status === 'GREEN');
+
+  // ── EFEITO, NÃO TENTATIVA (defeito medido 2026-10-17) ──────────────────────
+  // `replanned: true` era devolvido mesmo quando `resumeOriginalMission`
+  // respondia `resumed: false` (missão não executável / bloqueio de política) ou
+  // lançava: a tentativa tinha sido FEITA, mas nada foi replanejado — e o
+  // chamador logava "missão replanejada" sem `replacementTaskId`. É a mesma
+  // classe de falso verde que a missão proíbe: declarar sucesso sem efeito.
+  // O contador de tentativas continua sendo consumido (é o que impede loop
+  // infinito); o que muda é a DECLARAÇÃO.
+  const executou = replanExecutou(resumed);
   await persist({
     state: succeeded ? 'REPLAN_SUCCEEDED' : (error ? 'REPLAN_ERROR' : 'REPLAN_RAN'),
     attempts: nextAttempt,
@@ -708,13 +732,15 @@ async function maybeReplanAfterSourceFailure({ missionId, taskId = null, result 
   });
 
   return {
-    replanned: true,
+    replanned: executou,
+    attempted: true,
     attempt: nextAttempt,
     maxAttempts,
-    state: succeeded ? 'REPLAN_SUCCEEDED' : 'REPLAN_RAN',
+    state: succeeded ? 'REPLAN_SUCCEEDED' : (executou ? 'REPLAN_RAN' : 'REPLAN_NAO_EXECUTOU'),
     status: (resumed && resumed.status) || null,
     replacementTaskId: (resumed && resumed.replacementTaskId) || null,
     decision: (resumed && resumed.decision) || null,
+    reason: (resumed && resumed.reason) || null,
     error,
     sourceFailure,
     plan,
@@ -1195,6 +1221,7 @@ module.exports = {
   continueMission,
   resumeOriginalMission,
   maybeReplanAfterSourceFailure,
+  replanExecutou,
   withFindingLease,
   handleAnomaly,
   ingestTelemetry,

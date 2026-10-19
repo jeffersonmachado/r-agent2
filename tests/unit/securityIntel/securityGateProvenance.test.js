@@ -122,3 +122,36 @@ describe('Security Gate — proveniência do veredito (fail-closed)', () => {
     expect(codesOf(issues)).not.toContain('SECURITY_GATE_STALE_EVIDENCE');
   });
 });
+
+describe('run ENCERRADO não é run corrente (família H20)', () => {
+  const sbomFresco = { generatedAt: '2026-10-17T12:00:00.000Z', runId: 'run-atual' };
+  const runAberto = { runId: 'run-atual', startedAt: '2026-10-17T11:00:00.000Z', sourceFingerprint: 'f'.repeat(64) };
+
+  test('run ABANDONED ⇒ SECURITY_GATE_RUN_CLOSED (não culpa o SBOM)', () => {
+    const issues = resolveSecurityProvenance({
+      lineage: { runId: 'run-atual', source: 'governance/.current-run.json' },
+      currentRun: { ...runAberto, status: 'ABANDONED', closedAt: '2026-10-17T13:00:00.000Z' },
+      sbom: sbomFresco,
+    });
+    expect(codesOf(issues)).toContain('SECURITY_GATE_RUN_CLOSED');
+    expect(codesOf(issues)).not.toContain('SECURITY_GATE_STALE_EVIDENCE');
+  });
+
+  test('run SUPERSEDED ⇒ SECURITY_GATE_RUN_CLOSED', () => {
+    const issues = resolveSecurityProvenance({
+      lineage: { runId: 'run-atual', source: 'governance/.current-run.json' },
+      currentRun: { ...runAberto, status: 'SUPERSEDED' },
+      sbom: sbomFresco,
+    });
+    expect(codesOf(issues)).toContain('SECURITY_GATE_RUN_CLOSED');
+  });
+
+  test('run ABERTO com SBOM fresco segue sem recusa (controle positivo)', () => {
+    const issues = resolveSecurityProvenance({
+      lineage: { runId: 'run-atual', source: 'governance/.current-run.json' },
+      currentRun: runAberto,
+      sbom: sbomFresco,
+    });
+    expect(issues).toEqual([]);
+  });
+});

@@ -1,29 +1,29 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-16T06:06:04.864Z",
-  "runId": "rap-governed-20261016041828305-ae81e3ee",
-  "sourceFingerprint": "6ae89a8fb0f2da6245692436d1377a84987feae580a606e87fcea127b2e15035",
-  "runStartedAt": "2026-10-16T04:18:28.466Z",
+  "generatedAt": "2026-10-17T07:09:31.344Z",
+  "runId": "rap-governed-20261017053314590-3558e6f4",
+  "sourceFingerprint": "bfbabde34663cdd66a1105ef9c883d00b336cb535157430d6e9202a5a7c27080",
+  "runStartedAt": "2026-10-17T05:33:14.746Z",
   "decision": "REUSE",
   "code": "MESH_REUSE_OK",
   "detail": "execução canônica GO DESTE run cobre o registry corrente: reexecução suprimida",
   "registryScenarios": 144,
   "evidence": {
-    "goNoGoGeneratedAt": "2026-10-16T04:58:48.862Z",
+    "goNoGoGeneratedAt": "2026-10-17T06:24:47.151Z",
     "goNoGoStatus": "GO",
-    "historyEntry": "mesh-2026-10-16T04-26-59-432Z.json"
+    "historyEntry": "mesh-2026-10-17T05-55-05-230Z.json"
   },
   "checks": [
     {
       "code": "SAME_RUN_ID",
       "ok": true,
-      "detail": "runId=rap-governed-20261016041828305-ae81e3ee"
+      "detail": "runId=rap-governed-20261017053314590-3558e6f4"
     },
     {
       "code": "SAME_SOURCE",
       "ok": true,
-      "detail": "sourceFingerprint=6ae89a8fb0f2…"
+      "detail": "sourceFingerprint=bfbabde34663…"
     },
     {
       "code": "RELEASE_GATE_BOUND",
@@ -38,7 +38,7 @@
     {
       "code": "CANONICAL_HISTORY",
       "ok": true,
-      "detail": "qa-mesh/meshHistory/mesh-2026-10-16T04-26-59-432Z.json"
+      "detail": "qa-mesh/meshHistory/mesh-2026-10-17T05-55-05-230Z.json"
     },
     {
       "code": "DECISION_GO",
@@ -48,7 +48,7 @@
     {
       "code": "SAME_RUN_TIME",
       "ok": true,
-      "detail": "generatedAt=2026-10-16T04:58:48.862Z"
+      "detail": "generatedAt=2026-10-17T06:24:47.151Z"
     },
     {
       "code": "REGISTRY_COVERED",

@@ -33,6 +33,12 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 source "$SCRIPT_DIR/release-payload-blocklist.sh"
 
+# BUG CLOSURE FIRST (2026-10-17): empacotamento é etapa de release. Não roda com
+# P0/P1 bloqueante aberto na fila oficial. Sem bypass por variável de ambiente:
+# desligar exigiria editar este arquivo versionado (visível no diff do selo).
+source "$SCRIPT_DIR/governance/lib/bug-closure-guard.sh"
+exigir_elegibilidade SELO_FINAL "scripts/release-package.sh" || exit 3
+
 node_with_workspace_env() {
   node --env-file-if-exists="$PROJECT_ROOT/.env" "$@"
 }

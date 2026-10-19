@@ -1,0 +1,116 @@
+name: Dev Hardening CI (L0 + L1 governança)
+
+# =============================================================================
+# CI da branch de desenvolvimento auditável (`dev/engineering-hardening`).
+#
+# POR QUE ESTE WORKFLOW EXISTE
+# ---------------------------
+# Antes dele, `jest.yml`/`release-governance.yml`/`e2e.yml` disparavam apenas em
+# `main`/`develop`/`release/**`/`hotfix/**`. Medido em 2026-10-16:
+#   gh run list --branch dev/engineering-hardening  ->  []
+# isto é, ZERO execuções: todo checkpoint publicado na branch de desenvolvimento
+# auditável chegava ao GitHub sem nenhuma verificação automática.
+#
+# ESTADO REAL DO RUNNER (MEDIDO, NÃO SUPOSTO) — 2026-10-16
+# --------------------------------------------------------
+# O workflow DISPARA, mas os jobs NÃO INICIAM por limite de gastos da conta:
+#   gh run view 38881780959  ->
+#   "The job was not started because an Actions budget is preventing further use."
+#   (Jest, E2E Playwright, Frontend Tests, RAG Service Tests e Release Governance,
+#    todos com 2-5 s e zero passos executados; reconfirmado em 2026-10-14.)
+#
+# Consequência de honestidade: **este workflow NÃO é o gate efetivo hoje**.
+# Adicionar um workflow que não roda dá falsa sensação de proteção, então a
+# proteção real é o espelho LOCAL versionado, que roda os MESMOS passos e publica
+# a MESMA evidência estruturada (SHA exato, comando, exit code, hash):
+#
+#   node scripts/ci/dev-branch-gate.js            # gate L0+L1 executável agora
+#   AI_MEMORY/evidence/dev-branch-ci-<sha>.md     # evidência versionada
+#
+# O estado do bloqueio vive em AI_MEMORY/hardening-queue.json
+# (item `MISSAO-B9-CI-GITHUB-ACTIONS` = blocked_external, com a ação do dono:
+# elevar o limite de gastos do GitHub Actions).
+#
+# GARANTIAS DESTE WORKFLOW
+# ------------------------
+# - permissões mínimas (`contents: read`) — não escreve nada no repositório;
+# - nenhum segredo (`secrets.`) é lido ou impresso;
+# - nenhuma publicação: sem tag, sem release, sem deploy, sem push;
+# - falha obrigatória: qualquer passo L0/L1 vermelho derruba o job;
+# - evidência estruturada vinculada ao SHA EXATO do commit, com hash do próprio
+#   resultado (o artefato é anexado ao run, que é único por SHA).
+# =============================================================================
+
+on:
+  push:
+    branches:
+      - dev/engineering-hardening
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION_LTS: '20'
+
+jobs:
+  dev-branch-gate:
+    name: "L0 (Jest oficial) + L1 (gates de governanca)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Identificar o SHA exato desta execucao
+        run: |
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "HEAD=$(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      # Mesma materializacao de pacotes irmaos do jest.yml: o require resolve a
+      # partir do path real (`file:../../packages/auth`), fora do node_modules.
+      - name: Materializar pacotes irmaos @results (fora do checkout)
+        run: |
+          mkdir -p ../../packages ../packages
+          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
+          cp -r vendor/auth ../../packages/auth
+          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
+          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Toda a bateria L0+L1 roda pelo MESMO runner versionado que qualquer
+      # pessoa executa localmente. Sem passos paralelos: uma implementacao so.
+      - name: L0 + L1 (runner versionado, exit code real)
+        run: node scripts/ci/dev-branch-gate.js --out reports/dev-branch-ci-evidence.json
+        env:
+          CI: true
+          DEV_BRANCH_GATE_ESPERA_SHA: ${{ github.sha }}
+
+      # Evidencia anexada ao run. `if: always()` porque evidenciar a FALHA e tao
+      # obrigatorio quanto evidenciar o sucesso (um run vermelho sem evidencia
+      # estruturada obriga a reexecutar para descobrir o que quebrou).
+      - name: Publicar evidencia estruturada (vinculada ao SHA)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-branch-ci-evidence-${{ github.sha }}
+          path: |
+            reports/dev-branch-ci-evidence.json
+            AI_MEMORY/evidence/dev-branch-ci-*.md
+          if-no-files-found: error
+          retention-days: 30
+
+      # Prova explicita de nao-publicacao: este workflow nunca empurra refs.
+      - name: Nao publicar (asserção de escopo)
+        if: always()
+        run: |
+          echo "Este workflow nao cria tag, release, deploy nem push (permissions: contents: read)."

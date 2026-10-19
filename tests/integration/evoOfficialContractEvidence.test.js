@@ -53,7 +53,13 @@ describe('§20 o gate do contrato EVO existe e é executável', () => {
   });
 
   it('está no gate agregado de governança', () => {
-    expect(PKG.scripts['validate:governance-enforcement']).toContain('validate:evo-contract');
+    // Cadeia efetiva: DIRETA no topo ou em `:chain` quando o topo é o wrapper de veredito.
+    const { resolverCadeiaEfetiva } = require('../../scripts/governance/lib/effective-aggregate-chain');
+    const resolvido = resolverCadeiaEfetiva(PKG.scripts || {}, {
+      lerFonteRunner: () => fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'governance', 'run-governance-enforcement.js'), 'utf8'),
+    });
+    expect(resolvido.motivos).toEqual([]);
+    expect(resolvido.cadeia).toContain('validate:evo-contract');
   });
 
   it('o contrato real PASSA (o gate não é vacuoso nem sempre-vermelho)', () => {

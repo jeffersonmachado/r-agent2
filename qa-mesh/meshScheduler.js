@@ -147,6 +147,34 @@ function selectScenariosForSchedule(kind, registry = loadRegistry()) {
 }
 
 async function runScheduledMesh(kind = 'critical') {
+  // ── BUG CLOSURE FIRST (2026-10-17) ────────────────────────────────────────
+  // O scheduler da malha é um caminho ALTERNATIVO de execução: sem esta guarda,
+  // `npm run qa:mesh:scheduler` rodaria a malha completa ignorando a fila.
+  // Recusa é registrada como skip (não como falha de execução).
+  try {
+    const { avaliarComando } = require('../governance/bug-closure/command-policy');
+    const avaliacao = avaliarComando({ command: 'node', args: ['qa-mesh/meshRunner.js'], actor: 'qa-mesh/meshScheduler' });
+    if (!avaliacao.permitido) {
+      logSchedulerSkip('bug_closure_blocked', {
+        operacao: avaliacao.operacao,
+        razoes: (avaliacao.decisao && avaliacao.decisao.reasonCodes) || ['INVENTARIO_INDISPONIVEL'],
+      });
+      return {
+        skipped: true,
+        reason: 'bug_closure_blocked',
+        bloqueio: {
+          operacao: avaliacao.operacao,
+          razoes: (avaliacao.decisao && avaliacao.decisao.reasonCodes) || ['INVENTARIO_INDISPONIVEL'],
+        },
+        state: safeReadState(),
+      };
+    }
+  } catch (erro) {
+    // Fail-closed: erro ao avaliar não vira autorização.
+    logSchedulerSkip('bug_closure_indisponivel', { erro: String(erro && erro.message || erro) });
+    return { skipped: true, reason: 'bug_closure_indisponivel', state: safeReadState() };
+  }
+
   if (fs.existsSync(PIPELINE_ACTIVE_LOCK_PATH)) {
     logSchedulerSkip('pipeline_active');
     return { skipped: true, reason: 'pipeline_active', state: safeReadState() };

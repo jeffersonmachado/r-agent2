@@ -1,0 +1,14 @@
+LOGIN_OK
+-- 1 criar oportunidade (id=jornada-p0-1792402969)
+status=200
+-- 2 recriar MESMO id (deve 409)
+status=409
+   corpo: {"error":"id_indisponivel","message":"Identificador já utilizado; use outro id."}
+-- 3 atualizar via PUT
+status=200
+-- 4 listar
+status=200
+   encontrado: {"id":"jornada-p0-1792402969","name":"Jornada P0 revisada","tags":[],"notes":null,"value":750,"ownerId":null,"stageId":null,"accountId":null,"contactId":null,"createdAt":"2026-10-19T09:42:49.397Z","updatedAt":"2026-10-19T09:42:49.444Z","pipelineId":null,"probability":0,"expectedCloseDate":null}
+-- 5 métricas
+status=200
+{"ok":true,"dashboard":{"summary":{"totalAccounts":0,"totalContacts":4,"totalLeads":4,"totalOpportunities":2},"opportunity":{"totalValue":1500,"winRate":"0%"}},"meta":{"tenantId":"system","generatedAt":"2026-10-19T09:42:

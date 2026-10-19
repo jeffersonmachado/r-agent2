@@ -34,6 +34,17 @@ const MATERIAL_PHASE = 'CODING';
 const MATERIAL_TIMEOUT_MS = Number(process.env.TASK_LEASE_WORKER_MATERIAL_TIMEOUT_MS || 60000);
 const TERMINAL_STATES = ['RED', 'CANCELLED', 'COMPLETED', 'PROMOTED', 'READY_FOR_PROMOTION'];
 
+const { formatHandshakeLine } = require('../../scripts/governance/lib/task-lease-handshake');
+
+/**
+ * Handshake do lease da TASK — MARCADO de forma inequívoca.
+ * O produto LOGa JSON no mesmo stdout; sem marcador, um log com `state` era
+ * adotado como handshake pelo harness (defeito medido em 2026-10-16).
+ */
+function emitHandshake(payload) {
+  process.stdout.write(formatHandshakeLine(payload));
+}
+
 function emit(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
@@ -82,7 +93,7 @@ async function main() {
 
   const lease = await taskService.getTaskLease(taskId);
 
-  emit({
+  emitHandshake({
     state: 'READY',
     pid: process.pid,
     workerInstanceId,

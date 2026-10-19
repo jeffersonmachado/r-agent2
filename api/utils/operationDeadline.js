@@ -315,6 +315,25 @@ function runChildWithDeadline({
 } = {}) {
   const policy = resolvePolicy(policyName, { override });
   const graceMs = policyMs(gracePolicy, { override: graceOverride });
+
+  // ── BUG CLOSURE FIRST (2026-10-17) ────────────────────────────────────────
+  // Choke point de TODO comando filho deste utilitário (regressão, governança,
+  // workers). Sem isto, o Router/Mission teria um caminho alternativo para rodar
+  // operação extensiva sem passar pela elegibilidade.
+  //
+  // A recusa é uma PROMISE REJEITADA (e não throw síncrono): o contrato desta
+  // função é sempre devolver Promise, e quem usa `.catch()` também precisa ver
+  // o bloqueio.
+  {
+    const { avaliarComando, erroDeBloqueio } = require('../../governance/bug-closure/command-policy');
+    const avaliacao = avaliarComando({
+      command,
+      args,
+      actor: (meta && meta.operation) || 'operationDeadline',
+    });
+    if (!avaliacao.permitido) return Promise.reject(erroDeBloqueio(avaliacao));
+  }
+
   const plan = deadlineCore.buildChildTerminationPlan({ gracePeriodMs: graceMs });
   const startedAtMs = Date.now();
 

@@ -82,11 +82,16 @@ describe('lista de validadores vem do package.json (fonte única)', () => {
   });
 
   it('o agregado canônico NÃO foi enfraquecido: continua fail-fast com &&', () => {
-    const agregado = pkg.scripts['validate:governance-enforcement'];
-    expect(agregado).toContain('&&');
+    // A cadeia `&&` vive em `validate:governance-enforcement:chain`; o script
+    // `validate:governance-enforcement` é o wrapper que a executa gravando
+    // veredito próprio (P1: agregado sem relatório). Fail-fast segue garantido
+    // pelo wrapper e provado em tests/unit/governance/aggregateVerdict.test.js.
+    const cadeia = pkg.scripts['validate:governance-enforcement:chain'];
+    expect(cadeia).toContain('&&');
+    expect(pkg.scripts['validate:governance-enforcement']).toContain('run-governance-enforcement.js');
     // E o runner completo é um script SEPARADO, aditivo.
     expect(pkg.scripts['validate:all-validators']).toContain('run-all-validators.js');
-    expect(agregado).not.toContain('run-all-validators');
+    expect(cadeia).not.toContain('run-all-validators');
   });
 });
 

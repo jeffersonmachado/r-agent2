@@ -19,7 +19,12 @@
 
 /** Extrai a lista ordenada de scripts npm do agregado (dedup, ordem preservada). */
 function listarValidadores(pkg) {
-  const agregado = pkg && pkg.scripts && pkg.scripts['validate:governance-enforcement'];
+  // A cadeia canônica vive em `validate:governance-enforcement:chain`; o script
+  // `validate:governance-enforcement` é o wrapper que a executa gravando veredito
+  // próprio (P1 — agregado sem relatório). Aceitar os dois mantém este planejador
+  // funcionando com qualquer uma das formas.
+  const agregado = pkg && pkg.scripts
+    && (pkg.scripts['validate:governance-enforcement:chain'] || pkg.scripts['validate:governance-enforcement']);
   if (typeof agregado !== 'string' || agregado.trim() === '') {
     throw new Error('validate:governance-enforcement ausente no package.json');
   }

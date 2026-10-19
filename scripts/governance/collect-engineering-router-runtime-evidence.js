@@ -135,6 +135,38 @@ const RUNTIME_ITEMS = [
 ];
 
 /**
+ * Extrai o objeto JSON do reporter do Jest de uma saída que pode conter LOGS.
+ *
+ * DEFEITO MEDIDO (2026-10-17): o coletor fazia `JSON.parse(stdout)` cru. Quando o
+ * teste falhava por ASSERÇÃO, o Jest escrevia o JSON depois das linhas de log do
+ * próprio teste — o parse estourava e o relatório dizia "crash antes do reporter",
+ * culpando infraestrutura por uma falha de teste perfeitamente legível.
+ *
+ * Estratégia: JSON puro; depois a última linha; depois o último bloco iniciado em
+ * `{"num...` até o fim.
+ *
+ * @param {string} raw
+ * @returns {object|null}
+ */
+function extrairJsonDoJest(raw) {
+  const texto = typeof raw === 'string' ? raw : '';
+  if (!texto.trim()) return null;
+  try { return JSON.parse(texto.trim()); } catch (_) { /* segue */ }
+
+  const linhas = texto.split('\n').map((l) => l.trim()).filter(Boolean);
+  for (let i = linhas.length - 1; i >= 0; i -= 1) {
+    if (!linhas[i].startsWith('{')) continue;
+    try { return JSON.parse(linhas[i]); } catch (_) { /* tenta a anterior */ }
+  }
+
+  const marcador = texto.lastIndexOf('{"num');
+  if (marcador >= 0) {
+    try { return JSON.parse(texto.slice(marcador)); } catch (_) { /* sem JSON */ }
+  }
+  return null;
+}
+
+/**
  * Roda `testPath` restrito a `testId` (via `--testNamePattern`) e usa `--json` para extrair
  * dados estruturados — nunca confia só no exitCode do processo. `numPassedTests === 0` (nenhum
  * teste bateu o pattern: removido, renomeado, ou skipado) é SEMPRE tratado como falha, mesmo
@@ -175,12 +207,7 @@ function runTargetedTest(testPath, testId) {
     else if (err.code === 'ETIMEDOUT') terminationDetail = 'timeout do execFileSync (120000ms)';
   }
 
-  let parsed = null;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (_) {
-    // saída não-JSON (crash antes do reporter rodar) — trata como falha explícita abaixo.
-  }
+  let parsed = extrairJsonDoJest(raw);
 
   const finishedAt = new Date().toISOString();
   if (!parsed) {
@@ -297,7 +324,7 @@ function main() {
   process.exit(failed.length === 0 ? 0 : 1);
 }
 
-module.exports = { RUNTIME_ITEMS, isGitWorkTree, assertRouterEnvironmentUsable };
+module.exports = { RUNTIME_ITEMS, isGitWorkTree, assertRouterEnvironmentUsable, extrairJsonDoJest };
 
 // ER-V1-FINAL-009 (Full-Suite Isolation) — achado real: `validate-engineering-router-v1.js`
 // (REQUIRED_RUNTIME_ITEM_IDS) e `tests/integration/engineeringRouterMandatoryRuntimeGate.test.js`

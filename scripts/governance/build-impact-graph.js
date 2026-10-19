@@ -19,6 +19,7 @@ const { execFileSync } = require('child_process');
 
 const { buildImportGraph, isTestFile, normalizar } = require('../../qa/coverage/impactGraph');
 const { readJson } = require('./common');
+const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 
 const RAIZ = path.resolve(__dirname, '..', '..');
 const SAIDA_PADRAO = path.join(RAIZ, 'reports', 'impact-graph.json');
@@ -105,6 +106,22 @@ function jornadasPorArquivo() {
  * Constrói o artefato serializável.
  * @returns {object}
  */
+/**
+ * Commit atual do repositório — INFORMATIVO no vínculo de identidade do artefato.
+ * Nunca lança: em ambiente sem git devolve `null`. O vínculo OBRIGATÓRIO é o
+ * `sourceFingerprint` (derivado do conteúdo da árvore, não do histórico): dois
+ * commits que só mexem em relatórios têm o mesmo source e não devem invalidar o
+ * grafo.
+ * @returns {string|null}
+ */
+function commitAtual() {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: RAIZ, encoding: 'utf8' }).trim();
+  } catch (_) {
+    return null;
+  }
+}
+
 function construir() {
   const caminhos = listarArquivos();
   const arquivos = lerFontes(caminhos);
@@ -120,6 +137,16 @@ function construir() {
     kind: 'impact-graph',
     // Sem `generatedAt`: o artefato é função pura da árvore versionada, o que
     // permite comparação byte-a-byte em `--check`.
+    //
+    // VÍNCULO DE IDENTIDADE (P0-5, medido 2026-10-16): o artefato declara DE QUAL
+    // source ele foi construído. Sem isto, um grafo velho era consumido como se
+    // descrevesse a árvore atual — a seleção passava a decidir sobre um grafo que não
+    // corresponde ao código analisado, e nada acusava. `sourceFingerprint` é a
+    // identidade canônica do source (o mesmo mecanismo do resto da governança);
+    // `sourceCommit` é informativo/auditável. Continua sendo função pura da árvore:
+    // os dois campos derivam de conteúdo versionado, não do relógio.
+    sourceFingerprint: computeSourceFingerprint(RAIZ),
+    sourceCommit: commitAtual(),
     counts: {
       nodes: grafo.nodes.length,
       edges: Object.values(grafo.edges).reduce((s, l) => s + l.length, 0),

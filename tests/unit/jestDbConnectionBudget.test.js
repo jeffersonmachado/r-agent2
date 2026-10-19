@@ -130,7 +130,13 @@ describe('orçamento de conexões do Jest (paralelismo sem estourar o Postgres)'
 
   test('o jest.config.cjs real respeita a invariante (guarda contra regressão do defeito)', () => {
     const config = require(path.join(__dirname, '..', '..', 'jest.config.cjs'));
-    const budget = resolveJestDbBudget({ poolMax: Number(process.env.DB_POOL_MAX) });
+    // `cpus` REAL: sem isso o orçamento devolve `cpuBound = 1` e o teste passaria a ATESTAR o
+    // defeito (maxWorkers = 1 para sempre), em vez de guardá-lo. Foi exatamente essa expectativa
+    // que deixou a suíte oficial rodar serial até 2026-10-18.
+    const budget = resolveJestDbBudget({
+      poolMax: Number(process.env.DB_POOL_MAX),
+      cpus: require('os').cpus().length,
+    });
 
     expect(typeof config.maxWorkers).toBe('number');
     expect(config.maxWorkers).toBeGreaterThanOrEqual(1);

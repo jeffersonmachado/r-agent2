@@ -79,7 +79,12 @@ export function ContactsPage() {
       return;
     }
     try {
-      await upsertContact(formData);
+      // `department` não existe no contrato do CRM; vai em `attributes` para não
+      // ser descartado silenciosamente (medido em 2026-10-19).
+      await upsertContact({
+        ...formData,
+        attributes: formData.department ? { department: formData.department } : undefined,
+      });
       await loadContacts(page, pageSize, filters.search);
       setIsModalOpen(false);
       showToast('Contato salvo com sucesso!', 'success');

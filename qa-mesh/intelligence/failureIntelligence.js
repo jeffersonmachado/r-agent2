@@ -108,11 +108,32 @@ function buildFailureIntelligence(currentExecution, history = [], options = {}) 
     moduleStability,
   };
 
+  // DEFEITO MEDIDO (2026-10-16): a correcao de lineage existia aqui, mas o
+  // `execution` chega do meshRunner com campos nulos quando a malha roda FORA de
+  // run governado (`resolveOriginLineage()` le apenas GOVERNANCE_* do ambiente,
+  // e uma execucao MANUAL nao tem esses valores). Resultado: uma execucao manual
+  // local ("npm run qa:mesh" / replay de 1 cenario) SOBRESCREVIA
+  // qa-mesh/intelligence/latest.json com lineage nulo e derrubava o agregado com
+  // QA_EVIDENCE_LINEAGE_MISSING — acao de desenvolvedor envenenando evidencia
+  // governada. Regra: execucao sem lineage NAO escreve no caminho da evidencia
+  // governada; ela vai para um arquivo explicitamente NAO-governado.
+  const temLineage = Boolean(intelligence.runId && intelligence.sourceFingerprint);
+
   if (options.outputDir) {
     ensureDir(options.outputDir);
-    const target = path.join(options.outputDir, 'latest.json');
-    fs.writeFileSync(target, `${JSON.stringify(intelligence, null, 2)}\n`, 'utf8');
+    const nomeArquivo = temLineage ? 'latest.json' : 'latest-ungoverned.json';
+    const target = path.join(options.outputDir, nomeArquivo);
+    const payload = { ...intelligence, isGovernedEvidence: temLineage };
+    fs.writeFileSync(target, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
     intelligence.outputPath = target;
+    intelligence.isGovernedEvidence = temLineage;
+    if (!temLineage) {
+      console.warn(
+        `[mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): `
+        + `artefato escrito em ${target} e o artefato governado latest.json foi PRESERVADO. `
+        + `Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).`
+      );
+    }
   }
 
   return intelligence;

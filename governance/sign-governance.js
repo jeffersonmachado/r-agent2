@@ -36,6 +36,8 @@ const crypto = require('crypto');
 const {
   buildChain,
   writeChain,
+  certifyChain,
+  verifyChain,
   sha256File,
   sha256String,
   resolveArtifact,
@@ -137,11 +139,38 @@ function preSign(options = {}) {
 
   // Construir cadeia a partir dos arquivos de governança atuais
   const chain    = buildChain(artifact);
-  writeChain(chain);
 
   const ts         = new Date().toISOString();
   const zipName    = artifact.zip;
   const chainRoot  = chain.chainRoot;
+
+  // ── CERTIFICAÇÃO REAL (FASE 6 / 2026-10-16) ────────────────────────────────
+  //
+  // DEFEITO MEDIDO: `buildChain()` gravava `valid: completeChain` — "válido"
+  // significava apenas "todos os arquivos existem", sem recalcular um único hash.
+  // O preSign assinava a raiz SEM nunca verificar, e o atestado propagava
+  // `chainValid: true` para o mundo. Resultado medido: artefato declarando
+  // `valid: true` enquanto a recalculação encontrava 9 divergências, e o gate
+  // `validate:self-proving` aprovando a partir desse campo.
+  //
+  // Agora a certificação RECALCULA. Se a cadeia não fechar, o estado medido é
+  // gravado (o artefato nunca fica com aparência de válido) e a assinatura é
+  // RECUSADA — não se assina uma raiz que não corresponde aos bytes.
+  const certificacao = certifyChain(chain, {
+    origem: 'governance/sign-governance.js:preSign',
+    agora:  ts,
+  });
+
+  if (!certificacao.certificada) {
+    // Grava o estado MEDIDO antes de falhar: o artefato nunca mantém aparência
+    // de válido depois de um elo ser alterado.
+    writeChain(chain);
+    throw new Error(
+      `CADEIA_NAO_CERTIFICAVEL: a recalculação encontrou ${certificacao.failures.length} divergência(s) — ` +
+      `${certificacao.failures.map((f) => `${f.id}:${f.reason}`).join(', ')}. ` +
+      'Estado DIVERGENTE gravado em governance/governance-chain.json; assinatura recusada.'
+    );
+  }
 
   // 1. Assinatura de governança (cadeia completa)
   const govSig = signArtifact({
@@ -233,7 +262,14 @@ function preSign(options = {}) {
       chainRoot,
       chainLength:   chain.chainLength,
       chainComplete: chain.completeChain,
+      // chainValid agora é o veredito RECALCULADO (não mais "todos os arquivos
+      // existem"). Ver `certifyChain()` em governance/governance-chain.js.
       chainValid:    chain.valid,
+      verification:  chain.verification,
+      certificationState: chain.certification ? chain.certification.state : null,
+      certifiedAt:   chain.certification ? chain.certification.certifiedAt : null,
+      certifiedBy:   chain.certification ? chain.certification.origem : null,
+      verifiedLinks: chain.certification ? chain.certification.checkedLinks : null,
       missingLayers: chain.missingLayers,
     },
 
@@ -316,6 +352,12 @@ function preSign(options = {}) {
   writeArtifact(path.join(GOV_ARTIFACTS_DIR, 'replay.sig'),                 replaySig);
   writeArtifact(path.join(GOV_ARTIFACTS_DIR, 'governance-attestation.json'), attestation);
 
+  // A cadeia é gravada por ÚLTIMO (junto com os demais artefatos): toda a parte
+  // que pode falhar — derivação de chave, HMACs, atestação — já rodou. Antes, a
+  // cadeia era gravada no início e uma falha de chave deixava o par
+  // cadeia↔atestado divergente (medido: REPLAY_SIGNING_KEY_REQUIRED).
+  writeChain(chain);
+
   // Copiar governance-chain.json para dentro de governance-artifacts/
   const chainSrc = path.join(ROOT, 'governance', 'governance-chain.json');
   if (fs.existsSync(chainSrc)) {
@@ -390,10 +432,53 @@ if (require.main === module) {
         allValid = false;
       }
     }
+
+    // ── A verificação offline precisa verificar a CADEIA, não só os HMACs ──────
+    // DEFEITO MEDIDO (2026-10-16): `--verify` conferia apenas as assinaturas HMAC.
+    // Uma assinatura íntegra sobre uma raiz que NÃO corresponde mais aos bytes dos
+    // artefatos passava como "governança verificada" — a assinatura é do HASH da
+    // raiz, não do conteúdo atual dos elos. Agora a cadeia é RECALCULADA.
+    const chainCandidates = [
+      path.join(GOV_ARTIFACTS_DIR, 'governance-chain.json'),
+      path.join(ROOT, 'governance', 'governance-chain.json'),
+    ];
+    let chainChecked = false;
+    for (const chainPath of chainCandidates) {
+      if (!fs.existsSync(chainPath)) continue;
+      const stored = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+      const recalc = verifyChain(stored);
+      // eslint-disable-next-line no-console
+      console.log(
+        `[sign-governance] ${path.relative(ROOT, chainPath)}: ` +
+        `${recalc.valid ? 'CADEIA ÍNTEGRA ✓' : `CADEIA DIVERGENTE ✗ (${recalc.failures.length})`}`
+      );
+      if (!recalc.valid) {
+        recalc.failures.slice(0, 10).forEach((f) => {
+          // eslint-disable-next-line no-console
+          console.error(`[sign-governance]   ${f.id} — ${f.reason}`);
+        });
+        allValid = false;
+      }
+      chainChecked = true;
+      break;
+    }
+    if (!chainChecked) {
+      // eslint-disable-next-line no-console
+      console.error('[sign-governance] ausente: governance-chain.json (nada a verificar)');
+      allValid = false;
+    }
+
     process.exit(allValid ? 0 : 1);
   }
 
-  const result = preSign();
+  let result;
+  try {
+    result = preSign();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(`[sign-governance] RECUSADO: ${error.message}`);
+    process.exit(1);
+  }
   // eslint-disable-next-line no-console
   console.log(`[sign-governance] pre-signed: ${result.outputs.length} artifacts`);
   // eslint-disable-next-line no-console

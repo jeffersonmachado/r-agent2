@@ -6,15 +6,40 @@ import { CrmCard, CrmTable, CrmButton, CrmModal, CrmForm, CrmInput, CrmSelect, C
 import { CrudPageBase } from '../../modules/crud-base';
 
 const LEAD_STATUS_LABELS = {
-  new: 'Novo',
-  contacted: 'Contactado',
-  qualified: 'Qualificado',
+  novo: 'Novo',
+  contactado: 'Contactado',
+  qualificado: 'Qualificado',
+  perdido: 'Perdido',
+  // Etapas legadas de `marketing_leads` (valores em inglês que já existem na
+  // base). Sem rótulo, a coluna mostrava o valor cru (medido em 2026-10-19).
+  visitor: 'Visitante',
+  lead: 'Lead',
+  customer: 'Cliente',
+  opportunity: 'Oportunidade',
+  proposal: 'Proposta',
+  negotiation: 'Negociação',
+  won: 'Ganho',
   lost: 'Perdido',
 };
 
+// DEFEITO MEDIDO (2026-10-19, jornada real em /crm/leads): o formulário enviava
+// `status: 'new'` (inglês) e a lista lia `lead.status`, mas o backend persiste
+// `stage` com valores em português ('novo'|'contactado'|'qualificado'|'perdido').
+// Resultado: todo lead aparecia com Status "—" e o filtro de status nunca
+// encontrava nada. `stage` é o campo canônico; os valores legados em inglês são
+// normalizados para não quebrar registros antigos.
+const LEGACY_STATUS_ALIASES = {
+  new: 'novo',
+  contacted: 'contactado',
+  qualified: 'qualificado',
+  lost: 'perdido',
+  contact: 'contato',
+};
+
 function normalizeLeadStatus(lead) {
-  const status = lead?.status || lead?.lead_status || '';
-  return String(status).trim().toLowerCase();
+  const bruto = lead?.stage || lead?.status || lead?.lead_status || '';
+  const normalizado = String(bruto).trim().toLowerCase();
+  return LEGACY_STATUS_ALIASES[normalizado] || normalizado;
 }
 
 function getLeadCreatedAt(lead) {
@@ -46,7 +71,8 @@ export function LeadsPage() {
     return allLeads.filter(l => {
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        if (!l.source?.toLowerCase().includes(searchLower)) {
+        const alvo = `${l.name || ''} ${l.email || ''} ${l.source || ''}`.toLowerCase();
+        if (!alvo.includes(searchLower)) {
           return false;
         }
       }
@@ -65,14 +91,18 @@ export function LeadsPage() {
   };
   const { listLeads, upsertLead, deleteLead, loading } = useCrmApi();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const FORM_VAZIO = {
+    name: '',
+    email: '',
+    phone: '',
     accountId: '',
     contactId: '',
     source: 'website',
-    status: 'new',
+    stage: 'novo',
     score: 0,
     notes: '',
-  });
+  };
+  const [formData, setFormData] = useState(FORM_VAZIO);
 
   useEffect(() => {
     loadLeads();
@@ -89,14 +119,19 @@ export function LeadsPage() {
 
   const handleOpenModal = (lead = null) => {
     if (lead) {
-      setFormData(lead);
+      setFormData({ ...FORM_VAZIO, ...lead, stage: normalizeLeadStatus(lead) || 'novo' });
     } else {
-      setFormData({ accountId: '', contactId: '', source: 'website', status: 'new', score: 0, notes: '' });
+      setFormData({ ...FORM_VAZIO });
     }
     setIsModalOpen(true);
   };
 
   const handleSubmit = async () => {
+    // Sem identidade o registro vira "Sem nome" e não há como rastrear o lead.
+    if (!String(formData.name || '').trim()) {
+      showToast('Informe o nome do lead.', 'error');
+      return;
+    }
     try {
       await upsertLead(formData);
       await loadLeads();
@@ -118,9 +153,10 @@ export function LeadsPage() {
   };
 
   const columns = [
+    { key: 'name', label: 'Nome', render: (nome) => nome || '—' },
     { key: 'source', label: 'Fonte' },
     {
-      key: 'status',
+      key: 'stage',
       label: 'Status',
       render: (_, row) => {
         const normalized = normalizeLeadStatus(row);
@@ -150,7 +186,7 @@ export function LeadsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block mb-2 text-sm font-medium text-text-primary">
-              Buscar Fonte
+              Buscar por nome, e-mail ou fonte
             </label>
             <input
               type="text"
@@ -171,10 +207,10 @@ export function LeadsPage() {
               className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent transition-all appearance-none cursor-pointer"
             >
               <option value="">Todos</option>
-              <option value="new">Novo</option>
-              <option value="contacted">Contactado</option>
-              <option value="qualified">Qualificado</option>
-              <option value="lost">Perdido</option>
+              <option value="novo">Novo</option>
+              <option value="contactado">Contactado</option>
+              <option value="qualificado">Qualificado</option>
+              <option value="perdido">Perdido</option>
             </select>
           </div>
 
@@ -195,8 +231,8 @@ export function LeadsPage() {
           <div className="mt-4 pt-4 border-t border-border-default">
             <p className="text-sm text-text-secondary">
               Mostrando <strong>{leads.length}</strong> de <strong>{allLeads.length}</strong> lead(s)
-              {filters.search && ` with source "${filters.search}"`}
-              {filters.status && ` com status "${filters.status}"`}
+              {filters.search && ` para "${filters.search}"`}
+              {filters.status && ` com status "${LEAD_STATUS_LABELS[filters.status] || filters.status}"`}
             </p>
           </div>
         )}
@@ -207,6 +243,24 @@ export function LeadsPage() {
       </CrmCard>
       <CrmModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Lead" size="md">
         <CrmForm onSubmit={handleSubmit} isLoading={loading}>
+          <CrmInput
+            label="Nome"
+            value={formData.name}
+            onChange={(v) => setFormData({ ...formData, name: v })}
+            placeholder="Nome do lead"
+          />
+          <CrmInput
+            label="E-mail"
+            value={formData.email || ''}
+            onChange={(v) => setFormData({ ...formData, email: v })}
+            placeholder="lead@empresa.com"
+          />
+          <CrmInput
+            label="Telefone"
+            value={formData.phone || ''}
+            onChange={(v) => setFormData({ ...formData, phone: v })}
+            placeholder="+55 11 90000-0000"
+          />
           <CrmSelect
             label="Fonte"
             value={formData.source}
@@ -221,13 +275,13 @@ export function LeadsPage() {
           />
           <CrmSelect
             label="Status"
-            value={formData.status}
-            onChange={(v) => setFormData({ ...formData, status: v })}
+            value={formData.stage}
+            onChange={(v) => setFormData({ ...formData, stage: v })}
             options={[
-              { value: 'new', label: 'Novo' },
-              { value: 'contacted', label: 'Contactado' },
-              { value: 'qualified', label: 'Qualificado' },
-              { value: 'lost', label: 'Perdido' },
+              { value: 'novo', label: 'Novo' },
+              { value: 'contactado', label: 'Contactado' },
+              { value: 'qualificado', label: 'Qualificado' },
+              { value: 'perdido', label: 'Perdido' },
             ]}
           />
           <div>

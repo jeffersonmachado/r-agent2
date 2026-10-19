@@ -46,7 +46,13 @@
 #   bash scripts/governance/seal-release.sh                  # ciclo completo
 #   bash scripts/governance/seal-release.sh --from candidate  # retoma da fase
 #
-# Fases: prepare -> candidate -> final -> publish -> consolidate
+# Fases: prepare -> candidate -> final -> consolidate -> certify -> publish -> verify-delivery
+#
+# ORDEM CERTIFICA-ANTES-DE-PUBLICAR (P0-3, 2026-10-16): `consolidate` reconcilia,
+# `certify` afirma sobre o artefato congelado ANTES de publicar e `publish` é a única
+# fase que cria a tag. Antes a tag era criada na 4ª de 5 fases — os gates obrigatórios
+# rodavam depois dela (medido: três ciclos abortaram com a tag já no remote).
+# `verify-delivery` confirma a ENTREGA depois, separada da certificação.
 #
 set -uo pipefail
 
@@ -56,7 +62,7 @@ cd "$ROOT" || exit 1
 LOG_DIR="${SEAL_LOG_DIR:-/tmp/seal-release}"
 mkdir -p "$LOG_DIR"
 
-PHASES=(prepare candidate final publish consolidate)
+PHASES=(prepare candidate final consolidate certify publish verify-delivery)
 FROM_PHASE="prepare"
 DRY_RUN=0
 SKIP_PUSH=0
@@ -70,6 +76,15 @@ while [ $# -gt 0 ]; do
     *) echo "argumento desconhecido: $1" >&2; exit 2 ;;
   esac
 done
+
+# ── BUG CLOSURE FIRST (2026-10-17) ─────────────────────────────────────────────
+# Selagem é operação CERTIFICANTE: publica decisão de release. Não começa com
+# P0/P1 bloqueante aberto. `--dry-run` (plano) continua livre: planejar não
+# certifica. Exit 3 = recusado por defeito.
+source "$ROOT/scripts/governance/lib/bug-closure-guard.sh"
+if [ "$DRY_RUN" -eq 0 ]; then
+  exigir_elegibilidade SELO_FINAL "scripts/governance/seal-release.sh" || exit 3
+fi
 
 cyan() { printf '\033[0;36m%s\033[0m\n' "$1"; }
 ok()   { printf '\033[0;32m  ✓ %s\033[0m\n' "$1"; }
@@ -117,8 +132,20 @@ commit_and_push() {
     warn "push pulado (--skip-push)"
     return 0
   fi
-  git push origin main -q || return 1
-  ok "push ok"
+  # DEFEITO MEDIDO (2026-10-16): aqui era `git push origin main`, INCONDICIONAL. Com o
+  # selo rodando fora da `main`, isso empurrava a ref local `main` (parada) e imprimia
+  # "push ok" sem que o commit da branch em uso tivesse ido ao remoto — prova: `main`
+  # local e `origin/main` no mesmo SHA enquanto o HEAD estava 35 commits à frente, e 7
+  # commits `chore(governanca)` das fases do selo ficaram SÓ locais. "push ok" sem prova
+  # é falso relato. Agora publica a branch EM USO, nunca uma ref fixa.
+  local branch_atual
+  branch_atual="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)"
+  if [ "$branch_atual" = "HEAD" ]; then
+    warn "push pulado (HEAD destacado — não há branch para publicar)"
+    return 0
+  fi
+  git push origin "$branch_atual" -q || return 1
+  ok "push ok (branch $branch_atual)"
 }
 
 # ── Preflight ---------------------------------------------------------------
@@ -281,6 +308,17 @@ phase_prepare() {
     warn "RUN_SOURCE_DRIFT detectado — criando run governado do fingerprint atual"
     node scripts/governance/create-governed-run.js > "$LOG_DIR/create-run.log" 2>&1 || \
       fail "falha ao criar run governado" "$LOG_DIR/create-run.log" prepare
+
+    # PREFLIGHT fail-fast (P1-11): as 3 waves tecnicas passaram a ser conferidas
+    # contra o run corrente pelo validate-coverage-gate. Waves carimbadas com o
+    # run ANTERIOR degradam para STALE. Sem esta checagem o problema so
+    # apareceria no fim da converge (~35 min de QA Mesh) e o operador teria de
+    # reiniciar o ciclo — mesmo padrao do H17-PREFLIGHT-ASK-AI-TTL.
+    if ! node scripts/governance/check-wave-evidence-same-run.js > "$LOG_DIR/wave-same-run.log" 2>&1; then
+      cat "$LOG_DIR/wave-same-run.log" >&2 || true
+      fail "waves tecnicas pertencem a OUTRO run — regenere as waves DENTRO do run corrente (comandos no log) e rode novamente com --from prepare" "$LOG_DIR/wave-same-run.log" prepare
+    fi
+    ok "waves tecnicas conferem com o run corrente (SAME_RUN)"
     # DEFEITO MEDIDO (2026-10-06): o refresh acima roda ANTES de o run existir.
     # O proof set do scorecard exige evidência SAME_RUN, então o relatório
     # renascia com generatedAt < run.startedAt e a fase `candidate` reprovava em
@@ -408,18 +446,25 @@ phase_candidate() {
   ok "cadeia FINAL reexecutada e estampada dentro do run"
 
   local vlog="$LOG_DIR/verify-delivered.log"
-  timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-  if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-    ok "verify:delivered-release: $(grep -oE 'DELIVERED_[A-Z_]+' "$vlog" | tail -1)"
+  # Juiz fail-closed da ENTREGA (P1 2026-10-16). DEFEITO MEDIDO: aqui se fazia
+  #   `timeout 900 npm run verify:delivered-release > "$vlog" 2>&1`
+  # com o EXIT CODE DESCARTADO e o veredito vindo de
+  #   `grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"`,
+  # ou seja: (a) exit != 0 com texto positivo passava; (b) `DELIVERED_PENDING_SCORECARD`
+  # — estado PRÉ-pacote no vocabulário canônico — era aceito como entrega; (c) TEXTO de
+  # log era autoridade. Agora o veredito vem de `verify-delivery-strict.js`, que exige
+  # exit 0 + relatório estruturado + decisão permitida + identidade correspondente +
+  # cadeia RECALCULADA íntegra + gates PASS. O log é só diagnóstico.
+  if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+    ok "entrega verificada pelo juiz estrito"
   else
     # Armadilha: lineage de experience-segregation clobberado por varredura prévia.
-    warn "delivered não verificado — tentando reparar lineage e repetir"
+    warn "entrega não verificada — tentando reparar lineage e repetir"
     node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp-repair.log" 2>&1
-    timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-    if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-      ok "verify:delivered-release: reparado por stamp-report-lineage"
+    if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+      ok "entrega verificada após reparo de lineage"
     else
-      fail "verify:delivered-release falhou" "$vlog" candidate
+      fail "entrega NÃO verificada pelo juiz estrito (ver o `code=` do motivo)" "$vlog" candidate
     fi
   fi
 
@@ -505,7 +550,9 @@ phase_final() {
   printf '%s\n%s\n%s\n' "$RELEASE_ID" "$RELEASE_COMMIT" "$RELEASE_HFINAL" > "$LOG_DIR/release.env"
 }
 
-# ── Fase 4: publish ---------------------------------------------------------
+# ── Fase 6: publish — PUBLICAÇÃO (cria a tag) --------------------------------
+# Única fase que cria a tag. Roda DEPOIS da certificação (P0-3): uma falha em
+# qualquer gate pré-publicação impede chegar aqui.
 phase_publish() {
   step publish "tag imutável + proveniência remota + recibo + publicação"
 
@@ -551,12 +598,13 @@ phase_publish() {
     fail "falha ao commitar/pushar a fase publish" "$LOG_DIR/publication.log" publish
 }
 
-# ── Fase 5: consolidate -----------------------------------------------------
-# A varredura agregada roda AQUI (e não depois do selo) porque ela clobbera o
-# lineage de experience-segregation e invalida a projeção de jornada — as duas
-# reparações rodam imediatamente em seguida, na mesma fase.
+# ── Fase 4: consolidate — RECONCILIAÇÃO (pré-certificação) -------------------
+# A varredura agregada roda AQUI (e não depois da certificação) porque ela clobbera
+# o lineage de experience-segregation e invalida a projeção de jornada — as duas
+# reparações rodam imediatamente em seguida, na mesma fase. Esta fase RECONCILIA;
+# ela não certifica nem verifica a entrega (fases `certify` e `verify-delivery`).
 phase_consolidate() {
-  step consolidate "varredura agregada + aprovação de deploy + reparos (journey/stamp) + verificação final"
+  step consolidate "varredura agregada + reparos (journey/stamp) — reconciliação"
 
   # GUARD: reavalia o TTL do smoke contínuo IMEDIATAMENTE antes do agregado.
   #
@@ -646,6 +694,28 @@ phase_consolidate() {
     ok "gate agregado após reparo: EXIT 0"
   fi
 
+  # Persiste a reconciliação ANTES de certificar: a fase seguinte declara sobre um
+  # estado limpo e a retomada (`--from <fase>`) exige worktree limpo.
+  commit_and_push "chore(governance): reconciliação do ciclo de selagem (gate agregado)" || \
+    fail "falha ao commitar/pushar a reconciliação" "$alog" consolidate
+}
+
+# ── Fase 5: certify — CERTIFICAÇÃO PRÉ-PUBLICAÇÃO (P0-3) ─────────────────────
+#
+# POR QUE ESTA FASE EXISTE, E POR QUE ELA VEM ANTES DE `publish`
+# Ordem anterior: prepare → candidate → final → publish → consolidate. Os gates
+# obrigatórios (gate agregado, aprovação de deploy, prova de runtime do mcp-research
+# e a cadeia criptográfica) rodavam DEPOIS de a TAG já estar publicada. Medido em
+# 2026-10-15/16: TRÊS ciclos abortaram no `consolidate` com a tag já no remote, e a
+# saída era regenerar evidência e retomar a fase. Publicar antes de certificar
+# inverte a autoridade: a tag é a promessa pública de que os gates passaram.
+#
+# Esta fase contém apenas ASSERTIVAS sobre o estado já congelado (não gera pacote):
+# aprovação de deploy, cadeia criptográfica reconstruída e verificada contra os
+# BYTES atuais, e a prova de runtime. Só depois de todas passarem é que a fase
+# `publish` cria a tag — uma falha aqui IMPEDE a publicação, que é o critério de
+# aceite da missão.
+phase_certify() {
   # ── Aprovação de deploy do artefato selado ───────────────────────────────
   # `system:deploy` exige um sidecar `<release>.approval.json` com goNoGo=GO.
   # Metadados de aprovação NÃO podem ir no manifest do payload: o hash desse
@@ -655,11 +725,11 @@ phase_consolidate() {
   # `system:deploy` falhava com
   # `artifact_missing:no_zip_with_audit_passed_and_go_no_go_go`, porque o
   # `qa/release-manifest.json` vigente ainda era de 2026-09-08.
-  # Roda DEPOIS das reparações de projeção/lineage (acima) porque go/no-go
+  # Roda DEPOIS das reparações de projeção/lineage (fase anterior) porque go/no-go
   # regenera artefatos derivados; o `commit_and_push` logo abaixo persiste o
-  # resultado e o `verify:delivered-release` (último) é o juiz fail-closed de
-  # que o estado final continua íntegro.
-  step consolidate "aprovação de deploy do artefato selado"
+  # resultado e a fase `verify-delivery` é o juiz fail-closed de que o estado final
+  # continua íntegro.
+  step certify "aprovação de deploy do artefato selado"
   if timeout 900 npm run system:go-no-go > "$LOG_DIR/go-no-go.log" 2>&1 \
     && timeout 900 npm run system:release-manifest > "$LOG_DIR/release-manifest.log" 2>&1; then
     # Estado da fase `final` (release.env) ou, se perdido (reboot limpa /tmp), o
@@ -667,7 +737,7 @@ phase_consolidate() {
     local release_name=""
     release_name="$(resolve_release_name || true)"
     if [ -z "$release_name" ]; then
-      fail "estado do release indisponível: release.env ausente e dist/release sem envelope único — rode a fase final primeiro" "$LOG_DIR/release-manifest.log" consolidate
+      fail "estado do release indisponível: release.env ausente e dist/release sem envelope único — rode a fase final primeiro" "$LOG_DIR/release-manifest.log" certify
     fi
     local approval="dist/release/${release_name}.approval.json"
     if [ -n "$release_name" ] && [ -f "$approval" ] && node -e "
@@ -676,10 +746,90 @@ phase_consolidate() {
     " 2>/dev/null; then
       ok "aprovação de deploy: $(basename "$approval") (goNoGo=GO, approvedForDeploy=true)"
     else
-      fail "artefato selado sem aprovação de deploy válida — system:deploy ficaria bloqueado (artifact_missing:no_zip_with_audit_passed_and_go_no_go_go)" "$LOG_DIR/release-manifest.log" consolidate
+      fail "artefato selado sem aprovação de deploy válida — system:deploy ficaria bloqueado (artifact_missing:no_zip_with_audit_passed_and_go_no_go_go)" "$LOG_DIR/release-manifest.log" certify
     fi
   else
-    fail "falha ao gerar a aprovação de deploy (system:go-no-go / system:release-manifest)" "$LOG_DIR/release-manifest.log" consolidate
+    fail "falha ao gerar a aprovação de deploy (system:go-no-go / system:release-manifest)" "$LOG_DIR/release-manifest.log" certify
+  fi
+
+  # ── CERTIFICAÇÃO DA CADEIA CRIPTOGRÁFICA (P0-2) ─────────────────────────────
+  #
+  # DEFEITO MEDIDO (2026-10-16): a cadeia (`governance/governance-chain.json` — 10
+  # camadas, cada uma com o hash dos BYTES de um membro) é construída na fase
+  # `final`, dentro do two-pass. O `consolidate` reescreve 4-5 desses membros DEPOIS
+  # disso: `system:go-no-go` (→ platform-readiness) regrava
+  # `evidence-manifest.json`, `final-proof-report.json`, `final-readiness-report.json`
+  # e `package-validation-report.json`; `materialize-proof-artifacts` regrava
+  # `proof-signature.json`. Nenhum passo reconstruía a cadeia aqui, então TODO ciclo
+  # terminava com a cadeia estruturalmente INVÁLIDA:
+  # `governance-chain.js --verify` acusava 9 divergências (hash_mismatch ×5,
+  # cumulative_hash_broken ×3, chain_root_mismatch ×1) — e o único gate que recomputa
+  # (`validate:governance-chain`) não estava em nenhum lugar do pipeline. A
+  # verificação existia e ninguém a executava.
+  #
+  # A reconstrução usa o caminho SANCIONADO (`governance/sign-governance.js` →
+  # `preSign`: buildChain + atestação ligada à raiz definitiva + assinaturas), nunca
+  # um "conserto" manual da cadeia. `--env-file-if-exists=.env` é OBRIGATÓRIO: sem
+  # ele o `deriveGovernanceKey` fica sem a raiz de assinatura e o preSign aborta com
+  # `REPLAY_SIGNING_KEY_REQUIRED` DEPOIS de gravar a cadeia — deixando o par
+  # cadeia↔atestado divergente, pior que não rodar (medido).
+  step certify "congela e certifica a cadeia criptográfica (raiz definitiva)"
+  if node --env-file-if-exists=.env governance/sign-governance.js > "$LOG_DIR/chain-sign.log" 2>&1; then
+    ok "cadeia reconstruída e assinada ($(grep -oE 'chainRoot=[0-9a-f]{16}' "$LOG_DIR/chain-sign.log" | tail -1))"
+  else
+    fail "reconstrução/assinatura da cadeia falhou — o selo não certifica uma cadeia inválida" "$LOG_DIR/chain-sign.log" certify
+  fi
+
+  # O sign-governance grava o atestado em `dist/governance-artifacts/`; a cópia do
+  # workspace (lida pelo self-proving) ficaria apontando para a raiz ANTIGA. Mesma
+  # propagação do two-pass — uma regra só, sem implementação paralela.
+  for src in "$ROOT/dist/governance-artifacts/governance-attestation.json" "$ROOT/dist/governance-attestation.json"; do
+    if [ -f "$src" ]; then
+      cp "$src" "$ROOT/governance/governance-attestation.json"
+      ok "atestado propagado para o workspace (ligado à raiz definitiva)"
+      break
+    fi
+  done
+
+  # ── STAGING TRANSITÓRIO (DEFEITO MEDIDO 2026-10-16) ────────────────────────
+  #
+  # `sign-governance.js` RECRIA `dist/governance-artifacts/` — o staging que o
+  # empacotamento inclui no ZIP. Medido: essa sobra derruba o agregado no passo
+  # `validate:dist`, porque `scripts/check-dist-clean.sh` acusa
+  #   "Arquivos/dirs inesperados na raiz de dist/: governance-artifacts"
+  # (o ZIP já foi construído na fase `candidate`, e o `release-package.sh`
+  # remove o staging ao final do empacotamento).
+  #
+  # A limpeza aqui é a MESMA operação do empacotamento ("Remover
+  # governance-artifacts/ de releases anteriores"), não um relaxamento de gate:
+  # o atestado já foi propagado para o workspace e nenhum passo entre `certify` e
+  # `verify-delivery` lê o staging (`verify-delivered-release` lê o manifesto e os
+  # relatórios canônicos).
+  rm -rf "$ROOT/dist/governance-artifacts"
+
+  # O gate RECALCULA os bytes atuais e compara com a cadeia gravada. Bloqueante: uma
+  # cadeia que não fecha significa que algum documento certificado mudou depois do
+  # hash — exatamente a classe de defeito que este bloco existe para impedir.
+  local clog="$LOG_DIR/chain-verify.log"
+  if node scripts/governance/validate-governance-chain.js > "$clog" 2>&1; then
+    ok "cadeia verificada: $(grep -oE 'status=[A-Z_]+' "$clog" | tail -1)"
+  else
+    fail "cadeia criptográfica INVÁLIDA após a certificação — os hashes não correspondem à raiz definitiva" "$clog" certify
+  fi
+
+  # ASSERTIVA CANÔNICA (P0-4): a pergunta que a PUBLICAÇÃO exige não é "algum gate
+  # disse GO?", e sim "este artefato está em GO DEFINITIVO segundo a autoridade
+  # única?". Os gates checavam isso com vocabulários próprios, e estado pré-pacote
+  # (`PASS_WITH_DEFERRED_PACKAGE_GATE`, `AUTONOMOUS_READY` sem `_GO`) passava como
+  # aprovado em três consumidores medidos. Aqui a resposta vem de um lugar só
+  # (`governance/canonical-release-decision.js`), sobre os artefatos REAIS do selo,
+  # com versão do vocabulário e checagem de identidade: GO de outro candidato não vale.
+  # Bloqueante — sem GO definitivo, a fase `publish` nem começa.
+  local dlog="$LOG_DIR/canonical-decision.log"
+  if node --env-file-if-exists=.env scripts/governance/assert-canonical-release-decision.js > "$dlog" 2>&1; then
+    ok "decisão canônica: $(tail -1 "$dlog")"
+  else
+    fail "artefato selado NÃO está em GO definitivo — a publicação fica impedida (cadeia: decisão canônica P0-4)" "$dlog" certify
   fi
 
   # MCP_RESEARCH_DOCKER_E2E: no agregado o gate sai 0 com REQUIRES_DOCKER_RUNTIME
@@ -688,29 +838,59 @@ phase_consolidate() {
   if node scripts/governance/verify-mcp-research-docker-e2e-pass.js > "$LOG_DIR/mcp-e2e.log" 2>&1; then
     ok "MCP_RESEARCH_DOCKER_E2E: relatório PASS fresco"
   else
-    fail "MCP_RESEARCH_DOCKER_E2E não verde (release final não existe sem a prova de runtime)" "$LOG_DIR/mcp-e2e.log" consolidate
+    fail "MCP_RESEARCH_DOCKER_E2E não verde (release final não existe sem a prova de runtime)" "$LOG_DIR/mcp-e2e.log" certify
   fi
 
-  commit_and_push "chore(governance): consolidação final do ciclo de selagem" || \
-    fail "falha ao commitar/pushar a fase consolidate" "$alog" consolidate
+  # A certificação termina persistindo o resultado. A fase `publish` cria a tag
+  # sobre ESTE estado; a retomada (`--from certify`) exige worktree limpo.
+  commit_and_push "chore(governance): certificação final do ciclo de selagem" || \
+    fail "falha ao commitar/pushar a certificação" "$alog" certify
+}
 
-  # ÚLTIMA etapa: verificação do release entregue. Nada de rodar o agregado depois.
+# ── Fase 7: verify-delivery — CONFIRMAÇÃO DE ENTREGA (pós-publicação) ────────
+#
+# Deliberadamente SEPARADA da certificação (P0-3): a certificação afirma sobre o
+# artefato ANTES de publicar; esta fase confirma o ENTREGUE depois. Amarrar as duas
+# foi o defeito — uma falha de gate ocorria com a tag já no remote. Aqui só rodam
+# verificações (mais o repasse de lineage, que é reparo de metadado): nada capaz de
+# reabrir a decisão de certificar.
+phase_verify_delivery() {
+  # Etapa final: verificação do release entregue. Nada de rodar o agregado depois.
+  # Mesmo juiz fail-closed da fase `candidate` (ver comentário lá): exit code +
+  # relatório estruturado + decisão permitida + identidade + cadeia recalculada.
   local vlog="$LOG_DIR/verify-final.log"
-  timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-  if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-    ok "verify:delivered-release: $(grep -oE 'DELIVERED_[A-Z_]+' "$vlog" | tail -1)"
+  if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+    ok "entrega verificada pelo juiz estrito ($(grep -oE 'code=[A-Z_]+' "$vlog" | tail -1 || echo ''))"
   else
-    warn "verify:delivered-release falhou — repetindo o reparo de lineage"
+    warn "entrega não verificada — repetindo o reparo de lineage"
     node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp2.log" 2>&1
     git add -A >/dev/null 2>&1
     git commit -q -m "fix(governance): re-stampa lineage clobberado pela varredura agregada" >/dev/null 2>&1
-    git push origin main -q >/dev/null 2>&1
-    timeout 900 npm run verify:delivered-release > "$vlog" 2>&1
-    if grep -qE 'DELIVERED_RELEASE_VERIFIED|DELIVERED_PENDING_SCORECARD' "$vlog"; then
-      ok "verify:delivered-release: reparado"
-    else
-      fail "verify:delivered-release falhou após reparo" "$vlog" consolidate
+    # O reparo persiste na branch ATUAL. Sem push embutido para `main`: o selo não
+    # publica em branch protegida nem empurra ref que não seja a que está em uso
+    # (era `git push origin main` — medido e removido em 2026-10-16).
+    local branch_atual
+    branch_atual="$(git rev-parse --abbrev-ref HEAD)"
+    if [ "$branch_atual" != "main" ] && [ "$branch_atual" != "master" ] && [ "$branch_atual" != "HEAD" ]; then
+      git push origin "$branch_atual" -q >/dev/null 2>&1 || warn "push do reparo de lineage falhou (não bloqueante)"
     fi
+    if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
+      ok "entrega verificada após reparo de lineage"
+    else
+      fail "entrega NÃO verificada pelo juiz estrito após reparo" "$vlog" verify-delivery
+    fi
+  fi
+
+  # FECHO DA CERTIFICAÇÃO (P0-2): o requisito é "qualquer alteração POSTERIOR ao
+  # congelamento provoca NO_GO". Como o gate recalcula os BYTES atuais, reexecutá-lo
+  # no último ponto do ciclo prova que nada — nem o `verify:delivered-release`, nem o
+  # repasse de lineage logo acima — mexeu em documento certificado. Sem este fecho, a
+  # certificação seria uma promessa, não uma verificação.
+  local clogf="$LOG_DIR/chain-verify-final.log"
+  if node scripts/governance/validate-governance-chain.js > "$clogf" 2>&1; then
+    ok "cadeia íntegra no fecho (nada alterado após o congelamento)"
+  else
+    fail "documento certificado foi MODIFICADO depois do congelamento — cadeia inválida no fecho do ciclo" "$clogf" verify-delivery
   fi
 
   echo
@@ -739,23 +919,43 @@ if [ "$DRY_RUN" = "1" ]; then
   echo "  2. candidate    zip:release (exit 1 esperado) -> verify:delivered-release -> scorecard below10=0"
   echo "                 -> projeções PASS -> fixpoint -> commit+push"
   echo "  3. final        zip:release (exit 0) -> release/commit/H_final do MANIFEST -> commit no remote"
-  echo "  4. publish      create-release-tag -> verify-remote-provenance --manifest -> recibo -> publication"
-  echo "  5. consolidate  gate agregado (BLOQUEANTE: exit != 0 após reparos ABORTA o seal)"
-  echo "                 -> aprovação de deploy: go-no-go + release-manifest (sidecar com goNoGo=GO)"
-  echo "                 -> MCP_RESEARCH_DOCKER_E2E exige relatório PASS fresco (BLOQUEANTE)"
+  echo "  4. consolidate  gate agregado (BLOQUEANTE: exit != 0 após reparos ABORTA o seal)"
   echo "                 -> journey:projections -> stamp-report-lineage -> commit+push"
-  echo "                 -> verify:delivered-release (ÚLTIMO)"
+  echo "  5. certify      CERTIFICAÇÃO PRÉ-PUBLICAÇÃO (falha aqui IMPEDE a criação da tag)"
+  echo "                 -> aprovação de deploy: go-no-go + release-manifest (sidecar com goNoGo=GO)"
+  echo "                 -> cadeia criptográfica reconstruída + verificada contra os bytes atuais (BLOQUEANTE)"
+  echo "                 -> MCP_RESEARCH_DOCKER_E2E exige relatório PASS fresco (BLOQUEANTE)"
+  echo "  6. publish      create-release-tag -> verify-remote-provenance --manifest -> recibo -> publication"
+  echo "  7. verify-delivery  verify:delivered-release (juiz fail-closed da ENTREGA, pós-publicação)"
+  echo "                 -> fecho: cadeia reconferida (alteração pós-congelamento => NO_GO)"
   echo
   echo "  Fases: ${PHASES[*]}"
   echo "  A partir de: $FROM_PHASE"
   exit 0
 fi
 
+# `verify-delivery` é o nome canônico da fase e NÃO é um identificador bash válido
+# (hífen). O despacho é explícito, nunca por `phase_$phase`: a expansão falharia com
+# "command not found" e o ciclo terminaria SEM a verificação final — o pior desfecho
+# possível (declarar concluído sem verificar a entrega).
+dispatch_phase() {
+  case "$1" in
+    prepare)         phase_prepare ;;
+    candidate)       phase_candidate ;;
+    final)           phase_final ;;
+    consolidate)     phase_consolidate ;;
+    certify)         phase_certify ;;
+    publish)         phase_publish ;;
+    verify-delivery) phase_verify_delivery ;;
+    *) return 1 ;;
+  esac
+}
+
 STARTED=0
 for phase in "${PHASES[@]}"; do
   if [ "$phase" = "$FROM_PHASE" ]; then STARTED=1; fi
   [ "$STARTED" = "1" ] || { warn "pulando fase $phase"; continue; }
-  "phase_$phase"
+  dispatch_phase "$phase" || { bad "fase sem implementação: $phase"; echo "  válidas: ${PHASES[*]}"; exit 2; }
 done
 
 [ "$STARTED" = "1" ] || { bad "fase desconhecida: $FROM_PHASE"; echo "  válidas: ${PHASES[*]}"; exit 2; }

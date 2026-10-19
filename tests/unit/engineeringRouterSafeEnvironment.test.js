@@ -54,6 +54,25 @@ describe('ERV1-CLOSE-002 — environment seguro + redação de output', () => {
   let workspace;
   const previousEnv = {};
 
+  /**
+   * O comando do sandbox pode NÃO CONCLUIR sob carga (a suíte oficial roda em 11 workers e cada
+   * execução sobe um container). Medido (2026-10-18): sem retry, o teste acusava "redação falhou"
+   * quando na verdade o filho tinha estourado o deadline e produzido saída VAZIA — infra
+   * disfarçada de defeito de segurança. Aqui a repetição é LIMITADA (2x) e só ocorre quando o
+   * runner declara `timedOut`/infra; falha de asserção continua falhando de imediato.
+   */
+  async function executarComRetryDeInfra(opcoes, tentativas = 2) {
+    let ultimo;
+    for (let i = 0; i < tentativas; i += 1) {
+      ultimo = await runTestCommands(opcoes);
+      const r = ultimo.results[0] || {};
+      const infra = r.timedOut === true
+        || ['TIMEOUT', 'INFRA_ERROR', 'SANDBOX_UNAVAILABLE', 'SANDBOX_INVALID_WORKSPACE'].includes(String(r.status));
+      if (!infra) return ultimo;
+    }
+    return ultimo;
+  }
+
   beforeEach(() => {
     // CONTRATO DO RUNNER: o cwd da execução precisa estar sob `ENGINEERING_ROUTER_WORKSPACE_ROOT`
     // (o runner recusa qualquer outro com `cwd_not_allowed`). Criar o workspace no TMPDIR do host
@@ -86,7 +105,7 @@ describe('ERV1-CLOSE-002 — environment seguro + redação de output', () => {
   });
 
   test('subprocess não recebe nenhum secret real por default (env sandboxed)', async () => {
-    const { results } = await runTestCommands({
+    const { results } = await executarComRetryDeInfra({
       taskId: 'erv1-close-002-env',
       attemptNumber: 1,
       commands: ['node tests/fixtures/engineering-router-sandbox/printEnvProbe.js'],
@@ -107,7 +126,7 @@ describe('ERV1-CLOSE-002 — environment seguro + redação de output', () => {
   });
 
   test('output que imprime segredo em formato KEY=VALUE é redigido antes de persistir', async () => {
-    const { results } = await runTestCommands({
+    const { results } = await executarComRetryDeInfra({
       taskId: 'erv1-close-002-redact',
       attemptNumber: 1,
       commands: ['node tests/fixtures/engineering-router-sandbox/printHardcodedSecretProbe.js'],
@@ -132,7 +151,7 @@ describe('ERV1-CLOSE-002 — environment seguro + redação de output', () => {
     const relScript = 'tests/fixtures/engineering-router-sandbox/print-home-probe.js';
     fs.writeFileSync(path.join(workspace, relScript), "console.log('HOME_SEEN=' + process.env.HOME);");
 
-    const { results } = await runTestCommands({
+    const { results } = await executarComRetryDeInfra({
       taskId: 'erv1-close-002-home',
       attemptNumber: 1,
       commands: [`node ${relScript}`],

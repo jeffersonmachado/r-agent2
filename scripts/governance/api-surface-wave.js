@@ -232,6 +232,10 @@ async function loginProductionRole(bearerToken) {
 }
 
 async function main() {
+  // BUG CLOSURE FIRST (2026-10-17): wave técnica é operação extensiva.
+  require('../../governance/bug-closure/require-eligibility')
+    .exigirElegibilidade('QA_WAVES_COMPLETA', { actor: 'scripts/governance/api-surface-wave.js' });
+
   const inventory = JSON.parse(fs.readFileSync(INVENTORY_PATH, 'utf8'));
   let exemptions = {};
   try {
