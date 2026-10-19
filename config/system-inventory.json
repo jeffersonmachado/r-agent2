@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-17T06:28:57.343Z",
+  "generatedAt": "2026-10-19T20:28:55.548Z",
   "counts": {
-    "total": 3999,
+    "total": 4007,
     "byKind": {
-      "api": 916,
-      "field": 2477,
-      "model": 223,
+      "api": 918,
+      "field": 2481,
+      "model": 224,
       "page": 151,
       "relation": 9,
-      "table": 223
+      "table": 224
     },
     "byClassification": {
-      "PRODUCTION": 3695,
+      "PRODUCTION": 3703,
       "DEVELOPMENT": 212,
       "SUPPORT": 92
     },
@@ -1912,9 +1912,7 @@
       "source": "api/modules/domain-operations/routes.js",
       "authRequired": true,
       "authorization": [
-        "checkPermission:read",
         "ensurePermission:reports:read",
-        "resolveAuth",
         "resolveAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
@@ -1926,7 +1924,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "42a211c04137dcd540281e7f7ae611dbd2650bb4111a3e940b5c42b575709c17"
+      "fingerprint": "a951ce38991eef4a26af3a3a405e65f3f4c4d6bd8c2ff2986c8fc2222b2302d8"
     },
     {
       "id": "api:GET:/api/crm/contacts",
@@ -9588,6 +9586,24 @@
       "technicalWave": "security",
       "linkedJourneys": [],
       "fingerprint": "5f0f6101e2e4a4325ca63525c1e1ede3eb6a3e344f2f86ff9f414963b1bf6e81"
+    },
+    {
+      "id": "api:PATCH:/api/crm/opportunities/:id",
+      "kind": "api",
+      "method": "PATCH",
+      "path": "/api/crm/opportunities/:id",
+      "module": "crm",
+      "source": "api/modules/crm/routes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "da3d4e31abc3046ce8c44f774f50874c60d9ee468eb93e606c6f30ce63889731"
     },
     {
       "id": "api:PATCH:/api/marketing/leads/:leadId",
@@ -17960,6 +17976,24 @@
         "workspace"
       ],
       "fingerprint": "b59aa731c3e03035df23b04decc1d6c50fa392e98408c8a266075b0f866d14de"
+    },
+    {
+      "id": "api:PUT:/api/crm/opportunities/:id",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/api/crm/opportunities/:id",
+      "module": "crm",
+      "source": "api/modules/crm/routes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "417048d0f58bdaabc7335555d46650d4fcfeb9329ee8ce1afd6bdc50edd56a89"
     },
     {
       "id": "api:PUT:/api/intelligence/goals/:id",
@@ -26690,6 +26724,86 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "32fac3a632d2d6b5b85508b801e0f5ee7d0e9770e16ffcdc6c061d47267b8727"
+    },
+    {
+      "id": "field:CrmRecord.entity",
+      "kind": "field",
+      "model": "CrmRecord",
+      "field": "entity",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CrmRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8fd06561273cc0b82b4f1894c78ee76cd99daa253b52f6560e5d23fc18edcec7"
+    },
+    {
+      "id": "field:CrmRecord.id",
+      "kind": "field",
+      "model": "CrmRecord",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CrmRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e3146232dd7b294632bec3263656037d3fe9896499fb71f2ee0e4bca9471ee77"
+    },
+    {
+      "id": "field:CrmRecord.payload",
+      "kind": "field",
+      "model": "CrmRecord",
+      "field": "payload",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CrmRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "939ec230957ca0a84b4cf70a46c92d0656ff9539b1f15760d2f05ac91f7e826b"
+    },
+    {
+      "id": "field:CrmRecord.tenant_key",
+      "kind": "field",
+      "model": "CrmRecord",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CrmRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d6dde3848d5966d6ea7a345fe464da1749d9cf58a4c4a112656d7ab166bc8bf2"
     },
     {
       "id": "field:Delivery.context",
@@ -67199,6 +67313,23 @@
       "fingerprint": "f4336baa8cb8072eaca8c9f846c14369a9f20f45446f3a83a07603882d42948c"
     },
     {
+      "id": "model:CrmRecord",
+      "kind": "model",
+      "model": "CrmRecord",
+      "tableName": "crm_records",
+      "fieldCount": 4,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CrmRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "71f69700da2379e594f59eb905102ef84e9f388492692bd3c2b68e86369732a5"
+    },
+    {
       "id": "model:Delivery",
       "kind": "model",
       "model": "Delivery",
@@ -75190,6 +75321,41 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "2c46a4a28753dd26af7021e22dfc23da388cc103086f747a980e8fcd37983317"
+    },
+    {
+      "id": "table:crm_records",
+      "kind": "table",
+      "table": "crm_records",
+      "model": "CrmRecord",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "entity"
+          ],
+          "name": "crm_records_tenant_entity_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "entity",
+            "updated_at"
+          ],
+          "name": "crm_records_tenant_entity_updated_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CrmRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "capability_crm_updates"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "526a0d4941a71aa385d4bc65d1f50c7b3f0bf4ec1029a9646633f9fe9f53bbb1"
     },
     {
       "id": "table:deliveries",

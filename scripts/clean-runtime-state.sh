@@ -46,6 +46,25 @@ RUNTIME_DIRS=(
   "frontend/test-results"
   "qa/release-evidence"
   "qa-mesh/meshEvidence"
+  # DEFEITO MEDIDO (selo 2026-10-19, `seal-time-gate` SEAL_NO_GO):
+  # `governance/cleanup-proof.json` saía com `workspaceClean: false` e
+  # `workspaceArtifacts: ["test-results"]` porque o Playwright pode gravá-lo na
+  # RAIZ (não só em frontend/ e rag-service/, que já estavam listados). Com isso
+  # o proof engine marcava `cleanup_status` como ausente
+  # (governance/proof-engine/index.js: runtimeClean && workspaceClean) e o gap
+  # `gap-proof-governance-support` ficava aberto para sempre — nenhum selo
+  # fechava. É resíduo de teste gitignored (`.gitignore:213`), não evidência
+  # governada.
+  #
+  # A lista abaixo tem de cobrir EXATAMENTE o que
+  # `governance/materialize-proof-artifacts.js` inspeciona em
+  # `workspaceArtifacts` — divergência entre limpador e produtor torna o gate
+  # insatisfazível por construção. Contrato travado por
+  # tests/unit/governance/cleanupProofContract.test.js.
+  "test-results"
+  "playwright-report"
+  "frontend-e2e/test-results"
+  "frontend-e2e/playwright-report"
   # qa-mesh/meshHistory NÃO é resíduo: é evidência governada exigida por
   # validate:qa-governance (execução canônica). A retenção é do próprio mesh
   # (5 canônicos + 5 não-canônicos), policiada por validate:cleanup, e o

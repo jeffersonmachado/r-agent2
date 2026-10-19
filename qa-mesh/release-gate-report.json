@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-19T18-38-34-650Z",
+  "executionId": "mesh-2026-10-19T19-49-26-736Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "NO_GO",
+  "gate": "GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-19T18-38-34-650Z",
+    "executionId": "mesh-2026-10-19T19-49-26-736Z",
     "tenantId": "system",
-    "timestamp": "2026-10-19T18:38:34.650Z",
+    "timestamp": "2026-10-19T19:49:26.736Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,12 +31,12 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 142,
+    "passed": 144,
     "fallbackPassed": 0,
-    "failed": 1,
+    "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
-    "environmentMissing": 1,
+    "environmentMissing": 0,
     "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
@@ -81,12 +81,12 @@
         "total": 2
       },
       "core": {
-        "passed": 88,
+        "passed": 90,
         "fallbackPassed": 0,
-        "failed": 1,
+        "failed": 0,
         "skipped": 0,
         "infra_error": 0,
-        "environment_missing": 1,
+        "environment_missing": 0,
         "flaky": 0,
         "total": 90
       },
@@ -171,22 +171,10 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "CRITICAL_DOMAIN_FAILED:core",
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "core": {
-        "total": 2,
-        "blocking": 0,
-        "byType": {
-          "functional_failure": 1,
-          "environment_missing": 1
-        },
-        "successRate": 0.9777777777777777
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -200,6 +188,12 @@
         "successRate": 1
       },
       "clinic": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -254,52 +248,37 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "functional_failure": 1,
-      "environment_missing": 1
-    },
-    "topErrors": [
-      {
-        "message": "Pagina /channel-accounts renderizou vazia",
-        "count": 1
-      },
-      {
-        "message": "500 Internal Server Error: Provider de IA 'qwen' indisponível (circuit breaker aberto).",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-19T18-38-34-650Z",
-      "startedAt": "2026-10-19T18:38:34.650Z",
+      "executionId": "mesh-2026-10-19T19-49-26-736Z",
+      "startedAt": "2026-10-19T19:49:26.736Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-19T19:13:48.209Z",
+      "promotedAt": "2026-10-19T20:26:17.952Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [
-    "CRITICAL_DOMAIN_FAILED:core",
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-19T18-38-34-650Z",
-    "startedAt": "2026-10-19T18:38:34.650Z",
+    "executionId": "mesh-2026-10-19T19-49-26-736Z",
+    "startedAt": "2026-10-19T19:49:26.736Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-19T19:13:48.209Z",
+    "promotedAt": "2026-10-19T20:26:17.952Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "artifactType": "release-gate-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261019181447045-fa92c059",
-  "sourceFingerprint": "fe439ac15ee51c477f07ab580f295a7a7110d06bd576cc15e7f54397e5ce5d11",
-  "sourceCommit": "bfe573ae8656ee2506106de4bc4b7c64b2698205",
-  "sourceTree": "0783210124a65360bee4d712db60df75def0eba9",
-  "generatedAt": "2026-10-19T19:13:48.214Z"
+  "runId": "rap-governed-20261019192244262-9cfccff1",
+  "sourceFingerprint": "552ada7da67ab409147dfa703179b6903bba3374b2075b6da10171a0e41b9ab2",
+  "sourceCommit": "d85174d476f54220bb320bcb14e611b3e28ab100",
+  "sourceTree": "8f801ff762436e78b9dc4f15eac53dff52cffb9d",
+  "generatedAt": "2026-10-19T20:26:17.954Z"
 }

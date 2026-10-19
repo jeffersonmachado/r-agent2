@@ -1,46 +1,8 @@
 {
-  "generatedAt": "2026-10-19T19:13:48.987Z",
-  "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
+  "generatedAt": "2026-10-19T20:38:12.420Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
   "platformMaturity": "enterprise-partial",
   "backlog": [
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-core-functional_failure-business-core-biz-channel-accounts",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio core",
-      "evidence": {
-        "scenarios": [
-          "business-core-biz-channel-accounts"
-        ],
-        "sampleError": "Pagina /channel-accounts renderizou vazia"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-core-environment_missing-business-core-biz-flows-editor",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio core",
-      "evidence": {
-        "scenarios": [
-          "business-core-biz-flows-editor"
-        ],
-        "sampleError": "500 Internal Server Error: Provider de IA 'qwen' indisponível (circuit breaker aberto)."
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
     {
       "id": "gap-proof-governance-support",
       "severity": "critical",
@@ -55,16 +17,8 @@
         ]
       },
       "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
-    },
-    {
-      "id": "current_run_temporal_integrity",
-      "severity": "critical",
-      "area": "governance",
-      "title": "Evidência autoritativa pré-run não pode sustentar a decisão do run",
-      "detail": "status=FAIL fase=CONVERGE preRunArtifacts=0 pendingPhase=0 violations=1",
-      "suggestedFix": "npm run ensure:authoritative-artifacts-fresh && npm run validate:current-run-temporal-integrity"
     }
   ],
-  "blocking": 4,
+  "blocking": 1,
   "nonBlocking": 0
 }
