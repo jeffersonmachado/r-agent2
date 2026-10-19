@@ -1,8 +1,9 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useRouter } from '../../hooks/useRouter';
 import { CrmPage } from './CrmPage';
-import { buildApiUrl } from '../../api/client';
+import { fetchJson } from '../../api/client';
 import { getAuthHeaders } from '../../api/auth';
+import { useWebSocketContext } from '../../context/WebSocketContext';
 import logger from '../../utils/logger';
 import { CrudPageBase } from '../../modules/crud-base';
 
@@ -46,48 +47,69 @@ function CrmDashboardContent() {
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Buscar métricas do CRM
-  useEffect(() => {
-    const fetchCrmMetrics = async () => {
-      try {
-        const headers = getAuthHeaders();
-        if (!headers.Authorization) {
-          setLoadingMetrics(false);
-          return;
-        }
-        
-        const response = await fetch(buildApiUrl('/api/crm/analytics/dashboard'), {
-          headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const { summary, opportunity } = data.dashboard || {};
-          
-          setCrmMetrics({
-            accounts: summary?.totalAccounts || 0,
-            contacts: summary?.totalContacts || 0,
-            leads: summary?.totalLeads || 0,
-            opportunities: summary?.totalOpportunities || 0,
-            pipelineValue: opportunity?.totalValue || 0,
-            winRate: opportunity?.winRate || '0%',
-          });
-        }
-      } catch (err) {
-        logger.error('[CRM] Erro ao carregar métricas', err);
-      } finally {
-        setLoadingMetrics(false);
-      }
-    };
+  // Buscar métricas do CRM.
+  //
+  // DOIS DEFEITOS MEDIDOS nesta tela (aba real em /crm, 2026-10-19):
+  //
+  // 1) ARQUITETURA: o painel sincronizava estado com `setInterval` de 60 s. A
+  //    regra do projeto PROÍBE polling para estado — o caminho correto é push.
+  //    O backend emite `crm.metrics.updated` em toda mutação de conta/contato/
+  //    lead/pipeline/oportunidade/atividade e a tela reage ao evento. Sem intervalo.
+  // 2) ROBUSTEZ: era `fetch` cru, sem timeout/abort. Com a conexão pendurada,
+  //    cada poll deixava uma requisição aberta para sempre; elas se acumulavam,
+  //    esgotavam o pool de conexões do browser para a origem e a aba inteira
+  //    parava de responder (até o reload travava), com o console repetindo
+  //    "Unexpected end of JSON input" (200 com corpo vazio tratado como
+  //    `response.ok`). `fetchJson` traz AbortController + timeout e mensagem de
+  //    erro legível.
+  const emAndamento = useRef(false);
 
+  const fetchCrmMetrics = useCallback(async () => {
+    if (emAndamento.current) return;
+    try {
+      const headers = getAuthHeaders();
+      if (!headers.Authorization) {
+        setLoadingMetrics(false);
+        return;
+      }
+
+      emAndamento.current = true;
+      const data = await fetchJson('/api/crm/analytics/dashboard', {
+        timeoutMs: 15000,
+        silent: true,
+      });
+      const { summary, opportunity } = data.dashboard || {};
+
+      setCrmMetrics({
+        accounts: summary?.totalAccounts || 0,
+        contacts: summary?.totalContacts || 0,
+        leads: summary?.totalLeads || 0,
+        opportunities: summary?.totalOpportunities || 0,
+        pipelineValue: opportunity?.totalValue || 0,
+        winRate: opportunity?.winRate || '0%',
+      });
+    } catch (err) {
+      logger.error('[CRM] Erro ao carregar métricas', err);
+    } finally {
+      emAndamento.current = false;
+      setLoadingMetrics(false);
+    }
+  }, []);
+
+  // Leitura inicial (remontagem por troca de tenant refaz a leitura).
+  useEffect(() => {
     fetchCrmMetrics();
-    if (!autoRefresh) return;
-    const interval = setInterval(fetchCrmMetrics, 60000); // Atualiza a cada 60s
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [fetchCrmMetrics]);
+
+  // Realtime por PUSH: a tela escuta o evento em vez de consultar em loop.
+  // `autoRefresh` liga/desliga a assinatura (o botão Atualizar sempre funciona).
+  useWebSocketContext({
+    enabled: autoRefresh,
+    subscribeEvents: ['crm.metrics.updated'],
+    onEvent: (event) => {
+      if (event === 'crm.metrics.updated') fetchCrmMetrics();
+    },
+  });
 
   const features = [
     { 
@@ -271,7 +293,7 @@ function CrmDashboardContent() {
           <button
             type="button"
             className="px-4 py-2 text-sm rounded-lg border border-border-default bg-bg-secondary text-text-primary hover:bg-bg-hover transition-colors"
-            onClick={() => window.location.reload()}
+            onClick={() => fetchCrmMetrics()}
           >
             🔄 Atualizar
           </button>
@@ -282,7 +304,7 @@ function CrmDashboardContent() {
               onChange={(e) => setAutoRefresh(e.target.checked)}
               className="w-4 h-4"
             />
-            <span className="text-sm text-text-primary">Auto-atualizar</span>
+            <span className="text-sm text-text-primary">Atualização em tempo real</span>
           </label>
         </div>
       </div>

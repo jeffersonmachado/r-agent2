@@ -15,6 +15,26 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const { emitEvent } = require('../../services/websocketService');
+const logger = require('../../utils/logger');
+
+// ---------------------------------------------------------------------------
+// Realtime por PUSH (regra do projeto: PROIBIDO setInterval para sincronizar
+// estado). Toda mutação relevante de CRM emite `crm.metrics.updated`; as telas
+// (painel CRM e afins) apenas escutam o evento via WebSocket e refazem a leitura.
+// Best-effort: falha no emit JAMAIS bloqueia a escrita.
+// ---------------------------------------------------------------------------
+function emitCrmUpdated(tenantId, { entity, action, entityId }) {
+  try {
+    emitEvent(
+      'crm.metrics.updated',
+      { tenantId, entity, action, entityId: entityId || null },
+      { tenantId },
+    );
+  } catch (err) {
+    logger.warn('[CRM] Falha ao emitir crm.metrics.updated', { entity, action });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // In-memory store helpers
@@ -190,6 +210,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     getTenantStore(tenantId, 'accounts').set(id, item);
+    emitCrmUpdated(tenantId, { entity: 'accounts', action: 'created', entityId: id });
     ctx.sendJson(res, 200, item);
   });
 
@@ -205,6 +226,7 @@ function createCrmRoutes({ buildDeps }) {
       return;
     }
     store.delete(req.params.id);
+    emitCrmUpdated(tenantId, { entity: 'accounts', action: 'deleted', entityId: req.params.id });
     ctx.sendJson(res, 200, { ok: true });
   });
 
@@ -271,6 +293,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     getTenantStore(tenantId, 'contacts').set(id, item);
+    emitCrmUpdated(tenantId, { entity: 'contacts', action: 'created', entityId: id });
     ctx.sendJson(res, 200, item);
   });
 
@@ -286,6 +309,7 @@ function createCrmRoutes({ buildDeps }) {
       return;
     }
     store.delete(req.params.id);
+    emitCrmUpdated(tenantId, { entity: 'contacts', action: 'deleted', entityId: req.params.id });
     ctx.sendJson(res, 200, { ok: true });
   });
 
@@ -347,6 +371,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     getTenantStore(tenantId, 'leads').set(id, item);
+    emitCrmUpdated(tenantId, { entity: 'leads', action: 'created', entityId: id });
     ctx.sendJson(res, 200, item);
   });
 
@@ -362,6 +387,7 @@ function createCrmRoutes({ buildDeps }) {
       return;
     }
     store.delete(req.params.id);
+    emitCrmUpdated(tenantId, { entity: 'leads', action: 'deleted', entityId: req.params.id });
     ctx.sendJson(res, 200, { ok: true });
   });
 
@@ -436,6 +462,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     getTenantStore(tenantId, 'pipelines').set(id, item);
+    emitCrmUpdated(tenantId, { entity: 'pipelines', action: 'created', entityId: id });
     ctx.sendJson(res, 200, item);
   });
 
@@ -451,6 +478,7 @@ function createCrmRoutes({ buildDeps }) {
       return;
     }
     store.delete(req.params.id);
+    emitCrmUpdated(tenantId, { entity: 'pipelines', action: 'deleted', entityId: req.params.id });
     ctx.sendJson(res, 200, { ok: true });
   });
 
@@ -513,6 +541,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     getTenantStore(tenantId, 'opportunities').set(id, item);
+    emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'created', entityId: id });
     ctx.sendJson(res, 200, item);
   });
 
@@ -534,6 +563,7 @@ function createCrmRoutes({ buildDeps }) {
 
     const updated = { ...item, stageId: body.toStageId || item.stageId, updatedAt: now() };
     store.set(item.id, updated);
+    emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'moved', entityId: item.id });
     ctx.sendJson(res, 200, updated);
   });
 
@@ -549,6 +579,7 @@ function createCrmRoutes({ buildDeps }) {
       return;
     }
     store.delete(req.params.id);
+    emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'deleted', entityId: req.params.id });
     ctx.sendJson(res, 200, { ok: true });
   });
 
@@ -592,6 +623,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     getTenantStore(tenantId, 'activities').set(id, item);
+    emitCrmUpdated(tenantId, { entity: 'activities', action: 'created', entityId: id });
     ctx.sendJson(res, 200, item);
   });
 
@@ -622,31 +654,13 @@ function createCrmRoutes({ buildDeps }) {
 
   // ── ANALYTICS DASHBOARD ──────────────────────────────────────────────────
 
-  router.get('/api/crm/analytics/dashboard', async (req, res) => {
-    const ctx = buildDeps(req, res);
-    const tenantId = resolveAuth(ctx, req, res);
-    if (!tenantId) return;
-    if (!checkPermission(ctx, req, res, 'read')) return;
-
-    const accounts = getTenantStore(tenantId, 'accounts');
-    const contacts = getTenantStore(tenantId, 'contacts');
-    const leads = getTenantStore(tenantId, 'leads');
-    const opportunities = getTenantStore(tenantId, 'opportunities');
-
-    const opsList = Array.from(opportunities.values());
-    const totalPipeline = opsList.reduce((acc, o) => acc + (Number(o.value) || 0), 0);
-    const wonOpps = opsList.filter((o) => o.stageId === 'won' || o.stage === 'won');
-    const winRate = opsList.length > 0 ? Math.round((wonOpps.length / opsList.length) * 100) : 0;
-
-    ctx.sendJson(res, 200, {
-      accounts: accounts.size,
-      contacts: contacts.size,
-      leads: leads.size,
-      opportunities: opsList.length,
-      totalPipeline,
-      winRate,
-    });
-  });
+  // NOTA (medido em 2026-10-19): a rota `GET /api/crm/analytics/dashboard`
+  // era definida TAMBEM aqui, devolvendo um contrato DIFERENTE
+  // ({accounts, contacts, leads, ...} achatado) do servido de fato por
+  // `api/modules/domain-operations/routes.js`
+  // ({ok, dashboard:{summary, opportunity}, meta}), que monta ANTES deste
+  // router (api/app/routeRegistry.js). O handler daqui era INALCANCAVEL e
+  // divergente — removido para não virar armadilha de contrato.
 
   return router;
 }
