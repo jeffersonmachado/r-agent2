@@ -12,7 +12,12 @@ const { applyJestDbBudgetToEnv } = require('./lib/jestDbConnectionBudget');
 // `maxWorkers` agora é DERIVADO do teto de conexões (ver lib/jestDbConnectionBudget.js): o
 // número de workers e o pool por worker são dimensionados juntos. Rodar com `--runInBand`
 // (runners oficiais de evidência) continua sendo 1 worker.
-const dbBudget = applyJestDbBudgetToEnv(process.env);
+//
+// DEFEITO MEDIDO (2026-10-18): a chamada não passava `cpus`, e o default do módulo é `cpus: 1`
+// — resultado: `workers = 1` SEMPRE. O lote oficial de 1052 suítes rodava SERIAL (~1 suíte a
+// cada 20 s) e o L0 se tornava inviável na prática. A fórmula sempre esteve certa
+// (`cpus: 12` ⇒ 11 workers); o que faltava era informar as CPUs REAIS da máquina.
+const dbBudget = applyJestDbBudgetToEnv(process.env, { cpus: os.cpus().length });
 
 // Pacote irmão @results/auth (fora do repo em /opt/results/ria/): incluído nos
 // roots apenas quando existe, para que clones/CI sem o diretório não falhem
