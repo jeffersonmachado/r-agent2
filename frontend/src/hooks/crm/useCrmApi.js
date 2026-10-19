@@ -1,36 +1,24 @@
 import { useState, useCallback } from 'react';
-import { buildApiUrl } from '../../api/client';
-import { getAuthHeaders } from '../../api/auth';
+import { fetchJson } from '../../api/client';
 
 export function useCrmApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const getRequestHeaders = useCallback(() => ({
-    'Content-Type': 'application/json',
-    ...getAuthHeaders(),
-  }), []);
-
+  // O client compartilhado injeta Authorization/X-Tenant-Id, aplica
+  // AbortController + timeout e devolve mensagem de erro legível. Antes era um
+  // `fetch` cru sem timeout: com a conexão pendurada, a requisição ficava aberta
+  // para sempre (mesma classe de defeito medida no painel CRM em 2026-10-19).
   const request = useCallback(
     async (endpoint, options = {}) => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(buildApiUrl(endpoint), {
+        return await fetchJson(endpoint, {
+          timeoutMs: 20000,
+          silent: true,
           ...options,
-          headers: {
-            ...getRequestHeaders(),
-            ...options.headers,
-          },
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data?.message || `HTTP ${response.status}`);
-        }
-
-        return data;
       } catch (err) {
         setError(err.message);
         throw err;
@@ -38,7 +26,7 @@ export function useCrmApi() {
         setLoading(false);
       }
     },
-    [getRequestHeaders]
+    []
   );
 
   // Accounts
