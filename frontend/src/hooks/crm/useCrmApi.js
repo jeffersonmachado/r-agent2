@@ -140,11 +140,23 @@ export function useCrmApi() {
     [request]
   );
 
+  // Criação e atualização são operações DIFERENTES. `upsertOpportunity` mantido
+  // por compatibilidade (cria); edição usa `updateOpportunity` (PUT) para nunca
+  // criar um registro novo a partir do formulário de edição.
   const upsertOpportunity = useCallback(
     (data) =>
       request('/api/crm/opportunities', {
         method: 'POST',
         body: JSON.stringify(data),
+      }),
+    [request]
+  );
+
+  const updateOpportunity = useCallback(
+    (id, data) =>
+      request(`/api/crm/opportunities/${encodeURIComponent(String(id))}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...data, id }),
       }),
     [request]
   );
@@ -218,6 +230,7 @@ export function useCrmApi() {
     listOpportunities,
     getOpportunity,
     upsertOpportunity,
+    updateOpportunity,
     deleteOpportunity,
     moveOpportunityStage,
     listActivities,

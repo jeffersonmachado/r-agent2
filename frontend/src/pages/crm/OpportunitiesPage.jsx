@@ -18,8 +18,12 @@ import { CrudPageBase } from '../../modules/crud-base';
 export function OpportunitiesPage() {
   const { opportunities, setOpportunities, pipelines, setPipelines } = useCrm();
   const { showToast, ToastContainer } = useToast();
-  const { listOpportunities, listPipelines, upsertOpportunity, deleteOpportunity, moveOpportunityStage, loading } = useCrmApi();
+  const { listOpportunities, listPipelines, upsertOpportunity, updateOpportunity, deleteOpportunity, moveOpportunityStage, loading } = useCrmApi();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Edição explícita: guardar o id separa "atualizar" de "criar". Sem isto o
+  // formulário de edição caía no POST de criação e duplicava o registro
+  // (P1 medido em 2026-10-19).
+  const [editingId, setEditingId] = useState(null);
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' ou 'table'
   const [selectedPipeline, setSelectedPipeline] = useState(null);
   const [scheduleOpportunity, setScheduleOpportunity] = useState(null);
@@ -65,6 +69,8 @@ export function OpportunitiesPage() {
   };
 
   const handleOpenModal = () => {
+    // Abertura para CRIAÇÃO: limpa qualquer id de edição pendente.
+    setEditingId(null);
     setFormData({
       title: '',
       pipelineId: selectedPipeline || '',
@@ -101,14 +107,20 @@ export function OpportunitiesPage() {
     };
 
     try {
-      const response = await upsertOpportunity(payload);
+      // Atualização vai por PUT com id explícito; criação vai por POST. O backend
+      // recusa PUT sem registro existente (404) e id divergente (400), então
+      // editar nunca cria uma oportunidade nova.
+      const response = editingId
+        ? await updateOpportunity(editingId, payload)
+        : await upsertOpportunity(payload);
       // Mesma classe de defeito da tela de Contas: a guarda esperava
       // `response.opportunity`, a API devolve o registro direto.
       const salva = response?.opportunity || (response?.id ? response : null);
       if (salva) {
         await loadData();
         setIsModalOpen(false);
-        showToast('Oportunidade salva com sucesso!', 'success');
+        setEditingId(null);
+        showToast(editingId ? 'Oportunidade atualizada com sucesso!' : 'Oportunidade salva com sucesso!', 'success');
       }
     } catch (err) {
       showToast(`Erro ao salvar: ${err.message}`, 'error');
@@ -355,6 +367,7 @@ export function OpportunitiesPage() {
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => {
+                          setEditingId(opp.id);
                           setFormData({
                             ...opp,
                             title: tituloDe(opp),
@@ -400,7 +413,7 @@ export function OpportunitiesPage() {
       <CrmModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Nova Oportunidade"
+        title={editingId ? 'Editar Oportunidade' : 'Nova Oportunidade'}
         size="lg"
       >
         <CrmForm onSubmit={handleSubmit} isLoading={loading}>

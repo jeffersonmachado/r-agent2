@@ -711,6 +711,69 @@ function createCrmRoutes({ buildDeps }) {
     });
   });
 
+  /**
+   * ATUALIZAÇÃO de oportunidade (P1 medido em 2026-10-19): o formulário de
+   * edição enviava o payload sem `id` para o POST de criação — editar criava um
+   * registro novo. A atualização agora é explícita (PUT/PATCH), exige registro
+   * existente, valida tenant/permissão, preserva o ID e REJEITA id divergente.
+   * Nunca cria: ausência do registro é 404.
+   */
+  const atualizarOportunidade = async (req, res) => {
+    const ctx = buildDeps(req, res);
+    const tenantId = resolveAuth(ctx, req, res);
+    if (!tenantId) return;
+    if (!checkPermission(ctx, req, res, 'update')) return;
+
+    let body;
+    try { body = await ctx.parseJsonBody(req); } catch { ctx.badRequest(res, 'JSON inválido'); return; }
+
+    const idUrl = String(req.params.id || '').trim();
+    if (!idUrl) {
+      ctx.badRequest(res, 'id ausente na URL');
+      return;
+    }
+    if (body.id !== undefined && body.id !== null && String(body.id) !== idUrl) {
+      ctx.sendJson(res, 400, {
+        error: 'id_divergente',
+        message: 'O id do corpo difere do id da URL; atualização não pode trocar de registro.',
+      });
+      return;
+    }
+
+    await comPersistencia(ctx, res, async () => {
+      const atual = await lerRegistro(tenantId, 'opportunities', idUrl);
+      if (!atual) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
+
+      // Só campos conhecidos são aceitos; `id`, `tenantId` e `createdAt` são imutáveis.
+      const camposPermitidos = [
+        'name', 'accountId', 'contactId', 'pipelineId', 'stageId',
+        'value', 'probability', 'expectedCloseDate', 'ownerId', 'tags', 'notes',
+      ];
+      const alteracoes = {};
+      for (const campo of camposPermitidos) {
+        if (body[campo] !== undefined) alteracoes[campo] = body[campo];
+      }
+      if (alteracoes.name !== undefined) {
+        alteracoes.name = String(alteracoes.name || '').trim();
+        if (!alteracoes.name) {
+          ctx.badRequest(res, 'name não pode ficar vazio');
+          return;
+        }
+      }
+
+      const atualizado = { ...atual, ...alteracoes, id: atual.id, updatedAt: now() };
+      await gravarRegistro(tenantId, 'opportunities', atualizado);
+      emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'updated', entityId: atual.id });
+      ctx.sendJson(res, 200, atualizado);
+    });
+  };
+
+  router.put('/api/crm/opportunities/:id', atualizarOportunidade);
+  router.patch('/api/crm/opportunities/:id', atualizarOportunidade);
+
   router.post('/api/crm/opportunities/:id/move', async (req, res) => {
     const ctx = buildDeps(req, res);
     const tenantId = resolveAuth(ctx, req, res);
