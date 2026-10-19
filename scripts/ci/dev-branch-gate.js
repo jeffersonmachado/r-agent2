@@ -408,6 +408,21 @@ function executar(passo) {
   const exitCode = r.status === null ? null : r.status;
   // 124 = timeout(1); 137 = SIGKILL. Ambos são "sem veredito", nunca "reprovado".
   const estourouOrcamento = exitCode === 124 || exitCode === 137 || r.status === null;
+  // A saída COMPLETA do passo é a única forma de diagnosticar falha sem repetir
+  // a execução (e sem "achar" a causa). Antes só existia o digest + as últimas 12
+  // linhas: uma falha no MEIO da suíte ficava invisível e o diagnóstico dependia
+  // de re-rodar o processo inteiro — o que mascara defeitos intermitentes.
+  const dirLogs = path.resolve(ROOT, process.env.DEV_BRANCH_GATE_EVIDENCE_DIR || 'AI_MEMORY/evidence', 'dev-branch-gate-logs', String(CONTEXTO_EXECUCAO.execucaoId || 'sem-execucao'));
+  let saidaRef = null;
+  try {
+    fs.mkdirSync(dirLogs, { recursive: true });
+    const arquivo = path.join(dirLogs, `${passo.id}.log`);
+    fs.writeFileSync(arquivo, saida, 'utf8');
+    saidaRef = path.relative(ROOT, arquivo);
+  } catch (_) {
+    // evidência de log é best-effort: ausência de log NUNCA vira sucesso nem falha
+    saidaRef = null;
+  }
   return {
     id: passo.id,
     fase: passo.fase,
@@ -422,6 +437,7 @@ function executar(passo) {
     sha256Saida: sha256(saida),
     sha: CONTEXTO_EXECUCAO.sha,
     execucaoId: CONTEXTO_EXECUCAO.execucaoId,
+    saidaRef,
     saidaFinal: saida.trim().split('\n').slice(-12).join('\n'),
   };
 }
@@ -876,6 +892,10 @@ function finalizar({
     id: r.id, fase: r.fase, nivel: r.nivel, descricao: r.descricao, comando: r.comando,
     exitCode: r.exitCode, timeout: r.timeout, duracaoMs: r.duracaoMs,
     sha256Saida: r.sha256Saida, saidaFinal: r.saidaFinal,
+    // Referência ao log COMPLETO do passo (evidência de diagnóstico). Sem ela,
+    // uma falha no meio da suíte só podia ser investigada re-rodando tudo — e o
+    // defeito intermitente desaparecia na repetição.
+    ...(r.saidaRef ? { saidaRef: r.saidaRef } : {}),
     ...(r.naoExecutado ? { naoExecutado: true } : {}),
   });
 
@@ -1030,5 +1050,6 @@ if (require.main === module) {
 module.exports = {
   main, PASSOS, AUTORIZACAO_DA_FASE, REGRAS_PREVENTIVAS, preVoo, planejarFaseB,
   parseFases, identidadeValida, avaliarEstadosPorFase, decidirVeredito, definirContextoExecucao,
+  executar,
   FASES_CONHECIDAS, FASES_OBRIGATORIAS_VALIDACAO_COMPLETA, ESTADOS_DE_FASE,
 };
