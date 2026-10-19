@@ -45,14 +45,22 @@ ACAO="${1:-check}"
 
 achado() { printf '[pbx-cdr] %s\n' "$*"; }
 
+# ATENÇÃO (defeito medido em 2026-10-18): NUNCA usar `grep -q` em pipeline com
+# `set -o pipefail` quando o produtor pode escrever DEPOIS da linha que casa.
+# `grep -q` sai no primeiro casamento, o produtor recebe SIGPIPE e a pipeline
+# retorna 141 — sob carga isso acontece de forma intermitente e o script passa a
+# declarar DEGRADED um Asterisk saudável (falso negativo que bloqueia o preflight
+# do converge e queima um ciclo de ~40 min). `grep` sem `-q` consome todo o
+# stream e preserva o mesmo exit code de casamento. Regressão:
+# `tests/unit/pbx/pbxCdrHealthSigpipe.test.js`.
 ponte_escutando() {
   command -v ss >/dev/null 2>&1 || return 1
-  ss -ltn 2>/dev/null | grep -qF ":$PORTA"
+  ss -ltn 2>/dev/null | grep -F ":$PORTA" >/dev/null
 }
 
 docker_ok() {
   command -v docker >/dev/null 2>&1 || return 1
-  docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null | grep -q true
+  docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null | grep true >/dev/null
 }
 
 asterisk_ok() {
@@ -61,13 +69,20 @@ asterisk_ok() {
 
 # Backend de CDR registrado no engine? (sinal real de que o CDR vai gravar)
 backend_registrado() {
-  docker exec "$CONTAINER" asterisk -rx "cdr show status" 2>/dev/null | grep -q 'Adaptive ODBC'
+  # `grep` sem `-q` de propósito: ver nota de pipefail acima. O `cdr show status`
+  # real continua imprimindo backends DEPOIS da linha casada; com `grep -q` o
+  # `docker exec` morria por SIGPIPE e a função mentia "não registrado".
+  docker exec "$CONTAINER" asterisk -rx "cdr show status" 2>/dev/null | grep 'Adaptive ODBC' >/dev/null
 }
 
 # Conexão ODBC do DSN usada pelo backend (0 conexões = backend sem banco)
+#
+# `head -n1` fecha o pipe no primeiro casamento e mata o `docker exec` por
+# SIGPIPE (mesma armadilha do `grep -q`); `sed -n '1p'` lê o stream inteiro e
+# imprime só a primeira linha, sem sinalizar o produtor.
 conexoes_odbc() {
   docker exec "$CONTAINER" asterisk -rx "odbc show $DSN" 2>/dev/null \
-    | sed -n 's/.*Number of active connections: \([0-9]\+\).*/\1/p' | head -n1
+    | sed -n 's/.*Number of active connections: \([0-9]\+\).*/\1/p' | sed -n '1p'
 }
 
 # Última tentativa FALHA de conexão do DSN (string vazia = nenhuma registrada).
@@ -87,7 +102,7 @@ conexoes_odbc() {
 # documentada; o de ignorar é perder um ciclo de selagem de ~40 min.
 falha_conexao_odbc() {
   docker exec "$CONTAINER" asterisk -rx "odbc show $DSN" 2>/dev/null \
-    | sed -n 's/.*Last fail connection attempt: \(.*\)$/\1/p' | head -n1 | tr -d '\r'
+    | sed -n 's/.*Last fail connection attempt: \(.*\)$/\1/p' | sed -n '1p' | tr -d '\r'
 }
 
 recuperar() {
