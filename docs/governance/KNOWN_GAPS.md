@@ -1,7 +1,7 @@
 # Known Gaps
 
-## gap-proof-governance-support
-- Severity: critical
-- Area: proof-governance
-- Title: Governance signature ou cleanup proof nao possuem artifact fisico valido
-- Suggested fix: Persistir assinatura de governance com hashes e cleanup proof com limpeza validada.
+## gap-mesh-omnichannel-infra_error-fitness-matricula-leads
+- Severity: high
+- Area: qa-mesh
+- Title: Falha aberta no dominio omnichannel
+- Suggested fix: Priorizar correção de browser/runtime/rede antes de investigar regra de negócio.

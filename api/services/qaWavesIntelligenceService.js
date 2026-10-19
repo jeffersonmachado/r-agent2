@@ -30,8 +30,8 @@ const {
   SCENARIO_STORE_PATH,
 } = require('./qaWavesScenarioService');
 const { normalizeAiOutput } = require('../modules/qa-waves/aiScenarioAdapter');
-const { getAllReplayReadDirs } = require('../../lib/rpaPathResolver');
-const { belongsToTenant, normalizeTenantKey } = require('../../lib/rpaSecurity');
+const { getAllReplayReadDirs, getRuntimeRpaDir } = require('../../lib/rpaPathResolver');
+const { belongsToTenant, normalizeTenantKey, tenantFromArtifact } = require('../../lib/rpaSecurity');
 const { getBlockingJourneys, getSeverityByJourney } = require('../../qa/contracts/journeyCriticality');
 const { writeJsonAtomic } = require('../utils/atomicJsonFile');
 
@@ -139,8 +139,98 @@ function replayDirsSignature(dirs) {
 /**
  * Lê todos os arquivos de replay disponíveis e retorna um índice
  * {scenarioId -> { latestAt, hasFailure, count }}
+ *
+ * ── Índice INCREMENTAL por arquivo (2026-10-19) ────────────────────────────
+ * DEFEITO MEDIDO (mesh `mesh-2026-10-19T21-12-11-465Z`, cenário
+ * `fitness-matricula-leads`): `GET /api/qa-waves/intelligence/coverage`
+ * devolveu **500 com corpo vazio** (o proxy não recebeu resposta) e o cenário
+ * caiu como `infra_error` → `CRITICAL_DOMAIN_FAILED:omnichannel` → mesh NO_GO
+ * → selo abortado em `prepare`.
+ *
+ * Causa: o cache do índice era tudo-ou-nada — qualquer arquivo novo
+ * invalidava a assinatura e o build seguinte re-parseava TODOS os replays.
+ * Medido no runtime real: **756 arquivos / 3,0 GB** (o maior com 8,8 MB), e a
+ * primeira chamada de `/coverage` levou **38,4 s** (as seguintes, 0,7–1,3 s,
+ * já em cache). Sob 144 cenários abrindo `/dev/qa-waves` ao mesmo tempo, vários
+ * builds completos concorrentes travavam o event loop e a conexão morria.
+ *
+ * Agora cada arquivo tem entrada própria com `mtime+size`: replay é write-once,
+ * então arquivo inalterado NÃO é reparseado e um replay novo custa só o próprio
+ * arquivo. O índice agregado é remontado a partir das entradas (barato).
  */
+const replayFileIndexCache = new Map(); // `${dir}` -> Map(fileName -> {mtimeMs, size, rec})
+let replayFileIndexLoaded = false;
+const REPLAY_INDEX_CACHE_VERSION = 1;
+const REPLAY_INDEX_MAX_FILES = Number(process.env.QA_WAVES_REPLAY_INDEX_MAX_FILES || 20000);
+const REPLAY_INDEX_DISK_PATH = process.env.QA_WAVES_REPLAY_INDEX_DISK_PATH
+  || path.join(getRuntimeRpaDir(), 'replay-index-cache.json');
+
+/**
+ * Persistência do índice por arquivo. Sem ela o cache por arquivo só ajuda a
+ * partir do SEGUNDO build do mesmo processo: no boot (primeiro request) todos
+ * os 3,0 GB seriam parseados de novo (medido: 38–57 s). Com o arquivo em disco,
+ * um restart reaproveita as entradas inalteradas e só parseia o que mudou.
+ * É cache DERIVADO: corrompido/incompatível ⇒ ignora e reconstrói.
+ */
+function loadReplayFileIndexFromDisk() {
+  if (replayFileIndexLoaded) return;
+  replayFileIndexLoaded = true;
+  try {
+    const data = JSON.parse(fs.readFileSync(REPLAY_INDEX_DISK_PATH, 'utf8'));
+    if (!data || data.version !== REPLAY_INDEX_CACHE_VERSION || !data.dirs) return;
+    for (const [dir, files] of Object.entries(data.dirs)) {
+      const map = new Map();
+      for (const [name, entry] of Object.entries(files || {})) {
+        if (!entry || !entry.rec) continue;
+        map.set(name, { mtimeMs: entry.mtimeMs, size: entry.size, rec: entry.rec });
+      }
+      replayFileIndexCache.set(dir, map);
+    }
+  } catch (_) {
+    // ausente ou ilegível: primeiro build reconstrói
+  }
+}
+
+function persistReplayFileIndexToDisk() {
+  try {
+    const dirs = {};
+    for (const [dir, files] of replayFileIndexCache.entries()) {
+      const obj = {};
+      for (const [name, entry] of files.entries()) obj[name] = entry;
+      dirs[dir] = obj;
+    }
+    writeJsonAtomic(REPLAY_INDEX_DISK_PATH, { version: REPLAY_INDEX_CACHE_VERSION, dirs });
+  } catch (_) {
+    // cache é otimização: falha em gravá-lo não pode derrubar a request
+  }
+}
+
+function readReplayRecord(filePath, stat) {
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (_) {
+    return null; // arquivo ilegível/parcial (write concorrente): ignorado
+  }
+  const scenarioId = raw.scenarioId || raw.recordingId || null;
+  if (!scenarioId) return null;
+  const finishedAt = raw.finishedAt || raw.endTime || null;
+  const finishedMs = finishedAt ? new Date(finishedAt).getTime() : 0;
+  const status = String(raw.status || raw.result || '').toLowerCase();
+  return {
+    scenarioId,
+    // Mesma resolução usada por `belongsToTenant` (fallback 'system'): o
+    // cache por arquivo é tenant-agnóstico e o filtro acontece no agregado,
+    // então guardar o tenant RESOLVIDO mantém a semântica idêntica.
+    tenantId: tenantFromArtifact(raw),
+    finishedAt,
+    finishedMs,
+    isFailed: status === 'failed' || status === 'failure' || status === 'error',
+  };
+}
+
 function buildReplayIndex(tenantId = 'system') {
+  loadReplayFileIndexFromDisk();
   const scopedTenantId = normalizeTenantKey(tenantId);
   const dirs = getAllReplayReadDirs(scopedTenantId).filter((d) => fs.existsSync(d));
   const signature = replayDirsSignature(dirs);
@@ -153,6 +243,8 @@ function buildReplayIndex(tenantId = 'system') {
   const index = {};
   const now = Date.now();
   const freshnessMs = REPLAY_FRESHNESS_DAYS * 24 * 60 * 60 * 1000;
+  let parsedThisBuild = 0;
+  let reusedThisBuild = 0;
 
   for (const dir of dirs) {
     let entries = [];
@@ -162,34 +254,61 @@ function buildReplayIndex(tenantId = 'system') {
       continue;
     }
 
+    const previous = replayFileIndexCache.get(dir) || new Map();
+    const current = new Map();
+
     for (const entry of entries) {
       if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      if (current.size >= REPLAY_INDEX_MAX_FILES) break;
+      const filePath = path.join(dir, entry.name);
       try {
-        const raw = JSON.parse(fs.readFileSync(path.join(dir, entry.name), 'utf8'));
-        if (!belongsToTenant(raw, scopedTenantId)) continue;
-        const scenarioId = raw.scenarioId || raw.recordingId || null;
-        if (!scenarioId) continue;
-
-        const finishedAt = raw.finishedAt || raw.endTime || null;
-        const finishedMs = finishedAt ? new Date(finishedAt).getTime() : 0;
-        const status = String(raw.status || raw.result || '').toLowerCase();
-        const isFailed = status === 'failed' || status === 'failure' || status === 'error';
-        const isFresh = finishedMs > 0 && now - finishedMs < freshnessMs;
-
-        if (!index[scenarioId]) {
-          index[scenarioId] = { latestAt: finishedAt, hasFailure: false, hasFresh: false, count: 0 };
+        const stat = fs.statSync(filePath);
+        const prior = previous.get(entry.name);
+        let rec;
+        if (prior && prior.mtimeMs === stat.mtimeMs && prior.size === stat.size) {
+          rec = prior.rec; // write-once: nada mudou, não reparseia
+          reusedThisBuild += 1;
+        } else {
+          rec = readReplayRecord(filePath, stat);
+          parsedThisBuild += 1;
         }
-        const rec = index[scenarioId];
-        rec.count += 1;
-        if (!rec.latestAt || finishedMs > new Date(rec.latestAt).getTime()) {
-          rec.latestAt = finishedAt;
-        }
-        if (isFailed) rec.hasFailure = true;
-        if (isFresh) rec.hasFresh = true;
+        if (!rec) continue;
+        current.set(entry.name, { mtimeMs: stat.mtimeMs, size: stat.size, rec });
       } catch (_) {
-        // arquivo ilegível, ignora
+        // stat/parse falhou: arquivo ignorado neste build
       }
     }
+
+    replayFileIndexCache.set(dir, current);
+
+    // Agrega só o que pertence ao tenant consultado.
+    for (const { rec } of current.values()) {
+      if (rec.tenantId !== scopedTenantId) continue;
+      const { scenarioId, finishedAt, finishedMs } = rec;
+      if (!index[scenarioId]) {
+        index[scenarioId] = { latestAt: finishedAt, hasFailure: false, hasFresh: false, count: 0 };
+      }
+      const agg = index[scenarioId];
+      agg.count += 1;
+      if (!agg.latestAt || finishedMs > new Date(agg.latestAt).getTime()) {
+        agg.latestAt = finishedAt;
+      }
+      if (rec.isFailed) agg.hasFailure = true;
+      if (finishedMs > 0 && now - finishedMs < freshnessMs) agg.hasFresh = true;
+    }
+  }
+
+  if (parsedThisBuild > 0 || reusedThisBuild > 0) {
+    if (parsedThisBuild > 0) persistReplayFileIndexToDisk();
+    replayIndexCache.set(scopedTenantId, {
+      builtAt: Date.now(),
+      expiresAt: Date.now() + REPLAY_INDEX_TTL_MS,
+      signature,
+      index,
+      parsedThisBuild,
+      reusedThisBuild,
+    });
+    return index;
   }
 
   replayIndexCache.set(scopedTenantId, {

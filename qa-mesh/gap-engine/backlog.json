@@ -1,17 +1,21 @@
 [
   {
-    "id": "gap-proof-governance-support",
-    "severity": "critical",
-    "area": "proof-governance",
-    "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
-    "evidence": {
-      "status": "NOT_VALIDATED",
-      "signatureArtifact": "governance/proof-signature.json",
-      "cleanupArtifact": "governance/cleanup-proof.json",
-      "missing": [
-        "cleanup_status"
-      ]
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
     },
-    "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+    "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
+        "fitness-matricula-leads"
+      ],
+      "sampleError": "3 erro(s) de console detectados"
+    },
+    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
   }
 ]

@@ -1,25 +1,29 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-19T19-49-26-736Z",
+  "executionId": "mesh-2026-10-19T21-12-11-465Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "GO",
-  "reasons": [],
+  "status": "NO_GO",
+  "reasons": [
+    "CRITICAL_DOMAIN_FAILED:omnichannel",
+    "BASELINE_PASS_RATE_REGRESSION",
+    "BASELINE_INFRA_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-19T19-49-26-736Z",
-    "startedAt": "2026-10-19T19:49:26.736Z",
+    "executionId": "mesh-2026-10-19T21-12-11-465Z",
+    "startedAt": "2026-10-19T21:12:11.465Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-19T20:26:17.952Z",
+    "promotedAt": "2026-10-19T21:51:01.324Z",
     "registryTotal": 144,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-19T19-49-26-736Z",
+    "executionId": "mesh-2026-10-19T21-12-11-465Z",
     "tenantId": "system",
-    "timestamp": "2026-10-19T19:49:26.736Z",
+    "timestamp": "2026-10-19T21:12:11.465Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -27,11 +31,11 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 144,
+    "passed": 143,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
-    "infraErrors": 0,
+    "infraErrors": 1,
     "environmentMissing": 0,
     "flaky": 0,
     "fallbackUsed": 0,
@@ -127,11 +131,11 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 4,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 0,
+        "infra_error": 1,
         "environment_missing": 0,
         "flaky": 0,
         "total": 4
@@ -167,10 +171,22 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "CRITICAL_DOMAIN_FAILED:omnichannel",
+      "BASELINE_PASS_RATE_REGRESSION",
+      "BASELINE_INFRA_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "omnichannel": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "infra_error": 1
+        },
+        "successRate": 0.75
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -219,12 +235,6 @@
         "byType": {},
         "successRate": 1
       },
-      "omnichannel": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "pbx": {
         "total": 0,
         "blocking": 0,
@@ -244,26 +254,33 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "infra_error": 1
+    },
+    "topErrors": [
+      {
+        "message": "3 erro(s) de console detectados",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-19T19-49-26-736Z",
-      "startedAt": "2026-10-19T19:49:26.736Z",
+      "executionId": "mesh-2026-10-19T21-12-11-465Z",
+      "startedAt": "2026-10-19T21:12:11.465Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-19T20:26:17.952Z",
+      "promotedAt": "2026-10-19T21:51:01.324Z",
       "registryTotal": 144,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261019192244262-9cfccff1",
-  "sourceFingerprint": "552ada7da67ab409147dfa703179b6903bba3374b2075b6da10171a0e41b9ab2",
-  "sourceCommit": "d85174d476f54220bb320bcb14e611b3e28ab100",
-  "sourceTree": "8f801ff762436e78b9dc4f15eac53dff52cffb9d",
-  "generatedAt": "2026-10-19T20:26:17.954Z"
+  "runId": "rap-governed-20261019204341124-06095b94",
+  "sourceFingerprint": "9bd590a9eafb70604242b18a9c69c85c92fb8aade3521bff380083541fde8a3d",
+  "sourceCommit": "f9af600e62c54fd4c100b9074fd1ffb6a4d8c962",
+  "sourceTree": "2fa212771987427bc14d6515038a3591a939f488",
+  "generatedAt": "2026-10-19T21:51:01.330Z"
 }
