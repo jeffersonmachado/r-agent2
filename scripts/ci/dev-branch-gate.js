@@ -641,7 +641,10 @@ function finalizar({
   // veredito saía `FAIL` — como se a suíte tivesse reprovado. O correto é "sem veredito":
   // BLOQUEADO_POR_TIMEOUT (exit 2, igual a bloqueio), nunca PASS e nunca FAIL.
   const timeouts = resultados.filter((r) => r.timeout === true);
-  const falhas = resultados.filter((r) => r.exitCode !== 0 && r.timeout !== true);
+  // Passo SINTÉTICO (`naoExecutado: true`, ex.: "B: nenhum teste direcionado declarado") tem
+  // `exitCode: null` por construção e NÃO é falha — medido em 2026-10-18: o L0 passou com
+  // exit=0 em 217,4s e o veredito saiu FAIL só por causa desse registro informativo.
+  const falhas = resultados.filter((r) => r.naoExecutado !== true && r.timeout !== true && r.exitCode !== 0);
   const bloqueadoPorDefeitos = Boolean(bloqueio && [ 'FASE_NAO_AUTORIZADA', 'PRE_VOO_FALHOU' ].includes(bloqueio.code));
 
   const escopoParcial = rapido || fasesPedidas.length < 4 || Boolean(bloqueio) || !faseA.ok;
