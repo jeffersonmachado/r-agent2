@@ -24,6 +24,20 @@ const TRANSIENT_ENV_PATTERNS = [
   /ETIMEDOUT/,
   /ERR_CONNECTION/,
   /socket hang up/i,
+  // MEDIDO (2026-10-19, mesh canônico do ciclo de selagem): o cenário
+  // `fitness-matricula-leads` falhou com
+  //   page.goto: Timeout 30000ms exceeded ... navigating to
+  //   "http://localhost:5173/dev/qa-waves"
+  // sob contenção (144 cenários + API + browser). A URL estava CORRETA e a
+  // rota responde 200 em curl — é navegação impedida por ambiente, exatamente
+  // o caso que este módulo existe para cobrir, mas a assinatura não estava
+  // listada: o mesh ia a NO_GO por infra e o selo abortava.
+  //
+  // ESCOPO ESTRITO: só a NAVEGAÇÃO (`page.goto`) e erros de rede do browser.
+  // `page.waitForSelector`/`waitForFunction` continuam de fora de propósito —
+  // timeout de seletor pode ser defeito funcional, não ambiente.
+  /page\.goto:\s*Timeout[^\n]*exceeded/i,
+  /net::ERR_(NAME_NOT_RESOLVED|ADDRESS_UNREACHABLE|TIMED_OUT|CONNECTION_(RESET|REFUSED|CLOSED|ABORTED))/i,
 ];
 
 /**
