@@ -12,6 +12,12 @@
 - Title: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)
 - Suggested fix: Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO.
 
+## gap-proof-governance-support
+- Severity: critical
+- Area: proof-governance
+- Title: Governance signature ou cleanup proof nao possuem artifact fisico valido
+- Suggested fix: Persistir assinatura de governance com hashes e cleanup proof com limpeza validada.
+
 ## gap-cross-report-package_validation_failed
 - Severity: critical
 - Area: cross-report

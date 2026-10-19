@@ -24,6 +24,21 @@
     "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
   },
   {
+    "id": "gap-proof-governance-support",
+    "severity": "critical",
+    "area": "proof-governance",
+    "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
+    "evidence": {
+      "status": "NOT_VALIDATED",
+      "signatureArtifact": "governance/proof-signature.json",
+      "cleanupArtifact": "governance/cleanup-proof.json",
+      "missing": [
+        "cleanup_status"
+      ]
+    },
+    "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
+  },
+  {
     "id": "gap-cross-report-package_validation_failed",
     "severity": "critical",
     "area": "cross-report",

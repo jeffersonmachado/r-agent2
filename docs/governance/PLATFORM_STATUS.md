@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-10-17T11:12:00.857Z
+- Generated at: 2026-10-19T13:58:31.123Z
 - Canonical mesh execution: mesh-2026-10-17T05-55-05-230Z
 - Canonical mesh decision: GO
 - Readiness decision: NO_GO:BLOCKING_GAPS
@@ -25,5 +25,6 @@
 ## NO_GO reasons
 - ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]
 - Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Governance signature ou cleanup proof nao possuem artifact fisico valido [gap-proof-governance-support]
 - Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]
 - Evidência autoritativa pré-run não pode sustentar a decisão do run [current_run_temporal_integrity]
