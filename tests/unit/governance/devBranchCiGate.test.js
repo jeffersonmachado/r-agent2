@@ -129,7 +129,10 @@ describe('(2) runner local — o gate efetivo enquanto o runner do GitHub não i
 
   it('publica a evidência em Markdown versionado (o JSON solto em evidence/ é reprovado)', () => {
     const fonte = semComentarios(ler(RUNNER));
-    expect(fonte).toContain("AI_MEMORY/evidence/dev-branch-ci-");
+    // O diretório é configurável (testes não sobrescrevem a evidência real),
+    // com AI_MEMORY/evidence como default.
+    expect(fonte).toContain("process.env.DEV_BRANCH_GATE_EVIDENCE_DIR || 'AI_MEMORY/evidence'");
+    expect(fonte).toContain('dev-branch-ci-');
     expect(fonte).toContain('.md');
     expect(fonte).toContain('reports/dev-branch-ci-evidence.json');
   });
@@ -143,23 +146,23 @@ describe('(2) runner local — o gate efetivo enquanto o runner do GitHub não i
 
   it('o veredito deriva do exit code dos passos (falha não vira narrativa de sucesso)', () => {
     const fonte = semComentarios(ler(RUNNER));
-    expect(fonte).toContain("resultados.filter((r) => r.naoExecutado !== true && r.timeout !== true && r.exitCode !== 0)");
-    // Bloqueio por defeitos é um TERCEIRO estado (exit 2): não é PASS nem FAIL.
-    expect(fonte).toContain("'BLOQUEADO_POR_DEFEITOS'");
-    // TIMEOUT é um QUARTO estado (exit 2): "sem veredito" nunca vira FAIL nem PASS.
-    // Medido 2026-10-18: um passo morto pelo orçamento era reportado como FAIL.
-    expect(fonte).toContain("'BLOQUEADO_POR_TIMEOUT'");
-    expect(fonte).toContain('if (veredito === \'BLOQUEADO_POR_DEFEITOS\') return 2;');
-    expect(fonte).toContain("if (veredito === 'BLOQUEADO_POR_TIMEOUT') return 2;");
+    // Contrato P0 (2026-10-19): a decisão vem do estado REAL de cada fase,
+    // derivado dos exit codes — nunca do texto da saída.
+    expect(fonte).toContain('const comFalha = reais.filter((r) => r.exitCode !== 0);');
+    expect(fonte).toContain("ESTADOS_DE_FASE.FAIL");
+    expect(fonte).toContain("ESTADOS_DE_FASE.BLOCKED");
+    expect(fonte).toContain("if (veredito === 'PASS') return 0;");
     expect(fonte).toContain("if (veredito === 'FAIL') return 1;");
+    expect(fonte).toContain('return 2;');
   });
 
   it('escopo parcial NUNCA produz PASS (modo rápido não parece validação completa)', () => {
     const fonte = semComentarios(ler(RUNNER));
     expect(fonte).toContain("'PASS_PARCIAL'");
     expect(fonte).toContain('equivalenteAValidacaoCompleta');
-    // Só o veredito completo é PASS.
-    expect(fonte).toMatch(/escopoParcial\s*\)\s*veredito = 'PASS_PARCIAL'/);
+    // Só o veredito completo (todas as obrigatórias comprovadas) é PASS.
+    expect(fonte).toContain('const completo = veredito === \'PASS\';');
+    expect(fonte).toMatch(/faltantes\.length > 0\) return 'PASS_PARCIAL'/);
   });
 
   it('consulta a elegibilidade ANTES de cada fase técnica e para no primeiro bloqueio', () => {

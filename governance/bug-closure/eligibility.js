@@ -91,8 +91,74 @@ const CODIGOS = Object.freeze({
   DIAGNOSTICO_NAO_CERTIFICANTE: 'DIAGNOSTICO_NAO_CERTIFICANTE',
   BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO: 'BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO',
   RISCO_ACEITO_REGISTRADO: 'RISCO_ACEITO_REGISTRADO',
+  RISCO_ACEITO_INEFICAZ: 'RISCO_ACEITO_INEFICAZ',
+  CONTROLE_CRITICO_NAO_DISPENSAVEL: 'CONTROLE_CRITICO_NAO_DISPENSAVEL',
   CERTIFICACAO_AUSENTE: 'CERTIFICACAO_AUSENTE',
 });
+
+/**
+ * CONTROLES INEGOCIÁVEIS (defeito P0 medido em 2026-10-19 contra `9758f828f`).
+ *
+ * `RISK_ACCEPTED` era descartado ANTES da avaliação de severidade: um P0 de
+ * integridade criptográfica marcado como risco aceito liberava QA Waves. Isto
+ * misturava aceitação ADMINISTRATIVA com elegibilidade TÉCNICA.
+ *
+ * Regras novas:
+ *   - P0 NUNCA é dispensável por status, em nenhuma política (inclui P0 crítico);
+ *   - P1 só é dispensável quando a aceitação é VÁLIDA (responsável, justificativa,
+ *     validade futura, escopo declarado) e NÃO é de controle crítico;
+ *   - aceitação vencida/sem responsável/sem justificativa é INEFICAZ: o defeito
+ *     volta a contar como aberto.
+ */
+const CONTROLES_CRITICOS = Object.freeze([
+  'CRYPTOGRAPHIC_INTEGRITY',
+  'CHAIN_INTEGRITY',
+  'AUTHORIZATION',
+  'TENANT_ISOLATION',
+  'DATA_LOSS',
+  'CERTIFICATION_EVIDENCE',
+]);
+
+/** Lê os controles críticos declarados num defeito (campo explícito ou categoria). */
+function controlesCriticosDoDefeito(d) {
+  const declarados = [];
+  const push = (v) => {
+    if (v && typeof v === 'string') declarados.push(v.trim().toUpperCase());
+  };
+  push(d && d.control);
+  push(d && d.criticalControl);
+  if (Array.isArray(d && d.controls)) (d.controls || []).forEach(push);
+  if (Array.isArray(d && d.categories)) (d.categories || []).forEach(push);
+  if (d && typeof d.category === 'string') push(d.category);
+  const unicos = [...new Set(declarados)];
+  return unicos.filter((c) => CONTROLES_CRITICOS.includes(c));
+}
+
+/**
+ * Valida uma aceitação administrativa de risco. Retorna `{ valida, critico, motivo }`.
+ * Ineficaz ⇒ o defeito continua contando como aberto (fail-closed).
+ */
+function avaliarAceitacaoDeRisco(d, agora = new Date()) {
+  if (!d) return { valida: false, critico: false, motivo: 'DEFEITO_AUSENTE' };
+
+  const critico = controlesCriticosDoDefeito(d).length > 0;
+  const responsavel = d.riskAcceptedBy || d.acceptedBy || d.owner;
+  const justificativa = d.riskAcceptedReason || d.acceptanceReason || d.justification;
+  const expira = d.riskAcceptedExpiresAt || d.expiresAt || d.expiration;
+
+  if (!NAO_VAZIO(responsavel)) return { valida: false, critico, motivo: 'ACEITACAO_SEM_RESPONSAVEL' };
+  if (!NAO_VAZIO(justificativa)) return { valida: false, critico, motivo: 'ACEITACAO_SEM_JUSTIFICATIVA' };
+  if (!NAO_VAZIO(expira)) return { valida: false, critico, motivo: 'ACEITACAO_SEM_VALIDADE' };
+
+  const data = new Date(expira);
+  if (Number.isNaN(data.getTime())) return { valida: false, critico, motivo: 'ACEITACAO_VALIDADE_INVALIDA' };
+  if (data.getTime() <= agora.getTime()) return { valida: false, critico, motivo: 'ACEITACAO_VENCIDA' };
+
+  // Aceitação de controle crítico nunca é válida para dispensar bloqueio técnico.
+  if (critico) return { valida: false, critico: true, motivo: 'CONTROLE_CRITICO_NAO_DISPENSAVEL' };
+
+  return { valida: true, critico: false, motivo: null };
+}
 
 const DECISOES = Object.freeze({
   ALLOWED: 'ALLOWED',
@@ -112,14 +178,32 @@ function classificarDefeitos(defeitos) {
   const p1 = [];
   const naoDeclarada = [];
   const riscoAceito = [];
+  const riscoAceitoIneficaz = [];
   const bloqueioExterno = [];
 
-  for (const d of Array.isArray(defeitos) ? defeitos : []) {
+  for (let d of Array.isArray(defeitos) ? defeitos : []) {
     if (!d) continue;
     const sev = normalizarSeveridade(d.severity);
     const estado = String(d.state || '').toUpperCase();
 
-    if (estado === ESTADOS.RISK_ACCEPTED) { riscoAceito.push(d); continue; }
+    // RISK_ACCEPTED só dispensa quando a aceitação é VÁLIDA **e** o defeito não é
+    // P0 nem controla um mecanismo crítico. Caso contrário cai na classificação
+    // normal e bloqueia como qualquer aberto (defeito P0 de 2026-10-19).
+    if (estado === ESTADOS.RISK_ACCEPTED) {
+      const avaliacao = avaliarAceitacaoDeRisco(d);
+      riscoAceito.push(d);
+      const dispensa = avaliacao.valida && sev !== SEVERIDADES.P0;
+      if (dispensa) continue;
+      riscoAceitoIneficaz.push({
+        id: d.id,
+        severity: sev,
+        motivo: avaliacao.motivo || (sev === SEVERIDADES.P0 ? 'P0_NAO_DISPENSAVEL' : null),
+        controlesCriticos: controlesCriticosDoDefeito(d),
+      });
+      // Aceitação ineficaz mantém o defeito TECNICAMENTE ABERTO: o estado de
+      // risco aceito não pode ser lido como "fechado" pelo predicado de bloqueio.
+      d = { ...d, state: ESTADOS.OPEN };
+    }
     // Bloqueio EXTERNO continua contando para certificação (missão §3).
     if (estado === ESTADOS.BLOCKED_EXTERNAL) bloqueioExterno.push(d);
 
@@ -132,7 +216,7 @@ function classificarDefeitos(defeitos) {
     else if (sev === SEVERIDADES.P1) p1.push(d);
   }
 
-  return { p0, p1, naoDeclarada, riscoAceito, bloqueioExterno };
+  return { p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno };
 }
 
 /** Todos os defeitos que precisam de teste direcionado aprovado para liberar condicional. */
@@ -155,7 +239,13 @@ function exigemTesteDirecionado(defeitos) {
   return (Array.isArray(defeitos) ? defeitos : []).filter((d) => {
     const sev = normalizarSeveridade(d && d.severity);
     const estado = String((d && d.state) || '').toUpperCase();
-    if (estado === ESTADOS.RISK_ACCEPTED) return false;
+    if (estado === ESTADOS.RISK_ACCEPTED) {
+      const avaliacao = avaliarAceitacaoDeRisco(d);
+      // Só dispensa teste quando a aceitação é válida e não é P0/controle crítico.
+      const dispensa = avaliacao.valida && sev !== SEVERIDADES.P0;
+      if (dispensa) return false;
+      return sev === SEVERIDADES.P0 || sev === SEVERIDADES.P1 || sev === null;
+    }
     if (estado === ESTADOS.VERIFIED) return false;
     if (estado === ESTADOS.RESOLVED) {
       const prova = d && (d.targetedTestPassing === true
@@ -238,7 +328,9 @@ function evaluateExecutionEligibility(context = {}, operation) {
     };
   }
 
-  const { p0, p1, naoDeclarada, riscoAceito, bloqueioExterno } = classificarDefeitos(context.defects);
+  const {
+    p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno,
+  } = classificarDefeitos(context.defects);
 
   // "Publicação solicitada sem certificação" (missão §11 #20): operação de
   // publicação exige referência de certificação válida no contexto. Sem ela, nega
@@ -252,6 +344,24 @@ function evaluateExecutionEligibility(context = {}, operation) {
   for (const d of riscoAceito) {
     reasonCodes.push(CODIGOS.RISCO_ACEITO_REGISTRADO);
     evidenceRefs.push(`defect:${d.id}:RISK_ACCEPTED`);
+  }
+  // Aceitação ineficaz NÃO dispensa: registra o motivo e mantém o bloqueio vivo.
+  for (const item of riscoAceitoIneficaz) {
+    if (!reasonCodes.includes(CODIGOS.RISCO_ACEITO_INEFICAZ)) reasonCodes.push(CODIGOS.RISCO_ACEITO_INEFICAZ);
+    if (item.motivo === 'CONTROLE_CRITICO_NAO_DISPENSAVEL'
+      && !reasonCodes.includes(CODIGOS.CONTROLE_CRITICO_NAO_DISPENSAVEL)) {
+      reasonCodes.push(CODIGOS.CONTROLE_CRITICO_NAO_DISPENSAVEL);
+    }
+    blockingFindings.push({
+      code: CODIGOS.RISCO_ACEITO_INEFICAZ,
+      defectId: item.id,
+      severity: item.severity,
+      detail: item.motivo,
+      controlesCriticos: item.controlesCriticos,
+    });
+  }
+  if (riscoAceitoIneficaz.length > 0) {
+    requiredActions.push('corrigir a aceitação de risco (responsável, justificativa e validade futura) ou fechar o defeito — P0 e controles críticos nunca são dispensáveis');
   }
   for (const d of bloqueioExterno) {
     // Observação obrigatória: bloqueio externo não é fechamento.
@@ -359,4 +469,7 @@ module.exports = {
   DECISOES,
   classificarDefeitos,
   evaluateExecutionEligibility,
+  avaliarAceitacaoDeRisco,
+  controlesCriticosDoDefeito,
+  CONTROLES_CRITICOS,
 };

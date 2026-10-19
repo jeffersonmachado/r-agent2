@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  executarCadeia, lerCadeia, identidadeCompleta,
+  executarCadeia, lerCadeia, identidadeCompleta, PASSOS_OBRIGATORIOS,
 } = require('../../../scripts/governance/run-governance-enforcement');
 
 const ID_OK = {
@@ -23,8 +23,15 @@ const ID_OK = {
   sourceCommit: 'a'.repeat(40),
 };
 
-const ok = () => ({ exitCode: 0, duracaoMs: 1, sha256Saida: 'ok', saidaFinal: 'ok' });
-const falha = () => ({ exitCode: 1, duracaoMs: 1, sha256Saida: 'bad', saidaFinal: 'erro' });
+// Contrato novo (P0 2026-10-19): a cadeia precisa conter os passos obrigatórios e
+// a execução só começa com autorização válida. O teste injeta a autorização para
+// isolar o comportamento do veredito.
+const CADEIA_OK = PASSOS_OBRIGATORIOS.slice();
+const AUTORIZADO = { operacao: 'SELO_FINAL', allowed: true, decision: 'ALLOWED', reasonCodes: [], requiredActions: [] };
+const DIGEST = 'c'.repeat(64);
+
+const ok = () => ({ exitCode: 0, duracaoMs: 1, sha256Saida: DIGEST, saidaFinal: 'ok' });
+const falha = () => ({ exitCode: 1, duracaoMs: 1, sha256Saida: DIGEST, saidaFinal: 'erro' });
 
 describe('identidade do veredito', () => {
   it('exige runId, sourceFingerprint e sourceCommit de 40 hex', () => {
@@ -36,37 +43,40 @@ describe('identidade do veredito', () => {
 
 describe('veredito do agregado', () => {
   it('todos os passos verdes + identidade completa ⇒ PASS', () => {
-    const v = executarCadeia({ cadeia: ['a', 'b', 'c'], id: ID_OK, executor: ok });
+    const v = executarCadeia({ cadeia: CADEIA_OK, id: ID_OK, executor: ok, autorizacao: AUTORIZADO });
     expect(v.status).toBe('PASS');
-    expect(v.passosExecutados).toBe(3);
+    expect(v.passosExecutados).toBe(CADEIA_OK.length);
     expect(v.motivo).toBeNull();
   });
 
   it('falha interrompe a cadeia (fail-fast) e nomeia o passo', () => {
     const executados = [];
+    const alvo = CADEIA_OK[1];
     const v = executarCadeia({
-      cadeia: ['a', 'b', 'c'],
+      cadeia: CADEIA_OK,
       id: ID_OK,
-      executor: (cmd) => { executados.push(cmd); return cmd === 'b' ? falha() : ok(); },
+      autorizacao: AUTORIZADO,
+      executor: (cmd) => { executados.push(cmd); return cmd === alvo ? falha() : ok(); },
     });
     expect(v.status).toBe('FAIL');
-    expect(v.interrompidoEm).toBe('b');
+    expect(v.interrompidoEm).toBe(alvo);
     expect(v.passosExecutados).toBe(2);
-    expect(executados).toEqual(['a', 'b']); // 'c' nunca rodou
-    expect(v.motivo).toContain('passo falhou: b');
+    expect(executados).toEqual([CADEIA_OK[0], alvo]); // o terceiro nunca rodou
+    expect(v.motivo).toContain(`passo falhou: ${alvo}`);
   });
 
   it('exit code null (morte por sinal) NUNCA é sucesso', () => {
     const v = executarCadeia({
-      cadeia: ['a'],
+      cadeia: CADEIA_OK.slice(0, 1).concat(PASSOS_OBRIGATORIOS.slice(1)),
       id: ID_OK,
-      executor: () => ({ exitCode: null, duracaoMs: 1, sha256Saida: 'z', saidaFinal: '' }),
+      autorizacao: AUTORIZADO,
+      executor: () => ({ exitCode: null, duracaoMs: 1, sha256Saida: DIGEST, saidaFinal: '' }),
     });
     expect(v.status).toBe('FAIL');
   });
 
   it('sem identidade completa o veredito é BLOCKED (nunca PASS)', () => {
-    const v = executarCadeia({ cadeia: ['a'], id: { runId: null }, executor: ok });
+    const v = executarCadeia({ cadeia: CADEIA_OK, id: { runId: null }, executor: ok, autorizacao: AUTORIZADO });
     expect(v.status).toBe('BLOCKED');
     expect(v.motivo).toContain('identidade de run incompleta');
   });

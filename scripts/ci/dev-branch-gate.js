@@ -184,6 +184,163 @@ const AUTORIZACAO_DA_FASE = Object.freeze({
   F: OPERACOES.SELO_FINAL,
 });
 
+/**
+ * CONTRATO DETERMINÍSTICO DE CONCLUSÃO DE FASES (defeito P0 medido em 2026-10-19).
+ *
+ * Era possível pedir `--fases A,A,A,A` e receber `veredito=PASS`,
+ * `equivalenteAValidacaoCompleta=true`, `exit=0` — com ZERO passos executados,
+ * porque o tamanho do array era usado como sinal de cobertura e as fases
+ * desconhecidas eram filtradas em silêncio.
+ *
+ * Regra: quantidade de elementos NUNCA substitui comprovação. Cada fase só pode
+ * ser `PASS` se tiver sido realmente executada, com passos reais, exit 0 e
+ * evidência do MESMO SHA. Fases ausentes ficam `NOT_EXECUTED`; fase sem passos
+ * definidos fica `UNKNOWN`; entrada inválida (duplicada/desconhecida/vazia)
+ * recusa a execução antes de qualquer passo.
+ */
+const FASES_CONHECIDAS = Object.freeze(Object.keys(AUTORIZACAO_DA_FASE));
+
+/** Conjunto que caracteriza validação completa — `PASS` exige TODAS em PASS. */
+const FASES_OBRIGATORIAS_VALIDACAO_COMPLETA = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);
+
+const ESTADOS_DE_FASE = Object.freeze({
+  PASS: 'PASS',
+  FAIL: 'FAIL',
+  BLOCKED: 'BLOCKED',
+  NOT_EXECUTED: 'NOT_EXECUTED',
+  UNKNOWN: 'UNKNOWN',
+});
+
+/**
+ * Normaliza e VALIDA a lista de fases pedidas. Nunca descarta nada em silêncio.
+ * @param {string|null|undefined} bruto
+ * @returns {{fases: string[], invalido: boolean, motivo: string|null, duplicadas: string[], desconhecidas: string[]}}
+ */
+function parseFases(bruto) {
+  const texto = String(bruto == null ? '' : bruto);
+  const itens = texto.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+  const duplicadas = itens.filter((f, i) => itens.indexOf(f) !== i);
+  const desconhecidas = itens.filter((f) => !FASES_CONHECIDAS.includes(f));
+  const unicas = [...new Set(itens)];
+
+  if (itens.length === 0) {
+    return { fases: [], invalido: true, motivo: 'LISTA_DE_FASES_VAZIA', duplicadas, desconhecidas };
+  }
+  if (duplicadas.length > 0) {
+    return {
+      fases: unicas, invalido: true,
+      motivo: `FASE_DUPLICADA:${[...new Set(duplicadas)].join(',')}`, duplicadas, desconhecidas,
+    };
+  }
+  if (desconhecidas.length > 0) {
+    return {
+      fases: unicas, invalido: true,
+      motivo: `FASE_DESCONHECIDA:${desconhecidas.join(',')}`, duplicadas, desconhecidas,
+    };
+  }
+  return { fases: unicas, invalido: false, motivo: null, duplicadas, desconhecidas };
+}
+
+/** Identidade mínima de execução: SHA completo de 40 hex e branch não vazia. */
+function identidadeValida(sha, branch) {
+  const shaOk = typeof sha === 'string' && /^[0-9a-f]{40}$/i.test(sha);
+  const branchOk = typeof branch === 'string' && branch.trim().length > 0 && branch !== '(desconhecida)';
+  return { ok: shaOk && branchOk, shaOk, branchOk };
+}
+
+/**
+ * Estado REAL de cada fase pedida, derivado dos passos que foram executados.
+ * Nenhum estado é inferido de "a fase estava na lista".
+ */
+function avaliarEstadosPorFase({ fasesPedidas, faseA, resultados, bloqueio, timeouts, contexto }) {
+  const timeoutsIds = new Set((timeouts || []).map((r) => r.id));
+  const shaAtual = contexto ? contexto.sha : null;
+  const execucaoAtual = contexto ? contexto.execucaoId : null;
+  const digestValido = (v) => typeof v === 'string' && /^[0-9a-f]{64}$/i.test(v);
+  return (fasesPedidas || []).map((fase) => {
+    const passosDaFase = (resultados || []).filter((r) => r.fase === fase);
+    const reais = passosDaFase.filter((r) => r.naoExecutado !== true);
+    const sinteticos = passosDaFase.filter((r) => r.naoExecutado === true);
+
+    if (fase === 'A') {
+      if (!faseA) return { fase, estado: ESTADOS_DE_FASE.NOT_EXECUTED, passosReais: 0, motivo: 'PRE_VOO_NAO_EXECUTADO' };
+      if (!faseA.ok) return { fase, estado: ESTADOS_DE_FASE.FAIL, passosReais: faseA.checks ? faseA.checks.length : 0, motivo: 'PRE_VOO_FALHOU' };
+      return { fase, estado: ESTADOS_DE_FASE.PASS, passosReais: faseA.checks ? faseA.checks.length : 0, motivo: null };
+    }
+
+    if (reais.length === 0) {
+      const bloqueadoAqui = Boolean(bloqueio && bloqueio.fase === fase);
+      return {
+        fase,
+        estado: bloqueadoAqui ? ESTADOS_DE_FASE.BLOCKED : ESTADOS_DE_FASE.NOT_EXECUTED,
+        passosReais: 0,
+        passosSinteticos: sinteticos.length,
+        motivo: bloqueadoAqui ? (bloqueio.code || 'BLOQUEIO') : 'FASE_NAO_EXECUTADA',
+      };
+    }
+
+    // Evidência amarrada ao SHA e à execução: sem isso o passo não comprova nada.
+    const semDigest = reais.filter((r) => !digestValido(r.sha256Saida));
+    if (semDigest.length > 0) {
+      return { fase, estado: ESTADOS_DE_FASE.UNKNOWN, passosReais: reais.length, motivo: `EVIDENCIA_SEM_DIGEST:${semDigest.map((r) => r.id).join(',')}` };
+    }
+    const outroSha = reais.filter((r) => shaAtual && r.sha && r.sha !== shaAtual);
+    if (outroSha.length > 0) {
+      return { fase, estado: ESTADOS_DE_FASE.UNKNOWN, passosReais: reais.length, motivo: `EVIDENCIA_DE_OUTRO_SHA:${outroSha.map((r) => r.id).join(',')}` };
+    }
+    const outraExecucao = reais.filter((r) => execucaoAtual && r.execucaoId && r.execucaoId !== execucaoAtual);
+    if (outraExecucao.length > 0) {
+      return { fase, estado: ESTADOS_DE_FASE.UNKNOWN, passosReais: reais.length, motivo: `EVIDENCIA_DE_OUTRA_EXECUCAO:${outraExecucao.map((r) => r.id).join(',')}` };
+    }
+    const semVinculo = reais.filter((r) => !r.sha || !r.execucaoId);
+    if (semVinculo.length > 0) {
+      return { fase, estado: ESTADOS_DE_FASE.UNKNOWN, passosReais: reais.length, motivo: `EVIDENCIA_SEM_VINCULO:${semVinculo.map((r) => r.id).join(',')}` };
+    }
+
+    const comTimeout = reais.filter((r) => r.timeout === true || timeoutsIds.has(r.id));
+    if (comTimeout.length > 0) {
+      return { fase, estado: ESTADOS_DE_FASE.BLOCKED, passosReais: reais.length, motivo: 'TIMEOUT' };
+    }
+    const comFalha = reais.filter((r) => r.exitCode !== 0);
+    if (comFalha.length > 0) {
+      return {
+        fase, estado: ESTADOS_DE_FASE.FAIL, passosReais: reais.length,
+        motivo: `PASSO_FALHOU:${comFalha.map((r) => r.id).join(',')}`,
+      };
+    }
+    return { fase, estado: ESTADOS_DE_FASE.PASS, passosReais: reais.length, motivo: null };
+  });
+}
+
+/**
+ * Veredito global. `PASS` (e equivalência a validação completa) exige:
+ * identidade válida, entrada válida, TODAS as fases obrigatórias em `PASS`,
+ * sem bloqueio, sem timeout e sem fase em NOT_EXECUTED/UNKNOWN.
+ */
+function decidirVeredito({ entradaInvalida, identidade, estados, bloqueio }) {
+  const porFase = new Map((estados || []).map((e) => [e.fase, e.estado]));
+  const faltantes = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA.filter((f) => !porFase.has(f));
+  const naoPass = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA
+    .filter((f) => porFase.has(f) && porFase.get(f) !== ESTADOS_DE_FASE.PASS);
+  const estadosPresentes = new Set((estados || []).map((e) => e.estado));
+  const algumaNaoExecutada = estadosPresentes.has(ESTADOS_DE_FASE.NOT_EXECUTED);
+  const algumaDesconhecida = estadosPresentes.has(ESTADOS_DE_FASE.UNKNOWN);
+  const algumaFalha = estadosPresentes.has(ESTADOS_DE_FASE.FAIL);
+  const algumBloqueio = estadosPresentes.has(ESTADOS_DE_FASE.BLOCKED) || Boolean(bloqueio);
+
+  if (entradaInvalida) return 'ENTRADA_INVALIDA';
+  if (!identidade || !identidade.ok) return 'IDENTIDADE_INVALIDA';
+  if (algumaFalha) return 'FAIL';
+  if (algumBloqueio) {
+    return bloqueio && ['FASE_NAO_AUTORIZADA', 'PRE_VOO_FALHOU'].includes(bloqueio.code)
+      ? 'BLOQUEADO_POR_DEFEITOS'
+      : 'BLOQUEADO_POR_TIMEOUT';
+  }
+  if (faltantes.length > 0) return 'PASS_PARCIAL';
+  if (naoPass.length > 0 || algumaNaoExecutada || algumaDesconhecida) return 'INCONCLUSIVO';
+  return 'PASS';
+}
+
 /** Arquivos cuja existência é regra preventiva (defeito corrigido não volta a existir mudo). */
 const REGRAS_PREVENTIVAS = Object.freeze([
   'governance/RAP_AGENT_CONSTITUTION.md',
@@ -207,6 +364,15 @@ function git(args) {
 
 function sha256(texto) {
   return crypto.createHash('sha256').update(texto).digest('hex');
+}
+
+// Contexto da execução corrente: cada passo é amarrado a ele. Evidência de outro
+// SHA ou de outra execução NÃO conta como comprovação (defeito P0 medido em 2026-10-19).
+let CONTEXTO_EXECUCAO = { sha: null, execucaoId: null };
+
+function definirContextoExecucao(sha) {
+  CONTEXTO_EXECUCAO = { sha: sha || null, execucaoId: crypto.randomUUID() };
+  return CONTEXTO_EXECUCAO;
 }
 
 function executar(passo) {
@@ -244,6 +410,8 @@ function executar(passo) {
     timeout: estourouOrcamento,
     duracaoMs: Date.now() - inicio,
     sha256Saida: sha256(saida),
+    sha: CONTEXTO_EXECUCAO.sha,
+    execucaoId: CONTEXTO_EXECUCAO.execucaoId,
     saidaFinal: saida.trim().split('\n').slice(-12).join('\n'),
   };
 }
@@ -479,19 +647,41 @@ function main(argv = process.argv.slice(2)) {
   const escopoArg = argDe('--escopo');
   const escopo = escopoArg ? escopoArg.split(',').map((s) => s.trim()).filter(Boolean) : null;
 
-  const fasesPedidas = (argDe('--fases') || (extensivo ? 'A,B,C,D,E' : 'A,B,C,D'))
-    .split(',').map((s) => s.trim().toUpperCase()).filter(Boolean)
-    .filter((f) => Object.prototype.hasOwnProperty.call(AUTORIZACAO_DA_FASE, f));
+  // `--fases` presente com valor vazio é ENTRADA INVÁLIDA (não "use o default").
+  const fasesArg = argDe('--fases');
+  const fasesBrutas = fasesArg !== null ? fasesArg : (extensivo ? 'A,B,C,D,E' : 'A,B,C,D');
+  const fasesParse = parseFases(fasesBrutas);
+  const fasesPedidas = fasesParse.fases;
 
   const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']) || '(desconhecida)';
   const sha = git(['rev-parse', 'HEAD']) || '';
+  const identidade = identidadeValida(sha, branch);
+
+  // RECUSA ANTES DE EXECUTAR: entrada inválida (duplicada/desconhecida/vazia) ou
+  // identidade inválida não podem produzir veredito algum. Sem pré-voo, sem passos.
+  if (fasesParse.invalido || !identidade.ok) {
+    process.stderr.write(
+      `[dev-branch-gate] RECUSADO: ${fasesParse.invalido ? fasesParse.motivo : `IDENTIDADE_INVALIDA (sha=${sha || 'vazio'} branch=${branch})`}` +
+      ' — nenhuma fase foi executada.\n'
+    );
+    return finalizar({
+      outJson, sha, branch, faseA: null, resultados: [], autorizacoes: [],
+      fasesPedidas, escopo, rapido, bloqueio: null, preflight: null,
+      entradaInvalida: fasesParse.invalido ? fasesParse.motivo : null,
+      identidade, fasesParse,
+    });
+  }
 
   if (esperaSha && esperaSha !== sha) {
     process.stderr.write(
       `[dev-branch-gate] RECUSADO: HEAD=${sha} mas a execucao EXIGE ${esperaSha} — ` +
       'a evidencia seria vinculada ao commit errado.\n'
     );
-    return 1;
+    return finalizar({
+      outJson, sha, branch, faseA: null, resultados: [], autorizacoes: [],
+      fasesPedidas, escopo, rapido, bloqueio: null, preflight: null,
+      entradaInvalida: 'SHA_DIVERGENTE_DO_ESPERADO', identidade, fasesParse,
+    });
   }
 
   process.stdout.write(`[dev-branch-gate] branch=${branch} sha=${sha || '(vazio)'}\n`);
@@ -518,10 +708,11 @@ function main(argv = process.argv.slice(2)) {
     process.stdout.write(`[dev-branch-gate]   ${c.id.padEnd(24)} ${estado} — ${c.detalhe}\n`);
   }
 
-  if (fasesPedidas[0] === 'A' && fasesPedidas.length === 1) {
+  if (fasesPedidas.length === 1 && fasesPedidas[0] === 'A') {
     return finalizar({
       outJson, sha, branch, faseA, resultados: [], autorizacoes: [],
       fasesPedidas, escopo, rapido, bloqueio: null, preflight,
+      entradaInvalida: null, identidade, fasesParse,
     });
   }
 
@@ -531,8 +722,11 @@ function main(argv = process.argv.slice(2)) {
       outJson, sha, branch, faseA, resultados: [], autorizacoes: [],
       fasesPedidas, escopo, rapido, preflight,
       bloqueio: { code: 'PRE_VOO_FALHOU', detail: preflight.achados.map((a) => a.code).join(',') },
+      entradaInvalida: null, identidade, fasesParse,
     });
   }
+
+  const contexto = definirContextoExecucao(sha);
 
   const resultados = [];
   const autorizacoes = [];
@@ -631,29 +825,31 @@ function main(argv = process.argv.slice(2)) {
 
   return finalizar({
     outJson, sha, branch, faseA, resultados, autorizacoes, fasesPedidas, escopo, rapido, bloqueio, preflight,
+    entradaInvalida: null, identidade, fasesParse,
   });
 }
 
 function finalizar({
   outJson, sha, branch, faseA, resultados, autorizacoes, fasesPedidas, escopo, rapido, bloqueio, preflight,
+  entradaInvalida = null, identidade = null, fasesParse = null,
 }) {
-  // TIMEOUT NÃO É DEFEITO. Medido em 2026-10-18: o passo L0 estourou o orçamento e o
-  // veredito saía `FAIL` — como se a suíte tivesse reprovado. O correto é "sem veredito":
-  // BLOQUEADO_POR_TIMEOUT (exit 2, igual a bloqueio), nunca PASS e nunca FAIL.
-  const timeouts = resultados.filter((r) => r.timeout === true);
-  // Passo SINTÉTICO (`naoExecutado: true`, ex.: "B: nenhum teste direcionado declarado") tem
-  // `exitCode: null` por construção e NÃO é falha — medido em 2026-10-18: o L0 passou com
-  // exit=0 em 217,4s e o veredito saiu FAIL só por causa desse registro informativo.
-  const falhas = resultados.filter((r) => r.naoExecutado !== true && r.timeout !== true && r.exitCode !== 0);
-  const bloqueadoPorDefeitos = Boolean(bloqueio && [ 'FASE_NAO_AUTORIZADA', 'PRE_VOO_FALHOU' ].includes(bloqueio.code));
+  const resultadosSeguros = Array.isArray(resultados) ? resultados : [];
+  const autorizacoesSeguras = Array.isArray(autorizacoes) ? autorizacoes : [];
 
-  const escopoParcial = rapido || fasesPedidas.length < 4 || Boolean(bloqueio) || !faseA.ok;
-  let veredito;
-  if (bloqueadoPorDefeitos) veredito = 'BLOQUEADO_POR_DEFEITOS';
-  else if (timeouts.length > 0) veredito = 'BLOQUEADO_POR_TIMEOUT';
-  else if (falhas.length > 0 || Boolean(bloqueio)) veredito = 'FAIL';
-  else if (escopoParcial) veredito = 'PASS_PARCIAL';
-  else veredito = 'PASS';
+  // TIMEOUT NÃO É DEFEITO. Medido em 2026-10-18: o passo L0 estourou o orçamento e o
+  // veredito saía `FAIL` — como se a suíte tivesse reprovado. O correto é "sem veredito".
+  const timeouts = resultadosSeguros.filter((r) => r.timeout === true);
+  // Passo SINTÉTICO (`naoExecutado: true`) tem exitCode null por construção e NÃO é falha.
+  const falhas = resultadosSeguros.filter((r) => r.naoExecutado !== true && r.timeout !== true && r.exitCode !== 0);
+
+  const estados = avaliarEstadosPorFase({
+    fasesPedidas, faseA, resultados: resultadosSeguros, bloqueio, timeouts,
+    contexto: CONTEXTO_EXECUCAO,
+  });
+  const veredito = decidirVeredito({ entradaInvalida, identidade, estados, bloqueio });
+  const completo = veredito === 'PASS';
+  const fasesFaltantes = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA.filter((f) => !fasesPedidas.includes(f));
+  const naoExecutadas = estados.filter((e) => e.estado !== ESTADOS_DE_FASE.PASS).map((e) => e.fase);
 
   const runner = sondarRunnerDoGithub(branch);
   const shaCurto = (sha || 'vazio').slice(0, 12);
@@ -666,21 +862,40 @@ function finalizar({
   });
 
   const nucleo = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     kind: 'dev-branch-ci-evidence',
     comando: 'node scripts/ci/dev-branch-gate.js',
     veredito,
-    equivalenteAValidacaoCompleta: veredito === 'PASS',
-    escopo: rapido || fasesPedidas.length < 4 ? 'PARCIAL' : 'COMPLETO',
+    // Só é "equivalente a validação completa" quando TODAS as fases obrigatórias
+    // foram realmente executadas com exit 0 — nunca por tamanho de array.
+    equivalenteAValidacaoCompleta: completo,
+    escopo: completo ? 'COMPLETO' : 'PARCIAL',
     fasesPedidas,
-    fasesConcluidas: [...new Set(resultados.filter((r) => r.exitCode === 0 && !r.naoExecutado).map((r) => r.fase))],
+    fasesObrigatorias: FASES_OBRIGATORIAS_VALIDACAO_COMPLETA,
+    fasesFaltantes,
+    estadosPorFase: estados,
+    fasesNaoAprovadas: naoExecutadas,
+    entradaInvalida: entradaInvalida || null,
+    entrada: fasesParse ? {
+      bruto: fasesPedidas.join(','),
+      duplicadas: fasesParse.duplicadas || [],
+      desconhecidas: fasesParse.desconhecidas || [],
+    } : null,
+    contextoExecucao: { sha: CONTEXTO_EXECUCAO.sha, execucaoId: CONTEXTO_EXECUCAO.execucaoId },
+    identidade: {
+      sha,
+      branch,
+      shaValido: Boolean(identidade && identidade.shaOk),
+      branchValida: Boolean(identidade && identidade.branchOk),
+    },
+    fasesConcluidas: estados.filter((e) => e.estado === ESTADOS_DE_FASE.PASS).map((e) => e.fase),
     sha,
     shaCurto,
     branch,
     escopoDefeitos: escopo || null,
     runnerDoGithub: runner,
     gateEfetivo: 'LOCAL (o runner do GitHub nao inicia jobs por limite de gastos da conta)',
-    preVoo: {
+    preVoo: faseA ? {
       ok: faseA.ok,
       checks: faseA.checks,
       achados: faseA.achados,
@@ -689,60 +904,68 @@ function finalizar({
       arvoreSuja: faseA.arvoreSuja,
       arquivosSujos: faseA.arquivosSujos,
       evidenciaAnterior: faseA.evidenciaAnterior,
-    },
-    autorizacoes,
+    } : { ok: false, checks: [], achados: [{ code: 'PRE_VOO_NAO_EXECUTADO' }] },
+    autorizacoes: autorizacoesSeguras,
     bloqueio,
-    passos: resultados.map(semSaidaFinal),
+    passos: resultadosSeguros.map(semSaidaFinal),
     falhas: falhas.map((f) => ({ id: f.id, fase: f.fase, comando: f.comando, exitCode: f.exitCode })),
   };
 
   const evidencia = { ...nucleo, evidenceSha256: sha256(JSON.stringify(nucleo)) };
 
-  const outJsonAbs = path.join(ROOT, outJson);
+  const outJsonAbs = path.resolve(ROOT, outJson);
   fs.mkdirSync(path.dirname(outJsonAbs), { recursive: true });
   fs.writeFileSync(outJsonAbs, `${JSON.stringify(evidencia, null, 2)}\n`, 'utf8');
 
-  // Evidência versionada: Markdown com o payload JSON embutido em bloco cercado —
-  // `.json` solto em AI_MEMORY/evidence/ é reprovado pelo audit:json-persistence.
-  const mdRel = `AI_MEMORY/evidence/dev-branch-ci-${shaCurto}-${String(nucleo.escopo).toLowerCase()}.md`;
+  // Diretório da evidência versionada é configurável para que testes possam
+  // exercitar o gate sem sobrescrever a evidência real do repositório.
+  const dirEvidencia = process.env.DEV_BRANCH_GATE_EVIDENCE_DIR || 'AI_MEMORY/evidence';
+  const mdRel = path.posix.join(dirEvidencia, `dev-branch-ci-${shaCurto}-${String(nucleo.escopo).toLowerCase()}.md`);
+  const checksPreVoo = (nucleo.preVoo.checks || []);
   const linhas = [
     `# Gate em fases da branch de desenvolvimento — ${shaCurto} (${nucleo.escopo})`,
     '',
     `- **veredito**: \`${veredito}\``,
     `- **equivale a validação completa**: \`${nucleo.equivalenteAValidacaoCompleta}\``,
-    `- **fases pedidas**: \`${fasesPedidas.join(',')}\``,
-    `- **fases concluídas**: \`${nucleo.fasesConcluidas.join(',') || '(nenhuma)'}\``,
+    `- **fases pedidas**: \`${fasesPedidas.join(',') || '(vazio)'}\``,
+    `- **fases obrigatórias**: \`${FASES_OBRIGATORIAS_VALIDACAO_COMPLETA.join(',')}\``,
+    `- **fases faltantes**: \`${fasesFaltantes.join(',') || '(nenhuma)'}\``,
+    `- **entrada inválida**: \`${entradaInvalida || 'não'}\``,
     `- **branch**: \`${branch}\``,
     `- **sha exato avaliado**: \`${sha || '(vazio)'}\``,
     `- **gerado em**: ${new Date().toISOString()}`,
     `- **gate efetivo**: LOCAL — o runner do GitHub não inicia jobs por limite de gastos da conta`,
     '',
+    '## Estado por fase (comprovação, não intenção)',
+    '',
+    '| fase | estado | passos reais | motivo |',
+    '|---|---|---|---|',
+    ...estados.map((e) => `| ${e.fase} | **${e.estado}** | ${e.passosReais} | ${e.motivo || '—'} |`),
+    '',
     '## Pré-voo (fase A)',
     '',
-    '| check | resultado | detalhe |',
-    '|---|---|---|',
-    ...faseA.checks.map((c) => `| \`${c.id}\` | ${c.ok ? 'ok' : (c.bloqueante === false ? 'nota (não bloqueia)' : 'FALHA')} | ${String(c.detalhe).replace(/\|/g, '/')} |`),
+    checksPreVoo.length ? '| check | resultado | detalhe |' : '(pré-voo não executado)',
+    ...(checksPreVoo.length ? ['|---|---|---|'] : []),
+    ...checksPreVoo.map((c) => `| \`${c.id}\` | ${c.ok ? 'ok' : (c.bloqueante === false ? 'nota (não bloqueia)' : 'FALHA')} | ${String(c.detalhe).replace(/\|/g, '/')} |`),
     '',
-    faseA.inventario
-      ? `Inventário de defeitos: ${faseA.inventario.total} item(ns), ${faseA.inventario.abertos} aberto(s), ${faseA.inventario.bloqueantesParaCertificacao} bloqueante(s) para certificação.`
-      : `Inventário de defeitos INDISPONÍVEL: ${faseA.erroInventario}`,
+    nucleo.preVoo.inventario
+      ? `Inventário de defeitos: ${nucleo.preVoo.inventario.total} item(ns), ${nucleo.preVoo.inventario.abertos} aberto(s), ${nucleo.preVoo.inventario.bloqueantesParaCertificacao} bloqueante(s) para certificação.`
+      : `Inventário de defeitos INDISPONÍVEL: ${nucleo.preVoo.erroInventario || 'pré-voo não executado'}`,
     '',
     '## Autorizações de fase (Bug Closure First)',
     '',
-    autorizacoes.length
-      ? '| fase | operação | decisão | motivos |'
-      : '(nenhuma fase técnica foi solicitada)',
-    ...(autorizacoes.length ? ['|---|---|---|---|'] : []),
-    ...autorizacoes.map((a) => `| ${a.fase} | \`${a.operacao}\` | **${a.decision}** | ${a.reasonCodes.join(', ') || '—'} |`),
+    autorizacoesSeguras.length ? '| fase | operação | decisão | motivos |' : '(nenhuma fase técnica foi solicitada)',
+    ...(autorizacoesSeguras.length ? ['|---|---|---|---|'] : []),
+    ...autorizacoesSeguras.map((a) => `| ${a.fase} | \`${a.operacao}\` | **${a.decision}** | ${a.reasonCodes.join(', ') || '—'} |`),
     '',
     bloqueio ? `**BLOQUEIO**: fase ${bloqueio.fase || '-'} — \`${bloqueio.code}\` ${bloqueio.detail || ''}` : '**Sem bloqueio.**',
     '',
     '## Passos executados (comando, exit code, duração, sha256 da saída)',
     '',
-    resultados.length ? '| fase | passo | comando | exit | duração | sha256 da saída |' : '(nenhum passo executado)',
-    ...(resultados.length ? ['|---|---|---|---|---|---|'] : []),
-    ...resultados.map((r) =>
-      `| ${r.fase} | \`${r.id}\` | \`${r.comando}\` | ${r.exitCode === null ? 'null' : r.exitCode} | ${(r.duracaoMs / 1000).toFixed(1)}s | \`${r.sha256Saida.slice(0, 16)}…\` |`),
+    resultadosSeguros.length ? '| fase | passo | comando | exit | duração | sha256 da saída |' : '(nenhum passo executado)',
+    ...(resultadosSeguros.length ? ['|---|---|---|---|---|---|'] : []),
+    ...resultadosSeguros.map((r) =>
+      `| ${r.fase} | \`${r.id}\` | \`${r.comando}\` | ${r.exitCode === null ? 'null' : r.exitCode} | ${(r.duracaoMs / 1000).toFixed(1)}s | \`${String(r.sha256Saida).slice(0, 16)}…\` |`),
     '',
     '## Estado do runner do GitHub (medido)',
     '',
@@ -753,7 +976,7 @@ function finalizar({
     '## Como reconferir a evidência',
     '',
     '```bash',
-    `node scripts/ci/dev-branch-gate.js --fases ${fasesPedidas.join(',')}   # reexecuta as mesmas fases`,
+    `node scripts/ci/dev-branch-gate.js --fases ${fasesPedidas.join(',') || 'A'}   # reexecuta as mesmas fases`,
     `git log -1 --format=%H -- ${mdRel}   # commit que publicou esta evidência`,
     '```',
     '',
@@ -764,7 +987,7 @@ function finalizar({
     '```',
     '',
   ];
-  const mdAbs = path.join(ROOT, mdRel);
+  const mdAbs = path.resolve(ROOT, mdRel);
   fs.mkdirSync(path.dirname(mdAbs), { recursive: true });
   fs.writeFileSync(mdAbs, linhas.join('\n'), 'utf8');
 
@@ -773,14 +996,20 @@ function finalizar({
     `evidencia=${outJson} + ${mdRel}\n`
   );
 
-  if (veredito === 'BLOQUEADO_POR_DEFEITOS') return 2;
-  if (veredito === 'BLOQUEADO_POR_TIMEOUT') return 2;
+  if (veredito === 'PASS') return 0;
+  // PASS_PARCIAL: as fases pedidas passaram, mas NÃO equivalem a validação completa.
+  if (veredito === 'PASS_PARCIAL') return 0;
+  // Sem veredito / reprovado / entrada inválida: nunca exit 0.
   if (veredito === 'FAIL') return 1;
-  return 0;
+  return 2;
 }
 
 if (require.main === module) {
   process.exitCode = main();
 }
 
-module.exports = { main, PASSOS, AUTORIZACAO_DA_FASE, REGRAS_PREVENTIVAS, preVoo, planejarFaseB };
+module.exports = {
+  main, PASSOS, AUTORIZACAO_DA_FASE, REGRAS_PREVENTIVAS, preVoo, planejarFaseB,
+  parseFases, identidadeValida, avaliarEstadosPorFase, decidirVeredito, definirContextoExecucao,
+  FASES_CONHECIDAS, FASES_OBRIGATORIAS_VALIDACAO_COMPLETA, ESTADOS_DE_FASE,
+};
