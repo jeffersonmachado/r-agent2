@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T17:28:19.118Z",
+  "generatedAt": "2026-10-19T18:31:13.138Z",
   "engine": "replay-hardening-engine/v2",
   "pass": true,
   "decision": "REPLAY_HARDENING_GO",

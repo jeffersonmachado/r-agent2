@@ -1,5 +1,11 @@
 'use strict';
 
+// Classificação única de erro de IA que vira 400 estruturado (nunca 500).
+// A lista era duplicada aqui e nos handlers de geração e não incluía
+// `provider_circuit_open` — indisponibilidade de provider virava 500 e o
+// cenário `business-core-biz-flows-editor` derrubava o selo.
+const { isStructuredAiClientError } = require('../../utils/aiStructuredError');
+
 module.exports = { handleAiChatbotOrchestratorRoutes };
 
 async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, deps }) {
@@ -79,7 +85,7 @@ async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, d
       // AI_GENERATION_FAILED: provider de IA indisponível ou resposta
       // inválida/não parseável — falha agregada esperada, 400 estruturado.
       const code = err && err.code;
-      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || code === 'AI_PROVIDER_NOT_CONFIGURED' || code === 'AI_GENERATION_FAILED' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
+      if (isStructuredAiClientError(err)) {
         sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
         return true;
       }
@@ -152,7 +158,7 @@ async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, d
       // cliente: 400 estruturado, nunca 500. AI_PROVIDER_NOT_CONFIGURED e
       // AI_GENERATION_FAILED (IA indisponível/resposta inválida) idem.
       const code = err && err.code;
-      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || code === 'AI_PROVIDER_NOT_CONFIGURED' || code === 'AI_GENERATION_FAILED' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
+      if (isStructuredAiClientError(err)) {
         sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
         return true;
       }

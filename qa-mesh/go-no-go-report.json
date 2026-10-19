@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-19T17-34-30-385Z",
+  "executionId": "mesh-2026-10-19T18-38-34-650Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -10,19 +10,19 @@
     "BASELINE_PASS_RATE_REGRESSION"
   ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-19T17-34-30-385Z",
-    "startedAt": "2026-10-19T17:34:30.385Z",
+    "executionId": "mesh-2026-10-19T18-38-34-650Z",
+    "startedAt": "2026-10-19T18:38:34.650Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-19T18:10:50.410Z",
+    "promotedAt": "2026-10-19T19:13:48.209Z",
     "registryTotal": 144,
     "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-19T17-34-30-385Z",
+    "executionId": "mesh-2026-10-19T18-38-34-650Z",
     "tenantId": "system",
-    "timestamp": "2026-10-19T17:34:30.385Z",
+    "timestamp": "2026-10-19T18:38:34.650Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -30,12 +30,12 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 143,
+    "passed": 142,
     "fallbackPassed": 0,
     "failed": 1,
     "skipped": 0,
     "infraErrors": 0,
-    "environmentMissing": 0,
+    "environmentMissing": 1,
     "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
@@ -80,12 +80,12 @@
         "total": 2
       },
       "core": {
-        "passed": 89,
+        "passed": 88,
         "fallbackPassed": 0,
         "failed": 1,
         "skipped": 0,
         "infra_error": 0,
-        "environment_missing": 0,
+        "environment_missing": 1,
         "flaky": 0,
         "total": 90
       },
@@ -178,12 +178,13 @@
     "pipelineBlocked": 0,
     "failuresByDomain": {
       "core": {
-        "total": 1,
+        "total": 2,
         "blocking": 0,
         "byType": {
-          "functional_failure": 1
+          "functional_failure": 1,
+          "environment_missing": 1
         },
-        "successRate": 0.9888888888888889
+        "successRate": 0.9777777777777777
       },
       "beauty": {
         "total": 0,
@@ -253,22 +254,27 @@
       }
     },
     "failuresByType": {
-      "functional_failure": 1
+      "functional_failure": 1,
+      "environment_missing": 1
     },
     "topErrors": [
       {
-        "message": "Fila não foi removida: a fila continua na listagem após DELETE",
+        "message": "Pagina /channel-accounts renderizou vazia",
+        "count": 1
+      },
+      {
+        "message": "500 Internal Server Error: Provider de IA 'qwen' indisponível (circuit breaker aberto).",
         "count": 1
       }
     ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-19T17-34-30-385Z",
-      "startedAt": "2026-10-19T17:34:30.385Z",
+      "executionId": "mesh-2026-10-19T18-38-34-650Z",
+      "startedAt": "2026-10-19T18:38:34.650Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-19T18:10:50.410Z",
+      "promotedAt": "2026-10-19T19:13:48.209Z",
       "registryTotal": 144,
       "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
@@ -276,9 +282,9 @@
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261019171054896-bf01d05f",
-  "sourceFingerprint": "f137f0c926e0908ff7a967f417d8c0543af74de0b35adaec8293ca45c66b31e0",
-  "sourceCommit": "eca534f8ae88ff48592354a2d0690ee26c187e1c",
-  "sourceTree": "7e7cec15e2e36cf16ec68bab3b06de44d9a3650c",
-  "generatedAt": "2026-10-19T18:10:50.417Z"
+  "runId": "rap-governed-20261019181447045-fa92c059",
+  "sourceFingerprint": "fe439ac15ee51c477f07ab580f295a7a7110d06bd576cc15e7f54397e5ce5d11",
+  "sourceCommit": "bfe573ae8656ee2506106de4bc4b7c64b2698205",
+  "sourceTree": "0783210124a65360bee4d712db60df75def0eba9",
+  "generatedAt": "2026-10-19T19:13:48.214Z"
 }

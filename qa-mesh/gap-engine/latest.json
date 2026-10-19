@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T18:10:51.095Z",
+  "generatedAt": "2026-10-19T19:13:48.987Z",
   "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]",
   "platformMaturity": "enterprise-partial",
   "backlog": [
@@ -10,15 +10,34 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-functional_failure-business-core-biz-queues",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-channel-accounts",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
       "evidence": {
         "scenarios": [
-          "business-core-biz-queues"
+          "business-core-biz-channel-accounts"
         ],
-        "sampleError": "Fila não foi removida: a fila continua na listagem após DELETE"
+        "sampleError": "Pagina /channel-accounts renderizou vazia"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-environment_missing-business-core-biz-flows-editor",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-flows-editor"
+        ],
+        "sampleError": "500 Internal Server Error: Provider de IA 'qwen' indisponível (circuit breaker aberto)."
       },
       "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
@@ -46,6 +65,6 @@
       "suggestedFix": "npm run ensure:authoritative-artifacts-fresh && npm run validate:current-run-temporal-integrity"
     }
   ],
-  "blocking": 3,
+  "blocking": 4,
   "nonBlocking": 0
 }

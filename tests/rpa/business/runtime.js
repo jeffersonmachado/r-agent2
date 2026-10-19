@@ -864,7 +864,16 @@ async function assertBusinessPage(page, pageDef, definition) {
       renderedText = await readRenderedText(page);
     }
     if (!renderedText) {
-      throw new Error(`Pagina ${pageDef.path} renderizou vazia`);
+      // DIAGNOSTICABILIDADE (medido 2026-10-19, `business-core-biz-channel-
+      // accounts`): a mensagem dizia só "renderizou vazia" e a evidência do
+      // mesh (que é podada) levava junto a única pista — os console errors
+      // capturados aqui. Sem eles não é possível distinguir módulo que não
+      // carregou (Vite/chunk) de erro de render. A falha continua falhando:
+      // o que muda é que agora ela CARREGA a causa observada.
+      const consoleResumo = consoleErrors.length > 0
+        ? consoleErrors.slice(0, 5).join(' | ')
+        : '(nenhum erro de console capturado)';
+      throw new Error(`Pagina ${pageDef.path} renderizou vazia | console: ${consoleResumo}`);
     }
     const finalPath = new URL(page.url()).pathname;
     if (!pageDef.allowRedirect) {
