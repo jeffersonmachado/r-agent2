@@ -1867,10 +1867,43 @@ function _computeFinalDecisionSemantics({
   };
 }
 
+/**
+ * DEFEITO MEDIDO (2026-10-19): a decisão canônica era regravada sem que as
+ * projeções derivadas fossem atualizadas. Medido no run
+ * `rap-governed-20261017053314590-3558e6f4`: projeções escritas 11:12:00 com
+ * fingerprint `2c8f986c…` e canônica regravada 11:14:09 com `bfbabde3…` — o
+ * repositório passou a exibir `NO_GO` nos docs e `PASS_WITH_DEFERRED_PACKAGE_GATE`
+ * na canônica, e o gate `validate:final-status-projection` reprovou (L2).
+ *
+ * Regra: quem grava a decisão canônica REGENERA e VALIDA as 5 projeções na
+ * mesma execução. Assim a janela de divergência deixa de existir por construção
+ * (não depende de alguém lembrar de rodar o gerador depois).
+ *
+ * Falha aqui é fail-closed: projeção divergente derruba o produtor com exit != 0.
+ */
+function syncDerivedProjections() {
+  const { execFileSync } = require('child_process');
+  const raiz = path.resolve(__dirname, '..', '..');
+  const gerador = path.join(raiz, 'scripts', 'governance', 'generate-final-status-projections.js');
+  const validador = path.join(raiz, 'scripts', 'governance', 'validate-final-status-projection.js');
+  for (const script of [gerador, validador]) {
+    try {
+      execFileSync(process.execPath, [script], { cwd: raiz, stdio: 'pipe', encoding: 'utf8' });
+    } catch (err) {
+      const saida = `${(err && err.stdout) || ''}${(err && err.stderr) || ''}`.trim();
+      // eslint-disable-next-line no-console
+      console.error(`[platform-readiness] FINAL_STATUS_PROJECTION_STALE — ${path.basename(script)} falhou${saida ? `\n${saida}` : ''}`);
+      process.exitCode = 1;
+      return;
+    }
+  }
+}
+
 function main() {
   materializeProofArtifacts();
   const report = buildReport();
   persistReport(report);
+  syncDerivedProjections();
   // eslint-disable-next-line no-console
   console.log(JSON.stringify({
     status: report.finalDecision,
@@ -1921,6 +1954,7 @@ module.exports = {
   calculateReplayCoveragePercent,
   hasProvenCrmMutation,
   persistReport,
+  syncDerivedProjections,
   REQUIRED_REPLAY_JOURNEYS,
   toMarkdownSections,
   _internal: { _computeMandatoryDecision, _computeFinalDecisionSemantics },
