@@ -269,7 +269,7 @@ function resolveGraceMs(graceMs) {
   }
 }
 
-async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = 'none', graceMs = null, signal = null }) {
+async function runSandboxOnce({ executable, args, cwd, env, timeoutMs, network = 'none', graceMs = null, signal = null }) {
   // ── BUG CLOSURE FIRST (2026-10-17) ────────────────────────────────────────
   // O Sandbox do Router é um caminho ALTERNATIVO de execução: sem esta guarda,
   // um comando extensivo (`validate:governance-enforcement`, `qa:mesh`,
@@ -381,6 +381,36 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
       });
     });
   });
+}
+
+/**
+ * Wrapper com RETRY LIMITADO para falhas TRANSITÓRIAS do daemon/limites do Docker.
+ *
+ * MEDIDO (2026-10-18): com o lote oficial em 11 workers, suítes que abrem containers em paralelo
+ * falhavam de forma intermitente (`spawn ... EAGAIN`, `Cannot connect to the Docker daemon`) e o
+ * teste de redação caía porque NÃO HOUVE saída — falha de infraestrutura reportada como defeito de
+ * comportamento. Não é retry de teste: é retry de INFRA, com limite explícito, e depois disso o
+ * erro continua sendo erro (nunca vira PASS).
+ */
+const PADROES_TRANSITORIOS = /EAGAIN|resource temporarily unavailable|Cannot connect to the Docker daemon|is the docker daemon running\?|temporary failure|connection reset by peer|TLS handshake timeout/i;
+
+async function runInSandbox(entrada = {}) {
+  const maxTentativas = Math.max(1, Number(process.env.ENGINEERING_ROUTER_SANDBOX_RETRIES) || 3);
+  let ultimo = null;
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const resultado = await runSandboxOnce(entrada);
+    const stderr = String(resultado && resultado.stderr ? resultado.stderr : '');
+    const transitorio = (resultado.exitCode === null || resultado.exitCode === 125)
+      && PADROES_TRANSITORIOS.test(stderr);
+    ultimo = resultado;
+    if (!transitorio) return resultado;
+    if (tentativa === maxTentativas) break;
+    // Backoff curto e crescente: 250ms, 500ms... só para o daemon respirar.
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => setTimeout(r, 250 * tentativa));
+  }
+  return ultimo;
 }
 
 module.exports = {

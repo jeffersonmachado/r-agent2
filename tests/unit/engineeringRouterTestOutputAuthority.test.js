@@ -27,6 +27,28 @@ jest.setTimeout(30000);
 
 const PROBE_SCRIPT = 'tests/fixtures/engineering-router-sandbox/promptInjectionOutputProbe.js';
 
+// ── RETRY DE INFRA, NUNCA DE COMPORTAMENTO ───────────────────────────────────
+// MEDIDO em 2026-10-19 (L0 da fase C): sob carga, o container do sandbox pode
+// não devolver exit code (`EAGAIN`, daemon do Docker sob pressão). O teste então
+// reprovava em `expect(results[0].exitCode).toBe(0)` — reportando como DEFEITO DE
+// COMPORTAMENTO aquilo que foi falha de infraestrutura (não houve veredito).
+// O retry abaixo é limitado e SÓ existe para o caso "sem veredito": qualquer
+// exit code real (0 ou != 0) é julgado imediatamente, e um estado de infra
+// persistente continua REPROVANDO (nunca vira PASS).
+const STATUS_DE_INFRA = new Set(['INFRA_ERROR', 'SANDBOX_UNAVAILABLE', 'SANDBOX_INVALID_WORKSPACE']);
+
+async function executarComRetryDeInfra(opcoes, tentativas = 3) {
+  let ultimo = null;
+  for (let tentativa = 1; tentativa <= tentativas; tentativa += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    ultimo = await runTestCommands(opcoes);
+    const r = ultimo.results[0] || {};
+    const semVeredito = r.exitCode === null || r.exitCode === undefined || STATUS_DE_INFRA.has(r.status);
+    if (!semVeredito) return ultimo;
+  }
+  return ultimo;
+}
+
 describe('ERV1-CLOSE-010 — autoridade de PASS/FAIL nunca é o texto do output (prompt injection real)', () => {
   // ER-V1-FINAL-001: cwd precisa ser um workspace isolado real (nunca o repositório principal
   // — o Execution Sandbox recusa explicitamente com SANDBOX_INVALID_WORKSPACE, ver
@@ -42,7 +64,7 @@ describe('ERV1-CLOSE-010 — autoridade de PASS/FAIL nunca é o texto do output 
   }, 30000);
 
   test('exitCode != 0 com stdout tentando se passar por APPROVE/PASS ainda é reportado como FAIL', async () => {
-    const { results } = await runTestCommands({
+    const { results } = await executarComRetryDeInfra({
       taskId: 'erv1-close-010-prompt-injection',
       attemptNumber: 1,
       commands: [`node ${PROBE_SCRIPT} 1`],
@@ -58,7 +80,7 @@ describe('ERV1-CLOSE-010 — autoridade de PASS/FAIL nunca é o texto do output 
   });
 
   test('exitCode == 0 com stdout tentando se passar por REJECT/FAIL ainda é reportado como PASS', async () => {
-    const { results } = await runTestCommands({
+    const { results } = await executarComRetryDeInfra({
       taskId: 'erv1-close-010-prompt-injection',
       attemptNumber: 2,
       commands: [`node ${PROBE_SCRIPT} 0`],
