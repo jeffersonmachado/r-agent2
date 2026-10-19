@@ -64,12 +64,16 @@ function criarModeloFake() {
       linhas.set(registro.id, registro);
       return registro;
     },
-    async upsert(dados) {
+    async update(dados, { where } = {}) {
       if (this.__falhar) throw new Error('banco indisponível (teste)');
-      const atual = linhas.get(dados.id);
-      if (atual) Object.assign(atual, dados);
-      else linhas.set(dados.id, materializar(dados));
-      return [linhas.get(dados.id)];
+      let afetados = 0;
+      for (const registro of linhas.values()) {
+        if (casa(registro, where)) { Object.assign(registro, dados); afetados += 1; }
+      }
+      return [afetados];
+    },
+    async upsert() {
+      throw new Error('upsert proibido no CRM (P0-02)');
     },
     async destroy({ where } = {}) {
       if (this.__falhar) throw new Error('banco indisponível (teste)');

@@ -29,6 +29,11 @@ const express = require('express');
 const crypto = require('crypto');
 const { emitEvent } = require('../../services/websocketService');
 const logger = require('../../utils/logger');
+const {
+  criarRegistro: criarRegistroStore,
+  atualizarRegistro: atualizarRegistroStore,
+  CrmConflictError,
+} = require('../../services/crm/crmRecordStore');
 
 // ---------------------------------------------------------------------------
 // Realtime por PUSH (regra do projeto: PROIBIDO setInterval para sincronizar
@@ -94,11 +99,56 @@ async function comPersistencia(ctx, res, execucao) {
   try {
     await execucao();
   } catch (err) {
+    // Conflito de identificador (P0-02): o id já existe — em qualquer tenant —
+    // e a criação NUNCA sobrescreve nem transfere propriedade. A resposta é
+    // idêntica nos dois casos, para não revelar a existência do registro alheio.
+    if (err && err.code === 'id_indisponivel') {
+      ctx.sendJson(res, 409, {
+        error: 'id_indisponivel',
+        message: 'Identificador já utilizado; use outro id.',
+      });
+      return;
+    }
+    if (err && err.code === 'dados_invalidos') {
+      ctx.sendJson(res, 400, { error: 'dados_invalidos', message: err.message });
+      return;
+    }
     logger.error('[CRM] Falha de persistência', { erro: err && err.message });
     ctx.sendJson(res, 500, {
       error: 'persistence_required',
       message: 'Falha ao acessar a persistência do CRM.',
     });
+  }
+}
+
+/**
+ * Criação e atualização são OPERAÇÕES DISTINTAS (P0-02).
+ * Antes existia uma única `gravarRegistro` com `Model.upsert`, cuja chave
+ * primária é apenas `id`: quem enviasse o id de outro tenant sobrescrevia o
+ * registro alheio e mudava o `tenant_key` (transferência de propriedade).
+ */
+async function criarRegistro(tenantId, entity, item) {
+  try {
+    const { id, tenantId: _ignorado, ...payload } = item;
+    return await criarRegistroStore({ tenantId, entity, id, payload });
+  } catch (err) {
+    if (err && ['id_indisponivel', 'dados_invalidos'].includes(err.code)) throw err;
+    throw new PersistenceError(err);
+  }
+}
+
+/**
+ * Atualização escopada: `WHERE id AND tenant_key AND entity` na própria
+ * operação. Retorna `null` quando o registro não existe OU não pertence ao
+ * tenant — nunca cria, nunca transfere.
+ */
+async function atualizarRegistro(tenantId, entity, id, item) {
+  try {
+    const { id: _id, tenantId: _ignorado, ...payload } = item;
+    return await atualizarRegistroStore({ tenantId, entity, id, payload });
+  } catch (err) {
+    if (err && ['id_indisponivel', 'dados_invalidos'].includes(err.code)) throw err;
+    throw new PersistenceError(err);
   }
 }
 
@@ -134,14 +184,10 @@ async function lerRegistro(tenantId, entity, id) {
 }
 
 async function gravarRegistro(tenantId, entity, item) {
-  try {
-    const Model = modelCrmRecord();
-    const { id, tenantId: _tenantIgnorado, ...payload } = item;
-    await Model.upsert({ id, tenant_key: String(tenantId), entity, payload });
-    return item;
-  } catch (err) {
-    throw new PersistenceError(err);
-  }
+  // REMOVIDO (P0-02): esta função fazia `Model.upsert` com PK apenas `id`, o que
+  // permitia a um tenant sobrescrever/transferir registro de outro. Substituída
+  // por `criarRegistro` (INSERT) e `atualizarRegistro` (UPDATE escopado).
+  throw new Error('gravarRegistro removido: use criarRegistro/atualizarRegistro (P0-02)');
 }
 
 async function removerRegistro(tenantId, entity, id) {
@@ -249,6 +295,12 @@ async function gravarPessoa(tenantId, item) {
 
     return mapLead(registro);
   } catch (err) {
+    // `marketing_leads` tem PK global `id`. Criar com o id de OUTRO tenant
+    // viola a unicidade — isso é conflito explícito (409), nunca 500, e nunca
+    // sobrescreve o registro alheio.
+    if (err && err.name === 'SequelizeUniqueConstraintError') {
+      throw new CrmConflictError(item && item.id);
+    }
     throw new PersistenceError(err);
   }
 }
@@ -358,7 +410,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     await comPersistencia(ctx, res, async () => {
-      await gravarRegistro(tenantId, 'accounts', item);
+      await criarRegistro(tenantId, 'accounts', item);
       emitCrmUpdated(tenantId, { entity: 'accounts', action: 'created', entityId: id });
       ctx.sendJson(res, 200, item);
     });
@@ -574,7 +626,7 @@ function createCrmRoutes({ buildDeps }) {
           createdAt: ts,
           updatedAt: ts,
         };
-        await gravarRegistro(tenantId, 'pipelines', padrao);
+        await criarRegistro(tenantId, 'pipelines', padrao);
         pagina = await lerRegistros(tenantId, 'pipelines', { limit, offset });
       }
 
@@ -619,7 +671,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     await comPersistencia(ctx, res, async () => {
-      await gravarRegistro(tenantId, 'pipelines', item);
+      await criarRegistro(tenantId, 'pipelines', item);
       emitCrmUpdated(tenantId, { entity: 'pipelines', action: 'created', entityId: id });
       ctx.sendJson(res, 200, item);
     });
@@ -705,7 +757,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     await comPersistencia(ctx, res, async () => {
-      await gravarRegistro(tenantId, 'opportunities', item);
+      await criarRegistro(tenantId, 'opportunities', item);
       emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'created', entityId: id });
       ctx.sendJson(res, 200, item);
     });
@@ -765,9 +817,15 @@ function createCrmRoutes({ buildDeps }) {
       }
 
       const atualizado = { ...atual, ...alteracoes, id: atual.id, updatedAt: now() };
-      await gravarRegistro(tenantId, 'opportunities', atualizado);
+      const salvo = await atualizarRegistro(tenantId, 'opportunities', atual.id, atualizado);
+      if (!salvo) {
+        // Corrida: o registro deixou de existir (ou de pertencer ao tenant) entre
+        // a leitura e a escrita. Atualização NUNCA cria — 404.
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
       emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'updated', entityId: atual.id });
-      ctx.sendJson(res, 200, atualizado);
+      ctx.sendJson(res, 200, salvo);
     });
   };
 
@@ -794,9 +852,13 @@ function createCrmRoutes({ buildDeps }) {
         stageId: body.toStageId || item.stageId,
         updatedAt: now(),
       };
-      await gravarRegistro(tenantId, 'opportunities', atualizado);
+      const salvo = await atualizarRegistro(tenantId, 'opportunities', item.id, atualizado);
+      if (!salvo) {
+        ctx.sendJson(res, 404, { error: 'not_found', message: 'Oportunidade não encontrada' });
+        return;
+      }
       emitCrmUpdated(tenantId, { entity: 'opportunities', action: 'moved', entityId: item.id });
-      ctx.sendJson(res, 200, atualizado);
+      ctx.sendJson(res, 200, salvo);
     });
   });
 
@@ -860,7 +922,7 @@ function createCrmRoutes({ buildDeps }) {
     };
 
     await comPersistencia(ctx, res, async () => {
-      await gravarRegistro(tenantId, 'activities', item);
+      await criarRegistro(tenantId, 'activities', item);
       emitCrmUpdated(tenantId, { entity: 'activities', action: 'created', entityId: id });
       ctx.sendJson(res, 200, item);
     });

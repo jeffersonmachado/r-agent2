@@ -39,11 +39,19 @@ function criarModeloFake() {
       return [...linhas.values()].find((r) => casa(r, where)) || null;
     },
     async create(dados) { const r = materializar(dados); linhas.set(r.id, r); return r; },
-    async upsert(dados) {
-      const atual = linhas.get(dados.id);
-      if (atual) Object.assign(atual, dados);
-      else linhas.set(dados.id, materializar(dados));
-      return [linhas.get(dados.id)];
+    // `Model.update` estático, como no Sequelize real: aplica em TODAS as linhas
+    // que casam com o WHERE (inclusive tenant_key) e devolve [afetados].
+    async update(dados, { where } = {}) {
+      let afetados = 0;
+      for (const r of linhas.values()) {
+        if (casa(r, where)) { Object.assign(r, dados); afetados += 1; }
+      }
+      return [afetados];
+    },
+    async upsert() {
+      // O código de produção NÃO PODE usar upsert (P0-02). Se voltar, o teste
+      // falha aqui em vez de passar silenciosamente.
+      throw new Error('upsert proibido no CRM (P0-02)');
     },
     async destroy({ where } = {}) {
       let n = 0;
