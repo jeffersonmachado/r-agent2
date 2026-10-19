@@ -1,15 +1,13 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:BLOCKING_GAPS
-- Canonical mesh execution: mesh-2026-10-17T05-55-05-230Z
+- Decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]
+- Canonical mesh execution: mesh-2026-10-19T14-27-02-247Z
 - Enterprise readiness: enterprise-ready
 - Production readiness: NO_GO:BLOCKING_GAPS
-- Blocking gaps: 5
-- Blocking domains: none
+- Blocking gaps: 3
+- Blocking domains: omnichannel
 
 ## Hard blockers
-- gap-proof-package-validation: ZIP de release nao contem todos os proofs obrigatorios (critical)
-- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
+- gap-mesh-omnichannel-infra_error-fitness-matricula-leads: Falha aberta no dominio omnichannel (high)
 - gap-proof-governance-support: Governance signature ou cleanup proof nao possuem artifact fisico valido (critical)
-- gap-cross-report-package_validation_failed: Contradição cross-report: package_validation_failed (critical)
 - current_run_temporal_integrity: Evidência autoritativa pré-run não pode sustentar a decisão do run (critical)
