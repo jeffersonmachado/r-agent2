@@ -170,6 +170,7 @@ function mapLead(linha) {
     score: r.score ?? 0,
     notes: crm.notes || null,
     department: atributos.department || null,
+    role: atributos.role || null,
     attributes: atributos,
     createdAt: r.created_at || r.createdAt || null,
     updatedAt: r.updated_at || r.updatedAt || null,
@@ -425,6 +426,9 @@ function createCrmRoutes({ buildDeps }) {
 
     const atributos = body.attributes && typeof body.attributes === 'object' ? { ...body.attributes } : {};
     if (body.department) atributos.department = body.department;
+    // A tela de Contatos tem o campo "Cargo": sem persistir, era descartado em
+    // silêncio (medido em 2026-10-19, junto com `department`).
+    if (body.role) atributos.role = body.role;
 
     const item = {
       id: body.id || newId(),
