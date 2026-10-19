@@ -51,6 +51,7 @@ const { chromium } = require('playwright');
 
 const { evaluatePageSurface, probePolicy, classifyPageConsoleError } = require('../../qa/coverage/pageSurfaceWave');
 const { countTransportSignals, isTransportOnlyFailure, shouldRetryProbe } = require('./lib/wave-transport-retry');const { loginWithTenantSelection } = require('../../tests/helpers/playwrightAuth');
+const { comLineage } = require('./lib/report-lineage');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const INVENTORY_PATH = path.join(ROOT_DIR, 'config', 'system-inventory.json');
@@ -497,7 +498,7 @@ async function main() {
       commit = null;
     }
 
-    const report = {
+    const report = await comLineage({
       generatedAt: new Date().toISOString(),
       commit,
       baseUrl: BASE_URL,
@@ -506,7 +507,7 @@ async function main() {
       status: (totals.byState?.FAILED || 0) === 0 && (totals.byState?.BLOCKED || 0) === 0 ? 'PASS' : 'FAIL',
       exemptions: exemptionsApplied,
       perItem,
-    };
+    });
 
     fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
     fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);

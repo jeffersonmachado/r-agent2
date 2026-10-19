@@ -31,6 +31,7 @@ const { parseModelFile } = require('../../api/services/qa/inventory/modelScanner
 const { evaluateDbIntegrityWave, WAVE_ID } = require('../../qa/coverage/dbIntegrityWave');
 const { createEvidenceStore } = require('../../qa/coverage/evidenceStore');
 const { COVERAGE_STATES } = require('../../qa/coverage/coverageStates');
+const { comLineage } = require('./lib/report-lineage');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const INVENTORY_PATH = path.join(ROOT_DIR, 'config', 'system-inventory.json');
@@ -364,7 +365,7 @@ async function main() {
     process.exit(1);
   }
 
-  const report = {
+  const report = await comLineage({
     generatedAt: new Date().toISOString(),
     status: result.totals.failed === 0 ? 'PASS' : 'FAIL',
     artifactType: 'db-integrity-report',
@@ -392,7 +393,7 @@ async function main() {
         name: a.name, passed: a.passed, detail: a.detail,
       })),
     })),
-  };
+  });
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 
