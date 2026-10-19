@@ -400,7 +400,69 @@ const REGRAS_PREVENTIVAS = Object.freeze([
   'scripts/governance/evaluate-execution-eligibility.js',
   'tests/unit/governance/governanceChainContract.test.js',
   'tests/unit/governance/bugClosureFirst.test.js',
+  // P0-01 (2026-10-19): o contrato de cobertura e sua regressão adversarial são
+  // parte da regra — remover/renomear qualquer um derruba o preflight.
+  'scripts/ci/phase-step-contract.js',
+  'tests/unit/governance/phaseStepContract.test.js',
+  // P0-02 (2026-10-19): store multitenant, trava anti-upsert e matriz em PG real.
+  'api/services/crm/crmRecordStore.js',
+  'tests/unit/crmNoUpsertRegression.test.js',
+  'tests/integration/crmTenantIsolation.postgres.test.js',
 ]);
+
+/**
+ * ÁREAS SENSÍVEIS → testes adversariais que DEVEM rodar quando a área muda.
+ * É o vínculo executável entre "mexeu aqui" e "prove que não regrediu".
+ */
+const AREAS_SENSIVEIS = Object.freeze([
+  {
+    id: 'GATE-COBERTURA',
+    arquivos: ['scripts/ci/dev-branch-gate.js', 'scripts/ci/phase-step-contract.js'],
+    testes: [
+      'tests/unit/governance/phaseStepContract.test.js',
+      'tests/unit/governance/devBranchGatePhaseContract.test.js',
+      'tests/unit/governance/devBranchGateStepEvidence.test.js',
+    ],
+  },
+  {
+    id: 'CRM-MULTITENANT',
+    arquivos: [
+      'api/modules/crm/routes.js',
+      'api/services/crm/crmRecordStore.js',
+      'api/db/models/CrmRecord.js',
+    ],
+    testes: [
+      'tests/unit/crmNoUpsertRegression.test.js',
+      'tests/unit/crmOpportunityUpdate.test.js',
+      'tests/integration/crmTenantIsolation.postgres.test.js',
+    ],
+  },
+  {
+    id: 'MIGRACAO-CRM',
+    arquivos: ['api/db/migrations/20261019120000-create-crm-records.js', 'api/db/migrations/20261019130000-crm-records-tenant-guard.js'],
+    testes: ['tests/integration/crmTenantIsolation.postgres.test.js'],
+  },
+]);
+
+/**
+ * Detecta áreas sensíveis atingidas pelos arquivos alterados.
+ * @param {string[]} arquivos caminhos relativos
+ */
+function detectarAreasSensiveis(arquivos) {
+  const lista = (arquivos || []).map((a) => String(a).replace(/\\/g, '/'));
+  return AREAS_SENSIVEIS.filter((area) =>
+    area.arquivos.some((alvo) => lista.some((arq) => arq === alvo || arq.startsWith(alvo))),
+  );
+}
+
+/** Arquivos alterados do branch em relação à base de integração (best-effort). */
+function arquivosAlteradosNoBranch() {
+  for (const args of [['diff', '--name-only', 'origin/main...HEAD'], ['diff', '--name-only', 'HEAD~1']]) {
+    const saida = git(args);
+    if (saida) return saida.split('\n').map((l) => l.trim()).filter(Boolean);
+  }
+  return [];
+}
 
 function git(args) {
   try {
@@ -640,7 +702,7 @@ function preVoo({ esperaSha, requerLimpo, sha, branch }) {
  * estão esperando verificação). Sem teste declarado não há o que executar — e o
  * relatório registra isso como achado, não como aprovação.
  */
-function planejarFaseB(inventario, escopo) {
+function planejarFaseB(inventario, escopo, areasSensiveis = []) {
   if (!inventario) return { passos: [], semTeste: [], naoExecutada: 'INVENTARIO_AUSENTE' };
   const alvo = escopo && escopo.length
     ? inventario.defeitos.filter((d) => escopo.includes(d.id))
@@ -649,7 +711,18 @@ function planejarFaseB(inventario, escopo) {
   const semTeste = alvo.filter((d) => !d.regressionTest).map((d) => d.id);
   const testes = [...new Set(alvo.map((d) => d.regressionTest).filter(Boolean))];
 
-  const passos = testes.map((alvoTeste, i) => ({
+  // ÁREAS SENSÍVEIS: alterações em gate de certificação, contrato de passos,
+  // store multitenant e migrations selecionam os testes adversariais da área
+  // mesmo que nenhum defeito esteja em FIXED_PENDING_VERIFICATION. Sem isso, a
+  // regressão de um P0 já fechado só seria pega por sorte.
+  const extras = [];
+  for (const area of areasSensiveis) {
+    for (const teste of area.testes || []) {
+      if (!testes.includes(teste) && !extras.includes(teste)) extras.push(teste);
+    }
+  }
+
+  const passos = [...testes, ...extras].map((alvoTeste, i) => ({
     id: `B${i + 1}-${String(alvoTeste).split('/').pop()}`.slice(0, 60),
     fase: 'B',
     nivel: 'B',
@@ -658,7 +731,13 @@ function planejarFaseB(inventario, escopo) {
     orcamentoMs: 10 * 60 * 1000,
   }));
 
-  return { passos, semTeste, alvo: alvo.map((d) => d.id), naoExecutada: null };
+  return {
+    passos,
+    semTeste,
+    alvo: alvo.map((d) => d.id),
+    areasSensiveis: areasSensiveis.map((a) => a.id),
+    naoExecutada: null,
+  };
 }
 
 /**
@@ -840,7 +919,8 @@ function main(argv = process.argv.slice(2)) {
     }
 
     if (fase === 'B') {
-      const plano = planejarFaseB({ defeitos }, escopo);
+      const areasSensiveis = detectarAreasSensiveis(arquivosAlteradosNoBranch());
+      const plano = planejarFaseB({ defeitos }, escopo, areasSensiveis);
       if (plano.naoExecutada) {
         bloqueio = { fase: 'B', code: plano.naoExecutada, detail: 'inventário indisponível' };
         break;
@@ -1091,5 +1171,6 @@ module.exports = {
   main, PASSOS, AUTORIZACAO_DA_FASE, REGRAS_PREVENTIVAS, preVoo, planejarFaseB,
   parseFases, identidadeValida, avaliarEstadosPorFase, decidirVeredito, definirContextoExecucao,
   executar, passosObrigatoriosDaFase,
+  AREAS_SENSIVEIS, detectarAreasSensiveis,
   FASES_CONHECIDAS, FASES_OBRIGATORIAS_VALIDACAO_COMPLETA, ESTADOS_DE_FASE,
 };

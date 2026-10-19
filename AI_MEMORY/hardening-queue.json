@@ -1780,6 +1780,38 @@
       "evidence": "AI_MEMORY/evidence/dev-branch-gate-logs/60211197-ce1d-4594-9898-47b1b0cbdffc/L3-gate-agregado.log",
       "nextAction": "Abrir run governado (release:seal prepare) em janela autorizada e re-rodar a fase F.",
       "prevention": "REGRA: o agregado nunca certifica sem runId+sourceFingerprint; ausencia de run e bloqueio, nunca PASS por lista vazia."
+    },
+    {
+      "id": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
+      "title": "Fase do gate era aprovada com apenas PARTE dos passos obrigatorios (fase D: 1 de 7 = PASS)",
+      "status": "done",
+      "commit": "d12df62aa",
+      "evidence": "tests/unit/governance/phaseStepContract.test.js + AI_MEMORY/evidence/auditoria-2026-10-19-p0-p1.md",
+      "detail": "REPRODUCAO na baseline 511ae5249 (codigo efetivamente auditado): avaliarEstadosPorFase({fasesPedidas:['D'], resultados:[1 passo exit 0]}) => [{\"fase\":\"D\",\"estado\":\"PASS\",\"passosReais\":1}]. A fase D define 7 passos obrigatorios. CAUSA-RAIZ: o avaliador so verificava os resultados PRESENTES (digest/sha/runId/exit); nunca comparava com o conjunto obrigatorio da definicao. Ausencia nao tem linha, entao 'tudo que existe esta ok' virou 'fase completa'. CORRECAO: scripts/ci/phase-step-contract.js compara ESPERADOS (definicao imutavel) x EXECUTADOS x APROVADOS x EVIDENCIAS; rejeita ausente, duplicado, desconhecido, estado nao aprovado, sem digest, sem vinculo, timeout, exit null, exit != 0, evidencia ausente/inexistente/adulterada e ordem invalida; estado INCOMPLETE nunca aprova. Fases C,D,E,F no contrato. PROVA: 24 cenarios (23 invalidos rejeitados + conjunto legitimo aprovado) e caso negativo por adulteracao de arquivo.",
+      "prevention": "REGRA: cobertura de fase se mede por CONJUNTO OBRIGATORIO satisfeito com evidencia verificavel, nunca por contagem de resultados. A definicao vem do codigo (Object.freeze), jamais do relatorio, do stdout ou de argumento.",
+      "severity": "P0",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "done",
+      "regressionTest": "tests/unit/governance/phaseStepContract.test.js",
+      "severityBasis": "permitia certificar fase inteira com 1 de 7 verificacoes (falso PASS de gate)",
+      "severitySource": "auditoria-2026-10-19-sha-511ae5249"
+    },
+    {
+      "id": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
+      "title": "CRM usava upsert com PK apenas `id`: tenant B sobrescrevia e TRANSFERIA registro do tenant A",
+      "status": "done",
+      "commit": "5d451e1c9",
+      "evidence": "tests/integration/crmTenantIsolation.postgres.test.js + AI_MEMORY/evidence/p0-2026-10-19/",
+      "detail": "REPRODUCAO na baseline 511ae5249 em PostgreSQL 16.15 real: `gravarRegistro` fazia Model.upsert({id, tenant_key, entity, payload}) e a PK de crm_records e apenas `id`; o Sequelize emite INSERT ... ON CONFLICT (id) DO UPDATE. Medido: registro opp-1 do tenant-a virou tenant-b com payload de B (transferencia de propriedade). CAUSA-RAIZ: criacao e atualizacao eram a MESMA operacao e a condicao de tenant nao existia no SQL de escrita. CORRECAO: api/services/crm/crmRecordStore.js com criar (INSERT puro; colisao -> 409 id_indisponivel), ler, atualizar (UPDATE WHERE id AND tenant_key AND entity; 0 linhas -> null) e remover escopados; payload nao pode forjar id/tenant_key/entity; trigger BEFORE UPDATE recusa mudanca de tenant_key. PROVA: 22 cenarios em Postgres real com SQL independente antes/depois + trava estatica contra upsert.",
+      "prevention": "REGRA: criacao e atualizacao nunca compartilham operacao; escrita cross-tenant so existe com tenant_key na PROPRIA clausula SQL; upsert com PK global em tabela multi-tenant e proibido.",
+      "severity": "P0",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "done",
+      "regressionTest": "tests/integration/crmTenantIsolation.postgres.test.js",
+      "severityBasis": "violacao de isolamento multitenant com confidencialidade e integridade (OWASP A01)",
+      "severitySource": "auditoria-2026-10-19-sha-511ae5249"
     }
   ],
   "schemaVersion": 2,
