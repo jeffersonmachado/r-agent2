@@ -143,10 +143,14 @@ describe('(2) runner local — o gate efetivo enquanto o runner do GitHub não i
 
   it('o veredito deriva do exit code dos passos (falha não vira narrativa de sucesso)', () => {
     const fonte = semComentarios(ler(RUNNER));
-    expect(fonte).toContain("resultados.filter((r) => r.exitCode !== 0)");
+    expect(fonte).toContain("resultados.filter((r) => r.exitCode !== 0 && r.timeout !== true)");
     // Bloqueio por defeitos é um TERCEIRO estado (exit 2): não é PASS nem FAIL.
     expect(fonte).toContain("'BLOQUEADO_POR_DEFEITOS'");
+    // TIMEOUT é um QUARTO estado (exit 2): "sem veredito" nunca vira FAIL nem PASS.
+    // Medido 2026-10-18: um passo morto pelo orçamento era reportado como FAIL.
+    expect(fonte).toContain("'BLOQUEADO_POR_TIMEOUT'");
     expect(fonte).toContain('if (veredito === \'BLOQUEADO_POR_DEFEITOS\') return 2;');
+    expect(fonte).toContain("if (veredito === 'BLOQUEADO_POR_TIMEOUT') return 2;");
     expect(fonte).toContain("if (veredito === 'FAIL') return 1;");
   });
 

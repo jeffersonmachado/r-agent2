@@ -95,7 +95,12 @@ const PASSOS = Object.freeze({
       nivel: 'L0',
       comando: 'npm test',
       descricao: 'Suíte oficial Jest (unit + flow + rpa sem browser)',
-      orcamentoMs: 20 * 60 * 1000,
+      // MEDIDO (2026-10-18): a suíte oficial passou de 20 min e o passo foi morto com
+      // exit=null; o veredito saía FAIL — um TIMEOUT era reportado como se fosse defeito.
+      // Duas correções: orçamento real (ver `executar`) e timeout NÃO é FAIL. O default
+      // sobe para 45 min (a suíte roda unit + flow + rpa:jest de uma vez) e pode ser
+      // ajustado por `L0_ORCAMENTO_MS` — sempre auditável no relatório.
+      orcamentoMs: Number(process.env.L0_ORCAMENTO_MS) || 45 * 60 * 1000,
     },
   ],
   D: [
@@ -206,24 +211,37 @@ function sha256(texto) {
 
 function executar(passo) {
   const inicio = Date.now();
-  const r = spawnSync(passo.comando, {
+  // O ORÇAMENTO PRECISA MATAR O PROCESSO. Com `shell: true`, o `timeout` do spawnSync
+  // encerrava apenas o shell e deixava o processo filho vivo — medido: passo com orçamento
+  // de 20 min levou 1670,7s e ainda assim sobrou processo. `timeout(1)` do coreutils encerra
+  // o GRUPO do comando: o orçamento passa a ser real, e o exit 124 identifica o estouro.
+  const orcamentoSeg = Math.max(1, Math.round(Number(passo.orcamentoMs || 0) / 1000));
+  const comandoComOrcamento = orcamentoSeg > 0
+    ? `timeout -k 15 ${orcamentoSeg} ${passo.comando}`
+    : passo.comando;
+  const r = spawnSync(comandoComOrcamento, {
     cwd: ROOT,
     encoding: 'utf8',
     shell: true,
     env: process.env,
     maxBuffer: 64 * 1024 * 1024,
-    timeout: passo.orcamentoMs,
+    // Backstop: se até o `timeout` falhar, o spawnSync encerra.
+    timeout: Number(passo.orcamentoMs || 0) + 30 * 1000,
   });
   const saida = `${r.stdout || ''}${r.stderr || ''}`;
+  const exitCode = r.status === null ? null : r.status;
+  // 124 = timeout(1); 137 = SIGKILL. Ambos são "sem veredito", nunca "reprovado".
+  const estourouOrcamento = exitCode === 124 || exitCode === 137 || r.status === null;
   return {
     id: passo.id,
     fase: passo.fase,
     nivel: passo.nivel,
     descricao: passo.descricao,
     comando: passo.comando,
+    orcamentoMs: Number(passo.orcamentoMs || 0) || null,
     // `status === null` significa morte por sinal/timeout: NUNCA é sucesso.
-    exitCode: r.status === null ? null : r.status,
-    timeout: r.status === null,
+    exitCode: estourouOrcamento ? null : exitCode,
+    timeout: estourouOrcamento,
     duracaoMs: Date.now() - inicio,
     sha256Saida: sha256(saida),
     saidaFinal: saida.trim().split('\n').slice(-12).join('\n'),
@@ -619,12 +637,17 @@ function main(argv = process.argv.slice(2)) {
 function finalizar({
   outJson, sha, branch, faseA, resultados, autorizacoes, fasesPedidas, escopo, rapido, bloqueio, preflight,
 }) {
-  const falhas = resultados.filter((r) => r.exitCode !== 0);
+  // TIMEOUT NÃO É DEFEITO. Medido em 2026-10-18: o passo L0 estourou o orçamento e o
+  // veredito saía `FAIL` — como se a suíte tivesse reprovado. O correto é "sem veredito":
+  // BLOQUEADO_POR_TIMEOUT (exit 2, igual a bloqueio), nunca PASS e nunca FAIL.
+  const timeouts = resultados.filter((r) => r.timeout === true);
+  const falhas = resultados.filter((r) => r.exitCode !== 0 && r.timeout !== true);
   const bloqueadoPorDefeitos = Boolean(bloqueio && [ 'FASE_NAO_AUTORIZADA', 'PRE_VOO_FALHOU' ].includes(bloqueio.code));
 
   const escopoParcial = rapido || fasesPedidas.length < 4 || Boolean(bloqueio) || !faseA.ok;
   let veredito;
   if (bloqueadoPorDefeitos) veredito = 'BLOQUEADO_POR_DEFEITOS';
+  else if (timeouts.length > 0) veredito = 'BLOQUEADO_POR_TIMEOUT';
   else if (falhas.length > 0 || Boolean(bloqueio)) veredito = 'FAIL';
   else if (escopoParcial) veredito = 'PASS_PARCIAL';
   else veredito = 'PASS';
@@ -748,6 +771,7 @@ function finalizar({
   );
 
   if (veredito === 'BLOQUEADO_POR_DEFEITOS') return 2;
+  if (veredito === 'BLOQUEADO_POR_TIMEOUT') return 2;
   if (veredito === 'FAIL') return 1;
   return 0;
 }
