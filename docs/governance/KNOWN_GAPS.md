@@ -1,10 +1,10 @@
 # Known Gaps
 
-## gap-mesh-omnichannel-infra_error-fitness-matricula-leads
+## gap-mesh-core-functional_failure-business-core-biz-queues
 - Severity: high
 - Area: qa-mesh
-- Title: Falha aberta no dominio omnichannel
-- Suggested fix: Priorizar correção de browser/runtime/rede antes de investigar regra de negócio.
+- Title: Falha aberta no dominio core
+- Suggested fix: Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave.
 
 ## gap-proof-governance-support
 - Severity: critical

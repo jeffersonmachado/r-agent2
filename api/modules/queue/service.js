@@ -42,14 +42,45 @@ function createQueueService({ deps }) {
     async createQueue(req, queueName) {
       const result = deps.createQueue(queueName);
 
-      if (result.success) {
-        deps.queueDefinitionService.upsertQueue({
-          tenantId: req.tenantId,
-          name: result.queueName,
-          routingStrategy: 'manual',
-          priority: 0,
-          active: true,
-        }).catch(() => {});
+      if (!result.success) return result;
+
+      // A definição PERSISTIDA precisa existir antes de o request responder.
+      //
+      // DEFEITO MEDIDO (mesh 2026-10-19T17-34-30, cenário
+      // `business-core-biz-queues`): o upsert era fire-and-forget
+      // (`.catch(() => {})`). O `DELETE` do mesmo cenário chegava ANTES de o
+      // upsert concluir; `deactivateQueue` não encontrava a definição, o upsert
+      // pendente gravava `active: true` DEPOIS do delete e a fila
+      // "ressuscitava" na listagem — o cenário reprovava com "a fila continua
+      // na listagem após DELETE" de forma intermitente (24 ms de execução).
+      // Silenciar o erro também violava a política do projeto: falha de
+      // persistência nunca pode passar em silêncio.
+      const persistencia = await deps.queueDefinitionService.upsertQueue({
+        tenantId: req.tenantId,
+        name: result.queueName,
+        routingStrategy: 'manual',
+        priority: 0,
+        active: true,
+      });
+
+      if (persistencia && persistencia.success === false) {
+        // Rollback da memória: devolver sucesso deixaria a listagem anunciando
+        // uma fila que não sobrevive a restart — o estado inconsistente que
+        // produzia as centenas de filas órfãs de teste.
+        try {
+          deps.deleteQueue(result.queueName, true);
+        } catch (_) {
+          /* rollback best-effort; o erro real é reportado abaixo */
+        }
+        deps.logger.error('Erro ao persistir definição da fila', {
+          queueName: result.queueName,
+          error: (persistencia && persistencia.error) || null,
+        });
+        return {
+          success: false,
+          queueName: result.queueName,
+          message: `Fila não persistida: ${(persistencia && persistencia.error) || 'erro desconhecido'}`,
+        };
       }
 
       return result;

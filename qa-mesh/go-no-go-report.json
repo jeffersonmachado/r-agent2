@@ -1,29 +1,28 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-19T15-46-50-121Z",
+  "executionId": "mesh-2026-10-19T17-34-30-385Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "NO_GO",
   "reasons": [
-    "CRITICAL_DOMAIN_FAILED:omnichannel",
-    "BASELINE_PASS_RATE_REGRESSION",
-    "BASELINE_INFRA_REGRESSION"
+    "CRITICAL_DOMAIN_FAILED:core",
+    "BASELINE_PASS_RATE_REGRESSION"
   ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-19T15-46-50-121Z",
-    "startedAt": "2026-10-19T15:46:50.121Z",
+    "executionId": "mesh-2026-10-19T17-34-30-385Z",
+    "startedAt": "2026-10-19T17:34:30.385Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-19T16:26:36.808Z",
+    "promotedAt": "2026-10-19T18:10:50.410Z",
     "registryTotal": 144,
     "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-10-19T15-46-50-121Z",
+    "executionId": "mesh-2026-10-19T17-34-30-385Z",
     "tenantId": "system",
-    "timestamp": "2026-10-19T15:46:50.121Z",
+    "timestamp": "2026-10-19T17:34:30.385Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -33,9 +32,9 @@
     "total": 144,
     "passed": 143,
     "fallbackPassed": 0,
-    "failed": 0,
+    "failed": 1,
     "skipped": 0,
-    "infraErrors": 1,
+    "infraErrors": 0,
     "environmentMissing": 0,
     "flaky": 0,
     "fallbackUsed": 0,
@@ -81,9 +80,9 @@
         "total": 2
       },
       "core": {
-        "passed": 90,
+        "passed": 89,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -131,11 +130,11 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 3,
+        "passed": 4,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 1,
+        "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
         "total": 4
@@ -173,19 +172,18 @@
     },
     "goNoGo": "NO_GO",
     "reasons": [
-      "CRITICAL_DOMAIN_FAILED:omnichannel",
-      "BASELINE_PASS_RATE_REGRESSION",
-      "BASELINE_INFRA_REGRESSION"
+      "CRITICAL_DOMAIN_FAILED:core",
+      "BASELINE_PASS_RATE_REGRESSION"
     ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "omnichannel": {
+      "core": {
         "total": 1,
         "blocking": 0,
         "byType": {
-          "infra_error": 1
+          "functional_failure": 1
         },
-        "successRate": 0.75
+        "successRate": 0.9888888888888889
       },
       "beauty": {
         "total": 0,
@@ -200,12 +198,6 @@
         "successRate": 1
       },
       "clinic": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -235,6 +227,12 @@
         "byType": {},
         "successRate": 1
       },
+      "omnichannel": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "pbx": {
         "total": 0,
         "blocking": 0,
@@ -255,22 +253,22 @@
       }
     },
     "failuresByType": {
-      "infra_error": 1
+      "functional_failure": 1
     },
     "topErrors": [
       {
-        "message": "3 erro(s) de console detectados",
+        "message": "Fila não foi removida: a fila continua na listagem após DELETE",
         "count": 1
       }
     ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-19T15-46-50-121Z",
-      "startedAt": "2026-10-19T15:46:50.121Z",
+      "executionId": "mesh-2026-10-19T17-34-30-385Z",
+      "startedAt": "2026-10-19T17:34:30.385Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-19T16:26:36.808Z",
+      "promotedAt": "2026-10-19T18:10:50.410Z",
       "registryTotal": 144,
       "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
@@ -278,9 +276,9 @@
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261019151810461-6783ec6d",
-  "sourceFingerprint": "79d57fb8220487afc6f1275fe58aa7a68578b6048c2fd50abd53fe14a44e0e5c",
-  "sourceCommit": "df1548bb0a81fdbf9177e5e428348916fa7145b3",
-  "sourceTree": "7df78e61f2b1f67d3f9329e62a7ff21a09e0cf27",
-  "generatedAt": "2026-10-19T16:26:36.818Z"
+  "runId": "rap-governed-20261019171054896-bf01d05f",
+  "sourceFingerprint": "f137f0c926e0908ff7a967f417d8c0543af74de0b35adaec8293ca45c66b31e0",
+  "sourceCommit": "eca534f8ae88ff48592354a2d0690ee26c187e1c",
+  "sourceTree": "7e7cec15e2e36cf16ec68bab3b06de44d9a3650c",
+  "generatedAt": "2026-10-19T18:10:50.417Z"
 }

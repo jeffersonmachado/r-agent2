@@ -69,13 +69,35 @@ async function handleQueueRoutes(ctx) {
       const result = createQueue(queueName);
 
       if (result.success) {
-        queueDefinitionService.upsertQueue({
+        // Mesma correção do caminho via service (ver
+        // api/modules/queue/service.js): o upsert NÃO pode ser fire-and-forget.
+        // Com o `.catch(() => {})` anterior, o DELETE do cenário
+        // `business-core-biz-queues` corria à frente do upsert e a fila
+        // reaparecia na listagem (mesh 2026-10-19T17-34-30).
+        const persistencia = await queueDefinitionService.upsertQueue({
           tenantId: req.tenantId,
           name: result.queueName,
           routingStrategy: 'manual',
           priority: 0,
           active: true,
-        }).catch(() => {});
+        });
+
+        if (persistencia && persistencia.success === false) {
+          try {
+            deleteQueue(result.queueName, true);
+          } catch (_) {
+            /* rollback best-effort; o erro real é reportado abaixo */
+          }
+          logger.error('Erro ao persistir definição da fila', {
+            queueName: result.queueName,
+            error: (persistencia && persistencia.error) || null,
+          });
+          sendJson(res, 500, {
+            error: 'persistence_required',
+            message: `Fila não persistida: ${(persistencia && persistencia.error) || 'erro desconhecido'}`,
+          });
+          return true;
+        }
 
         logAction({
           agentId: req.agent.id,
