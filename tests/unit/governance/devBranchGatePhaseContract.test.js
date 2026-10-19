@@ -27,15 +27,40 @@ const {
   avaliarEstadosPorFase,
   decidirVeredito,
   definirContextoExecucao,
+  PASSOS,
   ESTADOS_DE_FASE,
   FASES_OBRIGATORIAS_VALIDACAO_COMPLETA,
 } = require('../../../scripts/ci/dev-branch-gate.js');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const GATE = path.join(ROOT, 'scripts', 'ci', 'dev-branch-gate.js');
+const crypto = require('crypto');
 
 const SHA = '9758f828f3fdd0fb07c08ebe591de1ace8df2ebe';
 const DIGEST = 'a'.repeat(64);
+const EVID_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-fase-evid-'));
+
+/** Evidência REAL em disco com o digest do próprio conteúdo. */
+function evidenciaPara(id, conteudo = `saida de ${id}`) {
+  const nome = `${id.replace(/[^A-Za-z0-9_.-]/g, '_')}.log`;
+  const absoluto = path.join(EVID_DIR, nome);
+  fs.writeFileSync(absoluto, conteudo, 'utf8');
+  return {
+    saidaRef: path.relative(ROOT, absoluto),
+    sha256Saida: crypto.createHash('sha256').update(conteudo, 'utf8').digest('hex'),
+  };
+}
+
+/** Todos os passos OBRIGATÓRIOS da fase com evidência válida. */
+function passosCompletosDaFase(fase, extra = {}) {
+  // Fase B é planejada dinamicamente (não tem definição fixa em PASSOS): mantém
+  // o passo sintético usado pelos cenários de planejamento.
+  if (!PASSOS[fase]) return [passo(fase, extra)];
+  return (PASSOS[fase] || []).map((p) => {
+    const ev = evidenciaPara(p.id);
+    return passo(fase, { id: p.id, ...ev, ...extra });
+  });
+}
 
 /** Passo real vinculado à execução corrente. */
 function passo(fase, extra = {}) {
@@ -120,7 +145,7 @@ describe('P0 gate de fases — comprovação de execução, não intenção', ()
 
   test('6. fase obrigatória ausente rebaixa para PASS_PARCIAL (nunca PASS)', () => {
     const fases = ['A', 'B', 'C'];
-    const resultados = fases.filter((f) => f !== 'A').map((f) => passo(f));
+    const resultados = [...passosCompletosDaFase('B'), ...passosCompletosDaFase('C')];
     const { veredito, estados } = avaliar({ fases, resultados });
     expect(estados.every((e) => e.estado === ESTADOS_DE_FASE.PASS)).toBe(true);
     expect(veredito).toBe('PASS_PARCIAL');
@@ -128,7 +153,9 @@ describe('P0 gate de fases — comprovação de execução, não intenção', ()
 
   test('todas as obrigatórias em PASS e comprovadas ⇒ PASS', () => {
     const fases = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA.slice();
-    const resultados = fases.filter((f) => f !== 'A').map((f) => passo(f));
+    const resultados = fases
+      .filter((f) => f !== 'A')
+      .flatMap((f) => passosCompletosDaFase(f));
     const { veredito } = avaliar({ fases, resultados });
     expect(veredito).toBe('PASS');
   });

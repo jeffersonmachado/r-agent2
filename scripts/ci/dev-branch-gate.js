@@ -79,6 +79,10 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const { evaluateExecutionEligibility, OPERACOES } = require('../../governance/bug-closure/eligibility');
 const { carregarInventario } = require('../../governance/bug-closure/defect-registry');
 const { ESTADOS } = require('../../governance/bug-closure/defect-states');
+const {
+  validarCoberturaDeFase,
+  passosObrigatoriosDaFase,
+} = require('./phase-step-contract');
 
 /**
  * Passos de cada fase técnica.
@@ -212,6 +216,9 @@ const ESTADOS_DE_FASE = Object.freeze({
   // Fase sem trabalho por definição (ex.: B sem nenhum defeito aberto a regredir).
   // Não é "não executada por falha": é ausência de objeto, declarada.
   NOT_APPLICABLE: 'NOT_APPLICABLE',
+  // Cobertura PARCIAL: executou, mas o conjunto não é exatamente o obrigatório
+  // (ausente, duplicado, desconhecido ou evidência inválida). Nunca aprova.
+  INCOMPLETE: 'INCOMPLETE',
 });
 
 /**
@@ -261,6 +268,39 @@ function avaliarEstadosPorFase({ fasesPedidas, faseA, resultados, bloqueio, time
   const execucaoAtual = contexto ? contexto.execucaoId : null;
   const digestValido = (v) => typeof v === 'string' && /^[0-9a-f]{64}$/i.test(v);
   return (fasesPedidas || []).map((fase) => {
+    // CONTRATO DE COBERTURA (P0-01): fases com definição canônica de passos (C,D,E,F)
+    // só podem ser PASS com o conjunto OBRIGATÓRIO integralmente executado,
+    // aprovado e com evidência verificável. Contagem de resultados nunca comprova.
+    // A e B têm semântica própria (pré-voo / planejamento dinâmico de regressões).
+    if (Object.prototype.hasOwnProperty.call(PASSOS, fase)) {
+      const { estado, motivo, detalhes } = validarCoberturaDeFase({
+        fase,
+        definicao: PASSOS[fase],
+        resultados,
+        contexto,
+        timeoutsIds,
+        raiz: ROOT,
+      });
+      const bloqueadoAqui = Boolean(bloqueio && bloqueio.fase === fase);
+      if (bloqueadoAqui && estado !== ESTADOS_DE_FASE.PASS) {
+        return {
+          fase,
+          estado: ESTADOS_DE_FASE.BLOCKED,
+          passosReais: detalhes.executados,
+          passosEsperados: detalhes.esperados.length,
+          motivo: bloqueio.code || 'BLOQUEIO',
+        };
+      }
+      return {
+        fase,
+        estado,
+        passosReais: detalhes.executados,
+        passosEsperados: detalhes.esperados.length,
+        passosAusentes: detalhes.ausentes,
+        motivo,
+      };
+    }
+
     const passosDaFase = (resultados || []).filter((r) => r.fase === fase);
     const reais = passosDaFase.filter((r) => r.naoExecutado !== true);
     const sinteticos = passosDaFase.filter((r) => r.naoExecutado === true);
@@ -1050,6 +1090,6 @@ if (require.main === module) {
 module.exports = {
   main, PASSOS, AUTORIZACAO_DA_FASE, REGRAS_PREVENTIVAS, preVoo, planejarFaseB,
   parseFases, identidadeValida, avaliarEstadosPorFase, decidirVeredito, definirContextoExecucao,
-  executar,
+  executar, passosObrigatoriosDaFase,
   FASES_CONHECIDAS, FASES_OBRIGATORIAS_VALIDACAO_COMPLETA, ESTADOS_DE_FASE,
 };
