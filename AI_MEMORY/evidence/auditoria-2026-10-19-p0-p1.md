@@ -89,3 +89,49 @@ Recertificar exige ciclo completo de selagem — proibido nesta missão (sem
 publicação). Consequência medida: `L1-cadeia-criptografica` exit 1
 (`CADEIA_DIVERGENTE`, `AUTO_DECLARACAO_DE_VALIDADE_FALSA`,
 `CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA`).
+
+---
+
+# Validação progressiva medida (L0 → L3) — 2026-10-19, branch `dev/engineering-hardening`
+
+Gate: `node scripts/ci/dev-branch-gate.js --fases ...` (contrato determinístico).
+
+| Nível | Fase | Comando | Estado medido | Evidência |
+|---|---|---|---|---|
+| L0 | C | `npm test` | **PASS** — exit 0 em 180,1 s / 191,5 s / 185,5 s / 188,3 s (4 de 5 execuções) | `reports/dev-branch-ci-evidence.json` + `saidaRef` |
+| L1 | D | `validate:governance-chain` | **FAIL** — exit 1 em 0,4–0,8 s (`CADEIA_DIVERGENTE`) | idem |
+| L2 | E | `test:system` | **FAIL** — exit 1 em 13,1 s (`final-status-projection`: 6 issues stale) | `dev-branch-gate-logs/.../L2-test-system.log` |
+| L3 | F | `validate:governance-enforcement` | **FAIL** — exit 1 em 0,3 s, `passos=0/64`, identidade de run incompleta | `dev-branch-gate-logs/.../L3-gate-agregado.log` |
+
+`equivalenteAValidacaoCompleta=false`, `veredito=FAIL`, `fasesFaltantes=[]` (todas
+tentadas), `EXIT=1`.
+
+## Por que L1/L2/L3 não fecham (medido, não inferido)
+
+1. **L1 — H20**: 5 elos de governança foram gravados 18.496 s DEPOIS da
+   certificação (2026-10-17 04:21). Recertificar exige ciclo de selagem.
+2. **L2 — projeções divergentes**: canônica do run `…3558e6f4` diz
+   `PASS_WITH_DEFERRED_PACKAGE_GATE` (fingerprint `bfbabde34663…`, 11:14:09) e as
+   projeções dizem `NO_GO:BLOCKING_GAPS` (`2c8f986c41ac…`, 11:12:00) — mesmo run,
+   projeção escrita **antes** da decisão final; o run terminou `ABANDONED`.
+   Regenerar propagaria aprovação de um run abandonado para
+   `PLATFORM_STATUS.md` (falso verde documental). Não foi feito.
+3. **L3**: o agregado exige `runId`+`sourceFingerprint`; não há run aberto →
+   fail-closed `passos=0/64` (comportamento correto).
+
+## Achado colateral corrigido: falha passou a ser diagnosticável
+
+A fase C reprovou uma vez (exit 1, 60,6 s) e o relatório guardava apenas o digest
+e as 12 últimas linhas — a asserção que falhou (`tests/unit/engineeringRouterExecutionSandboxSecurity.test.js`,
+`expect(allPass)`) ficou fora do recorte, obrigando a re-executar a suíte
+inteira (quando o defeito intermitente não reproduzia). Agora cada passo grava a
+saída COMPLETA em `AI_MEMORY/evidence/dev-branch-gate-logs/<execucaoId>/<passo>.log`
+e publica `saidaRef` no relatório. Regressão:
+`tests/unit/governance/devBranchGateStepEvidence.test.js` (3 testes).
+
+## Lição operacional (registrada)
+
+`bash -c "export PATH='…:$PATH'"` com **aspas simples internas** NÃO expande
+`$PATH` → `git` não encontrado → o gate devolve `IDENTIDADE_INVALIDA` (exit 2) e
+o erro parece "identidade inválida" em vez de PATH quebrado. Sempre usar aspas
+duplas na expansão ao despachar comando em background.
