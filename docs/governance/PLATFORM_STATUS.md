@@ -1,7 +1,7 @@
 # Platform Status
 
-- Generated at: 2026-10-19T15:06:53.673Z
-- Canonical mesh execution: mesh-2026-10-19T14-27-02-247Z
+- Generated at: 2026-10-19T16:26:39.668Z
+- Canonical mesh execution: mesh-2026-10-19T15-46-50-121Z
 - Canonical mesh decision: NO_GO
 - Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]
 - Readiness score: 99.83
@@ -13,7 +13,7 @@
 - omnichannel
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-19T14-27-02-247Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-10-19T15-46-50-121Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json

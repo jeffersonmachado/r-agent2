@@ -27,6 +27,7 @@ const {
   loadScenarioStore,
   upsertScenarioStore,
   normalizeScenarioRecord,
+  SCENARIO_STORE_PATH,
 } = require('./qaWavesScenarioService');
 const { normalizeAiOutput } = require('../modules/qa-waves/aiScenarioAdapter');
 const { getAllReplayReadDirs } = require('../../lib/rpaPathResolver');
@@ -1101,14 +1102,123 @@ function suggestMeshLinks(waveScenarios = [], meshRegistry = []) {
 
 // ─── Business Gaps (contracts × coverage) ──────────────────────────────────
 
+// ── Cache de business gaps (2026-10-19) ─────────────────────────────────────
+// `computeBusinessGaps` lê `scenario-store.json` (1,7 MB), `journey-contracts.
+// json` e todo o diretório `qa-waves/journey-coverage/` de forma SÍNCRONA
+// dentro do request handler. Medido no runtime real durante o ciclo de
+// selagem de 2026-10-19:
+//   1 requisição isolada .............. 260-420 ms
+//   25 requisições concorrentes ....... p50 3693 ms / máx 7454 ms
+//   (serializa ~300 ms por request: o parse de 1,7 MB bloqueia o event loop)
+// No mesh canônico (144 cenários abrindo /dev/qa-waves) a mesma rota estourou
+// o timeout de 30 s do client do frontend e `fitness-matricula-leads` falhou
+// com 3 erros de console (`HTTP Error 408` em
+// `/api/qa-waves/intelligence/business-gaps`) → `CRITICAL_DOMAIN_FAILED:
+// omnichannel` → mesh NO_GO → selo abortado na fase `prepare`. O mesmo
+// mecanismo já havia derrubado esse cenário via `intelligence/coverage`, que
+// hoje usa o cache de `buildReplayIndex` — este é o irmão que faltava.
+//
+// O resultado é DERIVADO de leitura pura (nenhum consumidor escreve), então:
+//  - `signature` = (mtime + size) do store, dos contracts e de cada arquivo de
+//    coverage: a invalidação é por MUDANÇA DE ARQUIVO, não por tempo;
+//  - `TTL` é apenas backstop temporal; `cooldown` evita N rebuilds síncronos
+//    simultâneos numa janela de escrita (mesmo padrão de `buildReplayIndex`);
+//  - o consumidor recebe um CLONE, para que mutação de caller não contamine o
+//    cache (o payload tem ~35 KB: clonar é ordens de magnitude mais barato que
+//    re-parsear 1,7 MB).
+const BUSINESS_GAPS_TTL_MS = Number(process.env.QA_WAVES_BUSINESS_GAPS_TTL_MS || 60000);
+const BUSINESS_GAPS_REBUILD_COOLDOWN_MS = Number(
+  process.env.QA_WAVES_BUSINESS_GAPS_COOLDOWN_MS || 5000,
+);
+const BUSINESS_GAPS_CACHE_MAX = Number(process.env.QA_WAVES_BUSINESS_GAPS_CACHE_MAX || 32);
+const BUSINESS_GAPS_CONTRACTS_PATH = path.join(ROOT_DIR, 'config', 'journey-contracts.json');
+const BUSINESS_GAPS_COVERAGE_DIR = path.join(ROOT_DIR, 'qa-waves', 'journey-coverage');
+const businessGapsCache = new Map();
+
+function fileStamp(filePath) {
+  try {
+    const stat = fs.statSync(filePath);
+    return `${filePath}\u0000${stat.mtimeMs}\u0000${stat.size}`;
+  } catch (_) {
+    return `${filePath}\u0000missing`;
+  }
+}
+
+function directoryStamp(dirPath) {
+  try {
+    const entries = fs.readdirSync(dirPath).filter((name) => name.endsWith('.json')).sort();
+    return `${dirPath}\u0000${entries.map((name) => fileStamp(path.join(dirPath, name))).join('|')}`;
+  } catch (_) {
+    return `${dirPath}\u0000missing`;
+  }
+}
+
+function businessGapsSignature() {
+  return [
+    fileStamp(SCENARIO_STORE_PATH),
+    fileStamp(BUSINESS_GAPS_CONTRACTS_PATH),
+    directoryStamp(BUSINESS_GAPS_COVERAGE_DIR),
+  ].join('||');
+}
+
+function businessGapsCacheKey({ vertical, journey, tenantId }) {
+  return `${normalizeTenantKey(tenantId)}|${vertical || '*'}|${journey || '*'}`;
+}
+
+function cloneBusinessGaps(payload) {
+  if (typeof structuredClone === 'function') return structuredClone(payload);
+  return JSON.parse(JSON.stringify(payload));
+}
+
 /**
  * Returns business-level gap analysis suitable for UI display.
  * Cross-references journey-contracts.json × journey-coverage × scenario-store.
+ *
+ * `generatedAt` é o instante em que o snapshot foi CALCULADO (não o instante
+ * da resposta): enquanto a assinatura dos arquivos não mudar, o mesmo snapshot
+ * é servido — dizer outra coisa seria reportar frescura que não existe.
  */
-function getBusinessGaps({ vertical = null, journey = null, tenantId = 'system' } = {}) {
+function getBusinessGaps(options = {}) {
+  const { vertical = null, journey = null, tenantId = 'system' } = options || {};
+  const key = businessGapsCacheKey({ vertical, journey, tenantId });
+  const signature = businessGapsSignature();
+  const now = Date.now();
+  const cached = businessGapsCache.get(key);
+
+  if (cached && cached.signature === signature && now < cached.expiresAt) {
+    return cloneBusinessGaps(cached.payload);
+  }
+  if (
+    cached
+    && cached.signature !== signature
+    && now - cached.builtAt < BUSINESS_GAPS_REBUILD_COOLDOWN_MS
+  ) {
+    // Janela de escrita: N calls concorrentes fariam N parses síncronos em
+    // série no mesmo event loop (a amplificação medida acima). O snapshot
+    // anterior continua correto o suficiente por poucos segundos e a próxima
+    // chamada após o cooldown reconstrói.
+    return cloneBusinessGaps(cached.payload);
+  }
+
+  const payload = computeBusinessGaps({ vertical, journey, tenantId });
+  businessGapsCache.set(key, {
+    signature,
+    builtAt: now,
+    expiresAt: now + BUSINESS_GAPS_TTL_MS,
+    payload,
+  });
+  // LRU simples: o cache é pequeno e por combinação de filtros.
+  while (businessGapsCache.size > BUSINESS_GAPS_CACHE_MAX) {
+    const oldest = businessGapsCache.keys().next().value;
+    businessGapsCache.delete(oldest);
+  }
+  return cloneBusinessGaps(payload);
+}
+
+function computeBusinessGaps({ vertical = null, journey = null, tenantId = 'system' } = {}) {
   const scopedTenantId = normalizeTenantKey(tenantId);
-  const contractsPath = path.join(ROOT_DIR, 'config', 'journey-contracts.json');
-  const coverageDir = path.join(ROOT_DIR, 'qa-waves', 'journey-coverage');
+  const contractsPath = BUSINESS_GAPS_CONTRACTS_PATH;
+  const coverageDir = BUSINESS_GAPS_COVERAGE_DIR;
   const storeData = loadScenarioStore();
   const scenarios = (storeData.scenarios || storeData || [])
     .map((s) => normalizeScenarioRecord(s))

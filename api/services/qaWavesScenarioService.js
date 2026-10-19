@@ -1214,6 +1214,11 @@ module.exports = {
   saveScenario,
   listLatestScenarios,
   runScenarioExecution,
+  // Caminho resolvido do store (inclui override por env). Exportado para que
+  // caches derivados possam reconstruir a assinatura de invalidação sobre o
+  // MESMO arquivo que `loadScenarioStore` lê — duplicar o default criaria
+  // cache servindo dado de um arquivo que ninguém mais lê.
+  SCENARIO_STORE_PATH: STORE_PATH,
   loadScenarioStore,
   upsertScenarioStore,
   normalizeScenarioRecord,

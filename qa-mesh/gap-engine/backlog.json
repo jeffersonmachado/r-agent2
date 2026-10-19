@@ -14,7 +14,7 @@
       "scenarios": [
         "fitness-matricula-leads"
       ],
-      "sampleError": "page.goto: Timeout 30000ms exceeded. Call log: - navigating to \"http://localhost:5173/dev/qa-waves\", waiting until \"domcontentloaded\""
+      "sampleError": "3 erro(s) de console detectados"
     },
     "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
   },

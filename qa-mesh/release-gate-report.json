@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-19T14-27-02-247Z",
+  "executionId": "mesh-2026-10-19T15-46-50-121Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-19T14-27-02-247Z",
+    "executionId": "mesh-2026-10-19T15-46-50-121Z",
     "tenantId": "system",
-    "timestamp": "2026-10-19T14:27:02.247Z",
+    "timestamp": "2026-10-19T15:46:50.121Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -259,18 +259,18 @@
     },
     "topErrors": [
       {
-        "message": "page.goto: Timeout 30000ms exceeded. Call log: - navigating to \"http://localhost:5173/dev/qa-waves\", waiting until \"domcontentloaded\"",
+        "message": "3 erro(s) de console detectados",
         "count": 1
       }
     ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-19T14-27-02-247Z",
-      "startedAt": "2026-10-19T14:27:02.247Z",
+      "executionId": "mesh-2026-10-19T15-46-50-121Z",
+      "startedAt": "2026-10-19T15:46:50.121Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-19T15:06:51.875Z",
+      "promotedAt": "2026-10-19T16:26:36.808Z",
       "registryTotal": 144,
       "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
@@ -282,20 +282,20 @@
     "BASELINE_INFRA_REGRESSION"
   ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-19T14-27-02-247Z",
-    "startedAt": "2026-10-19T14:27:02.247Z",
+    "executionId": "mesh-2026-10-19T15-46-50-121Z",
+    "startedAt": "2026-10-19T15:46:50.121Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-19T15:06:51.875Z",
+    "promotedAt": "2026-10-19T16:26:36.808Z",
     "registryTotal": 144,
     "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "artifactType": "release-gate-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261019140138641-4a6086c4",
-  "sourceFingerprint": "c6fcf4baf13814dcff6b4dd2bf464c9bc72e12488997a614f088569b0f823472",
-  "sourceCommit": "d0df29918b734a9821949099b6f0666f27cc5724",
-  "sourceTree": "5d80ef8d9655f7638a969744ba7428a3e1475895",
-  "generatedAt": "2026-10-19T15:06:51.881Z"
+  "runId": "rap-governed-20261019151810461-6783ec6d",
+  "sourceFingerprint": "79d57fb8220487afc6f1275fe58aa7a68578b6048c2fd50abd53fe14a44e0e5c",
+  "sourceCommit": "df1548bb0a81fdbf9177e5e428348916fa7145b3",
+  "sourceTree": "7df78e61f2b1f67d3f9329e62a7ff21a09e0cf27",
+  "generatedAt": "2026-10-19T16:26:36.819Z"
 }
