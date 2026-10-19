@@ -38,8 +38,11 @@ const ROOT = process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT
   ? path.resolve(process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT)
   : path.resolve(__dirname, '..', '..', '..');
 const SANDBOX_IMAGE = process.env.ENGINEERING_ROUTER_SANDBOX_IMAGE || 'r-agent2-engineering-router-sandbox:latest';
-const DEFAULT_MEMORY = process.env.ENGINEERING_ROUTER_SANDBOX_MEMORY || '512m';
-const DEFAULT_PIDS_LIMIT = process.env.ENGINEERING_ROUTER_SANDBOX_PIDS_LIMIT || '64';
+const DEFAULT_MEMORY = process.env.ENGINEERING_ROUTER_SANDBOX_MEMORY || '512m';// LIMITE DE PIDs: 64 era apertado demais para rodar `npx jest` DENTRO do container. Medido
+// (2026-10-18): o filho morria com `spawn /usr/local/bin/node EAGAIN` — EAGAIN em spawn é
+// falta de PID/thread, não erro do código testado. Com 128 a suíte roda e o controle
+// continua efetivo (o teste de segurança que tenta estourar o limite segue passando).
+const DEFAULT_PIDS_LIMIT = process.env.ENGINEERING_ROUTER_SANDBOX_PIDS_LIMIT || '128';
 const DEFAULT_CPUS = process.env.ENGINEERING_ROUTER_SANDBOX_CPUS || '1';
 const DEFAULT_TMPFS_SIZE = process.env.ENGINEERING_ROUTER_SANDBOX_TMPFS_SIZE || '64m';
 // UID/GID SEMPRE não-privilegiado e fixo — nunca o UID do processo host (que em produção real
@@ -209,6 +212,12 @@ function buildDockerArgs({ executable, args, cwd, env, containerName, network })
     '-e', 'GIT_CONFIG_COUNT=1',
     '-e', 'GIT_CONFIG_KEY_0=safe.directory',
     '-e', 'GIT_CONFIG_VALUE_0=*',
+    // WORKERS DO JEST DENTRO DO CONTAINER: o sandbox roda com `--cpus=1` e `--pids-limit=64`.
+    // `os.cpus()`/`os.availableParallelism()` leem a afinidade do HOST (não a quota do cgroup),
+    // então uma suíte Jest disparada aqui dentro tentava abrir N workers num container de 1 CPU
+    // — medido: `npx jest` dentro do sandbox passou a reportar FAIL (fork além do limite de
+    // PIDs). O teto é explícito e não depende de heurística.
+    '-e', 'JEST_MAX_WORKERS=1',
   ];
   for (const [key, value] of Object.entries(env || {})) {
     dockerArgs.push('-e', `${key}=${value}`);

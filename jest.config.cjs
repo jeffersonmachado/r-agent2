@@ -17,7 +17,20 @@ const { applyJestDbBudgetToEnv } = require('./lib/jestDbConnectionBudget');
 // — resultado: `workers = 1` SEMPRE. O lote oficial de 1052 suítes rodava SERIAL (~1 suíte a
 // cada 20 s) e o L0 se tornava inviável na prática. A fórmula sempre esteve certa
 // (`cpus: 12` ⇒ 11 workers); o que faltava era informar as CPUs REAIS da máquina.
-const dbBudget = applyJestDbBudgetToEnv(process.env, { cpus: os.cpus().length });
+//
+// SEGUNDO DEFEITO, medido logo depois: `os.cpus().length` mede o HOST. Dentro do sandbox do
+// Engineering Router (container com `--cpus=1` e `--pids-limit=64`) o Node continua vendo todos
+// os núcleos do host e tentava abrir 11 workers num container de 1 CPU — a suíte rodada DENTRO
+// do sandbox passou a falhar. `os.availableParallelism()` respeita a quota de CPU do cgroup, e
+// `JEST_MAX_WORKERS` permite que um chamador imponha um teto explícito.
+const paralelismoReal = typeof os.availableParallelism === 'function'
+  ? os.availableParallelism()
+  : os.cpus().length;
+const tetoExplicito = Number.parseInt(process.env.JEST_MAX_WORKERS, 10);
+const dbBudget = applyJestDbBudgetToEnv(process.env, { cpus: paralelismoReal });
+const workersEfetivos = Number.isFinite(tetoExplicito) && tetoExplicito > 0
+  ? Math.max(1, Math.min(dbBudget.workers, tetoExplicito))
+  : dbBudget.workers;
 
 // Pacote irmão @results/auth (fora do repo em /opt/results/ria/): incluído nos
 // roots apenas quando existe, para que clones/CI sem o diretório não falhem
@@ -34,8 +47,9 @@ module.exports = {
   testTimeout: 10000,
 
   // Paralelismo seguro: teto derivado do orçamento de conexões do Postgres
-  // (workers × DB_POOL_MAX ≤ orçamento). Nunca o default `cpus - 1` sem essa conta.
-  maxWorkers: dbBudget.workers,
+  // (workers × DB_POOL_MAX ≤ orçamento) e da PARALELIDADE REAL (respeita cgroup/container).
+  // Nunca o default `cpus - 1` sem essas contas.
+  maxWorkers: workersEfetivos,
 
   // Proteção contra travamentos
   bail: 1, // Para após primeiro teste falhar (útil para debug)
