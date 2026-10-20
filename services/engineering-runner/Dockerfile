@@ -38,6 +38,22 @@ COPY engine/engineeringRouter/secretRedaction.js ./engine/engineeringRouter/secr
 COPY engine/engineeringRouter/commandPolicy.js ./engine/engineeringRouter/commandPolicy.js
 COPY engine/engineeringRouter/constants.js ./engine/engineeringRouter/constants.js
 
+# L-1 (2026-10-20) — FECHAMENTO DE DEPENDÊNCIAS, NÃO LISTA DE CONVENIÊNCIA.
+#
+# Defeito medido ao vivo: `executionSandbox.js` passou a fazer
+# `require('../../../governance/bug-closure/command-policy')` e o COPY correspondente nunca foi
+# adicionado. O container REAL respondia, em toda execução de sandbox:
+#   {"error":"Cannot find module '../../../governance/bug-closure/command-policy'","code":"MODULE_NOT_FOUND"}
+# Rodando o mesmo código como processo bare no host (Jest) o `require()` resolve contra o monorepo
+# e MASCARA a ausência — foi assim que a mesma classe de defeito voltou (ver ER-V1-SEALFIX-003 no
+# comentário acima). A prevenção é `tests/unit/engineeringRunnerDockerfileClosure.test.js`, que
+# calcula o fechamento transitivo de `require()` a partir das entradas do runner e reprova qualquer
+# arquivo alcançado sem COPY. Ao adicionar dependência nova, o teste aponta o que falta.
+COPY api/utils ./api/utils
+COPY engine/shared ./engine/shared
+COPY governance/bug-closure ./governance/bug-closure
+COPY config/timeout-policy.json ./config/timeout-policy.json
+
 EXPOSE 8090
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
