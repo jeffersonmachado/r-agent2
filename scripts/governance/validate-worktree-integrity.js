@@ -33,7 +33,7 @@ function parseArgs(argv) {
     if (arg === '--report') { options.report = argv[++i]; continue; }
     if (arg === '--no-report') { options.report = false; continue; }
     if (arg === '--waive') {
-      pendingWaiver = { path: argv[++i], reason: '' };
+      pendingWaiver = { path: argv[++i], reason: '', approvedBy: '' };
       options.waiver.push(pendingWaiver);
       continue;
     }
@@ -42,6 +42,13 @@ function parseArgs(argv) {
         throw new Error('--reason sem --waive correspondente');
       }
       pendingWaiver.reason = argv[++i] || '';
+      continue;
+    }
+    if (arg === '--approved-by') {
+      if (!pendingWaiver) {
+        throw new Error('--approved-by sem --waive correspondente');
+      }
+      pendingWaiver.approvedBy = argv[++i] || '';
       continue;
     }
     throw new Error(`argumento desconhecido: ${arg}`);
@@ -74,6 +81,18 @@ function main() {
     options = parseArgs(process.argv.slice(2));
   } catch (error) {
     process.stderr.write(`${error.message}\n`);
+    process.exit(2);
+  }
+
+  // WAIVER SEM AUTORIDADE HUMANA É ERRO DE USO, não liberação silenciosa.
+  const semAutoridade = options.waiver.filter(
+    (w) => !w.approvedBy || String(w.approvedBy).trim().length < 2 || !w.reason || w.reason.trim().length < 10,
+  );
+  if (semAutoridade.length > 0) {
+    process.stderr.write(
+      'WAIVER_INVALIDO: todo waiver exige --reason (>=10 caracteres) e --approved-by <humano>. '
+      + `Faltando em: ${semAutoridade.map((w) => w.path).join(', ')}\n`,
+    );
     process.exit(2);
   }
 

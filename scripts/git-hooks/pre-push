@@ -1,16 +1,22 @@
 #!/bin/sh
 # Pre-push VERSIONADO (scripts/git-hooks/pre-push).
 #
-# Contém DUAS guardas:
+# Contém TRÊS guardas:
 #  1. TAG de release não é publicada por push (decisão local de 2026-10-10:
 #     commits para origin/main AUTORIZADOS; tag exige decisão posterior).
 #  2. INTEGRIDADE do worktree: push não publica diff que apaga prova (teste,
-#     símbolo, guarda) — a mutilação recorrente medida em 2026-10-09/2026-10-20.
+#     símbolo, guarda) não commitado.
+#  3. INTEGRIDADE DOS COMMITS ENVIADOS (2026-10-20): a versão anterior só olhava
+#     o worktree — mutilação COMMITADA passava limpa. Agora cada ref publicada é
+#     verificada no intervalo `remote_sha..local_sha`.
 #
 # Instalação: bash scripts/install-git-hooks.sh
 set -eu
 
 cd "$(git rev-parse --show-toplevel)"
+
+ZERO="0000000000000000000000000000000000000000"
+SEM_BASE=""
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -z "$remote_ref" ] && continue
@@ -20,14 +26,35 @@ while read -r local_ref local_sha remote_ref remote_sha; do
       exit 1
       ;;
   esac
+
+  base="$remote_sha"
+  if [ "$base" = "$ZERO" ]; then
+    # Ref nova no remoto: compara contra a base do repositório.
+    base=$(git rev-parse --verify --quiet origin/main || git rev-parse --verify --quiet main || true)
+  fi
+
+  if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+    if ! node scripts/governance/validate-worktree-integrity.js --base "$base" --no-report; then
+      echo "" >&2
+      echo "[worktree-integrity] PUSH BLOQUEADO: os commits a enviar removem prova em relacao a $base." >&2
+      echo "  node scripts/governance/validate-worktree-integrity.js --waive <arquivo> --reason \"<motivo>\" --approved-by <humano> --no-report" >&2
+      exit 1
+    fi
+  else
+    SEM_BASE="1"
+  fi
 done
 
 if ! node scripts/governance/validate-worktree-integrity.js --no-report; then
   echo "" >&2
   echo "[worktree-integrity] PUSH BLOQUEADO: worktree remove prova em relação a HEAD." >&2
-  echo "Restaure de HEAD ou registre waiver explícito:" >&2
-  echo "  node scripts/governance/validate-worktree-integrity.js --waive <arquivo> --reason \"<motivo>\" --no-report" >&2
+  echo "Restaure de HEAD ou registre waiver com autoridade humana:" >&2
+  echo "  node scripts/governance/validate-worktree-integrity.js --waive <arquivo> --reason \"<motivo>\" --approved-by <humano> --no-report" >&2
   exit 1
+fi
+
+if [ -n "$SEM_BASE" ]; then
+  echo "[worktree-integrity] aviso: ref sem base resolvivel no remoto - verificacao feita so no worktree." >&2
 fi
 
 exit 0

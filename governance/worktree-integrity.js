@@ -73,6 +73,10 @@ const PROTECTED_FILES = Object.freeze([
 ]);
 
 const TEST_DECLARATION_RE = /^\s*(?:it|test|describe)(?:\.(?:only|skip|each|concurrent))?\s*\(/;
+// SUPRESSÃO: `.skip`/`.only`/`.todo` desativam cobertura SEM apagar o arquivo.
+// Contar declarações não pega isso — por isso a regra dedicada.
+const TEST_SUPPRESSION_RE = /^\s*(?:it|test|describe|context)\.(?:skip|only|todo)(?:\.each)?\s*\(/;
+const ASSERTION_RE = /\bexpect\s*\(/;
 // Só declarações de ESCOPO DE MÓDULO (sem indentação): variáveis locais removidas
 // são consequência normal de refactor e gerariam ruído que destrói a confiança
 // na guarda. O sinal que importa é capacidade EXPORTADA/declarada que desaparece.
@@ -122,6 +126,9 @@ function parseDiff(rawDiff) {
         removedTests: 0,
         addedTests: 0,
         removedSymbols: [],
+        suppressionAdded: [],
+        removedAssertions: 0,
+        addedAssertions: 0,
       };
       files.set(current.path, current);
       continue;
@@ -138,6 +145,7 @@ function parseDiff(rawDiff) {
       current.removed += 1;
       const body = line.slice(1);
       if (TEST_DECLARATION_RE.test(body)) current.removedTests += 1;
+      if (ASSERTION_RE.test(body)) current.removedAssertions += 1;
       const fn = body.match(FUNCTION_DECLARATION_RE);
       if (fn) current.removedSymbols.push(fn[1]);
       const bound = body.match(BOUND_CONST_DECLARATION_RE);
@@ -146,7 +154,10 @@ function parseDiff(rawDiff) {
     }
     if (line.startsWith('+')) {
       current.added += 1;
-      if (TEST_DECLARATION_RE.test(line.slice(1))) current.addedTests += 1;
+      const body = line.slice(1);
+      if (TEST_DECLARATION_RE.test(body)) current.addedTests += 1;
+      if (ASSERTION_RE.test(body)) current.addedAssertions += 1;
+      if (TEST_SUPPRESSION_RE.test(body)) current.suppressionAdded.push(body.trim());
     }
   }
 
@@ -167,7 +178,13 @@ function readCurrentFile(cwd, relPath) {
  */
 function evaluateWorktree({ cwd = process.cwd(), baseRef = 'HEAD', waiver = [] } = {}) {
   const activeWaivers = (Array.isArray(waiver) ? waiver : []).filter(
-    (w) => w && typeof w.path === 'string' && typeof w.reason === 'string' && w.reason.trim().length >= 10,
+    (w) => w
+      && typeof w.path === 'string'
+      && typeof w.reason === 'string' && w.reason.trim().length >= 10
+      // AUTORIDADE HUMANA (2026-10-20): waiver gerado pelo próprio agente não
+      // pode liberar a própria alteração. Sem `approvedBy` explícito, o waiver
+      // é ignorado (fail-closed) — o motivo sozinho não basta.
+      && typeof w.approvedBy === 'string' && w.approvedBy.trim().length >= 2,
   );
   const waivedPaths = new Set(activeWaivers.map((w) => w.path.replace(/\\/g, '/')));
 
@@ -209,6 +226,30 @@ function evaluateWorktree({ cwd = process.cwd(), baseRef = 'HEAD', waiver = [] }
         detail: `casos de teste removidos: ${file.removedTests} removidos x ${file.addedTests} adicionados`,
         removedTests: file.removedTests,
         addedTests: file.addedTests,
+      });
+    }
+
+    // SUPRESSÃO SEMÂNTICA (2026-10-20): apagar o arquivo não é a única forma de
+    // desligar cobertura. `it.skip`/`describe.only`/`test.todo` silenciam testes
+    // sem mudar a contagem de declarações.
+    if (file.suppressionAdded.length > 0) {
+      push({
+        code: 'TEST_SUPPRESSION_ADDED',
+        path: file.path,
+        detail: `patch ADICIONA supressao de teste: ${file.suppressionAdded.slice(0, 3).join(' | ')}`,
+        lines: file.suppressionAdded,
+      });
+    }
+
+    // ASSERTION REMOVIDA: um teste que continua existindo mas perde verificações
+    // é um verde oco.
+    if (/\.test\.(?:js|mjs|cjs|ts)$/.test(file.path) && file.removedAssertions > file.addedAssertions) {
+      push({
+        code: 'ASSERTION_REMOVAL',
+        path: file.path,
+        detail: `assertions removidas: ${file.removedAssertions} removidas x ${file.addedAssertions} adicionadas`,
+        removedAssertions: file.removedAssertions,
+        addedAssertions: file.addedAssertions,
       });
     }
 

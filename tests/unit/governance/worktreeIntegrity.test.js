@@ -184,7 +184,7 @@ describe('guarda de integridade do worktree', () => {
     const report = evaluateWorktree({
       cwd: dir,
       baseRef: 'HEAD',
-      waiver: [{ path: 'tests/unit/alvo.test.js', reason: 'teste obsoleto removido em deprecacao aprovada' }],
+      waiver: [{ path: 'tests/unit/alvo.test.js', reason: 'teste obsoleto removido em deprecacao aprovada', approvedBy: 'joao.silva' }],
     });
 
     expect(report.verdict).toBe('PASS');
@@ -202,11 +202,51 @@ describe('guarda de integridade do worktree', () => {
     const report = evaluateWorktree({
       cwd: dir,
       baseRef: 'HEAD',
-      waiver: [{ path: 'tests/unit/alvo.test.js', reason: '' }],
+      waiver: [{ path: 'tests/unit/alvo.test.js', reason: '', approvedBy: 'joao.silva' }],
     });
 
     expect(report.verdict).toBe('FAIL');
     expect(report.waived).toHaveLength(0);
+  });
+
+  test('waiver sem AUTORIDADE HUMANA é ignorado (agente não libera a própria alteração)', () => {
+    const dir = repo();
+    write(dir, 'tests/unit/alvo.test.js', "it('a', () => {});\nit('b', () => {});\n");
+    commitAll(dir);
+    write(dir, 'tests/unit/alvo.test.js', "it('a', () => {});\n");
+
+    const report = evaluateWorktree({
+      cwd: dir,
+      baseRef: 'HEAD',
+      waiver: [{ path: 'tests/unit/alvo.test.js', reason: 'motivo suficientemente longo' }],
+    });
+
+    expect(report.verdict).toBe('FAIL');
+    expect(report.waived).toHaveLength(0);
+  });
+
+  test('it.skip adicionado reprova com TEST_SUPPRESSION_ADDED', () => {
+    const dir = repo();
+    write(dir, 'tests/unit/alvo.test.js', "it('a', () => { expect(1).toBe(1); });\n");
+    commitAll(dir);
+
+    write(dir, 'tests/unit/alvo.test.js', "it.skip('a', () => { expect(1).toBe(1); });\n");
+
+    const report = evaluateWorktree({ cwd: dir, baseRef: 'HEAD' });
+    expect(report.verdict).toBe('FAIL');
+    expect(codesOf(report)).toContain('TEST_SUPPRESSION_ADDED');
+  });
+
+  test('asserção removida reprova com ASSERTION_REMOVAL', () => {
+    const dir = repo();
+    write(dir, 'tests/unit/alvo.test.js', "it('a', () => {\n  expect(1).toBe(1);\n  expect(2).toBe(2);\n});\n");
+    commitAll(dir);
+
+    write(dir, 'tests/unit/alvo.test.js', "it('a', () => {\n  expect(1).toBe(1);\n});\n");
+
+    const report = evaluateWorktree({ cwd: dir, baseRef: 'HEAD' });
+    expect(report.verdict).toBe('FAIL');
+    expect(codesOf(report)).toContain('ASSERTION_REMOVAL');
   });
 
   test('classificação de caminho protegido', () => {
