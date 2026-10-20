@@ -1929,6 +1929,21 @@
       "regressionTest": "scripts/governance/collect-engineering-router-runtime-evidence.js",
       "severityBasis": "certificacao de runtime nao reproduzivel: falso verde com estado residual e falso vermelho em arvore limpa",
       "severitySource": "missao-L1-criterio-7"
+    },
+    {
+      "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+      "title": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
+      "status": "verified",
+      "commit": "42dd5f34b",
+      "evidence": "tests/integration/engineeringMissionFullE2E.test.js 8/8 (missao -> enriquecimento -> AWAITING_APPROVAL -> execucao BLOQUEADA antes da aprovacao -> aprovacao libera versao exata -> task aderente -> loop real do Router ate GREEN em 73,6s -> relatorio de auditoria -> TEST 48); L1 tests/integration/engineering + contracts 40 suites/221 testes exit 0; L0 no worktree principal 5a26cab7c: 256 suites/2782 testes exit 0; negativos 10 suites/110 testes exit 0; logs /tmp/l1-full-completo.log, /tmp/l2-iso-missao2.log, /tmp/l0-main-final.log, /tmp/negatives.log | RUNTIME: npm run collect:engineering-router-runtime-evidence com a arvore livre => status=RUNTIME_PASS, 25/25 itens, 0 falhas, sourceCommit=5a26cab7c, fingerprint=72882145a443635f, gerado 2026-10-20T19:18Z",
+      "resolution": "Medicao executada em clone do commit 42dd5f34b (mesmo codigo do HEAD 5a26cab7c; delta apenas docs/fila) enquanto outra sessao editava o worktree principal. A primeira tentativa deu 34/40 por artefato de isolamento: ENGINEERING_ROUTER_HOST_REPO_ROOT do .env apontava para o repo principal (promocao/candidate split/durable resume), WORKSPACE_ROOT compartilhado (pruning) e git clone --shared criava objects/info/alternates (git status do sandbox morria com bad object HEAD). Corrigida a configuracao (clone local sem alternates, raizes proprias, runner em porta dedicada), cada suite falha passa isolada e a bateria fecha 40/40.",
+      "note": "A aprovacao do L2 e PROGRAMATICA (ator distinto no teste). Prova o mecanismo de bloqueio/liberacao; NAO substitui assinatura humana real, que segue pendente de decisao do usuario. A reprovacao anterior do coletor (RUNTIME_FAIL, 1 item) era contencao: runner compartilhado e suite paralela; com uma unica sessao a coleta fecha 25/25.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "severityBasis": "criterios 5/6/7/8/13/14 da missao L-1 dependiam desta jornada",
+      "severitySource": "medicao-direta-2026-10-20"
     }
   ],
   "schemaVersion": 2,

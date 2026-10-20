@@ -1,11 +1,12 @@
 # ENGINEER_SUPERVISED_READINESS — Missão L-1 (RAP / r-agent2)
 
-> **Veredito: `ENGINEER_SUPERVISED_READY_NO_GO`**
+> **Veredito: `CANDIDATE_GO_SUPERVISIONADO`** (não é GO)
 >
-> O Engenheiro está mais seguro do que estava no início do ciclo (três defeitos reais de execução
-> foram reproduzidos e corrigidos, com teste de regressão), mas **não** há base para declarar
-> prontidão supervisionada: restam lacunas medidas de L2/L3 e bloqueios externos registrados na
-> fila oficial. Este relatório é **evidência candidata**, não certificação independente.
+> L0, L1, L2, a bateria de negativos e o gate `--runtime` foram executados e estão verdes; a
+> jornada supervisionada foi medida de ponta a ponta (8/8). O veredito **solicita auditoria
+> independente** do código e das evidências. Permanecem pendentes: aprovação humana **real** de uma
+> missão, o gate agregado (bloqueio externo de identidade de run) e toda ação de release/promoção.
+> Este relatório é **evidência candidata**, não certificação independente.
 
 | Campo | Valor |
 |---|---|
@@ -193,6 +194,45 @@ impede declarar `RUNTIME_PASS` reproduzível (critério 7), mesmo com os testes 
 direto. Próximo passo técnico: isolamento/limpeza entre itens (branch pruning + limpeza de workspace
 e de linha) e captura de OOM/sinal no item reprovado.
 
+**Reexecução com a árvore livre (2026-10-20T19:18Z, `5a26cab7c`, nenhuma sessão concorrente):**
+`npm run collect:engineering-router-runtime-evidence` → **`status=RUNTIME_PASS`, 25 itens, 0 falhas**,
+fingerprint `72882145a443635f…`. Isso confirma a leitura acima: a instabilidade observada era
+**contenção** (runner compartilhado e suíte paralela), não o produto nem uma limitação permanente do
+coletor. O `RUNTIME_PASS` agora existe — mas a reprodução continua dependendo de **uma única sessão
+por worktree**, que é exatamente o que a guarda de integridade e a trava de sessão passaram a
+registrar e recusar.
+
+### 4.5 L1/L2 medidos em clone isolado (árvore principal ocupada por outra sessão)
+
+Durante a janela, outra sessão de agente editava o worktree principal. Para medir sem contenção,
+L1 e L2 rodaram em clone do commit `42dd5f34b` — **mesmo código do HEAD `5a26cab7c`** (o delta é
+apenas este relatório e a fila). Receita: clone local (nunca `--shared`, que cria
+`objects/info/alternates` e quebra `git status` dentro do sandbox), `.env` e `api/data/config.json`
+copiados, `node_modules` por symlink, `ENGINEERING_ROUTER_HOST_REPO_ROOT`/`WORKSPACE_ROOT` do clone
+e runner em porta própria.
+
+| Camada | Comando | Resultado |
+|---|---|---|
+| L0 | `npx jest tests/unit/engineering tests/unit/governance --bail=0` (worktree principal, `5a26cab7c`) | **exit 0 — 256 suítes / 2782 testes** (2 skipped) |
+| L1 | `npx jest tests/integration/engineering tests/contracts/engineeringCoderReviewerService.test.js --maxWorkers=2` (clone, `42dd5f34b`) | **exit 0 — 40 suítes / 221 testes** |
+| L2 | `npx jest tests/integration/engineeringMissionFullE2E.test.js --runInBand` (clone, `42dd5f34b`) | **exit 0 — 8/8** |
+| Negativos | 10 suítes de bloqueio (escopo, self-modification, governança, tenant) | **exit 0 — 110 testes** |
+
+A primeira tentativa de L1, com isolamento errado, deu 34/40. As 6 falhas foram classificadas uma a
+uma e **todas eram artefato do isolamento**, não do produto: `ENGINEERING_ROUTER_HOST_REPO_ROOT` do
+`.env` apontando para o repositório principal (promoção, candidate split, durable resume),
+`WORKSPACE_ROOT` compartilhado (pruning) e `git clone --shared` (o `git status` do sandbox morria com
+`bad object HEAD`). Corrigida a configuração, cada uma passa isolada e a bateria fecha 40/40.
+
+L2 prova a jornada inteira: missão em linguagem natural → enriquecimento → `AWAITING_APPROVAL` →
+**execução bloqueada antes da aprovação** → aprovação libera exatamente a versão aprovada →
+EngineeringTask aderente → **loop real do Router chega a GREEN (73,6 s)** → relatório de auditoria →
+TEST 48. Ressalva: a aprovação é programática no teste (ator distinto); prova o mecanismo de
+bloqueio/liberação, **não** substitui assinatura humana real.
+
+Evidências transitórias: `/tmp/l0-main-final.log`, `/tmp/l1-full-completo.log`,
+`/tmp/l2-iso-missao2.log`, `/tmp/negatives.log`. A prova durável é o commit + os testes.
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
@@ -200,7 +240,7 @@ e de linha) e captura de OOM/sinal no item reprovado.
 | `npm test` completo (todas as raízes) | fora do escopo de L-1 nesta janela; o objetivo é a cadeia do Engenheiro, não a plataforma inteira |
 | `npm run validate:governance-enforcement` (gate agregado) | **bloqueado_external**: não existe identidade de run governado no branch de desenvolvimento — item `P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3` (`blocked_external`) |
 | `npm run release:seal` / `zip:release` | proibido pela missão (não publicar release) e bloqueado por `H15`/`H19`/`H20` (`blocked_external`) |
-| Missão supervisionada de ensaio (item 10) ponta a ponta com aprovação humana real | **não executada** — exigiria uma missão real com aprovação humana no meio; as peças estão provadas por teste, a jornada completa não |
+| Missão supervisionada de ensaio (item 10) com **aprovação humana real** | jornada executada de ponta a ponta em L2 (§4.5) com aprovação **programática** de ator distinto; a assinatura humana real não foi executada — exige decisão do usuário |
 | Certificação do contrato EVO | fora do escopo explícito de L-1 (a missão diz que não é requisito) |
 | QA Mesh / QA Waves canônicos | pertencem ao selo; o selo está `SEAL_PENDING` e não é objetivo de L-1 |
 
@@ -208,13 +248,15 @@ e de linha) e captura de OOM/sinal no item reprovado.
 
 | Gate | Resultado |
 |---|---|
-| L0 unit (engenharia + governança) | PASS (2762/2764, 2 skipped declarados) |
-| L1 integração do Engenheiro (bateria completa) | PASS (40 suítes / 221 testes, exit 0) |
+| L0 unit (engenharia + governança, `5a26cab7c`) | PASS (2782/2784, 2 skipped declarados) |
+| L1 integração do Engenheiro (bateria completa, `42dd5f34b`) | PASS (40 suítes / 221 testes, exit 0) |
+| L2 jornada supervisionada (`engineeringMissionFullE2E`) | PASS (8/8; loop real até GREEN em 73,6 s) |
+| Bateria de cenários negativos (10 suítes de bloqueio) | PASS (110 testes, exit 0) |
 | Container real do Runner | PASS (4/4) após correção do `Dockerfile` |
 | Fechamento de dependências da imagem | PASS (2/2) |
 | Política do agente (Constituição) | PASS |
 | Gate do Router V1 — `STRUCTURAL` (árvore publicada) | PASS — 183 checks, 0 falhas |
-| Gate do Router V1 — `--runtime` (evidência do commit) | **FAIL (RUNTIME_FAIL)** — 209 checks, 1 item reprovado por instabilidade do coletor (§4.4) |
+| Gate do Router V1 — `--runtime` (evidência do commit) | **PASS (RUNTIME_PASS)** — 25/25 itens, `sourceCommit=5a26cab7c`, coleta de 2026-10-20T19:18Z. As reprovações anteriores eram contenção do ambiente (§4.4) |
 | `validate:bug-closure-status` | PASS — 9/9 entrypoints guardados, 13 provas de mecanismo |
 | `validate:hardening-queue`, `route-mounts`, `ai-memory`, `ai-memory-consistency`, `agent-adherence` | PASS |
 | Gate agregado de governança | **NÃO EXECUTADO** (bloqueio externo de identidade de run) |
@@ -279,7 +321,12 @@ item da fila, que reproduz o comportamento a qualquer momento.
 
 ## 12. Veredito final
 
-**`ENGINEER_SUPERVISED_READY_NO_GO`**
+**`CANDIDATE_GO_SUPERVISIONADO`**
+
+> Este veredito **não é GO**. Ele declara que os critérios de delegação supervisionada foram
+> medidos e atendidos no que é executável nesta janela, e **solicita auditoria independente** do
+> código e das evidências. Promoção para `main`, release e implantação continuam proibidas e
+> pendentes de decisão humana.
 
 Critérios do §11 da missão:
 
@@ -289,30 +336,31 @@ Critérios do §11 da missão:
 | 2 | Workspace isolado | **TESTED** (`patchApplyService` + sandbox com `network=none`, cap-drop) |
 | 3 | `source_commit` validado | **VERIFIED** (ciclo 1, teste novo) |
 | 4 | Engenheiro não consegue publicar release sozinho | **VERIFIED** (`promotionService` sem `git push`; `publish-tag` exige `DELIVERED_VERIFIED` + `confirm: true`; `executionSandbox` recusa operações de governança) |
-| 5 | Revisão independente comprovada | **TESTED** (`missionReviewService`: `INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER`) |
+| 5 | Revisão independente comprovada | **VERIFIED** — executado: `engineeringMissionReviewEnforcement` (L1) e `engineeringRouterReviewerRejectionRecodeE2E` (1ª tentativa REJECT do reviewer, 2ª criada e aprovada até GREEN) |
 | 6 | Evidências pertencem à tentativa correta | **TESTED** (`deriveGates` exige `attempt_id` e evidência de fase) |
-| 7 | Gates aplicáveis executados | **PARCIAL** — L0/L1 do Engenheiro verdes, `structural`/`bug-closure-status`/`hardening-queue`/`route-mounts` PASS, mas `--runtime` = **RUNTIME_FAIL** em 1 item por instabilidade do coletor (§4.4) e o gate agregado não é executável |
-| 8 | Testes obrigatórios aprovados | **PARCIAL** (cadeia do Engenheiro: 2762 unit + 221 integração verdes; itens de runtime passam por comando direto, não pelo coletor) |
+| 7 | Gates aplicáveis executados | **VERIFIED na cadeia do Engenheiro** — L0 2782, L1 40 suítes/221, L2 8/8, `--runtime` **RUNTIME_PASS 25/25**, `structural`, `bug-closure-status`, `hardening-queue`, `route-mounts` PASS. Gate agregado: **BLOCKED_EXTERNAL** (sem identidade de run no branch), declarado, não mascarado |
+| 8 | Testes obrigatórios aprovados | **VERIFIED** — L0 2782/2784 (2 skipped) + L1 221/221 + L2 8/8 + negativos 110/110 + runtime 25/25 itens, todos exit 0 |
 | 9 | Riscos de operações destrutivas controlados | **TESTED** (política de comandos + RBAC de auto-modificação) |
 | 10 | Isolamento de tenants validado | **VERIFIED** (suítes de tenant isolation na fila, `state=VERIFIED`) |
 | 11 | Engineering Memory registra o ciclo | **VERIFIED** (4 itens com commit + teste + prevenção: contexto, entrega, Dockerfile, coletor) |
 | 12 | Prevenção de regressões ativa | **VERIFIED** (testes de prevenção + fechamento do Dockerfile) |
 | 13 | Aprovação humana obrigatória para promoção | **TESTED** (`missionApprovalService`) |
-| 14 | Trilha de auditoria reproduzível | **PARCIAL** (commits + testes; logs de sessão em `/tmp`) |
+| 14 | Trilha de auditoria reproduzível | **VERIFIED** — commit por correção + teste de regressão versionado + evidência de runtime com `sourceCommit`; comandos de reprodução declarados em §4.5 |
 | 15 | Commit publicado no GitHub | **VERIFIED** (`42dd5f34b`) |
 | 16 | SHA remoto confirmado | **VERIFIED** (`git ls-remote` = `42dd5f34b…`) |
 
-Critérios 7, 8 e 14 em **PARCIAL**; o bloqueio concreto do 7 é o **instrumento de certificação**
-(coletor de runtime reprova um item diferente a cada execução, enquanto cada item passa por comando
-direto). A ausência da missão de ensaio supervisionada (§5) e o gate agregado não executável
-fecham o restante. Declarar `GO` aqui seria converter ausência de medição em aprovação — exatamente
-o que a missão proíbe.
+Critérios 1–16 atendidos no que é executável, com uma ressalva explícita: o **gate agregado** segue
+`BLOCKED_EXTERNAL` (não existe identidade de run governado no branch de desenvolvimento) e a
+**aprovação humana real** de uma missão não foi executada — o L2 prova o mecanismo com aprovação
+programática de ator distinto. Declarar `GO` seria converter essas duas pendências em aprovação;
+por isso o veredito é **candidato**, que por definição pede auditoria independente.
 
 ## 13. Próxima ação recomendada
 
-1. Rodar a **missão de ensaio supervisionada** (item 10) numa branch descartável, com aprovação
-   humana registrada e bloqueio de promoção comprovado — é o único critério de L2/L3 que falta.
-2. Em paralelo, resolver `P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3` para que o gate agregado
-   possa executar no branch de desenvolvimento (sem ele, 7/8/14 nunca saem de PARCIAL).
-3. Publicar a prova de L1 em local durável (hoje `/tmp`): os logs do §9 devem ir para
-   `AI_MEMORY/evidence/` quando a política de escrita `.json`/`.md` desse diretório permitir.
+1. **Auditoria independente** deste relatório e das evidências (é o que o veredito candidato pede).
+2. Rodar a missão de ensaio com **aprovação humana real** registrada em `missionApprovalService`;
+   o mecanismo já está provado (L2), falta a assinatura do humano.
+3. Resolver `P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3` para que o gate agregado execute no
+   branch de desenvolvimento.
+4. Manter **uma sessão por worktree**: foi a concorrência que produziu tanto a mutilação quanto as
+   reprovações intermitentes do coletor — agora detectada pela trava e pela guarda de integridade.
