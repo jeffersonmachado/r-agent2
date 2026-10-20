@@ -1,28 +1,8 @@
 {
-  "generatedAt": "2026-10-19T21:51:02.419Z",
-  "status": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO]",
-  "platformMaturity": "enterprise-partial",
-  "backlog": [
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio omnichannel",
-      "evidence": {
-        "scenarios": [
-          "fitness-matricula-leads"
-        ],
-        "sampleError": "3 erro(s) de console detectados"
-      },
-      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-    }
-  ],
-  "blocking": 1,
+  "generatedAt": "2026-10-19T23:12:40.283Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
+  "platformMaturity": "autonomous-ready",
+  "backlog": [],
+  "blocking": 0,
   "nonBlocking": 0
 }

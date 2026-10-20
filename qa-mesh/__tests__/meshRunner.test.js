@@ -577,9 +577,30 @@ describe('qa-mesh/meshRunner', () => {
       QA_MESH_CANONICAL_LOCK_PATH: process.env.QA_MESH_CANONICAL_LOCK_PATH,
       QA_MESH_CANONICAL_PROMOTION_PATH: process.env.QA_MESH_CANONICAL_PROMOTION_PATH,
       RUNNING_IN_PIPELINE: process.env.RUNNING_IN_PIPELINE,
+      // IDENTIDADE DE RUN EXPLÍCITA (2026-10-19).
+      //
+      // DEFEITO MEDIDO: `avaliarPromocaoCanonica` recusa promoção quando a
+      // identidade está incompleta (`MESH_SEM_IDENTIDADE_DE_EXECUCAO`) — é o
+      // contrato correto: artefato sem run/fingerprint não é prova. O teste,
+      // porém, dependia de `GOVERNANCE_RUN_ID`/`GOVERNANCE_SOURCE_*` estarem no
+      // ambiente do processo: passava quando executado de dentro do converge
+      // (que exporta essas variáveis) e falhava no comando canônico
+      // `npx jest qa-mesh/__tests__/meshRunner.test.js --runInBand`, que é
+      // exatamente o que o RAP-026 do Master Scorecard executa. Resultado:
+      // RAP-026 travado em 5/10 e `seal-time-gate` em SEAL_NO_GO mesmo com o
+      // mesh canônico 144/144. A identidade agora é fornecida pelo próprio
+      // teste, sem afrouxar a assertiva (a promoção continua tendo de existir).
+      GOVERNANCE_RUN_ID: process.env.GOVERNANCE_RUN_ID,
+      GOVERNANCE_SOURCE_FINGERPRINT: process.env.GOVERNANCE_SOURCE_FINGERPRINT,
+      GOVERNANCE_SOURCE_COMMIT: process.env.GOVERNANCE_SOURCE_COMMIT,
+      GOVERNANCE_SOURCE_TREE: process.env.GOVERNANCE_SOURCE_TREE,
     };
 
     process.env.RUNNING_IN_PIPELINE = '1';
+    process.env.GOVERNANCE_RUN_ID = 'rap-governed-test-stale-lock';
+    process.env.GOVERNANCE_SOURCE_FINGERPRINT = 'f'.repeat(64);
+    process.env.GOVERNANCE_SOURCE_COMMIT = 'a'.repeat(40);
+    process.env.GOVERNANCE_SOURCE_TREE = 'b'.repeat(40);
     process.env.QA_MESH_REPORT_PATH = path.join(tempRoot, 'meshReport.json');
     process.env.QA_MESH_REPAIR_PLAN_PATH = path.join(tempRoot, 'repairPlan.json');
     process.env.QA_MESH_METRICS_PATH = path.join(tempRoot, 'metrics.json');
