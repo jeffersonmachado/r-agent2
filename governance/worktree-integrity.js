@@ -98,9 +98,12 @@ function git(cwd, args) {
   });
 }
 
-/** Lê o diff bruto contra a base (vazio = worktree idêntico à base). */
-function collectDiff({ cwd, baseRef = 'HEAD' }) {
-  return git(cwd, ['diff', '-U0', '--no-color', baseRef, '--']);
+/** Lê o diff bruto contra a base (vazio = head idêntico à base). */
+function collectDiff({ cwd, baseRef = 'HEAD', headRef = null }) {
+  const args = ['diff', '-U0', '--no-color', baseRef];
+  if (headRef) args.push(headRef);
+  args.push('--');
+  return git(cwd, args);
 }
 
 /**
@@ -164,7 +167,14 @@ function parseDiff(rawDiff) {
   return [...files.values()];
 }
 
-function readCurrentFile(cwd, relPath) {
+function readCurrentFile(cwd, relPath, headRef = null) {
+  if (headRef) {
+    try {
+      return git(cwd, ['show', `${headRef}:${relPath}`]);
+    } catch {
+      return null;
+    }
+  }
   try {
     return fs.readFileSync(path.join(cwd, relPath), 'utf8');
   } catch {
@@ -176,7 +186,7 @@ function readCurrentFile(cwd, relPath) {
  * Avalia o worktree. `waiver` é uma lista de `{ path, reason }` — cada waiver
  * precisa de motivo não vazio; waiver sem motivo é ignorado (fail-closed).
  */
-function evaluateWorktree({ cwd = process.cwd(), baseRef = 'HEAD', waiver = [] } = {}) {
+function evaluateWorktree({ cwd = process.cwd(), baseRef = 'HEAD', headRef = null, waiver = [] } = {}) {
   const activeWaivers = (Array.isArray(waiver) ? waiver : []).filter(
     (w) => w
       && typeof w.path === 'string'
@@ -189,10 +199,10 @@ function evaluateWorktree({ cwd = process.cwd(), baseRef = 'HEAD', waiver = [] }
   const waivedPaths = new Set(activeWaivers.map((w) => w.path.replace(/\\/g, '/')));
 
   const headSha = (() => {
-    try { return git(cwd, ['rev-parse', baseRef]).trim(); } catch { return null; }
+    try { return git(cwd, ['rev-parse', headRef || baseRef]).trim(); } catch { return null; }
   })();
 
-  const rawDiff = collectDiff({ cwd, baseRef });
+  const rawDiff = collectDiff({ cwd, baseRef, headRef });
   const files = parseDiff(rawDiff);
   const violations = [];
   const waived = [];
@@ -254,7 +264,7 @@ function evaluateWorktree({ cwd = process.cwd(), baseRef = 'HEAD', waiver = [] }
     }
 
     if (file.removedSymbols.length > 0) {
-      const content = readCurrentFile(cwd, file.path);
+      const content = readCurrentFile(cwd, file.path, headRef);
       if (content !== null) {
         const lost = [...new Set(file.removedSymbols)].filter(
           (name) => !new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(content),
@@ -298,6 +308,7 @@ function evaluateWorktree({ cwd = process.cwd(), baseRef = 'HEAD', waiver = [] }
   return {
     verdict: violations.length === 0 ? 'PASS' : 'FAIL',
     baseRef,
+    headRef,
     headSha,
     filesChanged: files.length,
     totals,

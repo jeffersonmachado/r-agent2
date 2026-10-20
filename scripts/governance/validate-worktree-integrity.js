@@ -22,12 +22,13 @@ const path = require('path');
 const { evaluateWorktree } = require('../../governance/worktree-integrity');
 
 function parseArgs(argv) {
-  const options = { base: 'HEAD', json: false, report: undefined, cwd: process.cwd(), waiver: [] };
+  const options = { base: 'HEAD', head: null, json: false, report: undefined, cwd: process.cwd(), waiver: [] };
   let pendingWaiver = null;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--base') { options.base = argv[++i]; continue; }
+    if (arg === '--head') { options.head = argv[++i]; continue; }
     if (arg === '--json') { options.json = true; continue; }
     if (arg === '--cwd') { options.cwd = path.resolve(argv[++i]); continue; }
     if (arg === '--report') { options.report = argv[++i]; continue; }
@@ -58,7 +59,7 @@ function parseArgs(argv) {
 
 function formatHuman(report) {
   const lines = [];
-  lines.push(`Integridade do worktree vs ${report.baseRef} (HEAD ${report.headSha || 'desconhecido'}): ${report.verdict}`);
+  lines.push(`Integridade do worktree vs ${report.baseRef}${report.headRef ? `..${report.headRef}` : ''} (HEAD ${report.headSha || 'desconhecido'}): ${report.verdict}`);
   lines.push(`Arquivos alterados: ${report.filesChanged} | linhas +${report.totals.added} / -${report.totals.removed}`);
   if (report.violations.length > 0) {
     lines.push('VIOLAÇÕES:');
@@ -98,7 +99,7 @@ function main() {
 
   let report;
   try {
-    report = evaluateWorktree({ cwd: options.cwd, baseRef: options.base, waiver: options.waiver });
+    report = evaluateWorktree({ cwd: options.cwd, baseRef: options.base, headRef: options.head, waiver: options.waiver });
   } catch (error) {
     // Erro de infraestrutura NÃO é aprovação: falha explícita com código 2.
     process.stderr.write(`WORKTREE_INTEGRITY_UNAVAILABLE: ${error.message}\n`);

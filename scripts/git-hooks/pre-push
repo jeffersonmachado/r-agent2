@@ -34,7 +34,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   fi
 
   if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null; then
-    if ! node scripts/governance/validate-worktree-integrity.js --base "$base" --no-report; then
+    if ! node scripts/governance/validate-worktree-integrity.js --base "$base" --head "$local_sha" --no-report; then
       echo "" >&2
       echo "[worktree-integrity] PUSH BLOQUEADO: os commits a enviar removem prova em relacao a $base." >&2
       echo "  node scripts/governance/validate-worktree-integrity.js --waive <arquivo> --reason \"<motivo>\" --approved-by <humano> --no-report" >&2
