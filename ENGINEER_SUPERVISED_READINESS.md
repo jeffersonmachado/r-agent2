@@ -12,10 +12,10 @@
 |---|---|
 | Data da avaliação | 2026-10-20 |
 | Branch | `dev/engineering-hardening` |
-| SHA local | `fb525c989c95eaeb725163e84737239a4ed5c7fa` |
-| SHA remoto (`origin/dev/engineering-hardening`) | `fb525c989c95eaeb725163e84737239a4ed5c7fa` (confirmado por `git ls-remote`) |
+| SHA local | `99a4f48b65813f8ac067c5bf59fd6a6797cec37f` |
+| SHA remoto (`origin/dev/engineering-hardening`) | `99a4f48b65813f8ac067c5bf59fd6a6797cec37f` (confirmado por `git ls-remote`) |
 | Escopo | Preparação e comprovação da delegação supervisionada (L-1). **Não** é implantação do StudioOly, **não** é release |
-| Commit final do ciclo | `fb525c989` (ciclo 4), precedido por `e3d358b5b`, `713aafc1a`, `53da93267`, `ce343edd3`, `6ecca330c` |
+| Commit final do ciclo | `99a4f48b6`, precedido por `5a26cab7c`, `42dd5f34b`, `1eca5ebbf`, `9d26a4ce6`, `cc4295226`, `070f303d7`, `fb525c989` |
 | Worktree | limpo no momento da publicação (`git status --short` vazio) |
 
 ---
