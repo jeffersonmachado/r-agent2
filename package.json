@@ -169,6 +169,7 @@
     "verify:engineering-router-v1-envelope": "node scripts/governance/verify-engineering-router-v1-audit-envelope.js",
     "validate:agent-adherence": "node scripts/governance/validate-agent-adherence.js",
     "validate:self-proving": "node scripts/governance/validate-self-proving.js",
+    "validate:worktree-integrity": "node scripts/governance/validate-worktree-integrity.js",
     "validate:timeout-architecture": "node scripts/governance/validate-timeout-architecture.js",
     "verify:timeout-architecture-e2e": "node --env-file-if-exists=.env scripts/governance/verify-timeout-architecture-e2e.js",
     "validate:system-scope-audit": "node scripts/governance/generate-system-scope-audit.js",

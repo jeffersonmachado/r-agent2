@@ -136,6 +136,10 @@ const FAILURE_CODES = Object.freeze({
   PATCH_BINARY_CHANGE: 'PATCH_BINARY_CHANGE',
   PATCH_TOO_LARGE: 'PATCH_TOO_LARGE',
   PATCH_UNEXPECTED_DELETE: 'PATCH_UNEXPECTED_DELETE',
+  // MUTILACAO DE WORKTREE (2026-10-20): o patch APAGA casos de teste para fazer
+  // a suite passar, em vez de corrigir o comportamento. Recusado antes do apply;
+  // autorizacao so por campo explicito de contrato aprovado por humano.
+  PATCH_REMOVES_TESTS: 'PATCH_REMOVES_TESTS',
   PATCH_APPLY_FAILED: 'PATCH_APPLY_FAILED',
   ENGINEERING_TASK_EXHAUSTED: 'ENGINEERING_TASK_EXHAUSTED',
   COMMAND_NOT_ALLOWED: 'COMMAND_NOT_ALLOWED',

@@ -15,6 +15,7 @@
 const { FAILURE_CODES } = require('./constants');
 const { checkPathBoundary, normalize } = require('./pathBoundary');
 const { SECRET_VALUE_PATTERNS, MULTILINE_BLOCK_PATTERNS } = require('./secretRedaction');
+const { findRemovedTestCases } = require('./testRemovalPolicy');
 
 const DEFAULT_MAX_PATCH_SIZE_BYTES = 200 * 1024; // 200KB — patch de tarefa, não de release inteira.
 const SECRET_LIKE_FILENAMES = [/(^|\/)\.env(\..*)?$/, /(^|\/)\.token\.env$/, /credentials\.json$/, /(^|\/)secrets?\//i];
@@ -332,6 +333,25 @@ function validatePatch(diffText, { contract = {}, maxPatchSizeBytes = DEFAULT_MA
   // por validação, aplicação, persistência e promoção sem nenhum obstáculo. A varredura é feita
   // aqui, no ponto único por onde todo patch passa, e SÓ sobre as linhas ADICIONADAS — remover um
   // segredo é a correção, nunca a violação.
+  // MUTILACAO DE WORKTREE (2026-10-20): o patch nao pode APAGAR casos de teste.
+  // Medido: 35 blocos it/describe removidos com a suite verde — o teste que
+  // reprovaria a delecao era o proprio teste apagado.
+  if (contract.allowTestRemovalAuthorization !== true) {
+    const testRemovals = findRemovedTestCases(text);
+    if (testRemovals.length > 0) {
+      const described = testRemovals
+        .map((entry) => `${entry.path} (${entry.removedTests} removidos x ${entry.addedTests} adicionados)`)
+        .join('; ');
+      issues.push({
+        code: FAILURE_CODES.PATCH_REMOVES_TESTS,
+        message:
+          'Patch REMOVE casos de teste sem autorizacao explicita de contrato — '
+          + 'corrigir o comportamento, nunca apagar a prova: ' + described,
+        testRemovals,
+      });
+    }
+  }
+
   const secretsInAddedContent = findSecretsInAddedContent(text);
   if (secretsInAddedContent.length > 0) {
     issues.push({

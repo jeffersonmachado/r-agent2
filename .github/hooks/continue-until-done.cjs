@@ -20,7 +20,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
+const { evaluateWorktree } = require('../../governance/worktree-integrity');
 
+const ROOT = path.resolve(__dirname, '..', '..');
 const QUEUE_PATH = 'AI_MEMORY/hardening-queue.json';
 const STATE_PATH = '.github/hooks/.continue-state.json';
 
@@ -120,6 +122,38 @@ function git(args) {
   }
 }
 
+/**
+ * INTEGRIDADE DO WORKTREE (2026-10-20).
+ *
+ * Terceira rodada de mutilação medida no mesmo repositório: dezenas de arquivos
+ * com guardas apagadas e testes removidos, suíte verde porque a prova tinha sido
+ * apagada. O hook é o ponto onde o agente encerra o turno — se o worktree está
+ * mutilado, encerrar é aceitar a perda sem ninguém ver.
+ *
+ * Fail-closed: falha ao avaliar NÃO vira aprovação (verdict UNAVAILABLE é
+ * reportado, não silenciado), mas também não bloqueia para não travar o turno
+ * por erro de ambiente.
+ */
+function inspectWorktree() {
+  try {
+    return evaluateWorktree({ cwd: ROOT, baseRef: 'HEAD' });
+  } catch (error) {
+    return { verdict: 'UNAVAILABLE', error: error.message, violations: [], filesChanged: 0, totals: { added: 0, removed: 0 } };
+  }
+}
+
+function integritySignature(report) {
+  const parts = (report.violations || []).map((v) => `${v.code}:${v.path}`).sort().join('|');
+  return crypto.createHash('sha256').update(parts).digest('hex').slice(0, 16);
+}
+
+function describeIntegrity(report) {
+  return (report.violations || [])
+    .slice(0, 6)
+    .map((v) => `[${v.code}] ${v.path}`)
+    .join('; ');
+}
+
 // Progresso real = commit novo, worktree alterado ou status da fila mudou.
 // O arquivo de estado do proprio hook e excluido para nao se auto-validar.
 function progressSignature(queue) {
@@ -179,27 +213,58 @@ function main() {
   }
 
   const items = openItems(queue);
+  const integrity = inspectWorktree();
+  const integrityBlocking = integrity.verdict === 'FAIL';
 
   if (eventName === 'SessionStart') {
-    if (!items.length) {
+    if (!items.length && !integrityBlocking) {
       emit({});
       return;
     }
-    emit({
-      hookSpecificOutput: {
-        hookEventName: 'SessionStart',
-        additionalContext:
-          `Fila de hardening aberta em ${QUEUE_PATH} (${items.length} item(ns)): ${describe(items)}. ` +
-          'Trabalhe item a item sem pausar para pedir confirmacao; a cada item concluido marque status "done", ' +
-          'grave "commit" e "evidence" no JSON e commite antes de seguir para o proximo.',
-      },
-    });
+    const parts = [];
+    if (items.length) {
+      parts.push(
+        `Fila de hardening aberta em ${QUEUE_PATH} (${items.length} item(ns)): ${describe(items)}. ` +
+        'Trabalhe item a item sem pausar para pedir confirmacao; a cada item concluido marque status "done", ' +
+        'grave "commit" e "evidence" no JSON e commite antes de seguir para o proximo.',
+      );
+    }
+    if (integrityBlocking) {
+      parts.push(
+        `ATENCAO: worktree MUTILADO (${integrity.violations.length} violacao(oes), ` +
+        `+${integrity.totals.added}/-${integrity.totals.removed} linhas): ${describeIntegrity(integrity)}. ` +
+        'Restaure de HEAD antes de qualquer trabalho novo; nao commite o worktree como esta.',
+      );
+    }
+    emit({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: parts.join(' ') } });
     return;
   }
 
   if (eventName !== 'Stop') {
     emit({});
     return;
+  }
+
+  // Mutilacao detectada: bloqueia UMA vez por assinatura (evita laco quando o
+  // agente nao consegue restaurar sozinho — ex.: precisa de decisao humana).
+  if (integrityBlocking) {
+    const signature = integritySignature(integrity);
+    const previous = readState();
+    if (previous.integritySignature !== signature) {
+      writeState({ ...previous, integritySignature: signature });
+      emit({
+        hookSpecificOutput: {
+          hookEventName: 'Stop',
+          decision: 'block',
+          reason:
+            `WORKTREE MUTILADO: ${integrity.violations.length} violacao(oes) contra HEAD ` +
+            `(+${integrity.totals.added}/-${integrity.totals.removed} linhas) — ${describeIntegrity(integrity)}. ` +
+            'Restaure os arquivos de HEAD (git checkout HEAD -- <arquivo>) ou registre waiver com motivo. ' +
+            'Nao commite nem publique o worktree neste estado.',
+        },
+      });
+      return;
+    }
   }
 
   if (!items.length) {

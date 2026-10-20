@@ -1,0 +1,33 @@
+#!/bin/sh
+# Pre-push VERSIONADO (scripts/git-hooks/pre-push).
+#
+# Contém DUAS guardas:
+#  1. TAG de release não é publicada por push (decisão local de 2026-10-10:
+#     commits para origin/main AUTORIZADOS; tag exige decisão posterior).
+#  2. INTEGRIDADE do worktree: push não publica diff que apaga prova (teste,
+#     símbolo, guarda) — a mutilação recorrente medida em 2026-10-09/2026-10-20.
+#
+# Instalação: bash scripts/install-git-hooks.sh
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "$remote_ref" ] && continue
+  case "$remote_ref" in
+    refs/tags/*)
+      echo "[guard-local] push de TAG bloqueado: $remote_ref (autorizado apenas push de commits)" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if ! node scripts/governance/validate-worktree-integrity.js --no-report; then
+  echo "" >&2
+  echo "[worktree-integrity] PUSH BLOQUEADO: worktree remove prova em relação a HEAD." >&2
+  echo "Restaure de HEAD ou registre waiver explícito:" >&2
+  echo "  node scripts/governance/validate-worktree-integrity.js --waive <arquivo> --reason \"<motivo>\" --no-report" >&2
+  exit 1
+fi
+
+exit 0

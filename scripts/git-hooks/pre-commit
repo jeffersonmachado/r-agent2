@@ -1,0 +1,22 @@
+#!/bin/sh
+# Pre-commit VERSIONADO (scripts/git-hooks/pre-commit).
+#
+# Motivo (2026-10-20): o worktree foi mutilado três vezes — guardas apagadas,
+# funções reimplementadas e CASOS DE TESTE REMOVIDOS, com a suíte verde porque o
+# teste que reprovaria a perda era o próprio teste apagado. Nenhum gate julgava
+# a RELAÇÃO entre o worktree e a base; este hook julga, antes do commit nascer.
+#
+# Instalação: bash scripts/install-git-hooks.sh
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+if ! node scripts/governance/validate-worktree-integrity.js --no-report; then
+  echo "" >&2
+  echo "[worktree-integrity] COMMIT BLOQUEADO: o diff em stage remove prova (teste," >&2
+  echo "símbolo ou guarda) sem autorização. Restaure de HEAD ou registre waiver:" >&2
+  echo "  node scripts/governance/validate-worktree-integrity.js --waive <arquivo> --reason \"<motivo>\" --no-report" >&2
+  exit 1
+fi
+
+exit 0
