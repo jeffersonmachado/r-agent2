@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-19T23:03:44.171Z",
-  "commit": "030546b0b84fcecfdf12bd138f43ff0ba7e15902",
+  "generatedAt": "2026-10-20T00:47:17.204Z",
+  "commit": "c96277f97d22701e27442725fb7c62ab8c5fce9b",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
@@ -9,8 +9,8 @@
   "totals": {
     "items": 918,
     "byState": {
-      "VALIDATED": 888,
-      "VISITED": 9,
+      "VALIDATED": 886,
+      "VISITED": 11,
       "NOT_APPLICABLE": 21
     }
   },
@@ -5198,10 +5198,7 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 200,
-          "notFoundFallback": false
-        },
+        "p2": "network-error",
         "p3": "skipped"
       }
     },
@@ -6274,7 +6271,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/executions",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6294,7 +6291,8 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "P3 com erro de rede",
+          "notEvaluated": true
         }
       ],
       "probes": {
@@ -6306,15 +6304,12 @@
           "status": 403,
           "notFoundFallback": false
         },
-        "p3": {
-          "status": 200,
-          "notFoundFallback": false
-        }
+        "p3": "network-error"
       }
     },
     {
       "id": "api:GET:/api/qa-waves/executions/:executionId",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6324,7 +6319,8 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "anônimo rejeitado com 401"
+          "detail": "P1 com erro de rede",
+          "notEvaluated": true
         },
         {
           "name": "classificationEnforced",
@@ -6338,10 +6334,7 @@
         }
       ],
       "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
+        "p1": "network-error",
         "p2": {
           "status": 403,
           "notFoundFallback": false
@@ -26009,9 +26002,6 @@
       }
     }
   ],
-  "runId": "rap-governed-20261019220308967-6aefb1b6",
-  "sourceFingerprint": "cb5bc030fa38b41cd38e3e4b93d71be30985f4caa3b46a0a0c8507461e9b0c17",
-  "sourceCommit": "3475c1e1db5bf0633e86c61cf9a4cd420f61ab89",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  "runId": "rap-governed-20261020004113703-7eb9453b",
+  "sourceFingerprint": "cb5bc030fa38b41cd38e3e4b93d71be30985f4caa3b46a0a0c8507461e9b0c17"
 }
