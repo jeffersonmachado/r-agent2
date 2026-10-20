@@ -20,9 +20,30 @@
 
 const VERDICTS = Object.freeze({
   DELIVERED_VERIFIED: 'DELIVERED_VERIFIED',
+  // L-1 (2026-10-20): existe artefato entregue e o HEAD corresponde a ele, mas a
+  // entrega NÃO está verificada (veredito ausente/negativo, bloqueio canônico
+  // ativo, evidência indisponível ou identidade do run incompleta).
+  DELIVERED_UNVERIFIED: 'DELIVERED_UNVERIFIED',
   SUPERSEDED: 'SUPERSEDED',
   SEALED_ONLY: 'SEALED_ONLY',
   NOT_SEALED: 'NOT_SEALED',
+});
+
+/**
+ * Lacunas que IMPEDEM `DELIVERED_VERIFIED`.
+ *
+ * Defeito corrigido (L-1): o veredito era atribuído apenas por "existe artefato
+ * entregue e o HEAD casa com o commit do run" — `blockers`, `evidenceUnavailable`
+ * e `deliveredVerdict` eram RECEBIDOS e devolvidos, mas nunca consultados. Um
+ * release com gate canônico vermelho (ou sem relatório de verificação nenhum)
+ * aparecia como "Entregue verificada". Receber o fato e não o usar é a forma mais
+ * silenciosa de falso GO.
+ */
+const VERIFICATION_GAPS = Object.freeze({
+  DELIVERED_VERDICT_NOT_POSITIVE: 'DELIVERED_VERDICT_NOT_POSITIVE',
+  RELEASE_BLOCKERS_PRESENT: 'RELEASE_BLOCKERS_PRESENT',
+  EVIDENCE_UNAVAILABLE: 'EVIDENCE_UNAVAILABLE',
+  RUN_IDENTITY_INCOMPLETE: 'RUN_IDENTITY_INCOMPLETE',
 });
 
 const ACTIONS = Object.freeze({
@@ -53,6 +74,9 @@ function shortHash(value) {
  * @param {Array}  [input.evidenceUnavailable] relatórios que NÃO puderam ser lidos
  * @param {string|null} [input.releaseName]  nome do release selado (envelope)
  * @param {string|null} [input.deliveredVerdict] veredito gravado pela última verificação
+ * @param {boolean|null} [input.deliveredOk]  resultado do predicado CANÔNICO do relatório de
+ *   entrega (`DECISION_REPORTS.delivered_release.isOk`) — a positividade é decidida por UMA
+ *   autoridade (o próprio relatório), não por casamento de token neste modelo
  */
 function deriveReleaseState({
   run = null,
@@ -63,6 +87,7 @@ function deriveReleaseState({
   evidenceUnavailable = [],
   releaseName = null,
   deliveredVerdict = null,
+  deliveredOk = null,
 } = {}) {
   const runCommit = toText(run && run.sourceCommit);
   const headCommit = toText(head && head.commit);
@@ -71,6 +96,41 @@ function deriveReleaseState({
   const delivered = Array.isArray(artifacts.delivered) ? artifacts.delivered : [];
   const candidate = Array.isArray(artifacts.candidate) ? artifacts.candidate : [];
   const hasDelivered = delivered.length > 0;
+  const blockerList = Array.isArray(blockers) ? blockers : [];
+  const unavailableList = Array.isArray(evidenceUnavailable) ? evidenceUnavailable : [];
+
+  // L-1: `DELIVERED_VERIFIED` é uma AFIRMAÇÃO, não um sinônimo de "existe arquivo em
+  // dist/release". Cada lacuna abaixo é um fato medido; qualquer uma delas derruba a
+  // afirmação para `DELIVERED_UNVERIFIED` (nunca para um veredito positivo mais fraco).
+  const verificationGaps = [];
+  if (deliveredOk !== true) {
+    verificationGaps.push({
+      code: VERIFICATION_GAPS.DELIVERED_VERDICT_NOT_POSITIVE,
+      detail: deliveredVerdict
+        ? `veredito da entrega não é positivo (${deliveredVerdict})`
+        : 'nenhum veredito de verificação da entrega foi produzido',
+    });
+  }
+  if (blockerList.length > 0) {
+    verificationGaps.push({
+      code: VERIFICATION_GAPS.RELEASE_BLOCKERS_PRESENT,
+      detail: `bloqueio(s) canônico(s): ${blockerList.map((b) => toText(b && b.code) || '?').join(', ')}`,
+      blockers: blockerList,
+    });
+  }
+  if (unavailableList.length > 0) {
+    verificationGaps.push({
+      code: VERIFICATION_GAPS.EVIDENCE_UNAVAILABLE,
+      detail: `evidência indisponível: ${unavailableList.map((u) => toText(u && u.code) || '?').join(', ')}`,
+      evidence: unavailableList,
+    });
+  }
+  if (!runCommit) {
+    verificationGaps.push({
+      code: VERIFICATION_GAPS.RUN_IDENTITY_INCOMPLETE,
+      detail: 'run corrente sem `sourceCommit`: a entrega não pode ser atribuída a um commit',
+    });
+  }
 
   let verdict;
   if (!hasDelivered && candidate.length === 0 && !releaseName) {
@@ -79,6 +139,8 @@ function deriveReleaseState({
     verdict = VERDICTS.SEALED_ONLY;
   } else if (superseded) {
     verdict = VERDICTS.SUPERSEDED;
+  } else if (verificationGaps.length > 0) {
+    verdict = VERDICTS.DELIVERED_UNVERIFIED;
   } else {
     verdict = VERDICTS.DELIVERED_VERIFIED;
   }
@@ -121,6 +183,14 @@ function deriveReleaseState({
     superseded,
     releaseName: toText(releaseName),
     deliveredVerdict: toText(deliveredVerdict),
+    deliveredOk: deliveredOk === true,
+    // Por que NÃO é "entregue verificada" (vazio quando o veredito é positivo). Sem artefato
+    // entregue não há afirmação de entrega a desmentir: a lista fica vazia em vez de carregar
+    // ruído sobre um entregue que não existe.
+    verificationGaps: hasDelivered ? verificationGaps : [],
+    // Compatibilidade: o campo segue exposto no formato anterior.
+    blockers: blockerList.slice(),
+    evidenceUnavailable: unavailableList.slice(),
     run: run
       ? {
         runId: toText(run.runId),
@@ -149,18 +219,17 @@ function deriveReleaseState({
     guard: guard
       ? { blocksTagPush: guardBlocksTag, reason: toText(guard.reason), path: toText(guard.path) }
       : null,
-    blockers: Array.isArray(blockers) ? blockers.slice() : [],
-    // Evidência FALTANTE é declarada: não vira bloqueio inventado nem silêncio.
-    evidenceUnavailable: Array.isArray(evidenceUnavailable) ? evidenceUnavailable.slice() : [],
     actions,
     explanation: verdict === VERDICTS.SUPERSEDED
       ? 'o artefato entregue é válido NO COMMIT DELE; o código atual mudou depois dele, então é necessário um novo ciclo de selagem'
       : (verdict === VERDICTS.DELIVERED_VERIFIED
-        ? 'a árvore atual corresponde ao artefato entregue'
-        : (verdict === VERDICTS.SEALED_ONLY
-          ? 'há candidato/selagem em andamento, mas nenhum artefato entregue'
-          : 'nenhum ciclo de selagem em andamento')),
+        ? 'a árvore atual corresponde ao artefato entregue e a entrega está verificada'
+        : (verdict === VERDICTS.DELIVERED_UNVERIFIED
+          ? `a árvore atual corresponde ao artefato entregue, mas a entrega NÃO está verificada: ${verificationGaps.map((g) => g.detail).join('; ')}`
+          : (verdict === VERDICTS.SEALED_ONLY
+            ? 'há candidato/selagem em andamento, mas nenhum artefato entregue'
+            : 'nenhum ciclo de selagem em andamento'))),
   };
 }
 
-module.exports = { VERDICTS, ACTIONS, deriveReleaseState, shortHash };
+module.exports = { VERDICTS, VERIFICATION_GAPS, ACTIONS, deriveReleaseState, shortHash };

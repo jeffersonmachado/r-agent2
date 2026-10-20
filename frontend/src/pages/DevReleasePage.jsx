@@ -22,6 +22,7 @@ import { useToast } from '../components/Toast';
 
 const VERDICT_TONE = {
   DELIVERED_VERIFIED: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+  DELIVERED_UNVERIFIED: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
   SUPERSEDED: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
   SEALED_ONLY: 'bg-sky-500/15 text-sky-500 border-sky-500/30',
   NOT_SEALED: 'bg-slate-500/15 text-text-secondary border-border-default',
@@ -29,6 +30,7 @@ const VERDICT_TONE = {
 
 const VERDICT_LABEL = {
   DELIVERED_VERIFIED: 'Entregue verificada',
+  DELIVERED_UNVERIFIED: 'Entregue NÃO verificada',
   SUPERSEDED: 'Superada — novo ciclo necessário',
   SEALED_ONLY: 'Selada, sem entregue',
   NOT_SEALED: 'Sem ciclo de selagem',
