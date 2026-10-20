@@ -189,6 +189,7 @@ tmp/*
 !tmp/.gitkeep
 tmp_*
 .jest-engineering-runner.pid
+.jest-engineering-runner-*.pid
 **/*.bkp
 **/*.bak
 **/*.backup

@@ -49,8 +49,16 @@ const envLoad = loadEnvFile(ROOT);
 // já resolvidos — o alerta existia, e foi ignorado na linha de cima.
 process.stderr.write(`[jest-global-setup] .env ${envLoad.loaded ? `carregado (${envLoad.keys} chave(s) aplicada(s); ambiente explícito vence)` : `não aplicado: ${envLoad.reason}`}\n`);
 
-const PID_FILE = path.join(ROOT, '.jest-engineering-runner.pid');
+// PID FILE POR PORTA (2026-10-20).
+//
+// DEFEITO MEDIDO: o arquivo tinha nome FIXO (`.jest-engineering-runner.pid`), então duas sessões
+// de teste no MESMO repositório — ou um run em porta alternativa — compartilhavam o mesmo registro.
+// O `globalTeardown` da sessão A lia o pid gravado pela sessão B (que acabara de subir seu runner)
+// e matava o runner ALHEIO. Sintoma observado: `SANDBOX_UNAVAILABLE ... fetch failed` em uma suíte
+// que passa isolada, e `RUNTIME_FAIL` em um item diferente a cada coleta — sempre dependente de
+// promoção. O nome agora carrega a porta, que é a identidade do runner de teste.
 const RUNNER_PORT = Number(process.env.ENGINEERING_RUNNER_TEST_PORT || 8097);
+const PID_FILE = path.join(ROOT, `.jest-engineering-runner-${RUNNER_PORT}.pid`);
 const RUNNER_TOKEN = 'jest-test-engineering-runner-token';
 const READY_TIMEOUT_MS = 15000;
 
