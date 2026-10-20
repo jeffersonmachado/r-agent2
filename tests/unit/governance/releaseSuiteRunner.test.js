@@ -410,7 +410,7 @@ describe('run-release-suites — prova de saída do grupo do lote (Fase 6)', () 
       'utf8',
     );
     expect(fonte).toContain('stdoutLogPath');
-    expect(fonte).toMatch(/if \(result\.status !== 0 && !reuse\)/);
+    expect(fonte).toMatch(/if \(result\.status !== 0\) \{/);
     expect(fonte).toContain('.stdout.log');
   });
 });

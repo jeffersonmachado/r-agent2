@@ -472,7 +472,7 @@ function runJestBatch(suites, batchIndex) {
   // tentativas) — e eles eram DESCARTADOS exatamente no caso em que são necessários. O arquivo
   // abaixo é transporte/evidência de execução (tmpdir), não relatório governado.
   let stdoutLogPath = null;
-  if (result.status !== 0 && !reuse) {
+  if (result.status !== 0) {
     try {
       stdoutLogPath = path.join(batchReportDir(), `batch-${batchIndex}.stdout.log`);
       fs.writeFileSync(stdoutLogPath, `${result.stdout || ''}\n--- STDERR ---\n${result.stderr || ''}`, 'utf8');
