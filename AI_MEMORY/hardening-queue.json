@@ -1944,6 +1944,21 @@
       "legacyStatus": "verified",
       "severityBasis": "criterios 5/6/7/8/13/14 da missao L-1 dependiam desta jornada",
       "severitySource": "medicao-direta-2026-10-20"
+    },
+    {
+      "id": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+      "title": "POST /engineering/tasks/:id/run aceitava duas execucoes concorrentes (202,202)",
+      "status": "prevention_active",
+      "commit": "867b47e30",
+      "evidence": "tests/integration/engineeringRouterConcurrentRunHttp.test.js 10/10 execucoes exit 0 apos o fix; ANTES: no lote completo reproduziu [202,202] (duas execucoes aceitas, nenhum 409). Regressao = a propria suite de concorrencia.",
+      "resolution": "DEFEITO REAL medido na auditoria de reprodutibilidade (clone de 4298d2427): runnerId era `http-<agent>-Date.now()`, que colide quando dois pedidos chegam no mesmo milissegundo. A clausula de reentrada do lease (`lease_worker_instance_id = :workerInstanceId`) entao reconhecia o segundo pedido como o MESMO worker e re-adquiria o lease (fence+1) em vez de falhar com TASK_ALREADY_RUNNING. O servico ja gerava identidade com crypto.randomUUID() em newRunnerId(); a rota era o unico ponto com timestamp.",
+      "prevention": "Identidade unica por requisicao (crypto.randomUUID) no POST /tasks/:id/run + suite de concorrencia como regressao permanente (202/409 exatos).",
+      "severity": "P0",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "execucao dupla de uma task de engenharia: dois workers com posse, risco de escrita concorrente",
+      "severitySource": "medicao-direta-2026-10-20"
     }
   ],
   "schemaVersion": 2,

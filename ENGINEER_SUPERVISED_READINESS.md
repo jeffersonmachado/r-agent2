@@ -233,6 +233,25 @@ bloqueio/liberação, **não** substitui assinatura humana real.
 Evidências transitórias: `/tmp/l0-main-final.log`, `/tmp/l1-full-completo.log`,
 `/tmp/l2-iso-missao2.log`, `/tmp/negatives.log`. A prova durável é o commit + os testes.
 
+### 4.6 Auditoria de reprodutibilidade no commit publicado (`4298d2427`)
+
+Clone limpo do commit publicado, raízes próprias e runner em porta dedicada: L1 deu **38/40 suítes,
+219/221 testes**. As duas falhas são de naturezas diferentes:
+
+1. `engineeringRouterConcurrentRunHttp` — **defeito real**: duas requisições simultâneas receberam
+   `202` e a execução foi aceita duas vezes (`[202, 202]` em vez de `[202, 409]`). Causa:
+   `runnerId = http-<agent>-Date.now()` colide no mesmo milissegundo e a cláusula de reentrada do
+   lease (`lease_worker_instance_id = :workerInstanceId`) reconhece o segundo pedido como o mesmo
+   worker, re-adquirindo o lease em vez de recusar. Corrigido em `867b47e30` (identidade por
+   `crypto.randomUUID()`, o mesmo padrão de `newRunnerId()`); a suíte passa **10/10** execuções
+   após a correção. Item `L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT`.
+2. `engineeringBugLoopNaturalPathE2E` — **timeout de 900 s no lote**; isolado passa em 44 s (e já
+   passou em baterias anteriores). Flake de contenção, declarado como tal: não foi tratado como
+   verde nem como defeito de produto.
+
+Nenhuma das duas foi mascarada: a primeira virou correção com regressão permanente; a segunda ficou
+registrada como flake.
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
@@ -264,7 +283,8 @@ Evidências transitórias: `/tmp/l0-main-final.log`, `/tmp/l1-full-completo.log`
 
 ## 7. Problemas P0/P1 (abertos e encontrados)
 
-Encontrados e **corrigidos** neste ciclo (todos com teste de regressão): §3.1, §3.2, §3.3.
+Encontrados e **corrigidos** neste ciclo (todos com teste de regressão): §3.1, §3.2, §3.3 e
+`L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT` (§4.6, commit `867b47e30` — dupla aceitação concorrente).
 
 Abertos na fila oficial (`AI_MEMORY/hardening-queue.json`, 110 itens, 6 `blocked_external`):
 
@@ -310,6 +330,10 @@ item da fila, que reproduz o comportamento a qualquer momento.
 - Não há identidade de run governado no branch de desenvolvimento, portanto o gate agregado não roda
   (bloqueio externo, não escolha).
 - Este relatório foi produzido **pelo próprio Engenheiro** sobre trabalho do próprio Engenheiro.
+- O **L0 de governança** lê artefatos de `reports/` (ignorados pelo git): em clone limpo, 10 suítes
+  reprovam por ausência de evidência gerada, não por defeito de produto. Para auditar L0, use o
+  repositório com os artefatos do run ou execute dentro do mesmo ciclo que os produziu. L1/L2 não
+  têm essa dependência e reproduzem em clone limpo (§4.5).
 
 ## 11. Ações que exigem aprovação humana
 
