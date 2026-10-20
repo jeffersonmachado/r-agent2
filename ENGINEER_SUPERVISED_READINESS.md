@@ -252,6 +252,11 @@ Clone limpo do commit publicado, raízes próprias e runner em porta dedicada: L
 Nenhuma das duas foi mascarada: a primeira virou correção com regressão permanente; a segunda ficou
 registrada como flake.
 
+**Rechecagem no tip publicado (`2822e9854`, clone limpo):** as duas suítes passam —
+`engineeringRouterConcurrentRunHttp` devolve `202/409` e `engineeringBugLoopNaturalPathE2E` fecha em
+50,7 s. O defeito de concorrência não existe mais no código publicado; o timeout do bug loop segue
+como flake declarado sob carga.
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
