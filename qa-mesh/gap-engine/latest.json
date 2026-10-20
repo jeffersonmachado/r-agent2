@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-19T23:12:40.283Z",
-  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
+  "generatedAt": "2026-10-20T01:48:19.678Z",
+  "status": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "platformMaturity": "autonomous-ready",
   "backlog": [],
   "blocking": 0,

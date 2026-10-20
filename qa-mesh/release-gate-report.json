@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-10-19T22-25-24-713Z",
+  "executionId": "mesh-2026-10-20T01-03-33-315Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-10-19T22-25-24-713Z",
+    "executionId": "mesh-2026-10-20T01-03-33-315Z",
     "tenantId": "system",
-    "timestamp": "2026-10-19T22:25:24.713Z",
+    "timestamp": "2026-10-20T01:03:33.315Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -253,11 +253,11 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-10-19T22-25-24-713Z",
-      "startedAt": "2026-10-19T22:25:24.713Z",
+      "executionId": "mesh-2026-10-20T01-03-33-315Z",
+      "startedAt": "2026-10-20T01:03:33.315Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-10-19T23:02:39.539Z",
+      "promotedAt": "2026-10-20T01:40:05.248Z",
       "registryTotal": 144,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
@@ -265,20 +265,20 @@
   },
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-10-19T22-25-24-713Z",
-    "startedAt": "2026-10-19T22:25:24.713Z",
+    "executionId": "mesh-2026-10-20T01-03-33-315Z",
+    "startedAt": "2026-10-20T01:03:33.315Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-10-19T23:02:39.539Z",
+    "promotedAt": "2026-10-20T01:40:05.248Z",
     "registryTotal": 144,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "artifactType": "release-gate-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20261019220308967-6aefb1b6",
+  "runId": "rap-governed-20261020004113703-7eb9453b",
   "sourceFingerprint": "cb5bc030fa38b41cd38e3e4b93d71be30985f4caa3b46a0a0c8507461e9b0c17",
-  "sourceCommit": "3475c1e1db5bf0633e86c61cf9a4cd420f61ab89",
-  "sourceTree": "61a4c79bd9a813b0e6690cce4b1ec7d1533ffc78",
-  "generatedAt": "2026-10-19T23:02:39.544Z"
+  "sourceCommit": "c96277f97d22701e27442725fb7c62ab8c5fce9b",
+  "sourceTree": "3c296f10f056d170268e78bbdf2c4bed28b26e4d",
+  "generatedAt": "2026-10-20T01:40:05.253Z"
 }
