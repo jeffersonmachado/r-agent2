@@ -1913,6 +1913,22 @@
       "legacyStatus": "prevention_active",
       "severityBasis": "perda silenciosa de prova (testes e guardas) com suite verde; risco direto de falso GO",
       "severitySource": "medicao-direta-2026-10-20"
+    },
+    {
+      "id": "L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL",
+      "title": "Coleta da evidencia de runtime restringia o Jest a um teste e dependia de sobra de execucoes anteriores",
+      "status": "done",
+      "commit": "42dd5f34b",
+      "evidence": "scripts/governance/collect-engineering-router-runtime-evidence.js (executa o ARQUIVO inteiro e extrai o teste-alvo de assertionResults); medicao: em arvore limpa EXACT_PATCH_PROMOTION dava promoted=false e PROVIDER_MODEL_FAILURE_REROUTE terminava READY_FOR_PROMOTION, enquanto a suíte inteira passava 221/221",
+      "resolution": "DEFEITO MEDIDO (L-1): o coletor rodava 'jest <arquivo> --testNamePattern <id>', executando SOMENTE o teste nomeado. Testes que dependem de estado produzido por outro teste do MESMO arquivo falhavam em arvore limpa e passavam quando havia estado residual de execucoes anteriores — a certificacao de runtime era dependente de sujeira previa (falso verde com residuo, falso vermelho em arvore limpa). CORRECAO: roda o arquivo inteiro (o mesmo comando que o gate L1 usa) e o veredito do item vem do status do teste-ALVO em assertionResults + exit code real; teste ausente/renomeado/skipado continua FALHANDO; arquivo vermelho com alvo verde e reportado com causa explicita; timeout 120s -> 600s.",
+      "prevention": "REGRA: evidencia de runtime tem de reproduzir exatamente o comando que o gate executa. Restringir a execucao por nome de teste cria dependencia de ordem/estado e transforma certificacao em sorte.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "done",
+      "regressionTest": "scripts/governance/collect-engineering-router-runtime-evidence.js",
+      "severityBasis": "certificacao de runtime nao reproduzivel: falso verde com estado residual e falso vermelho em arvore limpa",
+      "severitySource": "missao-L1-criterio-7"
     }
   ],
   "schemaVersion": 2,

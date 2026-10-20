@@ -136,6 +136,63 @@ consequências práticas: (a) "17 suítes vermelhas" não é sinal de regressão
 também **esconde** defeito real (o `MODULE_NOT_FOUND` do §3.3 apareceu porque uma suíte foi isolada).
 A leitura correta é sempre: lote com contenção reduzida **e** isolamento das que falharem.
 
+### 4.3 Incidente de trabalho: worktree mutado por sessões concorrentes (medido)
+
+Durante a certificação o worktree foi alterado **enquanto a medição rodava**. Evidência objetiva —
+três fingerprints distintos para o mesmo instante de referência:
+
+| Origem | `sourceFingerprint` |
+|---|---|
+| evidência de runtime gravada em uma das rodadas | `15bc43e9…` |
+| worktree principal no momento da verificação | `128f32f5…` |
+| clone limpo do commit publicado | `e823bdca…` |
+
+O gate compara a evidência com o código **no instante da verificação**: fingerprint que muda entre
+coleta e verificação produz `RUNTIME_EVIDENCE_FRESH` falso — ou seja, certificação impossível por
+construção enquanto a árvore muda.
+
+Esse incidente tem duas consequências registradas:
+
+1. **Um commit meu foi contaminado e revertido.** `3490286e3` levou junto um `package.json` que não
+   era o do repositório (removia `overrides`, `validate:anti-greenwashing`,
+   `validate:engineering-router-v2`, `validate:migrations`…). Detectado por auditoria de `git show
+   --stat`, revertido em `070f303d7` (conteúdo idêntico a `dc4f9904c`, `git diff` vazio).
+2. **A causa raiz foi identificada e hoje tem guarda.** O item `L1-WORKTREE-MUTILACAO-RECORRENTE`
+   (`prevention_active`, commit `cc4295226`) registra: duas sessões de agente editando o mesmo
+   worktree ao mesmo tempo — uma executando o coletor ER-V1 e suítes de integração, a outra
+   restaurando arquivos de HEAD. Prevenção: `validate:worktree-integrity`, hooks versionados que
+   recusam `TEST_CASE_REMOVAL`/`SYMBOL_REMOVAL`/`PURE_DELETION`/`DELETION_DOMINANT`, trava de sessão
+   única e `patchValidator` recusando patch que apaga casos de teste.
+
+Lição operacional: nenhuma medição é válida sem `git status` limpo **antes e depois** da execução; o
+relatório passa a registrar o snapshot nos dois extremos.
+
+### 4.4 Evidência de runtime: defeito de reprodutibilidade corrigido no coletor
+
+`EXACT_PATCH_PROMOTION` e `PROVIDER_MODEL_FAILURE_REROUTE` falhavam em árvore limpa (`promoted=false`,
+`READY_FOR_PROMOTION`) e passavam quando havia estado residual — enquanto a suíte inteira passava
+221/221. Causa: o coletor executava `jest <arquivo> --testNamePattern <id>`, isto é, **só o teste
+nomeado**, quebrando testes que dependem de estado produzido por outro teste do mesmo arquivo.
+Correção em `42dd5f34b`: roda o arquivo inteiro (o mesmo comando do gate L1) e extrai o veredito do
+teste-alvo de `assertionResults`. Item `L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL`.
+
+**Resultado medido após a correção (árvore limpa, `42dd5f34b`, `dirty=0` antes e depois):**
+coleta `EXIT=1` com **1 item reprovado** — `REVIEWER_REJECTION_RECODE` — e gate
+`status=FAIL (STRUCTURAL_PASS/RUNTIME_FAIL) checks=209 falhas=1`.
+
+O mesmo item, executado **diretamente**, passa: `npx jest
+engineeringRouterReviewerRejectionRecodeE2E.test.js --runInBand` → **PASS, 1/1, 81,6 s**. E a suíte de
+promoção, que reprovou nos ciclos anteriores, passa isolada **7/7 em 170,2 s**. Cada execução da
+coleta reprova um item DIFERENTE (promoção → reroute de provider → reviewer recode), sempre
+dependente de promoção, e sempre reexecutado com sucesso fora do coletor.
+
+Conclusão honesta: **é o instrumento de coleta que não é estável neste ambiente, não o produto** —
+25 arquivos E2E sequenciais acumulam 2.910 branches residuais `engineering/missions/*`, workspaces e
+linhas de banco entre itens, e o processo Jest do item reprovado morre antes de emitir o JSON. Isso
+impede declarar `RUNTIME_PASS` reproduzível (critério 7), mesmo com os testes passando por comando
+direto. Próximo passo técnico: isolamento/limpeza entre itens (branch pruning + limpeza de workspace
+e de linha) e captura de OOM/sinal no item reprovado.
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
@@ -156,6 +213,10 @@ A leitura correta é sempre: lote com contenção reduzida **e** isolamento das 
 | Container real do Runner | PASS (4/4) após correção do `Dockerfile` |
 | Fechamento de dependências da imagem | PASS (2/2) |
 | Política do agente (Constituição) | PASS |
+| Gate do Router V1 — `STRUCTURAL` (árvore publicada) | PASS — 183 checks, 0 falhas |
+| Gate do Router V1 — `--runtime` (evidência do commit) | **FAIL (RUNTIME_FAIL)** — 209 checks, 1 item reprovado por instabilidade do coletor (§4.4) |
+| `validate:bug-closure-status` | PASS — 9/9 entrypoints guardados, 13 provas de mecanismo |
+| `validate:hardening-queue`, `route-mounts`, `ai-memory`, `ai-memory-consistency`, `agent-adherence` | PASS |
 | Gate agregado de governança | **NÃO EXECUTADO** (bloqueio externo de identidade de run) |
 | Selo de release | `SEAL_PENDING` (não perseguido nesta missão) |
 
@@ -230,20 +291,22 @@ Critérios do §11 da missão:
 | 4 | Engenheiro não consegue publicar release sozinho | **VERIFIED** (`promotionService` sem `git push`; `publish-tag` exige `DELIVERED_VERIFIED` + `confirm: true`; `executionSandbox` recusa operações de governança) |
 | 5 | Revisão independente comprovada | **TESTED** (`missionReviewService`: `INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER`) |
 | 6 | Evidências pertencem à tentativa correta | **TESTED** (`deriveGates` exige `attempt_id` e evidência de fase) |
-| 7 | Gates aplicáveis executados | **PARCIAL** (L0 e L1 do Engenheiro completos e verdes; gate agregado de plataforma não executável) |
-| 8 | Testes obrigatórios aprovados | **PARCIAL** (cadeia do Engenheiro: 2762 unit + 221 integração verdes; gates de plataforma em §5) |
+| 7 | Gates aplicáveis executados | **PARCIAL** — L0/L1 do Engenheiro verdes, `structural`/`bug-closure-status`/`hardening-queue`/`route-mounts` PASS, mas `--runtime` = **RUNTIME_FAIL** em 1 item por instabilidade do coletor (§4.4) e o gate agregado não é executável |
+| 8 | Testes obrigatórios aprovados | **PARCIAL** (cadeia do Engenheiro: 2762 unit + 221 integração verdes; itens de runtime passam por comando direto, não pelo coletor) |
 | 9 | Riscos de operações destrutivas controlados | **TESTED** (política de comandos + RBAC de auto-modificação) |
 | 10 | Isolamento de tenants validado | **VERIFIED** (suítes de tenant isolation na fila, `state=VERIFIED`) |
-| 11 | Engineering Memory registra o ciclo | **VERIFIED** (3 itens com commit + teste + prevenção) |
+| 11 | Engineering Memory registra o ciclo | **VERIFIED** (4 itens com commit + teste + prevenção: contexto, entrega, Dockerfile, coletor) |
 | 12 | Prevenção de regressões ativa | **VERIFIED** (testes de prevenção + fechamento do Dockerfile) |
 | 13 | Aprovação humana obrigatória para promoção | **TESTED** (`missionApprovalService`) |
 | 14 | Trilha de auditoria reproduzível | **PARCIAL** (commits + testes; logs de sessão em `/tmp`) |
-| 15 | Commit publicado no GitHub | **VERIFIED** (`713aafc1a`) |
-| 16 | SHA remoto confirmado | **VERIFIED** (`git ls-remote` = `713aafc1a…`) |
+| 15 | Commit publicado no GitHub | **VERIFIED** (`42dd5f34b`) |
+| 16 | SHA remoto confirmado | **VERIFIED** (`git ls-remote` = `42dd5f34b…`) |
 
-Critérios 7, 8 e 14 em **PARCIAL** e a ausência da missão de ensaio supervisionada (§5) impedem o
-`GO`. Declarar `GO` aqui seria converter ausência de medição em aprovação — exatamente o que a
-missão proíbe.
+Critérios 7, 8 e 14 em **PARCIAL**; o bloqueio concreto do 7 é o **instrumento de certificação**
+(coletor de runtime reprova um item diferente a cada execução, enquanto cada item passa por comando
+direto). A ausência da missão de ensaio supervisionada (§5) e o gate agregado não executável
+fecham o restante. Declarar `GO` aqui seria converter ausência de medição em aprovação — exatamente
+o que a missão proíbe.
 
 ## 13. Próxima ação recomendada
 
