@@ -35,7 +35,6 @@ const { ROOT, writeReport } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 const { applyOriginLineage, resolveRunLineage } = require('./lib/resolve-run-lineage');
 const { captureFreeze, compareFreeze, assessInitialFreeze } = require('./lib/sourceFreezeGuard');
-
 // CONTAGEM DE TESTES OBRIGATÓRIOS V2 — DERIVADA DA FONTE, NUNCA ESCRITA À MÃO.
 // O manifesto versionado é a autoridade. Um número fixo no texto ("42") ficou ERRADO quando o
 // manifesto passou a ter 57 itens, e um gate que descreve a si mesmo com um número falso é pior do
@@ -129,7 +128,12 @@ const STEPS = Object.freeze([
   // justamente o defeito: um requisito obrigatório que o pipeline não enxerga não governa nada.
   { id: 'REQUIRED_TESTS_V2', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/validate-engineering-router-v2-required-tests.js', detail: `os ${REQUIRED_TESTS_TOTAL} testes obrigatórios provados individualmente (IDs do manifesto versionado)`, produces: ['reports/engineering-router-v2-required-tests-report.json'], dependsOn: ['SUITE_EXECUTION'] },
   { id: 'MISSION_CRASH_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/verify-mission-crash-recovery.js', detail: 'crash real do worker (SIGKILL) retomado por varredura automática', produces: ['reports/mission-crash-recovery-report.json'] },
-  { id: 'REAL_TASK_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node scripts/governance/verify-real-task-recovery.js', detail: 'crash real no MEIO da execução da TASK, retomada sem comando humano', produces: ['reports/real-task-recovery-report.json'] },
+  // `--env-file-if-exists=.env`: sem ele o processo NÃO tem `ENCRYPTION_KEY`, não descriptografa a
+  // credencial do provider e falha por CONFIGURAÇÃO, não por produto — medido em 2026-10-13:
+  // `[FAIL] REAL_TASK_RECOVERY` com `Erro ao descriptografar: ENCRYPTION_KEY não configurada`.
+  // Os passos irmãos de runtime (V1_RUNTIME_EVIDENCE, TIMEOUT_ARCHITECTURE_E2E) já carregavam o
+  // `.env`; este era o único que não carregava, e por isso o selo V2 abortava num passo obrigatório.
+  { id: 'REAL_TASK_RECOVERY', phase: 'EVIDENCE', required: true, kind: 'command', command: 'node --env-file-if-exists=.env scripts/governance/verify-real-task-recovery.js', detail: 'crash real no MEIO da execução da TASK, retomada sem comando humano', produces: ['reports/real-task-recovery-report.json'] },
   // TIMEOUT_ARCHITECTURE entra no PIPELINE do selo (missão 2026-09-28). Antes, a arquitetura de
   // timeouts vivia em um script lateral de governança: o selo podia ser GO sem que lease,
   // heartbeat, fence, deadline e detecção de ausência de progresso estivessem provados no runtime.
@@ -223,6 +227,14 @@ function runStep(step) {
   });
 
   const stderrTail = (result.stderr || '').split('\n').filter(Boolean).slice(-6).join(' | ');
+  // MOTIVO AUDITÁVEL NO RELATÓRIO. Passos como o coletor de evidência de runtime
+  // (V1_RUNTIME_EVIDENCE) escrevem a falha em STDOUT. Capturando só stderr, o
+  // passo reprovava com `stderrTail: ""` e um ciclo de ~40 min morria SEM causa
+  // aparente — medido em 2026-10-14: `exit=1` no passo, relatório sem uma linha
+  // de diagnóstico, obrigando a reproduzir o passo à mão para descobrir que era
+  // transitório. O `stdoutTail` entra APENAS no caminho de FAIL para não inchar o
+  // relatório dos passos que passam (o QA Mesh, por exemplo, imprime muito).
+  const stdoutTail = (result.stdout || '').split('\n').filter(Boolean).slice(-6).join(' | ');
   if (result.status === 0) return { status: SEAL_STATUS.PASS, detail: 'exit=0', stderrTail };
 
   // Ausência de credencial externa é ESTADO declarado, nunca FAIL por motivo errado nem PASS.
@@ -230,7 +242,7 @@ function runStep(step) {
   if (/CREDENTIAL_UNAVAILABLE|no credential|sem credencial|401|403/.test(combined) && step.credentialDependent) {
     return { status: SEAL_STATUS.NOT_APPLICABLE, detail: 'credencial externa ausente', stderrTail };
   }
-  return { status: SEAL_STATUS.FAIL, detail: `exit=${result.status}${result.signal ? ` signal=${result.signal}` : ''}`, stderrTail };
+  return { status: SEAL_STATUS.FAIL, detail: `exit=${result.status}${result.signal ? ` signal=${result.signal}` : ''}`, stderrTail, stdoutTail };
 }
 
 function main() {
@@ -247,49 +259,13 @@ function main() {
     process.exit(orderViolations.length === 0 ? 0 : 1);
   }
 
-  // ── BUG CLOSURE FIRST (guarda de entrada — L-1, 2026-10-20) ────────────────
-  // Selagem do Router V2 é operação CERTIFICANTE e este entrypoint NÃO consultava a
-  // elegibilidade de defeitos (achado real de `validate:bug-closure-status`:
-  // ENTRYPOINT_SEM_GUARDA). `--plan` acima segue livre: planejar não certifica.
-  // Mesma autoridade do gate agregado (`run-governance-enforcement.js`), sem segunda
-  // implementação da regra.
-  {
-    let autorizacao;
-    try {
-      const { evaluateExecutionEligibility, OPERACOES } = require('../../governance/bug-closure/eligibility');
-      const { carregarInventario } = require('../../governance/bug-closure/defect-registry');
-      const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
-      const inventario = carregarInventario({});
-      const decisao = evaluateExecutionEligibility(
-        {
-          commit,
-          actor: { id: 'scripts/governance/engineering-router-v2-seal.js', kind: 'runner' },
-          defects: inventario.defeitos || [],
-        },
-        OPERACOES.SELO_FINAL,
-      );
-      autorizacao = {
-        allowed: Boolean(decisao.allowed),
-        decision: decisao.decision,
-        reasonCodes: decisao.reasonCodes || [],
-      };
-    } catch (err) {
-      // Fail-closed: sem conseguir avaliar, não há autorização.
-      autorizacao = {
-        allowed: false,
-        decision: 'BLOQUEADO_POR_FALHA_NA_AVALIACAO',
-        reasonCodes: ['AUTORIZACAO_INDISPONIVEL'],
-        erro: err && err.message ? err.message : String(err),
-      };
-    }
-    console.log(`[bug-closure-guard] verificando elegibilidade: operacao=SELO_FINAL ator=scripts/governance/engineering-router-v2-seal.js → ${autorizacao.decision}`);
-    if (!autorizacao.allowed) {
-      console.error(`[bug-closure-guard] RECUSADO: ${autorizacao.decision} (${autorizacao.reasonCodes.join(', ') || 'sem motivo declarado'})`);
-      process.exit(3);
-    }
-  }
-
   // BINDING DE RUN + BINDING DE SOURCE (dois conceitos, dois campos).
+  //
+  // BUG CLOSURE FIRST (2026-10-17): selo é operação CERTIFICANTE. Antes de
+  // qualquer passo, exige que não haja P0/P1 bloqueante aberto na fila oficial.
+  // `--plan` (acima) continua livre: planejar não certifica.
+  require('../../governance/bug-closure/require-eligibility')
+    .exigirElegibilidade('SELO_FINAL', { actor: 'scripts/governance/engineering-router-v2-seal.js' });
   //
   // DEFEITO DE CONTRATO medido em 2026-09-30: `applyOriginLineage` grava
   // `sourceFingerprint` com o valor do RUN GOVERNADO (`governance/.current-run.json`), enquanto o
@@ -424,4 +400,4 @@ function deriveSealStatus(steps = []) {
 
 if (require.main === module) main();
 
-module.exports = { STEPS, PHASES, validateOrder, SEAL_STATUS, deriveSealStatus };
+module.exports = { STEPS, PHASES, validateOrder, SEAL_STATUS, deriveSealStatus, runStep };

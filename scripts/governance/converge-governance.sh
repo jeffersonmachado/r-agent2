@@ -53,6 +53,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
+# ── BUG CLOSURE FIRST (2026-10-17) ─────────────────────────────────────────────
+# Convergência completa é a operação mais extensiva do ciclo (12 etapas + QA Mesh).
+# Ela NÃO começa enquanto existir P0/P1 bloqueante aberto na fila oficial: o
+# resultado de uma convergência feita sobre código com defeito conhecido é um
+# veredito de qualidade sobre uma plataforma quebrada — exatamente o que a missão
+# proíbe. Exit 3 = recusado por defeito (distinto de falha de execução).
+# Sem bypass por variável de ambiente: desligar exige editar este arquivo versionado.
+source "scripts/governance/lib/bug-closure-guard.sh"
+exigir_elegibilidade CONVERGENCIA_COMPLETA "scripts/governance/converge-governance.sh" || exit 3
+
 # ── CARGA ÚNICA DO .env (mesmo contrato de scripts/governance/lib/loadEnvFile.js: o ambiente já
 #    presente VENCE) ──────────────────────────────────────────────────────────────────────────
 # DEFEITO REAL medido em 2026-10-02: o PREFLIGHT abaixo lê variáveis de SHELL
@@ -85,14 +95,6 @@ fi
 
 NODE="node --env-file-if-exists=.env"
 
-# ── BUG CLOSURE FIRST (guarda de entrada) ───────────────────────────────────
-# Convergência completa é operação CERTIFICANTE: regenera artefatos de decisão e
-# projeta governança. Não começa com defeito P0/P1 bloqueante aberto. Guarda
-# desligável por variável de ambiente? Não — desligar exigiria editar este
-# arquivo, e a alteração aparece no diff e no sourceFingerprint.
-source scripts/governance/lib/bug-closure-guard.sh
-exigir_elegibilidade CONVERGENCIA_COMPLETA "scripts/governance/converge-governance.sh" || exit 3
-
 # ── PREFLIGHT (fail-fast de ambiente) ────────────────────────────────────────
 # Defeito medido (2026-09-23): três falhas reais de AMBIENTE só apareceram DEPOIS
 # do mesh (etapa 1/12, 8.5/12 e 2.9 do empacotamento), custando 30-50 min de
@@ -117,16 +119,34 @@ preflight() {
   echo "[preflight] validando runtime obrigatório (API, frontend SPA, RAG, PBX, dist)"
 
   if curl -sf -m 10 -o /dev/null "${api_url}/health"; then _ok "API viva em ${api_url}"
-  else _bad "API não responde em ${api_url}/health — suba 'node api/server.js' (repo root)"; fi
+  else _bad "API não responde em ${api_url}/health — suba pela supervisão: npm run dev:api:service install"; fi
 
-  # nodemon observa `api`,`engine`,`src`,`qa-mesh`: qualquer escrita nessas
-  # árvores no meio do mesh reinicia a API e o cenário morre com
-  # `fetch failed (cause: UND_ERR_SOCKET)` (medido 2026-09-24 no
-  # business-core-biz-flows-editor). Aviso, não falha: o supervisor é útil em dev.
-  if pgrep -f "nodemon api/server.js" >/dev/null 2>&1 || pgrep -f "nodemon.*api" >/dev/null 2>&1; then
-    echo "  ⚠ API supervisionada por nodemon — reinício no meio do run causa UND_ERR_SOCKET; para o ciclo de governança rode 'node --env-file-if-exists=.env api/server.js' direto"
+  # SUPERVISÃO DA API — encadeada, não apenas aconselhada.
+  #
+  # Medido em 2026-10-11: uma regressão de 22 min perdeu a API no meio (log cortado
+  # sem stack trace, Vite devolvendo 500) porque a API era filha de um terminal.
+  # "API viva" no health NÃO distingue isso: uma API solta passa aqui e pode morrer
+  # durante o run, falhando longe da causa.
+  #
+  # Ordem de precedência: systemd > nodemon > solta.
+  #   - systemd (`ragent2-api-dev`, Restart=always): queda deixa de ser permanente;
+  #     se a unidade existir e estiver inativa, este preflight a SOBE (ação, não aviso);
+  #   - nodemon observa `api`,`engine`,`src`,`qa-mesh`: escrita nessas árvores no meio
+  #     do mesh reinicia a API e o cenário morre com `fetch failed (cause:
+  #     UND_ERR_SOCKET)` (medido 2026-09-24) — aviso com o remédio;
+  #   - solta: aviso explícito de que a queda será permanente.
+  if systemctl --user cat ragent2-api-dev >/dev/null 2>&1; then
+    if systemctl --user is-active --quiet ragent2-api-dev; then
+      _ok "API supervisionada por systemd (ragent2-api-dev, Restart=always)"
+    elif bash scripts/dev/api-service.sh start >/dev/null 2>&1; then
+      _ok "API estava inativa e foi SUBIDA pela unidade (ragent2-api-dev)"
+    else
+      echo "  ⚠ unidade ragent2-api-dev existe mas não subiu — rode: npm run dev:api:service status"
+    fi
+  elif pgrep -f "nodemon api/server.js" >/dev/null 2>&1 || pgrep -f "nodemon.*api" >/dev/null 2>&1; then
+    echo "  ⚠ API supervisionada por nodemon — reinício no meio do run causa UND_ERR_SOCKET; para o ciclo de governança use a unidade: npm run dev:api:service install"
   else
-    _ok "API sem supervisor (sem reinício acidental)"
+    echo "  ⚠ API SEM supervisão — se ela cair, este run segue sem API e falha longe da causa; suba pela unidade: npm run dev:api:service install"
   fi
 
   # A rota canônica `/workspace` precisa ser servida pelo FRONTEND. Em
@@ -144,6 +164,17 @@ preflight() {
 
   if command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -qF "${PBX_ODBC_PORT:-15432}"; then _ok "ponte host<->Asterisk escutando (${PBX_ODBC_PORT:-15432})"
   else _bad "ponte host<->Asterisk ausente — rode 'set -a && . ./.env && set +a && bash scripts/pbx-host-db-bridge.sh start' (sem ela o CDR do Asterisk nunca chega ao banco da API)"; fi
+
+  # A PORTA DE PÉ NÃO PROVA QUE O CDR GRAVA (defeito medido 2026-10-13, ciclo de
+  # ~40 min perdido): quando o Postgres não responde no boot do container, o
+  # backend `cdr_adaptive_odbc` sai do engine EM SILÊNCIO e não volta sozinho —
+  # a ponte segue escutando, este preflight passava, e o passo 1/12 reprovava com
+  # `pbxProdLike.cdr=false`. O sinal correto é o backend REGISTRADO
+  # (`cdr show status` → "Adaptive ODBC"). Ver scripts/pbx-cdr-health.sh.
+  if [ -x scripts/pbx-cdr-health.sh ] && command -v docker >/dev/null 2>&1; then
+    if bash scripts/pbx-cdr-health.sh check >/dev/null 2>&1; then _ok "CDR do Asterisk com backend registrado (Adaptive ODBC)"
+    else _bad "CDR do Asterisk DEGRADADO (backend fora do engine — a porta está de pé, mas nenhum CDR é gravado): rode 'bash scripts/pbx-cdr-health.sh ensure'"; fi
+  fi
 
   # tmpfs do Asterisk: o container copia /etc/asterisk-static SÓ no start; se o
   # tenants.conf do host for mais novo, o contexto de tenant não está em vigor.
@@ -288,7 +319,24 @@ echo "[converge] 8/12 QA Mesh canônico DENTRO do run governado (~35min; evidên
 # lineage é resolvido na origem por pipeline/entrypoints/runQaMesh.js a partir
 # de governance/.current-run.json — nunca anexado depois. Exit != 0 (NO_GO ou
 # erro) aborta a convergência: sem evidência same-run não há seal.
-RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh
+#
+# IDEMPOTÊNCIA POR RUN (medido 2026-10-05): este passo é alcançado TRÊS vezes por
+# ciclo — prepare, PRE_PACKAGE do zip candidato e PRE_PACKAGE do zip final — e o
+# `ensure-governed-run.js` REUTILIZA o run quando o fingerprint congelado é o
+# mesmo ("nada é recriado"). Logo as execuções 2 e 3 provavam o MESMO
+# runId/sourceFingerprint da 1ª: ~70 min de mesh sem prova nova, e a contenção
+# extra era a causa medida da intermitência do cenário `/editor`. A decisão de
+# reutilizar é do módulo abaixo, e ele NUNCA aceita prova de outro run, de outro
+# source, de execução não-canônica (qa:mesh à mão), de veredito NO_GO, anterior ao
+# início do run, ou que não cubra o REGISTRY CORRENTE. Cada decisão fica
+# auditável em qa-mesh/mesh-reuse-decision.json (com os checks que passaram).
+if REUSE_OUT="$($NODE scripts/governance/mesh-reuse-decision.js 2>&1)" \
+  && printf '%s' "$REUSE_OUT" | grep -q 'MESH_REUSE_OK'; then
+  printf '%s\n' "$REUSE_OUT" | sed 's/^/  /'
+else
+  printf '%s\n' "$REUSE_OUT" | sed 's/^/  /'
+  RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh
+fi
 
 echo "[converge] 8.5/12 coverage gate RECOMPUTADO sobre o mesh do run corrente"
 # Os estados de jornada do coverage gate derivam dos outcomes de cenário do
@@ -301,6 +349,19 @@ echo "[converge] 8.5/12 coverage gate RECOMPUTADO sobre o mesh do run corrente"
 # Exit != 0 (NO_GO) aborta a convergência — sem cobertura válida não há seal.
 $NODE scripts/governance/validate-coverage-gate.js
 
+echo "[converge] 8.7/12 reexecuta produtor de evidência autoritativa stale (nunca stamp)"
+# INTEGRIDADE TEMPORAL (missão 2026-10-05): num run NOVO toda a evidência do run
+# anterior é anterior ao startedAt, e `stamp-report-lineage` a RECUSA
+# (REJECTED_STALE_ARTIFACT, fail-closed) — foi exatamente o que abortou o conver
+# no run d362fcac: o passo 9 morria porque os produtores ainda não tinham rodado
+# dentro do run. Aqui o produtor de todo artefato autoritativo stale é
+# REEXECUTADO (mapa `producers` da taxonomia) antes do stamp. Exit != 0 aborta:
+# sem evidência temporalmente válida não há selo.
+if ! $NODE scripts/governance/ensure-authoritative-artifacts-fresh.js; then
+  _bad "evidência autoritativa pré-run não reparável — reexecute o produtor declarado na taxonomia (governance/authoritative-artifact-refresh-report.json)"
+  exit 1
+fi
+
 echo "[converge] 9/12 stamp de lineage"
 $NODE scripts/governance/stamp-report-lineage.js >/dev/null
 
@@ -309,6 +370,21 @@ $NODE scripts/governance/run-persisted-scorecard.js >/dev/null
 
 echo "[converge] 11/12 fixpoint (pass 2 — revalidação estável)"
 $NODE scripts/governance/run-persisted-scorecard.js
+
+echo "[converge] 11.5/12 integridade temporal + projeção de readiness DENTRO do run"
+# O seal-time-gate decide por `governance/final-readiness-report.json` e
+# `governance/final-proof-report.json`. Se essas projeções não forem REGERADAS
+# dentro do run, o gate lê o veredito do run ANTERIOR — adoção retroativa de
+# decisão, exatamente o defeito que a missão elimina (medido 2026-10-05: o gate
+# devolveu FINAL_READINESS_NOT_PASS com a decisão de um run anterior enquanto o
+# gate temporal do run corrente nem havia sido executado nesta fase).
+#
+# A ORDEM é a autoridade: (1) gate temporal phase-aware — artefato de fase
+# posterior é PENDING_PHASE, não violação; (2) projeções de readiness/proof
+# regeneradas a partir dele; (3) seal-time-gate. O gate temporal sem `|| true`
+# aborta de propósito: com violação real não há selo.
+$NODE scripts/governance/validate-current-run-temporal-integrity.js
+$NODE tools/system/platform-readiness.js >/dev/null || true
 
 echo "[converge] 12/12 seal-time-gate"
 node scripts/governance/seal-time-gate.js
