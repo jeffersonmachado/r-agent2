@@ -26,8 +26,26 @@ const createdTaskIds = [];
 
 function skipIfNoDatabase() {
   if (dbAvailable) return false;
-  console.warn(`[concurrent-run-http] PULADO: postgres_unreachable (${dbReason})`);
   return true;
+}
+
+/**
+ * FAIL-CLOSED (auditoria 2026-10-20).
+ *
+ * A versão anterior fazia `if (skipIfNoDatabase()) return;` — sem PostgreSQL o corpo test
+ * terminava SEM NENHUMA asserção e o Jest contabilizava PASS. O gate de concorrência subia verde
+ * em ambiente onde nada foi executado.
+ *
+ * Agora: banco obrigatório indisponível ⇒ `INFRA_ERROR` explícito. Suíte vermelha é o resultado
+ * honesto; PASS sem execução nunca é.
+ */
+function requireDatabase() {
+  if (dbAvailable) return;
+  const error = new Error(
+    `POSTGRES_UNAVAILABLE: ${dbReason || 'sem detalhe'} — este teste exige PostgreSQL real e NÃO pode passar sem ele`,
+  );
+  error.code = 'INFRA_ERROR';
+  throw error;
 }
 
 beforeAll(async () => {
@@ -90,7 +108,13 @@ describe('ER-V1-SEAL-002 — concurrent start via HTTP real (POST /engineering/t
   });
 
   test('duas requisições HTTP reais e simultâneas para a mesma task: só uma é aceita (202), a outra recebe 409 real', async () => {
-    if (skipIfNoDatabase()) return;
+    if (skipIfNoDatabase()) {
+      requireDatabase(); // lança INFRA_ERROR — nunca retorna em silêncio
+    }
+
+    // Evidência de que o banco está REALMENTE conectado nesta execução.
+    const [probe] = await sequelizeModule.getSequelize().query('SELECT 1 AS ok');
+    expect(Number(probe[0].ok)).toBe(1);
 
     const task = await engineeringTaskService.createTask({
       title: 'jest-concurrent-run-http',
