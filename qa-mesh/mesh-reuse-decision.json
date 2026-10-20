@@ -1,7 +1,7 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-20T12:29:24.843Z",
+  "generatedAt": "2026-10-20T13:30:47.569Z",
   "runId": "rap-governed-20261020122113664-db420779",
   "sourceFingerprint": "5b66077f911c228d8af1912ec7479ec12b2b58d571da7f24729e67b0db7621ed",
   "runStartedAt": "2026-10-20T12:21:13.848Z",
@@ -10,7 +10,7 @@
   "detail": "nenhuma execução de qa-mesh/meshHistory pertence a rap-governed-20261020122113664-db420779",
   "registryScenarios": 144,
   "evidence": {
-    "goNoGoGeneratedAt": "2026-10-20T10:29:17.214Z",
+    "goNoGoGeneratedAt": "2026-10-20T13:05:46.646Z",
     "goNoGoStatus": "GO",
     "historyEntry": null
   },
