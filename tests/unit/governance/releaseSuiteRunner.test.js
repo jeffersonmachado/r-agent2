@@ -428,4 +428,18 @@ describe('run-release-suites — prova de saída do grupo do lote (Fase 6)', () 
     expect(fonte).toContain('delete batchEnv.ENGINEERING_RUNNER_TOKEN');
     expect(fonte).toMatch(/env:\s*batchEnv,/);
   });
+
+  // DEFEITO REAL medido em 2026-10-20 (selo V2 do run …db420779): o lote 4 caiu com
+  // `SequelizeConnectionError: sorry, too many clients already` (max_connections=100) — o `.env`
+  // declara DB_POOL_MAX=40 para a API de dev e a suíte herda esse teto, mesmo rodando --runInBand.
+  // O lote passa a impor um teto próprio e pequeno (RELEASE_SUITES_DB_POOL_MAX, default 12).
+  it('o lote impõe teto de pool próprio (DB_POOL_MAX), nunca o valor de dev do .env', () => {
+    const fonte = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'run-release-suites.js'),
+      'utf8',
+    );
+    expect(fonte).toContain('RELEASE_SUITES_DB_POOL_MAX');
+    expect(fonte).toMatch(/batchEnv\.DB_POOL_MAX\s*=\s*String\(/);
+    expect(fonte).toMatch(/Math\.min\(inheritedPool, batchPoolMax\)/);
+  });
 });

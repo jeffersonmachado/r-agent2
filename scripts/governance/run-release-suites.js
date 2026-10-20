@@ -423,6 +423,19 @@ function runJestBatch(suites, batchIndex) {
   const batchEnv = { ...process.env, RELEASE_AUTHORITATIVE: process.env.RELEASE_AUTHORITATIVE || '1' };
   delete batchEnv.ENGINEERING_RUNNER_URL;
   delete batchEnv.ENGINEERING_RUNNER_TOKEN;
+  // ORÇAMENTO DE CONEXÕES DO LOTE — o `.env` declara `DB_POOL_MAX=40` para a API de dev, e o
+  // `applyJestDbBudgetToEnv` do `tests/setup.js` calcula a partir DELE. Medido em 2026-10-20: com a
+  // API de dev segurando ~34 conexões e o manifesto inteiro rodando, o lote 4 morreu com
+  // `SequelizeConnectionError: sorry, too many clients already` (max_connections=100) e a suíte
+  // `engineeringBugLoop` — que abre conexões SIMULTÂNEAS no teste de dedup concorrente — caiu. Um
+  // lote roda `--runInBand`: 40 conexões por suíte são desperdício, não necessidade. Aqui o teto do
+  // lote passa a ser explícito e pequeno, e o orçamento do Jest o respeita (clampa, nunca infla).
+  const declaredPool = Number.parseInt(process.env.RELEASE_SUITES_DB_POOL_MAX || '', 10);
+  const batchPoolMax = Number.isFinite(declaredPool) && declaredPool > 0 ? declaredPool : 12;
+  const inheritedPool = Number.parseInt(batchEnv.DB_POOL_MAX || '', 10);
+  batchEnv.DB_POOL_MAX = String(
+    Number.isFinite(inheritedPool) && inheritedPool > 0 ? Math.min(inheritedPool, batchPoolMax) : batchPoolMax,
+  );
   const result = spawnSync('npx', args, {
     cwd: ROOT,
     env: batchEnv,
