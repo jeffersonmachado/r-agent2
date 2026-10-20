@@ -73,5 +73,6 @@
   ],
   "contaminations": [],
   "crossIssues": [],
-  "summary": "Nenhuma contaminação detectada em 51 arquivos."
+  "summary": "Nenhuma contaminação detectada em 51 arquivos.",
+  "sourceCommit": "f06f1fc0926cc3a635d89aef7f8bae06611aa580"
 }
