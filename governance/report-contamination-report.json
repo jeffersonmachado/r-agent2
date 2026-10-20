@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-20T01:48:12.919Z",
-  "runId": "rap-governed-20261020004113703-7eb9453b",
+  "generatedAt": "2026-10-20T08:03:15.770Z",
+  "runId": "rap-governed-20261020065948472-0cec8343",
   "sourceFingerprint": "cb5bc030fa38b41cd38e3e4b93d71be30985f4caa3b46a0a0c8507461e9b0c17",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
@@ -24,7 +24,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/final-consistency-report.json",
-      "expected": "rap-governed-20261020004113703-7eb9453b",
+      "expected": "rap-governed-20261020065948472-0cec8343",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -36,7 +36,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/package-integrity-report.json",
-      "expected": "rap-governed-20261020004113703-7eb9453b",
+      "expected": "rap-governed-20261020065948472-0cec8343",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -48,7 +48,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/replay-integrity-report.json",
-      "expected": "rap-governed-20261020004113703-7eb9453b",
+      "expected": "rap-governed-20261020065948472-0cec8343",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -60,12 +60,12 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/self-proving-report.json",
-      "expected": "rap-governed-20261020004113703-7eb9453b",
+      "expected": "rap-governed-20261020065948472-0cec8343",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     }
   ],
-  "currentRunId": "rap-governed-20261020004113703-7eb9453b",
+  "currentRunId": "rap-governed-20261020065948472-0cec8343",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",
