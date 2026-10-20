@@ -510,6 +510,33 @@ async function linkFixTask(findingId, taskId, { actor = null, taskContract = nul
   return refreshed;
 }
 
+/**
+ * REGISTRA que um CICLO de correção terminou sem GREEN, incrementando `fix_attempts`.
+ *
+ * DEFEITO REAL QUE ISTO ELIMINA (medido em 2026-10-20 no lote autoritativo):
+ * `runFixLoop` executava as tentativas do Router e, ao terminar em `RED`/`READY_FOR_PROMOTION`,
+ * apenas gravava um evento e retornava. NADA era contado de forma persistida — `fix_attempts` só
+ * era incrementado em `linkFixTask`, uma única vez. Resultado: o worker global reexecutava o ciclo
+ * de correção dos MESMOS findings em todo tick (302 ciclos em 900 s, `fixed=0`), consumindo o
+ * runner compartilhado; a reprodução do finding NOVO da suíte falhava por concorrência
+ * (INCONCLUSIVE) e a missão nunca era retomada. O laço parecia vivo e não produzia progresso.
+ *
+ * O contador é a base da guarda de NÃO-CONVERGÊNCIA do coordenador: sem número persistido não há
+ * como distinguir "ainda vai convergir" de "vai repetir para sempre".
+ */
+async function recordFixNotGreen(findingId, {
+  actor = null, taskStatus = null, attempts = [], reasonCode = null,
+} = {}) {
+  const finding = await getFinding(findingId);
+  if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+  await model().increment({ fix_attempts: 1 }, { where: { id: findingId } });
+  await recordEvent(findingId, 'COMMENT', {
+    kind: 'FIX_NOT_GREEN', taskStatus, attempts, reasonCode,
+  }, { actor });
+  const refreshed = await getFinding(findingId);
+  return { finding: refreshed, fixAttempts: (refreshed && refreshed.fix_attempts) || 0 };
+}
+
 async function markFixApplied(findingId, { actor = null, taskId = null, attemptId = null, evidence = [], promotion = null } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
@@ -1056,6 +1083,7 @@ module.exports = {
   markDuplicate,
   linkFixTask,
   markFixApplied,
+  recordFixNotGreen,
   markPendingGovernanceApproval,
   clearGovernanceBlock,
   markFixed,

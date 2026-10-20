@@ -148,10 +148,29 @@ function basisIsObjective(basis) {
   return CONFIRMATION_BASES.includes(basis);
 }
 
+/**
+ * Quantas tentativas INCONCLUSIVAS CONSECUTIVAS existem no histórico (a mais recente primeiro)?
+ *
+ * Existe porque "não provou nada" não pode ser repetido para sempre: sem limite, um finding cuja
+ * reprodução falha por infraestrutura/concorrência fica em vaivém REPRODUCING↔SUSPECTED e consome
+ * o runner compartilhado em todo ciclo (medido em 2026-10-20 no lote autoritativo). Função PURA:
+ * a decisão de bloquear fica no serviço, o cálculo fica aqui e é testável sem banco.
+ */
+function countConsecutiveInconclusive(attempts) {
+  const list = Array.isArray(attempts) ? attempts : [];
+  let count = 0;
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    if (list[i] && list[i].outcome === REPRODUCTION_OUTCOMES.INCONCLUSIVE) count += 1;
+    else break;
+  }
+  return count;
+}
+
 module.exports = {
   REPRODUCTION_KINDS,
   REPRODUCTION_OUTCOMES,
   buildReproductionPlan,
   evaluateReproduction,
   basisIsObjective,
+  countConsecutiveInconclusive,
 };

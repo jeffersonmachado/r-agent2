@@ -22,8 +22,24 @@ const crypto = require('crypto');
 const logger = require('../../utils/logger');
 const { policyMs } = require('../../utils/operationDeadline');
 
-const RUNNER_URL = process.env.ENGINEERING_RUNNER_URL || null;
-const RUNNER_TOKEN = process.env.ENGINEERING_RUNNER_TOKEN || null;
+/**
+ * CONFIGURAÇÃO LIDA EM TEMPO DE CHAMADA, NUNCA NO CARREGAMENTO DO MÓDULO.
+ *
+ * DEFEITO REAL medido em 2026-10-20 (lote autoritativo): com `require` no topo, a URL era congelada
+ * no instante em que o módulo entrava no cache. O `.env` traz `ENGINEERING_RUNNER_URL`
+ * (`127.0.0.1:8090`) e o `globalSetup` do Jest sobe o runner de teste em `127.0.0.1:8097` e só
+ * então exporta a variável — qualquer processo que carregasse este módulo antes do override ficava
+ * apontado para a porta do `.env`, onde nada escutava. A task de correção morria em
+ * `SANDBOX_UNAVAILABLE ... :8090: fetch failed`, um diagnóstico que manda o operador procurar um
+ * Docker caído quando o problema é uma URL congelada.
+ */
+function runnerUrl() {
+  return process.env.ENGINEERING_RUNNER_URL || null;
+}
+
+function runnerToken() {
+  return process.env.ENGINEERING_RUNNER_TOKEN || null;
+}
 
 /**
  * Vocabulário de recusa do RUNNER → vocabulário de erro da API.
@@ -57,7 +73,7 @@ function sandboxUnavailable(detail) {
  *   endereço configurado para tentar. Disponibilidade real só é conhecida na chamada real.
  */
 function isRunnerConfigured() {
-  return Boolean(RUNNER_URL && RUNNER_TOKEN);
+  return Boolean(runnerUrl() && runnerToken());
 }
 
 /**
@@ -94,11 +110,11 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
 
   let response;
   try {
-    response = await fetch(`${RUNNER_URL}/execute`, {
+    response = await fetch(`${runnerUrl()}/execute`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${RUNNER_TOKEN}`,
+        Authorization: `Bearer ${runnerToken()}`,
       },
       body: JSON.stringify({ executionId, executable, args, cwd, env, timeoutMs: commandMs, network, graceMs }),
       signal: controller.signal,
@@ -110,7 +126,7 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
       throw cancelled;
     }
     logger.warn('[engineeringRunnerClient] falha ao alcançar o Engineering Runner', { executionId, error: err.message });
-    throw sandboxUnavailable(`falha ao alcançar o Engineering Runner em ${RUNNER_URL}: ${err.message}`);
+    throw sandboxUnavailable(`falha ao alcançar o Engineering Runner em ${runnerUrl()}: ${err.message}`);
   } finally {
     clearTimeout(timer);
     if (signal) signal.removeEventListener('abort', onCallerAbort);

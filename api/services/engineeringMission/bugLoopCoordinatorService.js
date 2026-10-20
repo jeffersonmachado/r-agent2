@@ -51,6 +51,25 @@ const MAX_FINDING_RECURRENCE = (() => {
   return Number.isFinite(raw) && raw > 0 ? raw : 3;
 })();
 
+/**
+ * GUARDA DE NÃO-CONVERGÊNCIA DA CORREÇÃO.
+ *
+ * DEFEITO REAL MEDIDO (2026-10-20, lote 5 do runner autoritativo): o worker global reexecutava
+ * `runFixLoop` (2 tentativas reais do Router cada) para os MESMOS findings em `FIXING` a cada
+ * tick de 1 s. Em 900 s foram 302 ciclos com `fixed=0`/`resumed=0`, e cada ciclo consumia o
+ * runner compartilhado — a reprodução do finding NOVO criado pela suíte falhava por concorrência
+ * (INCONCLUSIVE) e voltava para `SUSPECTED`, então a missão nunca era retomada. O laço parecia
+ * vivo e não produzia progresso: retrabalho infinito sobre backlog que nunca converge.
+ *
+ * Um finding que já consumiu N ciclos completos de correção sem GREEN não vai convergir por
+ * repetição imediata. Ele passa a `BLOCKED` com dependência e ação humana mínima declaradas —
+ * auditável, nunca silencioso, e fora da janela do sweep para que trabalho NOVO tenha vez.
+ */
+const MAX_FIX_NOT_CONVERGING = (() => {
+  const raw = Number(process.env.ENGINEERING_MAX_FIX_NOT_CONVERGING);
+  return Number.isFinite(raw) && raw > 0 ? raw : 3;
+})();
+
 function models() {
   const index = require('../../db/models');
   return {
@@ -170,14 +189,45 @@ async function runFixLoop(findingId, {
     || null;
 
   if (taskStatus !== 'GREEN') {
-    await bugFindingService.recordEvent(findingId, 'COMMENT', {
-      kind: 'FIX_NOT_GREEN',
-      taskStatus,
-      attempts,
-      reasonCode: lastResult?.reasonCode || null,
-    }, { actor });
-    logger.warn('[bugLoopCoordinator] correção não chegou a GREEN', { findingId, taskStatus, attempts: attempts.length });
-    return { finding: await bugFindingService.getFinding(findingId), executed: true, fixed: false, stage: 'NOT_GREEN', taskStatus, attempts };
+    // CONTAGEM PERSISTIDA (não só log): é ela que distingue "ainda pode convergir" de
+    // "vai repetir para sempre". Antes deste contador, o sweep reexecutava o ciclo completo
+    // dos mesmos findings em todo tick (medido: 302 ciclos / 900 s, `fixed=0`).
+    const recorded = await bugFindingService.recordFixNotGreen(findingId, {
+      actor, taskStatus, attempts, reasonCode: lastResult?.reasonCode || null,
+    });
+    logger.warn('[bugLoopCoordinator] correção não chegou a GREEN', {
+      findingId, taskStatus, attempts: attempts.length, fixAttempts: recorded.fixAttempts,
+    });
+    if (recorded.fixAttempts >= MAX_FIX_NOT_CONVERGING) {
+      // BLOCKED exige dependência + ação humana mínima (contrato do serviço). A evidência carrega
+      // o histórico das tentativas: quem for destravar não recomeça do zero.
+      await bugFindingService.blockFinding(findingId, {
+        actor,
+        dependency: 'BUG_FIX_NOT_CONVERGING',
+        evidence: [bugFindingService.makeEvidence({
+          type: 'LOG_CORRELATION',
+          ref: `fix-attempts:${recorded.fixAttempts}`,
+          detail: `${recorded.fixAttempts} ciclo(s) de correção terminaram em ${taskStatus || 'UNKNOWN'} sem GREEN (limite ${MAX_FIX_NOT_CONVERGING})`,
+          source: 'bugLoopCoordinatorService.runFixLoop',
+        })],
+        minimumHumanAction: 'inspecionar por que a correção não fecha GREEN (contrato da task, sandbox, provider) e reabrir o finding com o motivo',
+        tenantId,
+      });
+      logger.warn('[bugLoopCoordinator] finding BLOQUEADO por não-convergência da correção', {
+        findingId, fixAttempts: recorded.fixAttempts, limit: MAX_FIX_NOT_CONVERGING,
+      });
+      return {
+        finding: await bugFindingService.getFinding(findingId),
+        executed: true,
+        fixed: false,
+        stage: 'BLOCKED_NOT_CONVERGING',
+        code: 'BUG_FIX_NOT_CONVERGING',
+        taskStatus,
+        attempts,
+        fixAttempts: recorded.fixAttempts,
+      };
+    }
+    return { finding: await bugFindingService.getFinding(findingId), executed: true, fixed: false, stage: 'NOT_GREEN', taskStatus, attempts, fixAttempts: recorded.fixAttempts };
   }
 
   // ── GREEN: provar as TRÊS condições antes de declarar FIXED ─────────────────────────────────
@@ -1214,6 +1264,7 @@ async function isMissionResumeRecorded(missionId, findingId) {
 module.exports = {
   PLATFORM_TENANT_ID,
   DEFAULT_MAX_FIX_ATTEMPTS,
+  MAX_FIX_NOT_CONVERGING,
   readRegressionRuns,
   readReviews,
   readTestRuns,

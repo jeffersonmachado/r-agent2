@@ -21,6 +21,16 @@ const patchApplyService = require('../engineeringRouter/patchApplyService');
 const testRunnerService = require('../engineeringRouter/testRunnerService');
 const logger = require('../../utils/logger');
 
+/**
+ * Limite de reproduções INCONCLUSIVAS CONSECUTIVAS antes de BLOCKED declarado.
+ * Ver comentário em `reproduce()`: repetição inconclusiva sem limite monopoliza o runner
+ * compartilhado e mantém o finding em vaivém REPRODUCING↔SUSPECTED para sempre.
+ */
+const MAX_INCONCLUSIVE_REPRODUCTIONS = (() => {
+  const raw = Number(process.env.ENGINEERING_MAX_INCONCLUSIVE_REPRODUCTIONS);
+  return Number.isFinite(raw) && raw > 0 ? raw : 3;
+})();
+
 /** Ponto de injeção para teste/E2E; o default é o runner REAL do Router. */
 const defaultRunner = {
   createWorkspace: (taskId, attempt) => patchApplyService.createWorkspace(taskId, attempt),
@@ -150,6 +160,32 @@ async function reproduce(findingId, {
     return { outcome: evaluation.outcome, plan, evaluation, run, finding: result.finding };
   }
 
+  // INCONCLUSIVO = nada foi provado. O finding NÃO pode ficar em REPRODUCING fingindo trabalho em
+  // curso, e também não pode voltar para SUSPECTED indefinidamente.
+  //
+  // DEFEITO REAL MEDIDO (2026-10-20, lote 5 do runner autoritativo): um finding cuja reprodução
+  // falhava por concorrência com outra correção voltava para SUSPECTED e era reproduzido de novo no
+  // tick seguinte, para sempre (o mesmo finding aparece REPRODUCING→SUSPECTED em todos os ciclos).
+  // Isso consome o runner compartilhado e impede o laço de atender trabalho novo. Tentativas
+  // inconclusivas CONSECUTIVAS acima do limite viram `BLOCKED` declarado (nunca "PASS por cansaço").
+  const attemptsSoFar = Array.isArray(finding.reproduction_attempts) ? finding.reproduction_attempts : [];
+  const consecutiveInconclusive = engine.countConsecutiveInconclusive(attemptsSoFar) + 1;
+  if (consecutiveInconclusive >= MAX_INCONCLUSIVE_REPRODUCTIONS) {
+    await bugFindingService.blockFinding(findingId, {
+      actor,
+      dependency: 'BUG_REPRODUCTION_INCONCLUSIVE',
+      evidence: [bugFindingService.makeEvidence({
+        type: 'LOG_CORRELATION',
+        ref: `reproduction-inconclusive:${consecutiveInconclusive}`,
+        detail: `${consecutiveInconclusive} tentativa(s) de reprodução inconclusivas consecutivas (limite ${MAX_INCONCLUSIVE_REPRODUCTIONS}); último motivo: ${evaluation.reason || 'n/d'}`,
+        source: 'bugReproductionService.reproduce',
+      })],
+      minimumHumanAction: 'verificar infraestrutura/allowlist da reprodução (sandbox, comando, concorrência com outra correção) e reabrir o finding',
+      tenantId,
+    });
+    return { outcome: evaluation.outcome, plan, evaluation, run, blocked: true, code: 'BUG_REPRODUCTION_INCONCLUSIVE', finding: await bugFindingService.getFinding(findingId) };
+  }
+
   const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId });
   return { outcome: evaluation.outcome, plan, evaluation, run, finding: back.finding };
 }
@@ -183,4 +219,5 @@ module.exports = {
   defaultRunner,
   buildPlan,
   reproduce,
+  MAX_INCONCLUSIVE_REPRODUCTIONS,
 };
