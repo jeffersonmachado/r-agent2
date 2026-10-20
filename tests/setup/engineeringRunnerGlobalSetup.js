@@ -225,6 +225,17 @@ module.exports = async function engineeringRunnerGlobalSetup() {
     }
   })();
 
+  // ORDEM IMPORTA — as variáveis são definidas ANTES do spawn, não depois.
+  //
+  // DEFEITO REAL MEDIDO (2026-10-20): a atribuição existia só DEPOIS de `waitForHealth`. O filho
+  // do runner herda `{...process.env}` no instante do spawn — e nesse instante a env ainda trazia
+  // `ENGINEERING_RUNNER_URL` do `.env` (`127.0.0.1:8090`, endereço de dev). Medido com sonda por
+  // processo: o processo do runner nasceu com `url=http://127.0.0.1:8090` e `port=8097`. Toda
+  // execução disparada a partir dali podia falar com a porta errada, produzindo
+  // `SANDBOX_UNAVAILABLE ... :8090: fetch failed` e missões BLOCKED em suítes que passam isoladas.
+  process.env.ENGINEERING_RUNNER_URL = `http://127.0.0.1:${RUNNER_PORT}`;
+  process.env.ENGINEERING_RUNNER_TOKEN = RUNNER_TOKEN;
+
   const child = spawn(process.execPath, [path.join(ROOT, 'services', 'engineering-runner', 'src', 'index.js')], {
     cwd: ROOT,
     env: {
