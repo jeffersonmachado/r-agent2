@@ -290,7 +290,25 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     message: `Tentativa ${attempt.attempt_number}: ${coderSelection.providerId}:${coderSelection.modelId} gerando patch…`,
   });
 
-  const context = buildContext(task, { failureBundle, previousAttempt });
+  // L-1 (2026-10-20): a fonte do contexto é IDENTIDADE, não conveniência. Se a base declarada pela
+  // task (commit da fonte da missão) não existe, o CODER NÃO é despachado: o attempt é fechado com
+  // código estável e a task termina em RED. Antes, `buildContext` degradava para o checkout
+  // principal e o patch nascia sobre outra base.
+  let context;
+  try {
+    context = buildContext(task, { failureBundle, previousAttempt });
+  } catch (err) {
+    const code = err && err.code ? err.code : 'CONTEXT_BUILD_FAILED';
+    await ts.updateAttempt(attempt.id, {
+      status: 'FAILED',
+      error: { code, reason: err.reason || null, message: err.message },
+      completed_at: new Date(),
+    });
+    logger.warn('[engineeringRouterService] contexto não materializável — nenhum CODER despachado', {
+      taskId: task.id, attemptId: attempt.id, code, reason: err.reason || null, sourceCommit: err.sourceCommit || null,
+    });
+    return { outcome: 'FATAL', reasonCode: code, attempt };
+  }
   await ts.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget, sourceOrigin: context.sourceOrigin || null } });
 
   // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — telemetria POR TENTATIVA de despacho: motivo da
