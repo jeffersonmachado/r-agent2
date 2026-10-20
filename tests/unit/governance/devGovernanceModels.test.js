@@ -222,6 +222,56 @@ describe('releaseStateModel', () => {
     expect(seal.blockedReason).toMatch(/worktree sujo/);
   });
 
+  // L-1 (2026-10-20) — item B da missão: publicar TAG é ato de release. Estar SELADO não é estar
+  // VERIFICADO. Antes, `releaseName` + ausência de guard bastavam para oferecer o botão que publica
+  // a tag, mesmo com gate canônico vermelho ou sem relatório de entrega.
+  it('publish-tag NÃO é oferecida quando a entrega não está verificada', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      releaseName: 'r-agent2-20261011-083027',
+    });
+    const publish = state.actions.find((a) => a.id === 'publish-tag');
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_UNVERIFIED);
+    expect(publish.enabled).toBe(false);
+    expect(publish.blockedReason).toMatch(/entrega NÃO verificada/);
+    expect(publish.blockedReason).toContain(VERIFICATION_GAPS.DELIVERED_VERDICT_NOT_POSITIVE);
+  });
+
+  it('publish-tag é oferecida SOMENTE com DELIVERED_VERIFIED (sem guard bloqueando)', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      releaseName: 'r-agent2-20261011-083027',
+      deliveredVerdict: 'DELIVERED_RELEASE_VERIFIED',
+      deliveredOk: true,
+      guard: { blocksTagPush: false, reason: null, path: null },
+    });
+    const publish = state.actions.find((a) => a.id === 'publish-tag');
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_VERIFIED);
+    expect(publish.enabled).toBe(true);
+    expect(publish.blockedReason).toBeNull();
+  });
+
+  it('bloqueio canônico ativo também derruba publish-tag (não só o guard local)', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      releaseName: 'r-agent2-20261011-083027',
+      deliveredVerdict: 'DELIVERED_RELEASE_VERIFIED',
+      deliveredOk: true,
+      blockers: [{ code: 'qa_mesh', decision: 'NO_GO' }],
+    });
+    const publish = state.actions.find((a) => a.id === 'publish-tag');
+    expect(publish.enabled).toBe(false);
+    expect(publish.blockedReason).toContain(VERIFICATION_GAPS.RELEASE_BLOCKERS_PRESENT);
+  });
   it('sem artefato nem candidato ⇒ NOT_SEALED; evidência faltante é declarada', () => {
     const state = deriveReleaseState({
       run: null,

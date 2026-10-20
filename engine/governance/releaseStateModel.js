@@ -169,12 +169,18 @@ function deriveReleaseState({
       id: ACTIONS.PUBLISH_TAG,
       label: 'Publicar a tag do release',
       description: 'Cria e publica a tag anotada do release selado.',
-      enabled: Boolean(releaseName) && !guardBlocksTag,
+      // L-1 (2026-10-20): publicar TAG é ato de release. Estar selado não é estar verificado —
+      // a ação só é oferecida quando o veredito corrente é `DELIVERED_VERIFIED`. Antes bastava
+      // existir `releaseName` e nenhum guard local, então um release com gate canônico vermelho
+      // (ou sem relatório de entrega) oferecia o botão que publica a tag.
+      enabled: Boolean(releaseName) && !guardBlocksTag && verdict === VERDICTS.DELIVERED_VERIFIED,
       blockedReason: !releaseName
         ? 'não há release selado para taguear'
         : (guardBlocksTag
           ? `guard local recusa push de tag (${toText(guard && guard.path) || '.git/hooks/pre-push'}): ${toText(guard && guard.reason) || 'sem motivo registrado'}`
-          : null),
+          : (verdict !== VERDICTS.DELIVERED_VERIFIED
+            ? `entrega NÃO verificada (${verdict}) — publicar tag exige \`DELIVERED_VERIFIED\`: ${verificationGaps.map((g) => g.code).join(', ') || 'sem verificação'}`
+            : null)),
     },
   ];
 
