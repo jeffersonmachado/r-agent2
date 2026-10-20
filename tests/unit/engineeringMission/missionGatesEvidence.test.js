@@ -34,7 +34,11 @@ function review(overrides = {}) {
     attempt_id: 'attempt-current',
     decision: 'APPROVE',
     reviewer_provider: 'mistral',
+    // Identidade COMPLETA é requisito desde 2026-10-20: provider sem modelo não
+    // prova quem revisou.
+    reviewer_model: 'mistral-large-latest',
     independent_of_coder: true,
+    created_at: '2026-10-20T12:00:00.000Z',
     ...overrides,
   };
 }
@@ -99,7 +103,52 @@ describe('deriveGates — revisão vinculada à tentativa que avançou', () => {
 
     const reviewGate = gateOf(gates, 'review');
     expect(reviewGate).toMatchObject({ status: 'PASS', verification: 'EVIDENCE' });
-    expect(reviewGate.evidence).toMatchObject({ providersDiffer: true, independentOfCoder: true });
+    expect(reviewGate.evidence).toMatchObject({
+      providersDiffer: true,
+      independentOfCoder: true,
+      reviewerIdentityComplete: true,
+      attemptId: 'attempt-current',
+    });
+  });
+
+  test('P1: APPROVE SEM declaração de independência NÃO passa (prova positiva obrigatória)', () => {
+    const gates = deriveGates({
+      task: { status: 'GREEN' },
+      testRuns: [run()],
+      reviews: [review({ independent_of_coder: false })],
+      regressionRuns: [{ status: 'PASS' }],
+      greenAttempt: attempt(),
+    });
+
+    const reviewGate = gateOf(gates, 'review');
+    expect(reviewGate.status).not.toBe('PASS');
+    expect(reviewGate.evidence.diagnostic.code).toBe('INDEPENDENT_REVIEW_NOT_PROVEN');
+  });
+
+  test('P1: identidade do revisor incompleta (sem modelo) NÃO passa', () => {
+    const gates = deriveGates({
+      task: { status: 'GREEN' },
+      testRuns: [run()],
+      reviews: [review({ reviewer_model: null })],
+      regressionRuns: [{ status: 'PASS' }],
+      greenAttempt: attempt(),
+    });
+
+    expect(gateOf(gates, 'review').status).not.toBe('PASS');
+    expect(gateOf(gates, 'review').evidence.diagnostic.code).toBe('INDEPENDENT_REVIEW_NOT_PROVEN');
+  });
+
+  test('P1: provider do coder ausente NÃO vira independência por omissão', () => {
+    const gates = deriveGates({
+      task: { status: 'GREEN' },
+      testRuns: [run()],
+      reviews: [review()],
+      regressionRuns: [{ status: 'PASS' }],
+      greenAttempt: attempt({ coder_provider: null }),
+    });
+
+    expect(gateOf(gates, 'review').status).not.toBe('PASS');
+    expect(gateOf(gates, 'review').evidence.diagnostic.code).toBe('INDEPENDENT_REVIEW_NOT_PROVEN');
   });
 });
 
