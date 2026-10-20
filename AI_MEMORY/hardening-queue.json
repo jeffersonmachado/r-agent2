@@ -2049,6 +2049,21 @@
       "legacyStatus": "prevention_active",
       "severityBasis": "cobertura desligada sem deixar rastro na contagem; mutacao commitada nao detectada",
       "severitySource": "auditoria-externa-2026-10-20"
+    },
+    {
+      "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
+      "title": "Lineage de relatorio escolhia o run mais recente e omitia sourceCommit",
+      "status": "prevention_active",
+      "commit": "ab375c1b4",
+      "evidence": "tests/unit/governance/reportLineageExplicit.test.js (6 casos: sem contexto => LINEAGE_RUN_UNDEFINED; sem fingerprint => falha; sem sourceCommit => falha; contexto explicito => identidade completa) + tests/unit/governance 1836 passed",
+      "resolution": "report-lineage.js usava Model.findOne({order: created_at DESC}) e `...(sourceCommit ? ... : {})`. Um produtor que rodasse depois da criacao de outro run carimbava evidencia com identidade alheia; sem sourceCommit o relatorio saia sem origem. Agora a identidade vem do resolvedor canonico (GOVERNANCE_RUN_ID + GOVERNANCE_SOURCE_FINGERPRINT ou governance/.current-run.json); runId, fingerprint e sourceCommit sao obrigatorios; com banco acessivel o run e conferido e mismatch vira LINEAGE_RUN_COMMIT_MISMATCH.",
+      "prevention": "Fail-closed na producao (nunca escolher o mais recente) + conferencia run x commit.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "evidencia carimbada com identidade de outro run",
+      "severitySource": "auditoria-externa-2026-10-20"
     }
   ],
   "schemaVersion": 2,
