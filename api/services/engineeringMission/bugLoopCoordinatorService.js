@@ -26,6 +26,10 @@ const { parseCommand } = require('../../../engine/engineeringRouter/commandPolic
 const { runTask } = require('../engineeringRouter/engineeringRouterService');
 const missionStore = require('./missionStoreService');
 const missionSourceService = require('./missionSourceService');
+// FONTE CANÔNICA dos estados terminais de task: a retomada da missão decide por ESTA lista
+// (uma cópia local já divergiu e tratou `BLOCKED` como retomável — ver comentário em
+// `resumeOriginalMission`).
+const { TERMINAL_STATES: ROUTER_TERMINAL_TASK_STATES } = require('../../../engine/engineeringRouter/constants');
 const logger = require('../../utils/logger');
 
 /**
@@ -527,9 +531,20 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
     // em 2026-09-30: a missão ficava vinculada mas nunca voltava a executar. O lease é PROPAGADO
     // ao orquestrador (mesmo token/fence), nunca disputado com outra identidade.
     const outcome = await orch.withMissionLease(missionId, null, async ({ lease }) => {
-      const TERMINAL_TASK_STATUSES = ['RED', 'GREEN', 'FAILED', 'CANCELLED', 'READY_FOR_PROMOTION'];
+      // ESTADOS TERMINAIS DA TASK — DERIVADOS DA FONTE CANÔNICA DO ROUTER, NUNCA UMA LISTA LOCAL.
+      //
+      // DEFEITO REAL MEDIDO (2026-10-20, lote 5 do runner autoritativo): a lista local era
+      // `['RED','GREEN','FAILED','CANCELLED','READY_FOR_PROMOTION']` — ela OMITIA `BLOCKED`, que é
+      // estado TERMINAL do Router (`engine/engineeringRouter/constants.js::TERMINAL_STATES`), e
+      // incluía `FAILED`, que o Router nunca usa. Consequência medida: a task original terminava
+      // `BLOCKED` (ex.: `SANDBOX_UNAVAILABLE`), a retomada caía no ramo "task ainda executável",
+      // chamava `startExecution`, recebia a MESMA task de volta (idempotência) e registrava
+      // `replacementTaskId === originalTaskId`. A missão nunca voltava a executar e a suíte
+      // (corretamente) falhava em `expect(replacementTaskId).not.toBe(originalTaskId)`.
+      // Duplicar a lista é o que permitiu a divergência; agora ela vem do próprio Router.
+      const TERMINAL_TASK_STATUSES = new Set([...ROUTER_TERMINAL_TASK_STATES, 'FAILED']);
       let replacementTaskId = null;
-      if (originalTask && TERMINAL_TASK_STATUSES.includes(String(originalTask.status))) {
+      if (originalTask && TERMINAL_TASK_STATUSES.has(String(originalTask.status))) {
         // A task original está em estado TERMINAL. O Router é idempotente por design: `runTask`
         // numa task terminal devolve o estado atual SEM reexecutar, e retomar task terminal é
         // proibido (`TASK_ALREADY_TERMINAL_DURING_RESUME`). A continuação canônica da missão é

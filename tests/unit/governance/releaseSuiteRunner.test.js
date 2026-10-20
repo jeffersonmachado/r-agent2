@@ -399,4 +399,18 @@ describe('run-release-suites — prova de saída do grupo do lote (Fase 6)', () 
     expect(fonte).toContain('exitProof');
     expect(fonte).toContain('connectionDrains');
   });
+
+  // DEFEITO DE AUDITORIA medido em 2026-10-20: o stdout integral do lote era descartado, e com ele
+  // o diagnóstico estruturado que as suítes imprimem quando o ciclo não fecha
+  // (`DIAG_NAO_FECHOU`). Só sobravam 40 linhas de `stdoutTail`, insuficientes para saber POR QUE o
+  // lote falhou. Restringir o log ao lote que falhou é o ponto: o caminho feliz não paga o custo.
+  it('lote que FALHA tem o log integral preservado (e o caminho feliz não escreve nada)', () => {
+    const fonte = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'run-release-suites.js'),
+      'utf8',
+    );
+    expect(fonte).toContain('stdoutLogPath');
+    expect(fonte).toMatch(/if \(result\.status !== 0 && !reuse\)/);
+    expect(fonte).toContain('.stdout.log');
+  });
 });

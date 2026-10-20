@@ -463,6 +463,24 @@ function runJestBatch(suites, batchIndex) {
   } catch (err) {
     console.warn(`[release-suites] não foi possível gravar o binding do lote ${batchIndex}: ${err.message}`);
   }
+  // LOG INTEGRAL DO LOTE QUE FALHOU — preservado em disco.
+  //
+  // DEFEITO DE AUDITORIA medido em 2026-10-20: quando um lote falhava, só restavam 40 linhas de
+  // `stdoutTail`/`stderrTail` no relatório agregado. Suítes que fazem o diagnóstico impossível de
+  // adivinhar imprimem blocos estruturados no stdout (ex.: `DIAG_NAO_FECHOU` de
+  // `governanceApprovalFullWorkerE2E` com estado do finding, contrato da task e erro das
+  // tentativas) — e eles eram DESCARTADOS exatamente no caso em que são necessários. O arquivo
+  // abaixo é transporte/evidência de execução (tmpdir), não relatório governado.
+  let stdoutLogPath = null;
+  if (result.status !== 0 && !reuse) {
+    try {
+      stdoutLogPath = path.join(batchReportDir(), `batch-${batchIndex}.stdout.log`);
+      fs.writeFileSync(stdoutLogPath, `${result.stdout || ''}\n--- STDERR ---\n${result.stderr || ''}`, 'utf8');
+    } catch (err) {
+      stdoutLogPath = null;
+      console.warn(`[release-suites] não foi possível gravar o log do lote ${batchIndex}: ${err.message}`);
+    }
+  }
   return {
     suites,
     exitCode: result.status,
@@ -480,6 +498,8 @@ function runJestBatch(suites, batchIndex) {
     // preservá-lo é o que permite distinguir "falhou" de "não rodou" sem adivinhação.
     stdoutTail: (result.stdout || '').split('\n').slice(-40).join('\n'),
     stderrTail: (result.stderr || '').split('\n').slice(-40).join('\n'),
+    // Caminho do log INTEGRAL (só existe para lote que falhou). `null` = nada a preservar.
+    stdoutLogPath,
   };
 }
 
