@@ -133,6 +133,7 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
   // ver que não havia evidência de integração distinta.
   const coverage = summarizeTestCoverage(testRuns);
   const unitEvidence = coverage.byCategory[TEST_CATEGORIES.UNIT];
+  const unitBacked = Boolean(unitEvidence && unitEvidence.passed > 0);
   const integrationEvidence = coverage.byCategory[TEST_CATEGORIES.INTEGRATION];
   const e2eEvidence = coverage.byCategory[TEST_CATEGORIES.E2E];
   const hasDistinctIntegration = coverage.hasIntegrationEvidence;
@@ -214,7 +215,11 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
   const gates = [
     gate(
       'unit',
-      testsAllPass,
+      // CLASSIFICAÇÃO RIGOROSA (P1 medido em 2026-10-20): antes o gate usava
+      // `testsAllPass` — QUALQUER execução verde (inclusive só integração)
+      // satisfazia UNIT. Agora exige pelo menos uma execução CLASSIFICADA como
+      // UNIT com status PASS e exit code 0; UNKNOWN/SKIPPED não contam.
+      unitBacked,
       {
         source: 'engineering_test_runs',
         commands: testRuns.map((t) => t.command),
@@ -222,6 +227,12 @@ function deriveGates({ task, testRuns, reviews, regressionRuns, greenAttempt = n
         classification: TEST_CATEGORIES.UNIT,
         executedUnitCommands: unitEvidence.commands,
         unitRuns: unitEvidence.passed,
+        ...(unitBacked
+          ? {}
+          : {
+            code: 'UNIT_EVIDENCE_MISSING',
+            note: 'nenhuma execução classificada como UNIT com PASS/exit 0 — execução genérica não comprova cobertura unitária',
+          }),
       },
       { source: 'engineering_test_runs', count: testRuns.length, attestedBy: 'task.status' },
     ),
