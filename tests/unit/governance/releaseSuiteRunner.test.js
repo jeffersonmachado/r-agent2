@@ -413,4 +413,19 @@ describe('run-release-suites — prova de saída do grupo do lote (Fase 6)', () 
     expect(fonte).toMatch(/if \(result\.status !== 0\) \{/);
     expect(fonte).toContain('.stdout.log');
   });
+
+  // DEFEITO REAL medido em 2026-10-20: este script roda com `--env-file-if-exists=.env`, que define
+  // ENGINEERING_RUNNER_URL=8090 (dev). Os lotes herdavam esse valor e subprocessos que recarregavam
+  // o `.env` voltavam para 8090 — onde nada escuta — produzindo
+  // `SANDBOX_UNAVAILABLE ... :8090: fetch failed` e missões BLOCKED. Quem define a URL do runner de
+  // TESTE é o `globalSetup` do Jest (8097), nunca o `.env` herdado.
+  it('o lote NÃO herda ENGINEERING_RUNNER_URL/TOKEN do ambiente do runner de suítes', () => {
+    const fonte = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'run-release-suites.js'),
+      'utf8',
+    );
+    expect(fonte).toContain('delete batchEnv.ENGINEERING_RUNNER_URL');
+    expect(fonte).toContain('delete batchEnv.ENGINEERING_RUNNER_TOKEN');
+    expect(fonte).toMatch(/env:\s*batchEnv,/);
+  });
 });

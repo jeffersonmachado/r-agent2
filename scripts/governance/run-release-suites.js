@@ -411,9 +411,21 @@ function runJestBatch(suites, batchIndex) {
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   if (fs.existsSync(outputFile)) fs.rmSync(outputFile, { force: true });
   const args = buildJestArgs(suites, outputFile);
+  // A URL/TOKEN DO RUNNER NÃO SÃO HERDADOS DO AMBIENTE DO RUNNER DE SUÍTES.
+  //
+  // DEFEITO REAL MEDIDO (2026-10-20): o processo deste script roda com
+  // `--env-file-if-exists=.env`, que define `ENGINEERING_RUNNER_URL=http://127.0.0.1:8090`
+  // (endereço de dev). O `globalSetup` do Jest sobe o runner de TESTE em 8097 e exporta a
+  // variável — mas qualquer subprocesso que não herde esse override (ou que recarregue o
+  // `.env`) volta para 8090, onde nada escuta. Resultado medido: tasks de correção morriam em
+  // `SANDBOX_UNAVAILABLE ... :8090: fetch failed` e a missão ia para BLOCKED, derrubando suítes
+  // que passam isoladas. Quem define a URL do runner de teste é o globalSetup, nunca o `.env`.
+  const batchEnv = { ...process.env, RELEASE_AUTHORITATIVE: process.env.RELEASE_AUTHORITATIVE || '1' };
+  delete batchEnv.ENGINEERING_RUNNER_URL;
+  delete batchEnv.ENGINEERING_RUNNER_TOKEN;
   const result = spawnSync('npx', args, {
     cwd: ROOT,
-    env: { ...process.env, RELEASE_AUTHORITATIVE: process.env.RELEASE_AUTHORITATIVE || '1' },
+    env: batchEnv,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
     // Grupo de processos PRÓPRIO: permite ceifar o que o lote deixar vivo. Um lote que
