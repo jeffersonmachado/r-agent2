@@ -1882,6 +1882,22 @@
       "regressionTest": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
       "severityBasis": "todo trabalho de execucao do Engenheiro em deploy containerizado falhava em silencio contra a API real",
       "severitySource": "missao-L1-execucao-isolada"
+    },
+    {
+      "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",
+      "title": "publish-tag era oferecida com release selado mas NAO verificado",
+      "status": "done",
+      "commit": "fb525c989",
+      "evidence": "tests/unit/governance/devGovernanceModels.test.js (3 testes novos) + tests/unit/governance exit 0 (172 suites / 1816 testes)",
+      "detail": "DEFEITO MEDIDO (L-1 item B): deriveReleaseState habilitava a acao publish-tag quando existia releaseName e nenhum guard local bloqueava — mesmo com gate canonico vermelho, sem relatorio de entrega ou com identidade de run incompleta. 'Estar selado' nao e 'estar verificado'. CORRECAO: a acao exige veredito DELIVERED_VERIFIED e o blockedReason nomeia os codigos das lacunas. Autorizacao explicita ja existente e mantida: runReleaseAction recusa acao mutante sem confirm:true (confirmation_required), catalogo em allowlist fechada, assertPreconditions derivado da MESMA fonte de estado.",
+      "prevention": "REGRA: acao de release (tag/publicacao) nunca e habilitada por EXISTENCIA de artefato — so por veredito positivo verificado. Habilitar botao que publica tag e, na pratica, publicar com um clique.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "done",
+      "regressionTest": "tests/unit/governance/devGovernanceModels.test.js",
+      "severityBasis": "ato irreversivel de release oferecido a partir de estado nao verificado",
+      "severitySource": "missao-L1-item-B"
     }
   ],
   "schemaVersion": 2,

@@ -11,10 +11,10 @@
 |---|---|
 | Data da avaliação | 2026-10-20 |
 | Branch | `dev/engineering-hardening` |
-| SHA local | `713aafc1a7f5351ea58f67d06e6f9d3544c58958` |
-| SHA remoto (`origin/dev/engineering-hardening`) | `713aafc1a7f5351ea58f67d06e6f9d3544c58958` (confirmado por `git ls-remote`) |
+| SHA local | `fb525c989c95eaeb725163e84737239a4ed5c7fa` |
+| SHA remoto (`origin/dev/engineering-hardening`) | `fb525c989c95eaeb725163e84737239a4ed5c7fa` (confirmado por `git ls-remote`) |
 | Escopo | Preparação e comprovação da delegação supervisionada (L-1). **Não** é implantação do StudioOly, **não** é release |
-| Commit final do ciclo | `713aafc1a` (fila), precedido por `53da93267`, `ce343edd3`, `6ecca330c` |
+| Commit final do ciclo | `fb525c989` (ciclo 4), precedido por `e3d358b5b`, `713aafc1a`, `53da93267`, `ce343edd3`, `6ecca330c` |
 | Worktree | limpo no momento da publicação (`git status --short` vazio) |
 
 ---
@@ -74,7 +74,6 @@ Correção: veredito `DELIVERED_UNVERIFIED` + `verificationGaps` auditáveis; de
 `DECISION_REPORTS`; exige veredito positivo, zero bloqueios, evidência disponível e identidade de run.
 
 ### 3.3 `53da93267` — container real do Runner executava sandbox com `MODULE_NOT_FOUND`
-
 Reproduzido **ao vivo** (`docker run … + POST /execute`):
 
 ```json
@@ -87,8 +86,18 @@ Causa: `executionSandbox.js` passou a exigir `governance/bug-closure/command-pol
 `tests/unit/engineeringRunnerDockerfileClosure.test.js` calcula o fechamento transitivo e reprova
 arquivo sem `COPY`.
 
-## 4. Testes executados (medições reais)
+### 3.4 `fb525c989` — `publish-tag` exige entrega verificada (item B)
 
+Defeito: `deriveReleaseState` oferecia a ação `publish-tag` quando existia `releaseName` e nenhum
+guard local bloqueava — mesmo com gate canônico vermelho, sem relatório de entrega ou com identidade
+de run incompleta. Publicar tag é ato de release; "estar selado" não é "estar verificado".
+
+Correção: a ação passa a exigir `verdict === DELIVERED_VERIFIED`, e o `blockedReason` nomeia os
+códigos das lacunas. A autorização explícita já existia e continua obrigatória: `runReleaseAction`
+recusa ação mutante sem `confirm: true` (`confirmation_required`), o catálogo é allowlist fechada e
+`assertPreconditions` deriva da **mesma** fonte de estado (a API recusa antes do efeito).
+
+## 4. Testes executados (medições reais)
 | Camada | Comando | Resultado |
 |---|---|---|
 | L0 | `npx jest "tests/unit/engineering" tests/unit/governance --bail=0` | **exit 0** — 2 skipped, **2762 passed**, 2764 total (45,7 s) |
@@ -97,6 +106,7 @@ arquivo sem `COPY`.
 | L0 (fechamento do Dockerfile) | `npx jest tests/unit/engineeringRunnerDockerfileClosure.test.js` | exit 0 — 2/2 |
 | L1 (bateria completa) | `npx jest "tests/integration/engineering" tests/contracts/engineeringCoderReviewerService.test.js --maxWorkers=2` | **exit 0** — **40 suítes / 221 testes passed** (404,9 s) |
 | Política do agente | `node governance/verify-agent-policy-compliance.js` | `AGENT_POLICY_COMPLIANCE_PASS` |
+| L0 governança (após ciclo 4) | `npx jest tests/unit/governance --bail=0` | **exit 0** — 172 suítes / **1816 passed** (2 skipped) |
 
 ### 4.1 Falhas de L1 em lote: o que aconteceu e como foi classificado
 
@@ -117,6 +127,14 @@ mascarada, `skip` não foi introduzido e nenhuma asserção foi enfraquecida.
 `--maxWorkers=2` → **exit 0, 40 suítes / 221 testes, todos passed (404,9 s)**. As 17 suítes / 29 testes
 vermelhos da primeira tentativa não eram regressão de produto; a única falha determinística entre elas
 era o container quebrado do §3.3.
+
+### 4.2 Nota sobre contenção (risco de leitura errada do vermelho)
+
+O paralelismo padrão (12 workers) deste ambiente **não** suporta a bateria de integração do Router:
+cada suíte sobe containers reais e o sandbox fica indisponível (`SANDBOX_UNAVAILABLE`). Duas
+consequências práticas: (a) "17 suítes vermelhas" não é sinal de regressão e (b) rodar só o lote
+também **esconde** defeito real (o `MODULE_NOT_FOUND` do §3.3 apareceu porque uma suíte foi isolada).
+A leitura correta é sempre: lote com contenção reduzida **e** isolamento das que falharem.
 
 ## 5. Testes NÃO executados (declarado, com motivo)
 
@@ -176,7 +194,7 @@ Abertos na fila oficial (`AI_MEMORY/hardening-queue.json`, 110 itens, 6 `blocked
 | L1 serializado (`--maxWorkers=2`, HEAD final) | `/tmp/l1-l1-final.log` (exit 0, 221/221) |
 | Testes de regressão | `tests/unit/engineeringRouterContextSourceFailClosed.test.js`, `tests/unit/governance/releaseStateService.test.js`, `tests/unit/engineeringRunnerDockerfileClosure.test.js` |
 | Fila com os 3 itens | `AI_MEMORY/hardening-queue.json` (`L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL`, `L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO`, `L1-RUNNER-CONTAINER-MODULE-NOT-FOUND`) |
-| Commits publicados | `6ecca330c`, `ce343edd3`, `53da93267`, `713aafc1a` |
+| Commits publicados | `6ecca330c`, `ce343edd3`, `53da93267`, `713aafc1a`, `e3d358b5b`, `fb525c989` |
 
 Observação de auditabilidade: os logs acima vivem em `/tmp` (transitórios). São **evidência da
 sessão**, não prova versionada — a prova durável é o commit + o teste de regressão indicado em cada
@@ -209,7 +227,7 @@ Critérios do §11 da missão:
 | 1 | Roteador executa missão com escopo limitado | **TESTED** (`pathBoundary`, `applyDiffPolicy`, `commandPolicy`, E2E de loop) |
 | 2 | Workspace isolado | **TESTED** (`patchApplyService` + sandbox com `network=none`, cap-drop) |
 | 3 | `source_commit` validado | **VERIFIED** (ciclo 1, teste novo) |
-| 4 | Engenheiro não consegue publicar release sozinho | **TESTED** (`promotionService` sem `git push`; `executionSandbox` recusa operações de governança) |
+| 4 | Engenheiro não consegue publicar release sozinho | **VERIFIED** (`promotionService` sem `git push`; `publish-tag` exige `DELIVERED_VERIFIED` + `confirm: true`; `executionSandbox` recusa operações de governança) |
 | 5 | Revisão independente comprovada | **TESTED** (`missionReviewService`: `INDEPENDENT_REVIEW_CONTRADICTED_BY_PROVIDER`) |
 | 6 | Evidências pertencem à tentativa correta | **TESTED** (`deriveGates` exige `attempt_id` e evidência de fase) |
 | 7 | Gates aplicáveis executados | **PARCIAL** (L0 e L1 do Engenheiro completos e verdes; gate agregado de plataforma não executável) |
