@@ -25,6 +25,7 @@ const { evaluateWorktree } = require('../../governance/worktree-integrity');
 const ROOT = path.resolve(__dirname, '..', '..');
 const QUEUE_PATH = 'AI_MEMORY/hardening-queue.json';
 const STATE_PATH = '.github/hooks/.continue-state.json';
+const OWNER_PATH = '.github/hooks/.worktree-owner.json';
 
 /**
  * Estados canonicos da fila (MISSAO B / B8).
@@ -154,6 +155,48 @@ function describeIntegrity(report) {
     .join('; ');
 }
 
+/**
+ * TRAVA DE SESSÃO ÚNICA (2026-10-20).
+ *
+ * Causa raiz medida da mutilação cruzada: DUAS sessões de agente editando o
+ * MESMO worktree ao mesmo tempo (medido: pts/41 rodava o coletor ER-V1 e
+ * suítes de integração enquanto outra sessão restaurava arquivos de HEAD).
+ * Cada lado "conserta" o que o outro mudou, a partir de contexto velho — o
+ * resultado é exatamente o padrão de cópia degradada + testes removidos.
+ *
+ * A trava é DECLARATIVA e não destrutiva: registra o dono (pid do processo pai,
+ * que vive enquanto a sessão viver) e AVISA quando há outro dono vivo. Nunca
+ * mata nem bloqueia processo alheio — quem decide é o humano.
+ */
+function readOwner() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(OWNER_PATH, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function isAlive(pid) {
+  const value = Number(pid);
+  if (!Number.isFinite(value) || value <= 0) return false;
+  try {
+    process.kill(value, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function writeOwner(owner) {
+  try {
+    fs.mkdirSync(path.dirname(OWNER_PATH), { recursive: true });
+    fs.writeFileSync(OWNER_PATH, JSON.stringify(owner));
+  } catch {
+    /* trava auxiliar: falha aqui nunca quebra o turno */
+  }
+}
+
 // Progresso real = commit novo, worktree alterado ou status da fila mudou.
 // O arquivo de estado do proprio hook e excluido para nao se auto-validar.
 function progressSignature(queue) {
@@ -217,11 +260,25 @@ function main() {
   const integrityBlocking = integrity.verdict === 'FAIL';
 
   if (eventName === 'SessionStart') {
-    if (!items.length && !integrityBlocking) {
+    const previousOwner = readOwner();
+    const myPid = process.ppid;
+    const concurrentSession = Boolean(previousOwner && Number(previousOwner.pid) !== Number(myPid) && isAlive(previousOwner.pid));
+    if (!concurrentSession) {
+      writeOwner({ pid: myPid, startedAt: new Date().toISOString(), tty: process.env.TTY || null });
+    }
+
+    if (!items.length && !integrityBlocking && !concurrentSession) {
       emit({});
       return;
     }
     const parts = [];
+    if (concurrentSession) {
+      parts.push(
+        `ATENCAO: OUTRA SESSAO DE AGENTE ATIVA neste worktree (pid ${previousOwner.pid}, desde ${previousOwner.startedAt}). ` +
+        'Duas sessoes editando o mesmo worktree produzem copias degradadas e testes removidos — ' +
+        'encerre uma delas antes de editar; nao restaure arquivos que a outra sessao esta mudando.',
+      );
+    }
     if (items.length) {
       parts.push(
         `Fila de hardening aberta em ${QUEUE_PATH} (${items.length} item(ns)): ${describe(items)}. ` +
@@ -265,6 +322,11 @@ function main() {
       });
       return;
     }
+  }
+
+  const owner = readOwner();
+  if (owner && Number(owner.pid) === Number(process.ppid)) {
+    try { fs.rmSync(OWNER_PATH, { force: true }); } catch { /* auxiliar */ }
   }
 
   if (!items.length) {

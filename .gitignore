@@ -225,3 +225,4 @@ pbx/asterisk/etc/asterisk/conf/
 # Estado local do hook de continuidade da missao (nao eh artefato de release;
 # um arquivo nao rastreado aqui sujaria o worktree exigido pela selagem).
 .github/hooks/.continue-state.json
+.github/hooks/.worktree-owner.json
