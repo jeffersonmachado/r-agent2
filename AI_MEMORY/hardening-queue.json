@@ -1898,6 +1898,21 @@
       "regressionTest": "tests/unit/governance/devGovernanceModels.test.js",
       "severityBasis": "ato irreversivel de release oferecido a partir de estado nao verificado",
       "severitySource": "missao-L1-item-B"
+    },
+    {
+      "id": "L1-WORKTREE-MUTILACAO-RECORRENTE",
+      "title": "Worktree mutilado 3x (testes removidos + guardas apagadas): prevencao executavel",
+      "status": "prevention_active",
+      "commit": "cc4295226",
+      "evidence": "governance/worktree-integrity.js + scripts/governance/validate-worktree-integrity.js + tests/unit/governance/worktreeIntegrity.test.js (11 casos) + tests/unit/engineeringRouterTestRemovalPolicy.test.js (6 casos) + tests/unit/engineeringRouterPatchValidator.test.js (35 casos); PROVA REAL: o patch da mutilacao de 2026-10-20 (62 arquivos, +856/-5565, 35 blocos it/describe removidos) foi reaplicado em clone limpo e o pre-commit instalado recusou o commit (exit 1) nomeando TEST_CASE_REMOVAL/SYMBOL_REMOVAL/PURE_DELETION/DELETION_DOMINANT; alteracao legitima passou (commit aceito).",
+      "resolution": "DEFEITO REAL medido em 3 rodadas (2026-10-09 x2, 2026-10-20): o worktree aparecia com dezenas de arquivos M cujo conteudo era copia DEGRADADA de HEAD — guardas de governanca apagadas, funcoes reimplementadas de forma simplificada e 35 blocos it/describe REMOVIDOS. A suite ficava verde porque o teste que reprovaria a perda era o proprio teste apagado, e nenhum gate julgava a RELACAO entre worktree e base (todos julgam o produto). CAUSA RAIZ adicional medida em 2026-10-20 15:07: duas sessoes de agente editando o MESMO worktree ao mesmo tempo (uma executava o coletor ER-V1 e suites de integracao enquanto a outra restaurava arquivos de HEAD).",
+      "prevention": "Guarda deterministica que compara o diff real contra HEAD e reprova TEST_CASE_REMOVAL, SYMBOL_REMOVAL, PURE_DELETION, FILE_DELETED e DELETION_DOMINANT (waiver apenas explicito, por caminho e com motivo escrito); CLI npm run validate:worktree-integrity com relatorio reports/worktree-integrity-report.json e exit 2 para erro de infraestrutura; hooks pre-commit e pre-push VERSIONADOS em scripts/git-hooks/ com instalador scripts/install-git-hooks.sh; hook do agente avisa no SessionStart e BLOQUEIA o Stop com worktree mutilado; patchValidator recusa patch que apaga casos de teste (PATCH_REMOVES_TESTS, autorizacao so por campo explicito de contrato); trava de sessao unica no hook detecta outro dono vivo do worktree.",
+      "severity": "P0",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "perda silenciosa de prova (testes e guardas) com suite verde; risco direto de falso GO",
+      "severitySource": "medicao-direta-2026-10-20"
     }
   ],
   "schemaVersion": 2,
