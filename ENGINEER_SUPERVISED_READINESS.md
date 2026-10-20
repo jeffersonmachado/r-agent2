@@ -257,6 +257,21 @@ registrada como flake.
 50,7 s. O defeito de concorrência não existe mais no código publicado; o timeout do bug loop segue
 como flake declarado sob carga.
 
+### 4.7 Ciclo de hardening P0/P1 da auditoria externa (baseline `40042f1a3`)
+
+| ID | Defeito medido | Correção | Prova |
+|---|---|---|---|
+| `P0-FILAS-ROLLBACK-DESTRUTIVO` | rollback chamava `deleteQueue(name, true)` e fechava tickets ativos — inclusive de fila **preexistente** | `created:true|false` + rollback escopado **sem** force | `queueCreatePersistBeforeResponse` com helpers reais; 157/157 filas |
+| `P0-FILAS-ISOLAMENTO-TENANT` | exclusão forçada do tenant A fechava tickets do tenant B (mesmo nome de fila); listagem mesclava nomes globais | `tenantId` em list/create/delete/info (índice, serviço, módulo e handler legado) | `queueTenantIsolation.test.js` (5 casos) |
+| `P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA` | `Boolean(approvedReview) && !independentContradicted` aceitava APPROVE **sem** declaração de independência | prova positiva: declaração + identidade completa + provider distinto | gates 10/10; integração 16/16 |
+| `P1-UNIT-GATE-ACEITA-UNKNOWN` | gate `unit` usava `testsAllPass` (qualquer execução verde, inclusive UNKNOWN) | exige run classificado como UNIT com PASS/exit 0 | 443 unit; enforcement 7/7 |
+| `P1-CONCORRENCIA-EXIGE-POSTGRES` | `if (skipIfNoDatabase()) return;` → PASS sem executar | `INFRA_ERROR` explícito + sonda `SELECT 1` | passa com banco; falha com `DATABASE_URL` inválida |
+| `P1-GUARDA-SKIP-ASSERTIONS-COMMITS` | guarda só contava declarações; pre-push comparava com o **worktree**, não com o commit enviado | `TEST_SUPPRESSION_ADDED`, `ASSERTION_REMOVAL`, `--head <sha>` por ref, waiver com `--approved-by` | 14/14; mutação **commitada** bloqueada (exit 1) |
+
+Regressão deste ciclo: `npx jest tests/unit` → **1080 suítes / 9174 testes, exit 0**
+(2 skipped declarados). Nenhum teste foi removido ou enfraquecido para obter verde;
+os contratos alterados foram migrados explicitamente e estão nomeados nos commits.
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
