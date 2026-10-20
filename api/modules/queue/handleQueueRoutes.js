@@ -31,7 +31,7 @@ async function handleQueueRoutes(ctx) {
       return true;
     }
 
-    const legacy = listQueues() || [];
+    const legacy = listQueues(req.tenantId) || [];
     const defs = queueDefinitionService.listQueues({ tenantId: req.tenantId }).map((q) => q.name);
     const merged = Array.from(new Set([...legacy, ...defs])).sort();
     sendJson(res, 200, merged);
@@ -83,10 +83,20 @@ async function handleQueueRoutes(ctx) {
         });
 
         if (persistencia && persistencia.success === false) {
-          try {
-            deleteQueue(result.queueName, true);
-          } catch (_) {
-            /* rollback best-effort; o erro real é reportado abaixo */
+          // Compensação ESCOPADA (mesmo P0 do caminho via service): só reverte o
+          // que ESTA operação criou, nunca fila preexistente, e nunca com force
+          // (force fecha tickets ativos).
+          if (result.created === true) {
+            try {
+              deleteQueue(result.queueName, false, { tenantId: req.tenantId });
+            } catch (_) {
+              /* rollback best-effort; o erro real é reportado abaixo */
+            }
+          } else {
+            logger.error('Persistência falhou em fila preexistente — estado anterior preservado', {
+              queueName: result.queueName,
+              error: (persistencia && persistencia.error) || null,
+            });
           }
           logger.error('Erro ao persistir definição da fila', {
             queueName: result.queueName,
@@ -139,7 +149,7 @@ async function handleQueueRoutes(ctx) {
     }
 
     const queueName = decodeURIComponent(pathname.slice('/queues/'.length));
-    const info = getQueueInfo(queueName);
+    const info = getQueueInfo(queueName, { tenantId: req.tenantId });
 
     if (info === null) {
       badRequest(res, 'Nome da fila inválido');
@@ -168,7 +178,7 @@ async function handleQueueRoutes(ctx) {
     const urlObj = new URL(req.url || '/', 'http://localhost');
     const force = urlObj.searchParams.get('force') === 'true';
 
-    const result = deleteQueue(queueName, force);
+    const result = deleteQueue(queueName, force, { tenantId: req.tenantId });
 
     if (result.success) {
       // A definição persistida da fila precisa ser desativada junto: GET /queues

@@ -81,7 +81,7 @@ function createQueueController({ service, deps }) {
       if (!ensurePermission(req, res, 'queues', 'read')) return;
 
       const queueName = decodeURIComponent(String(req.params.queueName));
-      const info = service.getQueueInfo(queueName);
+      const info = service.getQueueInfo(queueName, req.tenantId);
       if (info === null) {
         deps.badRequest(res, 'Nome da fila inválido');
         return;

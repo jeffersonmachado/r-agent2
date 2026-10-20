@@ -21,11 +21,50 @@
 
 const { createQueueService } = require('../../api/modules/queue/service');
 const { createQueueController } = require('../../api/modules/queue/controller');
+const {
+  createQueue: createQueueOp,
+  deleteQueue: deleteQueueOp,
+} = require('../../api/services/queue/queueAdminOperations');
+
+/**
+ * Harness com os helpers REAIS de criação/exclusão (não mocks): é o que permite
+ * provar que o rollback não fecha tickets de uma fila preexistente.
+ */
+function buildRealHarness() {
+  const queues = new Map();
+  const tickets = new Map();
+  const logger = { debug: jest.fn(), error: jest.fn() };
+  const safeTrim = (value) => String(value ?? '').trim();
+  const ensureQueueIndex = (map, name) => { if (!map.has(name)) map.set(name, new Set()); };
+  const getQueueStats = ({ tickets: t, queues: q, queueName }) => {
+    const ids = q.get(queueName) || new Set();
+    let activeTickets = 0;
+    let closedTickets = 0;
+    for (const id of ids) {
+      const ticket = t.get(id);
+      if (!ticket) continue;
+      if (ticket.status === 'closed') closedTickets += 1;
+      else activeTickets += 1;
+    }
+    return { ticketIds: [...ids], ticketCount: ids.size, activeTickets, closedTickets };
+  };
+  const persistTicketBestEffort = jest.fn();
+
+  return {
+    queues,
+    tickets,
+    logger,
+    createQueue: (name) => createQueueOp(name, { queues, ensureQueueIndex, safeTrim, logger }),
+    deleteQueue: (name, force) => deleteQueueOp(name, force, {
+      queues, tickets, getQueueStats, persistTicketBestEffort, safeTrim, logger,
+    }),
+  };
+}
 
 function makeDeps(overrides = {}) {
   return {
     listQueues: jest.fn(() => []),
-    createQueue: jest.fn(() => ({ success: true, queueName: 'qa_queue_1', message: 'Fila criada com sucesso' })),
+    createQueue: jest.fn(() => ({ success: true, queueName: 'qa_queue_1', message: 'Fila criada com sucesso', created: true })),
     deleteQueue: jest.fn(() => ({ success: true, message: 'Fila excluída com sucesso' })),
     getQueueInfo: jest.fn(() => ({ name: 'qa_queue_1', exists: true })),
     listQueue: jest.fn(() => []),
@@ -80,12 +119,42 @@ describe('createQueue — persistência antes da resposta (anti-corrida com DELE
       expect.objectContaining({ queueName: 'qa_queue_1', error: 'db_unavailable' }),
     );
     // Rollback: a listagem (memória + banco) não pode anunciar a fila.
-    expect(deps.deleteQueue).toHaveBeenCalledWith('qa_queue_1', true);
+    // NUNCA com force — exclusão forçada fecha tickets ativos (P0 de 2026-10-20).
+    expect(deps.deleteQueue).toHaveBeenCalledWith('qa_queue_1', false);
+  });
+
+  test('P0: rollback NÃO fecha tickets de fila PREEXISTENTE', async () => {
+    const harness = buildRealHarness();
+    harness.createQueue('vendas');
+    harness.queues.get('vendas').add('t-1');
+    harness.tickets.set('t-1', { id: 't-1', status: 'open', queue: 'vendas', tenantId: 'system' });
+
+    const deps = makeDeps({
+      createQueue: jest.fn((name) => harness.createQueue(name)),
+      deleteQueue: jest.fn((name, force) => harness.deleteQueue(name, force)),
+      queueDefinitionService: {
+        listQueues: jest.fn(() => []),
+        upsertQueue: jest.fn(async () => ({ success: false, error: 'db_unavailable' })),
+      },
+    });
+    const service = createQueueService({ deps });
+
+    const resultado = await service.createQueue({ tenantId: 'system' }, 'vendas');
+
+    expect(resultado.success).toBe(false);
+    // Filas preexistentes não são revertidas: nenhum delete, nenhum ticket fechado.
+    expect(deps.deleteQueue).not.toHaveBeenCalled();
+    expect(harness.tickets.get('t-1').status).toBe('open');
+    expect(harness.queues.has('vendas')).toBe(true);
+    expect(deps.logger.error).toHaveBeenCalledWith(
+      'Persistência falhou em fila preexistente — estado anterior preservado',
+      expect.objectContaining({ queueName: 'vendas' }),
+    );
   });
 
   test('fila que já existe continua respondendo sucesso sem rollback', async () => {
     const deps = makeDeps({
-      createQueue: jest.fn(() => ({ success: true, queueName: 'qa_queue_1', message: 'Fila já existe' })),
+      createQueue: jest.fn(() => ({ success: true, queueName: 'qa_queue_1', message: 'Fila já existe', created: false })),
     });
     const service = createQueueService({ deps });
 

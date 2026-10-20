@@ -290,7 +290,7 @@ describe('queueRoutes handler', () => {
     });
 
     expect(handled).toBe(true);
-    expect(deps.getQueueInfo).toHaveBeenCalledWith('support');
+    expect(deps.getQueueInfo).toHaveBeenCalledWith('support', { tenantId: 'tenant-1' });
     expect(deps.sendJson).toHaveBeenCalledWith(res, 200, queueInfo);
   });
 
@@ -346,7 +346,7 @@ describe('queueRoutes handler', () => {
     });
 
     expect(handled).toBe(true);
-    expect(deps.deleteQueue).toHaveBeenCalledWith('oldq', true);
+    expect(deps.deleteQueue).toHaveBeenCalledWith('oldq', true, { tenantId: 'tenant-1' });
     expect(deps.logAction).toHaveBeenCalledWith(expect.objectContaining({ action: 'queue_delete', resourceId: 'oldq' }));
     expect(deps.sendJson).toHaveBeenCalledWith(res, 200, expect.objectContaining({ success: true }));
   });
