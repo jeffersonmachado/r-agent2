@@ -133,6 +133,17 @@ jobs:
       - name: Migrations (schema completo no banco efêmero)
         run: npm run db:migrate
 
+      # ARTEFATOS GOVERNADOS QUE AS SUÍTES L0 LEEM (medido 2026-10-21, run 39588568722):
+      # `convergenceFixpoint` e `readinessCertificationSeparation` reprovaram com
+      # ENOENT de `reports/benchmark-sufficiency-report.json` — `reports/` é ignorado pelo git,
+      # então num clone limpo o artefato não existe e a suíte confunde "não gerado" com defeito.
+      # A correção é GERAR (não pular): os dois validadores saem 0 em estado limpo e escrevem os
+      # relatórios a partir das fontes versionadas. Se um deles falhar, o passo falha.
+      - name: Gerar artefatos governados consumidos pelas suites L0
+        run: |
+          npm run validate:coverage-completeness
+          npm run validate:benchmark-sufficiency
+
       # Toda a bateria L0+L1 roda pelo MESMO runner versionado que qualquer
       # pessoa executa localmente. Sem passos paralelos: uma implementacao so.
       - name: L0 + L1 (runner versionado, exit code real)
