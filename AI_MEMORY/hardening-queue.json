@@ -2164,6 +2164,36 @@
       "legacyStatus": "prevention_active",
       "severityBasis": "decisao de prontidao sem prova executavel",
       "severitySource": "missao-engineer-supervised-2026-10-21"
+    },
+    {
+      "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
+      "title": "isSandboxAvailable cacheava NEGATIVO: falso SANDBOX_UNAVAILABLE sob carga",
+      "status": "prevention_active",
+      "commit": "11a461e59",
+      "evidence": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js 7/7 (contra o codigo ANTERIOR: 3 falhas) + sandbox real e cache 17/17 + npx jest tests/unit --maxWorkers=4 1086 suites/9214 testes exit 0",
+      "resolution": "O probe (docker info, timeout 5s) rodava uma vez por processo e o resultado NEGATIVO era cacheado. Com 11 workers e load average 12 o probe estourava e engineeringRouterExecutionSandboxSecurity recebia SANDBOX_UNAVAILABLE em 3-6 casos com Docker saudavel; isolada passava 10/10. Em producao isso reprova task legitima como INFRA_ERROR e o envenenamento dura ate o processo morrer. Agora: so positivo e cacheado; falha transitoria e retentada (2 tentativas) e, se persistir, responde false sem envenenar; ENOENT (CLI ausente) e definitivo e cacheado.",
+      "prevention": "Regra: nunca cachear negativo transitorio em probe de saude + regressao com mock de child_process e semantica de timeout/SIGTERM/ENOENT.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "falso INFRA_ERROR em execucao legivel",
+      "severitySource": "auditoria-2026-10-21"
+    },
+    {
+      "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+      "title": "L0 do gate do branch variava de suite vermelha por contencao (11 workers)",
+      "status": "prevention_active",
+      "commit": "24603e69b",
+      "evidence": "npx jest tests/unit --maxWorkers=4 -> 1086 suites / 9214 testes / exit 0 em 358 s; com o default (11 workers) 3 execucoes falharam em 3 suites DIFERENTES (sandbox, tenantAiCredentials, ...) sempre por timeout/probe e nunca por defeito; tests/unit/ciGateL0Determinism.test.js 3/3",
+      "resolution": "O passo L0 herdava o default do jest.config.cjs (workers = orcamento de conexoes => 11), que saturam a maquina e produzem falsos vermelhos (probe de docker estourando, testTimeout de 10s). Agora o gate fixa JEST_MAX_WORKERS=4 por env do passo (override L0_JEST_MAX_WORKERS) e o relatorio registra envFixado, para que o ambiente de cada passo seja auditavel. O default de npm test a mao nao muda.",
+      "prevention": "Teto de workers explicito no gate + env do passo auditavel no relatorio.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "gate que reprova por contencao treina a ignorar vermelho",
+      "severitySource": "auditoria-2026-10-21"
     }
   ],
   "schemaVersion": 2,
