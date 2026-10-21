@@ -504,6 +504,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # IDENTIDADE GIT DO RUNNER EFÊMERO (medido 2026-10-21, run 39670610339).
+      # Várias suítes exercitam git de VERDADE (cenários que criam repositório e commitam:
+      # releaseTagPolicyBlock, integridade de worktree, lineage de produtor). O runner do GitHub
+      # não traz `user.name`/`user.email`, então o `git commit` do cenário morre com exit 128 — o
+      # teste reprova por AMBIENTE, não por código (reproduzido localmente com HOME vazio: 128 em
+      # vez de 3/0; com identidade: 4/4 verdes). Este job não roda `ci:bootstrap`, por isso a
+      # identidade é criada aqui também (o bootstrap faz o mesmo quando presente).
+      - name: Identidade git (commits reais nos cenários de teste)
+        run: |
+          git config --global user.email "ci-runner@r-agent2.invalid"
+          git config --global user.name "RAP CI Runner"
+          git config --get user.email
+          git config --get user.name
+
       - name: Migrations (schema completo no banco efêmero)
         run: npm run db:migrate
 

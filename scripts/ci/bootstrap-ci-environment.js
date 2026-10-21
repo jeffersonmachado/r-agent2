@@ -106,6 +106,43 @@ function npmRun(id, script, opcoes = {}) {
   return rodar(id, 'npm', ['run', '-s', script], opcoes);
 }
 
+/**
+ * Garante identidade git para os cenários REAIS que commitam (runner efêmero não tem nenhuma).
+ *
+ * Não sobrescreve configuração existente: só cria quando `user.email`/`user.name` estão ausentes,
+ * e registra a identidade efetiva como passo auditável do bootstrap. Um teste que exige commit
+ * real (`releaseTagPolicyBlock`, integridade de worktree, lineage de produtor) não pode reprovar
+ * porque o host não tem identidade — isso é ambiente incompleto, não defeito de código.
+ */
+function registrarIdentidadeGit() {
+  const ler = (chave) => {
+    const r = spawnSync('git', ['config', '--get', chave], { encoding: 'utf8' });
+    return r.status === 0 ? String(r.stdout || '').trim() : '';
+  };
+  const ausentes = [];
+  if (!ler('user.email')) ausentes.push(['user.email', 'ci-runner@r-agent2.invalid']);
+  if (!ler('user.name')) ausentes.push(['user.name', 'RAP CI Runner']);
+  const saidas = [];
+  let ok = true;
+  for (const [chave, valor] of ausentes) {
+    const r = spawnSync('git', ['config', '--global', chave, valor], { encoding: 'utf8' });
+    saidas.push(`git config --global ${chave} ${valor} (exit ${r.status})${r.stderr ? ` ${String(r.stderr).trim()}` : ''}`);
+    if (r.status !== 0) ok = false;
+  }
+  const efetiva = `user.email=${ler('user.email') || '(ausente)'} user.name=${ler('user.name') || '(ausente)'}`;
+  registrar({
+    id: 'identidade-git',
+    comando: 'git config --get user.email/user.name (cria --global só quando ausente)',
+    exitCode: ok ? 0 : 1,
+    veredito: ok ? 'PASS' : 'FAIL',
+    ok,
+    duracaoMs: 0,
+    saida: [...saidas, `efetiva: ${efetiva}`].join('\n'),
+    ambiente: { identidadeEfetiva: efetiva },
+  });
+  return ok;
+}
+
 function preflight() {
   const problemas = [];
   const [major, minor] = process.versions.node.split('.').map(Number);
@@ -297,6 +334,19 @@ function main() {
     escreverRelatorio({ veredito: 'FAIL_PREFLIGHT' });
     return 2;
   }
+
+  // IDENTIDADE GIT DO RUNNER EFÊMERO (medido 2026-10-21, run 39670610339).
+  //
+  // `tests/unit/governance/releaseTagPolicyBlock.test.js` exercita
+  // `scripts/create-release-tag.sh` contra um remote LOCAL de verdade: cria repositório, commita e
+  // empurra. No runner efêmero do GitHub não existe `user.name`/`user.email`, então o `git commit`
+  // do cenário morre com exit 128 e o teste reprova com 128 onde o contrato exige 3 (bloqueio de
+  // política) ou 0 (caminho feliz). Localmente nunca aparecia porque a máquina do operador tem
+  // identidade global — um defeito que só existia por AMBIENTE incompleto, não por código.
+  //
+  // A correção é preparar o ambiente (nunca afrouxar o teste): a identidade só é criada quando
+  // AUSENTE, e a identidade usada é declarada e auditável no relatório do bootstrap.
+  registrarIdentidadeGit();
 
   // 0) pacotes irmãos @results/* ANTES de instalar dependências (ver comentário da função).
   materializarPacotesIrmaos();

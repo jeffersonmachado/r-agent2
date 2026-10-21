@@ -44,7 +44,18 @@ describe('gate do branch — L0 determinístico', () => {
     const l0b = PASSOS.C.find((p) => p.id === 'L0b-integracao-engenheiro');
     expect(l0b).toBeTruthy();
     // Integração com Postgres real: concorrência alta corrompe estado compartilhado.
-    expect(l0b.comando).toContain('--maxWorkers=2');
+    //
+    // APERTADO em 2026-10-21 (run 39660840381): `--maxWorkers=2` NÃO bastava. O padrão
+    // `tests/integration/engineering` casa todas as suítes `engineering*` — inclusive as do grupo
+    // EXCLUSIVO `MISSION_WORKER_SHARED_RUNNER_AND_DB` de `config/canonical-release-suites.json`
+    // (mesmo runner de laço/LEASE e mesmo banco de missões). Com 2 workers, duas delas rodaram
+    // juntas: `engineeringBugAutonomousLoopE2E` falhou em 18,31 s e
+    // `engineeringBugLoopNaturalPathE2E` estourou o timeout de 900 s — ambas PASSANDO isoladas.
+    // A exigência agora é serialização REAL (1 worker), que satisfaz a exclusividade canônica por
+    // construção; `--maxWorkers=2` é aceito apenas como sinônimo de teto explícito, nunca como
+    // permissão para dois workers.
+    expect(l0b.comando).toMatch(/--runInBand|--maxWorkers=1\b/);
+    expect(l0b.comando).not.toMatch(/--maxWorkers=[2-9]/);
     expect(l0b.comando).toContain('tests/integration/engineering');
   });
 });
