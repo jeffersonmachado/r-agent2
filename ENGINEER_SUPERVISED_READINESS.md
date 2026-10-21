@@ -367,6 +367,26 @@ Medição de regressão desta seção: `tests/unit/engineeringRouter` + suíte n
 400 testes PASS**; `tests/unit/engineeringMission` + integração `patchAndTestRunner`/`promotion` →
 **38 suítes / 457 testes PASS**.
 
+### 4.11 §11 — segregação PRODUCTION/SUPPORT/DEVELOPMENT revalidada após as mudanças
+
+Os três gates de segregação foram reexecutados depois de todas as mudanças acima (nenhuma delas
+tocou menu, rotas ou `workspace.route-classifications.js`, mas revalidar é obrigatório):
+
+| Gate | Resultado medido |
+|---|---|
+| `validate:visibility-policy` | `status=PASS violations=0` |
+| `validate:experience-segregation` | `status=PASS surfaces=205 supportSurfaces=22 violations=0` |
+| `validate:experience-api-segregation` | `status=PASS leaks={"productionTechnicalLeaks":0,"supportEngineeringLeaks":0,"directUrlBypasses":0}` |
+
+Os relatórios versionados (`governance/experience-segregation-report.json`,
+`governance/experience-api-segregation-report.json`) foram regravados pelos validadores e o
+worktree permaneceu **limpo** — isto é, o payload é determinístico para o mesmo código (nenhum
+artefato divergiu por efeito colateral da medição).
+
+Ressalva declarada: estes três gates são **estáticos** (menu, rotas, classificações, conteúdo
+proibido). A validação em **browser real** de que uma superfície DEVELOPMENT não aparece para
+classificação PRODUCTION não foi reexecutada nesta janela — está registrada em §5.
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
@@ -377,6 +397,8 @@ Medição de regressão desta seção: `tests/unit/engineeringRouter` + suíte n
 | Missão supervisionada de ensaio (item 10) com **aprovação humana real** | jornada executada de ponta a ponta em L2 (§4.5) com aprovação **programática** de ator distinto; a assinatura humana real não foi executada — exige decisão do usuário |
 | Certificação do contrato EVO | fora do escopo explícito de L-1 (a missão diz que não é requisito) |
 | QA Mesh / QA Waves canônicos | pertencem ao selo; o selo está `SEAL_PENDING` e não é objetivo de L-1 |
+| Segregação em **browser real** (superfície DEVELOPMENT invisível para PRODUCTION) | os 3 gates de §4.11 são estáticos e PASS; a prova em navegador com `tests/helpers/playwrightAuth.js` não foi reexecutada nesta janela. Não é declarada como feita. |
+| `--apply` da poda de branches | **executado** com aprovação do dono (3.017 → 10); registrado aqui porque era ação destrutiva e irreversível |
 
 ## 6. Resultado de cada gate (medido, sem narrativa)
 
@@ -493,6 +515,53 @@ Critérios 1–16 atendidos no que é executável, com uma ressalva explícita: 
 **aprovação humana real** de uma missão não foi executada — o L2 prova o mecanismo com aprovação
 programática de ator distinto. Declarar `GO` seria converter essas duas pendências em aprovação;
 por isso o veredito é **candidato**, que por definição pede auditoria independente.
+
+### 12.1 O veredito deixou de ser prosa: gate executável (§13)
+
+`npm run validate:engineer-supervised-readiness`
+(`scripts/governance/validate-engineer-supervised-readiness.js`) deriva a decisão de fatos medidos.
+Nenhum check é assumido:
+
+| Check | O que mede |
+|---|---|
+| `QUEUE_READABLE` / `QUEUE_NO_OPEN_DEFECT` | fila oficial: nenhum item `pending`/`in_progress`/`failed`/`fixed_unverified` |
+| `QUEUE_NO_BLOCKED` | nenhum item `blocked`/`blocked_external` — impedimento declarado **não é** prontidão |
+| `EVIDENCE_COMMITS_EXIST` | cada `commit` de prova é resolvido com `git cat-file` (**123** verificados) |
+| `SEGREGATION_VISIBILITY` / `SEGREGATION_EXPERIENCE` / `SEGREGATION_EXPERIENCE_API` | lê os três relatórios: `status=PASS`, `violations=0`, contadores `0` |
+| `READINESS_DOC_PRESENT` / `READINESS_DOC_SECTIONS` | o documento existe **e** não foi esvaziado (7 seções obrigatórias) |
+| `HUMAN_APPROVAL_PRESENT` / `HUMAN_APPROVAL_VALID` | assinatura com `approver`, `approvedAt`, `missionId`, `scope`, `statement`, `simulated:false` — sem ela **nunca** há GO |
+
+Vereditos: `ENGINEER_SUPERVISED_READY_GO` (exit 0) **somente** com todos os checks PASS e aprovação
+humana real; `PENDING_HUMAN_APPROVAL` (exit 2) com checks PASS e sem assinatura; `NOT_READY`
+(exit 1) se qualquer check bloqueante falhar; `INFRA_ERROR` (exit 3) quando não foi possível medir.
+
+**Medição de 2026-10-21 (veredito real do gate):** `NOT_READY` (exit 1), com dois bloqueadores:
+
+1. `QUEUE_NO_BLOCKED` — 6 itens `blocked_external` (`H15`, `H19`, `H20`,
+   `MISSAO-B9-CI-GITHUB-ACTIONS`, `P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO`,
+   `P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3`);
+2. `HUMAN_APPROVAL_PRESENT` — não existe assinatura humana em
+   `AI_MEMORY/evidence/engineer-supervised-approval.json`.
+
+Isto é mais restritivo do que a prosa anterior (`CANDIDATE_GO_SUPERVISIONADO`) e é a medição
+correta: **com 6 impedimentos externos abertos não se declara GO**, e sem assinatura humana também
+não. O gate está acima da narrativa — que era o objetivo do §13.
+
+### 12.2 O gate encontrou um falso verde que a fila escondia
+
+Na primeira execução, `EVIDENCE_COMMITS_EXIST` reprovou **3 itens `done`** que citavam o commit
+`5f6d0c1c9` — hash que **não existe em nenhum objeto do repositório** (reescrito num rebase
+anterior). O validador da fila só exigia "campo não vazio", então a fila exibia provas que ninguém
+podia abrir.
+
+As correções eram reais; os **ponteiros** estavam órfãos. Reancorados aos commits que de fato
+introduziram as provas (`5d451e1c9` nos dois itens de CRM, `ad92da172` no CDR), com
+`reanchoredFrom`/`reanchoredReason` registrados. Prevenção na origem: `validate-hardening-queue.js`
+agora reprova com `COMMIT_INEXISTENTE` qualquer hash inexistente ou malformado, e com
+`GIT_INDISPONIVEL` quando não consegue olhar (nunca "passa por não ter olhado").
+Prova: `hardeningQueueCommitExists.test.js` (5 casos, incluindo o hash do incidente) e
+`engineerSupervisedReadinessGate.test.js` (7 casos de semântica de veredito).
+Regressão `tests/unit/governance`: **177 suítes / 1854 testes, exit 0**.
 
 ## 13. Próxima ação recomendada
 

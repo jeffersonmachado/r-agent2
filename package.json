@@ -153,6 +153,7 @@
     "validate:required-tests": "node scripts/governance/validate-engineering-router-v2-required-tests.js",
     "validate:no-date-bombs": "node scripts/governance/validate-no-date-bombs.js",
     "validate:hardening-queue": "node scripts/governance/validate-hardening-queue.js",
+    "validate:engineer-supervised-readiness": "node scripts/governance/validate-engineer-supervised-readiness.js",
     "validate:bug-closure-status": "node scripts/governance/validate-bug-closure-status.js",
     "eligibility": "node scripts/governance/evaluate-execution-eligibility.js",
     "queue:migrate": "node scripts/governance/migrate-hardening-queue.js",
