@@ -360,6 +360,15 @@ jobs:
           docker logs ci-rag | tail -60
           exit 1
 
+      # IMAGEM DO SANDBOX (medido 2026-10-21, run 39621978537): as suítes de promoção e de
+      # execução do Engenheiro rodam o comando de teste DENTRO do sandbox real
+      # (`r-agent2-engineering-router-sandbox:latest`). O job do gate constrói essa imagem; ESTE
+      # job não construía — e o smoke pós-promoção passava a devolver
+      # `POST_PROMOTION_VERIFY_FAILED` (16 suítes / 32 testes) sem que houvesse defeito algum no
+      # código. Mesma correção do gate: construir a imagem em vez de pular a prova.
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
+
       - name: Integração do Engenheiro (Postgres real)
         run: npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit
         env:
