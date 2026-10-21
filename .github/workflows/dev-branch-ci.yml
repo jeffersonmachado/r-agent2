@@ -135,6 +135,44 @@ jobs:
       - name: Bootstrap canônico do ambiente de CI
         run: npm run ci:bootstrap
 
+      # SERVIÇO RAG — DEPENDÊNCIA REAL DO L0b (medido 2026-10-21, run 39614201981).
+      #
+      # O passo `L0b-integracao-engenheiro` reprovou com 16 suítes / 33 testes em vermelho e a
+      # causa única no log foi `ECONNREFUSED 127.0.0.1:8001` (serviço Python `rag-service/`,
+      # uvicorn na porta 8001). Esse serviço existe na máquina de desenvolvimento e NÃO existia
+      # no runner: ausência de infraestrutura, não defeito de código — as mesmas suítes passam
+      # localmente com o serviço de pé.
+      #
+      # A correção não é pular as suítes: é SUBIR o serviço real do repositório. A imagem é a
+      # oficial (`rag-service/Dockerfile`, modelo de embeddings pré-baixado no build, modo
+      # offline em runtime), o token interno é EFÊMERO por execução (nunca versionado) e o
+      # banco é o mesmo serviço efêmero do job.
+      - name: Construir a imagem do serviço RAG (dependência real do L0b)
+        run: docker build -t r-agent2-rag-service:ci rag-service
+
+      - name: Subir o serviço RAG em 127.0.0.1:8001
+        run: |
+          RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          docker run -d --name ci-rag --network host \
+            -e HOST=0.0.0.0 \
+            -e PORT=8001 \
+            -e RAG_ENVIRONMENT=development \
+            -e RAG_INTERNAL_TOKEN="$RAG_TOKEN" \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e HF_HUB_OFFLINE=1 \
+            -e TRANSFORMERS_OFFLINE=1 \
+            r-agent2-rag-service:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+              echo "RAG pronto em 127.0.0.1:8001 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "RAG não respondeu em /health após 300s"
+          docker logs ci-rag | tail -60
+          exit 1
+
       # IMAGEM DO EXECUTION SANDBOX (medido 2026-10-21, run 39593921911):
       # `engineeringRouterExecutionSandboxSecurity` reprovou com `docker run` exit 125 porque a
       # imagem `r-agent2-engineering-router-sandbox:latest` não existe no runner. A suíte RECUSA
@@ -251,6 +289,44 @@ jobs:
 
       - name: Migrations (schema completo no banco efêmero)
         run: npm run db:migrate
+
+      # SERVIÇO RAG — DEPENDÊNCIA REAL DO L0b (medido 2026-10-21, run 39614201981).
+      #
+      # O passo `L0b-integracao-engenheiro` reprovou com 16 suítes / 33 testes em vermelho e a
+      # causa única no log foi `ECONNREFUSED 127.0.0.1:8001` (serviço Python `rag-service/`,
+      # uvicorn na porta 8001). Esse serviço existe na máquina de desenvolvimento e NÃO existia
+      # no runner: ausência de infraestrutura, não defeito de código — as mesmas suítes passam
+      # localmente com o serviço de pé.
+      #
+      # A correção não é pular as suítes: é SUBIR o serviço real do repositório. A imagem é a
+      # oficial (`rag-service/Dockerfile`, modelo de embeddings pré-baixado no build, modo
+      # offline em runtime), o token interno é EFÊMERO por execução (nunca versionado) e o
+      # banco é o mesmo serviço efêmero do job.
+      - name: Construir a imagem do serviço RAG (dependência real do L0b)
+        run: docker build -t r-agent2-rag-service:ci rag-service
+
+      - name: Subir o serviço RAG em 127.0.0.1:8001
+        run: |
+          RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          docker run -d --name ci-rag --network host \
+            -e HOST=0.0.0.0 \
+            -e PORT=8001 \
+            -e RAG_ENVIRONMENT=development \
+            -e RAG_INTERNAL_TOKEN="$RAG_TOKEN" \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e HF_HUB_OFFLINE=1 \
+            -e TRANSFORMERS_OFFLINE=1 \
+            r-agent2-rag-service:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+              echo "RAG pronto em 127.0.0.1:8001 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "RAG não respondeu em /health após 300s"
+          docker logs ci-rag | tail -60
+          exit 1
 
       - name: Integração do Engenheiro (Postgres real)
         run: npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit
