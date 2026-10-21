@@ -387,6 +387,37 @@ Ressalva declarada: estes três gates são **estáticos** (menu, rotas, classifi
 proibido). A validação em **browser real** de que uma superfície DEVELOPMENT não aparece para
 classificação PRODUCTION não foi reexecutada nesta janela — está registrada em §5.
 
+### 4.12 Reprodução independente em janela congelada (commit `486a498cb`)
+
+Medição feita por sessão distinta da que produziu §4.4–§4.5, com o VS Code reaberto (uma única
+sessão) e **nenhuma edição** durante a execução. O ponto que §4.4 deixou em aberto — "o
+`RUNTIME_PASS` agora existe, mas a reprodução depende de uma única sessão" — é o que esta seção
+fecha: mesma árvore do início ao fim, atestada por snapshot.
+
+```
+SNAP_INI     23:15:46  head=486a498cb  dirty=0
+coletor      EXIT=0    status=RUNTIME_PASS items=25 falhas=0  fingerprint=a27300759b468fea…
+gate         EXIT=0    PASS (STRUCTURAL_PASS/RUNTIME_PASS) checks=209 falhas=0
+L0           EXIT=0    1087 suítes / 9218 testes (2 skipped)   [13:34 de execução]
+L1 (1ª)      EXIT=1    225/226 — 1 falha: engineeringBugLoopNaturalPathE2E (colisão de limpeza)
+L1 (isolada) EXIT=0    PASS — 1/1, 84,8 s  (a mesma suíte que falhou no lote)
+L1 (2ª)      EXIT=0    41 suítes / 226 testes
+SNAP_FIM3    23:58:01  head=486a498cb  dirty=0
+```
+
+Prova de janela: `head` idêntico e `dirty=0` em **todos** os snapshots
+(`AI_MEMORY/evidence/l1-2026-10-20/certificacao-snapshots.txt`).
+
+Sobre a falha da 1ª tentativa de L1: foi `purgeTestFindings` → `Finding.destroy` (limpeza de banco
+em paralelo com outras suítes), não asserção de comportamento; a mesma suíte passa **isolada** em
+84,8 s e o lote reexecutado fecha 41/41. Registrado porque esconder a tentativa vermelha seria
+justamente o tipo de relatório que esta missão proíbe.
+
+Artefatos versionados: `certificacao-snapshots.txt`, `certificacao-coletor.log`,
+`certificacao-gate-runtime.log`, `certificacao-resumos.txt` (extratos de L0/L1; os logs completos
+têm 1,3 MB e 0,5 MB e não são versionados — os comandos de reprodução estão em
+`CERTIFICATION-WINDOW.md`).
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
