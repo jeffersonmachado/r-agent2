@@ -500,19 +500,51 @@ async function ensureAuthenticated(page, baseUrl, role = 'agent') {
     localStorage.removeItem('auth_effective_tenant_id');
   }).catch(() => {});
 
-  await loginWithTenantSelection(page, {
-    targetUrl: `${baseUrl}/support`,
-    username,
-    password,
-    tenantId: authTenantId,
-    tenantName: authTenantName,
-  });
+  // PRONTIDÃO DA SPA ANTES DE AUTOMATIZAR (medido 2026-10-21, CI e local): quando a
+  // SPA ainda está no primeiro carregamento (container recém-subido, runner frio), o
+  // helper preenche/clica antes de o formulário existir e o login nunca acontece —
+  // resultando em `page.waitForFunction` estourando 30 s sem NENHUM erro de produto.
+  // Navegar e esperar o campo de senha é pré-condição de automação, não afrouxamento:
+  // todas as asserções seguintes (token, seleção de tenant, 9 jornadas) continuam
+  // obrigatórias e inalteradas.
+  await page.goto(`${baseUrl}/support`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+  await page.waitForSelector('input[type="password"]', { timeout: 60000 }).catch(() => {});
 
-  await page.waitForFunction(
-    () => Boolean(localStorage.getItem('auth_token')),
-    null,
-    { timeout: 30000 }
-  );
+  const loginAttempts = 2;
+  for (let tentativa = 1; tentativa <= loginAttempts; tentativa += 1) {
+    await loginWithTenantSelection(page, {
+      targetUrl: `${baseUrl}/support`,
+      username,
+      password,
+      tenantId: authTenantId,
+      tenantName: authTenantName,
+    });
+
+    const autenticou = await page.waitForFunction(
+      () => Boolean(localStorage.getItem('auth_token')),
+      null,
+      { timeout: 30000 }
+    ).then(() => true).catch(() => false);
+    if (autenticou) return;
+
+    if (tentativa < loginAttempts) {
+      await page.evaluate(() => {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_agent');
+        localStorage.removeItem('auth_effective_tenant_id');
+      }).catch(() => {});
+      await page.goto(`${baseUrl}/support`, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      await page.waitForSelector('input[type="password"]', { timeout: 30000 }).catch(() => {});
+    }
+  }
+
+  // Falha explícita: sem token não há como provar jornada alguma.
+  assertOperationalCondition(false, {
+    reason: 'support_login_token_missing',
+    journeyId: 'support_ticket_flow',
+    username,
+    tentativas: loginAttempts,
+  });
 }
 
 async function ensureTenantSelected(page, tenantName = process.env.QA_WAVES_TEST_TENANT || 'System') {
