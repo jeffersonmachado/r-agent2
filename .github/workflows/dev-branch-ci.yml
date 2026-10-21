@@ -509,14 +509,24 @@ jobs:
       # releaseTagPolicyBlock, integridade de worktree, lineage de produtor). O runner do GitHub
       # não traz `user.name`/`user.email`, então o `git commit` do cenário morre com exit 128 — o
       # teste reprova por AMBIENTE, não por código (reproduzido localmente com HOME vazio: 128 em
-      # vez de 3/0; com identidade: 4/4 verdes). Este job não roda `ci:bootstrap`, por isso a
-      # identidade é criada aqui também (o bootstrap faz o mesmo quando presente).
+      # vez de 3/0; com identidade: 4/4 verdes). Fica ANTES do bootstrap para que o próprio
+      # bootstrap e qualquer passo que commite já encontrem a identidade pronta.
       - name: Identidade git (commits reais nos cenários de teste)
         run: |
           git config --global user.email "ci-runner@r-agent2.invalid"
           git config --global user.name "RAP CI Runner"
           git config --get user.email
           git config --get user.name
+
+      # AMBIENTE CANÔNICO (medido 2026-10-21, run 39673283430): este job era o ÚNICO lugar onde
+      # as suítes de integração rodavam SEM o ambiente canônico — sem `.env`, o runner subia com
+      # `workspaceRoot=(nao definido)` e `engineeringBugLoopNaturalPathE2E` consumiu o próprio
+      # timeout de 900 s (900102 ms) enquanto a MESMA suíte fecha em ~72 s no gate e localmente.
+      # Homogeneizar é a correção honesta: os mesmos testes, do mesmo jeito, no mesmo ambiente —
+      # `ci:bootstrap` é o produtor canônico (cria `.env` com ENCRYPTION_KEY/tokens válidos,
+      # roda migrações, seed sintético, índices e artefatos exigidos pelos gates).
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
 
       - name: Migrations (schema completo no banco efêmero)
         run: npm run db:migrate
