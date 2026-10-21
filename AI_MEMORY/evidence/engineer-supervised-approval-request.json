@@ -5,8 +5,7 @@
   "requestedAt": "2026-10-21T00:00:00Z",
   "requestedBy": "agent:github-copilot",
   "branch": "dev/engineering-hardening",
-  "sourceCommit": "4d0546bb7",
-  "sourceCommitNote": "Commit medido no ciclo corrente (HEAD em dev/engineering-hardening). O gate recalcula `git rev-parse HEAD` e RECUSA aprovacao cujo sourceCommit nao coincida com o commit avaliado — a aprovacao e vinculada ao commit, nao a branch. Qualquer commit novo invalida esta solicitacao e exige uma nova (criterio de cancelamento abaixo).",
+  "sourceCommitNote": "INFORMATIVO. O vinculo obrigatorio NAO e este campo: a aprovacao humana (engineer-supervised-approval.json) carrega o proprio `sourceCommit`, e o gate recalcula `git rev-parse HEAD` no momento da verificacao — aprovacao com commit divergente e RECUSADA (governance/risk-acceptance/approval.js). Este pedido nao fixa um commit porque ele muda a cada documentacao publicada; o que vale e o HEAD no ato da aprovacao. 704150648 e o commit onde a medicao de CI deste ciclo foi produzida.",
   "scope": {
     "included": [
       "delegacao supervisionada do RAP Engineer em branch de desenvolvimento (dev/engineering-hardening)",
@@ -118,5 +117,6 @@
     "auditoria independente aponta achado bloqueante",
     "qualquer gate canonico passa a NO_GO por regressao",
     "qualquer tentativa de contornar enforcement (hook continue-until-done, validadores) for observada"
-  ]
+  ],
+  "sourceCommitInformational": "704150648"
 }
