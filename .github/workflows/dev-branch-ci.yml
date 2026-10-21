@@ -93,6 +93,13 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
       REDIS_URL: redis://localhost:6379
+      # ENGINEERING RUNNER: o globalSetup do Jest sobe o runner REAL em 127.0.0.1:8097 antes da
+      # bateria. O `.env` gerado pelo bootstrap traz ENGINEERING_RUNNER_URL=...:8090 (endereço de
+      # dev) e o worker que recarrega `.env` volta a falar com a porta errada — sintoma medido em
+      # 2026-10-21 (run 39660840381): `SANDBOX_UNAVAILABLE ... fetch failed` em
+      # engineeringRouterExecutionSandboxSecurity, com o runner imprimindo "pronto" depois no log.
+      # Env EXPLÍCITA de job vence o `.env` (política do projeto) e mantém worker e runner no mesmo porto.
+      ENGINEERING_RUNNER_URL: http://127.0.0.1:8097
 
     steps:
       # HISTÓRICO COMPLETO — dependência real, medida em 2026-10-21 (run 39620183526).
