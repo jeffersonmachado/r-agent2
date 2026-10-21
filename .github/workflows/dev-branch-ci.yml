@@ -561,6 +561,15 @@ jobs:
         run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
 
       - name: Integração do Engenheiro (Postgres real)
-        run: npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit
+        # SERIALIZAÇÃO OBRIGATÓRIA (medido 2026-10-21, run 39660840381): o padrão
+        # `tests/integration/engineering` casa TODAS as suítes `engineering*` de
+        # `tests/integration/` — inclusive as do laço de bugs, que
+        # `config/canonical-release-suites.json` mantém no MESMO grupo exclusivo (mesmo runner de
+        # laço/LEASE e mesmo banco de missões com a varredura de boot recovery). Com
+        # `--maxWorkers=2` duas delas rodaram juntas: `engineeringBugAutonomousLoopE2E` falhou em
+        # 18,31 s (`report.fix.fixed` false) e `engineeringBugLoopNaturalPathE2E` estourou o
+        # timeout de 900 s, ambas PASSANDO isoladas. `--runInBand` satisfaz a exclusividade por
+        # construção. Medido em série: 40 suítes / 219 testes verdes em 24m22s.
+        run: npx jest tests/integration/engineering --bail=0 --runInBand --forceExit
         env:
           CI: true
