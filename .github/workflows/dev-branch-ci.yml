@@ -331,8 +331,15 @@ jobs:
           echo "RAG_INTERNAL_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
           echo "ENGINEERING_RUNNER_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
 
+      # BASE DA API PRIMEIRO (medido 2026-10-21, run 39654736835): `api/Dockerfile` faz
+      # `FROM r-agent2-api-base:test` — uma imagem LOCAL, construída por `api/Dockerfile.base`
+      # (é a ordem oficial de `scripts/docker-deploy.sh`). Sem ela o build tenta puxar
+      # `docker.io/library/r-agent2-api-base:test` e falha com "pull access denied".
+      - name: Construir imagem base da API
+        run: docker build -f api/Dockerfile.base -t r-agent2-api-base:test .
+
       - name: Construir imagem da API
-        run: docker build -f api/Dockerfile -t r-agent2-api:ci .
+        run: docker build -f api/Dockerfile --build-arg API_BASE_IMAGE=r-agent2-api-base:test -t r-agent2-api:ci .
 
       - name: Construir imagem do frontend (servida na raiz, API em /api)
         run: docker build -f frontend/Dockerfile --build-arg VITE_BASE_PATH=/ --build-arg VITE_API_BASE_URL=/api -t r-agent2-frontend:ci .
