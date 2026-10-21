@@ -572,3 +572,104 @@ Regressão `tests/unit/governance`: **177 suítes / 1854 testes, exit 0**.
    branch de desenvolvimento.
 4. Manter **uma sessão por worktree**: foi a concorrência que produziu tanto a mutilação quanto as
    reprovações intermitentes do coletor — agora detectada pela trava e pela guarda de integridade.
+
+## 14. Relatório final consolidado (missão P0/P1, baseline `40042f1a3`)
+
+> Nota de honestidade sobre o template: a lista literal de campos pedida no §16 do enunciado não
+> está disponível no workspace (o prompt chegou como anexo e não foi persistido). Este relatório
+> cobre, campo a campo, tudo o que as seções §1–§13 da missão exigiram e mais o que foi medido —
+> sem inventar campo para "fechar" um template.
+
+### 14.1 Veredito
+
+**`NOT_READY`** — medido por `npm run validate:engineer-supervised-readiness` (exit 1), não por
+opinião. Dois bloqueadores:
+
+| Bloqueador | Detalhe |
+|---|---|
+| `QUEUE_NO_BLOCKED` | 6 itens `blocked_external`: `H15-DIST-RECIBO-STALE`, `H19-DIST-CAUSA-UNICA`, `H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE`, `MISSAO-B9-CI-GITHUB-ACTIONS`, `P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO`, `P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3` |
+| `HUMAN_APPROVAL_PRESENT` | não existe `AI_MEMORY/evidence/engineer-supervised-approval.json` |
+
+Nenhum dos dois é resolvível por mim: o primeiro depende de decisões/recursos do dono (budget de
+CI, certificação, autoridade de scorecard) e o segundo é, por definição, assinatura de outra pessoa.
+
+### 14.2 Defeitos P0/P1 corrigidos nesta janela
+
+| ID | Severidade | Causa raiz medida | Correção | Prova | Commit |
+|---|---|---|---|---|---|
+| `P0-FILAS-ROLLBACK-DESTRUTIVO` | P0 | rollback chamava `deleteQueue(name, true)` e fechava tickets ativos, inclusive de fila **preexistente** | `created:true|false` + rollback escopado sem `force` | `queueCreatePersistBeforeResponse` (helpers reais) + 157/157 filas | `7803aaa12` |
+| `P0-FILAS-ISOLAMENTO-TENANT` | P0 | exclusão forçada do tenant A fechava tickets do tenant B (mesmo nome de fila) | `tenantId` em list/create/delete/info | `queueTenantIsolation` (5) | `7803aaa12` |
+| `P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA` | P1 | `approvedReview && !contradicted` aceitava APPROVE sem declarar independência | prova positiva (declaração + identidade + provider distinto) | gates 10/10; integração 16/16 | `b5d92a87e` |
+| `P1-CONCORRENCIA-EXIGE-POSTGRES` | P1 | `if (skipIfNoDatabase()) return;` dava PASS sem executar | `INFRA_ERROR` explícito + sonda `SELECT 1` | passa com banco; falha com URL inválida | `9e5005556` |
+| `P1-UNIT-GATE-ACEITA-UNKNOWN` | P1 | gate `unit` usava "qualquer execução verde", inclusive UNKNOWN | exige run classificado UNIT com PASS/exit 0 | 443 unit; enforcement 7/7 | `f1a3ca037` |
+| `P1-GUARDA-SKIP-ASSERTIONS-COMMITS` | P1 | guarda só contava declarações; pre-push comparava com o **worktree**, não com o commit | `TEST_SUPPRESSION_ADDED`, `ASSERTION_REMOVAL`, `--head <sha>` por ref | 14/14; mutação commitada bloqueada (exit 1) | `d22e26539`, `423f2d815` |
+| `P1-LINEAGE-RUN-MAIS-RECENTE` | P1 | produtor de evidência escolhia "o run mais recente" e omitia `sourceCommit` | identidade explícita (`GOVERNANCE_RUN_ID`/`.current-run.json`) + mismatch = erro | 6 casos + `tests/unit/governance` | `ab375c1b4` |
+| `P1-CI-SEM-INTEGRACAO` | P1 | gate/CI do branch não rodava **nenhuma** suíte de integração | passo L0b + job `dev-branch-integration` (pgvector+redis), fail-closed | primeira execução reprovou 2 suítes (achado abaixo) | `a67a99835` |
+| `P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO` | P1 | `mergeMissionJson` era read-modify-write: escrita concorrente apagava a chave da outra | CAS por `updatedAt` + merge reaplicado + `MISSION_MERGE_CONFLICT` | 5 casos (código antigo: 1 falha) | `697381bbb` |
+| `P1-PATCH-SYMLINK-ESCAPE` | P1 | patch com `new file mode 120000` criava symlink para `/etc/shadow`/`../../.env`, e a fronteira de path (compara NOME) não via | `PATCH_SYMLINK_FORBIDDEN` fail-closed | 7/7 (4 falhas no código antigo) | `bd376df01` |
+| `P1-EVIDENCIA-COMMIT-ORFAO` | P1 | fila aceitava prova com commit inexistente (3 itens citavam `5f6d0c1c9`, hash reescrito) | `COMMIT_INEXISTENTE` + `GIT_INDISPONIVEL` no validador da fila; itens reancorados | 5 casos (usa o hash do incidente) | `eb6ca426c` |
+| `P1-GATE-PRONTIDAO-EXECUTAVEL` | P1 | veredito de prontidão era prosa | gate executável com semântica de veredito provada | 7 casos | `eb6ca426c` |
+| `P1-BRANCHES-MISSAO-RESIDUO` | P1 | 3.017 refs `engineering/missions/*` sem poda em produção (~22 por execução) | poda classificada por missão, dry-run por padrão; **aplicada com aprovação** | 3.007 removidas, 10 preservadas (missões de usuário) | `c4770aa55`, `23f6eb8c7` |
+
+Nenhum teste foi apagado ou enfraquecido para obter verde. Contratos alterados foram migrados
+explicitamente e estão nomeados nos commits (ex.: `queueCreatePersistBeforeResponse`,
+`bugClosureQueueModel` passou a usar commit real porque o contrato de prova mudou).
+
+### 14.3 Medições (todas exit 0, árvore limpa)
+
+| Bateria | Resultado |
+|---|---|
+| `npx jest tests/unit` | 1080 suítes / 9174 testes (2 skipped declarados) |
+| `npx jest tests/unit/governance` | 177 suítes / 1854 testes |
+| `npx jest tests/unit/engineeringRouter` + suíte nova | 39 suítes / 400 testes |
+| `tests/unit/engineeringMission` + integração patchRunner/promoção | 38 suítes / 457 testes |
+| `npx jest tests/integration/engineering --maxWorkers=2` | **40 suítes / 219 testes, 577 s** |
+| `validate:visibility-policy` | PASS, 0 violações |
+| `validate:experience-segregation` | PASS (205 superfícies, 22 support), 0 violações |
+| `validate:experience-api-segregation` | PASS, leaks 0/0/0 |
+| `validate:hardening-queue` | PASS — 128 itens, 125 commits de prova resolvidos no git |
+| `validate:engineer-supervised-readiness` | **NOT_READY** (exit 1) — ver 14.1 |
+
+### 14.4 Riscos residuais (declarados, não mascarados)
+
+1. **Contenção de ambiente**: sob carga, suítes que executam sub-Jest (smoke pós-promoção) podem
+   estourar deadline → `TIMEOUT` → promoção reprovada. Medido 1× na bateria e 0× nas execuções
+   seguintes; agora diagnosticável pelo `code`. Mitigação real: uma sessão por worktree.
+2. **Resíduo de refs**: poda aplicada, mas os testes continuam criando ~22 branches por execução e
+   não há poda automática no teardown (decisão de arquitetura pendente: marcar branches de teste).
+3. **Gate agregado** (`validate:governance-enforcement`) segue `BLOCKED_EXTERNAL` no branch de
+   desenvolvimento — não roda por falta de identidade de run governado.
+4. **Validação em browser real** da segregação não foi reexecutada nesta janela (os 3 gates são
+   estáticos).
+
+### 14.5 Reprodução (comandos exatos)
+
+```bash
+git fetch origin && git checkout dev/engineering-hardening
+npx jest tests/unit                       # 1080 suítes / 9174 testes
+npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit
+npm run validate:visibility-policy
+npm run validate:experience-segregation
+npm run validate:experience-api-segregation
+npm run validate:hardening-queue
+npm run validate:engineer-supervised-readiness   # NOT_READY até haver assinatura humana
+```
+
+### 14.6 Como fechar o último bloqueador que depende de humano
+
+Criar `AI_MEMORY/evidence/engineer-supervised-approval.json`:
+
+```json
+{
+  "approver": "<nome ou identificador do humano>",
+  "approvedAt": "<ISO-8601>",
+  "missionId": "<id da missão de ensaio>",
+  "scope": "ENGINEER_SUPERVISED_READY_GO",
+  "statement": "<o que está sendo aprovado, em texto próprio>",
+  "simulated": false
+}
+```
+
+Com os 6 `blocked_external` resolvidos (ou aceitos explicitamente como risco pelo dono) **e** a
+assinatura acima, o gate passa a `ENGINEER_SUPERVISED_READY_GO`. Nada mais é necessário — e nada
+menos é aceito.
