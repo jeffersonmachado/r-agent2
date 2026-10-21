@@ -153,6 +153,12 @@ jobs:
       - name: Subir o serviço RAG em 127.0.0.1:8001
         run: |
           RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          # O MESMO token tem de chegar ao processo de teste (medido no run 39619048989: o
+          # serviço subiu, o app respondeu `401 unauthorized — Token interno ausente ou
+          # inválido` e 16 suítes continuaram vermelhas com VECTOR_RAG_UNAVAILABLE). Exportar
+          # via GITHUB_ENV propaga o token efêmero para os passos seguintes SEM gravar segredo
+          # em arquivo do repositório.
+          echo "RAG_INTERNAL_TOKEN=$RAG_TOKEN" >> "$GITHUB_ENV"
           docker run -d --name ci-rag --network host \
             -e HOST=0.0.0.0 \
             -e PORT=8001 \
@@ -308,6 +314,12 @@ jobs:
       - name: Subir o serviço RAG em 127.0.0.1:8001
         run: |
           RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          # O MESMO token tem de chegar ao processo de teste (medido no run 39619048989: o
+          # serviço subiu, o app respondeu `401 unauthorized — Token interno ausente ou
+          # inválido` e 16 suítes continuaram vermelhas com VECTOR_RAG_UNAVAILABLE). Exportar
+          # via GITHUB_ENV propaga o token efêmero para os passos seguintes SEM gravar segredo
+          # em arquivo do repositório.
+          echo "RAG_INTERNAL_TOKEN=$RAG_TOKEN" >> "$GITHUB_ENV"
           docker run -d --name ci-rag --network host \
             -e HOST=0.0.0.0 \
             -e PORT=8001 \
