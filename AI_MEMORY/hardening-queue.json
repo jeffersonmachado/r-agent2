@@ -2098,17 +2098,18 @@
     {
       "id": "P1-BRANCHES-MISSAO-RESIDUO",
       "title": "Refs engineering/missions/* acumulavam sem poda (3017 residuais degradam medicao)",
-      "status": "ready_for_approval",
+      "status": "done",
       "commit": "c4770aa55",
-      "evidence": "node --env-file-if-exists=.env scripts/prune-engineering-mission-branches.js -> branches=3017, candidatas=3007 (2738 orfas + 269 fixtures de teste), mantidas=10 (missoes de usuario vivas); tests/unit/governance/pruneEngineeringMissionBranches.test.js 6/6. Bateria tests/integration/engineering --maxWorkers=2: 40/40 suites, 219/219 testes, exit 0 (577 s), com 22 branches novas por execucao",
+      "evidence": "DRY-RUN: branches=3017, candidatas=3007 (2738 orfas + 269 fixtures de teste), mantidas=10 (missoes de usuario vivas) | APLICACAO APROVADA (2026-10-21): node --env-file-if-exists=.env scripts/prune-engineering-mission-branches.js --apply --json reports/branch-prune-report.json -> status=PASS, applied=true, removidas=3007, falhas=0 | ANTES/DEPOIS medido: 3017 -> 10 refs engineering/missions/* (as 10 de missao de usuario preservadas) | Relatorio: reports/branch-prune-report.json | tests/unit/governance/pruneEngineeringMissionBranches.test.js 6/6 (criterio puro, sem banco) | Bateria tests/integration/engineering --maxWorkers=2, arvore limpa: 40/40 suites, 219/219 testes, exit 0, 577 s",
       "resolution": "Nenhuma poda existia em codigo de producao. Entregue scripts/prune-engineering-mission-branches.js: classifica por missao no banco (orfa / fixture de teste / manter), dry-run por padrao, --apply explicito, sem banco nada e candidato (INFRA_ERROR exit 2). O --apply NAO foi executado: apagar 3007 refs e irreversivel e as branches contem o fix integrado das missoes — exige decisao do dono.",
       "prevention": "Ferramenta de poda com criterio provado por teste (missao de usuario nunca e candidata; branch corrente nunca removida).",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "FIXED_PENDING_APPROVAL",
-      "legacyStatus": "ready_for_approval",
+      "state": "APPLIED_AND_VERIFIED",
+      "legacyStatus": "done",
       "severityBasis": "degradacao de reprodutibilidade das medicoes e das operacoes git",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "approved_by": "dono do repositorio (decisao explicita na sessao de 2026-10-21): \"Aplicar tudo (3007)\""
     }
   ],
   "schemaVersion": 2,
