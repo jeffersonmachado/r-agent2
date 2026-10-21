@@ -160,8 +160,18 @@ describe('coletor de runtime evidence — guard de ambiente', () => {
 describe('TTL do smoke contínuo — autoridade única de avaliação', () => {
   const preflight = require('../../../scripts/governance/qa-waves-scheduled-ttl-preflight');
 
-  test('avalia a evidência REAL e nunca devolve UNAVAILABLE (plumbing saudável)', () => {
+  test('avalia a evidência REAL e nunca devolve UNAVAILABLE quando ela existe', () => {
     const out = preflight.evaluate(ROOT);
+    // ESTADO-DEPENDENTE E EXPLÍCITO (medido no CI, run 39592369219): a evidência do smoke
+    // agendado (`qa/smoke/qa-waves-scheduled-operational-smoke.json`) só existe onde o smoke
+    // rodou; num clone limpo ela não existe. Nesse caso o comportamento CORRETO é fail-closed
+    // (UNAVAILABLE) — asserir isso preserva a intenção do teste ("nunca ok por omissão") em vez
+    // de reprovar por ausência de artefato ou de pular a verificação.
+    if (!fs.existsSync(path.join(ROOT, preflight.EVIDENCE_REL))) {
+      expect(out.status).toBe('UNAVAILABLE');
+      expect(String(out.detail)).toContain(preflight.EVIDENCE_REL);
+      return;
+    }
     expect(['OK', 'STALE']).toContain(out.status);
     expect(typeof out.detail).toBe('string');
   });
