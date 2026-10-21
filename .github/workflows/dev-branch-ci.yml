@@ -62,6 +62,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # LINHA PRINCIPAL RASTREADA (medido 2026-10-21, run 39585223390): num checkout de CI não
+      # existe branch LOCAL `main`, e 21 de 40 suítes de integração reprovavam com "não foi
+      # possível resolver o commit de origem 'main'". A resolução da fonte da missão passou a
+      # aceitar `origin/<ref>` (fail-closed preservado: o commit precisa existir) — este passo
+      # garante que a ref rastreada exista de fato no clone raso.
+      - name: Materializar a linha principal (origin/main)
+        run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -171,6 +179,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Materializar a linha principal (origin/main)
+        run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

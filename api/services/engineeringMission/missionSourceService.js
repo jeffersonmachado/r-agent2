@@ -89,11 +89,31 @@ function models() {
   return require('../../db/models');
 }
 
+/**
+ * Resolve o commit de um ref aceitando também a forma RASTREADA (`origin/<ref>`).
+ *
+ * MEDIDO no CI (run 39585223390, job "Integração real do Engenheiro"): 21 de 40 suítes
+ * reprovaram com `não foi possível resolver o commit de origem "main"` (44 ocorrências).
+ * A causa não é o código da missão: é a suposição de que a linha principal existe como
+ * branch LOCAL. Num checkout de CI (e em qualquer clone raso/worktree destacado) a linha
+ * principal pode existir apenas como `refs/remotes/origin/main` — o repositório tem o
+ * commit, mas `rev-parse main` falha.
+ *
+ * Fail-closed preservado: continua sendo obrigatório que o commit exista em algum lugar.
+ * Só passa a ser aceitável que ele exista como ref rastreado do remoto canônico.
+ */
+async function resolveRefCommit(ref, { cwd } = {}) {
+  const candidatos = [`${ref}^{commit}`, `refs/remotes/origin/${ref}^{commit}`];
+  for (const candidato of candidatos) {
+    const result = await runGit(['rev-parse', '--verify', candidato], { cwd });
+    if (result.ok) return result.stdout;
+  }
+  return null;
+}
+
 /** Commit atual da `main` — a medida que prova que a missão não tocou a linha principal. */
-async function readMainCommit(ref = 'main') {
-  const result = await runGit(['rev-parse', '--verify', `${ref}^{commit}`]);
-  if (!result.ok) return null;
-  return result.stdout;
+async function readMainCommit(ref = 'main', opcoes = {}) {
+  return resolveRefCommit(ref, opcoes);
 }
 
 async function readCommitParent(commit) {
