@@ -58,6 +58,39 @@ jobs:
     name: "L0 (Jest oficial) + L1 (gates de governanca)"
     runs-on: ubuntu-latest
 
+    # INFRA REAL NO L0 (medido 2026-10-21, run 39587822262): sem Postgres no job, a suíte oficial
+    # reprovou com 'tests/unit/benchmarks/benchmarkChangeProposal.test.js' (9 testes) e antes com
+    # o timeout do QWEN_LIVE — suítes que exercitam PERSISTÊNCIA de verdade. A correção não é
+    # pular: é dar ao L0 a mesma infraestrutura que a máquina de desenvolvimento tem, para que o
+    # teste EXECUTE. Serviços efêmeros, iguais aos do job de integração.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -94,6 +127,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Schema completo no banco efêmero: as suítes L0 que exercitam persistência precisam das
+      # tabelas reais (sem elas o teste falha por schema ausente, não por defeito).
+      - name: Migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
 
       # Toda a bateria L0+L1 roda pelo MESMO runner versionado que qualquer
       # pessoa executa localmente. Sem passos paralelos: uma implementacao so.
