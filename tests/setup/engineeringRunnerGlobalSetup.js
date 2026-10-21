@@ -223,6 +223,14 @@ module.exports = async function engineeringRunnerGlobalSetup() {
   // chegava ao chamador sem NENHUMA pista da causa — foi o que tornou o diagnóstico
   // do sandbox um exercício de adivinhação. O destino é ARQUIVO, nunca stdout: o
   // stdout do globalSetup é parseado pelo coletor (ver aviso no topo deste arquivo).
+  // STDOUT TAMBÉM, NÃO SÓ STDERR (medido 2026-10-21, run 39660840381): o banner de
+  // subida do runner (`[engineering-runner] serviço pronto na porta N`) é escrito em
+  // `console.log` — stdout — e o `stdio` acima descartava exatamente esse canal. O
+  // artefato `logs/engineering-runner-jest.log` voltou VAZIO (0 linhas) enquanto a suíte
+  // `engineeringRouterExecutionSandboxSecurity` falhava 9/9 com `fetch failed`/exitCode
+  // null: sem stdout, um runner que subiu, morreu e um que nunca escreveu nada produzem o
+  // MESMO arquivo vazio — a evidência some justamente quando é necessária. O destino
+  // continua sendo ARQUIVO (nunca o stdout do Jest, que é parseado pelo coletor).
   const runnerLogFd = (() => {
     try {
       const logDir = path.join(ROOT, 'logs');
@@ -232,6 +240,22 @@ module.exports = async function engineeringRunnerGlobalSetup() {
       return 'ignore';
     }
   })();
+
+  /**
+   * Linha de diagnóstico da VIDA do runner (subida e, principalmente, MORTE).
+   *
+   * Vai para stderr E para o arquivo. O stderr aparece no log do gate (onde se vê a
+   * sequência junto com as suítes); o arquivo é o artefato publicado
+   * (`logs/engineering-runner-jest.log`), que precisa ser legível sozinho — quem audita
+   * o run baixa só o artefato.
+   */
+  const registrarNoLog = (texto) => {
+    const linha = `[engineering-runner-jest ${new Date().toISOString()}] ${texto}\n`;
+    process.stderr.write(linha);
+    if (typeof runnerLogFd === 'number') {
+      try { fs.writeSync(runnerLogFd, linha); } catch (_) { /* log é diagnóstico */ }
+    }
+  };
 
   // ORDEM IMPORTA — as variáveis são definidas ANTES do spawn, não depois.
   //
@@ -251,8 +275,36 @@ module.exports = async function engineeringRunnerGlobalSetup() {
       ENGINEERING_RUNNER_TOKEN: RUNNER_TOKEN,
       ENGINEERING_RUNNER_PORT: String(RUNNER_PORT),
     },
-    stdio: ['ignore', 'ignore', runnerLogFd],
+    // stdout E stderr do filho vão para o MESMO arquivo: o banner de prontidão do runner
+    // é `console.log` (stdout) e era justamente o canal descartado antes.
+    stdio: ['ignore', runnerLogFd, runnerLogFd],
     detached: false,
+  });
+
+  registrarNoLog(
+    `runner spawn: pid=${child.pid} porta=${RUNNER_PORT} url=${process.env.ENGINEERING_RUNNER_URL} ` +
+    `workspaceRoot=${process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT || '(nao definido)'}`,
+  );
+
+  /**
+   * TESTEMUNHA DA MORTE DO RUNNER.
+   *
+   * Sem isto, um runner que morre no meio da bateria produz exatamente o mesmo sintoma
+   * de um runner que nunca existiu (`fetch failed` → `SANDBOX_UNAVAILABLE`, exitCode
+   * null) e o log fica vazio. Medido em 2026-10-21 (run 39660840381): a suíte
+   * engineeringRouterExecutionSandboxSecurity falhou 9/9 no FIM de uma execução de ~2,5
+   * min, com o runner confirmado em /health no início. Registrar exit code/sinal (SIGKILL
+   * de OOM killer é silencioso) e re-sondar /health fecha a pergunta "ele morreu?" com
+   * evidência, não com hipótese.
+   */
+  child.on('exit', (code, signal) => {
+    registrarNoLog(`runner ENCERROU: pid=${child.pid} code=${code} signal=${signal}`);
+    probeHealthOnce(`http://127.0.0.1:${RUNNER_PORT}/health`).then((dono) => {
+      registrarNoLog(`apos o encerramento, /health na porta ${RUNNER_PORT}: ${dono ? `ainda responde (pid ${dono.pid})` : 'sem resposta'}`);
+    }).catch(() => { /* diagnóstico */ });
+  });
+  child.on('error', (err) => {
+    registrarNoLog(`runner falhou ao iniciar (spawn): pid=${child.pid} erro=${err.message}`);
   });
 
   fs.writeFileSync(PID_FILE, String(child.pid));
@@ -297,6 +349,7 @@ module.exports = async function engineeringRunnerGlobalSetup() {
   // quebra o JSON.parse do coletor (achado real: os 25 itens de runtime evidence quebravam com
   // "saída do Jest não pôde ser parseada como JSON" até esta correção).
   process.stderr.write(`[jest-global-setup] Engineering Runner real (pid ${child.pid}) pronto em http://127.0.0.1:${RUNNER_PORT}\n`);
+  registrarNoLog(`runner pronto e verificado por /health: pid=${child.pid} porta=${RUNNER_PORT}`);
 };
 
 module.exports.PID_FILE = PID_FILE;
