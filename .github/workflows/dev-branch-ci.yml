@@ -164,6 +164,15 @@ jobs:
           }
           echo "artefatos presentes: coverage-completeness + benchmark-sufficiency + evo-contract + layer-conventions"
 
+      # IMAGEM DO EXECUTION SANDBOX (medido 2026-10-21, run 39593921911):
+      # `engineeringRouterExecutionSandboxSecurity` reprovou com `docker run` exit 125 porque a
+      # imagem `r-agent2-engineering-router-sandbox:latest` não existe no runner. A suíte RECUSA
+      # pular de propósito ("ambiente sem Docker não pode alegar SANDBOX_RUNTIME=PASS"), então a
+      # correção é CONSTRUIR a imagem: o runner do GitHub tem Docker e a prova de isolamento
+      # passa a ser executada de verdade (non-root, sem rede, sem socket, FS read-only).
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
+
       # Toda a bateria L0+L1 roda pelo MESMO runner versionado que qualquer
       # pessoa executa localmente. Sem passos paralelos: uma implementacao so.
       - name: L0 + L1 (runner versionado, exit code real)
