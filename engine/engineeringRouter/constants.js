@@ -136,6 +136,13 @@ const FAILURE_CODES = Object.freeze({
   PATCH_BINARY_CHANGE: 'PATCH_BINARY_CHANGE',
   PATCH_TOO_LARGE: 'PATCH_TOO_LARGE',
   PATCH_UNEXPECTED_DELETE: 'PATCH_UNEXPECTED_DELETE',
+  // ESCAPE DE ISOLAMENTO VIA SYMLINK (medido 2026-10-21): um diff com
+  // `new file mode 120000` cria um SYMLINK no worktree. O caminho tocado continua
+  // dentro do allowedPaths, mas o ALVO do link pode ser `/etc/shadow` ou
+  // `../../.env` — `git apply` aceita, o arquivo nasce como symlink real e qualquer
+  // leitura/escrita através dele sai do escopo. A fronteira de path não vê isso
+  // porque ela olha o NOME do arquivo, não o destino do link. Recusado antes do apply.
+  PATCH_SYMLINK_FORBIDDEN: 'PATCH_SYMLINK_FORBIDDEN',
   // MUTILACAO DE WORKTREE (2026-10-20): o patch APAGA casos de teste para fazer
   // a suite passar, em vez de corrigir o comportamento. Recusado antes do apply;
   // autorizacao so por campo explicito de contrato aprovado por humano.

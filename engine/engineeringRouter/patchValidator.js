@@ -49,6 +49,13 @@ const INTEGRITY_CRITICAL_PATH_PATTERNS = Object.freeze([
 
 const FILE_HEADER_RE = /^diff --git a\/(.+?) b\/(.+)$/;
 const HUNK_HEADER_RE = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+
+/**
+ * Modo git de SYMLINK. Um arquivo com este modo tem como CONTEÚDO o alvo do link — logo o
+ * caminho tocado pode estar dentro de `allowedPaths` enquanto o alvo aponta para `/etc/shadow`
+ * ou `../../.env`. Ver `PATCH_SYMLINK_FORBIDDEN`.
+ */
+const SYMLINK_GIT_MODE = '120000';
 const NO_NEWLINE_MARKER_RE = /^\\ No newline at end of file$/;
 
 /**
@@ -138,13 +145,28 @@ function parseUnifiedDiff(diffText) {
         isDeleted: false,
         isBinary: false,
         isRename: fileMatch[1] !== fileMatch[2],
+        // Modo git do arquivo. `120000` é SYMLINK: capturado porque o alvo do link pode
+        // escapar do repositório sem que o NOME do arquivo saia de allowedPaths.
+        gitMode: null,
         hunkCount: 0,
       };
       files.push(current);
       continue;
     }
     if (!current) continue;
+    const modeMatch = /^(?:new file mode|old mode|new mode) (\d{6})$/.exec(line);
+    if (modeMatch) {
+      // O ÚLTIMO modo declarado vence (old mode -> new mode reflete a mudança real).
+      current.gitMode = modeMatch[1];
+      if (modeMatch[1] === SYMLINK_GIT_MODE) current.isSymlink = true;
+    }
     if (/^new file mode/.test(line)) current.isNew = true;
+    // `index <sha>..<sha> <mode>` também carrega o modo (diffs de mudança de modo).
+    const indexModeMatch = /^index [0-9a-f]+\.\.[0-9a-f]+ (\d{6})$/.exec(line);
+    if (indexModeMatch) {
+      current.gitMode = indexModeMatch[1];
+      if (indexModeMatch[1] === SYMLINK_GIT_MODE) current.isSymlink = true;
+    }
     if (/^deleted file mode/.test(line)) current.isDeleted = true;
     if (/^Binary files .* differ$/.test(line) || /^GIT binary patch$/.test(line)) { current.isBinary = true; sawBinary = true; }
     if (/^\+\+\+ \/dev\/null$/.test(line)) current.isDeleted = true;
@@ -296,6 +318,32 @@ function validatePatch(diffText, { contract = {}, maxPatchSizeBytes = DEFAULT_MA
   }
 
   const touchedPaths = touchedPathsOf(parsed);
+
+  // ESCAPE DE ISOLAMENTO VIA SYMLINK (medido 2026-10-21).
+  //
+  // Um diff com `new file mode 120000` cria um SYMLINK cujo CONTEÚDO é o alvo. O nome do
+  // arquivo pode estar perfeitamente dentro de `allowedPaths` (`tests/fixtures/link`) enquanto
+  // o alvo aponta para `/etc/shadow` ou `../../.env` — então a fronteira de path, que olha o
+  // NOME, não vê nada. Medido: `git apply` aceita, o arquivo nasce como symlink REAL
+  // (`lstat().isSymbolicLink() === true`) e a leitura/escrita através dele sai do escopo do
+  // workspace. Nenhuma verificação posterior (diff canônico, tree hash, smoke) detecta isso,
+  // porque todas tratam o caminho como arquivo comum.
+  //
+  // Recusa FAIL-CLOSED de QUALQUER symlink no patch: o Router não tem caso de uso legítimo de
+  // criar symlink em patch de código, e "symlink permitido com validação de alvo" viraria uma
+  // corrida entre a validação e o filesystem. Autorização humana explícita, se algum dia for
+  // necessária, entra como campo de contrato auditável — nunca por padrão.
+  const symlinkFiles = (parsed.files || []).filter((f) => f.isSymlink === true || f.gitMode === SYMLINK_GIT_MODE);
+  if (symlinkFiles.length > 0 && contract.symlinkAuthorization !== true) {
+    issues.push({
+      code: FAILURE_CODES.PATCH_SYMLINK_FORBIDDEN,
+      message:
+        'Patch cria/altera SYMLINK (git mode 120000) — o alvo pode escapar do allowedPaths sem '
+        + `que o caminho tocado saia dele: ${symlinkFiles.map((f) => f.newPath || f.oldPath).join(', ')}`,
+      files: symlinkFiles.map((f) => ({ path: f.newPath || f.oldPath, gitMode: f.gitMode || null })),
+    });
+    return { ok: false, code: FAILURE_CODES.PATCH_SYMLINK_FORBIDDEN, issues, files: parsed.files, touchedPaths };
+  }
 
   // INTEGRIDADE: recusa fail-closed de qualquer caminho que pertença ao próprio maquinário de
   // verificação/release (gates, CI, config de baseline, orçamentos). Ver
