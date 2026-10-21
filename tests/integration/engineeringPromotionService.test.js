@@ -346,7 +346,10 @@ describe('ER-V1-SEAL-001 — Immutable Promotion Baseline (dirty working tree nu
     });
     if (result.promoted) createdBranches.push(candidateBranchName(taskId));
 
-    expect(result.promoted).toBe(true);
+    // DIAGNÓSTICO (2026-10-20): sob carga (bateria em --maxWorkers=2) a promoção reprovou em silêncio
+    // e a mensagem padrão `Expected: true, Received: false` não dizia QUAL etapa falhou. Incluir o
+    // `code` na asserção não afrouxa nada (continua exigindo promoted=true) e torna a falha acionável.
+    expect({ promoted: result.promoted, code: result.code || null }).toEqual({ promoted: true, code: null });
     expect(result.evidence.validatedChangedPaths).toEqual([FIXTURE_FILE]);
     expect(result.evidence.promotedChangedPaths).toEqual([FIXTURE_FILE]);
 
