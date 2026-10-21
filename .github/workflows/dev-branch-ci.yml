@@ -236,6 +236,12 @@ jobs:
             AI_MEMORY/evidence/dev-branch-gate-logs/**
             # Diagnóstico específico de systemd-analyze (teste sensível ao ambiente do runner).
             reports/dev-services-supervision-systemd.log
+            # DIAGNÓSTICO DO ENGINEERING RUNNER (medido 2026-10-21, run 39657773900): a suíte
+            # engineeringRouterExecutionSandboxSecurity falhou com `fetch failed` ao falar com o
+            # runner em 127.0.0.1:8097 e o runner imprimiu "pronto" DEPOIS das falhas — sinal de
+            # que o processo morreu durante a bateria. Este log (stdout/stderr do runner) é a
+            # evidência que faltava para fechar a causa; sem ele cada diagnóstico exige reexecutar.
+            logs/engineering-runner-jest.log
           if-no-files-found: error
           retention-days: 30
 
