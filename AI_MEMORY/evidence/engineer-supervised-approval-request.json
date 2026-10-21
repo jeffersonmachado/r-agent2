@@ -5,8 +5,8 @@
   "requestedAt": "2026-10-21T00:00:00Z",
   "requestedBy": "agent:github-copilot",
   "branch": "dev/engineering-hardening",
-  "sourceCommit": "704150648",
-  "sourceCommitNote": "Commit medido no ciclo corrente. O gate recalcula o SHA (git rev-parse HEAD) e RECUSA aprovacao cujo sourceCommit nao coincida com o commit avaliado — a aprovacao e vinculada ao commit, nao a branch.",
+  "sourceCommit": "4d0546bb7",
+  "sourceCommitNote": "Commit medido no ciclo corrente (HEAD em dev/engineering-hardening). O gate recalcula `git rev-parse HEAD` e RECUSA aprovacao cujo sourceCommit nao coincida com o commit avaliado — a aprovacao e vinculada ao commit, nao a branch. Qualquer commit novo invalida esta solicitacao e exige uma nova (criterio de cancelamento abaixo).",
   "scope": {
     "included": [
       "delegacao supervisionada do RAP Engineer em branch de desenvolvimento (dev/engineering-hardening)",
@@ -35,19 +35,30 @@
     {
       "id": "D1-AUDITORIA-INDEPENDENTE",
       "question": "Uma auditoria independente (pessoa ou processo fora do executor) revisou codigo, evidencias e veredito?",
-      "options": ["APROVADO_COM_AUDITORIA", "REPROVADO", "ADIADO"],
+      "options": [
+        "APROVADO_COM_AUDITORIA",
+        "REPROVADO",
+        "ADIADO"
+      ],
       "evidenceNeeded": "parecer da auditoria com escopo, metodo e achados; identificacao do auditor"
     },
     {
       "id": "D2-RISCOS-NAO-DISPENSAVEIS",
       "question": "Os riscos residuais listados em residualRisks sao aceitos, com dono e prazo?",
-      "options": ["ACEITO_COM_DONO_E_PRAZO", "NAO_ACEITO"],
+      "options": [
+        "ACEITO_COM_DONO_E_PRAZO",
+        "NAO_ACEITO"
+      ],
       "evidenceNeeded": "termo de aceitacao por item, com escopo, validade e criterio de revogacao"
     },
     {
       "id": "D3-CI-E-CLONE-LIMPO",
       "question": "CI L0: popular o ambiente (bootstrap + cadeia de validadores) OU declarar de forma auditavel as suites nao executaveis em clone limpo?",
-      "options": ["POPULAR_AMBIENTE", "DECLARAR_NAO_EXECUTAVEIS", "ADIADO"],
+      "options": [
+        "POPULAR_AMBIENTE",
+        "DECLARAR_NAO_EXECUTAVEIS",
+        "ADIADO"
+      ],
       "evidenceNeeded": "decisao registrada; a opcao escolhida muda contrato de gate e nao pode ser decidida pelo agente"
     }
   ],
