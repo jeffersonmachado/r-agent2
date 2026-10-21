@@ -104,4 +104,41 @@ describe('§8 isolamento adversarial — symlink no patch', () => {
     expect(parsed.files[0].isSymlink).toBe(true);
     expect(touchedPathsOf(parsed)).toEqual(['tests/fixtures/link5']);
   });
+
+  test('CONVERSÃO de arquivo existente em symlink (old mode 100644 → new mode 120000) é RECUSADA', () => {
+    // Variante que não cria arquivo novo: o patch TRANSFORMA um arquivo rastreado em symlink.
+    // Medido 2026-10-21: sem tratar `old mode`/`new mode` no parser, `isNew` não é marcado e o
+    // guard de "arquivo novo" passaria batido.
+    const diff = [
+      'diff --git a/tests/fixtures/existente.txt b/tests/fixtures/existente.txt',
+      'old mode 100644',
+      'new mode 120000',
+      'index 1111111..2222222',
+      '--- a/tests/fixtures/existente.txt',
+      '+++ b/tests/fixtures/existente.txt',
+      '@@ -1 +1 @@',
+      '-conteudo antigo',
+      '+/etc/shadow',
+    ].join('\n');
+    const parsed = parseUnifiedDiff(diff);
+    expect(parsed.files[0].gitMode).toBe('120000');
+    expect(parsed.files[0].isSymlink).toBe(true);
+    const r = validatePatch(diff, { contract: ALLOWED });
+    expect(r.ok).toBe(false);
+    expect(r.code).toBe(FAILURE_CODES.PATCH_SYMLINK_FORBIDDEN);
+  });
+
+  test('arquivo EXECUTÁVEL (100755) não é symlink: continua aceito', () => {
+    // Guarda contra excesso de zelo: o guard é sobre symlink, não sobre bit de execução.
+    const diff = [
+      'diff --git a/tests/fixtures/run.sh b/tests/fixtures/run.sh',
+      'new file mode 100755',
+      '--- /dev/null',
+      '+++ b/tests/fixtures/run.sh',
+      '@@ -0,0 +1,1 @@',
+      '+echo oi',
+    ].join('\n');
+    const r = validatePatch(diff, { contract: ALLOWED });
+    expect(r.ok).toBe(true);
+  });
 });

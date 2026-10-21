@@ -673,3 +673,33 @@ Criar `AI_MEMORY/evidence/engineer-supervised-approval.json`:
 Com os 6 `blocked_external` resolvidos (ou aceitos explicitamente como risco pelo dono) **e** a
 assinatura acima, o gate passa a `ENGINEER_SUPERVISED_READY_GO`. Nada mais é necessário — e nada
 menos é aceito.
+
+### 14.7 Estabilidade do próprio gate (dois falsos vermelhos corrigidos)
+
+O L0 oficial não era determinístico nesta máquina. Medido em 2026-10-21 com o default do
+`jest.config.cjs` (workers derivados do orçamento de conexões ⇒ 11 numa máquina de 12 CPUs):
+
+| Execução | Resultado |
+|---|---|
+| `npx jest tests/unit` (default, 11 workers) | **FAIL** — `engineeringRouterExecutionSandboxSecurity`: 3 casos com `SANDBOX_UNAVAILABLE` |
+| idem, repetida | **FAIL** — `tenantAiCredentialsSaveRoute`: `Exceeded timeout of 10000 ms` |
+| idem, com `--maxWorkers=4` | **PASS — 1086 suítes / 9214 testes / 358 s** |
+
+Cada execução reprovava uma suíte **diferente**, sempre por tempo/probe — nunca por asserção de
+comportamento. Duas causas distintas foram encontradas e corrigidas:
+
+1. **`P1-SANDBOX-PROBE-CACHE-NEGATIVO` (`11a461e59`)** — `isSandboxAvailable()` fazia
+   `docker info` (timeout 5 s) **uma vez por processo** e cacheava também o resultado NEGATIVO.
+   Com load average 12 o probe estourava e o processo inteiro passava a responder
+   `SANDBOX_UNAVAILABLE` com o Docker saudável (`docker ps` respondendo; a suíte isolada passava
+   10/10). Em produção isso reprova task legítima como `INFRA_ERROR`, e o envenenamento dura até o
+   processo morrer. Correção: só o POSITIVO é cacheado; falha transitória é retentada (2 tentativas)
+   e, se persistir, responde `false` sem envenenar; `ENOENT` (CLI ausente) é definitivo e cacheado.
+2. **`P1-L0-INDETERMINISTA-POR-CONTENCAO` (`24603e69b`)** — o passo L0 herdava os 11 workers e
+   saturava a máquina. O gate agora fixa `JEST_MAX_WORKERS=4` (override `L0_JEST_MAX_WORKERS`) e o
+   relatório registra `envFixado` por passo — "passou no gate" e "passou na minha máquina" deixam de
+   ser a mesma frase. O default de `npm test` à mão **não** mudou.
+
+Provas: `engineeringRouterSandboxAvailabilityCache.test.js` 7/7 (contra o código anterior, 3
+falhas: timeout, SIGTERM e recuperação); sandbox real + cache 17/17; `ciGateL0Determinism.test.js`
+3/3.
