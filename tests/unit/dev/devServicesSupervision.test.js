@@ -89,18 +89,32 @@ describe('supervisão generalizada dos serviços de dev', () => {
       return;
     }
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-units-'));
+    // DIAGNÓSTICO PERSISTENTE (L-1): no runner do GitHub esta verificação reprovou sem que o
+    // motivo aparecesse no log do job (o gate captura só a cauda da saída). Gravar a saída BRUTA
+    // em reports/ (que o CI publica como artefato) torna a falha diagnosticável sem adivinhação.
+    const saidaBruta = [];
     for (const nome of ['ragent2-api-dev', 'ragent2-rag-dev', 'ragent2-frontend-dev']) {
       const file = path.join(dir, `${nome}.service`);
       fs.writeFileSync(file, renderTemplate(nome, { log: path.join(dir, `${nome}.log`) }));
       let saida = '';
+      let codigo = 0;
       try {
         execFileSync('systemd-analyze', ['verify', file], { stdio: 'pipe' });
       } catch (error) {
         saida = `${error.stdout || ''}${error.stderr || ''}`;
+        codigo = typeof error.status === 'number' ? error.status : 1;
       }
+      saidaBruta.push(`### ${nome} exit=${codigo}\n${saida}`);
       const linhas = saida.split('\n').filter((linha) => linha.includes(`${nome}.service`));
       expect(linhas).toEqual([]);
     }
+    try {
+      fs.mkdirSync(path.join(__dirname, '..', '..', '..', 'reports'), { recursive: true });
+      fs.writeFileSync(
+        path.join(__dirname, '..', '..', '..', 'reports', 'dev-services-supervision-systemd.log'),
+        `${saidaBruta.join('\n')}\nsystemd-analyze: ${execFileSync('systemd-analyze', ['--version'], { encoding: 'utf8' }).split('\n')[0]}\n`,
+      );
+    } catch (_) { /* diagnóstico é best-effort: nunca muda o veredito */ }
     fs.rmSync(dir, { recursive: true, force: true });
   });
 

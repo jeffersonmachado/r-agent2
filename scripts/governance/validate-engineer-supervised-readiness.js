@@ -48,6 +48,11 @@ const APPROVAL_PATH = argDe('--approval')
 
 const QUEUE_PATH = path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json');
 const READINESS_DOC = path.join(ROOT, 'ENGINEER_SUPERVISED_READINESS.md');
+const DECISIONS_CONFIG = path.join(ROOT, 'config', 'readiness-decisions.json');
+
+const riskAcceptance = require('../../governance/risk-acceptance');
+const { DECISOES, CATEGORIAS_NAO_DISPENSAVEIS } = require('../../governance/risk-acceptance/policy');
+const signature = require('../../governance/risk-acceptance/signature');
 
 /** Estados abertos (defeito conhecido sem correção). Espelha validate-hardening-queue.js. */
 const ABERTOS = new Set(['pending', 'in_progress', 'failed', 'fixed_unverified']);
@@ -94,13 +99,104 @@ function checkFila() {
       : `abertos: ${abertos.map((i) => `${i.id}(${i.status})`).join(', ')}`,
     dados: { abertos: abertos.map((i) => i.id) },
   });
-  // Impedimento declarado NÃO é prontidão: é reportado e conta como pendência para GO.
+  // Impedimento declarado deixa de ser FAIL cego: cada item precisa ser CLASSIFICADO
+  // (resolvido com probe, aceito por humano assinado, ou roteado para a decisão dona).
+  // A classificação é medida em `checkBloqueiosClassificados` (precisa do SHA). Aqui fica o fato.
   registrar('QUEUE_NO_BLOCKED', {
     ok: impedidos.length === 0,
+    bloqueante: false,
     detalhe: impedidos.length === 0
       ? 'nenhum item blocked/blocked_external'
-      : `impedidos: ${impedidos.map((i) => `${i.id}(${i.status})`).join(', ')}`,
+      : `impedidos: ${impedidos.map((i) => `${i.id}(${i.status})`).join(', ')} — classificação exigida em QUEUE_BLOCKERS_CLASSIFIED`,
     dados: { impedidos: impedidos.map((i) => i.id) },
+  });
+  return { impedidos };
+}
+
+/**
+ * Classificação dos bloqueios em QUATRO baldes separados (missão §6), com evidência executada.
+ *
+ * REGRA CENTRAL: `ACCEPTED_RISK` nunca aparece como `RESOLVED_VERIFIED`. O balde decide o veredito:
+ * qualquer item em BLOCKED impede GO; os demais são reportados com o motivo e o dono da decisão.
+ * @param {string} sha commit medido (HEAD)
+ */
+function checkBloqueiosClassificados(sha) {
+  const fila = lerJson(QUEUE_PATH);
+  const itens = Array.isArray(fila.items) ? fila.items : [];
+  const impedidos = itens.filter((i) => IMPEDIDOS.has(String(i.status || '').toLowerCase()));
+
+  const resolucao = riskAcceptance.resolverBloqueios({
+    rootDir: ROOT,
+    itensBloqueados: impedidos,
+    sourceCommit: sha,
+    decisao: 'ENGINEER_SUPERVISED_READINESS',
+  });
+
+  const bloqueados = resolucao.baldes.BLOCKED;
+  registrar('QUEUE_BLOCKERS_CLASSIFIED', {
+    ok: resolucao.problemas.length === 0 && bloqueados.length === 0,
+    detalhe: resolucao.problemas.length > 0
+      ? `problemas: ${resolucao.problemas.join(', ')}`
+      : (bloqueados.length === 0
+        ? `${impedidos.length} classificado(s): ${resolucao.baldes.RESOLVED_VERIFIED.length} resolvido(s), ${resolucao.baldes.ACCEPTED_RISK.length} aceito(s), ${resolucao.baldes.NOT_APPLICABLE.length} roteado(s)`
+        : `ainda bloqueiam: ${bloqueados.map((b) => `${b.riskId}[${b.motivos.join('|')}]`).join(', ')}`),
+    dados: {
+      RESOLVED_VERIFIED: resolucao.baldes.RESOLVED_VERIFIED.map((i) => i.riskId),
+      ACCEPTED_RISK: resolucao.baldes.ACCEPTED_RISK.map((i) => i.riskId),
+      NOT_APPLICABLE: resolucao.baldes.NOT_APPLICABLE.map((i) => i.riskId),
+      BLOCKED: bloqueados.map((i) => i.riskId),
+    },
+  });
+
+  // Categoria não dispensável não pode ter sido "resolvida" por roteamento: reprova explícito.
+  const roteamento = (() => {
+    try { return lerJson(riskAcceptance.ROUTING_REL); } catch (_) { return null; }
+  })();
+  const naoDispensaveis = [];
+  for (const [riskId, rota] of Object.entries((roteamento && roteamento.items) || {})) {
+    for (const cat of (rota.categories || [])) {
+      if (CATEGORIAS_NAO_DISPENSAVEIS.includes(cat)) naoDispensaveis.push(`${riskId}:${cat}`);
+    }
+  }
+  registrar('NON_WAIVABLE_ABSENT', {
+    ok: naoDispensaveis.length === 0,
+    detalhe: naoDispensaveis.length === 0
+      ? 'nenhuma categoria não dispensável declarada no roteamento'
+      : `categorias não dispensáveis: ${naoDispensaveis.join(', ')}`,
+    dados: { naoDispensaveis },
+  });
+
+  return { baldes: resolucao.baldes, problemas: resolucao.problemas };
+}
+
+/**
+ * As três decisões existem, com escopo e validadores REAIS no disco (missão §5).
+ * Não cria caminho paralelo: só confere que o que a decisão cita existe.
+ */
+function checkDecisoesSeparadas() {
+  let cfg;
+  try { cfg = lerJson(DECISIONS_CONFIG); } catch (err) {
+    registrar('READINESS_DECISIONS_PRESENT', { ok: false, detalhe: `config ausente/ilegível: ${err.message}` });
+    return;
+  }
+  const decisoes = Array.isArray(cfg.decisions) ? cfg.decisions : [];
+  const ids = decisoes.map((d) => d.id);
+  const esperados = Object.keys(DECISOES);
+  const faltando = esperados.filter((id) => !ids.includes(id));
+  const validadoresFantasma = [];
+  for (const d of decisoes) {
+    for (const rel of (d.validators || [])) {
+      if (!fs.existsSync(path.join(ROOT, rel))) validadoresFantasma.push(`${d.id}:${rel}`);
+    }
+  }
+  registrar('READINESS_DECISIONS_PRESENT', {
+    ok: faltando.length === 0 && validadoresFantasma.length === 0,
+    detalhe: faltando.length > 0
+      ? `decisões ausentes: ${faltando.join(', ')}`
+      : (validadoresFantasma.length > 0
+        ? `validadores inexistentes: ${validadoresFantasma.join(', ')}`
+        : `${decisoes.length} decisão(ões) declaradas com validadores reais`),
+    dados: { decisoes: ids },
   });
 }
 
@@ -186,7 +282,7 @@ function checkDocumento() {
 }
 
 // ── 5. Aprovação humana REAL (não simulável) ────────────────────────────────────────────────
-function checkAprovacaoHumana() {
+function checkAprovacaoHumana(sha) {
   const rel = path.relative(ROOT, APPROVAL_PATH);
   let doc;
   try {
@@ -194,6 +290,10 @@ function checkAprovacaoHumana() {
   } catch (_) {
     registrar('HUMAN_APPROVAL_PRESENT', {
       ok: false,
+      // Ausência de assinatura NÃO é falha de check: o veredito correto é
+      // PENDING_HUMAN_APPROVAL (exit 2). Assinatura presente e INVÁLIDA continua bloqueante
+      // (HUMAN_APPROVAL_VALID).
+      bloqueante: false,
       detalhe: `sem assinatura humana em ${rel} — o veredito fica PENDING_HUMAN_APPROVAL (nunca GO)`,
       dados: { caminho: rel },
     });
@@ -203,15 +303,29 @@ function checkAprovacaoHumana() {
   const faltando = obrigatorios.filter((k) => !doc[k] || String(doc[k]).trim() === '');
   const simulada = doc.simulated === true || doc.approver === 'automation' || doc.approver === 'agent';
   const dataValida = !Number.isNaN(Date.parse(String(doc.approvedAt || '')));
-  const ok = faltando.length === 0 && !simulada && dataValida;
+  const okBasico = faltando.length === 0 && !simulada && dataValida;
 
   registrar('HUMAN_APPROVAL_PRESENT', { ok: true, detalhe: `assinatura encontrada em ${rel}` });
+
+  // Pedido vigente: a aprovação só vale para a MISSÃO pedida e para o COMMIT medido.
+  const pedidoRel = 'AI_MEMORY/evidence/engineer-supervised-approval-request.json';
+  const pedido = (() => { try { return lerJson(pedidoRel); } catch (_) { return null; } })();
+  const autoridadesDoc = (() => { try { return lerJson('governance/risk-acceptance/authorities.json'); } catch (_) { return null; } })();
+  const autoridades = autoridadesDoc && Array.isArray(autoridadesDoc.authorities) ? autoridadesDoc.authorities : [];
+
+  const validacao = require('../../governance/risk-acceptance/approval').validarAprovacaoHumana(doc, {
+    sourceCommit: sha,
+    missionId: pedido ? pedido.missionId : null,
+    autoridades,
+  });
+
+  const ok = okBasico && validacao.ok;
   registrar('HUMAN_APPROVAL_VALID', {
     ok,
     detalhe: ok
-      ? `aprovador=${doc.approver} em ${doc.approvedAt} (missão ${doc.missionId})`
-      : `assinatura inválida: faltando=[${faltando.join(',')}] simulada=${simulada} dataValida=${dataValida}`,
-    dados: { caminho: rel, approver: doc.approver || null },
+      ? `aprovador=${doc.approver} em ${doc.approvedAt} (missão ${doc.missionId}, commit ${String(doc.sourceCommit).slice(0, 10)})`
+      : `assinatura inválida: faltando=[${faltando.join(',')}] simulada=${simulada} dataValida=${dataValida} motivos=[${validacao.motivos.join(',')}]`,
+    dados: { caminho: rel, approver: doc.approver || null, motivos: validacao.motivos },
   });
   return { aprovado: ok };
 }
@@ -238,10 +352,12 @@ function main() {
   })();
 
   checkFila();
+  const bloqueios = checkBloqueiosClassificados(sha);
+  checkDecisoesSeparadas();
   checkCommits();
   checkSegregacao();
   checkDocumento();
-  const aprovacao = checkAprovacaoHumana();
+  const aprovacao = checkAprovacaoHumana(sha);
 
   const decisao = decidirVeredito({ checks, aprovacaoHumana: Boolean(aprovacao.aprovado) });
   const { veredito, exitCode } = decisao;
@@ -255,6 +371,13 @@ function main() {
     veredito,
     exitCode,
     checks,
+    /** Quatro baldes SEPARADOS (§6): aceite nunca aparece como resolução. */
+    bloqueios: {
+      RESOLVED_VERIFIED: (bloqueios.baldes.RESOLVED_VERIFIED || []).map((b) => ({ riskId: b.riskId, prova: b.detalhe && b.detalhe.probe, sha256Saida: b.detalhe && b.detalhe.sha256Saida })),
+      ACCEPTED_RISK: (bloqueios.baldes.ACCEPTED_RISK || []).map((b) => ({ riskId: b.riskId, aprovadoPor: b.detalhe && b.detalhe.aprovadoPor, expiraEm: b.detalhe && b.detalhe.aceiteExpiraEm })),
+      NOT_APPLICABLE: (bloqueios.baldes.NOT_APPLICABLE || []).map((b) => ({ riskId: b.riskId, classe: b.classe, dono: b.detalhe && b.detalhe.ownedBy })),
+      BLOCKED: (bloqueios.baldes.BLOCKED || []).map((b) => ({ riskId: b.riskId, motivos: b.motivos })),
+    },
     falhas: falhas.map((c) => c.id),
     aprovacaoHumana: { presente: checks.some((c) => c.id === 'HUMAN_APPROVAL_PRESENT' && c.ok), valida: Boolean(aprovacao.aprovado) },
     git: { commit: sha, branch },
