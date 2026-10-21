@@ -1711,7 +1711,7 @@
       "id": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
       "title": "Editar oportunidade criava registro novo (POST sem id) e o front lia payload cru da resposta",
       "status": "done",
-      "commit": "5f6d0c1c9",
+      "commit": "5d451e1c9",
       "evidence": "tests/unit/crmOpportunityUpdate.test.js + frontend/src/pages/crm/crmCrudContract.test.js",
       "detail": "CAUSA-RAIZ: formulario de edicao reenviava POST (gera id novo) e o cliente lia campos snake_case inexistentes. CORRECAO: PUT/PATCH /api/crm/opportunities/:id com 404/403/400 id_divergente e whitelist de campos mutaveis; frontend separa editingId, usa updateOpportunity e aceita camelCase com fallback snake. PROVA: 11 testes de servidor (inclui 8 criacoes e 6 atualizacoes concorrentes) + 5 de contrato.",
       "prevention": "REGRA: edicao nunca usa rota de criacao; contrato de campos normalizado em um unico ponto do cliente.",
@@ -1721,13 +1721,16 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/crmOpportunityUpdate.test.js",
       "severityBasis": "bloqueia certificacao de release ou produz falso verde/go",
-      "severitySource": "auditoria-2026-10-19-missao-hardening"
+      "severitySource": "auditoria-2026-10-19-missao-hardening",
+      "reanchoredFrom": "5f6d0c1c9",
+      "reanchoredAt": "2026-10-21",
+      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9"
     },
     {
       "id": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
       "title": "Painel CRM sincronizava por setInterval (proibido) e o evento de metricas nao tinha prova de isolamento por tenant",
       "status": "done",
-      "commit": "5f6d0c1c9",
+      "commit": "5d451e1c9",
       "evidence": "tests/unit/crmRealtimeEvents.test.js + tests/unit/realtimeTenantIsolation.test.js",
       "detail": "CAUSA-RAIZ: ausencia de emissao de evento no backend forcou polling no cliente. CORRECAO: API emite crm.metrics.updated em create/update/delete/move e o painel assina via useWebSocketContext; setInterval removido. PROVA: servidor http+ws real com tokens assinados — evento do tenant A nao chega em B, token invalido/sem tenant recusado, reconexao no proprio tenant (8 testes) + 13 de evento.",
       "prevention": "REGRA: estado realtime sempre por WebSocket com emissao no servidor; qualquer setInterval de sincronizacao e defeito, nao estilo.",
@@ -1737,13 +1740,16 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/realtimeTenantIsolation.test.js",
       "severityBasis": "bloqueia certificacao de release ou produz falso verde/go",
-      "severitySource": "auditoria-2026-10-19-missao-hardening"
+      "severitySource": "auditoria-2026-10-19-missao-hardening",
+      "reanchoredFrom": "5f6d0c1c9",
+      "reanchoredAt": "2026-10-21",
+      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9"
     },
     {
       "id": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
       "title": "pbx-cdr-health.sh falhava sob pipefail por SIGPIPE (grep -q / head -n1) — falso vermelho recorrente",
       "status": "done",
-      "commit": "5f6d0c1c9",
+      "commit": "ad92da172",
       "evidence": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
       "detail": "CAUSA-RAIZ: `escritor | grep -q` e `| head -n1` fecham o pipe e o produtor morre com 141; com set -o pipefail o script inteiro reporta falha. REPRODUCAO medida: exit 141. CORRECAO: grep sem -q com redirecionamento e `sed -n 1p`. PROVA: 3 testes que falham 3/3 contra o script antigo.",
       "prevention": "REGRA: em script com pipefail, nao usar consumidor que encerra cedo (-q, head) sobre produtor sujeito a SIGPIPE.",
@@ -1753,7 +1759,10 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
       "severityBasis": "bloqueia certificacao de release ou produz falso verde/go",
-      "severitySource": "auditoria-2026-10-19-missao-hardening"
+      "severitySource": "auditoria-2026-10-19-missao-hardening",
+      "reanchoredFrom": "5f6d0c1c9",
+      "reanchoredAt": "2026-10-21",
+      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por ad92da172"
     },
     {
       "id": "P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO",
@@ -2105,7 +2114,7 @@
       "prevention": "Ferramenta de poda com criterio provado por teste (missao de usuario nunca e candidata; branch corrente nunca removida).",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "APPLIED_AND_VERIFIED",
+      "state": "VERIFIED",
       "legacyStatus": "done",
       "severityBasis": "degradacao de reprodutibilidade das medicoes e das operacoes git",
       "severitySource": "auditoria-externa-2026-10-20",
@@ -2125,6 +2134,36 @@
       "legacyStatus": "prevention_active",
       "severityBasis": "escape de isolamento: leitura/escrita fora do workspace via alvo de symlink",
       "severitySource": "auditoria-adversarial-2026-10-21"
+    },
+    {
+      "id": "P1-EVIDENCIA-COMMIT-ORFAO",
+      "title": "Fila oficial aceitava prova com commit inexistente (3 itens citavam hash reescrito)",
+      "status": "prevention_active",
+      "commit": "eb6ca426c",
+      "evidence": "tests/unit/governance/hardeningQueueCommitExists.test.js (5 casos, inclui o hash real 5f6d0c1c9) + tests/unit/governance 177 suites/1854 testes exit 0",
+      "resolution": "validate-hardening-queue.js so exigia campo \"commit\" nao vazio. Tres itens done citavam 5f6d0c1c9, hash que nao existe em nenhum objeto do repositorio (reescrito em rebase): a fila exibia provas que ninguem podia abrir. Agora cada commit e resolvido com git cat-file; hash inexistente/malformado = COMMIT_INEXISTENTE e ausencia de git = GIT_INDISPONIVEL (nunca \"passa por nao ter olhado\"). Os 3 itens foram reancorados aos commits que de fato introduziram as provas (5d451e1c9, ad92da172) com reanchoredFrom/reanchoredReason.",
+      "prevention": "Checagem de existencia do commit no validador da fila + regressao com o hash do incidente.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "falso verde de governanca: prova citada nao existe",
+      "severitySource": "auditoria-adversarial-2026-10-21"
+    },
+    {
+      "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
+      "title": "Veredito ENGINEER_SUPERVISED_READY_GO vivia em prosa; agora e gate executavel",
+      "status": "prevention_active",
+      "commit": "eb6ca426c",
+      "evidence": "npm run validate:engineer-supervised-readiness -> veredito=NOT_READY (exit 1) com 2 bloqueadores (6 blocked_external + sem assinatura humana); relatorio reports/engineer-supervised-readiness-report.json; tests/unit/governance/engineerSupervisedReadinessGate.test.js 7/7",
+      "resolution": "A decisao era narrativa em ENGINEER_SUPERVISED_READINESS.md. O gate deriva de fatos: fila sem item aberto/impedido, commits de prova resolviveis no git, 3 relatorios de segregacao PASS com contadores 0, documento com as 7 secoes obrigatorias e assinatura humana real (approver/approvedAt/missionId/scope/statement, simulated=false). GO (exit 0) exige tudo isso; sem assinatura = PENDING_HUMAN_APPROVAL (exit 2); qualquer check bloqueante falho = NOT_READY (exit 1); sem medicao = INFRA_ERROR (exit 3).",
+      "prevention": "Gate executavel + semantica de veredito provada por teste (sem aprovacao humana nao existe GO).",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "decisao de prontidao sem prova executavel",
+      "severitySource": "missao-engineer-supervised-2026-10-21"
     }
   ],
   "schemaVersion": 2,
