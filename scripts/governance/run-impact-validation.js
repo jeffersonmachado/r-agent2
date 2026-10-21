@@ -346,7 +346,9 @@ function main(argv = process.argv.slice(2)) {
     : arquivosAlterados(base);
 
   if (deteccao.degraded) {
-    process.stderr.write(`[L1] ESCALATE: ${deteccao.reason}\n`);
+    const motivo = deteccao.reason || 'detecção de alterações degradada';
+    process.stderr.write(`[L1] ESCALATE: ${motivo}\n`);
+    registrarRecusa({ base: 'DEGRADED', changedFiles: deteccao.files || [], motivo });
     return EXIT.ESCALATE;
   }
 
@@ -385,8 +387,11 @@ function main(argv = process.argv.slice(2)) {
     execution: null,
   };
 
+  // Defensivo: a formatação do resumo NUNCA pode derrubar o runner (um crash aqui não grava o
+  // relatório e o artefato fica ausente para os consumidores).
+  const arquivosSelecionados = Array.isArray(selecao.changedFiles) ? selecao.changedFiles : [];
   process.stdout.write(
-    `[L1] alterados=${selecao.changedFiles.length} testes=${selecao.totalTests} ` +
+    `[L1] alterados=${arquivosSelecionados.length} testes=${selecao.totalTests} ` +
       `camadas(t/j/v)=${selecao.layers.transitiva.length}/${selecao.layers.jornada.length}/${selecao.layers.vizinhanca.length}`
   );
   if (selecao.escalate) process.stdout.write(` → ESCALATE (${selecao.escalateReason})`);
