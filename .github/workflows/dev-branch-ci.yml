@@ -149,13 +149,20 @@ jobs:
           npm run validate:coverage-completeness || true
           npm run validate:benchmark-sufficiency || true
           npm run validate:evo-contract || true
+          npm run validate:layer-conventions || true
 
       - name: Provar que os artefatos exigidos pelas suites L0 existem
         run: |
           test -s reports/coverage-completeness-report.json
           test -s reports/benchmark-sufficiency-report.json
           test -s reports/evo-contract-report.json
-          echo "artefatos presentes: coverage-completeness + benchmark-sufficiency + evo-contract"
+          test -s reports/layer-conventions-report.json || {
+            echo "layer-conventions-report.json ausente — o validador nao gerou o artefato:"
+            npm run validate:layer-conventions || true
+            ls -la reports/ | head -20
+            exit 1
+          }
+          echo "artefatos presentes: coverage-completeness + benchmark-sufficiency + evo-contract + layer-conventions"
 
       # Toda a bateria L0+L1 roda pelo MESMO runner versionado que qualquer
       # pessoa executa localmente. Sem passos paralelos: uma implementacao so.
