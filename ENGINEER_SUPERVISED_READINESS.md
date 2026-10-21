@@ -318,9 +318,54 @@ dry-run por padrão:
 | **total de candidatas** | **3.007** | requer `--apply` |
 
 Sem banco acessível **nada** é candidato (`INFRA_ERROR`, exit 2): "não sei se a missão existe" nunca
-vira "pode apagar". O `--apply` **não foi executado** — remover 3.007 refs é irreversível e as
-branches carregam o fix integrado das missões; é decisão do dono do repositório (item
-`P1-BRANCHES-MISSAO-RESIDUO`, `ready_for_approval`).
+vira "pode apagar". **Aprovado e aplicado** em 2026-10-21 por decisão explícita do dono do
+repositório: `--apply` → `status=PASS, aplicadas=3007, falhas=0`, refs **3.017 → 10** (as 10
+preservadas são de missões de usuário vivas; nenhuma delas é candidata por construção).
+
+### 4.10 §8 — auditoria adversarial do isolamento de execução
+
+Objetivo: tentar QUEBRAR o isolamento, não descrevê-lo. Cada linha é um vetor, o mecanismo que o
+contém e a prova que o mantém contido.
+
+**Achado novo, explorável e corrigido (`bd376df01`): escape por SYMLINK no patch.**
+`validatePatch` aceitava `new file mode 120000`. Nesse modo o CONTEÚDO do arquivo é o ALVO do link:
+o caminho tocado (`tests/fixtures/link`) fica dentro de `allowedPaths` — a fronteira de path compara
+o NOME, não o destino — e `git apply` materializa um symlink real. Medido:
+`{ gitApply: 'ok', isSymlink: true, target: '/etc/shadow', validadorAceitou: true }`, idem para
+`../../.env`. Diff canônico, tree hash e smoke não detectavam: todos tratam o caminho como arquivo
+comum. Correção: parser expõe `gitMode`/`isSymlink` (inclusive via `index <a>..<b> 120000`) e
+`validatePatch` recusa **qualquer** symlink com `PATCH_SYMLINK_FORBIDDEN`, fail-closed; a única
+aceitação possível é campo explícito de contrato (`symlinkAuthorization: true`), auditável.
+Prova: `engineeringRouterPatchSymlinkEscape.test.js` — **7/7** com o fix, **4 falhas** no código
+anterior (os 3 controles passam nos dois sentidos, então o teste não é vacuoso).
+
+| Vetor | Mecanismo que contém | Prova |
+|---|---|---|
+| Patch cria symlink para fora do repo | `PATCH_SYMLINK_FORBIDDEN` (novo, `bd376df01`) | `engineeringRouterPatchSymlinkEscape` 7/7; 4 falham no código antigo |
+| Path traversal (`..` escapando) | `parseUnifiedDiff`/`resolvePathSegments` colapsa `..`; `PATH_ESCAPES_ROOT` | `engineeringRouterPathBoundary` |
+| `allowedPaths` ausente/vazio | fail-closed: nenhum caminho aceito (nunca "tudo permitido") | `engineeringRouterPathBoundary` |
+| `forbiddenPaths` vs `allowedPaths` | `forbidden` sempre vence, mesmo após resolver `..` | `engineeringRouterPathBoundary` |
+| Patch apaga casos de teste | `PATCH_REMOVES_TESTS` (autorização só por contrato) | `engineeringRouterTestRemovalPolicy` |
+| Patch embute segredo | `findSecretsInAddedContent` → `PATCH_CONTAINS_SECRET` | `patchValidator` + suíte do Router |
+| Patch toca gates/CI/governança | `INTEGRITY_CRITICAL_PATH_PATTERNS` → `PATCH_FORBIDDEN_FILE` | `patchValidator` |
+| Execução sem Docker | `SANDBOX_UNAVAILABLE` fail-closed, **sem** fallback para host | `engineeringRouterMandatoryRuntimeGate`, `engineeringRouterExecutionSandboxSecurity` |
+| Rede no sandbox | `--network none` | `engineeringRouterExecutionSandboxSecurity` |
+| Docker socket do host | não é montado | idem |
+| Escrita fora do workspace | raiz read-only + bind do workspace | idem |
+| `node_modules` real corrompido | bind read-only (nunca o symlink gravável) | idem |
+| `cwd` = repositório principal | recusa explícita (nunca chmod/mount no código real) | idem |
+| Excesso de processos | limite de PIDs no container | idem |
+| Timeout | `docker kill --signal=SIGTERM` → janela de grace → `SIGKILL` se ainda de pé; resultado carrega `timedOut`/`terminatedBy` | `executionSandbox` + `engineeringRouterExecutionSandboxSecurity` |
+| Cancelamento concorrente no meio do run | transição a partir de `CANCELLED` tratada como resultado (`CANCELLED_MID_RUN`), nunca exceção não tratada | `engineeringRouterTolerantTransition` |
+| Task já terminal na retomada | `TASK_ALREADY_TERMINAL_DURING_RESUME` devolve o status real | `engineeringRouterTolerantTransition` |
+| Dois workers na mesma task | lease com fencing token; update condicional e `affected === 0` | `engineeringTaskFencing` (5 casos), `engineeringTaskConcurrencyAndRestart` (8) |
+| Posse perdida | `LEASE_LOST` — o perdedor não escreve mais nada | `engineeringRouterService` + suíte de concorrência |
+| Retomada após crash em PROMOTING | `findExistingCandidate` acha o candidate real; nunca promove duas vezes | `engineeringPromotionCandidateSplit`, ER-V1-SEAL-002 |
+| Duplo `accept` HTTP concorrente | `runnerId` com UUID + lease com cláusula de reentrada | `engineeringRouterConcurrentRunHttp` (10/10) |
+
+Medição de regressão desta seção: `tests/unit/engineeringRouter` + suíte nova → **39 suítes /
+400 testes PASS**; `tests/unit/engineeringMission` + integração `patchAndTestRunner`/`promotion` →
+**38 suítes / 457 testes PASS**.
 
 ## 5. Testes NÃO executados (declarado, com motivo)
 

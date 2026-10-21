@@ -2110,6 +2110,21 @@
       "severityBasis": "degradacao de reprodutibilidade das medicoes e das operacoes git",
       "severitySource": "auditoria-externa-2026-10-20",
       "approved_by": "dono do repositorio (decisao explicita na sessao de 2026-10-21): \"Aplicar tudo (3007)\""
+    },
+    {
+      "id": "P1-PATCH-SYMLINK-ESCAPE",
+      "title": "validatePatch aceitava symlink (git mode 120000): alvo do link escapa do allowedPaths",
+      "status": "prevention_active",
+      "commit": "bd376df01",
+      "evidence": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js 7/7 com o fix e 4 falhas no codigo ANTERIOR (3 controles passam nos dois sentidos); medicao: gitApply=ok, isSymlink=true, target=/etc/shadow, validadorAceitou=true; tests/unit/engineeringRouter 39 suites/400 testes PASS; mission+patchRunner+promocao 38 suites/457 testes PASS",
+      "resolution": "Um diff com new file mode 120000 cria symlink cujo CONTEUDO e o alvo. O caminho tocado fica dentro de allowedPaths, entao a fronteira de path (que compara NOME) nao ve nada, e git apply materializa symlink real para /etc/shadow ou ../../.env. Diff canonico, tree hash e smoke tratam o caminho como arquivo comum: nenhuma camada detectava. Agora o parser expoe gitMode/isSymlink (inclusive via index ..120000) e validatePatch recusa QUALQUER symlink com PATCH_SYMLINK_FORBIDDEN, fail-closed; unica aceitacao e campo explicito symlinkAuthorization=true, auditavel no attempt.",
+      "prevention": "PATCH_SYMLINK_FORBIDDEN + regressao com controles negativos e positivos no mesmo arquivo.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "prevention_active",
+      "severityBasis": "escape de isolamento: leitura/escrita fora do workspace via alvo de symlink",
+      "severitySource": "auditoria-adversarial-2026-10-21"
     }
   ],
   "schemaVersion": 2,
