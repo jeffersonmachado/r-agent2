@@ -106,6 +106,19 @@ const PASSOS = Object.freeze({
       // ajustado por `L0_ORCAMENTO_MS` — sempre auditável no relatório.
       orcamentoMs: Number(process.env.L0_ORCAMENTO_MS) || 45 * 60 * 1000,
     },
+    {
+      id: 'L0b-integracao-engenheiro',
+      nivel: 'L0',
+      // INTEGRAÇÃO REAL (auditoria 2026-10-20, §10). Antes o gate do branch de
+      // desenvolvimento só rodava `npm test` (unit + flow + rpa sem browser):
+      // nenhuma suíte de integração tocava Postgres/sandbox. As suítes de
+      // concorrência agora FALHAM sem banco (fail-closed), então ausência de
+      // Postgres derruba este passo — que é o comportamento correto para um
+      // gate de prontidão.
+      comando: 'npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit',
+      descricao: 'Integração real do Engenheiro (Postgres + sandbox; falha sem banco)',
+      orcamentoMs: Number(process.env.L0B_ORCAMENTO_MS) || 40 * 60 * 1000,
+    },
   ],
   D: [
     {

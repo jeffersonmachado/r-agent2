@@ -114,3 +114,79 @@ jobs:
         if: always()
         run: |
           echo "Este workflow nao cria tag, release, deploy nem push (permissions: contents: read)."
+
+  # ===========================================================================
+  # INTEGRAÇÃO REAL (auditoria 2026-10-20, §10 do hardening).
+  #
+  # DEFEITO: o gate do branch de desenvolvimento rodava `npm test` (unit + flow +
+  # rpa sem browser) e os gates de governança, mas NENHUMA suíte de integração
+  # com Postgres real. O job `jest-integration` existia apenas em `jest.yml`,
+  # que dispara em main/develop — ou seja, nada de integração rodava para os
+  # commits desta branch.
+  #
+  # Este job usa os MESMOS serviços do jest.yml (pgvector + redis), aplica as
+  # migrações e executa a bateria de integração do Engenheiro. Falha é falha:
+  # sem banco o job não pode passar (as suítes de concorrência exigem Postgres de
+  # verdade).
+  # ===========================================================================
+  dev-branch-integration:
+    name: "Integração real do Engenheiro (Postgres + sandbox)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar pacotes irmãos @results (fora do checkout)
+        run: |
+          mkdir -p ../../packages ../packages
+          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
+          cp -r vendor/auth ../../packages/auth
+          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
+          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
+
+      - name: Integração do Engenheiro (Postgres real)
+        run: npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit
+        env:
+          CI: true
