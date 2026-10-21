@@ -126,7 +126,22 @@ const PASSOS = Object.freeze({
       // concorrência agora FALHAM sem banco (fail-closed), então ausência de
       // Postgres derruba este passo — que é o comportamento correto para um
       // gate de prontidão.
-      comando: 'npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit',
+      //
+      // SERIALIZAÇÃO OBRIGATÓRIA (medido 2026-10-21, run 39660840381). O padrão
+      // `tests/integration/engineering` casa TODAS as suítes `engineering*` de
+      // `tests/integration/` — inclusive as do laço de bugs, que compartilham estado global
+      // declarado: `config/canonical-release-suites.json` mantém
+      // engineeringBugAutonomousLoopE2E + engineeringBugLoopNaturalPathE2E no MESMO grupo
+      // exclusivo porque usam o mesmo runner de laço (`runBugLoopSweep`/GLOBAL, posse por
+      // finding e LEASE) e o mesmo banco de missões (a varredura de boot recovery processa
+      // TODA missão EXECUTING abandonada). Rodando-as com `--maxWorkers=2`, o job de
+      // integração produziu exatamente o que o grupo existe para impedir:
+      // engineeringBugLoopNaturalPathE2E estourou o próprio timeout de 900 s enquanto
+      // engineeringBugAutonomousLoopE2E falhava em 18 s (`report.fix.fixed` false) — ambas
+      // PASSANDO isoladas (42,9 s e 54,6 s). O gate NÃO inventa uma lista de nomes: usa
+      // `--runInBand`, que satisfaz a exclusividade por construção para qualquer suíte que
+      // venha a compartilhar estado global no futuro.
+      comando: 'npx jest tests/integration/engineering --bail=0 --runInBand --forceExit',
       descricao: 'Integração real do Engenheiro (Postgres + sandbox; falha sem banco)',
       orcamentoMs: Number(process.env.L0B_ORCAMENTO_MS) || 40 * 60 * 1000,
     },
