@@ -1292,10 +1292,17 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId,
   task = await ensureRouted(task, { credentialScope, eventAudienceTenantId, run });
 
   if (!task.routing_decision?.coder?.selected) {
+    // TRANSIÇÃO LEGAL (medido 2026-10-21, run 39624141710): a task está em ROUTED e o mapa do
+    // motor (`engine/engineeringRouter/stateMachine.js`) admite `ROUTED -> CODING|CANCELLED|
+    // BLOCKED` — RED NÃO é alcançável daqui. O código pedia RED e o motor (corretamente) recusava
+    // com INVALID_STATE_TRANSITION: um crash no lugar de um estado terminal. Sem CODER qualificado
+    // a task não falhou DEPOIS de executar, ela está BLOQUEADA por capacidade — então o estado
+    // terminal correto é BLOCKED, e o motivo continua registrado em lastError. O motor não é
+    // alterado para acomodar o chamador.
     await ts.saveLastError(taskId, { code: 'NO_QUALIFIED_CODER', message: 'Nenhum CODER qualificado disponível' });
-    await ts.transitionTask(taskId, 'RED');
-    emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
-    return { taskId, status: 'RED', reasonCode: 'NO_QUALIFIED_CODER' };
+    await ts.transitionTask(taskId, 'BLOCKED');
+    emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
+    return { taskId, status: 'BLOCKED', reasonCode: 'NO_QUALIFIED_CODER' };
   }
 
   const existingAttempts = await engineeringTaskService.listAttempts(taskId);
