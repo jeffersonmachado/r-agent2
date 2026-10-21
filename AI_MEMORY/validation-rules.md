@@ -40,6 +40,13 @@ Passos do gate (`scripts/ci/dev-branch-gate.js`): `B1..B3` (contratos) → `L0` 
 `ci:bootstrap` regrava elos derivados — `CADEIA_DIVERGENTE`, decisão canônica `NO_GO`. Só
 `npm run release:seal` (fase PACKAGE) muda esse veredito; a CI não pode substituir isso.
 
+O `L1` vermelho em `dev/engineering-hardening` é **estrutural, não defeito de teste**: medido em
+2026-10-21, `npm run release:seal:plan` recusa antes de qualquer fase com
+`✗ branch atual é 'dev/engineering-hardening' (esperado main)` (guard em
+`scripts/governance/seal-release.sh`, `[ "$branch" = "main" ]`). Ou seja, o artefato da fase PACKAGE
+só existe depois que o conteúdo está em `main` e o selo roda lá. Fechar o `L1` = promover para
+`main` + `npm run release:seal` — nunca afrouxar o validador da cadeia.
+
 ### Regras que o CI aprendeu (não regredir)
 
 - **Engineering Runner é recurso de SESSÃO, não de porta**: `tests/setup/engineeringRunnerGlobalSetup.js`
