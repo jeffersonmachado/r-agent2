@@ -57,6 +57,9 @@ jobs:
   dev-branch-gate:
     name: "L0 (Jest oficial) + L1 (gates de governanca)"
     runs-on: ubuntu-latest
+    # O L0 depende do artefato prod-like (gitignored, produzido pelo job acima). Dependência
+    # explícita: se o produtor falhar, o gate NÃO roda com artefato ausente fingindo prova.
+    needs: prod-like-smoke
 
     # INFRA REAL NO L0 (medido 2026-10-21, run 39587822262): sem Postgres no job, a suíte oficial
     # reprovou com 'tests/unit/benchmarks/benchmarkChangeProposal.test.js' (9 testes) e antes com
@@ -104,6 +107,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # ARTEFATO PROD-LIKE PRODUZIDO PELO JOB ANTERIOR (medido 2026-10-21): o L0 exige
+      # `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` com status=GO e esse
+      # arquivo é gitignored. Sem este download o checkout limpo não tem a prova e a suíte
+      # `modelDrivenE2e` reprova por ausência de artefato — não por defeito de código.
+      - name: Baixar o artefato prod-like (prova de execução do job anterior)
+        uses: actions/download-artifact@v4
+        with:
+          name: prod-like-smoke-${{ github.sha }}
+          path: qa/smoke/prod-like/
 
       # LINHA PRINCIPAL RASTREADA (medido 2026-10-21, run 39585223390): num checkout de CI não
       # existe branch LOCAL `main`, e 21 de 40 suítes de integração reprovavam com "não foi
@@ -231,6 +244,164 @@ jobs:
         if: always()
         run: |
           echo "Este workflow nao cria tag, release, deploy nem push (permissions: contents: read)."
+
+  # ===========================================================================
+  # SMOKE PROD-LIKE REAL — O PRODUTOR DO ARTEFATO QUE O L0 CONSOME.
+  #
+  # POR QUE ESTE JOB EXISTE (medido 2026-10-21): `tests/unit/governance/modelDrivenE2e.test.js`
+  # exige `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` com `status=GO`, e esse
+  # arquivo é gitignored (artefato de runtime) — num checkout limpo ele NÃO existe e a suíte
+  # reprovava sem que houvesse defeito de código. A correção não é pular a prova: é o CI PRODUZIR
+  # o artefato com o produtor real.
+  #
+  # O smoke exige stack prod-like de verdade: frontend estático servido por nginx COM PROXY para a
+  # API (medido: `vite preview` não substitui — sem proxy de `/tickets` a UI fica sem dados e o
+  # smoke devolve NO_GO falso) e a API em container com migrations+seed do próprio entrypoint.
+  #
+  # Receita validada localmente: imagens `r-agent2-api` e `r-agent2-frontend` (VITE_BASE_PATH=/ e
+  # VITE_API_BASE_URL=/api), API com `--network host` na 3000, frontend publicado na 8080 com
+  # `--add-host api:host-gateway`, e o smoke rodando no HOST contra as duas URLs. Resultado da
+  # execução de referência: status=GO com 9/9 jornadas GO.
+  # ===========================================================================
+  prod-like-smoke:
+    name: "Smoke prod-like real (artefato GO consumido pelo L0)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - name: Checkout (histórico completo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar pacotes irmãos @results (fora do checkout)
+        run: |
+          mkdir -p ../../packages ../packages
+          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
+          cp -r vendor/auth ../../packages/auth
+          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
+          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
+
+      - name: Install dependencies (o produtor do smoke roda no host)
+        run: npm ci
+
+      - name: Chromium (Playwright) para o navegador real do smoke
+        run: npx playwright install --with-deps chromium
+
+      # Segredos EFÊMEROS por execução: nada versionado, nada de produção. O host (smoke) e o
+      # container (API) precisam dos MESMOS valores, por isso vão para $GITHUB_ENV.
+      - name: Segredos efêmeros do ambiente de smoke
+        run: |
+          echo "ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")" >> "$GITHUB_ENV"
+          echo "REPLAY_SIGNING_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
+          echo "RAG_INTERNAL_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
+          echo "ENGINEERING_RUNNER_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
+
+      - name: Construir imagem da API
+        run: docker build -f api/Dockerfile -t r-agent2-api:ci .
+
+      - name: Construir imagem do frontend (servida na raiz, API em /api)
+        run: docker build -f frontend/Dockerfile --build-arg VITE_BASE_PATH=/ --build-arg VITE_API_BASE_URL=/api -t r-agent2-frontend:ci .
+
+      # A API roda com `--network host` para alcançar o Postgres/Redis dos serviços do job em
+      # 127.0.0.1 — exatamente como a receita validada localmente.
+      - name: Subir API (migrations + seed do entrypoint) e aguardar /health
+        run: |
+          docker run -d --name ci-api --network host \
+            -e NODE_ENV=production \
+            -e API_PORT=3000 \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e REDIS_URL="$REDIS_URL" \
+            -e RATE_LIMIT_REDIS_URL="$REDIS_URL" \
+            -e ENCRYPTION_KEY="$ENCRYPTION_KEY" \
+            -e REPLAY_SIGNING_KEY="$REPLAY_SIGNING_KEY" \
+            -e RAG_INTERNAL_TOKEN="$RAG_INTERNAL_TOKEN" \
+            -e RAG_SERVICE_URL=http://127.0.0.1:8001 \
+            -e ENGINEERING_RUNNER_TOKEN="$ENGINEERING_RUNNER_TOKEN" \
+            -e ENGINEERING_RUNNER_URL=http://127.0.0.1:8090 \
+            r-agent2-api:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/health >/dev/null 2>&1; then
+              echo "API pronta em 127.0.0.1:3000 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "API não respondeu em /health após 300s"
+          docker logs ci-api | tail -80
+          exit 1
+
+      - name: Subir frontend (nginx com proxy) e aguardar
+        run: |
+          docker run -d --name ci-frontend -p 8080:80 --add-host api:host-gateway r-agent2-frontend:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/ >/dev/null 2>&1 && curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1; then
+              echo "frontend + proxy prontos em 127.0.0.1:8080 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "frontend ou proxy não respondeu após 150s"
+          docker logs ci-frontend | tail -60
+          exit 1
+
+      - name: Executar o smoke prod-like real (produtor do artefato)
+        run: |
+          RUN_QA_WAVES_PROD_LIKE_SMOKE=1 \
+          FRONTEND_URL=http://127.0.0.1:8080 \
+          API_URL=http://127.0.0.1:3000 \
+          node scripts/smoke/qa-waves-operational-final-smoke.js
+
+      - name: Publicar o artefato prod-like (evidência do próprio run)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-like-smoke-${{ github.sha }}
+          path: |
+            qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json
+            qa/smoke/prod-like/*-replay.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Dump de logs em caso de falha
+        if: failure()
+        run: |
+          docker logs ci-api 2>&1 | tail -100 || true
+          docker logs ci-frontend 2>&1 | tail -50 || true
 
   # ===========================================================================
   # INTEGRAÇÃO REAL (auditoria 2026-10-20, §10 do hardening).
