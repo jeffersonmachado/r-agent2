@@ -112,13 +112,20 @@ function preflight() {
   const nodeOk = major > NODE_MIN[0] || (major === NODE_MIN[0] && minor >= NODE_MIN[1]);
   if (!nodeOk) problemas.push(`node ${process.versions.node} < ${NODE_MIN.join('.')}`);
 
-  const temBin = (bin, args = ['--version']) => {
-    const r = spawnSync(bin, args, { stdio: 'ignore' });
-    return !r.error && r.status === 0;
+  const versao = (bin, args = ['--version']) => {
+    const r = spawnSync(bin, args, { encoding: 'utf8' });
+    return r.error || r.status !== 0 ? null : String(r.stdout || '').trim();
   };
-  if (!temBin('psql')) problemas.push('psql ausente (PostgreSQL não verificável)');
-  if (!temBin('redis-cli')) problemas.push('redis-cli ausente (Redis não verificável)');
-  if (!temBin('docker', ['info'])) problemas.push('docker indisponível (suíte de Execution Sandbox não roda)');
+
+  // DOCKER é obrigatório: a suíte de Execution Sandbox RECUSA pular (ambiente sem Docker não pode
+  // alegar SANDBOX_RUNTIME=PASS), então o ambiente precisa dele de fato.
+  if (!versao('docker', ['--version'])) problemas.push('docker ausente — a suíte de Execution Sandbox não roda');
+
+  // Postgres/Redis NÃO são verificados aqui por CLI: medido no runner (2026-10-21) que
+  // `redis-cli` não existe no ubuntu-latest, e exigir o BINÁRIO reprovava um ambiente onde o
+  // serviço estava saudável. A conectividade real é verificada em `conectividade-infra`,
+  // DEPOIS do bootstrap oficial (que cria o `.env`), usando os clientes do projeto (`pg` e
+  // `ioredis`) — que é o que a aplicação usa.
 
   registrar({
     id: 'preflight',
@@ -130,15 +137,65 @@ function preflight() {
     saida: problemas.join('\n'),
     ambiente: {
       node: process.versions.node,
-      npm: (spawnSync('npm', ['-v'], { encoding: 'utf8' }).stdout || '').trim(),
+      npm: versao('npm', ['-v']),
       /* eslint-disable-next-line global-require */
       jest: (() => { try { return require(path.join(ROOT, 'node_modules', 'jest', 'package.json')).version; } catch (_) { return null; } })(),
-      docker: (spawnSync('docker', ['--version'], { encoding: 'utf8' }).stdout || '').trim(),
-      psql: (spawnSync('psql', ['--version'], { encoding: 'utf8' }).stdout || '').trim(),
-      redis: (spawnSync('redis-cli', ['--version'], { encoding: 'utf8' }).stdout || '').trim(),
+      docker: versao('docker', ['--version']),
+      // Informativo (não bloqueia): presença dos CLIs de diagnóstico.
+      psql: versao('psql'),
+      redisCli: versao('redis-cli'),
     },
   });
   return problemas.length === 0;
+}
+
+/**
+ * CONECTIVIDADE REAL de PostgreSQL e Redis, com os clientes do projeto.
+ *
+ * Roda DEPOIS do bootstrap oficial (o `.env` já existe) e usa `node --env-file=.env` para que a
+ * sonda tenha exatamente as mesmas variáveis que a aplicação usará. Timeout curto e mensagem
+ * explícita: infra indisponível é FALHA do bootstrap, nunca "pulado".
+ */
+function verificarInfra() {
+  // A sonda usa os MESMOS clientes da aplicação: `api/db/sequelize` (config completa do Postgres,
+  // incluindo POSTGRES_* do `.env`/config.json) e `infra/redis/rateLimitClient`. Uma sonda
+  // paralela com `pg` crua reprovou por construir credenciais próprias
+  // ('client password must be a string') enquanto a aplicação conectava normalmente.
+  const sonda = `
+const fim = (msg, code) => { process.stdout.write(msg); process.exit(code); };
+(async () => {
+  try {
+    const { connect, close } = require('./api/db/sequelize');
+    await connect(3, 500);
+    await close();
+  } catch (e) {
+    return fim('postgres: ' + e.message, 1);
+  }
+  try {
+    const { isRedisAvailable } = require('./infra/redis/rateLimitClient');
+    const ok = await isRedisAvailable();
+    if (!ok) return fim('redis: indisponível (isRedisAvailable=false)', 1);
+  } catch (e) {
+    return fim('redis: ' + e.message, 1);
+  }
+  return fim('postgres: conectado; redis: conectado', 0);
+})();
+`;
+  const r = spawnSync(process.execPath, ['--env-file=.env', '-e', sonda], {
+    cwd: ROOT, stdio: 'pipe', encoding: 'utf8', timeout: 120000,
+  });
+  const saida = `${r.stdout || ''}${r.stderr || ''}`.trim();
+  const ok = r.status === 0;
+  registrar({
+    id: 'conectividade-infra',
+    comando: 'node --env-file=.env -e <sonda sequelize + rateLimitClient>',
+    exitCode: typeof r.status === 'number' ? r.status : null,
+    veredito: ok ? 'PASS' : 'FAIL',
+    ok,
+    duracaoMs: 0,
+    saida,
+  });
+  return ok;
 }
 
 /**
@@ -246,6 +303,9 @@ function main() {
 
   // 1) ambiente base: .env, api/data, dependências, migrações, invariantes, build, probes.
   npmRun('system-bootstrap', 'system:bootstrap');
+
+  // 1b) conectividade REAL de Postgres/Redis com os clientes do projeto (o `.env` já existe).
+  verificarInfra();
 
   // 2) dados sintéticos mínimos (tenant `system` + superadmin) — sem clientes reais.
   rodar('seed-sintetico', 'node', ['api/db/seed.js']);
