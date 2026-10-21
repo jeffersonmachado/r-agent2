@@ -2197,16 +2197,19 @@
     },
     {
       "id": "L1-NPM-TEST-CI-VERMELHO",
-      "title": "Suite oficial (npm test) reprova no CI real: devServicesSupervision.test.js aceita warning do systemd-analyze como rejeicao",
+      "title": "Suite oficial (npm test) reprova no CI real: devServicesSupervision.test.js reprovava unit por AMBIENTE (executavel ausente no runner)",
       "status": "in_progress",
       "severity": "P1",
       "severityStatus": "DECLARADA",
-      "state": "REPRODUCED",
-      "evidence": "CI run 39538386346 (job 119020233481): 'npm test' exit 1 em 79s, bail=1; evidencia estruturada reports/dev-branch-ci-evidence.json passo L0-suite-oficial saidaFinal: \"Test Suites: 1 failed, 22 passed, 23 of 1088\" em tests/unit/dev/devServicesSupervision.test.js:102. Localmente a mesma suite passa (systemd 255.4-1ubuntu8.17, exit 0 e saida vazia) — logo a assercao depende do ambiente.",
-      "detail": "CAUSA-RAIZ (medida, nao suposta): o teste considera rejeicao qualquer linha da saida de 'systemd-analyze verify' que cite o nome da unit; no runner do GitHub o comando emite linha citando o arquivo (warning/erro de ambiente) e o expect(linhas).toEqual([]) reprova. Como jest.config tem bail=1, UMA suite derruba a suite oficial inteira em 79s, e o job de CI falha sem indicar o motivo no log (o gate captura apenas a cauda da saida).",
-      "prevention": "A assercao deve julgar ACEITACAO (exit code) e ERROS (linhas de erro), nunca a mera mencao ao nome do arquivo; a saida bruta passa a ser publicada em reports/dev-services-supervision-systemd.log para diagnostico no artefato do CI. Regressao do classificador obrigatoria (warning-only passa, erro reprova).",
+      "state": "FIX_IN_PROGRESS",
+      "evidence": "MEDIDO no CI (run 39582527650, job 119163347033, passo C/L0-suite-oficial exit=1 em 65,5s): artefato reports/dev-branch-ci-evidence.json -> passos[L0-suite-oficial].saidaFinal = 'Test Suites: 1 failed, 16 passed, 17 of 1089 total / Tests: 1 failed, 604 passed' e 'at Object.toEqual (tests/unit/dev/devServicesSupervision.test.js:109:22)'. MECANISMO REPRODUZIDO localmente: com executavel inexistente o systemd-analyze verify emite 'ragent2-rag-dev.service: Command <path> is not executable' (exit 1) — no runner nao existem nem /usr/bin/node nem rag-service/venv/bin/uvicorn, que o template substitui. CORRECAO PROVADA: 'npx jest tests/unit/dev/devServicesSupervision.test.js' => 26/26 passed, exit 0 (reports/dev-services-supervision-systemd.log: as 3 units com exit=0 e nenhuma linha citando o unit).",
+      "detail": "CAUSA-RAIZ: o template de unit aponta para caminhos que so existem na maquina real (/usr/bin/node, venv/bin/uvicorn) e o teste exigia saida VAZIA do systemd-analyze; no runner esses binarios nao existem, entao a reprovacao era por AMBIENTE, nao por sintaxe do unit. Agravantes corrigidos no mesmo ciclo: (a) o teste so lia a saida no catch, perdendo o stderr de avisos com exit 0; (b) o arquivo de diagnostico era escrito DEPOIS do expect, logo a falha abortava sem deixar evidencia; (c) o artefato do CI nao publicava os logs de passo.",
+      "prevention": "Verificacao HERMETICA: o teste renderiza com executaveis que existem (process.execPath + stubs executaveis), entao o criterio segue estrito (nenhuma linha pode citar o unit) sem depender do ambiente; saida capturada com spawnSync (stdout+stderr) SEMPRE, diagnostico em reports/ escrito antes da assercao, prova de nao-vacuidade (chave invalida injetada precisa reprovar) e artefato de CI publicando AI_MEMORY/evidence/dev-branch-gate-logs/** e o log do systemd-analyze.",
       "severityBasis": "CI real vermelho bloqueia qualquer declaracao de prontidao verificada por terceiro",
-      "severitySource": "missao-L1-final-§11"
+      "severitySource": "missao-L1-final-§11",
+      "legacyStatus": "in_progress",
+      "regressionTest": "tests/unit/dev/devServicesSupervision.test.js",
+      "targetedTestPassing": true
     }
   ],
   "schemaVersion": 2,

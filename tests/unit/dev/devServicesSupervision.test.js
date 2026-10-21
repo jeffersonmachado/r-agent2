@@ -27,7 +27,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const SERVICE = path.join(ROOT, 'scripts', 'dev', 'service.sh');
@@ -47,15 +47,38 @@ const smokeCode = smoke
   .join('\n');
 
 /** Renderiza um template como o script faz (todos os placeholders). */
-function renderTemplate(nome, { root = ROOT, log = '/tmp/x.log' } = {}) {
+function renderTemplate(
+  nome,
+  {
+    root = ROOT,
+    log = '/tmp/x.log',
+    node = '/usr/bin/node',
+    npm = '/usr/bin/npm',
+    uvicorn = path.join(root, 'rag-service', 'venv', 'bin', 'uvicorn'),
+  } = {},
+) {
   return fs
     .readFileSync(path.join(ROOT, 'scripts', 'dev', `${nome}.service.template`), 'utf8')
     .split('{{ROOT}}').join(root)
     .split('{{SERVICE_DIR}}').join(root)
     .split('{{LOG}}').join(log)
-    .split('{{NODE}}').join('/usr/bin/node')
-    .split('{{NPM}}').join('/usr/bin/npm')
-    .split('{{UVICORN}}').join(path.join(root, 'rag-service', 'venv', 'bin', 'uvicorn'));
+    .split('{{NODE}}').join(node)
+    .split('{{NPM}}').join(npm)
+    .split('{{UVICORN}}').join(uvicorn);
+}
+
+/**
+ * Roda `systemd-analyze verify <arquivo>` devolvendo stdout+stderr SEMPRE.
+ *
+ * MEDIDO (systemd 255 e 249): o `verify` reporta `Unknown key name ... in section`
+ * no stderr com **exit 0** — então inspecionar a saída apenas no `catch` (com
+ * `execFileSync`) enxerga só metade dos diagnósticos e transforma o teste em algo
+ * que não vê defeito nenhum quando o systemd decide não falhar o processo.
+ */
+function verificarUnit(file) {
+  const r = spawnSync('systemd-analyze', ['verify', file], { encoding: 'utf8' });
+  const codigo = typeof r.status === 'number' ? r.status : 1;
+  return { codigo, saida: `${r.stdout || ''}${r.stderr || ''}` };
 }
 
 describe('supervisão generalizada dos serviços de dev', () => {
@@ -89,25 +112,36 @@ describe('supervisão generalizada dos serviços de dev', () => {
       return;
     }
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-units-'));
-    // DIAGNÓSTICO PERSISTENTE (L-1): no runner do GitHub esta verificação reprovou sem que o
-    // motivo aparecesse no log do job (o gate captura só a cauda da saída). Gravar a saída BRUTA
-    // em reports/ (que o CI publica como artefato) torna a falha diagnosticável sem adivinhação.
+    // VERIFICAÇÃO HERMÉTICA (medido 2026-10-21, run 39582527650): o template aponta para
+    // caminhos que só existem na máquina real (`/usr/bin/node`) e no venv do RAG
+    // (`rag-service/venv/bin/uvicorn`). No runner do CI eles não existem e o
+    // `systemd-analyze verify` reprova com "Command /usr/bin/node is not executable" —
+    // reprovação por AMBIENTE, não por sintaxe do unit. Custou um ciclo inteiro de
+    // diagnóstico (a saída não aparecia em lugar nenhum) e um vermelho falso treina todos a
+    // ignorar o L0. Aqui os executáveis passam a EXISTIR (stub executável), e o critério
+    // continua estrito: qualquer linha do systemd que cite o unit segue reprovando.
+    const binDir = path.join(dir, 'bin');
+    fs.mkdirSync(binDir);
+    const stub = (nome) => {
+      const alvo = path.join(binDir, nome);
+      fs.writeFileSync(alvo, '#!/bin/sh\nexit 0\n');
+      fs.chmodSync(alvo, 0o755);
+      return alvo;
+    };
+    const executaveis = { node: process.execPath, npm: stub('npm'), uvicorn: stub('uvicorn') };
+    const reprovacoes = [];
     const saidaBruta = [];
     for (const nome of ['ragent2-api-dev', 'ragent2-rag-dev', 'ragent2-frontend-dev']) {
       const file = path.join(dir, `${nome}.service`);
-      fs.writeFileSync(file, renderTemplate(nome, { log: path.join(dir, `${nome}.log`) }));
-      let saida = '';
-      let codigo = 0;
-      try {
-        execFileSync('systemd-analyze', ['verify', file], { stdio: 'pipe' });
-      } catch (error) {
-        saida = `${error.stdout || ''}${error.stderr || ''}`;
-        codigo = typeof error.status === 'number' ? error.status : 1;
-      }
-      saidaBruta.push(`### ${nome} exit=${codigo}\n${saida}`);
+      fs.writeFileSync(file, renderTemplate(nome, { log: path.join(dir, `${nome}.log`), ...executaveis }));
+      const { codigo, saida } = verificarUnit(file);
+      saidaBruta.push(`### ${nome} exit=${codigo}\n${saida || '(sem saída)'}`);
       const linhas = saida.split('\n').filter((linha) => linha.includes(`${nome}.service`));
-      expect(linhas).toEqual([]);
+      if (linhas.length > 0) reprovacoes.push({ nome, codigo, linhas });
     }
+    // DIAGNÓSTICO PERSISTENTE **antes** da asserção: se a verificação reprovar, a saída BRUTA
+    // já está em disco (o CI publica `reports/` como artefato). Antes o arquivo era escrito
+    // DEPOIS do `expect` — a reprovação abortava a função e não sobrava evidência alguma.
     try {
       fs.mkdirSync(path.join(__dirname, '..', '..', '..', 'reports'), { recursive: true });
       fs.writeFileSync(
@@ -116,6 +150,36 @@ describe('supervisão generalizada dos serviços de dev', () => {
       );
     } catch (_) { /* diagnóstico é best-effort: nunca muda o veredito */ }
     fs.rmSync(dir, { recursive: true, force: true });
+    expect(reprovacoes).toEqual([]);
+  });
+
+  test('a verificação de units NÃO é vacuosa: defeito real do systemd é detectado', () => {
+    // Prova de não-vacuidade do critério acima. Medido em systemd 255 e 249:
+    //   * chave desconhecida  -> `<unit>:6: Unknown key name '...', ignoring.` e exit 0;
+    //   * executável ausente  -> `<unit>: Command ... is not executable` e exit != 0.
+    // Ou seja: o exit code NÃO separa defeito de aviso — o que separa é a linha citar o unit.
+    // Este teste injeta um defeito real e exige que a MESMA checagem o detecte, para que a
+    // correção do vermelho falso (binários existentes) nunca vire um teste que passa sempre.
+    let disponivel = true;
+    try {
+      execFileSync('systemd-analyze', ['--version'], { stdio: 'ignore' });
+    } catch (_) {
+      disponivel = false;
+    }
+    if (!disponivel) return;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ragent2-units-neg-'));
+    const file = path.join(dir, 'ragent2-api-dev.service');
+    fs.writeFileSync(
+      file,
+      renderTemplate('ragent2-api-dev', { node: process.execPath, npm: process.execPath, uvicorn: process.execPath })
+        .replace('[Service]', '[Service]\nLvalueInventado=1'),
+    );
+    // Captura stdout+stderr SEMPRE: o defeito injetado sai como aviso (exit 0).
+    const { saida } = verificarUnit(file);
+    const linhas = saida.split('\n').filter((linha) => linha.includes('ragent2-api-dev.service'));
+    fs.rmSync(dir, { recursive: true, force: true });
+    expect(linhas.length).toBeGreaterThan(0);
+    expect(linhas.join('\n')).toMatch(/Unknown key name/i);
   });
 
   test('nenhuma unit versiona segredo', () => {
