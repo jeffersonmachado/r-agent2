@@ -92,8 +92,18 @@ jobs:
       REDIS_URL: redis://localhost:6379
 
     steps:
-      - name: Checkout
+      # HISTÓRICO COMPLETO — dependência real, medida em 2026-10-21 (run 39620183526).
+      #
+      # Com o checkout padrão (profundidade 1) as suítes de integração do Engenheiro reprovavam com
+      # `fatal: invalid reference: undefined`: o teste deriva o commit anterior com
+      # `git log --format=%H -n 2` para provar `PROMOTION_TARGET_DIVERGED` e, num clone raso, a
+      # segunda linha não existe — o valor vira `undefined` e o comando falha. O mesmo histórico
+      # raso derruba as promoções reais (candidate/worktree a partir de commits anteriores).
+      # Não é defeito de teste nem de produto: é ambiente incompleto, então o ambiente é corrigido.
+      - name: Checkout (histórico completo — as suítes de promoção exigem commits anteriores)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # LINHA PRINCIPAL RASTREADA (medido 2026-10-21, run 39585223390): num checkout de CI não
       # existe branch LOCAL `main`, e 21 de 40 suítes de integração reprovavam com "não foi
@@ -270,8 +280,18 @@ jobs:
       REDIS_URL: redis://localhost:6379
 
     steps:
-      - name: Checkout
+      # HISTÓRICO COMPLETO — dependência real, medida em 2026-10-21 (run 39620183526).
+      #
+      # Com o checkout padrão (profundidade 1) as suítes de integração do Engenheiro reprovavam com
+      # `fatal: invalid reference: undefined`: o teste deriva o commit anterior com
+      # `git log --format=%H -n 2` para provar `PROMOTION_TARGET_DIVERGED` e, num clone raso, a
+      # segunda linha não existe — o valor vira `undefined` e o comando falha. O mesmo histórico
+      # raso derruba as promoções reais (candidate/worktree a partir de commits anteriores).
+      # Não é defeito de teste nem de produto: é ambiente incompleto, então o ambiente é corrigido.
+      - name: Checkout (histórico completo — as suítes de promoção exigem commits anteriores)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Materializar a linha principal (origin/main)
         run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
