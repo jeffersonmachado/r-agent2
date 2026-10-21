@@ -105,6 +105,17 @@ const PASSOS = Object.freeze({
       // sobe para 45 min (a suíte roda unit + flow + rpa:jest de uma vez) e pode ser
       // ajustado por `L0_ORCAMENTO_MS` — sempre auditável no relatório.
       orcamentoMs: Number(process.env.L0_ORCAMENTO_MS) || 45 * 60 * 1000,
+      // DETERMINISMO DO L0 (medido 2026-10-21). Com o default do `jest.config.cjs`
+      // (workers = orçamento de conexões ⇒ 11 nesta máquina de 12 CPUs), a MESMA suíte
+      // produzia falsos vermelhos por contenção, sem defeito algum no código:
+      //   * `engineeringRouterExecutionSandboxSecurity` recebia SANDBOX_UNAVAILABLE porque o
+      //     probe `docker info` estourava 5 s com load average 12 (cache negativo envenenava
+      //     o processo — corrigido à parte, em `executionSandbox`);
+      //   * `tenantAiCredentialsSaveRoute` estourava o `testTimeout` de 10 s.
+      // Medição com 4 workers: 1086 suítes / 9214 testes / exit 0 em 358 s. Gate que reprova
+      // por contenção treina todo mundo a ignorar o vermelho — então o L0 fixa 4 workers.
+      // O teto é explícito (não é o default do repo): `npm test` à mão continua com o default.
+      env: { JEST_MAX_WORKERS: process.env.L0_JEST_MAX_WORKERS || '4' },
     },
     {
       id: 'L0b-integracao-engenheiro',
@@ -514,7 +525,9 @@ function executar(passo) {
     cwd: ROOT,
     encoding: 'utf8',
     shell: true,
-    env: process.env,
+    // `passo.env` permite fixar o ambiente do passo (ex.: `JEST_MAX_WORKERS`) sem variar o
+    // comportamento de quem roda `npm test` à mão.
+    env: { ...process.env, ...(passo.env || {}) },
     maxBuffer: 64 * 1024 * 1024,
     // Backstop: se até o `timeout` falhar, o spawnSync encerra.
     timeout: Number(passo.orcamentoMs || 0) + 30 * 1000,
@@ -544,6 +557,10 @@ function executar(passo) {
     nivel: passo.nivel,
     descricao: passo.descricao,
     comando: passo.comando,
+    // Auditoria: variáveis que o GATE fixou para este passo (ex.: `JEST_MAX_WORKERS`).
+    // Quem lê o relatório depois precisa saber com que ambiente o passo rodou — senão
+    // "passou no gate" e "passou na minha máquina" viram a mesma frase.
+    envFixado: passo.env || null,
     orcamentoMs: Number(passo.orcamentoMs || 0) || null,
     // `status === null` significa morte por sinal/timeout: NUNCA é sucesso.
     exitCode: estourouOrcamento ? null : exitCode,
