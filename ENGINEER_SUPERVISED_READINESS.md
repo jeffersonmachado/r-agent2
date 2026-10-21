@@ -272,6 +272,56 @@ Regressão deste ciclo: `npx jest tests/unit` → **1080 suítes / 9174 testes, 
 (2 skipped declarados). Nenhum teste foi removido ou enfraquecido para obter verde;
 os contratos alterados foram migrados explicitamente e estão nomeados nos commits.
 
+### 4.8 Integração real no gate do branch — e os dois defeitos que ela expôs
+
+Até `a67a99835` o gate do branch de desenvolvimento **não rodava nenhuma suíte de integração**:
+`dev-branch-ci.yml` executava `npm test` (unit + flow + rpa) e gates de governança, e o job de
+integração existia apenas em `jest.yml`, que dispara em `main`/`develop`. Nenhum commit desta branch
+passava por Postgres real.
+
+Correção (`a67a99835`): passo **L0b** em `scripts/ci/dev-branch-gate.js`
+(`npx jest tests/integration/engineering --bail=0 --maxWorkers=2 --forceExit`, fail-closed — sem
+banco o passo falha, não pula) e job `dev-branch-integration` no workflow, com serviços
+`pgvector/pgvector:pg16` + `redis:7` e migrations.
+
+A primeira execução do passo reprovou **duas** suítes, e as duas eram defeito real:
+
+| Achado | Diagnóstico | Prova |
+|---|---|---|
+| `P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO` (`697381bbb`) | `mergeMissionJson` fazia read-modify-write puro: duas escritas concorrentes partiam do mesmo snapshot e a última vencia com o snapshot **antigo**, apagando a chave da outra. O coordenador do Bug Loop logava `replacementTaskId` novo (`635d254e…`) e a missão persistida ficava com a lineage anterior (`= originalTaskId`) | `engineeringMissionMergeConcurrency.test.js` (5 casos; 15 rodadas concorrentes). Código **antigo**: 1 falha. Fix: 5/5 |
+| `P1-PROMOCAO-SMOKE-INSTAVEL-SOB-CARGA` (`c4770aa55`) | `engineeringPromotionService` reprovou **só na bateria** (`promoted:false`); isolada passa 10/10. O smoke pós-promoção executa um `npx jest` dentro do workspace e, sob carga, pode exceder o deadline → `TIMEOUT` → `POST_PROMOTION_VERIFY_FAILED`. Diagnóstico estava invisível (`Expected: true, Received: false`) | asserção passou a reportar o `code`; bateria seguinte: **40/40 suítes, 219/219 testes, exit 0 (577 s)** |
+
+Correção do merge, em detalhe: CAS por `updatedAt` (o model é `underscored: true` — usar
+`updated_at` no `WHERE` gera `WHERE parameter ... invalid "undefined"`), reaplicando o merge sobre o
+estado **relido**, 5 tentativas e `MISSION_MERGE_CONFLICT` explícito em vez de sobrescrever. O
+caminho com `guard.leaseToken` continua em `updateMissionGuarded` (já condicional por lease/fence).
+
+**Medição final da bateria (árvore limpa, `697381bbb`):** 40/40 suítes, 219/219 testes, exit 0,
+577 s. A falha de promoção não se repetiu; ela permanece classificada como instabilidade de
+contenção (a mesma classe documentada em §4.4), agora **diagnosticável** pelo `code`.
+
+### 4.9 Resíduo de refs `engineering/missions/*` (medido, poda pendente de aprovação)
+
+`git branch --list 'engineering/missions/*' | wc -l` → **3.017** (mais 86
+`engineering-router/candidates`), sem **nenhuma** poda em código de produção
+(`grep deleteBranch|branch -D` em `api/services/engineeringRouter|engineeringMission` → zero). Cada
+execução da bateria cria ~22 branches novas (2.995 → 3.017 medidos).
+
+`scripts/prune-engineering-mission-branches.js` (`c4770aa55`) classifica por missão no banco e é
+dry-run por padrão:
+
+| Classe | Quantidade | Ação |
+|---|---|---|
+| órfã (missionId inexistente no banco) | 2.738 | candidata |
+| fixture de teste (`created_by` com marcador) | 269 | candidata |
+| missão de usuário viva | 10 | **mantida** — nunca é candidata |
+| **total de candidatas** | **3.007** | requer `--apply` |
+
+Sem banco acessível **nada** é candidato (`INFRA_ERROR`, exit 2): "não sei se a missão existe" nunca
+vira "pode apagar". O `--apply` **não foi executado** — remover 3.007 refs é irreversível e as
+branches carregam o fix integrado das missões; é decisão do dono do repositório (item
+`P1-BRANCHES-MISSAO-RESIDUO`, `ready_for_approval`).
+
 ## 5. Testes NÃO executados (declarado, com motivo)
 
 | Não executado | Motivo |
