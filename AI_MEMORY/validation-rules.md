@@ -47,6 +47,19 @@ O `L1` vermelho em `dev/engineering-hardening` é **estrutural, não defeito de 
 só existe depois que o conteúdo está em `main` e o selo roda lá. Fechar o `L1` = promover para
 `main` + `npm run release:seal` — nunca afrouxar o validador da cadeia.
 
+**Reprodutibilidade medida 5× (commits `43b8825dd`, `02336a9e2`, `5e5a4196e`, `fe6837562` e o do
+checkpoint):** `L0` exit 0 em 431–449 s e `L0b` exit 0 em 468–474 s em TODAS as execuções, com
+`prod-like-smoke` e `dev-branch-integration` SUCCESS. O `L1` para sempre no MESMO ponto
+(`L1-cadeia-criptografica`, exit 1, ≤1 s) — é um bloqueio determinístico, não flake.
+
+**O bloqueio do `L1` tem UMA causa, não três:** os validadores seguintes ainda não executam no CI
+(a fase aborta no primeiro), mas medindo-os localmente o veredito é o mesmo e aponta para a cadeia —
+`validate-self-proving` reprova com `governance_chain_invalid` / `auto_declaracao_falsa` /
+`certificacao_ultrapassada` e `assert-canonical-release-decision` devolve
+`CADEIA_RECOMPUTADA_INVALIDA (divergências=11, raizConfere=false)`. `validate-release-dag`,
+`validate-hardening-queue`, `validate-ai-memory` e `validate-agent-adherence` PASSAM. Portanto o CI
+está a UM ciclo de selagem da matriz completa — e esse ciclo exige `main`.
+
 ### Regras que o CI aprendeu (não regredir)
 
 - **Engineering Runner é recurso de SESSÃO, não de porta**: `tests/setup/engineeringRunnerGlobalSetup.js`
