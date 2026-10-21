@@ -60,8 +60,24 @@ if (!isInPipeline()) {
 // BUG CLOSURE FIRST (2026-10-17): QA Mesh completo é operação EXTENSIVA. Não
 // começa enquanto existir P0/P1 bloqueante aberto na fila oficial. O guard
 // aborta com exit 3 (recusa por defeito ≠ falha de execução).
-require('../../governance/bug-closure/require-eligibility')
-  .exigirElegibilidade('QA_WAVES_COMPLETA', { actor: 'pipeline/entrypoints/runQaMesh.js' });
+//
+// ESCOPO DO GUARD (medido 2026-10-21, checkout limpo): `--refresh-registry` sozinho apenas
+// reconstrói o ÍNDICE a partir das definições versionadas — não executa cenário nem produz
+// evidência canônica. Bloqueá-lo com P1 aberto fechava um ciclo impossível: o índice é
+// pré-requisito para medir cobertura e fechar o defeito, e o defeito impedia construí-lo.
+// A classificação vive em `qa-mesh/meshOperationPolicy.js` (testável) e é conservadora:
+// qualquer combinação de flags continua exigindo elegibilidade.
+const { exigeElegibilidade } = require('../../qa-mesh/meshOperationPolicy');
+
+if (exigeElegibilidade(process.argv.slice(2))) {
+  require('../../governance/bug-closure/require-eligibility')
+    .exigirElegibilidade('QA_WAVES_COMPLETA', { actor: 'pipeline/entrypoints/runQaMesh.js' });
+} else {
+  console.warn(
+    '[pipeline/entrypoints/runQaMesh] Operação de MANUTENÇÃO DE ÍNDICE (--refresh-registry):\n'
+    + 'não executa cenários nem produz evidência canônica — Bug Closure First não se aplica.'
+  );
+}
 
 const result = spawnSync('node', ['qa-mesh/meshRunner.js', ...process.argv.slice(2)], {
   cwd: ROOT,
