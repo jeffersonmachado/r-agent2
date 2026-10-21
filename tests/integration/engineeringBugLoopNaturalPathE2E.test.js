@@ -32,6 +32,28 @@ const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 
+/**
+ * ESCOPO DE CREDENCIAL DO ROUTER — o MESMO tenant que esta suíte provisiona.
+ *
+ * DEFEITO REAL MEDIDO (2026-10-21, runs 39673283430 e 39676752021, passo L0b do gate): a suíte
+ * provisiona credenciais de IA para `TEST_TENANT_KEY` (`saveAICredentials` abaixo), mas o Router
+ * consulta as credenciais do tenant `ENGINEERING_ROUTER_TENANT_ID`, cujo default é `system`
+ * (`api/services/engineeringRouter/engineeringModelAvailabilityService.js`). Localmente o banco do
+ * operador TEM credenciais no tenant `system`, então o ciclo convergia; no runner efêmero o tenant
+ * `system` não tem nenhuma — nenhum modelo ficava disponível, a task de correção ia a
+ * `BLOCKED`/`NO_QUALIFIED_CODER` no primeiro ciclo e o worker passava 895 ciclos sem nada a fazer
+ * até estourar o próprio orçamento de espera (901 s). O sintoma reportado era "timeout", mas a
+ * causa era DEPENDÊNCIA DE ESTADO AMBIENTAL: a suíte nunca foi auto-suficiente.
+ *
+ * A correção aponta o escopo para o tenant que a suíte cria e limpa (nenhuma asserção muda, nenhum
+ * skip é usado): o teste passa a depender APENAS do que ele próprio provisiona.
+ *
+ * ORDEM IMPORTA — a variável é lida no carregamento do módulo, por isso a atribuição vem ANTES dos
+ * `require` que trazem `engineeringRouterService`/`engineeringModelAvailabilityService`.
+ */
+const TEST_TENANT_KEY = 'jest-e2e-bug-natural';
+process.env.ENGINEERING_ROUTER_TENANT_ID = TEST_TENANT_KEY;
+
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
@@ -53,7 +75,8 @@ const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ -
 
 const CODER_PROVIDER = 'anthropic';
 const REVIEWER_PROVIDER = 'mistral';
-const TEST_TENANT_KEY = 'jest-e2e-bug-natural';
+// `TEST_TENANT_KEY` é declarado no topo do arquivo, ANTES dos `require`, porque o escopo de
+// credencial do Router (`ENGINEERING_ROUTER_TENANT_ID`) é lido no carregamento do módulo.
 
 const SUITE_NAME = 'engineering-bug-loop-natural-path-e2e';
 
