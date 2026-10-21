@@ -106,6 +106,12 @@ jobs:
           path: |
             reports/dev-branch-ci-evidence.json
             AI_MEMORY/evidence/dev-branch-ci-*.md
+            # L-1 (2026-10-21): o veredito registra `saidaRef` (log do passo que falhou), mas o
+            # artefato não carregava esses logs — um run vermelho obrigava a reexecutar para
+            # descobrir o motivo. Evidenciar a FALHA inclui o log dela.
+            AI_MEMORY/evidence/dev-branch-gate-logs/**
+            # Diagnóstico específico de systemd-analyze (teste sensível ao ambiente do runner).
+            reports/dev-services-supervision-systemd.log
           if-no-files-found: error
           retention-days: 30
 

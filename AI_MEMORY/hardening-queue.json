@@ -2194,6 +2194,19 @@
       "legacyStatus": "prevention_active",
       "severityBasis": "gate que reprova por contencao treina a ignorar vermelho",
       "severitySource": "auditoria-2026-10-21"
+    },
+    {
+      "id": "L1-NPM-TEST-CI-VERMELHO",
+      "title": "Suite oficial (npm test) reprova no CI real: devServicesSupervision.test.js aceita warning do systemd-analyze como rejeicao",
+      "status": "in_progress",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "REPRODUCED",
+      "evidence": "CI run 39538386346 (job 119020233481): 'npm test' exit 1 em 79s, bail=1; evidencia estruturada reports/dev-branch-ci-evidence.json passo L0-suite-oficial saidaFinal: \"Test Suites: 1 failed, 22 passed, 23 of 1088\" em tests/unit/dev/devServicesSupervision.test.js:102. Localmente a mesma suite passa (systemd 255.4-1ubuntu8.17, exit 0 e saida vazia) — logo a assercao depende do ambiente.",
+      "detail": "CAUSA-RAIZ (medida, nao suposta): o teste considera rejeicao qualquer linha da saida de 'systemd-analyze verify' que cite o nome da unit; no runner do GitHub o comando emite linha citando o arquivo (warning/erro de ambiente) e o expect(linhas).toEqual([]) reprova. Como jest.config tem bail=1, UMA suite derruba a suite oficial inteira em 79s, e o job de CI falha sem indicar o motivo no log (o gate captura apenas a cauda da saida).",
+      "prevention": "A assercao deve julgar ACEITACAO (exit code) e ERROS (linhas de erro), nunca a mera mencao ao nome do arquivo; a saida bruta passa a ser publicada em reports/dev-services-supervision-systemd.log para diagnostico no artefato do CI. Regressao do classificador obrigatoria (warning-only passa, erro reprova).",
+      "severityBasis": "CI real vermelho bloqueia qualquer declaracao de prontidao verificada por terceiro",
+      "severitySource": "missao-L1-final-§11"
     }
   ],
   "schemaVersion": 2,
