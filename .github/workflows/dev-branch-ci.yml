@@ -115,54 +115,25 @@ jobs:
           echo "HEAD=$(git rev-parse HEAD)"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
-      # Mesma materializacao de pacotes irmaos do jest.yml: o require resolve a
-      # partir do path real (`file:../../packages/auth`), fora do node_modules.
-      - name: Materializar pacotes irmaos @results (fora do checkout)
-        run: |
-          mkdir -p ../../packages ../packages
-          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
-          cp -r vendor/auth ../../packages/auth
-          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
-          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
-
-      - name: Install dependencies
-        run: npm ci
-
-      # Schema completo no banco efêmero: as suítes L0 que exercitam persistência precisam das
-      # tabelas reais (sem elas o teste falha por schema ausente, não por defeito).
-      - name: Migrations (schema completo no banco efêmero)
-        run: npm run db:migrate
-
-      # ARTEFATOS GOVERNADOS QUE AS SUÍTES L0 LEEM (medido 2026-10-21, run 39588568722):
-      # `convergenceFixpoint` e `readinessCertificationSeparation` reprovaram com
-      # ENOENT de `reports/benchmark-sufficiency-report.json` — `reports/` é ignorado pelo git,
-      # então num clone limpo o artefato não existe e a suíte confunde "não gerado" com defeito.
+      # BOOTSTRAP CANÔNICO (missão CI DEFINITIVO, 2026-10-21).
       #
-      # Aqui o objetivo do passo é GERAR os artefatos, não julgar a cobertura da plataforma:
-      # MEDIDO no run 39590029421 que `validate:coverage-completeness` sai 1 no runner (faltam
-      # evidências de waves que só existem na máquina de desenvolvimento) DEPOIS de escrever o
-      # próprio relatório — o veredito dele é gate de L1/release, aplicado onde a evidência
-      # completa existe. Por isso o exit code dos geradores não é o gate deste passo; o gate
-      # deste passo é a EXISTÊNCIA e o conteúdo não-vazio dos dois artefatos (passo seguinte).
-      - name: Gerar artefatos governados consumidos pelas suites L0
-        run: |
-          npm run validate:coverage-completeness || true
-          npm run validate:benchmark-sufficiency || true
-          npm run validate:evo-contract || true
-          npm run validate:layer-conventions || true
-
-      - name: Provar que os artefatos exigidos pelas suites L0 existem
-        run: |
-          test -s reports/coverage-completeness-report.json
-          test -s reports/benchmark-sufficiency-report.json
-          test -s reports/evo-contract-report.json
-          test -s reports/layer-conventions-report.json || {
-            echo "layer-conventions-report.json ausente — o validador nao gerou o artefato:"
-            npm run validate:layer-conventions || true
-            ls -la reports/ | head -20
-            exit 1
-          }
-          echo "artefatos presentes: coverage-completeness + benchmark-sufficiency + evo-contract + layer-conventions"
+      # Tudo o que o ambiente precisa para rodar a suíte obrigatória em CLONE LIMPO está em UM
+      # entrypoint versionado — `npm run ci:bootstrap` — em vez de passos ad-hoc espalhados no
+      # workflow. Ele: materializa os pacotes irmãos `@results/*` a partir de `vendor/`, roda o
+      # bootstrap oficial (deps, migrações, invariantes, build do frontend, probes de API/preview/
+      # DB/Redis), cria os dados sintéticos mínimos (tenant `system` + superadmin), reconstrói o
+      # índice do QA Mesh e o grafo de impacto e gera os artefatos governados que as suítes leem.
+      #
+      # NÃO há `|| true` nem `continue-on-error`: o bootstrap reprova se um artefato exigido não
+      # existir. Os VEREDITOS dos produtores (ex.: `impact:validate` ESCALATE, `timeout-
+      # architecture` NO_GO) são registrados no relatório do bootstrap exatamente como saíram —
+      # nunca convertidos em PASS.
+      #
+      # Medido em clone limpo (git clone --local, profundidade igual à do runner): depois deste
+      # passo a suíte oficial vai de 13 suítes reprovadas para 1 (a que exige o smoke prod-like
+      # real com navegador; ver reports/ci-bootstrap-report.json e a fila oficial).
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
 
       # IMAGEM DO EXECUTION SANDBOX (medido 2026-10-21, run 39593921911):
       # `engineeringRouterExecutionSandboxSecurity` reprovou com `docker run` exit 125 porque a
