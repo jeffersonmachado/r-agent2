@@ -195,6 +195,52 @@ async function updateMission(id, patch = {}) {
  */
 const MERGE_JSON_KEYS = Object.freeze(['resume', 'enrichment', 'preview', 'policyResolution']);
 
+/**
+ * Tentativas do compare-and-swap do merge acumulativo. Valor pequeno de propósito:
+ * convergência real acontece em 1–2 rodadas; chegar ao teto significa contenção
+ * anômala e deve falhar (MISSION_MERGE_CONFLICT), não insistir indefinidamente.
+ */
+const MERGE_MAX_TENTATIVAS = 5;
+
+/**
+ * Campos acumulativos a partir do estado ATUAL + patch (função pura do merge).
+ * Extraída para que o laço de CAS reaplique exatamente a mesma semântica sobre o
+ * estado relido.
+ */
+function montarMergeAcumulativo(current, patch) {
+  const { resume = null, enrichment = null, preview = null, policyResolution = null } = patch;
+  const out = {};
+  if (resume) out.resume_metadata = { ...(current.resume_metadata || {}), ...resume };
+  if (enrichment) out.enrichment = { ...(current.enrichment || {}), ...enrichment };
+  if (preview) out.preview = { ...(current.preview || {}), ...preview };
+  // §21: a resolução de política é EVIDÊNCIA — sobrevive a re-enriquecimento porque vive em
+  // resume_metadata, não só no preview que é regerado.
+  out.resume_metadata = { ...(current.resume_metadata || {}), ...(out.resume_metadata || {}), ...(policyResolution ? { policyResolution } : {}) };
+  return out;
+}
+
+/**
+ * Merge de JSONB acumulativo com COMPARE-AND-SWAP.
+ *
+ * DEFEITO MEDIDO (2026-10-20): o merge era read-modify-write puro — `getMission`
+ * → monta objeto → `update` incondicional. Duas escritas concorrentes na MESMA
+ * missão (o coordenador do Bug Loop gravando `resume.bugLoop.lineage` e o
+ * orquestrador/worker gravando `resume.sourceReplan`) partiam do mesmo snapshot;
+ * a última gravação vencia com o snapshot ANTIGO e a linha de lineage
+ * simplesmente desaparecia. Efeito observado no E2E do Bug Loop: o coordenador
+ * registrava `decision=REPLACE_TASK_RESUME_PHASE` com `replacementTaskId` novo
+ * (log real) e a missão persistida ficava com a lineage anterior
+ * (`replacementTaskId === originalTaskId`), porque outra escrita havia vencido a
+ * corrida. Perda de atualização silenciosa é a pior classe aqui: o registro de
+ * auditoria existe mas descreve um estado que nunca valeu.
+ *
+ * Correção: update condicional por `updated_at` (o mesmo padrão de
+ * `updateMissionGuarded`, que já usa update com WHERE e checa `affected`). Se
+ * outra escrita venceu a corrida, o merge é REAPLICADO sobre o estado relido —
+ * escritas em chaves diferentes coexistem; escritas na mesma chave permanecem
+ * ordenadas pelo vencedor real. Sem vitória após as tentativas, falha explícita
+ * (`MISSION_MERGE_CONFLICT`) em vez de sobrescrever.
+ */
 async function mergeMissionJson(id, patch = {}, guard = null) {
   const unknown = Object.keys(patch).filter((key) => !MERGE_JSON_KEYS.includes(key));
   if (unknown.length > 0) {
@@ -203,20 +249,37 @@ async function mergeMissionJson(id, patch = {}, guard = null) {
     err.unknownKeys = unknown;
     throw err;
   }
-  const { resume = null, enrichment = null, preview = null, policyResolution = null } = patch;
-  const current = await getMission(id);
-  if (!current) return null;
-  const out = {};
-  if (resume) out.resume_metadata = { ...(current.resume_metadata || {}), ...resume };
-  if (enrichment) out.enrichment = { ...(current.enrichment || {}), ...enrichment };
-  if (preview) out.preview = { ...(current.preview || {}), ...preview };
-  // §21: a resolução de política é EVIDÊNCIA — sobrevive a re-enriquecimento porque vive em
-  // resume_metadata, não só no preview que é regerado.
-  out.resume_metadata = { ...(current.resume_metadata || {}), ...(out.resume_metadata || {}), ...(policyResolution ? { policyResolution } : {}) };
-  // Worker com posse (compiler/orquestrador/recovery) grava sob fence; sem guard é escrita
-  // administrativa/leitura-reconciliação (mesma semântica de sempre).
-  if (guard && guard.leaseToken) return updateMissionGuarded(id, out, guard);
-  return updateMission(id, out);
+  const { Mission } = models();
+  let ultimoConflito = null;
+  for (let tentativa = 1; tentativa <= MERGE_MAX_TENTATIVAS; tentativa += 1) {
+    const current = await getMission(id);
+    if (!current) return null;
+    const out = montarMergeAcumulativo(current, patch);
+    // Worker com posse (compiler/orquestrador/recovery) grava sob fence; sem guard é escrita
+    // administrativa/leitura-reconciliação (mesma semântica de sempre). O caminho guardado já é
+    // um update condicional por lease/fence — não precisa do CAS por updated_at.
+    if (guard && guard.leaseToken) return updateMissionGuarded(id, out, guard);
+
+    // `underscored: true` no model: o ATRIBUTO é `updatedAt` (coluna updated_at). Usar o
+    // nome do atributo é o que o Sequelize mapeia no WHERE.
+    const versaoVista = current.updatedAt;
+    if (!versaoVista) {
+      const err = new Error('mergeMissionJson: missão sem updatedAt — impossível garantir CAS');
+      err.code = 'MISSION_MERGE_NO_VERSION';
+      throw err;
+    }
+    const [afetadas] = await Mission.update(out, {
+      where: { id, updatedAt: versaoVista },
+    });
+    if (afetadas === 1) return getMission(id);
+    ultimoConflito = { tentativa, updatedAt: versaoVista };
+  }
+  const err = new Error(
+    `merge concorrente em resume/enrichment não convergiu após ${MERGE_MAX_TENTATIVAS} tentativas`
+  );
+  err.code = 'MISSION_MERGE_CONFLICT';
+  err.lastAttempt = ultimoConflito;
+  throw err;
 }
 
 // ── Lock de concorrência (interface histórica sobre o LEASE) ─────────────────────────────────
