@@ -404,6 +404,12 @@ function decidirVeredito({ entradaInvalida, identidade, estados, bloqueio }) {
 
   if (entradaInvalida) return 'ENTRADA_INVALIDA';
   if (!identidade || !identidade.ok) return 'IDENTIDADE_INVALIDA';
+  // UM PASSO QUE FALHOU É FALHA, NÃO TIMEOUT (medido 2026-10-21, run 39614201981): o passo
+  // `L0-suite-oficial` reprovou por asserção real (exit=1) e o veredito publicado foi
+  // `BLOQUEADO_POR_TIMEOUT` — rótulo que manda a investigação para o lado errado e sugere
+  // orçamento de tempo quando o defeito é de código. `timeout` continua tendo veredito próprio
+  // (BLOCKED por sinal), coberto pelo cenário 8 deste contrato.
+  if (bloqueio && bloqueio.code === 'PASSO_FALHOU') return 'FAIL';
   if (algumaFalha) return 'FAIL';
   if (algumBloqueio) {
     return bloqueio && ['FASE_NAO_AUTORIZADA', 'PRE_VOO_FALHOU'].includes(bloqueio.code)
