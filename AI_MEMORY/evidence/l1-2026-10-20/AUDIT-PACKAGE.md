@@ -107,3 +107,49 @@ a publicação deste pacote.
 - validação de segregação em **browser real** nesta janela (os três gates de segregação são
   estáticos e passam com 0 violações);
 - certificação do contrato EVO (fora do escopo explícito de L-1).
+
+---
+
+## 6. Atualização 2026-10-21 (ciclo de CI) — auditoria externa continua PENDENTE
+
+**Veredito:** `NOT_READY` / `PENDING_HUMAN_APPROVAL` (exit 1). **Auditoria independente: `AUDIT_PENDING`.**
+
+### 6.1 O que mudou desde a publicação anterior
+
+8 causas-raiz de AMBIENTE do CI foram corrigidas com prova de execução (tabela §15.1 de
+`ENGINEER_SUPERVISED_READINESS.md`): units hermeticas, prazo de infraestrutura, resolucao de
+`origin/main`, Postgres+Redis no job L0, artefatos governados gerados, preflight de TTL fail-closed,
+imagem do Execution Sandbox construida no job e log do passo publicado no artefato.
+
+Commits medidos: `ac92a70ab`, `2c36f3d1d`, `20abca31c`, `0fbb744d6`, `d987a1ecb`, `40ca9ea98`,
+`c087dd40a`, `70a24552a`, `704150648`.
+
+### 6.2 O que o auditor deve verificar primeiro (nesta ordem)
+
+1. `.github/workflows/dev-branch-ci.yml` — os passos novos (infra, migrações, geradores, prova de
+   artefato, build do sandbox). Nenhum deles pula teste: ou o teste EXECUTA, ou o passo falha.
+2. `tests/helpers/infraGate.js` (`comPrazo`) e `tests/unit/helpers/infraGatePrazo.test.js` —
+   a garantia de que prazo estourado vira `NOT_EXECUTED` em dev e `INFRA_ERROR` em
+   release-authoritative, nunca PASS.
+3. `api/services/engineeringMission/missionSourceService.js#readMainCommit` +
+   `tests/unit/engineeringMissionSourceRefRemote.test.js` — resolução de ref com precedência local e
+   fail-closed quando o commit não existe em nenhuma forma.
+4. `tests/unit/dev/{devServicesSupervision,apiServiceUnit}.test.js` — verificação hermética das
+   units (o critério continua estrito: nenhuma linha do systemd pode citar a unit).
+5. `tests/unit/governance/discoveredBlockerGuards.test.js` — asserção estado-dependente do preflight
+   de TTL (com evidência exige `OK/STALE`; sem evidência exige `UNAVAILABLE`).
+
+### 6.3 Limite honesto deste ciclo
+
+O CI **continua vermelho** e a causa está medida: em clone limpo, 13 suítes / 35 testes dependem de
+ambiente populado (`reports/` gerados, `.env`, evidência de smoke real). Resolver exige decisão
+humana entre popular o ambiente no CI (A) ou declarar auditavelmente as suítes não executáveis em
+clone limpo (B) — §15.2 do relatório. O item `L1-NPM-TEST-CI-VERMELHO` está `blocked` na fila com a
+decisão nomeada. **Nenhum gate foi afrouxado para produzir verde.**
+
+### 6.4 Solicitação formal
+
+`AI_MEMORY/evidence/engineer-supervised-approval-request.json` — três decisões separadas
+(auditoria independente, riscos não dispensáveis, CI/clone limpo), riscos residuais por classe e
+critérios de cancelamento. `engineer-supervised-approval.json` **não existe**: aprovação é ato
+humano com assinatura Ed25519 verificável.

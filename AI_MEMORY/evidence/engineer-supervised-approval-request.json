@@ -1,0 +1,111 @@
+{
+  "_doc": "SOLICITACAO de aprovacao humana para a missao L-1 FINAL READINESS. NAO e aprovacao: este arquivo e assinado pelo agente que executou a missao e, por isso, NAO PODE conter assinatura humana. O arquivo de aprovacao (engineer-supervised-approval.json) e criado exclusivamente por autoridade humana registrada em governance/risk-acceptance/authorities.json, com assinatura Ed25519 verificavel. Enquanto ele nao existir, o veredito do gate e PENDING_HUMAN_APPROVAL e nunca GO.",
+  "_schema": "engineer-supervised-approval-request/v1",
+  "missionId": "L1-FINAL-READINESS-2026-10-20",
+  "requestedAt": "2026-10-21T00:00:00Z",
+  "requestedBy": "agent:github-copilot",
+  "branch": "dev/engineering-hardening",
+  "sourceCommit": "704150648",
+  "sourceCommitNote": "Commit medido no ciclo corrente. O gate recalcula o SHA (git rev-parse HEAD) e RECUSA aprovacao cujo sourceCommit nao coincida com o commit avaliado — a aprovacao e vinculada ao commit, nao a branch.",
+  "scope": {
+    "included": [
+      "delegacao supervisionada do RAP Engineer em branch de desenvolvimento (dev/engineering-hardening)",
+      "execucao de L0 (suite oficial Jest), L1 (gates de governanca) e L2 (jornada supervisionada) em ambiente controlado",
+      "correcao de defeitos de engenharia com teste de regressao obrigatorio"
+    ],
+    "excluded": [
+      "release, selagem, tag, publicacao de artefato",
+      "push para main, merge, force-push",
+      "deploy em producao",
+      "autoaprovacao de risco (aceitacao de risco e ato humano)"
+    ]
+  },
+  "whatIsBeingRequested": "Decisao humana sobre o veredito de prontidao: (a) presenca ou nao de auditoria independente; (b) aceitacao ou nao dos riscos residuais que a missao NAO pode dispensar sozinha; (c) autorizacao (ou nao) de qualquer ciclo de release. Sem esta decisao o gate permanece NOT_READY/PENDING_HUMAN_APPROVAL.",
+  "measuredState": {
+    "gateVerdict": "PENDING_HUMAN_APPROVAL",
+    "gateExitCode": 2,
+    "gateReport": "reports/engineer-supervised-readiness-report.json",
+    "blockersClassified": 7,
+    "blockersAcceptedByAgent": 0,
+    "ciL0": "VERMELHO por dependencia de ambiente (medido; ver AI_MEMORY/hardening-queue.json item L1-NPM-TEST-CI-VERMELHO)",
+    "ciIntegration": "VERMELHO — parte das 40 suites depende da linha principal local/artefatos gerados",
+    "independentAudit": "AUDIT_PENDING — o executor revisou o proprio trabalho; isso nao e auditoria independente"
+  },
+  "decisionsRequired": [
+    {
+      "id": "D1-AUDITORIA-INDEPENDENTE",
+      "question": "Uma auditoria independente (pessoa ou processo fora do executor) revisou codigo, evidencias e veredito?",
+      "options": ["APROVADO_COM_AUDITORIA", "REPROVADO", "ADIADO"],
+      "evidenceNeeded": "parecer da auditoria com escopo, metodo e achados; identificacao do auditor"
+    },
+    {
+      "id": "D2-RISCOS-NAO-DISPENSAVEIS",
+      "question": "Os riscos residuais listados em residualRisks sao aceitos, com dono e prazo?",
+      "options": ["ACEITO_COM_DONO_E_PRAZO", "NAO_ACEITO"],
+      "evidenceNeeded": "termo de aceitacao por item, com escopo, validade e criterio de revogacao"
+    },
+    {
+      "id": "D3-CI-E-CLONE-LIMPO",
+      "question": "CI L0: popular o ambiente (bootstrap + cadeia de validadores) OU declarar de forma auditavel as suites nao executaveis em clone limpo?",
+      "options": ["POPULAR_AMBIENTE", "DECLARAR_NAO_EXECUTAVEIS", "ADIADO"],
+      "evidenceNeeded": "decisao registrada; a opcao escolhida muda contrato de gate e nao pode ser decidida pelo agente"
+    }
+  ],
+  "residualRisks": [
+    {
+      "id": "H15-DIST-RECIBO-STALE",
+      "class": "RELEASE_ONLY",
+      "summary": "recibo stale do verifier no dist/"
+    },
+    {
+      "id": "H19-DIST-CAUSA-UNICA",
+      "class": "RELEASE_ONLY",
+      "summary": "higiene do dist/ com causa unica"
+    },
+    {
+      "id": "H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE",
+      "class": "PLATFORM_BLOCKING",
+      "summary": "cadeia de governanca diverge do conteudo atual apos escritas pos-certificacao"
+    },
+    {
+      "id": "P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO",
+      "class": "PLATFORM_BLOCKING",
+      "summary": "projecoes de status gravadas antes da decisao final de run abandonado"
+    },
+    {
+      "id": "P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3",
+      "class": "PLATFORM_BLOCKING",
+      "summary": "gate agregado para em fail-closed sem identidade de run governado"
+    },
+    {
+      "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
+      "class": "EXTERNAL_DEPENDENCY",
+      "summary": "CI: budget/limites da conta e protecao de publicacao"
+    },
+    {
+      "id": "L1-NPM-TEST-CI-VERMELHO",
+      "class": "L1_BLOCKING",
+      "summary": "suite oficial nao roda completa em clone limpo (12-13 suites dependentes de ambiente populado)"
+    }
+  ],
+  "nonWaivableNotRequested": [
+    "falsificacao de prova, hash, assinatura ou replay",
+    "declarar PASS/GO sem execucao real",
+    "remover ou relaxar gates de governanca",
+    "publicar release, tag ou deploy com decisao canonica NO_GO",
+    "aprovacao de risco produzida pelo proprio agente"
+  ],
+  "howToGrant": [
+    "1) a autoridade precisa existir em governance/risk-acceptance/authorities.json (mayApproveMissions=true, chave publica Ed25519)",
+    "2) criar AI_MEMORY/evidence/engineer-supervised-approval.json com approver, approvedAt, missionId, scope, statement, sourceCommit e signature (Ed25519 sobre o JSON canonico)",
+    "3) rodar: node scripts/governance/validate-engineer-supervised-readiness.js",
+    "4) sem esse arquivo o gate devolve PENDING_HUMAN_APPROVAL (exit 2) — nunca GO"
+  ],
+  "validity": "Esta solicitacao vale apenas para o sourceCommit acima e para a missao L1-FINAL-READINESS-2026-10-20; qualquer commit novo invalida a correspondencia e o gate reprova a aprovacao.",
+  "cancelCriteria": [
+    "novo commit no branch avaliado (sourceCommit muda)",
+    "auditoria independente aponta achado bloqueante",
+    "qualquer gate canonico passa a NO_GO por regressao",
+    "qualquer tentativa de contornar enforcement (hook continue-until-done, validadores) for observada"
+  ]
+}

@@ -734,3 +734,80 @@ comportamento. Duas causas distintas foram encontradas e corrigidas:
 Provas: `engineeringRouterSandboxAvailabilityCache.test.js` 7/7 (contra o código anterior, 3
 falhas: timeout, SIGTERM e recuperação); sandbox real + cache 17/17; `ciGateL0Determinism.test.js`
 3/3.
+
+## 15. Ciclo 2026-10-21 — CI real: o que estava vermelho, o que foi corrigido e o que exige decisão humana
+
+Esta seção existe porque a missão exige **CI real** (§11) e proíbe declarar `CI_PASS` sem execução
+comprovada. O CI da branch estava vermelho desde antes desta missão. Cada ciclo abaixo é um run
+medido no GitHub Actions; nenhuma afirmação aqui vem de suposição.
+
+### 15.1 Defeitos de ambiente corrigidos e provados (8 causas-raiz)
+
+| # | Sintoma medido no CI | Causa-raiz | Correção | Prova |
+|---|---|---|---|---|
+| 1 | `devServicesSupervision.test.js:109` reprovava as units | o template substitui `{{NODE}}` por `/usr/bin/node`, inexistente no runner; `systemd-analyze` reprova o unit por AMBIENTE | renderização hermética (`process.execPath` + stubs executáveis), `spawnSync` lendo stdout+stderr sempre, diagnóstico escrito ANTES da asserção, teste de não-vacuidade | `ac92a70ab` — suíte 26/26; `npm test` local exit 0 |
+| 2 | `engineeringRouterQwenProvider` → `Exceeded timeout of 60000 ms` | `connect()` sem prazo sem Postgres; o teste nunca chegava ao `skipOrFail` | `infraGate.comPrazo` (erro `INFRA_TIMEOUT`) → `NOT_EXECUTED` em dev, `INFRA_ERROR` em release-authoritative | `2c36f3d1d` — com Postgres inalcançável 28/28 em 7,7 s; regressão 5/5 |
+| 3 | integração: `21 failed, 19 passed`, 44× "não foi possível resolver o commit de origem \"main\"" | checkout de CI não tem branch LOCAL `main` | `readMainCommit` aceita `refs/remotes/origin/<ref>` (local tem precedência, fail-closed preservado) + fetch de `origin/main` nos dois jobs | `2c36f3d1d` — 3/3 em clone raso sem `main` local |
+| 4 | L0: `benchmarkChangeProposal` (9 testes) | job L0 rodava `npm test` sem Postgres/Redis | serviços efêmeros (pgvector/pg16 + redis:7) + `npm run db:migrate` no job L0 | `20abca31c` |
+| 5 | L0: `convergenceFixpoint`, `readinessCertificationSeparation`, `enginePurityPorts` (ENOENT) | `reports/` é ignorado pelo git; os artefatos são GERADOS | passo de geração (`coverage-completeness`, `benchmark-sufficiency`, `evo-contract`, `layer-conventions`) + prova de existência com `test -s` | `0fbb744d6`, `70a24552a` |
+| 6 | L0: `discoveredBlockerGuards` exigia `OK/STALE` | a evidência do smoke agendado só existe onde o smoke rodou | asserção estado-dependente explícita: com evidência exige `OK/STALE`; sem evidência exige `UNAVAILABLE` (fail-closed) | `c087dd40a` — 17/17 nos DOIS estados |
+| 7 | L0: sandbox com `docker run` exit 125 | imagem `r-agent2-engineering-router-sandbox:latest` não existia no runner (a suíte RECUSA pular) | job constrói a imagem a partir de `engineering-router-sandbox/Dockerfile` | `704150648` — a suíte de sandbox passou no run `39594696270` |
+| 8 | artefato do CI não dizia qual suíte falhou | só o JSON e os resumos `.md` eram publicados | `upload-artifact` publica `AI_MEMORY/evidence/dev-branch-gate-logs/**` e o log do `systemd-analyze` | `d682bba68` |
+
+### 15.2 O que ainda impede CI verde — e por que o agente NÃO pode resolver sozinho
+
+Medição em clone limpo (`git worktree` de `704150648`, `jest tests/unit --bail=0`, após rodar os
+geradores do CI): **13 suítes / 35 testes reprovam por AMBIENTE**, não por defeito de produto.
+
+| Suíte | Motivo medido |
+|---|---|
+| `coverageCompletenessCanonicalDomains` | assere `exit 0` de um validador que, sem a evidência completa, sai 1 |
+| `v2AuditEnvelopeCoverage` | resolução de prova retorna `ok:false` sem evidência V2 gerada |
+| `v2TimeoutGateDependency` | `TIMEOUT_ARCHITECTURE_REPORT.json` ausente |
+| `modelDrivenE2e` | exige *smoke report* real |
+| `auditEntrypointArtifact` | exige `audit:json-persistence` PASS |
+| `businessJourneyProjection` | artefato de projeção ausente/não gerado |
+| `impactRunner` | `reports/impact-validation-report.json` ausente |
+| `jsonPersistenceNoPhantomWrite` | `governance/json-persistence-audit.json` ausente |
+| `workspaceStateSeeding` | `.env`/`api/data` ausentes (`npm run system:bootstrap` sai 0 em clone limpo — caminho viável) |
+| `engineeringRouterSafeEnvironment`, `engineeringRouterTestOutputAuthority` | dependem do sandbox/ambiente |
+| `runIdentityCommit` | artefato do worktree destacado (`abbrev-ref HEAD` = `HEAD`); não reproduz em CI |
+
+Tornar o CI verde exige **escolha humana** entre:
+
+- **(A) popular o ambiente no CI** — `system:bootstrap` + toda a cadeia de validadores (custo/tempo e
+  dependência de stack viva); ou
+- **(B) declarar de forma auditável** que essas suítes são **não executáveis em clone limpo** (lista
+  versionada + evidência `NOT_EXECUTED`), mantendo-as obrigatórias no ambiente de release.
+
+Ambas **mudam contrato de gate**. A missão proíbe ao agente afrouxar gate por conta própria, e a
+categoria "declarar PASS sem execução real" está na lista **não dispensável**. Por isso o item
+`L1-NPM-TEST-CI-VERMELHO` está na fila como **`blocked`** com a decisão nomeada — não como `done`.
+
+### 15.3 Estado do gate após este ciclo
+
+```
+npm run validate:engineer-supervised-readiness
+  PASS QUEUE_READABLE — 131 item(ns)
+  PASS QUEUE_NO_OPEN_DEFECT — nenhum item aberto
+  FAIL QUEUE_NO_BLOCKED — 7 impedidos (6 blocked_external + L1-NPM-TEST-CI-VERMELHO)
+  FAIL QUEUE_BLOCKERS_CLASSIFIED — L1-NPM-TEST-CI-VERMELHO[CLASSIFICADO_COMO_BLOQUEANTE_DE_L1]
+  PASS NON_WAIVABLE_ABSENT / READINESS_DECISIONS_PRESENT / EVIDENCE_COMMITS_EXIST
+  PASS SEGREGATION_VISIBILITY / SEGREGATION_EXPERIENCE / SEGREGATION_EXPERIENCE_API
+  PASS READINESS_DOC_PRESENT / READINESS_DOC_SECTIONS
+  FAIL HUMAN_APPROVAL_PRESENT — sem assinatura humana
+```
+
+`QUEUE_BLOCKERS_CLASSIFIED` recusar a classificação é o **comportamento correto**: um bloqueio de L1
+não vira "resolvido" por ser rotulado. O gate permanece `NOT_READY`.
+
+### 15.4 Solicitação formal de decisão
+
+`AI_MEMORY/evidence/engineer-supervised-approval-request.json` (assinado pelo executor, **sem**
+valor de aprovação) registra: escopo, commit medido, o que está sendo pedido, as três decisões
+separadas, os riscos residuais por classe, as categorias não dispensáveis e os critérios de
+cancelamento. **`engineer-supervised-approval.json` NÃO existe e não foi criado** — criá-lo é ato
+exclusivo de autoridade humana registrada, com assinatura Ed25519 verificável.
+
+**Auditoria independente: `AUDIT_PENDING`.** O executor revisou o próprio trabalho; isso não é
+auditoria independente e não é declarado como tal.
