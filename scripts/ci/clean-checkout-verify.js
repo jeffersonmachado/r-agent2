@@ -366,22 +366,13 @@ function provisionarProdLike(ctx, args) {
   esperarHttp(`http://127.0.0.1:${frontendPort}/`, 'frontend prod-like', 150, () => sh('docker', ['logs', '--tail', '60', NOMES.frontend]));
   esperarHttp(`http://127.0.0.1:${frontendPort}/api/health`, 'proxy /api do frontend', 150, () => sh('docker', ['logs', '--tail', '60', NOMES.frontend]));
 
-  passo('prod-like-smoke', 'node', ['scripts/smoke/qa-waves-operational-final-smoke.js'], {
-    cwd: clonePath,
-    // Os MESMOS segredos efêmeros da API: o smoke ASSINA artefatos de replay no host e a API
-    // valida a assinatura no container. Sem `REPLAY_SIGNING_KEY` no host, medido em 2026-10-21:
-    // `replay_signing_key_required_min_32_bytes` e nenhum artefato produzido.
-    env: {
-      ...env,
-      ...secrets,
-      RUN_QA_WAVES_PROD_LIKE_SMOKE: '1',
-      API_URL: `http://127.0.0.1:${apiPort}`,
-      FRONTEND_URL: `http://127.0.0.1:${frontendPort}`,
-    },
-    logDir,
-    timeoutMs: 45 * 60 * 1000,
-    descricao: 'Smoke prod-like real (produtor do artefato consumido por modelDrivenE2e)',
-  });
+  ctx.smokeEnv = {
+    ...env,
+    ...secrets,
+    API_URL: `http://127.0.0.1:${apiPort}`,
+    FRONTEND_URL: `http://127.0.0.1:${frontendPort}`,
+  };
+  porSmokeProdLike(ctx, logDir);
 
   const artefato = path.join(clonePath, 'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json');
   if (!fs.existsSync(artefato)) {
@@ -399,6 +390,20 @@ function provisionarProdLike(ctx, args) {
     startedAt: nowIso(),
     finishedAt: nowIso(),
     duracaoMs: 0,
+  });
+}
+
+/** Executa o smoke prod-like (produtor canônico do artefato). Reutilizável pelo cenário negativo. */
+function porSmokeProdLike(ctx, logDir, id = 'prod-like-smoke') {
+  return passo(id, 'node', ['scripts/smoke/qa-waves-operational-final-smoke.js'], {
+    cwd: ctx.clonePath,
+    // Os MESMOS segredos efêmeros da API: o smoke ASSINA artefatos de replay no host e a API
+    // valida a assinatura no container. Sem `REPLAY_SIGNING_KEY` no host, medido em 2026-10-21:
+    // `replay_signing_key_required_min_32_bytes` e nenhum artefato produzido.
+    env: { ...ctx.smokeEnv, RUN_QA_WAVES_PROD_LIKE_SMOKE: '1' },
+    logDir,
+    timeoutMs: 45 * 60 * 1000,
+    descricao: 'Smoke prod-like real (produtor do artefato consumido por modelDrivenE2e)',
   });
 }
 
@@ -715,15 +720,29 @@ function contarTenants(clonePath, env) {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * PAR CONSUMIDOR/PRODUTOR ESCOLHIDO POR MEDIÇÃO, NÃO POR APARÊNCIA.
+ *
+ * A primeira tentativa usou `reports/coverage-completeness-report.json` como artefato provado por
+ * `coverageCompletenessCanonicalDomains.test.js`. Medido em 2026-10-22: apagar o relatório NÃO
+ * reprovava o teste, porque o próprio teste RODA o produtor no `beforeAll` e depois lê o resultado
+ * — ele é produtor e consumidor ao mesmo tempo. Um "cenário de artefato ausente" sobre esse par
+ * provaria apenas que o produtor funciona.
+ *
+ * O par correto é o artefato PROD-LIKE: `modelDrivenE2e.test.js` só LÊ o arquivo e reprova quando
+ * ele não existe (medido em run limpo: L0 vermelho com exatamente essa suíte). É o vínculo real
+ * entre uma evidência produzida por execução e um gate que depende dela.
+ */
 const ARTEFATO_PROVADO = {
-  caminho: 'reports/coverage-completeness-report.json',
-  consumidor: ['tests/unit/governance/coverageCompletenessCanonicalDomains.test.js'],
-  produtor: ['run', '-s', 'validate:coverage-completeness'],
+  caminho: 'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json',
+  consumidor: ['tests/unit/governance/modelDrivenE2e.test.js'],
+  produtor: 'porSmokeProdLike',
 };
 
 function cenarioArtefatoAusente(ctx, args) {
   const { clonePath, env, logDir } = ctx;
   passo('bootstrap', 'npm', ['run', '-s', 'ci:bootstrap'], { cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000 });
+  provisionarProdLike(ctx, args);
   // Controle positivo: com o artefato presente o consumidor aprova.
   passo('consumidor-com-artefato', 'npx', ['jest', ...ARTEFATO_PROVADO.consumidor, '--silent'], {
     cwd: clonePath, env, logDir, descricao: 'Consumidor aprova com o artefato produzido',
@@ -735,7 +754,7 @@ function cenarioArtefatoAusente(ctx, args) {
     descricao: 'Artefato ausente REPROVA o consumidor (nunca PASS por ausencia)',
   });
   // O produtor canonico regenera e o consumidor volta a aprovar.
-  passo('produtor-regenera', 'npm', ARTEFATO_PROVADO.produtor, { cwd: clonePath, env, logDir });
+  porSmokeProdLike(ctx, logDir, 'produtor-regenera');
   passo('consumidor-apos-regenerar', 'npx', ['jest', ...ARTEFATO_PROVADO.consumidor, '--silent'], {
     cwd: clonePath, env, logDir, descricao: 'Consumidor aprova apos regeneracao pelo produtor',
   });
@@ -744,8 +763,9 @@ function cenarioArtefatoAusente(ctx, args) {
 function cenarioArtefatoCorrompido(ctx, args) {
   const { clonePath, env, logDir } = ctx;
   passo('bootstrap', 'npm', ['run', '-s', 'ci:bootstrap'], { cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000 });
+  provisionarProdLike(ctx, args);
   const alvo = path.join(clonePath, ARTEFATO_PROVADO.caminho);
-  fs.writeFileSync(alvo, '{"artifactType":"coverage-completeness-report","status":"PASS"', 'utf8');
+  fs.writeFileSync(alvo, '{"status":"GO","flows":[', 'utf8');
   passo('consumidor-artefato-corrompido', 'npx', ['jest', ...ARTEFATO_PROVADO.consumidor, '--silent'], {
     cwd: clonePath, env, logDir, esperado: 1,
     descricao: 'Artefato corrompido REPROVA o consumidor',
