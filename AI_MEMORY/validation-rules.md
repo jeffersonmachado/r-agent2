@@ -36,9 +36,17 @@ Passos do gate (`scripts/ci/dev-branch-gate.js`): `B1..B3` (contratos) → `L0` 
 → `L0b` (`npx jest tests/integration/engineering --runInBand`) → `L1` (7 validadores de governança).
 **Estado medido 2026-10-21 (runs 39682918570 e 39686396365):** smoke e integração SUCCESS,
 `L0` exit 0 (~445 s) e `L0b` exit 0 (~475 s, 40 suítes / 219 testes); o gate para em
-`L1-cadeia-criptografica` porque a cadeia aponta para `dist/release/*.zip` (não versionado) e porque
-`ci:bootstrap` regrava elos derivados — `CADEIA_DIVERGENTE`, decisão canônica `NO_GO`. Só
-`npm run release:seal` (fase PACKAGE) muda esse veredito; a CI não pode substituir isso.
+`L1-cadeia-criptografica` porque a cadeia aponta para `dist/release/*.zip` (não versionado) —
+`CADEIA_DIVERGENTE`, decisão canônica `NO_GO`. Só `npm run release:seal` (fase PACKAGE) muda esse
+veredito; a CI não pode substituir isso.
+
+> **CORREÇÃO MEDIDA em 2026-10-21 (checkout limpo, `npm run ci:clean-checkout`):** a causa é
+> **UMA** — os bytes do pacote selado não são versionáveis (`dist/` é gitignored), então qualquer
+> clone recalcula a cadeia sem o `package` e cascateia `cumulative_hash_broken`. A afirmação
+> anterior de que `ci:bootstrap` "regrava elos derivados" está **errada**: no clone, depois do
+> bootstrap, `governance/*.json` mantêm o mtime do checkout e aparecem limpos em `git status`. A
+> regravação de 2026-10-20T13:13 foi de um `zip:release` local
+> (`scripts/release-package.sh` → `tools/system/platform-readiness.js`), não do bootstrap.
 
 O `L1` vermelho em `dev/engineering-hardening` é **estrutural, não defeito de teste**: medido em
 2026-10-21, `npm run release:seal:plan` recusa antes de qualquer fase com
@@ -60,6 +68,17 @@ checkpoint):** `L0` exit 0 em 431–449 s e `L0b` exit 0 em 468–474 s em TODAS
 `validate-hardening-queue`, `validate-ai-memory` e `validate-agent-adherence` PASSAM. Portanto o CI
 está a UM ciclo de selagem da matriz completa — e esse ciclo exige `main`.
 
+> **CORREÇÃO MEDIDA em 2026-10-21 (checkout limpo, commit `382f83b37`):** `validate-ai-memory` e
+> `validate-agent-adherence` **NÃO** passavam num clone — eles exigiam
+> `.github/copilot-instructions.md`, que existia só em `.git/info/exclude` da máquina de
+> desenvolvimento. Medido: `required_file_missing` e `agent_instruction_missing` em TODO checkout
+> limpo. Corrigido em `c4b3fc70e` (adaptador versionado + lista canônica em
+> `scripts/governance/lib/required-agent-files.js` + regressão
+> `tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js`). Depois da correção, o
+> inventário do L1 medido no clone é **4 verdes / 3 vermelhos**, e os três vermelhos são
+> exatamente a família de certificação de release (`cadeia-criptografica`, `self-proving`,
+> `decisao-canonica`).
+
 ### Regras que o CI aprendeu (não regredir)
 
 - **Engineering Runner é recurso de SESSÃO, não de porta**: `tests/setup/engineeringRunnerGlobalSetup.js`
@@ -75,6 +94,35 @@ está a UM ciclo de selagem da matriz completa — e esse ciclo exige `main`.
   GERA hex. Regressão: `tests/unit/cryptoEncryptionKeyFormats.test.js`.
 - **Suíte E2E que provisiona credenciais de IA deve apontar `ENGINEERING_ROUTER_TENANT_ID`** para o
   próprio tenant, senão depende das credenciais de `system` da máquina do operador.
+- **O Engineering Runner NÃO pode ser compartilhado entre árvores**: com a porta fixa 8097, um
+  clone reutiliza o runner de OUTRA árvore (`runner REUTILIZADO: pid=… sessaoDona=…`, medido em
+  2026-10-21) e a prova de sandbox passa a medir o código do vizinho. `ci:clean-checkout` sobe o
+  runner em porta livre por run (`ENGINEERING_RUNNER_TEST_PORT`).
+- **Artefato gitignored consumido por teste tem de ser PRODUZIDO na run**: o
+  `qa/smoke/prod-like/…json` vem do job `prod-like-smoke`; num checkout limpo local ele não existe
+  e `modelDrivenE2e` reprova (medido: L0 379 suítes / 5568 testes, 1 vermelha). O harness executa o
+  produtor real (imagens do commit + API no banco da run + smoke no Chromium).
+
+## Checkout limpo como prova (não como intenção)
+
+`npm run ci:clean-checkout` (`scripts/ci/clean-checkout-verify.js`) é o teste adversarial de
+instalação limpa. Ele clona o commit exato em diretório temporário, recusa continuar se o clone
+trouxer resíduo (`git status --ignored`), provisiona banco/redis/RAG/runner próprios do run, executa
+`ci:bootstrap`, o produtor prod-like e o gate versionado, grava evidência com identidade de run
+(`runId`, `sourceCommit`, `sourceFingerprint`, `environmentId`, SHA-256 de cada log) e destrói o que
+criou. O relatório fica em `reports/ci-clean-checkout-report.json` e o resumo versionado em
+`AI_MEMORY/evidence/ci-clean-checkout-<sha>/<cenario>/RESULT.md`.
+
+Cenários negativos (provam não vacuidade, nunca "verde por ausência"): `bootstrap-twice`
+(idempotência do seed), `missing-artifact` (artefato ausente REPROVA o consumidor e o produtor
+regenera), `corrupt-artifact`, `db-unavailable` (sem Postgres o bootstrap falha), `docker-unavailable`
+(sem Docker a suíte de sandbox falha, nunca alega `SANDBOX_RUNTIME=PASS`).
+
+**Medido em 2026-10-21** (`--scenario clean --gate-phases A,B,C,D --with-integration`, commit
+`382f83b37`): clone limpo PASS · `ci:bootstrap` exit 0 em 99 s · `L0` 379 suítes / 5568 testes com
+1 vermelha (`modelDrivenE2e`, artefato prod-like ausente — produtor agora executado pelo harness) ·
+`L0b` 40 suítes / 219 testes exit 0 em 1002 s · inventário L1: 4 verdes / 3 vermelhos
+(`cadeia-criptografica`, `self-proving`, `decisao-canonica` = família de certificação de release).
 
 ## NO_GO conditions
 
