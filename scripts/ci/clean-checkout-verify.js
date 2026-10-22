@@ -403,10 +403,16 @@ function clonar(sha, destino) {
   const clone = sh('git', ['clone', '--no-hardlinks', '--no-local', ROOT, destino], { timeoutMs: 10 * 60 * 1000 });
   if (clone.status !== 0) throw new Error(`git clone falhou: ${(clone.stderr || clone.stdout).trim()}`);
 
-  let checkout = sh('git', ['checkout', '--detach', sha], { cwd: destino });
+  // CHECKOUT COMO O `actions/checkout` FAZ (branch local apontando para o SHA), nunca HEAD
+  // destacado. Medido em 2026-10-21: no clone destacado, `runIdentityCommit.test.js` reprovou com
+  // `sourceBranch` null — `git rev-parse --abbrev-ref HEAD` devolve "HEAD" e a identidade
+  // fail-closed do produto trata isso como ausencia de branch. O CI NÃO roda destacado (o
+  // checkout cria a branch local), então um clone destacado mediria um ambiente que não existe.
+  const branchLocal = sha === identidadeDoSorce().sha ? identidadeDoSorce().branch : 'ci-clean-checkout';
+  let checkout = sh('git', ['checkout', '--force', '-B', branchLocal, sha], { cwd: destino });
   if (checkout.status !== 0) {
     sh('git', ['fetch', '--no-tags', 'origin', sha], { cwd: destino });
-    checkout = sh('git', ['checkout', '--detach', sha], { cwd: destino });
+    checkout = sh('git', ['checkout', '--force', '-B', branchLocal, sha], { cwd: destino });
   }
   if (checkout.status !== 0) {
     throw new Error(`nao foi possivel materializar o commit ${sha}: ${(checkout.stderr || '').trim()}`);
