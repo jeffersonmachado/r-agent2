@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-19",
+  "updatedAt": "2026-10-21",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2202,8 +2202,8 @@
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "BLOCKED_EXTERNAL",
-      "evidence": "MEDIDO 2026-10-21 (run 39682918570, commit 43b8825dd, artefato dev-branch-ci-evidence-43b8825dd): prod-like-smoke=SUCCESS; dev-branch-integration=SUCCESS (PRIMEIRA vez); gate: B1/B2/B3 exit 0, L0-suite-oficial exit 0 em 443 s, L0b-integracao-engenheiro exit 0 em 454 s (40 suites / 219 testes). O gate so para em L1-cadeia-criptografica (exit 1): a cadeia de governanca recomputada diverge porque `dist/release/r-agent2-20261017-040050.zip` e o manifesto NAO existem no checkout e os elos derivados (evidence-manifest, final-proof-report, final-readiness, proof-signature, package-validation) foram regravados pelo `ci:bootstrap` DEPOIS da certificacao — CADEIA_DIVERGENTE/AUTO_DECLARACAO_DE_VALIDADE_FALSA, decisao canonica NO_GO. Isso NAO e defeito de teste nem de CI: exige `npm run release:seal` (mission propria). Ciclo de correcoes que produziu este estado, cada uma com causa medida: (1) impacto runner em checkout limpo; (2) RAG ausente + token nao compartilhado; (3) clone raso; (4) imagem do sandbox no job de integracao; (5) ROUTED->BLOCKED legal no router; (6) artefato prod-like produzido no CI; (7) base da API; (8) corrida no login do smoke; (9) runner do Engineering Runner morto por sessao Jest ANINHADA (registro de dono por porta + reuso); (10) L0b/job de integracao serializados pela exclusividade canonica; (11) identidade git do runner efemero; (12) ENCRYPTION_KEY hex aceita (api/utils/crypto.js); (13) job de integracao com o mesmo bootstrap canonico; (14) suite do caminho natural usa o tenant que ela provisiona (ENGINEERING_ROUTER_TENANT_ID).",
-      "detail": "CAUSA-RAIZ: o template de unit aponta para caminhos que so existem na maquina real (/usr/bin/node, venv/bin/uvicorn) e o teste exigia saida VAZIA do systemd-analyze; no runner esses binarios nao existem, entao a reprovacao era por AMBIENTE, nao por sintaxe do unit. Agravantes corrigidos no mesmo ciclo: (a) o teste so lia a saida no catch, perdendo o stderr de avisos com exit 0; (b) o arquivo de diagnostico era escrito DEPOIS do expect, logo a falha abortava sem deixar evidencia; (c) o artefato do CI nao publicava os logs de passo. SEGUNDA CAUSA (medida no run 39585223390): teste unitario de credencial LIVE chamava connect() sem prazo; sem Postgres  QUARTA CAUSA: o job L0 rodava 'npm test' sem Postgres/Redis, embora existam suites da suite oficial que escrevem no banco; a correcao foi dar infra real ao job (nao pular testes).",
+      "evidence": "MEDIDO 2026-10-21 (run 39682918570, commit 43b8825dd, artefato dev-branch-ci-evidence-43b8825dd): prod-like-smoke=SUCCESS; dev-branch-integration=SUCCESS (PRIMEIRA vez); gate: B1/B2/B3 exit 0, L0-suite-oficial exit 0 em 443 s, L0b-integracao-engenheiro exit 0 em 454 s (40 suites / 219 testes). O gate so para em L1-cadeia-criptografica (exit 1): a cadeia de governanca recomputada diverge porque `dist/release/r-agent2-20261017-040050.zip` e o manifesto NAO existem no checkout e os elos derivados (evidence-manifest, final-proof-report, final-readiness, proof-signature, package-validation) foram regravados pelo `ci:bootstrap` DEPOIS da certificacao — CADEIA_DIVERGENTE/AUTO_DECLARACAO_DE_VALIDADE_FALSA, decisao canonica NO_GO. Isso NAO e defeito de teste nem de CI: exige `npm run release:seal` (mission propria). Ciclo de correcoes que produziu este estado, cada uma com causa medida: (1) impacto runner em checkout limpo; (2) RAG ausente + token nao compartilhado; (3) clone raso; (4) imagem do sandbox no job de integracao; (5) ROUTED->BLOCKED legal no router; (6) artefato prod-like produzido no CI; (7) base da API; (8) corrida no login do smoke; (9) runner do Engineering Runner morto por sessao Jest ANINHADA (registro de dono por porta + reuso); (10) L0b/job de integracao serializados pela exclusividade canonica; (11) identidade git do runner efemero; (12) ENCRYPTION_KEY hex aceita (api/utils/crypto.js); (13) job de integracao com o mesmo bootstrap canonico; (14) suite do caminho natural usa o tenant que ela provisiona (ENGINEERING_ROUTER_TENANT_ID). | MEDIDO 2026-10-21 em CHECKOUT LIMPO (`npm run ci:clean-checkout`, commit 3786b1b02): o gate passa A/B1-B3 e o L0 roda a suite oficial com Postgres/Redis/RAG/runner do proprio run e o artefato prod-like produzido no clone; o L1 para na cadeia. Inventario completo do L1 no clone: 4 verdes (`release-dag`, `fila-oficial`, `ai-memory`, `aderencia-agente`) e 3 vermelhos (`cadeia-criptografica`, `self-proving`, `decisao-canonica`) — os tres da familia de certificacao de release. Duas causas atribuidas antes NAO se confirmaram no clone: `ci:bootstrap` NAO regrava elos derivados (mtime do checkout preservado, `git status` limpo) e `validate-ai-memory`/`validate-agent-adherence` NAO passavam em clone (defeito proprio, corrigido em c4b3fc70e).",
+      "detail": "CAUSA-RAIZ: o template de unit aponta para caminhos que so existem na maquina real (/usr/bin/node, venv/bin/uvicorn) e o teste exigia saida VAZIA do systemd-analyze; no runner esses binarios nao existem, entao a reprovacao era por AMBIENTE, nao por sintaxe do unit. Agravantes corrigidos no mesmo ciclo: (a) o teste so lia a saida no catch, perdendo o stderr de avisos com exit 0; (b) o arquivo de diagnostico era escrito DEPOIS do expect, logo a falha abortava sem deixar evidencia; (c) o artefato do CI nao publicava os logs de passo. SEGUNDA CAUSA (medida no run 39585223390): teste unitario de credencial LIVE chamava connect() sem prazo; sem Postgres  QUARTA CAUSA: o job L0 rodava 'npm test' sem Postgres/Redis, embora existam suites da suite oficial que escrevem no banco; a correcao foi dar infra real ao job (nao pular testes). | CAUSA UNICA CONFIRMADA: os bytes do pacote selado (`dist/release/*.zip`) nao sao versionaveis (dist/ e gitignored), entao qualquer clone recalcula a cadeia sem o elo `package` e cascateia `cumulative_hash_broken`.",
       "prevention": "O gate agora mede de verdade cada camada no runner efemero: L0 (suite oficial), L0b (integracao real com Postgres/Docker/RAG), smoke prod-like com artefato GO consumido do job produtor e job de integracao independente. Correcoes estruturais que impedem a reincidencia: registro de dono do Engineering Runner por porta + reuso por sessao aninhada (tests/setup/engineeringRunnerGlobalSetup.js), serializacao canonica do grupo exclusivo MISSION_WORKER_SHARED_RUNNER_AND_DB, bootstrap unico nos dois jobs (inclui identidade git), ENCRYPTION_KEY em hex E base64 com regressao (tests/unit/cryptoEncryptionKeyFormats.test.js) e isolamento de tenant nas suites E2E do laco de bugs.",
       "severityBasis": "CI real vermelho bloqueia qualquer declaracao de prontidao verificada por terceiro",
       "severitySource": "missao-L1-final-§11",
@@ -2211,7 +2211,51 @@
       "regressionTest": "tests/unit/qaMeshOperationPolicy.test.js",
       "targetedTestPassing": true,
       "blocked_reason": "Escopo de CI/testes CONCLUIDO e verificado no runner. O que resta vermelho e o passo L1 de DECISAO de release: a cadeia de governanca nao cobre o conteudo atual porque o release nao esta selado (dist/ vazio em checkout) e o bootstrap regenera elos derivados. Resolver exige `npm run release:seal` + publicacao do artefato — mission separada e maior, fora do escopo desta fila de CI. Nao pode ser declarado verde sem isso (Constituicao: nunca declarar release com governanca canonica NO_GO).",
-      "commit": "43b8825dd3252ed1a629bafd35ec2049ab9f48cb"
+      "commit": "021f3ebcf"
+    },
+    {
+      "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+      "title": "Gates de IA exigiam arquivo que nao existia em NENHUM commit (so no disco do desenvolvedor)",
+      "status": "verified",
+      "severity": "P1",
+      "severityStatus": "MEDIDA",
+      "evidence": "Medido em clone limpo do commit 382f83b37 (`npm run ci:clean-checkout`): `validate-ai-memory` FAIL `required_file_missing: .github/copilot-instructions.md` e `validate-agent-adherence` FAIL `agent_instruction_missing: .github/copilot-instructions.md`. Em QUALQUER checkout (CI, runner efemero, outra pessoa) os dois gates bloqueantes reprovavam; na maquina do operador passavam porque o arquivo estava em `.git/info/exclude`. Correcao: adaptador versionado, lista canonica unica em `scripts/governance/lib/required-agent-files.js` (consumida pelos dois validadores) e regressao `tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js`, que exige o arquivo NO INDICE do git e tem controle negativo (arquivo gitignored de proposito precisa falhar). Depois da correcao o inventario L1 no clone mostra os dois verdes: `AI_MEMORY/evidence/ci-clean-checkout-382f83b37/clean/RESULT.md`.",
+      "detail": "O indicador de falso verde era a propria documentacao: `AI_MEMORY/validation-rules.md` afirmava que os dois validadores 'PASSAM' — verdade apenas na arvore do operador. Medicao em clone contradisse a afirmacao.",
+      "prevention": "Lista unica + teste que compara com o INDICE do git (nao com o disco).",
+      "commit": "c4b3fc70e"
+    },
+    {
+      "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
+      "title": "Engineering Runner de porta fixa era reutilizado por outra arvore: a prova de sandbox media o codigo do vizinho",
+      "status": "verified",
+      "severity": "P1",
+      "severityStatus": "MEDIDA",
+      "evidence": "Medido em 2026-10-21 no clone do harness: `[engineering-runner-jest] runner REUTILIZADO: pid=4134758 porta=8097 sessaoDona=4134676` — o clone reutilizou um runner de OUTRA arvore do mesmo host. Com porta fixa, dois checkouts compartilham o processo e a suite de isolamento de sandbox deixa de provar o commit em analise. Correcao: o harness escolhe porta livre por run (`ENGINEERING_RUNNER_TEST_PORT`/`ENGINEERING_RUNNER_URL`). Registro: `scripts/ci/clean-checkout-verify.js`.",
+      "detail": "Nao era defeito do produto: `tests/setup/engineeringRunnerGlobalSetup.js` tem posse por porta; o defeito era o ambiente de medicao fixar 8097 para qualquer arvore.",
+      "prevention": "Porta por run no harness; o gate do CI continua usando 8097 porque o job e efemero e isolado.",
+      "commit": "3f97c7b65"
+    },
+    {
+      "id": "CI-FLOW-GATE-VACUOSO",
+      "title": "test:flow carregava --passWithNoTests: verde com ZERO testes executados",
+      "status": "verified",
+      "severity": "P2",
+      "severityStatus": "MEDIDA",
+      "evidence": "`package.json` mantinha `jest tests/flow engine/__tests__ --passWithNoTests`. `tests/flow` nao contem nenhum `*.test.js` (0 arquivos; medido) — foi exatamente o gate vacuoso corrigido em 2026-07 acrescentando `engine/__tests__` (30 arquivos), mas a flag que permite o verde vazio continuou armada para a proxima selecao errada. Correcao: flag removida e regressao `tests/unit/governance/officialTestScriptsNoVacuousPass.test.js` (proibe a flag nos tres scripts oficiais e exige que cada selecao contenha arquivos de teste, com controle negativo).",
+      "detail": "Missao CI DEFINITIVO §1 ('nunca aceitar testes com zero assertions efetivas') e §8 ('nao usar passWithNoTests').",
+      "prevention": "Teste que falha se a flag voltar ou se uma selecao ficar vazia.",
+      "commit": "3f97c7b65"
+    },
+    {
+      "id": "CI-CHECKOUT-LIMPO-HARNESS",
+      "title": "Instalacao limpa nunca era testada: todo diagnostico de CI dependia do estado da maquina do desenvolvedor",
+      "status": "verified",
+      "severity": "P1",
+      "severityStatus": "MEDIDA",
+      "evidence": "Novo `npm run ci:clean-checkout` (`scripts/ci/clean-checkout-verify.js`): clona o commit exato em diretorio temporario, recusa residuo (`git status --ignored`), provisiona banco/redis/RAG/runner/containers PROPRIOS do run, executa `ci:bootstrap`, o produtor prod-like e o gate versionado, grava evidencia com identidade de run e SHA-256 por log, e destroi tudo. Cenarios negativos implementados: bootstrap-twice, missing-artifact, corrupt-artifact, db-unavailable, docker-unavailable e l0-full (bail=0). Relatorio: `reports/ci-clean-checkout-report.json`; resumo versionado em `AI_MEMORY/evidence/ci-clean-checkout-<sha>/<cenario>/RESULT.md`.",
+      "detail": "Defeitos reais encontrados pelo harness e corrigidos nesta mesma janela: adaptador de IA nao versionado, runner compartilhado entre arvores, artefato prod-like nao produzido no clone, segredos efemeros ausentes no host do smoke, HEAD destacado x checkout do actions/checkout e nomes de container colidindo entre runs.",
+      "prevention": "O harness e versionado e roda em um comando; qualquer dependencia escondida do ambiente do operador aparece como falha no clone.",
+      "commit": "021f3ebcf"
     }
   ],
   "schemaVersion": 2,
