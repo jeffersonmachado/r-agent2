@@ -68,10 +68,19 @@ function main(argv = process.argv.slice(2)) {
     const raizRepo = path.resolve(__dirname, '..', '..');
     const rel = path.relative(raizRepo, path.resolve(queuePath)).split(path.sep).join('/');
     const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
-    if (!ambienteDeTeste || !rel.startsWith('tests/fixtures/')) {
+    // Fixture tem de ser VERSIONADO: `NODE_ENV=test --queue tests/fixtures/x.json` com arquivo
+    // não commitado não é prova de nada (observação P2 da 3ª passada).
+    let versionado = false;
+    if (ambienteDeTeste && rel.startsWith('tests/fixtures/')) {
+      try {
+        require('child_process').execFileSync('git', ['ls-files', '--error-unmatch', rel], { cwd: raizRepo, stdio: 'ignore' });
+        versionado = true;
+      } catch (_) { versionado = false; }
+    }
+    if (!ambienteDeTeste || !rel.startsWith('tests/fixtures/') || !versionado) {
       process.stderr.write(
         `[eligibility] RECUSADO (QUEUE_OVERRIDE_RECUSADO): --queue só é aceito em contexto de teste `
-        + `apontando para fixture versionado em tests/fixtures/ (recebido: ${rel || queuePath})\n`,
+        + `apontando para fixture VERSIONADO em tests/fixtures/ (recebido: ${rel || queuePath})\n`,
       );
       return 2;
     }
