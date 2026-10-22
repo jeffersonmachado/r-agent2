@@ -794,7 +794,7 @@ function cenarioBancoIndisponivel(ctx, args) {
   if (registro.exitCode === null) {
     registro.aceitoPorNaoSucesso = true;
     registro.ok = true;
-    console.log('[ci:clean-checkout]  ok   bootstrap-sem-postgres (abortado por orcamento — falhou fechado)');
+    console.log(`[ci:clean-checkout]  ok   bootstrap-sem-postgres (abortado por orcamento apos ${Math.round(registro.duracaoMs / 1000)}s — falhou fechado: exit=${registro.exitCode} sinal=${registro.signal})`);
   }
 }
 
