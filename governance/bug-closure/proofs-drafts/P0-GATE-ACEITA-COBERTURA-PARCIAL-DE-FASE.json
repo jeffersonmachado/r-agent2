@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "d0f28d13-b545-4a74-be3a-37e68f10f464",
+  "transitionId": "4bbdbcb9-d141-4572-acb0-4596853d3a8f",
   "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/phaseStepContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/phaseStepContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:55.410Z",
-      "finishedAt": "2026-10-22T18:30:59.804Z",
+      "startedAt": "2026-10-22T21:41:06.322Z",
+      "finishedAt": "2026-10-22T21:41:12.695Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
-      "outputSha256": "85a0ba57d18dfd681ec0929937dbfd12f23b79fd8e29c9f99a0015158158ab0f"
+      "outputSha256": "421bf298d3424e694accfef7c9ef4a333178a16349d2a2308d88ac5f842256d5"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:59.806Z",
-  "proofHash": "9f33cc0af6140a977e7b5db6fef97d2652e3fb2ff6a8eacde09bf585efb61237"
+  "createdAt": "2026-10-22T21:41:12.697Z",
+  "proofHash": "0f23003015cf6b93fe83bee59b0d511e4c4de8df6bff380ae29411e6489b9d79"
 }

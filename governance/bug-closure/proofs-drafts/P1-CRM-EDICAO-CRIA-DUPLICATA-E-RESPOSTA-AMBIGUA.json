@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "b4df1e4d-d0da-4c82-81a3-c7ee885b5c09",
+  "transitionId": "f878aa18-f5f7-4405-9eec-2a7c3922d786",
   "defectId": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/crmOpportunityUpdate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/crmOpportunityUpdate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:20.755Z",
-      "finishedAt": "2026-10-22T18:38:24.440Z",
+      "startedAt": "2026-10-22T21:47:13.081Z",
+      "finishedAt": "2026-10-22T21:47:17.984Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
-      "outputSha256": "c0106242b036ee6a4f0ae2eac6e5301a258db52997f7d77ee35456c79cf777f2"
+      "outputSha256": "c19095c1cfb692bbd8c69a0b0f163a6cf823cac3cdbbd671f7705f776b9bf47b"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:24.441Z",
-  "proofHash": "d5af65ae02ffaa94d28a6b0ed5fd3e3002d44f11f413c7de11313101e1823d89"
+  "createdAt": "2026-10-22T21:47:17.985Z",
+  "proofHash": "a6c5f9db92bcfa230118667e7ab0fa35a21d69952d1dbbc4484d2d5beeddd89a"
 }

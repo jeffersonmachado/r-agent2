@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ba39176f-09f9-4e9e-b883-6be59920eb61",
+  "transitionId": "d94c4bba-45a4-467a-82d8-9df3718d66c6",
   "defectId": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/projectionSyncOnCanonicalWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:59.339Z",
-      "finishedAt": "2026-10-22T18:39:03.692Z",
+      "startedAt": "2026-10-22T21:48:11.823Z",
+      "finishedAt": "2026-10-22T21:48:15.018Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
-      "outputSha256": "9212bd691f4a8c524353b585a1f18a725ac3d7ce0640fb74339c21d51df5fcce"
+      "outputSha256": "c0f3fb41a648676ee4ba3681f17d136e41af6c874b99492d0dfd5a6214f88570"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:39:03.693Z",
-  "proofHash": "84df4c7e423cd07e57c0ab56f7819bf3ad64b634f0534b8d207ab31f201ebceb"
+  "createdAt": "2026-10-22T21:48:15.019Z",
+  "proofHash": "5856de77bbf9588e01f0aba713ce94bae51e1c8c0c653d465c144da0d0284c4d"
 }

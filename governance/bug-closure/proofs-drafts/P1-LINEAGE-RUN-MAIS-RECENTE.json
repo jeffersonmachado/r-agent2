@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7c2badfd-23f5-43ce-bc37-9d2c8e0ff748",
+  "transitionId": "ae36f945-9ae3-47df-acca-c20a77e6d7a6",
   "defectId": "P1-LINEAGE-RUN-MAIS-RECENTE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/reportLineageExplicit.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/reportLineageExplicit.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:47.897Z",
-      "finishedAt": "2026-10-22T18:38:50.512Z",
+      "startedAt": "2026-10-22T21:47:50.290Z",
+      "finishedAt": "2026-10-22T21:47:56.058Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-LINEAGE-RUN-MAIS-RECENTE.log",
-      "outputSha256": "7c14fb6d5b27b0e827988dd8f92f02f4e1607334ec484cadce294ab1e3e539b6"
+      "outputSha256": "e913205ce34b0dcc34140adafb17c353f18147f9a07d430000bed7708e2e3ece"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:50.513Z",
-  "proofHash": "b1900867d42214dd879f87037913abecb22d8073712a058e46b1a376ae98511a"
+  "createdAt": "2026-10-22T21:47:56.059Z",
+  "proofHash": "85bbf21f05bb312ca7ea9d5040af572047ca533da6236d844c6f41830d148558"
 }

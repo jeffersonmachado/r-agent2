@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3b1494ca-2af0-462c-87d5-6f1f32b6df4c",
+  "transitionId": "68dd4a71-9786-40d1-8108-a458addf90bf",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:40:42.374Z",
-      "finishedAt": "2026-10-22T18:40:48.642Z",
+      "startedAt": "2026-10-22T21:49:55.993Z",
+      "finishedAt": "2026-10-22T21:49:59.465Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
-      "outputSha256": "68df40d18160506f1a0d666791cbf4da442ff94b88007f6d285b7f56d45b930d"
+      "outputSha256": "69172bac2e7482031a8e57e3f3bd4a1165c8853d6bc70079d007a91fe8124416"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:40:48.643Z",
-  "proofHash": "20df2d73a90d1a9a4fe9cf9ab6b4394a4815f5d012f5ca8f7535eb6846914fc0"
+  "createdAt": "2026-10-22T21:49:59.466Z",
+  "proofHash": "ab0a90c2e4c13ec4165be898c2b1dc61b38da877aa17ba1a1f47b0ab7a763f4d"
 }

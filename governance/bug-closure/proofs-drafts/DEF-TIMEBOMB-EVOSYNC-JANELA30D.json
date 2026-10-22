@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "1288643c-d1ab-44b4-844d-c20f60504ad3",
+  "transitionId": "5db8fba6-e9a6-4300-897c-ad98d6805264",
   "defectId": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/integration/evoSyncIntegration.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/evoSyncIntegration.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:39:28.513Z",
-      "finishedAt": "2026-10-22T18:39:39.522Z",
+      "startedAt": "2026-10-22T21:48:37.357Z",
+      "finishedAt": "2026-10-22T21:48:48.076Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log",
-      "outputSha256": "0e1c107e67e27055fb81efa3dc165e916cee6ffb05f82b7b7197e49f2b746017"
+      "outputSha256": "40a552e605b988332c44114840dbbd3560dfdbc15d7a29e6398841a3872b230c"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:39:39.523Z",
-  "proofHash": "4506e78e336d1b4fb7242bb8189e0ab948b598fb2e41d6923f8858d45216da09"
+  "createdAt": "2026-10-22T21:48:48.076Z",
+  "proofHash": "5ff7507da42d6f6ab6664d288f7fc139c875e7bd49b4fe311b77eb0a1b6add00"
 }

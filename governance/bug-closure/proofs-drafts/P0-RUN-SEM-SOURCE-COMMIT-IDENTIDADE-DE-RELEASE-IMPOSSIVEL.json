@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "bed6d483-afe3-4346-bd1f-1b0220b9330e",
+  "defectId": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
+  "requiredTests": [
+    "tests/unit/governance/runIdentityCommit.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/runIdentityCommit.test.js",
+      "command": "npx jest tests/unit/governance/runIdentityCommit.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T21:41:25.892Z",
+      "finishedAt": "2026-10-22T21:41:28.794Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
+      "outputSha256": "02c14f2c42cd134b7e465968cc80762a0c62c0d17325c8e98426a104e8d97a21"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/runIdentityCommit.test.js",
+      "sha256": "84f2376a9adca73f9ac823333e7f6de62666c0738ff59d426505c6e986614f4e"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T21:41:28.795Z",
+  "proofHash": "30dcbad50d6da3ad09dc425de55ed9b8dc08a698250c91ac4fa52af498277831"
+}

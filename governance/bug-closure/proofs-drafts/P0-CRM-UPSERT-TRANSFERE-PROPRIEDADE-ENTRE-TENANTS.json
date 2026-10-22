@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3aebdc91-c3c1-4238-9f2c-b6e3704debef",
+  "transitionId": "f54d8c0c-0777-441b-a504-0ce917ca5194",
   "defectId": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "0f962a50829a9676f4947a7fd6cbf9235d15cf1e",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/integration/crmTenantIsolation.postgres.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/crmTenantIsolation.postgres.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T20:43:29.364Z",
-      "finishedAt": "2026-10-22T20:43:35.169Z",
+      "startedAt": "2026-10-22T21:40:44.620Z",
+      "finishedAt": "2026-10-22T21:40:51.947Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
-      "outputSha256": "7058f8ece9eb9555950b1ba850bffe781b64bc715642645d27c182ffec113d12"
+      "outputSha256": "f9aab4063b1e28e0bd7b0525d7bff9e8eab44fcfa15af4ad3cd5e6f894c1a362"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T20:43:35.170Z",
-  "proofHash": "67d140719889a40c69265eae69501feb114748f3f8cc542eb12bb55285f87df0"
+  "createdAt": "2026-10-22T21:40:51.949Z",
+  "proofHash": "64715134f8f8e661f8c8883f593fe90609276a9bcf8907ee611b7700b8706a17"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "89cfedd1-0082-4a6e-aab4-4060b0e210f0",
+  "transitionId": "750a9382-2f61-48f3-bb23-1fba4b1425c8",
   "defectId": "DEF-TEARDOWN-DRAIN-WORKER",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "0f962a50829a9676f4947a7fd6cbf9235d15cf1e",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/integration/governanceApprovalFullWorkerE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T20:49:10.659Z",
-      "finishedAt": "2026-10-22T20:50:59.044Z",
+      "startedAt": "2026-10-22T21:41:52.506Z",
+      "finishedAt": "2026-10-22T21:43:27.434Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log",
-      "outputSha256": "47207425cdc272962b2c139696429bcb383a293fd9ee06b9e4b883a36273e0a4"
+      "outputSha256": "3a06ba7a9ccdd9c5e48c0fad9bd673d27cf6384a31eb5bd684bee68efe6f655f"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T20:50:59.050Z",
-  "proofHash": "d1039ac72514336bd1242fbcecf9894b19604fbc3bcc125609453bf258861a28"
+  "createdAt": "2026-10-22T21:43:27.436Z",
+  "proofHash": "d7831b45e8cc29991743482e06640bd0ba2fe1b85b76032263e33c510cefb665"
 }

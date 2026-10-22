@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9722cef4-5824-47e6-a716-f54040171e26",
+  "transitionId": "a194b072-1206-4e32-8ce3-706c9ce110bf",
   "defectId": "P0-FILAS-ROLLBACK-DESTRUTIVO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/queueCreatePersistBeforeResponse.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:53.023Z",
-      "finishedAt": "2026-10-22T18:30:55.407Z",
+      "startedAt": "2026-10-22T21:41:03.209Z",
+      "finishedAt": "2026-10-22T21:41:06.321Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
-      "outputSha256": "4e4c48c95a7e8c94376fcb53221a8fae82402e608e568f6a24d804ecbc535c1b"
+      "outputSha256": "91aa382329fbf6661cca88de1af89137ad0a844e0ba47493c817c13abbbf4da6"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:55.408Z",
-  "proofHash": "f8b82685a110b4221a65eadc52061c6b02ca454b3da2312e85f85318010a24b4"
+  "createdAt": "2026-10-22T21:41:06.322Z",
+  "proofHash": "12966f73bc9f66870e84a584a665278cc47170366747ec4298b3491b04602a85"
 }

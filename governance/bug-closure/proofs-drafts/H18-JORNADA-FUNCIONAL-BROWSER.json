@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "984ff545-5744-406e-8341-745b8c3eea14",
+  "transitionId": "796b91c8-4319-492f-9706-259e95e091e6",
   "defectId": "H18-JORNADA-FUNCIONAL-BROWSER",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/journeyDetectors.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/journeyDetectors.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:42:16.351Z",
-      "finishedAt": "2026-10-22T18:42:19.291Z",
+      "startedAt": "2026-10-22T21:52:43.357Z",
+      "finishedAt": "2026-10-22T21:52:46.896Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H18-JORNADA-FUNCIONAL-BROWSER.log",
-      "outputSha256": "35da5f17efb4873611b7bcf5e6f374a8b28035260b7ff795871d53bc2757a17c"
+      "outputSha256": "12978ab12673fecc1fdcb192df3a4d1fd40c0a6171cc6991113b4be96ff11006"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:42:19.292Z",
-  "proofHash": "e013cf06a02f11b719b6681f677b3cccbe8415059ab841e5e49c82f6e2998283"
+  "createdAt": "2026-10-22T21:52:46.897Z",
+  "proofHash": "ca08ab51f98c2e88e0ea7a1896da424bcd5ccf057c85303d5555a2b7b3d099e6"
 }

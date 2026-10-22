@@ -43,6 +43,15 @@ function caminhoDoLivro(rootDir, rel = REL_PADRAO) {
 }
 
 /** Hash do evento (sem os campos derivados `prevHash`/`hash`). */
+/**
+ * Normaliza o tipo do evento: transição (from !== to) ou ATESTAÇÃO de re-verificação
+ * (from === to, estado de fechamento já existente). Atestação não muda estado — é prova
+ * anexada a uma declaração que já existe.
+ */
+function tipoDoEvento(from, to) {
+  return String(from || '').toUpperCase() === String(to || '').toUpperCase() ? 'ATTESTATION' : 'TRANSITION';
+}
+
 function hashDoEvento(evento) {
   const base = {
     seq: evento.seq,
@@ -50,6 +59,7 @@ function hashDoEvento(evento) {
     defectId: evento.defectId,
     from: evento.from,
     to: evento.to,
+    kind: evento.kind || tipoDoEvento(evento.from, evento.to),
     at: evento.at,
     actorId: evento.actorId,
     proofHash: evento.proofHash,
@@ -137,6 +147,9 @@ function anexarEvento(entrada = {}) {
       defectId: entrada.defectId,
       from: entrada.from,
       to: entrada.to,
+      // Sem `kind`, um evento de atestação (from===to) seria indistinguível de uma transição
+      // degenerada na leitura do livro.
+      kind: entrada.kind || tipoDoEvento(entrada.from, entrada.to),
       at: entrada.at || new Date().toISOString(),
       actorId: entrada.actorId,
       proofHash: entrada.proofHash,
@@ -157,6 +170,7 @@ function anexarEvento(entrada = {}) {
 }
 
 module.exports = {
+  tipoDoEvento,
   REL_PADRAO,
   CODIGOS,
   GENESIS,

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "278ed7f8-422b-4c34-8e60-e7b5c193230b",
+  "transitionId": "b46cd18a-b422-4fca-918b-3f5e8517832c",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/aggregateVerdict.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/aggregateVerdict.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:36:14.903Z",
-      "finishedAt": "2026-10-22T18:36:18.075Z",
+      "startedAt": "2026-10-22T21:44:03.746Z",
+      "finishedAt": "2026-10-22T21:44:07.520Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
-      "outputSha256": "ca6d489dfddacbe9c062306f6fb35539c05ee152ab4c3349654dcfcdd1b01b82"
+      "outputSha256": "1dfc5b2f863b8f7c4db079f7c14d7adcec5e1278c09454c8cca26f37ebe51d82"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:36:18.076Z",
-  "proofHash": "0e21cabbe845baa1801bc780c121c7799e36a4991e9cff70875ecf0f3551fa13"
+  "createdAt": "2026-10-22T21:44:07.521Z",
+  "proofHash": "a2bc010b90a26722d811295cbbef7d132a6cec28664b470f045e9dff3871df11"
 }

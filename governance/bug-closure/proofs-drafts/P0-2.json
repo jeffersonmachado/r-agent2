@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "71621cac-e4b3-4709-a4d8-d61d07b8fe00",
+  "transitionId": "8f63a871-dd6c-40c1-95c1-0a86daaa6f16",
   "defectId": "P0-2",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/evidenceManifestHashBaseline.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/evidenceManifestHashBaseline.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:22.544Z",
-      "finishedAt": "2026-10-22T18:30:25.421Z",
+      "startedAt": "2026-10-22T21:40:12.786Z",
+      "finishedAt": "2026-10-22T21:40:16.926Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-2.log",
-      "outputSha256": "f58ce457b7301ac50253a039f5f118b5ea98af6d3635477b5c409de55e4a0e9b"
+      "outputSha256": "be230052ee274c9fcd4f4aa7cc1fa9bc9a0734dc0f1f95be73df41ea2300b982"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:25.421Z",
-  "proofHash": "e66372a8e2ad5e739dd9fb03ae77d458011a867633d48ba6b23014093ffae011"
+  "createdAt": "2026-10-22T21:40:16.927Z",
+  "proofHash": "877f45e9ea52463b451b7ffae7b9902a6b3e8cfcacf58598e701fa8581fee7d8"
 }

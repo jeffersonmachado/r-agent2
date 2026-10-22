@@ -1,23 +1,19 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T18:39:22.455Z",
+  "generatedAt": "2026-10-22T21:48:30.080Z",
   "authoritative": false,
   "resumo": {
-    "commit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-    "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+    "commit": "debed518968ce6d7aba7beda3389655bb2244016",
+    "fingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
     "total": 67,
     "porClasse": {
-      "AGUARDA_ASSINATURA_E_ANCORA": 48,
-      "REQUER_DECISAO_HUMANA": 14,
-      "AMBIENTE_INDISPONIVEL": 3,
-      "REQUER_AJUSTE_DE_MODELO": 2
+      "AGUARDA_ASSINATURA_E_ANCORA": 53,
+      "REQUER_DECISAO_HUMANA": 14
     },
     "porSeveridade": {
-      "AGUARDA_ASSINATURA_E_ANCORA:P1": 48,
-      "REQUER_DECISAO_HUMANA:P1": 14,
-      "AMBIENTE_INDISPONIVEL:P1": 3,
-      "REQUER_AJUSTE_DE_MODELO:P1": 2
+      "AGUARDA_ASSINATURA_E_ANCORA:P1": 53,
+      "REQUER_DECISAO_HUMANA:P1": 14
     },
     "filaAlterada": false,
     "assinatura": "PENDENTE — este script não assina e não altera a fila"
@@ -114,20 +110,28 @@
       "severity": "P1",
       "estadoPersistido": "VERIFIED",
       "titulo": "removeChild (React) por enhancement de header que movia/substituia nos do React",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
-      "motivo": "FRONTEND_DEPS_AUSENTES (frontend/node_modules não instalado)"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-REMOVECHILD-HEADER-ENHANCEMENT.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "DEF-TEARDOWN-DRAIN-WORKER",
       "severity": "P1",
       "estadoPersistido": "VERIFIED",
       "titulo": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-TEARDOWN-DRAIN-WORKER.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "DEF-WS-AUTH-POS-LOGIN",
@@ -264,9 +268,14 @@
       "severity": "P1",
       "estadoPersistido": "RESOLVED",
       "titulo": "FENCE_AVANCOU com antes=undefined: log JSON do produto confundido com handshake (selo V2 abortado)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -323,20 +332,28 @@
       "severity": "P1",
       "estadoPersistido": "VERIFIED",
       "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/integration/engineeringMissionFullE2E.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "L1-NPM-TEST-CI-VERMELHO",
       "severity": "P1",
       "estadoPersistido": "RESOLVED",
       "titulo": "CI do branch de desenvolvimento VERDE: L1 separado em D (desenvolvimento) e R (certificacao de release)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/qaMeshOperationPolicy.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-NPM-TEST-CI-VERMELHO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-NPM-TEST-CI-VERMELHO.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "2515bdd1-9f32-4b2d-9226-6387daafdce0",
+  "transitionId": "d9ef84ec-6f33-4733-83a3-3e93c0c57be5",
   "defectId": "MISSAO-A-L1-IMPACTO",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/coverage/impactGraph.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/coverage/impactGraph.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:42:19.295Z",
-      "finishedAt": "2026-10-22T18:42:23.327Z",
+      "startedAt": "2026-10-22T21:52:46.898Z",
+      "finishedAt": "2026-10-22T21:52:51.209Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L1-IMPACTO.log",
-      "outputSha256": "dd8c40c87c65a5c150e5f90014eae587eef39d848cf51897231a1a86e2579947"
+      "outputSha256": "9108b956f95d88d6bf131a66c3da4a50ea32c340fe73cac55d687c6a274272f8"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:42:23.329Z",
-  "proofHash": "989caa9c7bf7a811fedfbe7b8ddbc0ea0997fddc5052c310a0ac425bde9b43c0"
+  "createdAt": "2026-10-22T21:52:51.210Z",
+  "proofHash": "ad8b1c0ccc26890be6d9eb9649c134f38272f04f5e5f0a63469e7e3e2e852b3d"
 }

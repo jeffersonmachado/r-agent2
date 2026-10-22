@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a9f9c161-afab-4990-986a-dbb5bcf43bdc",
+  "transitionId": "bb365ebc-04cc-4e2f-a5c9-f62ef072b7f0",
   "defectId": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:42:08.015Z",
-      "finishedAt": "2026-10-22T18:42:12.843Z",
+      "startedAt": "2026-10-22T21:52:36.445Z",
+      "finishedAt": "2026-10-22T21:52:40.032Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
-      "outputSha256": "370ef02796c0349bf111a6074734242679244f8a750697b02afe6e710955c910"
+      "outputSha256": "99f4d4e627a4e8aeecb51d916bac679dc5cccbb745bfbd6562cd6b7d2c78abf9"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:42:12.845Z",
-  "proofHash": "db51e3e6da0bdff64ca239d0e37c8eb51c30dc92e6e203f8253a3b707220f1fa"
+  "createdAt": "2026-10-22T21:52:40.033Z",
+  "proofHash": "99e69e38951875220e01391aa1017c5d57f7f309809c35cd5fe1ede7554cf680"
 }

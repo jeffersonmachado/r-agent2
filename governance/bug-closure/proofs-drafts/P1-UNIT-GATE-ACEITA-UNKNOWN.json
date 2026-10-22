@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "db8d6584-6087-48bd-a054-5af606a0e827",
+  "transitionId": "f555c30b-e54c-42f5-96c1-87a974d0c206",
   "defectId": "P1-UNIT-GATE-ACEITA-UNKNOWN",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/engineeringMission/missionGatesEvidence.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:39:18.175Z",
-      "finishedAt": "2026-10-22T18:39:22.454Z",
+      "startedAt": "2026-10-22T21:48:24.930Z",
+      "finishedAt": "2026-10-22T21:48:30.075Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-UNIT-GATE-ACEITA-UNKNOWN.log",
-      "outputSha256": "a157b6f9f87ed7da0959cacfb94f3c1d9d030688ed1980e6502ec10fe76aed73"
+      "outputSha256": "a83bca82088b5556b87d7425993e20046f9871709b1ae2b39d4cc66ecdde88f3"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:39:22.455Z",
-  "proofHash": "02036bdaf08b13fdfd848d9522faf2f1880c56f36201b4cfdcc43f0a693783cf"
+  "createdAt": "2026-10-22T21:48:30.077Z",
+  "proofHash": "c145c2f423d301cb4bdbe91fd19d0e8386e167b73dcfc716e2ce4da9a8645b6a"
 }

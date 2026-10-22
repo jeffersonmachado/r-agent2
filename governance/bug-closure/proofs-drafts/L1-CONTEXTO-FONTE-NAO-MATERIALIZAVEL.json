@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a95e567c-b0e9-4d6b-9d1e-576f235943a6",
+  "transitionId": "a50715a6-3491-4e31-b818-9dcafaeed795",
   "defectId": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/engineeringRouterContextSourceFailClosed.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterContextSourceFailClosed.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:36:24.396Z",
-      "finishedAt": "2026-10-22T18:36:29.242Z",
+      "startedAt": "2026-10-22T21:44:19.699Z",
+      "finishedAt": "2026-10-22T21:44:27.562Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log",
-      "outputSha256": "37eed502a86e9af20fe69291b577cfdb758a8bbc573bdc833e81e196bbd9e9b1"
+      "outputSha256": "fa485cafd70e87027b9ff75b1ac7c717628c445bf9ba800400c6fb007d906176"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:36:29.243Z",
-  "proofHash": "7df1107a00ee36800e5fda1bfd420c7702657c26b577fea90286291ab5d9d340"
+  "createdAt": "2026-10-22T21:44:27.563Z",
+  "proofHash": "8f5a88540f38c884884815cc6938899e28c664e76783b5b0554452762ceef260"
 }

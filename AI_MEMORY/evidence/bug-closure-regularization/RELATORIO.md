@@ -1,6 +1,6 @@
 # Regularização de fechamentos sem prova
 
-Gerado em 2026-10-22T20:56:16.050Z · commit `0f962a50829a9676f4947a7fd6cbf9235d15cf1e` · fingerprint `420ad327c76e…`
+Gerado em 2026-10-22T21:55:00.789Z · commit `debed518968ce6d7aba7beda3389655bb2244016` · fingerprint `4f405dfb26f1…`
 
 > **Não autoritativo.** Este relatório descreve trabalho de re-verificação. A fila oficial não foi
 > alterada por este script, e nenhuma prova foi assinada: a assinatura é do dono da chave ancorada.
@@ -10,10 +10,8 @@ Gerado em 2026-10-22T20:56:16.050Z · commit `0f962a50829a9676f4947a7fd6cbf9235d
 | Classe | Itens |
 |---|---|
 | REQUER_DECISAO_HUMANA | 33 |
-| REQUER_AJUSTE_DE_MODELO | 7 |
-| AGUARDA_INSUMOS_HUMANOS | 16 |
-| AGUARDA_ASSINATURA_E_ANCORA | 73 |
-| AMBIENTE_INDISPONIVEL | 1 |
+| AGUARDA_INSUMOS_HUMANOS | 20 |
+| AGUARDA_ASSINATURA_E_ANCORA | 77 |
 
 ## Itens
 
@@ -21,7 +19,7 @@ Gerado em 2026-10-22T20:56:16.050Z · commit `0f962a50829a9676f4947a7fd6cbf9235d
 |---|---|---|---|---|---|
 | HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING | P0 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/qa-mesh/failureIntelligenceLineage.test.js | — |
+| HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING | P0 | RESOLVED | AGUARDA_INSUMOS_HUMANOS | tests/unit/qa-mesh/failureIntelligenceLineage.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log |
 | HARDENING-ENG-GOV-RELEASE-P0-2 | P0 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
 | HARDENING-ENG-GOV-RELEASE-P0-3 | P0 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
 | HARDENING-ENG-GOV-RELEASE-P0-4 | P0 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
@@ -38,7 +36,7 @@ Gerado em 2026-10-22T20:56:16.050Z · commit `0f962a50829a9676f4947a7fd6cbf9235d
 | P0-5 | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/integration/securityWaiverApprovalE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-5.log |
 | P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/governanceEnforcementOrder.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log |
 | P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO | P0 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/governance/governanceChainAppearance.test.js | — |
+| P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO | P0 | RESOLVED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/governanceChainAppearance.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log |
 | P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/integration/crmTenantIsolation.postgres.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log |
 | P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/canonicalReleaseDecision.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log |
@@ -47,9 +45,9 @@ Gerado em 2026-10-22T20:56:16.050Z · commit `0f962a50829a9676f4947a7fd6cbf9235d
 | P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/phaseStepContract.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log |
 | P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/devBranchGatePhaseContract.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log |
 | P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT | P0 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/governance/producerLineageIdentity.test.js | — |
+| P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT | P0 | RESOLVED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/producerLineageIdentity.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log |
 | P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/riskAcceptedCriticalControl.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log |
-| P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL | P0 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/governance/runIdentityCommit.test.js | — |
+| P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL | P0 | RESOLVED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/runIdentityCommit.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log |
 | AUDITORIA-ENTRYPOINT-TRAVAS | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/auditEntrypointArtifact.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-ENTRYPOINT-TRAVAS.log |
 | AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/auditEntrypointArtifact.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log |
 | CI-ADAPTADOR-IA-NAO-VERSIONADO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-ADAPTADOR-IA-NAO-VERSIONADO.log |
@@ -70,13 +68,13 @@ Gerado em 2026-10-22T20:56:16.050Z · commit `0f962a50829a9676f4947a7fd6cbf9235d
 | H17-HOOKS-EDITOR | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/aggregateVerdict.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log |
 | HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO | P1 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
-| HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED | P1 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/governance/taskLeaseHandshakeParsing.test.js | — |
+| HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED | P1 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/taskLeaseHandshakeParsing.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log |
 | HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/qa-mesh/meshZeroResultsPromotion.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log |
 | HARDENING-ENG-GOV-RELEASE-P1-11 | P1 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
 | L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRouterContextSourceFailClosed.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log |
 | L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/releaseStateService.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.log |
-| L1-L2-JORNADA-SUPERVISIONADA-MEDIDA | P1 | VERIFIED | AMBIENTE_INDISPONIVEL | tests/integration/engineeringMissionFullE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log |
-| L1-NPM-TEST-CI-VERMELHO | P1 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/qaMeshOperationPolicy.test.js | — |
+| L1-L2-JORNADA-SUPERVISIONADA-MEDIDA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionFullE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log |
+| L1-NPM-TEST-CI-VERMELHO | P1 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/qaMeshOperationPolicy.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-NPM-TEST-CI-VERMELHO.log |
 | L1-PUBLISH-TAG-EXIGE-VERIFICACAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/devGovernanceModels.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.log |
 | L1-RUNNER-CONTAINER-MODULE-NOT-FOUND | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRunnerDockerfileClosure.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log |
 | L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
@@ -138,7 +136,7 @@ Gerado em 2026-10-22T20:56:16.050Z · commit `0f962a50829a9676f4947a7fd6cbf9235d
 | N5-REENTREGA | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/missionSourceStaleReplanFullRouterE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log |
 | P2-1 | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/remoteProvenanceAuthority.test.js | AI_MEMORY/evidence/bug-closure-regularization/P2-1.log |
 | P2-2 | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/reportWriteLineage.test.js | AI_MEMORY/evidence/bug-closure-regularization/P2-2.log |
-| P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL | P2 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/governance/governedArtifactPreservation.test.js | — |
+| P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL | P2 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/governedArtifactPreservation.test.js | AI_MEMORY/evidence/bug-closure-regularization/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log |
 | AUDITORIA-BRANCH-INVENTORY | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/branchInventory.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-BRANCH-INVENTORY.log |
 | AUDITORIA-CHECKPOINT-PROTOCOL | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/checkpointTool.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-CHECKPOINT-PROTOCOL.log |
 | AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/auditEntrypointArtifact.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log |

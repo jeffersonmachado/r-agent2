@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5666dd66-ad49-42cd-88ce-d1c091a0c79d",
+  "transitionId": "90c3d4a5-b025-4427-8230-fb7991dff688",
   "defectId": "AUDITORIA-ENTRYPOINT-TRAVAS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:31:09.709Z",
-      "finishedAt": "2026-10-22T18:31:11.646Z",
+      "startedAt": "2026-10-22T21:41:29.901Z",
+      "finishedAt": "2026-10-22T21:41:32.772Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-ENTRYPOINT-TRAVAS.log",
-      "outputSha256": "7dd5e4fde8a025332c72a194e97648aaed8171dc2576c6ebff04bc651492edcf"
+      "outputSha256": "86f341abbf1528526464aa5d50bc23802221637c27d73e3b1e66d629ff8b3894"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:31:11.649Z",
-  "proofHash": "4807adcf9b4f5439821a2c9030d3e4baf61c61fc39d4ba6a25fa7a8628bdd35c"
+  "createdAt": "2026-10-22T21:41:32.777Z",
+  "proofHash": "19466b23d9dfc33ae51990bb0d68060c5d6b681f3a936232bc393ab4fe785614"
 }

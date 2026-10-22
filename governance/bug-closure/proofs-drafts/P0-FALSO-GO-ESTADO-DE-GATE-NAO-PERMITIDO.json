@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "df7097ae-c726-4140-8a01-bb4280b3164f",
+  "transitionId": "23b8ce43-2588-4102-a5d4-a0a0d79366b2",
   "defectId": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/canonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/canonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:44.458Z",
-      "finishedAt": "2026-10-22T18:30:50.743Z",
+      "startedAt": "2026-10-22T21:40:51.954Z",
+      "finishedAt": "2026-10-22T21:41:00.250Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
-      "outputSha256": "4fcb5929b8569feb5589267737268fedd4660dff00c796d71d7e08d46b221ae8"
+      "outputSha256": "c01c5c3c0873b6cabd178d9281c7f46909193d079f963b1b5585bda0373bd2bc"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:50.744Z",
-  "proofHash": "a9e3f4fe45438957747bbbee5539fabf11a6423e6d0137a364393bb898e3b12f"
+  "createdAt": "2026-10-22T21:41:00.251Z",
+  "proofHash": "bf0ca83dd703595f2daff50bb8351d38cd7636a05cee509070b5206bd070f1e7"
 }

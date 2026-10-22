@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e2fcf0ec-5859-401c-997a-4d459d36e9e0",
+  "transitionId": "0b5a2248-6183-491f-91d6-726dbc7d7a18",
   "defectId": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/integration/engineeringMissionMergeConcurrency.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionMergeConcurrency.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:50.517Z",
-      "finishedAt": "2026-10-22T18:38:55.762Z",
+      "startedAt": "2026-10-22T21:47:56.061Z",
+      "finishedAt": "2026-10-22T21:48:06.724Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.log",
-      "outputSha256": "28b5e79334e9a0d4aa994b7968df9dffce5c3c84693015c447f762db9c77a056"
+      "outputSha256": "91f3e00a59fe4a7f2078b169d53bc3af20ce14f6d16c72b6625f11653330f4b8"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:55.764Z",
-  "proofHash": "8d15297d922bc284d90f8dd6350f1d15b0fb9ad1085b70440f9c60ed5b144776"
+  "createdAt": "2026-10-22T21:48:06.725Z",
+  "proofHash": "009252b42d5ce9b4d638b68139a0c9f69a46968775a28f98add01d13d8140254"
 }

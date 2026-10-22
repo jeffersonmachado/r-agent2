@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ae3c31ae-cdac-4525-b49c-764926e8f688",
+  "transitionId": "dcf5a5a7-6688-466a-9394-d9d4ccd731f8",
   "defectId": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/engineeringMission/missionGatesEvidence.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:39:03.695Z",
-      "finishedAt": "2026-10-22T18:39:14.029Z",
+      "startedAt": "2026-10-22T21:48:15.020Z",
+      "finishedAt": "2026-10-22T21:48:21.706Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log",
-      "outputSha256": "2c7c75925e35f252d01775248ae25cad8f4d70ea50225d6c9f831fb229c40530"
+      "outputSha256": "996c4667cf2d8b4931d2b47766ac5ef66ff94a92a8f34f3abb1bef60993bdca2"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:39:14.030Z",
-  "proofHash": "7c780b86ec5ba8c84eac707b5f55d447c6bf8fb417b5e12ce1aae2b64d345a43"
+  "createdAt": "2026-10-22T21:48:21.706Z",
+  "proofHash": "7859731ea55da865173f536b8a21dbcc99df4c7ab3fa04f9e380a5df6dc87034"
 }

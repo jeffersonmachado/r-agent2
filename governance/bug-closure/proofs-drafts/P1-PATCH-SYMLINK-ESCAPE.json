@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "54a0221c-b70c-4ed7-9568-8cc83d4824a5",
+  "transitionId": "cd243c91-2f3f-4f33-816e-3b4311d4f1ae",
   "defectId": "P1-PATCH-SYMLINK-ESCAPE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/engineeringRouterPatchSymlinkEscape.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:55.767Z",
-      "finishedAt": "2026-10-22T18:38:59.337Z",
+      "startedAt": "2026-10-22T21:48:06.727Z",
+      "finishedAt": "2026-10-22T21:48:11.822Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-PATCH-SYMLINK-ESCAPE.log",
-      "outputSha256": "9e11b2b975d9606a585e570762a7f6cb755abad3d102cee0cdd35777dd6ce7c6"
+      "outputSha256": "c1c5ba9b1d784b16893094e0a4c4d1fd5b64b5e73fe4de36dbb2d0047990ce8b"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:59.337Z",
-  "proofHash": "8983c5a50ac04e5e56b370543e8f6eaf05888e0d7d8b0e8b915f255498373946"
+  "createdAt": "2026-10-22T21:48:11.822Z",
+  "proofHash": "97dad2907d72941a4814d26d527a51c03b7c3b23fbe315ae4616de9c3471b6dc"
 }

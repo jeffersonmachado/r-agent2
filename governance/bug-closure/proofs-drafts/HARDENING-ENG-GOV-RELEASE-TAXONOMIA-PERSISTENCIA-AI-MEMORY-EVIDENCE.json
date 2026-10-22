@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f7f4946c-c08b-4876-bf72-0477d48dcd82",
+  "transitionId": "53a725d4-92e8-4093-821d-eb20b4cc1539",
   "defectId": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:40:53.431Z",
-      "finishedAt": "2026-10-22T18:40:59.487Z",
+      "startedAt": "2026-10-22T21:50:02.758Z",
+      "finishedAt": "2026-10-22T21:50:06.124Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
-      "outputSha256": "a19bed0540af7395d504246e6ff4f89c4cbcf25ae2d1f58fc4c3bda13dc2c871"
+      "outputSha256": "e2d003774ea2374a83d5099207bab17f949dd1a6d580603d101b92ca4d9fb31b"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:40:59.488Z",
-  "proofHash": "29f2323a6f7ceec444bd6cf3b441fca5735c9b057eb69d47fddd2d4e154bac4e"
+  "createdAt": "2026-10-22T21:50:06.125Z",
+  "proofHash": "2143e2e676018e6d95112d13db4846401c99d5b4463155d0d501b7257501b19c"
 }

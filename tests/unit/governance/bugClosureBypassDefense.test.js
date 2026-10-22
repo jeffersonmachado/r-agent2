@@ -1145,3 +1145,114 @@ describe('prova × commit — ancestral com fingerprint igual vale; descendente 
     }).reasons).not.toContain('VERIFICACAO_EM_SHA_ANTERIOR');
   });
 });
+
+// ─── 13. ATESTAÇÃO DE RE-VERIFICAÇÃO (item já em estado de fechamento) ──
+// Item persistido como RESOLVED/VERIFIED não tem transição de fechamento a partir de si mesmo —
+// era irrecuperável. A atestação substancia a declaração EXISTENTE (fromState === toState) e
+// continua exigindo teste executado, artefato, fingerprint, ancestralidade e assinatura ancorada.
+
+describe('atestação de re-verificação — não cria fechamento, substancia declaração existente', () => {
+  const ctxAtest = (root, defeito) => ({
+    defeito,
+    // O fixture `provaValida` assina sempre com o SHA/FP de teste; a âncora é o DIRETÓRIO
+    // temporário do cenário (é lá que estão o log de saída e o teste referenciados).
+    currentCommit: SHA,
+    currentFingerprint: FP,
+    rootDir: root,
+    livro: null,
+    ancoragem: { pins: PINS.get(root) ? [PINS.get(root)] : [], externa: PINS.get(root) || null },
+    agora: Date.parse('2026-10-22T10:00:10.000Z'),
+  });
+
+  function provaAtestacao(root, overrides = {}) {
+    const { prova } = provaValida(root, overrides);
+    prova.policyDecision = {
+      decision: 'REVERIFY_EXISTING_CLOSURE', policyId: 'BUG_CLOSURE_FIRST', policyVersion: '1.0.0',
+    };
+    prova.fromState = 'RESOLVED';
+    prova.toState = 'RESOLVED';
+    prova.proofHash = ATUAL.proof.hashDoPayload(prova);
+    const payload = {};
+    for (const campo of ATUAL.proof.CAMPOS_ASSINADOS) payload[campo] = prova[campo];
+    prova.signature = {
+      alg: 'Ed25519',
+      keyId: 'owner@example.invalid',
+      value: crypto.sign(null, Buffer.from(ATUAL.signature.canonicalJson(payload), 'utf8'), CHAVES.get(root)).toString('base64'),
+    };
+    return prova;
+  }
+
+  test('atestação válida sobre RESOLVED passa por transição (não exige mudança de estado)', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const prova = provaAtestacao(root);
+    const ctx = ctxAtest(root, { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'RESOLVED' });
+    ctx.agora = Date.parse(prova.createdAt) + 1000;
+    const v = ATUAL.proof.verificarProvaDeFechamento(prova, ctx);
+    expect(v.reasons).not.toContain('TRANSICAO_INVALIDA');
+    expect(v.reasons).not.toContain('ESTADO_DE_ORIGEM_DIVERGENTE');
+    expect(v.ok).toBe(true);
+  });
+
+  test('atestação NÃO vale sobre estado aberto (OPEN/FIX_IN_PROGRESS)', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const prova = provaAtestacao(root);
+    prova.fromState = 'OPEN';
+    prova.toState = 'OPEN';
+    prova.proofHash = ATUAL.proof.hashDoPayload(prova);
+    const payload = {};
+    for (const campo of ATUAL.proof.CAMPOS_ASSINADOS) payload[campo] = prova[campo];
+    prova.signature = {
+      alg: 'Ed25519', keyId: 'owner@example.invalid',
+      value: crypto.sign(null, Buffer.from(ATUAL.signature.canonicalJson(payload), 'utf8'), CHAVES.get(root)).toString('base64'),
+    };
+    const ctx = ctxAtest(root, { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'OPEN' });
+    ctx.agora = Date.parse(prova.createdAt) + 1000;
+    const v = ATUAL.proof.verificarProvaDeFechamento(prova, ctx);
+    expect(v.reasons).toContain('TRANSICAO_INVALIDA');
+  });
+
+  test('atestação ainda exige o teste EXECUTADO com saída real (não é passe livre)', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const prova = provaAtestacao(root, { executions: [] });
+    const ctx = ctxAtest(root, { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'RESOLVED' });
+    ctx.agora = Date.parse(prova.createdAt) + 1000;
+    const v = ATUAL.proof.verificarProvaDeFechamento(prova, ctx);
+    expect(v.reasons).toContain('TESTE_NAO_EXECUTADO');
+  });
+
+  test('serviço: applyAttestation não muda o estado da fila e grava evento ATTESTATION', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'RESOLVED', status: 'prevention_active' })]);
+    const prova = provaAtestacao(root);
+    const r = ATUAL.service.applyAttestation({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', proof: prova,
+      actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA,
+      currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
+      agora: Date.parse(prova.createdAt) + 1000,
+    });
+    expect(r.ok).toBe(true);
+    const item = JSON.parse(fs.readFileSync(queuePath, 'utf8')).items[0];
+    expect(item.state).toBe('RESOLVED');
+    expect(item.attestationId).toBe(prova.transitionId);
+    const livro = ATUAL.ledger.verificarLivro(root);
+    expect(livro.eventos.at(-1).kind).toBe('ATTESTATION');
+    expect(livro.eventos.at(-1).from).toBe(livro.eventos.at(-1).to);
+  });
+
+  test('serviço: atestação é RECUSADA se a fila não está em estado de fechamento', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'FIX_IN_PROGRESS', status: 'in_progress' })]);
+    const prova = provaAtestacao(root);
+    const r = ATUAL.service.applyAttestation({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', proof: prova,
+      actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA,
+      currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain('ATESTACAO_SO_EM_ESTADO_DE_FECHAMENTO');
+  });
+});

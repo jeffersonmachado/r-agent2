@@ -3,9 +3,12 @@
   "severity": "P1",
   "estadoPersistido": "VERIFIED",
   "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
-  "classe": "AMBIENTE_INDISPONIVEL",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/integration/engineeringMissionFullE2E.test.js",
-  "exitCode": 1,
-  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-  "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log"
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
+  "draft": "governance/bug-closure/proofs-drafts/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.json",
+  "camposParaAssinar": 18
 }

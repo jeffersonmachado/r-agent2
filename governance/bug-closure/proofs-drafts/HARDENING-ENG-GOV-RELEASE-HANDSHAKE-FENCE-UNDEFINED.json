@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "896d1dab-5a54-46ae-a9dd-218577188416",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
+  "requiredTests": [
+    "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T21:44:07.523Z",
+      "finishedAt": "2026-10-22T21:44:11.225Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "outputSha256": "473c4138611a49adba9d7fff6f1b74f2c5a52b3b99a5d1879507c7609f5011fb"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "sha256": "51c40610fd231607184dff94d56bff7a069f0e3bb0892e6d324f0405e98580f5"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T21:44:11.226Z",
+  "proofHash": "be0efc0e6635cc096f34aeca69f15ef2a0693d425a865311c9d0137880893788"
+}

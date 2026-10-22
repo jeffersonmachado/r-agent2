@@ -3,7 +3,15 @@
   "severity": "P0",
   "estadoPersistido": "RESOLVED",
   "titulo": "Execucao da malha sem lineage destruia a evidencia governada (agregado em vermelho)",
-  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
-  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.json",
+  "camposParaAssinar": 18
 }

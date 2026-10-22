@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "26d4dcd6-b7f1-45d0-9ed7-185cb8ca73ab",
+  "transitionId": "49f82b0b-31ef-4427-8e09-f96f229a4680",
   "defectId": "L1-WORKTREE-MUTILACAO-RECORRENTE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/worktreeIntegrity.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:14.774Z",
-      "finishedAt": "2026-10-22T18:30:19.329Z",
+      "startedAt": "2026-10-22T21:40:00.811Z",
+      "finishedAt": "2026-10-22T21:40:07.673Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
-      "outputSha256": "0633a6e680f79bacc28dcc9ee58e7b3f7d0d5595f7fee47769318d21385a2ef3"
+      "outputSha256": "4047effc2162037f6e91e75b129500f66b14931f7a338f19d6efc9b974e1c908"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:19.331Z",
-  "proofHash": "1412a636f20f2a9f485124b352a43216538421d3c836d84ad0e0fffeee78cf36"
+  "createdAt": "2026-10-22T21:40:07.674Z",
+  "proofHash": "740f3e8ad5a7b3b3ef1519439bbf30d33b2360dde62c0528c446723853f3b7ec"
 }
