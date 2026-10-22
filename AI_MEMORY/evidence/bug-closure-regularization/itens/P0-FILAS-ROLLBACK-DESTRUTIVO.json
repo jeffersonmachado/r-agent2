@@ -3,6 +3,15 @@
   "severity": "P0",
   "estadoPersistido": "VERIFIED",
   "titulo": "Rollback de criacao de fila fechava tickets ativos (force=true) inclusive em fila preexistente",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ROLLBACK-DESTRUTIVO.json",
+  "camposParaAssinar": 18
 }

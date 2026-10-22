@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "475ffd05-c200-462b-9714-ee4f48af4f2e",
+  "transitionId": "984ff545-5744-406e-8341-745b8c3eea14",
   "defectId": "H18-JORNADA-FUNCIONAL-BROWSER",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "63c0d22f999bcef798a174e41b5097eaae80f266",
-  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
   "requiredTests": [
     "tests/unit/governance/journeyDetectors.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/journeyDetectors.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:01:56.372Z",
-      "finishedAt": "2026-10-22T18:01:59.287Z",
+      "startedAt": "2026-10-22T18:42:16.351Z",
+      "finishedAt": "2026-10-22T18:42:19.291Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H18-JORNADA-FUNCIONAL-BROWSER.log",
-      "outputSha256": "05e1820af20126c5adcefd885a4842ca443caa53a5051ddb56f5ddbf60ae8240"
+      "outputSha256": "35da5f17efb4873611b7bcf5e6f374a8b28035260b7ff795871d53bc2757a17c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:01:59.288Z",
-  "proofHash": "c4ab8c0cca5e5a0fca1b922f6961724425ede83921db8fb84811098ff8d5d373"
+  "createdAt": "2026-10-22T18:42:19.292Z",
+  "proofHash": "e013cf06a02f11b719b6681f677b3cccbe8415059ab841e5e49c82f6e2998283"
 }

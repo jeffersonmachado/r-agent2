@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/attestationOrder.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

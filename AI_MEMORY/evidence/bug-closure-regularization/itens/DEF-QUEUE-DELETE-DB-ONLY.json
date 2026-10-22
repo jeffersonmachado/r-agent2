@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "DELETE /queues nao removia fila existente so no banco (reaparecia na listagem)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/queueModuleRoutes.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

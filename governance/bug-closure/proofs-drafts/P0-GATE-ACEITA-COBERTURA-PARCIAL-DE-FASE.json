@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3cca1782-ba43-43c0-b53b-70cd9d8657b4",
+  "transitionId": "d0f28d13-b545-4a74-be3a-37e68f10f464",
   "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
-  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
   "requiredTests": [
     "tests/unit/governance/phaseStepContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/phaseStepContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T17:52:33.596Z",
-      "finishedAt": "2026-10-22T17:52:38.091Z",
+      "startedAt": "2026-10-22T18:30:55.410Z",
+      "finishedAt": "2026-10-22T18:30:59.804Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
-      "outputSha256": "0145163de07b4373b9fa1f17a4795deb86579c5ab384f6448f48f3c52b2152df"
+      "outputSha256": "85a0ba57d18dfd681ec0929937dbfd12f23b79fd8e29c9f99a0015158158ab0f"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T17:52:38.092Z",
-  "proofHash": "9cc2a5294739798f097e2c51f7146112a8cde16170eee465e1f055d0ed3f22f6"
+  "createdAt": "2026-10-22T18:30:59.806Z",
+  "proofHash": "9f33cc0af6140a977e7b5db6fef97d2652e3fb2ff6a8eacde09bf585efb61237"
 }

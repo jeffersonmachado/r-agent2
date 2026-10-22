@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Painel CRM sincronizava por setInterval (proibido) e o evento de metricas nao tinha prova de isolamento por tenant",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/realtimeTenantIsolation.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

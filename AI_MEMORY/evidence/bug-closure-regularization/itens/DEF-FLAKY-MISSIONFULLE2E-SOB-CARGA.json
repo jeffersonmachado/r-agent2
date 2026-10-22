@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "engineeringMissionFullE2E flaky sob carga BLOQUEIA o agregado e a selagem",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/governance/effectiveAggregateChain.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Proveniencia do Security Gate consegue falhar (fail-closed)",
   "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [

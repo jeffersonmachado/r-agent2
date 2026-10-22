@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Runner atribui falha causada por mutacao da superficie provada durante o run",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/allValidatorsRunner.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Checkpoints incrementais auditáveis (gravador executável + runbook + ponteiro)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/audit/checkpointTool.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

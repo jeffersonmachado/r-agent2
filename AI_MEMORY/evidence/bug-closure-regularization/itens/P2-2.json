@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Divergencia de lineage nos relatorios",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/reportWriteLineage.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

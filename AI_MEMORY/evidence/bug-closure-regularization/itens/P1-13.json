@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/smokeEvidenceSummary.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

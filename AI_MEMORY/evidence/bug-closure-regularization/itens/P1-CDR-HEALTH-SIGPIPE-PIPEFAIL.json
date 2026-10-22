@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "pbx-cdr-health.sh falhava sob pipefail por SIGPIPE (grep -q / head -n1) — falso vermelho recorrente",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

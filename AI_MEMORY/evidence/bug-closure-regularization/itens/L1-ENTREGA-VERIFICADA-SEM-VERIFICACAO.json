@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "DELIVERED_VERIFIED era concedido sem veredito positivo, com bloqueio ativo e lendo um relatorio que nunca existiu",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/releaseStateService.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/ragIndexHealthPolicy.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

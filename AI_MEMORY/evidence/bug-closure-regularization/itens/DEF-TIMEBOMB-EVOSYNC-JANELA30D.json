@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Teste evoSyncIntegration fixava frequency30d e venceu sozinho em 03/10/2026",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/integration/evoSyncIntegration.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Contrato unico de evidencias (campos obrigatorios, runId/lineage, FAIL vs INCOMPLETE)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/evidenceContract.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/coverage/impactGraph.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

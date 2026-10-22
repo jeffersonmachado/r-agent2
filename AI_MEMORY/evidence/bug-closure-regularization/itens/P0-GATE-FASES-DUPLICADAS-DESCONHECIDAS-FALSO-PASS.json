@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Gate de desenvolvimento certificava com fases duplicadas, desconhecidas ou inexistentes (A,A,A,A = PASS)",
   "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/devBranchGatePhaseContract.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [

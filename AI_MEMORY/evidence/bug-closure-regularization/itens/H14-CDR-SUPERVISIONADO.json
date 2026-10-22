@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

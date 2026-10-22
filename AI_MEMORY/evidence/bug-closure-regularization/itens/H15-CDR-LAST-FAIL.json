@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "CDR nao morre mais em silencio com o backend REGISTRADO sobre conexao que falhou",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

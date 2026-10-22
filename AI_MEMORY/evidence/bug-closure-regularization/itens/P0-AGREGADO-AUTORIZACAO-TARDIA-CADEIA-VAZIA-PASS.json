@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Gate agregado executava validadores antes da decisao de identidade/autorizacao e certificava cadeia vazia",
   "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/governanceEnforcementOrder.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Fase do gate era aprovada com apenas PARTE dos passos obrigatorios (fase D: 1 de 7 = PASS)",
   "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/phaseStepContract.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [

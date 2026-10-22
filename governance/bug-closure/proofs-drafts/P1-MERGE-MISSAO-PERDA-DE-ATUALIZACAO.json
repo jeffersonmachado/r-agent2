@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e2fcf0ec-5859-401c-997a-4d459d36e9e0",
+  "defectId": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "requiredTests": [
+    "tests/integration/engineeringMissionMergeConcurrency.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+      "command": "npx jest tests/integration/engineeringMissionMergeConcurrency.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T18:38:50.517Z",
+      "finishedAt": "2026-10-22T18:38:55.762Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.log",
+      "outputSha256": "28b5e79334e9a0d4aa994b7968df9dffce5c3c84693015c447f762db9c77a056"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+      "sha256": "3fbc81c07106e08a315f8027ff3e78f8c5d71173adc84eeb0e339af9ee494798"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T18:38:55.764Z",
+  "proofHash": "8d15297d922bc284d90f8dd6350f1d15b0fb9ad1085b70440f9c60ed5b144776"
+}

@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ae19278d-0464-4507-8e39-46b999acb7ad",
+  "defectId": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "requiredTests": [
+    "tests/unit/ciGateL0Determinism.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/ciGateL0Determinism.test.js",
+      "command": "npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T18:38:45.503Z",
+      "finishedAt": "2026-10-22T18:38:47.896Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
+      "outputSha256": "cf1c26bb713fdd999ed38c76f49cb0fdf8b329c8f5e1cedb564f698188e8fc66"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/ciGateL0Determinism.test.js",
+      "sha256": "03c38792d35c7eaf06c23966104f7ab2d60f76bf45882207112a9ea4d8326cf6"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T18:38:47.896Z",
+  "proofHash": "49e8856d187c88eca529cd71524f38b65fbba1f9663e383c8d90d54d34fb8b65"
+}

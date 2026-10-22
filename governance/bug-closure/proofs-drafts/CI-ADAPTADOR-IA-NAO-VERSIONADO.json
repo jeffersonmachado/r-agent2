@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "24030503-8641-467c-8511-6d86f2a18404",
+  "defectId": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "requiredTests": [
+    "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "command": "npx jest tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T18:31:14.098Z",
+      "finishedAt": "2026-10-22T18:31:17.114Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-ADAPTADOR-IA-NAO-VERSIONADO.log",
+      "outputSha256": "e864644d6a00999ba89a73f06b2e02bca071a0d656e085266772ff55c2c0f2a1"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "sha256": "26238c5848d11f21ab65aae9229c61a269b348abad9ce1bf957b762a63eb201f"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T18:31:17.115Z",
+  "proofHash": "ed1be0d34dada20157defe41a61b5a4526ff3a9cd25c5e6e1683e7f4ec3c6301"
+}

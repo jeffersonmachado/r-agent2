@@ -3,6 +3,9 @@
   "severity": "P1",
   "estadoPersistido": "VERIFIED",
   "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/integration/engineeringMissionFullE2E.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log"
 }

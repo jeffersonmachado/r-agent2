@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Cadeia criptografica: analise corrigida — elos derivados vs imutaveis, e estado exposto na auditoria",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

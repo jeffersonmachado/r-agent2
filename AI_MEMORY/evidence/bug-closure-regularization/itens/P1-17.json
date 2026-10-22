@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Dívida de segurança do Security Release Gate (47 -> 0 bloqueantes; gate GO)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],
