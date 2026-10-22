@@ -62,6 +62,7 @@ const ATOR = arg('--actor', 'owner@results.invalid');
 const TIMEOUT_MS = Number(arg('--timeout-ms', '600000'));
 const DRY_RUN = flag('--dry-run');
 const IDS = (arg('--id', '') || '').split(',').map((x) => x.trim()).filter(Boolean);
+const PROPOR = flag('--propor-testes');
 const JSON_OUT = flag('--json');
 
 const sha256De = (arquivo) => crypto.createHash('sha256').update(fs.readFileSync(arquivo)).digest('hex');
@@ -71,8 +72,21 @@ function headSha() {
   return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
 }
 
-/** Teste de regressão citado pelo item (campo canônico ou alias legado). */
+/** Mapa CONFIRMADO por humano: `config/bug-closure-test-map.json` = { "<ID>": "<teste>" }. */
+function testeMapeado(item) {
+  try {
+    // `path.join` inline: o auditor de persistência só reconhece contexto de LEITURA assim.
+    const mapa = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'bug-closure-test-map.json'), 'utf8'));
+    const rel = mapa && mapa[item && item.id];
+    if (rel && fs.existsSync(path.join(ROOT, String(rel)))) return String(rel);
+  } catch (_) { /* sem mapa: segue para o campo do item */ }
+  return null;
+}
+
+/** Teste de regressão citado pelo item (campo canônico, alias legado ou mapa confirmado). */
 function testeCitado(item) {
+  const mapeado = testeMapeado(item || {});
+  if (mapeado) return mapeado;
   for (const campo of ['regressionTest', 'test', 'regressionTests']) {
     const bruto = item && item[campo];
     const valores = Array.isArray(bruto) ? bruto : (bruto ? [bruto] : []);
@@ -168,6 +182,13 @@ function main() {
   if (IDS.length > 0) candidatos = candidatos.filter((d) => IDS.includes(d.id));
   candidatos.sort((a, b) => String(a.severity).localeCompare(String(b.severity)) || String(a.id).localeCompare(String(b.id)));
   if (LIMITE > 0) candidatos = candidatos.slice(0, LIMITE);
+
+  // ── MODO PROPOSTA ────────────────────────────────────────────────────────
+  // Para itens SEM teste citado, PROCURA candidatos no repositório por sobreposição de
+  // tokens do id/título com o nome do arquivo de teste. NÃO gera prova: mapear defeito→teste
+  // automaticamente seria inventar relação causal. A proposta é insumo para o humano
+  // confirmar em `config/bug-closure-test-map.json`.
+  if (PROPOR) return proporTestes(candidatos, porId);
 
   const resultados = [];
   for (const d of candidatos) {
@@ -343,6 +364,104 @@ function relatorioAgregado(dirEvidencia) {
     },
     resultados: itens,
   });
+}
+
+/** Tokens distintivos para busca de teste candidato. */
+function tokensDe(texto) {
+  const GENERICOS = new Set([
+    'p0', 'p1', 'p2', 'p3', 'missao', 'hardening', 'eng', 'gov', 'release', 'gate', 'teste',
+    'test', 'defeito', 'bug', 'fix', 'false', 'falso', 'pass', 'fail', 'the', 'and', 'de', 'da',
+    'do', 'na', 'no', 'em', 'para', 'com', 'sem', 'por', 'que', 'uma', 'dos', 'das',
+  ]);
+  return String(texto || '').toLowerCase().split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 4 && !GENERICOS.has(t));
+}
+
+/**
+ * Propõe teste candidato por item sem teste citado. Somente leitura: não gera prova,
+ * não altera a fila e não afirma relação causal.
+ */
+function proporTestes(candidatos, porId) {
+  const arquivos = [];
+  const varrer = (dir) => {
+    for (const entrada of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (['node_modules', '.git', 'dist', 'coverage'].includes(entrada.name)) continue;
+      const abs = path.join(dir, entrada.name);
+      if (entrada.isDirectory()) { varrer(abs); continue; }
+      if (!/\.(test|spec)\.(js|jsx|ts|tsx)$/.test(entrada.name)) continue;
+      arquivos.push(path.relative(ROOT, abs).split(path.sep).join('/'));
+    }
+  };
+  for (const raiz of ['tests', 'frontend/src', 'engine', 'qa']) {
+    const abs = path.join(ROOT, raiz);
+    if (fs.existsSync(abs)) varrer(abs);
+  }
+
+  const propostas = candidatos.map((d) => {
+    const item = porId.get(d.id) || d;
+    if (testeCitado(item)) return null;
+    const alvo = tokensDe(`${d.id} ${item.title || ''}`);
+    const idNormalizado = String(d.id).toLowerCase();
+    const pontuados = arquivos.map((rel) => {
+      const base = tokensDe(rel.replace(/\.(test|spec)\.(js|jsx|ts|tsx)$/, ''));
+      const doNome = alvo.filter((t) => base.includes(t));
+      // Sinal FORTE: o próprio id citado no conteúdo do teste (comentário/describe). Vale mais
+      // que qualquer sobreposição de nome, porque é o autor ligando o teste ao defeito.
+      let citacao = 0;
+      let conteudo = '';
+      try { conteudo = fs.readFileSync(path.join(ROOT, rel), 'utf8').toLowerCase(); } catch (_) { conteudo = ''; }
+      if (conteudo.includes(idNormalizado)) citacao = 5;
+      const doConteudo = citacao ? [] : alvo.filter((t) => conteudo.includes(t));
+      const pontos = citacao ? 5 + Math.min(doNome.length, 2) : doNome.length + doConteudo.length;
+      return { teste: rel, pontos, tokens: [...new Set([...doNome, ...doConteudo])], citacaoDoId: citacao > 0 };
+    }).filter((x) => x.pontos > 0).sort((a, b) => b.pontos - a.pontos).slice(0, 3);
+    return {
+      id: d.id,
+      severity: d.severity,
+      titulo: item.title || null,
+      tokensDoDefeito: alvo,
+      candidatos: pontuados,
+      // Honestidade: NENHUM teste cita o id destes itens (medido em 2026-10-22), então não
+      // existe mapeamento automático confiável. O que há é sugestão por sobreposição.
+      evidenciaDeclarada: String(item.evidence || '').slice(0, 400),
+      confianca: pontuados.length && pontuados[0].citacaoDoId ? 'CITACAO_DO_ID_NAO_CONFIRMADA'
+        : (pontuados.length ? 'SOBREPOSICAO_DE_TOKENS_NAO_CONFIRMADA' : 'SEM_CANDIDATO'),
+    };
+  }).filter(Boolean);
+
+  const saida = {
+    kind: 'bug-closure-test-proposals',
+    generatedAt: new Date().toISOString(),
+    authoritative: false,
+    aviso: 'Proposta por sobreposição de tokens. NÃO é prova de relação causal: confirme '
+      + 'manualmente em config/bug-closure-test-map.json antes de gerar prova.',
+    total: propostas.length,
+    porConfianca: propostas.reduce((acc, p) => { acc[p.confianca] = (acc[p.confianca] || 0) + 1; return acc; }, {}),
+    propostas,
+  };
+  fs.mkdirSync(EVIDENCIA, { recursive: true });
+  fs.writeFileSync(path.join(EVIDENCIA, 'proposta-testes.json'), `${JSON.stringify(saida, null, 2)}\n`, 'utf8');
+  const md = [
+    '# Proposta de testes de regressão (itens sem teste citado)',
+    '',
+    `Gerado em ${saida.generatedAt}. **Não autoritativo**: sobreposição de tokens não prova causalidade.`,
+    'Confirme o mapeamento em `config/bug-closure-test-map.json` (`{ "<ID>": "<caminho-do-teste>" }`)',
+    'e só então re-execute a regularização.',
+    '',
+    `Total de itens sem teste citado: **${saida.total}** · ${JSON.stringify(saida.porConfianca)}`,
+    '',
+    'Nenhum teste do repositório cita o id destes itens. Logo **não existe** mapeamento',
+    'automático confiável: a coluna "Candidato" é apenas pista por sobreposição de tokens, e a',
+    'coluna "Evidência declarada" é o que o autor do item registrou na época.',
+    '',
+    '| Defeito | Sev | Candidato (pista) | Evidência declarada |',
+    '|---|---|---|---|',
+    ...propostas.map((p) => `| ${p.id} | ${p.severity || '-'} | ${(p.candidatos[0] || {}).teste || '—'} | ${String(p.evidenciaDeclarada || '—').replace(/\|/g, '/').slice(0, 160)} |`),
+    '',
+  ].join('\n');
+  fs.writeFileSync(path.join(EVIDENCIA, 'PROPOSTA-TESTES.md'), `${md}\n`, 'utf8');
+  process.stdout.write(`[propor] itens sem teste: ${saida.total} · ${JSON.stringify(saida.porConfianca)}\n`);
+  return 0;
 }
 
 function relatorioMd(r) {
