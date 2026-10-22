@@ -208,6 +208,131 @@ function portaDeTesteLivre() {
   return porta;
 }
 
+function portaOcupada(porta) {
+  const r = sh('node', ['-e', `
+    const net = require('net');
+    const socket = net.connect({ host: '127.0.0.1', port: ${Number(porta)} });
+    socket.setTimeout(800);
+    socket.on('connect', () => { socket.destroy(); process.stdout.write('1'); });
+    socket.on('timeout', () => { socket.destroy(); process.stdout.write('0'); });
+    socket.on('error', () => process.stdout.write('0'));
+  `]);
+  return String(r.stdout).trim() === '1';
+}
+
+/**
+ * ARTEFATO PROD-LIKE — produzido por EXECUÇÃO REAL nesta run, nunca herdado.
+ *
+ * `tests/unit/governance/modelDrivenE2e.test.js` exige
+ * `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` com `status=GO`. O arquivo é
+ * gitignored e, no CI, vem do job `prod-like-smoke` (API + frontend em Docker + smoke real no
+ * Chromium). Sem ele o L0 do checkout limpo reprova em UMA suíte — medido em 2026-10-21:
+ * 379 suítes / 5568 testes, `modelDrivenE2e` vermelho por ausência de artefato.
+ *
+ * Aqui o produtor é executado dentro do clone: imagens construídas do commit (não reaproveitadas
+ * de outro), API com o banco/redis DESTA run e o RAG provisionado por este harness, smoke real.
+ * Os containers são removidos ao final.
+ */
+function provisionarProdLike(ctx, args) {
+  const { clonePath, env, logDir, ragUrl } = ctx;
+  const apiImage = 'rap-ci-clean-api';
+  const apiBaseImage = 'rap-ci-clean-api-base';
+  const frontendImage = 'rap-ci-clean-frontend';
+  const apiPort = 3000; // nginx do frontend proxya para api:3000 (frontend/nginx.conf)
+  const frontendPort = 8080;
+
+  for (const [nome, porta] of [['API', apiPort], ['frontend', frontendPort]]) {
+    if (portaOcupada(porta)) {
+      throw new Error(`porta ${porta} (${nome}) ocupada no host — o produtor prod-like precisa dela livre; pare o processo local ou rode em um runner isolado`);
+    }
+  }
+
+  const construcoes = [
+    ['build-api-base', ['build', '-f', 'api/Dockerfile.base', '-t', apiBaseImage, '.']],
+    ['build-api', ['build', '-f', 'api/Dockerfile', '--build-arg', `API_BASE_IMAGE=${apiBaseImage}`, '-t', apiImage, '.']],
+    ['build-frontend', ['build', '-f', 'frontend/Dockerfile', '--build-arg', 'VITE_BASE_PATH=/', '--build-arg', 'VITE_API_BASE_URL=/api', '-t', frontendImage, '.']],
+  ];
+  for (const [id, argumentos] of construcoes) {
+    const registro = passo(id, 'docker', argumentos, {
+      cwd: clonePath, logDir, timeoutMs: 60 * 60 * 1000,
+      descricao: `Imagem ${id} construida a partir do commit clonado`,
+    });
+    if (!registro.ok) throw new Error(`${id} falhou (exit ${registro.exitCode})`);
+  }
+
+  sh('docker', ['rm', '-f', 'rap-ci-clean-api']);
+  sh('docker', ['rm', '-f', 'rap-ci-clean-frontend']);
+
+  const secrets = {
+    ENCRYPTION_KEY: crypto.randomBytes(32).toString('base64'),
+    REPLAY_SIGNING_KEY: crypto.randomBytes(32).toString('hex'),
+    ENGINEERING_RUNNER_TOKEN: crypto.randomBytes(32).toString('hex'),
+  };
+
+  const subirApi = sh('docker', ['run', '-d', '--name', 'rap-ci-clean-api', '--network', 'host',
+    '-e', 'NODE_ENV=production',
+    '-e', `API_PORT=${apiPort}`,
+    '-e', `DATABASE_URL=${env.DATABASE_URL}`,
+    '-e', `REDIS_URL=${env.REDIS_URL}`,
+    '-e', `RATE_LIMIT_REDIS_URL=${env.REDIS_URL}`,
+    '-e', `ENCRYPTION_KEY=${secrets.ENCRYPTION_KEY}`,
+    '-e', `REPLAY_SIGNING_KEY=${secrets.REPLAY_SIGNING_KEY}`,
+    '-e', `RAG_INTERNAL_TOKEN=${env.RAG_INTERNAL_TOKEN}`,
+    '-e', `RAG_SERVICE_URL=${ragUrl}`,
+    '-e', `ENGINEERING_RUNNER_TOKEN=${secrets.ENGINEERING_RUNNER_TOKEN}`,
+    '-e', `ENGINEERING_RUNNER_URL=${env.ENGINEERING_RUNNER_URL}`,
+    apiImage]);
+  if (subirApi.status !== 0) throw new Error(`falha ao subir a API prod-like: ${(subirApi.stderr || '').trim()}`);
+
+  esperarHttp(`http://127.0.0.1:${apiPort}/health`, 'API prod-like', 300, () => sh('docker', ['logs', '--tail', '60', 'rap-ci-clean-api']));
+
+  const subirFrontend = sh('docker', ['run', '-d', '--name', 'rap-ci-clean-frontend',
+    '-p', `${frontendPort}:80`, '--add-host', 'api:host-gateway', frontendImage]);
+  if (subirFrontend.status !== 0) throw new Error(`falha ao subir o frontend prod-like: ${(subirFrontend.stderr || '').trim()}`);
+  esperarHttp(`http://127.0.0.1:${frontendPort}/`, 'frontend prod-like', 150, () => sh('docker', ['logs', '--tail', '60', 'rap-ci-clean-frontend']));
+  esperarHttp(`http://127.0.0.1:${frontendPort}/api/health`, 'proxy /api do frontend', 150, () => sh('docker', ['logs', '--tail', '60', 'rap-ci-clean-frontend']));
+
+  passo('prod-like-smoke', 'node', ['scripts/smoke/qa-waves-operational-final-smoke.js'], {
+    cwd: clonePath,
+    env: { ...env, RUN_QA_WAVES_PROD_LIKE_SMOKE: '1', API_URL: `http://127.0.0.1:${apiPort}`, FRONTEND_URL: `http://127.0.0.1:${frontendPort}` },
+    logDir,
+    timeoutMs: 45 * 60 * 1000,
+    descricao: 'Smoke prod-like real (produtor do artefato consumido por modelDrivenE2e)',
+  });
+
+  const artefato = path.join(clonePath, 'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json');
+  if (!fs.existsSync(artefato)) {
+    throw new Error('o smoke terminou sem produzir qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json');
+  }
+  passos.push({
+    id: 'prod-like-artefato',
+    comando: '(verificacao do artefato produzido)',
+    descricao: 'Artefato prod-like existe e declara status',
+    esperado: 0,
+    exitCode: 0,
+    statusArtefato: (() => { try { return JSON.parse(fs.readFileSync(artefato, 'utf8')).status || null; } catch (_) { return null; } })(),
+    sha256Artefato: sha256(fs.readFileSync(artefato, 'utf8')),
+    ok: true,
+    startedAt: nowIso(),
+    finishedAt: nowIso(),
+    duracaoMs: 0,
+  });
+}
+
+function esperarHttp(url, rotulo, tentativas, diagnostico) {
+  for (let i = 0; i < tentativas; i += 1) {
+    if (sh('curl', ['-fsS', '-m', '3', url]).status === 0) return;
+    sh('sleep', ['2']);
+  }
+  const diag = diagnostico();
+  throw new Error(`${rotulo} nao respondeu em ${url}: ${(diag.stderr || diag.stdout || '').trim().slice(-800)}`);
+}
+
+function derrubarProdLike() {
+  sh('docker', ['rm', '-f', 'rap-ci-clean-api']);
+  sh('docker', ['rm', '-f', 'rap-ci-clean-frontend']);
+}
+
 function imagemExiste(imagem) {
   return sh('docker', ['image', 'inspect', imagem]).status === 0;
 }
@@ -320,7 +445,7 @@ function fingerprintDoSource(destino) {
 // cenários
 // ---------------------------------------------------------------------------
 
-function criarAmbienteDoRun({ clonePath, databaseUrl, ragUrl, token, extras = {} }) {
+function criarAmbienteDoRun({ clonePath, databaseUrl, ragUrl, token, runnerPort, extras = {} }) {
   return {
     CI: 'true',
     NODE_ENV: 'test',
@@ -328,7 +453,11 @@ function criarAmbienteDoRun({ clonePath, databaseUrl, ragUrl, token, extras = {}
     REDIS_URL: `redis://${REDIS_HOST}:6379/${REDIS_DB}`,
     RAG_SERVICE_URL: ragUrl,
     RAG_INTERNAL_TOKEN: token,
-    ENGINEERING_RUNNER_URL: 'http://127.0.0.1:8097',
+    // ISOLAMENTO DO ENGINEERING RUNNER: porta propria do run. Com 8097 fixo, o clone podia
+    // REUTILIZAR um runner orfao de OUTRA arvore (medido nesta maquina: pid ocupando 8097 vindo do
+    // workspace principal) — a prova de sandbox passaria a medir o codigo do vizinho.
+    ENGINEERING_RUNNER_TEST_PORT: String(runnerPort),
+    ENGINEERING_RUNNER_URL: `http://127.0.0.1:${runnerPort}`,
     JEST_MAX_WORKERS: process.env.CLEAN_CHECKOUT_JEST_WORKERS || '4',
     ...extras,
   };
@@ -381,6 +510,35 @@ function cenarioClean(ctx, args) {
     cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000,
     descricao: 'Bootstrap canonico do ambiente (npm run ci:bootstrap)',
   });
+  if (!args.noProdLike) {
+    try {
+      provisionarProdLike(ctx, args);
+    } catch (erro) {
+      // Falha do PRODUTOR é registrada como falha e o gate continua: o L0 vai reprovar em
+      // `modelDrivenE2e` por ausência do artefato — e é isso que a evidência precisa mostrar.
+      passos.push({
+        id: 'prod-like-provisionamento',
+        comando: '(provisionamento do artefato prod-like)',
+        descricao: 'Produtor prod-like executado dentro do clone',
+        esperado: 0,
+        exitCode: 1,
+        erro: erro.message,
+        ok: false,
+        startedAt: nowIso(),
+        finishedAt: nowIso(),
+        duracaoMs: 0,
+      });
+      console.error(`[ci:clean-checkout] FAIL prod-like: ${erro.message}`);
+    }
+  } else {
+    passos.push({
+      id: 'prod-like-desabilitado',
+      comando: '(--no-prod-like)',
+      descricao: 'Artefato prod-like NAO produzido nesta run (L0 reprovara em modelDrivenE2e)',
+      esperado: 0, exitCode: 0, ok: true, informativo: true,
+      startedAt: nowIso(), finishedAt: nowIso(), duracaoMs: 0,
+    });
+  }
   const gate = executarGate(clonePath, env, args, logDir);
 
   // Inventário só quando o L1 está no escopo: nomear TODOS os vermelhos, não apenas o primeiro.
@@ -501,6 +659,7 @@ function cenarioBancoIndisponivel(ctx, args) {
     databaseUrl: 'postgres://postgres:postgres@127.0.0.1:1/inexistente',
     ragUrl: 'http://127.0.0.1:1',
     token: 'invalido',
+    runnerPort: ctx.runnerPort,
   });
   passo('bootstrap-sem-postgres', 'npm', ['run', '-s', 'ci:bootstrap'], {
     cwd: clonePath, env: envInvalido, logDir, esperado: 1,
@@ -600,6 +759,7 @@ function parseArgs(argv) {
     commit: argValor('--commit', null),
     gatePhases: fases.split(',').map((f) => f.trim().toUpperCase()).filter(Boolean),
     withIntegration: argv.includes('--with-integration'),
+    noProdLike: argv.includes('--no-prod-like'),
     buildImages: argv.includes('--build-images'),
     keep: argv.includes('--keep'),
     json: argv.includes('--json'),
@@ -661,11 +821,13 @@ function main(argv = process.argv.slice(2)) {
       criarBanco(nomeBanco);
       limparRedis();
 
+      const runnerPort = portaDeTesteLivre();
       let env = criarAmbienteDoRun({
         clonePath,
         databaseUrl: `postgres://postgres:postgres@127.0.0.1:5432/${nomeBanco}`,
         ragUrl: 'http://127.0.0.1:8001',
         token: 'ausente',
+        runnerPort,
       });
 
       // DOCKER: imagens exigidas pelo L0b sao PROVISIONADAS pelo harness, nunca herdadas.
@@ -698,9 +860,16 @@ function main(argv = process.argv.slice(2)) {
         databaseUrl: env.DATABASE_URL,
         ragUrl: ragPorta ? `http://127.0.0.1:${ragPorta}` : 'http://127.0.0.1:8001',
         token,
+        runnerPort,
       });
 
-      CENARIOS_IMPLEMENTADOS[cenario]({ clonePath, env, logDir, nomeBanco }, args);
+      CENARIOS_IMPLEMENTADOS[cenario]({
+        clonePath,
+        env,
+        logDir,
+        nomeBanco,
+        ragUrl: env.RAG_SERVICE_URL,
+      }, args);
 
       const copiados = copiarEvidenciaDoClone(clonePath, runDir);
       const meusPassos = passos.slice(iniciou);
@@ -757,6 +926,7 @@ function main(argv = process.argv.slice(2)) {
       resultados.push(relatorio);
       console.error(`[ci:clean-checkout] FAIL ${cenario}: ${erro.message}`);
     } finally {
+      derrubarProdLike();
       derrubarRag();
       encerrarProcessosDoClone(clonePath);
       destruirBanco(nomeBanco);

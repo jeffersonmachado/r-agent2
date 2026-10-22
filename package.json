@@ -15,7 +15,7 @@
     "test": "npm run test:unit && npm run test:flow && npm run test:rpa:jest",
     "test:jest": "jest --no-coverage",
     "test:unit": "jest tests/unit",
-    "test:flow": "jest tests/flow engine/__tests__ --passWithNoTests",
+    "test:flow": "jest tests/flow engine/__tests__",
     "test:flow:smoke": "npm run test:flow && npm run test:demo:smoke",
     "test:vertical:unit": "jest --no-coverage --testPathPattern=\"beautyJourneyService|fitnessMembershipService|verticalBeautyRoutes|verticalFitnessRoutes|verticalJourneyJobHandler|verticalSchedulerService|executionQueueService\"",
     "test:vertical:integration": "jest --no-coverage tests/integration/verticalBeautyEndToEnd.test.js tests/integration/verticalFitnessEndToEnd.test.js",
