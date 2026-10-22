@@ -51,6 +51,9 @@ const READINESS_DOC = path.join(ROOT, 'ENGINEER_SUPERVISED_READINESS.md');
 const DECISIONS_CONFIG = path.join(ROOT, 'config', 'readiness-decisions.json');
 
 const riskAcceptance = require('../../governance/risk-acceptance');
+const { carregarInventario } = require('../../governance/bug-closure/defect-registry');
+const { verificarLivro } = require('../../governance/bug-closure/transition-ledger');
+const { verificarCompletudeDoInventario, verificarConsistenciaDeRoteamento } = require('../../governance/bug-closure/authority-consistency');
 const { DECISOES, CATEGORIAS_NAO_DISPENSAVEIS } = require('../../governance/risk-acceptance/policy');
 const signature = require('../../governance/risk-acceptance/signature');
 
@@ -147,6 +150,50 @@ function checkBloqueiosClassificados(sha) {
       BLOCKED: bloqueados.map((i) => i.riskId),
     },
   });
+
+  // ── CAMADA B (missão P0 2026-10-22): inventário x livro x roteamento ──────
+  // Um defeito P0/P1 que DECLARA fechamento sem prova válida continua bloqueando
+  // certificação. Aqui isso é medido e reportado: não há caminho em que editar o JSON
+  // (ou apagar a linha, ou remover a rota) produza "pronto".
+  let inventario = null;
+  try {
+    inventario = carregarInventario({ queuePath: QUEUE_PATH });
+  } catch (erro) {
+    registrar('QUEUE_EVIDENCE_READABLE', { ok: false, detalhe: `inventário ilegível: ${erro.message}` });
+  }
+  if (inventario) {
+    const livro = verificarLivro(ROOT);
+    const naoProvados = inventario.defeitos.filter((d) => d.fechamentoNaoProvado === true);
+    registrar('QUEUE_CLOSURE_EVIDENCE', {
+      ok: naoProvados.length === 0,
+      bloqueante: true,
+      detalhe: naoProvados.length === 0
+        ? 'todo fechamento declarado tem prova válida (SHA, fingerprint, testes, livro e assinatura)'
+        : `${naoProvados.length} fechamento(s) declarado(s) SEM prova válida: ` +
+          `${naoProvados.slice(0, 8).map((d) => `${d.id}(${d.provaDeFechamento && d.provaDeFechamento.code})`).join(', ')}` +
+          (naoProvados.length > 8 ? ' …' : ''),
+      dados: { total: naoProvados.length, exemplo: naoProvados.slice(0, 20).map((d) => d.id) },
+    });
+
+    const completude = verificarCompletudeDoInventario({ defeitos: inventario.defeitos, livro });
+    registrar('QUEUE_INVENTORY_COMPLETE', {
+      ok: completude.ok,
+      bloqueante: true,
+      detalhe: completude.ok ? 'nenhum defeito do livro desapareceu do inventário' : completude.violations.map((v) => `${v.code}:${v.defectId}`).join(', '),
+    });
+
+    let roteamentoAtual = null;
+    try { roteamentoAtual = lerJson(riskAcceptance.ROUTING_REL); } catch (_) { roteamentoAtual = null; }
+    const consistencia = verificarConsistenciaDeRoteamento({ defeitos: inventario.defeitos, roteamento: roteamentoAtual });
+    registrar('ROUTING_CONSISTENT_WITH_AUTHORITY', {
+      ok: consistencia.ok,
+      bloqueante: true,
+      detalhe: consistencia.ok
+        ? 'roteamento coerente com a autoridade canônica (inventário + prova)'
+        : consistencia.violations.map((v) => `${v.code}:${v.defectId}`).join(', '),
+      dados: { violacoes: consistencia.violations.length },
+    });
+  }
 
   // Categoria não dispensável não pode ter sido "resolvida" por roteamento: reprova explícito.
   const roteamento = (() => {

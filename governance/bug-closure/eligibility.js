@@ -94,6 +94,8 @@ const CODIGOS = Object.freeze({
   RISCO_ACEITO_INEFICAZ: 'RISCO_ACEITO_INEFICAZ',
   CONTROLE_CRITICO_NAO_DISPENSAVEL: 'CONTROLE_CRITICO_NAO_DISPENSAVEL',
   CERTIFICACAO_AUSENTE: 'CERTIFICACAO_AUSENTE',
+  // CAMADA B (missão P0 2026-10-22): estado de fechamento sem prova válida.
+  FECHAMENTO_SEM_PROVA_VALIDA: 'FECHAMENTO_SEM_PROVA_VALIDA',
 });
 
 /**
@@ -180,11 +182,23 @@ function classificarDefeitos(defeitos) {
   const riscoAceito = [];
   const riscoAceitoIneficaz = [];
   const bloqueioExterno = [];
+  const fechamentoNaoProvado = [];
 
   for (let d of Array.isArray(defeitos) ? defeitos : []) {
     if (!d) continue;
     const sev = normalizarSeveridade(d.severity);
+    // O ESTADO EFETIVO é o que decide bloqueio: `RESOLVED`/`VERIFIED` escrito à mão
+    // sem prova válida volta a OPEN em `defect-registry.migrarItem`.
+    d = { ...d, state: d.stateEfetivo || d.state };
     const estado = String(d.state || '').toUpperCase();
+
+    // Fechamento declarado e NÃO provado: não conta como fechado. Fica em bucket
+    // próprio para que operações CERTIFICANTES neguem, sem recriar bloqueio circular
+    // em operações de verificação (missão §8).
+    if (d.fechamentoNaoProvado === true) {
+      fechamentoNaoProvado.push(d);
+      continue;
+    }
 
     // RISK_ACCEPTED só dispensa quando a aceitação é VÁLIDA **e** o defeito não é
     // P0 nem controla um mecanismo crítico. Caso contrário cai na classificação
@@ -216,7 +230,7 @@ function classificarDefeitos(defeitos) {
     else if (sev === SEVERIDADES.P1) p1.push(d);
   }
 
-  return { p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno };
+  return { p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno, fechamentoNaoProvado };
 }
 
 /** Todos os defeitos que precisam de teste direcionado aprovado para liberar condicional. */
@@ -329,7 +343,7 @@ function evaluateExecutionEligibility(context = {}, operation) {
   }
 
   const {
-    p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno,
+    p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno, fechamentoNaoProvado,
   } = classificarDefeitos(context.defects);
 
   // "Publicação solicitada sem certificação" (missão §11 #20): operação de
@@ -369,6 +383,32 @@ function evaluateExecutionEligibility(context = {}, operation) {
       reasonCodes.push(CODIGOS.BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO);
     }
     evidenceRefs.push(`defect:${d.id}:BLOCKED_EXTERNAL`);
+  }
+
+  // ── CAMADA B: fechamento declarado sem prova válida ─────────────────────────
+  // Operação que CERTIFICA exige prova assinada por autoridade registrada. Um JSON
+  // editado não é prova — este é o bloqueio do bypass medido em 2026-10-22.
+  // Em operação NÃO certificante o item não bloqueia (evita o ciclo
+  // L1 → Bug Closure → selo → L1), mas fica registrado como observação.
+  if (fechamentoNaoProvado.length > 0) {
+    if (politica.certifica) {
+      reasonCodes.push(CODIGOS.FECHAMENTO_SEM_PROVA_VALIDA);
+      for (const d of fechamentoNaoProvado) {
+        blockingFindings.push({
+          code: CODIGOS.FECHAMENTO_SEM_PROVA_VALIDA,
+          defectId: d.id,
+          severity: normalizarSeveridade(d.severity),
+          state: d.state,
+          estadoDeclarado: d.estadoDeclarado || null,
+          motivo: (d.provaDeFechamento && d.provaDeFechamento.code) || 'PROVA_DE_FECHAMENTO_AUSENTE',
+        });
+      }
+      requiredActions.push('anexar prova de fechamento válida (testes reais com exit 0, SHA atual, fingerprint, livro de transições e assinatura de autoridade com mayCloseDefects) ou reabrir o defeito');
+    } else {
+      for (const d of fechamentoNaoProvado) {
+        evidenceRefs.push(`defect:${d.id}:FECHAMENTO_NAO_PROVADO`);
+      }
+    }
   }
 
   // ── Regra dura: P0 aberto bloqueia tudo que certifica ──────────────────────
@@ -441,7 +481,11 @@ function evaluateExecutionEligibility(context = {}, operation) {
     };
   }
 
-  const negado = bloquearP0 || bloquearP1 || condicionalPendente
+  // Fechamento declarado sem prova válida NEGA toda operação certificante — é o
+  // bloqueio do bypass por edição de JSON (missão P0 2026-10-22).
+  const fechamentoSemProvaBloqueia = politica.certifica && fechamentoNaoProvado.length > 0;
+
+  const negado = bloquearP0 || bloquearP1 || condicionalPendente || fechamentoSemProvaBloqueia
     || (naoDeclarada.length > 0 && politica.certifica)
     || (op === OPERACOES.PUBLICACAO_RELEASE && !NAO_VAZIO(context.certification));
 

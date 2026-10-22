@@ -1,0 +1,342 @@
+diff --git a/governance/bug-closure/defect-registry.js b/governance/bug-closure/defect-registry.js
+index 3fc2b2293..7072db3fc 100644
+--- a/governance/bug-closure/defect-registry.js
++++ b/governance/bug-closure/defect-registry.js
+@@ -20,6 +20,7 @@
+ 
+ const fs = require('fs');
+ const path = require('path');
++const { execFileSync } = require('child_process');
+ 
+ const {
+   ESTADOS,
+@@ -28,6 +29,51 @@ const {
+   eBloqueanteParaCertificacao,
+   estaAberto,
+ } = require('./defect-states');
++const { verificarProvaDeFechamento } = require('./closure-proof');
++const { verificarLivro } = require('./transition-ledger');
++
++const ESTADOS_FECHADOS = Object.freeze([ESTADOS.VERIFIED, ESTADOS.RESOLVED]);
++
++/**
++ * Contexto de verificação de fechamento (Camada B).
++ *
++ * Sem prova válida, um item que DECLARA estado de fechamento NÃO deixa de bloquear
++ * operações certificantes: `stateEfetivo` volta a OPEN e o motivo fica registrado em
++ * `provaDeFechamento`. `RISK_ACCEPTED` continua usando o mecanismo próprio de aceite
++ * (assinatura + validade), que já é verificado em `eligibility.js`.
++ */
++function montarContextoDeFechamento(opcoes = {}) {
++  const rootDir = opcoes.rootDir || path.resolve(__dirname, '..', '..');
++  let livro = opcoes.livro;
++  if (!livro) {
++    const l = verificarLivro(rootDir, opcoes.livroPath);
++    livro = { eventos: l.eventos, integridadeOk: l.integridadeOk, problemas: l.problemas };
++  }
++  return {
++    rootDir,
++    currentCommit: opcoes.currentCommit || null,
++    currentFingerprint: opcoes.currentFingerprint || null,
++    autoridades: opcoes.autoridades,
++    livro,
++    agora: opcoes.agora,
++    existeArquivo: (rel) => fs.existsSync(path.join(rootDir, rel)),
++  };
++}
++
++function carregarProvaDoItem(item, ctx) {
++  const declarada = item && (item.closureProof || item.provaDeFechamento);
++  if (!declarada) return null;
++  if (typeof declarada === 'object') return declarada;
++  if (typeof declarada === 'string') {
++    const abs = path.isAbsolute(declarada) ? declarada : path.join(ctx.rootDir, declarada);
++    try {
++      return JSON.parse(fs.readFileSync(abs, 'utf8'));
++    } catch (_) {
++      return { __ilegivel: declarada };
++    }
++  }
++  return null;
++}
+ 
+ const CODIGOS = Object.freeze({
+   FILA_AUSENTE: 'FILA_AUSENTE',
+@@ -36,7 +82,7 @@ const CODIGOS = Object.freeze({
+ });
+ 
+ /** Migra um item legado para o contrato canônico de defeito. */
+-function migrarItem(item) {
++function migrarItem(item, opcoesDeFechamento = null) {
+   const legacyStatus = String((item && item.status) || '').toLowerCase();
+ 
+   // ── AUTORIDADE DO ESTADO (defeito medido 2026-10-17) ─────────────────────
+@@ -71,8 +117,38 @@ function migrarItem(item) {
+     touches: Array.isArray(item.touches) ? item.touches : [],
+   };
+ 
+-  defeito.aberto = estaAberto(defeito);
+-  defeito.bloqueanteParaCertificacao = eBloqueanteParaCertificacao(defeito);
++  // ── CAMADA B: PROVA DE FECHAMENTO ────────────────────────────────────────
++  // O `state` declarado é PROJEÇÃO. Quem decide se o defeito ainda bloqueia
++  // certificação é a prova verificada contra o código ATUAL, o livro de transições
++  // e a assinatura de autoridade registrada. Sem prova válida, um `RESOLVED`
++  // escrito à mão continua bloqueando (defeito do bypass de 2026-10-22).
++  defeito.estadoDeclarado = estado;
++  defeito.stateEfetivo = estado;
++  defeito.provaDeFechamento = null;
++  defeito.fechamentoNaoProvado = false;
++
++  if (ESTADOS_FECHADOS.includes(estado)) {
++    if (!opcoesDeFechamento) {
++      // Sem contexto NÃO se presume fechado: fail-closed explícito.
++      defeito.fechamentoNaoProvado = true;
++      defeito.provaDeFechamento = { ok: false, code: 'CONTEXTO_DE_VERIFICACAO_AUSENTE', reasons: ['CONTEXTO_DE_VERIFICACAO_AUSENTE'] };
++    } else {
++      const prova = carregarProvaDoItem(item, opcoesDeFechamento);
++      const veredito = prova && prova.__ilegivel
++        ? { ok: false, code: 'PROVA_MALFORMADA', reasons: ['PROVA_MALFORMADA'] }
++        : (prova
++          ? verificarProvaDeFechamento(prova, { ...opcoesDeFechamento, defeito })
++          : { ok: false, code: 'PROVA_DE_FECHAMENTO_AUSENTE', reasons: ['PROVA_DE_FECHAMENTO_AUSENTE'] });
++      defeito.provaDeFechamento = { ok: veredito.ok, code: veredito.code || null, reasons: veredito.reasons || [], detalhe: veredito.detalhe || {} };
++      if (!veredito.ok) {
++        defeito.fechamentoNaoProvado = true;
++        defeito.stateEfetivo = ESTADOS.OPEN;
++      }
++    }
++  }
++
++  defeito.aberto = estaAberto({ ...defeito, state: defeito.stateEfetivo });
++  defeito.bloqueanteParaCertificacao = eBloqueanteParaCertificacao({ ...defeito, state: defeito.stateEfetivo });
+   return defeito;
+ }
+ 
+@@ -115,7 +191,41 @@ function carregarInventario(opcoes = {}) {
+     throw erro;
+   }
+ 
+-  const defeitos = fila.items.map(migrarItem);
++  // Só monta o contexto (e calcula fingerprint) quando ALGUM item declara fechamento:
++  // o cálculo percorre as fontes do repositório e não pode onerar toda leitura da fila.
++  const declaraFechamento = fila.items.some((i) => i && ESTADOS_FECHADOS.includes(String(i.state || '').toUpperCase()));
++  let contexto = opcoes.opcoesDeFechamento || null;
++  if (!contexto && declaraFechamento && (opcoes.currentCommit || opcoes.currentFingerprint || opcoes.livro)) {
++    contexto = montarContextoDeFechamento({
++      rootDir: opcoes.rootDir,
++      currentCommit: opcoes.currentCommit,
++      currentFingerprint: opcoes.currentFingerprint,
++      autoridades: opcoes.autoridades,
++      livro: opcoes.livro,
++      livroPath: opcoes.livroPath,
++      agora: opcoes.agora,
++    });
++  }
++  if (!contexto && declaraFechamento) {
++    let fingerprint = null;
++    try {
++      // eslint-disable-next-line global-require
++      fingerprint = require('../proof-engine/fingerprint-chain').computeSourceFingerprint(path.resolve(__dirname, '..', '..'));
++    } catch (_) {
++      fingerprint = null;
++    }
++    let commit = null;
++    try {
++      commit = execFileSync('git', ['rev-parse', 'HEAD'], {
++        cwd: path.resolve(__dirname, '..', '..'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
++      }).trim();
++    } catch (_) {
++      commit = null;
++    }
++    contexto = montarContextoDeFechamento({ currentCommit: commit, currentFingerprint: fingerprint });
++  }
++
++  const defeitos = fila.items.map((item) => migrarItem(item, contexto));
+ 
+   const resumo = {
+     total: defeitos.length,
+@@ -136,6 +246,7 @@ function carregarInventario(opcoes = {}) {
+     if (d.bloqueanteParaCertificacao) resumo.bloqueantesParaCertificacao += 1;
+     if (d.aberto && !d.severity) resumo.semSeveridadeAbertos += 1;
+     if (d.state === ESTADOS.BLOCKED_EXTERNAL) resumo.bloqueioExterno += 1;
++    if (d.fechamentoNaoProvado) resumo.fechamentoNaoProvado = (resumo.fechamentoNaoProvado || 0) + 1;
+     if (d.state === ESTADOS.RISK_ACCEPTED) resumo.riscoAceito += 1;
+   }
+ 
+@@ -147,4 +258,4 @@ function carregarInventario(opcoes = {}) {
+   };
+ }
+ 
+-module.exports = { carregarInventario, migrarItem, CODIGOS };
++module.exports = { carregarInventario, migrarItem, montarContextoDeFechamento, CODIGOS };
+diff --git a/governance/bug-closure/eligibility.js b/governance/bug-closure/eligibility.js
+index b746c9caf..ba18ea05c 100644
+--- a/governance/bug-closure/eligibility.js
++++ b/governance/bug-closure/eligibility.js
+@@ -94,6 +94,8 @@ const CODIGOS = Object.freeze({
+   RISCO_ACEITO_INEFICAZ: 'RISCO_ACEITO_INEFICAZ',
+   CONTROLE_CRITICO_NAO_DISPENSAVEL: 'CONTROLE_CRITICO_NAO_DISPENSAVEL',
+   CERTIFICACAO_AUSENTE: 'CERTIFICACAO_AUSENTE',
++  // CAMADA B (missão P0 2026-10-22): estado de fechamento sem prova válida.
++  FECHAMENTO_SEM_PROVA_VALIDA: 'FECHAMENTO_SEM_PROVA_VALIDA',
+ });
+ 
+ /**
+@@ -180,12 +182,24 @@ function classificarDefeitos(defeitos) {
+   const riscoAceito = [];
+   const riscoAceitoIneficaz = [];
+   const bloqueioExterno = [];
++  const fechamentoNaoProvado = [];
+ 
+   for (let d of Array.isArray(defeitos) ? defeitos : []) {
+     if (!d) continue;
+     const sev = normalizarSeveridade(d.severity);
++    // O ESTADO EFETIVO é o que decide bloqueio: `RESOLVED`/`VERIFIED` escrito à mão
++    // sem prova válida volta a OPEN em `defect-registry.migrarItem`.
++    d = { ...d, state: d.stateEfetivo || d.state };
+     const estado = String(d.state || '').toUpperCase();
+ 
++    // Fechamento declarado e NÃO provado: não conta como fechado. Fica em bucket
++    // próprio para que operações CERTIFICANTES neguem, sem recriar bloqueio circular
++    // em operações de verificação (missão §8).
++    if (d.fechamentoNaoProvado === true) {
++      fechamentoNaoProvado.push(d);
++      continue;
++    }
++
+     // RISK_ACCEPTED só dispensa quando a aceitação é VÁLIDA **e** o defeito não é
+     // P0 nem controla um mecanismo crítico. Caso contrário cai na classificação
+     // normal e bloqueia como qualquer aberto (defeito P0 de 2026-10-19).
+@@ -216,7 +230,7 @@ function classificarDefeitos(defeitos) {
+     else if (sev === SEVERIDADES.P1) p1.push(d);
+   }
+ 
+-  return { p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno };
++  return { p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno, fechamentoNaoProvado };
+ }
+ 
+ /** Todos os defeitos que precisam de teste direcionado aprovado para liberar condicional. */
+@@ -329,7 +343,7 @@ function evaluateExecutionEligibility(context = {}, operation) {
+   }
+ 
+   const {
+-    p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno,
++    p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno, fechamentoNaoProvado,
+   } = classificarDefeitos(context.defects);
+ 
+   // "Publicação solicitada sem certificação" (missão §11 #20): operação de
+@@ -371,6 +385,32 @@ function evaluateExecutionEligibility(context = {}, operation) {
+     evidenceRefs.push(`defect:${d.id}:BLOCKED_EXTERNAL`);
+   }
+ 
++  // ── CAMADA B: fechamento declarado sem prova válida ─────────────────────────
++  // Operação que CERTIFICA exige prova assinada por autoridade registrada. Um JSON
++  // editado não é prova — este é o bloqueio do bypass medido em 2026-10-22.
++  // Em operação NÃO certificante o item não bloqueia (evita o ciclo
++  // L1 → Bug Closure → selo → L1), mas fica registrado como observação.
++  if (fechamentoNaoProvado.length > 0) {
++    if (politica.certifica) {
++      reasonCodes.push(CODIGOS.FECHAMENTO_SEM_PROVA_VALIDA);
++      for (const d of fechamentoNaoProvado) {
++        blockingFindings.push({
++          code: CODIGOS.FECHAMENTO_SEM_PROVA_VALIDA,
++          defectId: d.id,
++          severity: normalizarSeveridade(d.severity),
++          state: d.state,
++          estadoDeclarado: d.estadoDeclarado || null,
++          motivo: (d.provaDeFechamento && d.provaDeFechamento.code) || 'PROVA_DE_FECHAMENTO_AUSENTE',
++        });
++      }
++      requiredActions.push('anexar prova de fechamento válida (testes reais com exit 0, SHA atual, fingerprint, livro de transições e assinatura de autoridade com mayCloseDefects) ou reabrir o defeito');
++    } else {
++      for (const d of fechamentoNaoProvado) {
++        evidenceRefs.push(`defect:${d.id}:FECHAMENTO_NAO_PROVADO`);
++      }
++    }
++  }
++
+   // ── Regra dura: P0 aberto bloqueia tudo que certifica ──────────────────────
+   const bloquearP0 = p0.length > 0 && politica.comP0 === 'BLOQUEADO';
+   const bloquearP1 = p1.length > 0 && politica.comP1 === 'BLOQUEADO';
+@@ -441,7 +481,11 @@ function evaluateExecutionEligibility(context = {}, operation) {
+     };
+   }
+ 
+-  const negado = bloquearP0 || bloquearP1 || condicionalPendente
++  // Fechamento declarado sem prova válida NEGA toda operação certificante — é o
++  // bloqueio do bypass por edição de JSON (missão P0 2026-10-22).
++  const fechamentoSemProvaBloqueia = politica.certifica && fechamentoNaoProvado.length > 0;
++
++  const negado = bloquearP0 || bloquearP1 || condicionalPendente || fechamentoSemProvaBloqueia
+     || (naoDeclarada.length > 0 && politica.certifica)
+     || (op === OPERACOES.PUBLICACAO_RELEASE && !NAO_VAZIO(context.certification));
+ 
+diff --git a/scripts/governance/validate-engineer-supervised-readiness.js b/scripts/governance/validate-engineer-supervised-readiness.js
+index 85cc53c7b..f023a86b2 100644
+--- a/scripts/governance/validate-engineer-supervised-readiness.js
++++ b/scripts/governance/validate-engineer-supervised-readiness.js
+@@ -51,6 +51,9 @@ const READINESS_DOC = path.join(ROOT, 'ENGINEER_SUPERVISED_READINESS.md');
+ const DECISIONS_CONFIG = path.join(ROOT, 'config', 'readiness-decisions.json');
+ 
+ const riskAcceptance = require('../../governance/risk-acceptance');
++const { carregarInventario } = require('../../governance/bug-closure/defect-registry');
++const { verificarLivro } = require('../../governance/bug-closure/transition-ledger');
++const { verificarCompletudeDoInventario, verificarConsistenciaDeRoteamento } = require('../../governance/bug-closure/authority-consistency');
+ const { DECISOES, CATEGORIAS_NAO_DISPENSAVEIS } = require('../../governance/risk-acceptance/policy');
+ const signature = require('../../governance/risk-acceptance/signature');
+ 
+@@ -148,6 +151,50 @@ function checkBloqueiosClassificados(sha) {
+     },
+   });
+ 
++  // ── CAMADA B (missão P0 2026-10-22): inventário x livro x roteamento ──────
++  // Um defeito P0/P1 que DECLARA fechamento sem prova válida continua bloqueando
++  // certificação. Aqui isso é medido e reportado: não há caminho em que editar o JSON
++  // (ou apagar a linha, ou remover a rota) produza "pronto".
++  let inventario = null;
++  try {
++    inventario = carregarInventario({ queuePath: QUEUE_PATH });
++  } catch (erro) {
++    registrar('QUEUE_EVIDENCE_READABLE', { ok: false, detalhe: `inventário ilegível: ${erro.message}` });
++  }
++  if (inventario) {
++    const livro = verificarLivro(ROOT);
++    const naoProvados = inventario.defeitos.filter((d) => d.fechamentoNaoProvado === true);
++    registrar('QUEUE_CLOSURE_EVIDENCE', {
++      ok: naoProvados.length === 0,
++      bloqueante: true,
++      detalhe: naoProvados.length === 0
++        ? 'todo fechamento declarado tem prova válida (SHA, fingerprint, testes, livro e assinatura)'
++        : `${naoProvados.length} fechamento(s) declarado(s) SEM prova válida: ` +
++          `${naoProvados.slice(0, 8).map((d) => `${d.id}(${d.provaDeFechamento && d.provaDeFechamento.code})`).join(', ')}` +
++          (naoProvados.length > 8 ? ' …' : ''),
++      dados: { total: naoProvados.length, exemplo: naoProvados.slice(0, 20).map((d) => d.id) },
++    });
++
++    const completude = verificarCompletudeDoInventario({ defeitos: inventario.defeitos, livro });
++    registrar('QUEUE_INVENTORY_COMPLETE', {
++      ok: completude.ok,
++      bloqueante: true,
++      detalhe: completude.ok ? 'nenhum defeito do livro desapareceu do inventário' : completude.violations.map((v) => `${v.code}:${v.defectId}`).join(', '),
++    });
++
++    let roteamentoAtual = null;
++    try { roteamentoAtual = lerJson(riskAcceptance.ROUTING_REL); } catch (_) { roteamentoAtual = null; }
++    const consistencia = verificarConsistenciaDeRoteamento({ defeitos: inventario.defeitos, roteamento: roteamentoAtual });
++    registrar('ROUTING_CONSISTENT_WITH_AUTHORITY', {
++      ok: consistencia.ok,
++      bloqueante: true,
++      detalhe: consistencia.ok
++        ? 'roteamento coerente com a autoridade canônica (inventário + prova)'
++        : consistencia.violations.map((v) => `${v.code}:${v.defectId}`).join(', '),
++      dados: { violacoes: consistencia.violations.length },
++    });
++  }
++
+   // Categoria não dispensável não pode ter sido "resolvida" por roteamento: reprova explícito.
+   const roteamento = (() => {
+     try { return lerJson(riskAcceptance.ROUTING_REL); } catch (_) { return null; }
+ governance/bug-closure/defect-registry.js          | 121 ++++++++++++++++++++-
+ governance/bug-closure/eligibility.js              |  50 ++++++++-
+ .../validate-engineer-supervised-readiness.js      |  47 ++++++++
+ 3 files changed, 210 insertions(+), 8 deletions(-)
