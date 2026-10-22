@@ -894,6 +894,11 @@ o primeiro passo do L1, e o inventário local mostra que os outros dois vermelho
 mesma família (certificação de release). O padrão é o MESMO do checkout limpo local — a diferença de
 método não muda o veredito, o que é exatamente a propriedade que faltava antes deste ciclo.
 
+**Reprodutibilidade no runner (2 execuções consecutivas):** `321d2aae6` → L0 exit 0 em 451,8 s e
+L0b exit 0 em 472,6 s; `d751e2839` → L0 exit 0 em 447,5 s e L0b exit 0 em 462,8 s. Em ambas, o gate
+para em `L1-cadeia-criptografica` (exit 1, 0,1 s). Variação de 4,3 s no L0 e 9,8 s no L0b — é
+determinístico, não flake.
+
 ### 16.4 O que continua vermelho — e por que NÃO foi reclassificado
 
 O inventário do L1 executado no clone (cada validador individualmente, a partir da MESMA definição
