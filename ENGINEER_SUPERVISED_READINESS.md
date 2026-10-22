@@ -900,11 +900,11 @@ o primeiro passo do L1, e o inventário local mostra que os outros dois vermelho
 mesma família (certificação de release). O padrão é o MESMO do checkout limpo local — a diferença de
 método não muda o veredito, o que é exatamente a propriedade que faltava antes deste ciclo.
 
-**Reprodutibilidade no runner (4 execuções consecutivas):** `321d2aae6` → L0 exit 0 em 451,8 s e
-L0b exit 0 em 472,6 s; `d751e2839` → L0 exit 0 em 447,5 s e L0b exit 0 em 462,8 s; `3f6c30d0c`
-(run 39727907636) → L0 exit 0 em 447,0 s e L0b exit 0 em 456,0 s; `a88deff9a` (run 39747190874) →
-L0 exit 0 em 413,0 s e L0b exit 0 em 419,0 s. Nas quatro, o gate para em `L1-cadeia-criptografica`
-(exit 1). Amplitude de 38,8 s no L0 e 53,6 s no L0b — é determinístico, não flake.
+**Reprodutibilidade no runner (5 execuções consecutivas):** `321d2aae6` → L0 451,8 s / L0b 472,6 s;
+`d751e2839` → 447,5 s / 462,8 s; `3f6c30d0c` → 447,0 s / 456,0 s; `a88deff9a` → 413,0 s / 419,0 s;
+`f1395a0fb` (run 39762241115) → 439,0 s / 526,0 s. Em todas, L0 e L0b **exit 0** e o gate para em
+`L1-cadeia-criptografica` (exit 1). Amplitude de 38,8 s no L0 e 107,0 s no L0b — é determinístico,
+não flake.
 
 ### 16.3.2 Cenários negativos exercitados (prova de que "verde" não é vacuidade)
 
