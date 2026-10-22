@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
+  "severity": "P0",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Cadeia criptografica reconstruida e assinada a cada ciclo (selo imutavel)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

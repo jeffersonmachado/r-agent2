@@ -164,6 +164,69 @@ MESMA família de release, não defeito de teste.
 **Primeira medição (commit `382f83b37`, histórico):** `L0` 379 suítes / 5568 testes com 1 vermelha
 (`modelDrivenE2e`, artefato prod-like ausente — hoje o produtor é executado pelo harness).
 
+## Bug Closure First — âncoras externas e como provisioná-las
+
+A blindagem do Bug Closure First (PR #6, 2026-10-22) exige **três valores que não podem viver
+no repositório**, porque tudo que está na árvore é reescrevível por quem tem write access a ela:
+
+| Variável | O que é | Sem ela |
+|---|---|---|
+| `RAP_CLOSURE_TRUST_ANCHOR_SHA256` | fingerprint (sha256 do SPKI) da chave que **fecha** defeito | nenhuma prova de fechamento é aceita (`SEM_ANCORA_EXTERNA`) |
+| `RAP_APPROVAL_TRUST_ANCHOR_SHA256` | fingerprint da chave que **aprova** missão | aprovação humana não conta (`HUMAN_APPROVAL_ANCHORED=false`) |
+| `RAP_CLOSURE_INVENTORY_SHA256` | digest canônico do inventário (`[id, severity, state]` ordenados) | operação certificante negada (`INVENTARIO_NAO_ANCORADO`/`INVENTARIO_ADULTERADO`) |
+
+**Provisionamento (ação do dono, não do agente):**
+
+```bash
+# 1. derive o bloco de valores a partir da chave pública da autoridade
+node scripts/governance/provision-closure-anchors.js --key <chave-publica.pem>
+#    --out ~/.config/ragent2/closure-anchors.env   grava fora do workspace (modo 600);
+#    --out dentro do repositório é RECUSADO: âncora versionada deixa de ser âncora.
+
+# 2. registre os valores no cofre do orquestrador (CI secrets / vault) e pin a impressão em
+#    governance/bug-closure/trusted-authorities.js (PINNED_AUTHORITY_FINGERPRINTS).
+#    O pin sozinho não autoriza nada — a âncora externa é obrigatória.
+
+# 3. preflight antes de selar
+node scripts/governance/provision-closure-anchors.js --check    # exit 0 = pronto
+```
+
+**Custo operacional declarado:** `RAP_CLOSURE_INVENTORY_SHA256` muda **sempre** que a fila muda
+legitimamente. Toda alteração aprovada em `AI_MEMORY/hardening-queue.json` exige reprovisionar e
+atualizar o segredo — esse é o preço de autenticar a pertença dos itens sem assinar o arquivo.
+
+**Limites que o mecanismo NÃO cobre** (declarados em
+`AI_MEMORY/evidence/p0-bug-closure-2026-10-22/RELATORIO.md` §11):
+
+1. As âncoras são valores **portadores (bearer)** no ambiente do processo: quem controla o env do
+   release certifica o que quiser. O canal de injeção tem de ser o orquestrador/CI.
+2. Nenhum workflow define as âncoras hoje ⇒ default fail-closed: toda operação certificante é
+   `DENIED`.
+3. O pin em código é cache, não raiz de confiança.
+4. `sourceFingerprint` é integridade relativa; o livro de transições é hash-chain **sem assinatura**.
+5. O digest cobre `[id, severity, state]`, não todos os campos do item.
+6. O histórico da máquina de estados não é reconstruído (`fromState` é o estado persistido).
+7. O **verificador** vive na mesma árvore gravável: âncoras autenticam dados, não código.
+8. `validate-bug-closure-status`, `validate-hardening-queue` e `validate-bug-closure-risk` são
+   **não autoritativos** (`authoritative: false`): só `SELO_FINAL`/`PUBLICACAO_RELEASE` autorizam
+   release.
+
+## Regularização de fechamentos históricos
+
+`node scripts/governance/regularize-bug-closures.js [--only P0|P1|P2|P3] [--dry-run]` re-executa
+o teste de regressão citado por cada item que declara fechamento sem prova, guarda a saída real
+com sha256 e monta a prova **não assinada**. Ele nunca altera `AI_MEMORY/hardening-queue.json` e
+nunca assina: a assinatura é da autoridade ancorada. Classes do relatório:
+
+| Classe | Significado |
+|---|---|
+| `AGUARDA_ASSINATURA_E_ANCORA` | teste passou no HEAD, prova estruturalmente válida; falta só assinatura + âncoras |
+| `AGUARDA_INSUMOS_HUMANOS` | teste passou; falta `negativeEvidence`/`humanAuthorization` (exigidos em P0) |
+| `TESTE_FALHOU_AGORA` | a correção declarada não se sustenta no código atual ⇒ candidato a REABRIR |
+| `AMBIENTE_INDISPONIVEL` | teste exigiu infraestrutura ausente; não é veredito sobre o defeito |
+| `REQUER_AJUSTE_DE_MODELO` | estado persistido (RESOLVED/RISK_ACCEPTED) sem transição canônica de fechamento |
+| `REQUER_DECISAO_HUMANA` | nenhum teste de regressão citado/existente: reabrir ou aceitar risco |
+
 ## NO_GO conditions
 
 - Canonical mesh `NO_GO`

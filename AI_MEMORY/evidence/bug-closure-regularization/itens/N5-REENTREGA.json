@@ -1,0 +1,11 @@
+{
+  "id": "N5-REENTREGA",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log"
+}

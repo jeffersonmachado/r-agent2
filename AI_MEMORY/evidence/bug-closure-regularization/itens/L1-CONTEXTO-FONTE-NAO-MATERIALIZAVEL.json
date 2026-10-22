@@ -1,0 +1,13 @@
+{
+  "id": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Contexto do CODER lia o checkout principal quando o source_commit da missao era irresolvivel",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log",
+  "draft": "governance/bug-closure/proofs-drafts/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.json",
+  "camposParaAssinar": 18
+}

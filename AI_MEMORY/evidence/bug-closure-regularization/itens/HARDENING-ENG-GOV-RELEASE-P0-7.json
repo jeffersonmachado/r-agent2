@@ -1,0 +1,16 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "teste": "tests/unit/governance/branchProtectionApplyPayload.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-7.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-7.json",
+  "camposParaAssinar": 18
+}

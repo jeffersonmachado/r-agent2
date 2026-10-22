@@ -1,0 +1,8 @@
+{
+  "id": "P1-PATCH-SYMLINK-ESCAPE",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "validatePatch aceitava symlink (git mode 120000): alvo do link escapa do allowedPaths",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

@@ -1,0 +1,8 @@
+{
+  "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate review aceitava APPROVE sem prova positiva de independencia",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "B5: vinculo defeito -> commit -> prevencao executavel",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/integration/evoSyncIntegration.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.log",
+  "draft": "governance/bug-closure/proofs-drafts/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.json",
+  "camposParaAssinar": 18
+}

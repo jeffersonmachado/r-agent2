@@ -1,0 +1,9 @@
+{
+  "id": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
+  "severity": "P0",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Cadeia criptografica declarava valid=true sobre conteudo alterado e o agregado aprovava lendo o campo persistido",
+  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "teste": "tests/unit/governance/governanceChainAppearance.test.js",
+  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+}

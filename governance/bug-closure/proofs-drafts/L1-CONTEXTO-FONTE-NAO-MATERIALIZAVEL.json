@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e943fb51-6178-4dd1-8002-d548d8381b7e",
+  "defectId": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "63c0d22f999bcef798a174e41b5097eaae80f266",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "requiredTests": [
+    "tests/unit/engineeringRouterContextSourceFailClosed.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
+      "command": "npx jest tests/unit/engineeringRouterContextSourceFailClosed.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:57:48.106Z",
+      "finishedAt": "2026-10-22T17:57:52.265Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log",
+      "outputSha256": "88e496245ee1b8e932024cafde937e5371e8fbab8e287d112c011f331cc8eb70"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
+      "sha256": "3331cfbe5eaeaf43c8126596d43ac325495e70c6bfd07eb4b4a3336dde4419a8"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:57:52.265Z",
+  "proofHash": "c511754b02b5553a724ea735c2b4b304c3583bb21dcd78eafc4d39d19584b1a9"
+}

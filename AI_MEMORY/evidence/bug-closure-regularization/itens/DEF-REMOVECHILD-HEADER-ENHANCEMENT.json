@@ -1,0 +1,9 @@
+{
+  "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "removeChild (React) por enhancement de header que movia/substituia nos do React",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
+  "motivo": "FRONTEND_DEPS_AUSENTES (frontend/node_modules não instalado)"
+}

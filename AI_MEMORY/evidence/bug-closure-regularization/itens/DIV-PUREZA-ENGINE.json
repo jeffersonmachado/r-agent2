@@ -1,0 +1,11 @@
+{
+  "id": "DIV-PUREZA-ENGINE",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/unit/engine/enginePurityPorts.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log"
+}

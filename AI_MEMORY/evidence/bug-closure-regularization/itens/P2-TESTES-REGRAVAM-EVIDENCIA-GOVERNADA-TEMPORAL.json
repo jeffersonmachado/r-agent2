@@ -1,0 +1,9 @@
+{
+  "id": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Suites e validadores regravam relatorios governados e invalidam a coerencia temporal do run",
+  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "teste": "tests/unit/governance/governedArtifactPreservation.test.js",
+  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+}

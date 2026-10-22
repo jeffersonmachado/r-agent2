@@ -1,0 +1,9 @@
+{
+  "id": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
+  "severity": "P0",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Run governado nunca registrava o commit: identidade de release INCOMPLETA para sempre e GO definitivo impossivel",
+  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "teste": "tests/unit/governance/runIdentityCommit.test.js",
+  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+}

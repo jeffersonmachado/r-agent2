@@ -1,0 +1,8 @@
+{
+  "id": "P1-BRANCHES-MISSAO-RESIDUO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Refs engineering/missions/* acumulavam sem poda (3017 residuais degradam medicao)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

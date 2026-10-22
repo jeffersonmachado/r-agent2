@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "c6efa632-5a62-4a71-ad30-3e7d880a70b1",
+  "defectId": "P0-1",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "requiredTests": [
+    "tests/unit/securityIntel/approvalAuthority.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/securityIntel/approvalAuthority.test.js",
+      "command": "npx jest tests/unit/securityIntel/approvalAuthority.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:52:01.296Z",
+      "finishedAt": "2026-10-22T17:52:04.629Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-1.log",
+      "outputSha256": "6fe670083bab48a8d3fff608eb91625b59a06a13820921fea48715629a9128eb"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/securityIntel/approvalAuthority.test.js",
+      "sha256": "409cf58b1ccdf1057846ffb89086067e2c8b041d08d7517a0d685d364209553b"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:52:04.629Z",
+  "proofHash": "1d161d6069f00a54a5b265d77cf4957f7467c4b5aac2ca3439257a84dd436d9e"
+}

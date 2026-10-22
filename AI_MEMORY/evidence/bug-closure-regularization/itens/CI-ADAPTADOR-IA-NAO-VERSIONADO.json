@@ -1,0 +1,8 @@
+{
+  "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gates de IA exigiam arquivo que nao existia em NENHUM commit (so no disco do desenvolvedor)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

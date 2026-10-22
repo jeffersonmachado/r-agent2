@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "039243fc-0add-4c60-bea3-cf69463d1332",
+  "defectId": "L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "63c0d22f999bcef798a174e41b5097eaae80f266",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "requiredTests": [
+    "tests/unit/governance/releaseStateService.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/releaseStateService.test.js",
+      "command": "npx jest tests/unit/governance/releaseStateService.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:57:52.266Z",
+      "finishedAt": "2026-10-22T17:57:55.310Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.log",
+      "outputSha256": "6bc1e1ef37577d0ccafe3a9fcf65b822de8808b58741ba5ad120822bb46701b6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/releaseStateService.test.js",
+      "sha256": "2a1e9cdde875fbb8688e662d343f9f3a6123171a4ea4cc0219d1cc5b369d68b2"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:57:55.311Z",
+  "proofHash": "66c5b136c4fa73c7f2e18665fb9e684a901fb6026f9095758cfebe0146b17c08"
+}

@@ -1,0 +1,8 @@
+{
+  "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

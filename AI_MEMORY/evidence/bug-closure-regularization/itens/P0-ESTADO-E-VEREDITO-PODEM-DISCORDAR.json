@@ -1,0 +1,8 @@
+{
+  "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "state=CERTIFIED_GO coexistindo com veredito nao-ok (consumidor que le state via GO falso)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

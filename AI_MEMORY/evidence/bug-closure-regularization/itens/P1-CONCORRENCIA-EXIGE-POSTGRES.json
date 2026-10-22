@@ -1,0 +1,8 @@
+{
+  "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Teste de concorrencia HTTP passava sem PostgreSQL (retorno silencioso)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

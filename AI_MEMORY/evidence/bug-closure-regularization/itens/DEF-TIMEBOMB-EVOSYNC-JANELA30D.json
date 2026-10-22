@@ -1,0 +1,13 @@
+{
+  "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Teste evoSyncIntegration fixava frequency30d e venceu sozinho em 03/10/2026",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/integration/evoSyncIntegration.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-TIMEBOMB-EVOSYNC-JANELA30D.json",
+  "camposParaAssinar": 18
+}

@@ -1,0 +1,11 @@
+{
+  "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/unit/coverage/impactRunner.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
+}

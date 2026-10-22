@@ -1,0 +1,13 @@
+{
+  "id": "H16-V2SEAL-PASSO-SEM-MOTIVO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Passo obrigatorio do selo V2 que falha passa a registrar o MOTIVO no relatorio",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
+  "draft": "governance/bug-closure/proofs-drafts/H16-V2SEAL-PASSO-SEM-MOTIVO.json",
+  "camposParaAssinar": 18
+}

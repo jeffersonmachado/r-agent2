@@ -1,0 +1,8 @@
+{
+  "id": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "B1: cadeia criptografica existia mas NENHUM gate a recalculava",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

@@ -1,0 +1,8 @@
+{
+  "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Guarda de integridade nao via skip/assertion removida nem mutacao commitada",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

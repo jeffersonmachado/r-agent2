@@ -1,0 +1,13 @@
+{
+  "id": "P1-17",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Dívida de segurança do Security Release Gate (47 -> 0 bloqueantes; gate GO)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-17.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-17.json",
+  "camposParaAssinar": 18
+}

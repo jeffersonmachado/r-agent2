@@ -1,0 +1,8 @@
+{
+  "id": "P0-FILAS-ISOLAMENTO-TENANT",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Exclusao forcada de fila fechava tickets de OUTRO tenant com o mesmo nome",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

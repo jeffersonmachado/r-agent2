@@ -1,0 +1,8 @@
+{
+  "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Lineage de relatorio escolhia o run mais recente e omitia sourceCommit",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

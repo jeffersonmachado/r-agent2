@@ -1,0 +1,16 @@
+{
+  "id": "P0-3",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Proveniencia do Security Gate consegue falhar (fail-closed)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-3.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-3.json",
+  "camposParaAssinar": 18
+}

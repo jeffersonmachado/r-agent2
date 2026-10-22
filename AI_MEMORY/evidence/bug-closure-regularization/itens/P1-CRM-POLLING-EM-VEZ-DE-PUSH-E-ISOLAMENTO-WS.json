@@ -1,0 +1,13 @@
+{
+  "id": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Painel CRM sincronizava por setInterval (proibido) e o evento de metricas nao tinha prova de isolamento por tenant",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/realtimeTenantIsolation.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.json",
+  "camposParaAssinar": 18
+}

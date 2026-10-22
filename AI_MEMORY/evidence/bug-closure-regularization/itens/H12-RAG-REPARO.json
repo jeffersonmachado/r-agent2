@@ -1,0 +1,13 @@
+{
+  "id": "H12-RAG-REPARO",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/ragIndexHealthPolicy.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H12-RAG-REPARO.log",
+  "draft": "governance/bug-closure/proofs-drafts/H12-RAG-REPARO.json",
+  "camposParaAssinar": 18
+}

@@ -1,0 +1,16 @@
+{
+  "id": "P0-4",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Waiver em duas etapas com segregacao de funcoes e escopo",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "teste": "tests/unit/securityIntel/waiverService.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-4.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-4.json",
+  "camposParaAssinar": 18
+}

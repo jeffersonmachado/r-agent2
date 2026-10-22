@@ -1,0 +1,1463 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization",
+  "generatedAt": "2026-10-22T18:09:51.835Z",
+  "authoritative": false,
+  "resumo": {
+    "commit": "63c0d22f999bcef798a174e41b5097eaae80f266",
+    "fingerprint": "df5eb2e6fb6f23979d902edc451d25f4e15bcd053d0228f75abe23d998cc585f",
+    "total": 130,
+    "porClasse": {
+      "AGUARDA_ASSINATURA_E_ANCORA": 54,
+      "REQUER_DECISAO_HUMANA": 51,
+      "AMBIENTE_INDISPONIVEL": 7,
+      "REQUER_AJUSTE_DE_MODELO": 7,
+      "AGUARDA_INSUMOS_HUMANOS": 11
+    },
+    "porSeveridade": {
+      "AGUARDA_ASSINATURA_E_ANCORA:P3": 6,
+      "AGUARDA_ASSINATURA_E_ANCORA:P1": 36,
+      "AGUARDA_ASSINATURA_E_ANCORA:P2": 12,
+      "REQUER_DECISAO_HUMANA:P1": 27,
+      "REQUER_DECISAO_HUMANA:P2": 6,
+      "AMBIENTE_INDISPONIVEL:P1": 2,
+      "AMBIENTE_INDISPONIVEL:P2": 3,
+      "REQUER_DECISAO_HUMANA:P0": 15,
+      "REQUER_AJUSTE_DE_MODELO:P1": 2,
+      "REQUER_AJUSTE_DE_MODELO:P0": 4,
+      "AGUARDA_INSUMOS_HUMANOS:P0": 11,
+      "AMBIENTE_INDISPONIVEL:P3": 1,
+      "REQUER_DECISAO_HUMANA:P3": 3,
+      "AMBIENTE_INDISPONIVEL:P0": 1,
+      "REQUER_AJUSTE_DE_MODELO:P2": 1
+    },
+    "filaAlterada": false,
+    "assinatura": "PENDENTE — este script não assina e não altera a fila"
+  },
+  "resultados": [
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Criar run governado novo torna o CANDIDATO entregue um artefato de outro run",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Execucao da malha sem lineage destruia a evidencia governada (agregado em vermelho)",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Cadeia criptografica reconstruida e assinada a cada ciclo (selo imutavel)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-3",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Certificar ANTES de publicar (ordem de fase do selo)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-4",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Autoridade unica de decisao de release (fim da comparacao por substring)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-5",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Eliminar falsos verdes de cobertura (L1) e fazer a malha REALMENTE executar",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Reuso de lote do runner autoritativo nao pode mascarar exit code divergente",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/governance/branchProtectionApplyPayload.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-7.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-7.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "POST /engineering/tasks/:id/run aceitava duas execucoes concorrentes (202,202)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "L1-WORKTREE-MUTILACAO-RECORRENTE",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Worktree mutilado 3x (testes removidos + guardas apagadas): prevencao executavel",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B1: cadeia criptografica existia mas NENHUM gate a recalculava",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P0-1",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Identidade de aprovacao derivada do ator autenticado",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/securityIntel/approvalAuthority.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-1.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-1.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-2",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Evidencia ausente nunca e PASS (imutabilidade do evidence manifest)",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-2.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-2.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-3",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Proveniencia do Security Gate consegue falhar (fail-closed)",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-3.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-3.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-4",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Waiver em duas etapas com segregacao de funcoes e escopo",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/securityIntel/waiverService.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-4.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-4.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-5",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Suite E2E do Security Gate contra Postgres real",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/integration/securityWaiverApprovalE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-5.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-5.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate agregado executava validadores antes da decisao de identidade/autorizacao e certificava cadeia vazia",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/governance/governanceEnforcementOrder.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Avaliador canonico confiava no campo chain.valid GRAVADO em vez de recalcular a cadeia",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Cadeia criptografica declarava valid=true sobre conteudo alterado e o agregado aprovava lendo o campo persistido",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/governance/governanceChainAppearance.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    },
+    {
+      "id": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CRM usava upsert com PK apenas `id`: tenant B sobrescrevia e TRANSFERIA registro do tenant A",
+      "classe": "AMBIENTE_INDISPONIVEL",
+      "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log"
+    },
+    {
+      "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "state=CERTIFIED_GO coexistindo com veredito nao-ok (consumidor que le state via GO falso)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Falso GO: gate com status nao permitido (NOT_EXECUTED/UNKNOWN/SKIPPED/arbitrario) certificava",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/governance/canonicalReleaseDecision.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-FILAS-ISOLAMENTO-TENANT",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Exclusao forcada de fila fechava tickets de OUTRO tenant com o mesmo nome",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P0-FILAS-ROLLBACK-DESTRUTIVO",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Rollback de criacao de fila fechava tickets ativos (force=true) inclusive em fila preexistente",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fase do gate era aprovada com apenas PARTE dos passos obrigatorios (fase D: 1 de 7 = PASS)",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/governance/phaseStepContract.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate de desenvolvimento certificava com fases duplicadas, desconhecidas ou inexistentes (A,A,A,A = PASS)",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/governance/devBranchGatePhaseContract.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Identidade ausente era tratada como identidade coerente (aprovava sem runId/commit/fingerprint)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Produtores que carimbam o proprio lineage gravam runId + sourceFingerprint mas NAO sourceCommit: GO definitivo continua impossivel",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/governance/producerLineageIdentity.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    },
+    {
+      "id": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
+      "severity": "P0",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Defeito P0 com RISK_ACCEPTED deixava de ser bloqueante e liberava selo/publicacao",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "teste": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
+      "severity": "P0",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Run governado nunca registrava o commit: identidade de release INCOMPLETA para sempre e GO definitivo impossivel",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/governance/runIdentityCommit.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    },
+    {
+      "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Travas do ponto de entrada de auditoria (regressão do agg8 + epoch recalculável)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-ENTRYPOINT-TRAVAS.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-ENTRYPOINT-TRAVAS.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Teste de unidade regravava artefato governado e derrubava a integridade temporal",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gates de IA exigiam arquivo que nao existia em NENHUM commit (so no disco do desenvolvedor)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "CI-CHECKOUT-LIMPO-HARNESS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Instalacao limpa nunca era testada: todo diagnostico de CI dependia do estado da maquina do desenvolvedor",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Engineering Runner de porta fixa era reutilizado por outra arvore: a prova de sandbox media o codigo do vizinho",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "engineeringMissionFullE2E flaky sob carga BLOQUEIA o agregado e a selagem",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/effectiveAggregateChain.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "DEF-QUEUE-DELETE-DB-ONLY",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "DELETE /queues nao removia fila existente so no banco (reaparecia na listagem)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/queueModuleRoutes.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-QUEUE-DELETE-DB-ONLY.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-QUEUE-DELETE-DB-ONLY.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "removeChild (React) por enhancement de header que movia/substituia nos do React",
+      "classe": "AMBIENTE_INDISPONIVEL",
+      "teste": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
+      "motivo": "FRONTEND_DEPS_AUSENTES (frontend/node_modules não instalado)"
+    },
+    {
+      "id": "DEF-TEARDOWN-DRAIN-WORKER",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
+      "classe": "AMBIENTE_INDISPONIVEL",
+      "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log"
+    },
+    {
+      "id": "DEF-WS-AUTH-POS-LOGIN",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fix da FASE 6 mudou o sourceFingerprint: falta gerar novo candidato e nova certificacao preservando o anterior como historico",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "H10-VEREDITO-GATE-SEGURANCA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Veredito do Security Release Gate deixa de ser mascarado pela avaliacao de risco",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/securityGateState.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H10-VEREDITO-GATE-SEGURANCA.log",
+      "draft": "governance/bug-closure/proofs-drafts/H10-VEREDITO-GATE-SEGURANCA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H11-ESCOPO-DIFERIDO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Regressao da Fase 9: escopo diferido explicito + fixtures com evidencia de integracao",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringRouter/taskContractScope.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H11-ESCOPO-DIFERIDO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H11-ESCOPO-DIFERIDO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H13-RUNNER-COMPLETO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Agregado deixa de mascarar falhas: runner completo dos validadores",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/allValidatorsRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H13-RUNNER-COMPLETO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H13-RUNNER-COMPLETO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H14-CDR-SUPERVISIONADO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H14-CDR-SUPERVISIONADO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H14-CDR-SUPERVISIONADO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H15-CDR-LAST-FAIL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CDR nao morre mais em silencio com o backend REGISTRADO sobre conexao que falhou",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H15-CDR-LAST-FAIL.log",
+      "draft": "governance/bug-closure/proofs-drafts/H15-CDR-LAST-FAIL.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H16-V2SEAL-PASSO-SEM-MOTIVO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Passo obrigatorio do selo V2 que falha passa a registrar o MOTIVO no relatorio",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H16-V2SEAL-PASSO-SEM-MOTIVO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H17-HOOKS-EDITOR",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "O gate agregado nao persiste veredito proprio do run corrente",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/aggregateVerdict.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Harness aceitava LOG JSON do produto como handshake do worker de lease (selo V2 abortado)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "FENCE_AVANCOU com antes=undefined: log JSON do produto confundido com handshake (selo V2 abortado)",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Malha grava artefato governado mesmo executando ZERO resultados (--scenario-id da wave nao casa)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "TTL/frescor de evidencia: autoridade unica com 5 regras e vinculacao por run",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Contexto do CODER lia o checkout principal quando o source_commit da missao era irresolvivel",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "DELIVERED_VERIFIED era concedido sem veredito positivo, com bloqueio ativo e lendo um relatorio que nunca existiu",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/releaseStateService.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "L1-NPM-TEST-CI-VERMELHO",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "CI do branch de desenvolvimento VERDE: L1 separado em D (desenvolvimento) e R (certificacao de release)",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/qaMeshOperationPolicy.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    },
+    {
+      "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "publish-tag era oferecida com release selado mas NAO verificado",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/devGovernanceModels.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "L1-RUNNER-CONTAINER-MODULE-NOT-FOUND",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Container real do Engineering Runner executava sandbox com MODULE_NOT_FOUND (Dockerfile sem fechamento de dependencias)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Coleta da evidencia de runtime restringia o Jest a um teste e dependia de sobra de execucoes anteriores",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B9: CI do GitHub bloqueado por budget — release-governance.yml nao protege publicacao",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/devBranchCiGate.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B9-CI-GITHUB-ACTIONS.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-B9-CI-GITHUB-ACTIONS.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-1",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gates unit/integration declaram a CATEGORIA da evidencia",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringMission/testSuiteClassifier.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-1.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-1.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-10",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Self-engineering E2E governado (relatorio agregado obsoleto)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-10.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-10.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-11",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Destravar empacotamento e selagem (ciclo release:seal completo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/v2SealOrchestration.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-11.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-11.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-12",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/evidenceFreshness.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-12.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-12.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-13",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/smokeEvidenceSummary.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-13.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-13.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-15",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/attestationOrder.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-15.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-15.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-16",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Lotes do runner autoritativo nao se isolavam (conexoes e processos-filho vazavam)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-16.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-16.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-17",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Dívida de segurança do Security Release Gate (47 -> 0 bloqueantes; gate GO)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-17.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-17.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-2",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Revisao independente verificavel (vinculada a tentativa + independencia nos dados)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringMissionReviewEngines.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-2.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-2.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-3",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Promocao verificada obrigatoria para GREEN",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-3.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-3.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-4",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Regra preventiva exige teste EXECUTADO e regras ativas passam a ser consultadas",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/engineeringMission/activePreventiveRules.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-4.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-4.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-5",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-6",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-7",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/securityIntel/triageRemediation.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-7.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-7.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-8",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Inventario do sistema regenerado",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/qa/systemInventoryIntegrity.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-8.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-8.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-9",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Contrato unico de evidencias (campos obrigatorios, runId/lineage, FAIL vs INCOMPLETE)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/evidenceContract.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-9.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-9.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-BRANCHES-MISSAO-RESIDUO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Refs engineering/missions/* acumulavam sem poda (3017 residuais degradam medicao)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "pbx-cdr-health.sh falhava sob pipefail por SIGPIPE (grep -q / head -n1) — falso vermelho recorrente",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-CI-SEM-INTEGRACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate/CI do branch de desenvolvimento nao rodava NENHUMA suite de integracao",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Teste de concorrencia HTTP passava sem PostgreSQL (retorno silencioso)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Editar oportunidade criava registro novo (POST sem id) e o front lia payload cru da resposta",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/crmOpportunityUpdate.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Painel CRM sincronizava por setInterval (proibido) e o evento de metricas nao tinha prova de isolamento por tenant",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/realtimeTenantIsolation.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Verificacao de ENTREGA descartava o exit code e usava grep de texto positivo como autoridade",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/deliveryVerification.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-EVIDENCIA-COMMIT-ORFAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fila oficial aceitava prova com commit inexistente (3 itens citavam hash reescrito)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Veredito ENGINEER_SUPERVISED_READY_GO vivia em prosa; agora e gate executavel",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Guarda de integridade nao via skip/assertion removida nem mutacao commitada",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L0 do gate do branch variava de suite vermelha por contencao (11 workers)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Lineage de relatorio escolhia o run mais recente e omitia sourceCommit",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "mergeMissionJson (JSONB acumulativo) perdia atualizacao em escrita concorrente",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-PATCH-SYMLINK-ESCAPE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "validatePatch aceitava symlink (git mode 120000): alvo do link escapa do allowedPaths",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Projecoes podiam ser gravadas antes da decisao canonica final e ficar stale sem nenhum gate perceber na hora",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate review aceitava APPROVE sem prova positiva de independencia",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "isSandboxAvailable cacheava NEGATIVO: falso SANDBOX_UNAVAILABLE sob carga",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Selo publicava ref fixa (main) e imprimia \"push ok\" sem publicar o commit da branch em uso",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Certificacao deixa staging transitorio em dist/ e o agregado falha em validate:dist",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate unit era satisfeito por qualquer execucao verde (inclusive UNKNOWN/integracao)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Inventario de persistencia registra escrita fantasma da fila oficial (falso positivo do scanner)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "CI-FLOW-GATE-VACUOSO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "test:flow carregava --passWithNoTests: verde com ZERO testes executados",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Teste evoSyncIntegration fixava frequency30d e venceu sozinho em 03/10/2026",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/integration/evoSyncIntegration.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-TIMEBOMB-EVOSYNC-JANELA30D.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "DIV-PUREZA-ENGINE",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
+      "classe": "AMBIENTE_INDISPONIVEL",
+      "teste": "tests/unit/engine/enginePurityPorts.test.js",
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log"
+    },
+    {
+      "id": "H12-RAG-REPARO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/ragIndexHealthPolicy.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H12-RAG-REPARO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H12-RAG-REPARO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Runner atribui falha causada por mutacao da superficie provada durante o run",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/allValidatorsRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
+      "draft": "governance/bug-closure/proofs-drafts/H16-MUTACAO-SUPERFICIE-NO-RUN.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H17-PREFLIGHT-ASK-AI-TTL",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Preflight do selo checa o TTL da evidencia do Ask-AI (fail-fast em 4 s)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H17-PREFLIGHT-ASK-AI-TTL.log",
+      "draft": "governance/bug-closure/proofs-drafts/H17-PREFLIGHT-ASK-AI-TTL.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H20-RUN-ORFAO-PROJECAO-STALE",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
+      "classe": "AMBIENTE_INDISPONIVEL",
+      "teste": "tests/unit/governance/convergenceFixpoint.test.js",
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log"
+    },
+    {
+      "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "H9-IDENTIDADE-PORTA",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "D5/D6: unidade ativa que nao serve + porta ocupada por processo estranho (supervisao dev)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/dev/devServicesSupervision.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H9-IDENTIDADE-PORTA.log",
+      "draft": "governance/bug-closure/proofs-drafts/H9-IDENTIDADE-PORTA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Gate agregado exige worktree CONGELADO — commitar durante o run quebra a promocao do E2E",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Auditoria externa via git: ponto de entrada unico derivado",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Ponteiros de fechamento na raiz estao stale e nenhum gate os mantem",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "runtime-evidence reporta \"crash antes do reporter\" quando o teste falha por assercao",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/runtimeEvidenceDiagnosis.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "SBOM anterior ao startedAt do run derruba o security gate (exit 3) mesmo com risco GO",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "AI_MEMORY/evidence/ fora da taxonomia canônica de persistência JSON",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B5: vinculo defeito -> commit -> prevencao executavel",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/integration/evoSyncIntegration.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-B8-ESTADOS-FILA",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "B8: modelo de estados da fila com hook fail-closed e validador",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "N5-REENTREGA",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
+      "classe": "AMBIENTE_INDISPONIVEL",
+      "teste": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log"
+    },
+    {
+      "id": "P2-1",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Proveniencia remota verifica o commit do RUN, nao o HEAD",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/remoteProvenanceAuthority.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-1.log",
+      "draft": "governance/bug-closure/proofs-drafts/P2-1.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P2-2",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Divergencia de lineage nos relatorios",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/reportWriteLineage.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-2.log",
+      "draft": "governance/bug-closure/proofs-drafts/P2-2.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Suites e validadores regravam relatorios governados e invalidam a coerencia temporal do run",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/governance/governedArtifactPreservation.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    },
+    {
+      "id": "AUDITORIA-BRANCH-INVENTORY",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Inventário auditável das 2497 branches locais (2468 do loop autônomo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/branchInventory.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-BRANCH-INVENTORY.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-BRANCH-INVENTORY.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Checkpoints incrementais auditáveis (gravador executável + runbook + ponteiro)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/checkpointTool.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-CHECKPOINT-PROTOCOL.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-CHECKPOINT-PROTOCOL.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Cadeia criptografica: analise corrigida — elos derivados vs imutaveis, e estado exposto na auditoria",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "DEF-STATESYNC-EXEMPTION-STALE",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-STATESYNC-EXEMPTION-STALE.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-STATESYNC-EXEMPTION-STALE.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H18-JORNADA-FUNCIONAL-BROWSER",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/journeyDetectors.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H18-JORNADA-FUNCIONAL-BROWSER.log",
+      "draft": "governance/bug-closure/proofs-drafts/H18-JORNADA-FUNCIONAL-BROWSER.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-A-L1-IMPACTO",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/coverage/impactGraph.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L1-IMPACTO.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L1-IMPACTO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
+      "classe": "AMBIENTE_INDISPONIVEL",
+      "teste": "tests/unit/coverage/impactRunner.test.js",
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
+    },
+    {
+      "id": "MISSAO-B3-REUSO-PROVENIENCIA",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B3: reuso de lotes — verificado, NAO e defeito (rigor por desenho)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B4: revisao independente — verificado, NAO e defeito (rigor maximo)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "MISSAO-DEMO-SELF-ENGINEERING",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Demonstracao de self-engineering: o RAP encontrou defeitos reais que passaram por todos os gates",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "P1-12",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/evidenceFreshness.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-12.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-12.json",
+  "camposParaAssinar": 18
+}

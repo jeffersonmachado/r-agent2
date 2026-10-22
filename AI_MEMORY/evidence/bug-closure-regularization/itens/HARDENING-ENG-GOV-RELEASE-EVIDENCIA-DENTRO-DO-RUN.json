@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

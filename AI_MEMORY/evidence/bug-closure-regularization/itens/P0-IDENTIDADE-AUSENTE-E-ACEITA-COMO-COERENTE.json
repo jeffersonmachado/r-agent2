@@ -1,0 +1,8 @@
+{
+  "id": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Identidade ausente era tratada como identidade coerente (aprovava sem runId/commit/fingerprint)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

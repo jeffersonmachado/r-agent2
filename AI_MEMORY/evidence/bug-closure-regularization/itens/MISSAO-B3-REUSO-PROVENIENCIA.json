@@ -1,0 +1,8 @@
+{
+  "id": "MISSAO-B3-REUSO-PROVENIENCIA",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "B3: reuso de lotes — verificado, NAO e defeito (rigor por desenho)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

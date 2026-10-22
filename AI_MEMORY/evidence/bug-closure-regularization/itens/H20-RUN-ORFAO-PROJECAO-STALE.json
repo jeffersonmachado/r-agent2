@@ -1,0 +1,11 @@
+{
+  "id": "H20-RUN-ORFAO-PROJECAO-STALE",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/unit/governance/convergenceFixpoint.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log"
+}

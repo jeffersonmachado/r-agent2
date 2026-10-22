@@ -232,13 +232,30 @@ function validarTransicao(entrada = {}) {
     reasons.push(MOTIVOS.REVISAO_NAO_INDEPENDENTE);
   }
 
-  // VERIFIED exige verificação em SHA CONCRETO — e no SHA ATUAL do código.
+  // VERIFIED exige verificação em SHA CONCRETO do histórico do código atual.
+  //
+  // DEFEITO CORRIGIDO (2026-10-22): antes exigia `verificationCommit === currentCommit`
+  // literalmente. Isso tornava a certificação IMPOSSÍVEL por construção: a prova é um
+  // artefato que precisa ser commitado, e commitar muda o HEAD — então toda prova nascia
+  // "de outro SHA". Foi essa circularidade que empurrou 130 itens para "fechados" por edição
+  // manual da fila, sem prova.
+  //
+  // A intenção original ("um teste aprovado em SHA antigo não comprova correção no código
+  // atual") continua garantida pela Igualdade de CONTEÚDO: `closure-proof` exige que o
+  // `codeFingerprint` gravado na prova seja o fingerprint do código ATUAL. Aqui, o commit
+  // medido tem de ser o próprio HEAD ou um ANCESTRAL dele (prova não pode vir do futuro nem
+  // de outro branch).
   if (para === ESTADOS.VERIFIED) {
     if (!NAO_VAZIO(entrada.verificationCommit)) {
       reasons.push(MOTIVOS.FECHAMENTO_SEM_VERIFICACAO);
-    } else if (NAO_VAZIO(entrada.currentCommit) && entrada.verificationCommit !== entrada.currentCommit) {
-      // "Um teste aprovado em SHA antigo não comprova correção no código atual."
-      reasons.push(MOTIVOS.VERIFICACAO_EM_SHA_ANTERIOR);
+    } else if (NAO_VAZIO(entrada.currentCommit)) {
+      const mesmoCommit = String(entrada.verificationCommit).toLowerCase() === String(entrada.currentCommit).toLowerCase();
+      const ancestral = typeof entrada.ehAncestralDe === 'function'
+        ? entrada.ehAncestralDe(entrada.verificationCommit, entrada.currentCommit) === true
+        : false;
+      if (!mesmoCommit && !ancestral) {
+        reasons.push(MOTIVOS.VERIFICACAO_EM_SHA_ANTERIOR);
+      }
     }
   }
 

@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "SBOM anterior ao startedAt do run derruba o security gate (exit 3) mesmo com risco GO",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

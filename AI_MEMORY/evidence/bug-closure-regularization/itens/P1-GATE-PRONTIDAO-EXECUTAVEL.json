@@ -1,0 +1,8 @@
+{
+  "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Veredito ENGINEER_SUPERVISED_READY_GO vivia em prosa; agora e gate executavel",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

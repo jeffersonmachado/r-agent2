@@ -1,0 +1,13 @@
+{
+  "id": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Verificacao de ENTREGA descartava o exit code e usava grep de texto positivo como autoridade",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/deliveryVerification.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.json",
+  "camposParaAssinar": 18
+}

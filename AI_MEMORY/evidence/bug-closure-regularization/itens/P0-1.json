@@ -1,0 +1,16 @@
+{
+  "id": "P0-1",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Identidade de aprovacao derivada do ator autenticado",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "teste": "tests/unit/securityIntel/approvalAuthority.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-1.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-1.json",
+  "camposParaAssinar": 18
+}

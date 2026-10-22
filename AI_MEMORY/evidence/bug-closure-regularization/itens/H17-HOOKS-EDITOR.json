@@ -1,0 +1,8 @@
+{
+  "id": "H17-HOOKS-EDITOR",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}
