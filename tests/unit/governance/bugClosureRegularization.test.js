@@ -17,7 +17,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const RAIZ = path.resolve(__dirname, '..', '..', '..');
-const { testeCitado } = require('../../../scripts/governance/regularize-bug-closures');
+const { testeCitado, testeDaEvidencia } = require('../../../scripts/governance/regularize-bug-closures');
 const {
   fingerprintDaChavePem, digestDoInventario,
 } = require('../../../governance/bug-closure/trusted-authorities');
@@ -62,6 +62,41 @@ describe('regularização — seleção de teste citado', () => {
   test('lista de testes escolhe o primeiro que existe', () => {
     const rel = 'tests/unit/governance/engineerSupervisedReadinessGate.test.js';
     expect(testeCitado({ regressionTests: ['nope.test.js', rel] })).toBe(rel);
+  });
+});
+
+describe('regularização — teste declarado na EVIDÊNCIA do próprio item', () => {
+  test('extrai o caminho de teste citado no texto da evidência', () => {
+    const item = {
+      id: 'X',
+      evidence: 'tests/integration/engineeringRouterConcurrentRunHttp.test.js 10/10 execuções exit 0 após o fix',
+    };
+    expect(testeDaEvidencia(item)).toBe('tests/integration/engineeringRouterConcurrentRunHttp.test.js');
+  });
+
+  test('ignora caminho citado que não existe no repositório', () => {
+    expect(testeDaEvidencia({ evidence: 'rodou tests/unit/nao-existe-mesmo.test.js e passou' })).toBeNull();
+  });
+
+  test('prefere a suíte sob tests/ quando há mais de um caminho citado', () => {
+    const item = {
+      evidence: 'frontend/src/__tests__/supportHeaderEnhancement.test.js e '
+        + 'tests/unit/governance/worktreeIntegrity.test.js rodaram verdes',
+    };
+    expect(testeDaEvidencia(item)).toBe('tests/unit/governance/worktreeIntegrity.test.js');
+  });
+
+  test('testeCitado usa a evidência quando o campo dedicado está vazio', () => {
+    const item = { id: 'Y', evidence: 'verde em tests/unit/governance/worktreeIntegrity.test.js' };
+    expect(testeCitado(item)).toBe('tests/unit/governance/worktreeIntegrity.test.js');
+  });
+
+  test('campo dedicado tem precedência sobre a evidência', () => {
+    const item = {
+      regressionTest: 'tests/unit/governance/bugClosureBypassDefense.test.js',
+      evidence: 'também citou tests/unit/governance/worktreeIntegrity.test.js',
+    };
+    expect(testeCitado(item)).toBe('tests/unit/governance/bugClosureBypassDefense.test.js');
   });
 });
 

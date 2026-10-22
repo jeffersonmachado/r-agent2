@@ -83,10 +83,30 @@ function testeMapeado(item) {
   return null;
 }
 
-/** Teste de regressão citado pelo item (campo canônico, alias legado ou mapa confirmado). */
+/**
+ * Teste citado DENTRO da evidência governada do item.
+ *
+ * ACHADO ÚTIL (2026-10-22): nos itens antigos o campo dedicado costuma vir vazio, mas o texto
+ * de `evidence` escrito pelo autor MUITAS VEZES nomeia o arquivo de teste que provou a correção
+ * (ex.: "tests/integration/engineeringRouterConcurrentRunHttp.test.js 10/10 execuções exit 0").
+ * Isso é declaração do AUTOR do item, não heurística deste script — e o arquivo tem de existir.
+ */
+function testeDaEvidencia(item) {
+  const texto = String((item && item.evidence) || '');
+  const achados = texto.match(/[A-Za-z0-9_./-]+\.(?:test|spec)\.(?:js|jsx|ts|tsx)/g) || [];
+  const existentes = achados
+    .map((t) => t.replace(/^\.\//, ''))
+    .filter((t) => fs.existsSync(path.join(ROOT, t)));
+  // Prefere a suíte sob `tests/` (regressão de verdade) a um teste de frontend/unit incidental.
+  return existentes.sort((a, b) => (a.startsWith('tests/') === b.startsWith('tests/') ? 0 : (a.startsWith('tests/') ? -1 : 1)))[0] || null;
+}
+
+/** Teste de regressão citado pelo item (mapa confirmado, campo canônico, alias ou evidência). */
 function testeCitado(item) {
   const mapeado = testeMapeado(item || {});
   if (mapeado) return mapeado;
+  // Precedência: campo dedicado do item > evidência declarada. O campo é a declaração
+  // canônica; a evidência é fallback para os itens antigos que não tinham o campo.
   for (const campo of ['regressionTest', 'test', 'regressionTests']) {
     const bruto = item && item[campo];
     const valores = Array.isArray(bruto) ? bruto : (bruto ? [bruto] : []);
@@ -96,7 +116,7 @@ function testeCitado(item) {
       .find((rel) => fs.existsSync(path.join(ROOT, rel)));
     if (achado) return achado;
   }
-  return null;
+  return testeDaEvidencia(item || {});
 }
 
 /** Executa o teste e devolve execução + saída REAL em disco. */
@@ -225,6 +245,9 @@ function main() {
       continue;
     }
 
+    const origemDoTeste = testeMapeado(item) ? 'MAPA_CONFIRMADO'
+      : (testeDaEvidencia(item) ? 'EVIDENCIA_DECLARADA_PELO_AUTOR' : 'CAMPO_DO_ITEM');
+
     const execucao = executarTeste(d.id, teste);
     if (execucao.exitCode !== 0) {
       const saida = fs.readFileSync(path.join(ROOT, execucao.outputPath), 'utf8');
@@ -276,6 +299,7 @@ function main() {
     resultados.push({
       ...base,
       classe,
+      origemDoTeste,
       teste,
       transicao: `${String(item.state || '').toUpperCase()} → RESOLVED`,
       provasAusentes: pendenteAssinatura,
@@ -506,4 +530,4 @@ if (require.main === module) {
   process.exitCode = main();
 }
 
-module.exports = { testeCitado, executarTeste, montarDraft };
+module.exports = { testeCitado, testeDaEvidencia, executarTeste, montarDraft };
