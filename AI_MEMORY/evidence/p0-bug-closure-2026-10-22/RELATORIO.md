@@ -81,7 +81,9 @@ válida o item vira `fechamentoNaoProvado`, `stateEfetivo = OPEN`, e toda opera�
 | `governance/bug-closure/eligibility.js` | alterado (`INVENTARIO_NAO_ANCORADO`/`INVENTARIO_ADULTERADO` em operação certificante) | +28 |
 | `tests/unit/governance/riskAcceptedCriticalControl.test.js` | alterado (âncora do fixture; nenhum `expect` mudou) | +13 |
 
-Diff completo: `diff-p0.patch`.
+Diff completo: **derivado do git**, não duplicado como arquivo — `git diff 002363424..<HEAD>`.
+(O patch chegou a ser versionado e foi removido: regenerá-lo dentro do próprio commit fazia o
+arquivo conter a si mesmo e crescer a cada ciclo, além de poluir a revisão do PR.)
 
 ## 5. Contrato canônico de transição
 
