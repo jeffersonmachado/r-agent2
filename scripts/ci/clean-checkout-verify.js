@@ -54,6 +54,7 @@ const REPORT_PATH = path.join(ROOT, 'reports', 'ci-clean-checkout-report.json');
 
 const SCENARIOS = Object.freeze([
   'clean',
+  'l0-full',
   'bootstrap-twice',
   'missing-artifact',
   'corrupt-artifact',
@@ -100,6 +101,23 @@ function sh(comando, args, { cwd = ROOT, env = {}, timeoutMs = 10 * 60 * 1000 } 
 }
 
 const passos = [];
+
+/**
+ * NOMES DE CONTAINER ÚNICOS POR RUN.
+ *
+ * DEFEITO MEDIDO em 2026-10-21: dois runs do harness na mesma máquina usavam os mesmos nomes de
+ * container. O teardown de um REMOVEU os containers do outro no meio da execução — interferência
+ * silenciosa entre runs, exatamente o que o harness existe para eliminar. O sufixo vem do runId e
+ * um lock impede dois runs simultâneos.
+ */
+let NOMES = { api: 'rap-ci-clean-api', frontend: 'rap-ci-clean-frontend', rag: 'rap-ci-clean-rag' };
+function definirNomesDoRun(sufixo) {
+  NOMES = {
+    api: `rap-ci-clean-${sufixo}-api`,
+    frontend: `rap-ci-clean-${sufixo}-frontend`,
+    rag: `rap-ci-clean-${sufixo}-rag`,
+  };
+}
 
 /**
  * Executa um passo e registra a prova. NUNCA converte falha em sucesso: `ok` só é verdadeiro com
@@ -260,8 +278,8 @@ function provisionarProdLike(ctx, args) {
     if (!registro.ok) throw new Error(`${id} falhou (exit ${registro.exitCode})`);
   }
 
-  sh('docker', ['rm', '-f', 'rap-ci-clean-api']);
-  sh('docker', ['rm', '-f', 'rap-ci-clean-frontend']);
+  sh('docker', ['rm', '-f', NOMES.api]);
+  sh('docker', ['rm', '-f', NOMES.frontend]);
 
   const secrets = {
     ENCRYPTION_KEY: crypto.randomBytes(32).toString('base64'),
@@ -269,7 +287,7 @@ function provisionarProdLike(ctx, args) {
     ENGINEERING_RUNNER_TOKEN: crypto.randomBytes(32).toString('hex'),
   };
 
-  const subirApi = sh('docker', ['run', '-d', '--name', 'rap-ci-clean-api', '--network', 'host',
+  const subirApi = sh('docker', ['run', '-d', '--name', NOMES.api, '--network', 'host',
     '-e', 'NODE_ENV=production',
     '-e', `API_PORT=${apiPort}`,
     '-e', `DATABASE_URL=${env.DATABASE_URL}`,
@@ -284,13 +302,13 @@ function provisionarProdLike(ctx, args) {
     apiImage]);
   if (subirApi.status !== 0) throw new Error(`falha ao subir a API prod-like: ${(subirApi.stderr || '').trim()}`);
 
-  esperarHttp(`http://127.0.0.1:${apiPort}/health`, 'API prod-like', 300, () => sh('docker', ['logs', '--tail', '60', 'rap-ci-clean-api']));
+  esperarHttp(`http://127.0.0.1:${apiPort}/health`, 'API prod-like', 300, () => sh('docker', ['logs', '--tail', '60', NOMES.api]));
 
-  const subirFrontend = sh('docker', ['run', '-d', '--name', 'rap-ci-clean-frontend',
+  const subirFrontend = sh('docker', ['run', '-d', '--name', NOMES.frontend,
     '-p', `${frontendPort}:80`, '--add-host', 'api:host-gateway', frontendImage]);
   if (subirFrontend.status !== 0) throw new Error(`falha ao subir o frontend prod-like: ${(subirFrontend.stderr || '').trim()}`);
-  esperarHttp(`http://127.0.0.1:${frontendPort}/`, 'frontend prod-like', 150, () => sh('docker', ['logs', '--tail', '60', 'rap-ci-clean-frontend']));
-  esperarHttp(`http://127.0.0.1:${frontendPort}/api/health`, 'proxy /api do frontend', 150, () => sh('docker', ['logs', '--tail', '60', 'rap-ci-clean-frontend']));
+  esperarHttp(`http://127.0.0.1:${frontendPort}/`, 'frontend prod-like', 150, () => sh('docker', ['logs', '--tail', '60', NOMES.frontend]));
+  esperarHttp(`http://127.0.0.1:${frontendPort}/api/health`, 'proxy /api do frontend', 150, () => sh('docker', ['logs', '--tail', '60', NOMES.frontend]));
 
   passo('prod-like-smoke', 'node', ['scripts/smoke/qa-waves-operational-final-smoke.js'], {
     cwd: clonePath,
@@ -338,8 +356,8 @@ function esperarHttp(url, rotulo, tentativas, diagnostico) {
 }
 
 function derrubarProdLike() {
-  sh('docker', ['rm', '-f', 'rap-ci-clean-api']);
-  sh('docker', ['rm', '-f', 'rap-ci-clean-frontend']);
+  sh('docker', ['rm', '-f', NOMES.api]);
+  sh('docker', ['rm', '-f', NOMES.frontend]);
 }
 
 function imagemExiste(imagem) {
@@ -347,8 +365,8 @@ function imagemExiste(imagem) {
 }
 
 function subirRag({ porta, databaseUrl, token }) {
-  sh('docker', ['rm', '-f', 'rap-ci-clean-rag']);
-  const r = sh('docker', ['run', '-d', '--name', 'rap-ci-clean-rag', '--network', 'host',
+  sh('docker', ['rm', '-f', NOMES.rag]);
+  const r = sh('docker', ['run', '-d', '--name', NOMES.rag, '--network', 'host',
     '-e', 'HOST=0.0.0.0',
     '-e', `PORT=${porta}`,
     '-e', 'RAG_ENVIRONMENT=development',
@@ -365,12 +383,12 @@ function subirRag({ porta, databaseUrl, token }) {
     if (probe.status === 0) return;
     sh('sleep', ['3']);
   }
-  const logs = sh('docker', ['logs', '--tail', '40', 'rap-ci-clean-rag']);
+  const logs = sh('docker', ['logs', '--tail', '40', NOMES.rag]);
   throw new Error(`RAG nao respondeu em /health na porta ${porta}: ${(logs.stderr || logs.stdout).trim()}`);
 }
 
 function derrubarRag() {
-  sh('docker', ['rm', '-f', 'rap-ci-clean-rag']);
+  sh('docker', ['rm', '-f', NOMES.rag]);
 }
 
 /** Encerra processos que ficaram presos DENTRO do clone temporário (PID específico, nunca por nome). */
@@ -697,7 +715,43 @@ function cenarioDockerIndisponivel(ctx, args) {
   });
 }
 
+/**
+ * INVENTÁRIO COMPLETO DO L0 — `npm test` roda com `bail: 1` (jest.config.cjs), então a primeira
+ * suíte vermelha ABORTA a execução e as demais nem rodam. Medido em 2026-10-21: o L0 parou em 379
+ * de 1095 suítes e depois em 605 de 1096 — dois runs para descobrir duas falhas. Este cenário roda
+ * a mesma seleção com `--bail=0` e entrega a LISTA COMPLETA em uma execução.
+ */
+function cenarioL0Full(ctx, args) {
+  const { clonePath, env, logDir } = ctx;
+  passo('bootstrap', 'npm', ['run', '-s', 'ci:bootstrap'], {
+    cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000,
+    descricao: 'Bootstrap canonico do ambiente',
+  });
+  const registro = passo('l0-unit-bail0', 'npx', ['jest', 'tests/unit', '--bail=0'], {
+    cwd: clonePath, env, logDir, timeoutMs: 60 * 60 * 1000,
+    descricao: 'Suite unitaria COMPLETA (bail=0) para enumerar todas as falhas',
+  });
+  const suitesVermelhas = new Set();
+  try {
+    const texto = fs.readFileSync(path.join(ROOT, registro.logPath), 'utf8');
+    for (const m of texto.matchAll(/^FAIL (\S+)/gm)) suitesVermelhas.add(m[1]);
+  } catch (_) { /* log ausente ja reprova o passo */ }
+  passos.push({
+    id: 'l0-unidades-vermelhas',
+    comando: '(consolidacao das suites vermelhas)',
+    descricao: 'Lista completa de suites vermelhas do L0',
+    esperado: 0,
+    exitCode: suitesVermelhas.size === 0 ? 0 : 1,
+    suitesVermelhas: [...suitesVermelhas],
+    ok: true,
+    informativo: true,
+    startedAt: nowIso(), finishedAt: nowIso(), duracaoMs: 0,
+  });
+  console.log(`[ci:clean-checkout]  info  suites vermelhas (${suitesVermelhas.size}): ${[...suitesVermelhas].join(', ') || 'nenhuma'}`);
+}
+
 const CENARIOS_IMPLEMENTADOS = {
+  'l0-full': cenarioL0Full,
   clean: cenarioClean,
   'bootstrap-twice': cenarioBootstrapTwice,
   'missing-artifact': cenarioArtefatoAusente,
@@ -763,6 +817,35 @@ function escreverMarkdown(relatorio) {
 // main
 // ---------------------------------------------------------------------------
 
+const LOCK_PATH = path.join(ROOT, 'reports', '.ci-clean-checkout.lock');
+
+/**
+ * Um run por vez. O harness ocupa portas FIXAS do host (3000/8080, exigidas pelo nginx do
+ * frontend) e containers Docker: dois runs concorrentes se destroem mutuamente. Um lock com PID
+ * vivo é recusa explícita; PID morto (run interrompido) é reaproveitado.
+ */
+function adquirirLock() {
+  try {
+    const anterior = JSON.parse(fs.readFileSync(LOCK_PATH, 'utf8'));
+    if (anterior && Number(anterior.pid) && anterior.pid !== process.pid) {
+      try {
+        process.kill(anterior.pid, 0);
+        return { ok: false, motivo: `OUTRO RUN EM ANDAMENTO (pid ${anterior.pid}, iniciado ${anterior.startedAt}) — aguarde ou remova ${path.relative(ROOT, LOCK_PATH)} se o processo morreu` };
+      } catch (_) { /* pid morto: lock obsoleto */ }
+    }
+  } catch (_) { /* sem lock previo */ }
+  fs.mkdirSync(path.dirname(LOCK_PATH), { recursive: true });
+  fs.writeFileSync(LOCK_PATH, `${JSON.stringify({ pid: process.pid, startedAt: nowIso() }, null, 2)}\n`, 'utf8');
+  return { ok: true };
+}
+
+function liberarLock() {
+  try {
+    const atual = JSON.parse(fs.readFileSync(LOCK_PATH, 'utf8'));
+    if (atual && atual.pid === process.pid) fs.rmSync(LOCK_PATH, { force: true });
+  } catch (_) { /* nada a liberar */ }
+}
+
 function parseArgs(argv) {
   const argValor = (nome, padrao = null) => {
     const i = argv.indexOf(nome);
@@ -797,6 +880,14 @@ function main(argv = process.argv.slice(2)) {
   const environmentId = `local-${os.hostname()}-${process.pid}`;
   const limite = hostLimits();
 
+  // LOCK: dois harness simultâneos disputam portas fixas (3000/8080) e o mesmo host docker.
+  const lock = adquirirLock();
+  if (!lock.ok) {
+    console.error(`[ci:clean-checkout] ${lock.motivo}`);
+    return 3;
+  }
+
+  definirNomesDoRun(runId.split('-').pop());
   console.log(`[ci:clean-checkout] commit=${sourceCommit} cenarios=${pedidos.join(',')} runId=${runId}`);
   const resultados = [];
 
@@ -962,6 +1053,7 @@ function main(argv = process.argv.slice(2)) {
   };
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(relatorioFinal, null, 2)}\n`, 'utf8');
+  liberarLock();
   console.log(`[ci:clean-checkout] veredito=${veredito} — relatorio em ${path.relative(ROOT, REPORT_PATH)}`);
   return veredito === 'PASS' ? 0 : 1;
 }

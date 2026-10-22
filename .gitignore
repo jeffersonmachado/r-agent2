@@ -227,3 +227,6 @@ pbx/asterisk/etc/asterisk/conf/
 # um arquivo nao rastreado aqui sujaria o worktree exigido pela selagem).
 .github/hooks/.continue-state.json
 .github/hooks/.worktree-owner.json
+
+# Lock do harness de checkout limpo (estado local, nunca versionado)
+reports/.ci-clean-checkout.lock
