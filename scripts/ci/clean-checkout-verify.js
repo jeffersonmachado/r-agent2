@@ -285,16 +285,28 @@ function clonar(sha, destino) {
 
 /**
  * Recusa continuar se o clone carregar QUALQUER resíduo de execução anterior. Um "checkout limpo"
- * que traz `.env`, `reports/` ou `dist/` não prova nada: passaria a depender do estado do operador.
+ * que traz `.env`, `reports/` gerados ou `dist/` não prova nada: passaria a depender do estado do
+ * operador.
+ *
+ * A auditoria é sobre o que o GIT vê como não versionado/sujo — não sobre a existência do
+ * diretório. `reports/` existe legitimamente no clone porque versiona exceções
+ * (`reports/tenant-isolation-report.json`, `reports/db-integrity-report.json`); confundir
+ * "diretório existe" com "há resíduo" reprovaria um clone perfeito.
  */
 function auditarCloneLimpo(destino) {
   const proibidos = [
-    '.env', '.token.env', 'node_modules', 'reports', 'dist', 'api/data/config.json',
+    '.env', '.token.env', 'node_modules', 'dist', 'api/data/config.json',
     'qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json',
   ];
   const presentes = proibidos.filter((rel) => fs.existsSync(path.join(destino, rel)));
   const status = String(sh('git', ['status', '--porcelain'], { cwd: destino }).stdout || '').trim();
-  return { presentes, worktreeLimpo: status === '', artefatosProibidos: presentes };
+  const ignorados = String(sh('git', ['status', '--porcelain', '--ignored'], { cwd: destino }).stdout || '')
+    .split('\n')
+    .map((linha) => linha.trim())
+    .filter((linha) => /^!!|^\?\?/.test(linha))
+    .map((linha) => linha.replace(/^!!\s+|^\?\?\s+/, ''));
+  const residuos = [...new Set([...presentes, ...ignorados])];
+  return { presentes: residuos, worktreeLimpo: status === '', artefatosProibidos: residuos };
 }
 
 function fingerprintDoSource(destino) {
@@ -340,13 +352,57 @@ function executarGate(clonePath, env, args, logDir) {
   });
 }
 
+/**
+ * INVENTÁRIO COMPLETO DO L1 — o gate para no PRIMEIRO passo vermelho (contrato de fail-fast), então
+ * um run vermelho nomeia uma causa e esconde as demais. Aqui cada passo do L1 é executado
+ * individualmente, a partir da MESMA definição canônica (`PASSOS` do gate, nunca uma cópia), para
+ * que a evidência registre o conjunto exato de gates vermelhos e verdes do commit.
+ */
+function inventarioL1(clonePath, env, logDir) {
+  const { PASSOS } = require('./dev-branch-gate');
+  const resultado = [];
+  for (const definicao of PASSOS.D) {
+    const [comando, ...resto] = definicao.comando.split(' ');
+    const registro = passo(`L1-inventario:${definicao.id}`, comando, resto, {
+      cwd: clonePath,
+      env,
+      logDir,
+      timeoutMs: Math.min(definicao.orcamentoMs || 120000, 10 * 60 * 1000),
+      descricao: definicao.descricao,
+    });
+    resultado.push({ id: definicao.id, exitCode: registro.exitCode, ok: registro.ok });
+  }
+  return resultado;
+}
+
 function cenarioClean(ctx, args) {
   const { clonePath, env, logDir } = ctx;
   passo('npm-ci-bootstrap', 'npm', ['run', '-s', 'ci:bootstrap'], {
     cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000,
     descricao: 'Bootstrap canonico do ambiente (npm run ci:bootstrap)',
   });
-  executarGate(clonePath, env, args, logDir);
+  const gate = executarGate(clonePath, env, args, logDir);
+
+  // Inventário só quando o L1 está no escopo: nomear TODOS os vermelhos, não apenas o primeiro.
+  if (opcoesDeGate(args) === null || opcoesDeGate(args).includes('D')) {
+    const inventario = inventarioL1(clonePath, env, logDir);
+    const vermelhos = inventario.filter((i) => !i.ok).map((i) => i.id);
+    passos.push({
+      id: 'L1-inventario-resumo',
+      comando: '(consolidacao do inventario L1)',
+      descricao: 'Conjunto exato de gates L1 verdes/vermelhos no commit',
+      esperado: 0,
+      exitCode: vermelhos.length === 0 ? 0 : 1,
+      verdes: inventario.filter((i) => i.ok).map((i) => i.id),
+      vermelhos,
+      ok: true, // é diagnóstico: nunca altera o veredito do gate
+      informativo: true,
+      startedAt: nowIso(),
+      finishedAt: nowIso(),
+      duracaoMs: 0,
+    });
+    console.log(`[ci:clean-checkout]  info  L1 verdes=${inventario.filter((i) => i.ok).length} vermelhos=${vermelhos.join(',') || 'nenhum'}`);
+  }
 
   if (args.withIntegration) {
     passo('integracao-engenheiro', 'npx', ['jest', 'tests/integration/engineering', '--bail=0', '--runInBand', '--forceExit'], {
@@ -354,6 +410,7 @@ function cenarioClean(ctx, args) {
       descricao: 'Integracao real do Engenheiro (Postgres + sandbox)',
     });
   }
+  return gate;
 }
 
 function cenarioBootstrapTwice(ctx, args) {
@@ -647,7 +704,7 @@ function main(argv = process.argv.slice(2)) {
 
       const copiados = copiarEvidenciaDoClone(clonePath, runDir);
       const meusPassos = passos.slice(iniciou);
-      const executados = meusPassos.filter((p) => p.id !== 'clone-limpo');
+      const executados = meusPassos.filter((p) => p.id !== 'clone-limpo' && !p.informativo);
       const veredito = executados.length > 0 && executados.every((p) => p.ok) ? 'PASS' : 'FAIL';
       const relatorio = {
         schemaVersion: 1,
