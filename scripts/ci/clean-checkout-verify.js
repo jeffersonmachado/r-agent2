@@ -659,7 +659,10 @@ function cenarioClean(ctx, args) {
     console.log(`[ci:clean-checkout]  info  L1 verdes=${inventario.filter((i) => i.ok).length} vermelhos=${vermelhos.join(',') || 'nenhum'}`);
   }
 
-  if (args.withIntegration) {
+  // `--with-integration` NÃO repete o que a fase C do gate já executou (L0b). Rodar duas vezes a
+  // mesma bateria de integração só consome ~16 min e polui a evidência com um passo duplicado.
+  const faseCNoGate = opcoesDeGate(args) === null || opcoesDeGate(args).includes('C');
+  if (args.withIntegration && !faseCNoGate) {
     passo('integracao-engenheiro', 'npx', ['jest', 'tests/integration/engineering', '--bail=0', '--runInBand', '--forceExit'], {
       cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000,
       descricao: 'Integracao real do Engenheiro (Postgres + sandbox)',
