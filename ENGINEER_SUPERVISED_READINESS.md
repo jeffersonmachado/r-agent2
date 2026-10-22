@@ -900,6 +900,23 @@ L0b exit 0 em 472,6 s; `d751e2839` → L0 exit 0 em 447,5 s e L0b exit 0 em 462,
 `L1-cadeia-criptografica` (exit 1). Amplitude de 4,8 s no L0 e 16,6 s no L0b — é determinístico,
 não flake.
 
+### 16.3.2 Cenários negativos exercitados (prova de que "verde" não é vacuidade)
+
+| cenário | prova medida | veredito |
+|---|---|---|
+| `bootstrap-twice` | bootstrap 94 s + 77 s; tenants `antes=1 depois=1` | PASS |
+| `missing-artifact` | com artefato PASS; artefato apagado ⇒ consumidor **exit 1**; produtor regenera (69 s); consumidor volta a PASS | PASS |
+| `corrupt-artifact` | JSON prod-like truncado ⇒ consumidor **exit 1** | PASS |
+| `docker-unavailable` | sem Docker a suíte de sandbox **exit 1** — nunca `SANDBOX_RUNTIME=PASS` | PASS |
+| `db-unavailable` | bootstrap não termina em sucesso (exit != 0 / abortado por orçamento) | PASS |
+| `l0-full` | seleção oficial inteira com `--bail=0` | executado |
+
+**A execução negativa encontrou um defeito no próprio harness:** o primeiro par de `missing-artifact`
+era `reports/coverage-completeness-report.json` × `coverageCompletenessCanonicalDomains.test.js` — e esse
+teste **roda o produtor no `beforeAll`**, logo apagar o relatório não o reprova. Um cenário negativo que
+nunca falha não prova nada; o par foi trocado (`1e6a64b58`) para o artefato prod-like × `modelDrivenE2e`,
+que apenas LÊ o arquivo, e o cenário passou a reprovar de verdade quando o artefato não existe.
+
 ### 16.4 O que continua vermelho — e por que NÃO foi reclassificado
 
 O inventário do L1 executado no clone (cada validador individualmente, a partir da MESMA definição

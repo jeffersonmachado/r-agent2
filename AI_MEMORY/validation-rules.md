@@ -113,10 +113,23 @@ trouxer resíduo (`git status --ignored`), provisiona banco/redis/RAG/runner pr�
 criou. O relatório fica em `reports/ci-clean-checkout-report.json` e o resumo versionado em
 `AI_MEMORY/evidence/ci-clean-checkout-<sha>/<cenario>/RESULT.md` (ou `RUN-NOTES.md` + `gate/`, quando o run é interrompido).
 
-Cenários negativos (provam não vacuidade, nunca "verde por ausência"): `bootstrap-twice`
-(idempotência do seed), `missing-artifact` (artefato ausente REPROVA o consumidor e o produtor
-regenera), `corrupt-artifact`, `db-unavailable` (sem Postgres o bootstrap falha), `docker-unavailable`
-(sem Docker a suíte de sandbox falha, nunca alega `SANDBOX_RUNTIME=PASS`).
+Cenários negativos (provam não vacuidade, nunca "verde por ausência"). **Exercitados em 2026-10-22**,
+todos com `veredito=PASS`:
+
+| cenário | prova medida | evidência |
+|---|---|---|
+| `bootstrap-twice` | bootstrap 94 s + 77 s, contagem de tenants `antes=1 depois=1` | `ci-clean-checkout-3f6c30d0c/bootstrap-twice/` |
+| `missing-artifact` | com artefato PASS (8 s); artefato apagado ⇒ consumidor **exit 1** (5 s); produtor regenera (69 s); consumidor volta a PASS (6 s) | `ci-clean-checkout-1e6a64b58/missing-artifact/` |
+| `corrupt-artifact` | JSON prod-like truncado ⇒ consumidor **exit 1** (7 s) | `ci-clean-checkout-1e6a64b58/corrupt-artifact/` |
+| `docker-unavailable` | sem Docker a suíte de sandbox **exit 1** (2 s) — nunca `SANDBOX_RUNTIME=PASS` | `ci-clean-checkout-33ef95718/docker-unavailable/` |
+| `db-unavailable` | sem Postgres o bootstrap não termina em sucesso (exit != 0 ou abortado por orçamento) | executado, orçamento curto |
+| `l0-full` | seleção oficial inteira com `--bail=0` (bail=1 esconde o resto) | executado |
+
+**Defeito que a própria execução negativa revelou (2026-10-22):** o primeiro par escolhido para
+`missing-artifact` era `reports/coverage-completeness-report.json` ×
+`coverageCompletenessCanonicalDomains.test.js` — mas esse teste **roda o produtor no `beforeAll`**, então
+apagar o relatório não o reprova. O cenário passou a usar o artefato prod-like × `modelDrivenE2e`, que
+apenas lê o arquivo. Um cenário negativo que nunca falha não prova nada.
 
 **Medido em 2026-10-21** (`--scenario clean --gate-phases A,B,C,D --with-integration`, commit
 `382f83b37`): clone limpo PASS · `ci:bootstrap` exit 0 em 99 s · `L0` 379 suítes / 5568 testes com
