@@ -294,7 +294,16 @@ function provisionarProdLike(ctx, args) {
 
   passo('prod-like-smoke', 'node', ['scripts/smoke/qa-waves-operational-final-smoke.js'], {
     cwd: clonePath,
-    env: { ...env, RUN_QA_WAVES_PROD_LIKE_SMOKE: '1', API_URL: `http://127.0.0.1:${apiPort}`, FRONTEND_URL: `http://127.0.0.1:${frontendPort}` },
+    // Os MESMOS segredos efêmeros da API: o smoke ASSINA artefatos de replay no host e a API
+    // valida a assinatura no container. Sem `REPLAY_SIGNING_KEY` no host, medido em 2026-10-21:
+    // `replay_signing_key_required_min_32_bytes` e nenhum artefato produzido.
+    env: {
+      ...env,
+      ...secrets,
+      RUN_QA_WAVES_PROD_LIKE_SMOKE: '1',
+      API_URL: `http://127.0.0.1:${apiPort}`,
+      FRONTEND_URL: `http://127.0.0.1:${frontendPort}`,
+    },
     logDir,
     timeoutMs: 45 * 60 * 1000,
     descricao: 'Smoke prod-like real (produtor do artefato consumido por modelDrivenE2e)',
