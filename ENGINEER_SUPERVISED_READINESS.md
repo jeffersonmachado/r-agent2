@@ -811,3 +811,100 @@ exclusivo de autoridade humana registrada, com assinatura Ed25519 verificável.
 
 **Auditoria independente: `AUDIT_PENDING`.** O executor revisou o próprio trabalho; isso não é
 auditoria independente e não é declarado como tal.
+
+## 16. Ciclo CI DEFINITIVO — checkout limpo e ambiente reproduzível (2026-10-21/22)
+
+### 16.1 O método mudou (e foi o método que encontrou os defeitos)
+
+Todo diagnóstico de CI anterior era feito na MESMA árvore onde se desenvolve: `node_modules`
+quente, `.env` privado, `reports/*` de execuções antigas, serviço RAG de pé em 8001, imagens Docker
+construídas à mão e arquivos que existem no disco mas em NENHUM commit. Nesse ambiente é impossível
+separar "o produto está correto" de "a máquina do operador está preparada".
+
+Este ciclo introduziu `npm run ci:clean-checkout` (`scripts/ci/clean-checkout-verify.js`): clona o
+commit exato em diretório temporário, RECUSA continuar se o clone trouxer resíduo
+(`git status --ignored`), provisiona Postgres/Redis/RAG/Engineering Runner/containers próprios do
+run, executa `npm run ci:bootstrap`, o produtor prod-like real e o gate versionado, grava evidência
+com identidade de run e SHA-256 de cada log, e destrói o que criou. Cenários negativos:
+`bootstrap-twice`, `missing-artifact`, `corrupt-artifact`, `db-unavailable`, `docker-unavailable`,
+`l0-full` (a suíte inteira com `--bail=0`, porque `npm test` roda com `bail: 1` e esconde o resto).
+
+### 16.2 Defeitos encontrados SOMENTE porque o clone é limpo
+
+| # | Sintoma medido no clone | Causa raiz | Correção | Commit |
+|---|---|---|---|---|
+| 1 | `validate-ai-memory` FAIL `required_file_missing` e `validate-agent-adherence` FAIL `agent_instruction_missing` para `.github/copilot-instructions.md` | arquivo exigido por dois gates bloqueantes existia só em `.git/info/exclude` da máquina do desenvolvedor | adaptador versionado + lista canônica única + teste que exige o arquivo NO ÍNDICE do git (com controle negativo) | `c4b3fc70e` |
+| 2 | `runner REUTILIZADO: pid=… porta=8097 sessaoDona=…` | Engineering Runner de porta fixa era compartilhado entre árvores: a prova de sandbox media o código do vizinho | porta livre por run (`ENGINEERING_RUNNER_TEST_PORT`) | `3f97c7b65` |
+| 3 | `test:flow` verde com ZERO testes | `--passWithNoTests` continuava armado (o gate vacuoso de 2026-07 foi corrigido, a flag não) | flag removida + teste que proíbe a flag e exige seleção não vazia | `3f97c7b65` |
+| 4 | `modelDrivenE2e` FAIL (L0 379 suítes / 5568 testes) | artefato `qa/smoke/prod-like/…json` é gitignored e vinha do job prod-like do CI; no clone não existia | harness executa o PRODUTOR real (imagens do commit + API no banco do run + smoke no Chromium), com os mesmos segredos efêmeros | `3f97c7b65`, `dc220c628` |
+| 5 | `engineeringMissionSourceRefRemote` FAIL `cannot use bare repository` | o shell do operador injeta `safe.bareRepository=explicit` via `GIT_CONFIG_*` — configuração ambiente invisível | run exporta `GIT_CONFIG_COUNT=0` (mesma configuração do runner) | `b7ff1cb50` |
+| 6 | `runIdentityCommit` FAIL (`sourceBranch` null) | clone em HEAD destacado mede um ambiente que `actions/checkout` NÃO produz (o runner cria branch local) | clone usa `checkout -B <branch> <sha>` | `3786b1b02` |
+| 7 | `sorry, too many clients already` + uma suíte E2E estourando 900 s | Postgres do HOST: banco dedicado não isola CAPACIDADE (conexões são recurso do servidor) | Postgres/Redis efêmeros em containers por run, como os `services:` do CI | `90c4c93a0` |
+| 8 | teardown de um run removendo containers de outro | nomes de container fixos (`rap-ci-clean-api|frontend|rag`) | nomes por run + lock com PID vivo | `021f3ebcf` |
+
+Nenhum desses oito aparecia na árvore do desenvolvedor. Cinco deles (1, 4, 5, 6, 7) só aparecem
+quando se executa de verdade em ambiente limpo — é a prova de que "verde local" não era prova.
+
+### 16.3 Medição final do checkout limpo
+
+Ver `AI_MEMORY/evidence/ci-clean-checkout-<sha>/clean/` (versionado: `RESULT.md` quando o run conclui,
+ou `RUN-NOTES.md` + `gate/` com a evidência do próprio gate) e `reports/ci-clean-checkout-report.json`
+(relatório completo com identidade de run).
+
+Medição **runId `clean-checkout-20261022033303272-e0bbfe`**, commit medido `2f8b5aa29`,
+ambiente `local-jmachado-Precision-5530` (node 22.12.0, npm 10.9.0, psql 16.15, redis 7.0.15,
+docker 27.3.1, jest 29.7.0), Postgres/Redis/RAG/runner/containers efêmeros do próprio run:
+
+| passo | resultado | duração |
+|---|---|---|
+| clone limpo (sem `.env`, `dist/`, `node_modules`, sem resíduo em `git status --ignored`) | PASS | — |
+| `npm run ci:bootstrap` | exit 0 | 97 s |
+| imagens do commit (api-base, api, frontend) | exit 0 | 55 s |
+| produtor prod-like real (Chromium; artefato `status=GO`, 9 fluxos) | exit 0 | 111 s |
+| **L0 — `npm test`** | **exit 0** | 437 s |
+| **L0b — integração do Engenheiro** | **exit 0** — 40 suítes / 219 testes | 983 s |
+| L1 — inventário completo | 4 verdes / 3 vermelhos (família de release) | — |
+
+Contadores do L0 (exit 0): `tests/unit` 1095 suítes aprovadas + 1 skip (1095 de 1096),
+`tests/flow` + `engine/__tests__` 30 suítes, RPA 3 suítes — nenhuma falha, nenhum `--passWithNoTests`.
+
+Antes deste ciclo, o MESMO checkout limpo reprovava em `validate-ai-memory`,
+`validate-agent-adherence`, `modelDrivenE2e`, `runIdentityCommit`,
+`engineeringMissionSourceRefRemote`, `engineeringMissionMergeConcurrency`,
+`engineeringRouterConcurrentRunHttp` e `engineeringBugLoopNaturalPathE2E` (900 s de timeout).
+
+### 16.4 O que continua vermelho — e por que NÃO foi reclassificado
+
+O inventário do L1 executado no clone (cada validador individualmente, a partir da MESMA definição
+`PASSOS.D` do gate) dá **4 verdes e 3 vermelhos**:
+
+- verdes: `L1-release-dag`, `L1-fila-oficial`, `L1-ai-memory`, `L1-aderencia-agente`;
+- vermelhos: `L1-cadeia-criptografica`, `L1-self-proving`, `L1-decisao-canonica`.
+
+Os três vermelhos são a MESMA família: certificação de release. A causa é única e estrutural — os
+bytes do pacote selado (`dist/release/*.zip`) não são versionáveis (`dist/` é gitignored), então
+qualquer clone recalcula a cadeia sem o elo `package` e cascateia `cumulative_hash_broken`; e
+`npm run release:seal:plan` recusa rodar fora de `main`.
+
+Duas atribuições anteriores foram DESMENTIDAS pela medição no clone:
+
+1. `ci:bootstrap` **não** regrava elos derivados — `governance/*.json` mantêm o mtime do checkout e
+   ficam limpos em `git status` depois do bootstrap. A regravação de 2026-10-20T13:13 foi de um
+   `zip:release` local (`scripts/release-package.sh` → `tools/system/platform-readiness.js`).
+2. `validate-ai-memory` e `validate-agent-adherence` **não** passavam em clone (defeito 1 acima).
+
+O bloqueio NÃO foi convertido em verde: `governance/risk-routing/l1-scope-routing.json` mantém
+`class = L1_BLOCKING` para `L1-NPM-TEST-CI-VERMELHO` e a justificativa foi atualizada com a medição.
+Reclassificar para `RELEASE_ONLY` mudaria o veredito do gate de prontidão — é decisão do dono, não
+do agente.
+
+### 16.5 Veredito deste ciclo
+
+**`BLOCKED_EXTERNAL`** (mantido, agora com causa medida e delimitada).
+
+- Escopo de DESENVOLVIMENTO (L0 + L0b + 4 gates de integridade): `LOCAL_PASS` em checkout limpo,
+  com produtor prod-like real. Isso não é `CI_PASS`: o veredito de CI depende do runner.
+- Escopo de RELEASE (cadeia, self-proving, decisão canônica): `BLOCKED_EXTERNAL` — exige
+  promoção para `main` + `npm run release:seal`, proibidos nesta missão.
+- Aprovação humana real e auditoria independente continuam **pendentes**: o executor revisou o
+  próprio trabalho.

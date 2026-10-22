@@ -111,7 +111,7 @@ trouxer resíduo (`git status --ignored`), provisiona banco/redis/RAG/runner pr�
 `ci:bootstrap`, o produtor prod-like e o gate versionado, grava evidência com identidade de run
 (`runId`, `sourceCommit`, `sourceFingerprint`, `environmentId`, SHA-256 de cada log) e destrói o que
 criou. O relatório fica em `reports/ci-clean-checkout-report.json` e o resumo versionado em
-`AI_MEMORY/evidence/ci-clean-checkout-<sha>/<cenario>/RESULT.md`.
+`AI_MEMORY/evidence/ci-clean-checkout-<sha>/<cenario>/RESULT.md` (ou `RUN-NOTES.md` + `gate/`, quando o run é interrompido).
 
 Cenários negativos (provam não vacuidade, nunca "verde por ausência"): `bootstrap-twice`
 (idempotência do seed), `missing-artifact` (artefato ausente REPROVA o consumidor e o produtor

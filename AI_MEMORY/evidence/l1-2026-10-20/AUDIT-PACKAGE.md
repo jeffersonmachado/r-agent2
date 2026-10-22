@@ -153,3 +153,46 @@ decisão nomeada. **Nenhum gate foi afrouxado para produzir verde.**
 (auditoria independente, riscos não dispensáveis, CI/clone limpo), riscos residuais por classe e
 critérios de cancelamento. `engineer-supervised-approval.json` **não existe**: aprovação é ato
 humano com assinatura Ed25519 verificável.
+
+## 4. Ciclo CI DEFINITIVO (2026-10-21/22) — o que um auditor independente deve conseguir repetir
+
+**Comando único (versionado):**
+
+```bash
+npm ci
+npm run ci:clean-checkout -- --scenario clean --gate-phases A,B,C,D --with-integration
+```
+
+O comando clona o commit exato em `/tmp`, recusa resíduo, provisiona Postgres/Redis/RAG/runner e
+containers do próprio run, executa `ci:bootstrap`, o produtor prod-like (Chromium) e o gate.
+Relatório: `reports/ci-clean-checkout-report.json`; resumo versionado:
+`AI_MEMORY/evidence/ci-clean-checkout-<sha>/clean/RESULT.md`.
+
+### 4.1 O que verificar (ordem de menor para maior custo)
+
+1. **Que o clone é limpo**: o passo `clone-limpo` no RESULT.md só passa se `git status --ignored`
+   estiver vazio e não houver `.env`, `dist/`, `node_modules` nem `api/data/config.json`.
+2. **Que os gates de IA são verdes em clone** — `validate:ai-memory` e `validate-agent-adherence`
+   reprovavam em QUALQUER checkout antes de `c4b3fc70e` porque
+   `.github/copilot-instructions.md` não era versionado.
+3. **Que o L1 tem 4 verdes / 3 vermelhos** (inventário no RESULT.md). Os três vermelhos
+   (`cadeia-criptografica`, `self-proving`, `decisao-canonica`) são a família de certificação de
+   release e exigem `npm run release:seal` em `main` — proibido nesta missão.
+4. **Que nada foi reclassificado**: `governance/risk-routing/l1-scope-routing.json` mantém
+   `L1-NPM-TEST-CI-VERMELHO` como `L1_BLOCKING`; `ENGINEER_SUPERVISED_READINESS.md` §16 não declara
+   CI verde.
+
+### 4.2 Cenários negativos (prova de que "verde" não é vacuidade)
+
+`--scenario missing-artifact` (artefato ausente REPROVA o consumidor e o produtor regenera),
+`--scenario corrupt-artifact`, `--scenario bootstrap-twice` (idempotência do seed),
+`--scenario l0-full` (a seleção oficial inteira com `--bail=0`), `--scenario db-unavailable` e
+`--scenario docker-unavailable` (falha fechada, nunca PASS).
+
+### 4.3 Limites declarados deste ciclo
+
+- GitHub Actions: o veredito deste ciclo é `LOCAL_PASS` no escopo de desenvolvimento; não é
+  `CI_PASS`. O CI do runner continua vermelho no L1 pelo mesmo motivo estrutural (família de
+  release), e a medição local não substitui a do runner.
+- Auditoria independente: `AUDIT_PENDING`. O executor revisou o próprio trabalho.
+- Aprovação humana: ausente (`AI_MEMORY/evidence/engineer-supervised-approval.json` não existe).
