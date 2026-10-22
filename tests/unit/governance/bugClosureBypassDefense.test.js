@@ -299,7 +299,9 @@ describe('PROVA DE FECHAMENTO — recusa é nomeada, nunca silenciosa', () => {
     ['14. regressão com exit code 1', { executions: [{ testPath: 'tests/unit/regressao.test.js', command: 'x', exitCode: 1, startedAt: 'a', finishedAt: 'b', outputSha256: 'c'.repeat(64) }] }, 'EXIT_CODE_NAO_ZERO'],
     ['15. regressão com exit code null', { executions: [{ testPath: 'tests/unit/regressao.test.js', command: 'x', exitCode: null, startedAt: 'a', finishedAt: 'b', outputSha256: 'c'.repeat(64) }] }, 'EXIT_CODE_AUSENTE'],
     ['16. timeout durante teste', { executions: [{ testPath: 'tests/unit/regressao.test.js', command: 'x', exitCode: 0, timeout: true, startedAt: 'a', finishedAt: 'b', outputSha256: 'c'.repeat(64) }] }, 'TIMEOUT_NO_TESTE'],
-    ['17. evidência de outro SHA', { evaluatedCommit: 'd'.repeat(40) }, 'SHA_DIVERGENTE'],
+    // SHA bem formado mas que não é ancestral do HEAD ⇒ recusa nomeada (antes o código era
+    // SHA_DIVERGENTE por igualdade literal; a igualdade foi substituída por ancestralidade).
+    ['17. evidência de outro SHA', { evaluatedCommit: 'd'.repeat(40) }, 'COMMIT_NAO_ANCESTRAL'],
     ['18. fingerprint divergente', { codeFingerprint: 'e'.repeat(64) }, 'FINGERPRINT_DIVERGENTE'],
     ['19. hash de artefato adulterado', { artifactHashes: [{ path: 'tests/unit/regressao.test.js', sha256: 'f'.repeat(64) }] }, 'EVIDENCIA_ADULTERADA'],
     ['20. prova de outro defeito', { defectId: 'P1-OUTRO' }, 'DEFEITO_DIVERGENTE'],
@@ -1037,5 +1039,109 @@ describe('readiness — P0 disfarçado de RISK_ACCEPTED e aprovação sem âncor
   test('pins de aprovação são um conjunto SEPARADO dos de fechamento', () => {
     expect(Array.isArray(TA.PINNED_APPROVAL_FINGERPRINTS)).toBe(true);
     expect(TA.PINNED_APPROVAL_FINGERPRINTS).not.toBe(TA.PINNED_AUTHORITY_FINGERPRINTS);
+  });
+});
+
+// ─── 12. VÍNCULO PROVA × COMMIT: ancestralidade + fingerprint (não igualdade de SHA) ──
+// DEFEITO MEDIDO em 2026-10-22: exigir `evaluatedCommit === HEAD` tornava a certificação
+// impossível por construção — a prova é um artefato que precisa ser commitado, e commitar
+// muda o HEAD. Todo fechamento nascia "de outro SHA". A intenção ("teste em código antigo
+// não comprova o atual") continua garantida pelo CONTEÚDO: `codeFingerprint` igual ao atual.
+
+describe('prova × commit — ancestral com fingerprint igual vale; descendente não', () => {
+  function repoComDoisCommits() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'repo-anc-'));
+    const git = (...args) => execFileSync('git', args, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    git('init', '-q');
+    git('config', 'user.email', 't@t.invalid');
+    git('config', 'user.name', 't');
+    fs.writeFileSync(path.join(dir, 'a.txt'), '1\n', 'utf8');
+    git('add', '.');
+    git('commit', '-qm', 'primeiro');
+    const primeiro = git('rev-parse', 'HEAD');
+    fs.writeFileSync(path.join(dir, 'a.txt'), '2\n', 'utf8');
+    git('commit', '-qam', 'segundo');
+    const segundo = git('rev-parse', 'HEAD');
+    return { dir, primeiro, segundo };
+  }
+
+  const provaCom = (commit, fingerprint) => ({
+    artifactType: 'BUG_CLOSURE_PROOF',
+    artifactVersion: 1,
+    transitionId: crypto.randomUUID(),
+    defectId: 'P1-ADVERSARIAL',
+    severityBefore: 'P1',
+    severityAfter: 'P1',
+    fromState: 'FIXED_PENDING_VERIFICATION',
+    toState: 'RESOLVED',
+    evaluatedCommit: commit,
+    codeFingerprint: fingerprint,
+    requiredTests: ['tests/unit/regressao.test.js'],
+    executions: [{
+      testPath: 'tests/unit/regressao.test.js',
+      command: 'x',
+      exitCode: 0,
+      startedAt: 'a',
+      finishedAt: 'b',
+      outputPath: 'prova-saida/regressao.log',
+      outputSha256: 'c'.repeat(64),
+    }],
+    negativeEvidence: [],
+    artifactHashes: [],
+    actor: { id: 'owner@example.invalid', kind: 'humano' },
+    humanAuthorization: null,
+    policyDecision: { decision: 'CLOSE_VERIFIED', policyId: 'BUG_CLOSURE_FIRST', policyVersion: '1.0.0' },
+    createdAt: new Date().toISOString(),
+  });
+
+  test('commit ANCESTRAL com fingerprint atual NÃO é recusado por SHA', () => {
+    const { dir, primeiro, segundo } = repoComDoisCommits();
+    const prova = provaCom(primeiro, FP);
+    const v = ATUAL.proof.verificarProvaDeFechamento(prova, {
+      defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
+      currentCommit: segundo, currentFingerprint: FP, rootDir: dir, livro: null,
+      ancoragem: { pins: [], externa: null }, agora: Date.now(),
+    });
+    expect(v.reasons).not.toContain('COMMIT_NAO_ANCESTRAL');
+    expect(v.reasons).not.toContain('SHA_DIVERGENTE');
+  }, 60000);
+
+  test('commit DESCENDENTE do HEAD é recusado (prova vinda do futuro)', () => {
+    const { dir, primeiro, segundo } = repoComDoisCommits();
+    const prova = provaCom(segundo, FP);
+    const v = ATUAL.proof.verificarProvaDeFechamento(prova, {
+      defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
+      currentCommit: primeiro, currentFingerprint: FP, rootDir: dir, livro: null,
+      ancoragem: { pins: [], externa: null }, agora: Date.now(),
+    });
+    expect(v.reasons).toContain('COMMIT_NAO_ANCESTRAL');
+  }, 60000);
+
+  test('ancestral com fingerprint DIFERENTE continua recusado (conteúdo mudou)', () => {
+    const { dir, primeiro, segundo } = repoComDoisCommits();
+    const prova = provaCom(primeiro, 'e'.repeat(64));
+    const v = ATUAL.proof.verificarProvaDeFechamento(prova, {
+      defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
+      currentCommit: segundo, currentFingerprint: FP, rootDir: dir, livro: null,
+      ancoragem: { pins: [], externa: null }, agora: Date.now(),
+    });
+    expect(v.reasons).toContain('FINGERPRINT_DIVERGENTE');
+  }, 60000);
+
+  test('máquina de estados aceita verificação em commit ancestral (não exige igualdade)', () => {
+    const { validarTransicao } = require('../../../governance/bug-closure/defect-states');
+    const base = {
+      para: 'VERIFIED',
+      severity: 'P1',
+      regressionTest: 'tests/unit/regressao.test.js',
+      evidence: 'prova.json',
+      verificationCommit: 'a'.repeat(40),
+      currentCommit: 'b'.repeat(40),
+    };
+    expect(validarTransicao({ ...base, de: 'FIXED_PENDING_VERIFICATION' }).reasons)
+      .toContain('VERIFICACAO_EM_SHA_ANTERIOR');
+    expect(validarTransicao({
+      ...base, de: 'FIXED_PENDING_VERIFICATION', ehAncestralDe: () => true,
+    }).reasons).not.toContain('VERIFICACAO_EM_SHA_ANTERIOR');
   });
 });

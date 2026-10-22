@@ -41,6 +41,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const crypto = require('crypto');
 
 const { ESTADOS, validarTransicao, normalizarSeveridade } = require('./defect-states');
@@ -66,6 +67,7 @@ const CODIGOS = Object.freeze({
   REBAIXAMENTO_DE_SEVERIDADE: 'REBAIXAMENTO_DE_SEVERIDADE',
   TRANSICAO_INVALIDA: 'TRANSICAO_INVALIDA',
   SHA_DIVERGENTE: 'SHA_DIVERGENTE',
+  COMMIT_NAO_ANCESTRAL: 'COMMIT_NAO_ANCESTRAL',
   FINGERPRINT_DIVERGENTE: 'FINGERPRINT_DIVERGENTE',
   REGRESSAO_AUSENTE: 'REGRESSAO_AUSENTE',
   TESTE_NAO_EXECUTADO: 'TESTE_NAO_EXECUTADO',
@@ -95,6 +97,25 @@ const sha256Arquivo = (abs) => (fs.existsSync(abs)
 
 const naoVazio = (v) => v !== undefined && v !== null && String(v).trim() !== '';
 const sha40 = (v) => /^[0-9a-f]{40}$/i.test(String(v || ''));
+const mesmoCommit = (a, b) => Boolean(a) && Boolean(b)
+  && String(a).toLowerCase() === String(b).toLowerCase();
+
+/** `commit` é ancestral de `atual`? (mesmo commit conta). Fail-closed: erro ⇒ false. */
+function ehAncestralDe(commit, atual, rootDir) {
+  if (!commit || !atual) return false;
+  if (mesmoCommit(commit, atual)) return true;
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', String(commit), String(atual)], {
+      cwd: rootDir || ctxRootPadrao(), stdio: 'ignore',
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+const ctxRootPadrao = () => path.resolve(__dirname, '..', '..');
+
 const sha64 = (v) => /^[0-9a-f]{64}$/i.test(String(v || ''));
 
 /**
@@ -224,15 +245,21 @@ function validarEstrutura(prova, ctx) {
     evidence: (prova.artifactHashes || [])[0] && (prova.artifactHashes || [])[0].path,
     verificationCommit: prova.evaluatedCommit,
     currentCommit: ctx.currentCommit,
+    ehAncestralDe: ctx.ehAncestralDe || ((a, b) => ehAncestralDe(a, b, ctx.rootDir)),
   });
   if (!transicao.ok) {
     reasons.push(CODIGOS.TRANSICAO_INVALIDA);
     detalhe.transicao = transicao.reasons || [];
   }
 
-  // SHA e fingerprint têm de ser do código ATUAL — prova de outro commit não certifica.
-  if (!sha40(prova.evaluatedCommit) || String(prova.evaluatedCommit).toLowerCase() !== String(ctx.currentCommit || '').toLowerCase()) {
+  // Commit medido: tem de ser o HEAD ou um ANCESTRAL dele (nunca do futuro nem de outro
+  // branch) — e o CONTEÚDO tem de ser o atual, o que é garantido pelo `codeFingerprint`.
+  // Igualdade literal de SHA era circular: a prova é commitada, e commitar muda o HEAD.
+  if (!sha40(prova.evaluatedCommit)) {
     reasons.push(CODIGOS.SHA_DIVERGENTE);
+  } else if (!mesmoCommit(prova.evaluatedCommit, ctx.currentCommit)
+    && !(ctx.ehAncestralDe || ((a, b) => ehAncestralDe(a, b, ctx.rootDir)))(prova.evaluatedCommit, ctx.currentCommit)) {
+    reasons.push(CODIGOS.COMMIT_NAO_ANCESTRAL);
   }
   if (!sha64(prova.codeFingerprint) || String(prova.codeFingerprint) !== String(ctx.currentFingerprint || '')) {
     reasons.push(CODIGOS.FINGERPRINT_DIVERGENTE);
