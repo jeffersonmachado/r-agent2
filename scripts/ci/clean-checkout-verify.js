@@ -734,15 +734,24 @@ function cenarioL0Full(ctx, args) {
     cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000,
     descricao: 'Bootstrap canonico do ambiente',
   });
-  const registro = passo('l0-unit-bail0', 'npx', ['jest', 'tests/unit', '--bail=0'], {
-    cwd: clonePath, env, logDir, timeoutMs: 60 * 60 * 1000,
-    descricao: 'Suite unitaria COMPLETA (bail=0) para enumerar todas as falhas',
-  });
+  const selecoes = [
+    ['l0-unit-bail0', ['jest', 'tests/unit', 'tests/flow', 'engine/__tests__', '--bail=0']],
+    ['l0-rpa-bail0', ['jest', '--bail=0', '--runTestsByPath', 'tests/rpa/rpa.test.js', 'tests/rpa/login.test.js', 'tests/rpa/createTenantByAI.test.js', '--testPathIgnorePatterns=/node_modules/']],
+  ];
   const suitesVermelhas = new Set();
-  try {
-    const texto = fs.readFileSync(path.join(ROOT, registro.logPath), 'utf8');
-    for (const m of texto.matchAll(/^FAIL (\S+)/gm)) suitesVermelhas.add(m[1]);
-  } catch (_) { /* log ausente ja reprova o passo */ }
+  for (const [id, argv] of selecoes) {
+    const registro = passo(id, 'npx', argv, {
+      cwd: clonePath,
+      env: { ...env, RPA_SKIP_BROWSER_TESTS: 'true', SKIP_RPA_INTEGRATION_TESTS: 'true' },
+      logDir, timeoutMs: 60 * 60 * 1000,
+      descricao: 'Selecao oficial COMPLETA (bail=0) para enumerar todas as falhas',
+    });
+    if (!registro.logPath) continue;
+    try {
+      const texto = fs.readFileSync(path.join(ROOT, registro.logPath), 'utf8');
+      for (const m of texto.matchAll(/^FAIL (\S+)/gm)) suitesVermelhas.add(m[1]);
+    } catch (_) { /* log ausente ja reprova o passo */ }
+  }
   passos.push({
     id: 'l0-unidades-vermelhas',
     comando: '(consolidacao das suites vermelhas)',
