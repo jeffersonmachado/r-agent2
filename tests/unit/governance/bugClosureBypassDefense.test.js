@@ -933,6 +933,23 @@ describe('`--queue` e caminho de prova não são canais de desvio', () => {
     expect(status).toBe(2);
   });
 
+  test('proofsPath inválido NÃO deixa evento órfão no livro (validação antes do append)', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' })]);
+    const { prova } = provaValida(root);
+    const r = ATUAL.service.applyTransition({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
+      proofsPath: '/tmp',
+      actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain('CAMINHO_DE_PROVA_INVALIDO');
+    // O livro nem chega a existir: nada a "envenenar" na próxima transição legítima.
+    expect(fs.existsSync(path.join(root, ATUAL.ledger.REL_PADRAO))).toBe(false);
+    expect(JSON.parse(fs.readFileSync(queuePath, 'utf8')).items[0].state).toBe('FIXED_PENDING_VERIFICATION');
+  });
+
   test('applyTransition recusa proofsPath que sai da raiz', () => {
     const root = novaRaiz({ comAutoridade: true });
     const queuePath = escreverFila(root, [itemBase({ state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' })]);

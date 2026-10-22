@@ -76,7 +76,7 @@ válida o item vira `fechamentoNaoProvado`, `stateEfetivo = OPEN`, e toda opera�
 | `governance/bug-closure/defect-registry.js` | alterado (`stateEfetivo`, `provaDeFechamento`, contexto) | +121/−8 |
 | `governance/bug-closure/eligibility.js` | alterado (bucket `fechamentoNaoProvado`, negação certificante) | +50/−0 |
 | `scripts/governance/validate-engineer-supervised-readiness.js` | alterado (4 checks: `QUEUE_CLOSURE_EVIDENCE`, `QUEUE_INVENTORY_COMPLETE`, `ROUTING_CONSISTENT_WITH_AUTHORITY`, `QUEUE_STATE_STATUS_COHERENT`) | +70 |
-| `tests/unit/governance/bugClosureBypassDefense.test.js` | novo (82 testes adversariais) | 1035 |
+| `tests/unit/governance/bugClosureBypassDefense.test.js` | novo (83 testes adversariais) | 1065 |
 | `scripts/governance/evaluate-execution-eligibility.js` | alterado (`--queue` restrito a fixture versionado) | +16 |
 | `governance/bug-closure/eligibility.js` | alterado (`INVENTARIO_NAO_ANCORADO`/`INVENTARIO_ADULTERADO` em operação certificante) | +28 |
 | `tests/unit/governance/riskAcceptedCriticalControl.test.js` | alterado (âncora do fixture; nenhum `expect` mudou) | +13 |
@@ -124,7 +124,7 @@ BLOCKED_EXTERNAL → OPEN | FIX_IN_PROGRESS     (NUNCA → RESOLVED/VERIFIED)
 
 ## 7. Resultados dos testes adversariais (§9)
 
-`tests/unit/governance/bugClosureBypassDefense.test.js` — **82 testes, todos verdes**
+`tests/unit/governance/bugClosureBypassDefense.test.js` — **83 testes, todos verdes**
 (`npx jest tests/unit/governance/bugClosureBypassDefense.test.js`).
 
 Cobrem: 1–12 (JSON/adúlteras: OPEN sem evidência, RESOLVED/VERIFIED direto, só status
@@ -226,8 +226,26 @@ PoCs reproduzidas pelo revisor e re-medidas aqui, todas fechadas:
    persistido. Com a âncora externa, isso exige a chave do humano; sem ela, não.
 7. Operações **não certificantes** (L0/L1/diagnóstico/correção) seguem autorizadas com P0/P1
    abertos, por design da matriz de política.
+8. **O verificador está na mesma árvore gravável.** As âncoras autenticam *dados* (fila,
+   `authorities.json`, prova, livro), não o *código que verifica*. Quem escreve no repositório
+   pode alterar o verificador; o controle contra isso é revisão do diff e executar o release a
+   partir de artefato confiável. `sourceFingerprint` não é hoje comparado a valor externo.
+9. **Validadores de relatório não são autoritativos.** `validate-bug-closure-status`,
+   `validate-hardening-queue` e `validate-bug-closure-risk` derivam status da fila sem a âncora
+   de inventário — apagar itens os faz PASS. Agora declaram `authoritative: false`,
+   `inventoryAnchored` e um código próprio `FECHAMENTO_NAO_PROVADO` (hoje: 130 itens, P0=31,
+   P1=67). Só `SELO_FINAL`/`PUBLICACAO_RELEASE` autorizam release.
 
-## 12. Veredito
+## 12. Parecer final do revisor independente
+
+`APPROVED` (escopo declarado) em `4841c2a15`, após quatro passadas. Varredura dos entrypoints
+de release (`seal-release.sh`, `run-governance-enforcement.js`, `dev-branch-gate.js` fases R/F,
+`runFullValidation.js`, `run-release-suites.js`, waves/mesh, `engineering-router-v2-seal.js`):
+as seis operações `certifica:true` passam por `INVENTARIO_NAO_ANCORADO`/`INVENTARIO_ADULTERADO`.
+Nenhum P0/P1 executável restante sob o modelo de ameaça declarado. Testes: `git diff
+002363424..HEAD -- tests/` = **1037 inserções, 0 remoções**.
+
+## 13. Veredito
 `PARTIALLY_VERIFIED` — o mecanismo está provado contra a matriz adversarial e contra os
 achados das duas passadas do revisor; permanece incompleto por fatos externos ao código:
 

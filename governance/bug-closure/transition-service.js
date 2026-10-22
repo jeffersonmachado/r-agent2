@@ -150,6 +150,23 @@ function applyTransition(entrada = {}) {
 
   if (entrada.dryRun) return { ok: true, code: null, reasons: [], evento: null };
 
+  // P2 da 4ª passada do revisor: validar a CONTENÇÃO do caminho de prova ANTES de tocar no
+  // livro. Antes, `proofsPath` inválido appendava um evento e só depois recusava — deixando
+  // evento órfão que envenenava a checagem de ordem do próximo fechamento legítimo.
+  let dirProvas = null;
+  let absProva = null;
+  if (entrada.proof) {
+    dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
+    if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)) {
+      return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+    }
+    // Nome derivado do transitionId do chamador (UUID já validado acima), nunca campo livre.
+    absProva = path.resolve(dirProvas, `${String(entrada.proof.transitionId)}.json`);
+    if (!absProva.startsWith(`${dirProvas}${path.sep}`)) {
+      return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+    }
+  }
+
   // 1) evento no livro (autoridade da ORDEM); recusa duplicação/replay.
   const evento = anexarEvento({
     rootDir,
@@ -186,24 +203,14 @@ function applyTransition(entrada = {}) {
     alvo.legacyStatus = alvo.status;
     alvo.transitionId = evento.evento.transitionId;
     if (entrada.proof) {
-      const dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
-      // Achado do revisor (2ª passada, P2): `proofsPath` absoluto gravava JSON fora da raiz.
-      if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)) {
-        return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
-      }
-      // Nome derivado do id GERADO pelo serviço (UUID validado), nunca de campo livre.
-      const nomeProva = `${evento.evento.transitionId}.json`;
-      const absProva = path.resolve(dirProvas, nomeProva);
-      if (!absProva.startsWith(`${dirProvas}${path.sep}`)) {
-        return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
-      }
+      // `dirProvas`/`absProva` já validados ANTES do append (nenhum evento órfão).
       fs.mkdirSync(dirProvas, { recursive: true });
       try {
         fs.writeFileSync(absProva, `${JSON.stringify(entrada.proof, null, 2)}\n`, 'utf8');
       } catch (e) {
         return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: [`FALHA_AO_GRAVAR_PROVA:${e.message}`] };
       }
-      alvo.closureProof = path.join(path.relative(rootDir, dirProvas), nomeProva);
+      alvo.closureProof = path.join(path.relative(rootDir, dirProvas), path.basename(absProva));
       alvo.verificationCommit = entrada.proof.evaluatedCommit;
     }
     atual.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);

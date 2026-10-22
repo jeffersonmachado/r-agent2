@@ -35,6 +35,7 @@ const {
 } = require(path.join(ROOT, 'governance', 'bug-closure', 'eligibility'));
 const { carregarInventario } = require(path.join(ROOT, 'governance', 'bug-closure', 'defect-registry'));
 const { ESTADOS } = require(path.join(ROOT, 'governance', 'bug-closure', 'defect-states'));
+const { ancoraDoInventario } = require(path.join(ROOT, 'governance', 'bug-closure', 'trusted-authorities'));
 
 /** Operações que NUNCA podem começar com P0/P1 aberto. */
 const OPERACOES_CERTIFICANTES = [
@@ -152,8 +153,15 @@ function main(argv = process.argv.slice(2)) {
       violacoes.push({ code: 'ITEM_SEM_ESTADO_CANONICO', detail: semEstadoCanonico.join(',') });
     }
     const abertos = inventario.defeitos.filter((d) => d.aberto);
-    const p0 = abertos.filter((d) => d.severity === 'P0');
-    const p1 = abertos.filter((d) => d.severity === 'P1');
+    // Separa "aberto de verdade" de "declara fechamento sem prova": as duas coisas bloqueiam,
+    // mas têm causas e donos diferentes. Sem isso o relatório dizia "31 P0 abertos" quando o
+    // fato é "31 P0 declaram fechamento sem prova válida".
+    const semProva = abertos.filter((d) => d.fechamentoNaoProvado === true);
+    const abertosReais = abertos.filter((d) => d.fechamentoNaoProvado !== true);
+    const p0 = abertosReais.filter((d) => d.severity === 'P0');
+    const p1 = abertosReais.filter((d) => d.severity === 'P1');
+    const p0SemProva = semProva.filter((d) => d.severity === 'P0');
+    const p1SemProva = semProva.filter((d) => d.severity === 'P1');
     const semSev = abertos.filter((d) => !d.severity);
     resumo = {
       total: inventario.resumo.total,
@@ -187,6 +195,14 @@ function main(argv = process.argv.slice(2)) {
         ids: p1.map((d) => d.id).slice(0, 40),
       });
     }
+    if (semProva.length > 0) {
+      violacoes.push({
+        code: 'FECHAMENTO_NAO_PROVADO',
+        detail: `${semProva.length} defeito(s) DECLARAM fechamento sem prova válida `
+          + `(P0=${p0SemProva.length}, P1=${p1SemProva.length}) — declarar não é fechar`,
+        ids: semProva.map((d) => d.id).slice(0, 40),
+      });
+    }
     if (resumo.semSeveridadeAbertos > 0) {
       violacoes.push({
         code: 'SEVERIDADE_NAO_CLASSIFICADA',
@@ -211,6 +227,11 @@ function main(argv = process.argv.slice(2)) {
     guardas,
     inventario: resumo || { erro: erroInventario },
     violacoes,
+    // Limite declarado (4ª passada do revisor): este relatório NÃO autoriza release — quem
+    // autoriza é `SELO_FINAL`. Ele também não autentica a PERTENÇA do inventário: apagar
+    // itens o faz PASS. Ler como "não há defeitos" seria confundir relatório com prova.
+    authoritative: false,
+    inventoryAnchored: Boolean(ancoraDoInventario()),
   };
 
   fs.mkdirSync(path.dirname(RELATORIO), { recursive: true });
