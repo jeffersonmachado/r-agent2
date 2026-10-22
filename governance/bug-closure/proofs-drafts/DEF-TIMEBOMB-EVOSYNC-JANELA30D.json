@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ca755e7e-352c-4dd9-85e7-a12613b33189",
+  "transitionId": "5db8fba6-e9a6-4300-897c-ad98d6805264",
   "defectId": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
-  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/integration/evoSyncIntegration.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/evoSyncIntegration.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:22:56.665Z",
-      "finishedAt": "2026-10-22T21:23:09.096Z",
+      "startedAt": "2026-10-22T21:48:37.357Z",
+      "finishedAt": "2026-10-22T21:48:48.076Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log",
-      "outputSha256": "1ffaf2d189694e161f273d36c3efcac2fa2f4402035563602c5174c56fb461be"
+      "outputSha256": "40a552e605b988332c44114840dbbd3560dfdbc15d7a29e6398841a3872b230c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:23:09.102Z",
-  "proofHash": "2f3c96903c880779890620cd8f655feddb70395eb6bb0da5c1fec90dcbf291bb"
+  "createdAt": "2026-10-22T21:48:48.076Z",
+  "proofHash": "5ff7507da42d6f6ab6664d288f7fc139c875e7bd49b4fe311b77eb0a1b6add00"
 }

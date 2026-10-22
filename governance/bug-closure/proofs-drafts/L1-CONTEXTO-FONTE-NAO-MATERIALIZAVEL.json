@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cf61923f-ad23-4ebc-8417-4d11945223cd",
+  "transitionId": "a50715a6-3491-4e31-b818-9dcafaeed795",
   "defectId": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
-  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/engineeringRouterContextSourceFailClosed.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterContextSourceFailClosed.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:19:46.984Z",
-      "finishedAt": "2026-10-22T21:19:50.978Z",
+      "startedAt": "2026-10-22T21:44:19.699Z",
+      "finishedAt": "2026-10-22T21:44:27.562Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log",
-      "outputSha256": "d1a4c620b3a84ec7592aaddb3994beb2b0d053a08ad3e0d2611f669fc48c67d5"
+      "outputSha256": "fa485cafd70e87027b9ff75b1ac7c717628c445bf9ba800400c6fb007d906176"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:19:50.980Z",
-  "proofHash": "5c8e09ccfa1068c0cba0da0607883319ec1e364344559525f77c5cdd74a5e26b"
+  "createdAt": "2026-10-22T21:44:27.563Z",
+  "proofHash": "8f5a88540f38c884884815cc6938899e28c664e76783b5b0554452762ceef260"
 }

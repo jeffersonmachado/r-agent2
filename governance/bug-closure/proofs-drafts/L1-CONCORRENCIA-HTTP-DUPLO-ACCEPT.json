@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4515e37b-d846-4fb6-be63-de7d5e0997ea",
+  "transitionId": "c45d01c4-82cc-473b-8579-06a9aa88b8d8",
   "defectId": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
-  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:12:41.094Z",
-      "finishedAt": "2026-10-22T21:12:49.595Z",
+      "startedAt": "2026-10-22T21:39:53.981Z",
+      "finishedAt": "2026-10-22T21:40:00.808Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
-      "outputSha256": "c971d9b33118344a7471a79377dd2c21d17d329bbd1afcfc210f30be5ca3e4cd"
+      "outputSha256": "20c921d4da715e65b2a443750d849080285acb3cd126fef790ec9dcb1261cf88"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:12:49.597Z",
-  "proofHash": "7757bef9084289c65da426997ab6d12fad2857dca3d5ccc993160735a6458a5d"
+  "createdAt": "2026-10-22T21:40:00.809Z",
+  "proofHash": "b9cc95914272abd18eb3f5c85e7c6f09ba92f62212f23f1363faf5f3798efda8"
 }

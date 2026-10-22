@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "8ba92e11-95b3-41b6-8a85-eee8a524ce61",
+  "transitionId": "f878aa18-f5f7-4405-9eec-2a7c3922d786",
   "defectId": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
-  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/crmOpportunityUpdate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/crmOpportunityUpdate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:21:37.066Z",
-      "finishedAt": "2026-10-22T21:21:41.022Z",
+      "startedAt": "2026-10-22T21:47:13.081Z",
+      "finishedAt": "2026-10-22T21:47:17.984Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
-      "outputSha256": "e54b2ddcad67eb7e5205abfe6e174650772ae0779650c409e83b51d5995d721f"
+      "outputSha256": "c19095c1cfb692bbd8c69a0b0f163a6cf823cac3cdbbd671f7705f776b9bf47b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:21:41.023Z",
-  "proofHash": "8d7757853cdd3736b1381ad4b80df9f94b49cd8f5aae41af0a7620ef5e84eec6"
+  "createdAt": "2026-10-22T21:47:17.985Z",
+  "proofHash": "a6c5f9db92bcfa230118667e7ab0fa35a21d69952d1dbbc4484d2d5beeddd89a"
 }

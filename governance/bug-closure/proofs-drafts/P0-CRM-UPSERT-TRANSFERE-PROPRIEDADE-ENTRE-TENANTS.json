@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9dac8b5d-3c3d-4741-8269-fa875bdbb52c",
+  "transitionId": "f54d8c0c-0777-441b-a504-0ce917ca5194",
   "defectId": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
-  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/integration/crmTenantIsolation.postgres.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/crmTenantIsolation.postgres.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:31:57.628Z",
-      "finishedAt": "2026-10-22T21:32:05.135Z",
+      "startedAt": "2026-10-22T21:40:44.620Z",
+      "finishedAt": "2026-10-22T21:40:51.947Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
-      "outputSha256": "7be990b374b5b8aa7c38397fbf0d0da44825d6062153ac36a5d49afc1bc1e668"
+      "outputSha256": "f9aab4063b1e28e0bd7b0525d7bff9e8eab44fcfa15af4ad3cd5e6f894c1a362"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:32:05.140Z",
-  "proofHash": "57191a8c732ed2ddc7d075cc7c9e45602dacbba08abe8eaa3bf69ad5112287be"
+  "createdAt": "2026-10-22T21:40:51.949Z",
+  "proofHash": "64715134f8f8e661f8c8883f593fe90609276a9bcf8907ee611b7700b8706a17"
 }

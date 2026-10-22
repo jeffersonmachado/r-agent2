@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e62f84b5-460f-4175-bb81-854447547ac3",
+  "transitionId": "bed6d483-afe3-4346-bd1f-1b0220b9330e",
   "defectId": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
-  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
+  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
+  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
   "requiredTests": [
     "tests/unit/governance/runIdentityCommit.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/runIdentityCommit.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:14:07.514Z",
-      "finishedAt": "2026-10-22T21:14:12.624Z",
+      "startedAt": "2026-10-22T21:41:25.892Z",
+      "finishedAt": "2026-10-22T21:41:28.794Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
-      "outputSha256": "c8b1f53ee913469d89f4faf7ff2c07c857cfd8160b123a3be4fa29c3c704553a"
+      "outputSha256": "02c14f2c42cd134b7e465968cc80762a0c62c0d17325c8e98426a104e8d97a21"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:14:12.625Z",
-  "proofHash": "c36c03151b831eaa4908894855908350a19ad381bf54e75cafb108b7d816b16d"
+  "createdAt": "2026-10-22T21:41:28.795Z",
+  "proofHash": "30dcbad50d6da3ad09dc425de55ed9b8dc08a698250c91ac4fa52af498277831"
 }
