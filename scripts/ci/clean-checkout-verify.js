@@ -889,19 +889,38 @@ const CENARIOS_IMPLEMENTADOS = {
 // evidência
 // ---------------------------------------------------------------------------
 
-function copiarEvidenciaDoClone(clonePath, runDir) {
+function copiarEvidenciaDoClone(clonePath, runDir, sourceCommit) {
   const copiados = [];
   const pares = [
     ['reports/dev-branch-ci-evidence.json', path.join(ROOT, 'reports', 'dev-branch-ci-evidence.json')],
     ['reports/ci-bootstrap-report.json', path.join(runDir, 'ci-bootstrap-report.json')],
   ];
   const dirEvidencia = path.join(clonePath, 'AI_MEMORY', 'evidence');
+  // SÓ o relatório deste commit. Copiar todo `dev-branch-ci-*.md` trazia dezenas de evidências
+  // históricas do clone para a árvore do operador (medido em 2026-10-22: 23 arquivos alheios).
+  const prefixo = `dev-branch-ci-${String(sourceCommit).slice(0, 12)}`;
   if (fs.existsSync(dirEvidencia)) {
     for (const arquivo of fs.readdirSync(dirEvidencia)) {
-      if (!/^dev-branch-ci-.*\.md$/.test(arquivo)) continue;
+      if (!arquivo.startsWith(prefixo) || !arquivo.endsWith('.md')) continue;
       const destino = path.join(ROOT, 'AI_MEMORY', 'evidence', arquivo);
       fs.copyFileSync(path.join(dirEvidencia, arquivo), destino);
       copiados.push(path.relative(ROOT, destino));
+    }
+  }
+  // LOGS POR PASSO DO GATE (a evidência que nomeia cada falha com stack/contagem).
+  const dirLogs = path.join(dirEvidencia, 'dev-branch-gate-logs');
+  if (fs.existsSync(dirLogs)) {
+    const execucoes = fs.readdirSync(dirLogs).sort();
+    const ultima = execucoes[execucoes.length - 1];
+    if (ultima) {
+      const origem = path.join(dirLogs, ultima);
+      const destinoDir = path.join(runDir, 'gate');
+      fs.mkdirSync(destinoDir, { recursive: true });
+      for (const arquivo of fs.readdirSync(origem)) {
+        if (!arquivo.endsWith('.log')) continue;
+        fs.copyFileSync(path.join(origem, arquivo), path.join(destinoDir, arquivo));
+        copiados.push(path.relative(ROOT, path.join(destinoDir, arquivo)));
+      }
     }
   }
   for (const [origem, destino] of pares) {
@@ -1106,7 +1125,7 @@ function main(argv = process.argv.slice(2)) {
         ragUrl: env.RAG_SERVICE_URL,
       }, args);
 
-      const copiados = copiarEvidenciaDoClone(clonePath, runDir);
+      const copiados = copiarEvidenciaDoClone(clonePath, runDir, sourceCommit);
       const meusPassos = passos.slice(iniciou);
       const executados = meusPassos.filter((p) => p.id !== 'clone-limpo' && !p.informativo);
       const veredito = executados.length > 0 && executados.every((p) => p.ok) ? 'PASS' : 'FAIL';

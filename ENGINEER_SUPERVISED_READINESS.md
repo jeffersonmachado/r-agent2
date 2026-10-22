@@ -851,19 +851,25 @@ Ver `AI_MEMORY/evidence/ci-clean-checkout-<sha>/clean/` (versionado: `RESULT.md`
 ou `RUN-NOTES.md` + `gate/` com a evidência do próprio gate) e `reports/ci-clean-checkout-report.json`
 (relatório completo com identidade de run).
 
-Medição **runId `clean-checkout-20261022033303272-e0bbfe`**, commit medido `2f8b5aa29`,
-ambiente `local-jmachado-Precision-5530` (node 22.12.0, npm 10.9.0, psql 16.15, redis 7.0.15,
-docker 27.3.1, jest 29.7.0), Postgres/Redis/RAG/runner/containers efêmeros do próprio run:
+Medição DEFINITIVA, run completo sem interrupção — **runId `clean-checkout-20261022094712520-9f4605`**,
+commit medido `133eb147c`, ambiente `local-jmachado-Precision-5530` (node 22.12.0, npm 10.9.0,
+psql 16.15, redis 7.0.15, docker 27.3.1, jest 29.7.0), Postgres/Redis/RAG/runner/containers
+efêmeros do próprio run:
 
 | passo | resultado | duração |
 |---|---|---|
 | clone limpo (sem `.env`, `dist/`, `node_modules`, sem resíduo em `git status --ignored`) | PASS | — |
-| `npm run ci:bootstrap` | exit 0 | 97 s |
-| imagens do commit (api-base, api, frontend) | exit 0 | 55 s |
+| `npm run ci:bootstrap` | exit 0 | 102 s |
+| imagens do commit (api-base, api, frontend) | exit 0 | 54 s |
 | produtor prod-like real (Chromium; artefato `status=GO`, 9 fluxos) | exit 0 | 111 s |
-| **L0 — `npm test`** | **exit 0** | 437 s |
-| **L0b — integração do Engenheiro** | **exit 0** — 40 suítes / 219 testes | 983 s |
+| **L0 — `npm test`** | **exit 0** | 418,4 s |
+| **L0b — integração do Engenheiro** | **exit 0** — 40 suítes / 219 testes | 927,7 s |
 | L1 — inventário completo | 4 verdes / 3 vermelhos (família de release) | — |
+
+O veredito do harness para esse run é `FAIL`, e isso é correto: o gate reprova em
+`L1-cadeia-criptografica`. O harness não converte a falha do gate em sucesso — ele registra.
+
+Medição anterior (mesmo padrão, `2f8b5aa29`): L0 exit 0 em 437 s e L0b exit 0 em 983 s.
 
 Contadores do L0 (exit 0): `tests/unit` 1095 suítes aprovadas + 1 skip (1095 de 1096),
 `tests/flow` + `engine/__tests__` 30 suítes, RPA 3 suítes — nenhuma falha, nenhum `--passWithNoTests`.

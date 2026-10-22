@@ -131,11 +131,13 @@ todos com `veredito=PASS`:
 apagar o relatório não o reprova. O cenário passou a usar o artefato prod-like × `modelDrivenE2e`, que
 apenas lê o arquivo. Um cenário negativo que nunca falha não prova nada.
 
-**Medição FINAL (commit `2f8b5aa29`, runId `clean-checkout-20261022033303272-e0bbfe`):** clone limpo
-PASS · `ci:bootstrap` exit 0 em 97 s · produtor prod-like exit 0 (`status=GO`, 9 fluxos) ·
-**`L0` exit 0 em 437 s** (1095 suítes + 1 skip, 30 de flow/engine, 3 de RPA) · **`L0b` exit 0 em
-983 s (40 suítes / 219 testes)** · inventário L1: 4 verdes / 3 vermelhos (`cadeia-criptografica`,
-`self-proving`, `decisao-canonica` = família de certificação de release).
+**Medição DEFINITIVA (commit `133eb147c`, runId `clean-checkout-20261022094712520-9f4605`, run
+completo sem interrupção):** clone limpo PASS · `ci:bootstrap` exit 0 em 102 s · imagens do commit
+exit 0 em 54 s · produtor prod-like exit 0 (`status=GO`, 9 fluxos, 111 s) · **`L0` exit 0 em
+418,4 s** (1095 suítes + 1 skip em tests/unit, 30 em flow/engine, 3 em RPA) · **`L0b` exit 0 em
+927,7 s (40 suítes / 219 testes)** · inventário L1: 4 verdes / 3 vermelhos (`cadeia-criptografica`,
+`self-proving`, `decisao-canonica` = família de certificação de release). Medição anterior
+(`2f8b5aa29`): L0 437 s / L0b 983 s — mesmo padrão.
 
 **`l2-system` em checkout limpo:** 1 suíte vermelha (`finalStatusProjection`, falta
 `governance/rap-master-scorecard.json` — artefato gitignored que só existe após run selado); na árvore
