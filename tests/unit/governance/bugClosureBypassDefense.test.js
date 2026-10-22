@@ -654,29 +654,27 @@ describe('ALERT 2 (P0) — override de inventário por env não vale fora de tes
     expect(() => ATUAL.registry.carregarInventario()).toThrow(/OVERRIDE_DE_INVENTARIO_RECUSADO/);
   });
 
-  test('contexto de teste continua podendo apontar fixture (não quebra a suíte)', () => {
-    const root = novaRaiz();
-    const fixture = path.join(root, 'AI_MEMORY', 'fixture.json');
-    fs.writeFileSync(fixture, JSON.stringify({ items: [itemBase({ state: 'OPEN', status: 'pending' })] }), 'utf8');
-    process.env.BUG_CLOSURE_INVENTORY_PATH = fixture;
+  test('contexto de teste continua podendo apontar FIXTURE VERSIONADO (não quebra a suíte)', () => {
+    process.env.BUG_CLOSURE_INVENTORY_PATH = path.join(
+      RAIZ, 'tests', 'fixtures', 'bug-closure', 'queue-with-open-p0.json',
+    );
     process.env.NODE_ENV = 'test';
-    expect(ATUAL.registry.carregarInventario().defeitos.length).toBe(1);
+    expect(ATUAL.registry.carregarInventario().defeitos.length).toBeGreaterThan(0);
   });
 
-  test('fila vazia injetada por env não concede SELO_FINAL nem em teste', () => {
+  test('arquivo ARBITRÁRIO por env é recusado mesmo em teste (só fixture versionado vale)', () => {
     const root = novaRaiz();
     const vazia = path.join(root, 'AI_MEMORY', 'vazia.json');
     fs.writeFileSync(vazia, JSON.stringify({ items: [] }), 'utf8');
     process.env.BUG_CLOSURE_INVENTORY_PATH = vazia;
-    const inv = ATUAL.registry.carregarInventario();
-    const decisao = ATUAL.eligibility.evaluateExecutionEligibility(
-      { commit: SHA, actor: { id: 'teste', kind: 'script' }, defects: inv.defeitos },
-      'SELO_FINAL',
-    );
-    // Inventário vazio é aceito como FATO de teste, mas a ausência de prova de que o
-    // inventário é o oficial é justamente o que o gate de readiness mede.
-    expect(inv.origem).toContain('vazia.json');
-    expect(decisao.allowed).toBe(true); // a política não finge: quem mede completude é o gate
+    process.env.NODE_ENV = 'test';
+    expect(() => ATUAL.registry.carregarInventario()).toThrow(/OVERRIDE_DE_INVENTARIO_RECUSADO/);
+  });
+
+  test('fixture versionado que NÃO está em tests/fixtures é recusado', () => {
+    process.env.BUG_CLOSURE_INVENTORY_PATH = path.join(RAIZ, 'AI_MEMORY', 'hardening-queue.json');
+    process.env.NODE_ENV = 'test';
+    expect(() => ATUAL.registry.carregarInventario()).toThrow(/OVERRIDE_DE_INVENTARIO_RECUSADO/);
   });
 });
 

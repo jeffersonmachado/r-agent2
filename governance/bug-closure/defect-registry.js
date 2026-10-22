@@ -54,6 +54,7 @@ function montarContextoDeFechamento(opcoes = {}) {
     currentCommit: opcoes.currentCommit || null,
     currentFingerprint: opcoes.currentFingerprint || null,
     autoridades: opcoes.autoridades,
+    ancoragem: opcoes.ancoragem,
     livro,
     agora: opcoes.agora,
     existeArquivo: (rel) => fs.existsSync(path.join(rootDir, rel)),
@@ -171,13 +172,36 @@ function carregarInventario(opcoes = {}) {
   const overrideAmbiente = process.env.BUG_CLOSURE_INVENTORY_PATH
     && String(process.env.BUG_CLOSURE_INVENTORY_PATH).trim();
   const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
-  if (overrideAmbiente && !ambienteDeTeste) {
-    const erro = new Error(
-      `${CODIGOS.OVERRIDE_DE_INVENTARIO_RECUSADO}: BUG_CLOSURE_INVENTORY_PATH só é aceito em contexto de teste `
-      + `(NODE_ENV=test); execução real usa o inventário oficial`,
-    );
+  const recusarOverride = (motivo) => {
+    const erro = new Error(`${CODIGOS.OVERRIDE_DE_INVENTARIO_RECUSADO}: ${motivo}`);
     erro.code = CODIGOS.OVERRIDE_DE_INVENTARIO_RECUSADO;
-    throw erro;
+    return erro;
+  };
+  if (overrideAmbiente && !ambienteDeTeste) {
+    throw recusarOverride(
+      'BUG_CLOSURE_INVENTORY_PATH só é aceito em contexto de teste (NODE_ENV=test); '
+      + 'execução real usa o inventário oficial',
+    );
+  }
+  // Além do contexto de teste, o override tem de apontar para um FIXTURE VERSIONADO:
+  // um arquivo arbitrário (/tmp/vazio.json) não pode substituir a fila oficial, nem em teste.
+  if (overrideAmbiente) {
+    const raizRepo = path.resolve(__dirname, '..', '..');
+    const rel = path.relative(raizRepo, path.resolve(overrideAmbiente)).split(path.sep).join('/');
+    const dentroDeFixtures = rel.startsWith('tests/fixtures/');
+    let versionado = false;
+    if (dentroDeFixtures) {
+      try {
+        execFileSync('git', ['ls-files', '--error-unmatch', rel], { cwd: raizRepo, stdio: 'ignore' });
+        versionado = true;
+      } catch (_) { versionado = false; }
+    }
+    if (!dentroDeFixtures || !versionado) {
+      throw recusarOverride(
+        `BUG_CLOSURE_INVENTORY_PATH tem de apontar para fixture versionado em tests/fixtures/ `
+        + `(recebido: ${rel || overrideAmbiente})`,
+      );
+    }
   }
   const queuePath = opcoes.queuePath
     // Override EXPLÍCITO para testes: sem ele, testes de RECUSA passam a depender do

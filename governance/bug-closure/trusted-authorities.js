@@ -57,7 +57,12 @@ function ancoraExterna() {
  * @returns {{ok:boolean, motivo:string|null, fingerprint:string|null}}
  */
 function chaveAncorada(publicKeyPem, opcoes = {}) {
-  const pins = Array.isArray(opcoes.pins) ? opcoes.pins : PINNED_AUTHORITY_FINGERPRINTS;
+  // Pins vindos do CHAMADOR só valem em contexto de teste. Em execução real a raiz é
+  // SEMPRE o código versionado — senão o mesmo ator que edita o JSON poderia passar a
+  // própria lista de pins de dentro de um script.
+  const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+  const pinsDoChamador = ambienteDeTeste && Array.isArray(opcoes.pins) ? opcoes.pins : null;
+  const pins = pinsDoChamador || PINNED_AUTHORITY_FINGERPRINTS;
   const externa = opcoes.externa !== undefined ? opcoes.externa : ancoraExterna();
   const fingerprint = fingerprintDaChavePem(publicKeyPem);
   if (!fingerprint) return { ok: false, motivo: 'CHAVE_PUBLICA_ILEGIVEL', fingerprint: null };
