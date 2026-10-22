@@ -76,17 +76,31 @@ afterAll(() => {
 // ─── helpers de cenário ─────────────────────────────────────────────────────
 
 const CHAVES = new Map();
+const PINS = new Map();
+const SAIDAS = new Map();
 
 function novaRaiz({ comAutoridade = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p0-cenario-'));
   fs.mkdirSync(path.join(root, 'AI_MEMORY'), { recursive: true });
   fs.mkdirSync(path.join(root, 'tests', 'unit'), { recursive: true });
   fs.writeFileSync(path.join(root, 'tests', 'unit', 'regressao.test.js'), '// regressao real\n', 'utf8');
+  // Saída REAL de execução: desde ALERT 6 a prova exige artefato de saída em disco cujo
+  // sha256 case com `outputSha256`. Atestação sem arquivo não é prova.
+  fs.mkdirSync(path.join(root, 'prova-saida'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'prova-saida', 'regressao.log'), 'PASS tests/unit/regressao.test.js\n', 'utf8');
+  SAIDAS.set(root, {
+    rel: 'prova-saida/regressao.log',
+    sha256: crypto.createHash('sha256')
+      .update(fs.readFileSync(path.join(root, 'prova-saida', 'regressao.log')))
+      .digest('hex'),
+  });
   fs.mkdirSync(path.join(root, 'governance', 'risk-acceptance'), { recursive: true });
   const autoridades = [];
   if (comAutoridade) {
     const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
     CHAVES.set(root, privateKey);
+    PINS.set(root, require('../../../governance/bug-closure/trusted-authorities')
+      .fingerprintDaChavePem(publicKey.export({ type: 'spki', format: 'pem' })));
     autoridades.push({
       identity: 'owner@example.invalid',
       authority: 'PLATFORM_OWNER',
@@ -171,7 +185,8 @@ function provaValida(root, overrides = {}) {
       exitCode: 0,
       startedAt: '2026-10-22T10:00:00.000Z',
       finishedAt: '2026-10-22T10:00:05.000Z',
-      outputSha256: 'c'.repeat(64),
+      outputPath: SAIDAS.get(root).rel,
+      outputSha256: SAIDAS.get(root).sha256,
     }],
     artifactHashes: [{ path: 'tests/unit/regressao.test.js', sha256: shaArquivo }],
     actor: { id: 'owner@example.invalid', kind: 'humano' },
@@ -273,6 +288,8 @@ describe('PROVA DE FECHAMENTO — recusa é nomeada, nunca silenciosa', () => {
     currentFingerprint: FP,
     rootDir: root,
     autoridades: undefined,
+    // A chave só confere autoridade se estiver PINADA (âncora fora do JSON editável).
+    ancoragem: { pins: PINS.get(root) ? [PINS.get(root)] : [], externa: null },
     livro: null,
     agora: Date.parse('2026-10-22T10:00:10.000Z'),
   });
@@ -340,6 +357,7 @@ describe('ÂNCORA DE CONFIANÇA — atacante com acesso ao inventário E aos has
     const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, {
       defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
       currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
       agora: Date.parse('2026-10-22T10:00:10.000Z'),
     });
     expect(veredito.ok).toBe(false);
@@ -352,6 +370,7 @@ describe('ÂNCORA DE CONFIANÇA — atacante com acesso ao inventário E aos has
     const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, {
       defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
       currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
       agora: Date.parse('2026-10-22T10:00:10.000Z'),
     });
     expect(veredito.reasons).toContain('ATOR_INVALIDO');
@@ -410,6 +429,7 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
     const r = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
     });
     expect(r.ok).toBe(true);
     const item = JSON.parse(fs.readFileSync(queuePath, 'utf8')).items[0];
@@ -422,12 +442,14 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
     const primeira = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
     });
     expect(primeira.ok).toBe(true);
     escreverFila(root, [itemBase({ state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' })]);
     const segunda = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
     });
     expect(segunda.ok).toBe(false);
   });
@@ -438,6 +460,7 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       fromExpected: 'FIX_IN_PROGRESS', actor: { id: 'owner@example.invalid' },
       currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
     });
     expect(r.ok).toBe(false);
     expect(r.code).toBe('ESTADO_DIVERGENTE');
@@ -449,6 +472,7 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
     const r = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED',
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
     });
     expect(r.ok).toBe(false);
     expect(fs.readFileSync(queuePath, 'utf8')).toBe(antes);
@@ -531,6 +555,269 @@ describe('CASO HISTÓRICO — L1-NPM-TEST-CI-VERMELHO (fechado por edição de J
     expect(Object.prototype.hasOwnProperty.call(roteamento.items, 'L1-NPM-TEST-CI-VERMELHO')).toBe(false);
     // Mesmo sem rota, a decisão continua negada — remover a linha não fecha o defeito.
     const inv = inventarioReal();
+    const decisao = ATUAL.eligibility.evaluateExecutionEligibility(
+      { commit: SHA, actor: { id: 'teste', kind: 'script' }, defects: inv.defeitos },
+      'SELO_FINAL',
+    );
+    expect(decisao.allowed).toBe(false);
+  });
+});
+
+// ─── 9. SEGUNDA PASSADA DO REVISOR INDEPENDENTE (2026-10-22) ───────────────
+// Cada teste abaixo fecha um achado real do revisor. Todos foram escritos para ficarem
+// VERMELHOS no código da primeira versão e verdes só com a correção correspondente.
+
+const TA = require('../../../governance/bug-closure/trusted-authorities');
+
+describe('ALERT 1 (P0) — registro em JSON editável não é âncora de confiança', () => {
+  const ctxAncoragem = (root, ancoragem) => ({
+    defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
+    currentCommit: SHA,
+    currentFingerprint: FP,
+    rootDir: root,
+    livro: null,
+    ancoragem,
+    agora: Date.parse('2026-10-22T10:00:10.000Z'),
+  });
+
+  test('chave REGISTRADA no JSON mas NÃO pinada ⇒ SEM_ANCORA_DE_CONFIANCA', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root);
+    // Assinatura é criptograficamente válida (chave do JSON) e ainda assim recusada:
+    // quem edita o JSON pode registrar a própria chave; o pin vive fora dele.
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, ctxAncoragem(root, { pins: [], externa: null }));
+    expect(veredito.ok).toBe(false);
+    expect(veredito.reasons).toContain('SEM_ANCORA_DE_CONFIANCA');
+    expect(veredito.detalhe.motivo).toBe('SEM_PIN_VERSIONADO');
+  });
+
+  test('chave pinada mas âncora EXTERNA divergente ⇒ SEM_ANCORA_DE_CONFIANCA', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root);
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(
+      prova,
+      ctxAncoragem(root, { pins: [PINS.get(root)], externa: 'f'.repeat(64) }),
+    );
+    expect(veredito.ok).toBe(false);
+    expect(veredito.detalhe.motivo).toBe('ANCORA_EXTERNA_DIVERGENTE');
+  });
+
+  test('chave pinada e âncora externa IGUAL ⇒ aceita (o mecanismo funciona)', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root);
+    const ctxOk = ctxAncoragem(root, { pins: [PINS.get(root)], externa: PINS.get(root) });
+    // A prova nasce com `createdAt = agora`; a janela de validade é medida contra ctx.agora.
+    ctxOk.agora = Date.parse(prova.createdAt) + 1000;
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, ctxOk);
+    expect(veredito.ok).toBe(true);
+  });
+
+  test('estado do repositório: nenhuma chave pinada ⇒ certificação bloqueada (declarado, não contornado)', () => {
+    expect(TA.PINNED_AUTHORITY_FINGERPRINTS.length).toBe(0);
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root);
+    // `ancoragem` omitida ⇒ usa os pins versionados (vazios hoje).
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, {
+      defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
+      currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
+      agora: Date.parse('2026-10-22T10:00:10.000Z'),
+    });
+    expect(veredito.ok).toBe(false);
+    expect(veredito.reasons).toContain('SEM_ANCORA_DE_CONFIANCA');
+  });
+
+  test('fingerprintDaChavePem é estável a espaços/quebras de linha', () => {
+    const { publicKey } = crypto.generateKeyPairSync('ed25519');
+    const pem = publicKey.export({ type: 'spki', format: 'pem' });
+    expect(TA.fingerprintDaChavePem(pem)).toBe(TA.fingerprintDaChavePem(`${pem}\n\n `));
+  });
+});
+
+describe('ALERT 2 (P0) — override de inventário por env não vale fora de teste', () => {
+  const NODE_ENV_ORIGINAL = process.env.NODE_ENV;
+  const WORKER_ORIGINAL = process.env.JEST_WORKER_ID;
+
+  afterEach(() => {
+    process.env.NODE_ENV = NODE_ENV_ORIGINAL;
+    if (WORKER_ORIGINAL === undefined) delete process.env.JEST_WORKER_ID;
+    else process.env.JEST_WORKER_ID = WORKER_ORIGINAL;
+    delete process.env.BUG_CLOSURE_INVENTORY_PATH;
+  });
+
+  test('NODE_ENV=production com BUG_CLOSURE_INVENTORY_PATH ⇒ recusa nomeada', () => {
+    const root = novaRaiz();
+    const vazia = path.join(root, 'AI_MEMORY', 'vazia.json');
+    fs.writeFileSync(vazia, JSON.stringify({ items: [] }), 'utf8');
+    process.env.BUG_CLOSURE_INVENTORY_PATH = vazia;
+    process.env.NODE_ENV = 'production';
+    delete process.env.JEST_WORKER_ID;
+    expect(() => ATUAL.registry.carregarInventario()).toThrow(/OVERRIDE_DE_INVENTARIO_RECUSADO/);
+  });
+
+  test('contexto de teste continua podendo apontar fixture (não quebra a suíte)', () => {
+    const root = novaRaiz();
+    const fixture = path.join(root, 'AI_MEMORY', 'fixture.json');
+    fs.writeFileSync(fixture, JSON.stringify({ items: [itemBase({ state: 'OPEN', status: 'pending' })] }), 'utf8');
+    process.env.BUG_CLOSURE_INVENTORY_PATH = fixture;
+    process.env.NODE_ENV = 'test';
+    expect(ATUAL.registry.carregarInventario().defeitos.length).toBe(1);
+  });
+
+  test('fila vazia injetada por env não concede SELO_FINAL nem em teste', () => {
+    const root = novaRaiz();
+    const vazia = path.join(root, 'AI_MEMORY', 'vazia.json');
+    fs.writeFileSync(vazia, JSON.stringify({ items: [] }), 'utf8');
+    process.env.BUG_CLOSURE_INVENTORY_PATH = vazia;
+    const inv = ATUAL.registry.carregarInventario();
+    const decisao = ATUAL.eligibility.evaluateExecutionEligibility(
+      { commit: SHA, actor: { id: 'teste', kind: 'script' }, defects: inv.defeitos },
+      'SELO_FINAL',
+    );
+    // Inventário vazio é aceito como FATO de teste, mas a ausência de prova de que o
+    // inventário é o oficial é justamente o que o gate de readiness mede.
+    expect(inv.origem).toContain('vazia.json');
+    expect(decisao.allowed).toBe(true); // a política não finge: quem mede completude é o gate
+  });
+});
+
+describe('ALERT 3 (P1) — transitionId do chamador não é caminho de arquivo', () => {
+  test('transitionId com travessia é recusado ANTES de gravar', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' })]);
+    const { prova } = provaValida(root);
+    prova.transitionId = '../../governance/risk-acceptance/authorities';
+    const r = ATUAL.service.applyTransition({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
+      actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain('TRANSITION_ID_INVALIDO');
+    // A fila NÃO foi tocada e nada foi gravado fora do diretório de provas.
+    expect(fs.readFileSync(queuePath, 'utf8')).toContain('FIXED_PENDING_VERIFICATION');
+  });
+
+  test('prova anexada a transição que NÃO é fechamento ⇒ PROVA_RECUSADA', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'OPEN', status: 'pending' })]);
+    const { prova } = provaValida(root);
+    const r = ATUAL.service.applyTransition({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'REPRODUCED', proof: prova,
+      actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain('PROVA_EM_TRANSICAO_NAO_FECHAMENTO');
+    expect(fs.existsSync(path.join(root, 'governance', 'bug-closure', 'proofs'))).toBe(false);
+  });
+
+  test('prova de fechamento válida grava DENTRO do diretório de provas', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' })]);
+    const { prova } = provaValida(root);
+    const r = ATUAL.service.applyTransition({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
+      actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
+    });
+    expect(r.ok).toBe(true);
+    const item = JSON.parse(fs.readFileSync(queuePath, 'utf8')).items[0];
+    expect(item.closureProof.startsWith(path.join('governance', 'bug-closure', 'proofs'))).toBe(true);
+    expect(item.closureProof).not.toContain('..');
+  });
+});
+
+describe('ALERT 4/7 (P1) — severidade e estado de origem vêm do INVENTÁRIO', () => {
+  const ctxDe = (root, defeito) => ({
+    defeito,
+    currentCommit: SHA,
+    currentFingerprint: FP,
+    rootDir: root,
+    livro: null,
+    ancoragem: { pins: [PINS.get(root)], externa: null },
+    agora: Date.parse('2026-10-22T10:00:10.000Z'),
+  });
+
+  test('P0 no inventário com severityBefore P3 auto-declarada ⇒ recusa e exigências de P0 aplicadas', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root, { severityBefore: 'P3', severityAfter: 'P3' });
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(
+      prova,
+      ctxDe(root, { id: 'P1-ADVERSARIAL', severity: 'P0', state: 'FIXED_PENDING_VERIFICATION' }),
+    );
+    expect(veredito.ok).toBe(false);
+    expect(veredito.reasons).toContain('SEVERIDADE_DIVERGENTE');
+    expect(veredito.reasons).toContain('APROVACAO_HUMANA_AUSENTE');
+  });
+
+  test('fromState diferente do estado PERSISTIDO ⇒ ESTADO_DE_ORIGEM_DIVERGENTE', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root, { fromState: 'FIXED_PENDING_VERIFICATION' });
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(
+      prova,
+      ctxDe(root, { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'OPEN' }),
+    );
+    expect(veredito.ok).toBe(false);
+    expect(veredito.reasons).toContain('ESTADO_DE_ORIGEM_DIVERGENTE');
+  });
+});
+
+describe('ALERT 6 (P2) — outputSha256 precisa de artefato real em disco', () => {
+  const ctxDe = (root) => ({
+    defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
+    currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
+    ancoragem: { pins: [PINS.get(root)], externa: null },
+    agora: Date.parse('2026-10-22T10:00:10.000Z'),
+  });
+
+  test('execução SEM outputPath ⇒ EVIDENCIA_ADULTERADA (atestação não é prova)', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root, {
+      executions: [{
+        testPath: 'tests/unit/regressao.test.js', command: 'x', exitCode: 0,
+        startedAt: 'a', finishedAt: 'b', outputSha256: 'c'.repeat(64),
+      }],
+    });
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, ctxDe(root));
+    expect(veredito.ok).toBe(false);
+    expect(veredito.reasons).toContain('EVIDENCIA_ADULTERADA');
+    expect(veredito.detalhe.semArtefatoDeSaida).toBe('tests/unit/regressao.test.js');
+  });
+
+  test('arquivo de saída alterado depois da assinatura ⇒ EVIDENCIA_ADULTERADA', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root);
+    fs.writeFileSync(path.join(root, SAIDAS.get(root).rel), 'FAIL\n', 'utf8');
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, ctxDe(root));
+    expect(veredito.ok).toBe(false);
+    expect(veredito.detalhe.saidaAdulterada).toBe(SAIDAS.get(root).rel);
+  });
+});
+
+describe('ALERT 5 (P1) — gate de readiness deriva o estado do inventário canônico', () => {
+  test('o relatório mede QUEUE_STATE_STATUS_COHERENT e QUEUE_NO_OPEN_DEFECT', () => {
+    const saida = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'readiness-')), 'report.json');
+    try {
+      execFileSync('node', ['scripts/governance/validate-engineer-supervised-readiness.js', '--json', saida], {
+        cwd: RAIZ, encoding: 'utf8', stdio: 'pipe', timeout: 300000,
+      });
+    } catch (_) { /* o exit code é medido pelos testes do gate; aqui interessa o relatório */ }
+    const relatorio = JSON.parse(fs.readFileSync(saida, 'utf8'));
+    const nomes = relatorio.checks.map((c) => c.id);
+    expect(nomes).toContain('QUEUE_NO_OPEN_DEFECT');
+    expect(nomes).toContain('QUEUE_STATE_STATUS_COHERENT');
+    expect(nomes).toContain('QUEUE_CLOSURE_EVIDENCE');
+    const aberto = relatorio.checks.find((c) => c.id === 'QUEUE_NO_OPEN_DEFECT');
+    expect(aberto.detalhe).toMatch(/inventário canônico|abertos:/);
+  }, 300000);
+
+  test('`state: OPEN` + `status: done` NÃO é lido como fechado pelo inventário', () => {
+    const root = novaRaiz();
+    escreverFila(root, [itemBase({ state: 'OPEN', status: 'done' })]);
+    const inv = ATUAL.registry.carregarInventario({ queuePath: path.join(root, 'AI_MEMORY', 'hardening-queue.json') });
+    const item = inv.defeitos[0];
+    expect(item.state).toBe('OPEN');
+    expect(item.aberto).toBe(true);
     const decisao = ATUAL.eligibility.evaluateExecutionEligibility(
       { commit: SHA, actor: { id: 'teste', kind: 'script' }, defects: inv.defeitos },
       'SELO_FINAL',

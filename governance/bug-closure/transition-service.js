@@ -28,6 +28,8 @@ const { ESTADOS, validarTransicao } = require('./defect-states');
 const { verificarProvaDeFechamento, hashDoPayload } = require('./closure-proof');
 const { anexarEvento, verificarLivro } = require('./transition-ledger');
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const CODIGOS = Object.freeze({
   DEFEITO_AUSENTE: 'DEFEITO_AUSENTE',
   ESTADO_DIVERGENTE: 'ESTADO_DIVERGENTE',
@@ -94,6 +96,15 @@ function applyTransition(entrada = {}) {
     return { ok: false, code: CODIGOS.ESTADO_DIVERGENTE, reasons: [`esperado ${entrada.fromExpected}, persistido ${estadoDeclarado}`] };
   }
 
+  // ALERT 3a (revisor, P1): `transitionId` vinha do chamador e era usado como NOME DE ARQUIVO.
+  // `../../governance/risk-acceptance/authorities.json` gravava fora do diretório de provas.
+  if (entrada.proof) {
+    const idProva = String(entrada.proof.transitionId || '');
+    if (!UUID_RE.test(idProva)) {
+      return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: ['TRANSITION_ID_INVALIDO'] };
+    }
+  }
+
   const to = String(entrada.to || '').toUpperCase();
   const transicao = validarTransicao({
     de: estadoDeclarado,
@@ -119,6 +130,8 @@ function applyTransition(entrada = {}) {
       currentFingerprint: entrada.currentFingerprint,
       rootDir,
       autoridades: entrada.autoridades,
+      // Âncora de confiança: chaves PINADAS (fora do JSON editável) — ver trusted-authorities.
+      ancoragem: entrada.ancoragem,
       // Criação: o evento ainda NÃO existe (é anexado abaixo) — `null` desliga só esta
       // checagem. O append recusa transitionId duplicado, então replay continua bloqueado.
       livro: entrada.livro === undefined ? null : entrada.livro,
@@ -165,12 +178,26 @@ function applyTransition(entrada = {}) {
     alvo.status = STATUS_CANONICO[to] || alvo.status;
     alvo.legacyStatus = alvo.status;
     alvo.transitionId = evento.evento.transitionId;
+    // ALERT 3b: só transição de FECHAMENTO tem prova VERIFICADA. Gravar prova de transição
+    // intermediária criava arquivo não validado com nome controlado pelo chamador.
+    if (entrada.proof && !ESTADOS_FECHADOS.includes(to)) {
+      return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['PROVA_EM_TRANSICAO_NAO_FECHAMENTO'] };
+    }
     if (entrada.proof) {
-      const dirProvas = path.join(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
+      const dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
+      // Nome derivado do id GERADO pelo serviço (UUID validado), nunca de campo livre.
+      const nomeProva = `${evento.evento.transitionId}.json`;
+      const absProva = path.resolve(dirProvas, nomeProva);
+      if (!absProva.startsWith(`${dirProvas}${path.sep}`)) {
+        return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+      }
       fs.mkdirSync(dirProvas, { recursive: true });
-      const rel = path.join(path.relative(rootDir, dirProvas), `${entrada.proof.transitionId}.json`);
-      fs.writeFileSync(path.join(rootDir, rel), `${JSON.stringify(entrada.proof, null, 2)}\n`, 'utf8');
-      alvo.closureProof = rel;
+      try {
+        fs.writeFileSync(absProva, `${JSON.stringify(entrada.proof, null, 2)}\n`, 'utf8');
+      } catch (e) {
+        return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: [`FALHA_AO_GRAVAR_PROVA:${e.message}`] };
+      }
+      alvo.closureProof = path.join(path.relative(rootDir, dirProvas), nomeProva);
       alvo.verificationCommit = entrada.proof.evaluatedCommit;
     }
     atual.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);

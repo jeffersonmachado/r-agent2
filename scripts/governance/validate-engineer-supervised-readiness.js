@@ -91,16 +91,46 @@ function checkFila() {
     return;
   }
   const items = Array.isArray(fila.items) ? fila.items : [];
-  const abertos = items.filter((i) => ABERTOS.has(String(i.status || '').toLowerCase()));
+  // ALERT 5 (revisor independente, P1): este check lia o `status` CRU. `state:"OPEN"` com
+  // `status:"done"` passava por todos os checks novos. A autoridade do estado é o inventário
+  // MIGRADO (mesma função que certifica), e divergência state×status é fato reportado.
+  const inventario = carregarInventario();
+  const migrados = inventario.defeitos || [];
+  const porId = new Map(migrados.map((d) => [d.id, d]));
+  const abertos = migrados.filter((d) => d.aberto === true);
   const impedidos = items.filter((i) => IMPEDIDOS.has(String(i.status || '').toLowerCase()));
+
+  // Divergência ESTRUTURAL entre o `state` DECLARADO e o `status` legado (independente de
+  // prova). É exatamente o caso `state:"OPEN"` + `status:"done"`, que antes escapava de todos
+  // os checks. Itens sem `state` (legado puro) não podem divergir: o status É o estado.
+  const STATUS_FECHADOS = new Set(['done', 'verified', 'prevention_active', 'resolved', 'closed']);
+  const ESTADOS_DECLARADOS_FECHADOS = new Set(['VERIFIED', 'RESOLVED', 'RISK_ACCEPTED']);
+  const divergentes = items
+    .map((i) => ({ item: i, canonico: porId.get(i && i.id) }))
+    .filter(({ item }) => {
+      if (!item || !item.state) return false;
+      const declarado = String(item.state).toUpperCase();
+      const status = String(item.status || '').toLowerCase();
+      // `RISK_ACCEPTED` + `blocked_external` é a projeção legada correta de risco aceito.
+      if (declarado === 'RISK_ACCEPTED' && status === 'blocked_external') return false;
+      const declaradoFechado = ESTADOS_DECLARADOS_FECHADOS.has(declarado);
+      return declaradoFechado !== STATUS_FECHADOS.has(status);
+    });
 
   registrar('QUEUE_READABLE', { ok: items.length > 0, detalhe: `${items.length} item(ns)` });
   registrar('QUEUE_NO_OPEN_DEFECT', {
     ok: abertos.length === 0,
     detalhe: abertos.length === 0
-      ? 'nenhum item aberto (pending/in_progress/failed/fixed_unverified)'
-      : `abertos: ${abertos.map((i) => `${i.id}(${i.status})`).join(', ')}`,
-    dados: { abertos: abertos.map((i) => i.id) },
+      ? 'nenhum defeito aberto no inventário canônico'
+      : `abertos: ${abertos.map((d) => `${d.id}(${d.stateEfetivo || d.state})`).join(', ')}`,
+    dados: { abertos: abertos.map((d) => d.id) },
+  });
+  registrar('QUEUE_STATE_STATUS_COHERENT', {
+    ok: divergentes.length === 0,
+    detalhe: divergentes.length === 0
+      ? 'state canônico projetado sem divergência em todos os itens'
+      : `divergentes: ${divergentes.map(({ item, canonico }) => `${item.id}(declarado=${item.state || '-'} canonico=${canonico.state})`).join(', ')}`,
+    dados: { divergentes: divergentes.map(({ item }) => item.id) },
   });
   // Impedimento declarado deixa de ser FAIL cego: cada item precisa ser CLASSIFICADO
   // (resolvido com probe, aceito por humano assinado, ou roteado para a decisão dona).

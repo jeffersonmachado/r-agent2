@@ -79,6 +79,7 @@ const CODIGOS = Object.freeze({
   FILA_AUSENTE: 'FILA_AUSENTE',
   FILA_ILEGIVEL: 'FILA_ILEGIVEL',
   FILA_MALFORMADA: 'FILA_MALFORMADA',
+  OVERRIDE_DE_INVENTARIO_RECUSADO: 'OVERRIDE_DE_INVENTARIO_RECUSADO',
 });
 
 /** Migra um item legado para o contrato canônico de defeito. */
@@ -163,11 +164,26 @@ function carregarInventario(opcoes = {}) {
   // Aqui o caminho é resolvido numa variável e lido depois, então `path.join`
   // virava "alvo de ESCRITA fantasma" da fila no inventário. `path.resolve`
   // produz o mesmo caminho sem o falso positivo.
+  // ALERT 2 (revisor independente, P0): a variável de ambiente era um bypass de UM comando —
+  // `BUG_CLOSURE_INVENTORY_PATH=/tmp/vazia.json node ...` fazia `{"items":[]}` conceder
+  // ALLOWED para SELO_FINAL. Override de caminho só vale em contexto EXPLÍCITO de teste;
+  // em qualquer execução normal (gate, CI, release) o caminho é o oficial, sempre.
+  const overrideAmbiente = process.env.BUG_CLOSURE_INVENTORY_PATH
+    && String(process.env.BUG_CLOSURE_INVENTORY_PATH).trim();
+  const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+  if (overrideAmbiente && !ambienteDeTeste) {
+    const erro = new Error(
+      `${CODIGOS.OVERRIDE_DE_INVENTARIO_RECUSADO}: BUG_CLOSURE_INVENTORY_PATH só é aceito em contexto de teste `
+      + `(NODE_ENV=test); execução real usa o inventário oficial`,
+    );
+    erro.code = CODIGOS.OVERRIDE_DE_INVENTARIO_RECUSADO;
+    throw erro;
+  }
   const queuePath = opcoes.queuePath
     // Override EXPLÍCITO para testes: sem ele, testes de RECUSA passam a depender do
     // estado vivo da fila e ficam vermelhos exatamente quando todos os defeitos são
     // fechados (medido em 2026-10-17). A política não muda: só o CAMINHO do inventário.
-    || (process.env.BUG_CLOSURE_INVENTORY_PATH && String(process.env.BUG_CLOSURE_INVENTORY_PATH).trim())
+    || (ambienteDeTeste ? overrideAmbiente : null)
     || path.resolve(__dirname, '..', '..', 'AI_MEMORY', 'hardening-queue.json');
 
   if (!fs.existsSync(queuePath)) {

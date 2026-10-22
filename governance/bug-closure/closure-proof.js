@@ -45,6 +45,7 @@ const crypto = require('crypto');
 
 const { ESTADOS, validarTransicao, normalizarSeveridade } = require('./defect-states');
 const { canonicalJson, sha256, verificarEd25519 } = require('../risk-acceptance/signature');
+const { chaveAncorada } = require('./trusted-authorities');
 
 const ARTIFACT_TYPE = 'defect-closure-proof';
 const ARTIFACT_VERSION = '1.0.0';
@@ -84,6 +85,8 @@ const CODIGOS = Object.freeze({
   REPLAY_DE_EVENTO: 'REPLAY_DE_EVENTO',
   PROVA_VENCIDA: 'PROVA_VENCIDA',
   POLITICA_RECUSA: 'POLITICA_RECUSA',
+  SEVERIDADE_DIVERGENTE: 'SEVERIDADE_DIVERGENTE',
+  ESTADO_DE_ORIGEM_DIVERGENTE: 'ESTADO_DE_ORIGEM_DIVERGENTE',
 });
 
 const sha256Arquivo = (abs) => (fs.existsSync(abs)
@@ -193,6 +196,19 @@ function validarEstrutura(prova, ctx) {
   const sevAntes = normalizarSeveridade(prova.severityBefore);
   const sevDepois = normalizarSeveridade(prova.severityAfter);
   if (!sevAntes || !sevDepois) reasons.push(CODIGOS.SEVERIDADE_INVALIDA);
+
+  // ALERT 4 (revisor independente, P1): a severidade NÃO pode ser auto-declarada. Sem esta
+  // checagem, uma prova de um item P0 declarava `severityBefore:'P3'` e escapava de aprovação
+  // humana e de evidência negativa. A autoridade é a severidade do INVENTÁRIO.
+  const sevInventario = normalizarSeveridade(defeito.severity);
+  if (sevInventario && sevAntes !== sevInventario) reasons.push(CODIGOS.SEVERIDADE_DIVERGENTE);
+
+  // ALERT 7: o `fromState` da prova tem de ser o estado PERSISTIDO do item (a máquina de
+  // estados não pode ser contornada por um livro forjado de uma linha).
+  const estadoPersistido = String(defeito.state || '').toUpperCase();
+  if (estadoPersistido && String(prova.fromState).toUpperCase() !== estadoPersistido) {
+    reasons.push(CODIGOS.ESTADO_DE_ORIGEM_DIVERGENTE);
+  }
   // P0 é o MAIS grave: número maior = menos grave. Rebaixar é AUMENTAR o índice
   // (P1 → P3) para escapar de bloqueio — a comparação anterior estava invertida.
   if (sevAntes && sevDepois && Number(sevDepois[1]) > Number(sevAntes[1])) {
@@ -235,16 +251,36 @@ function validarEstrutura(prova, ctx) {
     else if (Number(exec.exitCode) !== 0) reasons.push(CODIGOS.EXIT_CODE_NAO_ZERO);
     if (exec.timeout === true || exec.signal) reasons.push(CODIGOS.TIMEOUT_NO_TESTE);
     if (!sha64(exec.outputSha256)) reasons.push(CODIGOS.EVIDENCIA_ADULTERADA);
+    // ALERT 6 (revisor, P2): `outputSha256` era atestação pura. Agora precisa existir um
+    // arquivo de saída em disco (relativo à raiz) cujo sha256 seja EXATAMENTE o declarado.
+    if (naoVazio(exec.outputPath)) {
+      const absSaida = path.isAbsolute(exec.outputPath) ? exec.outputPath : path.join(ctx.rootDir || process.cwd(), exec.outputPath);
+      const hashReal = sha256Arquivo(absSaida);
+      if (!hashReal || hashReal !== exec.outputSha256) {
+        reasons.push(CODIGOS.EVIDENCIA_ADULTERADA);
+        detalhe.saidaAdulterada = exec.outputPath;
+      }
+    } else {
+      // Sem arquivo de saída NÃO há como provar execução: recusa (atestação não é prova).
+      reasons.push(CODIGOS.EVIDENCIA_ADULTERADA);
+      detalhe.semArtefatoDeSaida = exec.testPath;
+    }
     if (!naoVazio(exec.startedAt) || !naoVazio(exec.finishedAt)) reasons.push(CODIGOS.TESTE_NAO_EXECUTADO);
   }
 
   // P0 exige evidência NEGATIVA (reprodução do defeito) — sem ela, só há afirmação.
-  if (sevAntes === 'P0' && !(Array.isArray(prova.negativeEvidence) && prova.negativeEvidence.length > 0)) {
+  // Exigência é a MAIOR severidade entre a declarada e a do inventário: se qualquer uma
+  // diz P0, as exigências de P0 valem (fail-closed — declarar menos nunca reduz exigência).
+  const ORDEM_SEV = { P0: 0, P1: 1, P2: 2, P3: 3 };
+  const sevParaExigencias = [sevInventario, sevAntes]
+    .filter(Boolean)
+    .sort((a, b) => ORDEM_SEV[a] - ORDEM_SEV[b])[0];
+  if (sevParaExigencias === 'P0' && !(Array.isArray(prova.negativeEvidence) && prova.negativeEvidence.length > 0)) {
     reasons.push(CODIGOS.EVIDENCIA_NEGATIVA_AUSENTE);
   }
 
   // P0 exige autorização humana explícita (missão §24: aprovação obrigatória ausente = DENY).
-  if (sevAntes === 'P0') {
+  if (sevParaExigencias === 'P0') {
     const ha = prova.humanAuthorization;
     if (!ha || !naoVazio(ha.by) || !naoVazio(ha.at) || !naoVazio(ha.ref)) {
       reasons.push(CODIGOS.APROVACAO_HUMANA_AUSENTE);
@@ -301,6 +337,14 @@ function validarAncora(prova, ctx) {
   }
   const autoridade = lista.find((a) => String(a.identity) === String(assinatura.keyId));
   if (!autoridade) return { reasons: [CODIGOS.SEM_ANCORA_DE_CONFIANCA], detalhe: { keyId: assinatura.keyId } };
+
+  // ALERT 1 (revisor, P0): o registro em JSON não é âncora — a chave tem de estar PINADA em
+  // código (e casar com a âncora externa quando fornecida). Registro editável não confere
+  // autoridade a ninguém.
+  const ancoragem = chaveAncorada(autoridade.publicKeyPem, ctx.ancoragem || {});
+  if (!ancoragem.ok) {
+    return { reasons: [CODIGOS.SEM_ANCORA_DE_CONFIANCA], detalhe: { motivo: ancoragem.motivo, fingerprint: ancoragem.fingerprint } };
+  }
   if (String(prova.actor && prova.actor.id) !== String(autoridade.identity)) {
     return { reasons: [CODIGOS.ASSINATURA_INVALIDA], detalhe: { motivo: 'ator diverge da autoridade assinante' } };
   }
