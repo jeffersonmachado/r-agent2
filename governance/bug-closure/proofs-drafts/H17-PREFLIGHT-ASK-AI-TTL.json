@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "8d4575a4-f959-41ee-8ba2-7e54720edb48",
+  "transitionId": "c998d5f6-f66f-464d-962d-852c6d5f2847",
   "defectId": "H17-PREFLIGHT-ASK-AI-TTL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:39:53.944Z",
-      "finishedAt": "2026-10-22T18:39:56.734Z",
+      "startedAt": "2026-10-22T21:23:27.557Z",
+      "finishedAt": "2026-10-22T21:23:33.022Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H17-PREFLIGHT-ASK-AI-TTL.log",
-      "outputSha256": "a08d8161342da34ab220192c94d8e10853560d0d6be9976f8756fcd694fcb7d7"
+      "outputSha256": "3291c7ca3893283e6bd7fd338a5ca0cd3499261a09e6e510e4182999741bf7b0"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:39:56.736Z",
-  "proofHash": "e4be2cc78c5a045505591a049565d6aa8d707d2b20612d6f42c3dec758085ebe"
+  "createdAt": "2026-10-22T21:23:33.023Z",
+  "proofHash": "c2e432e440192a965df1ee3c93f0999ee11ffde737802af25ec2f0d60b85a21d"
 }

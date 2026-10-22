@@ -1,23 +1,21 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T18:39:22.455Z",
+  "generatedAt": "2026-10-22T21:22:42.661Z",
   "authoritative": false,
   "resumo": {
-    "commit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-    "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+    "commit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+    "fingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
     "total": 67,
     "porClasse": {
-      "AGUARDA_ASSINATURA_E_ANCORA": 48,
+      "AGUARDA_ASSINATURA_E_ANCORA": 51,
       "REQUER_DECISAO_HUMANA": 14,
-      "AMBIENTE_INDISPONIVEL": 3,
-      "REQUER_AJUSTE_DE_MODELO": 2
+      "AMBIENTE_INDISPONIVEL": 2
     },
     "porSeveridade": {
-      "AGUARDA_ASSINATURA_E_ANCORA:P1": 48,
+      "AGUARDA_ASSINATURA_E_ANCORA:P1": 51,
       "REQUER_DECISAO_HUMANA:P1": 14,
-      "AMBIENTE_INDISPONIVEL:P1": 3,
-      "REQUER_AJUSTE_DE_MODELO:P1": 2
+      "AMBIENTE_INDISPONIVEL:P1": 2
     },
     "filaAlterada": false,
     "assinatura": "PENDENTE — este script não assina e não altera a fila"
@@ -114,9 +112,14 @@
       "severity": "P1",
       "estadoPersistido": "VERIFIED",
       "titulo": "removeChild (React) por enhancement de header que movia/substituia nos do React",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
-      "motivo": "FRONTEND_DEPS_AUSENTES (frontend/node_modules não instalado)"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-REMOVECHILD-HEADER-ENHANCEMENT.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "DEF-TEARDOWN-DRAIN-WORKER",
@@ -264,9 +267,14 @@
       "severity": "P1",
       "estadoPersistido": "RESOLVED",
       "titulo": "FENCE_AVANCOU com antes=undefined: log JSON do produto confundido com handshake (selo V2 abortado)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -334,9 +342,14 @@
       "severity": "P1",
       "estadoPersistido": "RESOLVED",
       "titulo": "CI do branch de desenvolvimento VERDE: L1 separado em D (desenvolvimento) e R (certificacao de release)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/qaMeshOperationPolicy.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-NPM-TEST-CI-VERMELHO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-NPM-TEST-CI-VERMELHO.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",

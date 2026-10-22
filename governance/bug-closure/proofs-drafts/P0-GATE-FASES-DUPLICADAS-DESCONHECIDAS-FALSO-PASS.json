@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "8cce4eb9-d5c2-4d5c-9d0f-148ea088a727",
+  "transitionId": "42eb0208-0e79-442b-b91b-eadb9478e70f",
   "defectId": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/devBranchGatePhaseContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/devBranchGatePhaseContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:59.808Z",
-      "finishedAt": "2026-10-22T18:31:05.851Z",
+      "startedAt": "2026-10-22T21:13:52.530Z",
+      "finishedAt": "2026-10-22T21:13:59.583Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
-      "outputSha256": "88c4d559873265ccdbe5b21be322794ffddec6fbf5a13072b198f0f982bb27f7"
+      "outputSha256": "0385d350cb9e8e965ddb2b482baa45b37d93e1fbabb6a7130ed6d4307901624e"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:31:05.852Z",
-  "proofHash": "6c369dff30fabef349e6c6a9086b9c8f6dab3e81ec865765fccd4d6fa49130e2"
+  "createdAt": "2026-10-22T21:13:59.584Z",
+  "proofHash": "beea654ae9f3ac7bd61d4fe9c66fed6d9b8ceb87c000ec0a05dc1a05d3e8d29c"
 }

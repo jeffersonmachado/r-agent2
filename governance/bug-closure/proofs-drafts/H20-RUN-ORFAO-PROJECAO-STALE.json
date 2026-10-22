@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ca1b3ecf-1815-4fe6-ab39-ccdc54bc07c2",
+  "transitionId": "fc5b91ca-10c8-455b-a930-9991647cef69",
   "defectId": "H20-RUN-ORFAO-PROJECAO-STALE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "0f962a50829a9676f4947a7fd6cbf9235d15cf1e",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/convergenceFixpoint.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/convergenceFixpoint.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T20:53:43.590Z",
-      "finishedAt": "2026-10-22T20:53:50.671Z",
+      "startedAt": "2026-10-22T21:23:33.026Z",
+      "finishedAt": "2026-10-22T21:23:40.057Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log",
-      "outputSha256": "60e261abb3a7d6c886195eb0df6ab767ee6f9eedf067843f5bc9639021a3e5f6"
+      "outputSha256": "fb8d401334c724e6c5e70e330c33fabcf7b5eef8bbcdaf3b837420428854fc15"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T20:53:50.673Z",
-  "proofHash": "0dc40f04633e2b9811f1cfb81fc9e9c58193403484ba8a810b0b42a673b838a9"
+  "createdAt": "2026-10-22T21:23:40.059Z",
+  "proofHash": "11fdeddade1e9428f9b7e4c510e2a13c13f9bc3dd8469a1b8626d4d0fa804993"
 }

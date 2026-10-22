@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3b1494ca-2af0-462c-87d5-6f1f32b6df4c",
+  "transitionId": "66c27df3-09f7-40bf-a491-88288bf19cf3",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:40:42.374Z",
-      "finishedAt": "2026-10-22T18:40:48.642Z",
+      "startedAt": "2026-10-22T21:24:23.462Z",
+      "finishedAt": "2026-10-22T21:24:26.288Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
-      "outputSha256": "68df40d18160506f1a0d666791cbf4da442ff94b88007f6d285b7f56d45b930d"
+      "outputSha256": "2758738a94092cfe54e26b6002901d628b12c42654eff4082cd2958ce53f5cd7"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:40:48.643Z",
-  "proofHash": "20df2d73a90d1a9a4fe9cf9ab6b4394a4815f5d012f5ca8f7535eb6846914fc0"
+  "createdAt": "2026-10-22T21:24:26.290Z",
+  "proofHash": "3a2e290a27119ec6879308af454bce79d909a673e21fe278ac23f44d7eccb67b"
 }

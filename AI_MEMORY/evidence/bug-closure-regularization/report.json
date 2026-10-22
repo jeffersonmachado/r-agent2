@@ -1,32 +1,26 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T20:56:16.026Z",
+  "generatedAt": "2026-10-22T21:39:21.093Z",
   "authoritative": false,
   "resumo": {
-    "commit": "0f962a50829a9676f4947a7fd6cbf9235d15cf1e",
-    "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+    "commit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+    "fingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
     "total": 130,
     "porClasse": {
-      "AGUARDA_ASSINATURA_E_ANCORA": 73,
+      "AGUARDA_ASSINATURA_E_ANCORA": 77,
       "REQUER_DECISAO_HUMANA": 33,
-      "REQUER_AJUSTE_DE_MODELO": 7,
-      "AGUARDA_INSUMOS_HUMANOS": 16,
-      "AMBIENTE_INDISPONIVEL": 1
+      "AGUARDA_INSUMOS_HUMANOS": 20
     },
     "porSeveridade": {
       "AGUARDA_ASSINATURA_E_ANCORA:P3": 7,
-      "AGUARDA_ASSINATURA_E_ANCORA:P1": 50,
-      "AGUARDA_ASSINATURA_E_ANCORA:P2": 16,
+      "AGUARDA_ASSINATURA_E_ANCORA:P1": 53,
+      "AGUARDA_ASSINATURA_E_ANCORA:P2": 17,
       "REQUER_DECISAO_HUMANA:P1": 14,
       "REQUER_DECISAO_HUMANA:P2": 5,
       "REQUER_DECISAO_HUMANA:P0": 11,
-      "REQUER_AJUSTE_DE_MODELO:P1": 2,
-      "REQUER_AJUSTE_DE_MODELO:P0": 4,
-      "AGUARDA_INSUMOS_HUMANOS:P0": 16,
-      "AMBIENTE_INDISPONIVEL:P1": 1,
-      "REQUER_DECISAO_HUMANA:P3": 3,
-      "REQUER_AJUSTE_DE_MODELO:P2": 1
+      "AGUARDA_INSUMOS_HUMANOS:P0": 20,
+      "REQUER_DECISAO_HUMANA:P3": 3
     },
     "filaAlterada": false,
     "assinatura": "PENDENTE — este script não assina e não altera a fila"
@@ -53,9 +47,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Execucao da malha sem lineage destruia a evidencia governada (agregado em vermelho)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
@@ -271,9 +273,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Cadeia criptografica declarava valid=true sobre conteudo alterado e o agregado aprovava lendo o campo persistido",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/governanceChainAppearance.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
@@ -398,9 +408,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Produtores que carimbam o proprio lineage gravam runId + sourceFingerprint mas NAO sourceCommit: GO definitivo continua impossivel",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/producerLineageIdentity.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
@@ -424,9 +442,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Run governado nunca registrava o commit: identidade de release INCOMPLETA para sempre e GO definitivo impossivel",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/runIdentityCommit.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
@@ -677,9 +703,14 @@
       "severity": "P1",
       "estadoPersistido": "RESOLVED",
       "titulo": "FENCE_AVANCOU com antes=undefined: log JSON do produto confundido com handshake (selo V2 abortado)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -736,20 +767,28 @@
       "severity": "P1",
       "estadoPersistido": "VERIFIED",
       "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/integration/engineeringMissionFullE2E.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "L1-NPM-TEST-CI-VERMELHO",
       "severity": "P1",
       "estadoPersistido": "RESOLVED",
       "titulo": "CI do branch de desenvolvimento VERDE: L1 separado em D (desenvolvimento) e R (certificacao de release)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/qaMeshOperationPolicy.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-NPM-TEST-CI-VERMELHO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-NPM-TEST-CI-VERMELHO.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",
@@ -1538,9 +1577,14 @@
       "severity": "P2",
       "estadoPersistido": "RESOLVED",
       "titulo": "Suites e validadores regravam relatorios governados e invalidam a coerencia temporal do run",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/governedArtifactPreservation.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "draft": "governance/bug-closure/proofs-drafts/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "AUDITORIA-BRANCH-INVENTORY",

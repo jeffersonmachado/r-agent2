@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ae19278d-0464-4507-8e39-46b999acb7ad",
+  "transitionId": "a47cf281-122a-42b1-af24-62efb0d87cce",
   "defectId": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/ciGateL0Determinism.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:45.503Z",
-      "finishedAt": "2026-10-22T18:38:47.896Z",
+      "startedAt": "2026-10-22T21:22:04.954Z",
+      "finishedAt": "2026-10-22T21:22:10.655Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
-      "outputSha256": "cf1c26bb713fdd999ed38c76f49cb0fdf8b329c8f5e1cedb564f698188e8fc66"
+      "outputSha256": "40a7b2667b0f2a3b8e11ea6f11d75dcd0fd13fa0dace381503cad4fb7bc9f5f8"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:47.896Z",
-  "proofHash": "49e8856d187c88eca529cd71524f38b65fbba1f9663e383c8d90d54d34fb8b65"
+  "createdAt": "2026-10-22T21:22:10.656Z",
+  "proofHash": "bf9bdb4a4135ae22ef7a5df961176486182af9c74b49e3b684dd7c1a5dfc4b7f"
 }

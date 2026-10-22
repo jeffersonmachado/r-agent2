@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "df7097ae-c726-4140-8a01-bb4280b3164f",
+  "transitionId": "78b6210f-b398-4c67-8dfb-bb36da4053f2",
   "defectId": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/canonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/canonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:44.458Z",
-      "finishedAt": "2026-10-22T18:30:50.743Z",
+      "startedAt": "2026-10-22T21:13:28.506Z",
+      "finishedAt": "2026-10-22T21:13:36.432Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
-      "outputSha256": "4fcb5929b8569feb5589267737268fedd4660dff00c796d71d7e08d46b221ae8"
+      "outputSha256": "eb9cee459fd5ea8b29361232a20c4eceeecd8d5abb25d644d8753c2db79c4dbe"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:50.744Z",
-  "proofHash": "a9e3f4fe45438957747bbbee5539fabf11a6423e6d0137a364393bb898e3b12f"
+  "createdAt": "2026-10-22T21:13:36.433Z",
+  "proofHash": "8f56f2b635a92d800530d970ce3132a592b3548bdf579b4ca14e79aa659b4324"
 }

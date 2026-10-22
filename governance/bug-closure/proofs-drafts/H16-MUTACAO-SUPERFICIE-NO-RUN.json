@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "05bb20b4-cc32-4dd3-ae38-107f87bd1f6b",
+  "transitionId": "6128f29d-d1eb-4118-8301-79ec60301b95",
   "defectId": "H16-MUTACAO-SUPERFICIE-NO-RUN",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/allValidatorsRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:39:46.404Z",
-      "finishedAt": "2026-10-22T18:39:53.942Z",
+      "startedAt": "2026-10-22T21:23:17.211Z",
+      "finishedAt": "2026-10-22T21:23:27.553Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
-      "outputSha256": "d0c3abb6dc37ed4e416f1b0ea0e89178ad3ae614ea6111a3d211d62cd27da887"
+      "outputSha256": "414fb19944f21aa6e07a879a44916844f9b3302f65a7bd80b67e7853789c4e8a"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:39:53.943Z",
-  "proofHash": "d0cea096d21a488ec1a3f47e2552215e9ee3287fc9ccf278f521d46f0ca29a94"
+  "createdAt": "2026-10-22T21:23:27.555Z",
+  "proofHash": "16c1d2b5eeda3d470718d14b4e554c7e728459f50346cfe46703f7a83ae0d662"
 }

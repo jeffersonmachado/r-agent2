@@ -226,4 +226,83 @@ function applyTransition(entrada = {}) {
   return { ok: true, code: null, reasons: [], evento: evento.evento };
 }
 
-module.exports = { applyTransition, CODIGOS, STATUS_CANONICO, ESTADOS_FECHADOS };
+/**
+ * Atestação de re-verificação: para item que JÁ está em VERIFIED/RESOLVED e só carece de prova.
+ * Não muda o estado da fila (não há transição a fazer), grava a prova e o evento `ATTESTATION`
+ * no livro. Todos os requisitos de prova continuam valendo — inclusive assinatura ancorada.
+ *
+ * @param {object} entrada { rootDir, queuePath, defectId, proof, actor, currentCommit, currentFingerprint, ancoragem, dryRun, agora }
+ */
+function applyAttestation(entrada = {}) {
+  const rootDir = entrada.rootDir || process.cwd();
+  const queuePath = entrada.queuePath || path.join(rootDir, 'AI_MEMORY', 'hardening-queue.json');
+  const livroPath = entrada.livroPath || null; // null ⇒ REL_PADRAO do livro
+  const prova = entrada.proof;
+  if (!prova) return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['PROVA_DE_FECHAMENTO_AUSENTE'] };
+
+  const atual = JSON.parse(fs.readFileSync(queuePath, 'utf8'));
+  const item = atual.items.find((i) => i && i.id === entrada.defectId);
+  if (!item) return { ok: false, code: CODIGOS.DEFEITO_AUSENTE, reasons: [String(entrada.defectId)] };
+
+  const estado = String(item.state || '').toUpperCase();
+  if (!['VERIFIED', 'RESOLVED'].includes(estado)) {
+    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['ATESTACAO_SO_EM_ESTADO_DE_FECHAMENTO'] };
+  }
+  if (prova.policyDecision && prova.policyDecision.decision !== 'REVERIFY_EXISTING_CLOSURE') {
+    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['DECISAO_DE_POLITICA_INCOMPATIVEL'] };
+  }
+  if (!UUID_RE.test(String(prova.transitionId || ''))) {
+    return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: ['TRANSITION_ID_INVALIDO'] };
+  }
+
+  const veredito = verificarProvaDeFechamento(prova, {
+    defeito: { id: item.id, severity: item.severity, state: estado },
+    currentCommit: entrada.currentCommit,
+    currentFingerprint: entrada.currentFingerprint,
+    rootDir,
+    autoridades: entrada.autoridades,
+    ancoragem: entrada.ancoragem,
+    livro: entrada.livro === undefined ? null : entrada.livro,
+    agora: entrada.agora,
+    existeArquivo: (rel) => fs.existsSync(path.join(rootDir, rel)),
+  });
+  if (!veredito.ok) return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: veredito.reasons };
+
+  if (entrada.dryRun) return { ok: true, code: null, reasons: [], evento: null };
+
+  const evento = anexarEvento({
+    rootDir,
+    rel: livroPath,
+    transitionId: prova.transitionId,
+    defectId: item.id,
+    from: estado,
+    to: estado, // atestação não transiciona
+    kind: 'ATTESTATION',
+    actorId: (entrada.actor && entrada.actor.id) || 'desconhecido',
+    proofHash: hashDoPayload(prova),
+    evaluatedCommit: entrada.currentCommit || null,
+    at: new Date(entrada.agora || Date.now()).toISOString(),
+  });
+  if (!evento.ok) return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: evento.problemas || [evento.code] };
+
+  const dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
+  if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)) {
+    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+  }
+  fs.mkdirSync(dirProvas, { recursive: true });
+  const nomeProva = `${prova.transitionId}.json`;
+  fs.writeFileSync(path.resolve(dirProvas, nomeProva), `${JSON.stringify(prova, null, 2)}\n`, 'utf8');
+
+  // A fila NÃO muda de estado: só registra a prova que faltava.
+  item.closureProof = path.join(path.relative(rootDir, dirProvas), nomeProva);
+  item.attestationId = prova.transitionId;
+  item.attestedAt = new Date(entrada.agora || Date.now()).toISOString();
+  atual.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);
+  const tmp = `${queuePath}.tmp`;
+  fs.writeFileSync(tmp, `${JSON.stringify(atual, null, 2)}\n`, 'utf8');
+  fs.renameSync(tmp, queuePath);
+  return { ok: true, code: null, reasons: [], evento: evento.evento };
+}
+
+module.exports = {
+  applyAttestation, applyTransition, CODIGOS, STATUS_CANONICO, ESTADOS_FECHADOS };

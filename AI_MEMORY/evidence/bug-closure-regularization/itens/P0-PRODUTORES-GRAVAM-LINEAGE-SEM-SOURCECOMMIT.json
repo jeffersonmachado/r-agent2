@@ -3,7 +3,15 @@
   "severity": "P0",
   "estadoPersistido": "RESOLVED",
   "titulo": "Produtores que carimbam o proprio lineage gravam runId + sourceFingerprint mas NAO sourceCommit: GO definitivo continua impossivel",
-  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/producerLineageIdentity.test.js",
-  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.json",
+  "camposParaAssinar": 18
 }

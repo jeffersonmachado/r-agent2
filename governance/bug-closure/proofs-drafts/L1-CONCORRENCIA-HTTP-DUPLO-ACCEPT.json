@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4b921d88-8a19-4d75-bd3b-d5f60fa8533b",
+  "transitionId": "4515e37b-d846-4fb6-be63-de7d5e0997ea",
   "defectId": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:11.293Z",
-      "finishedAt": "2026-10-22T18:30:14.772Z",
+      "startedAt": "2026-10-22T21:12:41.094Z",
+      "finishedAt": "2026-10-22T21:12:49.595Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
-      "outputSha256": "1873601fb71b46b529be02097d694dc6c7d9a8d69c24781374f43b65f6c0589d"
+      "outputSha256": "c971d9b33118344a7471a79377dd2c21d17d329bbd1afcfc210f30be5ca3e4cd"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:14.773Z",
-  "proofHash": "e9254575ac8673fd9db4ff0ea0d905983969e062f4b35fc7b77054ffcdc88606"
+  "createdAt": "2026-10-22T21:12:49.597Z",
+  "proofHash": "7757bef9084289c65da426997ab6d12fad2857dca3d5ccc993160735a6458a5d"
 }

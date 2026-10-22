@@ -236,8 +236,21 @@ function validarEstrutura(prova, ctx) {
     reasons.push(CODIGOS.REBAIXAMENTO_DE_SEVERIDADE);
   }
 
-  if (!ESTADOS_ALVO.includes(String(prova.toState))) reasons.push(CODIGOS.TRANSICAO_INVALIDA);
-  const transicao = validarTransicao({
+  const decisaoPoliticaProva = prova.policyDecision && prova.policyDecision.decision;
+  const ehAtestacao = decisaoPoliticaProva === 'REVERIFY_EXISTING_CLOSURE';
+
+  if (ehAtestacao) {
+    // Atestação: estado não muda, e só faz sentido sobre um estado de fechamento.
+    const ESTADOS_ATESTAVEIS = [ESTADOS.VERIFIED, ESTADOS.RESOLVED];
+    if (String(prova.fromState).toUpperCase() !== String(prova.toState).toUpperCase()
+      || !ESTADOS_ATESTAVEIS.includes(String(prova.toState).toUpperCase())) {
+      reasons.push(CODIGOS.TRANSICAO_INVALIDA);
+      detalhe.atestacao = 'fromState e toState têm de ser iguais e em VERIFIED/RESOLVED';
+    }
+  } else if (!ESTADOS_ALVO.includes(String(prova.toState))) {
+    reasons.push(CODIGOS.TRANSICAO_INVALIDA);
+  }
+  const transicao = ehAtestacao ? { ok: true, reasons: [] } : validarTransicao({
     de: prova.fromState,
     para: prova.toState,
     severity: sevAntes,
@@ -319,8 +332,18 @@ function validarEstrutura(prova, ctx) {
   if (!naoVazio(ator.id) || PADRAO_IDENTIDADE_AGENTE.test(String(ator.id))) reasons.push(CODIGOS.ATOR_INVALIDO);
 
   // Decisão de política declarada e coerente.
-  if (!prova.policyDecision || prova.policyDecision.decision !== 'CLOSE_VERIFIED') reasons.push(CODIGOS.POLITICA_RECUSA);
-
+  //
+  // `REVERIFY_EXISTING_CLOSURE` (atestação de re-verificação) existe para um caso específico:
+  // o item JÁ está em estado de fechamento (VERIFIED/RESOLVED) e o que falta é a prova — não há
+  // transição a executar. Sem isso, esses itens eram irrecuperáveis: a máquina de estados não
+  // tem transição de fechamento a partir de RESOLVED, e o `fromState` tem de ser o persistido.
+  // A atestação NÃO cria fechamento novo: ela substancia uma declaração que já existe, e exige
+  // todos os outros requisitos (teste executado, artefato, fingerprint, ancestralidade,
+  // assinatura ancorada e evento no livro).
+  const decisaoPolitica = decisaoPoliticaProva;
+  if (!prova.policyDecision || !['CLOSE_VERIFIED', 'REVERIFY_EXISTING_CLOSURE'].includes(decisaoPolitica)) {
+    reasons.push(CODIGOS.POLITICA_RECUSA);
+  }
   // Hashes dos artefatos conferidos contra os bytes em disco.
   for (const item of Array.isArray(prova.artifactHashes) ? prova.artifactHashes : []) {
     if (!item || !naoVazio(item.path) || !sha64(item.sha256)) { reasons.push(CODIGOS.EVIDENCIA_ADULTERADA); continue; }

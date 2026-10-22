@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "03713061-89f7-4de7-906f-d84e13f065bf",
+  "transitionId": "b74bbf6f-712c-4a69-8b6a-ee0397f75d05",
   "defectId": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/pbx/pbxCdrHealthSigpipe.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/pbx/pbxCdrHealthSigpipe.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:13.130Z",
-      "finishedAt": "2026-10-22T18:38:20.750Z",
+      "startedAt": "2026-10-22T21:21:29.141Z",
+      "finishedAt": "2026-10-22T21:21:37.062Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
-      "outputSha256": "84aa4db39743a824b8b9f3338a380bc206c391dde15f2308555f832fe13374c4"
+      "outputSha256": "478c5d647e7e79150b2c3c3f90526b24d4c7c377192c0785eae825abf18c14b8"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:20.751Z",
-  "proofHash": "91e5a408c795fd7032bc975188ff715ae41d8690acfd1f942b45bf301bca6924"
+  "createdAt": "2026-10-22T21:21:37.063Z",
+  "proofHash": "ef22888219287bef45643ec449b2b895b666238f18f54aff8287a89c913117d3"
 }

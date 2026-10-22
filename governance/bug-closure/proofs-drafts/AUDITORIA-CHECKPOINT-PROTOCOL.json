@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "d054f124-243e-44f4-9a40-f2330f178430",
+  "transitionId": "1a1a7d33-60be-4c76-86d5-8e87f95dc4cf",
   "defectId": "AUDITORIA-CHECKPOINT-PROTOCOL",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/audit/checkpointTool.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/checkpointTool.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:42:00.412Z",
-      "finishedAt": "2026-10-22T18:42:08.010Z",
+      "startedAt": "2026-10-22T21:25:20.939Z",
+      "finishedAt": "2026-10-22T21:25:27.902Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-CHECKPOINT-PROTOCOL.log",
-      "outputSha256": "677a902c60f3a4fec1ea1e737d92510762149838fe7de300552eeeb8ff75fd82"
+      "outputSha256": "65e4fdd857d215d65ce0e649f3a5edc5c8b74879881d7bd06a2f66819b6c8b7f"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:42:08.011Z",
-  "proofHash": "5e2ad891d42db8ccec295108e4c6c375b6a3e3a47105b9f8c111cb42a454dbf6"
+  "createdAt": "2026-10-22T21:25:27.903Z",
+  "proofHash": "1e95558ccd9700f23a21710f4ce7ed6c2e7439c6c3b0f6cd0c16762400e3d2fb"
 }

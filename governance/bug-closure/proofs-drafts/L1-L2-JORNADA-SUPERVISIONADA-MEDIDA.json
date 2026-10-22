@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "6b8e75b0-c2a2-4ee3-a059-faa3ccaf2a38",
+  "defectId": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
+  "requiredTests": [
+    "tests/integration/engineeringMissionFullE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionFullE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionFullE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T21:33:52.841Z",
+      "finishedAt": "2026-10-22T21:35:02.024Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
+      "outputSha256": "6ee18df00e1515ddfa62df6db9ee995231e205a95101eefd420d9a4173332ec8"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionFullE2E.test.js",
+      "sha256": "5412fcb5d91a730baffddd416cb76eed6a98a0cd94cec44329aa1e81e7f0bb5e"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T21:35:02.026Z",
+  "proofHash": "b6eb026b8e29f61cd195ed6ffe6e1099d75d94dd5d58b73a8da3813731118fa2"
+}

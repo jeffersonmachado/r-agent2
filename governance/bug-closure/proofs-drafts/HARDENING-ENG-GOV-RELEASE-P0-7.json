@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "08a16892-a1e5-4bbc-9e19-df5d06d23df7",
+  "transitionId": "905161e4-eb01-4060-97a4-72760eb318fc",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-7",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/branchProtectionApplyPayload.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/branchProtectionApplyPayload.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:30:09.529Z",
-      "finishedAt": "2026-10-22T18:30:11.288Z",
+      "startedAt": "2026-10-22T21:12:35.810Z",
+      "finishedAt": "2026-10-22T21:12:41.090Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-7.log",
-      "outputSha256": "f315dd9d347dff624a33cf76ec0ddd66b88d8c857acf31f28eba90014fd17927"
+      "outputSha256": "4b6ab70de49f60ebea5c4087235170270a8060958fe16ff443ef2bc5effc1925"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:30:11.289Z",
-  "proofHash": "9a15624da98489d41b2aebffc4000dcbc5ba59a9ed75584ab0bc2fe409714e29"
+  "createdAt": "2026-10-22T21:12:41.091Z",
+  "proofHash": "6b862597e6dc613bef0834df91e5cd322d226ccd19bf87f4deb7749bef7fb7a3"
 }

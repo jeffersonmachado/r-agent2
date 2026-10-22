@@ -1,22 +1,20 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T18:31:09.091Z",
+  "generatedAt": "2026-10-22T21:14:12.629Z",
   "authoritative": false,
   "resumo": {
-    "commit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-    "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+    "commit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+    "fingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
     "total": 31,
     "porClasse": {
       "REQUER_DECISAO_HUMANA": 11,
-      "REQUER_AJUSTE_DE_MODELO": 4,
-      "AGUARDA_INSUMOS_HUMANOS": 15,
+      "AGUARDA_INSUMOS_HUMANOS": 19,
       "AMBIENTE_INDISPONIVEL": 1
     },
     "porSeveridade": {
       "REQUER_DECISAO_HUMANA:P0": 11,
-      "REQUER_AJUSTE_DE_MODELO:P0": 4,
-      "AGUARDA_INSUMOS_HUMANOS:P0": 15,
+      "AGUARDA_INSUMOS_HUMANOS:P0": 19,
       "AMBIENTE_INDISPONIVEL:P0": 1
     },
     "filaAlterada": false,
@@ -44,9 +42,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Execucao da malha sem lineage destruia a evidencia governada (agregado em vermelho)",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
@@ -262,9 +268,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Cadeia criptografica declarava valid=true sobre conteudo alterado e o agregado aprovava lendo o campo persistido",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/governanceChainAppearance.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
@@ -383,9 +397,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Produtores que carimbam o proprio lineage gravam runId + sourceFingerprint mas NAO sourceCommit: GO definitivo continua impossivel",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/producerLineageIdentity.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
@@ -409,9 +431,17 @@
       "severity": "P0",
       "estadoPersistido": "RESOLVED",
       "titulo": "Run governado nunca registrava o commit: identidade de release INCOMPLETA para sempre e GO definitivo impossivel",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/runIdentityCommit.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.json",
+      "camposParaAssinar": 18
     }
   ]
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e7462f2f-4a58-440c-866e-067d41908fcb",
+  "transitionId": "87741346-d32c-4a6d-813b-e40a16885efa",
   "defectId": "H10-VEREDITO-GATE-SEGURANCA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/securityGateState.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/securityGateState.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:35:29.952Z",
-      "finishedAt": "2026-10-22T18:35:38.380Z",
+      "startedAt": "2026-10-22T21:18:58.205Z",
+      "finishedAt": "2026-10-22T21:19:06.842Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H10-VEREDITO-GATE-SEGURANCA.log",
-      "outputSha256": "9ad99e630dbc83eb120a2aad70a5a883c752e5aa9d4704716d86d151ae0e0f83"
+      "outputSha256": "77c9480ddf07bc65731005d56b0de26729e62fe9e475de414973ee163ec2a031"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:35:38.381Z",
-  "proofHash": "67344bdbb77408b84ea5e2b30a21d8bbd75e78919ba1301173787bd24f73e30e"
+  "createdAt": "2026-10-22T21:19:06.843Z",
+  "proofHash": "97af303407f4c107fbebcfeb8155c06860ba83bfc4293898d1169454af19c52a"
 }

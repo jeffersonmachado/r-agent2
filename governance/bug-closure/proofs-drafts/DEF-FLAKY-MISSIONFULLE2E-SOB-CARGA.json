@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f7ad4455-e18b-4581-b961-0e8fe6c5c062",
+  "transitionId": "5cb367d4-43b6-44e5-811f-a082df962b1c",
   "defectId": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/effectiveAggregateChain.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/effectiveAggregateChain.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:31:17.121Z",
-      "finishedAt": "2026-10-22T18:31:19.390Z",
+      "startedAt": "2026-10-22T21:14:33.836Z",
+      "finishedAt": "2026-10-22T21:14:37.852Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
-      "outputSha256": "136cb41e0f48e88672cd302f28038671a7710b75daab49609ff7b69b3edc8a8e"
+      "outputSha256": "609ddfa0975b5963b4bad3b008e1ca2d53b95a4010d5ed001c3a20dfa2735641"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:31:19.391Z",
-  "proofHash": "2e348936f048735835e1f92226374ab2257f5760f26d0576b1e9577a63097da5"
+  "createdAt": "2026-10-22T21:14:37.854Z",
+  "proofHash": "a1aec1b89996dae16a5d94f129ac208b316bb0fe241c010b5908c563317eff48"
 }

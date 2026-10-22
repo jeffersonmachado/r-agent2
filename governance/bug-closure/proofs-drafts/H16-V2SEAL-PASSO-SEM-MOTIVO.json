@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3321c8a3-8b02-4567-8e61-37d0c769384a",
+  "transitionId": "4b9f4f18-36a7-4a22-837c-42935213ba8d",
   "defectId": "H16-V2SEAL-PASSO-SEM-MOTIVO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/v2SealStepDiagnostics.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/v2SealStepDiagnostics.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:36:10.700Z",
-      "finishedAt": "2026-10-22T18:36:14.902Z",
+      "startedAt": "2026-10-22T21:19:33.573Z",
+      "finishedAt": "2026-10-22T21:19:36.491Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
-      "outputSha256": "0929ebbeb4750cf060b7ef6ddc05c7eb82390c570ae00cf636fe3a794da90721"
+      "outputSha256": "f2186b1ca274bb105d673560b8140b238b8d1a1d7783195360346aa52f387519"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:36:14.902Z",
-  "proofHash": "29aaff00feb111bc44585c034edb58b788f3de8d80b53966a690f189c2cb9415"
+  "createdAt": "2026-10-22T21:19:36.493Z",
+  "proofHash": "9060577e367ddf50526d2b483aa12d87bd43f219416ec45a84032908fa1f5d00"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "54a0221c-b70c-4ed7-9568-8cc83d4824a5",
+  "transitionId": "908998d5-3e75-4d73-8074-449bc89f2703",
   "defectId": "P1-PATCH-SYMLINK-ESCAPE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/engineeringRouterPatchSymlinkEscape.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:55.767Z",
-      "finishedAt": "2026-10-22T18:38:59.337Z",
+      "startedAt": "2026-10-22T21:22:22.287Z",
+      "finishedAt": "2026-10-22T21:22:25.272Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-PATCH-SYMLINK-ESCAPE.log",
-      "outputSha256": "9e11b2b975d9606a585e570762a7f6cb755abad3d102cee0cdd35777dd6ce7c6"
+      "outputSha256": "6105ada104d6a85ff8bac90dc0553faec9c6dcb8bb27c2b9bc2adad1ac8a5ec0"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:59.337Z",
-  "proofHash": "8983c5a50ac04e5e56b370543e8f6eaf05888e0d7d8b0e8b915f255498373946"
+  "createdAt": "2026-10-22T21:22:25.274Z",
+  "proofHash": "c7402225acf540a3a97850f214d2252b5c812d3fcd0e93fbad50c6124d496420"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "321dc95e-adf5-4e75-87de-183f7fb10266",
+  "transitionId": "abac8b28-f90b-4706-bbe9-7886e6ba91a2",
   "defectId": "P1-EVIDENCIA-COMMIT-ORFAO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/hardeningQueueCommitExists.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:35.032Z",
-      "finishedAt": "2026-10-22T18:38:38.024Z",
+      "startedAt": "2026-10-22T21:21:51.481Z",
+      "finishedAt": "2026-10-22T21:21:54.647Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-EVIDENCIA-COMMIT-ORFAO.log",
-      "outputSha256": "6678c2da8069db21f299bdbf5c2cad1753c3152d6210daa39bd8b52fd3fd6ceb"
+      "outputSha256": "97240014f081a1ccb49c886d4768daacac565cdb0e753b888290db6a2000d366"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:38.025Z",
-  "proofHash": "a9dae04356d74dfffc3fa9684720524c226471cad77201dc560c279db37e27b5"
+  "createdAt": "2026-10-22T21:21:54.648Z",
+  "proofHash": "71781facda9e9d07fa07e979816d7ea0ad1fb2080b890fab806ec593115b6bb3"
 }

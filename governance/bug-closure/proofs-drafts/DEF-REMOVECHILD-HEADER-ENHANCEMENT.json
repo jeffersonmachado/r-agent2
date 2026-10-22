@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f5ac5087-9b1a-4839-af0e-1eae1c8c5d17",
+  "transitionId": "e918ddbb-aa25-4c92-b683-c94e2d46d7bd",
   "defectId": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "0f962a50829a9676f4947a7fd6cbf9235d15cf1e",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "frontend/src/__tests__/supportHeaderEnhancement.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npm --prefix frontend run test -- src/__tests__/supportHeaderEnhancement.test.js",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T20:54:20.014Z",
-      "finishedAt": "2026-10-22T20:54:24.208Z",
+      "startedAt": "2026-10-22T21:14:41.473Z",
+      "finishedAt": "2026-10-22T21:14:46.430Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log",
-      "outputSha256": "335dda0efe50ffa8823d8ba70f059248c3f1e039209299323d2c4dafe3a13065"
+      "outputSha256": "a36d6f276a81e2145027c992cc20e840c61ca861b00481cad1b683a8b99b351e"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T20:54:24.212Z",
-  "proofHash": "6fab80e8a83ffd8d2fc22e449a57ae30aae2efadb5fbb5a3a0e7c3176a33dbd9"
+  "createdAt": "2026-10-22T21:14:46.431Z",
+  "proofHash": "d6b5ffcba87111786d3bf80ea79e3488012a99c03b88aa0d2ea21f4dc65573c0"
 }

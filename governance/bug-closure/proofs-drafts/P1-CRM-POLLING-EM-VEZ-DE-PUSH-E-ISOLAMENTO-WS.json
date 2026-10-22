@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7e7a863a-902f-4415-9414-b7d3f82fb471",
+  "transitionId": "3e83753f-1a8e-43ac-80cd-db5d5ef38da1",
   "defectId": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/realtimeTenantIsolation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/realtimeTenantIsolation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:38:24.443Z",
-      "finishedAt": "2026-10-22T18:38:31.407Z",
+      "startedAt": "2026-10-22T21:21:41.024Z",
+      "finishedAt": "2026-10-22T21:21:47.294Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.log",
-      "outputSha256": "597956027b7ea4c8ea686b06dedb7b7b68ff01e4145b5c53c3b3ec292615b455"
+      "outputSha256": "33ed6084255e4923ddeabd6af5ccc39649c70afbd8261b231d2b745d018ca050"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:38:31.409Z",
-  "proofHash": "c638a82cafdb3b93772cfe2d897bbbc5ed536e5354de5521c19a65c3d6d4a876"
+  "createdAt": "2026-10-22T21:21:47.296Z",
+  "proofHash": "5288bba4b3c43751873abe1321befc170805ef362ae43d9f4931cfe6f7ed8658"
 }

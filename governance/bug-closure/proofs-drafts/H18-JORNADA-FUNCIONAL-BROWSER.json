@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "984ff545-5744-406e-8341-745b8c3eea14",
+  "transitionId": "56fc705b-f40c-4dad-9cb2-b66f1ea78511",
   "defectId": "H18-JORNADA-FUNCIONAL-BROWSER",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/journeyDetectors.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/journeyDetectors.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:42:16.351Z",
-      "finishedAt": "2026-10-22T18:42:19.291Z",
+      "startedAt": "2026-10-22T21:25:38.271Z",
+      "finishedAt": "2026-10-22T21:25:42.127Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H18-JORNADA-FUNCIONAL-BROWSER.log",
-      "outputSha256": "35da5f17efb4873611b7bcf5e6f374a8b28035260b7ff795871d53bc2757a17c"
+      "outputSha256": "94fb6f6219b6db79ffb7ac27e6c5b8ab945511b52143dde36f0ab0c0ff6c735c"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:42:19.292Z",
-  "proofHash": "e013cf06a02f11b719b6681f677b3cccbe8415059ab841e5e49c82f6e2998283"
+  "createdAt": "2026-10-22T21:25:42.127Z",
+  "proofHash": "b4ed539551babbf0cdaad2bb9819f5eb87a580d11d13d25949d73d879135a72b"
 }

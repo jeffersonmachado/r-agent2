@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "278ed7f8-422b-4c34-8e60-e7b5c193230b",
+  "transitionId": "e5f1a184-5e2e-4f32-afa1-dac8453ba0a5",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/aggregateVerdict.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/aggregateVerdict.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:36:14.903Z",
-      "finishedAt": "2026-10-22T18:36:18.075Z",
+      "startedAt": "2026-10-22T21:19:36.497Z",
+      "finishedAt": "2026-10-22T21:19:39.285Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
-      "outputSha256": "ca6d489dfddacbe9c062306f6fb35539c05ee152ab4c3349654dcfcdd1b01b82"
+      "outputSha256": "656d64009aef0ba67f41026d5bfab147bf81dc00f4851b81f7c371a4825172ee"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:36:18.076Z",
-  "proofHash": "0e21cabbe845baa1801bc780c121c7799e36a4991e9cff70875ecf0f3551fa13"
+  "createdAt": "2026-10-22T21:19:39.286Z",
+  "proofHash": "8331631138bc9879cfb8a81a2694b7796d9067b97aaa29e864e9d7451dc23957"
 }

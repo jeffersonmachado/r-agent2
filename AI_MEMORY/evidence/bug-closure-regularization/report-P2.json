@@ -1,23 +1,21 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T18:41:51.336Z",
+  "generatedAt": "2026-10-22T21:25:16.049Z",
   "authoritative": false,
   "resumo": {
-    "commit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-    "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+    "commit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+    "fingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
     "total": 22,
     "porClasse": {
-      "AGUARDA_ASSINATURA_E_ANCORA": 13,
-      "AMBIENTE_INDISPONIVEL": 3,
+      "AGUARDA_ASSINATURA_E_ANCORA": 16,
       "REQUER_DECISAO_HUMANA": 5,
-      "REQUER_AJUSTE_DE_MODELO": 1
+      "AMBIENTE_INDISPONIVEL": 1
     },
     "porSeveridade": {
-      "AGUARDA_ASSINATURA_E_ANCORA:P2": 13,
-      "AMBIENTE_INDISPONIVEL:P2": 3,
+      "AGUARDA_ASSINATURA_E_ANCORA:P2": 16,
       "REQUER_DECISAO_HUMANA:P2": 5,
-      "REQUER_AJUSTE_DE_MODELO:P2": 1
+      "AMBIENTE_INDISPONIVEL:P2": 1
     },
     "filaAlterada": false,
     "assinatura": "PENDENTE — este script não assina e não altera a fila"
@@ -70,11 +68,14 @@
       "severity": "P2",
       "estadoPersistido": "VERIFIED",
       "titulo": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/engine/enginePurityPorts.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log",
+      "draft": "governance/bug-closure/proofs-drafts/DIV-PUREZA-ENGINE.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "H12-RAG-REPARO",
@@ -123,11 +124,14 @@
       "severity": "P2",
       "estadoPersistido": "VERIFIED",
       "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/convergenceFixpoint.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log",
+      "draft": "governance/bug-closure/proofs-drafts/H20-RUN-ORFAO-PROJECAO-STALE.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
@@ -283,9 +287,14 @@
       "severity": "P2",
       "estadoPersistido": "RESOLVED",
       "titulo": "Suites e validadores regravam relatorios governados e invalidam a coerencia temporal do run",
-      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/governedArtifactPreservation.test.js",
-      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "draft": "governance/bug-closure/proofs-drafts/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.json",
+      "camposParaAssinar": 18
     }
   ]
 }

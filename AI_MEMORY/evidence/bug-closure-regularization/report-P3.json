@@ -1,20 +1,20 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T18:42:27.054Z",
+  "generatedAt": "2026-10-22T21:25:50.891Z",
   "authoritative": false,
   "resumo": {
-    "commit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-    "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+    "commit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+    "fingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
     "total": 10,
     "porClasse": {
       "AGUARDA_ASSINATURA_E_ANCORA": 6,
-      "AMBIENTE_INDISPONIVEL": 1,
+      "TESTE_FALHOU_AGORA": 1,
       "REQUER_DECISAO_HUMANA": 3
     },
     "porSeveridade": {
       "AGUARDA_ASSINATURA_E_ANCORA:P3": 6,
-      "AMBIENTE_INDISPONIVEL:P3": 1,
+      "TESTE_FALHOU_AGORA:P3": 1,
       "REQUER_DECISAO_HUMANA:P3": 3
     },
     "filaAlterada": false,
@@ -110,10 +110,10 @@
       "severity": "P3",
       "estadoPersistido": "VERIFIED",
       "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "TESTE_FALHOU_AGORA",
       "teste": "tests/unit/coverage/impactRunner.test.js",
       "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
       "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
     },
     {

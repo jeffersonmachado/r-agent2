@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "abc0e19a-3f6c-4ac7-926c-2e298bdd067c",
+  "transitionId": "4f57cace-d8cd-409d-8b3e-ca71b8128c5e",
   "defectId": "MISSAO-B9-CI-GITHUB-ACTIONS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/devBranchCiGate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:37:00.007Z",
-      "finishedAt": "2026-10-22T18:37:04.990Z",
+      "startedAt": "2026-10-22T21:20:15.093Z",
+      "finishedAt": "2026-10-22T21:20:19.159Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B9-CI-GITHUB-ACTIONS.log",
-      "outputSha256": "ff8711b0b73bfade772cab9e6c64cc6099f67331beab0402f5d47c8ad5af07e5"
+      "outputSha256": "8bb726bed5c25731ed21e98c32d1077ad4273dc2298e367a59d76087da37ce88"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:37:04.991Z",
-  "proofHash": "623c47482ddea5ed08689984e6fefbca01a35bf407f1d326a056f8ea9426d7a2"
+  "createdAt": "2026-10-22T21:20:19.160Z",
+  "proofHash": "4ddddf91c1cd1071798ab4a91872d8aea3366c13944cb463d93c7eace172d80b"
 }

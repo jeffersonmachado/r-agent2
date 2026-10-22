@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "79b52f36-b9c2-443e-b506-2a804a24c901",
+  "transitionId": "c53cf693-0688-407d-93b6-f9aa325bbc35",
   "defectId": "H11-ESCOPO-DIFERIDO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/engineeringRouter/taskContractScope.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouter/taskContractScope.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:35:38.384Z",
-      "finishedAt": "2026-10-22T18:35:43.134Z",
+      "startedAt": "2026-10-22T21:19:06.847Z",
+      "finishedAt": "2026-10-22T21:19:14.685Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H11-ESCOPO-DIFERIDO.log",
-      "outputSha256": "43d3c451a0655c0e0c63b7860d2046fe798fd0a2864fcbdd94737868067a2354"
+      "outputSha256": "6eba171719c76c36b3c218df261c224cb3a0dba281938a91a0424c63fe63826a"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:35:43.135Z",
-  "proofHash": "0687c0f6308d9fe6ff15a8ecdfe30c7b429a1845126ba4a25bba39455ae409e1"
+  "createdAt": "2026-10-22T21:19:14.687Z",
+  "proofHash": "bbe6ca5cad9686fb20b85dbb9a9055de6a734c115532b7f10c743a60cdee2686"
 }

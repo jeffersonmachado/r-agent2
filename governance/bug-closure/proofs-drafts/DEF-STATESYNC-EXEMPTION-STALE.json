@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "b39f5dbe-c422-49f0-b097-fd7f062dffdf",
+  "transitionId": "411b631b-4d0a-442d-866a-b652ac3de0ba",
   "defectId": "DEF-STATESYNC-EXEMPTION-STALE",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/frontend/stateSyncExemptionExactness.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/frontend/stateSyncExemptionExactness.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:42:12.848Z",
-      "finishedAt": "2026-10-22T18:42:16.349Z",
+      "startedAt": "2026-10-22T21:25:33.095Z",
+      "finishedAt": "2026-10-22T21:25:38.270Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-STATESYNC-EXEMPTION-STALE.log",
-      "outputSha256": "3b60c5e69f0fe14a76684327d9ffeaacd0b93c29da690969953da2198acbd192"
+      "outputSha256": "4f2e7a6223a42ff963e5c808a26e36f2ef562866da74e592003e24196f99b3e3"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:42:16.349Z",
-  "proofHash": "9ae9d7398d7279c7b0584b67a8b2ff16843836666aa2c7219dec8ed1de1810d8"
+  "createdAt": "2026-10-22T21:25:38.270Z",
+  "proofHash": "1c5cfcaad67aeceda60c30d64e1ae7d30d5cc9e2ce2fbe0006a06384b59d0e98"
 }

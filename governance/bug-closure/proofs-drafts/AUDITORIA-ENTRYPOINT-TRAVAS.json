@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5666dd66-ad49-42cd-88ce-d1c091a0c79d",
+  "transitionId": "560881d4-686d-40db-aeea-a84c5e6b141b",
   "defectId": "AUDITORIA-ENTRYPOINT-TRAVAS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:31:09.709Z",
-      "finishedAt": "2026-10-22T18:31:11.646Z",
+      "startedAt": "2026-10-22T21:14:15.573Z",
+      "finishedAt": "2026-10-22T21:14:22.249Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-ENTRYPOINT-TRAVAS.log",
-      "outputSha256": "7dd5e4fde8a025332c72a194e97648aaed8171dc2576c6ebff04bc651492edcf"
+      "outputSha256": "913f84ff579cd00b9041ca9326e7f91dc83262798ef7d4a3ca0b2a2b623b7459"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:31:11.649Z",
-  "proofHash": "4807adcf9b4f5439821a2c9030d3e4baf61c61fc39d4ba6a25fa7a8628bdd35c"
+  "createdAt": "2026-10-22T21:14:22.253Z",
+  "proofHash": "90d44d87c8d704d0af65b62f395d4303c1c734bcb8b6f629f2abd590c1f23064"
 }

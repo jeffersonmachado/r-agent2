@@ -162,12 +162,17 @@ function executarTeste(defectId, relTeste) {
  * única transição de fechamento válida a partir de VERIFIED na máquina canônica.
  */
 function montarDraft(item, provaDeFechamento, execucao, ctx) {
+  const estado = String(item.state || '').toUpperCase();
+  // Item que JÁ está em estado de fechamento não tem transição a executar: a prova é uma
+  // ATESTAÇÃO de re-verificação (`fromState === toState`), que substancia a declaração
+  // existente em vez de criar um fechamento novo.
+  const ehAtestacao = ['VERIFIED', 'RESOLVED'].includes(estado);
   return construirProvaDeFechamento({
     defectId: item.id,
     severityBefore: item.severity,
     severityAfter: item.severity,
-    fromState: String(item.state || '').toUpperCase(),
-    toState: 'RESOLVED',
+    fromState: estado,
+    toState: ehAtestacao ? estado : 'RESOLVED',
     evaluatedCommit: ctx.commit,
     codeFingerprint: ctx.fingerprint,
     requiredTests: [execucao.testPath],
@@ -182,7 +187,7 @@ function montarDraft(item, provaDeFechamento, execucao, ctx) {
     // O verificador exige a decisão canônica `CLOSE_VERIFIED`; a NATUREZA do fechamento
     // (regularização de histórico) vai em campo próprio, sem afrouxar o contrato.
     policyDecision: {
-      decision: 'CLOSE_VERIFIED',
+      decision: ehAtestacao ? 'REVERIFY_EXISTING_CLOSURE' : 'CLOSE_VERIFIED',
       policyId: 'BUG_CLOSURE_FIRST',
       policyVersion: '1.0.0',
       natureza: 'REGULARIZACAO_DE_FECHAMENTO_HISTORICO',
@@ -226,14 +231,14 @@ function main() {
     }
 
     const estadoPersistido = String(item.state || '').toUpperCase();
-    if (['RESOLVED', 'RISK_ACCEPTED'].includes(estadoPersistido)) {
-      // RESOLVED/RISK_ACCEPTED não têm transição de fechamento válida a partir de si mesmos.
-      // Regularizar exige decisão de modelo (livro histórico VERIFIED→RESOLVED), não hack.
+    // RISK_ACCEPTED fecha por ACEITE assinado (mecanismo próprio), não por prova de correção:
+    // atestar "consertado" um risco aceito seria contradizer o próprio registro.
+    if (estadoPersistido === 'RISK_ACCEPTED') {
       resultados.push({
         ...base,
-        classe: 'REQUER_AJUSTE_DE_MODELO',
+        classe: 'REQUER_DECISAO_HUMANA',
         teste,
-        motivo: `estado persistido ${estadoPersistido} não tem transição canônica de fechamento a partir de si`,
+        motivo: 'RISK_ACCEPTED fecha por aceite assinado; prova de correção não se aplica',
       });
       continue;
     }
@@ -255,7 +260,7 @@ function main() {
       // chave de criptografia do ambiente ou sem rede, o teste não mede o que promete.
       // Falha por artefato gerado ausente (`reports/*.json` são produzidos pelos próprios
       // validadores) também não é veredito sobre o defeito: é ambiente de execução incompleto.
-      const semAmbiente = /SKIPPED_SEM_|ECONNREFUSED|ENOTFOUND|connect ECONNREFUSED|Erro ao descriptografar|Unsupported state or unable to authenticate|ENOENT: no such file or directory.*reports\/|GRAPH_ABSENT|not found/i.test(saida);
+      const semAmbiente = /SKIPPED_SEM_|ECONNREFUSED|ENOTFOUND|connect ECONNREFUSED|Erro ao descriptografar|Unsupported state or unable to authenticate|ENOENT: no such file or directory.*reports\/|GRAPH_ABSENT|GRAPH_STALE|not found/i.test(saida);
       resultados.push({
         ...base,
         classe: semAmbiente ? 'AMBIENTE_INDISPONIVEL' : 'TESTE_FALHOU_AGORA',

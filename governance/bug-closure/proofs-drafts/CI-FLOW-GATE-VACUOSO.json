@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "eab49eae-2365-47bd-9d12-d6466bfff7ee",
+  "transitionId": "63ead08d-53a2-4743-b5d5-7d058fa2ea02",
   "defectId": "CI-FLOW-GATE-VACUOSO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
-  "toState": "RESOLVED",
-  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
-  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "2e2c48d7d0c141daaea89e169a445617bff95018",
+  "codeFingerprint": "bb8aab1a6c68483e5ac738a5cdb5c4f39e2e492af78c5636e4684651431e6a2c",
   "requiredTests": [
     "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T18:39:25.671Z",
-      "finishedAt": "2026-10-22T18:39:28.508Z",
+      "startedAt": "2026-10-22T21:22:51.070Z",
+      "finishedAt": "2026-10-22T21:22:56.660Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-FLOW-GATE-VACUOSO.log",
-      "outputSha256": "0abd891939bcd7b8b588e43d478e2c78d33c90d186dec93fdb4769bfc1e0faa3"
+      "outputSha256": "c388a5ad0ffb971198ad4cf50c5acac8c6bf1688f164fd2717927163dbbb5239"
     }
   ],
   "negativeEvidence": [],
@@ -37,12 +37,12 @@
   },
   "humanAuthorization": null,
   "policyDecision": {
-    "decision": "CLOSE_VERIFIED",
+    "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T18:39:28.509Z",
-  "proofHash": "e308d90d350e78dcb1ecec3d9e28e96ab1fccbffb67676aa8cdb6b256d65a7b6"
+  "createdAt": "2026-10-22T21:22:56.661Z",
+  "proofHash": "488daa895332d98148c4266423ff1744056170320b4e77d73a72670fa131373f"
 }
