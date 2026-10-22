@@ -51,6 +51,13 @@ const READINESS_DOC = path.join(ROOT, 'ENGINEER_SUPERVISED_READINESS.md');
 const DECISIONS_CONFIG = path.join(ROOT, 'config', 'readiness-decisions.json');
 
 const riskAcceptance = require('../../governance/risk-acceptance');
+const { carregarInventario } = require('../../governance/bug-closure/defect-registry');
+const { verificarLivro } = require('../../governance/bug-closure/transition-ledger');
+const { verificarCompletudeDoInventario, verificarConsistenciaDeRoteamento } = require('../../governance/bug-closure/authority-consistency');
+const { classificarDefeitos } = require('../../governance/bug-closure/eligibility');
+const {
+  ancoraDoInventario, digestDoInventario, chaveDeAprovacaoAncorada, fingerprintDaChavePem,
+} = require('../../governance/bug-closure/trusted-authorities');
 const { DECISOES, CATEGORIAS_NAO_DISPENSAVEIS } = require('../../governance/risk-acceptance/policy');
 const signature = require('../../governance/risk-acceptance/signature');
 
@@ -88,16 +95,74 @@ function checkFila() {
     return;
   }
   const items = Array.isArray(fila.items) ? fila.items : [];
-  const abertos = items.filter((i) => ABERTOS.has(String(i.status || '').toLowerCase()));
+  // ALERT 5 (revisor independente, P1): este check lia o `status` CRU. `state:"OPEN"` com
+  // `status:"done"` passava por todos os checks novos. A autoridade do estado é o inventário
+  // MIGRADO (mesma função que certifica), e divergência state×status é fato reportado.
+  // Achado do revisor (2ª passada, P1): sem `queuePath`, em NODE_ENV=test o módulo lia o
+  // fixture apontado por BUG_CLOSURE_INVENTORY_PATH — as duas metades do gate olhavam
+  // inventários diferentes e um P0 real ficava invisível. O gate lê SEMPRE o oficial.
+  const inventario = carregarInventario({ queuePath: QUEUE_PATH });
+  const migrados = inventario.defeitos || [];
+  const porId = new Map(migrados.map((d) => [d.id, d]));
+  // 3ª passada do revisor, P1: `aberto` sozinho escondia `RISK_ACCEPTED` sem aceite válido
+  // (o item não conta como aberto, mas também não pode certificar). A fila é classificada
+  // pela MESMA régua que certifica: `classificarDefeitos` + validação do aceite.
+  const classificacao = classificarDefeitos(migrados);
+  const abertos = migrados.filter((d) => d.aberto === true
+    || (classificacao.riscoAceitoIneficaz || []).some((x) => x.id === d.id)
+    || (String(d.state || '').toUpperCase() === 'RISK_ACCEPTED'
+      && !(classificacao.riscoAceito || []).some((x) => x.id === d.id)));
   const impedidos = items.filter((i) => IMPEDIDOS.has(String(i.status || '').toLowerCase()));
+
+  // Divergência ESTRUTURAL entre o `state` DECLARADO e o `status` legado (independente de
+  // prova). É exatamente o caso `state:"OPEN"` + `status:"done"`, que antes escapava de todos
+  // os checks. Itens sem `state` (legado puro) não podem divergir: o status É o estado.
+  const STATUS_FECHADOS = new Set(['done', 'verified', 'prevention_active', 'resolved', 'closed']);
+  const ESTADOS_DECLARADOS_FECHADOS = new Set(['VERIFIED', 'RESOLVED', 'RISK_ACCEPTED']);
+  const divergentes = items
+    .map((i) => ({ item: i, canonico: porId.get(i && i.id) }))
+    .filter(({ item }) => {
+      if (!item || !item.state) return false;
+      const declarado = String(item.state).toUpperCase();
+      const status = String(item.status || '').toLowerCase();
+      // `RISK_ACCEPTED` + `blocked_external` é a projeção legada correta de risco aceito.
+      if (declarado === 'RISK_ACCEPTED' && status === 'blocked_external') return false;
+      const declaradoFechado = ESTADOS_DECLARADOS_FECHADOS.has(declarado);
+      return declaradoFechado !== STATUS_FECHADOS.has(status);
+    });
 
   registrar('QUEUE_READABLE', { ok: items.length > 0, detalhe: `${items.length} item(ns)` });
   registrar('QUEUE_NO_OPEN_DEFECT', {
     ok: abertos.length === 0,
     detalhe: abertos.length === 0
-      ? 'nenhum item aberto (pending/in_progress/failed/fixed_unverified)'
-      : `abertos: ${abertos.map((i) => `${i.id}(${i.status})`).join(', ')}`,
-    dados: { abertos: abertos.map((i) => i.id) },
+      ? 'nenhum defeito aberto no inventário canônico'
+      : `abertos: ${abertos.map((d) => `${d.id}(${d.stateEfetivo || d.state})`).join(', ')}`,
+    dados: { abertos: abertos.map((d) => d.id) },
+  });
+  // Pertença do inventário: o gate de readiness também deriva veredito formal, então exige a
+  // MESMA âncora externa usada na certificação.
+  {
+    const ancora = ancoraDoInventario();
+    const digest = digestDoInventario(migrados);
+    let okAncora = false;
+    let detalheAncora;
+    if (!ancora) {
+      detalheAncora = 'sem RAP_CLOSURE_INVENTORY_SHA256: pertença dos itens não autenticada';
+    } else if (ancora !== digest) {
+      detalheAncora = `digest ${digest.slice(0, 12)}… difere da âncora externa ${ancora.slice(0, 12)}…`;
+    } else {
+      okAncora = true;
+      detalheAncora = `digest do inventário casa com a âncora externa (${digest.slice(0, 12)}…)`;
+    }
+    registrar('QUEUE_INVENTORY_ANCHORED', { ok: okAncora, detalhe: detalheAncora, dados: { digest } });
+  }
+
+  registrar('QUEUE_STATE_STATUS_COHERENT', {
+    ok: divergentes.length === 0,
+    detalhe: divergentes.length === 0
+      ? 'state canônico projetado sem divergência em todos os itens'
+      : `divergentes: ${divergentes.map(({ item, canonico }) => `${item.id}(declarado=${item.state || '-'} canonico=${canonico.state})`).join(', ')}`,
+    dados: { divergentes: divergentes.map(({ item }) => item.id) },
   });
   // Impedimento declarado deixa de ser FAIL cego: cada item precisa ser CLASSIFICADO
   // (resolvido com probe, aceito por humano assinado, ou roteado para a decisão dona).
@@ -147,6 +212,50 @@ function checkBloqueiosClassificados(sha) {
       BLOCKED: bloqueados.map((i) => i.riskId),
     },
   });
+
+  // ── CAMADA B (missão P0 2026-10-22): inventário x livro x roteamento ──────
+  // Um defeito P0/P1 que DECLARA fechamento sem prova válida continua bloqueando
+  // certificação. Aqui isso é medido e reportado: não há caminho em que editar o JSON
+  // (ou apagar a linha, ou remover a rota) produza "pronto".
+  let inventario = null;
+  try {
+    inventario = carregarInventario({ queuePath: QUEUE_PATH });
+  } catch (erro) {
+    registrar('QUEUE_EVIDENCE_READABLE', { ok: false, detalhe: `inventário ilegível: ${erro.message}` });
+  }
+  if (inventario) {
+    const livro = verificarLivro(ROOT);
+    const naoProvados = inventario.defeitos.filter((d) => d.fechamentoNaoProvado === true);
+    registrar('QUEUE_CLOSURE_EVIDENCE', {
+      ok: naoProvados.length === 0,
+      bloqueante: true,
+      detalhe: naoProvados.length === 0
+        ? 'todo fechamento declarado tem prova válida (SHA, fingerprint, testes, livro e assinatura)'
+        : `${naoProvados.length} fechamento(s) declarado(s) SEM prova válida: ` +
+          `${naoProvados.slice(0, 8).map((d) => `${d.id}(${d.provaDeFechamento && d.provaDeFechamento.code})`).join(', ')}` +
+          (naoProvados.length > 8 ? ' …' : ''),
+      dados: { total: naoProvados.length, exemplo: naoProvados.slice(0, 20).map((d) => d.id) },
+    });
+
+    const completude = verificarCompletudeDoInventario({ defeitos: inventario.defeitos, livro });
+    registrar('QUEUE_INVENTORY_COMPLETE', {
+      ok: completude.ok,
+      bloqueante: true,
+      detalhe: completude.ok ? 'nenhum defeito do livro desapareceu do inventário' : completude.violations.map((v) => `${v.code}:${v.defectId}`).join(', '),
+    });
+
+    let roteamentoAtual = null;
+    try { roteamentoAtual = lerJson(riskAcceptance.ROUTING_REL); } catch (_) { roteamentoAtual = null; }
+    const consistencia = verificarConsistenciaDeRoteamento({ defeitos: inventario.defeitos, roteamento: roteamentoAtual });
+    registrar('ROUTING_CONSISTENT_WITH_AUTHORITY', {
+      ok: consistencia.ok,
+      bloqueante: true,
+      detalhe: consistencia.ok
+        ? 'roteamento coerente com a autoridade canônica (inventário + prova)'
+        : consistencia.violations.map((v) => `${v.code}:${v.defectId}`).join(', '),
+      dados: { violacoes: consistencia.violations.length },
+    });
+  }
 
   // Categoria não dispensável não pode ter sido "resolvida" por roteamento: reprova explícito.
   const roteamento = (() => {
@@ -319,7 +428,24 @@ function checkAprovacaoHumana(sha) {
     autoridades,
   });
 
-  const ok = okBasico && validacao.ok;
+  // 3ª passada do revisor, P1: validar a assinatura contra `authorities.json` (editável pelo
+  // mesmo ator) não prova autoria humana. A chave de aprovação precisa estar ANCORADA.
+  const autoridadeAprovadora = autoridades.find(
+    (a) => a && a.identity === String(doc.approverIdentity || doc.approver || ''),
+  );
+  const ancoragem = autoridadeAprovadora && autoridadeAprovadora.publicKeyPem
+    ? chaveDeAprovacaoAncorada(autoridadeAprovadora.publicKeyPem)
+    : { ok: false, motivo: 'AUTORIDADE_NAO_REGISTRADA', fingerprint: null };
+  registrar('HUMAN_APPROVAL_ANCHORED', {
+    ok: ancoragem.ok === true,
+    detalhe: ancoragem.ok
+      ? `chave de aprovação ancorada (${String(ancoragem.fingerprint).slice(0, 12)}…)`
+      : `chave de aprovação NÃO ancorada: ${ancoragem.motivo} — RAP_APPROVAL_TRUST_ANCHOR_SHA256 `
+        + 'e pin versionado são obrigatórios para que a aprovação valha como humana',
+    dados: { fingerprint: fingerprintDaChavePem(autoridadeAprovadora && autoridadeAprovadora.publicKeyPem) },
+  });
+
+  const ok = okBasico && validacao.ok && ancoragem.ok === true;
   registrar('HUMAN_APPROVAL_VALID', {
     ok,
     detalhe: ok

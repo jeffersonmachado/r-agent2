@@ -61,6 +61,31 @@ function main(argv = process.argv.slice(2)) {
     return 2;
   }
 
+  // Achado do revisor (2ª passada, P1): `--queue` era um bypass de UM argumento — apontar o
+  // gate para `{"items":[]}` concedia SELO_FINAL. O caminho explícito segue as MESMAS regras
+  // do override de ambiente: contexto de teste + fixture versionado em `tests/fixtures/`.
+  if (queuePath) {
+    const raizRepo = path.resolve(__dirname, '..', '..');
+    const rel = path.relative(raizRepo, path.resolve(queuePath)).split(path.sep).join('/');
+    const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+    // Fixture tem de ser VERSIONADO: `NODE_ENV=test --queue tests/fixtures/x.json` com arquivo
+    // não commitado não é prova de nada (observação P2 da 3ª passada).
+    let versionado = false;
+    if (ambienteDeTeste && rel.startsWith('tests/fixtures/')) {
+      try {
+        require('child_process').execFileSync('git', ['ls-files', '--error-unmatch', rel], { cwd: raizRepo, stdio: 'ignore' });
+        versionado = true;
+      } catch (_) { versionado = false; }
+    }
+    if (!ambienteDeTeste || !rel.startsWith('tests/fixtures/') || !versionado) {
+      process.stderr.write(
+        `[eligibility] RECUSADO (QUEUE_OVERRIDE_RECUSADO): --queue só é aceito em contexto de teste `
+        + `apontando para fixture VERSIONADO em tests/fixtures/ (recebido: ${rel || queuePath})\n`,
+      );
+      return 2;
+    }
+  }
+
   let inventario;
   try {
     inventario = carregarInventario(queuePath ? { queuePath } : {});
