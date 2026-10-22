@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Promocao verificada obrigatoria para GREEN",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Inventário auditável das 2497 branches locais (2468 do loop autônomo)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/audit/branchInventory.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

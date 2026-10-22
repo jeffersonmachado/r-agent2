@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Auditoria externa via git: ponto de entrada unico derivado",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ebfc7a93-d4b2-4d3a-9a58-40b472e861a7",
+  "defectId": "P0-FILAS-ISOLAMENTO-TENANT",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "requiredTests": [
+    "tests/unit/queueTenantIsolation.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/queueTenantIsolation.test.js",
+      "command": "npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T18:30:50.744Z",
+      "finishedAt": "2026-10-22T18:30:53.019Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log",
+      "outputSha256": "33ea937150f8d98db1a42fb92516243449b5c04b6a5883ae47aaca0a3a546a77"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/queueTenantIsolation.test.js",
+      "sha256": "1401472ab8ecb8d8856751e890489b93737eb8bc25b71c3f1ba951b18d2abecb"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T18:30:53.020Z",
+  "proofHash": "2e8827f19cba43653cfa68d62a1e5d63a79963a57c71d09ee48a769f139df745"
+}

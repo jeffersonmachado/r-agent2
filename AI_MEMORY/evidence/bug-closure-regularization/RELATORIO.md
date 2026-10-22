@@ -1,6 +1,6 @@
 # Regularização de fechamentos sem prova
 
-Gerado em 2026-10-22T18:09:51.903Z · commit `63c0d22f999bcef798a174e41b5097eaae80f266` · fingerprint `df5eb2e6fb6f…`
+Gerado em 2026-10-22T18:42:27.092Z · commit `ebd1bbf36f9d8de856c8b7e805624b3447958238` · fingerprint `420ad327c76e…`
 
 > **Não autoritativo.** Este relatório descreve trabalho de re-verificação. A fila oficial não foi
 > alterada por este script, e nenhuma prova foi assinada: a assinatura é do dono da chave ancorada.
@@ -9,11 +9,11 @@ Gerado em 2026-10-22T18:09:51.903Z · commit `63c0d22f999bcef798a174e41b5097eaae
 
 | Classe | Itens |
 |---|---|
-| REQUER_DECISAO_HUMANA | 51 |
+| REQUER_DECISAO_HUMANA | 33 |
 | REQUER_AJUSTE_DE_MODELO | 7 |
-| AGUARDA_INSUMOS_HUMANOS | 11 |
-| AMBIENTE_INDISPONIVEL | 7 |
-| AGUARDA_ASSINATURA_E_ANCORA | 54 |
+| AGUARDA_INSUMOS_HUMANOS | 15 |
+| AMBIENTE_INDISPONIVEL | 8 |
+| AGUARDA_ASSINATURA_E_ANCORA | 67 |
 
 ## Itens
 
@@ -28,8 +28,8 @@ Gerado em 2026-10-22T18:09:51.903Z · commit `63c0d22f999bcef798a174e41b5097eaae
 | HARDENING-ENG-GOV-RELEASE-P0-5 | P0 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
 | HARDENING-ENG-GOV-RELEASE-P0-6 | P0 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
 | HARDENING-ENG-GOV-RELEASE-P0-7 | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/branchProtectionApplyPayload.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-7.log |
-| L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| L1-WORKTREE-MUTILACAO-RECORRENTE | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/integration/engineeringRouterConcurrentRunHttp.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log |
+| L1-WORKTREE-MUTILACAO-RECORRENTE | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/worktreeIntegrity.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-WORKTREE-MUTILACAO-RECORRENTE.log |
 | MISSAO-B1-CADEIA-CRIPTOGRAFICA | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | P0-1 | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/securityIntel/approvalAuthority.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-1.log |
 | P0-2 | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/evidenceManifestHashBaseline.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-2.log |
@@ -42,8 +42,8 @@ Gerado em 2026-10-22T18:09:51.903Z · commit `63c0d22f999bcef798a174e41b5097eaae
 | P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS | P0 | VERIFIED | AMBIENTE_INDISPONIVEL | tests/integration/crmTenantIsolation.postgres.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log |
 | P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/canonicalReleaseDecision.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log |
-| P0-FILAS-ISOLAMENTO-TENANT | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P0-FILAS-ROLLBACK-DESTRUTIVO | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| P0-FILAS-ISOLAMENTO-TENANT | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/queueTenantIsolation.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log |
+| P0-FILAS-ROLLBACK-DESTRUTIVO | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/queueCreatePersistBeforeResponse.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ROLLBACK-DESTRUTIVO.log |
 | P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/phaseStepContract.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log |
 | P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/devBranchGatePhaseContract.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log |
 | P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE | P0 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
@@ -52,7 +52,7 @@ Gerado em 2026-10-22T18:09:51.903Z · commit `63c0d22f999bcef798a174e41b5097eaae
 | P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL | P0 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/governance/runIdentityCommit.test.js | — |
 | AUDITORIA-ENTRYPOINT-TRAVAS | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/auditEntrypointArtifact.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-ENTRYPOINT-TRAVAS.log |
 | AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/auditEntrypointArtifact.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log |
-| CI-ADAPTADOR-IA-NAO-VERSIONADO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| CI-ADAPTADOR-IA-NAO-VERSIONADO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-ADAPTADOR-IA-NAO-VERSIONADO.log |
 | CI-CHECKOUT-LIMPO-HARNESS | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/effectiveAggregateChain.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log |
@@ -75,7 +75,7 @@ Gerado em 2026-10-22T18:09:51.903Z · commit `63c0d22f999bcef798a174e41b5097eaae
 | HARDENING-ENG-GOV-RELEASE-P1-11 | P1 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
 | L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRouterContextSourceFailClosed.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log |
 | L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/releaseStateService.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.log |
-| L1-L2-JORNADA-SUPERVISIONADA-MEDIDA | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| L1-L2-JORNADA-SUPERVISIONADA-MEDIDA | P1 | VERIFIED | AMBIENTE_INDISPONIVEL | tests/integration/engineeringMissionFullE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log |
 | L1-NPM-TEST-CI-VERMELHO | P1 | RESOLVED | REQUER_AJUSTE_DE_MODELO | tests/unit/qaMeshOperationPolicy.test.js | — |
 | L1-PUBLISH-TAG-EXIGE-VERIFICACAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/devGovernanceModels.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.log |
 | L1-RUNNER-CONTAINER-MODULE-NOT-FOUND | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRunnerDockerfileClosure.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log |
@@ -97,28 +97,28 @@ Gerado em 2026-10-22T18:09:51.903Z · commit `63c0d22f999bcef798a174e41b5097eaae
 | P1-7 | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/securityIntel/triageRemediation.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-7.log |
 | P1-8 | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/qa/systemInventoryIntegrity.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-8.log |
 | P1-9 | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/evidenceContract.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-9.log |
-| P1-BRANCHES-MISSAO-RESIDUO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| P1-BRANCHES-MISSAO-RESIDUO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/pruneEngineeringMissionBranches.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-BRANCHES-MISSAO-RESIDUO.log |
 | P1-CDR-HEALTH-SIGPIPE-PIPEFAIL | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/pbx/pbxCdrHealthSigpipe.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log |
 | P1-CI-SEM-INTEGRACAO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | P1-CONCORRENCIA-EXIGE-POSTGRES | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/crmOpportunityUpdate.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log |
 | P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/realtimeTenantIsolation.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.log |
 | P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/deliveryVerification.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log |
-| P1-EVIDENCIA-COMMIT-ORFAO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P1-GATE-PRONTIDAO-EXECUTAVEL | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P1-GUARDA-SKIP-ASSERTIONS-COMMITS | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P1-L0-INDETERMINISTA-POR-CONTENCAO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P1-LINEAGE-RUN-MAIS-RECENTE | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P1-PATCH-SYMLINK-ESCAPE | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| P1-EVIDENCIA-COMMIT-ORFAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/hardeningQueueCommitExists.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-EVIDENCIA-COMMIT-ORFAO.log |
+| P1-GATE-PRONTIDAO-EXECUTAVEL | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/engineerSupervisedReadinessGate.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-GATE-PRONTIDAO-EXECUTAVEL.log |
+| P1-GUARDA-SKIP-ASSERTIONS-COMMITS | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/worktreeIntegrity.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.log |
+| P1-L0-INDETERMINISTA-POR-CONTENCAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/ciGateL0Determinism.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-L0-INDETERMINISTA-POR-CONTENCAO.log |
+| P1-LINEAGE-RUN-MAIS-RECENTE | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/reportLineageExplicit.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-LINEAGE-RUN-MAIS-RECENTE.log |
+| P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionMergeConcurrency.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.log |
+| P1-PATCH-SYMLINK-ESCAPE | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRouterPatchSymlinkEscape.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-PATCH-SYMLINK-ESCAPE.log |
 | P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/projectionSyncOnCanonicalWrite.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log |
-| P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
-| P1-SANDBOX-PROBE-CACHE-NEGATIVO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringMission/missionGatesEvidence.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log |
+| P1-SANDBOX-PROBE-CACHE-NEGATIVO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRouterSandboxAvailabilityCache.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-SANDBOX-PROBE-CACHE-NEGATIVO.log |
 | P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST | P1 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
-| P1-UNIT-GATE-ACEITA-UNKNOWN | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| P1-UNIT-GATE-ACEITA-UNKNOWN | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringMission/missionGatesEvidence.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-UNIT-GATE-ACEITA-UNKNOWN.log |
 | AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log |
-| CI-FLOW-GATE-VACUOSO | P2 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
+| CI-FLOW-GATE-VACUOSO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/officialTestScriptsNoVacuousPass.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-FLOW-GATE-VACUOSO.log |
 | DEF-TIMEBOMB-EVOSYNC-JANELA30D | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/evoSyncIntegration.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log |
 | DIV-PUREZA-ENGINE | P2 | VERIFIED | AMBIENTE_INDISPONIVEL | tests/unit/engine/enginePurityPorts.test.js | AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log |
 | H12-RAG-REPARO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/ragIndexHealthPolicy.test.js | AI_MEMORY/evidence/bug-closure-regularization/H12-RAG-REPARO.log |

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Regra preventiva exige teste EXECUTADO e regras ativas passam a ser consultadas",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/engineeringMission/activePreventiveRules.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

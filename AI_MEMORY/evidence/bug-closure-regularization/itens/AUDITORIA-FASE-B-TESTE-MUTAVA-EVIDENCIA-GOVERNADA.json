@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Teste de unidade regravava artefato governado e derrubava a integridade temporal",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

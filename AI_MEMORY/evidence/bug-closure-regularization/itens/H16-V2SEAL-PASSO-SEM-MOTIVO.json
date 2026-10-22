@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Passo obrigatorio do selo V2 que falha passa a registrar o MOTIVO no relatorio",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/v2SealStepDiagnostics.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

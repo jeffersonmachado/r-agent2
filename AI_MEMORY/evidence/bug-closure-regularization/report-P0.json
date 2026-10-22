@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T17:52:47.828Z",
+  "generatedAt": "2026-10-22T18:31:09.091Z",
   "authoritative": false,
   "resumo": {
-    "commit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
-    "fingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+    "commit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+    "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
     "total": 31,
     "porClasse": {
-      "REQUER_DECISAO_HUMANA": 15,
+      "REQUER_DECISAO_HUMANA": 11,
       "REQUER_AJUSTE_DE_MODELO": 4,
-      "AGUARDA_INSUMOS_HUMANOS": 11,
+      "AGUARDA_INSUMOS_HUMANOS": 15,
       "AMBIENTE_INDISPONIVEL": 1
     },
     "porSeveridade": {
-      "REQUER_DECISAO_HUMANA:P0": 15,
+      "REQUER_DECISAO_HUMANA:P0": 11,
       "REQUER_AJUSTE_DE_MODELO:P0": 4,
-      "AGUARDA_INSUMOS_HUMANOS:P0": 11,
+      "AGUARDA_INSUMOS_HUMANOS:P0": 15,
       "AMBIENTE_INDISPONIVEL:P0": 1
     },
     "filaAlterada": false,
@@ -94,6 +94,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/branchProtectionApplyPayload.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -109,16 +110,34 @@
       "severity": "P0",
       "estadoPersistido": "VERIFIED",
       "titulo": "POST /engineering/tasks/:id/run aceitava duas execucoes concorrentes (202,202)",
-      "classe": "REQUER_DECISAO_HUMANA",
-      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "L1-WORKTREE-MUTILACAO-RECORRENTE",
       "severity": "P0",
       "estadoPersistido": "VERIFIED",
       "titulo": "Worktree mutilado 3x (testes removidos + guardas apagadas): prevencao executavel",
-      "classe": "REQUER_DECISAO_HUMANA",
-      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/worktreeIntegrity.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-WORKTREE-MUTILACAO-RECORRENTE.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
@@ -134,6 +153,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Identidade de aprovacao derivada do ator autenticado",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/securityIntel/approvalAuthority.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -150,6 +170,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Evidencia ausente nunca e PASS (imutabilidade do evidence manifest)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -166,6 +187,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Proveniencia do Security Gate consegue falhar (fail-closed)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -182,6 +204,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Waiver em duas etapas com segregacao de funcoes e escopo",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/securityIntel/waiverService.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -198,6 +221,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Suite E2E do Security Gate contra Postgres real",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/integration/securityWaiverApprovalE2E.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -214,6 +238,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Gate agregado executava validadores antes da decisao de identidade/autorizacao e certificava cadeia vazia",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/governanceEnforcementOrder.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -266,6 +291,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Falso GO: gate com status nao permitido (NOT_EXECUTED/UNKNOWN/SKIPPED/arbitrario) certificava",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/canonicalReleaseDecision.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -281,16 +307,34 @@
       "severity": "P0",
       "estadoPersistido": "VERIFIED",
       "titulo": "Exclusao forcada de fila fechava tickets de OUTRO tenant com o mesmo nome",
-      "classe": "REQUER_DECISAO_HUMANA",
-      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/queueTenantIsolation.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ISOLAMENTO-TENANT.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P0-FILAS-ROLLBACK-DESTRUTIVO",
       "severity": "P0",
       "estadoPersistido": "VERIFIED",
       "titulo": "Rollback de criacao de fila fechava tickets ativos (force=true) inclusive em fila preexistente",
-      "classe": "REQUER_DECISAO_HUMANA",
-      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ROLLBACK-DESTRUTIVO.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
@@ -298,6 +342,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Fase do gate era aprovada com apenas PARTE dos passos obrigatorios (fase D: 1 de 7 = PASS)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/phaseStepContract.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -314,6 +359,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Gate de desenvolvimento certificava com fases duplicadas, desconhecidas ou inexistentes (A,A,A,A = PASS)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/devBranchGatePhaseContract.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
@@ -347,6 +393,7 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Defeito P0 com RISK_ACCEPTED deixava de ser bloqueante e liberava selo/publicacao",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [

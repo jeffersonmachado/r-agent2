@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "52f455c0-d9f5-4c87-9cf3-5dcedb2b43cd",
+  "transitionId": "2079ff5c-febd-45fb-930e-eb79aa7692ad",
   "defectId": "H13-RUNNER-COMPLETO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "63c0d22f999bcef798a174e41b5097eaae80f266",
-  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
   "requiredTests": [
     "tests/unit/governance/allValidatorsRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T17:57:18.645Z",
-      "finishedAt": "2026-10-22T17:57:26.649Z",
+      "startedAt": "2026-10-22T18:35:43.137Z",
+      "finishedAt": "2026-10-22T18:35:56.319Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H13-RUNNER-COMPLETO.log",
-      "outputSha256": "2360ad2247ffb63232b910afef2f7381148ca72b5eb2d1d5f04b7691afbe1f1a"
+      "outputSha256": "ff42e1c5fd747357d31f7404e7be07f15bfdd6c44b788522e9301c456fe0cd12"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T17:57:26.650Z",
-  "proofHash": "b96f2484cb33ad2902e483d1aea5f3f59d314d574dda56880afd70cfa4c32fa6"
+  "createdAt": "2026-10-22T18:35:56.320Z",
+  "proofHash": "8343b1558d32f4a143f0883344b4daac2a9174ba4a139ab60fe5d04da6af43c4"
 }

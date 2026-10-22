@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Evidencia ausente nunca e PASS (imutabilidade do evidence manifest)",
   "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [

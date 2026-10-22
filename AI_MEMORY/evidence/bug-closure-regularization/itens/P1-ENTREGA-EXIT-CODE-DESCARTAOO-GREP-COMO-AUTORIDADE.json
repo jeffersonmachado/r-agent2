@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Verificacao de ENTREGA descartava o exit code e usava grep de texto positivo como autoridade",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/deliveryVerification.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

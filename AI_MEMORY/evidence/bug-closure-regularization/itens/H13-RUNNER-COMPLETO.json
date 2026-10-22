@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Agregado deixa de mascarar falhas: runner completo dos validadores",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/allValidatorsRunner.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

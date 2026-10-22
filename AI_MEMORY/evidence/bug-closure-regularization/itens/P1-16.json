@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Lotes do runner autoritativo nao se isolavam (conexoes e processos-filho vazavam)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

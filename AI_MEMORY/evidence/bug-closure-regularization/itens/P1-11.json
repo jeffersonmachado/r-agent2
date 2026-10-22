@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Destravar empacotamento e selagem (ciclo release:seal completo)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/v2SealOrchestration.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

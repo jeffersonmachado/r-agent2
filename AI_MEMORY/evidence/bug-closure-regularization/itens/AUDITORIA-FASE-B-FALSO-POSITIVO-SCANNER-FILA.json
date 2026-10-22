@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Inventario de persistencia registra escrita fantasma da fila oficial (falso positivo do scanner)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

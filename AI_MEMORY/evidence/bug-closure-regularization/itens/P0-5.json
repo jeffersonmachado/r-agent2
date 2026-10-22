@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Suite E2E do Security Gate contra Postgres real",
   "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/integration/securityWaiverApprovalE2E.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [

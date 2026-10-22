@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Preflight do selo checa o TTL da evidencia do Ask-AI (fail-fast em 4 s)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

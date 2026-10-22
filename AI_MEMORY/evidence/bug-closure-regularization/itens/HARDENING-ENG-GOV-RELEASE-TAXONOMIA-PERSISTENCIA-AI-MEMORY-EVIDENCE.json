@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "AI_MEMORY/evidence/ fora da taxonomia canônica de persistência JSON",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

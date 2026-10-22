@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/evidenceFreshness.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

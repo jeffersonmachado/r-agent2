@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

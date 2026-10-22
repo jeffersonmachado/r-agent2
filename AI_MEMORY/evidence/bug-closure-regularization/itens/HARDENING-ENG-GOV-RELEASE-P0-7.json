@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Protecao da branch main (gate executavel; bloqueio externo comprovado)",
   "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/branchProtectionApplyPayload.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [

@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
   "teste": "tests/unit/securityIntel/triageRemediation.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

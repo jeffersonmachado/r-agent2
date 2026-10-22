@@ -4,6 +4,7 @@
   "estadoPersistido": "VERIFIED",
   "titulo": "Malha grava artefato governado mesmo executando ZERO resultados (--scenario-id da wave nao casa)",
   "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js",
   "transicao": "VERIFIED → RESOLVED",
   "provasAusentes": [],

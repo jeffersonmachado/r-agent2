@@ -3,6 +3,15 @@
   "severity": "P0",
   "estadoPersistido": "VERIFIED",
   "titulo": "Exclusao forcada de fila fechava tickets de OUTRO tenant com o mesmo nome",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/queueTenantIsolation.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ISOLAMENTO-TENANT.json",
+  "camposParaAssinar": 18
 }

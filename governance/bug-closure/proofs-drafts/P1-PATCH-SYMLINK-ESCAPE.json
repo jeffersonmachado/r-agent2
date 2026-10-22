@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "54a0221c-b70c-4ed7-9568-8cc83d4824a5",
+  "defectId": "P1-PATCH-SYMLINK-ESCAPE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "requiredTests": [
+    "tests/unit/engineeringRouterPatchSymlinkEscape.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
+      "command": "npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T18:38:55.767Z",
+      "finishedAt": "2026-10-22T18:38:59.337Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-PATCH-SYMLINK-ESCAPE.log",
+      "outputSha256": "9e11b2b975d9606a585e570762a7f6cb755abad3d102cee0cdd35777dd6ce7c6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
+      "sha256": "23778ce5957db7a76ab3cf67a6fac15b79bbe69960871be46a078454caa61c91"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T18:38:59.337Z",
+  "proofHash": "8983c5a50ac04e5e56b370543e8f6eaf05888e0d7d8b0e8b915f255498373946"
+}

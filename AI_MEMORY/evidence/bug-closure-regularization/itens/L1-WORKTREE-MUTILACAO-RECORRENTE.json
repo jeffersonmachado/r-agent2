@@ -3,6 +3,15 @@
   "severity": "P0",
   "estadoPersistido": "VERIFIED",
   "titulo": "Worktree mutilado 3x (testes removidos + guardas apagadas): prevencao executavel",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/worktreeIntegrity.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
+  "draft": "governance/bug-closure/proofs-drafts/L1-WORKTREE-MUTILACAO-RECORRENTE.json",
+  "camposParaAssinar": 18
 }
