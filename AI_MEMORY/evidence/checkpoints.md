@@ -818,3 +818,42 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 1e105722bb68 — docs: prontidao medida do Engineering Router
+
+- **Quando**: 2026-10-22T00:21:36.415Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `dc629456e134c577ecad798c7f3a3983ede05e1d`
+- **id** (sha256 do conteúdo do checkpoint): `1e105722bb68a93ea876dd4e2bc179f575707f88be10a682f0e071dfc2f20688`
+
+**Problema corrigido:** A prontidao do router para receber missao nao estava documentada: dependia de runner dedicado, token compartilhado, imagem de sandbox e tenant com provider valido, e o sintoma de falha (fetch failed / NO_QUALIFIED_CODER) nao apontava a causa.
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/engineering-validation.md`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=0 --forceExit` | 0 | 17.3 s | 40e1f4dc2604 |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=0 --forceExit</code></summary>
+
+```
+    ✓ atribui SOMENTE falhas de obsolescência (nunca por conveniência) (717 ms)
+    ✓ superfície ESTAVEL não atribui nenhuma falha (805 ms)
+    ✓ o runner mede a superfície ANTES e DEPOIS e publica a atribuição no relatório (105 ms)
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        11.338 s
+Ran all test suites matching /tests\/unit\/governance\/allValidatorsRunner.test.js/i.
+[engineering-runner-jest 2026-10-22T00:21:57.986Z] runner ENCERROU: pid=4047467 code=0 signal=null
+[engineering-runner-jest 2026-10-22T00:21:58.000Z] apos o encerramento, /health na porta 8097: sem resposta
+[jest-global-teardown] Engineering Runner (pid 4047467) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---
