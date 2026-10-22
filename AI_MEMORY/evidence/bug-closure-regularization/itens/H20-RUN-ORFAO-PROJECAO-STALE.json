@@ -3,9 +3,12 @@
   "severity": "P2",
   "estadoPersistido": "VERIFIED",
   "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
-  "classe": "AMBIENTE_INDISPONIVEL",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
   "teste": "tests/unit/governance/convergenceFixpoint.test.js",
-  "exitCode": 1,
-  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-  "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log"
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log",
+  "draft": "governance/bug-closure/proofs-drafts/H20-RUN-ORFAO-PROJECAO-STALE.json",
+  "camposParaAssinar": 18
 }

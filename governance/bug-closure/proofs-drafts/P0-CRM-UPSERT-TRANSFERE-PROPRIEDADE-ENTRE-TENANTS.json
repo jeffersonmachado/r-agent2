@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "3aebdc91-c3c1-4238-9f2c-b6e3704debef",
+  "defectId": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "0f962a50829a9676f4947a7fd6cbf9235d15cf1e",
+  "codeFingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
+  "requiredTests": [
+    "tests/integration/crmTenantIsolation.postgres.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/crmTenantIsolation.postgres.test.js",
+      "command": "npx jest tests/integration/crmTenantIsolation.postgres.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T20:43:29.364Z",
+      "finishedAt": "2026-10-22T20:43:35.169Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
+      "outputSha256": "7058f8ece9eb9555950b1ba850bffe781b64bc715642645d27c182ffec113d12"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/crmTenantIsolation.postgres.test.js",
+      "sha256": "b45a7d71d8dbe1e12ee60218db9d589b0d65509c5e83d79c53c619b5468e918f"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T20:43:35.170Z",
+  "proofHash": "67d140719889a40c69265eae69501feb114748f3f8cc542eb12bb55285f87df0"
+}
