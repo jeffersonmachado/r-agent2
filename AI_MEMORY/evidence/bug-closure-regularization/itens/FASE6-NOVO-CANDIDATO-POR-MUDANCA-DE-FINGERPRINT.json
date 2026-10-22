@@ -1,0 +1,8 @@
+{
+  "id": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Fix da FASE 6 mudou o sourceFingerprint: falta gerar novo candidato e nova certificacao preservando o anterior como historico",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

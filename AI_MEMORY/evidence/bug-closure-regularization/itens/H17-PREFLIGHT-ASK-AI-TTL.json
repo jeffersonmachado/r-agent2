@@ -1,0 +1,13 @@
+{
+  "id": "H17-PREFLIGHT-ASK-AI-TTL",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Preflight do selo checa o TTL da evidencia do Ask-AI (fail-fast em 4 s)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H17-PREFLIGHT-ASK-AI-TTL.log",
+  "draft": "governance/bug-closure/proofs-drafts/H17-PREFLIGHT-ASK-AI-TTL.json",
+  "camposParaAssinar": 18
+}

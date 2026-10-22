@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
+  "severity": "P0",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Reuso de lote do runner autoritativo nao pode mascarar exit code divergente",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

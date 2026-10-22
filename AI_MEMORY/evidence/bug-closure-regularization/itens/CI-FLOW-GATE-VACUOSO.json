@@ -1,0 +1,8 @@
+{
+  "id": "CI-FLOW-GATE-VACUOSO",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "test:flow carregava --passWithNoTests: verde com ZERO testes executados",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

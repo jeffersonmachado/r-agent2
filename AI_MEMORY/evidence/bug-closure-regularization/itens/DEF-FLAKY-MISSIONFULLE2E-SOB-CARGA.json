@@ -1,0 +1,13 @@
+{
+  "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "engineeringMissionFullE2E flaky sob carga BLOQUEIA o agregado e a selagem",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/effectiveAggregateChain.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.json",
+  "camposParaAssinar": 18
+}

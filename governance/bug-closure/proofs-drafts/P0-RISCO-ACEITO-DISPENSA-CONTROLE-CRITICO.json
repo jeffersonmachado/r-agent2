@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5e1bd3ce-7f86-4505-a3b0-a875a8b7363e",
+  "transitionId": "15639717-9a20-4cbc-b945-84b067ba6c49",
   "defectId": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
   "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
-  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
   "requiredTests": [
     "tests/unit/governance/riskAcceptedCriticalControl.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/riskAcceptedCriticalControl.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T17:35:51.547Z",
-      "finishedAt": "2026-10-22T17:35:54.947Z",
+      "startedAt": "2026-10-22T17:52:44.383Z",
+      "finishedAt": "2026-10-22T17:52:47.825Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
-      "outputSha256": "3522ff134c98024184d6b67cbb705b1fc32df472906aade1f9ff5f35c14bb553"
+      "outputSha256": "5dfc2261a94fe38c33c487659ef2da862fc7124ae60c08cb490b735477e9d2f9"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T17:35:54.948Z",
-  "proofHash": "193fc310e5ef41eff71ba3a1686c0660c96361d0181bcc413a742dcffdc493b4"
+  "createdAt": "2026-10-22T17:52:47.827Z",
+  "proofHash": "c75e5bd65a438b5fb9ab19981381888c89971c8b684911c4e0a0a32838b74eea"
 }

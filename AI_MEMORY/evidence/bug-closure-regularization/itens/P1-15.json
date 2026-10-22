@@ -1,0 +1,13 @@
+{
+  "id": "P1-15",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/attestationOrder.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-15.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-15.json",
+  "camposParaAssinar": 18
+}

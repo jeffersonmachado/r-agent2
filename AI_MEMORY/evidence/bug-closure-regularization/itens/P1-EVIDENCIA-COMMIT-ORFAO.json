@@ -1,0 +1,8 @@
+{
+  "id": "P1-EVIDENCIA-COMMIT-ORFAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Fila oficial aceitava prova com commit inexistente (3 itens citavam hash reescrito)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

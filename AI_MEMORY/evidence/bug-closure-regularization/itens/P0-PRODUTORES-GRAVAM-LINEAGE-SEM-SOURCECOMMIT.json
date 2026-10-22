@@ -1,0 +1,9 @@
+{
+  "id": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
+  "severity": "P0",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Produtores que carimbam o proprio lineage gravam runId + sourceFingerprint mas NAO sourceCommit: GO definitivo continua impossivel",
+  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "teste": "tests/unit/governance/producerLineageIdentity.test.js",
+  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+}

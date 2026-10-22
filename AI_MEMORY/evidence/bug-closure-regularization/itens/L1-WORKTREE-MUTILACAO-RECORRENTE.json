@@ -1,0 +1,8 @@
+{
+  "id": "L1-WORKTREE-MUTILACAO-RECORRENTE",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Worktree mutilado 3x (testes removidos + guardas apagadas): prevencao executavel",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

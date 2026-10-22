@@ -1,0 +1,13 @@
+{
+  "id": "P1-8",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Inventario do sistema regenerado",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/qa/systemInventoryIntegrity.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-8.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-8.json",
+  "camposParaAssinar": 18
+}

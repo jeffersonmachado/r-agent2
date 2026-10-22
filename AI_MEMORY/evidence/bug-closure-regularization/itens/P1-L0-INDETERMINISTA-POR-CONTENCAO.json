@@ -1,0 +1,8 @@
+{
+  "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L0 do gate do branch variava de suite vermelha por contencao (11 workers)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

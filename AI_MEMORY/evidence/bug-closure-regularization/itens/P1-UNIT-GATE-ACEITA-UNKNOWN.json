@@ -1,0 +1,8 @@
+{
+  "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate unit era satisfeito por qualquer execucao verde (inclusive UNKNOWN/integracao)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

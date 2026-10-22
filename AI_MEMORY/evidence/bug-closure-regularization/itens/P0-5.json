@@ -1,0 +1,16 @@
+{
+  "id": "P0-5",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Suite E2E do Security Gate contra Postgres real",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "teste": "tests/integration/securityWaiverApprovalE2E.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-5.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-5.json",
+  "camposParaAssinar": 18
+}

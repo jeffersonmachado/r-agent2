@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Harness aceitava LOG JSON do produto como handshake do worker de lease (selo V2 abortado)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

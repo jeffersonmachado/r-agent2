@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "b7fba900-246c-41cb-b5b9-ec22f90a8624",
+  "transitionId": "cbe51084-8ea9-4d45-a668-af704a6ea1a7",
   "defectId": "P1-7",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
-  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "evaluatedCommit": "63c0d22f999bcef798a174e41b5097eaae80f266",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
   "requiredTests": [
     "tests/unit/securityIntel/triageRemediation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/securityIntel/triageRemediation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T17:42:00.260Z",
-      "finishedAt": "2026-10-22T17:42:03.036Z",
+      "startedAt": "2026-10-22T17:58:52.767Z",
+      "finishedAt": "2026-10-22T17:58:55.249Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-7.log",
-      "outputSha256": "83fb1c18a9f6d1106a3c15af5082cc59f65c1341618d374e5b515e25b9f2ffa7"
+      "outputSha256": "15e9015cdc52820e4e2e9d64b7d024f479720bbce289f282de5a658dda8deedc"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T17:42:03.037Z",
-  "proofHash": "f6fb4c2dbc36d38cb52b16f37b1931a3f77d4e87cf5df290d6c752968482d655"
+  "createdAt": "2026-10-22T17:58:55.250Z",
+  "proofHash": "6febead3b9bf346a780ad457e6db4ae91f4c8613bbca386035e346e67cd14e8b"
 }

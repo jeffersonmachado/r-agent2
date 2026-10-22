@@ -1,0 +1,8 @@
+{
+  "id": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Selo publicava ref fixa (main) e imprimia \"push ok\" sem publicar o commit da branch em uso",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

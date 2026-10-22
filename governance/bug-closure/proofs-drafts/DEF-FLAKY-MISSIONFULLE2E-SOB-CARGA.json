@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e471bcae-0783-46fb-ae4f-17dec476881e",
+  "transitionId": "cf25b6cf-ca27-4550-a977-f415698adc4f",
   "defectId": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
-  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "evaluatedCommit": "63c0d22f999bcef798a174e41b5097eaae80f266",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
   "requiredTests": [
     "tests/unit/governance/effectiveAggregateChain.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/effectiveAggregateChain.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T17:36:05.515Z",
-      "finishedAt": "2026-10-22T17:36:08.316Z",
+      "startedAt": "2026-10-22T17:52:53.129Z",
+      "finishedAt": "2026-10-22T17:52:55.678Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
-      "outputSha256": "dd235c90fe8b680bc8bffd7c812bc83dbf593a0f9c5ccad04eca591498301eff"
+      "outputSha256": "3fd3793f17a1c4698d35f02c52d37310df5d6b4d6b0962afd8141a9f672d4298"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T17:36:08.317Z",
-  "proofHash": "8c93fc26ed205e954c140995ef5cda03a21a35ff25bc9fd8d3785223476d8a5a"
+  "createdAt": "2026-10-22T17:52:55.679Z",
+  "proofHash": "0dab6c0801fb6a926632ac748296af532fc35d9472e11829a82b2040334c218b"
 }

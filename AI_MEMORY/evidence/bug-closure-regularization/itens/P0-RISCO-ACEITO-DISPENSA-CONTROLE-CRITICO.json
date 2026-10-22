@@ -1,0 +1,16 @@
+{
+  "id": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Defeito P0 com RISK_ACCEPTED deixava de ser bloqueante e liberava selo/publicacao",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "teste": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.json",
+  "camposParaAssinar": 18
+}

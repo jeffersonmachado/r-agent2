@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "TTL/frescor de evidencia: autoridade unica com 5 regras e vinculacao por run",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

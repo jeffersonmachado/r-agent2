@@ -1,0 +1,13 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "AI_MEMORY/evidence/ fora da taxonomia canônica de persistência JSON",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.json",
+  "camposParaAssinar": 18
+}

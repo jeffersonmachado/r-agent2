@@ -1,0 +1,13 @@
+{
+  "id": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Projecoes podiam ser gravadas antes da decisao canonica final e ficar stale sem nenhum gate perceber na hora",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.json",
+  "camposParaAssinar": 18
+}

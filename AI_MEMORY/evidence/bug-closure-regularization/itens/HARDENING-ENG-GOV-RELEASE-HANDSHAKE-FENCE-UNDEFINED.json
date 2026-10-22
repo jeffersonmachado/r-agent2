@@ -1,0 +1,9 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "FENCE_AVANCOU com antes=undefined: log JSON do produto confundido com handshake (selo V2 abortado)",
+  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+}

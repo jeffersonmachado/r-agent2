@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f99a486b-1e97-4aec-b4cd-8e069a6ecc8b",
+  "transitionId": "97ec730f-c826-4037-bee8-c0d4758da35d",
   "defectId": "P1-2",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
-  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "evaluatedCommit": "63c0d22f999bcef798a174e41b5097eaae80f266",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
   "requiredTests": [
     "tests/unit/engineeringMissionReviewEngines.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMissionReviewEngines.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T17:41:48.475Z",
-      "finishedAt": "2026-10-22T17:41:52.643Z",
+      "startedAt": "2026-10-22T17:58:40.549Z",
+      "finishedAt": "2026-10-22T17:58:44.938Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-2.log",
-      "outputSha256": "74ad02b35c73b5ace091b170ae3756e76f8d6c6ee2b36300cefd4733a1fa07e2"
+      "outputSha256": "a1f9c0fd452babfb5204b0a4c655bff48ec787e620413e4f68a36b602ba7270b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T17:41:52.644Z",
-  "proofHash": "4c1b4b26cc3ef0e533a688588d48a78026a4e7a8328c84e1dd40b494dc200353"
+  "createdAt": "2026-10-22T17:58:44.940Z",
+  "proofHash": "2fd6ef815faaa0f261378f52d39a1783056e1b64c9e7d86bae6e47889aab5f59"
 }

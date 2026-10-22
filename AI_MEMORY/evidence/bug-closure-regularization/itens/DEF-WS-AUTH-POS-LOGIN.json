@@ -1,0 +1,8 @@
+{
+  "id": "DEF-WS-AUTH-POS-LOGIN",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

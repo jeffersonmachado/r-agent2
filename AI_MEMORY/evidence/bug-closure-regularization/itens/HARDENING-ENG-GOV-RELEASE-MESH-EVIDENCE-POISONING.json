@@ -1,0 +1,9 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
+  "severity": "P0",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Execucao da malha sem lineage destruia a evidencia governada (agregado em vermelho)",
+  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "teste": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+}

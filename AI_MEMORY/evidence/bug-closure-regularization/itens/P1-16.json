@@ -1,0 +1,13 @@
+{
+  "id": "P1-16",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Lotes do runner autoritativo nao se isolavam (conexoes e processos-filho vazavam)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-16.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-16.json",
+  "camposParaAssinar": 18
+}

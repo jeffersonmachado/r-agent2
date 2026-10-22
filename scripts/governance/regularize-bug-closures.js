@@ -91,10 +91,19 @@ function executarTeste(defectId, relTeste) {
   const saidaAbs = path.join(ROOT, saidaRel);
   fs.mkdirSync(path.dirname(saidaAbs), { recursive: true });
 
+  // Runner por ÁREA: teste em `frontend/` é Vitest, não Jest. Rodar com o runner errado
+  // produzia "TESTE_FALHOU_AGORA" falso — o defeito declarado não era o que falhava.
+  const ehFrontend = relTeste.startsWith('frontend/');
+  // O Vitest do frontend tem config própria (`frontend/vitest.config.mjs`); rodar `npx vitest`
+  // baixava OUTRA versão e falhava por reporter inexistente — falso vermelho.
+  const relFrontend = relTeste.replace(/^frontend\//, '');
+  const comando = ehFrontend
+    ? ['npm', ['--prefix', 'frontend', 'run', 'test', '--', relFrontend]]
+    : ['npx', ['jest', relTeste, '--bail=1', '--ci']];
   const inicio = new Date().toISOString();
-  const r = spawnSync('npx', ['jest', relTeste, '--bail=1', '--ci'], {
+  const r = spawnSync(comando[0], comando[1], {
     cwd: ROOT, encoding: 'utf8', shell: process.platform === 'win32', timeout: TIMEOUT_MS,
-    env: { ...process.env, CI: 'true' },
+    env: { ...process.env, CI: 'true', VITE_CACHE_DIR: '/tmp/r-agent2-vite' },
   });
   const fim = new Date().toISOString();
   const saida = `${r.stdout || ''}${r.stderr || ''}`;
@@ -102,7 +111,7 @@ function executarTeste(defectId, relTeste) {
 
   return {
     testPath: relTeste,
-    command: `npx jest ${relTeste} --bail=1 --ci`,
+    command: ehFrontend ? `npm --prefix frontend run test -- ${relFrontend}` : `npx jest ${relTeste} --bail=1 --ci`,
     exitCode: r.status === null ? null : r.status,
     signal: r.signal || null,
     timeout: r.error && /ETIMEDOUT|timed? ?out/i.test(String(r.error.message || '')) ? true : undefined,
@@ -188,12 +197,21 @@ function main() {
       continue;
     }
 
+    // Pré-checagem de runner: sem `frontend/node_modules` o Vitest nem existe — isso não é
+    // veredito sobre o defeito.
+    if (teste.startsWith('frontend/') && !fs.existsSync(path.join(ROOT, 'frontend', 'node_modules'))) {
+      resultados.push({ ...base, classe: 'AMBIENTE_INDISPONIVEL', teste, motivo: 'FRONTEND_DEPS_AUSENTES (frontend/node_modules não instalado)' });
+      continue;
+    }
+
     const execucao = executarTeste(d.id, teste);
     if (execucao.exitCode !== 0) {
       const saida = fs.readFileSync(path.join(ROOT, execucao.outputPath), 'utf8');
       // Falha por infraestrutura ausente NÃO é veredito sobre o defeito: sem Postgres, sem
       // chave de criptografia do ambiente ou sem rede, o teste não mede o que promete.
-      const semAmbiente = /SKIPPED_SEM_|ECONNREFUSED|ENOTFOUND|connect ECONNREFUSED|Erro ao descriptografar|Unsupported state or unable to authenticate/i.test(saida);
+      // Falha por artefato gerado ausente (`reports/*.json` são produzidos pelos próprios
+      // validadores) também não é veredito sobre o defeito: é ambiente de execução incompleto.
+      const semAmbiente = /SKIPPED_SEM_|ECONNREFUSED|ENOTFOUND|connect ECONNREFUSED|Erro ao descriptografar|Unsupported state or unable to authenticate|ENOENT: no such file or directory.*reports\/|GRAPH_ABSENT|not found/i.test(saida);
       resultados.push({
         ...base,
         classe: semAmbiente ? 'AMBIENTE_INDISPONIVEL' : 'TESTE_FALHOU_AGORA',
@@ -277,8 +295,22 @@ function main() {
     for (const r of resultados) {
       fs.writeFileSync(path.join(dirItens, `${r.id}.json`), `${JSON.stringify(r, null, 2)}\n`, 'utf8');
     }
-    const nome = APENAS === 'ALL' ? 'report.json' : `report-${APENAS}.json`;
-    fs.writeFileSync(path.join(EVIDENCIA, nome), `${JSON.stringify(relatorio, null, 2)}\n`, 'utf8');
+    // Sempre grava o recorte por severidade E o agregado: o agregado é o artefato estável
+    // (nunca "desaparece" quando a varredura é fatiada), o recorte preserva a execução.
+    if (APENAS !== 'ALL') {
+      fs.writeFileSync(path.join(EVIDENCIA, `report-${APENAS}.json`), `${JSON.stringify(relatorio, null, 2)}\n`, 'utf8');
+    }
+    const agregado = JSON.parse(JSON.stringify(relatorio));
+    const todos = fs.readdirSync(path.join(EVIDENCIA, 'itens')).filter((f) => f.endsWith('.json'))
+      .map((f) => JSON.parse(fs.readFileSync(path.join(EVIDENCIA, 'itens', f), 'utf8')));
+    agregado.resumo.total = todos.length;
+    agregado.resumo.porClasse = todos.reduce((acc, r) => { acc[r.classe] = (acc[r.classe] || 0) + 1; return acc; }, {});
+    agregado.resumo.porSeveridade = todos.reduce((acc, r) => {
+      acc[`${r.classe}:${r.severity}`] = (acc[`${r.classe}:${r.severity}`] || 0) + 1;
+      return acc;
+    }, {});
+    agregado.resultados = todos.sort((a, b) => String(a.severity).localeCompare(String(b.severity)) || String(a.id).localeCompare(String(b.id)));
+    fs.writeFileSync(path.join(EVIDENCIA, 'report.json'), `${JSON.stringify(agregado, null, 2)}\n`, 'utf8');
     fs.writeFileSync(path.join(EVIDENCIA, 'RELATORIO.md'), relatorioAgregado(EVIDENCIA), 'utf8');
   }
 

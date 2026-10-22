@@ -1,0 +1,8 @@
+{
+  "id": "P1-6",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

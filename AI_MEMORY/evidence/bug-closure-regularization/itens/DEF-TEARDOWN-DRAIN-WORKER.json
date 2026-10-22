@@ -1,0 +1,11 @@
+{
+  "id": "DEF-TEARDOWN-DRAIN-WORKER",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
+  "classe": "AMBIENTE_INDISPONIVEL",
+  "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log"
+}

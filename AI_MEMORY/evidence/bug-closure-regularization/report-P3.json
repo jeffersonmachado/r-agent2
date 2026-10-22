@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T17:49:09.792Z",
+  "generatedAt": "2026-10-22T18:02:05.988Z",
   "authoritative": false,
   "resumo": {
-    "commit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+    "commit": "63c0d22f999bcef798a174e41b5097eaae80f266",
     "fingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
     "total": 10,
     "porClasse": {

@@ -1,0 +1,8 @@
+{
+  "id": "L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Coleta da evidencia de runtime restringia o Jest a um teste e dependia de sobra de execucoes anteriores",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

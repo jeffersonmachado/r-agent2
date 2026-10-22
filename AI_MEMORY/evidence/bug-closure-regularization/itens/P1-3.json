@@ -1,0 +1,13 @@
+{
+  "id": "P1-3",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Promocao verificada obrigatoria para GREEN",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-3.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-3.json",
+  "camposParaAssinar": 18
+}

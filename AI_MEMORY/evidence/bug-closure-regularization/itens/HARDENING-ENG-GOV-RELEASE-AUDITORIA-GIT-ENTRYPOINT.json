@@ -1,0 +1,13 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Auditoria externa via git: ponto de entrada unico derivado",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.json",
+  "camposParaAssinar": 18
+}

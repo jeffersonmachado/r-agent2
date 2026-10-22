@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "32da55c6-f0c9-4e51-bf13-19c357fbfdd2",
+  "transitionId": "c99eebeb-fa71-42e2-a889-639d5db71ac8",
   "defectId": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "RESOLVED",
   "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
-  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
   "requiredTests": [
     "tests/unit/governance/canonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/canonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T17:35:35.455Z",
-      "finishedAt": "2026-10-22T17:35:41.925Z",
+      "startedAt": "2026-10-22T17:52:26.739Z",
+      "finishedAt": "2026-10-22T17:52:33.594Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
-      "outputSha256": "3ebe27b000969dfbb121df02cc909385da5b64d455baea77618ec933685722ae"
+      "outputSha256": "ded6e6925b30b13827825c1aa871a0da64796e4f99c39184ade1050412dce295"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T17:35:41.926Z",
-  "proofHash": "6eb362afe7463a89fa847e73f9e75f1e3d9b739116ebb955b41df2e71f9ab8d5"
+  "createdAt": "2026-10-22T17:52:33.595Z",
+  "proofHash": "77644066fc69d3357783bfac40ffb066cbb1c111546d4d2ef3cc4185afc65f21"
 }

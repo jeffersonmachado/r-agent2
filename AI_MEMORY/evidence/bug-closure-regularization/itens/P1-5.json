@@ -1,0 +1,8 @@
+{
+  "id": "P1-5",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

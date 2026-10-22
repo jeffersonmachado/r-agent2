@@ -1,0 +1,8 @@
+{
+  "id": "CI-CHECKOUT-LIMPO-HARNESS",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Instalacao limpa nunca era testada: todo diagnostico de CI dependia do estado da maquina do desenvolvedor",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

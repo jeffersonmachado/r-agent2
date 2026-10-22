@@ -1,0 +1,8 @@
+{
+  "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

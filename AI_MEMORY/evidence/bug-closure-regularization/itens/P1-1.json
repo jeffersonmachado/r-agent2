@@ -1,0 +1,13 @@
+{
+  "id": "P1-1",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gates unit/integration declaram a CATEGORIA da evidencia",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/engineeringMission/testSuiteClassifier.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-1.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-1.json",
+  "camposParaAssinar": 18
+}

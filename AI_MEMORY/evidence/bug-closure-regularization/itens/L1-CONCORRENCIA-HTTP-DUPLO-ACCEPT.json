@@ -1,0 +1,8 @@
+{
+  "id": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "POST /engineering/tasks/:id/run aceitava duas execucoes concorrentes (202,202)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "L1-NPM-TEST-CI-VERMELHO",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "CI do branch de desenvolvimento VERDE: L1 separado em D (desenvolvimento) e R (certificacao de release)",
+  "classe": "REQUER_AJUSTE_DE_MODELO",
+  "teste": "tests/unit/qaMeshOperationPolicy.test.js",
+  "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+}

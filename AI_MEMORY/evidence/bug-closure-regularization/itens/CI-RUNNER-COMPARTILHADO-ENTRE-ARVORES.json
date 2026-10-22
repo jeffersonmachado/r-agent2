@@ -1,0 +1,8 @@
+{
+  "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Engineering Runner de porta fixa era reutilizado por outra arvore: a prova de sandbox media o codigo do vizinho",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}
