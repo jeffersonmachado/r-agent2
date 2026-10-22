@@ -191,8 +191,10 @@ Relatório: `reports/ci-clean-checkout-report.json`; resumo versionado:
 
 ### 4.3 Limites declarados deste ciclo
 
-- GitHub Actions: o veredito deste ciclo é `LOCAL_PASS` no escopo de desenvolvimento; não é
-  `CI_PASS`. O CI do runner continua vermelho no L1 pelo mesmo motivo estrutural (família de
-  release), e a medição local não substitui a do runner.
+- GitHub Actions (run **39722271457**, commit `321d2aae6`, node 20.20.2): prod-like-smoke SUCCESS,
+  dev-branch-integration SUCCESS, `L0` exit 0 em 451,8 s, `L0b` exit 0 em 472,6 s,
+  `L1-cadeia-criptografica` exit 1 → veredito `FAIL (completo=false)`. O CI **não** está verde; o
+  que mudou é que agora o único vermelho é a família de certificação de release — o mesmo padrão
+  do checkout limpo local. `CI_PASS` continua NÃO alcançado.
 - Auditoria independente: `AUDIT_PENDING`. O executor revisou o próprio trabalho.
 - Aprovação humana: ausente (`AI_MEMORY/evidence/engineer-supervised-approval.json` não existe).

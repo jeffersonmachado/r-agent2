@@ -873,6 +873,27 @@ Antes deste ciclo, o MESMO checkout limpo reprovava em `validate-ai-memory`,
 `engineeringMissionSourceRefRemote`, `engineeringMissionMergeConcurrency`,
 `engineeringRouterConcurrentRunHttp` e `engineeringBugLoopNaturalPathE2E` (900 s de timeout).
 
+### 16.3.1 CI REAL no runner do GitHub (run 39722271457, commit `321d2aae6`, node 20.20.2)
+
+O bloqueio de budget do GitHub Actions não se manifesta mais nesta janela — a run executou ponta a
+ponta. Resultado medido, verbatim do log do gate:
+
+| job / passo | resultado | duração |
+|---|---|---|
+| `prod-like-smoke` (arteiro prod-like real em Docker) | SUCCESS | — |
+| `dev-branch-integration` | SUCCESS | — |
+| preflight `A1..A9` (identidade do SHA, árvore limpa, 135 itens na fila) | OK | — |
+| `B1` / `B2` / `B3` (contratos do gate) | exit 0 | 5,1 s / 4,0 s / 1,8 s |
+| **`L0-suite-oficial`** | **exit 0** | **451,8 s** |
+| **`L0b-integracao-engenheiro`** | **exit 0** | **472,6 s** |
+| `L1-cadeia-criptografica` | exit 1 | 0,1 s |
+| veredito | `FAIL (completo=false)` | — |
+
+Ou seja: **no runner também**, tudo o que é escopo de desenvolvimento está verde; o único vermelho é
+o primeiro passo do L1, e o inventário local mostra que os outros dois vermelhos do L1 pertencem à
+mesma família (certificação de release). O padrão é o MESMO do checkout limpo local — a diferença de
+método não muda o veredito, o que é exatamente a propriedade que faltava antes deste ciclo.
+
 ### 16.4 O que continua vermelho — e por que NÃO foi reclassificado
 
 O inventário do L1 executado no clone (cada validador individualmente, a partir da MESMA definição
