@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "42f84ea5-860e-44a8-8edc-9773c1a95bba",
+  "defectId": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "requiredTests": [
+    "tests/unit/audit/auditEntrypointArtifact.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:48:46.854Z",
+      "finishedAt": "2026-10-22T17:48:49.600Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
+      "outputSha256": "96b4b973616cd2a81128988537097ef64ccabe84a7d71ae7b78cbc8eab862cba"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "sha256": "1635749c1e0ea9f49cb4d15a9e45615fca09a52f862a7b75b4e1d12d8a4dc9e4"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:48:49.601Z",
+  "proofHash": "12a3fd4dd83000beb9cf867fc672032579290efc3b72dc5ad5e1601bdd2a22a8"
+}

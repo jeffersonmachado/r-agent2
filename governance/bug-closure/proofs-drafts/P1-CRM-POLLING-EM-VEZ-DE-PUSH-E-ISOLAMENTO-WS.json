@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ed752e14-b8d2-4f8a-bf21-68e93948aa28",
+  "defectId": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/realtimeTenantIsolation.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/realtimeTenantIsolation.test.js",
+      "command": "npx jest tests/unit/realtimeTenantIsolation.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:42:20.846Z",
+      "finishedAt": "2026-10-22T17:42:26.987Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.log",
+      "outputSha256": "d49b67d4a1f9865498abaf543aac86c476cd4f64e4ff49e32c4748f97cf7c1de"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/realtimeTenantIsolation.test.js",
+      "sha256": "57176e47a9958cc506da714ae7636e01329eaa959015fa0c8d8597682730dc05"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:42:26.988Z",
+  "proofHash": "18c826006fd8c10bf25b1929ce0f616f58a5102058882d2df9db27caf6624b5d"
+}

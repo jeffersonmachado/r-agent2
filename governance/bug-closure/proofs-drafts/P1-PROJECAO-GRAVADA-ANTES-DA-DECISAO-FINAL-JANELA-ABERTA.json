@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "6315e107-0691-4127-82dc-deba6d392a18",
+  "defectId": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
+      "command": "npx jest tests/unit/governance/projectionSyncOnCanonicalWrite.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:42:31.450Z",
+      "finishedAt": "2026-10-22T17:42:33.992Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
+      "outputSha256": "8ff9aa3b163606d73b2d1f5374a910b0f9b77926093cce6beb305319801bb58b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
+      "sha256": "860a38ecbdcc0c976bb6b2a8fc0ce23dcaa895bd6387cf3ea66994eeabbf5c87"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:42:33.992Z",
+  "proofHash": "a991ceab7677be4fc44e47504823b32290718e8913be9df2cc538f7b84a38058"
+}

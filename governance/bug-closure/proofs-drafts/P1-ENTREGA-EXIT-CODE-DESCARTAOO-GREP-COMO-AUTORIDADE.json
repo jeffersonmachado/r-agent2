@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "6fc2d9f0-f010-4db1-9f32-b3c3468e6409",
+  "defectId": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/governance/deliveryVerification.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/deliveryVerification.test.js",
+      "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:42:26.988Z",
+      "finishedAt": "2026-10-22T17:42:31.447Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "outputSha256": "a5dc105c86fd6661a3dc9828141f5419e8af07235d74c2ed5588aa770eec203b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/deliveryVerification.test.js",
+      "sha256": "e8e23ac0fccb5f1d0bcb78f3c56a496ef3c5a8015f541e265e99a1980da48a78"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:42:31.448Z",
+  "proofHash": "bbf3bbc327cf621fca4cd04df7229bc9f085991817076bb47a115c5973b3c64e"
+}

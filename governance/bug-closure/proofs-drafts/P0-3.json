@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "bc9c746e-8c9d-4cb3-9782-2a6c92e24987",
+  "defectId": "P0-3",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+  "requiredTests": [
+    "tests/unit/securityIntel/securityGateProvenance.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "command": "npx jest tests/unit/securityIntel/securityGateProvenance.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:52:07.314Z",
+      "finishedAt": "2026-10-22T17:52:10.275Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-3.log",
+      "outputSha256": "ea329a57cd571f33ad36958ae92c5ae8e1ca780769f590546fb464664bea72d1"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "sha256": "2db3fa33a089631062c2f234cf0157553cba01b92202d697b9f136aa0f5c02f4"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:52:10.275Z",
+  "proofHash": "8b3afd082cb63ac6da388282c4fcd33410597fbc6d6db5b400134aa902d24170"
+}

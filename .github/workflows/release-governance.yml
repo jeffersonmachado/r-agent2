@@ -125,11 +125,27 @@ jobs:
         env:
           RAP_RELEASE_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.RAP_RELEASE_ATTESTATION_PRIVATE_KEY }}
 
+      # Âncoras do Bug Closure First: SEMPRE do cofre do orquestrador, nunca do repositório.
+      # Sem os secrets, os valores ficam vazios e toda operação certificante é DENIED
+      # (fail-closed). Provisione com:
+      #   node scripts/governance/provision-closure-anchors.js --key <chave-publica.pem>
+      # e verifique o preflight com `--check` antes de selar.
+      - name: Preflight das âncoras do Bug Closure (fail-closed)
+        run: node scripts/governance/provision-closure-anchors.js --check
+        env:
+          RAP_CLOSURE_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_CLOSURE_TRUST_ANCHOR_SHA256 }}
+          RAP_APPROVAL_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_APPROVAL_TRUST_ANCHOR_SHA256 }}
+          RAP_CLOSURE_INVENTORY_SHA256: ${{ secrets.RAP_CLOSURE_INVENTORY_SHA256 }}
+        continue-on-error: true
+
       - name: Generate release artifacts
         if: ${{ github.event.inputs.skip_build != 'true' }}
         run: npm run zip:release
         env:
           CI: true
+          RAP_CLOSURE_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_CLOSURE_TRUST_ANCHOR_SHA256 }}
+          RAP_APPROVAL_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_APPROVAL_TRUST_ANCHOR_SHA256 }}
+          RAP_CLOSURE_INVENTORY_SHA256: ${{ secrets.RAP_CLOSURE_INVENTORY_SHA256 }}
 
       - name: Tornar scripts executáveis
         run: chmod +x scripts/*.sh

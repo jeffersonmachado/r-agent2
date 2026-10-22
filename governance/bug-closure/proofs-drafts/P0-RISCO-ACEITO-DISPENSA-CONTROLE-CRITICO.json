@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5e1bd3ce-7f86-4505-a3b0-a875a8b7363e",
+  "defectId": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/governance/riskAcceptedCriticalControl.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
+      "command": "npx jest tests/unit/governance/riskAcceptedCriticalControl.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:35:51.547Z",
+      "finishedAt": "2026-10-22T17:35:54.947Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
+      "outputSha256": "3522ff134c98024184d6b67cbb705b1fc32df472906aade1f9ff5f35c14bb553"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
+      "sha256": "e2ac8c7cf8f5de8d79fe80c757f6ad6af7b108e1b5187bc61b0df4edc49c7ac9"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:35:54.948Z",
+  "proofHash": "193fc310e5ef41eff71ba3a1686c0660c96361d0181bcc413a742dcffdc493b4"
+}

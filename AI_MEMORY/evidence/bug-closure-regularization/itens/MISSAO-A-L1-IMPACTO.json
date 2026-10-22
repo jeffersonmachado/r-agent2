@@ -1,0 +1,13 @@
+{
+  "id": "MISSAO-A-L1-IMPACTO",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/coverage/impactGraph.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L1-IMPACTO.log",
+  "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L1-IMPACTO.json",
+  "camposParaAssinar": 18
+}

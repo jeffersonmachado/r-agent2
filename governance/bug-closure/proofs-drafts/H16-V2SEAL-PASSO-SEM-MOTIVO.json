@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "cc3a56b2-6a3c-4ad6-85dc-06063c50892a",
+  "defectId": "H16-V2SEAL-PASSO-SEM-MOTIVO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/governance/v2SealStepDiagnostics.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "command": "npx jest tests/unit/governance/v2SealStepDiagnostics.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:40:46.991Z",
+      "finishedAt": "2026-10-22T17:40:49.787Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
+      "outputSha256": "0f9fb7061045713636397f4741a5426b8ab0338f26237846edcb335af31ed744"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "sha256": "fb6d6f394555da944e35fc40d4ac1269816a5285b6000e1b5cd118fed94e4a30"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:40:49.789Z",
+  "proofHash": "8ee50b2ef62fb8699052d6f172728529f4c6584d2a0f9723a7437d26e6c0ddf7"
+}

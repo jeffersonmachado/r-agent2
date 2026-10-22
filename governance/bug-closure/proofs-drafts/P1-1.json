@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "43162818-9d99-4b2c-9993-0ba54849614a",
+  "defectId": "P1-1",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/engineeringMission/testSuiteClassifier.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMission/testSuiteClassifier.test.js",
+      "command": "npx jest tests/unit/engineeringMission/testSuiteClassifier.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:41:16.972Z",
+      "finishedAt": "2026-10-22T17:41:19.775Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-1.log",
+      "outputSha256": "5f2ac0d3125a1d3f6ff7617e64d1f5f1165c36c9189d4cb1966d3150425276ae"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMission/testSuiteClassifier.test.js",
+      "sha256": "15a2eb359468a3fe482087a11a80b443ae60333adbc21da77e494cf36665b9f0"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:41:19.775Z",
+  "proofHash": "5fd56807a3e317ca9b3fc40815e8f530589c0687efa52fbf8c4fd8a04f44cf61"
+}

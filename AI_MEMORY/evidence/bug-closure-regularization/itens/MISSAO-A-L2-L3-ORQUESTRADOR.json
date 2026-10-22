@@ -1,0 +1,11 @@
+{
+  "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
+  "classe": "TESTE_FALHOU_AGORA",
+  "teste": "tests/unit/coverage/impactRunner.test.js",
+  "exitCode": 1,
+  "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
+}

@@ -1,0 +1,13 @@
+{
+  "id": "H18-JORNADA-FUNCIONAL-BROWSER",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "teste": "tests/unit/governance/journeyDetectors.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H18-JORNADA-FUNCIONAL-BROWSER.log",
+  "draft": "governance/bug-closure/proofs-drafts/H18-JORNADA-FUNCIONAL-BROWSER.json",
+  "camposParaAssinar": 18
+}

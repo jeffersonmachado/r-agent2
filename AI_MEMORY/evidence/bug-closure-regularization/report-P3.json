@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization",
+  "generatedAt": "2026-10-22T17:49:09.792Z",
+  "authoritative": false,
+  "resumo": {
+    "commit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+    "fingerprint": "231995a055f412aa8d53bcd9629100dc4e35e3b528f472e54b04f1f4a8cb57ed",
+    "total": 10,
+    "porClasse": {
+      "AGUARDA_ASSINATURA_E_ANCORA": 6,
+      "TESTE_FALHOU_AGORA": 1,
+      "REQUER_DECISAO_HUMANA": 3
+    },
+    "porSeveridade": {
+      "AGUARDA_ASSINATURA_E_ANCORA:P3": 6,
+      "TESTE_FALHOU_AGORA:P3": 1,
+      "REQUER_DECISAO_HUMANA:P3": 3
+    },
+    "filaAlterada": false,
+    "assinatura": "PENDENTE — este script não assina e não altera a fila"
+  },
+  "resultados": [
+    {
+      "id": "AUDITORIA-BRANCH-INVENTORY",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Inventário auditável das 2497 branches locais (2468 do loop autônomo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/branchInventory.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-BRANCH-INVENTORY.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-BRANCH-INVENTORY.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Checkpoints incrementais auditáveis (gravador executável + runbook + ponteiro)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/checkpointTool.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-CHECKPOINT-PROTOCOL.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-CHECKPOINT-PROTOCOL.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Cadeia criptografica: analise corrigida — elos derivados vs imutaveis, e estado exposto na auditoria",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "DEF-STATESYNC-EXEMPTION-STALE",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-STATESYNC-EXEMPTION-STALE.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-STATESYNC-EXEMPTION-STALE.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H18-JORNADA-FUNCIONAL-BROWSER",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Detector de jornada funcional com acoes reais (e metrica de efeito honesta)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/journeyDetectors.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H18-JORNADA-FUNCIONAL-BROWSER.log",
+      "draft": "governance/bug-closure/proofs-drafts/H18-JORNADA-FUNCIONAL-BROWSER.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-A-L1-IMPACTO",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L1: seleção de validação por impacto (grafo de imports + fail-closed)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/coverage/impactGraph.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L1-IMPACTO.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L1-IMPACTO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
+      "classe": "TESTE_FALHOU_AGORA",
+      "teste": "tests/unit/coverage/impactRunner.test.js",
+      "exitCode": 1,
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
+    },
+    {
+      "id": "MISSAO-B3-REUSO-PROVENIENCIA",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B3: reuso de lotes — verificado, NAO e defeito (rigor por desenho)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B4: revisao independente — verificado, NAO e defeito (rigor maximo)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "MISSAO-DEMO-SELF-ENGINEERING",
+      "severity": "P3",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Demonstracao de self-engineering: o RAP encontrou defeitos reais que passaram por todos os gates",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    }
+  ]
+}

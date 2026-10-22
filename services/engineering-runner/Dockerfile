@@ -52,6 +52,12 @@ COPY engine/engineeringRouter/constants.js ./engine/engineeringRouter/constants.
 COPY api/utils ./api/utils
 COPY engine/shared ./engine/shared
 COPY governance/bug-closure ./governance/bug-closure
+# Bug Closure First (PR #6): a prova de fechamento assina com Ed25519 e calcula o fingerprint do
+# código, então o container passou a alcançar estes módulos. Sem COPY, o runner morre em runtime
+# com MODULE_NOT_FOUND na primeira transição de defeito (mesma classe do ER-V1-SEALFIX-003).
+COPY governance/risk-acceptance/signature.js ./governance/risk-acceptance/signature.js
+COPY governance/proof-engine/fingerprint-chain.js ./governance/proof-engine/fingerprint-chain.js
+COPY qa/coverage/fingerprints.js ./qa/coverage/fingerprints.js
 COPY config/timeout-policy.json ./config/timeout-policy.json
 
 EXPOSE 8090

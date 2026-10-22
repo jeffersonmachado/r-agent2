@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b0051002-fba1-4d10-916c-4ad46ec75fe4",
+  "defectId": "DEF-QUEUE-DELETE-DB-ONLY",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/queueModuleRoutes.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/queueModuleRoutes.test.js",
+      "command": "npx jest tests/unit/queueModuleRoutes.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:36:08.320Z",
+      "finishedAt": "2026-10-22T17:36:10.775Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-QUEUE-DELETE-DB-ONLY.log",
+      "outputSha256": "0f2e31b940395263cb060802f8d24d8ceeacc4f5bc1b17b0630e6f98dbe7c7ff"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/queueModuleRoutes.test.js",
+      "sha256": "5324570bf5f001c5b976c59c05694130791425cdefe99162ea19c941d1b358c2"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:36:10.776Z",
+  "proofHash": "2d49709e7ae7dc45fbc670ada84fa3f5b4b20b0797283df269acc53a6f958a32"
+}

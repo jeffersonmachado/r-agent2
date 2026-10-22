@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization",
+  "generatedAt": "2026-10-22T17:48:39.005Z",
+  "authoritative": false,
+  "resumo": {
+    "commit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+    "fingerprint": "5f701c1b66126e7cd4ee90cbd3431ccb183d61086d8b00de3b2619125e8259ad",
+    "total": 22,
+    "porClasse": {
+      "TESTE_FALHOU_AGORA": 4,
+      "REQUER_DECISAO_HUMANA": 6,
+      "AGUARDA_ASSINATURA_E_ANCORA": 11,
+      "REQUER_AJUSTE_DE_MODELO": 1
+    },
+    "porSeveridade": {
+      "TESTE_FALHOU_AGORA:P2": 4,
+      "REQUER_DECISAO_HUMANA:P2": 6,
+      "AGUARDA_ASSINATURA_E_ANCORA:P2": 11,
+      "REQUER_AJUSTE_DE_MODELO:P2": 1
+    },
+    "filaAlterada": false,
+    "assinatura": "PENDENTE — este script não assina e não altera a fila"
+  },
+  "resultados": [
+    {
+      "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Inventario de persistencia registra escrita fantasma da fila oficial (falso positivo do scanner)",
+      "classe": "TESTE_FALHOU_AGORA",
+      "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "exitCode": 1,
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log"
+    },
+    {
+      "id": "CI-FLOW-GATE-VACUOSO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "test:flow carregava --passWithNoTests: verde com ZERO testes executados",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Teste evoSyncIntegration fixava frequency30d e venceu sozinho em 03/10/2026",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/integration/evoSyncIntegration.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-TIMEBOMB-EVOSYNC-JANELA30D.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "DIV-PUREZA-ENGINE",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
+      "classe": "TESTE_FALHOU_AGORA",
+      "teste": "tests/unit/engine/enginePurityPorts.test.js",
+      "exitCode": 1,
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log"
+    },
+    {
+      "id": "H12-RAG-REPARO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Reparo de documentos RAG (2 falhas ECONNREFUSED) — indice HEALTHY de novo",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/ragIndexHealthPolicy.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H12-RAG-REPARO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H12-RAG-REPARO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H16-MUTACAO-SUPERFICIE-NO-RUN",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Runner atribui falha causada por mutacao da superficie provada durante o run",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/allValidatorsRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
+      "draft": "governance/bug-closure/proofs-drafts/H16-MUTACAO-SUPERFICIE-NO-RUN.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H17-PREFLIGHT-ASK-AI-TTL",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Preflight do selo checa o TTL da evidencia do Ask-AI (fail-fast em 4 s)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H17-PREFLIGHT-ASK-AI-TTL.log",
+      "draft": "governance/bug-closure/proofs-drafts/H17-PREFLIGHT-ASK-AI-TTL.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "H20-RUN-ORFAO-PROJECAO-STALE",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
+      "classe": "TESTE_FALHOU_AGORA",
+      "teste": "tests/unit/governance/convergenceFixpoint.test.js",
+      "exitCode": 1,
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log"
+    },
+    {
+      "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CRM grava em store in-memory por processo, mas o painel mede tabelas do banco: mutação não reflete nos números e o dado some no restart",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "H9-IDENTIDADE-PORTA",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "D5/D6: unidade ativa que nao serve + porta ocupada por processo estranho (supervisao dev)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/dev/devServicesSupervision.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H9-IDENTIDADE-PORTA.log",
+      "draft": "governance/bug-closure/proofs-drafts/H9-IDENTIDADE-PORTA.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Gate agregado exige worktree CONGELADO — commitar durante o run quebra a promocao do E2E",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Auditoria externa via git: ponto de entrada unico derivado",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Ponteiros de fechamento na raiz estao stale e nenhum gate os mantem",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "runtime-evidence reporta \"crash antes do reporter\" quando o teste falha por assercao",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/runtimeEvidenceDiagnosis.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "SBOM anterior ao startedAt do run derruba o security gate (exit 3) mesmo com risco GO",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "AI_MEMORY/evidence/ fora da taxonomia canônica de persistência JSON",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B5: vinculo defeito -> commit -> prevencao executavel",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/integration/evoSyncIntegration.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "MISSAO-B8-ESTADOS-FILA",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "B8: modelo de estados da fila com hook fail-closed e validador",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+    },
+    {
+      "id": "N5-REENTREGA",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
+      "classe": "TESTE_FALHOU_AGORA",
+      "teste": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+      "exitCode": 1,
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log"
+    },
+    {
+      "id": "P2-1",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Proveniencia remota verifica o commit do RUN, nao o HEAD",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/remoteProvenanceAuthority.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-1.log",
+      "draft": "governance/bug-closure/proofs-drafts/P2-1.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P2-2",
+      "severity": "P2",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Divergencia de lineage nos relatorios",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "teste": "tests/unit/governance/reportWriteLineage.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P2-2.log",
+      "draft": "governance/bug-closure/proofs-drafts/P2-2.json",
+      "camposParaAssinar": 18
+    },
+    {
+      "id": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
+      "severity": "P2",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Suites e validadores regravam relatorios governados e invalidam a coerencia temporal do run",
+      "classe": "REQUER_AJUSTE_DE_MODELO",
+      "teste": "tests/unit/governance/governedArtifactPreservation.test.js",
+      "motivo": "estado persistido RESOLVED não tem transição canônica de fechamento a partir de si"
+    }
+  ]
+}

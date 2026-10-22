@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "f99a486b-1e97-4aec-b4cd-8e069a6ecc8b",
+  "defectId": "P1-2",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a122ad8bde6d0934ba0b46a61d2cbf7045ef6f78",
+  "codeFingerprint": "1087cf1cedbe3844c673c30c019139806e3aec30e37804b87fca512fcc5e832a",
+  "requiredTests": [
+    "tests/unit/engineeringMissionReviewEngines.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMissionReviewEngines.test.js",
+      "command": "npx jest tests/unit/engineeringMissionReviewEngines.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-22T17:41:48.475Z",
+      "finishedAt": "2026-10-22T17:41:52.643Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-2.log",
+      "outputSha256": "74ad02b35c73b5ace091b170ae3756e76f8d6c6ee2b36300cefd4733a1fa07e2"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMissionReviewEngines.test.js",
+      "sha256": "5edfc9d3352e43a406c89fb4164d7c485b03dc73ae7b570bdf7af93f9912e870"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "CLOSE_VERIFIED",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-22T17:41:52.644Z",
+  "proofHash": "4c1b4b26cc3ef0e533a688588d48a78026a4e7a8328c84e1dd40b494dc200353"
+}
