@@ -1,34 +1,31 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T18:42:27.054Z",
+  "generatedAt": "2026-10-22T20:56:16.026Z",
   "authoritative": false,
   "resumo": {
-    "commit": "ebd1bbf36f9d8de856c8b7e805624b3447958238",
+    "commit": "0f962a50829a9676f4947a7fd6cbf9235d15cf1e",
     "fingerprint": "420ad327c76ec03ac0879700bb0c3dbddc6fe134b2e0e6e1da8d30f21c3793d3",
     "total": 130,
     "porClasse": {
-      "AGUARDA_ASSINATURA_E_ANCORA": 67,
+      "AGUARDA_ASSINATURA_E_ANCORA": 73,
       "REQUER_DECISAO_HUMANA": 33,
-      "AMBIENTE_INDISPONIVEL": 8,
       "REQUER_AJUSTE_DE_MODELO": 7,
-      "AGUARDA_INSUMOS_HUMANOS": 15
+      "AGUARDA_INSUMOS_HUMANOS": 16,
+      "AMBIENTE_INDISPONIVEL": 1
     },
     "porSeveridade": {
-      "AGUARDA_ASSINATURA_E_ANCORA:P3": 6,
-      "AGUARDA_ASSINATURA_E_ANCORA:P1": 48,
-      "AGUARDA_ASSINATURA_E_ANCORA:P2": 13,
+      "AGUARDA_ASSINATURA_E_ANCORA:P3": 7,
+      "AGUARDA_ASSINATURA_E_ANCORA:P1": 50,
+      "AGUARDA_ASSINATURA_E_ANCORA:P2": 16,
       "REQUER_DECISAO_HUMANA:P1": 14,
-      "AMBIENTE_INDISPONIVEL:P1": 3,
-      "AMBIENTE_INDISPONIVEL:P2": 3,
       "REQUER_DECISAO_HUMANA:P2": 5,
       "REQUER_DECISAO_HUMANA:P0": 11,
       "REQUER_AJUSTE_DE_MODELO:P1": 2,
       "REQUER_AJUSTE_DE_MODELO:P0": 4,
-      "AGUARDA_INSUMOS_HUMANOS:P0": 15,
-      "AMBIENTE_INDISPONIVEL:P3": 1,
+      "AGUARDA_INSUMOS_HUMANOS:P0": 16,
+      "AMBIENTE_INDISPONIVEL:P1": 1,
       "REQUER_DECISAO_HUMANA:P3": 3,
-      "AMBIENTE_INDISPONIVEL:P0": 1,
       "REQUER_AJUSTE_DE_MODELO:P2": 1
     },
     "filaAlterada": false,
@@ -283,11 +280,17 @@
       "severity": "P0",
       "estadoPersistido": "VERIFIED",
       "titulo": "CRM usava upsert com PK apenas `id`: tenant B sobrescrevia e TRANSFERIA registro do tenant A",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
+      "draft": "governance/bug-closure/proofs-drafts/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
@@ -516,20 +519,28 @@
       "severity": "P1",
       "estadoPersistido": "VERIFIED",
       "titulo": "removeChild (React) por enhancement de header que movia/substituia nos do React",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
-      "motivo": "FRONTEND_DEPS_AUSENTES (frontend/node_modules não instalado)"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-REMOVECHILD-HEADER-ENHANCEMENT.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "DEF-TEARDOWN-DRAIN-WORKER",
       "severity": "P1",
       "estadoPersistido": "VERIFIED",
       "titulo": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-TEARDOWN-DRAIN-WORKER.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "DEF-WS-AUTH-POS-LOGIN",
@@ -1305,11 +1316,14 @@
       "severity": "P2",
       "estadoPersistido": "VERIFIED",
       "titulo": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/engine/enginePurityPorts.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log",
+      "draft": "governance/bug-closure/proofs-drafts/DIV-PUREZA-ENGINE.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "H12-RAG-REPARO",
@@ -1358,11 +1372,14 @@
       "severity": "P2",
       "estadoPersistido": "VERIFIED",
       "titulo": "Ciclo interrompido deixa run governado aberto e projecao de readiness no run anterior",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/unit/governance/convergenceFixpoint.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H20-RUN-ORFAO-PROJECAO-STALE.log",
+      "draft": "governance/bug-closure/proofs-drafts/H20-RUN-ORFAO-PROJECAO-STALE.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "H21-CRM-PERSISTENCIA-X-METRICAS",
@@ -1479,11 +1496,14 @@
       "severity": "P2",
       "estadoPersistido": "VERIFIED",
       "titulo": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
       "teste": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log",
+      "draft": "governance/bug-closure/proofs-drafts/N5-REENTREGA.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "P2-1",
@@ -1611,11 +1631,14 @@
       "severity": "P3",
       "estadoPersistido": "VERIFIED",
       "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
-      "classe": "AMBIENTE_INDISPONIVEL",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/coverage/impactRunner.test.js",
-      "exitCode": 1,
-      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L2-L3-ORQUESTRADOR.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "MISSAO-B3-REUSO-PROVENIENCIA",
