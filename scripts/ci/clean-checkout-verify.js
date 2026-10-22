@@ -489,6 +489,13 @@ function criarAmbienteDoRun({ clonePath, databaseUrl, ragUrl, token, runnerPort,
     // ISOLAMENTO DO ENGINEERING RUNNER: porta propria do run. Com 8097 fixo, o clone podia
     // REUTILIZAR um runner orfao de OUTRA arvore (medido nesta maquina: pid ocupando 8097 vindo do
     // workspace principal) — a prova de sandbox passaria a medir o codigo do vizinho.
+    // AMBIENTE GIT SANEADO. O shell que executa o harness pode injetar configuracao por
+    // `GIT_CONFIG_COUNT/KEY_n/VALUE_n` (medido nesta maquina: `safe.bareRepository=explicit`).
+    // Um teste que cria um repositorio BARE em /tmp passa a falhar com "cannot use bare
+    // repository" — nao por defeito de produto, mas por configuracao ambiente invisivel.
+    // `GIT_CONFIG_COUNT=0` descarta TODA a injecao do processo pai: o run passa a ver a mesma
+    // configuracao que o runner do CI.
+    GIT_CONFIG_COUNT: '0',
     ENGINEERING_RUNNER_TEST_PORT: String(runnerPort),
     ENGINEERING_RUNNER_URL: `http://127.0.0.1:${runnerPort}`,
     JEST_MAX_WORKERS: process.env.CLEAN_CHECKOUT_JEST_WORKERS || '4',
