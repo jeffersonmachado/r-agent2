@@ -69,14 +69,17 @@ válida o item vira `fechamentoNaoProvado`, `stateEfetivo = OPEN`, e toda opera�
 | Arquivo | Natureza | Linhas |
 |---|---|---|
 | `governance/bug-closure/closure-proof.js` | novo (prova + âncora) | 500 |
-| `governance/bug-closure/trusted-authorities.js` | novo (pin de chave + âncora externa; 2ª passada) | 85 |
+| `governance/bug-closure/trusted-authorities.js` | novo (pins + âncoras externas de chave, inventário e aprovação) | 150 |
 | `governance/bug-closure/transition-ledger.js` | novo (livro append-only) | 170 |
 | `governance/bug-closure/transition-service.js` | novo (API autoritativa) | 215 |
 | `governance/bug-closure/authority-consistency.js` | novo (inventário × livro × rota) | 130 |
 | `governance/bug-closure/defect-registry.js` | alterado (`stateEfetivo`, `provaDeFechamento`, contexto) | +121/−8 |
 | `governance/bug-closure/eligibility.js` | alterado (bucket `fechamentoNaoProvado`, negação certificante) | +50/−0 |
 | `scripts/governance/validate-engineer-supervised-readiness.js` | alterado (4 checks: `QUEUE_CLOSURE_EVIDENCE`, `QUEUE_INVENTORY_COMPLETE`, `ROUTING_CONSISTENT_WITH_AUTHORITY`, `QUEUE_STATE_STATUS_COHERENT`) | +70 |
-| `tests/unit/governance/bugClosureBypassDefense.test.js` | novo (61 testes adversariais) | 810 |
+| `tests/unit/governance/bugClosureBypassDefense.test.js` | novo (82 testes adversariais) | 1035 |
+| `scripts/governance/evaluate-execution-eligibility.js` | alterado (`--queue` restrito a fixture versionado) | +16 |
+| `governance/bug-closure/eligibility.js` | alterado (`INVENTARIO_NAO_ANCORADO`/`INVENTARIO_ADULTERADO` em operação certificante) | +28 |
+| `tests/unit/governance/riskAcceptedCriticalControl.test.js` | alterado (âncora do fixture; nenhum `expect` mudou) | +13 |
 
 Diff completo: `diff-p0.patch`.
 
@@ -121,7 +124,7 @@ BLOCKED_EXTERNAL → OPEN | FIX_IN_PROGRESS     (NUNCA → RESOLVED/VERIFIED)
 
 ## 7. Resultados dos testes adversariais (§9)
 
-`tests/unit/governance/bugClosureBypassDefense.test.js` — **61 testes, todos verdes**
+`tests/unit/governance/bugClosureBypassDefense.test.js` — **82 testes, todos verdes**
 (`npx jest tests/unit/governance/bugClosureBypassDefense.test.js`).
 
 Cobrem: 1–12 (JSON/adúlteras: OPEN sem evidência, RESOLVED/VERIFIED direto, só status
@@ -142,7 +145,7 @@ provando que o bypass existia (`02` e `03` ⇒ `allowed: true`).
 
 | Nível | Comando | Resultado |
 |---|---|---|
-| **L0** (unit/contratos) | `npx jest tests/unit/governance --bail=0` (ignorando 2 suítes que exigem artefato de bootstrap) | **179 suítes / 1946 testes PASS**, 2 skip |
+| **L0** (unit/contratos) | `npx jest tests/unit/governance --bail=0` (ignorando 2 suítes que exigem artefato de bootstrap) | **178 suítes / 1967 testes PASS**, 2 skip |
 | **L1** (consumidores reais) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL exit 0**; 4 gates verdes |
 | **L2** (sistema) | `npm run test:system` | 10 suítes PASS / 1 FAIL — `finalStatusProjection` exige `governance/rap-master-scorecard.json` (artefato gitignored, só existe após run selado) ⇒ **BLOCKED_BY_POLICY (escopo de release)** |
 | **L3** (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED** — 0/64: identidade de run inexistente no worktree (item `P1-AGREGADO-SEM-IDENTIDADE-DE-RUN-BLOQUEIA-L3`) |
@@ -171,8 +174,60 @@ Medição nova do gate de readiness com o check de coerência: o item real
 divergência reportada (não corrigida na fila: a fila é evidência governada, não se
 "conserta" dado para o gate passar).
 
-## 10. Veredito
+## 10. Terceira e quarta passadas — a raiz de confiança fora da árvore
 
+O revisor mostrou que a 2ª versão tinha o defeito de fundo certo: **enquanto a âncora for
+opcional, o pin em código é só um cache reescrevível por quem escreve na árvore**. Duas
+âncoras externas passaram a ser **obrigatórias**:
+
+| Âncora | Env (fora da árvore) | Sem ela |
+|---|---|---|
+| chave de fechamento | `RAP_CLOSURE_TRUST_ANCHOR_SHA256` | `SEM_ANCORA_EXTERNA` ⇒ prova recusada |
+| pertença do inventário | `RAP_CLOSURE_INVENTORY_SHA256` (digest de `[id,severity,state]` ordenados) | `INVENTARIO_NAO_ANCORADO` ⇒ certificação negada |
+| chave de aprovação humana | `RAP_APPROVAL_TRUST_ANCHOR_SHA256` | `HUMAN_APPROVAL_ANCHORED=false` ⇒ sem GO |
+
+Outras correções da 3ª/4ª passadas: `--queue` do CLI com a mesma regra do env
+(`QUEUE_OVERRIDE_RECUSADO`); readiness lendo **sempre** o caminho oficial;
+`applyTransition` validando antes do append no livro e `proofsPath` dentro de `rootDir`;
+`QUEUE_NO_OPEN_DEFECT` classificando a fila pela MESMA régua que certifica (um P0
+`RISK_ACCEPTED` sem aceite válido não conta como fila limpa); novo
+`QUEUE_INVENTORY_ANCHORED` no readiness.
+
+PoCs reproduzidas pelo revisor e re-medidas aqui, todas fechadas:
+
+| PoC | Antes | Agora |
+|---|---|---|
+| `{"items":[]}` na fila oficial ⇒ `SELO_FINAL` | ALLOWED | **DENIED** `INVENTARIO_NAO_ANCORADO` |
+| remover um item / rebaixar P0→P3 | ALLOWED | **DENIED** `INVENTARIO_ADULTERADO` |
+| pin reescrito + `authorities.json` forjado | ALLOWED | **DENIED** |
+| `--queue /tmp/vazia.json` | ALLOWED | **exit 2** `QUEUE_OVERRIDE_RECUSADO` |
+| `NODE_ENV=test` + fixture no readiness | P0 invisível | **detalhe idêntico ao oficial** |
+| P0 como `RISK_ACCEPTED` no readiness | `PENDING_HUMAN_APPROVAL` | **`NOT_READY`**, item listado como aberto |
+| aprovação assinada com chave não ancorada | `READY_GO` | **recusada** (`HUMAN_APPROVAL_ANCHORED=false`) |
+
+## 11. Limites declarados (não resolvidos por design)
+
+1. **As âncoras são valores portadores (bearer) injetados no ambiente do processo.** Elas
+   garantem que *quem provisionou o ambiente de release autorizou exatamente aquela chave e
+   exatamente aquelas triplas do inventário*. **Quem controla o ambiente do processo de
+   release pode forjar as duas** — e o gate certifica. Não é assinatura de intenção humana;
+   o canal de injeção tem de ser o orquestrador/CI (secrets), nunca o shell do release nem
+   `.env` do repositório.
+2. **Nenhum workflow deste repositório define as âncoras.** Com o default, toda operação
+   certificante é DENIED. É fail-closed correto e exige provisionamento operacional: sem
+   ele, o selo não roda.
+3. **O pin versionado é cache, não raiz** — quem impede a forja é a âncora externa.
+4. **`sourceFingerprint` é integridade relativa; o livro é hash-chain sem assinatura** —
+   quem reescreve o arquivo reescreve a cadeia.
+5. **O digest autentica as triplas `[id, severity, state]`**, não cada campo do item
+   (`riskAccepted*`, controles, `closureProof`). No selo isso hoje é fail-closed por omissão
+   de campos na migração, não por assinatura.
+6. **O histórico da máquina de estados não é reconstruído do livro**: `fromState` é o estado
+   persistido. Com a âncora externa, isso exige a chave do humano; sem ela, não.
+7. Operações **não certificantes** (L0/L1/diagnóstico/correção) seguem autorizadas com P0/P1
+   abertos, por design da matriz de política.
+
+## 12. Veredito
 `PARTIALLY_VERIFIED` — o mecanismo está provado contra a matriz adversarial e contra os
 achados das duas passadas do revisor; permanece incompleto por fatos externos ao código:
 

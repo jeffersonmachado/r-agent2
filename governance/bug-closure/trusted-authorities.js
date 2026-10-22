@@ -56,6 +56,31 @@ function ancoraExterna() {
 }
 
 /**
+ * Pins das chaves de APROVAÇÃO HUMANA (missões/readiness). Separados dos de fechamento:
+ * quem fecha defeito não é necessariamente quem aprova a missão.
+ */
+const PINNED_APPROVAL_FINGERPRINTS = Object.freeze([]);
+
+/**
+ * Âncora externa da chave de aprovação. Mesmo achado do Alert 1, aplicado ao gate de
+ * readiness: validar a assinatura contra um registro JSON editável não prova autoria.
+ */
+function ancoraDeAprovacao() {
+  const valor = String(process.env.RAP_APPROVAL_TRUST_ANCHOR_SHA256 || '').trim().toLowerCase();
+  return /^[0-9a-f]{64}$/.test(valor) ? valor : null;
+}
+
+/** A chave de aprovação está ancorada (pin versionado + âncora externa)? */
+function chaveDeAprovacaoAncorada(publicKeyPem, opcoes = {}) {
+  const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+  const pinsDoChamador = ambienteDeTeste && Array.isArray(opcoes.pins) ? opcoes.pins : null;
+  return chaveAncorada(publicKeyPem, {
+    pins: pinsDoChamador || PINNED_APPROVAL_FINGERPRINTS,
+    externa: opcoes.externa !== undefined ? opcoes.externa : ancoraDeAprovacao(),
+  });
+}
+
+/**
  * Âncora EXTERNA do INVENTÁRIO (membership). Fecha o achado "apagar itens libera o selo":
  * o digest do inventário é comparado com um valor que vive FORA da árvore.
  */
@@ -105,6 +130,9 @@ function chaveAncorada(publicKeyPem, opcoes = {}) {
 
 module.exports = {
   PINNED_AUTHORITY_FINGERPRINTS,
+  PINNED_APPROVAL_FINGERPRINTS,
+  ancoraDeAprovacao,
+  chaveDeAprovacaoAncorada,
   fingerprintDaChavePem,
   ancoraExterna,
   ancoraDoInventario,

@@ -54,6 +54,10 @@ const riskAcceptance = require('../../governance/risk-acceptance');
 const { carregarInventario } = require('../../governance/bug-closure/defect-registry');
 const { verificarLivro } = require('../../governance/bug-closure/transition-ledger');
 const { verificarCompletudeDoInventario, verificarConsistenciaDeRoteamento } = require('../../governance/bug-closure/authority-consistency');
+const { classificarDefeitos } = require('../../governance/bug-closure/eligibility');
+const {
+  ancoraDoInventario, digestDoInventario, chaveDeAprovacaoAncorada, fingerprintDaChavePem,
+} = require('../../governance/bug-closure/trusted-authorities');
 const { DECISOES, CATEGORIAS_NAO_DISPENSAVEIS } = require('../../governance/risk-acceptance/policy');
 const signature = require('../../governance/risk-acceptance/signature');
 
@@ -100,7 +104,14 @@ function checkFila() {
   const inventario = carregarInventario({ queuePath: QUEUE_PATH });
   const migrados = inventario.defeitos || [];
   const porId = new Map(migrados.map((d) => [d.id, d]));
-  const abertos = migrados.filter((d) => d.aberto === true);
+  // 3ª passada do revisor, P1: `aberto` sozinho escondia `RISK_ACCEPTED` sem aceite válido
+  // (o item não conta como aberto, mas também não pode certificar). A fila é classificada
+  // pela MESMA régua que certifica: `classificarDefeitos` + validação do aceite.
+  const classificacao = classificarDefeitos(migrados);
+  const abertos = migrados.filter((d) => d.aberto === true
+    || (classificacao.riscoAceitoIneficaz || []).some((x) => x.id === d.id)
+    || (String(d.state || '').toUpperCase() === 'RISK_ACCEPTED'
+      && !(classificacao.riscoAceito || []).some((x) => x.id === d.id)));
   const impedidos = items.filter((i) => IMPEDIDOS.has(String(i.status || '').toLowerCase()));
 
   // Divergência ESTRUTURAL entre o `state` DECLARADO e o `status` legado (independente de
@@ -128,6 +139,24 @@ function checkFila() {
       : `abertos: ${abertos.map((d) => `${d.id}(${d.stateEfetivo || d.state})`).join(', ')}`,
     dados: { abertos: abertos.map((d) => d.id) },
   });
+  // Pertença do inventário: o gate de readiness também deriva veredito formal, então exige a
+  // MESMA âncora externa usada na certificação.
+  {
+    const ancora = ancoraDoInventario();
+    const digest = digestDoInventario(migrados);
+    let okAncora = false;
+    let detalheAncora;
+    if (!ancora) {
+      detalheAncora = 'sem RAP_CLOSURE_INVENTORY_SHA256: pertença dos itens não autenticada';
+    } else if (ancora !== digest) {
+      detalheAncora = `digest ${digest.slice(0, 12)}… difere da âncora externa ${ancora.slice(0, 12)}…`;
+    } else {
+      okAncora = true;
+      detalheAncora = `digest do inventário casa com a âncora externa (${digest.slice(0, 12)}…)`;
+    }
+    registrar('QUEUE_INVENTORY_ANCHORED', { ok: okAncora, detalhe: detalheAncora, dados: { digest } });
+  }
+
   registrar('QUEUE_STATE_STATUS_COHERENT', {
     ok: divergentes.length === 0,
     detalhe: divergentes.length === 0
@@ -399,7 +428,24 @@ function checkAprovacaoHumana(sha) {
     autoridades,
   });
 
-  const ok = okBasico && validacao.ok;
+  // 3ª passada do revisor, P1: validar a assinatura contra `authorities.json` (editável pelo
+  // mesmo ator) não prova autoria humana. A chave de aprovação precisa estar ANCORADA.
+  const autoridadeAprovadora = autoridades.find(
+    (a) => a && a.identity === String(doc.approverIdentity || doc.approver || ''),
+  );
+  const ancoragem = autoridadeAprovadora && autoridadeAprovadora.publicKeyPem
+    ? chaveDeAprovacaoAncorada(autoridadeAprovadora.publicKeyPem)
+    : { ok: false, motivo: 'AUTORIDADE_NAO_REGISTRADA', fingerprint: null };
+  registrar('HUMAN_APPROVAL_ANCHORED', {
+    ok: ancoragem.ok === true,
+    detalhe: ancoragem.ok
+      ? `chave de aprovação ancorada (${String(ancoragem.fingerprint).slice(0, 12)}…)`
+      : `chave de aprovação NÃO ancorada: ${ancoragem.motivo} — RAP_APPROVAL_TRUST_ANCHOR_SHA256 `
+        + 'e pin versionado são obrigatórios para que a aprovação valha como humana',
+    dados: { fingerprint: fingerprintDaChavePem(autoridadeAprovadora && autoridadeAprovadora.publicKeyPem) },
+  });
+
+  const ok = okBasico && validacao.ok && ancoragem.ok === true;
   registrar('HUMAN_APPROVAL_VALID', {
     ok,
     detalhe: ok

@@ -961,3 +961,64 @@ describe('`--queue` e caminho de prova não são canais de desvio', () => {
     expect(fs.existsSync(livro)).toBe(false);
   });
 });
+
+// ─── 11. QUARTA PASSADA: readiness não esconde P0 e aprovação humana é ancorada ──
+
+describe('readiness — P0 disfarçado de RISK_ACCEPTED e aprovação sem âncora', () => {
+
+
+  function rodarReadiness(env = {}) {
+    const saida = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ready-')), 'r.json');
+    try {
+      execFileSync('node', ['scripts/governance/validate-engineer-supervised-readiness.js', '--json', saida], {
+        cwd: RAIZ, encoding: 'utf8', stdio: 'pipe', timeout: 300000, env: { ...process.env, ...env },
+      });
+    } catch (_) { /* exit code é medido pelos testes do gate */ }
+    return JSON.parse(fs.readFileSync(saida, 'utf8'));
+  }
+
+  test('RISK_ACCEPTED sem aceite válido NÃO conta como fila limpa (classificação canônica)', () => {
+    const rel = rodarReadiness();
+    const fila = rel.checks.find((c) => c.id === 'QUEUE_NO_OPEN_DEFECT');
+    // O repositório real tem 130 fechamentos sem prova: a fila NÃO pode estar limpa.
+    expect(fila.ok).toBe(false);
+    expect(fila.detalhe).toMatch(/abertos:/);
+  }, 300000);
+
+  test('o gate mede a âncora do inventário (fail-closed sem RAP_CLOSURE_INVENTORY_SHA256)', () => {
+    const rel = rodarReadiness();
+    const ancora = rel.checks.find((c) => c.id === 'QUEUE_INVENTORY_ANCHORED');
+    expect(ancora).toBeDefined();
+    expect(ancora.ok).toBe(false);
+    expect(ancora.detalhe).toMatch(/RAP_CLOSURE_INVENTORY_SHA256/);
+  }, 300000);
+
+  test('chave de aprovação NÃO ancorada não vale como humana', () => {
+    const { publicKey } = crypto.generateKeyPairSync('ed25519');
+    const r = TA.chaveDeAprovacaoAncorada(publicKey.export({ type: 'spki', format: 'pem' }));
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toBe('SEM_ANCORA_EXTERNA');
+  });
+
+  test('chave de aprovação ancorada (pin + externa) é aceita', () => {
+    const { publicKey } = crypto.generateKeyPairSync('ed25519');
+    const pem = publicKey.export({ type: 'spki', format: 'pem' });
+    const fp = TA.fingerprintDaChavePem(pem);
+    const r = TA.chaveDeAprovacaoAncorada(pem, { pins: [fp], externa: fp });
+    expect(r.ok).toBe(true);
+  });
+
+  test('chave de aprovação pinada com âncora externa divergente é recusada', () => {
+    const { publicKey } = crypto.generateKeyPairSync('ed25519');
+    const pem = publicKey.export({ type: 'spki', format: 'pem' });
+    const fp = TA.fingerprintDaChavePem(pem);
+    const r = TA.chaveDeAprovacaoAncorada(pem, { pins: [fp], externa: 'a'.repeat(64) });
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toBe('ANCORA_EXTERNA_DIVERGENTE');
+  });
+
+  test('pins de aprovação são um conjunto SEPARADO dos de fechamento', () => {
+    expect(Array.isArray(TA.PINNED_APPROVAL_FINGERPRINTS)).toBe(true);
+    expect(TA.PINNED_APPROVAL_FINGERPRINTS).not.toBe(TA.PINNED_AUTHORITY_FINGERPRINTS);
+  });
+});
