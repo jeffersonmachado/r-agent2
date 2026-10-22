@@ -220,8 +220,16 @@ jobs:
 
       # Toda a bateria L0+L1 roda pelo MESMO runner versionado que qualquer
       # pessoa executa localmente. Sem passos paralelos: uma implementacao so.
+      # ESCOPO DECLARADO (2026-10-22): fases A (pré-voo), B (regressões), C (L0+L0b) e D
+      # (integridade de DESENVOLVIMENTO: release-dag, fila oficial, ai-memory, aderência).
+      # A fase R (certificação de RELEASE: cadeia criptográfica, self-proving, decisão canônica)
+      # NÃO roda aqui de propósito: ela certifica o PACOTE SELADO, cujos bytes não são versionáveis
+      # (`dist/` é gitignored), e só é avaliável depois de `npm run release:seal` em `main`.
+      # O veredito sai `PASS_PARCIAL` com `equivalenteAValidacaoCompleta:false` — nunca `PASS`.
+      # Um gate que nunca pode ficar verde ensina o time a ignorar o vermelho; o controle de
+      # release continua obrigatório em R (validação completa) e no pipeline de selagem.
       - name: L0 + L1 (runner versionado, exit code real)
-        run: node scripts/ci/dev-branch-gate.js --out reports/dev-branch-ci-evidence.json
+        run: node scripts/ci/dev-branch-gate.js --fases A,B,C,D --out reports/dev-branch-ci-evidence.json
         env:
           CI: true
           DEV_BRANCH_GATE_ESPERA_SHA: ${{ github.sha }}

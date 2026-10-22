@@ -932,6 +932,29 @@ teste **roda o produtor no `beforeAll`**, logo apagar o relatório não o reprov
 nunca falha não prova nada; o par foi trocado (`1e6a64b58`) para o artefato prod-like × `modelDrivenE2e`,
 que apenas LÊ o arquivo, e o cenário passou a reprovar de verdade quando o artefato não existe.
 
+### 16.3.3 CORREÇÃO DO L1 (2026-10-22): separação de escopo D × R
+
+O `L1` misturava dois escopos no mesmo conjunto de 7 gates. Medido em checkout limpo e no runner,
+os três gates de **certificação de release** não podem passar antes de `npm run release:seal` em
+`main` (a cadeia encadeia o ZIP selado, que não é versionável). Mantê-los na fase de desenvolvimento
+produzia um CI que **nunca** poderia ficar verde.
+
+Correção estrutural (não é afrouxamento de validador — os três validadores continuam idênticos):
+
+| fase | conteúdo | autorização | onde roda |
+|---|---|---|---|
+| **D** | `L1-release-dag`, `L1-fila-oficial`, `L1-ai-memory`, `L1-aderencia-agente` | `L1_AMPLO` | CI do branch de desenvolvimento |
+| **R** | `L1-cadeia-criptografica`, `L1-self-proving`, `L1-decisao-canonica` | `SELO_FINAL` | pipeline de selagem / validação completa |
+
+- `FASES_OBRIGATORIAS_VALIDACAO_COMPLETA` passou a ser `A,B,C,D,R,E,F` — **R continua obrigatória**
+  para validação completa; o CI pede `A,B,C,D` e o veredito é `PASS_PARCIAL`
+  (`equivalenteAValidacaoCompleta=false`), nunca `PASS`;
+- o contrato é PINado em `tests/unit/governance/phaseStepContract.test.js` (a definição de D é
+  comparada item a item e R precisa existir e ser obrigatória);
+- medido localmente: `--fases A,D` → 4 gates verdes, `PASS_PARCIAL`, exit 0; `--fases A,R` →
+  `SELO_FINAL` **NEGADA** (`BLOQUEADO_POR_DEFEITOS`) enquanto houver P1/bloqueio aberto — ou seja, o
+  controle de release ficou mais rígido, não mais frouxo.
+
 ### 16.4 O que continua vermelho — e por que NÃO foi reclassificado
 
 O inventário do L1 executado no clone (cada validador individualmente, a partir da MESMA definição

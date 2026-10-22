@@ -36,9 +36,22 @@
  *                     trabalho, dependências, regras preventivas, evidência velha
  *   B  direcionado  — testes de regressão declarados pelos defeitos em escopo
  *   C  L0           — suíte oficial (`npm test`)        exige L0_COMPLETO
- *   D  L1           — gates de governança offline       exige L1_AMPLO
+ *   D  L1           — integridade de DESENVOLVIMENTO    exige L1_AMPLO
+ *                     (release-dag, fila, ai-memory, aderência)
+ *   R  release      — CERTIFICAÇÃO de release            exige SELO_FINAL
+ *                     (cadeia criptográfica, self-proving, decisão canônica)
  *   E  L2/L3        — `test:system` (extensivo)         exige L2_L3_EXTENSIVO
  *   F  release      — gate agregado (63 passos)         exige SELO_FINAL
+ *
+ * POR QUE R É SEPARADA DE D (medido em 2026-10-22, commit `133eb147c`, em checkout LIMPO e no
+ * runner): os três gates de R certificam o PACOTE SELADO — a cadeia encadeia o ZIP, o self-proving
+ * recalcula essa cadeia e a decisão canônica exige GO definitivo. Nenhum dos três pode passar antes
+ * de `npm run release:seal` em `main`, porque os bytes do pacote não são versionáveis (`dist/` é
+ * gitignored). Mantê-los dentro de D fazia o CI do branch de desenvolvimento reprovar para sempre
+ * por um controle de RELEASE — e um gate que nunca pode ficar verde ensina o time a ignorar o
+ * vermelho. Eles continuam OBRIGATÓRIOS para validação completa (R ∈ FASES_OBRIGATORIAS) e são
+ * executados pelo pipeline de selagem; o que muda é que o CI de desenvolvimento mede o que pode
+ * medir e declara o resto como fora de escopo (`PASS_PARCIAL`), em vez de fingir que mediu.
  *
  * Se a autorização for NEGADA, o gate PARA naquele ponto e o veredito é
  * `BLOQUEADO_POR_DEFEITOS` (exit 2). Ele não "pula" a validação e não inventa
@@ -63,7 +76,7 @@
  * Uso:
  *   node scripts/ci/dev-branch-gate.js [--out <json>] [--espera-sha <sha>]
  *                                      [--escopo <defeito[,defeito]>]
- *                                      [--fases A,B,C,D,E,F] [--rapido]
+ *                                      [--fases A,B,C,D,R,E,F] [--rapido]
  *                                      [--requer-limpo] [--extensivo]
  *
  * Códigos de saída: 0 = PASS/PASS_PARCIAL, 1 = FAIL, 2 = BLOQUEADO_POR_DEFEITOS.
@@ -148,31 +161,10 @@ const PASSOS = Object.freeze({
   ],
   D: [
     {
-      id: 'L1-cadeia-criptografica',
-      nivel: 'L1',
-      comando: 'node scripts/governance/validate-governance-chain.js',
-      descricao: 'Cadeia de governança RECALCULADA dos bytes atuais (e declaração auditável)',
-      orcamentoMs: 120 * 1000,
-    },
-    {
-      id: 'L1-self-proving',
-      nivel: 'L1',
-      comando: 'node scripts/governance/validate-self-proving.js',
-      descricao: 'Self-proving sobre a cadeia recalculada',
-      orcamentoMs: 120 * 1000,
-    },
-    {
       id: 'L1-release-dag',
       nivel: 'L1',
       comando: 'node scripts/governance/validate-release-dag.js',
       descricao: 'DAG do release sem ciclo e sem violação de ordem de fase',
-      orcamentoMs: 120 * 1000,
-    },
-    {
-      id: 'L1-decisao-canonica',
-      nivel: 'L1',
-      comando: 'node scripts/governance/assert-canonical-release-decision.js',
-      descricao: 'Decisão canônica de release (autoridade única) coerente com os artefatos',
       orcamentoMs: 120 * 1000,
     },
     {
@@ -195,6 +187,34 @@ const PASSOS = Object.freeze({
       comando: 'node scripts/governance/validate-agent-adherence.js',
       descricao: 'Aderência do agente à Constituição',
       orcamentoMs: 60 * 1000,
+    },
+  ],
+
+  /**
+   * CERTIFICAÇÃO DE RELEASE — só é avaliável contra um pacote SELADO (ver docstring).
+   * Executada pelo pipeline de selagem e exigida em `FASES_OBRIGATORIAS_VALIDACAO_COMPLETA`.
+   */
+  R: [
+    {
+      id: 'L1-cadeia-criptografica',
+      nivel: 'L1',
+      comando: 'node scripts/governance/validate-governance-chain.js',
+      descricao: 'Cadeia de governança RECALCULADA dos bytes atuais (e declaração auditável)',
+      orcamentoMs: 120 * 1000,
+    },
+    {
+      id: 'L1-self-proving',
+      nivel: 'L1',
+      comando: 'node scripts/governance/validate-self-proving.js',
+      descricao: 'Self-proving sobre a cadeia recalculada',
+      orcamentoMs: 120 * 1000,
+    },
+    {
+      id: 'L1-decisao-canonica',
+      nivel: 'L1',
+      comando: 'node scripts/governance/assert-canonical-release-decision.js',
+      descricao: 'Decisão canônica de release (autoridade única) coerente com os artefatos',
+      orcamentoMs: 120 * 1000,
     },
   ],
   E: [
@@ -223,6 +243,8 @@ const AUTORIZACAO_DA_FASE = Object.freeze({
   B: OPERACOES.TESTES_NEGATIVOS_REGRESSAO,
   C: OPERACOES.L0_COMPLETO,
   D: OPERACOES.L1_AMPLO,
+  // Certificação de release é operação de SELAGEM — não de desenvolvimento.
+  R: OPERACOES.SELO_FINAL,
   E: OPERACOES.L2_L3_EXTENSIVO,
   F: OPERACOES.SELO_FINAL,
 });
@@ -244,7 +266,7 @@ const AUTORIZACAO_DA_FASE = Object.freeze({
 const FASES_CONHECIDAS = Object.freeze(Object.keys(AUTORIZACAO_DA_FASE));
 
 /** Conjunto que caracteriza validação completa — `PASS` exige TODAS em PASS. */
-const FASES_OBRIGATORIAS_VALIDACAO_COMPLETA = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);
+const FASES_OBRIGATORIAS_VALIDACAO_COMPLETA = Object.freeze(['A', 'B', 'C', 'D', 'R', 'E', 'F']);
 
 const ESTADOS_DE_FASE = Object.freeze({
   PASS: 'PASS',

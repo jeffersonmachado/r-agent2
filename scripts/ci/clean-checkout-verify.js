@@ -593,7 +593,9 @@ function executarGate(clonePath, env, args, logDir) {
 function inventarioL1(clonePath, env, logDir) {
   const { PASSOS } = require('./dev-branch-gate');
   const resultado = [];
-  for (const definicao of PASSOS.D) {
+  // D = integridade de desenvolvimento; R = certificação de release. O inventário cobre as duas
+  // para nomear o conjunto COMPLETO de gates de governança do commit (a fase R não roda no CI).
+  for (const definicao of [...PASSOS.D, ...(PASSOS.R || [])]) {
     const [comando, ...resto] = definicao.comando.split(' ');
     const registro = passo(`L1-inventario:${definicao.id}`, comando, resto, {
       cwd: clonePath,

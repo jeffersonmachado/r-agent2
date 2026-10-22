@@ -33,7 +33,16 @@ Três jobs, todos com produtores REAIS (nenhum `continue-on-error`, nenhum skip)
 | `dev-branch-gate` | `reports/dev-branch-ci-evidence.json` + logs por passo | artefato prod-like do job anterior, `ci:bootstrap`, RAG, sandbox image |
 
 Passos do gate (`scripts/ci/dev-branch-gate.js`): `B1..B3` (contratos) → `L0` (`npm test`, 4 workers)
-→ `L0b` (`npx jest tests/integration/engineering --runInBand`) → `L1` (7 validadores de governança).
+→ `L0b` (`npx jest tests/integration/engineering --runInBand`) → `L1` em DUAS fases de escopo
+diferente (separação de 2026-10-22):
+
+- **fase D — integridade de DESENVOLVIMENTO** (roda no CI): `L1-release-dag`, `L1-fila-oficial`,
+  `L1-ai-memory`, `L1-aderencia-agente`;
+- **fase R — CERTIFICAÇÃO DE RELEASE** (`SELO_FINAL`, não roda no CI): `L1-cadeia-criptografica`,
+  `L1-self-proving`, `L1-decisao-canonica`.
+
+O CI roda `--fases A,B,C,D` e o veredito é **`PASS_PARCIAL` (exit 0)** — `equivalenteAValidacaoCompleta`
+é `false`, porque R/E/F não foram executadas. Nunca é `PASS`.
 **Estado medido 2026-10-21 (runs 39682918570 e 39686396365):** smoke e integração SUCCESS,
 `L0` exit 0 (~445 s) e `L0b` exit 0 (~475 s, 40 suítes / 219 testes); o gate para em
 `L1-cadeia-criptografica` porque a cadeia aponta para `dist/release/*.zip` (não versionado) —
@@ -59,6 +68,14 @@ só existe depois que o conteúdo está em `main` e o selo roda lá. Fechar o `L
 checkpoint):** `L0` exit 0 em 431–449 s e `L0b` exit 0 em 468–474 s em TODAS as execuções, com
 `prod-like-smoke` e `dev-branch-integration` SUCCESS. O `L1` para sempre no MESMO ponto
 (`L1-cadeia-criptografica`, exit 1, ≤1 s) — é um bloqueio determinístico, não flake.
+
+**Por que R saiu de D (2026-10-22):** os três gates de R certificam o PACOTE SELADO — a cadeia
+encadeia o ZIP, o self-proving recalcula essa cadeia e a decisão canônica exige GO definitivo. Nenhum
+deles pode passar antes de `npm run release:seal` em `main`. Mantê-los em D fazia o CI de
+desenvolvimento reprovar para sempre por um controle de RELEASE. R continua **obrigatória para
+validação completa** (`FASES_OBRIGATORIAS_VALIDACAO_COMPLETA = A,B,C,D,R,E,F`), é **requerida pelo
+pipeline de selagem** e o contrato está PINado em `tests/unit/governance/phaseStepContract.test.js`
+(mover um gate de escopo sem atualizar o contrato falha o teste).
 
 **O bloqueio do `L1` tem UMA causa, não três:** os validadores seguintes ainda não executam no CI
 (a fase aborta no primeiro), mas medindo-os localmente o veredito é o mesmo e aponta para a cadeia —

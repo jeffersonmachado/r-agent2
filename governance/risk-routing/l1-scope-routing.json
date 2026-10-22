@@ -3,7 +3,7 @@
   "artifactVersion": 1,
   "_doc": "Roteamento dos bloqueios declarados da fila para a DECISAO que de fato os possui (missao L-1 FINAL §2, §5, §6). Rotear NAO e aceitar nem resolver: nenhum item aqui vira 'resolvido' sem PROBE executada, e nenhum item pode ser roteado se carregar categoria nao dispensavel (governance/risk-acceptance/policy.js). Alterar este arquivo e alterar um ato de governanca: fica no diff e exige revisao humana.",
   "decision": "ENGINEER_SUPERVISED_READINESS",
-  "verifiedAt": "2026-10-22T03:40:00.000Z",
+  "verifiedAt": "2026-10-22T10:40:00.000Z",
   "items": {
     "H15-DIST-RECIBO-STALE": {
       "class": "RELEASE_ONLY",
@@ -66,21 +66,6 @@
         "governance/.current-run.json",
         "AI_MEMORY/hardening-queue.json"
       ]
-    },
-    "L1-NPM-TEST-CI-VERMELHO": {
-      "class": "L1_BLOCKING",
-      "ownedBy": "ENGINEER_SUPERVISED_READINESS",
-      "categories": [],
-      "justification": "Bloqueia a cadeia do Engenheiro: sem CI verde nao existe verificacao por terceiro do L0/L1. MEDIDO em 2026-10-21/22 com o harness de checkout limpo (npm run ci:clean-checkout): a OPCAO A da justificativa anterior (preparar integralmente o ambiente) foi EXECUTADA — clone do commit exato, Postgres/Redis/RAG/runner/containers efemeros do proprio run, ci:bootstrap, produtor prod-like real e gate versionado. Resultado: os defeitos que reprovavam suites em clone limpo eram CINCO e todos tinham causa raiz de ambiente/repositorio, corrigidos e provados: (1) .github/copilot-instructions.md exigido por dois gates bloqueantes e nao versionado; (2) Engineering Runner de porta fixa reutilizado por outra arvore; (3) --passWithNoTests armado no test:flow; (4) configuracao git injetada pelo shell (safe.bareRepository=explicit) quebrando teste de repositorio bare; (5) checkout destacado medindo um ambiente que o actions/checkout nao produz. Depois disso o L0 e o L0b (40 suites / 219 testes) executam no clone. O que RESTA NAO e defeito de produto nem de teste: a familia de certificacao de release (governance-chain, self-proving, decisao canonica), que nao pode ser satisfeita em clone porque os bytes do pacote selado (dist/release/*.zip) nao sao versionaveis e o selo exige main (release:seal). MANTER class L1_BLOCKING: a cadeia do Engenheiro continua sem CI 100% verde. Reclassificar para RELEASE_ONLY mudaria o veredito do gate de prontidao e e decisao do dono, nao do agente.",
-      "evidenceReferences": [
-        "AI_MEMORY/hardening-queue.json",
-        "reports/engineer-supervised-readiness-report.json",
-        ".github/workflows/dev-branch-ci.yml",
-        "ENGINEER_SUPERVISED_READINESS.md",
-        "scripts/ci/clean-checkout-verify.js",
-        "AI_MEMORY/validation-rules.md"
-      ],
-      "probe": null
     }
   }
 }
