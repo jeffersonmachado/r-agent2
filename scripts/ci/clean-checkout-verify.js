@@ -195,6 +195,62 @@ function versao(comando, args = ['--version']) {
 // recursos efêmeros (banco, redis, container)
 // ---------------------------------------------------------------------------
 
+const PG_IMAGE = process.env.CLEAN_CHECKOUT_PG_IMAGE || 'pgvector/pgvector:pg16';
+const REDIS_IMAGE = process.env.CLEAN_CHECKOUT_REDIS_IMAGE || 'redis:7';
+
+/**
+ * POSTGRES E REDIS PRÓPRIOS DO RUN (containers efêmeros), como os `services:` do job de CI.
+ *
+ * DEFEITO MEDIDO em 2026-10-22 (run limpo de c5f045a8b): mesmo com banco dedicado, o servidor
+ * Postgres era o do host — compartilhado com a API de desenvolvimento, o preview e outros bancos.
+ * As suítes de concorrência reprovaram com `SequelizeConnectionError: sorry, too many clients
+ * already` e uma suíte E2E estourou 900 s. A "isolação por banco" não isolava CAPACIDADE: conexões
+ * são um recurso do SERVIDOR, não do banco. No CI o Postgres é um serviço efêmero com capacidade
+ * inteira para o job. Aqui ele passa a ser também.
+ */
+function subirInfraDeDados(sufixo) {
+  const nomes = { pg: `rap-ci-clean-${sufixo}-pg`, redis: `rap-ci-clean-${sufixo}-redis` };
+  const pgPorta = portaDeTesteLivre();
+  const redisPorta = portaDeTesteLivre();
+
+  sh('docker', ['rm', '-f', nomes.pg]);
+  sh('docker', ['rm', '-f', nomes.redis]);
+
+  const pg = sh('docker', ['run', '-d', '--name', nomes.pg,
+    '-e', 'POSTGRES_USER=postgres',
+    '-e', 'POSTGRES_PASSWORD=postgres',
+    '-e', 'POSTGRES_DB=ci',
+    '-p', `127.0.0.1:${pgPorta}:5432`, PG_IMAGE]);
+  if (pg.status !== 0) throw new Error(`falha ao subir Postgres efemero: ${(pg.stderr || pg.stdout).trim()}`);
+
+  const redis = sh('docker', ['run', '-d', '--name', nomes.redis,
+    '-p', `127.0.0.1:${redisPorta}:6379`, REDIS_IMAGE]);
+  if (redis.status !== 0) throw new Error(`falha ao subir Redis efemero: ${(redis.stderr || redis.stdout).trim()}`);
+
+  for (let i = 0; i < 60; i += 1) {
+    if (sh('docker', ['exec', nomes.pg, 'pg_isready', '-U', 'postgres']).status === 0) break;
+    sh('sleep', ['2']);
+  }
+  for (let i = 0; i < 60; i += 1) {
+    if (sh('docker', ['exec', nomes.redis, 'redis-cli', 'ping']).status === 0) break;
+    sh('sleep', ['1']);
+  }
+
+  return {
+    nomes,
+    pgPorta,
+    redisPorta,
+    databaseUrl: `postgres://postgres:postgres@127.0.0.1:${pgPorta}/ci`,
+    redisUrl: `redis://127.0.0.1:${redisPorta}/0`,
+  };
+}
+
+function derrubarInfraDeDados(nomes) {
+  if (!nomes) return;
+  sh('docker', ['rm', '-f', nomes.pg]);
+  sh('docker', ['rm', '-f', nomes.redis]);
+}
+
 function criarBanco(nome) {
   const r = sh('psql', [ADMIN_DATABASE_URL, '-v', 'ON_ERROR_STOP=1', '-c', `CREATE DATABASE "${nome}"`]);
   if (r.status !== 0) {
@@ -478,12 +534,13 @@ function fingerprintDoSource(destino) {
 // cenários
 // ---------------------------------------------------------------------------
 
-function criarAmbienteDoRun({ clonePath, databaseUrl, ragUrl, token, runnerPort, extras = {} }) {
+function criarAmbienteDoRun({ clonePath, databaseUrl, redisUrl, ragUrl, token, runnerPort, extras = {} }) {
   return {
     CI: 'true',
     NODE_ENV: 'test',
     DATABASE_URL: databaseUrl,
-    REDIS_URL: `redis://${REDIS_HOST}:6379/${REDIS_DB}`,
+    REDIS_URL: redisUrl || `redis://${REDIS_HOST}:6379/${REDIS_DB}`,
+    RATE_LIMIT_REDIS_URL: redisUrl || `redis://${REDIS_HOST}:6379/${REDIS_DB}`,
     RAG_SERVICE_URL: ragUrl,
     RAG_INTERNAL_TOKEN: token,
     // ISOLAMENTO DO ENGINEERING RUNNER: porta propria do run. Com 8097 fixo, o clone podia
@@ -697,6 +754,7 @@ function cenarioBancoIndisponivel(ctx, args) {
   const envInvalido = criarAmbienteDoRun({
     clonePath,
     databaseUrl: 'postgres://postgres:postgres@127.0.0.1:1/inexistente',
+    redisUrl: ctx.env.REDIS_URL,
     ragUrl: 'http://127.0.0.1:1',
     token: 'invalido',
     runnerPort: ctx.runnerPort,
@@ -917,6 +975,7 @@ function main(argv = process.argv.slice(2)) {
     const limitacoes = [];
     let token = null;
     let ragPorta = null;
+    let infraDados = null;
 
     try {
       fs.mkdirSync(logDir, { recursive: true });
@@ -940,13 +999,15 @@ function main(argv = process.argv.slice(2)) {
       }
 
       const sourceFingerprint = fingerprintDoSource(clonePath);
-      criarBanco(nomeBanco);
-      limparRedis();
+      // CAPACIDADE dedicada: Postgres/Redis efemeros do run (mesmo desenho dos `services:` do CI).
+      infraDados = subirInfraDeDados(runId.split('-').pop());
+      limitacoes.push(`Postgres/Redis efemeros do run: pg:${infraDados.pgPorta} redis:${infraDados.redisPorta}`);
 
       const runnerPort = portaDeTesteLivre();
       let env = criarAmbienteDoRun({
         clonePath,
-        databaseUrl: `postgres://postgres:postgres@127.0.0.1:5432/${nomeBanco}`,
+        databaseUrl: infraDados.databaseUrl,
+        redisUrl: infraDados.redisUrl,
         ragUrl: 'http://127.0.0.1:8001',
         token: 'ausente',
         runnerPort,
@@ -980,6 +1041,7 @@ function main(argv = process.argv.slice(2)) {
       env = criarAmbienteDoRun({
         clonePath,
         databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
         ragUrl: ragPorta ? `http://127.0.0.1:${ragPorta}` : 'http://127.0.0.1:8001',
         token,
         runnerPort,
@@ -1051,7 +1113,7 @@ function main(argv = process.argv.slice(2)) {
       derrubarProdLike();
       derrubarRag();
       encerrarProcessosDoClone(clonePath);
-      destruirBanco(nomeBanco);
+      derrubarInfraDeDados(infraDados && infraDados.nomes);
       if (!args.keep) fs.rmSync(tmpRoot, { recursive: true, force: true });
       else console.log(`[ci:clean-checkout] clone preservado em ${clonePath}`);
     }
