@@ -61,6 +61,22 @@ function main(argv = process.argv.slice(2)) {
     return 2;
   }
 
+  // Achado do revisor (2ª passada, P1): `--queue` era um bypass de UM argumento — apontar o
+  // gate para `{"items":[]}` concedia SELO_FINAL. O caminho explícito segue as MESMAS regras
+  // do override de ambiente: contexto de teste + fixture versionado em `tests/fixtures/`.
+  if (queuePath) {
+    const raizRepo = path.resolve(__dirname, '..', '..');
+    const rel = path.relative(raizRepo, path.resolve(queuePath)).split(path.sep).join('/');
+    const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+    if (!ambienteDeTeste || !rel.startsWith('tests/fixtures/')) {
+      process.stderr.write(
+        `[eligibility] RECUSADO (QUEUE_OVERRIDE_RECUSADO): --queue só é aceito em contexto de teste `
+        + `apontando para fixture versionado em tests/fixtures/ (recebido: ${rel || queuePath})\n`,
+      );
+      return 2;
+    }
+  }
+
   let inventario;
   try {
     inventario = carregarInventario(queuePath ? { queuePath } : {});

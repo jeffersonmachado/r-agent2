@@ -30,6 +30,16 @@ const SHA = '9758f828f3fdd0fb07c08ebe591de1ace8df2ebe';
 const FUTURO = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
 const PASSADO = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
+// A âncora externa do inventário (2ª passada do revisor) é exigida para operação
+// certificante. Estes testes medem a mecânica de ACEITAÇÃO DE RISCO, então fornecem a
+// âncora do próprio fixture — sem ela o veredito seria DENIED por INVENTARIO_NAO_ANCORADO
+// e o que se quer medir aqui (risco aceito) ficaria mascarado.
+const { digestDoInventario } = require('../../../governance/bug-closure/trusted-authorities');
+
+function ancorarInventario(defeitos) {
+  process.env.RAP_CLOSURE_INVENTORY_SHA256 = digestDoInventario(defeitos);
+}
+
 function contexto(defeitos) {
   return {
     commit: SHA,
@@ -40,8 +50,11 @@ function contexto(defeitos) {
 }
 
 function avaliar(defeitos, operacao = OPERACOES.QA_WAVES_COMPLETA) {
+  ancorarInventario(defeitos);
   return evaluateExecutionEligibility(contexto(defeitos), operacao);
 }
+
+afterEach(() => { delete process.env.RAP_CLOSURE_INVENTORY_SHA256; });
 
 const ACEITACAO_VALIDA = {
   riskAcceptedBy: 'security@results',

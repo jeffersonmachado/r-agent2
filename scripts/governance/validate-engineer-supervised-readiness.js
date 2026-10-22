@@ -94,7 +94,10 @@ function checkFila() {
   // ALERT 5 (revisor independente, P1): este check lia o `status` CRU. `state:"OPEN"` com
   // `status:"done"` passava por todos os checks novos. A autoridade do estado é o inventário
   // MIGRADO (mesma função que certifica), e divergência state×status é fato reportado.
-  const inventario = carregarInventario();
+  // Achado do revisor (2ª passada, P1): sem `queuePath`, em NODE_ENV=test o módulo lia o
+  // fixture apontado por BUG_CLOSURE_INVENTORY_PATH — as duas metades do gate olhavam
+  // inventários diferentes e um P0 real ficava invisível. O gate lê SEMPRE o oficial.
+  const inventario = carregarInventario({ queuePath: QUEUE_PATH });
   const migrados = inventario.defeitos || [];
   const porId = new Map(migrados.map((d) => [d.id, d]));
   const abertos = migrados.filter((d) => d.aberto === true);

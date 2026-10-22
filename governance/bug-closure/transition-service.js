@@ -121,6 +121,13 @@ function applyTransition(entrada = {}) {
     return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: transicao.reasons || [] };
   }
 
+  // ALERT 3b (revisor, 2ª passada): a recusa por prova em transição não-fechamento era
+  // avaliada DEPOIS do append no livro — uma chamada recusada deixava evento permanente de
+  // uma transição que nunca ocorreu. Toda validação precede qualquer escrita.
+  if (entrada.proof && !ESTADOS_FECHADOS.includes(to)) {
+    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['PROVA_EM_TRANSICAO_NAO_FECHAMENTO'] };
+  }
+
   // Fechamento exige prova verificada. A fila sozinha nunca fecha nada.
   if (ESTADOS_FECHADOS.includes(to)) {
     if (!entrada.proof) return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['PROVA_DE_FECHAMENTO_AUSENTE'] };
@@ -178,13 +185,12 @@ function applyTransition(entrada = {}) {
     alvo.status = STATUS_CANONICO[to] || alvo.status;
     alvo.legacyStatus = alvo.status;
     alvo.transitionId = evento.evento.transitionId;
-    // ALERT 3b: só transição de FECHAMENTO tem prova VERIFICADA. Gravar prova de transição
-    // intermediária criava arquivo não validado com nome controlado pelo chamador.
-    if (entrada.proof && !ESTADOS_FECHADOS.includes(to)) {
-      return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['PROVA_EM_TRANSICAO_NAO_FECHAMENTO'] };
-    }
     if (entrada.proof) {
       const dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
+      // Achado do revisor (2ª passada, P2): `proofsPath` absoluto gravava JSON fora da raiz.
+      if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)) {
+        return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+      }
       // Nome derivado do id GERADO pelo serviço (UUID validado), nunca de campo livre.
       const nomeProva = `${evento.evento.transitionId}.json`;
       const absProva = path.resolve(dirProvas, nomeProva);

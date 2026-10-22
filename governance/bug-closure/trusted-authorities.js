@@ -44,10 +44,36 @@ function fingerprintDaChavePem(publicKeyPem) {
   }
 }
 
-/** Âncora EXTERNA opcional (fornecida pelo operador/CI, nunca versionada). */
+/**
+ * Âncora EXTERNA da chave de fechamento (operador/CI, NUNCA versionada).
+ * 2ª passada do revisor: era OPCIONAL — logo o pin em código virava raiz de confiança e o
+ * atacante que reescreve a árvore reescrevia o pin. Agora é OBRIGATÓRIA: sem ela não há
+ * âncora e a certificação permanece bloqueada.
+ */
 function ancoraExterna() {
   const valor = String(process.env.RAP_CLOSURE_TRUST_ANCHOR_SHA256 || '').trim().toLowerCase();
   return /^[0-9a-f]{64}$/.test(valor) ? valor : null;
+}
+
+/**
+ * Âncora EXTERNA do INVENTÁRIO (membership). Fecha o achado "apagar itens libera o selo":
+ * o digest do inventário é comparado com um valor que vive FORA da árvore.
+ */
+function ancoraDoInventario() {
+  const valor = String(process.env.RAP_CLOSURE_INVENTORY_SHA256 || '').trim().toLowerCase();
+  return /^[0-9a-f]{64}$/.test(valor) ? valor : null;
+}
+
+/**
+ * Digest canônico do inventário: identidade + severidade + estado de cada item, ordenado.
+ * Remover, renomear, rebaixar severidade ou "fechar" item muda o digest.
+ */
+function digestDoInventario(itens) {
+  const { canonicalJson, sha256 } = require('../risk-acceptance/signature');
+  const triplas = (Array.isArray(itens) ? itens : [])
+    .map((i) => [String((i && i.id) || ''), String((i && i.severity) || '').toUpperCase(), String((i && i.state) || '').toUpperCase()])
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  return sha256(canonicalJson(triplas));
 }
 
 /**
@@ -66,11 +92,12 @@ function chaveAncorada(publicKeyPem, opcoes = {}) {
   const externa = opcoes.externa !== undefined ? opcoes.externa : ancoraExterna();
   const fingerprint = fingerprintDaChavePem(publicKeyPem);
   if (!fingerprint) return { ok: false, motivo: 'CHAVE_PUBLICA_ILEGIVEL', fingerprint: null };
+  if (!externa) return { ok: false, motivo: 'SEM_ANCORA_EXTERNA', fingerprint };
   if (pins.length === 0) return { ok: false, motivo: 'SEM_PIN_VERSIONADO', fingerprint };
   if (!pins.map((p) => String(p).toLowerCase()).includes(fingerprint)) {
     return { ok: false, motivo: 'FINGERPRINT_NAO_PINADO', fingerprint };
   }
-  if (externa && externa !== fingerprint) {
+  if (externa !== fingerprint) {
     return { ok: false, motivo: 'ANCORA_EXTERNA_DIVERGENTE', fingerprint };
   }
   return { ok: true, motivo: null, fingerprint };
@@ -80,5 +107,7 @@ module.exports = {
   PINNED_AUTHORITY_FINGERPRINTS,
   fingerprintDaChavePem,
   ancoraExterna,
+  ancoraDoInventario,
+  digestDoInventario,
   chaveAncorada,
 };

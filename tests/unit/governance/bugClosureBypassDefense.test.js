@@ -289,7 +289,7 @@ describe('PROVA DE FECHAMENTO — recusa é nomeada, nunca silenciosa', () => {
     rootDir: root,
     autoridades: undefined,
     // A chave só confere autoridade se estiver PINADA (âncora fora do JSON editável).
-    ancoragem: { pins: PINS.get(root) ? [PINS.get(root)] : [], externa: null },
+    ancoragem: { pins: PINS.get(root) ? [PINS.get(root)] : [], externa: PINS.get(root) || null },
     livro: null,
     agora: Date.parse('2026-10-22T10:00:10.000Z'),
   });
@@ -357,7 +357,7 @@ describe('ÂNCORA DE CONFIANÇA — atacante com acesso ao inventário E aos has
     const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, {
       defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
       currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
       agora: Date.parse('2026-10-22T10:00:10.000Z'),
     });
     expect(veredito.ok).toBe(false);
@@ -370,7 +370,7 @@ describe('ÂNCORA DE CONFIANÇA — atacante com acesso ao inventário E aos has
     const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, {
       defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
       currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
       agora: Date.parse('2026-10-22T10:00:10.000Z'),
     });
     expect(veredito.reasons).toContain('ATOR_INVALIDO');
@@ -429,7 +429,7 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
     const r = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(r.ok).toBe(true);
     const item = JSON.parse(fs.readFileSync(queuePath, 'utf8')).items[0];
@@ -442,14 +442,14 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
     const primeira = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(primeira.ok).toBe(true);
     escreverFila(root, [itemBase({ state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' })]);
     const segunda = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(segunda.ok).toBe(false);
   });
@@ -460,7 +460,7 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       fromExpected: 'FIX_IN_PROGRESS', actor: { id: 'owner@example.invalid' },
       currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(r.ok).toBe(false);
     expect(r.code).toBe('ESTADO_DIVERGENTE');
@@ -472,7 +472,7 @@ describe('SERVIÇO DE TRANSIÇÃO', () => {
     const r = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED',
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(r.ok).toBe(false);
     expect(fs.readFileSync(queuePath, 'utf8')).toBe(antes);
@@ -585,7 +585,10 @@ describe('ALERT 1 (P0) — registro em JSON editável não é âncora de confian
     const { prova } = provaValida(root);
     // Assinatura é criptograficamente válida (chave do JSON) e ainda assim recusada:
     // quem edita o JSON pode registrar a própria chave; o pin vive fora dele.
-    const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, ctxAncoragem(root, { pins: [], externa: null }));
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(
+      prova,
+      ctxAncoragem(root, { pins: [], externa: PINS.get(root) }),
+    );
     expect(veredito.ok).toBe(false);
     expect(veredito.reasons).toContain('SEM_ANCORA_DE_CONFIANCA');
     expect(veredito.detalhe.motivo).toBe('SEM_PIN_VERSIONADO');
@@ -600,6 +603,17 @@ describe('ALERT 1 (P0) — registro em JSON editável não é âncora de confian
     );
     expect(veredito.ok).toBe(false);
     expect(veredito.detalhe.motivo).toBe('ANCORA_EXTERNA_DIVERGENTE');
+  });
+
+  test('chave pinada SEM âncora externa ⇒ SEM_ANCORA_DE_CONFIANCA (âncora externa é obrigatória)', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root);
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(
+      prova,
+      ctxAncoragem(root, { pins: [PINS.get(root)], externa: null }),
+    );
+    expect(veredito.ok).toBe(false);
+    expect(veredito.detalhe.motivo).toBe('SEM_ANCORA_EXTERNA');
   });
 
   test('chave pinada e âncora externa IGUAL ⇒ aceita (o mecanismo funciona)', () => {
@@ -687,7 +701,7 @@ describe('ALERT 3 (P1) — transitionId do chamador não é caminho de arquivo',
     const r = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(r.ok).toBe(false);
     expect(r.reasons).toContain('TRANSITION_ID_INVALIDO');
@@ -702,7 +716,7 @@ describe('ALERT 3 (P1) — transitionId do chamador não é caminho de arquivo',
     const r = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'REPRODUCED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(r.ok).toBe(false);
     expect(r.reasons).toContain('PROVA_EM_TRANSICAO_NAO_FECHAMENTO');
@@ -716,7 +730,7 @@ describe('ALERT 3 (P1) — transitionId do chamador não é caminho de arquivo',
     const r = ATUAL.service.applyTransition({
       rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
       actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
-      ancoragem: { pins: [PINS.get(root)], externa: null },
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
     });
     expect(r.ok).toBe(true);
     const item = JSON.parse(fs.readFileSync(queuePath, 'utf8')).items[0];
@@ -821,5 +835,129 @@ describe('ALERT 5 (P1) — gate de readiness deriva o estado do inventário can�
       'SELO_FINAL',
     );
     expect(decisao.allowed).toBe(false);
+  });
+});
+
+// ─── 10. TERCEIRA PASSADA: âncora externa obrigatória e pertença do inventário ──
+// O revisor mostrou que, enquanto a âncora for OPCIONAL, o pin em código é apenas um cache
+// reescrevível: o atacante que escreve na árvore reescreve pin + inventário + prova. Estes
+// testes provam que (a) sem âncora externa NADA certifica e (b) apagar itens não libera.
+
+describe('ÂNCORA EXTERNA OBRIGATÓRIA — sem ela, nenhuma operação certifica', () => {
+  const SEMM = ['SELO_FINAL', 'PUBLICACAO_RELEASE', 'L2_L3_EXTENSIVO', 'CONVERGENCIA_COMPLETA'];
+
+  test.each(SEMM)('%s nega com SEM_ANCORA_EXTERNA quando não há valor externo', (operacao) => {
+    const root = novaRaiz({ comAutoridade: true });
+    const { prova } = provaValida(root);
+    const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, {
+      defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
+      currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
+      ancoragem: { pins: [PINS.get(root)], externa: null },
+      agora: Date.parse(prova.createdAt) + 1000,
+    });
+    expect(veredito.ok).toBe(false);
+    expect(veredito.detalhe.motivo).toBe('SEM_ANCORA_EXTERNA');
+  });
+
+  test('ancoraDoInventario nulo por default no repositório', () => {
+    expect(TA.ancoraDoInventario()).toBeNull();
+  });
+
+  test('digestDoInventario muda quando um item é REMOVIDO (membership)', () => {
+    const base = [
+      { id: 'P0-A', severity: 'P0', state: 'OPEN' },
+      { id: 'P1-B', severity: 'P1', state: 'OPEN' },
+    ];
+    expect(TA.digestDoInventario(base)).not.toBe(TA.digestDoInventario([base[0]]));
+  });
+
+  test('digestDoInventario muda quando a severidade é REBAIXADA', () => {
+    const item = { id: 'P0-A', severity: 'P0', state: 'OPEN' };
+    expect(TA.digestDoInventario([item])).not.toBe(TA.digestDoInventario([{ ...item, severity: 'P3' }]));
+  });
+
+  test('inventário VAZIO não concede SELO_FINAL (apagar as linhas não fecha nada)', () => {
+    const decisao = ATUAL.eligibility.evaluateExecutionEligibility(
+      { commit: SHA, actor: { id: 'teste', kind: 'script' }, defects: [], certification: 'CERTIFIED_GO' },
+      'SELO_FINAL',
+    );
+    expect(decisao.allowed).toBe(false);
+    expect(decisao.reasonCodes).toContain('INVENTARIO_NAO_ANCORADO');
+  });
+
+  test('inventário com digest divergente da âncora externa ⇒ INVENTARIO_ADULTERADO', () => {
+    const original = process.env.RAP_CLOSURE_INVENTORY_SHA256;
+    process.env.RAP_CLOSURE_INVENTORY_SHA256 = 'f'.repeat(64);
+    try {
+      const decisao = ATUAL.eligibility.evaluateExecutionEligibility(
+        { commit: SHA, actor: { id: 'teste', kind: 'script' }, defects: [{ id: 'P3-X', severity: 'P3', state: 'OPEN' }] },
+        'SELO_FINAL',
+      );
+      expect(decisao.allowed).toBe(false);
+      expect(decisao.reasonCodes).toContain('INVENTARIO_ADULTERADO');
+    } finally {
+      if (original === undefined) delete process.env.RAP_CLOSURE_INVENTORY_SHA256;
+      else process.env.RAP_CLOSURE_INVENTORY_SHA256 = original;
+    }
+  });
+
+  test('inventário com digest CASANDO a âncora externa não é bloqueado por âncora', () => {
+    const itens = [{ id: 'P3-OK', severity: 'P3', state: 'RISK_ACCEPTED' }];
+    const original = process.env.RAP_CLOSURE_INVENTORY_SHA256;
+    process.env.RAP_CLOSURE_INVENTORY_SHA256 = TA.digestDoInventario(itens);
+    try {
+      const decisao = ATUAL.eligibility.evaluateExecutionEligibility(
+        { commit: SHA, actor: { id: 'teste', kind: 'script' }, defects: itens },
+        'SELO_FINAL',
+      );
+      expect(decisao.reasonCodes).not.toContain('INVENTARIO_NAO_ANCORADO');
+      expect(decisao.reasonCodes).not.toContain('INVENTARIO_ADULTERADO');
+    } finally {
+      if (original === undefined) delete process.env.RAP_CLOSURE_INVENTORY_SHA256;
+      else process.env.RAP_CLOSURE_INVENTORY_SHA256 = original;
+    }
+  });
+});
+
+describe('`--queue` e caminho de prova não são canais de desvio', () => {
+  test('CLI recusa --queue fora de contexto de teste ou fora de tests/fixtures', () => {
+    const saida = path.join(os.tmpdir(), `elig-${crypto.randomUUID()}.json`);
+    fs.writeFileSync(saida, JSON.stringify({ items: [] }), 'utf8');
+    let status = 0;
+    try {
+      execFileSync('node', [
+        'scripts/governance/evaluate-execution-eligibility.js',
+        '--operation', 'SELO_FINAL', '--queue', saida,
+      ], { cwd: RAIZ, encoding: 'utf8', stdio: 'pipe', timeout: 60000 });
+    } catch (e) { status = e.status; }
+    expect(status).toBe(2);
+  });
+
+  test('applyTransition recusa proofsPath que sai da raiz', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' })]);
+    const { prova } = provaValida(root);
+    const r = ATUAL.service.applyTransition({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'VERIFIED', proof: prova,
+      proofsPath: '/tmp',
+      actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain('CAMINHO_DE_PROVA_INVALIDO');
+  });
+
+  test('transição recusada NÃO deixa evento órfão no livro', () => {
+    const root = novaRaiz({ comAutoridade: true });
+    const queuePath = escreverFila(root, [itemBase({ state: 'OPEN', status: 'pending' })]);
+    const { prova } = provaValida(root);
+    const r = ATUAL.service.applyTransition({
+      rootDir: root, queuePath, defectId: 'P1-ADVERSARIAL', to: 'REPRODUCED', proof: prova,
+      actor: { id: 'owner@example.invalid' }, currentCommit: SHA, currentFingerprint: FP,
+      ancoragem: { pins: [PINS.get(root)], externa: PINS.get(root) },
+    });
+    expect(r.ok).toBe(false);
+    const livro = path.join(root, ATUAL.ledger.REL_PADRAO);
+    expect(fs.existsSync(livro)).toBe(false);
   });
 });

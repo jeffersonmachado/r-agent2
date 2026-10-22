@@ -26,6 +26,7 @@ const {
   normalizarSeveridade,
   eBloqueanteParaCertificacao,
 } = require('./defect-states');
+const { ancoraDoInventario, digestDoInventario } = require('./trusted-authorities');
 
 /** Operações controladas (nome canônico em maiúsculas). */
 const OPERACOES = Object.freeze({
@@ -96,6 +97,8 @@ const CODIGOS = Object.freeze({
   CERTIFICACAO_AUSENTE: 'CERTIFICACAO_AUSENTE',
   // CAMADA B (missão P0 2026-10-22): estado de fechamento sem prova válida.
   FECHAMENTO_SEM_PROVA_VALIDA: 'FECHAMENTO_SEM_PROVA_VALIDA',
+  INVENTARIO_NAO_ANCORADO: 'INVENTARIO_NAO_ANCORADO',
+  INVENTARIO_ADULTERADO: 'INVENTARIO_ADULTERADO',
 });
 
 /**
@@ -355,6 +358,31 @@ function evaluateExecutionEligibility(context = {}, operation) {
     requiredActions.push('anexar a certificação canônica antes de autorizar publicação');
   }
 
+  // ── ÂNCORA EXTERNA DO INVENTÁRIO (membership) ────────────────────────────
+  // 2ª passada do revisor, P0: a Camada B autenticava o FECHAMENTO, mas não a EXISTÊNCIA do
+  // defeito. Apagar a linha (ou apontar o gate para outro inventário) liberava SELO_FINAL.
+  // Operação certificante agora exige que o digest do inventário lido case com o valor
+  // externo `RAP_CLOSURE_INVENTORY_SHA256`, que vive FORA da árvore.
+  if (politica.certifica) {
+    const ancora = ancoraDoInventario();
+    const digest = digestDoInventario(context.defects);
+    if (!ancora) {
+      reasonCodes.push(CODIGOS.INVENTARIO_NAO_ANCORADO);
+      blockingFindings.push({
+        code: CODIGOS.INVENTARIO_NAO_ANCORADO,
+        detail: 'inventário sem âncora externa (RAP_CLOSURE_INVENTORY_SHA256): pertença dos itens não autenticada',
+      });
+      requiredActions.push('fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI), fora da árvore do repositório');
+    } else if (ancora !== digest) {
+      reasonCodes.push(CODIGOS.INVENTARIO_ADULTERADO);
+      blockingFindings.push({
+        code: CODIGOS.INVENTARIO_ADULTERADO,
+        detail: `digest do inventário (${digest.slice(0, 12)}…) difere da âncora externa (${ancora.slice(0, 12)}…): item removido, renomeado ou reclassificado`,
+      });
+      requiredActions.push('restaurar o inventário oficial OU atualizar a âncora externa por ato humano auditado');
+    }
+  }
+
   for (const d of riscoAceito) {
     reasonCodes.push(CODIGOS.RISCO_ACEITO_REGISTRADO);
     evidenceRefs.push(`defect:${d.id}:RISK_ACCEPTED`);
@@ -485,7 +513,13 @@ function evaluateExecutionEligibility(context = {}, operation) {
   // bloqueio do bypass por edição de JSON (missão P0 2026-10-22).
   const fechamentoSemProvaBloqueia = politica.certifica && fechamentoNaoProvado.length > 0;
 
+  // Pertença do inventário não autenticada/adulterada NEGA certificação (2ª passada do
+  // revisor): apagar a linha do defeito não pode liberar o selo.
+  const inventarioNaoAncoradoBloqueia = politica.certifica
+    && (reasonCodes.includes(CODIGOS.INVENTARIO_NAO_ANCORADO) || reasonCodes.includes(CODIGOS.INVENTARIO_ADULTERADO));
+
   const negado = bloquearP0 || bloquearP1 || condicionalPendente || fechamentoSemProvaBloqueia
+    || inventarioNaoAncoradoBloqueia
     || (naoDeclarada.length > 0 && politica.certifica)
     || (op === OPERACOES.PUBLICACAO_RELEASE && !NAO_VAZIO(context.certification));
 
