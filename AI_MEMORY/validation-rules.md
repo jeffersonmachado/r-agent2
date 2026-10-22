@@ -122,7 +122,7 @@ todos com `veredito=PASS`:
 | `missing-artifact` | com artefato PASS (8 s); artefato apagado ⇒ consumidor **exit 1** (5 s); produtor regenera (69 s); consumidor volta a PASS (6 s) | `ci-clean-checkout-1e6a64b58/missing-artifact/` |
 | `corrupt-artifact` | JSON prod-like truncado ⇒ consumidor **exit 1** (7 s) | `ci-clean-checkout-1e6a64b58/corrupt-artifact/` |
 | `docker-unavailable` | sem Docker a suíte de sandbox **exit 1** (2 s) — nunca `SANDBOX_RUNTIME=PASS` | `ci-clean-checkout-33ef95718/docker-unavailable/` |
-| `db-unavailable` | sem Postgres o bootstrap não termina em sucesso (exit != 0 ou abortado por orçamento) | executado, orçamento curto |
+| `db-unavailable` | sem Postgres o bootstrap foi **abortado em 480 s** pelo orçamento (nunca virou sucesso) | `ci-clean-checkout-e38734867/db-unavailable/` |
 | `l0-full` | seleção oficial inteira com `--bail=0` (bail=1 esconde o resto) | executado |
 
 **Defeito que a própria execução negativa revelou (2026-10-22):** o primeiro par escolhido para
@@ -131,11 +131,19 @@ todos com `veredito=PASS`:
 apagar o relatório não o reprova. O cenário passou a usar o artefato prod-like × `modelDrivenE2e`, que
 apenas lê o arquivo. Um cenário negativo que nunca falha não prova nada.
 
-**Medido em 2026-10-21** (`--scenario clean --gate-phases A,B,C,D --with-integration`, commit
-`382f83b37`): clone limpo PASS · `ci:bootstrap` exit 0 em 99 s · `L0` 379 suítes / 5568 testes com
-1 vermelha (`modelDrivenE2e`, artefato prod-like ausente — produtor agora executado pelo harness) ·
-`L0b` 40 suítes / 219 testes exit 0 em 1002 s · inventário L1: 4 verdes / 3 vermelhos
-(`cadeia-criptografica`, `self-proving`, `decisao-canonica` = família de certificação de release).
+**Medição FINAL (commit `2f8b5aa29`, runId `clean-checkout-20261022033303272-e0bbfe`):** clone limpo
+PASS · `ci:bootstrap` exit 0 em 97 s · produtor prod-like exit 0 (`status=GO`, 9 fluxos) ·
+**`L0` exit 0 em 437 s** (1095 suítes + 1 skip, 30 de flow/engine, 3 de RPA) · **`L0b` exit 0 em
+983 s (40 suítes / 219 testes)** · inventário L1: 4 verdes / 3 vermelhos (`cadeia-criptografica`,
+`self-proving`, `decisao-canonica` = família de certificação de release).
+
+**`l2-system` em checkout limpo:** 1 suíte vermelha (`finalStatusProjection`, falta
+`governance/rap-master-scorecard.json` — artefato gitignored que só existe após run selado); na árvore
+de desenvolvimento com esses artefatos, `npm run test:system` = 18 suítes / 162 testes exit 0. É a
+MESMA família de release, não defeito de teste.
+
+**Primeira medição (commit `382f83b37`, histórico):** `L0` 379 suítes / 5568 testes com 1 vermelha
+(`modelDrivenE2e`, artefato prod-like ausente — hoje o produtor é executado pelo harness).
 
 ## NO_GO conditions
 

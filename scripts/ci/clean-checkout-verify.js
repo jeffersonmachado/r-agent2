@@ -55,6 +55,7 @@ const REPORT_PATH = path.join(ROOT, 'reports', 'ci-clean-checkout-report.json');
 const SCENARIOS = Object.freeze([
   'clean',
   'l0-full',
+  'l2-system',
   'bootstrap-twice',
   'missing-artifact',
   'corrupt-artifact',
@@ -856,8 +857,26 @@ function cenarioL0Full(ctx, args) {
   console.log(`[ci:clean-checkout]  info  suites vermelhas (${suitesVermelhas.size}): ${[...suitesVermelhas].join(', ') || 'nenhuma'}`);
 }
 
+/**
+ * L2 — contratos, governança, CI, runtime, organizacional, stress e rate-limit (`npm run test:system`).
+ * Roda no CLONE porque várias dessas suítes leem relatórios e valem por ambiente: medir na árvore do
+ * operador é exatamente o erro que este harness existe para evitar.
+ */
+function cenarioL2System(ctx, args) {
+  const { clonePath, env, logDir } = ctx;
+  passo('bootstrap', 'npm', ['run', '-s', 'ci:bootstrap'], {
+    cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000,
+    descricao: 'Bootstrap canonico do ambiente',
+  });
+  passo('l2-test-system', 'npm', ['run', '-s', 'test:system'], {
+    cwd: clonePath, env, logDir, timeoutMs: 60 * 60 * 1000,
+    descricao: 'L2: contratos, governanca, CI, runtime, organizacional, stress e rate-limit',
+  });
+}
+
 const CENARIOS_IMPLEMENTADOS = {
   'l0-full': cenarioL0Full,
+  'l2-system': cenarioL2System,
   clean: cenarioClean,
   'bootstrap-twice': cenarioBootstrapTwice,
   'missing-artifact': cenarioArtefatoAusente,

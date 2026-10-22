@@ -911,6 +911,15 @@ não flake.
 | `db-unavailable` | bootstrap não termina em sucesso (exit != 0 / abortado por orçamento) | PASS |
 | `l0-full` | seleção oficial inteira com `--bail=0` | executado |
 
+**L2 em checkout limpo (`npm run test:system`, cenário `l2-system`):** 1 suíte vermelha —
+`tests/governance/finalStatusProjection.test.js`, com
+`canonical_unreadable:missing:governance/rap-master-scorecard.json`. A causa é a MESMA família descrita
+em 16.4: o produtor canônico (`generate-final-status-projections`) exige
+`governance/final-readiness-report.json`, `final-governance-report.json` e o próprio scorecard — os três
+gitignored e só existentes depois de um run selado. Na árvore de desenvolvimento (com esses artefatos)
+o L2 passa: 18 suítes / 162 testes. Não foi alterado o teste nem o produtor: em checkout sem selo o
+vermelho é a verdade sobre o escopo de release.
+
 **A execução negativa encontrou um defeito no próprio harness:** o primeiro par de `missing-artifact`
 era `reports/coverage-completeness-report.json` × `coverageCompletenessCanonicalDomains.test.js` — e esse
 teste **roda o produtor no `beforeAll`**, logo apagar o relatório não o reprova. Um cenário negativo que
