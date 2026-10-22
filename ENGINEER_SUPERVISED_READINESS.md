@@ -955,6 +955,22 @@ Correção estrutural (não é afrouxamento de validador — os três validadore
   `SELO_FINAL` **NEGADA** (`BLOQUEADO_POR_DEFEITOS`) enquanto houver P1/bloqueio aberto — ou seja, o
   controle de release ficou mais rígido, não mais frouxo.
 
+### 16.3.4 CI REAL VERDE (run 39767108368, commit `e503591b5`, node 20.20.2)
+
+| job / passo | resultado | duração |
+|---|---|---|
+| `prod-like-smoke` | **SUCCESS** | — |
+| `dev-branch-integration` | **SUCCESS** | — |
+| `B1` / `B2` / `B3` | exit 0 | 18 s / 15 s / 2 s |
+| `L0-suite-oficial` | **exit 0** | 458 s |
+| `L0b-integracao-engenheiro` | **exit 0** | 484 s |
+| `L1-release-dag` / `L1-fila-oficial` / `L1-ai-memory` / `L1-aderencia-agente` | exit 0 | < 1 s cada |
+| **veredito do gate** | **`PASS_PARCIAL`** — `equivalenteAValidacaoCompleta=false`, `fasesPedidas=A,B,C,D`, `fasesFaltantes=R,E,F` | — |
+
+Os três jobs do workflow terminaram **SUCCESS**. O veredito do gate **não** é `PASS` e não
+representa validação completa: R (certificação de release), E (L2) e F (agregado) estão declarados
+como faltantes. É o primeiro CI verde deste branch, e ele é verde porque mede o que pode medir.
+
 ### 16.4 O que continua vermelho — e por que NÃO foi reclassificado
 
 O inventário do L1 executado no clone (cada validador individualmente, a partir da MESMA definição
