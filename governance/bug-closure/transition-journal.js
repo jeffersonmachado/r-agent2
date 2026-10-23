@@ -106,17 +106,23 @@ function lerRegistros(rootDir) {
   } catch (e) {
     return { registros: [], corrompido: true, motivo: `JOURNAL_ILEGIVEL:${e.message}` };
   }
-  const linhas = String(bruto).split('\n').filter((l) => l.trim() !== '');
+  const texto = String(bruto);
+  // Cauda sem `\n` é escrita EM VOO (leitor concorrente) ou interrompida por crash: não é
+  // conteúdo do diário. Ignorar é seguro — não esconde registro anterior — e evita NEGAR
+  // certificação de forma transitória só porque alguém leu no meio de um append.
+  const caudaIncompleta = texto !== '' && !texto.endsWith('\n');
+  const linhas = texto.split('\n').filter((l) => l.trim() !== '');
+  const completas = caudaIncompleta ? linhas.slice(0, -1) : linhas;
   const registros = [];
-  for (let i = 0; i < linhas.length; i += 1) {
+  for (let i = 0; i < completas.length; i += 1) {
     try {
-      registros.push(JSON.parse(linhas[i]));
+      registros.push(JSON.parse(completas[i]));
     } catch (_) {
       return { registros, corrompido: true, motivo: `JOURNAL_ILEGIVEL:linha=${i}` };
     }
   }
   const quebra = verificarCadeia(registros);
-  return { registros, corrompido: Boolean(quebra), motivo: quebra };
+  return { registros, corrompido: Boolean(quebra), motivo: quebra, caudaIncompleta };
 }
 
 const ARQUIVO_LOCK = 'journal.log.lock';
@@ -150,10 +156,23 @@ function pidVivo(pid) {
  * nunca é removido.
  */
 function removerLockOrfao(abs, st) {
+  // Arquivo sumiu entre o EEXIST e o lstat: nada a remover, só tentar criar de novo.
+  if (!st) return true;
   let dono = null;
-  try { dono = JSON.parse(fs.readFileSync(abs, 'utf8')).pid; } catch (_) { dono = null; }
+  let legivel = false;
+  try {
+    dono = JSON.parse(fs.readFileSync(abs, 'utf8')).pid;
+    legivel = true;
+  } catch (_) {
+    legivel = false;
+  }
   if (pidVivo(dono)) return false;
-  if (dono === null && st && Date.now() - st.mtimeMs < 60000) return false;
+  // Ilegível e recente pode ser um lock sendo escrito agora por outro processo: espera.
+  if (!legivel && Date.now() - st.mtimeMs < 60000) return false;
+  // O arquivo pode ter sido trocado depois da nossa leitura: só remove o MESMO inode.
+  const atual = fs.lstatSync(abs, { throwIfNoEntry: false });
+  if (!atual) return true;
+  if (atual.ino !== st.ino) return true;
   try { fs.rmSync(abs, { force: true }); return true; } catch (_) { return false; }
 }
 
@@ -211,7 +230,13 @@ function anexarRegistro(rootDir, registro) {
     if (st && !st.isFile()) return { ok: false, erro: 'JOURNAL_NAO_ARQUIVO' };
     const fd = fs.openSync(abs, 'a', 0o600);
     try {
-      fs.writeSync(fd, `${JSON.stringify(registro)}\n`);
+      // `writeSync` pode devolver menos bytes que o pedido: tratado como falha de escrita
+      // (registro truncado no diário é pior que operação abortada).
+      const carga = Buffer.from(`${JSON.stringify(registro)}\n`, 'utf8');
+      const escritos = fs.writeSync(fd, carga);
+      if (escritos !== carga.length) {
+        throw new Error(`escrita parcial ${escritos}/${carga.length}`);
+      }
       fs.fsyncSync(fd);
     } finally {
       try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
@@ -275,23 +300,45 @@ function repararDiario(rootDir, opcoes = {}) {
       return { ok: false, erro: 'REPARO_PERDERIA_EVIDENCIA_DE_EFEITO', descartados, motivo };
     }
 
-    const conteudo = validos.map((r) => `${JSON.stringify(r)}\n`).join('');
-    const tmp = path.join(caminhoJornal(rootDir), `.reparo-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
-    try {
-      const fd = fs.openSync(tmp, 'wx', 0o600);
-      try {
-        fs.writeSync(fd, conteudo);
-        fs.fsyncSync(fd);
-      } finally {
-        try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
-      }
-      fs.renameSync(tmp, abs);
-    } catch (e) {
-      try { fs.rmSync(tmp, { force: true }); } catch (_) { /* nada a limpar */ }
-      return { ok: false, erro: `JOURNAL_REPARO_FALHOU:${e.message}` };
-    }
+    const gravado = gravarPrefixo(rootDir, validos);
+    if (!gravado.ok) return { ok: false, erro: gravado.erro };
     return { ok: true, mantidos: validos.length, descartados, motivo };
   });
+}
+
+/**
+ * Regrava o diário com o prefixo informado (temporário IMPREVISÍVEL + `O_EXCL` + rename).
+ * Precisa ser chamado SOB o lock do diário. Usado pelo reparo e pela limpeza de cauda
+ * incompleta — nunca para "desfazer" registro válido.
+ */
+function gravarPrefixo(rootDir, registros) {
+  const abs = caminhoDiario(rootDir);
+  const conteudo = registros.map((r) => `${JSON.stringify(r)}\n`).join('');
+  const tmp = path.join(caminhoJornal(rootDir), `.reparo-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
+  try {
+    const fd = fs.openSync(tmp, 'wx', 0o600);
+    try {
+      fs.writeSync(fd, conteudo);
+      fs.fsyncSync(fd);
+    } finally {
+      try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+    }
+    fs.renameSync(tmp, abs);
+    return { ok: true };
+  } catch (e) {
+    try { fs.rmSync(tmp, { force: true }); } catch (_) { /* nada a limpar */ }
+    return { ok: false, erro: `JOURNAL_REPARO_FALHOU:${e.message}` };
+  }
+}
+
+/**
+ * Remove a cauda SEM `\n` (escrita em voo/crash) antes de anexar.
+ * Sem isso, um append depois do fragmento o transformaria em linha do MEIO e quebraria a
+ * cadeia — a leitura já ignora a cauda, mas a escrita precisa descartá-la de fato.
+ */
+function limparCaudaIncompleta(rootDir, lido) {
+  if (!lido.caudaIncompleta) return { ok: true };
+  return gravarPrefixo(rootDir, lido.registros);
 }
 
 /** Hash da fila/livro no instante anterior à mutação: base da detecção de lost update. */
@@ -313,6 +360,8 @@ function iniciar(rootDir, entrada = {}) {
 function iniciarSemLock(rootDir, entrada = {}) {
   const lido = lerRegistros(rootDir);
   if (lido.corrompido) return { ok: false, erro: `JOURNAL_CORROMPIDO:${lido.motivo}` };
+  const cauda = limparCaudaIncompleta(rootDir, lido);
+  if (!cauda.ok) return { ok: false, erro: cauda.erro };
 
   // Regra de idempotência (alerts 1 das 3ª e 4ª passadas): COMMITTED é terminal, INTENT é
   // operação em andamento (recusa sem tocar no diário) e ABORTED pode ser RETENTADO — senão
@@ -370,6 +419,8 @@ function atualizarStatus(rootDir, transitionId, status, extra = {}) {
 function atualizarStatusSemLock(rootDir, transitionId, status, extra = {}) {
   const lido = lerRegistros(rootDir);
   if (lido.corrompido) return { ok: false, erro: `JOURNAL_CORROMPIDO:${lido.motivo}` };
+  const cauda = limparCaudaIncompleta(rootDir, lido);
+  if (!cauda.ok) return { ok: false, erro: cauda.erro };
   const mesma = lido.registros.filter((r) => String(r.transitionId) === String(transitionId));
   const atual = mesma.length ? mesma[mesma.length - 1] : null;
   if (!atual) return { ok: false, erro: 'JOURNAL_INTENT_AUSENTE' };

@@ -870,6 +870,36 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
   }, 60000);
 });
 
+describe('revisão 5ª passada — cauda em voo (leitor concorrente) não nega certificação', () => {
+  test('fragmento sem \\n é ignorado na leitura e descartado antes do próximo append', () => {
+    const c = cenarioComItens(['V1', 'V2']);
+    const primeiro = jornal.iniciar(c.root, {
+      transitionId: c.provas.V1.transitionId, defectId: 'V1', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    expect(primeiro.ok).toBe(true);
+
+    // Escrita em voo: um leitor concorrente pode enxergar exatamente isto.
+    fs.appendFileSync(jornal.caminhoDiario(c.root), '{"seq":1,"transitionId":"meio-escrito"', 'utf8');
+    const lido = jornal.lerRegistros(c.root);
+    expect(lido.corrompido).toBe(false);
+    expect(lido.caudaIncompleta).toBe(true);
+    expect(lido.registros).toHaveLength(1);
+
+    // Anexar depois não pode transformar o fragmento em linha do MEIO (quebraria a cadeia).
+    const segundo = jornal.iniciar(c.root, {
+      transitionId: c.provas.V2.transitionId, defectId: 'V2', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    expect(segundo.ok).toBe(true);
+    const final = jornal.lerRegistros(c.root);
+    expect(final.corrompido).toBe(false);
+    expect(final.caudaIncompleta).toBe(false);
+    expect(final.registros.map((r) => r.seq)).toEqual([0, 1]);
+    expect(fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8')).not.toContain('meio-escrito');
+  }, 60000);
+});
+
 describe('revisão 5ª passada — Alert 2: `extra` não sobrescreve campo de controle', () => {
   test('status/seq/hash/prevHash vindos de `extra` são ignorados', () => {
     const c = cenarioComItens(['X1']);

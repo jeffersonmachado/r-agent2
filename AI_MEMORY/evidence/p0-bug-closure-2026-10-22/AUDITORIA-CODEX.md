@@ -74,7 +74,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 | Camada | Comando | Resultado |
 |---|---|---|
-| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **278 testes / 10 suítes, todos PASS** |
+| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **279 testes / 10 suítes, todos PASS** |
 | L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2069 PASS / 15 FAIL / 2 SKIP (2086)** |
 | L1 (DEVELOPMENT) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL**, exit 0 |
 | L3 (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED 0/64** — identidade de run ausente |
@@ -214,6 +214,12 @@ Descartar registro só pode **rebaixar** o estado observado — o reparo nunca l
 `corrompido=true`, 0/8 concluídos. Com o lock: `seq` contíguo, cadeia íntegra, 0 processos com
 `ok:true` sem `COMMITTED` correspondente, e o retry dos recusados por contenção
 (`FILA_MUDOU_DESDE_A_BASE` / `FILA_OCUPADA`, ambos sem efeito) converge para 8/8 `VERIFIED`.
+O teste foi executado **10×** consecutivas sem falha após a correção de um segundo defeito de
+corrida que ele mesmo revelou: `removerLockOrfao` podia apagar o lock **vivo** de outro processo
+(o arquivo podia ser trocado entre a leitura e o `rmSync`); agora a remoção revalida o `ino` e
+nunca remove lock ilegível recente. Leitura concorrente também deixou de negar certificação:
+fragmento sem `\n` (escrita em voo) é ignorado na leitura e **descartado antes do próximo
+append**, em vez de virar linha do meio e quebrar a cadeia.
 
 **Limite que continua declarado:** truncamento da **cauda** do diário, remoção do arquivo e forja
 com cadeia **recalculada** não são detectáveis sem âncora externa — mesma propriedade do livro
