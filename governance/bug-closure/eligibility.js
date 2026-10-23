@@ -99,6 +99,7 @@ const CODIGOS = Object.freeze({
   FECHAMENTO_SEM_PROVA_VALIDA: 'FECHAMENTO_SEM_PROVA_VALIDA',
   INVENTARIO_NAO_ANCORADO: 'INVENTARIO_NAO_ANCORADO',
   INVENTARIO_ADULTERADO: 'INVENTARIO_ADULTERADO',
+  OPERACAO_PENDENTE_DE_RECUPERACAO: 'OPERACAO_PENDENTE_DE_RECUPERACAO',
 });
 
 /**
@@ -518,7 +519,28 @@ function evaluateExecutionEligibility(context = {}, operation) {
   const inventarioNaoAncoradoBloqueia = politica.certifica
     && (reasonCodes.includes(CODIGOS.INVENTARIO_NAO_ANCORADO) || reasonCodes.includes(CODIGOS.INVENTARIO_ADULTERADO));
 
+  // A4 (missão Codex): diário com efeito parcial (evento sem fila, prova sem fila, operação
+  // interrompida) mantém a certificação NEGADA até recuperação canônica. O livro é append-only
+  // e não se trunca, então a única saída honesta é bloquear e exigir reconciliação.
+  let recuperacaoPendente = false;
+  if (politica.certifica) {
+    try {
+      // eslint-disable-next-line global-require
+      const jornal = require('./transition-journal');
+      if (jornal.haOperacaoPendente(context.rootDir || process.cwd())) {
+        recuperacaoPendente = true;
+        reasonCodes.push(CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO);
+        blockingFindings.push({
+          code: CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO,
+          detail: 'diário de transições tem operação interrompida com efeito parcial — recupere antes de certificar',
+        });
+        requiredActions.push('rodar node scripts/governance/recover-bug-closure-journal.js e resolver as operações pendentes');
+      }
+    } catch (_) { /* sem diário ⇒ nada pendente */ }
+  }
+
   const negado = bloquearP0 || bloquearP1 || condicionalPendente || fechamentoSemProvaBloqueia
+    || recuperacaoPendente
     || inventarioNaoAncoradoBloqueia
     || (naoDeclarada.length > 0 && politica.certifica)
     || (op === OPERACOES.PUBLICACAO_RELEASE && !NAO_VAZIO(context.certification));

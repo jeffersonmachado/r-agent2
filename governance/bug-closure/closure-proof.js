@@ -89,6 +89,7 @@ const CODIGOS = Object.freeze({
   POLITICA_RECUSA: 'POLITICA_RECUSA',
   SEVERIDADE_DIVERGENTE: 'SEVERIDADE_DIVERGENTE',
   ESTADO_DE_ORIGEM_DIVERGENTE: 'ESTADO_DE_ORIGEM_DIVERGENTE',
+  EVENTO_DIVERGENTE_DA_PROVA: 'EVENTO_DIVERGENTE_DA_PROVA',
 });
 
 const sha256Arquivo = (abs) => (fs.existsSync(abs)
@@ -224,10 +225,22 @@ function validarEstrutura(prova, ctx) {
   const sevInventario = normalizarSeveridade(defeito.severity);
   if (sevInventario && sevAntes !== sevInventario) reasons.push(CODIGOS.SEVERIDADE_DIVERGENTE);
 
-  // ALERT 7: o `fromState` da prova tem de ser o estado PERSISTIDO do item (a máquina de
-  // estados não pode ser contornada por um livro forjado de uma linha).
+  // A1 (missão Codex, P1): a prova tem DUAS fases e o estado persistido muda entre elas.
+  //
+  //   PENDENTE  → persistido === fromState (prova preparada, transição ainda não aplicada)
+  //   APLICADA  → persistido === toState   (transição aplicada e registrada no livro)
+  //
+  // A versão anterior exigia `fromState === persistido`. Depois de `applyTransition` o estado
+  // persistido é o `toState`, então a transição legítima INVALIDAVA a própria prova ao
+  // recarregar (medido: `ESTADO_DE_ORIGEM_DIVERGENTE` + `fechamentoNaoProvado=true`).
+  //
+  // O que continua proibido: persistido ser QUALQUER OUTRO estado. E o caminho "APLICADA" não
+  // é atalho — o bloco do livro exige o evento correspondente, com `from`/`to` iguais aos da
+  // prova e `proofHash` conferido (A2 logo abaixo).
   const estadoPersistido = String(defeito.state || '').toUpperCase();
-  if (estadoPersistido && String(prova.fromState).toUpperCase() !== estadoPersistido) {
+  const estadoDeOrigem = String(prova.fromState).toUpperCase();
+  const estadoDeDestino = String(prova.toState).toUpperCase();
+  if (estadoPersistido && estadoPersistido !== estadoDeOrigem && estadoPersistido !== estadoDeDestino) {
     reasons.push(CODIGOS.ESTADO_DE_ORIGEM_DIVERGENTE);
   }
   // P0 é o MAIS grave: número maior = menos grave. Rebaixar é AUMENTAR o índice
@@ -425,21 +438,53 @@ function verificarProvaDeFechamento(prova, ctx = {}) {
   // `ctx.livro === null` é usado SOMENTE pelo serviço de transição no instante da criação
   // (o evento é anexado logo depois, e `anexarEvento` recusa transitionId repetido). Em
   // qualquer LEITURA o livro é obrigatório — sem ele a prova não é aceita.
+  const camposDivergentes = [];
   const livro = ctx.livro;
   if (livro === null) {
     // criação: nada a conferir aqui; a ordem é garantida pelo append atômico.
   } else if (livro) {
     const eventos = livro.eventos || [];
     const doDefeito = eventos.filter((e) => e && e.defectId === prova.defectId);
-    const iguais = doDefeito.filter((e) => e.transitionId === prova.transitionId);
-    if (iguais.length === 0) reasons.push(CODIGOS.TRANSICAO_NAO_REGISTRADA);
-    else if (iguais.length > 1) reasons.push(CODIGOS.EVENTO_DUPLICADO);
-    else if (doDefeito[doDefeito.length - 1].transitionId !== prova.transitionId) reasons.push(CODIGOS.EVENTO_FORA_DE_ORDEM);
+    // Busca pelo `transitionId` em TODO o livro: um evento que se declara de outro defeito
+    // continua sendo "o evento com este id" — e a divergência precisa ser NOMEADA como tal,
+    // não mascarada como "não registrado".
+    const porId = eventos.filter((e) => e && e.transitionId === prova.transitionId);
+    if (porId.length === 0) {
+      reasons.push(CODIGOS.TRANSICAO_NAO_REGISTRADA);
+    } else if (porId.length > 1) {
+      reasons.push(CODIGOS.EVENTO_DUPLICADO);
+    } else {
+      const evento = porId[0];
+      if (!doDefeito.some((e) => e.transitionId === prova.transitionId)) {
+        // Registrado sob outro defeito: replay/deslocamento de evento.
+        reasons.push(CODIGOS.REPLAY_DE_EVENTO);
+      }
+      if (doDefeito.length > 0 && doDefeito[doDefeito.length - 1].transitionId !== prova.transitionId) {
+        reasons.push(CODIGOS.EVENTO_FORA_DE_ORDEM);
+      }
+
+      // A2 (missão Codex, P1): achar o evento pelo id NÃO é prova de correspondência. O evento
+      // tem de ser IGUAL à prova nos campos que definem o fechamento. Sem isto, um livro
+      // internamente consistente mas semanticamente divergente passava (medido: `from`, `to`,
+      // `proofHash`, `actorId`, `evaluatedCommit`, `kind` e `defectId` adulterados isoladamente).
+      const kindEsperado = String(prova.fromState).toUpperCase() === String(prova.toState).toUpperCase()
+        ? 'ATTESTATION' : 'TRANSITION';
+      const divergencias = [];
+      if (String(evento.from).toUpperCase() !== String(prova.fromState).toUpperCase()) divergencias.push('from');
+      if (String(evento.to).toUpperCase() !== String(prova.toState).toUpperCase()) divergencias.push('to');
+      if (String(evento.proofHash) !== String(hashDoPayload(prova))) divergencias.push('proofHash');
+      if (String(evento.actorId) !== String((prova.actor && prova.actor.id) || '')) divergencias.push('actorId');
+      if (!mesmoCommit(evento.evaluatedCommit, prova.evaluatedCommit)) divergencias.push('evaluatedCommit');
+      if (String(evento.kind || 'TRANSITION') !== kindEsperado) divergencias.push('kind');
+      if (String(evento.defectId) !== String(prova.defectId)) divergencias.push('defectId');
+      if (divergencias.length > 0) {
+        reasons.push(CODIGOS.EVENTO_DIVERGENTE_DA_PROVA);
+        camposDivergentes.push(...divergencias);
+      }
+    }
     const anterior = doDefeito.length >= 2 ? doDefeito[doDefeito.length - 2] : null;
     if (anterior && anterior.to !== prova.fromState) reasons.push(CODIGOS.EVENTO_FORA_DE_ORDEM);
     if (livro.integridadeOk === false) reasons.push(CODIGOS.EVIDENCIA_ADULTERADA);
-    const repetido = eventos.filter((e) => e && e.transitionId === prova.transitionId && e.defectId !== prova.defectId);
-    if (repetido.length > 0) reasons.push(CODIGOS.REPLAY_DE_EVENTO);
   } else {
     reasons.push(CODIGOS.TRANSICAO_NAO_REGISTRADA);
   }
@@ -449,7 +494,11 @@ function verificarProvaDeFechamento(prova, ctx = {}) {
     ok: unicos.length === 0,
     code: unicos[0] || null,
     reasons: unicos,
-    detalhe: { ...(estrutura.detalhe || {}), ...(ancora.detalhe || {}) },
+    detalhe: {
+      ...(estrutura.detalhe || {}),
+      ...(ancora.detalhe || {}),
+      ...(camposDivergentes.length ? { eventoDivergente: [...new Set(camposDivergentes)] } : {}),
+    },
   };
 }
 

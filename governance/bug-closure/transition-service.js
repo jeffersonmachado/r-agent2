@@ -26,7 +26,33 @@ const crypto = require('crypto');
 
 const { ESTADOS, validarTransicao } = require('./defect-states');
 const { verificarProvaDeFechamento, hashDoPayload } = require('./closure-proof');
-const { anexarEvento, verificarLivro } = require('./transition-ledger');
+const { anexarEvento, verificarLivro, REL_PADRAO } = require('./transition-ledger');
+const jornal = require('./transition-journal');
+
+
+/**
+ * Resolve o caminho REAL (symlinks seguidos) e confirma que ele está dentro da raiz.
+ * `startsWith(rootDir)` sozinho não protege contra symlink: um link dentro da raiz apontando
+ * para fora passa no teste textual e escreve fora do repositório. Aqui o alvo é resolvido
+ * pelo ancestral existente mais próximo e comparado com o realpath da raiz.
+ */
+function caminhoRealDentroDaRaiz(rootDir, alvo) {
+  try {
+    const raizReal = fs.realpathSync(rootDir);
+    let atual = path.resolve(alvo);
+    const restante = [];
+    while (!fs.existsSync(atual)) {
+      restante.unshift(path.basename(atual));
+      const pai = path.dirname(atual);
+      if (pai === atual) return { ok: false, real: atual };
+      atual = pai;
+    }
+    const real = path.join(fs.realpathSync(atual), ...restante);
+    return { ok: real === raizReal || real.startsWith(`${raizReal}${path.sep}`), real };
+  } catch (_) {
+    return { ok: false, real: null };
+  }
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -150,6 +176,31 @@ function applyTransition(entrada = {}) {
 
   if (entrada.dryRun) return { ok: true, code: null, reasons: [], evento: null };
 
+  // A4 (missão Codex): base do lost update + INTENT no diário ANTES de qualquer mutação.
+  // A partir daqui, toda recusa passa por `abortar()` para que o diário não fique em INTENT.
+  const livroAbs = path.join(rootDir, entrada.livroPath || REL_PADRAO);
+  const base = jornal.baseAtual(rootDir, queuePath, livroAbs);
+  const intent = jornal.iniciar(rootDir, {
+    transitionId: entrada.proof ? entrada.proof.transitionId : crypto.randomUUID(),
+    defectId: item.id,
+    kind: 'TRANSITION',
+    from: estadoDeclarado,
+    to,
+    proofRel: entrada.proof
+      ? path.relative(rootDir, path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs', `${entrada.proof.transitionId}.json`))
+      : null,
+    proofHash: entrada.proof ? hashDoPayload(entrada.proof) : null,
+    queuePath,
+    ledgerRel: entrada.livroPath || REL_PADRAO,
+    base,
+    agora: entrada.agora,
+  });
+  if (!intent.ok) return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: [intent.erro] };
+  const abortar = (motivo, extra = {}) => {
+    jornal.marcarAborto(rootDir, intent.intent.transitionId, motivo, extra);
+    return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: [motivo] };
+  };
+
   // P2 da 4ª passada do revisor: validar a CONTENÇÃO do caminho de prova ANTES de tocar no
   // livro. Antes, `proofsPath` inválido appendava um evento e só depois recusava — deixando
   // evento órfão que envenenava a checagem de ordem do próximo fechamento legítimo.
@@ -157,13 +208,14 @@ function applyTransition(entrada = {}) {
   let absProva = null;
   if (entrada.proof) {
     dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
-    if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)) {
-      return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+    if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)
+      || !caminhoRealDentroDaRaiz(rootDir, dirProvas).ok) {
+      return abortar('CAMINHO_DE_PROVA_INVALIDO');
     }
     // Nome derivado do transitionId do chamador (UUID já validado acima), nunca campo livre.
     absProva = path.resolve(dirProvas, `${String(entrada.proof.transitionId)}.json`);
-    if (!absProva.startsWith(`${dirProvas}${path.sep}`)) {
-      return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+    if (!absProva.startsWith(`${dirProvas}${path.sep}`) || !caminhoRealDentroDaRaiz(rootDir, absProva).ok) {
+      return abortar('CAMINHO_DE_PROVA_INVALIDO');
     }
   }
 
@@ -171,7 +223,7 @@ function applyTransition(entrada = {}) {
   const evento = anexarEvento({
     rootDir,
     rel: livroPath,
-    transitionId: entrada.proof ? entrada.proof.transitionId : crypto.randomUUID(),
+    transitionId: intent.intent.transitionId,
     defectId: item.id,
     from: estadoDeclarado,
     to,
@@ -180,7 +232,7 @@ function applyTransition(entrada = {}) {
     evaluatedCommit: entrada.currentCommit || null,
     at: new Date(entrada.agora || Date.now()).toISOString(),
   });
-  if (!evento.ok) return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: evento.problemas || [evento.code] };
+  if (!evento.ok) return abortar(`EVENTO_NAO_ANEXADO:${evento.code}`, { problemas: evento.problemas || [] });
 
   // 2) projeção atômica da fila sob lock exclusivo.
   const lock = `${queuePath}.lock`;
@@ -188,14 +240,18 @@ function applyTransition(entrada = {}) {
   try {
     fdLock = fs.openSync(lock, 'wx');
   } catch (_) {
-    return { ok: false, code: CODIGOS.FILA_OCUPADA, reasons: ['outra transição está em andamento'] };
+    return abortar('FILA_OCUPADA', { lockOcupado: true });
   }
   try {
     const atual = JSON.parse(fs.readFileSync(queuePath, 'utf8'));
     const alvo = atual.items.find((i) => i && i.id === item.id);
-    if (!alvo) return { ok: false, code: CODIGOS.DEFEITO_AUSENTE, reasons: [item.id] };
+    if (!alvo) return abortar('DEFEITO_AUSENTE');
     if (String(alvo.state || '').toUpperCase() !== estadoDeclarado) {
-      return { ok: false, code: CODIGOS.ESTADO_DIVERGENTE, reasons: ['fila mudou durante a transição'] };
+      return abortar('ESTADO_DIVERGENTE');
+    }
+    const hashAtual = jornal.sha256Arquivo(queuePath);
+    if (base.queueHash && hashAtual && hashAtual !== base.queueHash) {
+      return abortar('FILA_MUDOU_DESDE_A_BASE', { esperado: base.queueHash, atual: hashAtual });
     }
 
     alvo.state = to;
@@ -203,12 +259,13 @@ function applyTransition(entrada = {}) {
     alvo.legacyStatus = alvo.status;
     alvo.transitionId = evento.evento.transitionId;
     if (entrada.proof) {
-      // `dirProvas`/`absProva` já validados ANTES do append (nenhum evento órfão).
-      fs.mkdirSync(dirProvas, { recursive: true });
+      // `dirProvas`/`absProva` já validados ANTES do append (nenhum evento órfão). A criação do
+      // diretório TAMBÉM está no try: EEXIST/EACCES aqui é falha de persistência, não crash.
       try {
+        fs.mkdirSync(dirProvas, { recursive: true });
         fs.writeFileSync(absProva, `${JSON.stringify(entrada.proof, null, 2)}\n`, 'utf8');
       } catch (e) {
-        return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: [`FALHA_AO_GRAVAR_PROVA:${e.message}`] };
+        return abortar(`FALHA_AO_GRAVAR_PROVA:${e.message}`);
       }
       alvo.closureProof = path.join(path.relative(rootDir, dirProvas), path.basename(absProva));
       alvo.verificationCommit = entrada.proof.evaluatedCommit;
@@ -218,6 +275,10 @@ function applyTransition(entrada = {}) {
     const tmp = `${queuePath}.tmp`;
     fs.writeFileSync(tmp, `${JSON.stringify(atual, null, 2)}\n`, 'utf8');
     fs.renameSync(tmp, queuePath);
+    jornal.marcarCommit(rootDir, intent.intent.transitionId);
+  } catch (e) {
+    jornal.marcarAborto(rootDir, intent.intent.transitionId, `PROJECAO_FALHOU:${e.message}`);
+    throw e;
   } finally {
     try { fs.closeSync(fdLock); } catch (_) { /* já fechado */ }
     try { fs.rmSync(lock, { force: true }); } catch (_) { /* lock transitório */ }
@@ -255,6 +316,20 @@ function applyAttestation(entrada = {}) {
     return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: ['TRANSITION_ID_INVALIDO'] };
   }
 
+  // A3 (missão Codex, P1): o caminho da prova é validado ANTES de qualquer mutação. Antes,
+  // `anexarEvento` rodava primeiro e uma recusa por `proofsPath` inválido deixava evento órfão
+  // no livro append-only — transição que nunca aconteceu, consumindo o `transitionId`.
+  const dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
+  if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)
+    || !caminhoRealDentroDaRaiz(rootDir, dirProvas).ok) {
+    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+  }
+  const nomeProva = `${prova.transitionId}.json`;
+  const absProva = path.resolve(dirProvas, nomeProva);
+  if (!absProva.startsWith(`${dirProvas}${path.sep}`) || !caminhoRealDentroDaRaiz(rootDir, absProva).ok) {
+    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+  }
+
   const veredito = verificarProvaDeFechamento(prova, {
     defeito: { id: item.id, severity: item.severity, state: estado },
     currentCommit: entrada.currentCommit,
@@ -270,6 +345,21 @@ function applyAttestation(entrada = {}) {
 
   if (entrada.dryRun) return { ok: true, code: null, reasons: [], evento: null };
 
+  const intentAtest = jornal.iniciar(rootDir, {
+    transitionId: prova.transitionId,
+    defectId: item.id,
+    kind: 'ATTESTATION',
+    from: estado,
+    to: estado,
+    proofRel: path.relative(rootDir, absProva),
+    proofHash: hashDoPayload(prova),
+    queuePath,
+    ledgerRel: livroPath || REL_PADRAO,
+    base: jornal.baseAtual(rootDir, queuePath, path.join(rootDir, livroPath || REL_PADRAO)),
+    agora: entrada.agora,
+  });
+  if (!intentAtest.ok) return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: [intentAtest.erro] };
+
   const evento = anexarEvento({
     rootDir,
     rel: livroPath,
@@ -283,15 +373,15 @@ function applyAttestation(entrada = {}) {
     evaluatedCommit: entrada.currentCommit || null,
     at: new Date(entrada.agora || Date.now()).toISOString(),
   });
-  if (!evento.ok) return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: evento.problemas || [evento.code] };
+  if (!evento.ok) return abortar(`EVENTO_NAO_ANEXADO:${evento.code}`, { problemas: evento.problemas || [] });
 
-  const dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
-  if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)) {
-    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+  try {
+    fs.mkdirSync(dirProvas, { recursive: true });
+    fs.writeFileSync(absProva, `${JSON.stringify(prova, null, 2)}\n`, 'utf8');
+  } catch (e) {
+    jornal.marcarAborto(rootDir, prova.transitionId, `FALHA_AO_GRAVAR_PROVA:${e.message}`);
+    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: [`FALHA_AO_GRAVAR_PROVA:${e.message}`] };
   }
-  fs.mkdirSync(dirProvas, { recursive: true });
-  const nomeProva = `${prova.transitionId}.json`;
-  fs.writeFileSync(path.resolve(dirProvas, nomeProva), `${JSON.stringify(prova, null, 2)}\n`, 'utf8');
 
   // A fila NÃO muda de estado: só registra a prova que faltava.
   item.closureProof = path.join(path.relative(rootDir, dirProvas), nomeProva);
