@@ -1,0 +1,18 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/engineerSupervisedReadinessGate.test.js
+  gate de prontidão supervisionada — veredito derivado
+    ✓ qualquer check bloqueante reprovado ⇒ NOT_READY (exit 1) (104 ms)
+    ✓ todos os checks OK mas SEM aprovação humana ⇒ PENDING_HUMAN_APPROVAL (exit 2) (102 ms)
+    ✓ GO exige os dois: checks OK **e** aprovação humana (101 ms)
+    ✓ check INFORMATIVO (bloqueante:false) reprovado não impede GO (102 ms)
+    ✓ falhas são listadas por id (auditável, nunca "algum check falhou") (102 ms)
+    ✓ entrada degenerada (sem checks) não vira GO silencioso (101 ms)
+    ✓ listas de estado espelham o validador canônico da fila (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        0.895 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/engineerSupervisedReadinessGate.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

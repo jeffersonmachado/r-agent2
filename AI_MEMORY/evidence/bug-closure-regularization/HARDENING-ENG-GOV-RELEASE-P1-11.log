@@ -1,0 +1,32 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/evidenceTtl.test.js
+  P1-11 validarTtl — TTL declarado nunca aumenta a validade
+    ✓ ausente com default => usa o default (e diz que a origem e default) (107 ms)
+    ✓ ausente SEM default => TTL_AUSENTE (nunca inventa validade) (103 ms)
+    ✓ nao-finito ("abc", "Infinity", 1e999, NaN) => TTL_NAO_FINITO (108 ms)
+    ✓ zero e negativo => TTL_NAO_POSITIVO (109 ms)
+    ✓ numeros e strings numericas validas passam com o valor exato (106 ms)
+    ✓ REPRODUCAO do defeito original: `Number(env) || 7d` aceitava Infinity e nunca vencia (109 ms)
+  P1-11 avaliarFrescor — timestamp, expiração e identidade
+    ✓ timestamp ausente/invalido => reprovado com motivo nomeado (104 ms)
+    ✓ timestamp no FUTURO alem da tolerancia => TIMESTAMP_FUTURO (idade negativa nao e frescor) (106 ms)
+    ✓ timestamp levemente no futuro (dentro da tolerancia de relogio) NAO e falso positivo (104 ms)
+    ✓ expirada => EVIDENCIA_EXPIRADA; fresca => OK (nao-vacuidade nos dois sentidos) (103 ms)
+    ✓ expira DURANTE o processamento => EXPIRA_DURANTE_PROCESSAMENTO (106 ms)
+    ✓ identidade estrangeira => reprovada por commit, run e fingerprint (104 ms)
+    ✓ identidade ausente de um dos lados nao aprova nem reprova (campo ainda nao produzido) (105 ms)
+    ✓ validarEvidencia combina TTL invalido e frescor numa unica decisao (104 ms)
+  P1-11 integracao real no coverage gate (agora aplica as regras)
+    ✓ TTL declarado nao-finito => evidencia REPROVADA (nao cai no default em silencio) (110 ms)
+    ✓ TTL declarado negativo => reprovada por TTL_NAO_POSITIVO (106 ms)
+    ✓ relatorio com generatedAt no futuro => STALE (antes passava como fresco) (113 ms)
+    ✓ evidencia de OUTRO run/fingerprint => STALE quando o gate sabe a identidade corrente (107 ms)
+    ✓ fresca, sem identidade declarada => continua valida (nao ha falso vermelho) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       19 passed, 19 total
+Snapshots:   0 total
+Time:        2.541 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/evidenceTtl.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

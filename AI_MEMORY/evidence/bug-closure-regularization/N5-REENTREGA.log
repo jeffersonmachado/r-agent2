@@ -1,0 +1,698 @@
+  console.error
+    [2026-10-23T17:04:49.142Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/missionCompilerService.js:52:30)
+      at Object.require (tests/integration/missionSourceStaleReplanFullRouterE2E.test.js:46:18)
+
+  console.info
+    [2026-10-23T17:04:49.898Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:50.155Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.184Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.186Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:50.404Z] [INFO] [TenantAIService] Credencial anthropic salva para tenant jest-e2e-stale-full-router
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:50.407Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.415Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.418Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:50.620Z] [INFO] [TenantAIService] Credencial mistral salva para tenant jest-e2e-stale-full-router
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:50.622Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.626Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.627Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:50.770Z] [INFO] [TenantAIService] Credencial kimi salva para tenant jest-e2e-stale-full-router
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:50.772Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.777Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.779Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:50.926Z] [INFO] [TenantAIService] Credencial deepseek salva para tenant jest-e2e-stale-full-router
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:50.929Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.933Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:50.935Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:51.070Z] [INFO] [TenantAIService] Credencial openai salva para tenant jest-e2e-stale-full-router
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:51.072Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:51.076Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:51.077Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:51.238Z] [INFO] [TenantAIService] Credencial qwen salva para tenant jest-e2e-stale-full-router
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:51.240Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:51.245Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:51.247Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:51.465Z] [INFO] [TenantAIService] Credencial groq salva para tenant jest-e2e-stale-full-router
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:51.590Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:53.369Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-stale-full-router",
+      "tenant_id": "b7deab68-0b7d-4bb3-8507-b18774afd8b5",
+      "tenant_key": "jest-e2e-stale-full-router"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:53.560Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:04:53.689Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:04:53.762Z] [INFO] [missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "branch": "engineering/missions/3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "baseCommit": "9a70ee2b23ce",
+      "worker": "pid-3467349"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:04:53.811Z] [INFO] [missionSource] fonte da missão inicializada
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "branch": "engineering/missions/3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "baseCommit": "9a70ee2b23ce",
+      "actor": "jest",
+      "alreadyPersisted": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:04:56.020Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "taskId": "cf2bcb9c-b44a-47c8-b4d0-0e351c2d7770",
+      "candidateCommit": "a0ba49f1ffd8",
+      "worker": "pid-3467349"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:04:56.068Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "taskId": "cf2bcb9c-b44a-47c8-b4d0-0e351c2d7770",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "9a70ee2b23ce",
+      "to": "a0ba49f1ffd8",
+      "actor": "jest-a"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:04:56.106Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "e793cc71-8a6f-446c-8a4f-1d5e74d69ce9",
+      "runnerId": "engineer-jmachado-Precision-5530-6ec69fc9-bc59-49a8-83b2-8c53af902903",
+      "fence": 1,
+      "pid": 3467349
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:04:56.152Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "system",
+      "tenant_id": "3b7ec7e9-e773-420c-ae31-2c09884f70c9",
+      "tenant_key": "system"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:00.242Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:00.278Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:05:01.856Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-e793cc71-8a6f-446c-8a4f-1d5e74d69ce9-attempt-1-426f03e6",
+      "commit": "9a70ee2b23ce304fd22a0305b70821d4a2ef00de",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:05:02.517Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:02.537Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:09.165Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:09.194Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:09.230Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:09.260Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:18.047Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:18.076Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:18.330Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:18.353Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:05:21.256Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-e793cc71-8a6f-446c-8a4f-1d5e74d69ce9-expected-94c50135",
+      "commit": "9a70ee2b23ce304fd22a0305b70821d4a2ef00de",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:05:22.075Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:22.098Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:05:24.082Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-e793cc71-8a6f-446c-8a4f-1d5e74d69ce9-smoke-f681fe25",
+      "commit": "9157a0dbd4a2ab99a8d4aafcb67685f5c99bf116",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:05:38.747Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:38.961Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:40.738Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:05:40.922Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "122e7d97-819a-4534-8db8-2e09875e451f",
+      "runnerId": "engineer-jmachado-Precision-5530-f7a97d54-7d4e-4d35-a365-84f89a1825ef",
+      "fence": 1,
+      "pid": 3467349
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:05:40.937Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "system",
+      "tenant_id": "3b7ec7e9-e773-420c-ae31-2c09884f70c9",
+      "tenant_key": "system"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:42.598Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:42.689Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:05:44.946Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-122e7d97-819a-4534-8db8-2e09875e451f-attempt-1-daf4e566",
+      "commit": "a0ba49f1ffd8d0fe54a20dd02e3e1ecb7ff52b73",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:05:45.587Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:45.605Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:53.085Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:53.112Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:53.163Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:53.210Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:59.871Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:05:59.886Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:06:00.057Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:06:00.073Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:06:02.424Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-122e7d97-819a-4534-8db8-2e09875e451f-expected-83403847",
+      "commit": "a0ba49f1ffd8d0fe54a20dd02e3e1ecb7ff52b73",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:06:03.383Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:06:03.402Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:06:04.805Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-122e7d97-819a-4534-8db8-2e09875e451f-smoke-d2e35273",
+      "commit": "f31edb202f00d8df9562c6fd25ec560075c03d53",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:06:16.271Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:06:16.356Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "taskId": "122e7d97-819a-4534-8db8-2e09875e451f",
+      "candidateCommit": "f31edb202f00",
+      "worker": "pid-3467349"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:06:16.396Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "taskId": "122e7d97-819a-4534-8db8-2e09875e451f",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "a0ba49f1ffd8",
+      "to": "f31edb202f00",
+      "actor": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:06:16.406Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:06:16.422Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:06:16.805Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-stale-full-router
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:06:16.845Z] [INFO] [bugLoopCoordinator] missão original retomada
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "originalTaskId": null,
+      "replacementTaskId": "122e7d97-819a-4534-8db8-2e09875e451f",
+      "decision": "REPLACE_TASK_RESUME_PHASE",
+      "findingId": null,
+      "resumedStatus": "GREEN"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:06:16.857Z] [INFO] [bugLoopCoordinator] replan de fonte executado
+    {
+      "missionId": "3ef10101-340c-46cb-9f02-22ab4a03b458",
+      "taskId": "e793cc71-8a6f-446c-8a4f-1d5e74d69ce9",
+      "attempt": 1,
+      "maxAttempts": 2,
+      "replacementTaskId": "122e7d97-819a-4534-8db8-2e09875e451f",
+      "status": "GREEN",
+      "error": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:06:17.240Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+Preparing worktree (detached HEAD 9a70ee2b2)
+Updating files:  56% (3763/6669)Updating files:  57% (3802/6669)Updating files:  58% (3869/6669)Updating files:  59% (3935/6669)Updating files:  60% (4002/6669)Updating files:  61% (4069/6669)Updating files:  62% (4135/6669)Updating files:  63% (4202/6669)Updating files:  64% (4269/6669)Updating files:  65% (4335/6669)Updating files:  66% (4402/6669)Updating files:  67% (4469/6669)Updating files:  68% (4535/6669)Updating files:  69% (4602/6669)Updating files:  70% (4669/6669)Updating files:  71% (4735/6669)Updating files:  72% (4802/6669)Updating files:  73% (4869/6669)Updating files:  74% (4936/6669)Updating files:  75% (5002/6669)Updating files:  76% (5069/6669)Updating files:  77% (5136/6669)Updating files:  78% (5202/6669)Updating files:  79% (5269/6669)Updating files:  80% (5336/6669)Updating files:  81% (5402/6669)Updating files:  82% (5469/6669)Updating files:  83% (5536/6669)Updating files:  84% (5602/6669)Updating files:  85% (5669/6669)Updating files:  86% (5736/6669)Updating files:  87% (5803/6669)Updating files:  88% (5869/6669)Updating files:  89% (5936/6669)Updating files:  90% (6003/6669)Updating files:  91% (6069/6669)Updating files:  92% (6136/6669)Updating files:  93% (6203/6669)Updating files:  94% (6269/6669)Updating files:  95% (6336/6669)Updating files:  96% (6403/6669)Updating files:  97% (6469/6669)Updating files:  98% (6536/6669)Updating files:  99% (6603/6669)Updating files: 100% (6669/6669)Updating files: 100% (6669/6669), done.
+fatal: path 'tests/fixtures/engineering-router-sandbox/staleReplanPatchB.js' does not exist in 'a0ba49f1ffd8d0fe54a20dd02e3e1ecb7ff52b73'
+fatal: path 'tests/fixtures/engineering-router-sandbox/staleReplanPatchB.js' does not exist in '9a70ee2b23ce304fd22a0305b70821d4a2ef00de'
+error: branch 'engineering-router/candidates/cf2bcb9c-b44a-47c8-b4d0-0e351c2d7770' not found
+PASS tests/integration/missionSourceStaleReplanFullRouterE2E.test.js (90.982 s)
+  Mission Source — STALE_CANDIDATE → REPLAN com a SUBSTITUTA executada pelo ROUTER
+    ✓ a substituta do replan converge a GREEN pelo Router e avança a fonte para M3 (83215 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        91.095 s
+Ran all test suites matching /tests\/integration\/missionSourceStaleReplanFullRouterE2E.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

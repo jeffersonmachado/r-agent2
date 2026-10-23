@@ -1,0 +1,24 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/assertCanonicalReleaseDecision.test.js
+  assert-canonical-release-decision
+    ✓ três decisões finais + identidade completa + cadeia íntegra ⇒ CERTIFIED_GO (não-vacuidade) (140 ms)
+    ✓ gate de identidade entra como FAIL quando a identidade falta (state e ok concordam) (107 ms)
+    ✓ READINESS em estado PRÉ-pacote ⇒ NÃO é GO definitivo (o falso verde medido) (109 ms)
+    ✓ GO de governance ausente (literal desconhecido) ⇒ NÃO é GO definitivo (115 ms)
+    ✓ cadeia com valid=true GRAVADO mas hashes que não fecham ⇒ FAIL (recomputação, não campo) (108 ms)
+    ✓ cadeia ausente ⇒ FAIL (não aprovar por ausência de cadeia) (106 ms)
+    ✓ artefato ausente ⇒ NÃO é GO definitivo (nunca aprovar por ausência) (107 ms)
+    ✓ .current-run.json AUSENTE ⇒ BLOQUEIA (antes: identidade vazia passava como coerente) (108 ms)
+    ✓ runId AUSENTE no run corrente ⇒ BLOQUEIA com o campo nomeado (106 ms)
+    ✓ sourceFingerprint com formato inválido ⇒ BLOQUEIA como inválido (não como ausente) (104 ms)
+    ✓ relatório SEM identidade (mas run completo) ⇒ BLOQUEIA por relatório incompleto (107 ms)
+    ✓ identidade divergente do run ⇒ NÃO é GO definitivo, com o campo nomeado (104 ms)
+    ✓ o estado devolvido é sempre do vocabulário canônico (118 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        2.245 s
+Ran all test suites matching /tests\/unit\/governance\/assertCanonicalReleaseDecision.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

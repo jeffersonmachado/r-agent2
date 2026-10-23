@@ -1,0 +1,23 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/securityIntel/securityGateProvenance.test.js
+  Security Gate — proveniência do veredito (fail-closed)
+    ✓ VERDADEIRO NEGATIVO: SBOM do próprio run, posterior ao startedAt ⇒ nada a recusar (110 ms)
+    ✓ CONTROLE POSITIVO — SBOM ANTERIOR ao run ⇒ SECURITY_GATE_STALE_EVIDENCE (104 ms)
+    ✓ CONTROLE POSITIVO — SBOM de OUTRO run ⇒ SECURITY_GATE_FOREIGN_RUN (101 ms)
+    ✓ CONTROLE POSITIVO — sem run governado ⇒ SECURITY_GATE_NO_GOVERNED_RUN (102 ms)
+    ✓ CONTROLE POSITIVO — run corrente ilegível ⇒ SECURITY_GATE_UNAVAILABLE (nunca PASS por ausência) (105 ms)
+    ✓ SBOM reusado entre runs (run_id NULLABLE por desenho) não é recusado só por isso (104 ms)
+    ✓ ANTI "GATE QUE NÃO PODE FALHAR": os 4 códigos de recusa são todos alcançáveis (105 ms)
+    ✓ datetime inválido não vira recusa falsa (nem esconde vínculo ausente) (102 ms)
+  run ENCERRADO não é run corrente (família H20)
+    ✓ run ABANDONED ⇒ SECURITY_GATE_RUN_CLOSED (não culpa o SBOM) (106 ms)
+    ✓ run SUPERSEDED ⇒ SECURITY_GATE_RUN_CLOSED (109 ms)
+    ✓ run ABERTO com SBOM fresco segue sem recusa (controle positivo) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.661 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/securityIntel\/securityGateProvenance.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,18 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js
+  inventário de persistência — nenhuma escrita fantasma da fila oficial
+    ✓ módulos que apenas LEEM a fila não aparecem como escritores (104 ms)
+    ✓ os escritores LEGÍTIMOS da fila continuam registrados (não-vacuidade) (103 ms)
+    ✓ nenhum alvo de escrita fica sem classificação (UNKNOWN = 0) (102 ms)
+  taxonomia — AI_MEMORY/evidence é prova versionada, não runtime
+    ✓ o diretório está classificado na taxonomia canônica (102 ms)
+    ✓ a fila oficial segue classificada como configuração versionada (100 ms)
+    ✓ leitores da fila usam path.resolve (leitura não vira alvo de escrita) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.785 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/governance\/jsonPersistenceNoPhantomWrite.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

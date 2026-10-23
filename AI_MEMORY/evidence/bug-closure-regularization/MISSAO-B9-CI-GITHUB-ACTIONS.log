@@ -1,0 +1,28 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/devBranchCiGate.test.js
+  (1) workflow do CI — cobre a branch de desenvolvimento com permissão mínima
+    ✓ existe e dispara em push para dev/engineering-hardening (109 ms)
+    ✓ declara permissões mínimas (contents: read) — não escreve no repositório (106 ms)
+    ✓ não lê nem imprime segredo algum (105 ms)
+    ✓ não publica: sem tag, release, deploy, push ou publish (111 ms)
+    ✓ roda pelo MESMO runner versionado (uma implementação, não duas) (103 ms)
+    ✓ vincula a evidência ao SHA exato e publica o artefato do run (108 ms)
+  (2) runner local — o gate efetivo enquanto o runner do GitHub não inicia
+    ✓ define L0 e L1 obrigatórios, todos com id/nível/comando (134 ms)
+    ✓ o L1 inclui a cadeia criptográfica e o self-proving (o falso GO da FASE 6) (104 ms)
+    ✓ cada fase técnica tem operação de elegibilidade declarada (Bug Closure First) (115 ms)
+    ✓ recusa executar quando o SHA exigido não é o HEAD (evidência ligada ao commit errado) (104 ms)
+    ✓ registra comando, exit code, duração e sha256 da saída de cada passo (104 ms)
+    ✓ publica a evidência em Markdown versionado (o JSON solto em evidence/ é reprovado) (103 ms)
+    ✓ nunca publica release: sem push, tag, deploy ou publish (103 ms)
+    ✓ o veredito deriva do exit code dos passos (falha não vira narrativa de sucesso) (103 ms)
+    ✓ escopo parcial NUNCA produz PASS (modo rápido não parece validação completa) (105 ms)
+    ✓ consulta a elegibilidade ANTES de cada fase técnica e para no primeiro bloqueio (111 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        2.314 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/devBranchCiGate.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

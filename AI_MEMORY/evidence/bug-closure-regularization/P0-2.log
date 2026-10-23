@@ -1,0 +1,21 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/evidenceManifestHashBaseline.test.js
+  evidence manifest hash — baseline atestado
+    ✓ hash confere e proveniência casa ⇒ PASS (111 ms)
+    ✓ CONTROLE POSITIVO: ausência de baseline é FAIL (nunca PASS por falta de dado) (105 ms)
+    ✓ CONTROLE POSITIVO: hash divergente é FAIL (evidência alterada após atestação) (102 ms)
+    ✓ CONTROLE POSITIVO: baseline de OUTRO run é FAIL (evidência estrangeira) (103 ms)
+    ✓ CONTROLE POSITIVO: baseline de outra árvore de código é FAIL (stale source) (102 ms)
+    ✓ manifest ausente/ilegível ⇒ FAIL (não há o que comparar) (103 ms)
+    ✓ ausência de run corrente NÃO fabrica recusa (não inventa divergência) (102 ms)
+  não-vacuidade: o pipeline real exercita a decisão
+    ✓ o engine consome o módulo de decisão (e não tem mais PASS por ausência) (102 ms)
+    ✓ o produtor CRIA o baseline (antes só atualizava se já existisse) (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        1.447 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/evidenceManifestHashBaseline.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

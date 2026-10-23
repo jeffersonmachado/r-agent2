@@ -1,0 +1,17 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js
+  preflight do TTL da evidência de runtime do Ask-AI
+    ✓ evidência fresca com prova de geração ⇒ OK (o ciclo pode começar) (106 ms)
+    ✓ evidência vencida ⇒ STALE com o código do agregado (o caso medido em 2026-10-15) (103 ms)
+    ✓ evidência ausente ⇒ STALE (bloqueante), nunca "ok sem sinal" (101 ms)
+    ✓ evidência fresca SEM prova de geração ⇒ STALE (usa a mesma autoridade do validador) (102 ms)
+    ✓ ASCII inválido não derruba a avaliação (exit 2 é só plumbing) (102 ms)
+    ✓ o selo chama este preflight na ENTRADA e antes do agregado (fail-fast, não no fim) (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.781 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/askAiRuntimeEvidenceTtlPreflight.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

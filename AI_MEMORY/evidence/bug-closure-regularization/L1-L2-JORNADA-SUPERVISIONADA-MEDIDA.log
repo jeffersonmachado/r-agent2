@@ -1,0 +1,348 @@
+  console.error
+    [2026-10-23T17:01:11.445Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/missionCompilerService.js:52:30)
+      at Object.require (tests/integration/engineeringMissionFullE2E.test.js:26:18)
+
+  console.info
+    [2026-10-23T17:01:11.901Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:11.962Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-engineering-mission"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:11.980Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-engineering-mission",
+      "tenant_id": "340e22c4-fb80-4489-b7ae-b3d4f1379625",
+      "tenant_key": "jest-e2e-engineering-mission"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:11.982Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-engineering-mission",
+      "tenant_id": "340e22c4-fb80-4489-b7ae-b3d4f1379625",
+      "tenant_key": "jest-e2e-engineering-mission"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:12.082Z] [INFO] [TenantAIService] Credencial anthropic salva para tenant jest-e2e-engineering-mission
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:12.084Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-engineering-mission"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:12.087Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-engineering-mission",
+      "tenant_id": "340e22c4-fb80-4489-b7ae-b3d4f1379625",
+      "tenant_key": "jest-e2e-engineering-mission"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:12.089Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-engineering-mission",
+      "tenant_id": "340e22c4-fb80-4489-b7ae-b3d4f1379625",
+      "tenant_key": "jest-e2e-engineering-mission"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:12.187Z] [INFO] [TenantAIService] Credencial mistral salva para tenant jest-e2e-engineering-mission
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:12.267Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:13.657Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "system",
+      "tenant_id": "3b7ec7e9-e773-420c-ae31-2c09884f70c9",
+      "tenant_key": "system"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:17.754Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:18.227Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:18.439Z] [INFO] [missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte
+    {
+      "missionId": "b658f1b9-2775-4959-a27e-a41945cb6bd8",
+      "branch": "engineering/missions/b658f1b9-2775-4959-a27e-a41945cb6bd8",
+      "baseCommit": "9a70ee2b23ce",
+      "worker": "pid-3460355"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:01:18.497Z] [INFO] [missionSource] fonte da missão inicializada
+    {
+      "missionId": "b658f1b9-2775-4959-a27e-a41945cb6bd8",
+      "branch": "engineering/missions/b658f1b9-2775-4959-a27e-a41945cb6bd8",
+      "baseCommit": "9a70ee2b23ce",
+      "actor": "jest-e2e",
+      "alreadyPersisted": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:18.622Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:18.788Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:18.950Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "54ef222a-a145-4786-b22c-ca88104798db",
+      "runnerId": "jest-e2e-mission-runner",
+      "fence": 1,
+      "pid": 3460355
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:18.986Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-engineering-mission",
+      "tenant_id": "340e22c4-fb80-4489-b7ae-b3d4f1379625",
+      "tenant_key": "jest-e2e-engineering-mission"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:19.069Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:19.153Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:20.543Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-54ef222a-a145-4786-b22c-ca88104798db-attempt-1-2950c2bb",
+      "commit": "9a70ee2b23ce304fd22a0305b70821d4a2ef00de",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:20.921Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:20.939Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:26.715Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:26.739Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:26.788Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:26.833Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:34.772Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:34.790Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:34.997Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:35.012Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:36.990Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-54ef222a-a145-4786-b22c-ca88104798db-expected-1d298a07",
+      "commit": "9a70ee2b23ce304fd22a0305b70821d4a2ef00de",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:38.027Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:38.050Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:39.407Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-54ef222a-a145-4786-b22c-ca88104798db-smoke-6eb1c93b",
+      "commit": "abdecb6377dd954db0b2dfcd0a5b073fba0c6be8",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:45.855Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:45.947Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "b658f1b9-2775-4959-a27e-a41945cb6bd8",
+      "taskId": "54ef222a-a145-4786-b22c-ca88104798db",
+      "candidateCommit": "abdecb6377dd",
+      "worker": "pid-3460355"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T17:01:45.990Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "b658f1b9-2775-4959-a27e-a41945cb6bd8",
+      "taskId": "54ef222a-a145-4786-b22c-ca88104798db",
+      "findingId": null,
+      "integrationType": "TASK_CANDIDATE",
+      "from": "9a70ee2b23ce",
+      "to": "abdecb6377dd",
+      "actor": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T17:01:46.002Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:46.021Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T17:01:46.369Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-engineering-mission
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T17:01:46.864Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/engineeringMissionFullE2E.test.js (37.117 s)
+  Engineering Mission — E2E missão → enriquecimento → aprovação → execução → GREEN
+    ✓ 1. missão em linguagem natural é enriquecida com fatos reais e fica AWAITING_APPROVAL (5680 ms)
+    ✓ 2. preview mostra o que foi acrescentado, com fonte e motivo (autoaprovação desabilitada por padrão) (128 ms)
+    ✓ 3. execução antes da aprovação é bloqueada (143 ms)
+    ✓ 4. aprovação humana (com edição do contrato de execução) libera exatamente a versão aprovada (212 ms)
+    ✓ 5. execução cria uma EngineeringTask com contrato ADERENTE à MissionSpec aprovada (537 ms)
+    ✓ 6. o loop real do Router chega a GREEN e a missão reflete GREEN (27601 ms)
+    ✓ 7. relatório de auditoria responde às perguntas do auditor externo (§39) (128 ms)
+    ✓ 8. TEST 48 — aderência missão original ↔ MissionSpec aprovada ↔ execução entregue (139 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        37.173 s
+Ran all test suites matching /tests\/integration\/engineeringMissionFullE2E.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

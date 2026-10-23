@@ -1,0 +1,46 @@
+  console.error
+    [2026-10-23T16:34:58.567Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/missionCompilerService.js:52:30)
+      at Object.require (api/services/engineeringMission/missionReviewService.js:63:18)
+      at Object.require (tests/unit/engineeringMission/missionGatesEvidence.test.js:14:25)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringMission/missionGatesEvidence.test.js
+  deriveGates — categoria da evidência de teste
+    ✓ P1: comando genérico (classificação UNKNOWN) NÃO satisfaz unit (104 ms)
+    ✓ execução classificada como UNIT satisfaz unit (102 ms)
+    ✓ suíte de integração executada vira evidência distinta (101 ms)
+  deriveGates — revisão vinculada à tentativa que avançou
+    ✓ APPROVE de OUTRA tentativa NÃO satisfaz o gate (reuso de revisão de outro patch) (100 ms)
+    ✓ APPROVE da tentativa corrente, com provider diferente, é PASS (101 ms)
+    ✓ P1: APPROVE SEM declaração de independência NÃO passa (prova positiva obrigatória) (101 ms)
+    ✓ P1: identidade do revisor incompleta (sem modelo) NÃO passa (101 ms)
+    ✓ P1: provider do coder ausente NÃO vira independência por omissão (102 ms)
+  deriveGates — independência CONTRADITA pelos dados
+    ✓ declarar independente com o MESMO provider do coder não passa, e o código é nomeado (102 ms)
+    ✓ sem APPROVE o gate não passa (revisão é requisito) (101 ms)
+  deriveGates — fail-closed no atestado
+    ✓ task.status=GREEN sem evidência de fase produz ATTESTED, nunca PASS (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        2.107 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/engineeringMission\/missionGatesEvidence.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

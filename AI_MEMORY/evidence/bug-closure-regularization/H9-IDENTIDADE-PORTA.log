@@ -1,0 +1,45 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+[service] AVISO: [api] a porta 3001 responde, mas quem atende não é a unidade ragent2-api-dev (pids: 3420069 )
+[service] AVISO: [api] subiu mas não responde (health 200) — reiniciando a unidade uma vez (bind pode ter falhado com porta ocupada)
+[service] ERRO: [api] NÃO atende a porta 3001: quem responde ali não é a unidade ragent2-api-dev (pids: 3420069 ). Libere a porta (stack Docker? outro processo?) e rode de novo
+PASS tests/unit/dev/devServicesSupervision.test.js (34.948 s)
+  supervisão generalizada dos serviços de dev
+    ✓ os TRÊS serviços têm template versionado, com restart e trava anti-tempestade em [Unit] (108 ms)
+    ✓ systemd-analyze verify aceita as TRÊS units renderizadas (578 ms)
+    ✓ a verificação de units NÃO é vacuosa: defeito real do systemd é detectado (304 ms)
+    ✓ nenhuma unit versiona segredo (102 ms)
+    ✓ o dispatcher cobre api/rag/frontend e falha fechado em serviço desconhecido (110 ms)
+  D1/D2 — normalização: fallback não pode DUPLICAR a saída
+    ✓ o helper `|| printf`/`|| echo` não é usado em comandos que já imprimem valor (100 ms)
+    ✓ health_code devolve UM valor (mesmo quando o curl falha) (189 ms)
+  D3 — o smoke restaura SÓ o que ele parou
+    ✓ a política decide parar/preservar de forma explícita (tabela executada de verdade) (105 ms)
+    ✓ deve_restaurar só aceita quem foi marcado como parado (109 ms)
+    ✓ o snapshot usa delimitador fixo e não compara com a string "000" (102 ms)
+    ✓ o smoke tem trap de saída e restauração idempotente (101 ms)
+    ✓ o snapshot cobre os TRÊS serviços (parar só a API deixava Vite/uvicorn presos à porta) (101 ms)
+  D4 — filho do serviço não é resíduo
+    ✓ a identidade usa o ControlGroup da unidade (não só o MainPID) (100 ms)
+    ✓ identidade por cwd também é exigida (protege OUTRA instalação do RAP) (100 ms)
+    ✓ o `stop` limpa resíduo fora da unidade (senão a porta continua ocupada) (100 ms)
+    ✓ nenhum script usa pkill/fuser para derrubar serviço supervisionado (101 ms)
+  D5 — identidade de quem responde na porta
+    ✓ a lib expõe porta canônica, PIDs da porta e identidade (fonte única) (101 ms)
+    ✓ porta canônica: 3001/8001/5173 e serviço desconhecido falha (115 ms)
+    ✓ EXECUÇÃO: processo REAL fora da unidade => identidade NÃO comprovada (fail-closed) (237 ms)
+    ✓ identidade COMPROVADA quando o cgroup do PID é o da unidade (162 ms)
+    ✓ sem evidência (nada escutando / cgroup ilegível) => NÃO comprovado (162 ms)
+    ✓ restore do smoke NÃO declara RESTAURADO sem identidade comprovada (100 ms)
+    ✓ restauração incompleta tem estado terminal próprio (exit 3), nunca GO (101 ms)
+  D6 — start exige identidade e recupera "ativa sem servir"
+    ✓ o service.sh consome a MESMA política de estado (fonte única, sem duplicar portas) (101 ms)
+    ✓ start só declara sucesso com health E identidade; senão reinicia uma vez e falha explicando (101 ms)
+    ✓ PROVA FUNCIONAL: porta servida por outro processo => start FALHA (antes: "no ar") (31208 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        34.995 s, estimated 37 s
+Ran all test suites matching /tests\/unit\/dev\/devServicesSupervision.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

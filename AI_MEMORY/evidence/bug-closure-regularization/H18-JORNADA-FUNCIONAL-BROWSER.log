@@ -1,0 +1,23 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/journeyDetectors.test.js
+  selecionarChipDeFiltro
+    ✓ NÃO escolhe botão de ação como filtro (caso real: /tasks escolhia "Atualizar") (103 ms)
+    ✓ NÃO escolhe grupos de menu lateral nem rótulo de usuário (104 ms)
+    ✓ NÃO escolhe paginação numérica nem setas (103 ms)
+    ✓ sem filtro identificável devolve null (ação inexistente não é sucesso) (105 ms)
+  classificarErroDeConsole
+    ✓ "Failed to fetch" durante a navegação do teste é CANCELAMENTO DECLARADO (caso real: /crm) (102 ms)
+    ✓ o mesmo erro em tela ESTÁVEL continua sendo DEFEITO (não é supressão cega) (102 ms)
+    ✓ erro que não é cancelamento nunca é abafado, mesmo durante navegação (102 ms)
+  proximaLeituraDeEstabilidade
+    ✓ "Carregando..." estável NÃO encerra a espera (caso real: /editor media 13 chars) (105 ms)
+    ✓ conteúdo estável encerra a espera (104 ms)
+    ✓ espera de loading tem LIMITE (nunca espera infinita) (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        1.283 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/journeyDetectors.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

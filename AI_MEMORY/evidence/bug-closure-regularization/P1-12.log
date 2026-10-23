@@ -1,0 +1,29 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/evidenceFreshness.test.js
+  evaluateArtifactFreshness — TTL de evidência
+    ✓ o TTL canônico é o de 7 dias (o mesmo do master-scorecard e das waves) (109 ms)
+    ✓ evidência dentro do TTL é FRESH (105 ms)
+    ✓ exatamente no limite ainda é FRESH (o TTL vence DEPOIS do prazo, não no instante) (101 ms)
+    ✓ evidência de ~50 dias (o caso real medido) é STALE e diz a idade (104 ms)
+    ✓ artefato sem timestamp é UNKNOWN — nunca STALE (ausência de dado não é dado) (103 ms)
+    ✓ timestamp inválido (não parseável) também é UNKNOWN (102 ms)
+    ✓ artefato isento (fonte de governança) é UNKNOWN com o motivo declarado (103 ms)
+    ✓ produtor com política própria pode informar TTL menor (48 h do smoke agendado) (103 ms)
+  resolveProofStatus — o frescor entra como terceira condição
+    ✓ ausente continua missing (102 ms)
+    ✓ conteúdo semanticamente inválido continua invalid (e vence sobre o frescor) (102 ms)
+    ✓ presente, semanticamente ok e VENCIDO é stale — nunca valid (101 ms)
+    ✓ presente, semanticamente ok e fresco é valid (101 ms)
+    ✓ não-vacuidade: sem política de frescor o resultado seria valid — é o defeito que o teste trava (103 ms)
+  resolveGovernanceLinkage — evidência vencida não afirma a decisão final
+    ✓ evidência fresca linka final_decision (105 ms)
+    ✓ evidência VENCIDA não linka final_decision (o vínculo é retirado, não mantido por inércia) (101 ms)
+    ✓ domínio governance é fonte e linka proof_based_governance independentemente da idade (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        2.269 s
+Ran all test suites matching /tests\/unit\/governance\/evidenceFreshness.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

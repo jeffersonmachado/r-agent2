@@ -1,0 +1,30 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/convergenceFixpoint.test.js
+  guard circular reconhece o requisito como ele é PERSISTIDO
+    ✓ a falha circular é reconhecida quando o caminho está em evidence[].path (105 ms)
+    ✓ os QUATRO relatórios de projeção são circulares (101 ms)
+    ✓ NÃO é circular: NO_GO de artefato que não é projeção do scorecard (101 ms)
+    ✓ NÃO é circular: falha real que não é NO_GO de artefato (101 ms)
+    ✓ o guard NÃO transforma falha real em sucesso (dimensão mista continua reprovada) (101 ms)
+    ✓ dimensão cujas ÚNICAS falhas são circulares é classificada como circular (101 ms)
+    ✓ dimensão sem falha própria (só gap/blocker derivado) é circular (101 ms)
+  certification-states: sem medição não se publica 0
+    ✓ sem a lista de verticais os números são null, NUNCA 0/N (103 ms)
+    ✓ com a lista de verticais o numerador é contado e o rótulo é o correto (103 ms)
+    ✓ core GO não é rebaixado por pacote pendente, e mercado NÃO herda o core (103 ms)
+    ✓ CORE_NOT_GO é explícito quando o núcleo não está pronto (102 ms)
+    ✓ os cinco estados são sempre publicados juntos, com a invariante explícita (102 ms)
+    ✓ o estado de contrato EVO vem do contrato versionado, com os quatro estados separados (102 ms)
+  a sequência de convergência preserva o lineage canônico
+    ✓ regera a projeção de readiness ANTES do fixpoint (100 ms)
+    ✓ tolera o exit code de decisão do produtor (não aborta sob set -e) (101 ms)
+    ✓ o runId da projeção é o do run corrente, sem artefato estrangeiro (101 ms)
+    ✓ o relatório de contaminação não aponta lineage estrangeiro (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        1.94 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/convergenceFixpoint.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,23 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/bugClosureHistoricalGuards.test.js
+  MISSAO-B1 — a cadeia é RECALCULADA, não atestada
+    ✓ cadeia intacta é verificada sem falhas (recomputação confere) (114 ms)
+    ✓ hash GRAVADO divergente do conteúdo real é DETECTADO (o gate recalcula) (105 ms)
+    ✓ elo apontando para arquivo inexistente é DETECTADO (file_deleted) (105 ms)
+    ✓ o gate publica raiz GRAVADA e raiz RECALCULADA lado a lado (104 ms)
+  P1-AGREGADO — identidade de run é fail-closed
+    ✓ sem runId nem fingerprint: incompleta, nomeando os dois (104 ms)
+    ✓ commit não-SHA também derruba a identidade (não basta "ter um commit") (102 ms)
+    ✓ identidade completa é aceita (102 ms)
+  CI-CHECKOUT-LIMPO — harness com cenários negativos exercitáveis
+    ✓ cenários obrigatórios existem (103 ms)
+    ✓ auditarCloneLimpo é função real (o harness mede o clone, não o workspace) (102 ms)
+    ✓ contadores de teste são lidos da SAÍDA real (não estimados) (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        1.707 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/bugClosureHistoricalGuards.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,15 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/branchProtectionApplyPayload.test.js
+  aplicar() — corpo do PUT de proteção de branch
+    ✓ envia os TRÊS campos obrigatórios com null explícito (causa do 422) (109 ms)
+    ✓ allow_force_pushes / allow_deletions refletem a configuração (nunca por omissão) (103 ms)
+    ✓ usa o endpoint de proteção da branch e envia o corpo por stdin (nunca -F) (101 ms)
+    ✓ falha da API é propagada como ok=false (nunca sucesso silencioso) (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        0.807 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/governance\/branchProtectionApplyPayload.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

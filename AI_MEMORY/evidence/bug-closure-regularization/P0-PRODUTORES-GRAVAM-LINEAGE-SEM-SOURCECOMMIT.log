@@ -1,0 +1,22 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/producerLineageIdentity.test.js
+  produtores gravam os TRÊS campos que a decisão canônica exige
+    ✓ a exigência canônica inclui sourceCommit (não é só runId + fingerprint) (115 ms)
+    ✓ governance/proof-engine/index.js grava sourceCommit (104 ms)
+    ✓ governance/export-governance-artifacts.js grava sourceCommit (107 ms)
+    ✓ tools/system/platform-readiness.js grava sourceCommit (106 ms)
+    ✓ o proof engine lê o lineage do RUN congelado, não do HEAD vivo (104 ms)
+    ✓ export-governance-artifacts usa o commit do registro do run (102 ms)
+    ✓ platform-readiness propaga sourceCommit do proof para readiness e proof (106 ms)
+  artefatos reais: quando produzidos, a identidade está completa
+    ✓ governance/final-governance-report.json tem runId + sourceCommit + sourceFingerprint (ou não existe) (103 ms)
+    ✓ governance/final-readiness-report.json tem runId + sourceCommit + sourceFingerprint (ou não existe) (161 ms)
+    ✓ governance/final-proof-report.json tem runId + sourceCommit + sourceFingerprint (ou não existe) (192 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        1.995 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/producerLineageIdentity.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,16 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/runtimeEvidenceDiagnosis.test.js
+  extração do JSON do reporter do Jest
+    ✓ JSON puro (execução limpa) (107 ms)
+    ✓ JSON precedido por LOGS do teste (o caso que virava "crash antes do reporter") (103 ms)
+    ✓ JSON concatenado em bloco único até o fim da saída (104 ms)
+    ✓ saída sem JSON nenhum continua nula (aí sim é crash real) (102 ms)
+    ✓ o coletor usa o extrator robusto (não parse cru) (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.706 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/governance\/runtimeEvidenceDiagnosis.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

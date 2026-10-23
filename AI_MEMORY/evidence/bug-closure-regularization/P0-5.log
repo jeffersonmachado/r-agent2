@@ -1,0 +1,23 @@
+  console.info
+    [2026-10-23T16:24:23.417Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/securityWaiverApprovalE2E.test.js (5.539 s)
+  waiver de segurança — ciclo de aprovação contra o banco real
+    ✓ SOLICITAR cria PENDING_APPROVAL e NÃO mitiga o achado (317 ms)
+    ✓ AUTOAPROVAÇÃO é recusada pelo banco real (segregação de funções) (276 ms)
+    ✓ APROVAR por outro ator mitiga o achado e grava a trilha completa (262 ms)
+    ✓ ESCOPO alterado depois do pedido bloqueia a aprovação (249 ms)
+    ✓ REVOGAR devolve o achado ao risco aberto e o tirar da lista do gate (279 ms)
+    ✓ waiver EXPIRADO não é aprovado e não é entregue ao gate (149 ms)
+    ✓ revogação CONCORRENTE: só uma vence (CAS real) (340 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        5.674 s
+Ran all test suites matching /tests\/integration\/securityWaiverApprovalE2E.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

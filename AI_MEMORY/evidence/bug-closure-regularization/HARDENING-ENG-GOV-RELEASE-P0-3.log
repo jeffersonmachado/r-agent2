@@ -1,0 +1,17 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/sealPhaseOrder.test.js
+  P0-3 — a ordem das fases certifica antes de publicar
+    ✓ PHASES executa consolidate e certify ANTES de publish, com verify-delivery por último (118 ms)
+    ✓ a criação da TAG existe SÓ na fase publish (110 ms)
+    ✓ publicar NÃO re-certifica: a fase publish não executa gate obrigatório (104 ms)
+    ✓ os gates obrigatórios vivem em consolidate/certify (controle positivo do teste) (102 ms)
+    ✓ o despacho cobre as 7 fases — `verify-delivery` tem hífen e não é função bash (103 ms)
+    ✓ a certificação da cadeia (P0-2) roda na fase certify, não em consolidate (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.286 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/sealPhaseOrder.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

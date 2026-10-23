@@ -1,0 +1,20 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/effectiveAggregateChain.test.js
+  resolverCadeiaEfetiva — agregado de governança
+    ✓ forma DIRETA: a própria string é a cadeia (113 ms)
+    ✓ forma WRAPPER: a cadeia efetiva é `:chain` (e o runner precisa executá-la) (105 ms)
+    ✓ wrapper SEM `:chain` é recusado (nunca cadeia vazia silenciosa) (103 ms)
+    ✓ wrapper cujo runner NÃO executa a cadeia é recusado (atóstica de wrapper vazio) (106 ms)
+    ✓ agregado ausente é recusado explicitamente (103 ms)
+    ✓ cadeia com a forma structural-only é DETECTÁVEL (o guard a reprova) (102 ms)
+    ✓ cadeiaContemPasso é literal (não casa por regex do nome do passo) (103 ms)
+  package.json real — o agregado atual continua exigindo o gate de runtime
+    ✓ cadeia efetiva do repositório contém o passo de runtime e nenhuma forma structural-only (106 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        1.575 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/effectiveAggregateChain.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

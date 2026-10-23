@@ -1,0 +1,16 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/hardeningQueueCommitExists.test.js
+  validate-hardening-queue — prova precisa ser abrível
+    ✓ commit real do repositório é aceito (118 ms)
+    ✓ hash inexistente é VIOLAÇÃO (o caso 5f6d0c1c9) (114 ms)
+    ✓ commit abreviado que existe continua aceito (não exige 40 chars) (120 ms)
+    ✓ formato inválido (não-hex, com espaço) é VIOLAÇÃO mesmo sem consultar o git (130 ms)
+    ✓ item sem commit não gera COMMIT_INEXISTENTE (é outra violação: campo obrigatório) (110 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.789 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/hardeningQueueCommitExists.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

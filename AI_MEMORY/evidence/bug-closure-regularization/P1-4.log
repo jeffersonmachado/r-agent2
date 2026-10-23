@@ -1,0 +1,37 @@
+  console.error
+    [2026-10-23T16:33:50.763Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/bugFindingService.js:28:30)
+      at Object.require (tests/unit/engineeringMission/activePreventiveRules.test.js:19:27)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringMission/activePreventiveRules.test.js
+  bugFindingService.getActivePreventiveRules
+    ✓ devolve SOMENTE regras ACTIVE — PROPOSED não é obrigação (120 ms)
+    ✓ a categoria FILTRA a busca (só a mesma classe de falha é consultada) (105 ms)
+    ✓ limite é limitado (não varre a tabela inteira) e sem categoria não filtra categoria (102 ms)
+    ✓ sem banco a leitura falha — o chamador trata como lista vazia (não inventa regra) (126 ms)
+  bugTriageService — regras ativas entram no contrato da correção
+    ✓ o triage consulta as regras ativas da categoria e as declara no assessment (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        3.722 s, estimated 4 s
+Ran all test suites matching /tests\/unit\/engineeringMission\/activePreventiveRules.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,23 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/ragIndexHealthPolicy.test.js
+  avaliarSaudeDoIndice — índice saudável
+    ✓ corpus consistente é HEALTHY sem violações (107 ms)
+    ✓ failed DECLARADO com motivo e origem não vira violação (mas continua listado) (101 ms)
+  avaliarSaudeDoIndice — cada cláusula reprova quando deve
+    ✓ indexed SEM chunks reprova (100 ms)
+    ✓ failed NÃO declarado reprova (102 ms)
+    ✓ exceção SEM motivo/origem reprova (exceção sem justificativa é esconderijo) (102 ms)
+    ✓ documento sem texto COM chunks (chunk fantasma) reprova (102 ms)
+    ✓ placeholder duplicado fora do arquivo autorizado reprova (102 ms)
+    ✓ indexing preso além da janela reprova e cita o limite (102 ms)
+  avaliarSaudeDoIndice — robustez de entrada
+    ✓ medição ausente não lança e não inventa verde com dados (100 ms)
+    ✓ exceção declarada que não existe mais é reportada como STALE (não silencia) (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        1.257 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/ragIndexHealthPolicy.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

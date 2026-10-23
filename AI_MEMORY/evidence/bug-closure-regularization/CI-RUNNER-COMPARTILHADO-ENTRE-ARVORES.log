@@ -1,0 +1,19 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/officialTestScriptsNoVacuousPass.test.js
+  scripts oficiais de teste não podem passar com zero testes
+    ✓ os três scripts oficiais existem no package.json (111 ms)
+    ✓ test:unit não usa --passWithNoTests (103 ms)
+    ✓ test:flow não usa --passWithNoTests (101 ms)
+    ✓ test:rpa:jest não usa --passWithNoTests (105 ms)
+    ✓ test:unit seleciona ao menos um diretório com arquivos de teste (136 ms)
+    ✓ test:flow seleciona ao menos um diretório com arquivos de teste (103 ms)
+    ✓ test:rpa:jest seleciona ao menos um diretório com arquivos de teste (102 ms)
+    ✓ CONTROLE NEGATIVO: a detecção de suíte vazia funciona (tests/flow sozinho é vazio) (105 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        1.512 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/officialTestScriptsNoVacuousPass.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

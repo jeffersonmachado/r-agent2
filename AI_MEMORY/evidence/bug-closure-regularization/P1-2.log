@@ -1,0 +1,35 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringMissionReviewEngines.test.js
+  metaReview — checks executáveis
+    ✓ bundle saudável não produz blocking findings (NOT_VERIFIABLE nunca bloqueia) (183 ms)
+    ✓ MR-02 reprova quando a versão executada difere da aprovada (119 ms)
+    ✓ MR-03 reprova versão posterior à aprovada sem aprovação própria (103 ms)
+    ✓ MR-04 reprova critério de aceite que não chegou ao contrato de execução (102 ms)
+    ✓ MR-05 reprova requisito derivado sem evidência de tratamento (105 ms)
+    ✓ MR-06 reprova gate ausente ou não-PASS (104 ms)
+    ✓ MR-07 reprova remoção de asserção e de caso de teste (111 ms)
+    ✓ MR-08 reprova teste desligado (.skip/.only) adicionado (106 ms)
+    ✓ MR-09 reprova segredo adicionado no patch (104 ms)
+    ✓ MR-10 reprova catch vazio/silencioso (ou declara NOT_VERIFIABLE se faltar parser) (123 ms)
+    ✓ MR-11 reprova flag que desliga funcionalidade para passar (102 ms)
+    ✓ MR-13 reprova risco alto sem review independente (102 ms)
+    ✓ MR-14 reprova afirmação de conclusão sem evidência (103 ms)
+    ✓ MR-15 reprova duplicação de infraestrutura existente (105 ms)
+    ✓ MR-16 reprova rota nova sem enforcement de classificação (103 ms)
+    ✓ MR-17 reprova estado impossível: missão GREEN sem execução GREEN (103 ms)
+    ✓ MR-18 reprova model alterado sem migration no mesmo patch (102 ms)
+    ✓ MR-19 reprova leitura sem escopo em serviço tenant-facing e isenta infraestrutura interna (104 ms)
+  adversarialReview — catálogo com cobertura verificável
+    ✓ catálogo declara ataques com teste permanente e defesa (136 ms)
+    ✓ cobertura total ⇒ PASS e não bloqueia GREEN (103 ms)
+    ✓ ataque sem teste permanente ⇒ UNCOVERED e bloqueia GREEN (103 ms)
+    ✓ teste presente mas SEM o caso específico ⇒ também UNCOVERED (nome importa) (102 ms)
+    ✓ ataques não automatizáveis ficam declarados, nunca omitidos (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       23 passed, 23 total
+Snapshots:   0 total
+Time:        3.413 s
+Ran all test suites matching /tests\/unit\/engineeringMissionReviewEngines.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

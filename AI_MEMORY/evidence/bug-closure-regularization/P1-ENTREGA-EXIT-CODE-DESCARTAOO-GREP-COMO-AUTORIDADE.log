@@ -1,0 +1,29 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/deliveryVerification.test.js
+  entrega — o caso VÁLIDO só passa com todas as condições
+    ✓ exit 0 + relatório permitido + identidade correspondente + cadeia íntegra + gates PASS ⇒ ok (104 ms)
+  entrega — matriz NEGATIVA (todo caso inválido bloqueia)
+    ✓ exit code != 0 COM texto positivo no log ⇒ BLOQUEIA (o defeito central) (101 ms)
+    ✓ exit code AUSENTE ⇒ BLOQUEIA (101 ms)
+    ✓ exit 0 com resultado NEGATIVO ⇒ BLOQUEIA (decisão não permitida) (101 ms)
+    ✓ DELIVERED_PENDING_SCORECARD ⇒ BLOQUEIA como ESTADO PRÉ-PACOTE (101 ms)
+    ✓ outros estados pré-pacote ⇒ BLOQUEIA (102 ms)
+    ✓ resultado AUSENTE ⇒ BLOQUEIA (101 ms)
+    ✓ resultado MALFORMADO ⇒ BLOQUEIA (101 ms)
+    ✓ relatório sem decisão ⇒ BLOQUEIA (102 ms)
+    ✓ identidade DIVERGENTE ⇒ BLOQUEIA (102 ms)
+    ✓ identidade AUSENTE (run corrente inexistente) ⇒ BLOQUEIA (101 ms)
+    ✓ identidade INCOMPLETA (relatório sem runId) ⇒ BLOQUEIA (100 ms)
+    ✓ cadeia adulterada ⇒ BLOQUEIA (100 ms)
+    ✓ cadeia não verificada ⇒ BLOQUEIA (não aprovar sem integridade) (101 ms)
+    ✓ gate bloqueante no relatório ⇒ BLOQUEIA (só PASS avança) (102 ms)
+    ✓ gate ilegível ⇒ BLOQUEIA (100 ms)
+    ✓ relatório sem gates declarados ⇒ BLOQUEIA (100 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        1.862 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/deliveryVerification.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

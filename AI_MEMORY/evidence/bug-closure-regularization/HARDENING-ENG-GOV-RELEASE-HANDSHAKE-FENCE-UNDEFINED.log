@@ -1,0 +1,17 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/taskLeaseHandshakeParsing.test.js
+  handshake do worker de lease — parsing inequívoco
+    ✓ linha com marcador é aceita e o payload é íntegro (115 ms)
+    ✓ LOG do produto com `state` NÃO é mais confundido com handshake (defeito original) (105 ms)
+    ✓ caminho legado só passa com campo exclusivo do handshake (102 ms)
+    ✓ marcador sem state, JSON inválido e linha vazia são rejeitados com motivo (103 ms)
+    ✓ fenceLegivel(): `undefined` nunca conta como fence (era a raiz do veredito errado) (103 ms)
+    ✓ não-vacuidade: o handshake real, marcado, continua sendo aceito em qualquer ordem de linhas (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.378 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/taskLeaseHandshakeParsing.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
