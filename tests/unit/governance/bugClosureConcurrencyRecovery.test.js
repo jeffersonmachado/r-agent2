@@ -771,14 +771,32 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     expect(jornal.haOperacaoPendente(c.root)).toBe(false);
   }, 180000);
 
-  test('lock órfão de processo MORTO é removido; lock de processo VIVO é respeitado', () => {
+  test('lock órfão NÃO é removido automaticamente (erro distinguível) e a quebra é explícita', () => {
     const c = cenarioComItens(['R9']);
     const dir = path.join(c.root, jornal.DIR_JORNAL);
     fs.mkdirSync(dir, { recursive: true });
     const lock = path.join(dir, 'journal.log.lock');
 
-    // Órfão: pid que não existe ⇒ removido e a operação segue.
-    fs.writeFileSync(lock, JSON.stringify({ pid: 999999, at: new Date().toISOString() }), 'utf8');
+    // ALERT 1 da 6ª passada: a remoção automática era um TOCTOU (lstat→rm não é CAS) que
+    // permitia dois donos. Agora lock de PID morto vira erro DISTINGUÍVEL e nada é apagado.
+    fs.writeFileSync(lock, JSON.stringify({ pid: 999999, token: 'x', at: new Date().toISOString() }), 'utf8');
+    const orfao = jornal.iniciar(c.root, {
+      transitionId: crypto.randomUUID(), defectId: 'R9', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    expect(orfao.ok).toBe(false);
+    expect(orfao.erro).toBe('JOURNAL_LOCK_ORFAO');
+    expect(fs.existsSync(lock)).toBe(true);
+
+    // Quebra sem confirmação é recusada; com confirmação, remove e libera a operação.
+    const semConfirmar = jornal.quebrarLock(c.root, {});
+    expect(semConfirmar.ok).toBe(false);
+    expect(semConfirmar.erro).toBe('QUEBRA_DE_LOCK_EXIGE_CONFIRMACAO');
+    expect(fs.existsSync(lock)).toBe(true);
+    const quebrado = jornal.quebrarLock(c.root, { confirmar: true });
+    expect(quebrado.ok).toBe(true);
+    expect(quebrado.donoPid).toBe(999999);
+    expect(fs.existsSync(lock)).toBe(false);
     const ok = jornal.iniciar(c.root, {
       transitionId: crypto.randomUUID(), defectId: 'R9', kind: 'TRANSITION',
       from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
@@ -786,8 +804,8 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     expect(ok.ok).toBe(true);
     expect(fs.existsSync(lock)).toBe(false);
 
-    // Vivo: o próprio processo ⇒ JOURNAL_OCUPADO (não remove lock alheio).
-    fs.writeFileSync(lock, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }), 'utf8');
+    // Vivo: o próprio processo ⇒ JOURNAL_OCUPADO e quebra RECUSADA (nunca derruba lock vivo).
+    fs.writeFileSync(lock, JSON.stringify({ pid: process.pid, token: 'vivo' }), 'utf8');
     const timeoutAnterior = process.env.JOURNAL_LOCK_TIMEOUT_MS;
     process.env.JOURNAL_LOCK_TIMEOUT_MS = '150';
     const ocupado = jornal.iniciar(c.root, {
@@ -796,6 +814,10 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     });
     expect(ocupado.ok).toBe(false);
     expect(ocupado.erro).toBe('JOURNAL_OCUPADO');
+    expect(fs.existsSync(lock)).toBe(true);
+    const quebraViva = jornal.quebrarLock(c.root, { confirmar: true });
+    expect(quebraViva.ok).toBe(false);
+    expect(quebraViva.erro).toBe('JOURNAL_LOCK_DE_PROCESSO_VIVO');
     expect(fs.existsSync(lock)).toBe(true);
     if (timeoutAnterior === undefined) delete process.env.JOURNAL_LOCK_TIMEOUT_MS;
     else process.env.JOURNAL_LOCK_TIMEOUT_MS = timeoutAnterior;
@@ -815,7 +837,7 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     fs.appendFileSync(jornal.caminhoDiario(c.root), '{"seq":9,"lixo":true}\n', 'utf8');
     expect(jornal.lerRegistros(c.root).corrompido).toBe(true);
 
-    const semForca = jornal.repararDiario(c.root, { ledgerEventos: [] });
+    const semForca = jornal.repararDiario(c.root, { ledgerEventos: [], ledgerVerificavel: true });
     expect(semForca.ok).toBe(true);
     expect(semForca.mantidos).toBe(2);
     expect(semForca.descartados).toHaveLength(1);
@@ -839,7 +861,7 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     // Registro válido cujo transitionId tem evento no livro; e uma cauda quebrada depois dele.
     fs.appendFileSync(jornal.caminhoDiario(c.root), 'nao-e-json\n', 'utf8');
     const recusado = jornal.repararDiario(c.root, {
-      ledgerEventos: [{ transitionId: tid }],
+      ledgerEventos: [{ transitionId: tid }], ledgerVerificavel: true,
     });
     // O prefixo válido inclui o registro com evidência: nada a descartar dele, mas a cauda
     // ilegível é descartável (não carrega transitionId).
@@ -859,11 +881,13 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     fs.writeFileSync(jornal.caminhoDiario(c2.root), `${linhas[0]}\n${JSON.stringify(forjado)}\n`, 'utf8');
     expect(jornal.lerRegistros(c2.root).corrompido).toBe(false); // cadeia válida: forja completa
     fs.appendFileSync(jornal.caminhoDiario(c2.root), `${JSON.stringify({ ...forjado, seq: 5 })}\n`, 'utf8');
-    const rec2 = jornal.repararDiario(c2.root, { ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }] });
+    const rec2 = jornal.repararDiario(c2.root, {
+      ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }], ledgerVerificavel: true,
+    });
     expect(rec2.ok).toBe(false);
     expect(rec2.erro).toBe('REPARO_PERDERIA_EVIDENCIA_DE_EFEITO');
     const forcado = jornal.repararDiario(c2.root, {
-      ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }], forcar: true,
+      ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }], ledgerVerificavel: true, forcar: true,
     });
     expect(forcado.ok).toBe(true);
     expect(forcado.descartados).toHaveLength(1);
@@ -915,5 +939,69 @@ describe('revisão 5ª passada — Alert 2: `extra` não sobrescreve campo de co
     expect(r.intent.seq).toBe(1);
     expect(r.intent.recuperado).toBe(true);
     expect(jornal.lerRegistros(c.root).corrompido).toBe(false);
+  }, 60000);
+});
+
+describe('revisão 6ª passada — reparo fail-closed e preservação do último registro', () => {
+  test('reparo DESTRUTIVO sem livro verificável é RECUSADO (não zera o diário)', () => {
+    const c = cenarioComItens(['W1']);
+    const tid = c.provas.W1.transitionId;
+    jornal.iniciar(c.root, {
+      transitionId: tid, defectId: 'W1', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    jornal.marcarAborto(c.root, tid, 'TESTE');
+    // Corrompe a PRIMEIRA linha: o prefixo válido fica vazio (reparo apagaria tudo).
+    const linhas = fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8').split('\n').filter(Boolean);
+    fs.writeFileSync(jornal.caminhoDiario(c.root), `{quebrado\n${linhas.join('\n')}\n`, 'utf8');
+
+    const semLivro = jornal.repararDiario(c.root, { ledgerEventos: [], ledgerVerificavel: false });
+    expect(semLivro.ok).toBe(false);
+    expect(semLivro.erro).toBe('REPARO_SEM_LIVRO_VERIFICAVEL');
+    // O diário não foi tocado.
+    expect(fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8')).toContain('{quebrado');
+  }, 60000);
+
+  test('remover o \\n final NÃO descarta o último registro válido', () => {
+    const c = cenarioComItens(['W2']);
+    const tid = c.provas.W2.transitionId;
+    jornal.iniciar(c.root, {
+      transitionId: tid, defectId: 'W2', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    jornal.marcarCommit(c.root, tid);
+    const conteudo = fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8');
+    fs.writeFileSync(jornal.caminhoDiario(c.root), conteudo.replace(/\n$/, ''), 'utf8');
+
+    const lido = jornal.lerRegistros(c.root);
+    expect(lido.corrompido).toBe(false);
+    expect(lido.registros).toHaveLength(2);
+    expect(lido.registros[1].status).toBe('COMMITTED');
+    expect(lido.precisaNormalizar).toBe(true);
+
+    // O próximo append normaliza (newline final) sem perder o COMMITTED.
+    const novo = jornal.iniciar(c.root, {
+      transitionId: c.provas.W2.transitionId, defectId: 'W2', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    // t1 está COMMITTED ⇒ retry recusado (terminal), mas a normalização já aconteceu.
+    expect(novo.ok).toBe(false);
+    const final = jornal.lerRegistros(c.root);
+    expect(final.registros.map((r) => r.status)).toEqual(['INTENT', 'COMMITTED']);
+    expect(fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8').endsWith('\n')).toBe(true);
+  }, 60000);
+
+  test('o finally do lock NÃO apaga lock de terceiro (token diferente)', () => {
+    const c = cenarioComItens(['W3']);
+    const lock = path.join(c.root, jornal.DIR_JORNAL, 'journal.log.lock');
+    const r = jornal.comLockDoDiario(c.root, () => {
+      // Simula "roubo" do lock durante a seção crítica (só possível com intervenção manual).
+      fs.writeFileSync(lock, JSON.stringify({ pid: process.pid, token: 'de-terceiro' }), 'utf8');
+      return { ok: true };
+    });
+    expect(r.ok).toBe(true);
+    expect(fs.existsSync(lock)).toBe(true);
+    expect(JSON.parse(fs.readFileSync(lock, 'utf8')).token).toBe('de-terceiro');
+    fs.rmSync(lock, { force: true });
   }, 60000);
 });

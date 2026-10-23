@@ -107,22 +107,41 @@ function lerRegistros(rootDir) {
     return { registros: [], corrompido: true, motivo: `JOURNAL_ILEGIVEL:${e.message}` };
   }
   const texto = String(bruto);
-  // Cauda sem `\n` é escrita EM VOO (leitor concorrente) ou interrompida por crash: não é
-  // conteúdo do diário. Ignorar é seguro — não esconde registro anterior — e evita NEGAR
-  // certificação de forma transitória só porque alguém leu no meio de um append.
-  const caudaIncompleta = texto !== '' && !texto.endsWith('\n');
-  const linhas = texto.split('\n').filter((l) => l.trim() !== '');
-  const completas = caudaIncompleta ? linhas.slice(0, -1) : linhas;
-  const registros = [];
-  for (let i = 0; i < completas.length; i += 1) {
+  // Cauda sem `\n` é escrita EM VOO (leitor concorrente) ou crash. ALERT 2 da 6ª passada: o
+  // corte era feito DEPOIS do filtro de linhas vazias e podia descartar o ÚLTIMO REGISTRO VÁLIDO
+  // (bastava remover o `\n` final, ou anexar um espaço). Agora o corte é pelo FRAGMENTO: só é
+  // cauda em voo o que NÃO completa um registro; JSON completo sem `\n` final continua valendo.
+  const partes = texto.split('\n');
+  const semNewlineFinal = texto !== '' && !texto.endsWith('\n');
+  let caudaIncompleta = false;
+  if (semNewlineFinal) {
+    const fragmento = partes[partes.length - 1];
     try {
-      registros.push(JSON.parse(completas[i]));
+      JSON.parse(fragmento);
+    } catch (_) {
+      partes.pop();
+      caudaIncompleta = true;
+    }
+  }
+  const linhas = partes.filter((l) => l.trim() !== '');
+  const registros = [];
+  for (let i = 0; i < linhas.length; i += 1) {
+    try {
+      registros.push(JSON.parse(linhas[i]));
     } catch (_) {
       return { registros, corrompido: true, motivo: `JOURNAL_ILEGIVEL:linha=${i}` };
     }
   }
   const quebra = verificarCadeia(registros);
-  return { registros, corrompido: Boolean(quebra), motivo: quebra, caudaIncompleta };
+  return {
+    registros,
+    corrompido: Boolean(quebra),
+    motivo: quebra,
+    caudaIncompleta,
+    // Arquivo sem `\n` final precisa ser normalizado antes de QUALQUER append (senão a próxima
+    // linha gruda na última). Não é perda de dado: `registros` já contém todos os válidos.
+    precisaNormalizar: semNewlineFinal,
+  };
 }
 
 const ARQUIVO_LOCK = 'journal.log.lock';
@@ -152,28 +171,26 @@ function pidVivo(pid) {
 }
 
 /**
- * Remove lock órfão: processo dono morto, ou arquivo ilegível e velho. Lock de processo VIVO
- * nunca é removido.
+ * @deprecated REMOVIDO na 6ª passada da revisão independente.
+ *
+ * A remoção AUTOMÁTICA de lock órfão era um TOCTOU: `lstat`→`rmSync` não é compare-and-swap, e
+ * entre a checagem e o `rm` o caminho podia ser recriado por outro processo — dois donos, `seq`
+ * duplicado e cadeia quebrada de forma permanente (reproduzido em 4/40 rodadas). O símbolo é
+ * mantido apenas para FALHAR de forma ruidosa se algum chamador antigo aparecer; a quebra de
+ * lock agora é explícita em `quebrarLock()`.
  */
-function removerLockOrfao(abs, st) {
-  // Arquivo sumiu entre o EEXIST e o lstat: nada a remover, só tentar criar de novo.
-  if (!st) return true;
-  let dono = null;
-  let legivel = false;
+function removerLockOrfao() {
+  throw new Error('removerLockOrfao foi REMOVIDO: use quebrarLock(rootDir, { confirmar: true })');
+}
+
+/** Lê o dono do lock. `null` quando o arquivo sumiu ou o conteúdo é ilegível. */
+function lerDonoDoLock(abs) {
   try {
-    dono = JSON.parse(fs.readFileSync(abs, 'utf8')).pid;
-    legivel = true;
+    const lido = JSON.parse(fs.readFileSync(abs, 'utf8'));
+    return { pid: lido && lido.pid, token: lido && lido.token };
   } catch (_) {
-    legivel = false;
+    return null;
   }
-  if (pidVivo(dono)) return false;
-  // Ilegível e recente pode ser um lock sendo escrito agora por outro processo: espera.
-  if (!legivel && Date.now() - st.mtimeMs < 60000) return false;
-  // O arquivo pode ter sido trocado depois da nossa leitura: só remove o MESMO inode.
-  const atual = fs.lstatSync(abs, { throwIfNoEntry: false });
-  if (!atual) return true;
-  if (atual.ino !== st.ino) return true;
-  try { fs.rmSync(abs, { force: true }); return true; } catch (_) { return false; }
 }
 
 /**
@@ -183,6 +200,13 @@ function removerLockOrfao(abs, st) {
  * alocação de `seq`/`prevHash` — dois processos liam N registros, ambos calculavam `seq=N` e
  * anexavam, e a cadeia quebrava de forma PERMANENTE (`iniciar` passava a recusar tudo). O par
  * leitura+append tem de ser serializado.
+ *
+ * ALERT 1 da 6ª passada: a versão anterior REMOVIA lock órfão automaticamente para quebrar
+ * deadlock, o que abria um TOCTOU (`lstat`→`rmSync` não é compare-and-swap): entre a checagem e
+ * o `rm` o caminho podia ser recriado por outro processo, dois processos entravam na seção
+ * crítica e a cadeia quebrava (4/40 rodadas). Agora NADA é removido automaticamente: lock de
+ * processo morto vira erro DISTINGUÍVEL (`JOURNAL_LOCK_ORFAO`) e a quebra é uma ação explícita
+ * (`quebrarLock`, `--quebrar-lock --confirmar`).
  */
 function comLockDoDiario(rootDir, fn) {
   const dir = caminhoJornal(rootDir);
@@ -192,25 +216,68 @@ function comLockDoDiario(rootDir, fn) {
     return { ok: false, erro: `JOURNAL_LOCK_FALHOU:${e.message}` };
   }
   const abs = path.join(dir, ARQUIVO_LOCK);
+  const token = `${process.pid}-${crypto.randomBytes(8).toString('hex')}`;
   const limite = Date.now() + LOCK_TIMEOUT_MS();
   let fd = null;
   while (fd === null) {
     try {
       fd = fs.openSync(abs, 'wx', 0o600);
-      try { fs.writeSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() })); } catch (_) { /* informativo */ }
     } catch (e) {
-      if (e.code !== 'EEXIST') return { ok: false, erro: `JOURNAL_LOCK_FALHOU:${e.message}` };
+      if (e.code !== 'EEXIST') return { ok: false, erro: `JOURNAL_LOCK_FALHOU:${e.code || e.message}` };
       const st = fs.lstatSync(abs, { throwIfNoEntry: false });
-      if (removerLockOrfao(abs, st)) continue;
+      if (st && st.isDirectory()) return { ok: false, erro: 'JOURNAL_LOCK_NAO_ARQUIVO' };
+      const dono = lerDonoDoLock(abs);
+      if (dono && !pidVivo(dono.pid)) {
+        return {
+          ok: false,
+          erro: 'JOURNAL_LOCK_ORFAO',
+          donoPid: dono.pid,
+          instrucao: 'quebre com: node scripts/governance/recover-bug-closure-journal.js --quebrar-lock --confirmar',
+        };
+      }
       if (Date.now() > limite) return { ok: false, erro: 'JOURNAL_OCUPADO' };
       dormir(10);
     }
   }
   try {
+    // Token único por aquisição: é ele — não o caminho — que prova quem é o dono ao liberar.
+    fs.writeSync(fd, JSON.stringify({ pid: process.pid, token, at: new Date().toISOString() }));
+    fs.fsyncSync(fd);
+  } catch (_) { /* informativo: a exclusão já é garantida pelo O_EXCL */ }
+  try {
     return fn();
   } finally {
     try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
-    try { fs.rmSync(abs, { force: true }); } catch (_) { /* lock transitório */ }
+    // Nunca apaga o lock de terceiro: só o arquivo que ainda carrega o NOSSO token.
+    const dono = lerDonoDoLock(abs);
+    if (dono && dono.token === token) {
+      try { fs.rmSync(abs, { force: true }); } catch (_) { /* lock transitório */ }
+    }
+  }
+}
+
+/**
+ * Quebra EXPLÍCITA de lock órfão (processo dono morto). Exige `confirmar: true`; recusa-se a
+ * quebrar lock de processo vivo. A checagem de PID aqui é check-then-act, mas a operação é
+ * manual e auditada — o caminho automático (que era o TOCTOU do Alert 1 da 6ª passada) não
+ * existe mais.
+ */
+function quebrarLock(rootDir, opcoes = {}) {
+  const abs = path.join(caminhoJornal(rootDir), ARQUIVO_LOCK);
+  const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+  if (!st) return { ok: true, nadaAQuebrar: true };
+  const dono = st.isFile() ? lerDonoDoLock(abs) : null;
+  if (dono && pidVivo(dono.pid)) {
+    return { ok: false, erro: 'JOURNAL_LOCK_DE_PROCESSO_VIVO', donoPid: dono.pid };
+  }
+  if (opcoes.confirmar !== true) {
+    return { ok: false, erro: 'QUEBRA_DE_LOCK_EXIGE_CONFIRMACAO', donoPid: dono ? dono.pid : null };
+  }
+  try {
+    fs.rmSync(abs, { recursive: true, force: true });
+    return { ok: true, removido: true, donoPid: dono ? dono.pid : null };
+  } catch (e) {
+    return { ok: false, erro: `QUEBRA_DE_LOCK_FALHOU:${e.message}` };
   }
 }
 
@@ -244,6 +311,22 @@ function anexarRegistro(rootDir, registro) {
     return { ok: true };
   } catch (e) {
     return { ok: false, erro: `JOURNAL_ESCRITA_FALHOU:${e.message}` };
+  }
+}
+
+/** Lê o livro append-only para o guardião de evidência do reparo (sob o lock do diário). */
+function lerLivro(ledgerPath) {
+  try {
+    const alvo = ledgerPath || path.join(__dirname, 'transition-ledger');
+    const ledger = require(alvo);
+    const rel = ledger.REL_PADRAO;
+    const rootDir = path.resolve(__dirname, '..', '..');
+    const lido = ledger.verificarLivro(rootDir, rel);
+    const eventos = Array.isArray(lido.eventos) ? lido.eventos : [];
+    const integro = lido.integridadeOk !== false;
+    return { ok: integro, eventos };
+  } catch (_) {
+    return { ok: false, eventos: [] };
   }
 }
 
@@ -293,7 +376,19 @@ function repararDiario(rootDir, opcoes = {}) {
     });
     if (descartados.length === 0) return { ok: true, nadaDescartado: true, mantidos: validos.length };
 
-    const eventos = Array.isArray(opcoes.ledgerEventos) ? opcoes.ledgerEventos : [];
+    // ALERT 4 da 6ª passada: sem livro VERIFICÁVEL o guardião de evidência ficava fail-OPEN
+    // (lista vazia ⇒ nada "perde evidência" ⇒ diário zerado com `ok:true`). Reparo destrutivo
+    // exige livro verificável, e o snapshot é feito AQUI, sob o lock do diário.
+    let eventos = Array.isArray(opcoes.ledgerEventos) ? opcoes.ledgerEventos : null;
+    let livroVerificavel = opcoes.ledgerVerificavel === true;
+    if (eventos === null) {
+      const leitura = lerLivro(opcoes.ledgerPath);
+      eventos = leitura.eventos;
+      livroVerificavel = leitura.ok;
+    }
+    if (!livroVerificavel && opcoes.forcar !== true) {
+      return { ok: false, erro: 'REPARO_SEM_LIVRO_VERIFICAVEL', descartados, motivo };
+    }
     const perdeEvidencia = descartados.some((d) => d && d.transitionId
       && eventos.some((e) => e && String(e.transitionId) === String(d.transitionId)));
     if (perdeEvidencia && opcoes.forcar !== true) {
@@ -337,7 +432,7 @@ function gravarPrefixo(rootDir, registros) {
  * cadeia — a leitura já ignora a cauda, mas a escrita precisa descartá-la de fato.
  */
 function limparCaudaIncompleta(rootDir, lido) {
-  if (!lido.caudaIncompleta) return { ok: true };
+  if (!lido.precisaNormalizar) return { ok: true };
   return gravarPrefixo(rootDir, lido.registros);
 }
 
@@ -606,5 +701,7 @@ module.exports = {
   caminhoDiario,
   caminhoIntent,
   repararDiario,
+  quebrarLock,
   hashDoRegistro,
+  comLockDoDiario,
 };

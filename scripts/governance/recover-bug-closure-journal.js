@@ -15,13 +15,17 @@
  * Uso:
  *   node scripts/governance/recover-bug-closure-journal.js [--json] [--strict]
  *   node scripts/governance/recover-bug-closure-journal.js --reparar [--forcar] [--json]
+ *   node scripts/governance/recover-bug-closure-journal.js --quebrar-lock --confirmar [--json]
  *
  * `--reparar` é o reparo CANÔNICO de um diário com cadeia quebrada: mantém o maior prefixo
  * válido e descarta a cauda, nunca truncando o livro. Recusa-se a descartar registro cujo
  * `transitionId` já tem evento no livro (evidência de efeito aplicado) sem `--forcar`.
  *
+ * `--quebrar-lock --confirmar` quebra um lock ÓRFÃO (processo dono morto). O caminho automático
+ * de remoção foi removido (TOCTOU do Alert 1 da 6ª passada); a quebra é sempre explícita.
+ *
  * Exit codes: 0 = nada pendente; 1 = há operação pendente (certificação bloqueada);
- *             2 = erro de leitura; 3 = reparo recusado.
+ *             2 = erro de leitura; 3 = reparo recusado; 4 = quebra de lock recusada.
  */
 
 const fs = require('fs');
@@ -36,14 +40,31 @@ const flag = (nome) => process.argv.includes(nome);
 function eventosDoLivro() {
   try {
     const lido = ledger.verificarLivro(ROOT);
-    return Array.isArray(lido.eventos) ? lido.eventos : [];
+    return {
+      eventos: Array.isArray(lido.eventos) ? lido.eventos : [],
+      verificavel: lido.integridadeOk !== false,
+    };
   } catch (_) {
-    return [];
+    // Livro ilegível NÃO é "livro vazio": o reparo destrutivo tem de ser recusado.
+    return { eventos: [], verificavel: false };
   }
 }
 
+function quebrar() {
+  const resultado = jornal.quebrarLock(ROOT, { confirmar: flag('--confirmar') });
+  if (flag('--json')) process.stdout.write(`${JSON.stringify({ kind: 'bug-closure-journal-lock-break', ...resultado }, null, 2)}\n`);
+  else if (resultado.ok) process.stdout.write(`[lock] ${resultado.nadaAQuebrar ? 'nenhum lock presente' : `lock removido (dono pid=${resultado.donoPid ?? 'desconhecido'})`}\n`);
+  else process.stdout.write(`[lock] RECUSADO: ${resultado.erro}${resultado.donoPid ? ` (dono pid=${resultado.donoPid})` : ''}\n`);
+  return resultado.ok ? 0 : 4;
+}
+
 function reparar() {
-  const resultado = jornal.repararDiario(ROOT, { ledgerEventos: eventosDoLivro(), forcar: flag('--forcar') });
+  const livro = eventosDoLivro();
+  const resultado = jornal.repararDiario(ROOT, {
+    ledgerEventos: livro.eventos,
+    ledgerVerificavel: livro.verificavel,
+    forcar: flag('--forcar'),
+  });
   const saida = {
     kind: 'bug-closure-journal-repair',
     generatedAt: new Date().toISOString(),
@@ -66,6 +87,7 @@ function reparar() {
 }
 
 function main() {
+  if (flag('--quebrar-lock')) return quebrar();
   if (flag('--reparar')) return reparar();
   const queuePath = path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json');
   const relatorio = jornal.recuperar(ROOT, { queuePath });

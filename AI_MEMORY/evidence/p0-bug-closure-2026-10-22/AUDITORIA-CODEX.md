@@ -74,8 +74,8 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 | Camada | Comando | Resultado |
 |---|---|---|
-| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **279 testes / 10 suítes, todos PASS** |
-| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2069 PASS / 15 FAIL / 2 SKIP (2086)** |
+| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **282 testes / 10 suítes, todos PASS** |
+| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2073 PASS / 15 FAIL / 2 SKIP (2090)** |
 | L1 (DEVELOPMENT) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL**, exit 0 |
 | L3 (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED 0/64** — identidade de run ausente |
 | Auditoria de persistência | `npm run audit:json-persistence` | **PASS**, `unknown: 0` |
@@ -222,11 +222,40 @@ nunca remove lock ilegível recente. Leitura concorrente também deixou de negar
 fragmento sem `\n` (escrita em voo) é ignorado na leitura e **descartado antes do próximo
 append**, em vez de virar linha do meio e quebrar a cadeia.
 
+- **6ª passada — 4 achados** (1 P1 + 3 P2): (P1) a remoção automática de lock órfão era um
+  **TOCTOU** — `lstat`→`rmSync` não é compare-and-swap, dois processos entravam na seção crítica
+  e a cadeia quebrava (reproduzido **4/40 e 2/20** rodadas com 10 processos e um lock órfão,
+  contra **0/20** sem ele); (P2) o corte da cauda em voo era feito **depois** do filtro de linhas
+  e podia descartar o **último registro válido** (bastava remover o `\n` final); (P2) lock com
+  PID vivo alheio — ou um diretório no caminho do lock — negava **todas** as escritas do diário de
+  forma indistinguível de contenção; (P2) `--reparar` era **fail-open** quando o livro não era
+  legível (`eventosDoLivro` devolvia `[]`), podendo zerar o diário com `ok:true`.
+
+**Correção da 6ª passada:**
+- **Nenhuma remoção automática de lock.** Lock de PID morto vira erro **distinguível**
+  (`JOURNAL_LOCK_ORFAO`, com a instrução exata) e a quebra é explícita e auditada
+  (`quebrarLock` / `--quebrar-lock --confirmar`, que **recusa** lock de processo vivo). Isso
+  elimina a classe inteira do TOCTOU: não há mais `rm` no caminho de aquisição.
+- **Liberação por token**, não por caminho: cada aquisição grava `{pid, token}` e o `finally` só
+  apaga o lock que **ainda carrega o próprio token** — nunca o de terceiro.
+- **Corte da cauda pelo fragmento**: só é cauda em voo o que **não completa** um registro; JSON
+  completo sem `\n` final continua valendo e o arquivo é **normalizado** antes do próximo append
+  (nenhum registro válido é perdido).
+- **Reparo fail-closed**: reparo destrutivo exige **livro verificável** (`REPARO_SEM_LIVRO_VERIFICAVEL`)
+  e o snapshot do livro é lido **dentro** do lock do diário.
+
+**Evidência medida:** 10 rodadas × 10 processos com lock órfão ⇒ **0 corrupções**, 10/10
+`JOURNAL_LOCK_ORFAO`, `haOperacaoPendente=false`, quebra explícita OK; 10 rodadas × 10 processos
+sem órfão ⇒ **0 corrupções**; `282/282` na suíte; L0 sem regressão.
+
 **Limite que continua declarado:** truncamento da **cauda** do diário, remoção do arquivo e forja
 com cadeia **recalculada** não são detectáveis sem âncora externa — mesma propriedade do livro
 (`transitions.log.jsonl`). Verificado que truncar a cauda/filtrar o arquivo **não** libera
 certificação (o efeito parcial continua negando o selo por `INVENTARIO_ADULTERADO` /
-`P1_BLOQUEANTE_ABERTO`).
+`P1_BLOQUEANTE_ABERTO`). Um lock in-tree com PID vivo alheio (ou diretório no caminho) bloqueia
+**novas escritas** do diário até quebra manual — DoS in-tree, indistinguível de contenção,
+**não** bloqueia a leitura do selo; corrigível só com lock de kernel (`flock`) ou WAL fora da
+árvore, ambos fora do escopo desta missão.
 
 ## 6. Criptografia — o que é realmente garantido
 
@@ -279,7 +308,7 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
 **`PARTIALLY_VERIFIED`**
 
 Os quatro P1 da missão (A1–A4) estão corrigidos, com teste vermelho antes e verde depois, e os
-**15 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2). Não é `DEVELOPMENT_VERIFIED` porque
+**19 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4). Não é `DEVELOPMENT_VERIFIED` porque
 quatro critérios de aceitação dependem de insumo externo e continuam abertos: âncoras
 provisionadas, aprovação humana dos P0, regeneração das 118 provas no SHA final e execução de
 L1/L2 completos com infraestrutura (runner + banco de teste já usados; `coverageCompleteness`
