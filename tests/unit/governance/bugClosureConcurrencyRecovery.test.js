@@ -440,15 +440,31 @@ describe('revisão 2ª passada — Alert 2/4: atestação com lock, base, commit
     fs.rmSync(`${c.queuePath}.lock`, { force: true });
   }, 60000);
 
-  test('mesmo transitionId reusado ⇒ recusa estruturada (sem ReferenceError) e ABORTED', () => {
+  test('retry da MESMA atestação: recusa sem rebaixar COMMITTED e sem bloquear certificação', () => {
     const c = cenarioAtest(['AT3']);
     expect(atestar(c, 'AT3').ok).toBe(true);
-    // Segunda tentativa com a mesma prova: o livro recusa o transitionId duplicado.
+    // Retry (double-submit) da mesma prova: o diário é terminal, então a recusa acontece antes
+    // de tocar no livro — e o COMMITTED não pode virar ABORTED (era o Alert 1 da 3ª passada).
     const segunda = atestar(c, 'AT3');
     expect(segunda.ok).toBe(false);
-    expect(segunda.reasons.join(',')).toMatch(/EVENTO_NAO_ANEXADO/);
+    expect(segunda.reasons.join(',')).toMatch(/JOURNAL_TRANSICAO_JA_REGISTRADA:COMMITTED/);
     const intents = journalDe(c);
-    expect(intents.every((i) => i.status !== 'INTENT')).toBe(true);
+    expect(intents).toHaveLength(1);
+    expect(intents[0].status).toBe('COMMITTED');
+    expect(jornal.haOperacaoPendente(c.root)).toBe(false);
+    expect(jornal.recuperar(c.root, { queuePath: c.queuePath }).bloqueiaCertificacao).toBe(false);
+  }, 60000);
+
+  test('retry APÓS ABORTED é permitido (recusa legítima não impede a operação para sempre)', () => {
+    const c = cenarioAtest(['AT4']);
+    fs.writeFileSync(`${c.queuePath}.lock`, 'ocupado', 'utf8');
+    expect(atestar(c, 'AT4').ok).toBe(false);
+    expect(journalDe(c)[0].status).toBe('ABORTED');
+    fs.rmSync(`${c.queuePath}.lock`, { force: true });
+    const segunda = atestar(c, 'AT4');
+    expect(segunda.ok).toBe(true);
+    expect(journalDe(c)[0].status).toBe('COMMITTED');
+    expect(journalDe(c)[0].tentativa).toBe(2);
   }, 60000);
 });
 

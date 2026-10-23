@@ -158,10 +158,25 @@ function anexarEvento(entrada = {}) {
     };
     evento.hash = hashDoEvento(evento);
 
-    const tmp = `${abs}.tmp`;
+    // Alert 2 da 3ª passada: `<livro>.tmp` é caminho PREVISÍVEL; `writeFileSync` segue symlink
+    // e o `rename` renomeia a entrada do link. Escreve com O_EXCL em nome imprevisível.
+    let stLivro = null;
+    try { stLivro = fs.lstatSync(abs); } catch (_) { stLivro = null; }
+    if (stLivro && stLivro.isSymbolicLink()) return { ok: false, code: CODIGOS.LIVRO_ILEGIVEL, problemas: ['LIVRO_E_SYMLINK'] };
+    const tmp = path.join(path.dirname(abs), `.tmp-livro-${process.pid}-${crypto.randomBytes(6).toString('hex')}`);
     const anterior = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
-    fs.writeFileSync(tmp, `${anterior}${JSON.stringify(evento)}\n`, 'utf8');
-    fs.renameSync(tmp, abs);
+    let fdTmp;
+    try {
+      fdTmp = fs.openSync(tmp, 'wx', 0o600);
+      fs.writeSync(fdTmp, `${anterior}${JSON.stringify(evento)}\n`);
+      fs.closeSync(fdTmp);
+      fdTmp = undefined;
+      fs.renameSync(tmp, abs);
+    } catch (e) {
+      if (fdTmp !== undefined && fdTmp !== null) { try { fs.closeSync(fdTmp); } catch (_) { /* fechado */ } }
+      try { fs.rmSync(tmp, { force: true }); } catch (_) { /* temporário */ }
+      return { ok: false, code: CODIGOS.LIVRO_ILEGIVEL, problemas: [`FALHA_DE_ESCRITA:${e.message}`] };
+    }
     return { ok: true, code: null, evento };
   } finally {
     try { fs.closeSync(fdLock); } catch (_) { /* já fechado */ }

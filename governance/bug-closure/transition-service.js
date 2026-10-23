@@ -42,6 +42,39 @@ const jornal = require('./transition-journal');
  * link, não o alvo). `realpath` de ancestral não basta: o componente final pode não existir
  * ainda e ser um symlink pendente apontando para fora.
  */
+
+/**
+ * Escrita atômica SEM seguir symlink, para qualquer artefato com caminho previsível
+ * (`<fila>.tmp`, `<livro>.tmp`, `<id>.json`). Alert 2 da 3ª passada do revisor: `writeFileSync`
+ * num tmp previsível segue o link e o `rename` renomeia a ENTRADA do link — o atacante escolhe
+ * o alvo e o artefato oficial vira symlink para fora da árvore.
+ *
+ * Regras: recusa se o destino for symlink; cria o tmp com `O_CREAT|O_EXCL` (0600) num nome
+ * imprevisível no MESMO diretório; `rename` atômico.
+ */
+function escreverAtomicoSeguro(absDestino, conteudo) {
+  let stDestino = null;
+  try { stDestino = fs.lstatSync(absDestino); } catch (_) { stDestino = null; }
+  if (stDestino && stDestino.isSymbolicLink()) return { ok: false, motivo: 'DESTINO_E_SYMLINK' };
+  const dir = path.dirname(absDestino);
+  const tmp = path.join(dir, `.tmp-${path.basename(absDestino)}-${process.pid}-${crypto.randomBytes(6).toString('hex')}`);
+  let fd;
+  try {
+    fd = fs.openSync(tmp, 'wx', 0o600);
+    fs.writeSync(fd, conteudo);
+    fs.closeSync(fd);
+    fd = undefined;
+    const stTmp = fs.lstatSync(tmp);
+    if (stTmp.isSymbolicLink()) return { ok: false, motivo: 'TMP_E_SYMLINK' };
+    fs.renameSync(tmp, absDestino);
+    return { ok: true };
+  } catch (e) {
+    if (fd !== undefined && fd !== null) { try { fs.closeSync(fd); } catch (_) { /* já fechado */ } }
+    try { fs.rmSync(tmp, { force: true }); } catch (_) { /* temporário */ }
+    return { ok: false, motivo: `FALHA_DE_ESCRITA:${e.message}` };
+  }
+}
+
 function gravarProvaSemSeguirSymlink(dirProvas, absProva, conteudo) {
   // `existsSync` SEGUE o link: para symlink PENDENTE (alvo inexistente) ele devolve false e a
   // checagem era pulada. `lstatSync` lê a entrada do próprio link, exista o alvo ou não.
@@ -296,10 +329,18 @@ function applyTransition(entrada = {}) {
     if (entrada.proof) {
       // `dirProvas`/`absProva` já validados ANTES do append (nenhum evento órfão). A criação do
       // diretório TAMBÉM está no try: EEXIST/EACCES aqui é falha de persistência, não crash.
+      // ALERT 3 da 3ª passada: a pré-checagem do diretório acontece antes do lock; entre ela e
+      // a escrita alguém pode trocar `proofs/` por symlink (TOCTOU). Revalida aqui, no ponto
+      // de uso, e recusa se o diretório em si for symlink.
       try {
         fs.mkdirSync(dirProvas, { recursive: true });
       } catch (e) {
         return abortar(`FALHA_AO_GRAVAR_PROVA:${e.message}`);
+      }
+      let stDir = null;
+      try { stDir = fs.lstatSync(dirProvas); } catch (_) { stDir = null; }
+      if (!stDir || stDir.isSymbolicLink() || !caminhoRealDentroDaRaiz(rootDir, dirProvas).ok) {
+        return abortar('CAMINHO_DE_PROVA_INVALIDO');
       }
       const gravacao = gravarProvaSemSeguirSymlink(dirProvas, absProva, `${JSON.stringify(entrada.proof, null, 2)}\n`);
       if (!gravacao.ok) return abortar(gravacao.motivo);
@@ -308,9 +349,8 @@ function applyTransition(entrada = {}) {
     }
     atual.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);
 
-    const tmp = `${queuePath}.tmp`;
-    fs.writeFileSync(tmp, `${JSON.stringify(atual, null, 2)}\n`, 'utf8');
-    fs.renameSync(tmp, queuePath);
+    const gravaFila = escreverAtomicoSeguro(queuePath, `${JSON.stringify(atual, null, 2)}\n`);
+    if (!gravaFila.ok) return abortar(gravaFila.motivo);
     jornal.marcarCommit(rootDir, intent.intent.transitionId);
   } catch (e) {
     jornal.marcarAborto(rootDir, intent.intent.transitionId, `PROJECAO_FALHOU:${e.message}`);
@@ -446,6 +486,13 @@ function applyAttestation(entrada = {}) {
     } catch (e) {
       return abortar(`FALHA_AO_GRAVAR_PROVA:${e.message}`);
     }
+    {
+      let stDirAtest = null;
+      try { stDirAtest = fs.lstatSync(dirProvas); } catch (_) { stDirAtest = null; }
+      if (!stDirAtest || stDirAtest.isSymbolicLink() || !caminhoRealDentroDaRaiz(rootDir, dirProvas).ok) {
+        return abortar('CAMINHO_DE_PROVA_INVALIDO');
+      }
+    }
     const gravacao = gravarProvaSemSeguirSymlink(dirProvas, absProva, `${JSON.stringify(prova, null, 2)}\n`);
     if (!gravacao.ok) return abortar(gravacao.motivo);
 
@@ -454,9 +501,8 @@ function applyAttestation(entrada = {}) {
     alvo.attestationId = prova.transitionId;
     alvo.attestedAt = new Date(entrada.agora || Date.now()).toISOString();
     filaAgora.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);
-    const tmp = `${queuePath}.tmp`;
-    fs.writeFileSync(tmp, `${JSON.stringify(filaAgora, null, 2)}\n`, 'utf8');
-    fs.renameSync(tmp, queuePath);
+    const gravaFila = escreverAtomicoSeguro(queuePath, `${JSON.stringify(filaAgora, null, 2)}\n`);
+    if (!gravaFila.ok) return abortar(gravaFila.motivo);
     jornal.marcarCommit(rootDir, intent.intent.transitionId);
     return { ok: true, code: null, reasons: [], evento: evento.evento };
   } catch (e) {

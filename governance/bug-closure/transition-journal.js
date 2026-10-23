@@ -73,8 +73,46 @@ function iniciar(rootDir, entrada = {}) {
     status: ESTADOS_JORNAL.INTENT,
     startedAt: new Date(entrada.agora || Date.now()).toISOString(),
   };
+  const destino = caminhoIntent(rootDir, entrada.transitionId);
+  // ALERT 1 (3ª passada): `iniciar` sobrescrevia a entrada anterior. Um retry legítimo da
+  // MESMA operação transformava COMMITTED em INTENT e depois ABORTED, deixando a operação
+  // "pendente para sempre" e negando o selo. Entrada existente NUNCA é sobrescrita.
+  if (fs.existsSync(destino)) {
+    let anteriorStatus = null;
+    try { anteriorStatus = JSON.parse(fs.readFileSync(destino, 'utf8')).status; } catch (_) { anteriorStatus = 'ILEGIVEL'; }
+    // Regra de idempotência: COMMITTED é terminal (retry é recusado sem tocar no diário);
+    // INTENT é operação em andamento (recusa, não sobrescreve); ABORTED pode ser RETENTADO —
+    // caso contrário uma recusa legítima (ex.: lock ocupado) impediria a operação para sempre.
+    if (anteriorStatus !== ESTADOS_JORNAL.ABORTED) {
+      return { ok: false, erro: `JOURNAL_TRANSICAO_JA_REGISTRADA:${anteriorStatus}`, jaRegistrada: true, statusAnterior: anteriorStatus };
+    }
+    intent.tentativa = Number((JSON.parse(fs.readFileSync(destino, 'utf8')).tentativa) || 1) + 1;
+  }
   try {
-    fs.writeFileSync(caminhoIntent(rootDir, entrada.transitionId), `${JSON.stringify(intent, null, 2)}\n`, 'utf8');
+    // Cadeia de hash no diário (ALERT 4, 3ª passada): cada entrada carrega `prevHash` do
+    // diário anterior, então forjar `status` sem refazer a cadeia é detectável.
+    const anteriores = lerIntents(rootDir);
+    const ultimo = anteriores[anteriores.length - 1];
+    intent.seq = anteriores.length;
+    intent.prevHash = ultimo ? ultimo.hash : 'GENESIS';
+    intent.hash = sha256Texto(JSON.stringify({
+      seq: intent.seq, transitionId: intent.transitionId, defectId: intent.defectId, kind: intent.kind,
+      from: intent.from, to: intent.to, proofHash: intent.proofHash, status: intent.status,
+      startedAt: intent.startedAt, prevHash: intent.prevHash,
+    }));
+    if (intent.tentativa) {
+      // Retry de uma entrada ABORTED: substitui de forma atômica (temp imprevisível + rename).
+      const tmp = path.join(dir, `.tmp-intent-${process.pid}-${crypto.randomBytes(6).toString('hex')}`);
+      const fd = fs.openSync(tmp, 'wx', 0o600);
+      try {
+        fs.writeSync(fd, `${JSON.stringify(intent, null, 2)}\n`);
+      } finally {
+        try { fs.closeSync(fd); } catch (_) { /* fechado */ }
+      }
+      fs.renameSync(tmp, destino);
+    } else {
+      fs.writeFileSync(destino, `${JSON.stringify(intent, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    }
     return { ok: true, intent };
   } catch (e) {
     return { ok: false, erro: `JOURNAL_INTENT_FALHOU:${e.message}` };
@@ -86,9 +124,14 @@ function atualizarStatus(rootDir, transitionId, status, extra = {}) {
   if (!fs.existsSync(abs)) return { ok: false, erro: 'JOURNAL_INTENT_AUSENTE' };
   try {
     const atual = JSON.parse(fs.readFileSync(abs, 'utf8'));
+    // ALERT 1 (3ª passada): COMMITTED é TERMINAL. Nenhuma transição de status pode rebaixar
+    // uma operação concluída (o retry legítimo deixava a operação pendente para sempre).
+    if (atual.status === ESTADOS_JORNAL.COMMITTED && status !== ESTADOS_JORNAL.COMMITTED) {
+      return { ok: false, erro: 'JOURNAL_COMMITTED_E_TERMINAL', statusAnterior: atual.status };
+    }
     const novo = { ...atual, ...extra, status, updatedAt: new Date().toISOString() };
     const tmp = `${abs}.tmp`;
-    fs.writeFileSync(tmp, `${JSON.stringify(novo, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(tmp, `${JSON.stringify(novo, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
     fs.renameSync(tmp, abs);
     return { ok: true, intent: novo };
   } catch (e) {
