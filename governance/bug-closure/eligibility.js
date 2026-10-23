@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 /**
  * BUG CLOSURE FIRST — GATE CENTRAL DE ELEGIBILIDADE.
  *
@@ -524,10 +526,15 @@ function evaluateExecutionEligibility(context = {}, operation) {
   // e não se trunca, então a única saída honesta é bloquear e exigir reconciliação.
   let recuperacaoPendente = false;
   if (politica.certifica) {
+    // ALERT 6 do revisor (P2): o default era `process.cwd()`, então rodar o gate de um
+    // subdiretório (ou CI com working-directory) desligava a guarda silenciosamente. A raiz
+    // passa a ser derivada do próprio módulo. Erro de leitura do diário é fail-CLOSED
+    // (tratado como pendência), nunca "nada pendente".
+    const raizDoModulo = path.resolve(__dirname, '..', '..');
     try {
       // eslint-disable-next-line global-require
       const jornal = require('./transition-journal');
-      if (jornal.haOperacaoPendente(context.rootDir || process.cwd())) {
+      if (jornal.haOperacaoPendente(context.rootDir || raizDoModulo)) {
         recuperacaoPendente = true;
         reasonCodes.push(CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO);
         blockingFindings.push({
@@ -536,7 +543,15 @@ function evaluateExecutionEligibility(context = {}, operation) {
         });
         requiredActions.push('rodar node scripts/governance/recover-bug-closure-journal.js e resolver as operações pendentes');
       }
-    } catch (_) { /* sem diário ⇒ nada pendente */ }
+    } catch (e) {
+      // fail-closed: diário ilegível não é ausência de pendência.
+      recuperacaoPendente = true;
+      reasonCodes.push(CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO);
+      blockingFindings.push({
+        code: CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO,
+        detail: `diário de transições ilegível (${e.message}) — tratado como pendência`,
+      });
+    }
   }
 
   const negado = bloquearP0 || bloquearP1 || condicionalPendente || fechamentoSemProvaBloqueia

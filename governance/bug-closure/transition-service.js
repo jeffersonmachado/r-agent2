@@ -36,6 +36,34 @@ const jornal = require('./transition-journal');
  * para fora passa no teste textual e escreve fora do repositório. Aqui o alvo é resolvido
  * pelo ancestral existente mais próximo e comparado com o realpath da raiz.
  */
+/**
+ * Grava a prova SEM seguir symlink: recusa alvo que já é symlink, escreve em arquivo
+ * temporário com O_EXCL no MESMO diretório e renomeia (rename substitui a ENTRADA do
+ * link, não o alvo). `realpath` de ancestral não basta: o componente final pode não existir
+ * ainda e ser um symlink pendente apontando para fora.
+ */
+function gravarProvaSemSeguirSymlink(dirProvas, absProva, conteudo) {
+  // `existsSync` SEGUE o link: para symlink PENDENTE (alvo inexistente) ele devolve false e a
+  // checagem era pulada. `lstatSync` lê a entrada do próprio link, exista o alvo ou não.
+  let st = null;
+  try { st = fs.lstatSync(absProva); } catch (_) { st = null; }
+  if (st && st.isSymbolicLink()) return { ok: false, motivo: 'PROVA_E_SYMLINK' };
+  const tmp = path.join(dirProvas, `.tmp-${path.basename(absProva)}-${process.pid}-${Date.now()}`);
+  let fd;
+  try {
+    fd = fs.openSync(tmp, 'wx', 0o600);
+    fs.writeSync(fd, conteudo);
+    fs.closeSync(fd);
+    fd = null;
+    fs.renameSync(tmp, absProva);
+    return { ok: true };
+  } catch (e) {
+    if (fd !== null && fd !== undefined) { try { fs.closeSync(fd); } catch (_) { /* já fechado */ } }
+    try { fs.rmSync(tmp, { force: true }); } catch (_) { /* temporário */ }
+    return { ok: false, motivo: `FALHA_AO_GRAVAR_PROVA:${e.message}` };
+  }
+}
+
 function caminhoRealDentroDaRaiz(rootDir, alvo) {
   try {
     const raizReal = fs.realpathSync(rootDir);
@@ -219,22 +247,10 @@ function applyTransition(entrada = {}) {
     }
   }
 
-  // 1) evento no livro (autoridade da ORDEM); recusa duplicação/replay.
-  const evento = anexarEvento({
-    rootDir,
-    rel: livroPath,
-    transitionId: intent.intent.transitionId,
-    defectId: item.id,
-    from: estadoDeclarado,
-    to,
-    actorId: (entrada.actor && entrada.actor.id) || 'desconhecido',
-    proofHash: entrada.proof ? hashDoPayload(entrada.proof) : null,
-    evaluatedCommit: entrada.currentCommit || null,
-    at: new Date(entrada.agora || Date.now()).toISOString(),
-  });
-  if (!evento.ok) return abortar(`EVENTO_NAO_ANEXADO:${evento.code}`, { problemas: evento.problemas || [] });
-
-  // 2) projeção atômica da fila sob lock exclusivo.
+  // ALERT 3 do revisor (P1): o LOCK da fila e a checagem de BASE vêm ANTES de qualquer
+  // append. Antes, um evento era anexado e a recusa posterior (FILA_OCUPADA/ESTADO_DIVERGENTE/
+  // FILA_MUDOU_DESDE_A_BASE) deixava evento órfão permanente — que virava o "último evento" do
+  // defeito e fazia o fechamento legítimo seguinte falhar com EVENTO_FORA_DE_ORDEM.
   const lock = `${queuePath}.lock`;
   let fdLock;
   try {
@@ -242,6 +258,7 @@ function applyTransition(entrada = {}) {
   } catch (_) {
     return abortar('FILA_OCUPADA', { lockOcupado: true });
   }
+  let evento;
   try {
     const atual = JSON.parse(fs.readFileSync(queuePath, 'utf8'));
     const alvo = atual.items.find((i) => i && i.id === item.id);
@@ -254,6 +271,24 @@ function applyTransition(entrada = {}) {
       return abortar('FILA_MUDOU_DESDE_A_BASE', { esperado: base.queueHash, atual: hashAtual });
     }
 
+    // Só DEPOIS das pré-condições o livro é tocado.
+    evento = anexarEvento({
+      rootDir,
+      rel: livroPath,
+      transitionId: intent.intent.transitionId,
+      defectId: item.id,
+      from: estadoDeclarado,
+      to,
+      actorId: (entrada.actor && entrada.actor.id) || 'desconhecido',
+      proofHash: entrada.proof ? hashDoPayload(entrada.proof) : null,
+      // ALERT 5 do revisor (P2): o evento registra o commit ASSINADO na prova (o valor que a
+      // assinatura cobre), não o HEAD da aplicação. Comparar commit de fix com HEAD na
+      // releitura invalidava a prova que o próprio serviço acabou de aplicar.
+      evaluatedCommit: (entrada.proof && entrada.proof.evaluatedCommit) || entrada.currentCommit || null,
+      at: new Date(entrada.agora || Date.now()).toISOString(),
+    });
+    if (!evento.ok) return abortar(`EVENTO_NAO_ANEXADO:${evento.code}`, { problemas: evento.problemas || [] });
+
     alvo.state = to;
     alvo.status = STATUS_CANONICO[to] || alvo.status;
     alvo.legacyStatus = alvo.status;
@@ -263,10 +298,11 @@ function applyTransition(entrada = {}) {
       // diretório TAMBÉM está no try: EEXIST/EACCES aqui é falha de persistência, não crash.
       try {
         fs.mkdirSync(dirProvas, { recursive: true });
-        fs.writeFileSync(absProva, `${JSON.stringify(entrada.proof, null, 2)}\n`, 'utf8');
       } catch (e) {
         return abortar(`FALHA_AO_GRAVAR_PROVA:${e.message}`);
       }
+      const gravacao = gravarProvaSemSeguirSymlink(dirProvas, absProva, `${JSON.stringify(entrada.proof, null, 2)}\n`);
+      if (!gravacao.ok) return abortar(gravacao.motivo);
       alvo.closureProof = path.join(path.relative(rootDir, dirProvas), path.basename(absProva));
       alvo.verificationCommit = entrada.proof.evaluatedCommit;
     }
@@ -295,7 +331,7 @@ function applyTransition(entrada = {}) {
  * @param {object} entrada { rootDir, queuePath, defectId, proof, actor, currentCommit, currentFingerprint, ancoragem, dryRun, agora }
  */
 function applyAttestation(entrada = {}) {
-  const rootDir = entrada.rootDir || process.cwd();
+  const rootDir = entrada.rootDir || path.resolve(__dirname, '..', '..');
   const queuePath = entrada.queuePath || path.join(rootDir, 'AI_MEMORY', 'hardening-queue.json');
   const livroPath = entrada.livroPath || null; // null ⇒ REL_PADRAO do livro
   const prova = entrada.proof;
@@ -316,9 +352,7 @@ function applyAttestation(entrada = {}) {
     return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: ['TRANSITION_ID_INVALIDO'] };
   }
 
-  // A3 (missão Codex, P1): o caminho da prova é validado ANTES de qualquer mutação. Antes,
-  // `anexarEvento` rodava primeiro e uma recusa por `proofsPath` inválido deixava evento órfão
-  // no livro append-only — transição que nunca aconteceu, consumindo o `transitionId`.
+  // Caminho de prova validado (textual + realpath + alvo não-symlink) ANTES de qualquer mutação.
   const dirProvas = path.resolve(rootDir, entrada.proofsPath || 'governance/bug-closure/proofs');
   if (!dirProvas.startsWith(`${path.resolve(rootDir)}${path.sep}`)
     || !caminhoRealDentroDaRaiz(rootDir, dirProvas).ok) {
@@ -328,6 +362,13 @@ function applyAttestation(entrada = {}) {
   const absProva = path.resolve(dirProvas, nomeProva);
   if (!absProva.startsWith(`${dirProvas}${path.sep}`) || !caminhoRealDentroDaRaiz(rootDir, absProva).ok) {
     return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['CAMINHO_DE_PROVA_INVALIDO'] };
+  }
+  {
+    let stProva = null;
+    try { stProva = fs.lstatSync(absProva); } catch (_) { stProva = null; }
+    if (stProva && stProva.isSymbolicLink()) {
+      return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: ['PROVA_E_SYMLINK'] };
+    }
   }
 
   const veredito = verificarProvaDeFechamento(prova, {
@@ -345,7 +386,11 @@ function applyAttestation(entrada = {}) {
 
   if (entrada.dryRun) return { ok: true, code: null, reasons: [], evento: null };
 
-  const intentAtest = jornal.iniciar(rootDir, {
+  // ALERT 2/4 do revisor: mesma disciplina do applyTransition — INTENT, lock, base, aborto
+  // estruturado em qualquer falha e COMMITTED só depois da projeção.
+  const livroAbs = path.join(rootDir, livroPath || REL_PADRAO);
+  const base = jornal.baseAtual(rootDir, queuePath, livroAbs);
+  const intent = jornal.iniciar(rootDir, {
     transitionId: prova.transitionId,
     defectId: item.id,
     kind: 'ATTESTATION',
@@ -355,43 +400,72 @@ function applyAttestation(entrada = {}) {
     proofHash: hashDoPayload(prova),
     queuePath,
     ledgerRel: livroPath || REL_PADRAO,
-    base: jornal.baseAtual(rootDir, queuePath, path.join(rootDir, livroPath || REL_PADRAO)),
+    base,
     agora: entrada.agora,
   });
-  if (!intentAtest.ok) return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: [intentAtest.erro] };
+  if (!intent.ok) return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: [intent.erro] };
+  const abortar = (motivo, extra = {}) => {
+    jornal.marcarAborto(rootDir, intent.intent.transitionId, motivo, extra);
+    return { ok: false, code: CODIGOS.TRANSICAO_RECUSADA, reasons: [motivo] };
+  };
 
-  const evento = anexarEvento({
-    rootDir,
-    rel: livroPath,
-    transitionId: prova.transitionId,
-    defectId: item.id,
-    from: estado,
-    to: estado, // atestação não transiciona
-    kind: 'ATTESTATION',
-    actorId: (entrada.actor && entrada.actor.id) || 'desconhecido',
-    proofHash: hashDoPayload(prova),
-    evaluatedCommit: entrada.currentCommit || null,
-    at: new Date(entrada.agora || Date.now()).toISOString(),
-  });
-  if (!evento.ok) return abortar(`EVENTO_NAO_ANEXADO:${evento.code}`, { problemas: evento.problemas || [] });
-
+  const lock = `${queuePath}.lock`;
+  let fdLock;
   try {
-    fs.mkdirSync(dirProvas, { recursive: true });
-    fs.writeFileSync(absProva, `${JSON.stringify(prova, null, 2)}\n`, 'utf8');
-  } catch (e) {
-    jornal.marcarAborto(rootDir, prova.transitionId, `FALHA_AO_GRAVAR_PROVA:${e.message}`);
-    return { ok: false, code: CODIGOS.PROVA_RECUSADA, reasons: [`FALHA_AO_GRAVAR_PROVA:${e.message}`] };
+    fdLock = fs.openSync(lock, 'wx');
+  } catch (_) {
+    return abortar('FILA_OCUPADA', { lockOcupado: true });
   }
+  try {
+    const filaAgora = JSON.parse(fs.readFileSync(queuePath, 'utf8'));
+    const alvo = filaAgora.items.find((i) => i && i.id === item.id);
+    if (!alvo) return abortar('DEFEITO_AUSENTE');
+    if (String(alvo.state || '').toUpperCase() !== estado) return abortar('ESTADO_DIVERGENTE');
+    const hashAtual = jornal.sha256Arquivo(queuePath);
+    if (base.queueHash && hashAtual && hashAtual !== base.queueHash) {
+      return abortar('FILA_MUDOU_DESDE_A_BASE', { esperado: base.queueHash, atual: hashAtual });
+    }
 
-  // A fila NÃO muda de estado: só registra a prova que faltava.
-  item.closureProof = path.join(path.relative(rootDir, dirProvas), nomeProva);
-  item.attestationId = prova.transitionId;
-  item.attestedAt = new Date(entrada.agora || Date.now()).toISOString();
-  atual.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);
-  const tmp = `${queuePath}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(atual, null, 2)}\n`, 'utf8');
-  fs.renameSync(tmp, queuePath);
-  return { ok: true, code: null, reasons: [], evento: evento.evento };
+    const evento = anexarEvento({
+      rootDir,
+      rel: livroPath,
+      transitionId: prova.transitionId,
+      defectId: item.id,
+      from: estado,
+      to: estado, // atestação não transiciona
+      kind: 'ATTESTATION',
+      actorId: (entrada.actor && entrada.actor.id) || 'desconhecido',
+      proofHash: hashDoPayload(prova),
+      evaluatedCommit: prova.evaluatedCommit || entrada.currentCommit || null,
+      at: new Date(entrada.agora || Date.now()).toISOString(),
+    });
+    if (!evento.ok) return abortar(`EVENTO_NAO_ANEXADO:${evento.code}`, { problemas: evento.problemas || [] });
+
+    try {
+      fs.mkdirSync(dirProvas, { recursive: true });
+    } catch (e) {
+      return abortar(`FALHA_AO_GRAVAR_PROVA:${e.message}`);
+    }
+    const gravacao = gravarProvaSemSeguirSymlink(dirProvas, absProva, `${JSON.stringify(prova, null, 2)}\n`);
+    if (!gravacao.ok) return abortar(gravacao.motivo);
+
+    // A fila NÃO muda de estado: só registra a prova que faltava.
+    alvo.closureProof = path.join(path.relative(rootDir, dirProvas), nomeProva);
+    alvo.attestationId = prova.transitionId;
+    alvo.attestedAt = new Date(entrada.agora || Date.now()).toISOString();
+    filaAgora.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);
+    const tmp = `${queuePath}.tmp`;
+    fs.writeFileSync(tmp, `${JSON.stringify(filaAgora, null, 2)}\n`, 'utf8');
+    fs.renameSync(tmp, queuePath);
+    jornal.marcarCommit(rootDir, intent.intent.transitionId);
+    return { ok: true, code: null, reasons: [], evento: evento.evento };
+  } catch (e) {
+    jornal.marcarAborto(rootDir, intent.intent.transitionId, `PROJECAO_FALHOU:${e.message}`);
+    throw e;
+  } finally {
+    try { fs.closeSync(fdLock); } catch (_) { /* já fechado */ }
+    try { fs.rmSync(lock, { force: true }); } catch (_) { /* lock transitório */ }
+  }
 }
 
 module.exports = {

@@ -141,6 +141,15 @@ function recuperar(rootDir, opcoes = {}) {
   const pendentes = [];
 
   for (const intent of lerIntents(rootDir)) {
+    // ALERT 7 do revisor (P2): arquivo de diário ilegível NÃO pode ser "abortado" — não dá
+    // para provar que nada aconteceu, e reescrevê-lo apagaria a evidência. Fica PENDENTE.
+    if (intent.corrompido) {
+      pendentes.push({
+        transitionId: intent.transitionId, defectId: null,
+        evento: false, prova: false, fila: false, motivo: 'JOURNAL_ILEGIVEL', status: 'CORROMPIDO',
+      });
+      continue;
+    }
     const evento = eventos.find((e) => e && e.transitionId === intent.transitionId) || null;
     const temProva = Boolean(intent.proofRel);
     const provaOk = temProva ? fs.existsSync(path.join(rootDir, intent.proofRel)) : false;
@@ -168,11 +177,15 @@ function recuperar(rootDir, opcoes = {}) {
     if (intent.status !== ESTADOS_JORNAL.INTENT) continue;
 
     if (efeitos === efeitosEsperados) {
-      marcarCommit(rootDir, intent.transitionId, { recuperado: true, recuperadoEm: new Date().toISOString() });
-      completados.push(intent.transitionId);
+      const r = marcarCommit(rootDir, intent.transitionId, { recuperado: true, recuperadoEm: new Date().toISOString() });
+      if (r.ok) completados.push(intent.transitionId);
+      else pendentes.push({ transitionId: intent.transitionId, defectId: intent.defectId, evento: Boolean(evento), prova: provaOk, fila: filaAplicada, motivo: r.erro });
     } else if (efeitos === 0) {
-      marcarAborto(rootDir, intent.transitionId, 'RECUPERACAO_SEM_EFEITO', { recuperado: true });
-      abortados.push(intent.transitionId);
+      const r = marcarAborto(rootDir, intent.transitionId, 'RECUPERACAO_SEM_EFEITO', { recuperado: true });
+      // Se nem o aborto pôde ser gravado, a operação continua pendente — o relatório tem de
+      // dizer isso e o CLI não pode sair 0.
+      if (r.ok) abortados.push(intent.transitionId);
+      else pendentes.push({ transitionId: intent.transitionId, defectId: intent.defectId, evento: Boolean(evento), prova: provaOk, fila: filaAplicada, motivo: r.erro });
     } else {
       pendentes.push({
         transitionId: intent.transitionId, defectId: intent.defectId,
@@ -181,13 +194,16 @@ function recuperar(rootDir, opcoes = {}) {
     }
   }
 
+  // O veredito reflete o estado REAL do diário depois da reconciliação, não só o que foi
+  // classificado nesta passada (um INTENT que não pôde ser fechado continua bloqueando).
+  const aindaPendente = haOperacaoPendente(rootDir, { livroRel });
   return {
     completados,
     abortados,
     pendentes,
-    ok: pendentes.length === 0,
-    // Operação pendente com efeito parcial: certificação tem de permanecer negada.
-    bloqueiaCertificacao: pendentes.length > 0,
+    ok: pendentes.length === 0 && !aindaPendente,
+    // Operação pendente/irreconciliável: certificação tem de permanecer negada.
+    bloqueiaCertificacao: pendentes.length > 0 || aindaPendente,
   };
 }
 
@@ -197,13 +213,16 @@ function recuperar(rootDir, opcoes = {}) {
  * irreversível). ABORTED sem efeito não bloqueia: nada foi aplicado.
  */
 function haOperacaoPendente(rootDir, opcoes = {}) {
+  // Raiz derivada do MÓDULO quando o chamador não informa: depender de `process.cwd()`
+  // desligava a guarda em qualquer execução de subdiretório (alert 6 do revisor).
+  const raiz = rootDir || path.resolve(__dirname, '..', '..');
   const livroRel = opcoes.livroRel || path.join('governance', 'bug-closure', 'transitions.log.jsonl');
-  const abs = path.join(rootDir, livroRel);
+  const abs = path.join(raiz, livroRel);
   const eventos = fs.existsSync(abs)
     ? fs.readFileSync(abs, 'utf8').split('\n').filter((l) => l.trim() !== '')
       .map((l) => { try { return JSON.parse(l); } catch (_) { return null; } }).filter(Boolean)
     : [];
-  return lerIntents(rootDir).some((i) => {
+  return lerIntents(raiz).some((i) => {
     if (i.status === ESTADOS_JORNAL.INTENT) return true;
     if (i.status === ESTADOS_JORNAL.ABORTED) return eventos.some((e) => e && e.transitionId === i.transitionId);
     return false;

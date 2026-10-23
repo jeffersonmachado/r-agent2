@@ -83,7 +83,7 @@ function cenarioComItens(ids, estado = 'FIXED_PENDING_VERIFICATION') {
     provas[id] = p;
   }
 
-  return { root, queuePath, provas, ancoragem: { pins: [fingerprint], externa: fingerprint } };
+  return { root, queuePath, provas, privateKey, ancoragem: { pins: [fingerprint], externa: fingerprint } };
 }
 
 /** Roda applyTransition em PROCESSO separado (concorrência real). */
@@ -337,5 +337,221 @@ describe('A4 — recuperação determinística do diário', () => {
     expect(jornal.haOperacaoPendente(c.root)).toBe(true);
     jornal.recuperar(c.root, { queuePath: c.queuePath });
     expect(jornal.haOperacaoPendente(c.root)).toBe(false);
+  }, 60000);
+});
+
+// ─── ACHADOS DA REVISÃO ADVERSARIAL (2ª passada) ────────────────────────────
+// Cada um foi reproduzido pelo revisor antes da correção; aqui ficam como regressão.
+
+describe('revisão 2ª passada — Alert 1: symlink não pode virar escrita arbitrária', () => {
+  test('symlink PENDENTE apontando para fora da raiz ⇒ recusa e nada é criado fora', () => {
+    const c = cenarioComItens(['SY1']);
+    const fora = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fora2-')), 'alvo.json');
+    const dirProvas = path.join(c.root, 'governance', 'bug-closure', 'proofs');
+    fs.mkdirSync(dirProvas, { recursive: true });
+    // Alvo AINDA não existe: o realpath do ancestral passaria; lstat do componente final não.
+    fs.symlinkSync(fora, path.join(dirProvas, `${c.provas.SY1.transitionId}.json`));
+
+    const r = service.applyTransition({
+      rootDir: c.root, queuePath: c.queuePath, defectId: 'SY1', to: 'VERIFIED',
+      proof: c.provas.SY1, actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+      agora: Date.parse(c.provas.SY1.createdAt) + 1000,
+    });
+
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain('PROVA_E_SYMLINK');
+    expect(fs.existsSync(fora)).toBe(false);
+    expect(lerFila(c).items[0].state).toBe('FIXED_PENDING_VERIFICATION');
+  }, 60000);
+
+  test('symlink para arquivo DENTRO da raiz não sobrescreve o alvo (livro intacto)', () => {
+    const c = cenarioComItens(['SY2']);
+    const dirProvas = path.join(c.root, 'governance', 'bug-closure', 'proofs');
+    fs.mkdirSync(dirProvas, { recursive: true });
+    const livro = path.join(c.root, 'governance', 'bug-closure', 'transitions.log.jsonl');
+    fs.writeFileSync(livro, '', 'utf8');
+    fs.symlinkSync(livro, path.join(dirProvas, `${c.provas.SY2.transitionId}.json`));
+
+    const r = service.applyTransition({
+      rootDir: c.root, queuePath: c.queuePath, defectId: 'SY2', to: 'VERIFIED',
+      proof: c.provas.SY2, actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+      agora: Date.parse(c.provas.SY2.createdAt) + 1000,
+    });
+
+    expect(r.ok).toBe(false);
+    // O livro NÃO pode ter sido substituído pelo JSON da prova.
+    expect(fs.readFileSync(livro, 'utf8')).not.toMatch(/defect-closure-proof/);
+  }, 60000);
+});
+
+describe('revisão 2ª passada — Alert 2/4: atestação com lock, base, commit e aborto', () => {
+  function cenarioAtest(ids) {
+    const c = cenarioComItens(ids, 'RESOLVED');
+    const provas = {};
+    for (const id of ids) {
+      const p = proof.construirProvaDeFechamento({
+        defectId: id, severityBefore: 'P1', severityAfter: 'P1',
+        fromState: 'RESOLVED', toState: 'RESOLVED',
+        evaluatedCommit: SHA, codeFingerprint: FP,
+        requiredTests: ['tests/unit/regressao.test.js'],
+        executions: c.provas[id].executions,
+        artifactHashes: c.provas[id].artifactHashes,
+        actor: { id: 'owner@example.invalid', kind: 'humano' },
+        policyDecision: { decision: 'REVERIFY_EXISTING_CLOSURE', policyId: 'BUG_CLOSURE_FIRST', policyVersion: '1.0.0' },
+      });
+      const payload = {};
+      for (const campo of proof.CAMPOS_ASSINADOS) payload[campo] = p[campo];
+      p.signature = {
+        alg: 'Ed25519', keyId: 'owner@example.invalid',
+        value: crypto.sign(null, Buffer.from(sig.canonicalJson(payload), 'utf8'), c.privateKey).toString('base64'),
+      };
+      provas[id] = p;
+    }
+    return { ...c, provasAtest: provas };
+  }
+
+  function atestar(c, id) {
+    return service.applyAttestation({
+      rootDir: c.root, queuePath: c.queuePath, defectId: id, proof: c.provasAtest[id],
+      actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+      agora: Date.parse(c.provasAtest[id].createdAt) + 1000,
+    });
+  }
+
+  test('atestação legítima grava COMMITTED (não fica INTENT para sempre)', () => {
+    const c = cenarioAtest(['AT1']);
+    expect(atestar(c, 'AT1').ok).toBe(true);
+    const intents = journalDe(c);
+    expect(intents).toHaveLength(1);
+    expect(intents[0].status).toBe('COMMITTED');
+    expect(jornal.haOperacaoPendente(c.root)).toBe(false);
+  }, 60000);
+
+  test('lock ocupado na atestação ⇒ recusa estruturada + ABORTED', () => {
+    const c = cenarioAtest(['AT2']);
+    fs.writeFileSync(`${c.queuePath}.lock`, 'ocupado', 'utf8');
+    const r = atestar(c, 'AT2');
+    expect(r.ok).toBe(false);
+    expect(r.reasons).toContain('FILA_OCUPADA');
+    expect(journalDe(c)[0].status).toBe('ABORTED');
+    fs.rmSync(`${c.queuePath}.lock`, { force: true });
+  }, 60000);
+
+  test('mesmo transitionId reusado ⇒ recusa estruturada (sem ReferenceError) e ABORTED', () => {
+    const c = cenarioAtest(['AT3']);
+    expect(atestar(c, 'AT3').ok).toBe(true);
+    // Segunda tentativa com a mesma prova: o livro recusa o transitionId duplicado.
+    const segunda = atestar(c, 'AT3');
+    expect(segunda.ok).toBe(false);
+    expect(segunda.reasons.join(',')).toMatch(/EVENTO_NAO_ANEXADO/);
+    const intents = journalDe(c);
+    expect(intents.every((i) => i.status !== 'INTENT')).toBe(true);
+  }, 60000);
+});
+
+describe('revisão 2ª passada — Alert 3: recusa não envenena o livro', () => {
+  test('FILA_OCUPADA não deixa evento no livro (lock é adquirido antes do append)', () => {
+    const c = cenarioComItens(['EN1']);
+    fs.writeFileSync(`${c.queuePath}.lock`, 'ocupado', 'utf8');
+    const r = service.applyTransition({
+      rootDir: c.root, queuePath: c.queuePath, defectId: 'EN1', to: 'VERIFIED',
+      proof: c.provas.EN1, actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+      agora: Date.parse(c.provas.EN1.createdAt) + 1000,
+    });
+    expect(r.ok).toBe(false);
+    expect(ledger.verificarLivro(c.root).eventos).toHaveLength(0);
+    fs.rmSync(`${c.queuePath}.lock`, { force: true });
+
+    // E a tentativa seguinte, legítima, funciona sem EVENTO_FORA_DE_ORDEM.
+    const segunda = service.applyTransition({
+      rootDir: c.root, queuePath: c.queuePath, defectId: 'EN1', to: 'VERIFIED',
+      proof: c.provas.EN1, actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+      agora: Date.parse(c.provas.EN1.createdAt) + 1000,
+    });
+    expect(segunda.ok).toBe(true);
+    const v = proof.verificarProvaDeFechamento(c.provas.EN1, {
+      defeito: { id: 'EN1', severity: 'P1', state: 'VERIFIED' },
+      currentCommit: SHA, currentFingerprint: FP, rootDir: c.root,
+      livro: ledger.verificarLivro(c.root), ancoragem: c.ancoragem,
+      agora: Date.parse(c.provas.EN1.createdAt) + 1000,
+      existeArquivo: (rel) => fs.existsSync(path.join(c.root, rel)),
+    });
+    expect(v.reasons).toEqual([]);
+  }, 60000);
+
+  test('4 transições simultâneas em defeitos diferentes: todas aplicam, nenhum evento órfão', () => {
+    const c = cenarioComItens(['S1', 'S2', 'S3', 'S4']);
+    const arquivos = provasEmArquivo(c);
+    const saidas = ['S1', 'S2', 'S3', 'S4'].map((id) => emProcesso({ ...c, defectId: id, provaArquivo: arquivos[id] }));
+    const oks = saidas.filter((s) => JSON.parse(s.stdout || '{"ok":false}').ok).length;
+
+    const livro = ledger.verificarLivro(c.root);
+    expect(livro.integridadeOk).toBe(true);
+    const aplicados = lerFila(c).items.filter((i) => i.state === 'VERIFIED').length;
+    // Nenhum evento sem fila correspondente e nenhuma fila sem evento.
+    expect(livro.eventos).toHaveLength(aplicados);
+    expect(oks).toBe(aplicados);
+    const rec = jornal.recuperar(c.root, { queuePath: c.queuePath });
+    expect(rec.pendentes).toHaveLength(0);
+    expect(rec.bloqueiaCertificacao).toBe(false);
+  }, 180000);
+});
+
+describe('revisão 2ª passada — Alert 5/6/7', () => {
+  test('Alert 5: evento grava o commit ASSINADO da prova (releitura não invalida)', () => {
+    const c = cenarioComItens(['AL5']);
+    const p = c.provas.AL5;
+    const r = service.applyTransition({
+      rootDir: c.root, queuePath: c.queuePath, defectId: 'AL5', to: 'VERIFIED',
+      proof: p, actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+      agora: Date.parse(p.createdAt) + 1000,
+    });
+    expect(r.ok).toBe(true);
+    const evento = ledger.verificarLivro(c.root).eventos[0];
+    expect(evento.evaluatedCommit).toBe(p.evaluatedCommit);
+  }, 60000);
+
+  test('Alert 6: guarda de recuperação usa a raiz do módulo, não o cwd', () => {
+    const c = cenarioComItens(['AL6']);
+    // INTENT pendente na raiz do cenário.
+    jornal.iniciar(c.root, {
+      transitionId: crypto.randomUUID(), defectId: 'AL6', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+      ledgerRel: ledger.REL_PADRAO, base: null,
+    });
+    // Sem `rootDir`: a raiz é derivada do MÓDULO (repositório), independente de cwd. O
+    // cenário vive em /tmp, então o pendente dele NÃO é enxergado por aquele caminho — e a
+    // decisão não muda quando o cwd muda (era exatamente o defeito: cwd desligava a guarda).
+    const original = process.cwd();
+    let deOutroCwd;
+    let daRaizDoModulo;
+    try {
+      process.chdir(os.tmpdir());
+      deOutroCwd = jornal.haOperacaoPendente();
+    } finally {
+      process.chdir(original);
+    }
+    daRaizDoModulo = jornal.haOperacaoPendente();
+    expect(daRaizDoModulo).toBe(deOutroCwd);
+    expect(jornal.haOperacaoPendente(c.root)).toBe(true);
+  }, 60000);
+
+  test('Alert 7: diário com JSON inválido ⇒ PENDENTE, exit 1 e não "RECUPERADO"', () => {
+    const c = cenarioComItens(['AL7']);
+    const dir = path.join(c.root, jornal.DIR_JORNAL);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${crypto.randomUUID()}.json`), '{ isso não é json', 'utf8');
+
+    const rec = jornal.recuperar(c.root, { queuePath: c.queuePath });
+    expect(rec.ok).toBe(false);
+    expect(rec.bloqueiaCertificacao).toBe(true);
+    expect(rec.pendentes.some((p) => p.motivo === 'JOURNAL_ILEGIVEL')).toBe(true);
+    expect(rec.abortados).toHaveLength(0); // não pode reportar "abortado" o que não sabe ler
   }, 60000);
 });
