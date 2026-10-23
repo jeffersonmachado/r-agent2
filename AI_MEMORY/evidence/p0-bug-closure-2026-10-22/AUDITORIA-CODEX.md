@@ -1,7 +1,7 @@
 # Missão Codex — blindagem do Bug Closure First: auditoria adversarial
 
 **SHA inicial:** `52d39fea293affe072b868972a5e48519ac54184`
-**SHA final:** `e087eb10b` (branch `codex/bug-closure-adversarial-hardening`)
+**SHA final:** `af012e541` (branch `codex/bug-closure-adversarial-hardening`, publicada em `origin`)
 **Worktree:** `/tmp/rbc-audit`
 **Baseline histórica do bypass:** `0023634244ad05b3e2a01a61987a244c30ea75b2`
 
@@ -91,7 +91,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 ---
 
-### 2.1 Comandos executados (SHA `93c487484`)
+### 2.1 Comandos executados (SHA final `af012e541`)
 
 | Comando | Exit | Resultado medido |
 |---|---|---|
@@ -314,13 +314,28 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
 4. **O verificador vive na árvore que audita.** `sourceFingerprint` é integridade relativa.
 5. **`at` do evento não é vinculado pela prova** — não alimenta decisão.
 6. **Operações não certificantes** seguem permitidas com P0/P1 abertos, por design.
+7. **Lock de escrita do diário é in-tree.** Um lock com PID vivo alheio (ou um diretório no
+   caminho) bloqueia **novas** escritas do diário até quebra manual — DoS in-tree,
+   indistinguível de contenção legítima, que **não** bloqueia a leitura do selo. Nada é removido
+   automaticamente (a remoção automática era o TOCTOU do P1 da 6ª passada); a quebra é explícita
+   (`--quebrar-lock --confirmar`) e recusa lock de processo vivo. Solução real exigiria
+   `flock(2)`/WAL fora da árvore.
+8. **Liveness de PID é local ao namespace.** Em multi-container com volume compartilhado, um lock
+   vivo de outro container é classificado como órfão (erro, não remoção) — conservador, mas exige
+   decisão humana.
+9. **Guardão de evidência do reparo depende do livro.** Livro truncado a ponto de perder eventos
+   mantém a cadeia "íntegra" (não há âncora para detectar truncamento), e o reparo passa a ver
+   menos evidência; por isso livro ausente/vazio é tratado como **não verificável** e o reparo
+   destrutivo exige `--forcar`, que é a única válvula e fica registrada no relatório.
+10. **Reparo é O(n²)** (`verificarCadeia` por linha): ~318 ms para 200 registros; milhares de
+    registros levariam minutos. Não é caminho quente.
 
 ## 8. Veredito
 
 **`PARTIALLY_VERIFIED`**
 
 Os quatro P1 da missão (A1–A4) estão corrigidos, com teste vermelho antes e verde depois, e os
-**21 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4 + 2). Não é `DEVELOPMENT_VERIFIED` porque
+**23 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4 + 2 + 2). Não é `DEVELOPMENT_VERIFIED` porque
 quatro critérios de aceitação dependem de insumo externo e continuam abertos: âncoras
 provisionadas, aprovação humana dos P0, regeneração das 118 provas no SHA final e execução de
 L1/L2 completos com infraestrutura (runner + banco de teste já usados; `coverageCompleteness`
