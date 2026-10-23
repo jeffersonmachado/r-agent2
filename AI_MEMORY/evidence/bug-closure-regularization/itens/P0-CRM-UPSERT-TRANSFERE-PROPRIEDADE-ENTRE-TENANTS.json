@@ -3,15 +3,9 @@
   "severity": "P0",
   "estadoPersistido": "VERIFIED",
   "titulo": "CRM usava upsert com PK apenas `id`: tenant B sobrescrevia e TRANSFERIA registro do tenant A",
-  "classe": "AGUARDA_INSUMOS_HUMANOS",
-  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "classe": "AMBIENTE_INDISPONIVEL",
   "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
-  "transicao": "VERIFIED → RESOLVED",
-  "provasAusentes": [
-    "EVIDENCIA_NEGATIVA_AUSENTE",
-    "APROVACAO_HUMANA_AUSENTE"
-  ],
-  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
-  "draft": "governance/bug-closure/proofs-drafts/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.json",
-  "camposParaAssinar": 18
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log"
 }

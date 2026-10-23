@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "6b48a4d2-2763-4f70-9dd8-d79fafdefca1",
+  "transitionId": "af86b5fd-fcaa-4c76-94f0-0d04d0d9f281",
   "defectId": "P0-FILAS-ISOLAMENTO-TENANT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
-  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
+  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
+  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
   "requiredTests": [
     "tests/unit/queueTenantIsolation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T01:59:33.306Z",
-      "finishedAt": "2026-10-23T01:59:38.637Z",
+      "startedAt": "2026-10-23T14:29:11.530Z",
+      "finishedAt": "2026-10-23T14:29:14.299Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log",
-      "outputSha256": "add6ffa7ef5a329b3dd202c9a013e52bc5e7d06d2411bc5961eb935d6f9fed0d"
+      "outputSha256": "aa3d4f8477c1b4684bd2d414c64250639e19ed47e15000d208ff78943230f509"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T01:59:38.638Z",
-  "proofHash": "911c0b9b9279ba2bcc6891a9af471285299c4b6615e0700d9d044fc986b01e0a"
+  "createdAt": "2026-10-23T14:29:14.299Z",
+  "proofHash": "35ea1e133dd1be1ccd0862d6d6ddce5cdf1c2b8dd6811f6d3b8859a7da5ba721"
 }

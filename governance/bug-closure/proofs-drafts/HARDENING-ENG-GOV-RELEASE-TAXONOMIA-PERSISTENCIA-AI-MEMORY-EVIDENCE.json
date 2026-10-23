@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a177dce9-cf20-4ddf-b003-630415ac4efa",
+  "transitionId": "ac660ab4-a85e-47cd-a0cb-cda43836b0d1",
   "defectId": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
-  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
+  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
+  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
   "requiredTests": [
     "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T02:18:41.595Z",
-      "finishedAt": "2026-10-23T02:18:44.506Z",
+      "startedAt": "2026-10-23T14:41:38.410Z",
+      "finishedAt": "2026-10-23T14:41:41.277Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
-      "outputSha256": "0ea33cc1d0a9596130bf29e62df5ef29d67d77df880e32fe6300be2f312312a2"
+      "outputSha256": "ad9273cefb2bb0724324f6945d3cd66ac3da0fea5804fcbe0d8f51b553470d45"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T02:18:44.507Z",
-  "proofHash": "8e6b65d52d86a4fb8e9d8e2c9a6c4ca37fb1766bddb2efa90659bdc69dc7410a"
+  "createdAt": "2026-10-23T14:41:41.278Z",
+  "proofHash": "98fddd7867d6a82f4916c03fc88e6c5b567bfc71fe73e76077bace183189597c"
 }

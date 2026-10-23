@@ -3,12 +3,9 @@
   "severity": "P3",
   "estadoPersistido": "VERIFIED",
   "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
-  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
-  "origemDoTeste": "CAMPO_DO_ITEM",
+  "classe": "AMBIENTE_INDISPONIVEL",
   "teste": "tests/unit/coverage/impactRunner.test.js",
-  "transicao": "VERIFIED → RESOLVED",
-  "provasAusentes": [],
-  "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log",
-  "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L2-L3-ORQUESTRADOR.json",
-  "camposParaAssinar": 18
+  "exitCode": 1,
+  "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
 }

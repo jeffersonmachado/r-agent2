@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "02409bb7-104f-40ae-8132-96656934bd7d",
+  "transitionId": "a6eca351-5377-4881-a638-24cab292e8de",
   "defectId": "H14-CDR-SUPERVISIONADO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
-  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
+  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
+  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
   "requiredTests": [
     "tests/unit/pbx/pbxCdrHealth.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/pbx/pbxCdrHealth.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T02:11:11.570Z",
-      "finishedAt": "2026-10-23T02:11:15.863Z",
+      "startedAt": "2026-10-23T14:34:54.651Z",
+      "finishedAt": "2026-10-23T14:34:59.170Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H14-CDR-SUPERVISIONADO.log",
-      "outputSha256": "7f5b1a8b5fe43a5b291d831a4e2d1a3879ad9fab1b00f86c44c5040deb28c8dd"
+      "outputSha256": "fd187100f5cb7e0fa62d4131ef8bd83a28b586449758163948eb333bf7e4d124"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T02:11:15.864Z",
-  "proofHash": "739cfdd2a23ce3d9145d0f2ff89c429aa7f66839e6052397aaeec5cec038c9aa"
+  "createdAt": "2026-10-23T14:34:59.171Z",
+  "proofHash": "8081a453a9e2c6d4f6e51edd8b36777bb0022cbb49ded9e2361805d2508eece7"
 }
