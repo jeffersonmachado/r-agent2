@@ -11,7 +11,7 @@
  */
 
 const crypto = require('crypto');
-const { execFileSync, spawnSync } = require('child_process');
+const { execFileSync, spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -108,6 +108,35 @@ function emProcesso({ root, queuePath, defectId, provaArquivo, ancoragem }) {
     process.stdout.write(JSON.stringify({ ok: r.ok, reasons: r.reasons || [] }));
   `;
   return spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', timeout: 60000 });
+}
+
+/** Roda applyTransition em processo PARALELO (spawn, não spawnSync): corrida real. */
+function emProcessoAssincrono({ root, queuePath, defectId, provaArquivo, ancoragem }) {
+  const script = `
+    process.env.NODE_ENV = 'test';
+    const fs = require('fs');
+    const service = require(${JSON.stringify(path.join(RAIZ, 'governance/bug-closure/transition-service'))});
+    const prova = JSON.parse(fs.readFileSync(${JSON.stringify(provaArquivo)}, 'utf8'));
+    const r = service.applyTransition({
+      rootDir: ${JSON.stringify(root)},
+      queuePath: ${JSON.stringify(queuePath)},
+      defectId: ${JSON.stringify(defectId)},
+      to: 'VERIFIED',
+      proof: prova,
+      actor: { id: 'owner@example.invalid' },
+      currentCommit: ${JSON.stringify(SHA)},
+      currentFingerprint: ${JSON.stringify(FP)},
+      ancoragem: ${JSON.stringify(ancoragem)},
+      agora: Date.parse(prova.createdAt) + 1000,
+    });
+    process.stdout.write(JSON.stringify({ ok: r.ok, reasons: r.reasons || [] }));
+  `;
+  const filho = spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'ignore'] });
+  return new Promise((resolve) => {
+    let saida = '';
+    filho.stdout.on('data', (d) => { saida += String(d); });
+    filho.on('close', (codigo) => resolve({ codigo, saida }));
+  });
 }
 
 function provasEmArquivo(c) {
@@ -695,5 +724,166 @@ describe('revisão 4ª passada — Alert 2: sem temporário previsível e falha 
     } finally {
       espiao.mockRestore();
     }
+  }, 60000);
+});
+
+// ─── 5ª passada da revisão independente ─────────────────────────────────────
+
+describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a cadeia do diário', () => {
+  test('8 processos SIMULTÂNEOS: seq contíguo, cadeia íntegra, nenhuma operação perdida', async () => {
+    const ids = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'];
+    const c = cenarioComItens(ids);
+    const arquivos = provasEmArquivo(c);
+
+    // `Promise.all` sobre `spawn`: todos partem juntos. Com `spawnSync` (teste antigo) a
+    // execução era SEQUENCIAL e a corrida nunca acontecia.
+    const resultados = await Promise.all(ids.map((id) => emProcessoAssincrono({
+      ...c, defectId: id, provaArquivo: arquivos[id],
+    })));
+
+    // O que NÃO pode acontecer sob concorrência real: bifurcação de `seq` (cadeia quebrada de
+    // forma permanente) ou operação perdida. Contenção na fila é esperada e legítima
+    // (`FILA_MUDOU_DESDE_A_BASE`): o chamador reexecuta.
+    const lido = jornal.lerRegistros(c.root);
+    expect(lido.corrompido).toBe(false);
+    expect(jornal.verificarCadeia(lido.registros)).toBeNull();
+    expect(lido.registros.map((r) => r.seq)).toEqual(lido.registros.map((_r, i) => i));
+    // Registros INTENT individuais são esperados (fase 1 de cada operação); o que não pode
+    // sobrar é operação cujo estado VIGENTE (último evento) ficou em INTENT.
+    expect(jornal.lerIntents(c.root).every((i) => i.status !== 'INTENT')).toBe(true);
+    for (const r of resultados) expect(r.saida).toContain('"ok"');
+    expect(resultados.filter((r) => r.saida.includes('"ok":true')).length).toBeGreaterThanOrEqual(1);
+
+    // Liveness: repetir os que abortaram por contenção converge para TODOS aplicados, e a fila
+    // reflete exatamente os que declararam sucesso — nenhuma atualização perdida.
+    const aplicados = new Set(jornal.lerRegistros(c.root).registros
+      .filter((r) => r.status === 'COMMITTED').map((r) => r.defectId));
+    for (const id of ids) {
+      if (aplicados.has(id)) continue;
+      const r = await emProcessoAssincrono({ ...c, defectId: id, provaArquivo: arquivos[id] });
+      expect(r.saida).toContain('"ok":true');
+    }
+    const lidoFinal = jornal.lerRegistros(c.root);
+    expect(lidoFinal.corrompido).toBe(false);
+    expect(lidoFinal.registros.filter((r) => r.status === 'COMMITTED').map((r) => r.defectId).sort())
+      .toEqual([...ids].sort());
+    expect(lerFila(c).items.filter((i) => i.state === 'VERIFIED')).toHaveLength(ids.length);
+    expect(jornal.haOperacaoPendente(c.root)).toBe(false);
+  }, 180000);
+
+  test('lock órfão de processo MORTO é removido; lock de processo VIVO é respeitado', () => {
+    const c = cenarioComItens(['R9']);
+    const dir = path.join(c.root, jornal.DIR_JORNAL);
+    fs.mkdirSync(dir, { recursive: true });
+    const lock = path.join(dir, 'journal.log.lock');
+
+    // Órfão: pid que não existe ⇒ removido e a operação segue.
+    fs.writeFileSync(lock, JSON.stringify({ pid: 999999, at: new Date().toISOString() }), 'utf8');
+    const ok = jornal.iniciar(c.root, {
+      transitionId: crypto.randomUUID(), defectId: 'R9', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    expect(ok.ok).toBe(true);
+    expect(fs.existsSync(lock)).toBe(false);
+
+    // Vivo: o próprio processo ⇒ JOURNAL_OCUPADO (não remove lock alheio).
+    fs.writeFileSync(lock, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }), 'utf8');
+    const timeoutAnterior = process.env.JOURNAL_LOCK_TIMEOUT_MS;
+    process.env.JOURNAL_LOCK_TIMEOUT_MS = '150';
+    const ocupado = jornal.iniciar(c.root, {
+      transitionId: crypto.randomUUID(), defectId: 'R9', kind: 'TRANSITION',
+      from: 'X', to: 'Y', queuePath: c.queuePath,
+    });
+    expect(ocupado.ok).toBe(false);
+    expect(ocupado.erro).toBe('JOURNAL_OCUPADO');
+    expect(fs.existsSync(lock)).toBe(true);
+    if (timeoutAnterior === undefined) delete process.env.JOURNAL_LOCK_TIMEOUT_MS;
+    else process.env.JOURNAL_LOCK_TIMEOUT_MS = timeoutAnterior;
+    fs.rmSync(lock, { force: true });
+  }, 60000);
+
+  test('diário quebrado deixa de ser bloqueio permanente: reparo canônico mantém o prefixo válido', () => {
+    const c = cenarioComItens(['R10']);
+    const p = c.provas.R10;
+    const iniciado = jornal.iniciar(c.root, {
+      transitionId: p.transitionId, defectId: 'R10', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    expect(iniciado.ok).toBe(true);
+    jornal.marcarAborto(c.root, p.transitionId, 'TESTE');
+    // Corrompe o FIM (simula escrita truncada/tentativa de forja).
+    fs.appendFileSync(jornal.caminhoDiario(c.root), '{"seq":9,"lixo":true}\n', 'utf8');
+    expect(jornal.lerRegistros(c.root).corrompido).toBe(true);
+
+    const semForca = jornal.repararDiario(c.root, { ledgerEventos: [] });
+    expect(semForca.ok).toBe(true);
+    expect(semForca.mantidos).toBe(2);
+    expect(semForca.descartados).toHaveLength(1);
+    expect(jornal.lerRegistros(c.root).corrompido).toBe(false);
+    // Depois do reparo a operação volta a ser possível.
+    const novo = jornal.iniciar(c.root, {
+      transitionId: crypto.randomUUID(), defectId: 'R10', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    expect(novo.ok).toBe(true);
+  }, 60000);
+
+  test('reparo NÃO descarta registro cujo efeito já está no livro sem --forcar', () => {
+    const c = cenarioComItens(['R11']);
+    const p = c.provas.R11;
+    const tid = p.transitionId;
+    jornal.iniciar(c.root, {
+      transitionId: tid, defectId: 'R11', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    // Registro válido cujo transitionId tem evento no livro; e uma cauda quebrada depois dele.
+    fs.appendFileSync(jornal.caminhoDiario(c.root), 'nao-e-json\n', 'utf8');
+    const recusado = jornal.repararDiario(c.root, {
+      ledgerEventos: [{ transitionId: tid }],
+    });
+    // O prefixo válido inclui o registro com evidência: nada a descartar dele, mas a cauda
+    // ilegível é descartável (não carrega transitionId).
+    expect(recusado.ok).toBe(true);
+
+    // Já um registro ESTRUTURADO descartável com evidência no livro é recusado sem --forcar.
+    const c2 = cenarioComItens(['R12']);
+    jornal.iniciar(c2.root, {
+      transitionId: c2.provas.R12.transitionId, defectId: 'R12', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c2.queuePath,
+    });
+    const linhas = fs.readFileSync(jornal.caminhoDiario(c2.root), 'utf8').split('\n').filter(Boolean);
+    const primeiro = JSON.parse(linhas[0]);
+    const forjado = { ...primeiro, seq: 1, prevHash: primeiro.hash, status: 'COMMITTED' };
+    delete forjado.hash;
+    forjado.hash = jornal.hashDoRegistro(forjado);
+    fs.writeFileSync(jornal.caminhoDiario(c2.root), `${linhas[0]}\n${JSON.stringify(forjado)}\n`, 'utf8');
+    expect(jornal.lerRegistros(c2.root).corrompido).toBe(false); // cadeia válida: forja completa
+    fs.appendFileSync(jornal.caminhoDiario(c2.root), `${JSON.stringify({ ...forjado, seq: 5 })}\n`, 'utf8');
+    const rec2 = jornal.repararDiario(c2.root, { ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }] });
+    expect(rec2.ok).toBe(false);
+    expect(rec2.erro).toBe('REPARO_PERDERIA_EVIDENCIA_DE_EFEITO');
+    const forcado = jornal.repararDiario(c2.root, {
+      ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }], forcar: true,
+    });
+    expect(forcado.ok).toBe(true);
+    expect(forcado.descartados).toHaveLength(1);
+  }, 60000);
+});
+
+describe('revisão 5ª passada — Alert 2: `extra` não sobrescreve campo de controle', () => {
+  test('status/seq/hash/prevHash vindos de `extra` são ignorados', () => {
+    const c = cenarioComItens(['X1']);
+    const tid = c.provas.X1.transitionId;
+    expect(jornal.iniciar(c.root, {
+      transitionId: tid, defectId: 'X1', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    }).ok).toBe(true);
+
+    const r = jornal.marcarCommit(c.root, tid, { status: 'ABORTED', seq: 999, hash: 'x', prevHash: 'y', recuperado: true });
+    expect(r.ok).toBe(true);
+    expect(r.intent.status).toBe('COMMITTED');
+    expect(r.intent.seq).toBe(1);
+    expect(r.intent.recuperado).toBe(true);
+    expect(jornal.lerRegistros(c.root).corrompido).toBe(false);
   }, 60000);
 });

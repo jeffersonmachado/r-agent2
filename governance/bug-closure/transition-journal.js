@@ -63,6 +63,11 @@ const CAMPOS_ENCADEADOS = Object.freeze([
   'queueRel', 'ledgerRel', 'base', 'status', 'tentativa', 'motivo', 'prevHash',
 ]);
 
+/** Campos informativos que um chamador pode acrescentar a um evento de status. */
+const CAMPOS_EXTRA_PERMITIDOS = Object.freeze([
+  'recuperado', 'recuperadoEm', 'problemas', 'esperado', 'atual', 'lockOcupado',
+]);
+
 function hashDoRegistro(registro) {
   const base = {};
   for (const campo of CAMPOS_ENCADEADOS) base[campo] = registro[campo] === undefined ? null : registro[campo];
@@ -114,6 +119,82 @@ function lerRegistros(rootDir) {
   return { registros, corrompido: Boolean(quebra), motivo: quebra };
 }
 
+const ARQUIVO_LOCK = 'journal.log.lock';
+const LOCK_TIMEOUT_MS = () => {
+  const bruto = Number(process.env.JOURNAL_LOCK_TIMEOUT_MS);
+  return Number.isFinite(bruto) && bruto > 0 ? bruto : 5000;
+};
+
+/** Dorme de forma SÍNCRONA e sem dependência (Atomics.wait em buffer compartilhado). */
+function dormir(ms) {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  } catch (_) {
+    const fim = Date.now() + ms;
+    while (Date.now() < fim) { /* espera ativa como último recurso */ }
+  }
+}
+
+function pidVivo(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code === 'EPERM';
+  }
+}
+
+/**
+ * Remove lock órfão: processo dono morto, ou arquivo ilegível e velho. Lock de processo VIVO
+ * nunca é removido.
+ */
+function removerLockOrfao(abs, st) {
+  let dono = null;
+  try { dono = JSON.parse(fs.readFileSync(abs, 'utf8')).pid; } catch (_) { dono = null; }
+  if (pidVivo(dono)) return false;
+  if (dono === null && st && Date.now() - st.mtimeMs < 60000) return false;
+  try { fs.rmSync(abs, { force: true }); return true; } catch (_) { return false; }
+}
+
+/**
+ * Executa `fn` sob o LOCK do diário.
+ *
+ * ALERT 1 da 5ª passada: `O_APPEND` garante que os BYTES não se misturam, mas não garante a
+ * alocação de `seq`/`prevHash` — dois processos liam N registros, ambos calculavam `seq=N` e
+ * anexavam, e a cadeia quebrava de forma PERMANENTE (`iniciar` passava a recusar tudo). O par
+ * leitura+append tem de ser serializado.
+ */
+function comLockDoDiario(rootDir, fn) {
+  const dir = caminhoJornal(rootDir);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (e) {
+    return { ok: false, erro: `JOURNAL_LOCK_FALHOU:${e.message}` };
+  }
+  const abs = path.join(dir, ARQUIVO_LOCK);
+  const limite = Date.now() + LOCK_TIMEOUT_MS();
+  let fd = null;
+  while (fd === null) {
+    try {
+      fd = fs.openSync(abs, 'wx', 0o600);
+      try { fs.writeSync(fd, JSON.stringify({ pid: process.pid, at: new Date().toISOString() })); } catch (_) { /* informativo */ }
+    } catch (e) {
+      if (e.code !== 'EEXIST') return { ok: false, erro: `JOURNAL_LOCK_FALHOU:${e.message}` };
+      const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+      if (removerLockOrfao(abs, st)) continue;
+      if (Date.now() > limite) return { ok: false, erro: 'JOURNAL_OCUPADO' };
+      dormir(10);
+    }
+  }
+  try {
+    return fn();
+  } finally {
+    try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+    try { fs.rmSync(abs, { force: true }); } catch (_) { /* lock transitório */ }
+  }
+}
+
 /**
  * Anexa um registro com `O_APPEND` + um único `write`.
  *
@@ -141,6 +222,78 @@ function anexarRegistro(rootDir, registro) {
   }
 }
 
+/**
+ * Reparo CANÔNICO do diário: mantém o maior PREFIXO válido da cadeia e descarta a cauda
+ * quebrada, gravando o resultado com temporário imprevisível + rename.
+ *
+ * Por que é necessário (5ª passada): uma vez `corrompido`, o diário recusava qualquer escrita e
+ * não havia caminho de volta — virava um bloqueio permanente sem decisão possível. O reparo é
+ * explícito, determinístico e NUNCA libera certificação: descartar um registro só pode rebaixar
+ * o estado observado (COMMITTED → INTENT ⇒ pendente), e o livro append-only continua intacto.
+ *
+ * `opcoes.ledgerEventos` (eventos do livro) torna o reparo fail-closed quando o descarte
+ * apagaria evidência de efeito já aplicado: nesse caso exige `opcoes.forcar === true`.
+ *
+ * @returns {{ok:boolean, mantidos?:number, descartados?:object[], erro?:string}}
+ */
+function repararDiario(rootDir, opcoes = {}) {
+  return comLockDoDiario(rootDir, () => {
+    const abs = caminhoDiario(rootDir);
+    let bruto = '';
+    try {
+      if (fs.existsSync(abs)) bruto = fs.readFileSync(abs, 'utf8');
+    } catch (e) {
+      return { ok: false, erro: `JOURNAL_ILEGIVEL:${e.message}` };
+    }
+    const linhas = String(bruto).split('\n').filter((l) => l.trim() !== '');
+    const validos = [];
+    let motivo = null;
+    for (let i = 0; i < linhas.length; i += 1) {
+      let registro;
+      try {
+        registro = JSON.parse(linhas[i]);
+      } catch (_) {
+        motivo = `JOURNAL_ILEGIVEL:linha=${i}`;
+        break;
+      }
+      const quebra = verificarCadeia([...validos, registro]);
+      if (quebra) {
+        motivo = quebra;
+        break;
+      }
+      validos.push(registro);
+    }
+    const descartados = linhas.slice(validos.length).map((linha) => {
+      try { return JSON.parse(linha); } catch (_) { return { linhaIlegivel: String(linha).slice(0, 160) }; }
+    });
+    if (descartados.length === 0) return { ok: true, nadaDescartado: true, mantidos: validos.length };
+
+    const eventos = Array.isArray(opcoes.ledgerEventos) ? opcoes.ledgerEventos : [];
+    const perdeEvidencia = descartados.some((d) => d && d.transitionId
+      && eventos.some((e) => e && String(e.transitionId) === String(d.transitionId)));
+    if (perdeEvidencia && opcoes.forcar !== true) {
+      return { ok: false, erro: 'REPARO_PERDERIA_EVIDENCIA_DE_EFEITO', descartados, motivo };
+    }
+
+    const conteudo = validos.map((r) => `${JSON.stringify(r)}\n`).join('');
+    const tmp = path.join(caminhoJornal(rootDir), `.reparo-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
+    try {
+      const fd = fs.openSync(tmp, 'wx', 0o600);
+      try {
+        fs.writeSync(fd, conteudo);
+        fs.fsyncSync(fd);
+      } finally {
+        try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+      }
+      fs.renameSync(tmp, abs);
+    } catch (e) {
+      try { fs.rmSync(tmp, { force: true }); } catch (_) { /* nada a limpar */ }
+      return { ok: false, erro: `JOURNAL_REPARO_FALHOU:${e.message}` };
+    }
+    return { ok: true, mantidos: validos.length, descartados, motivo };
+  });
+}
+
 /** Hash da fila/livro no instante anterior à mutação: base da detecção de lost update. */
 function baseAtual(rootDir, queuePath, livroAbs) {
   return {
@@ -154,6 +307,10 @@ function baseAtual(rootDir, queuePath, livroAbs) {
  * @returns {{ok:boolean, erro?:string, intent?:object}}
  */
 function iniciar(rootDir, entrada = {}) {
+  return comLockDoDiario(rootDir, () => iniciarSemLock(rootDir, entrada));
+}
+
+function iniciarSemLock(rootDir, entrada = {}) {
   const lido = lerRegistros(rootDir);
   if (lido.corrompido) return { ok: false, erro: `JOURNAL_CORROMPIDO:${lido.motivo}` };
 
@@ -197,11 +354,6 @@ function iniciar(rootDir, entrada = {}) {
   };
   intent.hash = hashDoRegistro(intent);
 
-  try {
-    fs.mkdirSync(caminhoJornal(rootDir), { recursive: true });
-  } catch (e) {
-    return { ok: false, erro: `JOURNAL_INTENT_FALHOU:${e.message}` };
-  }
   const anexado = anexarRegistro(rootDir, intent);
   if (!anexado.ok) return { ok: false, erro: anexado.erro };
   return { ok: true, intent };
@@ -212,6 +364,10 @@ function iniciar(rootDir, entrada = {}) {
  * status vigente é o último evento daquela `transitionId`.
  */
 function atualizarStatus(rootDir, transitionId, status, extra = {}) {
+  return comLockDoDiario(rootDir, () => atualizarStatusSemLock(rootDir, transitionId, status, extra));
+}
+
+function atualizarStatusSemLock(rootDir, transitionId, status, extra = {}) {
   const lido = lerRegistros(rootDir);
   if (lido.corrompido) return { ok: false, erro: `JOURNAL_CORROMPIDO:${lido.motivo}` };
   const mesma = lido.registros.filter((r) => String(r.transitionId) === String(transitionId));
@@ -225,15 +381,17 @@ function atualizarStatus(rootDir, transitionId, status, extra = {}) {
   if (atual.status === status) return { ok: true, intent: atual, idempotente: true };
 
   const ultimo = lido.registros[lido.registros.length - 1];
-  const novo = {
-    ...atual,
-    seq: lido.registros.length,
-    em: new Date().toISOString(),
-    status,
-    motivo: extra.motivo === undefined ? null : extra.motivo,
-    ...extra,
-    prevHash: ultimo.hash,
-  };
+  const novo = { ...atual };
+  // ALERT 2 da 5ª passada: `extra` NÃO pode sobrescrever campo de controle (status/seq/hash/
+  // prevHash) — só campos informativos da allowlist entram, e os de controle vêm por último.
+  for (const campo of CAMPOS_EXTRA_PERMITIDOS) {
+    if (extra[campo] !== undefined) novo[campo] = extra[campo];
+  }
+  novo.motivo = extra.motivo === undefined ? null : extra.motivo;
+  novo.seq = lido.registros.length;
+  novo.em = new Date().toISOString();
+  novo.status = status;
+  novo.prevHash = ultimo.hash;
   delete novo.hash;
   novo.hash = hashDoRegistro(novo);
   const anexado = anexarRegistro(rootDir, novo);
@@ -396,4 +554,6 @@ module.exports = {
   sha256Arquivo,
   caminhoDiario,
   caminhoIntent,
+  repararDiario,
+  hashDoRegistro,
 };

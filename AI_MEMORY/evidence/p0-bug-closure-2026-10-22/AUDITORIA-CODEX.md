@@ -74,8 +74,8 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 | Camada | Comando | Resultado |
 |---|---|---|
-| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **273 testes / 10 suítes, todos PASS** |
-| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2064 PASS / 15 FAIL / 2 SKIP (2081)** |
+| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **278 testes / 10 suítes, todos PASS** |
+| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2069 PASS / 15 FAIL / 2 SKIP (2086)** |
 | L1 (DEVELOPMENT) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL**, exit 0 |
 | L3 (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED 0/64** — identidade de run ausente |
 | Auditoria de persistência | `npm run audit:json-persistence` | **PASS**, `unknown: 0` |
@@ -100,6 +100,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 | `node scripts/ci/dev-branch-gate.js --fases A,D` | 0 | `PASS_PARCIAL` (A pre-voo 10 checks OK; 4 gates L1 verdes) |
 | `node scripts/governance/audit-bug-closure-inventory.js` | 0 | 130 itens: 118 `INVALID_EVIDENCE`, 12 `PENDING_REGRESSION` |
 | `node scripts/governance/recover-bug-closure-journal.js` | 0 | nada pendente (nenhuma mutação real feita no repo) |
+| `node scripts/governance/recover-bug-closure-journal.js --reparar` | 0 | cadeia íntegra, nada a reparar |
 | `npm run audit:json-persistence` | 0 | `status: PASS`, `unknown: 0` (566 alvos) |
 | `node scripts/governance/run-governance-enforcement.js` | ≠0 | `BLOCKED` 0/64 — identidade de run inexistente |
 
@@ -193,8 +194,32 @@ Regressões novas: 5 testes (diário legítimo passa; forja de status detectada 
 segue negada; reordenação/remoção no meio detectadas; tmp pré-criado não afeta o commit; falha de
 commit não vira sucesso).
 
-**Limite que continua declarado:** truncamento da **cauda** do diário e remoção do arquivo não são
-detectáveis sem âncora externa — mesma propriedade do livro (`transitions.log.jsonl`).
+- **5ª passada — 2 achados**: (P1) `O_APPEND` protegia os *bytes* mas **não** a alocação de
+  `seq`/`prevHash`: dois processos liam N registros, ambos calculavam `seq=N` e o diário quebrava
+  de forma **permanente** (`iniciar` passava a recusar tudo e não havia reparo); e (P2) `...extra`
+  vinha **depois** de `status`/`seq` em `atualizarStatus`, permitindo que um chamador
+  sobrescrevesse campos de controle (API latente).
+
+**Correção da 5ª passada** — o par leitura+append do diário passou a rodar sob **lock próprio**
+(`journal/journal.log.lock`, `O_EXCL`, timeout `JOURNAL_OCUPADO`, remoção de lock órfão por PID
+morto, nunca de PID vivo); `extra` só entra por allowlist e os campos de controle são atribuídos
+por último; e — porque um diário quebrado era um bloqueio **sem saída** — há agora **reparo
+canônico** (`recover-bug-closure-journal.js --reparar`) que mantém o maior prefixo válido,
+**recusa-se** a descartar registro cujo `transitionId` já tem evento no livro
+(`REPARO_PERDERIA_EVIDENCIA_DE_EFEITO`) sem `--forcar`, e nunca toca no livro append-only.
+Descartar registro só pode **rebaixar** o estado observado — o reparo nunca libera certificação.
+
+**Prova vermelho→verde da corrida (real, não simulada).** Com a exclusão mútua desligada
+(`spawn` de 8 processos simultâneos, 5 execuções): `JOURNAL_CADEIA_SEQ_DIVERGENTE:3`,
+`corrompido=true`, 0/8 concluídos. Com o lock: `seq` contíguo, cadeia íntegra, 0 processos com
+`ok:true` sem `COMMITTED` correspondente, e o retry dos recusados por contenção
+(`FILA_MUDOU_DESDE_A_BASE` / `FILA_OCUPADA`, ambos sem efeito) converge para 8/8 `VERIFIED`.
+
+**Limite que continua declarado:** truncamento da **cauda** do diário, remoção do arquivo e forja
+com cadeia **recalculada** não são detectáveis sem âncora externa — mesma propriedade do livro
+(`transitions.log.jsonl`). Verificado que truncar a cauda/filtrar o arquivo **não** libera
+certificação (o efeito parcial continua negando o selo por `INVENTARIO_ADULTERADO` /
+`P1_BLOQUEANTE_ABERTO`).
 
 ## 6. Criptografia — o que é realmente garantido
 
@@ -232,10 +257,12 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
    de release decide quais chaves e qual inventário valem. Não é assinatura de intenção.
 2. **Nenhum workflow define as âncoras** ⇒ default fail-closed: toda operação certificante
    `DENIED`.
-3. **O diário é estado in-tree.** A cadeia agora é **verificada** a cada leitura (edição,
-   reordenação e remoção no meio são detectadas), mas **não é autenticada**: remover o arquivo ou
-   truncar a cauda não é detectável, e quem reescreve diário **e** livro de forma coerente desliga
-   a guarda A4. Só âncora externa (ou WAL fora da árvore) resolveria.
+3. **O diário é estado in-tree.** A cadeia é **verificada** a cada leitura (edição, reordenação e
+   remoção no meio são detectadas) e a alocação de `seq` é serializada por lock, mas **não é
+   autenticada**: remover o arquivo, truncar a cauda ou forjar tudo com a cadeia recalculada não é
+   detectável, e o lock em si também é um arquivo in-tree (quem escreve na árvore pode removê-lo).
+   Só âncora externa (ou WAL fora da árvore) resolveria. Verificado que nenhuma dessas
+   manipulações, isoladamente, produz fechamento certificado.
 4. **O verificador vive na árvore que audita.** `sourceFingerprint` é integridade relativa.
 5. **`at` do evento não é vinculado pela prova** — não alimenta decisão.
 6. **Operações não certificantes** seguem permitidas com P0/P1 abertos, por design.
@@ -245,7 +272,7 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
 **`PARTIALLY_VERIFIED`**
 
 Os quatro P1 da missão (A1–A4) estão corrigidos, com teste vermelho antes e verde depois, e os
-**13 achados** das revisões independentes seguintes também (7 + 4 + 2). Não é `DEVELOPMENT_VERIFIED` porque
+**15 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2). Não é `DEVELOPMENT_VERIFIED` porque
 quatro critérios de aceitação dependem de insumo externo e continuam abertos: âncoras
 provisionadas, aprovação humana dos P0, regeneração das 118 provas no SHA final e execução de
 L1/L2 completos com infraestrutura (runner + banco de teste já usados; `coverageCompleteness`
