@@ -273,6 +273,14 @@ function quebrarLock(rootDir, opcoes = {}) {
   if (opcoes.confirmar !== true) {
     return { ok: false, erro: 'QUEBRA_DE_LOCK_EXIGE_CONFIRMACAO', donoPid: dono ? dono.pid : null };
   }
+  // Revalidação imediatamente antes do `rm`: mesmo `ino` E mesmo token. Não é CAS (a janela
+  // remanescente exige intervenção manual exatamente neste instante), mas impede derrubar o
+  // lock de um processo que o readquiriu entre a checagem e a remoção.
+  const relido = fs.lstatSync(abs, { throwIfNoEntry: false });
+  const donoRelido = relido && relido.isFile() ? lerDonoDoLock(abs) : null;
+  if (!relido || relido.ino !== st.ino || String((donoRelido && donoRelido.token) || '') !== String((dono && dono.token) || '')) {
+    return { ok: false, erro: 'LOCK_MUDOU_DURANTE_A_QUEBRA', donoPid: donoRelido ? donoRelido.pid : null };
+  }
   try {
     fs.rmSync(abs, { recursive: true, force: true });
     return { ok: true, removido: true, donoPid: dono ? dono.pid : null };
