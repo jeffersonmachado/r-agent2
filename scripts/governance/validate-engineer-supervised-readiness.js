@@ -537,7 +537,9 @@ const STATUS_INCONCLUSIVOS = Object.freeze(new Set([
  * @returns {{veredito:string, exitCode:number, isGo:boolean, falhas:string[], problemas:string[], checksAusentes:string[]}}
  */
 function decidirVeredito({ checks, aprovacaoHumana = false, catalogo = CHECKS_OBRIGATORIOS, identidade = null } = {}) {
-  const catalogoEfetivo = Array.isArray(catalogo) ? catalogo : [];
+  // Achado 4 da revisão independente: `catalogo: []`/`null` desligava as duas guardas de
+  // cobertura. Catálogo vazio NÃO é "não exigir nada" — é o catálogo canônico.
+  const catalogoEfetivo = (Array.isArray(catalogo) && catalogo.length > 0) ? catalogo : CHECKS_OBRIGATORIOS;
   const problemas = [];
   const falhas = [];
 
@@ -568,7 +570,7 @@ function decidirVeredito({ checks, aprovacaoHumana = false, catalogo = CHECKS_OB
     if (typeof check.ok !== 'boolean') problemas.push(`CHECK_SEM_RESULTADO_BOOLEANO:${id}`);
     if (typeof check.detalhe !== 'string' || check.detalhe.trim() === '') problemas.push(`CHECK_SEM_EVIDENCIA:${id}`);
 
-    const status = String(check.status || '').toUpperCase();
+    const status = String(check.status || '').trim().toUpperCase();
     if (status && STATUS_INCONCLUSIVOS.has(status)) problemas.push(`CHECK_INCONCLUSIVO:${id}:${status}`);
 
     if (identidade && check.identidade) {

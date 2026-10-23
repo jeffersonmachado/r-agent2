@@ -266,6 +266,14 @@ function montarDraft(item, provaDeFechamento, execucao, ctx) {
  * Valida completude, identidade de código e hash dos artefatos; recusa mistura silenciosa.
  */
 function executarAgregacao(runIds) {
+  // `--agregar` é entrada de linha de comando que vira CAMINHO: mesmo contrato do defectId.
+  for (const runId of runIds) {
+    const v = runLib.validarRunId(runId);
+    if (!v.ok) {
+      process.stderr.write(`[regularize] AGREGAÇÃO RECUSADA: ${v.motivo}\n`);
+      return 3;
+    }
+  }
   const agregacao = runLib.agregar({ rootDir: ROOT, baseRel: EVIDENCIA_REL, runIds });
   const saida = {
     kind: 'bug-closure-regularization-aggregate',
@@ -514,7 +522,6 @@ function main() {
     const fim = runLib.finalizar({
       rootDir: ROOT, baseRel: EVIDENCIA_REL, runId: execucao.runId,
       status: resultados.length === candidatos.length ? runLib.STATUS.COMPLETED : runLib.STATUS.FAILED,
-      processados: resultados.length,
     });
     const agregacao = runLib.agregar({ rootDir: ROOT, baseRel: EVIDENCIA_REL, runIds: [execucao.runId] });
     if (!agregacao.ok) {

@@ -196,3 +196,34 @@ describe('P1-C — o workflow executa o preflight de forma BLOQUEANTE', () => {
     expect(dev).not.toContain('RAP_CLOSURE_TRUST_ANCHOR_SHA256');
   });
 });
+
+// ─── 1ª passada da revisão independente (achado 5) ──────────────────────────
+
+describe('P1-C — a atestação do preflight é CONSUMIDA pelo release-gate', () => {
+  test('release-gate baixa e valida a atestação do preflight deste run', () => {
+    const wf = carregarWorkflow();
+    const gate = passosDoJob(wf, 'release-gate');
+    const download = gate.find((p) => String(p.uses || '').startsWith('actions/download-artifact'));
+    expect(download).toBeTruthy();
+    expect(download.with.name).toBe('closure-anchors-attestation');
+
+    const verificacao = gate.find((p) => String(p.name || '').includes('Exigir atestação'));
+    expect(verificacao).toBeTruthy();
+    const script = String(verificacao.run);
+    // A atestação precisa amarrar kind, ok, commit e runId — não basta existir.
+    expect(script).toContain('closure-anchors-attestation');
+    expect(script).toContain('GITHUB_SHA');
+    expect(script).toContain('GITHUB_RUN_ID');
+    expect(script).toContain('SEM_ATESTACAO_DE_PREFLIGHT');
+    expect(script).toContain('ATESTACAO_INVALIDA');
+  });
+
+  test('a verificação da atestação acontece ANTES de declarar release autorizado', () => {
+    const wf = carregarWorkflow();
+    const gate = passosDoJob(wf, 'release-gate');
+    const idxAtestacao = gate.findIndex((p) => String(p.name || '').includes('Exigir atestação'));
+    const idxAutorizacao = gate.findIndex((p) => String(p.run || '').includes('Release autorizado'));
+    expect(idxAtestacao).toBeGreaterThanOrEqual(0);
+    expect(idxAutorizacao).toBeGreaterThan(idxAtestacao);
+  });
+});

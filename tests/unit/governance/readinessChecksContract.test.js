@@ -151,3 +151,24 @@ describe('P1-D — aprovação humana: necessária e NUNCA suficiente', () => {
     expect(new Set(CHECKS_OBRIGATORIOS).size).toBe(CHECKS_OBRIGATORIOS.length);
   });
 });
+
+// ─── 1ª passada da revisão independente (achado 4) ──────────────────────────
+
+describe('P1-D — parâmetros públicos não podem desligar as guardas', () => {
+  test('catalogo=[] ou null NÃO desliga a cobertura obrigatória', () => {
+    const inventado = [{ id: 'fake', ok: true, detalhe: 'inventado' }];
+    for (const catalogo of [[], null, undefined, 'nao-e-array']) {
+      const d = decidirVeredito({ checks: inventado, aprovacaoHumana: true, catalogo });
+      expect(d.veredito).toBe('NOT_READY');
+      expect(d.isGo).toBe(false);
+    }
+  });
+
+  test('status inconclusivo com espaço/case diferente continua reprovando', () => {
+    for (const status of [' TimeOut', 'timeout ', '  unknown', 'Not_Executed ']) {
+      const checks = cheio({ QUEUE_CLOSURE_EVIDENCE: { ok: true, status, bloqueante: true, detalhe: 'x' } });
+      const d = decidirVeredito({ checks, aprovacaoHumana: true });
+      expect(d.veredito).toBe('NOT_READY');
+    }
+  });
+});

@@ -218,3 +218,76 @@ describe('P1-B — o regularizador usa a execução isolada (contrato de fonte)'
     expect(fonte).toContain('--agregar');
   });
 });
+
+// ─── 1ª passada da revisão independente (achados 1 e 2) ─────────────────────
+
+describe('revisão independente — agregação não aceita cobertura declarada', () => {
+  test('manifesto forjado com escopo.completo=true e ZERO artefatos ⇒ RECUSADO', () => {
+    const root = raiz();
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1 } });
+    // Forja: marca completo por fora, sem produzir resultado nenhum.
+    const manifestoPath = path.join(a.dir, 'manifest.json');
+    const m = JSON.parse(fs.readFileSync(manifestoPath, 'utf8'));
+    m.status = 'COMPLETED';
+    m.resultados = 1;
+    m.escopo.completo = true;
+    fs.writeFileSync(manifestoPath, `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+
+    const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toBe(`EXECUCAO_SEM_RESULTADOS:${a.runId}`);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('completo é RECALCULADO dos artefatos: manifesto mentindo `completo` não basta', () => {
+    const root = raiz();
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 3 } });
+    fechar(root, a, ['M1']); // 1 de 3
+    const manifestoPath = path.join(a.dir, 'manifest.json');
+    const m = JSON.parse(fs.readFileSync(manifestoPath, 'utf8'));
+    m.escopo.completo = true; // mentira
+    m.resultados = 1;
+    fs.writeFileSync(manifestoPath, `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+    const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(r.ok).toBe(true);
+    expect(r.completo).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('finalizar conta os artefatos em vez de confiar no chamador', () => {
+    const root = raiz();
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2 } });
+    for (const id of ['N1', 'N2']) {
+      runLib.gravarResultado({ rootDir: root, baseRel: BASE, runId: a.runId, resultado: resultado(id) });
+    }
+    const fim = runLib.finalizar({ rootDir: root, baseRel: BASE, runId: a.runId, status: runLib.STATUS.COMPLETED });
+    expect(fim.manifesto.resultados).toBe(2);
+    expect(fim.manifesto.escopo.completo).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+});
+
+describe('revisão independente — runId entra em caminho, logo tem contrato', () => {
+  test('runId com traversal é recusado ANTES de qualquer I/O', () => {
+    const root = raiz();
+    const forjado = '../../../../p1b-evil';
+    for (const acao of [
+      () => runLib.lerManifesto(root, BASE, forjado),
+      () => runLib.lerResultados(root, BASE, forjado),
+      () => runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [forjado] }),
+      () => runLib.dirDaExecucao(root, BASE, forjado),
+    ]) {
+      let recusou = false;
+      try {
+        const r = acao();
+        recusou = r === null || r.ok === false;
+      } catch (e) {
+        recusou = /RUN_ID_FORA_(DO_CONTRATO|DA_RAIZ)/.test(e.message);
+      }
+      expect(recusou).toBe(true);
+    }
+    expect(runLib.validarRunId(forjado).ok).toBe(false);
+    expect(runLib.validarRunId('run-20261023120000-abcdef12').ok).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+});

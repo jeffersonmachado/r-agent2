@@ -33,12 +33,30 @@ const path = require('path');
 const VERSAO_REGULARIZADOR = '2.0.0';
 const STATUS = Object.freeze({ RUNNING: 'RUNNING', COMPLETED: 'COMPLETED', FAILED: 'FAILED' });
 
+/** Contrato do runId: `run-<14 dígitos de data>-<8 hex>`. Entra em caminho, logo é validado. */
+const PADRAO_RUN_ID = /^run-\d{14}-[0-9a-f]{8}$/;
+
+function validarRunId(runId) {
+  if (typeof runId !== 'string' || !PADRAO_RUN_ID.test(runId)) {
+    return { ok: false, motivo: `RUN_ID_FORA_DO_CONTRATO:${String(runId).slice(0, 40)}` };
+  }
+  return { ok: true, runId };
+}
+
 const sha256Texto = (t) => crypto.createHash('sha256').update(String(t), 'utf8').digest('hex');
 const sha256Arquivo = (abs) => crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
 const agora = () => new Date().toISOString();
 
 function dirDaExecucao(rootDir, baseRel, runId) {
-  return path.join(rootDir, baseRel, 'runs', runId);
+  const v = validarRunId(runId);
+  if (!v.ok) throw new Error(v.motivo);
+  const base = path.resolve(rootDir, baseRel, 'runs');
+  const abs = path.resolve(base, v.runId);
+  // Contenção: mesmo com o contrato, nada fora de `runs/` pode ser resolvido.
+  if (abs !== path.join(base, v.runId) || !abs.startsWith(`${base}${path.sep}`)) {
+    throw new Error(`RUN_ID_FORA_DA_RAIZ:${String(runId).slice(0, 40)}`);
+  }
+  return abs;
 }
 
 /** Identidade do AMBIENTE que influencia o resultado (runner, banco, node) — sem segredos. */
@@ -93,6 +111,7 @@ function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerp
 }
 
 function lerManifesto(rootDir, baseRel, runId) {
+  if (!validarRunId(runId).ok) return null;
   const abs = path.join(dirDaExecucao(rootDir, baseRel, runId), 'manifest.json');
   if (!fs.existsSync(abs)) return null;
   try {
@@ -120,10 +139,16 @@ function gravarResultado({ rootDir, baseRel, runId, resultado, esperadoNoEscopo 
 }
 
 /** Reconhece o fim da execução. `completo` só é true se cobriu TODO o escopo declarado. */
-function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, processados = 0, observacoes = [] }) {
+function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, observacoes = [] }) {
   const abs = path.join(dirDaExecucao(rootDir, baseRel, runId), 'manifest.json');
   const m = lerManifesto(rootDir, baseRel, runId);
   if (!m) return { ok: false, motivo: 'MANIFESTO_AUSENTE' };
+  // `processados` é CONTADO dos artefatos (achado 1 da revisão): o chamador não declara
+  // cobertura, ele a produz.
+  const dirItens = path.join(path.dirname(abs), 'itens');
+  const processados = fs.existsSync(dirItens)
+    ? fs.readdirSync(dirItens).filter((f) => f.endsWith('.json')).length
+    : 0;
   m.status = status;
   m.completedAt = agora();
   m.resultados = processados;
@@ -137,6 +162,9 @@ function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, process
 
 /** Lê os resultados de UMA execução conferindo integridade de cada artefato. */
 function lerResultados(rootDir, baseRel, runId) {
+  if (!validarRunId(runId).ok) {
+    return { ok: false, motivo: `RUN_ID_FORA_DO_CONTRATO:${String(runId).slice(0, 40)}`, resultados: [], manifesto: null };
+  }
   const dir = dirDaExecucao(rootDir, baseRel, runId);
   const manifesto = lerManifesto(rootDir, baseRel, runId);
   if (!manifesto) return { ok: false, motivo: 'MANIFESTO_AUSENTE', resultados: [], manifesto: null };
@@ -177,6 +205,10 @@ function lerResultados(rootDir, baseRel, runId) {
 /**
  * AGREGAÇÃO EXPLÍCITA de execuções. Nunca mistura silenciosamente.
  *
+ * LIMITE DECLARADO (achado 3 da revisão independente): a identidade é auto-declarada e o
+ * `artifactSha256` é calculado pelo executor; quem reescrever manifesto + itens E recalcular os
+ * hashes passa. É detecção de erro OPERACIONAL, não controle contra adulteração deliberada.
+ *
  * Recusa quando:
  *   - a lista de runs é vazia ou algum run não existe;
  *   - algum run não está COMPLETED (execução interrompida/parcial ⇒ INCOMPLETE);
@@ -197,6 +229,12 @@ function agregar({ rootDir, baseRel, runIds }) {
     }
     if (!lido.ok) return { ok: false, motivo: `ARTEFATO_ADULTERADO:${runId}`, adulterados: lido.adulterados };
     execucoes.push({ runId, manifesto: lido.manifesto, resultados: lido.resultados });
+  }
+
+  // Nenhuma execução VAZIA pode ser agregada: zero artefatos não prova cobertura nenhuma.
+  const vazia = execucoes.find((e) => e.resultados.length === 0);
+  if (vazia) {
+    return { ok: false, motivo: `EXECUCAO_SEM_RESULTADOS:${vazia.runId}` };
   }
 
   const referencia = execucoes[0].manifesto.identidade;
@@ -224,11 +262,18 @@ function agregar({ rootDir, baseRel, runIds }) {
   if (duplicados.length > 0) return { ok: false, motivo: 'ID_DUPLICADO_ENTRE_EXECUCOES', duplicados };
 
   const resultados = [...porId.values()].sort((a, b) => String(a.severity).localeCompare(String(b.severity)) || String(a.id).localeCompare(String(b.id)));
-  // "Completo" = cobertura INTEGRAL do inventário por UMA execução. Execução parcial, ainda que
-  // tenha processado tudo o que selecionou, NUNCA é cobertura integral.
-  const completo = execucoes.length === 1
-    && execucoes[0].manifesto.escopo.tipo === 'INTEGRAL'
-    && execucoes[0].manifesto.escopo.completo === true;
+  // "Completo" é RECALCULADO a partir dos artefatos lidos — nunca aceito do manifesto.
+  // (Achado 1 da revisão independente: um manifesto forjado com `escopo.completo: true` e zero
+  // itens era aceito como cobertura integral.) O booleano gravado é apenas informativo.
+  const completaPorArtefatos = (e) => {
+    const esperado = Number(e.manifesto.escopo.esperadoNoEscopo || 0);
+    return e.manifesto.escopo.tipo === 'INTEGRAL'
+      && e.resultados.length > 0
+      && esperado > 0
+      && e.resultados.length >= esperado
+      && Number(e.manifesto.resultados) === e.resultados.length;
+  };
+  const completo = execucoes.length === 1 && completaPorArtefatos(execucoes[0]);
   return {
     ok: true,
     identidade: referencia,
@@ -256,4 +301,6 @@ module.exports = {
   agregar,
   identidadeDoAmbiente,
   dirDaExecucao,
+  validarRunId,
+  PADRAO_RUN_ID,
 };

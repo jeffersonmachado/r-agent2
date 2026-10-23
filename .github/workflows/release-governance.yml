@@ -366,6 +366,32 @@ jobs:
         with:
           fetch-depth: 1
 
+      # Achado 5 da revisão independente: a atestação do preflight era publicada e NINGUÉM a
+      # consumia — a afirmação de controle não existia. Aqui ela é exigida: sem artefato do
+      # preflight deste run, o gate não declara release autorizado.
+      - name: Baixar a atestação do preflight de âncoras
+        uses: actions/download-artifact@v4
+        with:
+          name: closure-anchors-attestation
+          path: ${{ runner.temp }}/anchor-attestation
+
+      - name: Exigir atestação VÁLIDA do preflight (mesmo run, mesmo commit)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = process.env.RUNNER_TEMP + "/anchor-attestation/anchor-attestation.json";
+            if (!fs.existsSync(p)) { console.error("SEM_ATESTACAO_DE_PREFLIGHT"); process.exit(1); }
+            const a = JSON.parse(fs.readFileSync(p, "utf8"));
+            const problemas = [];
+            if (a.kind !== "closure-anchors-attestation") problemas.push("KIND");
+            if (a.ok !== true) problemas.push("OK");
+            if (String(a.commit) !== String(process.env.GITHUB_SHA)) problemas.push("COMMIT");
+            if (String(a.runId) !== String(process.env.GITHUB_RUN_ID)) problemas.push("RUN");
+            if (!a.ancoras || !a.ancoras.fechamento || !a.ancoras.aprovacao || !a.ancoras.inventario) problemas.push("ANCORAS");
+            if (problemas.length) { console.error("ATESTACAO_INVALIDA:" + problemas.join(",")); process.exit(1); }
+            console.log("atestação do preflight válida para o commit " + String(a.commit).slice(0, 10));
+          '
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
