@@ -45,10 +45,9 @@ function eventosDoLivro() {
   try {
     const ledger = require(path.join(ROOT, 'governance', 'bug-closure', 'transition-ledger'));
     const lido = ledger.verificarLivro(ROOT);
-    return {
-      eventos: Array.isArray(lido.eventos) ? lido.eventos : [],
-      verificavel: lido.existe !== false && lido.integridadeOk !== false,
-    };
+    const eventos = Array.isArray(lido.eventos) ? lido.eventos : [];
+    // Mesma régua do guardião (`lerLivro`): livro vazio NÃO é verificável.
+    return { eventos, verificavel: lido.existe !== false && lido.integridadeOk !== false && eventos.length > 0 };
   } catch (_) {
     return { eventos: [], verificavel: false };
   }
@@ -84,6 +83,9 @@ function reparar() {
     process.stdout.write(`[reparo] cadeia íntegra: nada a reparar (${resultado.mantidos} registro(s)) | livro: ${saida.livroDiagnostico.eventos} evento(s)${saida.livroDiagnostico.verificavel ? '' : ' (NÃO verificável)'}\n`);
   } else {
     process.stdout.write(`[reparo] mantidos=${resultado.mantidos} descartados=${resultado.descartados.length} motivo=${resultado.motivo}\n`);
+    if (resultado.forcado) {
+      process.stdout.write(`[reparo] FORÇADO (--forcar): guardião contornado | livroVerificavel=${resultado.livroVerificavel} perdeEvidencia=${resultado.perdeEvidencia}\n`);
+    }
   }
   if (!resultado.ok) return 3;
   return 0;

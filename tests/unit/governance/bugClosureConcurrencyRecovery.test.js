@@ -1089,3 +1089,46 @@ describe('revisão 7ª passada — guardião do reparo lê o livro do ROOT CERTO
     expect(r.erro).toBe('REPARO_SEM_LIVRO_VERIFICAVEL');
   }, 60000);
 });
+
+describe('revisão 8ª passada — relatório do reparo marca quando o guardião foi contornado', () => {
+  test('reparo forçado devolve forcado=true, livroVerificavel e perdeEvidencia', () => {
+    const c = cenarioComItens(['Z1']);
+    jornal.iniciar(c.root, {
+      transitionId: crypto.randomUUID(), defectId: 'Z1', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    fs.appendFileSync(jornal.caminhoDiario(c.root), 'lixo\n', 'utf8');
+    // Sem livro no cenário ⇒ não verificável; sem --forcar recusa.
+    const recusa = jornal.repararDiario(c.root, {});
+    expect(recusa.ok).toBe(false);
+    expect(recusa.erro).toBe('REPARO_SEM_LIVRO_VERIFICAVEL');
+
+    const forcado = jornal.repararDiario(c.root, { forcar: true });
+    expect(forcado.ok).toBe(true);
+    expect(forcado.forcado).toBe(true);
+    expect(forcado.livroVerificavel).toBe(false);
+    expect(forcado.perdeEvidencia).toBe(1); // linha ilegível com \n = possível evidência
+    expect(forcado.descartados).toHaveLength(1);
+  }, 60000);
+
+  test('reparo normal (livro verificável, sem perda) devolve forcado=false', () => {
+    const c = cenarioComItens(['Z2']);
+    ledger.anexarEvento({
+      rootDir: c.root, transitionId: crypto.randomUUID(), defectId: 'Z2',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', kind: 'TRANSITION',
+      actorId: 'owner@example.invalid', proofHash: 'e'.repeat(64), evaluatedCommit: SHA,
+    });
+    jornal.iniciar(c.root, {
+      transitionId: crypto.randomUUID(), defectId: 'Z2', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    // Cauda de escrita em voo (sem \n): comprovadamente incompleta ⇒ descarte sem --forcar.
+    fs.appendFileSync(jornal.caminhoDiario(c.root), '{"seq":1,"transitionId":"em-voo"', 'utf8');
+    const r = jornal.repararDiario(c.root, {});
+    expect(r.ok).toBe(true);
+    expect(r.forcado).toBe(false);
+    expect(r.livroVerificavel).toBe(true);
+    expect(r.perdeEvidencia).toBe(0);
+    expect(r.descartados).toHaveLength(1);
+  }, 60000);
+});

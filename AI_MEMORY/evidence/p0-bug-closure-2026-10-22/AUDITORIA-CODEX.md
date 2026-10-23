@@ -77,7 +77,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 | Camada | Comando | Resultado |
 |---|---|---|
-| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **286 testes / 10 suítes, todos PASS** |
+| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **288 testes / 10 suítes, todos PASS** |
 | L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2077 PASS / 15 FAIL / 2 SKIP (2094)** |
 | L1 (DEVELOPMENT) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL**, exit 0 |
 | L3 (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED 0/64** — identidade de run ausente |
@@ -263,6 +263,17 @@ livro ausente, ilegível **ou sem eventos** ⇒ `REPARO_SEM_LIVRO_VERIFICAVEL`; 
 destrutivo exige `--forcar` — só o fragmento **final sem newline** (escrita em voo/comprovadamente
 incompleto) é considerado inofensivo.
 
+- **8ª passada — `APPROVED`**, sem achado bloqueante. Duas observações de auditoria (LOW) aplicadas:
+  o reparo passa a devolver `forcado`, `livroVerificavel` e `perdeEvidencia` (e o CLI imprime
+  `[reparo] FORÇADO`), e o `livroDiagnostico` do CLI usa a mesma régua do guardião
+  (`eventos > 0`) — antes um livro vazio aparecia como "verificável" no diagnóstico enquanto a
+  decisão recusava. 2 regressões novas.
+
+**Parecer final do revisor (8ª passada, literal):** *"Não encontrei novo caminho para certificação
+falsa nem para corrupção automática do diário. Nenhuma manipulação de lock/diário/reparo, em
+nenhuma das 8 passadas, produziu `SELO_FINAL = ALLOWED` sem prova; todos os caminhos falham
+fechados."*
+
 **Limite que continua declarado:** truncamento da **cauda** do diário, remoção do arquivo e forja
 com cadeia **recalculada** não são detectáveis sem âncora externa — mesma propriedade do livro
 (`transitions.log.jsonl`). Verificado que truncar a cauda/filtrar o arquivo **não** libera
@@ -338,7 +349,8 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
 **`PARTIALLY_VERIFIED`**
 
 Os quatro P1 da missão (A1–A4) estão corrigidos, com teste vermelho antes e verde depois, e os
-**23 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4 + 2 + 2). Não é `DEVELOPMENT_VERIFIED` porque
+**23 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4 + 2 + 2), com
+`APPROVED` na 8ª passada. Não é `DEVELOPMENT_VERIFIED` porque
 quatro critérios de aceitação dependem de insumo externo e continuam abertos: âncoras
 provisionadas, aprovação humana dos P0, regeneração das 118 provas no SHA final e execução de
 L1/L2 completos com infraestrutura (runner + banco de teste já usados; `coverageCompleteness`

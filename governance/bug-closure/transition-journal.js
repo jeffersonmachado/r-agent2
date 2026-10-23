@@ -429,7 +429,17 @@ function repararDiario(rootDir, opcoes = {}) {
 
     const gravado = gravarPrefixo(rootDir, validos);
     if (!gravado.ok) return { ok: false, erro: gravado.erro };
-    return { ok: true, mantidos: validos.length, descartados, motivo };
+    // Auditoria (8ª passada, observação não bloqueante): o relatório tem de deixar explícito
+    // QUANDO o guardião foi contornado, não só o que foi descartado.
+    return {
+      ok: true,
+      mantidos: validos.length,
+      descartados,
+      motivo,
+      forcado: opcoes.forcar === true,
+      livroVerificavel: livro.verificavel,
+      perdeEvidencia: perdeEvidencia.length,
+    };
   });
 }
 
