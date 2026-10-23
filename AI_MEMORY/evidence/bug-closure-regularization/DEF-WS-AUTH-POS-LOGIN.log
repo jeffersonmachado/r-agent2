@@ -1,0 +1,27 @@
+
+> chatbot-flow-editor@0.1.0 test
+> VITE_CACHE_DIR=/tmp/r-agent2-vite vitest run --config vitest.config.mjs src/context/__tests__/WebSocketContext.loginAuth.test.jsx
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/tmp/rbc-audit/frontend[39m
+
+[90mstdout[2m | src/context/__tests__/WebSocketContext.loginAuth.test.jsx
+[22m[39m⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mdeslogado: conecta mas NÃO envia autenticação (não há token)
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mdeslogado: conecta mas NÃO envia autenticação (não há token)[33m 315[2mms[22m[39m
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mDEFEITO: login com socket inutilizável reconecta e AUTENTICA (antes: silêncio absoluto)
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mDEFEITO: login com socket inutilizável reconecta e AUTENTICA (antes: silêncio absoluto)[33m 534[2mms[22m[39m
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mlogin com socket já aberto: autentica sem depender de polling
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mlogin com socket já aberto: autentica sem depender de polling[33m 377[2mms[22m[39m
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mNÃO usa polling de 2s para sincronizar token (setInterval proibido pelo projeto)
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mNÃO usa polling de 2s para sincronizar token (setInterval proibido pelo projeto)[33m 462[2mms[22m[39m
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mao desmontar, socket ainda em CONNECTING é fechado quando abre (não deixa órfão no servidor)
+ [32m✓[39m src/context/__tests__/WebSocketContext.loginAuth.test.jsx[2m > [22mWebSocketContext — autenticação no LOGIN (regressão 2026-10-14)[2m > [22mao desmontar, socket ainda em CONNECTING é fechado quando abre (não deixa órfão no servidor)
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 13:30:44
+[2m   Duration [22m 4.64s[2m (transform 606ms, setup 473ms, collect 577ms, tests 1.86s, environment 752ms, prepare 536ms)[22m
+
+JUNIT report written to /tmp/rbc-audit/frontend/test-results/junit.xml

@@ -1,0 +1,51 @@
+  console.error
+    [2026-10-23T16:32:57.597Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/tenantAIService.js:13:71)
+      at Object.require (api/services/engineeringRouter/engineeringModelAvailabilityService.js:35:57)
+      at Object.require (api/services/engineeringRouter/engineeringRouterService.js:36:53)
+      at Object.require (tests/unit/engineeringRouterProviderChainPolicy.test.js:18:76)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringRouterProviderChainPolicy.test.js (5.167 s)
+  HUMAN_EXTERNAL_BOOTSTRAP — política de execução da cadeia de providers
+    orçamento da cadeia (tentativas e tempo)
+      ✓ a cadeia pode ULTRAPASSAR 6 tentativas quando necessário (116 ms)
+      ✓ NUNCA ultrapassa o novo teto: esgota exatamente no limite do registry (12) (107 ms)
+      ✓ o orçamento de TEMPO continua sendo guarda final (nada virou retry cego) (104 ms)
+      ✓ nenhum laço infinito é possível: iterar respeitando exhausted() termina em no máximo maxAttempts (103 ms)
+    deadline de provider por propósito
+      ✓ engineering_* recebe o deadline ampliado; outros propósitos mantêm o default (104 ms)
+      ✓ o override é aceito pela política real e o default global NÃO mudou (103 ms)
+      ✓ o valor ampliado continua dentro do máximo declarado da política (900 s) (103 ms)
+    classificação failure-aware
+      ✓ 429 por FALTA DE CRÉDITO não é tratado como rate limit transitório (106 ms)
+      ✓ 429 de rate limit real continua transitório, e todos são inutilizáveis na janela (110 ms)
+    prioridade por EVIDÊNCIA histórica (nunca por nome fixo)
+      ✓ sem evidência, a seleção determinística continua sendo a mais barata qualificada (113 ms)
+      ✓ com evidência de patch aplicado, o modelo COMPROVADO passa à frente e o motivo fica registrado (104 ms)
+      ✓ excluídos continuam excluídos mesmo sendo comprovados (evidência não reabre modelo excluído) (102 ms)
+    progression em falhas determinísticas (sem retry inútil)
+      ✓ falha de FORMATO de patch progride IMEDIATAMENTE (nunca repete o mesmo coder) (104 ms)
+      ✓ assinatura de falha distingue LACO de progresso (mesma falha repetida vs erro diferente) (110 ms)
+      ✓ falha determinística exclui o candidato e o próximo assume; repetição só até o teto (143 ms)
+      ✓ as classes de falha que a cadeia trata como progression estão nomeadas e estáveis (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        5.363 s, estimated 6 s
+Ran all test suites matching /tests\/unit\/engineeringRouterProviderChainPolicy.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

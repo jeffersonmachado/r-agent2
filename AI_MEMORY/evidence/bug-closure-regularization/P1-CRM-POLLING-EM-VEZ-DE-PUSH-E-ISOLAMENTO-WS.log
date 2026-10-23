@@ -1,0 +1,219 @@
+  console.info
+    [2026-10-23T16:34:23.093Z] [INFO] [WebSocketService] Servidor WebSocket inicializado
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.160Z] [INFO] [WebSocketService] Cliente conectado: client-1792773263160-4d2h8vy4v
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.165Z] [INFO] [WebSocketService] Cliente client-1792773263160-4d2h8vy4v autenticado como a
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.168Z] [INFO] [WebSocketService] Cliente conectado: client-1792773263168-d447fcg3w
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.170Z] [INFO] [WebSocketService] Cliente client-1792773263168-d447fcg3w autenticado como b
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.177Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773263168-d447fcg3w
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.177Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773263160-4d2h8vy4v
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.278Z] [INFO] [WebSocketService] Cliente conectado: client-1792773263277-h9gnnjcwo
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.279Z] [INFO] [WebSocketService] Cliente client-1792773263277-h9gnnjcwo autenticado como a
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.281Z] [INFO] [WebSocketService] Cliente conectado: client-1792773263281-3mgmqy9gn
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.282Z] [INFO] [WebSocketService] Cliente client-1792773263281-3mgmqy9gn autenticado como b
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T16:34:23.434Z] [DEBUG] [WebSocketService] Broadcast enviado para 1 cliente(s) do tenant tenant-a
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T16:34:23.738Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773263281-3mgmqy9gn
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.741Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773263277-h9gnnjcwo
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.938Z] [INFO] [WebSocketService] Cliente conectado: client-1792773263938-mutgos0lr
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.940Z] [INFO] [WebSocketService] Cliente client-1792773263938-mutgos0lr autenticado como a
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.943Z] [INFO] [WebSocketService] Cliente conectado: client-1792773263943-znjl1q93k
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:23.945Z] [INFO] [WebSocketService] Cliente client-1792773263943-znjl1q93k autenticado como b
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T16:34:24.095Z] [DEBUG] [WebSocketService] Broadcast enviado para 1 cliente(s) do tenant tenant-b
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T16:34:24.398Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773263943-znjl1q93k
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:24.399Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773263938-mutgos0lr
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:24.600Z] [INFO] [WebSocketService] Cliente conectado: client-1792773264600-euljvpf1c
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T16:34:24.603Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant tenant-a
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T16:34:24.614Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773264600-euljvpf1c
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:25.058Z] [INFO] [WebSocketService] Cliente conectado: client-1792773265058-49ufsdwwv
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:25.060Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773265058-49ufsdwwv
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:25.262Z] [INFO] [WebSocketService] Cliente conectado: client-1792773265262-km2w3kgu7
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:25.264Z] [INFO] [WebSocketService] Cliente client-1792773265262-km2w3kgu7 autenticado como a
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:25.266Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773265262-km2w3kgu7
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:25.467Z] [INFO] [WebSocketService] Cliente conectado: client-1792773265467-qozzk4bbx
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:25.468Z] [INFO] [WebSocketService] Cliente client-1792773265467-qozzk4bbx autenticado como a
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T16:34:25.620Z] [DEBUG] [WebSocketService] Broadcast enviado para 1 cliente(s) do tenant tenant-a
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T16:34:25.923Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773265467-qozzk4bbx
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:26.124Z] [INFO] [WebSocketService] Cliente conectado: client-1792773266124-qxmvgfvyc
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:26.126Z] [INFO] [WebSocketService] Cliente client-1792773266124-qxmvgfvyc autenticado como b
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T16:34:26.277Z] [DEBUG] [WebSocketService] Broadcast enviado para 1 cliente(s) do tenant tenant-b
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T16:34:26.579Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773266124-qxmvgfvyc
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:26.780Z] [INFO] [WebSocketService] Cliente conectado: client-1792773266780-7wydrsvtu
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:26.781Z] [INFO] [WebSocketService] Cliente client-1792773266780-7wydrsvtu autenticado como a
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:26.933Z] [INFO] [WebSocketService] Cliente desconectado: client-1792773266780-7wydrsvtu
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/realtimeTenantIsolation.test.js
+  WebSocket — isolamento entre tenants com servidor real
+    ✓ duas conexões simultâneas autenticadas em tenants distintos (126 ms)
+    ✓ evento do tenant A chega SÓ em A (nenhum vazamento para B) (660 ms)
+    ✓ evento do tenant B chega SÓ em B (662 ms)
+    ✓ token inválido não autentica e não recebe evento (457 ms)
+    ✓ token sem tenant é recusado (204 ms)
+    ✓ reconexão volta a receber o evento do próprio tenant (863 ms)
+    ✓ broadcast usa o tenant do cliente autenticado (nunca o informado no payload) (656 ms)
+    ✓ URL do servidor é /ws e o serviço reporta conexões por tenant (354 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        4.258 s, estimated 6 s
+Ran all test suites matching /tests\/unit\/realtimeTenantIsolation.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

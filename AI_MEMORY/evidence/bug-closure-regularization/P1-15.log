@@ -1,0 +1,16 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/attestationOrder.test.js
+  P1-15 — atestação cobre o manifesto efetivamente enviado
+    ✓ a re-atestação acontece DEPOIS de exportGovernanceArtifacts (106 ms)
+    ✓ a re-atestação acontece DEPOIS do package-validator (105 ms)
+    ✓ a re-atestação acontece ANTES do package-integrity-engine (que a exige) (107 ms)
+    ✓ falha da re-atestação BLOQUEIA o release (nunca segue com atestação velha) (105 ms)
+    ✓ a assinatura final é re-emitida DEPOIS dos engines (H_final é a última palavra) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.932 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/governance\/attestationOrder.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,21 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringRouter/taskContractScope.test.js
+  assertTaskContract — task insatisfazível não pode ser criada
+    ✓ produzir patch exige escopo declarado (171 ms)
+    ✓ escopo só com espaços é ausência de escopo (não passa por declarado) (105 ms)
+    ✓ escopo declarado é aceito (103 ms)
+    ✓ escopo DIFERIDO explícito é aceito (fluxo de missão em descoberta) (107 ms)
+    ✓ a flag é ESTRITA: só `true` libera (string/truthy NÃO libera) (113 ms)
+    ✓ os DOIS chamadores de missão declaram o escopo diferido (não há porta dos fundos) (107 ms)
+    ✓ task de ANÁLISE não exige escopo (não escreve arquivo) (104 ms)
+    ✓ o erro carrega código e status HTTP de cliente (400), não 500 (103 ms)
+    ✓ a lista de tipos que produzem patch cobre os que escrevem código/config (105 ms)
+    ✓ a rota de criação traduz erro de contrato em 400 (não em 500) (107 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        2.132 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/engineeringRouter\/taskContractScope.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

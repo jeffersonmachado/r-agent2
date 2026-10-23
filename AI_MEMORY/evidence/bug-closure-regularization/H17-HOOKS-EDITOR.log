@@ -1,0 +1,25 @@
+
+> chatbot-flow-editor@0.1.0 test
+> VITE_CACHE_DIR=/tmp/r-agent2-vite vitest run --config vitest.config.mjs src/components/FlowTemplateSelector.test.jsx
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/tmp/rbc-audit/frontend[39m
+
+[90mstdout[2m | src/components/FlowTemplateSelector.test.jsx
+[22m[39m⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
+
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22mrenderiza a lista sem NENHUM erro de Rules of Hooks (loading -> com templates)
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22mrenderiza a lista sem NENHUM erro de Rules of Hooks (loading -> com templates)[33m 331[2mms[22m[39m
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22mlista VAZIA (loading -> vazio) também passa pela transição sem quebrar os hooks
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22mlista VAZIA (loading -> vazio) também passa pela transição sem quebrar os hooks
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22merro no carregamento não quebra os hooks (loading -> error)
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22merro no carregamento não quebra os hooks (loading -> error)
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22mo useMemo das tags fica ANTES dos returns antecipados (estrutura que fecha o defeito)
+ [32m✓[39m src/components/FlowTemplateSelector.test.jsx[2m > [22mcomponents/FlowTemplateSelector — integridade dos hooks[2m > [22mo useMemo das tags fica ANTES dos returns antecipados (estrutura que fecha o defeito)
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 13:31:32
+[2m   Duration [22m 4.50s[2m (transform 740ms, setup 562ms, collect 721ms, tests 747ms, environment 979ms, prepare 308ms)[22m
+
+JUNIT report written to /tmp/rbc-audit/frontend/test-results/junit.xml

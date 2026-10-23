@@ -1,0 +1,26 @@
+  console.info
+    [2026-10-23T16:34:41.030Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:42.372Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/engineeringMissionMergeConcurrency.test.js
+  mergeMissionJson — escrita concorrente não perde atualização
+    ✓ escritas concorrentes em CHAVES DIFERENTES de resume_metadata sobrevivem as duas (669 ms)
+    ✓ escritas concorrentes na MESMA chave produzem um dos valores, nunca estado parcial (296 ms)
+    ✓ gravar resume NÃO apaga enrichment/preview/policyResolution já persistidos (121 ms)
+    ✓ merge em missão inexistente devolve null (não inventa registro) (103 ms)
+    ✓ chave não suportada continua sendo erro explícito (não é engolida pelo CAS) (105 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        1.871 s, estimated 5 s
+Ran all test suites matching /tests\/integration\/engineeringMissionMergeConcurrency.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

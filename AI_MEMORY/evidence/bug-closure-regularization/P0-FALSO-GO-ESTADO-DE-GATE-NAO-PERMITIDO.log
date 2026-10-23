@@ -1,0 +1,64 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/canonicalReleaseDecision.test.js (5.383 s)
+  vocabulário canônico — fechado e versionado
+    ✓ declara versão e exatamente 7 estados (112 ms)
+    ✓ só CERTIFIED_GO e PUBLISHED_VERIFIED são GO definitivo (105 ms)
+    ✓ NENHUM literal não-final é classificado como final (varredura de todo o mapa) (102 ms)
+  classifyReleaseDecision — fail-closed
+    ✓ os estados PRÉ-pacote NÃO são finais (o falso verde medido) (105 ms)
+    ✓ os literais finais são reconhecidos como finais (102 ms)
+    ✓ NO_GO com sufixo continua NO_GO (prefixo, não igualdade) (102 ms)
+    ✓ literal DESCONHECIDO não é final (nunca aprovar por não reconhecer) (102 ms)
+    ✓ ausente/vazio ⇒ NOT_STARTED (101 ms)
+    ✓ isReleaseDecisionLiteral distingue o vocabulário de RELEASE do de gate (102 ms)
+  exigirGoFinal — o predicado que os consumidores devem usar
+    ✓ recusa tudo que não é final (inclui os que passavam antes) (111 ms)
+    ✓ aceita os finais (102 ms)
+    ✓ aceita estado canônico diretamente (não só literal) (102 ms)
+  clasificar — precedência fail-closed a partir dos fatos
+    ✓ sem gates ⇒ NOT_STARTED (104 ms)
+    ✓ gate obrigatório FALHO ⇒ NO_GO (103 ms)
+    ✓ gate obrigatório DIFERIDO ⇒ NO_GO (bloqueio não resolvido é bloqueio) (102 ms)
+    ✓ gate obrigatório BLOQUEADO ⇒ BLOCKED (distinto de NO_GO) (102 ms)
+    ✓ gate PENDENTE ⇒ RUNNING (102 ms)
+    ✓ gate opcional falho NÃO bloqueia (obrigatorio:false) (101 ms)
+    ✓ todos passam mas o pacote não está selado ⇒ PRE_PACKAGE_PASS (não é GO) (103 ms)
+    ✓ selado mas não certificado ⇒ PRE_PACKAGE_PASS (103 ms)
+    ✓ selado + certificado ⇒ CERTIFIED_GO (101 ms)
+    ✓ publicado sem entrega verificada ⇒ ainda CERTIFIED_GO (não é entrega confirmada) (102 ms)
+    ✓ publicado + entrega verificada ⇒ PUBLISHED_VERIFIED (102 ms)
+    ✓ a decisão carrega a versão do vocabulário e a identidade (104 ms)
+  identidadeCoerente — GO de outro candidato não vale
+    ✓ identidade idêntica E COMPLETA é coerente (104 ms)
+    ✓ cada campo divergente é nomeado e o estado é DIVERGENTE (107 ms)
+    ✓ decisão SEM identidade contra identidade atual completa ⇒ AUSENTE e ok=false (101 ms)
+    ✓ identidade atual AUSENTE (ex.: .current-run.json inexistente) ⇒ ok=false (102 ms)
+    ✓ os DOIS lados vazios ⇒ AUSENTE e ok=false (ausência nunca é coerência) (103 ms)
+    ✓ identidade parcial (só runId) ⇒ INCOMPLETA e ok=false (104 ms)
+    ✓ campo presente mas com formato inválido ⇒ INCOMPLETA e ok=false (102 ms)
+    ✓ campo ausente de um dos lados não é divergência — é ausência (não compara undefined) (102 ms)
+  clasificar — POLÍTICA EXPLÍCITA de gate (P0 corrigido 2026-10-16)
+    ✓ todos os gates PASS ⇒ CERTIFIED_GO (positivo) (103 ms)
+    ✓ gate obrigatório "NOT_EXECUTED" bloqueia e não é GO final (103 ms)
+    ✓ gate obrigatório "UNKNOWN" bloqueia e não é GO final (102 ms)
+    ✓ gate obrigatório "SKIPPED" bloqueia e não é GO final (102 ms)
+    ✓ gate obrigatório "BLOCKED_EXTERNAL" bloqueia e não é GO final (105 ms)
+    ✓ gate obrigatório "WAT" bloqueia e não é GO final (103 ms)
+    ✓ gate obrigatório "not_executed" bloqueia e não é GO final (110 ms)
+    ✓ gate obrigatório "FAIL" bloqueia e não é GO final (102 ms)
+    ✓ gate obrigatório "DEFERRED" bloqueia e não é GO final (102 ms)
+    ✓ gate BLOCKED ⇒ BLOCKED (não é GO final) (102 ms)
+    ✓ gate PENDING e gate sem status ⇒ RUNNING (não é GO final) (103 ms)
+    ✓ lista de gates vazia ⇒ NOT_STARTED (não é GO final) (103 ms)
+    ✓ gate obrigatório SEM id ⇒ NO_GO (não existe gate anônimo) (103 ms)
+    ✓ gate obrigatório AUSENTE do conjunto esperado ⇒ NO_GO (102 ms)
+    ✓ gate pertencente a OUTRO run ⇒ NO_GO (relatório de outro ciclo não vale) (103 ms)
+    ✓ gate não obrigatório em estado desconhecido não bloqueia o GO dos obrigatórios (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       48 passed, 48 total
+Snapshots:   0 total
+Time:        5.475 s, estimated 6 s
+Ran all test suites matching /tests\/unit\/governance\/canonicalReleaseDecision.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

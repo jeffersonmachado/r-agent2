@@ -1,0 +1,17 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/pruneEngineeringMissionBranches.test.js
+  prune-engineering-mission-branches — critério de segurança
+    ✓ missão inexistente no banco é órfã (candidata) (105 ms)
+    ✓ missão de usuário viva NUNCA é candidata (102 ms)
+    ✓ missão de usuário em estado terminal também é mantida (102 ms)
+    ✓ fixture de teste é candidata mesmo com missão viva (102 ms)
+    ✓ created_by vazio ou nulo NÃO é tratado como teste (fail-safe) (101 ms)
+    ✓ marcador de teste dentro de nome de usuário não vira fixture por substring solta (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.947 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/governance\/pruneEngineeringMissionBranches.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

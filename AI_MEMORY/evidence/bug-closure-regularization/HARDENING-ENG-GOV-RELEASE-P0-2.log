@@ -1,0 +1,21 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/governanceChainCertification.test.js
+  cadeia criptográfica — o hash cobre os BYTES do documento
+    ✓ cadeia íntegra verifica (não-vacuidade: o teste não aprova por construção) (117 ms)
+    ✓ ALTERAR o documento depois do hash ⇒ FAIL com hash_mismatch (critério da missão) (108 ms)
+    ✓ documento certificado REMOVIDO ⇒ file_deleted (107 ms)
+    ✓ cadeia ausente/malformada ⇒ erro explícito (nunca "válida por ausência") (102 ms)
+  selo — a certificação da cadeia está na ORDEM certa (tripwire de P0-2)
+    ✓ reconstrói e assina a cadeia no consolidate, pelo caminho SANCIONADO (103 ms)
+    ✓ a certificação vem DEPOIS dos escritores de membros certificados (102 ms)
+    ✓ o gate que RECALCULA é executado na certificação E no fecho do ciclo (102 ms)
+    ✓ o fecho detém a alteração posterior: o gate vem depois do verify:delivered-release (102 ms)
+    ✓ propaga o atestado para o workspace (a cópia lida pelo self-proving não fica stale) (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        1.447 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/governanceChainCertification.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,21 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/pbx/pbxCdrHealth.test.js
+  pbx-cdr-health — sinal é o BACKEND registrado, não a porta
+    ✓ backend registrado: check OK e ensure NÃO recarrega módulo (idempotente) (271 ms)
+    ✓ backend AUSENTE com a porta de pé: check acusa DEGRADED (o preflight do converge passaria!) (204 ms)
+    ✓ ensure RECUPERA: aplica os dois reloads, reverifica e sai como RECOVERED (316 ms)
+    ✓ ensure que NÃO consegue recuperar é UNAVAILABLE (fail-closed, nunca ok sem sinal) (300 ms)
+    ✓ ponte ausente: ensure TENTA subir a ponte antes de recarregar módulo (200 ms)
+    ✓ container ausente: motivo explícito e exit 1 (não finge saúde) (155 ms)
+    ✓ backend REGISTRADO + 1 conexão + Last fail ⇒ DEGRADED (falso negativo medido em 2026-10-14) (186 ms)
+    ✓ ensure RECUPERA o estado de conexão falha (reload limpa o Last fail e sai RECOVERED) (300 ms)
+    ✓ sem Last fail: check OK (o sinal novo não gera falso positivo no caminho saudável) (189 ms)
+    ✓ o preflight do converge passa a exigir o BACKEND, não só a porta (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        2.7 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/pbx\/pbxCdrHealth.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,42 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/phaseStepContract.test.js
+  P0-01 — contrato de cobertura: a fase D é o conjunto EXATO de integridade de desenvolvimento
+    ✓ a fase D contém só gates de desenvolvimento, na ordem canônica (111 ms)
+    ✓ a fase R (certificação de release) é obrigatória para validação completa (103 ms)
+  P0-01 — 23 cenários inválidos NUNCA produzem PASS
+    ✓ 1. nenhum passo executado (103 ms)
+    ✓ 2. apenas um passo aprovado em fase com vários obrigatórios (106 ms)
+    ✓ 3. seis de sete passos aprovados (103 ms)
+    ✓ 4. sete resultados com um id duplicado e outro ausente (103 ms)
+    ✓ 5. todos aprovados, mas um sem evidência (103 ms)
+    ✓ 6. SHA divergente (evidência de outro commit) (105 ms)
+    ✓ 7. RunId divergente (105 ms)
+    ✓ 8. passo desconhecido no lugar de um obrigatório (105 ms)
+    ✓ 9. passo obrigatório com NOT_EXECUTED (105 ms)
+    ✓ 10. passo obrigatório com UNKNOWN (105 ms)
+    ✓ 11. passo obrigatório com SKIPPED não autorizado (116 ms)
+    ✓ 12. exit code não zero (105 ms)
+    ✓ 13. timeout (105 ms)
+    ✓ 14. encerramento por sinal (sem exit code) (102 ms)
+    ✓ 15. "PASS" textual com subprocesso FAIL continua FAIL (103 ms)
+    ✓ 16. relatório antigo reutilizado (outro run) não preenche a fase (103 ms)
+    ✓ 17. evidência alterada depois da execução (105 ms)
+    ✓ 18. ordem inválida quando a definição declara dependência (103 ms)
+    ✓ 19. fases duplicadas na entrada (102 ms)
+    ✓ 20. fases ausentes nunca produzem PASS completo (101 ms)
+    ✓ 21. execução parcial interrompida (resultado sem exit code) (102 ms)
+    ✓ 22. tentativa de reduzir a lista obrigatória pelo próprio resultado (106 ms)
+    ✓ 23. tentativa de falsificar o número de passos (104 ms)
+  P0-01 — o cenário legítimo continua APROVADO (não vacuidade)
+    ✓ 24. conjunto completo, aprovado e com evidência verificável ⇒ PASS (103 ms)
+    ✓ o mesmo conjunto SEM uma evidência passa a INCOMPLETE (o PASS depende do contrato) (104 ms)
+  P0-01 — integração com decidirVeredito
+    ✓ fase D INCOMPLETE nunca vira PASS global (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       28 passed, 28 total
+Snapshots:   0 total
+Time:        3.629 s, estimated 4 s
+Ran all test suites matching /tests\/unit\/governance\/phaseStepContract.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

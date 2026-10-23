@@ -1,0 +1,18 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/releaseStateService.test.js
+  releaseStateService — a entrega só é "verificada" com veredito CANÔNICO positivo
+    ✓ SINGLE AUTHORITY: a lista local é idêntica à do juiz canônico da entrega (108 ms)
+    ✓ todos os relatórios canônicos ok + entrega verificada ⇒ DELIVERED_VERIFIED (139 ms)
+    ✓ relatório de entrega NEGATIVO que CONTÉM a palavra VERIFIED ⇒ DELIVERED_UNVERIFIED (134 ms)
+    ✓ `UNVERIFIED` e estado pré-pacote também não são entrega verificada (128 ms)
+    ✓ relatório no caminho ANTIGO (reports/) NÃO conta como evidência (152 ms)
+    ✓ relatório de entrega AUSENTE ⇒ evidência indisponível declarada e NUNCA verificado (132 ms)
+    ✓ QA Mesh NO_GO com entrega "verificada" ⇒ DELIVERED_UNVERIFIED (bloqueio canônico manda) (130 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.279 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/releaseStateService.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

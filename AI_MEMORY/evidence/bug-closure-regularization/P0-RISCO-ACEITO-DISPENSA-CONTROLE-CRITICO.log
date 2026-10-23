@@ -1,0 +1,28 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/riskAcceptedCriticalControl.test.js
+  P0 RISK_ACCEPTED — P0 continua bloqueando mesmo com risco aceito
+    ✓ P0 com RISK_ACCEPTED e aceitação completa AINDA bloqueia QA Waves (132 ms)
+    ✓ P0 de integridade criptográfica com RISK_ACCEPTED bloqueia e marca controle crítico (104 ms)
+    ✓ P1 de segurança (controle crítico) com RISK_ACCEPTED NÃO é dispensado (105 ms)
+    ✓ P0 de isolamento de tenant com RISK_ACCEPTED bloqueia (103 ms)
+    ✓ P0 de perda de dados com RISK_ACCEPTED bloqueia (102 ms)
+    ✓ P0 de evidência de certificação com RISK_ACCEPTED bloqueia (102 ms)
+  P0 RISK_ACCEPTED — aceitação inválida não dispensa nem P1 comum
+    ✓ sem responsável ⇒ aceitação ineficaz e P1 bloqueia (103 ms)
+    ✓ vencida ⇒ aceitação ineficaz e P1 bloqueia (103 ms)
+    ✓ sem justificativa ⇒ aceitação ineficaz e P1 bloqueia (104 ms)
+    ✓ sem validade ⇒ aceitação ineficaz e P1 bloqueia (102 ms)
+    ✓ aceitação válida de P1 comum é registrada e não bloqueia QA Waves (103 ms)
+  P0 RISK_ACCEPTED — classificação e testes direcionados
+    ✓ classificarDefeitos mantém P0 de risco aceito na lista de P0 (103 ms)
+    ✓ P1 com aceitação válida sai da classificação bloqueante (103 ms)
+    ✓ detecta controles críticos por campo, lista e categoria (103 ms)
+    ✓ P0 RISK_ACCEPTED bloqueia também o selo final e a publicação (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       15 passed, 15 total
+Snapshots:   0 total
+Time:        2.052 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/riskAcceptedCriticalControl.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

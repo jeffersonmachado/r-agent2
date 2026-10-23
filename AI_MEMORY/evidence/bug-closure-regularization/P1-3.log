@@ -1,0 +1,44 @@
+  console.error
+    [2026-10-23T16:33:43.384Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/missionCompilerService.js:52:30)
+      at Object.require (api/services/engineeringMission/missionReviewService.js:63:18)
+      at Object.require (tests/unit/engineeringMission/deriveGatesEvidence.test.js:20:5)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringMission/deriveGatesEvidence.test.js
+  missionReviewService.deriveGates — verificação independente do atestado do executor
+    ✓ GREEN isolado (sem evidência de fase) NÃO produz PASS em NENHUM gate obrigatório (129 ms)
+    ✓ o Meta Reviewer (MR-06) bloquearia: nenhum gate obrigatório fica PASS (110 ms)
+    ✓ evidência REAL de fase ⇒ PASS com verification=EVIDENCE (108 ms)
+    ✓ evidência VAZIA ({}) não conta como evidência (104 ms)
+    ✓ task NÃO-GREEN sem evidência ⇒ MISSING (não é atestado: não há nada a atestar) (104 ms)
+    ✓ regressão também é aceita por linhas reais de EngineeringRegressionRun (105 ms)
+    ✓ promotion_status READY_FOR_PROMOTION NÃO vira PASS (candidate não verificado) (103 ms)
+  missionReviewService.deriveGates — H3: unit não substitui integration
+    ✓ com evidência apenas UNIT, `integration` NÃO é PASS e nomeia a ausência (107 ms)
+    ✓ com execução de INTEGRAÇÃO, o gate passa com evidência distinta (107 ms)
+    ✓ com política EXPLÍCITA que dispensa, sai NOT_APPLICABLE com a FONTE registrada (103 ms)
+    ✓ política ilegível/ausente NÃO autoriza nada (fail-closed, medido no default) (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        3.836 s, estimated 4 s
+Ran all test suites matching /tests\/unit\/engineeringMission\/deriveGatesEvidence.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
