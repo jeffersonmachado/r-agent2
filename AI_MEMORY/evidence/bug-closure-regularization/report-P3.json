@@ -1,18 +1,20 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-22T21:52:56.361Z",
+  "generatedAt": "2026-10-23T02:21:45.060Z",
   "authoritative": false,
   "resumo": {
-    "commit": "debed518968ce6d7aba7beda3389655bb2244016",
-    "fingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
+    "commit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
+    "fingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
     "total": 10,
     "porClasse": {
-      "AGUARDA_ASSINATURA_E_ANCORA": 7,
+      "AGUARDA_ASSINATURA_E_ANCORA": 6,
+      "AMBIENTE_INDISPONIVEL": 1,
       "REQUER_DECISAO_HUMANA": 3
     },
     "porSeveridade": {
-      "AGUARDA_ASSINATURA_E_ANCORA:P3": 7,
+      "AGUARDA_ASSINATURA_E_ANCORA:P3": 6,
+      "AMBIENTE_INDISPONIVEL:P3": 1,
       "REQUER_DECISAO_HUMANA:P3": 3
     },
     "filaAlterada": false,
@@ -108,14 +110,11 @@
       "severity": "P3",
       "estadoPersistido": "VERIFIED",
       "titulo": "L2/L3 + EngineeringValidationOrchestrator sobre o L1",
-      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
-      "origemDoTeste": "CAMPO_DO_ITEM",
+      "classe": "AMBIENTE_INDISPONIVEL",
       "teste": "tests/unit/coverage/impactRunner.test.js",
-      "transicao": "VERIFIED → RESOLVED",
-      "provasAusentes": [],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log",
-      "draft": "governance/bug-closure/proofs-drafts/MISSAO-A-L2-L3-ORQUESTRADOR.json",
-      "camposParaAssinar": 18
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log"
     },
     {
       "id": "MISSAO-B3-REUSO-PROVENIENCIA",

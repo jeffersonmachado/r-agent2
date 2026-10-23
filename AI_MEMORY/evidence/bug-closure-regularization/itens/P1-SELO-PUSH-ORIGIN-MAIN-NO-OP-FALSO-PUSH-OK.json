@@ -3,6 +3,12 @@
   "severity": "P1",
   "estadoPersistido": "VERIFIED",
   "titulo": "Selo publicava ref fixa (main) e imprimia \"push ok\" sem publicar o commit da branch em uso",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/deliveryVerification.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.json",
+  "camposParaAssinar": 18
 }

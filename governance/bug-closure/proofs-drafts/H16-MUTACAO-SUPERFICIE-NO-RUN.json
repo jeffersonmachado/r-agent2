@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7eaffc0d-7728-4d51-adcb-59aef583e99e",
+  "transitionId": "b32f9cd3-ff45-48a7-8e92-74f7de01f6c4",
   "defectId": "H16-MUTACAO-SUPERFICIE-NO-RUN",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
-  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
+  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
+  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
   "requiredTests": [
     "tests/unit/governance/allValidatorsRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:48:55.776Z",
-      "finishedAt": "2026-10-22T21:49:04.467Z",
+      "startedAt": "2026-10-23T02:17:29.230Z",
+      "finishedAt": "2026-10-23T02:17:36.905Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
-      "outputSha256": "10ae7f71c2b65cbd9adabe421d17c28886a5eaf459d225d0c9b845cbd42a2332"
+      "outputSha256": "ab9ff45ecb4987a231d101cd4777e6d12efed2781fbc784bb86c538728a7d53c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:49:04.468Z",
-  "proofHash": "78fa4c72b6fc7ceb0222a1f1a97f93324bdd3491afad132c94db73c81c49045d"
+  "createdAt": "2026-10-23T02:17:36.905Z",
+  "proofHash": "17deca0390cb8a71d1506f48052cbf66a1e21bb69807b842f94ec52362d8213e"
 }

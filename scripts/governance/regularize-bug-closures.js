@@ -84,6 +84,38 @@ function testeMapeado(item) {
 }
 
 /**
+ * Teste que veio no PRÓPRIO COMMIT do fix.
+ *
+ * O campo `commit` do item aponta o commit que corrigiu o defeito — e esse commit normalmente
+ * ADICIONA/ALTERA a suíte de regressão junto com a correção. É a evidência mais direta que
+ * existe (o autor escreveu o teste no mesmo commit), e não depende de o texto da evidência
+ * citar o caminho.
+ */
+function testeDoCommitDoFix(item) {
+  const commit = String((item && item.commit) || '').trim();
+  if (!/^[0-9a-f]{7,40}$/i.test(commit)) return null;
+  let arquivos;
+  try {
+    arquivos = execFileSync('git', ['show', '--name-only', '--pretty=format:', commit], {
+      cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    }).split('\n').map((l) => l.trim()).filter(Boolean);
+  } catch (_) {
+    return null;
+  }
+  const testes = arquivos
+    .filter((f) => /\.(test|spec)\.(js|jsx|ts|tsx)$/.test(f))
+    .filter((f) => fs.existsSync(path.join(ROOT, f)));
+  if (testes.length === 0) return null;
+  const alvo = new Set(tokensDe(`${item.id} ${item.title || ''}`));
+  const pontuar = (rel) => {
+    const base = tokensDe(rel);
+    const comuns = [...alvo].filter((t) => base.includes(t)).length;
+    return comuns + (rel.startsWith('tests/') ? 0.5 : 0);
+  };
+  return testes.sort((a, b) => pontuar(b) - pontuar(a))[0];
+}
+
+/**
  * Teste citado DENTRO da evidência governada do item.
  *
  * ACHADO ÚTIL (2026-10-22): nos itens antigos o campo dedicado costuma vir vazio, mas o texto
@@ -116,7 +148,7 @@ function testeCitado(item) {
       .find((rel) => fs.existsSync(path.join(ROOT, rel)));
     if (achado) return achado;
   }
-  return testeDaEvidencia(item || {});
+  return testeDaEvidencia(item || {}) || testeDoCommitDoFix(item || {});
 }
 
 /** Executa o teste e devolve execução + saída REAL em disco. */
@@ -251,7 +283,8 @@ function main() {
     }
 
     const origemDoTeste = testeMapeado(item) ? 'MAPA_CONFIRMADO'
-      : (testeDaEvidencia(item) ? 'EVIDENCIA_DECLARADA_PELO_AUTOR' : 'CAMPO_DO_ITEM');
+      : (testeDaEvidencia(item) ? 'EVIDENCIA_DECLARADA_PELO_AUTOR'
+        : (String(item.regressionTest || item.test || '').trim() ? 'CAMPO_DO_ITEM' : 'COMMIT_DO_FIX'));
 
     const execucao = executarTeste(d.id, teste);
     if (execucao.exitCode !== 0) {
@@ -535,4 +568,4 @@ if (require.main === module) {
   process.exitCode = main();
 }
 
-module.exports = { testeCitado, testeDaEvidencia, executarTeste, montarDraft };
+module.exports = { testeCitado, testeDaEvidencia, testeDoCommitDoFix, executarTeste, montarDraft };

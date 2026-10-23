@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f68270f3-4392-4147-b5d0-95e29a813283",
+  "transitionId": "36fa9150-b580-4f74-99a9-4b12d3313f29",
   "defectId": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
-  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
+  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
+  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
   "requiredTests": [
     "tests/integration/engineeringMissionFullE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionFullE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:44:32.216Z",
-      "finishedAt": "2026-10-22T21:45:34.883Z",
+      "startedAt": "2026-10-23T02:12:03.918Z",
+      "finishedAt": "2026-10-23T02:13:08.699Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
-      "outputSha256": "a2803978f65855fc17ce84c44620f914ef53ea241f091ee2b72d2e922847c164"
+      "outputSha256": "43ee87b644062f1ae7adc347964702518cf8e1f9337618f215c7ba70a87d7a08"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:45:34.885Z",
-  "proofHash": "2b0cfe6d8a53f7c096d57fcd746d2bd34d609abb4b1c75025d8d7ed56e4c350f"
+  "createdAt": "2026-10-23T02:13:08.704Z",
+  "proofHash": "485bb2001d266fae2902a2ac9b3d9c9a579b46cca6227020139d22dba684675c"
 }
