@@ -1,6 +1,6 @@
 # Regularização de fechamentos sem prova
 
-Gerado em 2026-10-23T15:02:58.679Z · commit `149d6d8a88aff2334e27235824ce902835c087a4` · fingerprint `babb60d5f1b4…`
+Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb772739810d8` · fingerprint `a351e0628dcd…`
 
 > **Não autoritativo.** Este relatório descreve trabalho de re-verificação. A fila oficial não foi
 > alterada por este script, e nenhuma prova foi assinada: a assinatura é do dono da chave ancorada.

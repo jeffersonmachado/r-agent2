@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e01ccb41-4392-44b6-989a-a2743d4e89cc",
+  "transitionId": "a6dea1d2-9140-4b42-9d88-442d0806fc79",
   "defectId": "MISSAO-A-L2-L3-ORQUESTRADOR",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "149d6d8a88aff2334e27235824ce902835c087a4",
-  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
+  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
+  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
   "requiredTests": [
     "tests/unit/coverage/impactRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/coverage/impactRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T14:47:22.830Z",
-      "finishedAt": "2026-10-23T14:47:25.899Z",
+      "startedAt": "2026-10-23T16:36:58.457Z",
+      "finishedAt": "2026-10-23T16:37:02.478Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log",
-      "outputSha256": "4db1efc4a25e524b99459f82dff01bc2ee55a71b348628e1a7c46ae57222b683"
+      "outputSha256": "c4d0dedeeb385cbfa60cd42133edfb2aaa8da81cffa68635aa17743dca168429"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T14:47:25.900Z",
-  "proofHash": "0250a6f30ecb0c555699471e18145e6629a5a218fd1b2daab5216c219af3fb75"
+  "createdAt": "2026-10-23T16:37:02.478Z",
+  "proofHash": "244bd6ba2805a4da8c45495e3976a562c38e44fdbdc57f1cbec833ee5908f18f"
 }

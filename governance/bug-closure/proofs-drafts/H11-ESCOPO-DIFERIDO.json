@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "926d9050-bc6b-497a-ad45-1cc38ffb2d93",
+  "transitionId": "1ec2ed17-0998-4181-8722-5464286aacb9",
   "defectId": "H11-ESCOPO-DIFERIDO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
-  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
+  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
+  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
   "requiredTests": [
     "tests/unit/engineeringRouter/taskContractScope.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouter/taskContractScope.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T14:34:41.976Z",
-      "finishedAt": "2026-10-23T14:34:46.102Z",
+      "startedAt": "2026-10-23T16:30:57.615Z",
+      "finishedAt": "2026-10-23T16:31:02.172Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H11-ESCOPO-DIFERIDO.log",
-      "outputSha256": "a311d20ba7664a500c4b790ed16686ca2296d9df4a22bc324edbcb68ea720663"
+      "outputSha256": "4ee664d771a7aec48b921892893793aff07cd6388f92cc543c169d715ed50daa"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T14:34:46.104Z",
-  "proofHash": "d080f472763f3d093b3cada478b15f4a5133a12245643d5a01a0873b2a278125"
+  "createdAt": "2026-10-23T16:31:02.173Z",
+  "proofHash": "759b13c8ba832dd04bf371a733c8c06a07e2dcb625a2b7220980337fd9734815"
 }
