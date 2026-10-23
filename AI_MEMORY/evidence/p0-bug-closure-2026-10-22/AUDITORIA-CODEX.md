@@ -1,7 +1,7 @@
 # Missão Codex — blindagem do Bug Closure First: auditoria adversarial
 
 **SHA inicial:** `52d39fea293affe072b868972a5e48519ac54184`
-**SHA final:** `af012e541` (branch `codex/bug-closure-adversarial-hardening`, publicada em `origin`)
+**SHA final:** `344cf44bd` (branch `codex/bug-closure-adversarial-hardening`, publicada em `origin`)
 **Worktree:** `/tmp/rbc-audit`
 **Baseline histórica do bypass:** `0023634244ad05b3e2a01a61987a244c30ea75b2`
 
@@ -91,7 +91,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 ---
 
-### 2.1 Comandos executados (SHA final `af012e541`)
+### 2.1 Comandos executados (SHA final `344cf44bd`)
 
 | Comando | Exit | Resultado medido |
 |---|---|---|
