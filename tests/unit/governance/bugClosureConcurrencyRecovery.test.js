@@ -824,9 +824,19 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     fs.rmSync(lock, { force: true });
   }, 60000);
 
+  /** Cria um livro append-only REAL no root do cenário (o guardião lê dele). */
+  function livroComEvento(c, transitionId, defectId) {
+    ledger.anexarEvento({
+      rootDir: c.root, transitionId, defectId,
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', kind: 'TRANSITION',
+      actorId: 'owner@example.invalid', proofHash: 'c'.repeat(64), evaluatedCommit: SHA,
+    });
+  }
+
   test('diário quebrado deixa de ser bloqueio permanente: reparo canônico mantém o prefixo válido', () => {
     const c = cenarioComItens(['R10']);
     const p = c.provas.R10;
+    livroComEvento(c, crypto.randomUUID(), 'R10');
     const iniciado = jornal.iniciar(c.root, {
       transitionId: p.transitionId, defectId: 'R10', kind: 'TRANSITION',
       from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
@@ -837,7 +847,7 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     fs.appendFileSync(jornal.caminhoDiario(c.root), '{"seq":9,"lixo":true}\n', 'utf8');
     expect(jornal.lerRegistros(c.root).corrompido).toBe(true);
 
-    const semForca = jornal.repararDiario(c.root, { ledgerEventos: [], ledgerVerificavel: true });
+    const semForca = jornal.repararDiario(c.root, {});
     expect(semForca.ok).toBe(true);
     expect(semForca.mantidos).toBe(2);
     expect(semForca.descartados).toHaveLength(1);
@@ -854,21 +864,22 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     const c = cenarioComItens(['R11']);
     const p = c.provas.R11;
     const tid = p.transitionId;
+    livroComEvento(c, tid, 'R11');
     jornal.iniciar(c.root, {
       transitionId: tid, defectId: 'R11', kind: 'TRANSITION',
       from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
     });
     // Registro válido cujo transitionId tem evento no livro; e uma cauda quebrada depois dele.
     fs.appendFileSync(jornal.caminhoDiario(c.root), 'nao-e-json\n', 'utf8');
-    const recusado = jornal.repararDiario(c.root, {
-      ledgerEventos: [{ transitionId: tid }], ledgerVerificavel: true,
-    });
-    // O prefixo válido inclui o registro com evidência: nada a descartar dele, mas a cauda
-    // ilegível é descartável (não carrega transitionId).
-    expect(recusado.ok).toBe(true);
+    const recusado = jornal.repararDiario(c.root, {});
+    // Linha ilegível COM `\n` não é comprovadamente inofensiva: o guardião trata como possível
+    // evidência e RECUSA o reparo destrutivo sem `--forcar`.
+    expect(recusado.ok).toBe(false);
+    expect(recusado.erro).toBe('REPARO_PERDERIA_EVIDENCIA_DE_EFEITO');
 
     // Já um registro ESTRUTURADO descartável com evidência no livro é recusado sem --forcar.
     const c2 = cenarioComItens(['R12']);
+    livroComEvento(c2, c2.provas.R12.transitionId, 'R12');
     jornal.iniciar(c2.root, {
       transitionId: c2.provas.R12.transitionId, defectId: 'R12', kind: 'TRANSITION',
       from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c2.queuePath,
@@ -881,14 +892,10 @@ describe('revisão 5ª passada — Alert 1: concorrência REAL não bifurca a ca
     fs.writeFileSync(jornal.caminhoDiario(c2.root), `${linhas[0]}\n${JSON.stringify(forjado)}\n`, 'utf8');
     expect(jornal.lerRegistros(c2.root).corrompido).toBe(false); // cadeia válida: forja completa
     fs.appendFileSync(jornal.caminhoDiario(c2.root), `${JSON.stringify({ ...forjado, seq: 5 })}\n`, 'utf8');
-    const rec2 = jornal.repararDiario(c2.root, {
-      ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }], ledgerVerificavel: true,
-    });
+    const rec2 = jornal.repararDiario(c2.root, {});
     expect(rec2.ok).toBe(false);
     expect(rec2.erro).toBe('REPARO_PERDERIA_EVIDENCIA_DE_EFEITO');
-    const forcado = jornal.repararDiario(c2.root, {
-      ledgerEventos: [{ transitionId: c2.provas.R12.transitionId }], ledgerVerificavel: true, forcar: true,
-    });
+    const forcado = jornal.repararDiario(c2.root, { forcar: true });
     expect(forcado.ok).toBe(true);
     expect(forcado.descartados).toHaveLength(1);
   }, 60000);
@@ -955,7 +962,7 @@ describe('revisão 6ª passada — reparo fail-closed e preservação do último
     const linhas = fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8').split('\n').filter(Boolean);
     fs.writeFileSync(jornal.caminhoDiario(c.root), `{quebrado\n${linhas.join('\n')}\n`, 'utf8');
 
-    const semLivro = jornal.repararDiario(c.root, { ledgerEventos: [], ledgerVerificavel: false });
+    const semLivro = jornal.repararDiario(c.root, {});
     expect(semLivro.ok).toBe(false);
     expect(semLivro.erro).toBe('REPARO_SEM_LIVRO_VERIFICAVEL');
     // O diário não foi tocado.
@@ -1003,5 +1010,82 @@ describe('revisão 6ª passada — reparo fail-closed e preservação do último
     expect(fs.existsSync(lock)).toBe(true);
     expect(JSON.parse(fs.readFileSync(lock, 'utf8')).token).toBe('de-terceiro');
     fs.rmSync(lock, { force: true });
+  }, 60000);
+});
+
+describe('revisão 7ª passada — guardião do reparo lê o livro do ROOT CERTO e exige livro real', () => {
+  /** Diário com 1 registro válido + cauda descartável (para o reparo ter o que descartar). */
+  function comCaudaDescartavel(c, defectId, transitionId = crypto.randomUUID()) {
+    jornal.iniciar(c.root, {
+      transitionId, defectId, kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    fs.appendFileSync(jornal.caminhoDiario(c.root), 'lixo\n', 'utf8');
+    return transitionId;
+  }
+
+  function livroDoCenario(c, transitionId, defectId) {
+    ledger.anexarEvento({
+      rootDir: c.root, transitionId, defectId,
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', kind: 'TRANSITION',
+      actorId: 'owner@example.invalid', proofHash: 'd'.repeat(64), evaluatedCommit: SHA,
+    });
+  }
+
+  test('livro do FIXTURE com o evento é visto (não o livro do repositório do módulo)', () => {
+    const c = cenarioComItens(['Y1']);
+    const tid = c.provas.Y1.transitionId;
+    livroDoCenario(c, tid, 'Y1');
+    // Diário válido + cauda cujo transitionId TEM evento no livro do FIXTURE.
+    jornal.iniciar(c.root, {
+      transitionId: tid, defectId: 'Y1', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', queuePath: c.queuePath,
+    });
+    const linhas = fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8').split('\n').filter(Boolean);
+    const base = JSON.parse(linhas[0]);
+    const descartavel = { ...base, seq: 1, prevHash: base.hash, status: 'ABORTED' };
+    delete descartavel.hash;
+    descartavel.hash = jornal.hashDoRegistro(descartavel);
+    // A cauda descartável precisa ser INVÁLIDA para o reparo ter o que descartar: vai como
+    // linha ilegível carregando o transitionId em texto puro.
+    fs.writeFileSync(jornal.caminhoDiario(c.root),
+      `${linhas[0]}\n${JSON.stringify(descartavel)}\n{"transitionId":"${tid}",quebrado\n`, 'utf8');
+
+    const r = jornal.repararDiario(c.root, {});
+    expect(r.ok).toBe(false);
+    expect(r.erro).toBe('REPARO_PERDERIA_EVIDENCIA_DE_EFEITO');
+    expect(r.descartados.map((d) => d.transitionId)).toContain(tid);
+  }, 60000);
+
+  test('livro AUSENTE é não verificável ⇒ reparo destrutivo recusado (não zera o diário)', () => {
+    const c = cenarioComItens(['Y2']);
+    comCaudaDescartavel(c, 'Y2');
+    expect(fs.existsSync(path.join(c.root, 'governance/bug-closure/transitions.log.jsonl'))).toBe(false);
+    const r = jornal.repararDiario(c.root, {});
+    expect(r.ok).toBe(false);
+    expect(r.erro).toBe('REPARO_SEM_LIVRO_VERIFICAVEL');
+    expect(r.livro).toEqual({ existe: false, integro: true, eventos: 0 });
+  }, 60000);
+
+  test('livro TRUNCADO (arquivo existe e vazio) é não verificável ⇒ recusa', () => {
+    const c = cenarioComItens(['Y3']);
+    comCaudaDescartavel(c, 'Y3');
+    const rel = path.join(c.root, 'governance/bug-closure/transitions.log.jsonl');
+    fs.mkdirSync(path.dirname(rel), { recursive: true });
+    fs.writeFileSync(rel, '', 'utf8'); // livro "íntegro" com zero eventos
+    const r = jornal.repararDiario(c.root, {});
+    expect(r.ok).toBe(false);
+    expect(r.erro).toBe('REPARO_SEM_LIVRO_VERIFICAVEL');
+  }, 60000);
+
+  test('snapshot do livro NÃO é aceito do chamador (ignorado, lido do root)', () => {
+    const c = cenarioComItens(['Y4']);
+    comCaudaDescartavel(c, 'Y4');
+    // Chamador tenta injetar "livro verificável" — deve ser ignorado.
+    const r = jornal.repararDiario(c.root, {
+      ledgerEventos: [{ transitionId: 'x' }], ledgerVerificavel: true,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.erro).toBe('REPARO_SEM_LIVRO_VERIFICAVEL');
   }, 60000);
 });

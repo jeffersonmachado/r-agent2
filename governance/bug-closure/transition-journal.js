@@ -322,19 +322,24 @@ function anexarRegistro(rootDir, registro) {
   }
 }
 
-/** Lê o livro append-only para o guardião de evidência do reparo (sob o lock do diário). */
-function lerLivro(ledgerPath) {
+/**
+ * Lê o livro append-only do MESMO root do diário, para o guardião de evidência do reparo.
+ *
+ * ALERT 1 da 7ª passada: a versão anterior ignorava o `rootDir` e verificava o livro do
+ * REPOSITÓRIO DO MÓDULO — reparar um diretório de dados lia o livro errado e descartava
+ * evidência. ALERT 2 da 7ª passada: livro ausente ou vazio deixava a cadeia "íntegra" com zero
+ * eventos, então truncar/apagar o livro desarmava o guardião; agora isso é NÃO verificável.
+ */
+function lerLivro(rootDir) {
   try {
-    const alvo = ledgerPath || path.join(__dirname, 'transition-ledger');
-    const ledger = require(alvo);
-    const rel = ledger.REL_PADRAO;
-    const rootDir = path.resolve(__dirname, '..', '..');
-    const lido = ledger.verificarLivro(rootDir, rel);
+    const ledger = require('./transition-ledger');
+    const lido = ledger.verificarLivro(rootDir, ledger.REL_PADRAO);
     const eventos = Array.isArray(lido.eventos) ? lido.eventos : [];
+    const existe = lido.existe !== false;
     const integro = lido.integridadeOk !== false;
-    return { ok: integro, eventos };
+    return { eventos, existe, integro, verificavel: existe && integro && eventos.length > 0 };
   } catch (_) {
-    return { ok: false, eventos: [] };
+    return { eventos: [], existe: false, integro: false, verificavel: false };
   }
 }
 
@@ -379,28 +384,47 @@ function repararDiario(rootDir, opcoes = {}) {
       }
       validos.push(registro);
     }
-    const descartados = linhas.slice(validos.length).map((linha) => {
-      try { return JSON.parse(linha); } catch (_) { return { linhaIlegivel: String(linha).slice(0, 160) }; }
+    // `ultimaSemNewline`: fragmento de escrita em voo/crash — não pode ser registro completo, logo
+    // é comprovadamente inofensivo. Linha ilegível COM `\n` não é comprovável: pode ser um registro
+    // truncado por terceiro, então o guardião a trata como possível evidência (fail-closed).
+    const indicesDescartados = linhas.length - validos.length;
+    const descartados = linhas.slice(validos.length).map((linha, i) => {
+      try {
+        return JSON.parse(linha);
+      } catch (_) {
+        const doFim = i === indicesDescartados - 1;
+        return {
+          linhaIlegivel: String(linha).slice(0, 160),
+          ultimaSemNewline: doFim && !String(bruto).endsWith('\n'),
+          transitionId: (String(linha).match(/"transitionId"\s*:\s*"([^"\\]+)"/) || [])[1] || null,
+        };
+      }
     });
     if (descartados.length === 0) return { ok: true, nadaDescartado: true, mantidos: validos.length };
 
     // ALERT 4 da 6ª passada: sem livro VERIFICÁVEL o guardião de evidência ficava fail-OPEN
-    // (lista vazia ⇒ nada "perde evidência" ⇒ diário zerado com `ok:true`). Reparo destrutivo
-    // exige livro verificável, e o snapshot é feito AQUI, sob o lock do diário.
-    let eventos = Array.isArray(opcoes.ledgerEventos) ? opcoes.ledgerEventos : null;
-    let livroVerificavel = opcoes.ledgerVerificavel === true;
-    if (eventos === null) {
-      const leitura = lerLivro(opcoes.ledgerPath);
-      eventos = leitura.eventos;
-      livroVerificavel = leitura.ok;
+    // (lista vazia ⇒ nada "perde evidência" ⇒ diário zerado com `ok:true`). ALERT 1 da 7ª: o
+    // snapshot tem de vir do MESMO root e ser lido AQUI, sob o lock — nunca aceito do chamador.
+    const livro = lerLivro(rootDir);
+    if (!livro.verificavel && opcoes.forcar !== true) {
+      return {
+        ok: false,
+        erro: 'REPARO_SEM_LIVRO_VERIFICAVEL',
+        descartados,
+        motivo,
+        livro: { existe: livro.existe, integro: livro.integro, eventos: livro.eventos.length },
+      };
     }
-    if (!livroVerificavel && opcoes.forcar !== true) {
-      return { ok: false, erro: 'REPARO_SEM_LIVRO_VERIFICAVEL', descartados, motivo };
-    }
-    const perdeEvidencia = descartados.some((d) => d && d.transitionId
-      && eventos.some((e) => e && String(e.transitionId) === String(d.transitionId)));
-    if (perdeEvidencia && opcoes.forcar !== true) {
-      return { ok: false, erro: 'REPARO_PERDERIA_EVIDENCIA_DE_EFEITO', descartados, motivo };
+    const eventos = livro.eventos;
+    const perdeEvidencia = descartados.filter((d) => {
+      if (!d) return false;
+      if (d.ultimaSemNewline) return false;
+      if (d.linhaIlegivel) return true;
+      return Boolean(d.transitionId)
+        && eventos.some((e) => e && String(e.transitionId) === String(d.transitionId));
+    });
+    if (perdeEvidencia.length > 0 && opcoes.forcar !== true) {
+      return { ok: false, erro: 'REPARO_PERDERIA_EVIDENCIA_DE_EFEITO', descartados, perdeEvidencia, motivo };
     }
 
     const gravado = gravarPrefixo(rootDir, validos);

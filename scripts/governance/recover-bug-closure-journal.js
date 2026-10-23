@@ -33,19 +33,23 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const jornal = require(path.join(ROOT, 'governance', 'bug-closure', 'transition-journal'));
-const ledger = require(path.join(ROOT, 'governance', 'bug-closure', 'transition-ledger'));
 
 const flag = (nome) => process.argv.includes(nome);
 
+/**
+ * Diagnóstico do livro (contagem de eventos) para a SAÍDA do CLI. Não é usado como snapshot do
+ * guardião de evidência: quem decide o descarte é `repararDiario`, que lê o livro do próprio
+ * root DENTRO do lock (alert 1 da 7ª passada).
+ */
 function eventosDoLivro() {
   try {
+    const ledger = require(path.join(ROOT, 'governance', 'bug-closure', 'transition-ledger'));
     const lido = ledger.verificarLivro(ROOT);
     return {
       eventos: Array.isArray(lido.eventos) ? lido.eventos : [],
-      verificavel: lido.integridadeOk !== false,
+      verificavel: lido.existe !== false && lido.integridadeOk !== false,
     };
   } catch (_) {
-    // Livro ilegível NÃO é "livro vazio": o reparo destrutivo tem de ser recusado.
     return { eventos: [], verificavel: false };
   }
 }
@@ -59,16 +63,15 @@ function quebrar() {
 }
 
 function reparar() {
+  // O guardião de evidência lê o livro DENTRO do lock, do mesmo root (alert 1 da 7ª passada):
+  // nada de snapshot antecipado aqui.
+  const resultado = jornal.repararDiario(ROOT, { forcar: flag('--forcar') });
   const livro = eventosDoLivro();
-  const resultado = jornal.repararDiario(ROOT, {
-    ledgerEventos: livro.eventos,
-    ledgerVerificavel: livro.verificavel,
-    forcar: flag('--forcar'),
-  });
   const saida = {
     kind: 'bug-closure-journal-repair',
     generatedAt: new Date().toISOString(),
     authoritative: false,
+    livroDiagnostico: { eventos: livro.eventos.length, verificavel: livro.verificavel },
     ...resultado,
   };
   if (flag('--json')) process.stdout.write(`${JSON.stringify(saida, null, 2)}\n`);
@@ -78,7 +81,7 @@ function reparar() {
       process.stdout.write(`[reparo]   descartaria ${d.transitionId || '(ilegivel)'} status=${d.status || '?'}\n`);
     }
   } else if (resultado.nadaDescartado) {
-    process.stdout.write(`[reparo] cadeia íntegra: nada a reparar (${resultado.mantidos} registro(s))\n`);
+    process.stdout.write(`[reparo] cadeia íntegra: nada a reparar (${resultado.mantidos} registro(s)) | livro: ${saida.livroDiagnostico.eventos} evento(s)${saida.livroDiagnostico.verificavel ? '' : ' (NÃO verificável)'}\n`);
   } else {
     process.stdout.write(`[reparo] mantidos=${resultado.mantidos} descartados=${resultado.descartados.length} motivo=${resultado.motivo}\n`);
   }

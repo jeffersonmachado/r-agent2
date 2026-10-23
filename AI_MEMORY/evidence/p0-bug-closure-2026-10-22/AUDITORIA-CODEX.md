@@ -74,8 +74,8 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 | Camada | Comando | Resultado |
 |---|---|---|
-| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **282 testes / 10 suítes, todos PASS** |
-| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2073 PASS / 15 FAIL / 2 SKIP (2090)** |
+| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **286 testes / 10 suítes, todos PASS** |
+| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2077 PASS / 15 FAIL / 2 SKIP (2094)** |
 | L1 (DEVELOPMENT) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL**, exit 0 |
 | L3 (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED 0/64** — identidade de run ausente |
 | Auditoria de persistência | `npm run audit:json-persistence` | **PASS**, `unknown: 0` |
@@ -248,6 +248,18 @@ append**, em vez de virar linha do meio e quebrar a cadeia.
 `JOURNAL_LOCK_ORFAO`, `haOperacaoPendente=false`, quebra explícita OK; 10 rodadas × 10 processos
 sem órfão ⇒ **0 corrupções**; `282/282` na suíte; L0 sem regressão.
 
+- **7ª passada — 2 P2** no guardião de evidência do reparo: o CLI ainda tirava o snapshot do livro
+  **fora** do lock e `lerLivro` ignorava o `rootDir` (reparar um diretório de dados lia o livro do
+  **repositório do módulo** e descartava evidência); e livro **ausente/vazio** continuava
+  "verificável" (cadeia íntegra, zero eventos), então truncar o livro desarmava o guardião.
+
+**Correção da 7ª passada:** `repararDiario(rootDir, {forcar})` lê o livro **internamente, sob o
+lock, do mesmo `rootDir`** — `ledgerEventos`/`ledgerVerificavel` de chamador são **ignorados**;
+livro ausente, ilegível **ou sem eventos** ⇒ `REPARO_SEM_LIVRO_VERIFICAVEL`; e linha ilegível
+**com `\n`** passa a ser tratada como possível evidência (não é comprovável), então o reparo
+destrutivo exige `--forcar` — só o fragmento **final sem newline** (escrita em voo/comprovadamente
+incompleto) é considerado inofensivo.
+
 **Limite que continua declarado:** truncamento da **cauda** do diário, remoção do arquivo e forja
 com cadeia **recalculada** não são detectáveis sem âncora externa — mesma propriedade do livro
 (`transitions.log.jsonl`). Verificado que truncar a cauda/filtrar o arquivo **não** libera
@@ -308,7 +320,7 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
 **`PARTIALLY_VERIFIED`**
 
 Os quatro P1 da missão (A1–A4) estão corrigidos, com teste vermelho antes e verde depois, e os
-**19 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4). Não é `DEVELOPMENT_VERIFIED` porque
+**21 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4 + 2). Não é `DEVELOPMENT_VERIFIED` porque
 quatro critérios de aceitação dependem de insumo externo e continuam abertos: âncoras
 provisionadas, aprovação humana dos P0, regeneração das 118 provas no SHA final e execução de
 L1/L2 completos com infraestrutura (runner + banco de teste já usados; `coverageCompleteness`
