@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-23T15:02:58.662Z",
+  "generatedAt": "2026-10-23T17:06:17.332Z",
   "authoritative": false,
   "resumo": {
-    "commit": "149d6d8a88aff2334e27235824ce902835c087a4",
-    "fingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
+    "commit": "32edd8e765ba167e3ed53831caacb772739810d8",
+    "fingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
     "total": 130,
     "porClasse": {
       "AGUARDA_ASSINATURA_E_ANCORA": 88,

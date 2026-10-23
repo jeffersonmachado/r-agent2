@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "16307f6e-3c13-46c6-89ea-95bf1cd39f35",
+  "transitionId": "5913617b-c1ed-4259-9277-d1d2feb5d2fc",
   "defectId": "AUDITORIA-BRANCH-INVENTORY",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
-  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
+  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
+  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
   "requiredTests": [
     "tests/unit/audit/branchInventory.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/branchInventory.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T14:42:30.586Z",
-      "finishedAt": "2026-10-23T14:42:34.475Z",
+      "startedAt": "2026-10-23T16:36:42.449Z",
+      "finishedAt": "2026-10-23T16:36:44.606Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-BRANCH-INVENTORY.log",
-      "outputSha256": "ccc6b25cf379210e1a6967aee9e4cf537b2978b1bfeb8b0f258fb7ac3718909b"
+      "outputSha256": "1ef50d3450591f05e99d7eb02e81debaef58ab0ac8c6893004562ede189a4b37"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T14:42:34.475Z",
-  "proofHash": "83850f4dc9203c392cc3378a9652a81fb1c68af037d70e4230ea36fc444ccea4"
+  "createdAt": "2026-10-23T16:36:44.606Z",
+  "proofHash": "d686bbe24020cd325bb855ef6c5a056be16c77a0c9d4ed1a39e0b129a0283fc5"
 }

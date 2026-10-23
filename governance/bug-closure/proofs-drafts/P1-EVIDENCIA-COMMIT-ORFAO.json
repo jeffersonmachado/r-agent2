@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "737fd87a-6f8e-46d0-9d2b-d42063238126",
+  "transitionId": "4fcf1926-9438-420d-9ccc-82e80f3d26ae",
   "defectId": "P1-EVIDENCIA-COMMIT-ORFAO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
-  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
+  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
+  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
   "requiredTests": [
     "tests/unit/governance/hardeningQueueCommitExists.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T14:38:30.660Z",
-      "finishedAt": "2026-10-23T14:38:34.646Z",
+      "startedAt": "2026-10-23T16:34:29.870Z",
+      "finishedAt": "2026-10-23T16:34:31.619Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-EVIDENCIA-COMMIT-ORFAO.log",
-      "outputSha256": "20b5e8928dc27b7d5eaad2cf29a37de1e8d80a82df06f8864e79a4c207c6e962"
+      "outputSha256": "219d6fcee8411957fa71ef9ceda455393e08b0e319a155754cb412543608fa0d"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T14:38:34.647Z",
-  "proofHash": "2e56aa56e3ba6dc0d54f780126e0512ed96aaee8062f56ea8243edd330263af0"
+  "createdAt": "2026-10-23T16:34:31.619Z",
+  "proofHash": "44b55563f382c07f654c01383f6d8c45724cd9e8e4f243642ce2bfc4008717b1"
 }

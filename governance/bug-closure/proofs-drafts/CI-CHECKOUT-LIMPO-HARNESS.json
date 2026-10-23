@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "18c7ba7d-0a0d-4d11-b11f-fd86d14656f3",
+  "transitionId": "e6405f46-d91d-4f21-99ab-c0e9ee283b99",
   "defectId": "CI-CHECKOUT-LIMPO-HARNESS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
-  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
+  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
+  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
   "requiredTests": [
     "tests/unit/governance/bugClosureHistoricalGuards.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T14:29:52.597Z",
-      "finishedAt": "2026-10-23T14:29:55.659Z",
+      "startedAt": "2026-10-23T16:26:01.366Z",
+      "finishedAt": "2026-10-23T16:26:05.589Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-CHECKOUT-LIMPO-HARNESS.log",
-      "outputSha256": "4cba9b56c72c2f88670511d09916eb61b1472446fe549440cc30dce3ff50a032"
+      "outputSha256": "159a93c0bbc12fafef036fa653cb11a056c3272bcf45752c886dc7acb04a9a74"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T14:29:55.660Z",
-  "proofHash": "74363e30732818388b74dcb14d3ac7448cf45e29e00c9e879c245a0b25fd2ec2"
+  "createdAt": "2026-10-23T16:26:05.591Z",
+  "proofHash": "0b2a015786ce9b1f36f5c173475b56dc97509e8cdc3cb3b1f2e4543f9261f3ca"
 }

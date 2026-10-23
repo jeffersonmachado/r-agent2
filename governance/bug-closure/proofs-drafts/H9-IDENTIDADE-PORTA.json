@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "c02ba4ad-dfeb-42bc-8cb1-b5bb4e9179af",
+  "transitionId": "4533a1a0-bccc-4d7f-bc8c-6730d86bfc77",
   "defectId": "H9-IDENTIDADE-PORTA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
-  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
+  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
+  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
   "requiredTests": [
     "tests/unit/dev/devServicesSupervision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T14:40:52.319Z",
-      "finishedAt": "2026-10-23T14:41:30.599Z",
+      "startedAt": "2026-10-23T16:35:28.811Z",
+      "finishedAt": "2026-10-23T16:36:04.841Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H9-IDENTIDADE-PORTA.log",
-      "outputSha256": "708058b3022599040133a268c4d53cd55aefc0f079de88f8ecc47fd888d0b64e"
+      "outputSha256": "ca42252f33ce75fa2aff0c67a834abc1033addedaf7bc7a7fe2382850ef886d1"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T14:41:30.600Z",
-  "proofHash": "e679ba29ad96b68a22c18b5ec594b8291c001e4ddad4f6649316183e4ec63e4e"
+  "createdAt": "2026-10-23T16:36:04.842Z",
+  "proofHash": "a6c7d3322524a6fae6184d2fcf4d698c542ead80ae3008ec4fc3af3eeb942c0c"
 }
