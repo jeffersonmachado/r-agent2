@@ -27,6 +27,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { canonicalJson } = require('../risk-acceptance/signature');
 
 const DIR_JORNAL = path.join('governance', 'bug-closure', 'journal');
 
@@ -39,9 +40,105 @@ const ESTADOS_JORNAL = Object.freeze({
 const sha256Texto = (t) => crypto.createHash('sha256').update(t, 'utf8').digest('hex');
 const sha256Arquivo = (abs) => (fs.existsSync(abs) ? sha256Texto(fs.readFileSync(abs, 'utf8')) : null);
 const caminhoJornal = (rootDir) => path.join(rootDir, DIR_JORNAL);
+const ARQUIVO_DIARIO = 'journal.log.jsonl';
+const caminhoDiario = (rootDir) => path.join(caminhoJornal(rootDir), ARQUIVO_DIARIO);
 
-function caminhoIntent(rootDir, transitionId) {
-  return path.join(caminhoJornal(rootDir), `${transitionId}.json`);
+/**
+ * Compatibilidade: o diário unificou todos os registros num único log append-only, então não
+ * existe mais um arquivo por operação. O helper é mantido porque era exportado e chamadores
+ * antigos o usavam para localizar o diário; ele devolve o log compartilhado.
+ */
+const caminhoIntent = (rootDir) => caminhoDiario(rootDir);
+
+/**
+ * Campos que entram no hash do registro.
+ *
+ * ALERT 1 da 4ª passada: a cadeia anterior era **write-only** e hasheava `status`, então toda
+ * entrada legitimamente COMMITTED nascia com hash inválido (ninguém verificava, mas a garantia
+ * anunciada não existia). O modelo correto é EVENTO append-only: mudar `status` não é editar o
+ * registro, é ANEXAR outro. Logo o hash cobre `status` do EVENTO (não há edição a proteger).
+ */
+const CAMPOS_ENCADEADOS = Object.freeze([
+  'seq', 'em', 'transitionId', 'defectId', 'kind', 'from', 'to', 'proofRel', 'proofHash',
+  'queueRel', 'ledgerRel', 'base', 'status', 'tentativa', 'motivo', 'prevHash',
+]);
+
+function hashDoRegistro(registro) {
+  const base = {};
+  for (const campo of CAMPOS_ENCADEADOS) base[campo] = registro[campo] === undefined ? null : registro[campo];
+  return sha256Texto(canonicalJson(base));
+}
+
+/**
+ * Verifica a cadeia de hash do diário inteiro.
+ * Detecta: edição de qualquer campo encadeado, reordenação, remoção no MEIO e `seq` fora de
+ * ordem. NÃO detecta truncamento da CAUDA nem remoção do arquivo — sem âncora externa, estado
+ * in-tree não tem autenticidade (limite declarado, igual ao do livro).
+ *
+ * @returns {string|null} motivo da quebra, ou `null` se íntegra
+ */
+function verificarCadeia(registros) {
+  let anterior = null;
+  for (let i = 0; i < registros.length; i += 1) {
+    const registro = registros[i];
+    if (!registro || typeof registro !== 'object') return `JOURNAL_CADEIA_REGISTRO_INVALIDO:${i}`;
+    if (Number(registro.seq) !== i) return `JOURNAL_CADEIA_SEQ_DIVERGENTE:${i}`;
+    const esperado = anterior ? anterior.hash : 'GENESIS';
+    if (String(registro.prevHash) !== String(esperado)) return `JOURNAL_CADEIA_QUEBRADA:${i}`;
+    if (String(registro.hash) !== hashDoRegistro(registro)) return `JOURNAL_CADEIA_HASH_INVALIDO:${i}`;
+    anterior = registro;
+  }
+  return null;
+}
+
+/** Lê e VALIDA o diário. Nunca lança: corrupção vira estado (fail-closed), não exceção. */
+function lerRegistros(rootDir) {
+  const abs = caminhoDiario(rootDir);
+  let bruto = null;
+  try {
+    if (!fs.existsSync(abs)) return { registros: [], corrompido: false, motivo: null };
+    bruto = fs.readFileSync(abs, 'utf8');
+  } catch (e) {
+    return { registros: [], corrompido: true, motivo: `JOURNAL_ILEGIVEL:${e.message}` };
+  }
+  const linhas = String(bruto).split('\n').filter((l) => l.trim() !== '');
+  const registros = [];
+  for (let i = 0; i < linhas.length; i += 1) {
+    try {
+      registros.push(JSON.parse(linhas[i]));
+    } catch (_) {
+      return { registros, corrompido: true, motivo: `JOURNAL_ILEGIVEL:linha=${i}` };
+    }
+  }
+  const quebra = verificarCadeia(registros);
+  return { registros, corrompido: Boolean(quebra), motivo: quebra };
+}
+
+/**
+ * Anexa um registro com `O_APPEND` + um único `write`.
+ *
+ * ALERT 2 da 4ª passada: a atualização de status usava `<id>.json.tmp` PREVISÍVEL. Aqui não há
+ * temporário nenhum: o diário só cresce, então não existe "arquivo inteiro reescrito" para
+ * seguir symlink nem tmp a ser pré-criado por terceiro. Residual: o DIRETÓRIO pai (janela de
+ * `openat`), a mesma limitação declarada do modelo in-tree.
+ */
+function anexarRegistro(rootDir, registro) {
+  const abs = caminhoDiario(rootDir);
+  try {
+    const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+    if (st && st.isSymbolicLink()) return { ok: false, erro: 'JOURNAL_SYMLINK' };
+    if (st && !st.isFile()) return { ok: false, erro: 'JOURNAL_NAO_ARQUIVO' };
+    const fd = fs.openSync(abs, 'a', 0o600);
+    try {
+      fs.writeSync(fd, `${JSON.stringify(registro)}\n`);
+      fs.fsyncSync(fd);
+    } finally {
+      try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, erro: `JOURNAL_ESCRITA_FALHOU:${e.message}` };
+  }
 }
 
 /** Hash da fila/livro no instante anterior à mutação: base da detecção de lost update. */
@@ -57,9 +154,32 @@ function baseAtual(rootDir, queuePath, livroAbs) {
  * @returns {{ok:boolean, erro?:string, intent?:object}}
  */
 function iniciar(rootDir, entrada = {}) {
-  const dir = caminhoJornal(rootDir);
-  fs.mkdirSync(dir, { recursive: true });
+  const lido = lerRegistros(rootDir);
+  if (lido.corrompido) return { ok: false, erro: `JOURNAL_CORROMPIDO:${lido.motivo}` };
+
+  // Regra de idempotência (alerts 1 das 3ª e 4ª passadas): COMMITTED é terminal, INTENT é
+  // operação em andamento (recusa sem tocar no diário) e ABORTED pode ser RETENTADO — senão
+  // uma recusa legítima (lock ocupado) impediria a operação para sempre. O retry ANEXA um novo
+  // INTENT com `tentativa` incrementada; o registro ABORTED permanece como evidência.
+  const mesma = lido.registros.filter((r) => String(r.transitionId) === String(entrada.transitionId));
+  const ultimoMesmo = mesma.length ? mesma[mesma.length - 1] : null;
+  let tentativa = 1;
+  if (ultimoMesmo) {
+    if (ultimoMesmo.status !== ESTADOS_JORNAL.ABORTED) {
+      return {
+        ok: false,
+        erro: `JOURNAL_TRANSICAO_JA_REGISTRADA:${ultimoMesmo.status}`,
+        jaRegistrada: true,
+        statusAnterior: ultimoMesmo.status,
+      };
+    }
+    tentativa = Number(ultimoMesmo.tentativa || 1) + 1;
+  }
+
+  const ultimo = lido.registros.length ? lido.registros[lido.registros.length - 1] : null;
   const intent = {
+    seq: lido.registros.length,
+    em: new Date(entrada.agora || Date.now()).toISOString(),
     transitionId: entrada.transitionId,
     defectId: entrada.defectId,
     kind: entrada.kind, // TRANSITION | ATTESTATION
@@ -67,96 +187,84 @@ function iniciar(rootDir, entrada = {}) {
     to: entrada.to,
     proofRel: entrada.proofRel || null,
     proofHash: entrada.proofHash || null,
-    queuePath: path.relative(rootDir, entrada.queuePath),
+    queueRel: path.relative(rootDir, entrada.queuePath),
     ledgerRel: entrada.ledgerRel || null,
     base: entrada.base || null,
     status: ESTADOS_JORNAL.INTENT,
-    startedAt: new Date(entrada.agora || Date.now()).toISOString(),
+    tentativa,
+    motivo: null,
+    prevHash: ultimo ? ultimo.hash : 'GENESIS',
   };
-  const destino = caminhoIntent(rootDir, entrada.transitionId);
-  // ALERT 1 (3ª passada): `iniciar` sobrescrevia a entrada anterior. Um retry legítimo da
-  // MESMA operação transformava COMMITTED em INTENT e depois ABORTED, deixando a operação
-  // "pendente para sempre" e negando o selo. Entrada existente NUNCA é sobrescrita.
-  if (fs.existsSync(destino)) {
-    let anteriorStatus = null;
-    try { anteriorStatus = JSON.parse(fs.readFileSync(destino, 'utf8')).status; } catch (_) { anteriorStatus = 'ILEGIVEL'; }
-    // Regra de idempotência: COMMITTED é terminal (retry é recusado sem tocar no diário);
-    // INTENT é operação em andamento (recusa, não sobrescreve); ABORTED pode ser RETENTADO —
-    // caso contrário uma recusa legítima (ex.: lock ocupado) impediria a operação para sempre.
-    if (anteriorStatus !== ESTADOS_JORNAL.ABORTED) {
-      return { ok: false, erro: `JOURNAL_TRANSICAO_JA_REGISTRADA:${anteriorStatus}`, jaRegistrada: true, statusAnterior: anteriorStatus };
-    }
-    intent.tentativa = Number((JSON.parse(fs.readFileSync(destino, 'utf8')).tentativa) || 1) + 1;
-  }
+  intent.hash = hashDoRegistro(intent);
+
   try {
-    // Cadeia de hash no diário (ALERT 4, 3ª passada): cada entrada carrega `prevHash` do
-    // diário anterior, então forjar `status` sem refazer a cadeia é detectável.
-    const anteriores = lerIntents(rootDir);
-    const ultimo = anteriores[anteriores.length - 1];
-    intent.seq = anteriores.length;
-    intent.prevHash = ultimo ? ultimo.hash : 'GENESIS';
-    intent.hash = sha256Texto(JSON.stringify({
-      seq: intent.seq, transitionId: intent.transitionId, defectId: intent.defectId, kind: intent.kind,
-      from: intent.from, to: intent.to, proofHash: intent.proofHash, status: intent.status,
-      startedAt: intent.startedAt, prevHash: intent.prevHash,
-    }));
-    if (intent.tentativa) {
-      // Retry de uma entrada ABORTED: substitui de forma atômica (temp imprevisível + rename).
-      const tmp = path.join(dir, `.tmp-intent-${process.pid}-${crypto.randomBytes(6).toString('hex')}`);
-      const fd = fs.openSync(tmp, 'wx', 0o600);
-      try {
-        fs.writeSync(fd, `${JSON.stringify(intent, null, 2)}\n`);
-      } finally {
-        try { fs.closeSync(fd); } catch (_) { /* fechado */ }
-      }
-      fs.renameSync(tmp, destino);
-    } else {
-      fs.writeFileSync(destino, `${JSON.stringify(intent, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-    }
-    return { ok: true, intent };
+    fs.mkdirSync(caminhoJornal(rootDir), { recursive: true });
   } catch (e) {
     return { ok: false, erro: `JOURNAL_INTENT_FALHOU:${e.message}` };
   }
+  const anexado = anexarRegistro(rootDir, intent);
+  if (!anexado.ok) return { ok: false, erro: anexado.erro };
+  return { ok: true, intent };
 }
 
+/**
+ * Anexa um EVENTO de status (COMMITTED/ABORTED). O registro anterior nunca é reescrito: o
+ * status vigente é o último evento daquela `transitionId`.
+ */
 function atualizarStatus(rootDir, transitionId, status, extra = {}) {
-  const abs = caminhoIntent(rootDir, transitionId);
-  if (!fs.existsSync(abs)) return { ok: false, erro: 'JOURNAL_INTENT_AUSENTE' };
-  try {
-    const atual = JSON.parse(fs.readFileSync(abs, 'utf8'));
-    // ALERT 1 (3ª passada): COMMITTED é TERMINAL. Nenhuma transição de status pode rebaixar
-    // uma operação concluída (o retry legítimo deixava a operação pendente para sempre).
-    if (atual.status === ESTADOS_JORNAL.COMMITTED && status !== ESTADOS_JORNAL.COMMITTED) {
-      return { ok: false, erro: 'JOURNAL_COMMITTED_E_TERMINAL', statusAnterior: atual.status };
-    }
-    const novo = { ...atual, ...extra, status, updatedAt: new Date().toISOString() };
-    const tmp = `${abs}.tmp`;
-    fs.writeFileSync(tmp, `${JSON.stringify(novo, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-    fs.renameSync(tmp, abs);
-    return { ok: true, intent: novo };
-  } catch (e) {
-    return { ok: false, erro: `JOURNAL_UPDATE_FALHOU:${e.message}` };
+  const lido = lerRegistros(rootDir);
+  if (lido.corrompido) return { ok: false, erro: `JOURNAL_CORROMPIDO:${lido.motivo}` };
+  const mesma = lido.registros.filter((r) => String(r.transitionId) === String(transitionId));
+  const atual = mesma.length ? mesma[mesma.length - 1] : null;
+  if (!atual) return { ok: false, erro: 'JOURNAL_INTENT_AUSENTE' };
+  // ALERT 1 da 3ª passada: COMMITTED é TERMINAL. Nenhuma transição de status pode rebaixar
+  // uma operação concluída (o retry legítimo deixava a operação pendente para sempre).
+  if (atual.status === ESTADOS_JORNAL.COMMITTED && status !== ESTADOS_JORNAL.COMMITTED) {
+    return { ok: false, erro: 'JOURNAL_COMMITTED_E_TERMINAL', statusAnterior: atual.status };
   }
+  if (atual.status === status) return { ok: true, intent: atual, idempotente: true };
+
+  const ultimo = lido.registros[lido.registros.length - 1];
+  const novo = {
+    ...atual,
+    seq: lido.registros.length,
+    em: new Date().toISOString(),
+    status,
+    motivo: extra.motivo === undefined ? null : extra.motivo,
+    ...extra,
+    prevHash: ultimo.hash,
+  };
+  delete novo.hash;
+  novo.hash = hashDoRegistro(novo);
+  const anexado = anexarRegistro(rootDir, novo);
+  if (!anexado.ok) return { ok: false, erro: anexado.erro };
+  return { ok: true, intent: novo };
 }
 
 const marcarCommit = (rootDir, transitionId, extra = {}) => atualizarStatus(rootDir, transitionId, ESTADOS_JORNAL.COMMITTED, extra);
 const marcarAborto = (rootDir, transitionId, motivo, extra = {}) => atualizarStatus(rootDir, transitionId, ESTADOS_JORNAL.ABORTED, { motivo, ...extra });
 
-/** Lê o diário inteiro (ordem determinística por `startedAt` + `transitionId`). */
+/**
+ * Estado vigente por operação: último evento de cada `transitionId`.
+ * Diário ilegível ou cadeia quebrada vira entrada `corrompido` (fail-closed) — nunca "vazio".
+ */
 function lerIntents(rootDir) {
-  const dir = caminhoJornal(rootDir);
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => {
-      try {
-        return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
-      } catch (_) {
-        return { transitionId: f.replace(/\.json$/, ''), status: ESTADOS_JORNAL.INTENT, corrompido: true };
-      }
-    })
-    .sort((a, b) => String(a.startedAt || '').localeCompare(String(b.startedAt || ''))
-      || String(a.transitionId).localeCompare(String(b.transitionId)));
+  const { registros, corrompido, motivo } = lerRegistros(rootDir);
+  const porOperacao = new Map();
+  for (const registro of registros) {
+    if (registro && typeof registro === 'object') porOperacao.set(String(registro.transitionId), registro);
+  }
+  const intents = [...porOperacao.values()];
+  if (corrompido) {
+    intents.push({
+      transitionId: '__DIARIO_CORROMPIDO__',
+      defectId: null,
+      status: ESTADOS_JORNAL.INTENT,
+      corrompido: true,
+      motivo,
+    });
+  }
+  return intents;
 }
 
 /**
@@ -189,7 +297,7 @@ function recuperar(rootDir, opcoes = {}) {
     if (intent.corrompido) {
       pendentes.push({
         transitionId: intent.transitionId, defectId: null,
-        evento: false, prova: false, fila: false, motivo: 'JOURNAL_ILEGIVEL', status: 'CORROMPIDO',
+        evento: false, prova: false, fila: false, motivo: intent.motivo || 'JOURNAL_ILEGIVEL', status: 'CORROMPIDO',
       });
       continue;
     }
@@ -274,14 +382,18 @@ function haOperacaoPendente(rootDir, opcoes = {}) {
 
 module.exports = {
   DIR_JORNAL,
+  ARQUIVO_DIARIO,
   ESTADOS_JORNAL,
   iniciar,
   marcarCommit,
   marcarAborto,
+  lerRegistros,
+  verificarCadeia,
   lerIntents,
   recuperar,
   haOperacaoPendente,
   baseAtual,
   sha256Arquivo,
+  caminhoDiario,
   caminhoIntent,
 };

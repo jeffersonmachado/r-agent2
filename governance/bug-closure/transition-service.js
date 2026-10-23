@@ -351,7 +351,18 @@ function applyTransition(entrada = {}) {
 
     const gravaFila = escreverAtomicoSeguro(queuePath, `${JSON.stringify(atual, null, 2)}\n`);
     if (!gravaFila.ok) return abortar(gravaFila.motivo);
-    jornal.marcarCommit(rootDir, intent.intent.transitionId);
+    // ALERT 2 da 4ª passada: ignorar o retorno de `marcarCommit` devolvia `ok:true` com o diário
+    // preso em INTENT — sucesso declarado sobre operação que a recuperação considera pendente.
+    const commit = jornal.marcarCommit(rootDir, intent.intent.transitionId);
+    if (!commit.ok) {
+      return {
+        ok: false,
+        code: CODIGOS.PROVA_RECUSADA,
+        reasons: [`COMMIT_NAO_REGISTRADO:${commit.erro}`],
+        evento: evento.evento,
+        projecaoAplicada: true,
+      };
+    }
   } catch (e) {
     jornal.marcarAborto(rootDir, intent.intent.transitionId, `PROJECAO_FALHOU:${e.message}`);
     throw e;
@@ -503,7 +514,16 @@ function applyAttestation(entrada = {}) {
     filaAgora.updatedAt = new Date(entrada.agora || Date.now()).toISOString().slice(0, 10);
     const gravaFila = escreverAtomicoSeguro(queuePath, `${JSON.stringify(filaAgora, null, 2)}\n`);
     if (!gravaFila.ok) return abortar(gravaFila.motivo);
-    jornal.marcarCommit(rootDir, intent.intent.transitionId);
+    const commit = jornal.marcarCommit(rootDir, intent.intent.transitionId);
+    if (!commit.ok) {
+      return {
+        ok: false,
+        code: CODIGOS.PROVA_RECUSADA,
+        reasons: [`COMMIT_NAO_REGISTRADO:${commit.erro}`],
+        evento: evento.evento,
+        projecaoAplicada: true,
+      };
+    }
     return { ok: true, code: null, reasons: [], evento: evento.evento };
   } catch (e) {
     jornal.marcarAborto(rootDir, intent.intent.transitionId, `PROJECAO_FALHOU:${e.message}`);

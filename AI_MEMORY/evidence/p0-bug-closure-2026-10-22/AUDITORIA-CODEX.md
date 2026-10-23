@@ -74,8 +74,8 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 
 | Camada | Comando | Resultado |
 |---|---|---|
-| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **268 testes / 10 suítes, todos PASS** |
-| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2058 PASS / 15 FAIL / 2 SKIP (2075)** |
+| Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **273 testes / 10 suítes, todos PASS** |
+| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2064 PASS / 15 FAIL / 2 SKIP (2081)** |
 | L1 (DEVELOPMENT) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL**, exit 0 |
 | L3 (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED 0/64** — identidade de run ausente |
 | Auditoria de persistência | `npm run audit:json-persistence` | **PASS**, `unknown: 0` |
@@ -90,6 +90,30 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 **Nenhum teste anterior foi enfraquecido:** `git diff 52d39fea2..HEAD -- tests/` só adiciona.
 
 ---
+
+### 2.1 Comandos executados (SHA `93c487484`)
+
+| Comando | Exit | Resultado medido |
+|---|---|---|
+| `npx jest tests/unit/governance/bugClosure` | 0 | 273 / 273 PASS (10 suítes) |
+| `npx jest tests/unit/governance --bail=0` | 1 | 2064 PASS / 15 FAIL / 2 SKIP — as 7 suítes abaixo |
+| `node scripts/ci/dev-branch-gate.js --fases A,D` | 0 | `PASS_PARCIAL` (A pre-voo 10 checks OK; 4 gates L1 verdes) |
+| `node scripts/governance/audit-bug-closure-inventory.js` | 0 | 130 itens: 118 `INVALID_EVIDENCE`, 12 `PENDING_REGRESSION` |
+| `node scripts/governance/recover-bug-closure-journal.js` | 0 | nada pendente (nenhuma mutação real feita no repo) |
+| `npm run audit:json-persistence` | 0 | `status: PASS`, `unknown: 0` (566 alvos) |
+| `node scripts/governance/run-governance-enforcement.js` | ≠0 | `BLOCKED` 0/64 — identidade de run inexistente |
+
+### 2.2 Explicitamente NÃO executado
+
+- **L2** (`test:system` / integração com DB e runner) nesta passada: `NOT_EXECUTED`. A stack de
+  teste foi usada nas fases anteriores (banco `crm_p0_test`, runner em 8090), mas não foi
+  reexecutada aqui; nada aqui depende dela para o veredito.
+- **`coverageCompletenessCanonicalDomains`**: `NOT_EXECUTED` — exige artefato de `ci:bootstrap`
+  (`qa-mesh/meshRegistry.json`) que este ambiente não gera. `NOT_EXECUTED` nunca é contado como PASS.
+- **Regeneração das 118 provas**: `NOT_EXECUTED` — exige reexecutar a suíte citada por item no
+  SHA final; só depois disso os drafts voltam a ser assináveis.
+- **Provisionamento de âncoras e assinatura das provas**: `NOT_EXECUTED` — exige a chave privada
+  do dono; por política nenhum agente assina.
 
 ## 3. Segurança — ataques executados
 
@@ -136,32 +160,92 @@ de autoridade ancorada. Ver limites.
 
 ## 5. Revisão independente
 
-Quatro passadas por revisor adversarial com contexto separado, **sem acesso ao meu raciocínio**.
-Achados: **7** na 2ª passada (4 P1: symlink escape, atestação sem lock/base/commit, evento
-antes do lock, `abortar` fora de escopo; 3 P2) e **4** na 3ª (retry rebaixava COMMITTED —
-regressão introduzida pela minha própria correção —, temporários previsíveis com symlink,
-TOCTOU do diretório de provas, diário sem autenticação). Todos corrigidos com reprodução e
-regressão própria.
+Cinco passadas por revisor adversarial com contexto separado, **sem acesso ao meu raciocínio**.
 
-## 6. Limites de confiança (não resolvidos por design)
+- **2ª passada — 7 achados** (4 P1): symlink escape por prova pendente, atestação sem
+  lock/base/commit, evento anexado antes do lock, `abortar` fora de escopo; e 3 P2.
+- **3ª passada — 4 achados**: retry rebaixava `COMMITTED` (regressão introduzida pela correção
+  anterior), temporários previsíveis escritos com `writeFileSync` (segue symlink), TOCTOU do
+  diretório de provas, diário sem autenticação.
+- **4ª passada — 2 P2**: a cadeia de hash do diário era **write-only** (nenhum consumidor a
+  verificava, e `status` mudava sem recomputar o hash — todo `COMMITTED` legítimo nascia com hash
+  inválido); e sobrava **um** temporário previsível (`<journal>/<id>.json.tmp`) cuja pré-criação
+  prendia a operação em `INTENT` **com o serviço devolvendo `ok:true`**.
+
+**Correção estrutural da 4ª passada** — o diário deixou de ser "um JSON por operação reescrito"
+e virou **log append-only encadeado** (`journal.log.jsonl`, `O_APPEND` + `fsync`, um registro por
+evento):
+
+- `hash` cobre `seq`, `em`, `transitionId`, `defectId`, `kind`, `from`, `to`, `proofRel`,
+  `proofHash`, `queueRel`, `ledgerRel`, `base`, `status`, `tentativa`, `motivo`, `prevHash`
+  (JSON canônico, o mesmo de `signature.js`);
+- `verificarCadeia` roda em **toda leitura** (`lerRegistros` → `lerIntents` → `recuperar` /
+  `haOperacaoPendente`) e detecta edição de campo, reordenação, remoção no meio e `seq` fora de
+  ordem;
+- mudar status agora é **anexar evento**, não editar registro — forjar `ABORTED`→`COMMITTED`
+  quebra o hash e deixa o diário `corrompido`, o que mantém a certificação **negada**
+  (fail-closed); anexar sobre cadeia quebrada é recusado (`JOURNAL_CORROMPIDO`);
+- **não existe mais temporário algum** no diário (o log só cresce), então o alerta 2 desapareceu
+  por construção; e a falha de `marcarCommit` passou a ser **propagada** (`COMMIT_NAO_REGISTRADO`,
+  `ok:false`, `projecaoAplicada:true`).
+
+Regressões novas: 5 testes (diário legítimo passa; forja de status detectada e certificação
+segue negada; reordenação/remoção no meio detectadas; tmp pré-criado não afeta o commit; falha de
+commit não vira sucesso).
+
+**Limite que continua declarado:** truncamento da **cauda** do diário e remoção do arquivo não são
+detectáveis sem âncora externa — mesma propriedade do livro (`transitions.log.jsonl`).
+
+## 6. Criptografia — o que é realmente garantido
+
+**Primitivas.** Assinatura **Ed25519** (`crypto.verify(null, payload, chavePublicaPem, assinatura)`)
+sobre o **JSON canônico** da prova (chaves ordenadas recursivamente, sem espaços —
+`governance/risk-acceptance/signature.js`). `proofHash = sha256(payload canônico)` é conferido
+separadamente contra o `proofHash` gravado e contra o evento do livro.
+Chave pública resolvida do registro (`governance/risk-acceptance/authorities.json`), nunca do
+próprio artefato — o agente não pode se auto-conferir autoridade.
+
+**Cobertura verificada (teste, não prosa).** Todo campo que o verificador lê está assinado:
+o conjunto `CAMPOS_ASSINADOS` de `closure-proof.js` contém `artifactType`, `artifactVersion`,
+`transitionId`, `defectId`, `severityBefore/After`, `fromState`, `toState`, `evaluatedCommit`,
+`codeFingerprint`, `requiredTests`, `executions`, `negativeEvidence`, `artifactHashes`, `actor`,
+`humanAuthorization`, `policyDecision`, `createdAt` — e nada mais é lido pelo verificador além de
+`proofHash`/`signature` (os próprios resultados da assinatura). Logo não existe **campo não
+assinado que influencie a decisão**: trocar `negativeEvidence`, `executions` ou `artifactHashes`
+invalida a assinatura; trocar `transitionId` faz o evento não casar.
+
+**Cadeia de confiança.** âncora externa (sha256 do conjunto de pins, no ambiente) → pin em código
+versionado → `identity` → `publicKeyPem` do registro. Cada elo é verificável; a **raiz é um valor
+bearer no ambiente do processo de release**, não um segredo criptográfico. Não há assinatura de
+intenção humana: a âncora atesta *quais chaves valem*, não *que o dono autorizou este fechamento*.
+
+**Replay.** Reutilizar `transitionId` (mesmo com assinatura válida) é recusado: `REPLAY_DE_EVENTO`
+quando o evento existe sob outro defeito, `EVENTO_DIVERGENTE_DA_PROVA` quando os campos divergem.
+
+**O que a criptografia NÃO cobre.** `at` do evento (não alimenta decisão), a ordem temporal real
+do livro (só encadeamento de hash), a autoria do diário de transição e a integridade do próprio
+verificador na árvore. Nenhum desses é usado para conceder fechamento.
+
+## 7. Limites de confiança (não resolvidos por design)
 
 1. **Âncoras externas são valores bearer no ambiente do processo.** Quem provisiona o ambiente
    de release decide quais chaves e qual inventário valem. Não é assinatura de intenção.
 2. **Nenhum workflow define as âncoras** ⇒ default fail-closed: toda operação certificante
    `DENIED`.
-3. **O diário é estado in-tree.** Ganhou cadeia de hash (forja exige reescrever a cadeia
-   inteira), mas **não é autenticado**: quem reescreve diário **e** livro de forma coerente
-   desliga a guarda A4. Só âncora externa (ou WAL fora da árvore) resolveria.
+3. **O diário é estado in-tree.** A cadeia agora é **verificada** a cada leitura (edição,
+   reordenação e remoção no meio são detectadas), mas **não é autenticada**: remover o arquivo ou
+   truncar a cauda não é detectável, e quem reescreve diário **e** livro de forma coerente desliga
+   a guarda A4. Só âncora externa (ou WAL fora da árvore) resolveria.
 4. **O verificador vive na árvore que audita.** `sourceFingerprint` é integridade relativa.
 5. **`at` do evento não é vinculado pela prova** — não alimenta decisão.
 6. **Operações não certificantes** seguem permitidas com P0/P1 abertos, por design.
 
-## 7. Veredito
+## 8. Veredito
 
 **`PARTIALLY_VERIFIED`**
 
 Os quatro P1 da missão (A1–A4) estão corrigidos, com teste vermelho antes e verde depois, e os
-11 achados das revisões independentes seguintes também. Não é `DEVELOPMENT_VERIFIED` porque
+**13 achados** das revisões independentes seguintes também (7 + 4 + 2). Não é `DEVELOPMENT_VERIFIED` porque
 quatro critérios de aceitação dependem de insumo externo e continuam abertos: âncoras
 provisionadas, aprovação humana dos P0, regeneração das 118 provas no SHA final e execução de
 L1/L2 completos com infraestrutura (runner + banco de teste já usados; `coverageCompleteness`

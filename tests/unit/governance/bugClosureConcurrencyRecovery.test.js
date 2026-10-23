@@ -562,12 +562,138 @@ describe('revisão 2ª passada — Alert 5/6/7', () => {
     const c = cenarioComItens(['AL7']);
     const dir = path.join(c.root, jornal.DIR_JORNAL);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, `${crypto.randomUUID()}.json`), '{ isso não é json', 'utf8');
+    // O diário é um log append-only encadeado; linha ilegível é a corrupção canônica.
+    fs.writeFileSync(path.join(dir, jornal.ARQUIVO_DIARIO), '{ isso não é json\n', 'utf8');
 
     const rec = jornal.recuperar(c.root, { queuePath: c.queuePath });
     expect(rec.ok).toBe(false);
     expect(rec.bloqueiaCertificacao).toBe(true);
-    expect(rec.pendentes.some((p) => p.motivo === 'JOURNAL_ILEGIVEL')).toBe(true);
+    expect(rec.pendentes.some((p) => String(p.motivo || '').startsWith('JOURNAL_ILEGIVEL'))).toBe(true);
     expect(rec.abortados).toHaveLength(0); // não pode reportar "abortado" o que não sabe ler
+  }, 60000);
+});
+
+// ─── 4ª passada da revisão independente ─────────────────────────────────────
+
+describe('revisão 4ª passada — Alert 1: a cadeia do diário é VERIFICADA (não write-only)', () => {
+  const aplicar = (c, id) => service.applyTransition({
+    rootDir: c.root, queuePath: c.queuePath, defectId: id, to: 'VERIFIED',
+    proof: c.provas[id], actor: { id: 'owner@example.invalid' },
+    currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+    agora: Date.parse(c.provas[id].createdAt) + 1000,
+  });
+
+  const linhasDoDiario = (c) => fs.readFileSync(jornal.caminhoDiario(c.root), 'utf8')
+    .split('\n').filter((l) => l.trim() !== '').map((l) => JSON.parse(l));
+  const escreverDiario = (c, registros) => fs.writeFileSync(
+    jornal.caminhoDiario(c.root),
+    `${registros.map((r) => JSON.stringify(r)).join('\n')}\n`, 'utf8');
+
+  test('diário legítimo (INTENT + COMMITTED) passa na verificação da cadeia', () => {
+    const c = cenarioComItens(['C1']);
+    expect(aplicar(c, 'C1').ok).toBe(true);
+    const lido = jornal.lerRegistros(c.root);
+    expect(lido.corrompido).toBe(false);
+    expect(jornal.verificarCadeia(lido.registros)).toBeNull();
+    expect(lido.registros.map((r) => r.status)).toEqual(['INTENT', 'COMMITTED']);
+  }, 60000);
+
+  test('forjar status (ABORTED com efeito ⇒ COMMITTED) quebra a cadeia e NÃO libera certificação', () => {
+    const c = cenarioComItens(['C2']);
+    const p = c.provas.C2;
+    // Efeito parcial genuíno: evento no livro sem projeção na fila.
+    ledger.anexarEvento({
+      rootDir: c.root, transitionId: p.transitionId, defectId: 'C2',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED', kind: 'TRANSITION',
+      actorId: 'owner@example.invalid', proofHash: proof.hashDoPayload(p), evaluatedCommit: SHA,
+    });
+    const aberto = jornal.iniciar(c.root, {
+      transitionId: p.transitionId, defectId: 'C2', kind: 'TRANSITION',
+      from: 'FIXED_PENDING_VERIFICATION', to: 'VERIFIED',
+      proofRel: 'governance/bug-closure/proofs/inexistente.json', proofHash: null,
+      queuePath: c.queuePath, ledgerRel: ledger.REL_PADRAO, base: null,
+    });
+    expect(aberto.ok).toBe(true);
+    jornal.marcarAborto(c.root, p.transitionId, 'PROJECAO_FALHOU');
+    expect(jornal.haOperacaoPendente(c.root)).toBe(true);
+
+    // Ataque: reescrever o ÚLTIMO registro trocando ABORTED por COMMITTED, sem tocar no hash.
+    const registros = linhasDoDiario(c);
+    registros[registros.length - 1].status = 'COMMITTED';
+    escreverDiario(c, registros);
+
+    const lido = jornal.lerRegistros(c.root);
+    expect(lido.corrompido).toBe(true);
+    expect(String(lido.motivo)).toContain('JOURNAL_CADEIA_HASH_INVALIDO');
+    // Fail-closed: diário ilegível/reforjado continua bloqueando a certificação.
+    expect(jornal.haOperacaoPendente(c.root)).toBe(true);
+    const rec = jornal.recuperar(c.root, { queuePath: c.queuePath });
+    expect(rec.bloqueiaCertificacao).toBe(true);
+    expect(rec.ok).toBe(false);
+    // E a operação nova é recusada em vez de anexar sobre cadeia quebrada.
+    const novo = jornal.iniciar(c.root, { transitionId: crypto.randomUUID(), defectId: 'C2', kind: 'TRANSITION', from: 'X', to: 'Y', queuePath: c.queuePath });
+    expect(novo.ok).toBe(false);
+    expect(String(novo.erro)).toContain('JOURNAL_CORROMPIDO');
+  }, 60000);
+
+  test('reordenar ou remover registro do MEIO é detectado (seq/prevHash)', () => {
+    const c = cenarioComItens(['C3', 'C4']);
+    expect(aplicar(c, 'C3').ok).toBe(true);
+    expect(aplicar(c, 'C4').ok).toBe(true);
+    const registros = linhasDoDiario(c);
+    expect(registros).toHaveLength(4);
+
+    const reordenado = [registros[1], registros[0], ...registros.slice(2)];
+    escreverDiario(c, reordenado);
+    expect(jornal.lerRegistros(c.root).corrompido).toBe(true);
+
+    const semMeio = [registros[0], ...registros.slice(2)];
+    escreverDiario(c, semMeio);
+    const lido = jornal.lerRegistros(c.root);
+    expect(lido.corrompido).toBe(true);
+    expect(String(lido.motivo)).toContain('JOURNAL_CADEIA_SEQ_DIVERGENTE');
+  }, 60000);
+});
+
+describe('revisão 4ª passada — Alert 2: sem temporário previsível e falha de commit propagada', () => {
+  test('arquivo pré-criado no diretório do diário não impede o COMMIT (não há <alvo>.tmp)', () => {
+    const c = cenarioComItens(['T1']);
+    const dir = path.join(c.root, jornal.DIR_JORNAL);
+    fs.mkdirSync(dir, { recursive: true });
+    // O ataque antigo: pré-criar o tmp previsível do registro de status.
+    const alvoAntigo = path.join(dir, `${c.provas.T1.transitionId}.json.tmp`);
+    fs.writeFileSync(alvoAntigo, 'ocupado', 'utf8');
+
+    const r = service.applyTransition({
+      rootDir: c.root, queuePath: c.queuePath, defectId: 'T1', to: 'VERIFIED',
+      proof: c.provas.T1, actor: { id: 'owner@example.invalid' },
+      currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+      agora: Date.parse(c.provas.T1.createdAt) + 1000,
+    });
+
+    expect(r.ok).toBe(true);
+    expect(jornal.lerIntents(c.root).map((i) => i.status)).toEqual(['COMMITTED']);
+    expect(jornal.haOperacaoPendente(c.root)).toBe(false);
+    // O arquivo plantado não é consumido nem apagado: o diário não usa temporário nenhum.
+    expect(fs.readFileSync(alvoAntigo, 'utf8')).toBe('ocupado');
+  }, 60000);
+
+  test('falha ao registrar COMMITTED NÃO devolve sucesso (não declara operação concluída)', () => {
+    const c = cenarioComItens(['T2']);
+    const espiao = jest.spyOn(jornal, 'marcarCommit')
+      .mockReturnValue({ ok: false, erro: 'JOURNAL_ESCRITA_FALHOU:disco cheio' });
+    try {
+      const r = service.applyTransition({
+        rootDir: c.root, queuePath: c.queuePath, defectId: 'T2', to: 'VERIFIED',
+        proof: c.provas.T2, actor: { id: 'owner@example.invalid' },
+        currentCommit: SHA, currentFingerprint: FP, ancoragem: c.ancoragem,
+        agora: Date.parse(c.provas.T2.createdAt) + 1000,
+      });
+      expect(r.ok).toBe(false);
+      expect(r.reasons.join(' ')).toContain('COMMIT_NAO_REGISTRADO');
+      expect(r.projecaoAplicada).toBe(true);
+    } finally {
+      espiao.mockRestore();
+    }
   }, 60000);
 });
