@@ -330,10 +330,10 @@ function anexarRegistro(rootDir, registro) {
  * evidência. ALERT 2 da 7ª passada: livro ausente ou vazio deixava a cadeia "íntegra" com zero
  * eventos, então truncar/apagar o livro desarmava o guardião; agora isso é NÃO verificável.
  */
-function lerLivro(rootDir) {
+function lerLivro(rootDir, livroRel) {
   try {
     const ledger = require('./transition-ledger');
-    const lido = ledger.verificarLivro(rootDir, ledger.REL_PADRAO);
+    const lido = ledger.verificarLivro(rootDir, livroRel || ledger.REL_PADRAO);
     const eventos = Array.isArray(lido.eventos) ? lido.eventos : [];
     const existe = lido.existe !== false;
     const integro = lido.integridadeOk !== false;
@@ -405,7 +405,7 @@ function repararDiario(rootDir, opcoes = {}) {
     // ALERT 4 da 6ª passada: sem livro VERIFICÁVEL o guardião de evidência ficava fail-OPEN
     // (lista vazia ⇒ nada "perde evidência" ⇒ diário zerado com `ok:true`). ALERT 1 da 7ª: o
     // snapshot tem de vir do MESMO root e ser lido AQUI, sob o lock — nunca aceito do chamador.
-    const livro = lerLivro(rootDir);
+    const livro = lerLivro(rootDir, opcoes.livroRel);
     if (!livro.verificavel && opcoes.forcar !== true) {
       return {
         ok: false,
