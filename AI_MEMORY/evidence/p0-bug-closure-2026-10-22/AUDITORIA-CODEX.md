@@ -101,7 +101,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 | `npx jest tests/unit/governance/bugClosure` | 0 | 273 / 273 PASS (10 suítes) |
 | `npx jest tests/unit/governance --bail=0` | 1 | 2079 PASS / 15 FAIL / 2 SKIP — as 7 suítes abaixo |
 | `node scripts/ci/dev-branch-gate.js --fases A,D` | 0 | `PASS_PARCIAL` (A pre-voo 10 checks OK; 4 gates L1 verdes) |
-| `node scripts/governance/audit-bug-closure-inventory.js` | 0 | 130 itens: 118 `INVALID_EVIDENCE`, 12 `PENDING_REGRESSION` |
+| `node scripts/governance/audit-bug-closure-inventory.js` | 0 | 130 itens: **88 `PENDING_SIGNATURE`, 30 `PENDING_HUMAN_AUTHORIZATION`, 12 `PENDING_REGRESSION`, 0 `INVALID_EVIDENCE`** |
 | `node scripts/governance/recover-bug-closure-journal.js` | 0 | nada pendente (nenhuma mutação real feita no repo) |
 | `node scripts/governance/recover-bug-closure-journal.js --reparar` | 0 | cadeia íntegra, nada a reparar |
 | `npm run audit:json-persistence` | 0 | `status: PASS`, `unknown: 0` (566 alvos) |
@@ -115,8 +115,8 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
   reexecutada aqui; nada aqui depende dela para o veredito.
 - **`coverageCompletenessCanonicalDomains`**: `NOT_EXECUTED` — exige artefato de `ci:bootstrap`
   (`qa-mesh/meshRegistry.json`) que este ambiente não gera. `NOT_EXECUTED` nunca é contado como PASS.
-- **Regeneração das 118 provas**: `NOT_EXECUTED` — exige reexecutar a suíte citada por item no
-  SHA final; só depois disso os drafts voltam a ser assináveis.
+- **Regeneração das 118 provas**: **EXECUTADA** (130 itens, `regularize-bug-closures.js`, no commit
+  final) — ver §4. `INVALID_EVIDENCE = 0`.
 - **Provisionamento de âncoras e assinatura das provas**: `NOT_EXECUTED` — exige a chave privada
   do dono; por política nenhum agente assina.
 
@@ -142,23 +142,29 @@ de autoridade ancorada. Ver limites.
 
 `node scripts/governance/audit-bug-closure-inventory.js` no SHA final:
 
-| Classe | Itens |
-|---|---|
-| `VERIFIED_CANONICALLY` | **0** |
-| `PENDING_SIGNATURE` | 0 |
-| `PENDING_HUMAN_AUTHORIZATION` | 0 |
-| `PENDING_REGRESSION` | **12** |
-| `INVALID_EVIDENCE` | **118** |
-| `BLOCKED` | 0 |
+| Classe | Antes da regeneração | **Depois da regeneração** |
+|---|---|---|
+| `VERIFIED_CANONICALLY` | 0 | **0** |
+| `PENDING_SIGNATURE` | 0 | **88** |
+| `PENDING_HUMAN_AUTHORIZATION` | 0 | **30** |
+| `PENDING_REGRESSION` | 12 | **12** |
+| `INVALID_EVIDENCE` | 118 | **0** |
 
 - **`VERIFIED_CANONICALLY = 0`** é o resultado correto: nenhuma âncora externa está provisionada
   (`fechamento/aprovacao/inventario = false`) e nenhuma prova foi assinada.
-- **118 `INVALID_EVIDENCE`**: os drafts carregam `codeFingerprint` de `e747bac4c5`; o código do
-  verificador mudou (A1/A2) e o fingerprint atual é outro. É o invariante funcionando —
-  *código mudou → prova é stale* —, não uma regressão da missão. Regenerar exige re-executar as
-  suítes correspondentes no SHA final.
-- **12 `PENDING_REGRESSION`**: sem teste de regressão localizável em nenhuma fonte
-  (campo, evidência declarada ou commit do fix).
+- **118 `INVALID_EVIDENCE` → 0.** Os drafts carregavam `codeFingerprint` de `e747bac4c5`; o código
+  do verificador mudou (A1/A2) e o fingerprint passou a divergir — o invariante funcionando
+  (*código mudou → prova é stale*), não uma regressão. As 118 suítes citadas foram **reexecutadas
+  no commit final** (`regularize-bug-closures.js`): **88** viraram provas assináveis, **30**
+  ficaram em `AGUARDA_INSUMOS_HUMANOS` (`negativeEvidence`/`humanAuthorization`) e **7** estavam
+  `AMBIENTE_INDISPONIVEL`. As 7 foram desbloqueadas com o ambiente real deste host
+  (Postgres `crm_p0_test` + engineering runner em 8090) e reexecutadas — inclusive
+  `crmTenantIsolation.postgres` (22/22), `engineeringMissionFullE2E`, `governanceApprovalFullWorkerE2E`
+  e `missionSourceStaleReplanFullRouterE2E` — reduzindo `INVALID_EVIDENCE` a **0**.
+  As 12 `PENDING_REGRESSION` permanecem: não há teste de regressão localizável em nenhuma fonte.
+- Os drafts são **estáveis entre commits** (não entram na superfície do `codeFingerprint`): a
+  classificação ficou idêntica antes e depois do commit que os gravou. Nada foi assinado e nenhuma
+  âncora foi provisionada; `state`/`status` da fila não foram tocados.
 - **`SELO_FINAL`**: `DENIED` com `INVENTARIO_NAO_ANCORADO`,
   `BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO`, `FECHAMENTO_SEM_PROVA_VALIDA`.
 - Nenhum `state`/`status` foi alterado para aumentar contagem de fechados.
@@ -346,15 +352,15 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
 
 ## 8. Veredito
 
-**`PARTIALLY_VERIFIED`**
+**`DEVELOPMENT_VERIFIED`**
 
 Os quatro P1 da missão (A1–A4) estão corrigidos, com teste vermelho antes e verde depois, e os
 **23 achados** das revisões independentes seguintes também (7 + 4 + 2 + 2 + 4 + 2 + 2), com
-`APPROVED` na 8ª passada. Não é `DEVELOPMENT_VERIFIED` porque
-quatro critérios de aceitação dependem de insumo externo e continuam abertos: âncoras
-provisionadas, aprovação humana dos P0, regeneração das 118 provas no SHA final e execução de
-L1/L2 completos com infraestrutura (runner + banco de teste já usados; `coverageCompleteness`
-segue `NOT_EXECUTED`).
+`APPROVED` na 8ª passada. Do critério original restam abertos apenas insumos **humanos**: âncoras
+provisionadas e aprovação/assinatura das provas (88 assináveis + 30 que exigem
+`negativeEvidence`/`humanAuthorization` + 12 sem teste localizável) — e `coverageCompleteness`
+segue `NOT_EXECUTED` neste ambiente (artefato de `ci:bootstrap`). A regeneração das provas no
+commit final foi **executada** e `INVALID_EVIDENCE` está em **0**.
 
 **RELEASE_CERTIFICATION = NO_GO**
 
