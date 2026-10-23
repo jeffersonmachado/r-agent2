@@ -102,6 +102,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 | `node scripts/governance/recover-bug-closure-journal.js` | 0 | nada pendente (nenhuma mutação real feita no repo) |
 | `node scripts/governance/recover-bug-closure-journal.js --reparar` | 0 | cadeia íntegra, nada a reparar |
 | `npm run audit:json-persistence` | 0 | `status: PASS`, `unknown: 0` (566 alvos) |
+| `node scripts/governance/validate-bug-closure-status.js` | **1** | `mecanismo: recusa como deve (13 provas)`; `guardas: 9/9` consultam elegibilidade; **`FAIL: FECHAMENTO_NAO_PROVADO`** (130) — fail-closed correto, não regressão |
 | `node scripts/governance/run-governance-enforcement.js` | ≠0 | `BLOCKED` 0/64 — identidade de run inexistente |
 
 ### 2.2 Explicitamente NÃO executado
