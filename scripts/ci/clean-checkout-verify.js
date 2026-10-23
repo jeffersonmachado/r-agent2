@@ -63,6 +63,8 @@ const SCENARIOS = Object.freeze([
   'docker-unavailable',
 ]);
 
+const classificacao = require('./lib/resultClassification');
+
 const ADMIN_DATABASE_URL = process.env.CLEAN_CHECKOUT_ADMIN_DATABASE_URL
   || 'postgres://postgres:postgres@127.0.0.1:5432/postgres';
 const REDIS_HOST = process.env.CLEAN_CHECKOUT_REDIS_HOST || '127.0.0.1';
@@ -76,6 +78,19 @@ const SANDBOX_IMAGE = process.env.CLEAN_CHECKOUT_SANDBOX_IMAGE || 'r-agent2-engi
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+/**
+ * Falha de INFRAESTRUTURA do harness (não é veredito sobre a aplicação).
+ * P1-E2: quando o RAG isolado não pode ser provisionado, o run vira BLOCKED — nunca cai num
+ * serviço preexistente do host (`127.0.0.1:8001`) para transformar falha em PASS.
+ */
+class ErroDeInfraestrutura extends Error {
+  constructor(mensagem, detalhe = null) {
+    super(mensagem);
+    this.name = 'ErroDeInfraestrutura';
+    this.detalhe = detalhe;
+  }
 }
 
 function sha256(texto) {
@@ -97,6 +112,9 @@ function sh(comando, args, { cwd = ROOT, env = {}, timeoutMs = 10 * 60 * 1000 } 
     stdout: r.stdout || '',
     stderr: r.stderr || '',
     erro: r.error ? r.error.message : null,
+    // O Node marca ETIMEDOUT quando o `timeout` mata o processo; sinal sozinho não distingue
+    // timeout de kill externo, então o motivo fica explícito.
+    timedOut: Boolean(r.error && r.error.code === 'ETIMEDOUT'),
     duracaoMs: Date.now() - inicio,
   };
 }
@@ -149,9 +167,21 @@ function passo(id, comando, args, opcoes = {}) {
     duracaoMs: r.duracaoMs,
     outputSha256: sha256(saida),
     outputBytes: Buffer.byteLength(saida),
-    ok: r.status === esperado,
     ...contadoresDeTeste(saida),
   };
+  // P1-E1: `exitCode === null` (timeout/sinal/spawn falho) NÃO é "falhou como esperado".
+  const classe = classificacao.classificarResultado({
+    exitCode: registro.exitCode,
+    signal: registro.signal,
+    timedOut: Boolean(r.timedOut),
+    esperado,
+    assinaturasEsperadas: opcoes.assinaturasEsperadas || [],
+    sinaisAceitos: opcoes.sinaisAceitos || [],
+    saida,
+  });
+  registro.classe = classe.classe;
+  registro.classificacaoMotivo = classe.motivo;
+  registro.ok = classe.ok;
   if (logDir) {
     fs.mkdirSync(logDir, { recursive: true });
     const arquivo = path.join(logDir, `${id}.log`);
@@ -447,6 +477,36 @@ function subirRag({ porta, databaseUrl, token }) {
   }
   const logs = sh('docker', ['logs', '--tail', '40', NOMES.rag]);
   throw new Error(`RAG nao respondeu em /health na porta ${porta}: ${(logs.stderr || logs.stdout).trim()}`);
+}
+
+/**
+ * IDENTIDADE do serviço RAG efetivamente usado (P1-E2).
+ *
+ * O harness só pode falar com o container que ELE subiu. Se a porta responder sem que o nosso
+ * container esteja de pé, há um serviço alheio ali: recusa em vez de colher evidência
+ * contaminada. O corpo de `/health` é registrado por hash como identidade observada.
+ */
+function identidadeDoRag({ porta, token }) {
+  const inspecao = sh('docker', ['inspect', '--format', '{{.State.Running}}|{{.Config.Image}}|{{.Name}}', NOMES.rag]);
+  if (inspecao.status !== 0) {
+    return { ok: false, motivo: 'CONTAINER_PROPRIO_AUSENTE', detalhe: (inspecao.stderr || '').trim() };
+  }
+  const [rodando, imagem, nome] = String(inspecao.stdout).trim().split('|');
+  if (rodando !== 'true') return { ok: false, motivo: 'CONTAINER_PROPRIO_PARADO', detalhe: `${nome} ${imagem}` };
+
+  const probe = sh('curl', ['-fsS', '-m', '5', `http://127.0.0.1:${porta}/health`]);
+  if (probe.status !== 0) return { ok: false, motivo: 'HEALTH_NAO_RESPONDE', detalhe: (probe.stderr || '').trim() };
+  return {
+    ok: true,
+    detalhe: {
+      container: String(nome || '').replace(/^\//, ''),
+      imagem: String(imagem || ''),
+      porta,
+      endpoint: `http://127.0.0.1:${porta}`,
+      healthSha256: sha256(String(probe.stdout || '')),
+      tokenDesteRun: Boolean(token),
+    },
+  };
 }
 
 function derrubarRag() {
@@ -785,19 +845,27 @@ function cenarioBancoIndisponivel(ctx, args) {
     token: 'invalido',
     runnerPort: ctx.runnerPort,
   });
-  // ORCAMENTO CURTO E ACEITE EXPLICITO DE "NAO TERMINOU EM SUCESSO". Medido em 2026-10-22: com o
-  // banco inalcancavel o bootstrap NAO retorna rapido — `api/db/seed.js` fica tentando por minutos.
-  // O contrato que importa e "nunca vira sucesso": exit != 0 OU processo abortado por orcamento.
-  // O sinal (`SIGTERM`) e o exit code ficam registrados, jamais convertidos em PASS.
+  // P1-E1: o cenário só passa se a falha esperada for REALMENTE observada e COMPROVADA pela
+  // assinatura do motivo. Antes, `exitCode === null` (timeout/sinal/spawn falho) era aceito como
+  // sucesso — timeout virava PASS.
+  // Assinaturas do motivo esperado: o bootstrap não consegue falar com o banco.
   const registro = passo('bootstrap-sem-postgres', 'npm', ['run', '-s', 'ci:bootstrap'], {
     cwd: clonePath, env: envInvalido, logDir, esperado: 1,
     timeoutMs: 8 * 60 * 1000,
-    descricao: 'Sem PostgreSQL o bootstrap NAO termina em sucesso (exit != 0 ou abortado por orcamento)',
+    assinaturasEsperadas: [
+      'ECONNREFUSED',
+      'password authentication failed',
+      'does not exist',
+      'database "inexistente"',
+      'persistence_required',
+      'getaddrinfo',
+    ],
+    descricao: 'Sem PostgreSQL o bootstrap falha PELO MOTIVO esperado (assinatura verificavel)',
   });
-  if (registro.exitCode === null) {
-    registro.aceitoPorNaoSucesso = true;
-    registro.ok = true;
-    console.log(`[ci:clean-checkout]  ok   bootstrap-sem-postgres (abortado por orcamento apos ${Math.round(registro.duracaoMs / 1000)}s — falhou fechado: exit=${registro.exitCode} sinal=${registro.signal})`);
+  if (registro.classe === 'TIMEOUT' || registro.classe === 'SIGNALLED') {
+    // Contrato explícito: orçamento estourado ou morte por sinal NÃO é "falhou fechado" — é
+    // ausência de medição. O cenário reprova e o run fica FAIL/BLOCKED, nunca PASS.
+    console.log(`[ci:clean-checkout] FAIL  bootstrap-sem-postgres (${registro.classe}: ${registro.classificacaoMotivo})`);
   }
 }
 
@@ -1076,11 +1144,13 @@ function main(argv = process.argv.slice(2)) {
       limitacoes.push(`Postgres/Redis efemeros do run: pg:${infraDados.pgPorta} redis:${infraDados.redisPorta}`);
 
       const runnerPort = portaDeTesteLivre();
+      // Sem fallback para o 8001 em NENHUM ponto: enquanto o RAG isolado não sobe, o ambiente
+      // aponta para uma porta morta (127.0.0.1:1) — falha explícita, nunca serviço alheio.
       let env = criarAmbienteDoRun({
         clonePath,
         databaseUrl: infraDados.databaseUrl,
         redisUrl: infraDados.redisUrl,
-        ragUrl: 'http://127.0.0.1:8001',
+        ragUrl: 'http://127.0.0.1:1',
         token: 'ausente',
         runnerPort,
       });
@@ -1102,19 +1172,29 @@ function main(argv = process.argv.slice(2)) {
       }
 
       token = crypto.randomBytes(32).toString('hex');
-      try {
-        ragPorta = portaDeTesteLivre();
-        subirRag({ porta: ragPorta, databaseUrl: env.DATABASE_URL, token });
-        limitacoes.push(`servico RAG provisionado pelo harness em 127.0.0.1:${ragPorta} (nao usa o 8001 do desenvolvedor)`);
-      } catch (erro) {
-        limitacoes.push(`RAG nao pode ser provisionado: ${erro.message}`);
-        ragPorta = null;
+      // P1-E2: NENHUM fallback. Se o RAG isolado não subir, o run é BLOCKED. Antes, a falha de
+      // provisionamento caía em `http://127.0.0.1:8001` — o serviço do desenvolvedor — e a
+      // evidência passava a vir de um ambiente que não é desta execução (ou de nenhum).
+      ragPorta = portaDeTesteLivre();
+      if (portaOcupada(ragPorta)) {
+        throw new ErroDeInfraestrutura(`porta reservada ${ragPorta} já responde — serviço alheio, recusando contaminar a evidência`);
       }
+      try {
+        subirRag({ porta: ragPorta, databaseUrl: env.DATABASE_URL, token });
+      } catch (erro) {
+        throw new ErroDeInfraestrutura(`RAG isolado não pôde ser provisionado: ${erro.message}`);
+      }
+      const identidadeRag = identidadeDoRag({ porta: ragPorta, token });
+      if (!identidadeRag.ok) {
+        throw new ErroDeInfraestrutura(`identidade do RAG recusada: ${identidadeRag.motivo}`, identidadeRag.detalhe);
+      }
+      limitacoes.push(`servico RAG provisionado pelo harness em ${identidadeRag.detalhe.endpoint} `
+        + `(container ${identidadeRag.detalhe.container}; nao usa o 8001 do desenvolvedor)`);
       env = criarAmbienteDoRun({
         clonePath,
         databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,
-        ragUrl: ragPorta ? `http://127.0.0.1:${ragPorta}` : 'http://127.0.0.1:8001',
+        ragUrl: identidadeRag.detalhe.endpoint,
         token,
         runnerPort,
       });
@@ -1162,6 +1242,8 @@ function main(argv = process.argv.slice(2)) {
 
       if (!args.json) console.log(markdown);
     } catch (erro) {
+      // P1-E2: falha de infraestrutura NÃO é FAIL da aplicação — é BLOCKED (nada foi provado).
+      const ehInfra = erro instanceof ErroDeInfraestrutura;
       const relatorio = {
         schemaVersion: 1,
         artifactType: 'ci-clean-checkout-report',
@@ -1173,14 +1255,16 @@ function main(argv = process.argv.slice(2)) {
         sourceFingerprint: null,
         environmentId,
         generatedAt: nowIso(),
-        veredito: 'FAIL',
+        veredito: ehInfra ? 'BLOCKED' : 'FAIL',
+        classificacao: ehInfra ? 'INFRASTRUCTURE_ERROR' : 'UNEXPECTED_FAILURE',
         erro: erro.message,
+        erroDetalhe: ehInfra ? erro.detalhe : null,
         environment: limite,
         passos: passos.slice(iniciou),
         limitacoes,
       };
       resultados.push(relatorio);
-      console.error(`[ci:clean-checkout] FAIL ${cenario}: ${erro.message}`);
+      console.error(`[ci:clean-checkout] ${ehInfra ? 'BLOCKED' : 'FAIL'} ${cenario}: ${erro.message}`);
     } finally {
       derrubarProdLike();
       derrubarRag();
@@ -1191,7 +1275,10 @@ function main(argv = process.argv.slice(2)) {
     }
   }
 
-  const veredito = resultados.length > 0 && resultados.every((r) => r.veredito === 'PASS') ? 'PASS' : 'FAIL';
+  // BLOCKED tem precedência: nada foi provado (não é "provado que falhou").
+  const veredito = resultados.length === 0 ? 'BLOCKED'
+    : resultados.some((r) => r.veredito === 'BLOCKED') ? 'BLOCKED'
+      : resultados.every((r) => r.veredito === 'PASS') ? 'PASS' : 'FAIL';
   const relatorioFinal = {
     schemaVersion: 1,
     artifactType: 'ci-clean-checkout-report',
@@ -1205,7 +1292,8 @@ function main(argv = process.argv.slice(2)) {
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(relatorioFinal, null, 2)}\n`, 'utf8');
   liberarLock();
   console.log(`[ci:clean-checkout] veredito=${veredito} — relatorio em ${path.relative(ROOT, REPORT_PATH)}`);
-  return veredito === 'PASS' ? 0 : 1;
+  if (veredito === 'PASS') return 0;
+  return veredito === 'BLOCKED' ? 3 : 1;
 }
 
 function hostLimits() {
