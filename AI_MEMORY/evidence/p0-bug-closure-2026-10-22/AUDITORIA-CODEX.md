@@ -350,7 +350,59 @@ verificador na árvore. Nenhum desses é usado para conceder fechamento.
 10. **Reparo é O(n²)** (`verificarCadeia` por linha): ~318 ms para 200 registros; milhares de
     registros levariam minutos. Não é caminho quente.
 
-## 8. Veredito
+## 8. Achados PÓS-MERGE: a prova não era portável entre checkouts
+
+Depois do merge do PR #12, validar no workspace principal revelou **dois** defeitos que nenhuma
+das 8 passadas de revisão pegou — porque todos os testes rodavam numa árvore só. Ambos foram
+corrigidos (PRs #13 e #14) e provados num **checkout limpo**.
+
+### 8.1 `sourceFingerprint` dependia de artefato GERADO (`qa/evidence`)
+
+`qa/evidence/` está na superfície provada (os **validadores** vivem lá), mas o mesmo diretório
+recebe **saídas** de execução (`*-latest.json`, ignoradas pelo git). Uma delas entrava no
+fingerprint, então o invariante *"código mudou → prova stale"* disparava por **artefato de
+execução**:
+
+```
+worktree limpo ................ babb60d5f1b4
+workspace que rodou a jornada .. 3eac1cbf8859
+```
+
+O mesmo commit produzia dois fingerprints. **Correção:** `SKIP_REL_FILE_PATTERNS` exclui
+`qa/evidence/*-latest.(json|txt|log)` — mesma regra já aplicada a `qa-mesh/meshHistory`,
+`qa/mesh/intelligence/history` e `core/rpa/reports`. Validadores `*.js` e JSON de contrato em
+`qa/evidence` **continuam contando** (teste nos dois sentidos; um deles fica vermelho sem o fix).
+Depois do fix, as duas árvores dão `a351e0628dcd`.
+
+### 8.2 A prova referenciava um log que o `.gitignore` excluía
+
+As 118 provas amarram `outputSha256` a
+`AI_MEMORY/evidence/bug-closure-regularization/<ID>.log`, mas `*.log` estava no `.gitignore`:
+os logs existiam **só na máquina que gerou a prova**. Em qualquer outro checkout, as 118 viravam
+`EVIDENCIA_ADULTERADA` — o portão acusava adulteração onde havia arquivo ausente.
+**Correção:** exceção explícita no `.gitignore` (com o motivo ao lado da regra) e as 118 saídas
+versionadas (588 KB); o `.gitattributes` do diretório já preserva os bytes exatos
+(`*.log -text -diff`). 118/118 conferem com o `outputSha256`.
+
+### 8.3 Prova de portabilidade (checkout limpo)
+
+```
+git worktree add --detach /tmp/rbc-verify 7f8922d8c     # sem .env, sem artefatos, sem runs
+node scripts/governance/audit-bug-closure-inventory.js
+  88 PENDING_SIGNATURE
+  30 PENDING_HUMAN_AUTHORIZATION
+  12 PENDING_REGRESSION
+   0 INVALID_EVIDENCE
+```
+
+Antes: **118 `INVALID_EVIDENCE`** no mesmo tipo de checkout. `292/292` testes passam no checkout
+limpo e `validate:bug-closure-status` continua **FAIL** (`FECHAMENTO_NAO_PROVADO`) — fail-closed.
+
+**Lição de auditoria:** um invariante que depende de estado de execução do workspace não é
+invariante. Os dois defeitos só apareceram porque a validação saiu da árvore onde tudo foi
+gerado; a revisão adversarial, por mais rodadas que fizesse, herdava o mesmo ponto cego.
+
+## 9. Veredito
 
 **`DEVELOPMENT_VERIFIED`**
 
@@ -361,6 +413,10 @@ provisionadas e aprovação/assinatura das provas (88 assináveis + 30 que exige
 `negativeEvidence`/`humanAuthorization` + 12 sem teste localizável) — e `coverageCompleteness`
 segue `NOT_EXECUTED` neste ambiente (artefato de `ci:bootstrap`). A regeneração das provas no
 commit final foi **executada** e `INVALID_EVIDENCE` está em **0**.
+
+Os dois achados pós-merge (§8) estão corrigidos e provados em checkout limpo — inclusive o
+defeito de portabilidade, que fazia a afirmação "`INVALID_EVIDENCE = 0`" ser verdadeira só na
+árvore que gerou as provas.
 
 **RELEASE_CERTIFICATION = NO_GO**
 
