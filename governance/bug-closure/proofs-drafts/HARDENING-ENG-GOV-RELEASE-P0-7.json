@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "8e0a265e-de5f-4452-8069-f40ea958674a",
+  "transitionId": "4e1b357c-6b4c-49e2-81db-b0b2e926669b",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-7",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
-  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
+  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
+  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
   "requiredTests": [
     "tests/unit/governance/branchProtectionApplyPayload.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/branchProtectionApplyPayload.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T01:58:18.372Z",
-      "finishedAt": "2026-10-23T01:58:21.001Z",
+      "startedAt": "2026-10-23T14:28:06.208Z",
+      "finishedAt": "2026-10-23T14:28:08.598Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-7.log",
-      "outputSha256": "aee254392c8b5d2ef11387dded5f81f209c427b50b161a5321532fb9d76d5334"
+      "outputSha256": "7818dd343a79091333436538356442c72f05ae6cd4ca018f404ad0d79cdc457c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T01:58:21.002Z",
-  "proofHash": "cf1fdd1bf213e9b93fb2eb484f50335b4fbcbf4d919a0939ce2006bcaa1a736d"
+  "createdAt": "2026-10-23T14:28:08.599Z",
+  "proofHash": "c995c4484c3448a4ea098f4095118266c4f3b0850efba57ec312171017b9bd46"
 }

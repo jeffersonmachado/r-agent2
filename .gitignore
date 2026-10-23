@@ -2,10 +2,11 @@
 api/data/
 api/data/config.json
 
-# Node modules
-node_modules/
-frontend/node_modules/
-frontend-e2e/node_modules/
+# Node modules (sem barra final: 'node_modules/' NAO casa com symlink, e um symlink
+# local de node_modules ja entrou no indice por causa disso)
+node_modules
+frontend/node_modules
+frontend-e2e/node_modules
 
 # Logs
 *.log

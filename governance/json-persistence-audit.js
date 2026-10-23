@@ -66,6 +66,9 @@ const CLASSIFIED = {
   'governance/.current-run.json': 'DB_CANONICAL_JSON_EXPORT',
   'governance/materialized-proof-artifacts-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/governance-score.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Proposta mecânica de testes de regressão (derivada do inventário; reconstruível por
+  // `node scripts/governance/regularize-bug-closures.js --propor-testes`).
+  'reports/bug-closure-test-proposals.json': 'ARTIFACT_STORAGE',
   'reports/master-scorecard-regression-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/master-scorecard-test-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/coverage-gate-report.json': 'DB_CANONICAL_JSON_EXPORT',

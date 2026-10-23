@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "14b82aa8-3f10-4523-a009-165579f48ce2",
+  "transitionId": "d2407a20-fc02-42fb-8e94-ef6ba0963301",
   "defectId": "MISSAO-A-L1-IMPACTO",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
-  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
+  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
+  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
   "requiredTests": [
     "tests/unit/coverage/impactGraph.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/coverage/impactGraph.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T02:21:36.450Z",
-      "finishedAt": "2026-10-23T02:21:40.736Z",
+      "startedAt": "2026-10-23T14:42:58.669Z",
+      "finishedAt": "2026-10-23T14:43:03.718Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L1-IMPACTO.log",
-      "outputSha256": "0643450512bbfddc65dc8a4e0852c108846dfbd3477df1fba10049f7af919066"
+      "outputSha256": "5d7a0dc7f53b3b166019fdbe6181f2c87267abc14a8ab2f6da0813ecf165e470"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T02:21:40.737Z",
-  "proofHash": "a9c711c6448b96dd1383652d69e80a234b03077881fc1b7d57065c3aba9ecde8"
+  "createdAt": "2026-10-23T14:43:03.719Z",
+  "proofHash": "ce9e15dad8abdf989ec9559ec26dbbd479cb434866211413d582102c87aa2dce"
 }

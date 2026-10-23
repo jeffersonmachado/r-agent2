@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 /**
  * BUG CLOSURE FIRST — GATE CENTRAL DE ELEGIBILIDADE.
  *
@@ -99,6 +101,7 @@ const CODIGOS = Object.freeze({
   FECHAMENTO_SEM_PROVA_VALIDA: 'FECHAMENTO_SEM_PROVA_VALIDA',
   INVENTARIO_NAO_ANCORADO: 'INVENTARIO_NAO_ANCORADO',
   INVENTARIO_ADULTERADO: 'INVENTARIO_ADULTERADO',
+  OPERACAO_PENDENTE_DE_RECUPERACAO: 'OPERACAO_PENDENTE_DE_RECUPERACAO',
 });
 
 /**
@@ -518,7 +521,41 @@ function evaluateExecutionEligibility(context = {}, operation) {
   const inventarioNaoAncoradoBloqueia = politica.certifica
     && (reasonCodes.includes(CODIGOS.INVENTARIO_NAO_ANCORADO) || reasonCodes.includes(CODIGOS.INVENTARIO_ADULTERADO));
 
+  // A4 (missão Codex): diário com efeito parcial (evento sem fila, prova sem fila, operação
+  // interrompida) mantém a certificação NEGADA até recuperação canônica. O livro é append-only
+  // e não se trunca, então a única saída honesta é bloquear e exigir reconciliação.
+  let recuperacaoPendente = false;
+  if (politica.certifica) {
+    // ALERT 6 do revisor (P2): o default era `process.cwd()`, então rodar o gate de um
+    // subdiretório (ou CI com working-directory) desligava a guarda silenciosamente. A raiz
+    // passa a ser derivada do próprio módulo. Erro de leitura do diário é fail-CLOSED
+    // (tratado como pendência), nunca "nada pendente".
+    const raizDoModulo = path.resolve(__dirname, '..', '..');
+    try {
+      // eslint-disable-next-line global-require
+      const jornal = require('./transition-journal');
+      if (jornal.haOperacaoPendente(context.rootDir || raizDoModulo)) {
+        recuperacaoPendente = true;
+        reasonCodes.push(CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO);
+        blockingFindings.push({
+          code: CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO,
+          detail: 'diário de transições tem operação interrompida com efeito parcial — recupere antes de certificar',
+        });
+        requiredActions.push('rodar node scripts/governance/recover-bug-closure-journal.js e resolver as operações pendentes');
+      }
+    } catch (e) {
+      // fail-closed: diário ilegível não é ausência de pendência.
+      recuperacaoPendente = true;
+      reasonCodes.push(CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO);
+      blockingFindings.push({
+        code: CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO,
+        detail: `diário de transições ilegível (${e.message}) — tratado como pendência`,
+      });
+    }
+  }
+
   const negado = bloquearP0 || bloquearP1 || condicionalPendente || fechamentoSemProvaBloqueia
+    || recuperacaoPendente
     || inventarioNaoAncoradoBloqueia
     || (naoDeclarada.length > 0 && politica.certifica)
     || (op === OPERACOES.PUBLICACAO_RELEASE && !NAO_VAZIO(context.certification));

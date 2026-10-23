@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "da2635eb-b1c9-4846-abc8-165abfebba3f",
+  "transitionId": "784255bb-c9cd-4a97-8e92-3181aead9f67",
   "defectId": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
-  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
+  "evaluatedCommit": "440dad35e09ca52d3232efe53c9dd04db70e32d5",
+  "codeFingerprint": "babb60d5f1b4cf9313507fca7c2dd6c27b3d589b99c406cb33b7ae35294007c7",
   "requiredTests": [
     "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterSandboxAvailabilityCache.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T02:16:45.548Z",
-      "finishedAt": "2026-10-23T02:16:51.586Z",
+      "startedAt": "2026-10-23T14:39:10.849Z",
+      "finishedAt": "2026-10-23T14:39:17.405Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-SANDBOX-PROBE-CACHE-NEGATIVO.log",
-      "outputSha256": "8a641e51bac277e61d13ec8e6c5ffeb618c35b7e75b5f229cbb5b422834613dd"
+      "outputSha256": "8b237f351f23e0ab72d06e5d0ff03574a4b81c23ef2736d4e7ec418ebed39cdc"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T02:16:51.587Z",
-  "proofHash": "ffd9e88e27b6e471abfd0c67ccb3bf3138726cd33815827c73b3557f0447d22f"
+  "createdAt": "2026-10-23T14:39:17.405Z",
+  "proofHash": "5088cce9171d5d91344d5d54fbe47318ceda402176bc896837c74b214872587d"
 }

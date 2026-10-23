@@ -501,8 +501,13 @@ function proporTestes(candidatos, porId) {
     porConfianca: propostas.reduce((acc, p) => { acc[p.confianca] = (acc[p.confianca] || 0) + 1; return acc; }, {}),
     propostas,
   };
+  // O JSON mecânico vive em `reports/` (namespace de artefato). Em `AI_MEMORY/evidence/`
+  // fica só o .md: o auditor de persistência (RAP-078) reprova alvo `.json` fora da taxonomia
+  // e o repo decidiu que evidência em AI_MEMORY é legível por humano, não máquina.
+  const destinoJson = path.join(ROOT, 'reports', 'bug-closure-test-proposals.json');
+  fs.mkdirSync(path.dirname(destinoJson), { recursive: true });
+  fs.writeFileSync(destinoJson, `${JSON.stringify(saida, null, 2)}\n`, 'utf8');
   fs.mkdirSync(EVIDENCIA, { recursive: true });
-  fs.writeFileSync(path.join(EVIDENCIA, 'proposta-testes.json'), `${JSON.stringify(saida, null, 2)}\n`, 'utf8');
   const md = [
     '# Proposta de testes de regressão (itens sem teste citado)',
     '',

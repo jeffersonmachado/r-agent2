@@ -241,6 +241,9 @@ function carregarInventario(opcoes = {}) {
       currentCommit: opcoes.currentCommit,
       currentFingerprint: opcoes.currentFingerprint,
       autoridades: opcoes.autoridades,
+      // Âncoras do chamador (teste/operador). Sem repasse, toda leitura considerava a prova
+      // SEM_ANCORA_DE_CONFIANCA mesmo quando o cenário tinha pin + âncora externa.
+      ancoragem: opcoes.ancoragem,
       livro: opcoes.livro,
       livroPath: opcoes.livroPath,
       agora: opcoes.agora,
