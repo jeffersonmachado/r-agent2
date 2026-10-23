@@ -78,7 +78,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 | Camada | Comando | Resultado |
 |---|---|---|
 | Suítes de bug-closure | `npx jest tests/unit/governance/bugClosure` | **288 testes / 10 suítes, todos PASS** |
-| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2077 PASS / 15 FAIL / 2 SKIP (2094)** |
+| L0 (governança) | `npx jest tests/unit/governance --bail=0` | **2079 PASS / 15 FAIL / 2 SKIP (2096)** |
 | L1 (DEVELOPMENT) | `node scripts/ci/dev-branch-gate.js --fases A,D` | **PASS_PARCIAL**, exit 0 |
 | L3 (agregado) | `node scripts/governance/run-governance-enforcement.js` | **BLOCKED 0/64** — identidade de run ausente |
 | Auditoria de persistência | `npm run audit:json-persistence` | **PASS**, `unknown: 0` |
@@ -99,7 +99,7 @@ escrita/rename, recuperação idempotente, diário ilegível, retry pós-abort/p
 | Comando | Exit | Resultado medido |
 |---|---|---|
 | `npx jest tests/unit/governance/bugClosure` | 0 | 273 / 273 PASS (10 suítes) |
-| `npx jest tests/unit/governance --bail=0` | 1 | 2064 PASS / 15 FAIL / 2 SKIP — as 7 suítes abaixo |
+| `npx jest tests/unit/governance --bail=0` | 1 | 2079 PASS / 15 FAIL / 2 SKIP — as 7 suítes abaixo |
 | `node scripts/ci/dev-branch-gate.js --fases A,D` | 0 | `PASS_PARCIAL` (A pre-voo 10 checks OK; 4 gates L1 verdes) |
 | `node scripts/governance/audit-bug-closure-inventory.js` | 0 | 130 itens: 118 `INVALID_EVIDENCE`, 12 `PENDING_REGRESSION` |
 | `node scripts/governance/recover-bug-closure-journal.js` | 0 | nada pendente (nenhuma mutação real feita no repo) |
