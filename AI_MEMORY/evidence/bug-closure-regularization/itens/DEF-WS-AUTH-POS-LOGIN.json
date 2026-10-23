@@ -3,6 +3,12 @@
   "severity": "P1",
   "estadoPersistido": "VERIFIED",
   "titulo": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-WS-AUTH-POS-LOGIN.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-WS-AUTH-POS-LOGIN.json",
+  "camposParaAssinar": 18
 }

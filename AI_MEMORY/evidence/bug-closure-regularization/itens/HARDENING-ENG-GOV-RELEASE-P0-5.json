@@ -3,6 +3,15 @@
   "severity": "P0",
   "estadoPersistido": "RESOLVED",
   "titulo": "Eliminar falsos verdes de cobertura (L1) e fazer a malha REALMENTE executar",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/coverage/impactRunnerBinding.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-5.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-5.json",
+  "camposParaAssinar": 18
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3482a9ef-6fff-48d8-b005-ce706a867e87",
+  "transitionId": "a6046601-7be3-4fee-99ae-bf569eec6334",
   "defectId": "DEF-STATESYNC-EXEMPTION-STALE",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
-  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
+  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
+  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
   "requiredTests": [
     "tests/unit/frontend/stateSyncExemptionExactness.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/frontend/stateSyncExemptionExactness.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:52:40.035Z",
-      "finishedAt": "2026-10-22T21:52:43.354Z",
+      "startedAt": "2026-10-23T02:21:26.466Z",
+      "finishedAt": "2026-10-23T02:21:31.807Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-STATESYNC-EXEMPTION-STALE.log",
-      "outputSha256": "88c1c48f1f9cee3f4fd07751a73e3fd4ca024418776812ca3eb0ab85c389536f"
+      "outputSha256": "88431ffd64090fd21427a7c51e62db5324b07c92522f3188ae4fec05d75dc5fa"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:52:43.355Z",
-  "proofHash": "c061712b9130fd976220b700ed059c490e412ade3bb4d784af9b0f365e729b32"
+  "createdAt": "2026-10-23T02:21:31.808Z",
+  "proofHash": "2a9f37c2fa1ced2c7ef4a1ea5246499310b5956603e45a3121bf064bff7a489e"
 }

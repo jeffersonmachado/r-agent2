@@ -3,6 +3,15 @@
   "severity": "P0",
   "estadoPersistido": "RESOLVED",
   "titulo": "Cadeia criptografica reconstruida e assinada a cada ciclo (selo imutavel)",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/governanceChainCertification.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-2.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-2.json",
+  "camposParaAssinar": 18
 }

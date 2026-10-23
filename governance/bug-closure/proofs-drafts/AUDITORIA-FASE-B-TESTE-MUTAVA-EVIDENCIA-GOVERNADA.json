@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "01701e32-6929-48e1-bd18-36be11862d93",
+  "transitionId": "cb589e77-4fba-45ed-9cfc-9c6baf529964",
   "defectId": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "debed518968ce6d7aba7beda3389655bb2244016",
-  "codeFingerprint": "4f405dfb26f16b28fbb3fa718025b6cc7c57dd750d7ff0d027fdad76cf2f2aa0",
+  "evaluatedCommit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
+  "codeFingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-22T21:41:32.790Z",
-      "finishedAt": "2026-10-22T21:41:35.785Z",
+      "startedAt": "2026-10-23T02:00:14.689Z",
+      "finishedAt": "2026-10-23T02:00:16.988Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log",
-      "outputSha256": "0a37a045786176945c5bfa91c25ff8afc6a7603593192ccf409b8157de6f5d0c"
+      "outputSha256": "df95c4bc791ce0f11882e79efa7e479d4f07f74592042248d9a10958678686d8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-22T21:41:35.786Z",
-  "proofHash": "91b330cd5107251a04c0c7e1a8b1c9b541ba3e480fea3ef7515527da4d998d96"
+  "createdAt": "2026-10-23T02:00:16.989Z",
+  "proofHash": "1efc84a85770c6517079e97d8c87e38a09fcade1f5e7e7902802654224904652"
 }

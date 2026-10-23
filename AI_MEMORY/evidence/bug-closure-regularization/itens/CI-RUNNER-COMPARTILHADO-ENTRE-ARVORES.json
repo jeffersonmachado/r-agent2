@@ -3,6 +3,12 @@
   "severity": "P1",
   "estadoPersistido": "VERIFIED",
   "titulo": "Engineering Runner de porta fixa era reutilizado por outra arvore: a prova de sandbox media o codigo do vizinho",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
+  "draft": "governance/bug-closure/proofs-drafts/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.json",
+  "camposParaAssinar": 18
 }

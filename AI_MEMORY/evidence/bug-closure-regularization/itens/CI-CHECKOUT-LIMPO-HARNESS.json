@@ -3,6 +3,12 @@
   "severity": "P1",
   "estadoPersistido": "VERIFIED",
   "titulo": "Instalacao limpa nunca era testada: todo diagnostico de CI dependia do estado da maquina do desenvolvedor",
-  "classe": "REQUER_DECISAO_HUMANA",
-  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "MAPA_CONFIRMADO",
+  "teste": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-CHECKOUT-LIMPO-HARNESS.log",
+  "draft": "governance/bug-closure/proofs-drafts/CI-CHECKOUT-LIMPO-HARNESS.json",
+  "camposParaAssinar": 18
 }
