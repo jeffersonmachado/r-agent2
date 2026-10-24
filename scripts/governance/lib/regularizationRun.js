@@ -102,6 +102,112 @@ function realpathDoAncestral(abs) {
   }
 }
 
+/**
+ * DURABILIDADE E TOCTOU (Fase 2, achados B-1/B-2).
+ *
+ * `fsync` do ARQUIVO já existia; sem `fsync` do DIRETÓRIO o `rename` pode ser perdido num crash
+ * (o nome novo não chega ao disco) — o artefato "gravado" desaparece. `sincronizarDiretorio`
+ * fecha essa janela.
+ *
+ * `depoisDaEscrita` é a única defesa possível contra troca de DIRETÓRIO no meio da gravação: o
+ * Node.js NÃO expõe `openat`, então `O_NOFOLLOW` no componente final não protege diretórios
+ * ancestrais. A mitigação implementada é de DETECÇÃO + RECUSA: o `realpath` do diretório é
+ * capturado antes da escrita e conferido depois; se mudou (troca por symlink) ou se o arquivo
+ * escrito resolve para fora dele, a gravação é REPORTADA como falha (`DIR_TROCADO_DURANTE_
+ * ESCRITA`) — nunca como sucesso. A mitigação PREVENTIVA é a raiz privada (`criarRaizPrivada`,
+ * modo 0700), que impede outro usuário local de trocar entradas dentro da raiz.
+ */
+function sincronizarDiretorio(dirAbs) {
+  try {
+    const fd = fs.openSync(dirAbs, fs.constants.O_RDONLY);
+    try { fs.fsyncSync(fd); } finally { try { fs.closeSync(fd); } catch (_) { /* já fechado */ } }
+    return true;
+  } catch (_) {
+    // Alguns filesystems não permitem fsync de diretório; a ausência é reportada, não escondida.
+    return false;
+  }
+}
+
+/** Raiz de execução PRIVADA (0700). Recusa raiz já existente com escrita para grupo/outros. */
+function criarRaizPrivada(rootDir, baseRel) {
+  const base = path.resolve(rootDir, baseRel);
+  const runs = path.join(base, 'runs');
+  for (const dir of [base, runs]) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const st = fs.statSync(dir);
+    // O que permite a OUTRO usuário local trocar entradas é permissão de ESCRITA no diretório
+    // (leitura/execução não permitem swap). `0o022` = grupo e outros.
+    if ((st.mode & 0o022) !== 0) {
+      throw new Error(`RAIZ_PERMISSIVA:${path.relative(path.resolve(rootDir), dir) || '.'}:${(st.mode & 0o777).toString(8)}`);
+    }
+    if (fs.realpathSync(dir) !== dir && path.resolve(fs.realpathSync(dir)) !== path.resolve(dir)) {
+      throw new Error(`RAIZ_FORA_DA_RAIZ:${path.relative(path.resolve(rootDir), dir) || '.'}`);
+    }
+  }
+  return runs;
+}
+
+/**
+ * DIRETÓRIO PINADO POR DESCRITOR (`/proc/self/fd/<fd>`) — a defesa que realmente impede o TOCTOU
+ * de diretório no Linux, e não apenas o detecta.
+ *
+ * `O_NOFOLLOW` no componente final não protege diretórios ancestrais: se `itens/` for trocado por
+ * um symlink entre a validação e a abertura, o caminho textual passa a apontar para fora. Abrindo
+ * o DIRETÓRIO com `O_DIRECTORY|O_NOFOLLOW` e operando por `/proc/self/fd/<fd>/<nome>`, todas as
+ * operações passam a resolver no INODE aberto — trocar o nome do diretório depois não redireciona
+ * a escrita (medido: o arquivo aparece no inode pinado, nunca no alvo do symlink).
+ *
+ * Quando `/proc` não está disponível (`PIN_INDISPONIVEL`), o chamador cai no caminho textual com
+ * detecção pós-escrita (`depoisDaEscrita`) — que DETECTA a troca e recusa o sucesso, sem preveni-la.
+ */
+function abrirDiretorioPinado(dirAbs) {
+  let fd;
+  try {
+    fd = fs.openSync(dirAbs, fs.constants.O_RDONLY | (fs.constants.O_DIRECTORY || 0) | fs.constants.O_NOFOLLOW);
+  } catch (e) {
+    // `ELOOP`/`ENOTDIR` significam que o caminho NÃO é o diretório que validamos (symlink trocado
+    // no meio): a escrita tem de ser RECUSADA, nunca refeita pelo caminho textual — cair no
+    // fallback aqui escreveria dentro do alvo do symlink (medido 2026-10-24 no cenário B2).
+    return { ok: false, motivo: `DIR_NAO_E_DIRETORIO:${e.code || e.message}` };
+  }
+  const caminho = `/proc/self/fd/${fd}`;
+  let disponivel = false;
+  try { disponivel = fs.existsSync(caminho); } catch (_) { disponivel = false; }
+  if (!disponivel) {
+    try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+    return { ok: false, motivo: 'PIN_INDISPONIVEL' };
+  }
+  return {
+    ok: true,
+    fd,
+    caminho,
+    realDoPin() {
+      try { return fs.realpathSync(caminho); } catch (_) { return null; }
+    },
+    fechar() { try { fs.closeSync(fd); } catch (_) { /* já fechado */ } },
+  };
+}
+
+function depoisDaEscrita(dirAbs, realDirAntes, destinoAbs) {
+  let realDirDepois;
+  try {
+    realDirDepois = fs.realpathSync(dirAbs);
+  } catch (e) {
+    return { ok: false, motivo: `DIR_INACESSIVEL_APOS_ESCRITA:${e.code || e.message}` };
+  }
+  if (realDirDepois !== realDirAntes) return { ok: false, motivo: 'DIR_TROCADO_DURANTE_ESCRITA' };
+  let realDestino;
+  try {
+    realDestino = fs.realpathSync(destinoAbs);
+  } catch (e) {
+    return { ok: false, motivo: `DESTINO_INACESSIVEL_APOS_ESCRITA:${e.code || e.message}` };
+  }
+  if (realDestino !== path.join(realDirAntes, path.basename(destinoAbs))) {
+    return { ok: false, motivo: 'DESTINO_FORA_DA_RAIZ_APOS_ESCRITA' };
+  }
+  return { ok: true };
+}
+
 /** Identidade do AMBIENTE que influencia o resultado (runner, banco, node) — sem segredos. */
 function identidadeDoAmbiente(extra = {}) {
   return {
@@ -121,6 +227,10 @@ function identidadeDoAmbiente(extra = {}) {
  */
 function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerprint, hardeningQueueFingerprint, testManifestFingerprint, escopo, ambiente }) {
   const runId = `run-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}-${crypto.randomBytes(4).toString('hex')}`;
+  // RAIZ PRIVADA (Fase 2, B-2): a defesa preventiva contra troca de entradas por outro usuário
+  // local é o diretório não ser gravável por grupo/outros. `dirDaExecucao` continua sendo a
+  // verificação de contenção (realpath) — as duas são complementares, não alternativas.
+  criarRaizPrivada(rootDir, baseRel);
   const dir = dirDaExecucao(rootDir, baseRel, runId);
   const dirItensNovo = path.join(dir, 'itens');
   const stItensNovo = fs.lstatSync(dirItensNovo, { throwIfNoEntry: false });
@@ -167,7 +277,11 @@ function gravarManifesto(dir, manifesto) {
   const abs = path.join(dir, 'manifest.json');
   const st = fs.lstatSync(abs, { throwIfNoEntry: false });
   if (st && st.isSymbolicLink()) throw new Error('MANIFESTO_E_SYMLINK');
-  const tmp = path.join(dir, `.tmp-manifest-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
+  const realDirAntes = fs.realpathSync(dir);
+  const pin = abrirDiretorioPinado(dir);
+  if (!pin.ok && pin.motivo !== 'PIN_INDISPONIVEL') throw new Error(pin.motivo);
+  const dirOperacoes = pin.ok ? pin.caminho : dir;
+  const tmp = path.join(dirOperacoes, `.tmp-manifest-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
   try {
     const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
     try {
@@ -178,12 +292,27 @@ function gravarManifesto(dir, manifesto) {
     } finally {
       try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
     }
-    fs.renameSync(tmp, abs);
+    fs.renameSync(tmp, path.join(dirOperacoes, 'manifest.json'));
+    // `rename` sem `fsync` do diretório pode ser perdido num crash (B-1) e a troca de diretório
+    // no meio da gravação não é impedida pelo `O_NOFOLLOW` do componente final (B-2) — o pin por
+    // descritor impede o redirecionamento; o `fsync` garante a durabilidade do nome.
+    if (pin.ok) { try { fs.fsyncSync(pin.fd); } catch (_) { sincronizarDiretorio(dir); } } else { sincronizarDiretorio(dir); }
+    if (pin.ok) {
+      const realDoPin = pin.realDoPin();
+      if (!realDoPin || realDoPin !== realDirAntes) throw new Error('DIR_TROCADO_DURANTE_ESCRITA');
+    }
+    const pos = depoisDaEscrita(dir, realDirAntes, abs);
+    if (!pos.ok) {
+      try { fs.rmSync(abs, { force: true }); } catch (_) { /* nada a limpar */ }
+      throw new Error(pos.motivo);
+    }
     return abs;
   } catch (e) {
     // Falha no meio não deixa temporário órfão nem manifesto truncado (o antigo permanece).
     try { fs.rmSync(tmp, { force: true }); } catch (_) { /* nada a limpar */ }
     throw e;
+  } finally {
+    if (pin.ok) pin.fechar();
   }
 }
 
@@ -244,21 +373,52 @@ function gravarResultado({ rootDir, baseRel, runId, resultado, esperadoNoEscopo 
   const destino = path.join(dirItensAlvo, `${resultado.id}.json`);
   const stDestino = fs.lstatSync(destino, { throwIfNoEntry: false });
   if (stDestino && stDestino.isSymbolicLink()) return { ok: false, motivo: 'RESULTADO_E_SYMLINK' };
-  // Escrita atômica: temporário imprevisível + rename (não segue symlink, não deixa parcial).
-  const tmp = path.join(dirItensAlvo, `.tmp-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
+  // IDEMPOTÊNCIA E NÃO-SOBRESCRITA (Fase 2, achado B-4): `rename` substituiria silenciosamente
+  // uma prova JÁ GRAVADA por conteúdo incompatível (e duas gravações simultâneas do mesmo id
+  // deixariam "a última vence"). `link(2)` é atômico e falha com `EEXIST`: a criação acontece
+  // exatamente uma vez. Reexecução com o MESMO conteúdo é idempotente; conteúdo divergente é
+  // recusado.
+  const realDirAntes = fs.realpathSync(dirItensAlvo);
+  const pin = abrirDiretorioPinado(dirItensAlvo);
+  if (!pin.ok && pin.motivo !== 'PIN_INDISPONIVEL') return { ok: false, motivo: pin.motivo };
+  const dirOperacoes = pin.ok ? pin.caminho : dirItensAlvo;
+  const tmp = path.join(dirOperacoes, `.tmp-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
+  const destinoOperacoes = path.join(dirOperacoes, `${resultado.id}.json`);
   try {
     const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
     try {
-      fs.writeSync(fd, `${JSON.stringify(corpo, null, 2)}\n`);
+      const carga = Buffer.from(`${JSON.stringify(corpo, null, 2)}\n`, 'utf8');
+      const escritos = fs.writeSync(fd, carga);
+      if (escritos !== carga.length) throw new Error(`ESCRITA_PARCIAL:${escritos}/${carga.length}`);
       fs.fsyncSync(fd);
     } finally {
       try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
     }
-    fs.renameSync(tmp, destino);
+    fs.linkSync(tmp, destinoOperacoes);
+    if (pin.ok) { try { fs.fsyncSync(pin.fd); } catch (_) { sincronizarDiretorio(dirItensAlvo); } } else { sincronizarDiretorio(dirItensAlvo); }
   } catch (e) {
     try { fs.rmSync(tmp, { force: true }); } catch (_) { /* nada a limpar */ }
+    if (e.code === 'EEXIST') {
+      let existente = null;
+      try { existente = JSON.parse(fs.readFileSync(destino, 'utf8')); } catch (_) { existente = null; }
+      if (existente && existente.artifactSha256 === corpo.artifactSha256) {
+        return { ok: true, abs: destino, sha256: corpo.artifactSha256, idempotente: true };
+      }
+      return { ok: false, motivo: 'RESULTADO_JA_EXISTE_DIVERGENTE' };
+    }
     return { ok: false, motivo: `ESCRITA_FALHOU:${e.code || e.message}` };
+  } finally {
+    try { fs.rmSync(tmp, { force: true }); } catch (_) { /* já removido */ }
+    if (pin.ok) {
+      // O diretório pinado ainda é o diretório canônico? Se foi trocado no meio da gravação, o
+      // artefato ficou no inode antigo: a execução é reportada como comprometida (nunca sucesso).
+      const realDoPin = pin.realDoPin();
+      pin.fechar();
+      if (!realDoPin || realDoPin !== realDirAntes) return { ok: false, motivo: 'DIR_TROCADO_DURANTE_ESCRITA' };
+    }
   }
+  const pos = depoisDaEscrita(dirItensAlvo, realDirAntes, destino);
+  if (!pos.ok) return { ok: false, motivo: pos.motivo };
   return { ok: true, abs: destino, sha256: corpo.artifactSha256 };
 }
 
@@ -566,6 +726,8 @@ function agregar({ rootDir, baseRel, runIds }) {
 }
 
 module.exports = {
+  criarRaizPrivada,
+  sincronizarDiretorio,
   VERSAO_REGULARIZADOR,
   STATUS,
   iniciar,
