@@ -72,11 +72,18 @@ jobs:
     name: "Governance Core (Node ${{ matrix.node-version }})"
     runs-on: ubuntu-latest
 
-    # ERREXIT POR PADRÃO (medido no CI de 2026-10-24, run 40105995013). Sem `-e`, o status de um
-    # passo multi-comando é o da ÚLTIMA linha: um `npm run validate:*` que reprovava no meio do
-    # script era seguido por um `echo` bem-sucedido e o job ficava VERDE. O caso concreto já
-    # corrigido foi o preflight de âncoras; o padrão vale para todos os passos deste job para que o
-    # defeito não reapareça em outro script. Passo que TOLERA falha precisa dizer `|| true`.
+    # SHELL EXPLÍCITO COM `pipefail` (revisão independente + docs oficiais, 2026-10-24).
+    #
+    # O runner já aplica `set -e` no shell PADRÃO (`bash -e {0}`), mas NÃO aplica `-o pipefail`
+    # ("When `shell: bash` is specified, `-o pipefail` is also applied", workflow-syntax docs).
+    # Num pipeline, o status é o do ÚLTIMO elemento: `node ... --check | tee arquivo` devolvia o
+    # status do `tee` (0), o `-e` do default não disparava, o `echo` seguinte tinha sucesso e o PASSO
+    # terminava 0 — com o script tendo reprovado. Medido nas duas formas:
+    #   bash --noprofile --norc -e -c 'node -e "process.exit(1)" | tee /dev/null; echo fim'  -> 0
+    #   bash --noprofile --norc -eo pipefail -c '...'                                        -> 1
+    # Fixar o shell com `pipefail` neste job (e nos demais certificantes) é o controle; `set -e` nos
+    # scripts é a segunda barreira, e é o que impede mascaramento por "última linha vence" também em
+    # script multi-comando. Passo que TOLERA falha precisa dizer `|| true`.
     defaults:
       run:
         shell: bash --noprofile --norc -eo pipefail {0}
@@ -152,10 +159,11 @@ jobs:
       - name: Preflight das âncoras do Bug Closure (BLOQUEANTE no caminho certificante)
         id: anchor-preflight
         run: |
-          # `set -e`: sem ele o status do passo é o da ÚLTIMA linha (`echo` no $GITHUB_OUTPUT), que
-          # sempre teve sucesso no runner — o `| tee` com pipefail não bastava e o passo ficava verde
-          # com o script devolvendo 1 (medido no CI de 2026-10-24). `-u` impede seguir com variável
-          # de ambiente ausente.
+          # `pipefail` + `-e`: o shell padrão do runner tem `-e` mas NÃO tem `pipefail`, e o status
+          # de `node ... --check | tee arquivo` é o do `tee` (0) — o passo terminava verde com o
+          # script reprovando, e o `echo` em $GITHUB_OUTPUT registrava sucesso. Reproduzido nas duas
+          # semânticas de shell (ver `tests/unit/ci/stepExitMasking.test.js`). `-u` impede seguir com
+          # variável de ambiente ausente.
           set -euo pipefail
           node scripts/governance/provision-closure-anchors.js --check | tee "$RUNNER_TEMP/anchor-preflight.json"
           echo "anchor_preflight=ok" >> "$GITHUB_OUTPUT"
@@ -273,15 +281,20 @@ jobs:
 
           chmod +x "$VERIFIER" 2>/dev/null || true
           echo "Executando verifier offline: $VERIFIER"
-          bash "$VERIFIER"
-          EXIT_CODE=$?
-          rm -rf "$TMPDIR_OFFLINE"
-
-          if [[ "$EXIT_CODE" -ne 0 ]]; then
+          # SOB ERREXIT (revisão independente, 2026-10-24): `bash "$VERIFIER"` que falha aborta o
+          # script no mesmo instante, então `EXIT_CODE=$?` e a mensagem `REPROVADO` ficavam
+          # INALCANÇÁVEIS e o diretório temporário sobrevivia. O veredito nunca foi afetado (o passo
+          # já saía vermelho), mas perdia-se exatamente o diagnóstico que evita reexecução — o mesmo
+          # objetivo do `saidaFinal` do gate. Forma explícita: o ramo de falha roda sempre.
+          if bash "$VERIFIER"; then
+            rm -rf "$TMPDIR_OFFLINE"
+            echo "✓ Verifier offline: PASS"
+          else
+            EXIT_CODE=$?
             echo "REPROVADO: verifier offline falhou (exit $EXIT_CODE)"
-            exit $EXIT_CODE
+            rm -rf "$TMPDIR_OFFLINE"
+            exit "$EXIT_CODE"
           fi
-          echo "✓ Verifier offline: PASS"
 
       - name: Upload artifacts de governança
         if: always()

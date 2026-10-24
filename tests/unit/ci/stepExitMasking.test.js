@@ -42,7 +42,21 @@ const comandos = (run) => String(run)
   .map((l) => l.trim())
   .filter((l) => l.length > 0 && !l.startsWith('#'));
 
-const temErrexitNoScript = (run) => /set\s+-[a-z]*e|set\s+-o\s+errexit/.test(String(run));
+/**
+ * O `run:` é lido SEM comentários. Comentário que CITA `set -e` — exatamente o que este arquivo e os
+ * dois passos de preflight fazem, ao explicar o defeito — não é diretiva. Se ele satisfizesse a
+ * checagem, remover o `set -euo pipefail` real passaria despercebido: regressão que só existe no
+ * papel. Medido em revisão independente (2026-10-24): a versão anterior deste helper devolvia `true`
+ * para os dois passos com a diretiva removida do script.
+ */
+const semComentarios = (run) => String(run)
+  .split('\n')
+  .map((l) => l.replace(/\s+#.*$/, ''))
+  .filter((l) => !l.trim().startsWith('#'))
+  .join('\n');
+
+const DIRETIVA_ERREXIT = /^\s*set\s+-[a-z]*e[a-z]*\b|^\s*set\s+-o\s+errexit\b/m;
+const temErrexitNoScript = (run) => DIRETIVA_ERREXIT.test(semComentarios(run));
 const shellTemErrexit = (shell) => /(^|\s)-[a-z]*e[a-z]*(\s|$)|errexit/.test(String(shell || ''));
 
 function passoProtegido(passo, job) {
@@ -78,7 +92,39 @@ describe('status de passo multi-comando não pode ser mascarado pela última lin
       expect(passo).toBeTruthy();
       expect(temErrexitNoScript(passo.run)).toBe(true);
       expect(passo['continue-on-error']).toBeUndefined();
+
+      // NÃO VACUIDADE: remover a diretiva real, mantendo os comentários que citam `set -e`, tem de
+      // fazer a checagem REPROVAR. Sem esta prova, apagar o `set -euo pipefail` passaria despercebido.
+      const semDiretiva = String(passo.run).replace(/^\s*set\s+-euo\s+pipefail\s*$/m, '');
+      expect(semDiretiva).not.toBe(String(passo.run));
+      expect(temErrexitNoScript(semDiretiva)).toBe(false);
     }
+  });
+
+  /**
+   * MECANISMO REAL, com as duas semânticas de shell do runner — docs oficiais: "By default, fail-fast
+   * behavior is enforced using `set -e` for both `sh` and `bash`. When `shell: bash` is specified,
+   * `-o pipefail` is also applied".
+   *
+   * Consequência que fecha o caso do preflight: o shell PADRÃO já tem `-e`, mas NÃO tem `pipefail` —
+   * logo `node ... --check | tee ...` era mascarado (o status do pipe é o do `tee`) e o `-e` do
+   * default não salvava nada. `shell: bash` (o que o `defaults.run.shell` fixa) acrescenta `pipefail`
+   * e é o que de fato reprova. Um teste que só provasse "a última linha bem-sucedida não salva"
+   * perderia esse mecanismo; este o executa nas duas formas.
+   */
+  test('shell PADRÃO (`bash -e`, sem pipefail) mascara pipe; `shell: bash` (-eo pipefail) não', () => {
+    const { execFileSync } = require('child_process');
+    const executar = (args, script) => {
+      try {
+        execFileSync('bash', [...args, '-c', script], { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
+        return 0;
+      } catch (e) {
+        return typeof e.status === 'number' ? e.status : 1;
+      }
+    };
+    const script = 'node -e "process.exit(1)" | tee /dev/null; echo fim';
+    expect(executar(['--noprofile', '--norc', '-e'], script)).toBe(0);
+    expect(executar(['--noprofile', '--norc', '-eo', 'pipefail'], script)).not.toBe(0);
   });
 
   test('a regra de errexit é comportamental: último comando bem-sucedido não salva o passo', () => {
