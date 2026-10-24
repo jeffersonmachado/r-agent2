@@ -564,6 +564,15 @@ function definirContextoExecucao(sha) {
   return CONTEXTO_EXECUCAO;
 }
 
+/**
+ * Resultado que o passo DEVERIA ter. Passos negativos declaram `esperado` (ex.: 1); os demais
+ * esperam 0. Usado só para decidir QUANTO da saída guardar (diagnóstico) — nunca no veredito.
+ */
+function esperadoParaEstePasso(passo) {
+  const bruto = passo && passo.esperado;
+  return typeof bruto === 'number' ? bruto : 0;
+}
+
 function executar(passo) {
   const inicio = Date.now();
   // O ORÇAMENTO PRECISA MATAR O PROCESSO. Com `shell: true`, o `timeout` do spawnSync
@@ -623,7 +632,13 @@ function executar(passo) {
     sha: CONTEXTO_EXECUCAO.sha,
     execucaoId: CONTEXTO_EXECUCAO.execucaoId,
     saidaRef,
-    saidaFinal: saida.trim().split('\n').slice(-12).join('\n'),
+    // DIAGNÓSTICO DE FALHA (Fase 3): o `saidaFinal` guardava só a CAUDA (12 linhas). Num passo que
+    // roda a suíte inteira, a cauda traz "Tests: 1 failed" e o RESUMO — mas não o nome do teste nem
+    // `Expected/Received`, que ficam no MEIO da saída. Sem isso, um vermelho no CI obriga a
+    // reexecutar tudo para descobrir o que falhou (medido em 2026-10-24, run 40105995013).
+    saidaFinal: (estourouOrcamento || exitCode !== esperadoParaEstePasso(passo))
+      ? [saida.trim().split('\n').slice(0, 60).join('\n'), saida.trim().split('\n').slice(-25).join('\n')].join('\n…\n')
+      : saida.trim().split('\n').slice(-12).join('\n'),
   };
 }
 
