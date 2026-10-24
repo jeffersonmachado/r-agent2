@@ -650,12 +650,22 @@ function executarGate(clonePath, env, args, logDir) {
  * individualmente, a partir da MESMA definição canônica (`PASSOS` do gate, nunca uma cópia), para
  * que a evidência registre o conjunto exato de gates vermelhos e verdes do commit.
  */
-function inventarioL1(clonePath, env, logDir) {
+function inventarioL1(clonePath, env, logDir, fasesPedidas = null) {
   const { PASSOS } = require('./dev-branch-gate');
   const resultado = [];
   // D = integridade de desenvolvimento; R = certificação de release. O inventário cobre as duas
   // para nomear o conjunto COMPLETO de gates de governança do commit (a fase R não roda no CI).
-  for (const definicao of [...PASSOS.D, ...(PASSOS.R || [])]) {
+  //
+  // ACHADO DA FASE 2 (medido 2026-10-24, `--scenario clean`): os passos da fase R são de
+  // CERTIFICAÇÃO DE RELEASE (`validate-governance-chain`, `validate-self-proving`,
+  // `assert-canonical-release-decision`) e NÃO PODEM passar num repositório sem selo — eles
+  // falham legitimamente (`CADEIA_RECOMPUTADA_INVALIDA`, `PRE_PACKAGE_PASS`). Como entravam no
+  // veredito, `ci:clean-checkout --gate-phases A,B,C,D` NUNCA podia ficar verde: o resultado
+  // media a certificação do release, não a sanidade do ambiente. O passo continua sendo EXECUTADO
+  // e o exit code continua registrado; ele apenas é marcado `foraDeEscopo` (e deixa de alimentar
+  // o veredito) quando a fase R não foi solicitada. Com `--gate-phases ...R`, volta a contar.
+  const faseRNoEscopo = fasesPedidas === null || fasesPedidas.includes('R');
+  for (const definicao of PASSOS.D) {
     const [comando, ...resto] = definicao.comando.split(' ');
     const registro = passo(`L1-inventario:${definicao.id}`, comando, resto, {
       cwd: clonePath,
@@ -664,7 +674,22 @@ function inventarioL1(clonePath, env, logDir) {
       timeoutMs: Math.min(definicao.orcamentoMs || 120000, 10 * 60 * 1000),
       descricao: definicao.descricao,
     });
-    resultado.push({ id: definicao.id, exitCode: registro.exitCode, ok: registro.ok });
+    resultado.push({ id: definicao.id, exitCode: registro.exitCode, ok: registro.ok, fase: 'D' });
+  }
+  for (const definicao of PASSOS.R || []) {
+    const [comando, ...resto] = definicao.comando.split(' ');
+    const registro = passo(`L1-inventario:${definicao.id}`, comando, resto, {
+      cwd: clonePath,
+      env,
+      logDir,
+      timeoutMs: Math.min(definicao.orcamentoMs || 120000, 10 * 60 * 1000),
+      descricao: definicao.descricao,
+    });
+    if (!faseRNoEscopo) {
+      registro.foraDeEscopo = true;
+      registro.motivoForaDeEscopo = 'FASE_R_NAO_SOLICITADA';
+    }
+    resultado.push({ id: definicao.id, exitCode: registro.exitCode, ok: registro.ok, fase: 'R', foraDeEscopo: !faseRNoEscopo });
   }
   return resultado;
 }
@@ -708,7 +733,7 @@ function cenarioClean(ctx, args) {
 
   // Inventário só quando o L1 está no escopo: nomear TODOS os vermelhos, não apenas o primeiro.
   if (opcoesDeGate(args) === null || opcoesDeGate(args).includes('D')) {
-    const inventario = inventarioL1(clonePath, env, logDir);
+    const inventario = inventarioL1(clonePath, env, logDir, opcoesDeGate(args));
     const vermelhos = inventario.filter((i) => !i.ok).map((i) => i.id);
     passos.push({
       id: 'L1-inventario-resumo',
@@ -1222,7 +1247,11 @@ function main(argv = process.argv.slice(2)) {
 
       const copiados = copiarEvidenciaDoClone(clonePath, runDir, sourceCommit);
       const meusPassos = passos.slice(iniciou);
-      const executados = meusPassos.filter((p) => p.id !== 'clone-limpo' && !p.informativo);
+      // Passo `foraDeEscopo` foi EXECUTADO e seu exit code está no relatório, mas mede certificação
+      // de release (fase R) quando o run pediu apenas A,B,C,D: não pode governar o veredito do
+      // ambiente. `--gate-phases ...R` faz o passo voltar a contar.
+      const executados = meusPassos.filter((p) => p.id !== 'clone-limpo' && !p.informativo && !p.foraDeEscopo);
+      const foraDeEscopo = meusPassos.filter((p) => p.foraDeEscopo).map((p) => ({ id: p.id, exitCode: p.exitCode, motivo: p.motivoForaDeEscopo }));
       const veredito = executados.length > 0 && executados.every((p) => p.ok) ? 'PASS' : 'FAIL';
       const relatorio = {
         schemaVersion: 1,
@@ -1238,6 +1267,7 @@ function main(argv = process.argv.slice(2)) {
         generatedAt: nowIso(),
         veredito,
         gatePhases: args.gatePhases,
+        passosForaDeEscopo: foraDeEscopo,
         withIntegration: args.withIntegration,
         database: nomeBanco,
         redis: `db${REDIS_DB}`,

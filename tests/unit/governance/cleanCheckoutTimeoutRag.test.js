@@ -207,3 +207,39 @@ describe('P1-E — cenário negativo é fail-closed e infra vence sempre', () =>
     }
   });
 });
+
+describe('P2-D — ESCOPO DO VEREDITO: fase R não governa a sanidade do ambiente', () => {
+  // MEDIDO 2026-10-24 (`--scenario clean`, commit 85ca7e2cc): o gate A,B,C,D passou em 1459 s e
+  // todos os passos de ambiente passaram, mas o veredito final foi FAIL porque os três passos da
+  // fase R (certificação de release) reprovaram — e eles NÃO PODEM passar num repositório sem
+  // selo (`CADEIA_RECOMPUTADA_INVALIDA`, `PRE_PACKAGE_PASS`). O harness então nunca podia ficar
+  // verde, e o vermelho não distinguia "ambiente quebrado" de "release não certificado".
+  test('o inventário marca os passos da fase R como fora de escopo quando R não foi pedida', () => {
+    expect(FONTE).toContain("registro.foraDeEscopo = true");
+    expect(FONTE).toContain("registro.motivoForaDeEscopo = 'FASE_R_NAO_SOLICITADA'");
+    expect(FONTE).toContain('const faseRNoEscopo = fasesPedidas === null || fasesPedidas.includes(\'R\')');
+  });
+
+  test('o passo fora de escopo CONTINUA sendo executado (exit code preservado no relatório)', () => {
+    // O registro é produzido por `passo(...)` (execução real) e só DEPOIS marcado; o relatório
+    // grava o exit code do passo fora de escopo em `passosForaDeEscopo`.
+    expect(FONTE).toContain('passosForaDeEscopo: foraDeEscopo');
+    expect(FONTE).toContain('const foraDeEscopo = meusPassos.filter((p) => p.foraDeEscopo)');
+    expect(FONTE).toContain('{ id: p.id, exitCode: p.exitCode, motivo: p.motivoForaDeEscopo }');
+  });
+
+  test('o veredito IGNORA passos fora de escopo (nunca os usa para PASS por omissão)', () => {
+    expect(FONTE).toContain("!p.informativo && !p.foraDeEscopo");
+    // Um passo fora de escopo continua visível e com ok=false no relatório: não é "convertido em sucesso".
+    expect(FONTE).not.toMatch(/foraDeEscopo[\s\S]{0,80}ok = true/);
+  });
+
+  test('a fase R continua contando quando é solicitada explicitamente', () => {
+    expect(FONTE).toContain("fasesPedidas.includes('R')");
+    const { PASSOS } = require('../../../scripts/ci/dev-branch-gate');
+    expect((PASSOS.R || []).map((p) => p.id)).toEqual(
+      expect.arrayContaining(['L1-cadeia-criptografica', 'L1-self-proving', 'L1-decisao-canonica']),
+    );
+    expect((PASSOS.D || []).map((p) => p.id)).not.toContain('L1-cadeia-criptografica');
+  });
+});
