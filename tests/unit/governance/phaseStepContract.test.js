@@ -106,7 +106,17 @@ describe('P0-01 — contrato de cobertura: a fase D é o conjunto EXATO de integ
 
   test('a fase R (certificação de release) é obrigatória para validação completa', () => {
     const idsR = passosObrigatoriosDaFase(PASSOS.R);
-    expect(idsR).toEqual(['L1-cadeia-criptografica', 'L1-self-proving', 'L1-decisao-canonica']);
+    // Fase 3 (missão D): a asserção de ESTADO CANÔNICO das projeções saiu do L2 (dependia de
+    // `governance/rap-master-scorecard.json`, artefato de run governado) e passou a ser exigida
+    // AQUI — o controle de certificação continua obrigatório, apenas no lugar certo.
+    expect(idsR).toEqual([
+      'L1-cadeia-criptografica',
+      'L1-self-proving',
+      'L1-projecao-estado-canonico',
+      'L1-decisao-canonica',
+    ]);
+    const certificacao = PASSOS.R.find((p) => p.id === 'L1-projecao-estado-canonico');
+    expect(certificacao.comando).toContain('test:certification');
     // Se R deixar de ser obrigatória, "validação completa" passaria a não exigir certificação de
     // release — exatamente o furo que a separação existe para evitar.
     expect(FASES_OBRIGATORIAS_VALIDACAO_COMPLETA).toContain('R');
