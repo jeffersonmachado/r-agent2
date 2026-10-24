@@ -5,7 +5,7 @@
 **PR:** #16 → `dev/engineering-hardening` — **NÃO MESCLADO**
 **Baseline do PR:** `484eee4788e553907e31f7b0528cac9ee41d9298`
 **Base desta fase (fim da Fase 2):** `a3aa22d2869ff6c162968cac64dd33de9403738c`
-**HEAD desta fase (código validado por CI):** `23ab5d768fa22a85d2f3804e29f7a3d66f519ec4`
+**HEAD desta fase (código validado por CI + checkout limpo + L2):** `83b50f1e4209522593d554a84a40b1d02abeb6cc`
 **CI (SHA exato):** run `40114341579` — merge `56c435e3a6e0` — **success**
 **Diff da fase:**  21 files changed, 1167 insertions(+), 63 deletions(-)
 **Node:** v22.12.0 · **npm:** 10.9.0 · **Jest:** 29.7.0 · **Docker:** 27.3.1
@@ -244,14 +244,26 @@ node scripts/governance/provision-closure-anchors.js --check | tee "$RUNNER_TEMP
 echo "anchor_preflight=ok" >> "$GITHUB_OUTPUT"
 ```
 
-Sem `set -e`, o status de um passo é o da **última** linha. No runner `$GITHUB_OUTPUT` e
-`$RUNNER_TEMP` existem, então o `echo` tinha sucesso e `pipefail` sozinho não reprovava:
-`governance-core` ficava verde e `release-gate` podia imprimir *"Release autorizado"* sem nenhuma
-âncora de confiança. O teste do P1-C passava na máquina de desenvolvimento **por acidente de
+Mecanismo (docs oficiais + medição, não suposição): o shell PADRÃO do runner aplica `set -e`
+(`bash -e {0}`), mas **não** aplica `pipefail` — *"When `shell: bash` is specified, `-o pipefail` is
+also applied"*. Num pipeline o status é o do ÚLTIMO elemento, então `node … --check | tee arquivo`
+devolvia o status do `tee` (0), o `-e` do default não disparava, o `echo` seguinte tinha sucesso e o
+PASSO terminava 0 com o script reprovando. Medido nas duas semânticas:
+
+```
+bash --noprofile --norc -e  -c 'node -e "process.exit(1)" | tee /dev/null; echo fim'  -> 0  (mascarado)
+bash --noprofile --norc -eo pipefail -c '...'                                          -> 1  (reprova)
+```
+
+Consequência: `governance-core` ficava verde e `release-gate` podia imprimir *"Release autorizado"*
+sem nenhuma âncora de confiança. O defeito é **anterior** a esta fase e nunca foi observado num run
+de `release-governance.yml` (esse workflow não dispara para as branches deste PR); foi reproduzido
+pelo harness, que modelava o runner com `bash -c` sem `-e`, e depois confirmado pela simulação do
+shell padrão acima. O teste do P1-C passava na máquina de desenvolvimento **por acidente de
 ambiente** (sem essas variáveis, o próprio `echo` falhava e a asserção era satisfeita pelo motivo
 errado).
 
-Correção: `set -euo pipefail` nos dois passos de preflight e
+Correção (duas barreiras): `set -euo pipefail` nos dois passos de preflight e
 `defaults.run.shell: bash --noprofile --norc -eo pipefail {0}` nos jobs certificantes
 (`governance-core`, `governance-regression`, `anchors-attestation`, `release-gate`, `dev-branch-gate`).
 Passo que TOLERA falha passa a precisar dizer `|| true` explicitamente.
@@ -288,6 +300,23 @@ Correção: novo passo `L0a-artefatos-canoeiros` (`npm run ci:artifacts`) imedia
 backoff linear (10 s…50 s) e **falha fechada** (`exit 1`) se todas esgotarem — retry é resiliência a
 janela de rate limit, não tolerância a modelo ausente. Validado com laço forçado a falhar
 (exit 1 em `bash:5`) e `docker build --check rag-service` ⇒ *no warnings found*.
+
+### 5.7-bis Governança de branch no GitHub (missão E, itens 4-7) — medido, não presumido
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Branch protection de `dev/engineering-hardening` | `gh api repos/…/branches/dev/engineering-hardening/protection` | **404 — "Branch not protected"** |
+| Rulesets do repositório | `gh api repos/…/rulesets` | **`[]`** (nenhum) |
+| Required checks | (derivam de protection/rulesets) | **nenhum exigido** — o CI é informativo, não bloqueante no GitHub |
+| Permissões dos workflows | `permissions:` nos workflows de desenvolvimento | `contents: read` (não publicam) |
+| Jobs puláveis | `continue-on-error` em passos de gate | nenhum (travado por `prCiCoverage.test.js`) |
+| Identidade do SHA | `test "$(git rev-parse HEAD)" = "$GITHUB_SHA"` + `A2-sha-esperado` | assertada em cada run |
+
+Consequência declarada: **o verde de CI não é imposto pelo GitHub** — é um gate *voluntário* na
+cultura do repositório. Quem pode fazer merge pode ignorar o vermelho. Mudar isso exige configuração
+de branch protection (fora do escopo autorizado desta missão: "não alterar a configuração de
+segurança do repositório apenas para obter CI verde"); fica registrado como risco residual e item de
+fila, não como sucesso presumido.
 
 ### 5.8 Harness de paridade com o CI (como o "um vermelho por run" foi encerrado)
 
@@ -329,9 +358,10 @@ RAG vivos, `L0b`) é coberta pelos `services:` e passos do workflow.
 | Isolamento RAG | `tests/unit/rag*` + `ragDomainRouter` + `ragDomainSegregationEvidence` | PASS (173) |
 | L1 desenvolvimento | `validate-release-dag` / `validate-ai-memory` / `validate-agent-adherence` | exit 0 |
 | L1 fila oficial | `validate-bug-closure-status` | **exit 1** (`FECHAMENTO_NAO_PROVADO` 130 — estado canônico) |
-| L2 | `--scenario l2-system` (checkout descartável) | **PASS** |
-| Checkout limpo (`clean`) | `--scenario clean` | PASS na Fase 2 (`9bb607c40`); **não reexecutado no HEAD desta fase** |
-| Cenários negativos de infraestrutura | `missing-artifact`, `corrupt-artifact`, `docker-unavailable`, `bootstrap-twice`, `db-unavailable` | PASS (Fase 2, `cad7caaad`) |
+| L2 | `--scenario l2-system --commit 83b50f1e4` (checkout descartável) | **PASS** — `clone-limpo` 0, `bootstrap` 0 (102 s), `l2-test-system` 0 (68 s) |
+| Checkout limpo (`clean`) | `--scenario clean --commit 83b50f1e4` | **PASS** (runId `clean-checkout-20261024190537448-351b57`); clone virgem + Postgres/Redis efêmeros + RAG em porta própria; fase R marcada `FASE_R_NAO_SOLICITADA` (fora de escopo, não FAIL) |
+| Artefato ausente | `--scenario missing-artifact` | **PASS** — `consumidor-com-artefato` 0 ⇒ `consumidor-sem-artefato` **exit 1** ⇒ `produtor-regenera` 0 ⇒ `consumidor-apos-regenerar` 0 (não vacuidade provada) |
+| Cenários negativos de infraestrutura | `bootstrap-twice`, `corrupt-artifact`, `docker-unavailable`, `db-unavailable` (todos com `--commit 83b50f1e4`) | **PASS nos quatro**, reexecutados no SHA final |
 | `test:certification` | `jest tests/certification` | PASS (2) |
 
 ### 6.1 `modelDrivenE2e` — dependência de artefato do CI, não regressão
@@ -383,6 +413,13 @@ Ver §11 (resultado e achados).
    release). Fica como item de fila, não como exceção silenciosa.
 7. **Rate limit do HuggingFace** — retry reduz a flakiness, mas não elimina a dependência de rede no
    build da imagem RAG; cache de modelo no runner seria a solução definitiva.
+8. **Branch sem protection** — `dev/engineering-hardening` não tem branch protection nem required
+   checks (§5.7-bis). O CI verde é convenção, não imposição: um merge pode ignorar o vermelho.
+9. **Boot da aplicação é caro** — 12 suítes sobem `api/server` inteiro; o orçamento passou a ser
+   compartilhado (60 s) depois de medir 24,5 s a frio. A fragilidade de fundo (boot pesado por teste)
+   permanece: a correção estrutural seria um `createServer` sob demanda, refactor fora deste escopo.
+10. **Rate limit do HuggingFace** — retry reduz a flakiness, mas não elimina a dependência de rede no
+    build da imagem RAG; cache de modelo no runner seria a solução definitiva.
 
 ---
 
@@ -425,6 +462,17 @@ runner difere da máquina de desenvolvimento):**
 | D2 | P1 | asserção dependente de HEAD destacado (`sourceBranch` obrigatoriamente string) | CI `40112925374` ⇒ `runIdentityCommit:60` | regra estrita: igualdade com o git, `null` só com `git symbolic-ref` falhando |
 | D3 | P1 | L0 não produzia as próprias entradas (artefatos ignorados pelo git) | árvore sem `reports/*.json` ⇒ `GRAPH_ABSENT` | passo `L0a-artefatos-canoeiros` + ordem travada por contrato |
 | D4 | P2 | build da imagem RAG morria por `429` do HuggingFace | CI `40108935675` (1ª tentativa) | retry com backoff e falha fechada |
+| D5 | P2 | **TIMEOUT** (não asserção) em `publicStorefrontPhysicalEndpoints` no clone limpo: 24,5 s a frio contra orçamento de 30 s | `ci:clean-checkout --scenario clean` em `c5230cbf0` | `tests/helpers/jestTimeouts.js` (`TIMEOUT_BOOT_APP_MS = 60000`) aplicado às 12 suítes que sobem `api/server`; asserções intactas |
+
+### 13.x Segunda revisão independente (delta pós-CI) — 3 achados, todos tratados
+
+Revisor distinto (`code-review`, contexto próprio, 9 min) sobre `6770c3af1..c5230cbf0`.
+
+| # | Sev | Achado | Tratamento |
+|---|---|---|---|
+| R1 | P2 | `temErrexitNoScript` casava a regex no texto CRU, então **comentário** que cita `set -e` mantinha o teste verde com a diretiva real apagada — a regressão do D1 era só no papel | comentários removidos antes da checagem; a diretiva precisa ser linha `set -…e…`; prova de não vacuidade no teste + **mutação executada** (apagar a linha do YAML ⇒ vermelho; restaurar ⇒ verde) |
+| R2 | P2 | revisão supôs que o shell padrão já tem `pipefail` (o que faria do D1 um fantasma) | **não procede**: docs oficiais + medição provam `-e` sem `pipefail` no default; o D1 é real. O que a revisão acertou: os COMENTÁRIOS do workflow atribuíam o mascaramento à ausência de `-e` — reescritos, e o teste passa a executar as duas semânticas de shell |
+| R3 | P2 | sob errexit, `bash "$VERIFIER"` que falha abortava antes de `EXIT_CODE=$?`, da mensagem `REPROVADO` e do `rm -rf` do temporário | forma explícita `if bash "$VERIFIER"; then … else cod=$?; …; exit "$cod"; fi`, exercitada com verifier devolvendo 3 (mensagem impressa, código propagado, temporário removido) |
 
 **Achado DERIVADO (não apontado pelo revisor, encontrado no fechamento):** `jest tests/unit` regera
 `reports/tenant-isolation-report.json` e `reports/rag-domain-segregation-report.json` — o `git add -A`
@@ -437,7 +485,7 @@ item 5 (risco residual §9.3 mantido).
 ## 12. VEREDITO
 
 ```
-NÍVEL DE DESENVOLVIMENTO .......... DEVELOPMENT_VERIFIED_NO_SHA_R (ver 12.4)
+NÍVEL DE DESENVOLVIMENTO .......... DEVELOPMENT_VERIFIED (ver 12.4)
 NÍVEL DE CERTIFICAÇÃO ............. NO_GO
 
 RELEASE_CERTIFICATION = NO_GO
@@ -454,8 +502,10 @@ PUBLISHED             = FALSE
 | `TESTED_SHA` (local) | `26f6acfdb5d414a8339512b05293c1ea90e5b56f` | L0 completo local: 9726 PASS, exit 0 |
 | `TESTED_SHA` (paridade CI) | `23ab5d768fa22a85d2f3804e29f7a3d66f519ec4` | worktree `--detach` + artefato prod-like: 1115/1115 suítes, exit 0 |
 | `REVIEWED_SHA` | `6770c3af12da6d69ba3ced36dad440c198211d7e` | intervalo revisado por agente distinto |
-| `DELIVERED_SHA` | `23ab5d768fa22a85d2f3804e29f7a3d66f519ec4` (+ commit deste relatório) | **validado por CI no run `40114341579`** |
-| `CI_VALIDATED_SHA` | merge de `23ab5d768` em `484eee478` = `56c435e3a6e06e5637e315f66690ba67ad353e92` | job L0+L1 `success`; `A2-sha-esperado` confirma identidade |
+| `DELIVERED_SHA` | `83b50f1e4209522593d554a84a40b1d02abeb6cc` (+ commit deste relatório) | **validado por CI no run `40123706119`** (success) |
+| `CI_VALIDATED_SHA` | `23ab5d768` (run `40114341579`), `c5230cbf0` (run `40116481472`), `83b50f1e4` (run `40123706119`) | job L0+L1 `success` nos três; `A2-sha-esperado` confirma identidade em cada um |
+| `L2_VALIDATED_SHA` | `83b50f1e4` | `--scenario l2-system` **PASS** (clone limpo, bootstrap 102 s, `l2-test-system` 68 s) |
+| `CLEAN_VALIDATED_SHA` | `83b50f1e4` | `--scenario clean` **PASS**; `--scenario missing-artifact` **PASS** |
 
 O merge commit do PR é o objeto realmente testado pelo runner (é o que o `pull_request` executa), e o
 gate ASSERE a identidade (`test "$(git rev-parse HEAD)" = "$GITHUB_SHA"` + `A2-sha-esperado`), então a
@@ -467,42 +517,54 @@ validação é do conteúdo do PR e não de um ref vizinho. O commit que adicion
 | Critério (mission §1) | Estado |
 |---|---|
 | Todas as vulnerabilidades reproduzidas corrigidas | **SIM** — A (2 vetores), B (fail-closed), C (trust), achados 1/2/4 da revisão |
-| Testes de regressão verdes | **SIM** — 1115/1115 suítes e 9726 testes, exit 0, em árvore de paridade com o CI (`23ab5d768`) |
+| Testes de regressão verdes | **SIM** — 1115/1115 suítes e 9726 testes, exit 0 (árvore de paridade `23ab5d768`); CI `40123706119` sucesso em `83b50f1e4` |
 | Nenhum caminho de publicação contorna a decisão canônica | **SIM** para os 6 entrypoints inventariados e testados |
 | Isolamento de filesystem comprovado no modelo de ameaça | **SIM** (18 ataques; sem `/proc` ⇒ recusa) |
-| L2 executado e dependência resolvida legitimamente | **SIM** — `L2 = PASS` em checkout limpo, com separação formal |
-| HEAD entregue == HEAD validado | **SIM** — run `40114341579` no merge de `23ab5d768` com L0+L1 verdes e identidade de SHA assertada pelo gate |
+| L2 executado e dependência resolvida legitimamente | **SIM** — `L2 = PASS` em checkout limpo em `83b50f1e4`; a dependência de artefato governado saiu do L2 e foi para a fase R (separação formal, §4) |
+| HEAD entregue == HEAD validado | **SIM** — `83b50f1e4` validado por CI (`40123706119`), checkout limpo, L2 e os 6 cenários; identidade de SHA assertada pelo gate |
 | Revisão adversarial independente concluída | **SIM** — `CHANGES_REQUESTED` → 6 de 7 tratados, item 3 já corrigido |
 
 ### 12.3 Verificações reais das declarações
 
 ```
-git rev-parse origin/main                      -> 04cad9c1b639cdae357687f7febf47e490834665  (inalterado)
+git rev-parse origin/main                       -> 04cad9c1b639cdae357687f7febf47e490834665  (inalterado)
 git rev-parse origin/dev/engineering-hardening  -> 484eee4788e553907e31f7b0528cac9ee41d9298  (inalterado)
-git tag --points-at HEAD                        -> (vazio)  # nenhuma tag criada
-gh run view 40114341579 --json jobs             -> prod-like-smoke/integração/L0+L1 = success
+git tag --points-at 83b50f1e4                   -> (vazio)  # nenhuma tag criada
+gh run view 40123706119 --json jobs             -> prod-like-smoke/integração/L0+L1 = success
+gh api .../branches/dev/engineering-hardening/protection -> 404 Branch not protected (§5.7-bis)
 ```
 
 `MAIN_MODIFIED = FALSE` e `PUBLISHED = FALSE` conferidos por `git ls-remote`, não presumidos.
-O único push feito foi para `codex/p1-governance-hardening-20261023`, autorizado pelo usuário.
+Único push feito: `codex/p1-governance-hardening-20261023`, autorizado pelo usuário.
 
-### 12.4 Por que `DEVELOPMENT_VERIFIED_NO_SHA_R` e não mais que isso
+### 12.4 Por que `DEVELOPMENT_VERIFIED` e por que isso NÃO é certificação
 
-O que está provado: L0 oficial (1115 suítes / 9726 testes) e L1 (release-dag, fila oficial, ai-memory,
-aderência do agente) verdes **no runner do GitHub**, no SHA exato do PR, com os quatro defeitos
-encontrados por CI corrigidos e travados por regressão.
+Critérios de desenvolvimento do briefing, todos comprovados no SHA final `83b50f1e4`:
 
-O que **não** está provado, e por isso o veredito é restrito:
+| § | Critério | Prova no SHA final |
+|---|---|---|
+| 1 | vulnerabilidades reproduzidas corrigidas | A (bypass de publicação, classe fechada), B (fs fail-closed sem `/proc`), C (trust levels), D (L2×certificação), D1–D5 (achados de CI e de revisão) |
+| 2 | regressão verde | L0 local 1115/1115 suítes · 9726 testes · exit 0; CI run `40123706119` **success** |
+| 3 | nenhum caminho de publicação contorna a decisão | 6 entrypoints com porteiro + 40 casos de bypass (A1–A14) |
+| 4 | isolamento de filesystem comprovado | 18 ataques reais; sem `/proc` ⇒ `UNSUPPORTED_SECURE_FILESYSTEM` (recusa, não escrita-e-detecção) |
+| 5 | L2 executado e dependência resolvida | `--scenario l2-system` **PASS** (`npm run test:system`, 68 s) |
+| 6 | HEAD entregue == HEAD validado | `83b50f1e4` validado por CI, checkout limpo, L2 e os 6 cenários |
+| 7 | revisão adversarial independente | duas rodadas (7 + 3 achados), todos tratados com regressão |
 
-1. **Fase R (certificação) não roda no CI.** O workflow roda `--fases A,B,C,D` por decisão explícita
-   (o comentário do próprio workflow registra que R depende de âncoras externas e de artefato
-   governado). Logo `completo=false` e o veredito do gate é `PASS_PARCIAL` — nunca `PASS`.
-2. **Gate agregado continua vermelho por contrato**: `validate-bug-closure-status` reprova 130 itens
-   sem prova de fechamento e as âncoras de confiança não existem no ambiente do runner. Isso é o
-   estado canônico correto, não um defeito a "consertar".
-3. **L2/certificação de release** seguem `NO_GO`: selagem exige decisão canônica GO, que exige
-   âncoras externas que este ambiente não tem.
-4. Nenhum release, tag, merge ou publicação foi executado (`MERGE_PR_16 = NOT_AUTHORIZED`).
+E os cenários do §9/§F no SHA final: `clean` PASS · `missing-artifact` PASS · `bootstrap-twice` PASS ·
+`corrupt-artifact` PASS · `docker-unavailable` PASS · `db-unavailable` PASS · `l2-system` PASS.
 
-Ou seja: **o desenvolvimento está validado de forma independente; a certificação de release não está,
-e não estava no escopo autorizado.**
+O que **não** está provado — e por que não impede o rótulo de desenvolvimento:
+
+1. **Fase R (certificação) não roda no CI** (`--fases A,B,C,D`) e exige âncoras externas
+   (`RAP_CLOSURE_*`) inexistentes neste ambiente. Sem elas, o caminho certificante **recusa** — o que é
+   o comportamento correto, não um defeito a contornar. Por isso o gate agregado é `PASS_PARCIAL` e
+   `RELEASE_CERTIFICATION = NO_GO`.
+2. **Gate agregado vermelho por contrato**: 130 itens da fila sem prova de fechamento. Nenhum estado
+   foi alterado para forçar GO.
+3. **Branch sem protection** (§5.7-bis): o verde de CI é convenção, não imposição do GitHub.
+4. Nenhum release, tag, merge ou publicação executado (`MERGE_PR_16 = NOT_AUTHORIZED`,
+   `MAIN_MODIFIED = FALSE`, `PUBLISHED = FALSE`).
+
+Resumo em uma frase: **o desenvolvimento está validado de forma independente; a certificação de
+release continua `NO_GO`, e não estava no escopo autorizado.**
