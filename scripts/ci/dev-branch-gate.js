@@ -210,6 +210,16 @@ const PASSOS = Object.freeze({
       orcamentoMs: 120 * 1000,
     },
     {
+      // Fase 3, missão D: a asserção de ESTADO CANÔNICO das projeções saiu do L2 (dependia de
+      // `governance/rap-master-scorecard.json`, artefato de run governado) e passou a viver aqui,
+      // na fase de CERTIFICAÇÃO. O controle continua exigido — só deixou de contaminar o L2.
+      id: 'L1-projecao-estado-canonico',
+      nivel: 'L1',
+      comando: 'npm run -s test:certification',
+      descricao: 'Projeções canônicas do estado real (BLOCKED_BY_GOVERNED_EVIDENCE sem scorecard governado)',
+      orcamentoMs: 120 * 1000,
+    },
+    {
       id: 'L1-decisao-canonica',
       nivel: 'L1',
       comando: 'node scripts/governance/assert-canonical-release-decision.js',

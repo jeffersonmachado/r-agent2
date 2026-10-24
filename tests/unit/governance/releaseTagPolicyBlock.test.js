@@ -69,11 +69,23 @@ function montarCenario({ hookBloqueiaTag }) {
   return { base, repo, remote, commit };
 }
 
+/**
+ * O cenário usa um remote BARE em filesystem (não publica nada). Desde a Fase 3 o porteiro de
+ * publicação exige autorização + GO DEFINITIVO por padrão, e a única dispensa é o modo local de
+ * teste EXPLÍCITO (`RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW` = caminho exato do destino de push).
+ * Isso é declarado aqui — antes a dispensa era implícita (heurística de URL), o que foi contornado.
+ */
 function rodarScript(cenario) {
   const r = spawnSync('bash', [SCRIPT, TAG, cenario.commit], {
     cwd: cenario.repo,
     encoding: 'utf8',
-    env: { ...process.env, RAP_RELEASE_TAG_REMOTE: 'origin' },
+    env: {
+      ...process.env,
+      RAP_RELEASE_TAG_REMOTE: 'origin',
+      RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remote,
+      CI: '',
+      NODE_ENV: 'test',
+    },
   });
   return { status: r.status, saida: `${r.stdout || ''}${r.stderr || ''}` };
 }

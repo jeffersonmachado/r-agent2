@@ -68,6 +68,7 @@
     "test:stress": "jest tests/stress",
     "test:rate-limit": "jest tests/rate-limit",
     "test:system": "jest tests/contracts tests/governance tests/ci tests/runtime tests/organizational tests/stress tests/rate-limit",
+    "test:certification": "jest tests/certification",
     "qa": "node qa/qaRunner.js",
     "learning:skill-graph:build": "node scripts/learning/build-skill-graph.js",
     "qa:mesh": "node --env-file-if-exists=.env pipeline/entrypoints/runQaMesh.js",

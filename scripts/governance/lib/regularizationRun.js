@@ -30,6 +30,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { classificarEvidencia, proximoNivel } = require('../../../governance/proof-engine/evidence-trust');
+
 const VERSAO_REGULARIZADOR = '2.0.0';
 const STATUS = Object.freeze({ RUNNING: 'RUNNING', COMPLETED: 'COMPLETED', FAILED: 'FAILED' });
 
@@ -171,6 +173,11 @@ function criarRaizPrivada(rootDir, baseRel) {
  * detecção pós-escrita (`depoisDaEscrita`) — que DETECTA a troca e recusa o sucesso, sem preveni-la.
  */
 function abrirDiretorioPinado(dirAbs) {
+  // COSTURA DE TESTE (Fase 3, missão B): simula plataforma sem `/proc` para provar o fail-closed.
+  // Só pode piorar a situação (força a recusa), nunca habilitar escrita — e não vale em produção.
+  if (process.env.RAP_SECURE_FS_FORCE_NO_PROC === '1' && process.env.NODE_ENV !== 'production') {
+    return { ok: false, motivo: 'PIN_INDISPONIVEL' };
+  }
   let fd;
   try {
     fd = fs.openSync(dirAbs, fs.constants.O_RDONLY | (fs.constants.O_DIRECTORY || 0) | fs.constants.O_NOFOLLOW);
@@ -289,8 +296,10 @@ function gravarManifesto(dir, manifesto) {
   if (st && st.isSymbolicLink()) throw new Error('MANIFESTO_E_SYMLINK');
   const realDirAntes = fs.realpathSync(dir);
   const pin = abrirDiretorioPinado(dir);
-  if (!pin.ok && pin.motivo !== 'PIN_INDISPONIVEL') throw new Error(pin.motivo);
-  const dirOperacoes = pin.ok ? pin.caminho : dir;
+  if (!pin.ok) {
+    throw new Error(pin.motivo === 'PIN_INDISPONIVEL' ? 'UNSUPPORTED_SECURE_FILESYSTEM:PIN_INDISPONIVEL' : pin.motivo);
+  }
+  const dirOperacoes = pin.caminho;
   const tmp = path.join(dirOperacoes, `.tmp-manifest-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
   try {
     const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
@@ -393,9 +402,20 @@ function gravarResultado({ rootDir, baseRel, runId, resultado, esperadoNoEscopo 
   // exatamente uma vez. Reexecução com o MESMO conteúdo é idempotente; conteúdo divergente é
   // recusado.
   const realDirAntes = fs.realpathSync(dirItensAlvo);
+  // FAIL-CLOSED SEM PRIMITIVA (Fase 3, missão B): antes, `PIN_INDISPONIVEL` (plataforma sem
+  // `/proc`, ou container que o restringe) caía num caminho textual que escreve e só DEPOIS
+  // detecta a troca de diretório — detecção não é prevenção, e o efeito externo já teria ocorrido.
+  // Agora a ausência da primitiva RECUSA a escrita (nunca fabrica sucesso):
   const pin = abrirDiretorioPinado(dirItensAlvo);
-  if (!pin.ok && pin.motivo !== 'PIN_INDISPONIVEL') return { ok: false, motivo: pin.motivo };
-  const dirOperacoes = pin.ok ? pin.caminho : dirItensAlvo;
+  if (!pin.ok) {
+    return {
+      ok: false,
+      motivo: pin.motivo === 'PIN_INDISPONIVEL'
+        ? 'UNSUPPORTED_SECURE_FILESYSTEM:PIN_INDISPONIVEL'
+        : pin.motivo,
+    };
+  }
+  const dirOperacoes = pin.caminho;
   const tmp = path.join(dirOperacoes, `.tmp-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
   const destinoOperacoes = path.join(dirOperacoes, `${resultado.id}.json`);
   try {
@@ -719,11 +739,35 @@ function agregar({ rootDir, baseRel, runIds }) {
       && Number(e.manifesto.resultados) === e.resultados.length;
   };
   const completo = execucoes.length === 1 && completaPorArtefatos(execucoes[0]);
+  // CONFIANÇA DECLARADA (Fase 3, missão C): o agregado diz em QUAL nível de confiança ele está.
+  // Integridade local (hashes) nunca é lida como certificação: sem assinatura verificada, sem
+  // âncora externa e sem decisão canônica GO, `certificante` é `false` e o bloqueio é NOMEADO.
+  const confianca = classificarEvidencia({
+    integridadeOk: execucoes.every((e) => (e.resultados || []).length > 0),
+    runIdCoerente: execucoes.every((e) => (e.resultados || []).every((r) => String(r.runId) === String(e.runId))),
+    identidadeCoerente: execucoes.every((e) => (e.resultados || []).every((r) => {
+      const ident = r.identidade || {};
+      return campos.every((campo) => String(ident[campo]) === String(e.manifesto.identidade[campo]));
+    })),
+    provenienciaConfere: Boolean(digestRealDoInventario)
+      && String(referencia.hardeningQueueFingerprint) === String(digestRealDoInventario),
+    // Assinatura/âncora/decisão NÃO são presumidas aqui: quem tiver a prova as fornece.
+    assinatura: { verificada: false, motivo: 'SEM_ASSINATURA_VERIFICADA' },
+    ancoraExterna: { confere: false, motivo: 'SEM_ANCORA_EXTERNA' },
+    decisaoCanonica: { goDefinitivo: false, motivo: 'DECISAO_NAO_E_GO_DEFINITIVO' },
+  });
   return {
     ok: true,
     identidade: referencia,
     runIds: ids,
     completo,
+    confianca: {
+      nivel: confianca.nivel,
+      alcancados: confianca.alcancados,
+      bloqueios: confianca.bloqueios,
+      certificante: confianca.certificante,
+      proximoNivelExigido: proximoNivel(confianca.nivel),
+    },
     // Explicita POR QUE a cobertura não é integral, para o relatório não sugerir o contrário.
     coberturaIntegral: completo
       ? { motivo: 'lista de ids coberta e inventário do rootDir confere', inventoryDigest: digestRealDoInventario }

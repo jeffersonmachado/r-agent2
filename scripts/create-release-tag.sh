@@ -94,24 +94,15 @@ if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>&1; then
 fi
 
 # ── Porteiro de publicação (Fase 2, achado 1 da revisão independente) ─────────
-# O PUSH da tag de release é PUBLICAÇÃO. Antes desta correção o único controle vivia na fase
-# `certify` do selo: com `seal-release.sh --from publish` (que pula as fases anteriores) ou com
-# este script chamado à mão, a tag ia para o remote sem nenhuma decisão canônica.
-# Remote LOCAL (caminho de filesystem) é ambiente de teste — não publica nada e não é barrado;
-# remote NOMEADO/URL (origin, git@…, https://…) exige autorização explícita + GO definitivo.
-# A classificação é pela URL EFETIVA do remote (`git remote get-url`), não pelo nome: os testes de
-# imutabilidade empurram para um repositório BARE local via remote nomeado `origin`.
-REMOTE_URL="$(git remote get-url "$REMOTE" 2>/dev/null || printf '%s' "$REMOTE")"
-case "$REMOTE_URL" in
-  /*|./*|../*|file://*)
-    echo "[release-tag] remote LOCAL ($REMOTE_URL): sem publicação externa — porteiro de publicação não se aplica"
-    ;;
-  *)
-    # shellcheck source=/dev/null
-    . "$SCRIPT_DIR/governance/publication-gate.sh"
-    rap_publication_gate "create-release-tag:$TAG"
-    ;;
-esac
+# O PUSH da tag de release é PUBLICAÇÃO e passa SEMPRE pelo porteiro. Na Fase 2 existia uma
+# dispensa por "remote local", classificada por `git remote get-url`; a Fase 3 demonstrou que isso
+# é contornável (`remote.*.pushurl` externo com fetch local, e `url.*.pushInsteadOf` reescrevendo
+# o destino) — a dispensa por string foi REMOVIDA. A única exceção é o modo local de teste
+# explícito (`RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW`), que não vale em CI/produção, recusa qualquer
+# regra de reescrita e exige que TODOS os destinos de push sejam exatamente o caminho autorizado.
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/governance/publication-gate.sh"
+rap_publication_gate "create-release-tag:$TAG" "$REMOTE"
 
 PUSH_LOG="$(mktemp)"
 PUSH_RC=0

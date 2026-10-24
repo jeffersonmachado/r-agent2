@@ -134,6 +134,7 @@ function cenarioDeTag() {
   fs.writeFileSync(path.join(repo, 'a.txt'), 'conteudo\n', 'utf8');
   git(repo, 'add', 'a.txt');
   git(repo, 'commit', '-q', '-m', 'base');
+  git(repo, 'remote', 'add', 'origin', remoto);
   const commit = git(repo, 'rev-parse', 'HEAD');
   return { base, remoto, repo, commit, git };
 }
@@ -168,10 +169,10 @@ describe('C — tag de release não é empurrada para remote externo sem decisã
     expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
   });
 
-  test('C3e — remote LOCAL (bare em filesystem) NÃO é publicação: caminho feliz continua funcionando', () => {
+  test('C3e — remote LOCAL (bare em filesystem) com dispensa EXPLÍCITA: caminho feliz funciona', () => {
     const cenario = cenarioDeTag();
     cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
-    const r = rodarTag(cenario, {}, 'local');
+    const r = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, CI: '', NODE_ENV: 'test' }, 'local');
     expect(r.status).toBe(0);
     expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('v-teste-1');
   });
@@ -181,6 +182,105 @@ describe('C — tag de release não é empurrada para remote externo sem decisã
     const bloco = fonte.slice(fonte.indexOf('phase_publish()'));
     expect(bloco.slice(0, 1500)).toContain('assert-canonical-release-decision.js');
     expect(bloco.slice(0, 2000)).toMatch(/publicação BLOQUEADA/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 1c. MISSÃO A DA FASE 3 — BYPASS DE PUBLICAÇÃO POR CONFIGURAÇÃO GIT
+// ---------------------------------------------------------------------------
+
+/**
+ * Reproduções medidas em 2026-10-24 num repositório descartável:
+ *  - `remote.origin.pushurl` EXTERNO com fetch URL local: `git remote get-url origin` devolve o
+ *    caminho LOCAL (a dispensa da Fase 2 disparava) enquanto o `git push` vai para o host externo;
+ *  - `url.<destino>.pushInsteadOf <origem>` faz `get-url --push` devolver o destino reescrito.
+ * A dispensa por string foi removida: hoje o default exige o gate e a única exceção é o modo local
+ * de teste explícito, que recusa reescrita, CI/produção e destino diferente do autorizado.
+ */
+describe('C-3A — classificação por URL não pode ser contornada', () => {
+  const EXTERNO = 'git@example.invalid:org/repo.git';
+
+  test('A1 — pushurl EXTERNO com fetch local: dispensa por string NÃO se aplica', () => {
+    const cenario = cenarioDeTag();
+    // fetch continua local; o PUSH vai para fora (o ataque real).
+    cenario.git(cenario.repo, 'remote', 'set-url', '--add', '--push', 'origin', EXTERNO);
+    const r = rodarTag(cenario, {}, 'origin');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/publication-gate/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('A2 — modo de teste autorizando o caminho LOCAL é recusado quando existe pushurl externo', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'set-url', '--add', '--push', 'origin', EXTERNO);
+    const r = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, CI: '', NODE_ENV: 'test' }, 'origin');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/destino de push '.*example\.invalid.*' != autorizado/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('A3 — `url.*.pushInsteadOf` presente invalida a dispensa (URL observada != URL usada)', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
+    // Reescrita que faria o caminho "local" resolver para um destino externo no transporte.
+    cenario.git(cenario.repo, 'config', `url.${EXTERNO}.insteadOf`, cenario.remoto);
+    const r = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, CI: '', NODE_ENV: 'test' }, 'local');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/url\.\*\.insteadOf|reescrita|pushInsteadOf/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('A4 — MÚLTIPLOS destinos de push: basta um externo para recusar', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'multi', cenario.remoto);
+    cenario.git(cenario.repo, 'remote', 'set-url', '--add', '--push', 'multi', cenario.remoto);
+    cenario.git(cenario.repo, 'remote', 'set-url', '--add', '--push', 'multi', EXTERNO);
+    const r = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, CI: '', NODE_ENV: 'test' }, 'multi');
+    expect(r.status).not.toBe(0);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('A5 — dispensa não vale em CI nem em produção (impossível ativar em silêncio)', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
+    const emCi = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, CI: 'true' }, 'local');
+    expect(emCi.status).not.toBe(0);
+    expect(emCi.saida).toMatch(/não vale em CI\/produção/);
+    const emProd = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, NODE_ENV: 'production' }, 'local');
+    expect(emProd.status).not.toBe(0);
+    expect(emProd.saida).toMatch(/não vale em CI\/produção/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('A6 — destino autorizado diferente do configurado é recusado (sem prova por string solta)', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
+    const outro = path.join(cenario.base, 'outro.git');
+    cenario.git(cenario.base, 'init', '--bare', '-q', outro);
+    const r = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: outro, CI: '', NODE_ENV: 'test' }, 'local');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/!= autorizado/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('A7 — PROVA do transporte real: o push resolveria para o host EXTERNO (dry-run com ssh falso)', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'set-url', '--add', '--push', 'origin', EXTERNO);
+    const registro = path.join(cenario.base, 'ssh-args.txt');
+    const sshFalso = path.join(cenario.base, 'ssh-falso');
+    fs.writeFileSync(sshFalso, `#!/bin/sh\necho "$@" >> "${registro}"\nexit 1\n`, { mode: 0o755 });
+
+    // `get-url` (o que a dispensa da Fase 2 consultava) diz LOCAL…
+    expect(cenario.git(cenario.repo, 'remote', 'get-url', 'origin')).toBe(cenario.remoto);
+    // …mas o transporte do push é EXTERNO.
+    const push = spawnSync('git', ['push', '--dry-run', 'origin', 'HEAD:refs/heads/x'], {
+      cwd: cenario.repo,
+      encoding: 'utf8',
+      env: { ...process.env, GIT_SSH_COMMAND: sshFalso, GIT_TERMINAL_PROMPT: '0' },
+    });
+    expect(push.status).not.toBe(0);
+    const chamada = fs.readFileSync(registro, 'utf8');
+    expect(chamada).toContain('example.invalid');
   });
 });
 

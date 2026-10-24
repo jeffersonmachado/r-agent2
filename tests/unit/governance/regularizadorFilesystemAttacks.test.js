@@ -115,8 +115,10 @@ while (Date.now() < fim) {
 process.stdout.write(String(trocas));
 `;
 
-function rodarEscritor(plano) {
-  const r = spawnSync(process.execPath, ['-e', SCRIPT_ESCRITOR, LIB, JSON.stringify(plano)], { encoding: 'utf8', timeout: 120000 });
+function rodarEscritor(plano, envExtra = {}) {
+  const r = spawnSync(process.execPath, ['-e', SCRIPT_ESCRITOR, LIB, JSON.stringify(plano)], {
+    encoding: 'utf8', timeout: 120000, env: { ...process.env, ...envExtra },
+  });
   if (r.status !== 0 && !r.stdout) throw new Error(`escritor falhou: ${r.status} ${r.stderr}`);
   return JSON.parse(r.stdout || '[]');
 }
@@ -301,6 +303,47 @@ describe('P2-B — ataques de filesystem com processos concorrentes', () => {
 
     fs.unlinkSync(base);
     fs.renameSync(guardado, base);
+  });
+
+  test('B3c — SEM `/proc` (plataforma sem primitiva): escrita RECUSADA, nada escapa (missão B)', () => {
+    // Antes: `PIN_INDISPONIVEL` caía em caminho textual (escreve e só DEPOIS detecta) — detecção
+    // não é prevenção e o efeito externo já teria ocorrido. Agora é recusa explícita.
+    const root = novaRaiz();
+    const sen = sentinela();
+    raizes.push(sen.dir);
+    const run = abrirRun(root);
+    const itens = path.join(run.dir, 'itens');
+    expect(fs.existsSync(itens)).toBe(true);
+
+    const saida = rodarEscritor({
+      root, baseRel: BASE, runId: run.runId, itens: [resultado('X1'), resultado('X2')],
+    }, { RAP_SECURE_FS_FORCE_NO_PROC: '1', NODE_ENV: 'test' });
+
+    expect(saida).toHaveLength(2);
+    for (const retorno of saida) {
+      expect(retorno.ok).toBe(false);
+      expect(retorno.motivo).toBe('UNSUPPORTED_SECURE_FILESYSTEM:PIN_INDISPONIVEL');
+    }
+    // Nenhum artefato criado, nenhuma escrita externa, nenhum sucesso falso.
+    expect(artefatos(itens)).toEqual([]);
+    expect(fs.readdirSync(sen.dir)).toEqual(['sentinela.txt']);
+    expect(crypto.createHash('sha256').update(fs.readFileSync(sen.arquivo)).digest('hex')).toBe(sen.hash);
+    // E o FECHAMENTO também recusa quando não há primitiva (o manifesto não pode ser reescrito):
+    const fechamento = spawnSync(process.execPath, ['-e', `
+      const runLib = require(process.argv[1]);
+      const [root, baseRel, runId] = process.argv.slice(2);
+      let r;
+      try { r = runLib.finalizar({ rootDir: root, baseRel, runId }); } catch (e) { r = { ok: false, motivo: String(e.message) }; }
+      process.stdout.write(JSON.stringify(r));
+    `, LIB, root, BASE, run.runId], {
+      encoding: 'utf8',
+      env: { ...process.env, RAP_SECURE_FS_FORCE_NO_PROC: '1', NODE_ENV: 'test' },
+    });
+    const f = JSON.parse(fechamento.stdout);
+    expect(f.ok).toBe(false);
+    expect(String(f.motivo)).toContain('UNSUPPORTED_SECURE_FILESYSTEM');
+    // O manifesto em disco continua em RUNNING (nada foi reescrito sem primitiva segura).
+    expect(runLib.lerManifesto(root, BASE, run.runId).status).toBe(runLib.STATUS.RUNNING);
   });
 
   test('B4 — destino substituído por symlink para a sentinela não é seguido', () => {
