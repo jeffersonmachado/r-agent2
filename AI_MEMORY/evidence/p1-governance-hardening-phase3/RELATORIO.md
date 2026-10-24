@@ -5,7 +5,7 @@
 **PR:** #16 → `dev/engineering-hardening` — **NÃO MESCLADO**
 **Baseline do PR:** `484eee4788e553907e31f7b0528cac9ee41d9298`
 **Base desta fase (fim da Fase 2):** `a3aa22d2869ff6c162968cac64dd33de9403738c`
-**HEAD desta fase:** `a964627fe5ae1f24837dd8c94d44f201b24e2c95`
+**HEAD desta fase:** `5c6aed2276e0f125bd1ea614281cd7c248d05ebf`
 **Diff da fase:**  21 files changed, 1167 insertions(+), 63 deletions(-)
 **Node:** v22.12.0 · **npm:** 10.9.0 · **Jest:** 29.7.0 · **Docker:** 27.3.1
 **Ambiente:** Linux 6.8.0-146-generic (12 CPUs) · host `jmachado-Precision-5530`
@@ -324,9 +324,9 @@ PUBLISHED             = FALSE
 | `SOURCE_SHA` (base do PR) | `484eee4788e553907e31f7b0528cac9ee41d9298` | inalterado |
 | `TESTED_SHA` | `a964627fe5ae1f24837dd8c94d44f201b24e2c95` | L0 completo executado (9723 testes) |
 | `REVIEWED_SHA` | `6770c3af12da6d69ba3ced36dad440c198211d7e` | intervalo revisado por agente distinto |
-| `DELIVERED_SHA` | `a964627fe5ae1f24837dd8c94d44f201b24e2c95` | **não validado por CI** (push não autorizado) |
+| `DELIVERED_SHA` | `5c6aed2276e0f125bd1ea614281cd7c248d05ebf` | **não validado por CI** (push não autorizado) |
 
-`TESTED_SHA == DELIVERED_SHA` (`a964627fe`): o L0 completo foi executado nesse commit **depois** da
+`TESTED_SHA` e `DELIVERED_SHA` diferem apenas pelo commit do próprio relatório (`5c6aed227`): o L0 completo foi executado nesse commit **depois** da
 restauração dos bytes governados. O que falta é a validação **independente** (CI no remoto), que exige
 push — não autorizado nesta missão.
 
