@@ -72,6 +72,15 @@ jobs:
     name: "Governance Core (Node ${{ matrix.node-version }})"
     runs-on: ubuntu-latest
 
+    # ERREXIT POR PADRÃO (medido no CI de 2026-10-24, run 40105995013). Sem `-e`, o status de um
+    # passo multi-comando é o da ÚLTIMA linha: um `npm run validate:*` que reprovava no meio do
+    # script era seguido por um `echo` bem-sucedido e o job ficava VERDE. O caso concreto já
+    # corrigido foi o preflight de âncoras; o padrão vale para todos os passos deste job para que o
+    # defeito não reapareça em outro script. Passo que TOLERA falha precisa dizer `|| true`.
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+
     # P1-C: este workflow é o caminho CERTIFICANTE (tag/publish/release). O preflight das
     # âncoras de confiança abaixo é BLOQUEANTE por definição: âncora ausente ⇒ este job falha ⇒
     # `release-gate` recusa. O caminho DEVELOPMENT não certificante vive em
@@ -143,7 +152,11 @@ jobs:
       - name: Preflight das âncoras do Bug Closure (BLOQUEANTE no caminho certificante)
         id: anchor-preflight
         run: |
-          set -o pipefail
+          # `set -e`: sem ele o status do passo é o da ÚLTIMA linha (`echo` no $GITHUB_OUTPUT), que
+          # sempre teve sucesso no runner — o `| tee` com pipefail não bastava e o passo ficava verde
+          # com o script devolvendo 1 (medido no CI de 2026-10-24). `-u` impede seguir com variável
+          # de ambiente ausente.
+          set -euo pipefail
           node scripts/governance/provision-closure-anchors.js --check | tee "$RUNNER_TEMP/anchor-preflight.json"
           echo "anchor_preflight=ok" >> "$GITHUB_OUTPUT"
         env:
@@ -234,7 +247,7 @@ jobs:
 
       - name: "[7/7] Verifier offline — extrair envelope e executar verifier"
         run: |
-          ENVELOPE="$(ls -t dist/release/*.zip 2>/dev/null | grep -v '\.payload\.zip' | head -1)"
+          ENVELOPE="$(ls -t dist/release/*.zip 2>/dev/null | grep -v '\.payload\.zip' | head -1 || true)"
           if [[ -z "$ENVELOPE" ]]; then
             echo "ERRO: envelope não encontrado em dist/release/"
             exit 1
@@ -300,6 +313,9 @@ jobs:
     name: "Regression Tests"
     runs-on: ubuntu-latest
     needs: []  # Independente — detecta regressões no próprio CI
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     steps:
       - name: Checkout
@@ -355,6 +371,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - governance-core
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     steps:
       - name: Checkout
@@ -370,7 +389,10 @@ jobs:
       - name: Preflight BLOQUEANTE das âncoras (revalidado neste job)
         id: anchor-preflight
         run: |
-          set -o pipefail
+          # Mesmo defeito do job `governance-core` (medido no CI de 2026-10-24): `pipefail` sozinho
+          # não reprova o passo quando a última linha é um `echo`/`tee` bem-sucedido. `set -e` torna
+          # o exit do script o do primeiro comando que falha.
+          set -euo pipefail
           node scripts/governance/provision-closure-anchors.js --check | tee "$RUNNER_TEMP/anchor-preflight.json"
         env:
           RAP_CLOSURE_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_CLOSURE_TRUST_ANCHOR_SHA256 }}
@@ -416,6 +438,10 @@ jobs:
       - governance-regression
       - anchors-attestation
     if: always()
+
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     steps:
       - name: Checkout (o gate revalida as âncoras por conta própria)

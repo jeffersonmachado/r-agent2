@@ -64,6 +64,9 @@ jobs:
   dev-branch-gate:
     name: "L0 (Jest oficial) + L1 (gates de governanca)"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
     # O L0 depende do artefato prod-like (gitignored, produzido pelo job acima). Dependência
     # explícita: se o produtor falhar, o gate NÃO roda com artefato ausente fingindo prova.
     needs: prod-like-smoke

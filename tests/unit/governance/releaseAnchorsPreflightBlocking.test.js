@@ -39,11 +39,30 @@ function digestDoInventario() {
   return fn(fila.items);
 }
 
+/**
+ * Ambiente que o RUNNER fornece a todo passo (`GITHUB_OUTPUT`, `RUNNER_TEMP`, ...).
+ *
+ * Defeito medido (CI 2026-10-24, run 40105995013): sem essas variáveis o harness não reproduzia o
+ * runner — `echo ... >> "$GITHUB_OUTPUT"` falhava aqui e "salvava" a asserção, enquanto no runner
+ * ele tinha sucesso e o status final do passo era 0 (a última linha vence quando o script não é
+ * `set -e`). O teste passava por acidente de ambiente e o defeito seguia vivo no workflow.
+ */
+function ambienteDeRunner() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'runner-passos-'));
+  const caminhos = ['GITHUB_OUTPUT', 'GITHUB_ENV', 'GITHUB_STATE'];
+  const env = { RUNNER_TEMP: dir, GITHUB_ACTIONS: 'true', GITHUB_SHA: 'sha-de-teste', GITHUB_RUN_ID: 'run-de-teste', GITHUB_JOB: 'governance-core' };
+  for (const nome of caminhos) {
+    env[nome] = path.join(dir, nome.toLowerCase());
+    fs.writeFileSync(env[nome], '');
+  }
+  return env;
+}
+
 /** Executa o comando de um passo como o runner faria (bash, cwd raiz, env controlado). */
 function executarPasso(passo, env) {
   try {
     const saida = execFileSync('bash', ['-c', String(passo.run)], {
-      cwd: RAIZ, encoding: 'utf8', env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: RAIZ, encoding: 'utf8', env: { ...process.env, ...ambienteDeRunner(), ...env }, stdio: ['ignore', 'pipe', 'pipe'],
     });
     return { exitCode: 0, saida };
   } catch (e) {
