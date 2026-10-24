@@ -106,6 +106,85 @@ describe('C — publicação de imagens exige autorização e GO definitivo', ()
 });
 
 // ---------------------------------------------------------------------------
+// 1b. TAG DE RELEASE — push para remote REAL exige o mesmo porteiro (achado 1 da revisão)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cenário de tag: repositório local com `origin` bare. O remote é um CAMINHO de filesystem, logo
+ * não é publicação externa — mas o porteiro tem de ser acionado quando a URL efetiva do remote é
+ * externa (`git@…`, `https://…`), que é o caso que publica de verdade.
+ */
+function cenarioDeTag() {
+  const base = novoDir('tag-');
+  const remoto = path.join(base, 'origin.git');
+  const repo = path.join(base, 'repo');
+  // Ambiente git saneado: o processo pai pode injetar `safe.bareRepository=explicit` por
+  // `GIT_CONFIG_COUNT/KEY_n/VALUE_n`, o que faz TODO comando sobre o repositório BARE de prova
+  // falhar com "cannot use bare repository" (mesma técnica de `clean-checkout-verify.js`).
+  const git = (cwd, ...args) => require('child_process').execFileSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    env: { ...process.env, GIT_CONFIG_COUNT: '0' },
+  }).trim();
+  git(base, 'init', '--bare', '-q', remoto);
+  git(base, 'init', '-q', repo);
+  git(repo, 'config', 'user.email', 'teste@example.invalid');
+  git(repo, 'config', 'user.name', 'teste');
+  git(repo, 'checkout', '-q', '-b', 'main');
+  fs.writeFileSync(path.join(repo, 'a.txt'), 'conteudo\n', 'utf8');
+  git(repo, 'add', 'a.txt');
+  git(repo, 'commit', '-q', '-m', 'base');
+  const commit = git(repo, 'rev-parse', 'HEAD');
+  return { base, remoto, repo, commit, git };
+}
+
+function rodarTag(cenario, env, remote) {
+  const r = spawnSync('bash', [path.join(ROOT, 'scripts', 'create-release-tag.sh'), 'v-teste-1', cenario.commit], {
+    cwd: cenario.repo,
+    encoding: 'utf8',
+    timeout: 120000,
+    env: { ...process.env, RAP_RELEASE_TAG_REMOTE: remote, RAP_PUBLISH_AUTHORIZED: '', ...env },
+  });
+  return { status: r.status, saida: `${r.stdout}${r.stderr}` };
+}
+
+describe('C — tag de release não é empurrada para remote externo sem decisão GO', () => {
+  test('C3c — remote EXTERNO (URL ssh) sem autorização ⇒ BLOCKED e nada é empurrado', () => {
+    const cenario = cenarioDeTag();
+    // `--add` de uma URL externa fictícia: nenhuma conexão é feita, o porteiro barra antes do push.
+    cenario.git(cenario.repo, 'remote', 'add', 'externo', 'git@example.invalid:org/repo.git');
+    const r = rodarTag(cenario, {}, 'externo');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/publication-gate|RAP_PUBLISH_AUTHORIZED/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('C3d — remote EXTERNO com autorização mas SEM decisão GO continua bloqueado', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'externo', 'git@example.invalid:org/repo.git');
+    const r = rodarTag(cenario, { RAP_PUBLISH_AUTHORIZED: '1' }, 'externo');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/decisão canônica de release não é GO definitivo/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('C3e — remote LOCAL (bare em filesystem) NÃO é publicação: caminho feliz continua funcionando', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
+    const r = rodarTag(cenario, {}, 'local');
+    expect(r.status).toBe(0);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('v-teste-1');
+  });
+
+  test('C3f — `phase_publish` revalida a decisão canônica (o `--from publish` não pula a certificação)', () => {
+    const fonte = fs.readFileSync(path.join(ROOT, 'scripts', 'governance', 'seal-release.sh'), 'utf8');
+    const bloco = fonte.slice(fonte.indexOf('phase_publish()'));
+    expect(bloco.slice(0, 1500)).toContain('assert-canonical-release-decision.js');
+    expect(bloco.slice(0, 2000)).toMatch(/publicação BLOQUEADA/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 2. ESTRUTURA DO WORKFLOW — o gate não pode ser desacoplado dos controles
 // ---------------------------------------------------------------------------
 

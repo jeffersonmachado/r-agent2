@@ -56,11 +56,14 @@ const PRODUTORES_ESPERADOS = [
  * Raiz descartável: `package.json` com os mesmos nomes de script do repositório, cada um
  * apenas anexando o próprio id em `executados.txt`. Nenhum produtor real é chamado.
  */
-function criarRaizFalsa({ artefatosFaltando = [], vereditoDoProdutor = '' } = {}) {
+function criarRaizFalsa({ artefatosFaltando = [], vereditoDoProdutor = '', produtoresInertes = false, artefatosAntigos = false } = {}) {
   const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'bootstrap-artifacts-'));
   fs.writeFileSync(path.join(raiz, 'executados.txt'), '', 'utf8');
 
-  const registrador = (id) => `node -e "require('fs').appendFileSync('executados.txt', '${id}\\n')${vereditoDoProdutor ? `;console.log('${vereditoDoProdutor}')` : ''}"`;
+  const registrador = (id) => (produtoresInertes
+    // produtor que "passa" sem escrever NADA (exit 0) — o caso que produzia falso-verde READY
+    ? `node -e "require('fs').appendFileSync('executados.txt', '${id}\\n')${vereditoDoProdutor ? `;console.log('${vereditoDoProdutor}')` : ''}"`
+    : `node -e "require('fs').appendFileSync('executados.txt', '${id}\\n')${vereditoDoProdutor ? `;console.log('${vereditoDoProdutor}')` : ''}"`);
   const scripts = {};
   for (const [id, script] of PRODUTORES_ESPERADOS) {
     if (script) scripts[script] = registrador(id);
@@ -79,7 +82,12 @@ function criarRaizFalsa({ artefatosFaltando = [], vereditoDoProdutor = '' } = {}
     if (artefatosFaltando.includes(item.caminho)) continue;
     const destino = path.join(raiz, item.caminho);
     fs.mkdirSync(path.dirname(destino), { recursive: true });
-    fs.writeFileSync(destino, '{"produzido":"produtor-falso"}\n', 'utf8');
+    fs.writeFileSync(destino, artefatosAntigos ? '{"commit":"OUTRO_COMMIT"}\n' : '{"produzido":"produtor-falso"}\n', 'utf8');
+    if (artefatosAntigos) {
+      // Evidência de OUTRA execução/commit: mtime muito anterior ao run.
+      const antigo = new Date(Date.now() - 86400000);
+      fs.utimesSync(destino, antigo, antigo);
+    }
   }
   return { raiz, marcador: path.join(raiz, 'executados.txt') };
 }
@@ -176,6 +184,21 @@ describe('bootstrap de CI — modo artifacts-only', () => {
     expect(r.status).toBe(2);
     expect(`${r.stdout}${r.stderr}`).toMatch(/CI_BOOTSTRAP_ROOT recusado/);
     expect(fs.existsSync(path.join(raiz, 'reports', 'ci-bootstrap-report.json'))).toBe(false);
+  });
+
+  test('produtor que passa SEM escrever e artefato antigo de outro commit ⇒ NÃO é READY (achado 4)', () => {
+    // Reprodução do falso-verde medido pela revisão independente: todos os produtores saem 0 sem
+    // escrever nada e os 10 artefatos já existem (conteúdo de OUTRO commit, mtime de ontem).
+    // Antes da prova de frescor isto devolvia `exit 0` + `veredito READY`.
+    const { raiz } = novaRaiz({ produtoresInertes: true, artefatosAntigos: true });
+    const r = rodarBootstrap(raiz, ['--artifacts-only']);
+    expect(r.status).toBe(1);
+    const relatorio = lerRelatorio(raiz);
+    expect(relatorio.veredito).toBe('INCOMPLETE');
+    const prova = relatorio.passos.find((p) => p.id === 'artefatos-obrigatorios');
+    expect(prova.ok).toBe(false);
+    expect(prova.naoReescritos.length).toBeGreaterThan(0);
+    expect(prova.saida).toMatch(/NAO REESCRITO nesta execucao/);
   });
 
   test('cada artefato obrigatório nomeia um consumidor que existe no repositório', () => {

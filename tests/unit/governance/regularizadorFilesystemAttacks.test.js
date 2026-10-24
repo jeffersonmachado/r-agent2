@@ -34,6 +34,9 @@ const runLib = require('../../../scripts/governance/lib/regularizationRun');
 
 const BASE = path.join('AI_MEMORY', 'evidence', 'bug-closure-regularization');
 const LIB = path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'lib', 'regularizationRun.js');
+// Caminho da autoridade de inventário DERIVADO do repositório (nunca fixo no worktree do autor):
+// um `require('/tmp/<worktree>')` commitado deixaria a suíte vermelha em qualquer outro clone.
+const TRUSTED = path.join(__dirname, '..', '..', '..', 'governance', 'bug-closure', 'trusted-authorities.js');
 
 const raiz = () => fs.mkdtempSync(path.join(os.tmpdir(), 'p2b-'));
 
@@ -138,13 +141,13 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const [LIB, BASE, JANELA] = process.argv.slice(1);
+const [LIB, BASE, JANELA, TRUSTED] = process.argv.slice(1);
 const lib = require(LIB);
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'janela-'));
 fs.mkdirSync(path.join(root, 'AI_MEMORY'), { recursive: true });
 const fila = [{ id: 'X1', severity: 'P1', state: 'VERIFIED', status: 'prevention_active', title: 'X1' }];
 fs.writeFileSync(path.join(root, 'AI_MEMORY', 'hardening-queue.json'), JSON.stringify({ items: fila }));
-const { digestDoInventario } = require('/tmp/r-agent2-p1-hardening/governance/bug-closure/trusted-authorities');
+const { digestDoInventario } = require(TRUSTED);
 const queueSha = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'AI_MEMORY', 'hardening-queue.json'))).digest('hex');
 const run = lib.iniciar({ rootDir: root, baseRel: BASE, commit: 'a'.repeat(40), sourceFingerprint: 'b'.repeat(64),
   inventoryFingerprint: digestDoInventario(fila), hardeningQueueFingerprint: queueSha, testManifestFingerprint: 'd'.repeat(64),
@@ -177,7 +180,7 @@ process.stdout.write(JSON.stringify({
 `;
 
 function rodarJanela(janela) {
-  const r = spawnSync(process.execPath, ['-e', SCRIPT_JANELA, LIB, BASE, janela], { encoding: 'utf8', timeout: 60000 });
+  const r = spawnSync(process.execPath, ['-e', SCRIPT_JANELA, LIB, BASE, janela, TRUSTED], { encoding: 'utf8', timeout: 60000 });
   if (!r.stdout) throw new Error(`filho falhou (${janela}): ${r.status} ${r.stderr}`);
   return JSON.parse(r.stdout);
 }
@@ -271,6 +274,35 @@ describe('P2-B — ataques de filesystem com processos concorrentes', () => {
     expect(fs.realpathSync(run.dir)).toBe(dirDoRunReal);
   });
 
+  test('B3b — troca do diretório ANCESTRAL da BASE (achado 2 da revisão): nada é escrito no alvo', () => {
+    // Medido pela revisão independente: `dirDaExecucao` comparava `realBase` com ele mesmo, então
+    // trocar `AI_MEMORY/evidence/bug-closure-regularization` por um symlink para fora fazia
+    // `gravarResultado` gravar no alvo do atacante e RETORNAR `{ok:true}`. Âncora agora é
+    // `realpath(rootDir)`: a base re-resolvida tem de ser exatamente `<realRaiz>/<baseRel>`.
+    const root = novaRaiz();
+    const sen = sentinela();
+    raizes.push(sen.dir);
+    const run = abrirRun(root);
+    const base = path.join(root, BASE);
+    const guardado = path.join(root, 'base-guardada');
+
+    // O atacante prepara o alvo com a estrutura esperada e troca a base por symlink.
+    fs.mkdirSync(path.join(sen.dir, 'runs', run.runId, 'itens'), { recursive: true });
+    fs.renameSync(base, guardado);
+    fs.symlinkSync(sen.dir, base);
+
+    const r = runLib.gravarResultado({ rootDir: root, baseRel: BASE, runId: run.runId, resultado: resultado('X1') });
+    expect(r.ok).toBe(false);
+    expect(String(r.motivo)).toMatch(/BASE_FORA_DA_RAIZ|ITENS_E_SYMLINK|DIR_NAO_E_DIRETORIO|RUN_DIR_E_SYMLINK/);
+    // Nenhum artefato novo no alvo do atacante e a sentinela intacta.
+    expect(fs.readdirSync(path.join(sen.dir, 'runs', run.runId, 'itens'))).toEqual([]);
+    expect(crypto.createHash('sha256').update(fs.readFileSync(sen.arquivo)).digest('hex')).toBe(sen.hash);
+    expect(runLib.lerManifesto(root, BASE, run.runId)).toBeNull();
+
+    fs.unlinkSync(base);
+    fs.renameSync(guardado, base);
+  });
+
   test('B4 — destino substituído por symlink para a sentinela não é seguido', () => {
     const root = novaRaiz();
     const sen = sentinela();
@@ -285,24 +317,38 @@ describe('P2-B — ataques de filesystem com processos concorrentes', () => {
     expect(crypto.createHash('sha256').update(fs.readFileSync(sen.arquivo)).digest('hex')).toBe(sen.hash);
   });
 
-  test('B5 — duas gravações SIMULTÂNEAS do mesmo id: exatamente uma vence e a divergente é recusada', () => {
+  test('B5 — duas gravações CONCORRENTES do mesmo id: exatamente uma vence e a divergente é recusada', () => {
+    // Achado 5 da revisão independente: `spawnSync` duas vezes é execução SEQUENCIAL e
+    // `oks.length >= 1` aceitaria dois vencedores — uma regressão para "a última gravação vence"
+    // continuaria verde. Aqui os dois escritores sobem em paralelo (`spawn`) e a asserção exige
+    // EXATAMENTE um sucesso.
+    const { spawn } = require('child_process');
     const root = novaRaiz();
     const run = abrirRun(root);
     const planoA = { root, baseRel: BASE, runId: run.runId, itens: [resultado('X1', { classe: 'A' })] };
     const planoB = { root, baseRel: BASE, runId: run.runId, itens: [resultado('X1', { classe: 'B' })] };
 
-    const a = spawnSync(process.execPath, ['-e', SCRIPT_ESCRITOR, LIB, JSON.stringify(planoA)], { encoding: 'utf8' });
-    const b = spawnSync(process.execPath, ['-e', SCRIPT_ESCRITOR, LIB, JSON.stringify(planoB)], { encoding: 'utf8' });
-    const retornos = [...JSON.parse(a.stdout), ...JSON.parse(b.stdout)];
-    const oks = retornos.filter((x) => x.ok);
-    const recusados = retornos.filter((x) => !x.ok);
+    const disparar = (plano) => new Promise((resolve) => {
+      const filho = spawn(process.execPath, ['-e', SCRIPT_ESCRITOR, LIB, JSON.stringify(plano)], { stdio: ['ignore', 'pipe', 'ignore'] });
+      let saida = '';
+      filho.stdout.on('data', (d) => { saida += d; });
+      filho.on('close', () => { try { resolve(JSON.parse(saida)); } catch (_) { resolve([]); } });
+    });
+    const retornosPromise = Promise.all([disparar(planoA), disparar(planoB)]);
+    return retornosPromise.then(([ra, rb]) => {
+      const retornos = [...ra, ...rb];
+      const oks = retornos.filter((x) => x.ok);
+      const recusados = retornos.filter((x) => !x.ok);
 
-    expect(oks.length).toBeGreaterThanOrEqual(1);
-    // O conteúdo no disco é EXATAMENTE o do vencedor (nunca uma mistura dos dois).
-    const disco = JSON.parse(fs.readFileSync(path.join(run.dir, 'itens', 'X1.json'), 'utf8'));
-    expect(oks.some((o) => o.sha256 === disco.artifactSha256)).toBe(true);
-    // Qualquer recusa é por divergência explícita — não por erro obscuro.
-    for (const recusado of recusados) expect(recusado.motivo).toBe('RESULTADO_JA_EXISTE_DIVERGENTE');
+      expect(oks).toHaveLength(1);
+      // O conteúdo no disco é EXATAMENTE o do vencedor (nunca uma mistura dos dois).
+      const disco = JSON.parse(fs.readFileSync(path.join(run.dir, 'itens', 'X1.json'), 'utf8'));
+      expect(disco.artifactSha256).toBe(oks[0].sha256);
+      expect(['A', 'B']).toContain(disco.classe);
+      // O perdedor é recusado por divergência EXPLÍCITA — não por erro obscuro.
+      expect(recusados).toHaveLength(1);
+      expect(recusados[0].motivo).toBe('RESULTADO_JA_EXISTE_DIVERGENTE');
+    });
   });
 
   test('B6 — reexecução IDEMPOTENTE do mesmo conteúdo é aceita e não altera a prova', () => {

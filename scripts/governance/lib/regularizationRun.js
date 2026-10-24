@@ -75,6 +75,16 @@ function dirDaExecucao(rootDir, baseRel, runId) {
   if (recomposto !== path.join(realBase, v.runId) || !recomposto.startsWith(`${realBase}${path.sep}`)) {
     throw new Error(`RUN_ID_FORA_DA_RAIZ:${String(runId).slice(0, 40)}`);
   }
+  // ACHADO 2 DA REVISÃO INDEPENDENTE (Fase 2): as checagens acima são TAUTOLÓGICAS em relação a
+  // `rootDir` — `realBase` é re-resolvido a cada chamada e comparado consigo mesmo. Medido: trocar
+  // o ANCESTRAL `AI_MEMORY/evidence/bug-closure-regularization` por um symlink para fora fazia
+  // `gravarResultado` escrever no alvo do atacante e retornar `{ok:true}`. A âncora tem de ser a
+  // raiz REAL do repositório: a base re-resolvida precisa cair exatamente em `<realRaiz>/<baseRel>`.
+  const realRaiz = realpathDoAncestral(rootDir);
+  const baseEsperada = path.resolve(path.join(realRaiz, baseRel), 'runs');
+  if (realBase !== baseEsperada) {
+    throw new Error(`BASE_FORA_DA_RAIZ:${path.relative(realRaiz, realBase) || '.'}`);
+  }
   // O diretório da execução JÁ existente é resolvido de verdade: symlink escapa mesmo que o
   // caminho textual pareça contido (achado A4).
   const st = fs.lstatSync(abs, { throwIfNoEntry: false });
@@ -349,6 +359,16 @@ function validarIdResultado(id) {
 function gravarResultado({ rootDir, baseRel, runId, resultado, esperadoNoEscopo }) {
   const idValido = validarIdResultado(resultado && resultado.id);
   if (!idValido.ok) return { ok: false, motivo: `RESULTADO_ID_INVALIDO:${idValido.motivo}` };
+  // CONTENÇÃO ANTES DA LEITURA (achado 2 da revisão independente): `lerManifesto` é fail-closed e
+  // devolve `null` para caminho recusado, o que mascarava `BASE_FORA_DA_RAIZ` como
+  // `MANIFESTO_AUSENTE`. O motivo preciso importa: "execução não existe" e "a base foi trocada por
+  // symlink" pedem reações opostas do operador.
+  let dirDoRun;
+  try {
+    dirDoRun = dirDaExecucao(rootDir, baseRel, runId);
+  } catch (e) {
+    return { ok: false, motivo: e.message };
+  }
   const m = lerManifesto(rootDir, baseRel, runId);
   if (!m) return { ok: false, motivo: 'MANIFESTO_AUSENTE' };
   if (m.status !== STATUS.RUNNING) return { ok: false, motivo: `EXECUCAO_NAO_ESTA_EM_ANDAMENTO:${m.status}` };
@@ -360,12 +380,6 @@ function gravarResultado({ rootDir, baseRel, runId, resultado, esperadoNoEscopo 
   };
   const semHash = JSON.stringify(corpo, null, 2);
   corpo.artifactSha256 = sha256Texto(semHash);
-  let dirDoRun;
-  try {
-    dirDoRun = dirDaExecucao(rootDir, baseRel, runId);
-  } catch (e) {
-    return { ok: false, motivo: e.message };
-  }
   // Achado A4-1: `itens/` também é componente de caminho — symlink aqui ESCREVERIA fora.
   const dirItensAlvo = path.join(dirDoRun, 'itens');
   const stItens = fs.lstatSync(dirItensAlvo, { throwIfNoEntry: false });

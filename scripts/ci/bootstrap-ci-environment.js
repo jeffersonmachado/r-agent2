@@ -82,9 +82,14 @@ const ARTEFATOS_OBRIGATORIOS = [
   { caminho: 'reports/business-journey-projections.json', consumidor: 'tests/unit/businessJourneyProjection.test.js' },
   { caminho: 'reports/impact-validation-report.json', consumidor: 'tests/unit/coverage/impactRunner.test.js' },
   { caminho: 'governance/json-persistence-audit.json', consumidor: 'tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js' },
-  { caminho: 'qa-mesh/meshRegistry.json', consumidor: 'scripts/governance/validate-coverage-completeness.js (cobertura de cenários)' },
+  // Produtor IDEMPOTENTE: `qa:mesh:refresh` só reescreve o índice quando ele muda de fato, então
+  // mtime antigo aqui significa "índice já estava atualizado" — frescor não se aplica.
+  { caminho: 'qa-mesh/meshRegistry.json', consumidor: 'scripts/governance/validate-coverage-completeness.js (cobertura de cenários)', produzidoAqui: false },
   { caminho: 'reports/TIMEOUT_ARCHITECTURE_REPORT.json', consumidor: 'tests/unit/governance/v2TimeoutGateDependency.test.js' },
-  { caminho: 'reports/api-surface-report.json', consumidor: 'validate:coverage-gate / api surface wave (quando exigido)' },
+  // NÃO é produzido por este bootstrap: é evidência VERSIONADA, atualizada semanalmente pelo
+  // workflow `wave-reports.yml`. Frescor não se aplica — a prova aqui é de existência (e o gate de
+  // cobertura trata staleness por conta própria, com `applyWaveReportStaleness`).
+  { caminho: 'reports/api-surface-report.json', consumidor: 'validate:coverage-gate / api surface wave (quando exigido)', produzidoAqui: false },
 ];
 
 const passos = [];
@@ -335,27 +340,58 @@ function materializarPacotesIrmaos() {
   return ok;
 }
 
-function verificarArtefatos() {
+/**
+ * Prova de existência **e de FRESCOR**.
+ *
+ * ACHADO 4 DA REVISÃO INDEPENDENTE (Fase 2): `existsSync && size > 0` aprovava artefato ANTIGO
+ * deixado por outra execução/outro commit — medido com produtores que não escrevem nada
+ * (`exit 0`) e 10 artefatos pré-existentes de outro commit: veredito `READY`. Um artefato
+ * ignorado pelo git sobrevive no diretório do operador, então existência não é prova.
+ *
+ * Agora cada artefato obrigatório tem de ter sido ESCRITO nesta execução: `mtime` não anterior ao
+ * início do passo que o produz. `inicioMs` é capturado antes do primeiro produtor.
+ */
+function verificarArtefatos(inicioMs = null) {
   const faltando = [];
+  const vencidos = [];
   const presentes = [];
   for (const item of ARTEFATOS_OBRIGATORIOS) {
     const abs = path.join(ROOT, item.caminho);
     const existe = fs.existsSync(abs) && fs.statSync(abs).size > 0;
-    if (existe) presentes.push(item.caminho);
-    else faltando.push(item);
+    if (!existe) {
+      faltando.push(item);
+      continue;
+    }
+    // FRESCOR só para artefato que ESTE bootstrap se compromete a reescrever. Artefato versionado
+    // por outro produtor (ex.: `api-surface-report.json`, atualizado pelo workflow semanal) tem,
+    // legitimamente, mtime do commit.
+    if (typeof inicioMs === 'number' && item.produzidoAqui !== false) {
+      const mtimeMs = fs.statSync(abs).mtimeMs;
+      // Tolerância de 2 s absorve granularidade de filesystem sem aceitar artefato de outra run.
+      if (mtimeMs < inicioMs - 2000) {
+        vencidos.push({ caminho: item.caminho, consumidor: item.consumidor, mtime: new Date(mtimeMs).toISOString() });
+        continue;
+      }
+    }
+    presentes.push(item.caminho);
   }
+  const artefatosOk = faltando.length === 0 && vencidos.length === 0;
   registrar({
     id: 'artefatos-obrigatorios',
-    comando: '(verificação de existência)',
-    exitCode: faltando.length === 0 ? 0 : 1,
-    veredito: faltando.length === 0 ? 'PASS' : 'FAIL',
-    ok: faltando.length === 0,
+    comando: '(verificação de existência e frescor)',
+    exitCode: artefatosOk ? 0 : 1,
+    veredito: artefatosOk ? 'PASS' : 'FAIL',
+    ok: artefatosOk,
     duracaoMs: 0,
-    saida: faltando.map((f) => `ausente: ${f.caminho} (consumido por ${f.consumidor})`).join('\n'),
+    saida: [
+      ...faltando.map((f) => `ausente: ${f.caminho} (consumido por ${f.consumidor})`),
+      ...vencidos.map((v) => `NAO REESCRITO nesta execucao: ${v.caminho} (mtime ${v.mtime}, consumido por ${v.consumidor})`),
+    ].join('\n'),
     presentes,
     faltando: faltando.map((f) => f.caminho),
+    naoReescritos: vencidos,
   });
-  return faltando.length === 0;
+  return artefatosOk;
 }
 
 /**
@@ -364,6 +400,10 @@ function verificarArtefatos() {
  * UMA definição da ordem e da lista de produtores.
  */
 function produzirArtefatos() {
+  // Instante de referência da prova de FRESCOR: todo artefato obrigatório tem de ser reescrito
+  // a partir daqui (artefato anterior a este marco é evidência de outra execução).
+  const inicioMs = Date.now();
+
   // 3) índice do QA Mesh (manutenção de índice: não executa cenário).
   npmRun('mesh-registry', 'qa:mesh:refresh');
 
@@ -383,8 +423,8 @@ function produzirArtefatos() {
   npmRun('governance-summary', 'validate:governance-summary', { aceitaVeredito: [1] });
   npmRun('impact-validation', 'impact:validate', { aceitaVeredito: [2, 3] });
 
-  // 6) prova de existência dos artefatos exigidos pela suíte obrigatória.
-  return verificarArtefatos();
+  // 6) prova de existência E FRESCOR dos artefatos exigidos pela suíte obrigatória.
+  return verificarArtefatos(inicioMs);
 }
 
 function parseArgs(argv) {

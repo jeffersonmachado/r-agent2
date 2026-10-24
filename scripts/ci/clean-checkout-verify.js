@@ -694,6 +694,26 @@ function inventarioL1(clonePath, env, logDir, fasesPedidas = null) {
   return resultado;
 }
 
+/**
+ * FÓRMULA DO VEREDITO DE UM CENÁRIO (função pura, exportada para teste de COMPORTAMENTO).
+ *
+ * `foraDeEscopo`: passo EXECUTADO cuja reprovação mede certificação de release (fase R) enquanto o
+ * run pediu apenas A,B,C,D — não governa o veredito do ambiente, mas continua no relatório.
+ * Um passo fora de escopo NUNCA é convertido em sucesso: ele só deixa de decidir.
+ */
+function vereditoDoCenario(passosDoCenario) {
+  const validos = (passosDoCenario || []).filter((p) => p.id !== 'clone-limpo');
+  const executados = validos.filter((p) => !p.informativo && !p.foraDeEscopo);
+  const foraDeEscopo = validos
+    .filter((p) => p.foraDeEscopo)
+    .map((p) => ({ id: p.id, exitCode: p.exitCode, motivo: p.motivoForaDeEscopo || null }));
+  return {
+    veredito: executados.length > 0 && executados.every((p) => p.ok) ? 'PASS' : 'FAIL',
+    foraDeEscopo,
+    considerados: executados.length,
+  };
+}
+
 function cenarioClean(ctx, args) {
   const { clonePath, env, logDir } = ctx;
   passo('npm-ci-bootstrap', 'npm', ['run', '-s', 'ci:bootstrap'], {
@@ -1250,9 +1270,7 @@ function main(argv = process.argv.slice(2)) {
       // Passo `foraDeEscopo` foi EXECUTADO e seu exit code está no relatório, mas mede certificação
       // de release (fase R) quando o run pediu apenas A,B,C,D: não pode governar o veredito do
       // ambiente. `--gate-phases ...R` faz o passo voltar a contar.
-      const executados = meusPassos.filter((p) => p.id !== 'clone-limpo' && !p.informativo && !p.foraDeEscopo);
-      const foraDeEscopo = meusPassos.filter((p) => p.foraDeEscopo).map((p) => ({ id: p.id, exitCode: p.exitCode, motivo: p.motivoForaDeEscopo }));
-      const veredito = executados.length > 0 && executados.every((p) => p.ok) ? 'PASS' : 'FAIL';
+      const { veredito, foraDeEscopo } = vereditoDoCenario(meusPassos);
       const relatorio = {
         schemaVersion: 1,
         artifactType: 'ci-clean-checkout-report',
@@ -1357,4 +1375,4 @@ if (require.main === module) {
   process.exit(main());
 }
 
-module.exports = { main, SCENARIOS, auditarCloneLimpo, contadoresDeTeste };
+module.exports = { main, SCENARIOS, auditarCloneLimpo, contadoresDeTeste, vereditoDoCenario, inventarioL1 };

@@ -214,32 +214,56 @@ describe('P2-D — ESCOPO DO VEREDITO: fase R não governa a sanidade do ambient
   // fase R (certificação de release) reprovaram — e eles NÃO PODEM passar num repositório sem
   // selo (`CADEIA_RECOMPUTADA_INVALIDA`, `PRE_PACKAGE_PASS`). O harness então nunca podia ficar
   // verde, e o vermelho não distinguia "ambiente quebrado" de "release não certificado".
-  test('o inventário marca os passos da fase R como fora de escopo quando R não foi pedida', () => {
-    expect(FONTE).toContain("registro.foraDeEscopo = true");
-    expect(FONTE).toContain("registro.motivoForaDeEscopo = 'FASE_R_NAO_SOLICITADA'");
-    expect(FONTE).toContain('const faseRNoEscopo = fasesPedidas === null || fasesPedidas.includes(\'R\')');
+  //
+  // Achado 6 da revisão independente: as asserções originais eram `expect(FONTE).toContain(...)`.
+  // Aqui a fórmula é EXERCITADA (`vereditoDoCenario`, função pura exportada pelo harness).
+  const { vereditoDoCenario } = require('../../../scripts/ci/clean-checkout-verify');
+
+  const passoOk = (id) => ({ id, ok: true, exitCode: 0 });
+  const passoR = (id) => ({ id, ok: false, exitCode: 1, foraDeEscopo: true, motivoForaDeEscopo: 'FASE_R_NAO_SOLICITADA' });
+
+  test('passos de ambiente verdes + fase R vermelha fora de escopo ⇒ PASS', () => {
+    const r = vereditoDoCenario([passoOk('bootstrap'), passoOk('gate-dev-branch'), passoR('L1-inventario:L1-self-proving')]);
+    expect(r.veredito).toBe('PASS');
+    expect(r.foraDeEscopo).toEqual([{ id: 'L1-inventario:L1-self-proving', exitCode: 1, motivo: 'FASE_R_NAO_SOLICITADA' }]);
+    expect(r.considerados).toBe(2);
   });
 
-  test('o passo fora de escopo CONTINUA sendo executado (exit code preservado no relatório)', () => {
-    // O registro é produzido por `passo(...)` (execução real) e só DEPOIS marcado; o relatório
-    // grava o exit code do passo fora de escopo em `passosForaDeEscopo`.
-    expect(FONTE).toContain('passosForaDeEscopo: foraDeEscopo');
-    expect(FONTE).toContain('const foraDeEscopo = meusPassos.filter((p) => p.foraDeEscopo)');
-    expect(FONTE).toContain('{ id: p.id, exitCode: p.exitCode, motivo: p.motivoForaDeEscopo }');
+  test('o MESMO passo vermelho SEM a marcação ⇒ FAIL (a marcação é o que muda o veredito)', () => {
+    const r = vereditoDoCenario([passoOk('bootstrap'), { id: 'L1-inventario:L1-self-proving', ok: false, exitCode: 1 }]);
+    expect(r.veredito).toBe('FAIL');
+    expect(r.foraDeEscopo).toEqual([]);
   });
 
-  test('o veredito IGNORA passos fora de escopo (nunca os usa para PASS por omissão)', () => {
-    expect(FONTE).toContain("!p.informativo && !p.foraDeEscopo");
-    // Um passo fora de escopo continua visível e com ok=false no relatório: não é "convertido em sucesso".
-    expect(FONTE).not.toMatch(/foraDeEscopo[\s\S]{0,80}ok = true/);
+  test('passo fora de escopo NUNCA vira sucesso: `ok` e exit code permanecem os medidos', () => {
+    const passo = passoR('L1-inventario:L1-cadeia-criptografica');
+    vereditoDoCenario([passoOk('bootstrap'), passo]);
+    expect(passo.ok).toBe(false);
+    expect(passo.exitCode).toBe(1);
   });
 
-  test('a fase R continua contando quando é solicitada explicitamente', () => {
-    expect(FONTE).toContain("fasesPedidas.includes('R')");
+  test('um vermelho REAL de ambiente continua reprovando mesmo com fase R fora de escopo', () => {
+    const r = vereditoDoCenario([
+      { id: 'bootstrap', ok: false, exitCode: 1 },
+      passoR('L1-inventario:L1-self-proving'),
+    ]);
+    expect(r.veredito).toBe('FAIL');
+  });
+
+  test('nenhum passo considerado ⇒ FAIL (não há PASS vazio)', () => {
+    expect(vereditoDoCenario([]).veredito).toBe('FAIL');
+    expect(vereditoDoCenario([passoR('x')]).veredito).toBe('FAIL');
+  });
+
+  test('só os passos da FASE R são marcados fora de escopo pelo harness', () => {
     const { PASSOS } = require('../../../scripts/ci/dev-branch-gate');
-    expect((PASSOS.R || []).map((p) => p.id)).toEqual(
-      expect.arrayContaining(['L1-cadeia-criptografica', 'L1-self-proving', 'L1-decisao-canonica']),
-    );
-    expect((PASSOS.D || []).map((p) => p.id)).not.toContain('L1-cadeia-criptografica');
+    const idsD = (PASSOS.D || []).map((p) => p.id);
+    const idsR = (PASSOS.R || []).map((p) => p.id);
+    expect(idsR).toEqual(expect.arrayContaining(['L1-cadeia-criptografica', 'L1-self-proving', 'L1-decisao-canonica']));
+    expect(idsD).not.toContain('L1-cadeia-criptografica');
+    // A marcação é aplicada no laço de PASSOS.R, e o laço de PASSOS.D não a recebe.
+    const fonteHarness = fs.readFileSync(HARNESS, 'utf8');
+    expect(fonteHarness).toMatch(/for \(const definicao of PASSOS\.R \|\| \[\]\)[\s\S]{0,600}foraDeEscopo = true/);
+    expect(fonteHarness).toMatch(/for \(const definicao of PASSOS\.D\)[\s\S]{0,400}?resultado\.push\(\{ id: definicao\.id, exitCode: registro\.exitCode, ok: registro\.ok, fase: 'D' \}\)/);
   });
 });
