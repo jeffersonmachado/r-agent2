@@ -12,9 +12,13 @@
  * manifesto (`SCORECARD_EVIDENCE_HASH_MISMATCH`) e o `validate:coverage-gate` passa a contar um
  * relatório RAG FAIL "fresco", derrubando o `consolidate` do selo.
  *
- * Causa: `git add -A` depois de rodar a suíte, sem conferência. Este teste é a conferência:
- * para todo registro `DERIVED_REPORT` do manifesto cujo arquivo EXISTE no repositório versionado,
- * os bytes em disco têm de ter exatamente o `sha256` registrado.
+ * Causa: `git add -A` depois de rodar a suíte, sem conferência. Este teste é a conferência.
+ *
+ * O QUE É COMPARADO: os bytes que SHIPAM — `git show HEAD:<path>` — e não o arquivo do worktree.
+ * Motivo medido: as próprias suítes (`report:tenant-isolation`, validador de domínio RAG) REGERAM
+ * esses dois relatórios a cada execução de `jest tests/unit`, então comparar o worktree tornava o
+ * guard dependente da ordem de execução (auto-sabotagem). O contrato que importa é: o que está
+ * commitado corresponde ao manifesto governado.
  */
 
 const crypto = require('crypto');
@@ -42,6 +46,9 @@ describe('P3 — evidência versionada corresponde ao manifesto governedo', () =
    * O escopo é o que SHIPA: arquivo versionado (`git ls-files`). Artefato de runtime
    * (gitignored) é regerado por qualquer validador local e sua divergência não é deste teste.
    */
+  /** Bytes COMMITADOS de um caminho (o que o release leva), não o estado do worktree. */
+  const bytesDeHead = (rel) => execFileSync('git', ['show', `HEAD:${rel}`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
+
   const ehVersionado = (rel) => {
     try {
       execFileSync('git', ['ls-files', '--error-unmatch', rel], { cwd: ROOT, stdio: 'ignore' });
@@ -58,7 +65,7 @@ describe('P3 — evidência versionada corresponde ao manifesto governedo', () =
       const abs = path.join(ROOT, rel);
       if (!fs.existsSync(abs)) continue; // artefato de runtime ausente não é divergência
       if (!ehVersionado(rel)) continue; // artefato de runtime (gitignored): fora do escopo
-      const sha = crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+      const sha = crypto.createHash('sha256').update(bytesDeHead(rel)).digest('hex');
       if (sha !== registro.sha256) divergentes.push({ rel, esperado: registro.sha256.slice(0, 12), encontrado: sha.slice(0, 12) });
       else verificados.push(rel);
     }
@@ -72,7 +79,7 @@ describe('P3 — evidência versionada corresponde ao manifesto governedo', () =
       expect(registro).toBeDefined();
       const abs = path.join(ROOT, rel);
       expect(fs.existsSync(abs)).toBe(true);
-      const sha = crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+      const sha = crypto.createHash('sha256').update(bytesDeHead(rel)).digest('hex');
       expect({ rel, sha }).toEqual({ rel, sha: registro.sha256 });
     }
   });
