@@ -475,7 +475,14 @@ function agregar({ rootDir, baseRel, runIds }) {
     const filaDoManifesto = e.manifesto.identidade.hardeningQueueFingerprint;
     const filaConfere = Boolean(digestRealDoInventario)
       && String(filaDoManifesto) === String(digestRealDoInventario);
-    return escopo.tipo === 'INTEGRAL'
+    // Achado (a) da 4ª passada (auto-revisão): declarar `tipo:INTEGRAL` com `limite`/filtro
+    // reduzia o conjunto derivado e um SUBCONJUNTO passava como cobertura integral. Integral
+    // exige escopo NEUTRO: sem limite, sem filtro de severidade, sem seleção de ids.
+    const escopoNeutro = Number(escopo.limite || 0) === 0
+      && String(escopo.filtroSeveridade || 'ALL').toUpperCase() === 'ALL'
+      && (!Array.isArray(escopo.idsSelecionados) || escopo.idsSelecionados.length === 0);
+    return escopoNeutro
+      && escopo.tipo === 'INTEGRAL'
       && e.resultados.length > 0
       && esperado > 0
       && e.resultados.length >= esperado

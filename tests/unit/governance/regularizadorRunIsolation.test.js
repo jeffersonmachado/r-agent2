@@ -512,3 +512,29 @@ describe('revisão independente 3ª passada — escopo derivado da fila (A1-2) e
     expect(inexistentes).toEqual([]);
   });
 });
+
+describe('4ª passada (auto-revisão) — cobertura integral exige escopo NEUTRO', () => {
+  test('declarar INTEGRAL com limite/filtro/ids reduz o conjunto e NÃO vira cobertura integral', () => {
+    const root = raiz();
+    inventarioNoRoot(root, ['L1', 'L2', 'L3']);
+    const a = abrirRun(root, {
+      reusarFila: true,
+      escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['L1'], limite: 1 },
+    });
+    fechar(root, a, ['L1']);
+    expect(runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] }).completo).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('mesmo conteúdo, escopo neutro ⇒ cobertura integral', () => {
+    const root = raiz();
+    inventarioNoRoot(root, ['L1', 'L2', 'L3']);
+    const a = abrirRun(root, {
+      reusarFila: true,
+      escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 3, idsEsperados: ['L1', 'L2', 'L3'] },
+    });
+    fechar(root, a, ['L1', 'L2', 'L3']);
+    expect(runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] }).completo).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+});
