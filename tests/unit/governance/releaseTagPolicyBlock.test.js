@@ -85,6 +85,9 @@ function rodarScript(cenario) {
       RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remote,
       CI: '',
       NODE_ENV: 'test',
+      // O porteiro RECUSA injeção de configuração git (`GIT_CONFIG_COUNT>0`); o processo pai pode
+      // injetar (medido: 3 regras nesta máquina). `0` descarta a injeção e mantém o teste hermético.
+      GIT_CONFIG_COUNT: '0',
     },
   });
   return { status: r.status, saida: `${r.stdout || ''}${r.stderr || ''}` };

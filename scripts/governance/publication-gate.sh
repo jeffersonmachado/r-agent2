@@ -70,6 +70,17 @@ rap_ha_reescrita_de_url() {
   git config --get-regexp '^url\..*\.(insteadof|pushinsteadof)$' >/dev/null 2>&1
 }
 
+# CONFIGURAÇÃO QUE REDIRECIONA O TRANSPORTE (achado 1 da revisão da Fase 3, reproduzido):
+#   `remote.<n>.receivepack` / `remote.<n>.uploadpack` executam OUTRO comando no push/pull — o
+#   destino deixa de ser o que `get-url` mostra. Medido: `receivepack` mandou a tag para um bare
+#   FORA do caminho autorizado enquanto o gate imprimia "MODO LOCAL DE TESTE".
+# `core.hooksPath`/`core.sshCommand` também trocam o executor. Qualquer um deles invalida a prova.
+rap_config_redireciona_transporte() {
+  git config --get-regexp '^(remote\..*\.)?(receivepack|uploadpack)$' >/dev/null 2>&1 && return 0
+  git config --get-regexp '^core\.(hookspath|sshcommand|gitproxy)$' >/dev/null 2>&1 && return 0
+  return 1
+}
+
 # Dispensa de TESTE, restrita ao filesystem e impossível em produção/CI.
 rap_publication_gate_local_test() {
   local origem="${1:-publicacao}"
@@ -86,6 +97,27 @@ rap_publication_gate_local_test() {
   if rap_ha_reescrita_de_url; then
     echo "[publication-gate] RECUSADO (${origem}): existe regra url.*.insteadOf/pushInsteadOf — a URL" >&2
     echo "[publication-gate] observada não é necessariamente a URL usada pelo transporte." >&2
+    return 1
+  fi
+  if rap_config_redireciona_transporte; then
+    echo "[publication-gate] RECUSADO (${origem}): remote.*.receivepack/uploadpack ou core.hooksPath/" >&2
+    echo "[publication-gate] core.sshCommand configurados — o destino do push nao e o do get-url." >&2
+    return 1
+  fi
+  # O caminho autorizado nao pode ser symlink (nem ter ancestral symlink): sem isso um link no
+  # caminho "autorizado" manda a escrita para outro lugar (reproduzido pela revisao).
+  local permitidoReal
+  if ! permitidoReal="$(cd "$(dirname "$permitido")" 2>/dev/null && pwd -P)/$(basename "$permitido")"; then
+    echo "[publication-gate] RECUSADO (${origem}): caminho autorizado inacessivel." >&2
+    return 1
+  fi
+  if [[ "$permitidoReal" != "$permitido" ]]; then
+    echo "[publication-gate] RECUSADO (${origem}): caminho autorizado resolve para '$permitidoReal'" >&2
+    echo "[publication-gate] (symlink/ancestral symlink) != '$permitido'." >&2
+    return 1
+  fi
+  if [[ -L "$permitido" ]]; then
+    echo "[publication-gate] RECUSADO (${origem}): o destino autorizado E um symlink." >&2
     return 1
   fi
   if [[ -z "$remote" ]]; then
@@ -116,7 +148,11 @@ rap_publication_gate_local_test() {
     esac
   done <<< "$destinos"
 
-  echo "[publication-gate] MODO LOCAL DE TESTE (${origem}): destinos de push autorizados => $(printf '%s' "$destinos" | tr '\n' ' ')"
+  # O PUSH tem de ir para o CAMINHO VALIDADO, não para o nome do remote: com `receivepack`/
+  # `pushurl` o nome do remote pode apontar para outro lugar mesmo depois de todas as checagens.
+  # Exportado para o chamador usar em `git push "$RAP_PUBLICATION_LOCAL_TARGET"`.
+  export RAP_PUBLICATION_LOCAL_TARGET="$permitidoReal"
+  echo "[publication-gate] MODO LOCAL DE TESTE (${origem}): push direcionado ao caminho validado ${permitidoReal}"
   return 0
 }
 

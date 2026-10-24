@@ -31,7 +31,8 @@ function runScript(cwd, args) {
   const result = spawnSync('bash', [SCRIPT, ...args], {
     cwd,
     encoding: 'utf8',
-    env: { ...process.env, RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: remoteBare, CI: '', NODE_ENV: 'test' },
+    // `GIT_CONFIG_COUNT=0` descarta injeção de configuração git do processo pai (o porteiro a recusa).
+    env: { ...process.env, RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: remoteBare, CI: '', NODE_ENV: 'test', GIT_CONFIG_COUNT: '0' },
   });
   return {
     status: result.status,

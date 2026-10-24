@@ -266,7 +266,9 @@ describe('C-3A — classificação por URL não pode ser contornada', () => {
     cenario.git(cenario.repo, 'remote', 'set-url', '--add', '--push', 'origin', EXTERNO);
     const r = rodarTag(cenario, {}, 'origin');
     expect(r.status).not.toBe(0);
-    expect(r.saida).toMatch(/publication-gate/);
+    // Motivo ESPECÍFICO (não "bloqueou por falta de autorização"): o destino de push inclui o host
+    // externo e o porteiro o recusa explicitamente.
+    expect(r.saida).toMatch(/RAP_PUBLISH_AUTHORIZED|destino de push/);
     expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
   });
 
@@ -341,6 +343,87 @@ describe('C-3A — classificação por URL não pode ser contornada', () => {
     expect(push.status).not.toBe(0);
     const chamada = fs.readFileSync(registro, 'utf8');
     expect(chamada).toContain('example.invalid');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 1d. ACHADOS DA REVISÃO DA FASE 3 — receivepack, symlink e alvos de deploy
+// ---------------------------------------------------------------------------
+
+describe('C-3A2 — o modo local de teste não pode ser redirecionado', () => {
+  const gateDireto = (cenario, env, args = 'local') => {
+    const gate = path.join(ROOT, 'scripts', 'governance', 'publication-gate.sh');
+    return spawnSync('bash', ['-c', `. "${gate}"; rap_publication_gate "teste" ${args}`], {
+      cwd: cenario.repo,
+      encoding: 'utf8',
+      env: { ...process.env, GIT_CONFIG_COUNT: '0', CI: '', NODE_ENV: 'test', ...env },
+    });
+  };
+
+  test('A10 — `remote.origin.receivepack` é recusado (executa OUTRO comando no push)', () => {
+    // Reproduzido pela revisão: com `receivepack` apontando para outro bare, a tag ia para FORA do
+    // caminho autorizado enquanto o porteiro imprimia "MODO LOCAL DE TESTE".
+    const cenario = cenarioDeTag();
+    const fora = path.join(cenario.base, 'fora.git');
+    cenario.git(cenario.base, 'init', '--bare', '-q', fora);
+    cenario.git(cenario.repo, 'config', 'remote.origin.receivepack', `git-receive-pack ${fora}`);
+    const r = gateDireto(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto }, 'local');
+    expect(r.status).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toMatch(/receivepack|uploadpack/);
+  });
+
+  test('A11 — caminho autorizado que É symlink é recusado (não resolve para outro destino)', () => {
+    const cenario = cenarioDeTag();
+    const fora = path.join(cenario.base, 'fora.git');
+    cenario.git(cenario.base, 'init', '--bare', '-q', fora);
+    const link = path.join(cenario.base, 'link.git');
+    fs.symlinkSync(fora, link);
+    cenario.git(cenario.repo, 'remote', 'add', 'link', link);
+    const r = gateDireto(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: link }, 'link');
+    expect(r.status).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toMatch(/symlink|resolve para/);
+  });
+
+  test('A12 — com transporte são, o porteiro exporta o CAMINHO validado (push não usa o nome do remote)', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
+    const r = spawnSync('bash', ['-c', `. "${path.join(ROOT, 'scripts', 'governance', 'publication-gate.sh')}"; rap_publication_gate "teste" local; printf 'ALVO=%s' "$RAP_PUBLICATION_LOCAL_TARGET"`], {
+      cwd: cenario.repo,
+      encoding: 'utf8',
+      env: { ...process.env, GIT_CONFIG_COUNT: '0', CI: '', NODE_ENV: 'test', RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto },
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain(`ALVO=${cenario.remoto}`);
+  });
+
+  test('A14 — fim-a-fim: `receivepack` externo com allow local NÃO publica tag em lugar nenhum', () => {
+    // Reprodução da revisão: o gate imprimia "MODO LOCAL DE TESTE" e a tag ia para o bare EXTERNO.
+    const cenario = cenarioDeTag();
+    const fora = path.join(cenario.base, 'fora.git');
+    cenario.git(cenario.base, 'init', '--bare', '-q', fora);
+    cenario.git(cenario.repo, 'config', 'remote.origin.receivepack', `git-receive-pack ${fora}`);
+    const r = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, CI: '', NODE_ENV: 'test' }, 'origin');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/receivepack|uploadpack/);
+    expect(cenario.git(fora, 'tag').trim()).toBe('');
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+  });
+
+  test('A13 — nenhum entrypoint de publicação fica sem o porteiro (inventário verificado)', () => {
+    // Achado 2 da revisão: `deploy:prod`, `deploy:remote*` e `system:test-images:push` publicavam
+    // sem gate. O inventário é verificado no FONTE de cada script de publicação.
+    const entrypoints = [
+      'scripts/docker-push.sh',
+      'scripts/docker-push-remote.sh',
+      'scripts/create-release-tag.sh',
+      'scripts/deploy-prod.sh',
+      'scripts/docker-deploy.sh',
+      'scripts/prewarm-test-images.sh',
+    ];
+    for (const rel of entrypoints) {
+      const fonte = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      expect({ rel, temGate: fonte.includes('rap_publication_gate') }).toEqual({ rel, temGate: true });
+    }
   });
 });
 
