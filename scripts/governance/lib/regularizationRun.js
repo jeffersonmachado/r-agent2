@@ -171,7 +171,9 @@ function gravarManifesto(dir, manifesto) {
   try {
     const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
     try {
-      fs.writeSync(fd, `${JSON.stringify(manifesto, null, 2)}\n`);
+      const carga = Buffer.from(`${JSON.stringify(manifesto, null, 2)}\n`, 'utf8');
+      const escritos = fs.writeSync(fd, carga);
+      if (escritos !== carga.length) throw new Error(`ESCRITA_PARCIAL:${escritos}/${carga.length}`);
       fs.fsyncSync(fd);
     } finally {
       try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
@@ -265,6 +267,8 @@ function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, observa
   const abs = path.join(dirDaExecucao(rootDir, baseRel, runId), 'manifest.json');
   const m = lerManifesto(rootDir, baseRel, runId);
   if (!m) return { ok: false, motivo: 'MANIFESTO_AUSENTE' };
+  // R-1 (resíduo library-only): manifesto forjado sem `escopo` lançava TypeError.
+  if (!m.escopo || typeof m.escopo !== 'object') return { ok: false, motivo: 'MANIFESTO_SEM_ESCOPO' };
   // `processados` é CONTADO dos artefatos (achado 1 da revisão): o chamador não declara
   // cobertura, ele a produz.
   const dirItens = path.join(path.dirname(abs), 'itens');
@@ -304,8 +308,18 @@ function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, observa
   const escopoNeutro = Number(m.escopo.limite || 0) === 0
     && String(m.escopo.filtroSeveridade || 'ALL').toUpperCase() === 'ALL'
     && (!Array.isArray(m.escopo.idsSelecionados) || m.escopo.idsSelecionados.length === 0);
+  // Limite 5 da 5ª passada: escopo neutro + `idsEsperados` curto marcava completo. `finalizar`
+  // passa a derivar os candidatos da fila, como `agregar` — o rótulo do manifesto não pode
+  // discordar do gate.
+  const candidatosReais = candidatosDoInventario(rootDir, m.escopo);
+  const esperadosDeclarados = Array.isArray(m.escopo.idsEsperados) ? m.escopo.idsEsperados : [];
+  const escopoConfere = Array.isArray(candidatosReais)
+    && candidatosReais.length > 0
+    && esperadosDeclarados.length === candidatosReais.length
+    && candidatosReais.every((id, i) => String(esperadosDeclarados[i]) === id);
   m.escopo.completo = status === STATUS.COMPLETED
     && escopoNeutro
+    && escopoConfere
     && processados > 0
     && processados >= Number(m.escopo.esperadoNoEscopo || 0)
     && cobreLista;

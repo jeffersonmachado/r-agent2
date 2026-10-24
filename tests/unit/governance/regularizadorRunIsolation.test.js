@@ -293,7 +293,8 @@ describe('revisão independente — agregação não aceita cobertura declarada'
 
   test('finalizar conta os artefatos em vez de confiar no chamador', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['N1', 'N2'] } });
+    inventarioNoRoot(root, ['N1', 'N2']);
+    const a = abrirRun(root, { reusarFila: true, escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['N1', 'N2'] } });
     for (const id of ['N1', 'N2']) {
       runLib.gravarResultado({ rootDir: root, baseRel: BASE, runId: a.runId, resultado: resultado(id) });
     }
@@ -608,4 +609,41 @@ describe('5ª passada — escrita do manifesto é atômica e sem resíduo', () =
     expect(fs.readdirSync(a.dir).filter((f) => f.startsWith('.tmp-'))).toEqual([]);
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
+});
+
+describe('5ª passada — resíduos do relatório final', () => {
+  test('limite 5: escopo neutro com idsEsperados CURTO não marca escopo.completo', () => {
+    const root = raiz();
+    inventarioNoRoot(root, ['W1', 'W2', 'W3']);
+    const a = abrirRun(root, {
+      reusarFila: true,
+      escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['W1'] },
+    });
+    for (const id of ['W1']) {
+      runLib.gravarResultado({ rootDir: root, baseRel: BASE, runId: a.runId, resultado: resultado(id) });
+    }
+    const fim = runLib.finalizar({ rootDir: root, baseRel: BASE, runId: a.runId });
+    expect(fim.ok).toBe(true);
+    expect(fim.manifesto.escopo.completo).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('R-1 residual: manifesto sem `escopo` é recusado (não lança TypeError)', () => {
+    const root = raiz();
+    const a = abrirRun(root);
+    const absManifesto = path.join(a.dir, 'manifest.json');
+    const m = JSON.parse(fs.readFileSync(absManifesto, 'utf8'));
+    delete m.escopo;
+    fs.writeFileSync(absManifesto, `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+    const fim = runLib.finalizar({ rootDir: root, baseRel: BASE, runId: a.runId });
+    expect(fim.ok).toBe(false);
+    expect(fim.motivo).toBe('MANIFESTO_SEM_ESCOPO');
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('escrever o manifesto verifica bytes efetivamente gravados (sem short write silencioso)', () => {
+    const fonte = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'lib', 'regularizationRun.js'), 'utf8');
+    expect(fonte).toContain('ESCRITA_PARCIAL');
+    expect(fonte).toContain('fs.rmSync(tmp, { force: true })');
+  });
 });
