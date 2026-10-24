@@ -299,6 +299,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -459,6 +467,14 @@ jobs:
     name: "Integração real do Engenheiro (Postgres + sandbox)"
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     services:
       postgres:

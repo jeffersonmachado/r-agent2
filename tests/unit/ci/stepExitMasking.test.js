@@ -19,8 +19,9 @@
  * `$GITHUB_OUTPUT`/`$RUNNER_TEMP` o próprio `echo` falhava e a asserção era satisfeita pelo motivo
  * errado. Por isso aqui a verificação é ESTRUTURAL sobre o YAML e não depende de ambiente.
  *
- * REGRA TRAVADA: todo passo `run:` com 2+ comandos nos jobs certificantes precisa de errexit — via
- * `set -e*`/`-o errexit` no script, `shell:` explícito, ou `defaults.run.shell` do job.
+ * REGRA TRAVADA: todo passo `run:` com 2+ comandos, em QUALQUER workflow do repositório, precisa de
+ * errexit — via `set -e*`/`-o errexit` no script, `shell:` explícito, ou `defaults.run.shell` do job.
+ * Passo que tolera falha diz `|| true` (dumps de log fazem isso desde sempre).
  */
 
 const fs = require('fs');
@@ -30,9 +31,18 @@ const yaml = require('js-yaml');
 const RAIZ = path.join(__dirname, '..', '..', '..');
 const WORKFLOWS = path.join(RAIZ, '.github', 'workflows');
 
-const JOBS_CERTIFICANTES = {
-  'release-governance.yml': ['governance-core', 'governance-regression', 'anchors-attestation', 'release-gate'],
-  'dev-branch-ci.yml': ['dev-branch-gate'],
+/**
+ * ESCOPO: TODOS os workflows (Fase 3, fechamento). A regra começou nos jobs certificantes — onde o
+ * defeito D1 foi medido — e passou a valer para o repositório inteiro: um `| tail`/`| head`/`>>` no
+ * fim de um pipeline mascara o mesmo tipo de falha em smoke, e2e, jest e refresh de waves.
+ * `{ todos: true }` significa "todos os jobs do arquivo".
+ */
+const ESCOPO = {
+  'release-governance.yml': { todos: true },
+  'dev-branch-ci.yml': { todos: true },
+  'e2e.yml': { todos: true },
+  'jest.yml': { todos: true },
+  'wave-reports.yml': { todos: true },
 };
 
 const carregar = (arquivo) => yaml.load(fs.readFileSync(path.join(WORKFLOWS, arquivo), 'utf8'));
@@ -67,10 +77,11 @@ function passoProtegido(passo, job) {
 }
 
 describe('status de passo multi-comando não pode ser mascarado pela última linha', () => {
-  for (const [arquivo, jobs] of Object.entries(JOBS_CERTIFICANTES)) {
-    test(`${arquivo}: todo passo multi-comando dos jobs certificantes tem errexit`, () => {
+  for (const [arquivo, escopo] of Object.entries(ESCOPO)) {
+    test(`${arquivo}: todo passo multi-comando tem errexit (ou tolerância explícita)`, () => {
       const wf = carregar(arquivo);
       const desprotegidos = [];
+      const jobs = escopo.todos ? Object.keys(wf.jobs || {}) : escopo.jobs;
       for (const nomeJob of jobs) {
         const job = wf.jobs[nomeJob];
         expect(job).toBeTruthy();
