@@ -168,15 +168,21 @@ function gravarManifesto(dir, manifesto) {
   const st = fs.lstatSync(abs, { throwIfNoEntry: false });
   if (st && st.isSymbolicLink()) throw new Error('MANIFESTO_E_SYMLINK');
   const tmp = path.join(dir, `.tmp-manifest-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
-  const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
   try {
-    fs.writeSync(fd, `${JSON.stringify(manifesto, null, 2)}\n`);
-    fs.fsyncSync(fd);
-  } finally {
-    try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+    const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+    try {
+      fs.writeSync(fd, `${JSON.stringify(manifesto, null, 2)}\n`);
+      fs.fsyncSync(fd);
+    } finally {
+      try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+    }
+    fs.renameSync(tmp, abs);
+    return abs;
+  } catch (e) {
+    // Falha no meio não deixa temporário órfão nem manifesto truncado (o antigo permanece).
+    try { fs.rmSync(tmp, { force: true }); } catch (_) { /* nada a limpar */ }
+    throw e;
   }
-  fs.renameSync(tmp, abs);
-  return abs;
 }
 
 function lerManifesto(rootDir, baseRel, runId) {

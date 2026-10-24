@@ -588,3 +588,24 @@ describe('4ª passada — manifest.json e manifesto sem identidade (F-1/R-1)', (
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
 });
+
+describe('5ª passada — escrita do manifesto é atômica e sem resíduo', () => {
+  test('falha ao gravar o manifesto preserva o anterior e não deixa .tmp órfão', () => {
+    const root = raiz();
+    const a = abrirRun(root, { escopo: { tipo: 'PARCIAL', esperadoNoEscopo: 1 } });
+    fechar(root, a, ['A1']);
+    const antes = fs.readFileSync(path.join(a.dir, 'manifest.json'), 'utf8');
+    // Torna o diretório somente-leitura: a escrita do manifesto tem de falhar fechada.
+    fs.chmodSync(a.dir, 0o500);
+    let resultado;
+    try {
+      resultado = runLib.finalizar({ rootDir: root, baseRel: BASE, runId: a.runId });
+    } finally {
+      fs.chmodSync(a.dir, 0o700);
+    }
+    expect(resultado.ok).toBe(false);
+    expect(fs.readFileSync(path.join(a.dir, 'manifest.json'), 'utf8')).toBe(antes);
+    expect(fs.readdirSync(a.dir).filter((f) => f.startsWith('.tmp-'))).toEqual([]);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+});
