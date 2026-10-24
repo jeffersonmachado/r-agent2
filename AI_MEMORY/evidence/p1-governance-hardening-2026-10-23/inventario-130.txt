@@ -1,0 +1,4 @@
+[inventario] commit=ea7905c47b declarando-fechamento-sem-prova=130
+[inventario]   118 INVALID_EVIDENCE
+[inventario]    12 PENDING_REGRESSION
+[inventario] âncoras: {"fechamento":false,"aprovacao":false,"inventario":false}

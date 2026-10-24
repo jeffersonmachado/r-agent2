@@ -72,6 +72,13 @@ jobs:
     name: "Governance Core (Node ${{ matrix.node-version }})"
     runs-on: ubuntu-latest
 
+    # P1-C: este workflow é o caminho CERTIFICANTE (tag/publish/release). O preflight das
+    # âncoras de confiança abaixo é BLOQUEANTE por definição: âncora ausente ⇒ este job falha ⇒
+    # `release-gate` recusa. O caminho DEVELOPMENT não certificante vive em
+    # `.github/workflows/dev-branch-gate.yml` (L0/L1), que não depende de âncora de release.
+    env:
+      RAP_CERTIFYING_PATH: 'true'
+
     strategy:
       fail-fast: true
       matrix:
@@ -130,13 +137,43 @@ jobs:
       # (fail-closed). Provisione com:
       #   node scripts/governance/provision-closure-anchors.js --key <chave-publica.pem>
       # e verifique o preflight com `--check` antes de selar.
-      - name: Preflight das âncoras do Bug Closure (fail-closed)
-        run: node scripts/governance/provision-closure-anchors.js --check
+      # P1-C: SEM `continue-on-error`. Antes, o passo podia falhar e o job seguia verde: as
+      # âncoras ausentes não bloqueavam nada e `release-gate` declarava "Release autorizado".
+      # O exit code do script (1 = âncora ausente/inválida/divergente) agora derruba o job.
+      - name: Preflight das âncoras do Bug Closure (BLOQUEANTE no caminho certificante)
+        id: anchor-preflight
+        run: |
+          set -o pipefail
+          node scripts/governance/provision-closure-anchors.js --check | tee "$RUNNER_TEMP/anchor-preflight.json"
+          echo "anchor_preflight=ok" >> "$GITHUB_OUTPUT"
         env:
           RAP_CLOSURE_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_CLOSURE_TRUST_ANCHOR_SHA256 }}
           RAP_APPROVAL_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_APPROVAL_TRUST_ANCHOR_SHA256 }}
           RAP_CLOSURE_INVENTORY_SHA256: ${{ secrets.RAP_CLOSURE_INVENTORY_SHA256 }}
-        continue-on-error: true
+
+      # Prova POSITIVA de que o preflight rodou neste job e passou. `release-gate` exige este
+      # artefato: um job alternativo que pule o passo não consegue produzi-lo.
+      - name: Registrar atestação do preflight (exigida pelo release-gate)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = process.env.RUNNER_TEMP + "/anchor-preflight.json";
+            const lido = JSON.parse(fs.readFileSync(p, "utf8"));
+            if (lido.ok !== true) { console.error("preflight não passou"); process.exit(1); }
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/anchor-attestation.json", JSON.stringify({
+              kind: "closure-anchors-attestation",
+              ok: true,
+              commit: process.env.GITHUB_SHA,
+              runId: process.env.GITHUB_RUN_ID,
+              job: process.env.GITHUB_JOB,
+              ancoras: lido.ancoras,
+              inventario: lido.inventario,
+              at: new Date().toISOString(),
+            }, null, 2) + "\n");
+          '
+
+      # (a atestação é publicada por um job NÃO-matrix: upload-artifact@v4 não aceita dois
+      # artefatos com o mesmo nome no mesmo run, e este job roda em matrix [20, 22].)
 
       - name: Generate release artifacts
         if: ${{ github.event.inputs.skip_build != 'true' }}
@@ -307,6 +344,67 @@ jobs:
           if-no-files-found: warn
 
   # ===========================================================================
+  # JOB 2b: Atestação das âncoras (NÃO-matrix)
+  # Publica a prova de que o preflight rodou e passou NESTE commit/run. Job dedicado porque
+  # `upload-artifact@v4` recusa dois artefatos com o mesmo nome no mesmo run (governance-core
+  # roda em matrix e o segundo leg falharia, derrubando o gate sempre — falha fechada, mas
+  # inútil). Roda em paralelo ao job de regressão.
+  # ===========================================================================
+  anchors-attestation:
+    name: "Atestação do preflight de âncoras"
+    runs-on: ubuntu-latest
+    needs:
+      - governance-core
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Preflight BLOQUEANTE das âncoras (revalidado neste job)
+        id: anchor-preflight
+        run: |
+          set -o pipefail
+          node scripts/governance/provision-closure-anchors.js --check | tee "$RUNNER_TEMP/anchor-preflight.json"
+        env:
+          RAP_CLOSURE_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_CLOSURE_TRUST_ANCHOR_SHA256 }}
+          RAP_APPROVAL_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_APPROVAL_TRUST_ANCHOR_SHA256 }}
+          RAP_CLOSURE_INVENTORY_SHA256: ${{ secrets.RAP_CLOSURE_INVENTORY_SHA256 }}
+
+      - name: Registrar atestação do preflight
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = process.env.RUNNER_TEMP + "/anchor-preflight.json";
+            const lido = JSON.parse(fs.readFileSync(p, "utf8"));
+            if (lido.ok !== true) { console.error("preflight não passou"); process.exit(1); }
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/anchor-attestation.json", JSON.stringify({
+              kind: "closure-anchors-attestation",
+              ok: true,
+              commit: process.env.GITHUB_SHA,
+              runId: process.env.GITHUB_RUN_ID,
+              job: process.env.GITHUB_JOB,
+              ancoras: lido.ancoras,
+              inventario: lido.inventario,
+              at: new Date().toISOString(),
+            }, null, 2) + "\n");
+          '
+
+      - name: Upload da atestação do preflight de âncoras
+        uses: actions/upload-artifact@v4
+        with:
+          name: closure-anchors-attestation
+          path: ${{ runner.temp }}/anchor-attestation.json
+          if-no-files-found: error
+          retention-days: 14
+
+  # ===========================================================================
   # JOB 3: Gate de Proteção de Release
   # Bloqueia tag/publish se qualquer validação falhou
   # ===========================================================================
@@ -316,16 +414,72 @@ jobs:
     needs:
       - governance-core
       - governance-regression
+      - anchors-attestation
     if: always()
 
     steps:
+      - name: Checkout (o gate revalida as âncoras por conta própria)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Achado 5 da revisão independente: a atestação do preflight era publicada e NINGUÉM a
+      # consumia — a afirmação de controle não existia. Aqui ela é exigida: sem artefato do
+      # preflight deste run, o gate não declara release autorizado.
+      - name: Baixar a atestação do preflight de âncoras
+        uses: actions/download-artifact@v4
+        with:
+          name: closure-anchors-attestation
+          path: ${{ runner.temp }}/anchor-attestation
+
+      - name: Exigir atestação VÁLIDA do preflight (mesmo run, mesmo commit)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = process.env.RUNNER_TEMP + "/anchor-attestation/anchor-attestation.json";
+            if (!fs.existsSync(p)) { console.error("SEM_ATESTACAO_DE_PREFLIGHT"); process.exit(1); }
+            const a = JSON.parse(fs.readFileSync(p, "utf8"));
+            const problemas = [];
+            if (a.kind !== "closure-anchors-attestation") problemas.push("KIND");
+            if (a.ok !== true) problemas.push("OK");
+            if (String(a.commit) !== String(process.env.GITHUB_SHA)) problemas.push("COMMIT");
+            if (String(a.runId) !== String(process.env.GITHUB_RUN_ID)) problemas.push("RUN");
+            if (!a.ancoras || !a.ancoras.fechamento || !a.ancoras.aprovacao || !a.ancoras.inventario) problemas.push("ANCORAS");
+            if (problemas.length) { console.error("ATESTACAO_INVALIDA:" + problemas.join(",")); process.exit(1); }
+            console.log("atestação do preflight válida para o commit " + String(a.commit).slice(0, 10));
+          '
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # P1-C (defesa em profundidade): o gate NÃO confia que o job anterior rodou o preflight.
+      # Se alguém remover/condicionar o passo em `governance-core`, esta checagem independente
+      # ainda impede "Release autorizado" com âncora ausente, vazia ou divergente.
+      - name: Revalidar âncoras do Bug Closure neste gate (BLOQUEANTE)
+        run: node scripts/governance/provision-closure-anchors.js --check
+        env:
+          RAP_CLOSURE_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_CLOSURE_TRUST_ANCHOR_SHA256 }}
+          RAP_APPROVAL_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_APPROVAL_TRUST_ANCHOR_SHA256 }}
+          RAP_CLOSURE_INVENTORY_SHA256: ${{ secrets.RAP_CLOSURE_INVENTORY_SHA256 }}
+
       - name: Verificar resultado dos jobs anteriores
         run: |
           CORE_RESULT="${{ needs.governance-core.result }}"
           REGR_RESULT="${{ needs.governance-regression.result }}"
+          ATEST_RESULT="${{ needs.anchors-attestation.result }}"
 
           echo "governance-core: $CORE_RESULT"
           echo "governance-regression: $REGR_RESULT"
+          echo "anchors-attestation: $ATEST_RESULT"
+
+          if [[ "$ATEST_RESULT" != "success" ]]; then
+            echo ""
+            echo "REPROVADO: atestação das âncoras ausente/falha ($ATEST_RESULT)"
+            echo "Tag, publish e release BLOQUEADOS."
+            exit 1
+          fi
 
           if [[ "$CORE_RESULT" != "success" ]]; then
             echo ""

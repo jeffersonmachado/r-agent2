@@ -1,0 +1,6 @@
+== /tmp/l0.log
+Test Suites: 18 failed, 1 skipped, 1089 passed, 1107 of 1108 total
+Tests:       42 failed, 2 skipped, 9524 passed, 9568 total
+== /tmp/l0-base.log
+Test Suites: 18 failed, 1 skipped, 1084 passed, 1102 of 1103 total
+Tests:       48 failed, 2 skipped, 9417 passed, 9467 total

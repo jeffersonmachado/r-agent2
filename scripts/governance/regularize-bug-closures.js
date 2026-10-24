@@ -46,9 +46,35 @@ const {
   construirProvaDeFechamento, verificarProvaDeFechamento, CAMPOS_ASSINADOS,
 } = require(path.join(ROOT, 'governance', 'bug-closure', 'closure-proof'));
 const { computeSourceFingerprint } = require(path.join(ROOT, 'governance', 'proof-engine', 'fingerprint-chain'));
+const defectId = require(path.join(ROOT, 'governance', 'bug-closure', 'defect-id'));
+const runLib = require(path.join(ROOT, 'scripts', 'governance', 'lib', 'regularizationRun'));
+const { computeInventoryFingerprint } = require(path.join(ROOT, 'governance', 'proof-engine', 'fingerprint-chain'));
 
-const DRAFTS = path.join(ROOT, 'governance', 'bug-closure', 'proofs-drafts');
-const EVIDENCIA = path.join(ROOT, 'AI_MEMORY', 'evidence', 'bug-closure-regularization');
+const DRAFTS_REL = path.join('governance', 'bug-closure', 'proofs-drafts');
+const EVIDENCIA_REL = path.join('AI_MEMORY', 'evidence', 'bug-closure-regularization');
+const DRAFTS = path.join(ROOT, DRAFTS_REL);
+const EVIDENCIA = path.join(ROOT, EVIDENCIA_REL);
+
+/**
+ * ÚNICO ponto de resolução de caminho a partir de identificador de defeito.
+ *
+ * P1-A: o id vem da fila (`AI_MEMORY/hardening-queue.json`), que é dado — não caminho. Montar
+ * `${id}.log`/`${id}.json` direto deixava `../../../../tmp/x` escrever FORA da raiz (reproduzido
+ * com filesystem real). Todo consumidor passa por aqui: contrato do id + contenção verificada.
+ */
+function resolverCaminhoDeEvidencia({ id, dirRel, ext = '.json', criarDir = false }) {
+  const alvo = defectId.resolverDestino({ rootDir: ROOT, dirRel, id, ext });
+  if (!alvo.ok) return alvo;
+  if (criarDir) fs.mkdirSync(path.dirname(alvo.abs), { recursive: true });
+  return alvo;
+}
+
+function gravarEvidencia({ id, dirRel, ext = '.json', conteudo, criarDir = true }) {
+  const alvo = resolverCaminhoDeEvidencia({ id, dirRel, ext, criarDir });
+  if (!alvo.ok) return alvo;
+  const gravado = defectId.gravarSemSeguirSymlink(alvo.abs, conteudo);
+  return gravado.ok ? alvo : { ok: false, motivo: gravado.motivo };
+}
 
 const arg = (nome, padrao = null) => {
   const i = process.argv.indexOf(nome);
@@ -57,12 +83,17 @@ const arg = (nome, padrao = null) => {
 const flag = (nome) => process.argv.includes(nome);
 
 const APENAS = String(arg('--only', 'all')).toUpperCase();
+// `--only` entra no nome do arquivo (`report-${APENAS}.json`): allowlist, nunca texto livre.
+const ESCOPOS_VALIDOS = new Set(['ALL', 'P0', 'P1', 'P2', 'P3']);
+const ESCOPO_INVALIDO = !ESCOPOS_VALIDOS.has(APENAS);
 const LIMITE = Number(arg('--limit', '0')) || 0;
 const ATOR = arg('--actor', 'owner@results.invalid');
 const TIMEOUT_MS = Number(arg('--timeout-ms', '600000'));
 const DRY_RUN = flag('--dry-run');
 const IDS = (arg('--id', '') || '').split(',').map((x) => x.trim()).filter(Boolean);
 const PROPOR = flag('--propor-testes');
+// `--agregar runA,runB` — operação EXPLÍCITA de combinação de execuções (nunca automática).
+const AGREGAR = String(arg('--agregar', '')).split(',').map((x) => x.trim()).filter(Boolean);
 const JSON_OUT = flag('--json');
 
 const sha256De = (arquivo) => crypto.createHash('sha256').update(fs.readFileSync(arquivo)).digest('hex');
@@ -152,10 +183,11 @@ function testeCitado(item) {
 }
 
 /** Executa o teste e devolve execução + saída REAL em disco. */
-function executarTeste(defectId, relTeste) {
-  const saidaRel = path.join('AI_MEMORY', 'evidence', 'bug-closure-regularization', `${defectId}.log`);
-  const saidaAbs = path.join(ROOT, saidaRel);
-  fs.mkdirSync(path.dirname(saidaAbs), { recursive: true });
+function executarTeste(idDefeito, relTeste) {
+  const alvoLog = resolverCaminhoDeEvidencia({ id: idDefeito, dirRel: EVIDENCIA_REL, ext: '.log', criarDir: true });
+  if (!alvoLog.ok) throw new Error(`ID_INVALIDO:${alvoLog.motivo}:${String(idDefeito).slice(0, 40)}`);
+  const saidaRel = alvoLog.rel;
+  const saidaAbs = alvoLog.abs;
 
   // Runner por ÁREA: teste em `frontend/` é Vitest, não Jest. Rodar com o runner errado
   // produzia "TESTE_FALHOU_AGORA" falso — o defeito declarado não era o que falhava.
@@ -173,7 +205,8 @@ function executarTeste(defectId, relTeste) {
   });
   const fim = new Date().toISOString();
   const saida = `${r.stdout || ''}${r.stderr || ''}`;
-  fs.writeFileSync(saidaAbs, saida, 'utf8');
+  const gravacaoLog = defectId.gravarSemSeguirSymlink(saidaAbs, saida);
+  if (!gravacaoLog.ok) throw new Error(`LOG_NAO_GRAVADO:${gravacaoLog.motivo}`);
 
   return {
     testPath: relTeste,
@@ -228,10 +261,65 @@ function montarDraft(item, provaDeFechamento, execucao, ctx) {
   });
 }
 
+/**
+ * AGREGAÇÃO EXPLÍCITA (`--agregar run1,run2`): única forma de combinar execuções.
+ * Valida completude, identidade de código e hash dos artefatos; recusa mistura silenciosa.
+ */
+function executarAgregacao(runIds) {
+  // `--agregar` é entrada de linha de comando que vira CAMINHO: mesmo contrato do defectId.
+  for (const runId of runIds) {
+    const v = runLib.validarRunId(runId);
+    if (!v.ok) {
+      process.stderr.write(`[regularize] AGREGAÇÃO RECUSADA: ${v.motivo}\n`);
+      return 3;
+    }
+  }
+  const agregacao = runLib.agregar({ rootDir: ROOT, baseRel: EVIDENCIA_REL, runIds });
+  const saida = {
+    kind: 'bug-closure-regularization-aggregate',
+    generatedAt: new Date().toISOString(),
+    authoritative: false,
+    ok: agregacao.ok,
+    motivo: agregacao.motivo || null,
+    runIds,
+    identidade: agregacao.identidade || null,
+    completo: agregacao.completo === true,
+    coberturaIntegral: agregacao.coberturaIntegral || null,
+    escopo: agregacao.escopo || null,
+    duplicados: agregacao.duplicados || null,
+    adulterados: agregacao.adulterados || null,
+    detalhe: agregacao.detalhe || null,
+    total: agregacao.ok ? agregacao.resultados.length : 0,
+    porClasse: agregacao.ok
+      ? agregacao.resultados.reduce((acc, r) => { acc[r.classe] = (acc[r.classe] || 0) + 1; return acc; }, {})
+      : {},
+  };
+  fs.mkdirSync(EVIDENCIA, { recursive: true });
+  // Achado A9: uma agregação RECUSADA não pode sobrescrever o agregado canônico anterior.
+  // Recusa vai para arquivo próprio; o canônico só é escrito quando a agregação é válida.
+  const destino = path.join(EVIDENCIA, agregacao.ok ? 'report-agregado.json' : 'report-agregado-recusado.json');
+  fs.writeFileSync(destino, `${JSON.stringify({ ...saida, resultados: agregacao.ok ? agregacao.resultados : [] }, null, 2)}\n`, 'utf8');
+  if (JSON_OUT) process.stdout.write(`${JSON.stringify(saida, null, 2)}\n`);
+  else if (agregacao.ok) {
+    process.stdout.write(`[regularize] agregação OK: ${saida.total} item(ns) · cobertura ${saida.completo ? 'INTEGRAL' : 'PARCIAL'} · runs ${runIds.join(', ')}\n`);
+  } else {
+    process.stderr.write(`[regularize] AGREGAÇÃO RECUSADA: ${agregacao.motivo}\n`);
+  }
+  return agregacao.ok ? 0 : 3;
+}
+
 function main() {
+  if (AGREGAR.length > 0) return executarAgregacao(AGREGAR);
+  // O escopo entra no NOME do arquivo de relatório (`report-${APENAS}.json`): allowlist,
+  // nunca texto livre. Recusa antes de qualquer leitura/execução.
+  if (ESCOPO_INVALIDO) {
+    process.stderr.write(`[regularize] RECUSADO: --only ${JSON.stringify(APENAS)} não é escopo válido (${[...ESCOPOS_VALIDOS].join('|')})\n`);
+    return 2;
+  }
   const commit = headSha();
   const fingerprint = computeSourceFingerprint(ROOT);
-  const inventario = carregarInventario({ queuePath: path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json'), currentCommit: commit });
+  const queuePathOficial = path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json');
+  const inventario = carregarInventario({ queuePath: queuePathOficial, currentCommit: commit });
 
   const porId = new Map(JSON.parse(fs.readFileSync(path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json'), 'utf8')).items.map((i) => [i.id, i]));
   let candidatos = inventario.defeitos.filter((d) => d.fechamentoNaoProvado === true);
@@ -239,6 +327,54 @@ function main() {
   if (IDS.length > 0) candidatos = candidatos.filter((d) => IDS.includes(d.id));
   candidatos.sort((a, b) => String(a.severity).localeCompare(String(b.severity)) || String(a.id).localeCompare(String(b.id)));
   if (LIMITE > 0) candidatos = candidatos.slice(0, LIMITE);
+
+  // `--id` também é entrada do usuário: valida ANTES de qualquer uso (nunca interpolar texto livre).
+  if (IDS.length > 0) {
+    const contratoIds = defectId.validarConjunto(IDS);
+    if (!contratoIds.ok) {
+      process.stderr.write('[regularize] RECUSADO: --id fora do contrato de identificador\n');
+      for (const i of contratoIds.invalidos) process.stderr.write(`  ${JSON.stringify(i.id).slice(0, 60)} — ${i.motivo}\n`);
+      return 2;
+    }
+  }
+
+  // ── CONTRATO DE IDENTIFICADOR (P1-A) ─────────────────────────────────────
+  // Valida o CONJUNTO antes de qualquer efeito: um id inválido aborta a execução inteira, sem
+  // execução de teste, sem log, sem draft e sem relatório parcial. Validar no fim (no
+  // `writeFileSync`) deixaria os efeitos anteriores de pé — escrita parcial.
+  const contrato = defectId.validarConjunto(candidatos.map((d) => d.id));
+  if (!contrato.ok) {
+    process.stderr.write('[regularize] RECUSADO: identificador(es) de defeito fora do contrato:\n');
+    for (const i of contrato.invalidos) process.stderr.write(`  ${JSON.stringify(i.id).slice(0, 60)} — ${i.motivo}\n`);
+    for (const c of contrato.colisoes) process.stderr.write(`  colisão (${c.normalizado}): ${c.ids.join(', ')}\n`);
+    process.stderr.write('[regularize] nada foi executado nem gravado.\n');
+    return 2;
+  }
+
+  // ── IDENTIDADE DA EXECUÇÃO (P1-B) ────────────────────────────────────────
+  const testeMapaRel = path.join('config', 'bug-closure-test-map.json');
+  const testManifestFingerprint = fs.existsSync(path.join(ROOT, testeMapaRel)) ? sha256De(path.join(ROOT, testeMapaRel)) : null;
+  const inventoryFingerprint = (() => {
+    try { return computeInventoryFingerprint(ROOT); } catch (_) { return null; }
+  })();
+  const escopo = {
+    tipo: (APENAS === 'ALL' && IDS.length === 0 && LIMITE === 0) ? 'INTEGRAL' : 'PARCIAL',
+    filtroSeveridade: APENAS,
+    idsSelecionados: IDS,
+    limite: LIMITE,
+    // Lista EXPLÍCITA: sem ela, "N artefatos" poderia ser satisfeito por conteúdo repetido.
+    idsEsperados: candidatos.map((d) => d.id).sort(),
+    esperadoNoEscopo: candidatos.length,
+  };
+  // Dry-run não produz evidência: não abre execução (nada é gravado).
+  // Digest da FILA (candidatos) — campo próprio: o `inventoryFingerprint` é o do system-inventory
+  // e comparar um contra o outro reprovava toda execução genuína (achado A1-1 da 3ª passada).
+  const hardeningQueueFingerprint = sha256De(queuePathOficial);
+  const execucao = DRY_RUN ? null : runLib.iniciar({
+    rootDir: ROOT, baseRel: EVIDENCIA_REL, commit,
+    sourceFingerprint: fingerprint, inventoryFingerprint, hardeningQueueFingerprint,
+    testManifestFingerprint, escopo,
+  });
 
   // ── MODO PROPOSTA ────────────────────────────────────────────────────────
   // Para itens SEM teste citado, PROCURA candidatos no repositório por sobreposição de
@@ -328,10 +464,14 @@ function main() {
     else if (faltaHumano.length > 0) classe = 'AGUARDA_INSUMOS_HUMANOS';
     else classe = 'AGUARDA_ASSINATURA_E_ANCORA';
 
+    // Caminho RELATIVO do draft sempre pelo contrato (mesmo em dry-run), nunca por concatenação.
+    const draftAlvo = resolverCaminhoDeEvidencia({ id: item.id, dirRel: DRAFTS_REL, ext: '.json' });
+    if (!draftAlvo.ok) throw new Error(`DRAFT_ID_INVALIDO:${item.id}:${draftAlvo.motivo}`);
     if (!DRY_RUN && classe !== 'ESTRUTURA_INCOMPLETA') {
-      fs.mkdirSync(DRAFTS, { recursive: true });
-      const destino = path.join(DRAFTS, `${item.id}.json`);
-      fs.writeFileSync(destino, `${JSON.stringify(draft, null, 2)}\n`, 'utf8');
+      const gravado = gravarEvidencia({
+        id: item.id, dirRel: DRAFTS_REL, ext: '.json', conteudo: `${JSON.stringify(draft, null, 2)}\n`,
+      });
+      if (!gravado.ok) throw new Error(`DRAFT_NAO_GRAVADO:${item.id}:${gravado.motivo}`);
     }
 
     resultados.push({
@@ -342,7 +482,7 @@ function main() {
       transicao: `${String(item.state || '').toUpperCase()} → RESOLVED`,
       provasAusentes: pendenteAssinatura,
       log: execucao.outputPath,
-      draft: classe === 'ESTRUTURA_INCOMPLETA' ? null : path.relative(ROOT, path.join(DRAFTS, `${item.id}.json`)),
+      draft: classe === 'ESTRUTURA_INCOMPLETA' ? null : draftAlvo.rel,
       camposParaAssinar: CAMPOS_ASSINADOS.length,
     });
   }
@@ -350,6 +490,7 @@ function main() {
   const resumo = {
     commit,
     fingerprint,
+    runId: execucao ? execucao.runId : null,
     total: resultados.length,
     porClasse: resultados.reduce((acc, r) => { acc[r.classe] = (acc[r.classe] || 0) + 1; return acc; }, {}),
     porSeveridade: resultados.reduce((acc, r) => {
@@ -372,29 +513,77 @@ function main() {
 
   if (!DRY_RUN) {
     fs.mkdirSync(EVIDENCIA, { recursive: true });
-    const dirItens = path.join(EVIDENCIA, 'itens');
-    fs.mkdirSync(dirItens, { recursive: true });
-    // Resultado POR ITEM: permite reconstruir o relatório agregado sem re-executar teste algum.
+    // Resultado POR ITEM dentro da execução (runs/<runId>/itens/): é a fonte da agregação.
     for (const r of resultados) {
-      fs.writeFileSync(path.join(dirItens, `${r.id}.json`), `${JSON.stringify(r, null, 2)}\n`, 'utf8');
+      const gravado = runLib.gravarResultado({
+        rootDir: ROOT, baseRel: EVIDENCIA_REL, runId: execucao.runId, resultado: r,
+      });
+      if (!gravado.ok) throw new Error(`ITEM_NAO_GRAVADO:${r.id}:${gravado.motivo}`);
     }
     // Sempre grava o recorte por severidade E o agregado: o agregado é o artefato estável
     // (nunca "desaparece" quando a varredura é fatiada), o recorte preserva a execução.
     if (APENAS !== 'ALL') {
       fs.writeFileSync(path.join(EVIDENCIA, `report-${APENAS}.json`), `${JSON.stringify(relatorio, null, 2)}\n`, 'utf8');
     }
-    const agregado = JSON.parse(JSON.stringify(relatorio));
-    const todos = fs.readdirSync(path.join(EVIDENCIA, 'itens')).filter((f) => f.endsWith('.json'))
-      .map((f) => JSON.parse(fs.readFileSync(path.join(EVIDENCIA, 'itens', f), 'utf8')));
-    agregado.resumo.total = todos.length;
-    agregado.resumo.porClasse = todos.reduce((acc, r) => { acc[r.classe] = (acc[r.classe] || 0) + 1; return acc; }, {});
-    agregado.resumo.porSeveridade = todos.reduce((acc, r) => {
-      acc[`${r.classe}:${r.severity}`] = (acc[`${r.classe}:${r.severity}`] || 0) + 1;
-      return acc;
-    }, {});
-    agregado.resultados = todos.sort((a, b) => String(a.severity).localeCompare(String(b.severity)) || String(a.id).localeCompare(String(b.id)));
-    fs.writeFileSync(path.join(EVIDENCIA, 'report.json'), `${JSON.stringify(agregado, null, 2)}\n`, 'utf8');
-    fs.writeFileSync(path.join(EVIDENCIA, 'RELATORIO.md'), relatorioAgregado(EVIDENCIA), 'utf8');
+    // ── FIM DA EXECUÇÃO + AGREGAÇÃO (P1-B) ────────────────────────────────
+    // O agregado é montado EXCLUSIVAMENTE a partir desta execução (`agregar([runId])`), que
+    // valida status COMPLETED, identidade e hash de cada artefato. Antes, o relatório lia TODOS
+    // os arquivos de um diretório compartilhado e misturava execuções de commits diferentes.
+    const fim = runLib.finalizar({
+      rootDir: ROOT, baseRel: EVIDENCIA_REL, runId: execucao.runId,
+      status: resultados.length === candidatos.length ? runLib.STATUS.COMPLETED : runLib.STATUS.FAILED,
+    });
+    const agregacao = runLib.agregar({ rootDir: ROOT, baseRel: EVIDENCIA_REL, runIds: [execucao.runId] });
+    if (!agregacao.ok) {
+      process.stderr.write(`[regularize] AGREGAÇÃO RECUSADA: ${agregacao.motivo}\n`);
+      return 3;
+    }
+    const agregado = {
+      schemaVersion: 2,
+      kind: 'bug-closure-regularization',
+      generatedAt: new Date().toISOString(),
+      authoritative: false,
+      runId: execucao.runId,
+      identidade: agregacao.identidade,
+      escopo: {
+        tipo: escopo.tipo,
+        filtroSeveridade: escopo.filtroSeveridade,
+        limite: escopo.limite,
+        esperadoNoEscopo: escopo.esperadoNoEscopo,
+        processados: agregacao.resultados.length,
+        completoNoEscopo: fim.ok ? fim.manifesto.escopo.completo === true : false,
+        // Uma execução parcial NUNCA tem aparência de cobertura integral.
+        cobreInventario: agregacao.completo && escopo.tipo === 'INTEGRAL',
+      },
+      resumo: {
+        ...resumo,
+        total: agregacao.resultados.length,
+        porClasse: agregacao.resultados.reduce((acc, r) => { acc[r.classe] = (acc[r.classe] || 0) + 1; return acc; }, {}),
+        porSeveridade: agregacao.resultados.reduce((acc, r) => {
+          acc[`${r.classe}:${r.severity}`] = (acc[`${r.classe}:${r.severity}`] || 0) + 1;
+          return acc;
+        }, {}),
+      },
+      resultados: agregacao.resultados,
+      // A1-3b: o motivo da cobertura tem de estar no relatório POR EXECUÇÃO, não só no agregado.
+      coberturaIntegral: agregacao.coberturaIntegral || null,
+      execucao: {
+        status: fim.ok ? fim.manifesto.status : null,
+        completo: fim.ok ? fim.manifesto.escopo.completo === true : false,
+        completedAt: fim.ok ? fim.manifesto.completedAt : null,
+      },
+    };
+    fs.writeFileSync(path.join(execucao.dir, 'report.json'), `${JSON.stringify(agregado, null, 2)}\n`, 'utf8');
+    // O agregado CANÔNICO (topo) só é atualizado por execução INTEGRAL: uma execução parcial não
+    // pode substituir a cobertura integral anterior nem se apresentar como ela (P1-B).
+    if (escopo.tipo === 'INTEGRAL' && agregado.escopo.cobreInventario === true) {
+      fs.writeFileSync(path.join(EVIDENCIA, 'report.json'), `${JSON.stringify(agregado, null, 2)}\n`, 'utf8');
+      fs.writeFileSync(path.join(EVIDENCIA, 'RELATORIO.md'), relatorioMd(agregado), 'utf8');
+    } else {
+      fs.writeFileSync(path.join(execucao.dir, 'RELATORIO.md'), relatorioMd(agregado), 'utf8');
+      process.stdout.write('[regularize] execução PARCIAL: relatório canônico do topo preservado '
+        + `(evidência desta execução em ${path.relative(ROOT, execucao.dir)})\n`);
+    }
   }
 
   if (JSON_OUT) process.stdout.write(`${JSON.stringify(relatorio, null, 2)}\n`);
@@ -405,13 +594,16 @@ function main() {
   return 0;
 }
 
-/** Reconstrói o relatório a partir dos resultados POR ITEM já gravados (sem re-executar). */
-function relatorioAgregado(dirEvidencia) {
-  const dirItens = path.join(dirEvidencia, 'itens');
-  const itens = fs.existsSync(dirItens)
-    ? fs.readdirSync(dirItens).filter((f) => f.endsWith('.json'))
-      .map((f) => JSON.parse(fs.readFileSync(path.join(dirItens, f), 'utf8')))
-    : [];
+/**
+ * Reconstrói o relatório a partir dos resultados de UMA execução já gravada.
+ * P1-B: lê `runs/<runId>/itens/` de UM runId — nunca o diretório compartilhado, que misturava
+ * execuções de commits diferentes.
+ */
+function relatorioAgregado(runId) {
+  const lido = runLib.lerResultados(ROOT, EVIDENCIA_REL, runId);
+  if (!lido.manifesto) throw new Error(`EXECUCAO_AUSENTE:${runId}`);
+  if (!lido.ok) throw new Error(`ARTEFATO_ADULTERADO:${runId}`);
+  const itens = lido.resultados;
   itens.sort((a, b) => String(a.severity).localeCompare(String(b.severity)) || String(a.id).localeCompare(String(b.id)));
   const porClasse = itens.reduce((acc, r) => { acc[r.classe] = (acc[r.classe] || 0) + 1; return acc; }, {});
   const porSeveridade = itens.reduce((acc, r) => { acc[`${r.classe}:${r.severity}`] = (acc[`${r.classe}:${r.severity}`] || 0) + 1; return acc; }, {});
@@ -532,10 +724,15 @@ function proporTestes(candidatos, porId) {
 }
 
 function relatorioMd(r) {
+  const escopo = r.escopo || { tipo: 'DESCONHECIDO', cobreInventario: false, processados: r.resumo.total, esperadoNoEscopo: null };
   const linhas = [
     '# Regularização de fechamentos sem prova',
     '',
     `Gerado em ${r.generatedAt} · commit \`${r.resumo.commit}\` · fingerprint \`${r.resumo.fingerprint.slice(0, 12)}…\``,
+    // P1-B: execução parcial NÃO pode parecer cobertura integral.
+    `Execução \`${r.runId || 'sem-runId'}\` · escopo **${escopo.tipo}** · `
+      + `processados ${escopo.processados}${escopo.esperadoNoEscopo != null ? ` de ${escopo.esperadoNoEscopo}` : ''} · `
+      + `cobertura ${escopo.cobreInventario ? '**INTEGRAL**' : '**PARCIAL** (não cobre o inventário)'}`,
     '',
     '> **Não autoritativo.** Este relatório descreve trabalho de re-verificação. A fila oficial não foi',
     '> alterada por este script, e nenhuma prova foi assinada: a assinatura é do dono da chave ancorada.',
@@ -573,4 +770,14 @@ if (require.main === module) {
   process.exitCode = main();
 }
 
-module.exports = { testeCitado, testeDaEvidencia, testeDoCommitDoFix, executarTeste, montarDraft };
+module.exports = {
+  testeCitado,
+  testeDaEvidencia,
+  testeDoCommitDoFix,
+  executarTeste,
+  montarDraft,
+  executarAgregacao,
+  resolverCaminhoDeEvidencia,
+  gravarEvidencia,
+  main,
+};
