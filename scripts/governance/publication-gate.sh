@@ -40,6 +40,24 @@ rap_raiz_do_repo() {
   (cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 }
 
+# AMBIENTE GIT REDIRECIONADO (Fase 3): `GIT_DIR`/`GIT_WORK_TREE` mudam QUAL repositório o comando
+# enxerga — o porteiro leria a configuração de outro repo e o push sairia por um remote que ele nunca
+# validou. Injeção por `GIT_CONFIG_COUNT>0` (com KEY/VALUE) faz o mesmo por outro caminho. `COUNT=0`
+# é permitido: é a forma canônica de DESCARTAR injeção do processo pai.
+rap_ambiente_git_redirecionado() {
+  if [[ -n "${GIT_DIR:-}" || -n "${GIT_WORK_TREE:-}" ]]; then
+    echo "[publication-gate] RECUSADO: GIT_DIR/GIT_WORK_TREE definidos — o repositório avaliado nao" >&2
+    echo "[publication-gate] e necessariamente o repositorio do push." >&2
+    return 0
+  fi
+  if [[ -n "${GIT_CONFIG_COUNT:-}" && "${GIT_CONFIG_COUNT}" != "0" ]]; then
+    echo "[publication-gate] RECUSADO: GIT_CONFIG_COUNT=${GIT_CONFIG_COUNT} injeta configuracao de git" >&2
+    echo "[publication-gate] (url.*.pushInsteadOf, remote.*.pushurl) fora do arquivo de configuracao." >&2
+    return 0
+  fi
+  return 1
+}
+
 # Todos os destinos de PUSH configurados para o remote (pushurl múltiplo incluído).
 # Não é prova de segurança: é o que se AUDITA e o que o modo de teste confere item a item.
 rap_destinos_de_push() {
@@ -107,6 +125,10 @@ rap_publication_gate() {
   local remote="${2:-}"
   local raiz
   raiz="$(rap_raiz_do_repo)"
+
+  if rap_ambiente_git_redirecionado; then
+    exit 1
+  fi
 
   if rap_publication_gate_local_test "$origem" "$remote"; then
     return 0

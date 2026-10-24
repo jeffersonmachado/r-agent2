@@ -67,6 +67,10 @@ function rodarScript(relativo, { env = {}, args = [] } = {}) {
       ...process.env,
       PATH: `${fake.dir}:${process.env.PATH}`,
       RAP_PUBLISH_AUTHORIZED: '',
+      // AMBIENTE GIT SANEADO: o processo pai pode injetar `GIT_CONFIG_COUNT/KEY_n/VALUE_n`
+      // (medido nesta máquina: 3 regras). O porteiro RECUSA `COUNT>0` por desenho, então o teste
+      // parte de `COUNT=0` (descarta a injeção) e só a define quando o cenário é sobre injeção.
+      GIT_CONFIG_COUNT: '0',
       ...env,
     },
   });
@@ -144,7 +148,14 @@ function rodarTag(cenario, env, remote) {
     cwd: cenario.repo,
     encoding: 'utf8',
     timeout: 120000,
-    env: { ...process.env, RAP_RELEASE_TAG_REMOTE: remote, RAP_PUBLISH_AUTHORIZED: '', ...env },
+    env: {
+      ...process.env,
+      RAP_RELEASE_TAG_REMOTE: remote,
+      RAP_PUBLISH_AUTHORIZED: '',
+      // Ver comentário em `rodarScript`: o porteiro recusa injeção de configuração git.
+      GIT_CONFIG_COUNT: '0',
+      ...env,
+    },
   });
   return { status: r.status, saida: `${r.stdout}${r.stderr}` };
 }
@@ -175,6 +186,55 @@ describe('C — tag de release não é empurrada para remote externo sem decisã
     const r = rodarTag(cenario, { RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto, CI: '', NODE_ENV: 'test' }, 'local');
     expect(r.status).toBe(0);
     expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('v-teste-1');
+  });
+
+  test('A8 — `GIT_DIR`/`GIT_WORK_TREE` redirecionando o repositório é recusado (porteiro direto)', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
+    // Repositório "alternativo" cujo remote aponta para fora: o porteiro não pode avaliar ESTE repo.
+    const outro = path.join(cenario.base, 'outro-repo');
+    cenario.git(cenario.base, 'init', '-q', outro);
+    cenario.git(outro, 'remote', 'add', 'origin', 'git@example.invalid:org/repo.git');
+    const gate = path.join(ROOT, 'scripts', 'governance', 'publication-gate.sh');
+    // Chama o PORTEIRO isolado: a recusa é dele, antes de qualquer tag/push do script.
+    const r = spawnSync('bash', ['-c', `. "${gate}"; rap_publication_gate "teste-a8" local`], {
+      cwd: cenario.repo,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        GIT_CONFIG_COUNT: '0',
+        RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto,
+        CI: '',
+        NODE_ENV: 'test',
+        GIT_DIR: path.join(outro, '.git'),
+      },
+    });
+    expect(r.status).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toMatch(/GIT_DIR\/GIT_WORK_TREE definidos/);
+  });
+
+  test('A9 — injeção por GIT_CONFIG_COUNT>0 é recusada (COUNT=0 continua permitido)', () => {
+    const cenario = cenarioDeTag();
+    cenario.git(cenario.repo, 'remote', 'add', 'local', cenario.remoto);
+    const r = rodarTag(cenario, {
+      RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto,
+      CI: '',
+      NODE_ENV: 'test',
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'url.git@example.invalid:x.pushInsteadOf',
+      GIT_CONFIG_VALUE_0: cenario.remoto,
+    }, 'local');
+    expect(r.status).not.toBe(0);
+    expect(r.saida).toMatch(/injeta configuracao de git/);
+    expect(cenario.git(cenario.remoto, 'tag').trim()).toBe('');
+    // Controle positivo: COUNT=0 (descarta injeção) não é recusado por si só.
+    const ok = rodarTag(cenario, {
+      RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: cenario.remoto,
+      CI: '',
+      NODE_ENV: 'test',
+      GIT_CONFIG_COUNT: '0',
+    }, 'local');
+    expect(ok.status).toBe(0);
   });
 
   test('C3f — `phase_publish` revalida a decisão canônica (o `--from publish` não pula a certificação)', () => {
