@@ -45,6 +45,13 @@ on:
   push:
     branches:
       - dev/engineering-hardening
+  # FASE 3 / missão E: o PR #16 (codex/** -> dev/engineering-hardening) NÃO disparava NENHUM
+  # workflow — medido em 2026-10-24 com `gh run list --branch codex/...` (vazio) e
+  # `gh run list --commit a3aa22d28` (vazio). Sem gatilho de PR, o L0/L1 nunca é validado de forma
+  # independente no SHA do PR; a validação só existia como execução local do agente.
+  pull_request:
+    branches:
+      - dev/engineering-hardening
   workflow_dispatch:
 
 permissions:
