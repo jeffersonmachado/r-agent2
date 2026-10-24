@@ -170,7 +170,7 @@ describe('P1-B — agregação rejeita evidência incompatível (cenários 1–5
 describe('P1-B — execução parcial não finge cobertura integral', () => {
   test('run PARCIAL com tudo o que selecionou continua “PARCIAL” e não cobre o inventário', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'PARCIAL', limite: 1, esperadoNoEscopo: 1 } });
+    const a = abrirRun(root, { escopo: { tipo: 'PARCIAL', limite: 1, esperadoNoEscopo: 1, idsEsperados: ['P1'] } });
     fechar(root, a, ['P1']);
     const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
     expect(r.ok).toBe(true);
@@ -181,7 +181,7 @@ describe('P1-B — execução parcial não finge cobertura integral', () => {
 
   test('run INTEGRAL que processou menos que o esperado não é COMPLETED', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 3 } });
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 3, idsEsperados: ['I1', 'I2', 'I3'] } });
     // Processa 2 de 3 e finaliza: `completo` fica false e `agregar` reporta cobertura parcial.
     for (const id of ['I1', 'I2']) {
       runLib.gravarResultado({ rootDir: root, baseRel: BASE, runId: a.runId, resultado: resultado(id) });
@@ -196,7 +196,7 @@ describe('P1-B — execução parcial não finge cobertura integral', () => {
 
   test('run INTEGRAL completo é o ÚNICO caso com cobertura integral', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2 } });
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['C1', 'C2'] } });
     fechar(root, a, ['C1', 'C2']);
     const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
     expect(r.ok).toBe(true);
@@ -241,7 +241,7 @@ describe('revisão independente — agregação não aceita cobertura declarada'
 
   test('completo é RECALCULADO dos artefatos: manifesto mentindo `completo` não basta', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 3 } });
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 3, idsEsperados: ['M1', 'M2', 'M3'] } });
     fechar(root, a, ['M1']); // 1 de 3
     const manifestoPath = path.join(a.dir, 'manifest.json');
     const m = JSON.parse(fs.readFileSync(manifestoPath, 'utf8'));
@@ -256,7 +256,7 @@ describe('revisão independente — agregação não aceita cobertura declarada'
 
   test('finalizar conta os artefatos em vez de confiar no chamador', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2 } });
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['N1', 'N2'] } });
     for (const id of ['N1', 'N2']) {
       runLib.gravarResultado({ rootDir: root, baseRel: BASE, runId: a.runId, resultado: resultado(id) });
     }
@@ -288,6 +288,29 @@ describe('revisão independente — runId entra em caminho, logo tem contrato', 
     }
     expect(runLib.validarRunId(forjado).ok).toBe(false);
     expect(runLib.validarRunId('run-20261023120000-abcdef12').ok).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+});
+
+describe('revisão independente 2ª passada (a) — cobertura integral exige a LISTA de ids', () => {
+  test('N artefatos com ids diferentes mas conteúdo repetido NÃO viram cobertura integral', () => {
+    const root = raiz();
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['D1', 'D2'] } });
+    // Atalho: grava o MESMO defeito duas vezes com ids distintos e conta 2.
+    fechar(root, a, ['D1', 'INVENTADO']);
+    const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(r.ok).toBe(true);
+    expect(r.completo).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('cobertura integral só com a lista EXATA de ids esperados', () => {
+    const root = raiz();
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['D1', 'D2'] } });
+    fechar(root, a, ['D2', 'D1']);
+    const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(r.ok).toBe(true);
+    expect(r.completo).toBe(true);
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
 });

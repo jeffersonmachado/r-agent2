@@ -358,6 +358,8 @@ function main() {
     filtroSeveridade: APENAS,
     idsSelecionados: IDS,
     limite: LIMITE,
+    // Lista EXPLÍCITA: sem ela, "N artefatos" poderia ser satisfeito por conteúdo repetido.
+    idsEsperados: candidatos.map((d) => d.id).sort(),
     esperadoNoEscopo: candidatos.length,
   };
   // Dry-run não produz evidência: não abre execução (nada é gravado).

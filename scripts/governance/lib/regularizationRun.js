@@ -99,6 +99,9 @@ function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerp
       idsSelecionados: escopo.idsSelecionados || [],
       limite: escopo.limite || 0,
       esperadoNoEscopo: escopo.esperadoNoEscopo || 0,
+      // LISTA EXPLÍCITA do que a execução se propôs a cobrir. Sem ela, "N artefatos" poderia ser
+      // satisfeito com N arquivos de conteúdo repetido (achado (a) da 2ª passada).
+      idsEsperados: Array.isArray(escopo.idsEsperados) ? [...escopo.idsEsperados] : [],
       completo: false, // só vira true no fim, se cobriu o esperado
     },
     status: STATUS.RUNNING,
@@ -153,9 +156,18 @@ function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, observa
   m.completedAt = agora();
   m.resultados = processados;
   m.observacoes = observacoes;
+  const idsEsperados = Array.isArray(m.escopo.idsEsperados) ? m.escopo.idsEsperados : [];
+  const idsReais = fs.existsSync(dirItens)
+    ? fs.readdirSync(dirItens).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''))
+    : [];
+  const cobreLista = idsEsperados.length > 0
+    && new Set(idsReais).size === idsReais.length
+    && idsReais.length === idsEsperados.length
+    && idsEsperados.every((id) => idsReais.includes(String(id)));
   m.escopo.completo = status === STATUS.COMPLETED
     && processados > 0
-    && processados >= Number(m.escopo.esperadoNoEscopo || 0);
+    && processados >= Number(m.escopo.esperadoNoEscopo || 0)
+    && cobreLista;
   fs.writeFileSync(abs, `${JSON.stringify(m, null, 2)}\n`, 'utf8');
   return { ok: true, manifesto: m };
 }
@@ -266,11 +278,21 @@ function agregar({ rootDir, baseRel, runIds }) {
   // (Achado 1 da revisão independente: um manifesto forjado com `escopo.completo: true` e zero
   // itens era aceito como cobertura integral.) O booleano gravado é apenas informativo.
   const completaPorArtefatos = (e) => {
-    const esperado = Number(e.manifesto.escopo.esperadoNoEscopo || 0);
-    return e.manifesto.escopo.tipo === 'INTEGRAL'
+    const escopo = e.manifesto.escopo || {};
+    const esperado = Number(escopo.esperadoNoEscopo || 0);
+    const idsEsperados = Array.isArray(escopo.idsEsperados) ? escopo.idsEsperados : [];
+    const idsReais = e.resultados.map((r) => String(r.id));
+    // Cobertura INTEGRAL exige: escopo INTEGRAL, lista explícita de ids, e os artefatos
+    // cobrindo EXATAMENTE essa lista (nem a mais, nem a menos, sem repetição).
+    const cobreLista = idsEsperados.length > 0
+      && new Set(idsReais).size === idsReais.length
+      && idsReais.length === idsEsperados.length
+      && idsEsperados.every((id) => idsReais.includes(String(id)));
+    return escopo.tipo === 'INTEGRAL'
       && e.resultados.length > 0
       && esperado > 0
       && e.resultados.length >= esperado
+      && cobreLista
       && Number(e.manifesto.resultados) === e.resultados.length;
   };
   const completo = execucoes.length === 1 && completaPorArtefatos(execucoes[0]);
