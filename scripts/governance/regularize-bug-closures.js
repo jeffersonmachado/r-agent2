@@ -293,8 +293,10 @@ function executarAgregacao(runIds) {
       ? agregacao.resultados.reduce((acc, r) => { acc[r.classe] = (acc[r.classe] || 0) + 1; return acc; }, {})
       : {},
   };
-  const destino = path.join(EVIDENCIA, 'report-agregado.json');
   fs.mkdirSync(EVIDENCIA, { recursive: true });
+  // Achado A9: uma agregação RECUSADA não pode sobrescrever o agregado canônico anterior.
+  // Recusa vai para arquivo próprio; o canônico só é escrito quando a agregação é válida.
+  const destino = path.join(EVIDENCIA, agregacao.ok ? 'report-agregado.json' : 'report-agregado-recusado.json');
   fs.writeFileSync(destino, `${JSON.stringify({ ...saida, resultados: agregacao.ok ? agregacao.resultados : [] }, null, 2)}\n`, 'utf8');
   if (JSON_OUT) process.stdout.write(`${JSON.stringify(saida, null, 2)}\n`);
   else if (agregacao.ok) {

@@ -70,14 +70,19 @@ function classificarResultado({
   assinaturasEsperadas = [],
   saida = '',
   sinaisAceitos = [],
+  aceitarQualquerFalha = false,
 }) {
   const texto = String(saida || '');
 
   if (timedOut) {
     return { classe: CLASSES.TIMEOUT, ok: false, motivo: 'orçamento de tempo estourado — timeout nunca é sucesso' };
   }
+  // Achado A2 da 2ª passada: a assinatura de infraestrutura só rebaixava quando `exitCode ===
+  // null`. Uma falha de ambiente que sai com exit 1 ("Could not resolve host", "Cannot connect to
+  // the Docker daemon") era aceita como "falha esperada" e o cenário negativo passava pelo motivo
+  // errado. Agora infraestrutura vence SEMPRE, com ou sem exit code.
   const infra = ASSINATURAS_INFRA.find((re) => re.test(texto));
-  if (infra && exitCode === null) {
+  if (infra) {
     return { classe: CLASSES.INFRASTRUCTURE_ERROR, ok: false, motivo: `falha de infraestrutura: ${infra}` };
   }
   if (exitCode === null && signal) {
@@ -97,6 +102,17 @@ function classificarResultado({
   if (exitCode === 0) {
     return { classe: CLASSES.UNEXPECTED_SUCCESS, ok: false, motivo: `exit 0 (esperado ${esperado})` };
   }
+  // Achado A2: sem assinatura declarada, QUALQUER exit != 0 passava — erro de sintaxe no teste,
+  // dependência ausente ou bug de produto "provavam" o controle negativo. Cenário negativo agora
+  // é fail-closed: exige a assinatura do motivo. Contrato explícito `aceitarQualquerFalha` só
+  // quando a falha não tiver assinatura possível (ex.: processo que aborta sem mensagem).
+  if (assinaturasEsperadas.length === 0 && !aceitarQualquerFalha) {
+    return {
+      classe: CLASSES.EXPECTED_FAILURE_SEM_ASSINATURA,
+      ok: false,
+      motivo: `exit ${exitCode} sem assinatura de falha declarada — falha pelo motivo errado não aprova`,
+    };
+  }
   if (assinaturasEsperadas.length > 0) {
     const casou = assinaturasEsperadas.some((assinatura) => texto.includes(assinatura));
     if (!casou) {
@@ -106,16 +122,23 @@ function classificarResultado({
         motivo: `exit ${exitCode} sem a assinatura de falha esperada (${assinaturasEsperadas.join(' | ')})`,
       };
     }
-    return { classe: CLASSES.EXPECTED_FAILURE, ok: true, motivo: `exit ${exitCode} com assinatura de falha esperada` };
   }
-  if (exitCode !== esperado) {
+  if (assinaturasEsperadas.length === 0 && exitCode !== esperado) {
     return { classe: CLASSES.UNEXPECTED_FAILURE, ok: false, motivo: `exit ${exitCode} (esperado ${esperado})` };
   }
-  return { classe: CLASSES.EXPECTED_FAILURE, ok: true, motivo: `exit ${exitCode} como esperado` };
+  return {
+    classe: CLASSES.EXPECTED_FAILURE,
+    ok: true,
+    motivo: assinaturasEsperadas.length > 0
+      ? `exit ${exitCode} com assinatura de falha esperada`
+      : `exit ${exitCode} como esperado (contrato aceitarQualquerFalha)`,
+  };
 }
 
 /** BLOCKED tem precedência sobre FAIL; PASS exige todos os passos aprovados. */
 function vereditoDoRun(passos) {
+  // Achado A6: `[].every(...)` é `true`, então "nenhum passo" virava PASS.
+  if (!Array.isArray(passos) || passos.length === 0) return 'BLOCKED';
   if (passos.some((p) => p.classe === CLASSES.INFRASTRUCTURE_ERROR || p.classe === CLASSES.NOT_EXECUTED)) return 'BLOCKED';
   return passos.every((p) => CLASSES_APROVAVEIS.has(p.classe)) ? 'PASS' : 'FAIL';
 }

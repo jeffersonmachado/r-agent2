@@ -169,3 +169,41 @@ describe('P1-E1/E2 — contrato do harness (fonte e comportamento observável)',
     expect(trecho).toContain('healthSha256');
   });
 });
+
+// ─── 2ª passada da revisão independente (A2, A6) ────────────────────────────
+
+describe('P1-E — cenário negativo é fail-closed e infra vence sempre', () => {
+  test('A2: falha esperada SEM assinatura declarada NÃO aprova', () => {
+    const r = classificarResultado({ exitCode: 1, esperado: 1, saida: 'erro qualquer de sintaxe' });
+    expect(r.classe).toBe(CLASSES.EXPECTED_FAILURE_SEM_ASSINATURA);
+    expect(r.ok).toBe(false);
+  });
+
+  test('A2: falha de INFRAESTRUTURA reprova mesmo saindo com exit code não-nulo', () => {
+    for (const saida of ['Could not resolve host: db', 'Cannot connect to the Docker daemon at unix:///x']) {
+      const r = classificarResultado({ exitCode: 1, esperado: 1, saida, assinaturasEsperadas: [saida] });
+      expect(r.classe).toBe(CLASSES.INFRASTRUCTURE_ERROR);
+      expect(r.ok).toBe(false);
+    }
+  });
+
+  test('A2: contrato explícito aceitarQualquerFalha só quando declarado', () => {
+    expect(classificarResultado({ exitCode: 1, esperado: 1 }).ok).toBe(false);
+    expect(classificarResultado({ exitCode: 1, esperado: 1, aceitarQualquerFalha: true }).ok).toBe(true);
+  });
+
+  test('A6: vereditoDoRun([]) é BLOCKED (não PASS)', () => {
+    expect(vereditoDoRun([])).toBe('BLOCKED');
+    expect(vereditoDoRun(null)).toBe('BLOCKED');
+    expect(vereditoDoRun(undefined)).toBe('BLOCKED');
+  });
+
+  test('todo cenário negativo do harness declara assinatura do motivo', () => {
+    const trechos = FONTE.split('esperado: 1').slice(1);
+    expect(trechos.length).toBeGreaterThanOrEqual(4);
+    for (const trecho of trechos) {
+      const janela = trecho.slice(0, 400);
+      expect(janela).toContain('assinaturasEsperadas');
+    }
+  });
+});

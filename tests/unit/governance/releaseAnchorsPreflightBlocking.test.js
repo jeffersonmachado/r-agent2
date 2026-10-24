@@ -227,3 +227,34 @@ describe('P1-C — a atestação do preflight é CONSUMIDA pelo release-gate', (
     expect(idxAutorizacao).toBeGreaterThan(idxAtestacao);
   });
 });
+
+// ─── 2ª passada da revisão independente (A3) ────────────────────────────────
+
+describe('P1-C — atestação é publicada por job NÃO-matrix (A3)', () => {
+  test('upload-artifact da atestação está em job sem matrix', () => {
+    const wf = carregarWorkflow();
+    // Só UPLOADS contam como publicadores (o gate faz download com o mesmo `name`).
+    const donos = Object.entries(wf.jobs)
+      .filter(([, job]) => (job.steps || []).some((p) => String(p.uses || '').startsWith('actions/upload-artifact')
+        && p.with && p.with.name === 'closure-anchors-attestation'))
+      .map(([nome, job]) => ({ nome, matrix: Boolean(job.strategy && job.strategy.matrix) }));
+    expect(donos).toHaveLength(1);
+    // `upload-artifact@v4` recusa dois artefatos com o mesmo nome no mesmo run; um job matrix
+    // com 2 legs faria o segundo leg falhar e derrubaria o gate SEMPRE.
+    expect(donos[0].matrix).toBe(false);
+  });
+
+  test('o job da atestação roda o preflight bloqueante e o gate depende dele', () => {
+    const wf = carregarWorkflow();
+    const job = wf.jobs['anchors-attestation'];
+    expect(job).toBeTruthy();
+    const preflight = job.steps.find((p) => String(p.run || '').includes('provision-closure-anchors.js --check'));
+    expect(preflight).toBeTruthy();
+    expect(preflight['continue-on-error']).toBeUndefined();
+    // E o gate exige o resultado desse job, não só o artifact.
+    expect(wf.jobs['release-gate'].needs).toContain('anchors-attestation');
+    const verificacao = wf.jobs['release-gate'].steps.find((p) => String(p.run || '').includes('ATEST_RESULT'));
+    expect(verificacao).toBeTruthy();
+    expect(String(verificacao.run)).toContain('Tag, publish e release BLOQUEADOS');
+  });
+});

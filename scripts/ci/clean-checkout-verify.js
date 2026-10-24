@@ -814,7 +814,9 @@ function cenarioArtefatoAusente(ctx, args) {
   // Prova de nao vacuidade: sem o artefato o MESMO consumidor tem de reprovar.
   passo('consumidor-sem-artefato', 'npx', ['jest', ...ARTEFATO_PROVADO.consumidor, '--silent'], {
     cwd: clonePath, env, logDir, esperado: 1,
-    descricao: 'Artefato ausente REPROVA o consumidor (nunca PASS por ausencia)',
+    // A2: sem assinatura do motivo, "reprovou" poderia ser erro de sintaxe/dependência ausente.
+    assinaturasEsperadas: ['artefato', 'artifact', 'ENOENT'],
+    descricao: 'Artefato ausente REPROVA o consumidor pelo motivo certo (nunca PASS por ausencia)',
   });
   // O produtor canonico regenera e o consumidor volta a aprovar.
   porSmokeProdLike(ctx, logDir, 'produtor-regenera');
@@ -831,7 +833,8 @@ function cenarioArtefatoCorrompido(ctx, args) {
   fs.writeFileSync(alvo, '{"status":"GO","flows":[', 'utf8');
   passo('consumidor-artefato-corrompido', 'npx', ['jest', ...ARTEFATO_PROVADO.consumidor, '--silent'], {
     cwd: clonePath, env, logDir, esperado: 1,
-    descricao: 'Artefato corrompido REPROVA o consumidor',
+    assinaturasEsperadas: ['artefato', 'artifact', 'Unexpected end of JSON', 'JSON'],
+    descricao: 'Artefato corrompido REPROVA o consumidor pelo motivo certo',
   });
 }
 
@@ -879,7 +882,9 @@ function cenarioDockerIndisponivel(ctx, args) {
   ], {
     cwd: clonePath, env: envSemDocker, logDir, esperado: 1,
     timeoutMs: 20 * 60 * 1000,
-    descricao: 'Sem Docker a suite de sandbox REPROVA (nunca alega SANDBOX_RUNTIME=PASS)',
+    // A2: a reprovação tem de ser a de sandbox indisponível, não erro de sintaxe/import.
+    assinaturasEsperadas: ['SANDBOX_UNAVAILABLE', 'DOCKER', 'docker', 'sandbox'],
+    descricao: 'Sem Docker a suite de sandbox REPROVA pelo motivo certo (nunca alega SANDBOX_RUNTIME=PASS)',
   });
 }
 

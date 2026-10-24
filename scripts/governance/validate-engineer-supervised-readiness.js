@@ -537,9 +537,24 @@ const STATUS_INCONCLUSIVOS = Object.freeze(new Set([
  * @returns {{veredito:string, exitCode:number, isGo:boolean, falhas:string[], problemas:string[], checksAusentes:string[]}}
  */
 function decidirVeredito({ checks, aprovacaoHumana = false, catalogo = CHECKS_OBRIGATORIOS, identidade = null } = {}) {
-  // Achado 4 da revisão independente: `catalogo: []`/`null` desligava as duas guardas de
-  // cobertura. Catálogo vazio NÃO é "não exigir nada" — é o catálogo canônico.
-  const catalogoEfetivo = (Array.isArray(catalogo) && catalogo.length > 0) ? catalogo : CHECKS_OBRIGATORIOS;
+  // Achado 4 da 1ª passada: `catalogo: []`/`null` desligava as duas guardas de cobertura.
+  // Achado A7 da 2ª: um catálogo custom NÃO-VAZIO substituía o canônico (1 check inventado
+  // bastava). Agora catálogo custom só é aceito se for SUPERCONJUNTO do canônico.
+  const custom = Array.isArray(catalogo) && catalogo.length > 0 ? [...new Set(catalogo)] : null;
+  const catalogoEfetivo = CHECKS_OBRIGATORIOS;
+  if (custom) {
+    const faltandoDoCanonico = CHECKS_OBRIGATORIOS.filter((id) => !custom.includes(id));
+    if (faltandoDoCanonico.length > 0) {
+      return {
+        veredito: 'NOT_READY',
+        exitCode: 1,
+        isGo: false,
+        falhas: [],
+        problemas: faltandoDoCanonico.map((id) => `CATALOGO_CUSTOM_OMITE_OBRIGATORIO:${id}`),
+        checksAusentes: faltandoDoCanonico,
+      };
+    }
+  }
   const problemas = [];
   const falhas = [];
 
@@ -570,7 +585,13 @@ function decidirVeredito({ checks, aprovacaoHumana = false, catalogo = CHECKS_OB
     if (typeof check.ok !== 'boolean') problemas.push(`CHECK_SEM_RESULTADO_BOOLEANO:${id}`);
     if (typeof check.detalhe !== 'string' || check.detalhe.trim() === '') problemas.push(`CHECK_SEM_EVIDENCIA:${id}`);
 
-    const status = String(check.status || '').trim().toUpperCase();
+    // Achado A7: `UNKNOWN\u200b` e fullwidth `ＵＮＫＮＯＷＮ` escapavam. Normaliza NFKC e remove
+    // caracteres de largura zero/controle antes de comparar.
+    const status = String(check.status || '')
+      .normalize('NFKC')
+      .replace(/[\u200b-\u200f\u2028\u2029\ufeff]/g, '')
+      .trim()
+      .toUpperCase();
     if (status && STATUS_INCONCLUSIVOS.has(status)) problemas.push(`CHECK_INCONCLUSIVO:${id}:${status}`);
 
     if (identidade && check.identidade) {
@@ -594,7 +615,9 @@ function decidirVeredito({ checks, aprovacaoHumana = false, catalogo = CHECKS_OB
   }
 
   // Aprovação humana é NECESSÁRIA, nunca suficiente: os checks técnicos acima já foram exigidos.
-  if (!aprovacaoHumana) {
+  // Achado A7: era testada por truthiness (`aprovacaoHumana: 'false'` ⇒ READY_GO). Só o booleano
+  // `true` aprova.
+  if (aprovacaoHumana !== true) {
     return { veredito: 'PENDING_HUMAN_APPROVAL', exitCode: 2, isGo: false, falhas: [], problemas: [], checksAusentes: [], checados };
   }
   return { veredito: 'ENGINEER_SUPERVISED_READY_GO', exitCode: 0, isGo: true, falhas: [], problemas: [], checksAusentes: [], checados };

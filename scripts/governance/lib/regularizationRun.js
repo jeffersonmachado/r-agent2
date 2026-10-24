@@ -47,16 +47,59 @@ const sha256Texto = (t) => crypto.createHash('sha256').update(String(t), 'utf8')
 const sha256Arquivo = (abs) => crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
 const agora = () => new Date().toISOString();
 
+/** `baseRel` é relativo, sem `..` e sem raiz absoluta (achado A5). */
+function validarBaseRel(baseRel) {
+  if (typeof baseRel !== 'string' || baseRel.trim() === '') return { ok: false, motivo: 'BASE_REL_INVALIDA' };
+  if (path.isAbsolute(baseRel)) return { ok: false, motivo: 'BASE_REL_ABSOLUTA' };
+  if (baseRel.split(/[\\/]/).includes('..')) return { ok: false, motivo: 'BASE_REL_COM_TRAVERSAL' };
+  return { ok: true };
+}
+
+/**
+ * Caminho da execução, com contenção REAL (achado A4): `path.resolve` não resolve symlink e
+ * `startsWith` é comparação textual — um symlink `runs/<runId>` apontando para fora passava.
+ * Aqui o `realpath` é obrigatório nos dois lados (mesma disciplina de `defect-id.dentroDaRaiz`).
+ */
 function dirDaExecucao(rootDir, baseRel, runId) {
   const v = validarRunId(runId);
   if (!v.ok) throw new Error(v.motivo);
+  const baseValidada = validarBaseRel(baseRel);
+  if (!baseValidada.ok) throw new Error(baseValidada.motivo);
   const base = path.resolve(rootDir, baseRel, 'runs');
   const abs = path.resolve(base, v.runId);
-  // Contenção: mesmo com o contrato, nada fora de `runs/` pode ser resolvido.
-  if (abs !== path.join(base, v.runId) || !abs.startsWith(`${base}${path.sep}`)) {
+  if (abs !== path.join(base, v.runId)) throw new Error(`RUN_ID_FORA_DA_RAIZ:${String(runId).slice(0, 40)}`);
+  // A base pode não existir ainda: resolve o ancestral real e recompõe o trecho relativo.
+  const realBase = realpathDoAncestral(base);
+  const relDentro = path.relative(base, abs);
+  const recomposto = path.resolve(realBase, relDentro);
+  if (recomposto !== path.join(realBase, v.runId) || !recomposto.startsWith(`${realBase}${path.sep}`)) {
     throw new Error(`RUN_ID_FORA_DA_RAIZ:${String(runId).slice(0, 40)}`);
   }
+  // O diretório da execução JÁ existente é resolvido de verdade: symlink escapa mesmo que o
+  // caminho textual pareça contido (achado A4).
+  const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+  if (st) {
+    if (st.isSymbolicLink()) throw new Error(`RUN_DIR_E_SYMLINK:${String(runId).slice(0, 40)}`);
+    const realAbs = fs.realpathSync(abs);
+    if (realAbs !== path.join(realBase, v.runId)) {
+      throw new Error(`RUN_ID_FORA_DA_RAIZ:${String(runId).slice(0, 40)}`);
+    }
+  }
   return abs;
+}
+
+/** `realpath` do ancestral existente mais próximo (o diretório pode ainda não existir). */
+function realpathDoAncestral(abs) {
+  let atual = path.resolve(abs);
+  for (;;) {
+    try {
+      return fs.realpathSync(atual);
+    } catch (_) {
+      const pai = path.dirname(atual);
+      if (pai === atual) return path.resolve(atual);
+      atual = pai;
+    }
+  }
 }
 
 /** Identidade do AMBIENTE que influencia o resultado (runner, banco, node) — sem segredos. */
@@ -115,7 +158,14 @@ function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerp
 
 function lerManifesto(rootDir, baseRel, runId) {
   if (!validarRunId(runId).ok) return null;
-  const abs = path.join(dirDaExecucao(rootDir, baseRel, runId), 'manifest.json');
+  let dir;
+  try {
+    dir = dirDaExecucao(rootDir, baseRel, runId);
+  } catch (_) {
+    // Caminho recusado (symlink, traversal) é "não há manifesto legível" — fail-closed.
+    return null;
+  }
+  const abs = path.join(dir, 'manifest.json');
   if (!fs.existsSync(abs)) return null;
   try {
     return JSON.parse(fs.readFileSync(abs, 'utf8'));
@@ -124,7 +174,18 @@ function lerManifesto(rootDir, baseRel, runId) {
   }
 }
 
+/** Contrato do id de RESULTADO (achado A8): o arquivo é `<id>.json`, logo o id é caminho. */
+function validarIdResultado(id) {
+  if (typeof id !== 'string' || id.trim() === '') return { ok: false, motivo: 'ID_VAZIO' };
+  if (id.length > 120) return { ok: false, motivo: 'ID_LONGO_DEMAIS' };
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id)) return { ok: false, motivo: 'ID_FORA_DO_CONTRATO' };
+  if (id.includes('..') || id.includes('/') || id.includes('\\')) return { ok: false, motivo: 'ID_COM_SEPARADOR_DE_CAMINHO' };
+  return { ok: true, id };
+}
+
 function gravarResultado({ rootDir, baseRel, runId, resultado, esperadoNoEscopo }) {
+  const idValido = validarIdResultado(resultado && resultado.id);
+  if (!idValido.ok) return { ok: false, motivo: `RESULTADO_ID_INVALIDO:${idValido.motivo}` };
   const m = lerManifesto(rootDir, baseRel, runId);
   if (!m) return { ok: false, motivo: 'MANIFESTO_AUSENTE' };
   if (m.status !== STATUS.RUNNING) return { ok: false, motivo: `EXECUCAO_NAO_ESTA_EM_ANDAMENTO:${m.status}` };
@@ -157,9 +218,24 @@ function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, observa
   m.resultados = processados;
   m.observacoes = observacoes;
   const idsEsperados = Array.isArray(m.escopo.idsEsperados) ? m.escopo.idsEsperados : [];
-  const idsReais = fs.existsSync(dirItens)
-    ? fs.readdirSync(dirItens).filter((f) => f.endsWith('.json')).map((f) => f.replace(/\.json$/, ''))
-    : [];
+  const arquivosItens = fs.existsSync(dirItens) ? fs.readdirSync(dirItens).filter((f) => f.endsWith('.json')) : [];
+  const idsReais = [];
+  for (const arquivo of arquivosItens) {
+    const esperadoDoArquivo = arquivo.replace(/\.json$/, '');
+    let idDoConteudo = null;
+    try {
+      idDoConteudo = JSON.parse(fs.readFileSync(path.join(dirItens, arquivo), 'utf8')).id;
+    } catch (_) {
+      idDoConteudo = null;
+    }
+    // Nome do arquivo e id do CONTEÚDO têm de coincidir (achado A8): senão `completo:true`
+    // poderia ser declarado com o conteúdo de outro defeito.
+    if (String(idDoConteudo) !== String(esperadoDoArquivo)) return {
+      ok: false,
+      motivo: `RESULTADO_ID_DIVERGENTE_DO_ARQUIVO:${arquivo}`,
+    };
+    idsReais.push(esperadoDoArquivo);
+  }
   const cobreLista = idsEsperados.length > 0
     && new Set(idsReais).size === idsReais.length
     && idsReais.length === idsEsperados.length
@@ -177,7 +253,12 @@ function lerResultados(rootDir, baseRel, runId) {
   if (!validarRunId(runId).ok) {
     return { ok: false, motivo: `RUN_ID_FORA_DO_CONTRATO:${String(runId).slice(0, 40)}`, resultados: [], manifesto: null };
   }
-  const dir = dirDaExecucao(rootDir, baseRel, runId);
+  let dir;
+  try {
+    dir = dirDaExecucao(rootDir, baseRel, runId);
+  } catch (e) {
+    return { ok: false, motivo: e.message, resultados: [], manifesto: null };
+  }
   const manifesto = lerManifesto(rootDir, baseRel, runId);
   if (!manifesto) return { ok: false, motivo: 'MANIFESTO_AUSENTE', resultados: [], manifesto: null };
   const dirItens = path.join(dir, 'itens');
@@ -228,6 +309,37 @@ function lerResultados(rootDir, baseRel, runId) {
  *   - o mesmo id aparece em mais de um run (duplicidade não é "o último vence");
  *   - algum artefato foi adulterado (hash não confere).
  */
+/**
+ * Digest canônico do inventário OFICIAL do rootDir (mesma função do resto do Bug Closure).
+ * `null` quando não é possível calcular — o que impede declarar cobertura integral.
+ */
+function digestDoInventarioOficial(rootDir) {
+  try {
+    // A FUNÇÃO vem do módulo (código); os DADOS vêm do inventário do rootDir que está sendo
+    // agregado. Usar o módulo do próprio rootDir faria de um diretório de evidência a autoridade
+    // sobre o hash.
+    const { digestDoInventario } = require('../../..'
+      + '/governance/bug-closure/trusted-authorities');
+    const fila = JSON.parse(fs.readFileSync(path.join(rootDir, 'AI_MEMORY', 'hardening-queue.json'), 'utf8'));
+    return digestDoInventario(Array.isArray(fila.items) ? fila.items : []);
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * AGREGAÇÃO EXPLÍCITA de execuções. Nunca mistura silenciosamente.
+ *
+ * ACHADO A1 da 2ª passada: `completo` era recalculado apenas contra `manifesto.escopo.idsEsperados`
+ * — que o próprio manifesto declara. Um manifesto com `tipo:INTEGRAL`, 1 id e 1 artefato recebia
+ * "cobertura INTEGRAL" com 135 itens na fila. Agora a cobertura integral exige, além da lista
+ * exata, que o `inventoryFingerprint` do manifesto seja o digest do inventário REAL do rootDir,
+ * recalculado aqui. Sem inventário legível, não há cobertura integral (fail-closed).
+ *
+ * LIMITE DECLARADO (achado 3 da 1ª passada): a identidade é auto-declarada e o `artifactSha256` é
+ * calculado pelo executor; quem reescrever manifesto + itens E recalcular os hashes passa. É
+ * detecção de erro OPERACIONAL, não controle contra adulteração deliberada.
+ */
 function agregar({ rootDir, baseRel, runIds }) {
   const ids = Array.isArray(runIds) ? runIds : [];
   if (ids.length === 0) return { ok: false, motivo: 'NENHUMA_EXECUCAO_INFORMADA' };
@@ -274,9 +386,10 @@ function agregar({ rootDir, baseRel, runIds }) {
   if (duplicados.length > 0) return { ok: false, motivo: 'ID_DUPLICADO_ENTRE_EXECUCOES', duplicados };
 
   const resultados = [...porId.values()].sort((a, b) => String(a.severity).localeCompare(String(b.severity)) || String(a.id).localeCompare(String(b.id)));
-  // "Completo" é RECALCULADO a partir dos artefatos lidos — nunca aceito do manifesto.
-  // (Achado 1 da revisão independente: um manifesto forjado com `escopo.completo: true` e zero
-  // itens era aceito como cobertura integral.) O booleano gravado é apenas informativo.
+  // "Completo" é RECALCULADO a partir dos artefatos lidos E do inventário real — nunca aceito do
+  // manifesto. (Achado 1 da 1ª passada: manifesto forjado com `completo:true` e zero itens.
+  // Achado A1 da 2ª passada: cobertura relativa à lista que o próprio manifesto declara.)
+  const digestRealDoInventario = digestDoInventarioOficial(rootDir);
   const completaPorArtefatos = (e) => {
     const escopo = e.manifesto.escopo || {};
     const esperado = Number(escopo.esperadoNoEscopo || 0);
@@ -288,11 +401,14 @@ function agregar({ rootDir, baseRel, runIds }) {
       && new Set(idsReais).size === idsReais.length
       && idsReais.length === idsEsperados.length
       && idsEsperados.every((id) => idsReais.includes(String(id)));
+    const inventarioConfere = Boolean(digestRealDoInventario)
+      && String(e.manifesto.identidade.inventoryFingerprint) === String(digestRealDoInventario);
     return escopo.tipo === 'INTEGRAL'
       && e.resultados.length > 0
       && esperado > 0
       && e.resultados.length >= esperado
       && cobreLista
+      && inventarioConfere
       && Number(e.manifesto.resultados) === e.resultados.length;
   };
   const completo = execucoes.length === 1 && completaPorArtefatos(execucoes[0]);
@@ -301,6 +417,10 @@ function agregar({ rootDir, baseRel, runIds }) {
     identidade: referencia,
     runIds: ids,
     completo,
+    // Explicita POR QUE a cobertura não é integral, para o relatório não sugerir o contrário.
+    coberturaIntegral: completo
+      ? { motivo: 'lista de ids coberta e inventário do rootDir confere', inventoryDigest: digestRealDoInventario }
+      : { motivo: digestRealDoInventario ? 'escopo/lista/inventário não conferem' : 'INVENTARIO_ILEGIVEL', inventoryDigest: digestRealDoInventario },
     escopo: execucoes.map((e) => ({
       runId: e.runId,
       tipo: e.manifesto.escopo.tipo,
@@ -324,5 +444,8 @@ module.exports = {
   identidadeDoAmbiente,
   dirDaExecucao,
   validarRunId,
+  validarBaseRel,
+  validarIdResultado,
+  digestDoInventarioOficial,
   PADRAO_RUN_ID,
 };

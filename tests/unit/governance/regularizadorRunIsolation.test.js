@@ -31,22 +31,38 @@ function raiz() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'p1b-'));
 }
 
-function identidade(commit = 'a'.repeat(40), fp = 'b'.repeat(64)) {
+/**
+ * Cria a fila oficial MÍNIMA no root do cenário e devolve o digest canônico dela. A cobertura
+ * INTEGRAL só é aceita se o `inventoryFingerprint` do manifesto for o digest do inventário REAL
+ * do rootDir (achado A1 da 2ª passada), então o cenário precisa ter inventário de verdade.
+ */
+function inventarioNoRoot(root, ids = ['X']) {
+  const fsx = require('fs');
+  const { digestDoInventario } = require('../../../governance/bug-closure/trusted-authorities');
+  fsx.mkdirSync(path.join(root, 'AI_MEMORY'), { recursive: true });
+  const itens = ids.map((id) => ({ id, severity: 'P1', state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' }));
+  fsx.writeFileSync(path.join(root, 'AI_MEMORY', 'hardening-queue.json'), JSON.stringify({ items: itens }, null, 2), 'utf8');
+  return digestDoInventario(itens);
+}
+
+function identidade(commit = 'a'.repeat(40), fp = 'b'.repeat(64), inventario = 'c'.repeat(64)) {
   return {
     commit,
     sourceFingerprint: fp,
-    inventoryFingerprint: 'c'.repeat(64),
+    inventoryFingerprint: inventario,
     testManifestFingerprint: 'd'.repeat(64),
   };
 }
 
-function abrirRun(root, { commit, fp, escopo } = {}) {
+function abrirRun(root, { commit, fp, escopo, inventario } = {}) {
+  // Garante inventário real no root (a menos que o teste queira um digest divergente).
+  const digest = inventario || inventarioNoRoot(root);
   return runLib.iniciar({
     rootDir: root,
     baseRel: BASE,
     commit: commit || identidade().commit,
     sourceFingerprint: fp || identidade().sourceFingerprint,
-    inventoryFingerprint: 'c'.repeat(64),
+    inventoryFingerprint: digest,
     testManifestFingerprint: 'd'.repeat(64),
     escopo: escopo || { tipo: 'PARCIAL', esperadoNoEscopo: 2 },
   });
@@ -311,6 +327,100 @@ describe('revisão independente 2ª passada (a) — cobertura integral exige a L
     const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
     expect(r.ok).toBe(true);
     expect(r.completo).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+});
+
+describe('revisão independente 2ª passada — A1/A4/A5/A8', () => {
+  test('A1: cobertura INTEGRAL é conferida contra o INVENTÁRIO real do root, não contra a lista do manifesto', () => {
+    const root = raiz();
+    // Fila com 3 itens; manifesto declara INTEGRAL cobrindo só 1 e um digest inventado.
+    fs.mkdirSync(path.join(root, 'AI_MEMORY'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'AI_MEMORY', 'hardening-queue.json'), JSON.stringify({
+      items: [{ id: 'Q1', severity: 'P1' }, { id: 'Q2', severity: 'P1' }, { id: 'Q3', severity: 'P1' }],
+    }), 'utf8');
+    const a = abrirRun(root, {
+      inventario: 'f'.repeat(64),
+      escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['Q1'] },
+    });
+    fechar(root, a, ['Q1']);
+    const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(r.ok).toBe(true);
+    expect(r.completo).toBe(false);
+    // E o relatório diz POR QUE, em vez de sugerir cobertura.
+    expect(r.coberturaIntegral.motivo).toBe('escopo/lista/inventário não conferem');
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('A1: inventoryFingerprint precisa ser o digest do inventário do rootDir', () => {
+    const root = raiz();
+    const digest = inventarioNoRoot(root, ['Z1']);
+    const a = abrirRun(root, { inventario: digest, escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['Z1'] } });
+    fechar(root, a, ['Z1']);
+    const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(r.completo).toBe(true);
+    expect(r.coberturaIntegral.inventoryDigest).toBe(digest);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('A4: symlink em runs/<runId> não escapa (realpath obrigatório)', () => {
+    const root = raiz();
+    const fora = fs.mkdtempSync(path.join(os.tmpdir(), 'p1b-fora-'));
+    const runId = 'run-20261023000000-abcdef01';
+    fs.mkdirSync(path.join(fora, 'itens'), { recursive: true });
+    fs.writeFileSync(path.join(fora, 'manifest.json'), JSON.stringify({ runId, status: 'COMPLETED' }), 'utf8');
+    fs.mkdirSync(path.join(root, BASE, 'runs'), { recursive: true });
+    fs.symlinkSync(fora, path.join(root, BASE, 'runs', runId));
+    expect(() => runLib.dirDaExecucao(root, BASE, runId)).toThrow(/RUN_DIR_E_SYMLINK/);
+    // `lerManifesto` engole a recusa como "ausente" (fail-closed) e `agregar` recusa o run.
+    expect(runLib.lerManifesto(root, BASE, runId)).toBeNull();
+    let recusou = false;
+    try {
+      recusou = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [runId] }).ok === false;
+    } catch (e) {
+      recusou = /RUN_DIR_E_SYMLINK/.test(e.message);
+    }
+    expect(recusou).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(fora, { recursive: true, force: true });
+  }, 60000);
+
+  test('A5: baseRel com traversal ou absoluto é recusado', () => {
+    const root = raiz();
+    for (const baseRel of ['../../fora', '/etc', 'AI_MEMORY/../../fora', '']) {
+      expect(runLib.validarBaseRel(baseRel).ok).toBe(false);
+      expect(() => runLib.dirDaExecucao(root, baseRel, 'run-20261023000000-abcdef01')).toThrow();
+    }
+    expect(runLib.validarBaseRel(BASE).ok).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('A8: id de resultado com traversal é recusado por gravarResultado', () => {
+    const root = raiz();
+    const a = abrirRun(root);
+    for (const id of ['../../../../tmp/pwn', 'a/b', 'a\\b', '..', '']) {
+      const r = runLib.gravarResultado({ rootDir: root, baseRel: BASE, runId: a.runId, resultado: { id, severity: 'P1', classe: 'PRONTA' } });
+      expect(r.ok).toBe(false);
+      expect(String(r.motivo)).toMatch(/RESULTADO_ID_INVALIDO/);
+    }
+    expect(fs.existsSync(path.join(os.tmpdir(), 'pwn.json'))).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('A8: finalizar recusa quando o id do CONTEÚDO diverge do nome do arquivo', () => {
+    const root = raiz();
+    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['K1'] } });
+    fechar(root, a, ['K1']);
+    const arquivo = path.join(a.dir, 'itens', 'K1.json');
+    const corpo = JSON.parse(fs.readFileSync(arquivo, 'utf8'));
+    corpo.id = 'OUTRO';
+    fs.writeFileSync(arquivo, `${JSON.stringify(corpo, null, 2)}\n`, 'utf8');
+    const m2 = JSON.parse(fs.readFileSync(path.join(a.dir, 'manifest.json'), 'utf8'));
+    m2.status = 'RUNNING';
+    fs.writeFileSync(path.join(a.dir, 'manifest.json'), `${JSON.stringify(m2, null, 2)}\n`, 'utf8');
+    const fim = runLib.finalizar({ rootDir: root, baseRel: BASE, runId: a.runId });
+    expect(fim.ok).toBe(false);
+    expect(fim.motivo).toMatch(/RESULTADO_ID_DIVERGENTE_DO_ARQUIVO/);
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
 });

@@ -172,3 +172,34 @@ describe('P1-D — parâmetros públicos não podem desligar as guardas', () => 
     }
   });
 });
+
+// ─── 2ª passada da revisão independente (A7) ────────────────────────────────
+
+describe('P1-D — resíduos do contrato exportado (A7)', () => {
+  test('catálogo custom não pode OMITIR obrigatórios do canônico', () => {
+    const d = decidirVeredito({
+      checks: [{ id: 'HUMAN_APPROVAL_PRESENT', ok: true, detalhe: 'x' }],
+      catalogo: ['HUMAN_APPROVAL_PRESENT'],
+      aprovacaoHumana: true,
+    });
+    expect(d.veredito).toBe('NOT_READY');
+    expect(d.isGo).toBe(false);
+    expect(d.problemas.some((p) => p.startsWith('CATALOGO_CUSTOM_OMITE_OBRIGATORIO'))).toBe(true);
+  });
+
+  test("aprovação humana só vale como o booleano `true` (truthiness não aprova)", () => {
+    for (const valor of ['false', 'true', 1, {}, []]) {
+      const d = decidirVeredito({ checks: cheio(), aprovacaoHumana: valor });
+      expect(d.veredito).toBe('PENDING_HUMAN_APPROVAL');
+      expect(d.isGo).toBe(false);
+    }
+  });
+
+  test('status inconclusivo com caractere de largura zero ou fullwidth não escapa', () => {
+    for (const status of ['UNKNOWN\u200b', 'ＵＮＫＮＯＷＮ', 'TiMeOut\u200d', 'NOT_EXECUTED\ufeff']) {
+      const checks = cheio({ QUEUE_CLOSURE_EVIDENCE: { ok: true, status, bloqueante: true, detalhe: 'x' } });
+      const d = decidirVeredito({ checks, aprovacaoHumana: true });
+      expect(d.veredito).toBe('NOT_READY');
+    }
+  });
+});

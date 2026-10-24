@@ -172,13 +172,8 @@ jobs:
             }, null, 2) + "\n");
           '
 
-      - name: Upload da atestação do preflight de âncoras
-        uses: actions/upload-artifact@v4
-        with:
-          name: closure-anchors-attestation
-          path: ${{ runner.temp }}/anchor-attestation.json
-          if-no-files-found: error
-          retention-days: 14
+      # (a atestação é publicada por um job NÃO-matrix: upload-artifact@v4 não aceita dois
+      # artefatos com o mesmo nome no mesmo run, e este job roda em matrix [20, 22].)
 
       - name: Generate release artifacts
         if: ${{ github.event.inputs.skip_build != 'true' }}
@@ -349,6 +344,67 @@ jobs:
           if-no-files-found: warn
 
   # ===========================================================================
+  # JOB 2b: Atestação das âncoras (NÃO-matrix)
+  # Publica a prova de que o preflight rodou e passou NESTE commit/run. Job dedicado porque
+  # `upload-artifact@v4` recusa dois artefatos com o mesmo nome no mesmo run (governance-core
+  # roda em matrix e o segundo leg falharia, derrubando o gate sempre — falha fechada, mas
+  # inútil). Roda em paralelo ao job de regressão.
+  # ===========================================================================
+  anchors-attestation:
+    name: "Atestação do preflight de âncoras"
+    runs-on: ubuntu-latest
+    needs:
+      - governance-core
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Preflight BLOQUEANTE das âncoras (revalidado neste job)
+        id: anchor-preflight
+        run: |
+          set -o pipefail
+          node scripts/governance/provision-closure-anchors.js --check | tee "$RUNNER_TEMP/anchor-preflight.json"
+        env:
+          RAP_CLOSURE_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_CLOSURE_TRUST_ANCHOR_SHA256 }}
+          RAP_APPROVAL_TRUST_ANCHOR_SHA256: ${{ secrets.RAP_APPROVAL_TRUST_ANCHOR_SHA256 }}
+          RAP_CLOSURE_INVENTORY_SHA256: ${{ secrets.RAP_CLOSURE_INVENTORY_SHA256 }}
+
+      - name: Registrar atestação do preflight
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = process.env.RUNNER_TEMP + "/anchor-preflight.json";
+            const lido = JSON.parse(fs.readFileSync(p, "utf8"));
+            if (lido.ok !== true) { console.error("preflight não passou"); process.exit(1); }
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/anchor-attestation.json", JSON.stringify({
+              kind: "closure-anchors-attestation",
+              ok: true,
+              commit: process.env.GITHUB_SHA,
+              runId: process.env.GITHUB_RUN_ID,
+              job: process.env.GITHUB_JOB,
+              ancoras: lido.ancoras,
+              inventario: lido.inventario,
+              at: new Date().toISOString(),
+            }, null, 2) + "\n");
+          '
+
+      - name: Upload da atestação do preflight de âncoras
+        uses: actions/upload-artifact@v4
+        with:
+          name: closure-anchors-attestation
+          path: ${{ runner.temp }}/anchor-attestation.json
+          if-no-files-found: error
+          retention-days: 14
+
+  # ===========================================================================
   # JOB 3: Gate de Proteção de Release
   # Bloqueia tag/publish se qualquer validação falhou
   # ===========================================================================
@@ -358,6 +414,7 @@ jobs:
     needs:
       - governance-core
       - governance-regression
+      - anchors-attestation
     if: always()
 
     steps:
@@ -411,9 +468,18 @@ jobs:
         run: |
           CORE_RESULT="${{ needs.governance-core.result }}"
           REGR_RESULT="${{ needs.governance-regression.result }}"
+          ATEST_RESULT="${{ needs.anchors-attestation.result }}"
 
           echo "governance-core: $CORE_RESULT"
           echo "governance-regression: $REGR_RESULT"
+          echo "anchors-attestation: $ATEST_RESULT"
+
+          if [[ "$ATEST_RESULT" != "success" ]]; then
+            echo ""
+            echo "REPROVADO: atestação das âncoras ausente/falha ($ATEST_RESULT)"
+            echo "Tag, publish e release BLOQUEADOS."
+            exit 1
+          fi
 
           if [[ "$CORE_RESULT" != "success" ]]; then
             echo ""
