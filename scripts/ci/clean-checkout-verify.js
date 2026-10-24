@@ -902,9 +902,17 @@ function cenarioBancoIndisponivel(ctx, args) {
   // assinatura do motivo. Antes, `exitCode === null` (timeout/sinal/spawn falho) era aceito como
   // sucesso — timeout virava PASS.
   // Assinaturas do motivo esperado: o bootstrap não consegue falar com o banco.
+  // ORÇAMENTO DE CONEXÃO CURTO (Fase 2): sem isto o bootstrap tenta 30 vezes (com backoff até 10 s)
+  // e estoura o orçamento do passo — o resultado é TIMEOUT, que NÃO prova o fail-closed. O teste
+  // mede "falha pelo motivo certo", não "demora muito"; o padrão de produção (30) não muda.
+  const envSemBanco = { ...envInvalido, DB_CONNECT_ATTEMPTS: '1', DB_CONNECT_RETRY_DELAY_MS: '50' };
   const registro = passo('bootstrap-sem-postgres', 'npm', ['run', '-s', 'ci:bootstrap'], {
-    cwd: clonePath, env: envInvalido, logDir, esperado: 1,
-    timeoutMs: 8 * 60 * 1000,
+    cwd: clonePath, env: envSemBanco, logDir, esperado: 1,
+    // ORÇAMENTO REALISTA (medido 2026-10-24): com o banco morto o `ci:bootstrap` completo
+    // (install + `official.sh` + probes + validadores de artefato) leva ~7-8 min e batia no teto
+    // de 8 min ⇒ `exit=null`/TIMEOUT, que NÃO é "falhou fechado". O contrato deste cenário é a
+    // ASSINATURA do motivo, não o tempo de parede: 15 min dá margem sem aceitar laço infinito.
+    timeoutMs: 15 * 60 * 1000,
     assinaturasEsperadas: [
       'ECONNREFUSED',
       'password authentication failed',

@@ -280,7 +280,7 @@ Resultados medidos (`reports/ci-clean-checkout-report.json`, um relatório por c
 | `corrupt-artifact` | **FAIL** → **PASS** após correção | mesma causa; mesma correção; reexecutado |
 | `docker-unavailable` | **PASS** | ausência de Docker não vira alegação de sandbox saudável |
 | `bootstrap-twice` | **PASS** | idempotência comprovada (mesma contagem de tenants nas duas execuções) |
-| `db-unavailable` | **FAIL (TIMEOUT)** | `bootstrap-sem-postgres` estourou o orçamento do passo (480 s, `exit=null`) em vez de falhar rápido: `api/db/sequelize.js` tenta conectar **30 vezes** antes de desistir. **Fail-closed preservado** (nunca PASS), mas o cenário não consegue provar a assinatura do motivo. Correção proposta (não aplicada): orçamento de conexão configurável (`DB_CONNECT_BUDGET_MS`) usado pelo harness — mudar a política de retry de produção exige regressão própria |
+| `db-unavailable` | **FAIL (TIMEOUT)** → **corrigido** | `bootstrap-sem-postgres` estourava o orçamento do passo (480 s, `exit=null`) em vez de falhar com assinatura. Duas causas medidas: (a) `api/db/sequelize.js` tentava conectar **30 vezes** com backoff até 10 s — passou a aceitar `DB_CONNECT_ATTEMPTS` (padrão de produção **intocado**, 30) e o harness declara orçamento curto; (b) o `ci:bootstrap` **completo** com banco morto leva ~7-8 min (install + `official.sh` + probes + validadores), batendo no teto de 8 min — o teto passou a 15 min (o contrato do cenário é a ASSINATURA do motivo, não o tempo de parede). **Fail-closed sempre preservado**: nunca PASS |
 | `l2-system` | **FAIL (BLOQUEADO por contrato)** | `tests/governance/finalStatusProjection.test.js` exige `governance/rap-master-scorecard.json`, que é **gitignored** e **derivado de um run governado** (`runId rap-governed-20261020150721180-09a2168d`). Regenerar localmente (`governance/revalidate-master-scorecard.js`) foi medido: produz divergência (`canonical_divergence: readiness.sourceFingerprint != scorecard.sourceFingerprint`, `stale_run_id`) — ou seja, é estado de governança FABRICADO, proibido pela missão. L2 em checkout limpo é BLOCKED, não corrigível por código sem inventar prova |
 
 Nenhum destes cenários cria tag, release, publish ou deploy.
@@ -392,9 +392,10 @@ motivo ERRADO). Corrigido tornando a falha auto-descritiva.
    desenvolvimento fica com 1 falha esperada até rodar `prod-like-smoke`.
 5. **Coverage de L3** — o gate agregado permanece vermelho por contrato (130 defeitos sem prova), o
    que impede qualquer alegação de release verde.
-6. **Retry de conexão de 30 tentativas** (`api/db/sequelize.js`) — com Postgres inalcançável o
-   bootstrap demora mais que o orçamento do passo negativo do harness e o resultado é TIMEOUT.
-   Fail-closed correto, diagnóstico ruim; proposta: orçamento configurável por env.
+6. **Retry de conexão de 30 tentativas** (`api/db/sequelize.js`) — mitigado: orçamento configurável
+   por `DB_CONNECT_ATTEMPTS` (padrão de produção 30 inalterado) e teto do cenário negativo ajustado.
+   O bootstrap completo com banco morto continua levando ~7-8 min; é lentidão de diagnóstico, não
+   risco de PASS.
 7. **L2 depende de artefato de run governado** (`governance/rap-master-scorecard.json`) — checkout
    limpo não consegue rodar `test:system` verde sem fabricar estado.
 
@@ -438,11 +439,13 @@ motivo ERRADO). Corrigido tornando a falha auto-descritiva.
 - `validate:bug-closure-status`: **FAIL** (`FECHAMENTO_NAO_PROVADO` 130, `inventoryAnchored=false`).
 - `--scenario missing-artifact` e `--scenario corrupt-artifact`: **FAIL**, corrigidos e reexecutados
   para **PASS** (o consumidor reprovava sem nomear a dependência ⇒ `EXPECTED_FAILURE_SEM_ASSINATURA`).
-- `--scenario db-unavailable`: **FAIL por TIMEOUT** — `bootstrap-sem-postgres` ficou 480 s (orçamento
-  do passo) porque `api/db/sequelize.js` tenta conectar 30 vezes. Fail-closed preservado (nunca PASS);
-  a correção exige orçamento de conexão configurável e regressão própria — **não aplicada**.
+- `--scenario db-unavailable`: **FAIL por TIMEOUT** (480 s) — corrigido em duas frentes: orçamento de
+  conexão configurável (`DB_CONNECT_ATTEMPTS`, padrão de produção 30 preservado) e teto do passo de
+  8 → 15 min (o `ci:bootstrap` completo com banco morto leva ~7-8 min). Fail-closed nunca foi violado
+  (jamais PASS); o que faltava era a prova da assinatura do motivo.
 - `--scenario l2-system`: **FAIL** por dependência de artefato de run governado (§6.2).
-- `--scenario docker-unavailable` e `--scenario bootstrap-twice`: **PASS**.
+- `--scenario docker-unavailable`, `--scenario bootstrap-twice` e `--scenario db-unavailable`
+  (após a correção): **PASS**.
 
 ### BLOQUEADO
 
@@ -519,6 +522,8 @@ Relatórios de máquina (ignorados por git, presentes no workspace de execução
 Evidências de execução copiadas do clone pelo harness (não commitadas por serem evidência de
 runtime): `AI_MEMORY/evidence/ci-clean-checkout-85ca7e2cc/` (primeira execução, FAIL),
 `AI_MEMORY/evidence/ci-clean-checkout-9bb607c40/` (clean PASS + 5 cenários negativos),
-`AI_MEMORY/evidence/ci-clean-checkout-c9ca2b435/` (docker-unavailable, bootstrap-twice, l2-system).
+`AI_MEMORY/evidence/ci-clean-checkout-c9ca2b435/` (docker-unavailable, bootstrap-twice, l2-system),
+`AI_MEMORY/evidence/ci-clean-checkout-d6842b34e/` (db-unavailable após a correção: PASS, exit=1 com
+assinatura do motivo).
 
 Data de geração: 2026-10-24T11:32:57Z

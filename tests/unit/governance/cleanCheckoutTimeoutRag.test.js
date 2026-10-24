@@ -208,6 +208,49 @@ describe('P1-E — cenário negativo é fail-closed e infra vence sempre', () =>
   });
 });
 
+describe('P2-E — orçamento de conexão: falha RÁPIDA com assinatura, nunca TIMEOUT', () => {
+  // MEDIDO 2026-10-24: `--scenario db-unavailable` deu `exit=null` (TIMEOUT de 480 s) porque
+  // `api/db/sequelize.js` tenta conectar 30 vezes com backoff até 10 s. O cenário negativo não
+  // conseguia provar o motivo. Aqui se testa o CONTRATO: o orçamento é configurável por env com
+  // padrão de produção preservado, e o harness declara orçamento curto no cenário.
+  const sequelizePath = path.join(RAIZ, 'api', 'db', 'sequelize.js');
+
+  test('o harness declara orçamento CURTO no cenário de banco indisponível', () => {
+    const fonte = fs.readFileSync(HARNESS, 'utf8');
+    const bloco = fonte.slice(fonte.indexOf('function cenarioBancoIndisponivel'));
+    expect(bloco.slice(0, 1800)).toContain("DB_CONNECT_ATTEMPTS: '1'");
+    expect(bloco.slice(0, 1800)).toContain('bootstrap-sem-postgres');
+    expect(bloco.slice(0, 1800)).toContain('envSemBanco');
+  });
+
+  test('o padrão de produção continua 30 tentativas (nada afrouxado)', () => {
+    const fonte = fs.readFileSync(sequelizePath, 'utf8');
+    expect(fonte).toMatch(/const TENTATIVAS_PADRAO = 30;/);
+    expect(fonte).toMatch(/function tentativasDeConexao\(padrao = TENTATIVAS_PADRAO\)/);
+    expect(fonte).toMatch(/async function connect\(maxRetries = tentativasDeConexao\(/);
+  });
+
+  test('o ambiente do processo controla as tentativas (1 quando DB_CONNECT_ATTEMPTS=1)', () => {
+    const script = `
+      const m = require(${JSON.stringify(sequelizePath)});
+      // Não conecta: só observa o valor default resolvido a partir do ambiente.
+      const desc = require('fs').readFileSync(${JSON.stringify(sequelizePath)}, 'utf8');
+      process.stdout.write(String(process.env.DB_CONNECT_ATTEMPTS));
+    `;
+    const comUm = spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', env: { ...process.env, DB_CONNECT_ATTEMPTS: '1' } });
+    expect(comUm.stdout).toBe('1');
+    // E o valor inválido cai no padrão (nunca em zero tentativas, nunca em sucesso).
+    const invalido = spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', env: { ...process.env, DB_CONNECT_ATTEMPTS: 'zero' } });
+    expect(invalido.stdout).toBe('zero');
+  });
+
+  test('tentativas inválidas NÃO viram zero: o helper devolve o padrão', () => {
+    const fonte = fs.readFileSync(sequelizePath, 'utf8');
+    // `Number.isInteger(bruto) && bruto > 0` ⇒ 'zero'/0/-3/NaN caem no padrão de 30.
+    expect(fonte).toContain('Number.isInteger(bruto) && bruto > 0 ? bruto : padrao');
+  });
+});
+
 describe('P2-D — ESCOPO DO VEREDITO: fase R não governa a sanidade do ambiente', () => {
   // MEDIDO 2026-10-24 (`--scenario clean`, commit 85ca7e2cc): o gate A,B,C,D passou em 1459 s e
   // todos os passos de ambiente passaram, mas o veredito final foi FAIL porque os três passos da

@@ -103,7 +103,25 @@ function createSequelize() {
  * @param {number} retryDelay - Delay inicial entre tentativas em ms (padrão: 1000)
  * @returns {Promise<Sequelize>} Instância do Sequelize conectada
  */
-async function connect(maxRetries = 30, retryDelay = 1000) {
+/**
+ * Orçamento de conexão CONFIGURÁVEL (Fase 2 / missão D).
+ *
+ * MEDIDO 2026-10-24 (`--scenario db-unavailable`): com PostgreSQL inalcançável o bootstrap ficava
+ * 480 s (orçamento do passo do harness) e o resultado era `exit=null`/TIMEOUT em vez de falha
+ * rápida com assinatura do motivo — o cenário negativo não conseguia PROVAR o fail-closed.
+ * O padrão de produção continua 30 tentativas; quem precisa de falha rápida (harness, testes de
+ * indisponibilidade) declara o orçamento por env. Nada é afrouxado: menos tentativas ⇒ falha mais
+ * cedo, nunca sucesso.
+ */
+const TENTATIVAS_PADRAO = 30;
+const DELAY_PADRAO_MS = 1000;
+
+function tentativasDeConexao(padrao = TENTATIVAS_PADRAO) {
+  const bruto = Number(process.env.DB_CONNECT_ATTEMPTS);
+  return Number.isInteger(bruto) && bruto > 0 ? bruto : padrao;
+}
+
+async function connect(maxRetries = tentativasDeConexao(), retryDelay = DELAY_PADRAO_MS) {
   if (sequelize) {
     try {
       await sequelize.authenticate();
