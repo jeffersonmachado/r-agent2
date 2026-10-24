@@ -121,6 +121,23 @@ describe('P0-01 — contrato de cobertura: a fase D é o conjunto EXATO de integ
     // release — exatamente o furo que a separação existe para evitar.
     expect(FASES_OBRIGATORIAS_VALIDACAO_COMPLETA).toContain('R');
   });
+
+  /**
+   * Defeito medido no runner (CI 2026-10-24, run 40105995013): o L0 reprovou com `GRAPH_ABSENT`
+   * porque a suíte consome artefatos ignorados pelo git e o gate cobrava a suíte sem produzi-los.
+   * O vermelho era real e reprodutível (reports/ vazio ⇒ exit=1), mas nenhuma máquina de
+   * desenvolvimento o via: os artefatos sobreviviam de execuções anteriores. Sem esta asserção a
+   * ordem volta a ser acidental e o gate fica verde só em árvore suja.
+   */
+  test('o L0 é precedido pelo preparo dos artefatos canônicos que ele consome', () => {
+    const ids = PASSOS.C.map((p) => p.id);
+    const iArtefatos = ids.indexOf('L0a-artefatos-canoeiros');
+    const iSuite = ids.indexOf('L0-suite-oficial');
+    expect(iArtefatos).toBeGreaterThanOrEqual(0);
+    expect(iSuite).toBeGreaterThan(iArtefatos);
+    expect(PASSOS.C[iArtefatos].comando).toBe('npm run ci:artifacts');
+    expect(PASSOS.C[iArtefatos]['continue-on-error']).toBeUndefined();
+  });
 });
 
 describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {

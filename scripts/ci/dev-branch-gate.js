@@ -108,6 +108,30 @@ const {
 const PASSOS = Object.freeze({
   C: [
     {
+      /**
+       * PREPARO DE ENTRADAS DO L0 (medido no CI de 2026-10-24, run 40105995013).
+       *
+       * O L0 reprovou no runner com `GRAPH_ABSENT` em `tests/unit/coverage/impactRunner.test.js`:
+       * a suíte consome artefatos IGNORADOS pelo git (`reports/*.json`,
+       * `governance/json-persistence-audit.json`, `qa-mesh/meshRegistry.json`) e nenhum clone
+       * contém esses arquivos. Na máquina de desenvolvimento o vermelho não aparecia porque os
+       * artefatos já existiam de execuções anteriores — reprodutibilidade dependia de estado sujo.
+       *
+       * O gate passa a produzir as entradas com os MESMOS produtores canônicos (`ci:artifacts`,
+       * parte de `ci:bootstrap`) ANTES de cobrar a suíte. Passo que falha aqui derruba a fase:
+       * ausência de artefato é defeito de preparo, não motivo para pular asserção.
+       * Medição de referência: `reports/` vazio ⇒ L0 exit=1 (`Expected "EXPLICIT", Received
+       * "GRAPH_ABSENT"`); `npm run ci:artifacts` ⇒ mesmo conjunto ⇒ exit=0.
+       */
+      id: 'L0a-artefatos-canoeiros',
+      nivel: 'L0',
+      comando: 'npm run ci:artifacts',
+      descricao: 'Produz os artefatos canônicos (ignorados pelo git) que o L0 consome',
+      // Medido em 2026-10-24: 12 produtores + prova de existência/frescor ≈ 60-120 s em árvore
+      // limpa. Orçamento folgado porque produtor lento não é defeito de código.
+      orcamentoMs: Number(process.env.L0A_ORCAMENTO_MS) || 20 * 60 * 1000,
+    },
+    {
       id: 'L0-suite-oficial',
       nivel: 'L0',
       comando: 'npm test',
