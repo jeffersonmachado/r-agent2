@@ -565,6 +565,8 @@ function main() {
         }, {}),
       },
       resultados: agregacao.resultados,
+      // A1-3b: o motivo da cobertura tem de estar no relatório POR EXECUÇÃO, não só no agregado.
+      coberturaIntegral: agregacao.coberturaIntegral || null,
       execucao: {
         status: fim.ok ? fim.manifesto.status : null,
         completo: fim.ok ? fim.manifesto.escopo.completo === true : false,

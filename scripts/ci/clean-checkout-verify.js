@@ -731,7 +731,10 @@ function cenarioClean(ctx, args) {
   // mesma bateria de integração só consome ~16 min e polui a evidência com um passo duplicado.
   const faseCNoGate = opcoesDeGate(args) === null || opcoesDeGate(args).includes('C');
   if (args.withIntegration && !faseCNoGate) {
-    passo('integracao-engenheiro', 'npx', ['jest', 'tests/integration/engineering', '--bail=0', '--runInBand', '--forceExit'], {
+    // C-1 (4ª passada): `tests/integration/engineering` NÃO existe — `jest <dir inexistente>`
+    // sai com "No tests found" e o passo (positivo, `esperado:0`) nunca mediu integração.
+    // A integração do Engenheiro vive em `tests/integration/*engineering*.test.js`.
+    passo('integracao-engenheiro', 'npx', ['jest', 'tests/integration', '--testPathPattern', 'engineering', '--bail=0', '--runInBand', '--forceExit'], {
       cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000,
       descricao: 'Integracao real do Engenheiro (Postgres + sandbox)',
     });

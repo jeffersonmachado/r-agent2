@@ -158,8 +158,25 @@ function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerp
     completedAt: null,
     resultados: 0,
   };
-  fs.writeFileSync(path.join(dir, 'manifest.json'), `${JSON.stringify(manifesto, null, 2)}\n`, 'utf8');
+  gravarManifesto(dir, manifesto);
   return { runId, dir, manifesto };
+}
+
+/** Grava o manifesto com tmp imprevisível + rename; recusa destino symlink (achado F-1). */
+function gravarManifesto(dir, manifesto) {
+  const abs = path.join(dir, 'manifest.json');
+  const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+  if (st && st.isSymbolicLink()) throw new Error('MANIFESTO_E_SYMLINK');
+  const tmp = path.join(dir, `.tmp-manifest-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
+  const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+  try {
+    fs.writeSync(fd, `${JSON.stringify(manifesto, null, 2)}\n`);
+    fs.fsyncSync(fd);
+  } finally {
+    try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+  }
+  fs.renameSync(tmp, abs);
+  return abs;
 }
 
 function lerManifesto(rootDir, baseRel, runId) {
@@ -172,7 +189,10 @@ function lerManifesto(rootDir, baseRel, runId) {
     return null;
   }
   const abs = path.join(dir, 'manifest.json');
-  if (!fs.existsSync(abs)) return null;
+  const st = fs.lstatSync(abs, { throwIfNoEntry: false });
+  // Achado F-1: `manifest.json` também é componente de caminho — symlink aqui leria (e
+  // escreveria) fora da execução.
+  if (!st || st.isSymbolicLink() || !st.isFile()) return null;
   try {
     return JSON.parse(fs.readFileSync(abs, 'utf8'));
   } catch (_) {
@@ -274,11 +294,20 @@ function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, observa
     && new Set(idsReais).size === idsReais.length
     && idsReais.length === idsEsperados.length
     && idsEsperados.every((id) => idsReais.includes(String(id)));
+  // Limite 6 da 4ª passada: `finalizar` também exige escopo NEUTRO para marcar completo.
+  const escopoNeutro = Number(m.escopo.limite || 0) === 0
+    && String(m.escopo.filtroSeveridade || 'ALL').toUpperCase() === 'ALL'
+    && (!Array.isArray(m.escopo.idsSelecionados) || m.escopo.idsSelecionados.length === 0);
   m.escopo.completo = status === STATUS.COMPLETED
+    && escopoNeutro
     && processados > 0
     && processados >= Number(m.escopo.esperadoNoEscopo || 0)
     && cobreLista;
-  fs.writeFileSync(abs, `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+  try {
+    gravarManifesto(path.dirname(abs), m);
+  } catch (e) {
+    return { ok: false, motivo: e.message };
+  }
   return { ok: true, manifesto: m };
 }
 
@@ -295,6 +324,10 @@ function lerResultados(rootDir, baseRel, runId) {
   }
   const manifesto = lerManifesto(rootDir, baseRel, runId);
   if (!manifesto) return { ok: false, motivo: 'MANIFESTO_AUSENTE', resultados: [], manifesto: null };
+  // Achado R-1: manifesto forjado sem `identidade` lançava TypeError em vez de recusar.
+  if (!manifesto.identidade || typeof manifesto.identidade !== 'object') {
+    return { ok: false, motivo: 'MANIFESTO_SEM_IDENTIDADE', resultados: [], manifesto };
+  }
   const dirItens = path.join(dir, 'itens');
   // `itens/` também é componente de caminho: symlink aqui leria artefatos de fora da execução
   // (achado (d) da 3ª passada). Recusa explícita, não confiança no hash do conteúdo.

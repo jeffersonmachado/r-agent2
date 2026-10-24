@@ -205,7 +205,9 @@ describe('P1-B — execução parcial não finge cobertura integral', () => {
     const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
     expect(r.ok).toBe(true);
     expect(r.completo).toBe(false);
-    expect(r.escopo[0]).toMatchObject({ tipo: 'PARCIAL', completoNoEscopo: true, processados: 1 });
+    // Escopo não-neutro (limite=1) NUNCA marca `completoNoEscopo` — nem dentro do próprio
+    // recorte (limite 6 da 4ª passada da revisão).
+    expect(r.escopo[0]).toMatchObject({ tipo: 'PARCIAL', completoNoEscopo: false, processados: 1 });
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
 
@@ -503,12 +505,15 @@ describe('revisão independente 3ª passada — escopo derivado da fila (A1-2) e
     }
   });
 
-  test('A2-2: o caminho de teste citado em cada cenário negativo EXISTE no repositório', () => {
+  test('A2-2/C-1: TODO caminho citado no harness existe (arquivo OU diretório)', () => {
     const fsx = require('fs');
-    const fonte = fsx.readFileSync(path.join(__dirname, '..', '..', '..', 'scripts', 'ci', 'clean-checkout-verify.js'), 'utf8');
-    const citados = [...fonte.matchAll(/'(tests\/[A-Za-z0-9_./-]+\.test\.js)'/g)].map((m) => m[1]);
-    expect(citados.length).toBeGreaterThan(0);
-    const inexistentes = citados.filter((rel) => !fsx.existsSync(path.join(__dirname, '..', '..', '..', rel)));
+    const raizRepo = path.join(__dirname, '..', '..', '..');
+    const fonte = fsx.readFileSync(path.join(raizRepo, 'scripts', 'ci', 'clean-checkout-verify.js'), 'utf8');
+    // Cobre `tests/...`, `engine/...` e `scripts/smoke/...` citados em qualquer forma de comando,
+    // não só `jest <x>.test.js` — era o furo do C-1 (diretório inexistente passava).
+    const citados = [...fonte.matchAll(/'((?:tests|engine|scripts)\/[A-Za-z0-9_./-]+)'/g)].map((m) => m[1]);
+    expect(citados.length).toBeGreaterThan(5);
+    const inexistentes = [...new Set(citados)].filter((rel) => !fsx.existsSync(path.join(raizRepo, rel)));
     expect(inexistentes).toEqual([]);
   });
 });
@@ -535,6 +540,51 @@ describe('4ª passada (auto-revisão) — cobertura integral exige escopo NEUTRO
     });
     fechar(root, a, ['L1', 'L2', 'L3']);
     expect(runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] }).completo).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+});
+
+describe('4ª passada — manifest.json e manifesto sem identidade (F-1/R-1)', () => {
+  test('F-1: manifest.json symlink é recusado na leitura e na escrita', () => {
+    const root = raiz();
+    const fora = fs.mkdtempSync(path.join(os.tmpdir(), 'p1b-manif-'));
+    const a = abrirRun(root);
+    const absManifesto = path.join(a.dir, 'manifest.json');
+    const copia = path.join(fora, 'manifest.json');
+    fs.copyFileSync(absManifesto, copia);
+    fs.rmSync(absManifesto);
+    fs.symlinkSync(copia, absManifesto);
+
+    expect(runLib.lerManifesto(root, BASE, a.runId)).toBeNull();
+    // Escrever (finalizar) também recusa, em vez de sobrescrever o alvo do link.
+    const antes = fs.readFileSync(copia, 'utf8');
+    let recusou = false;
+    try {
+      const r = runLib.finalizar({ rootDir: root, baseRel: BASE, runId: a.runId });
+      recusou = r.ok === false;
+    } catch (e) {
+      recusou = /MANIFESTO_E_SYMLINK/.test(e.message);
+    }
+    expect(recusou).toBe(true);
+    expect(fs.readFileSync(copia, 'utf8')).toBe(antes);
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(fora, { recursive: true, force: true });
+  }, 60000);
+
+  test('R-1: manifesto forjado SEM identidade é recusado limpo (não lança)', () => {
+    const root = raiz();
+    const a = abrirRun(root);
+    fechar(root, a, ['R1']);
+    const absManifesto = path.join(a.dir, 'manifest.json');
+    const m = JSON.parse(fs.readFileSync(absManifesto, 'utf8'));
+    delete m.identidade;
+    fs.writeFileSync(absManifesto, `${JSON.stringify(m, null, 2)}\n`, 'utf8');
+
+    const lido = runLib.lerResultados(root, BASE, a.runId);
+    expect(lido.ok).toBe(false);
+    expect(lido.motivo).toBe('MANIFESTO_SEM_IDENTIDADE');
+    const ag = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(ag.ok).toBe(false);
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
 });
