@@ -5,7 +5,7 @@
 **PR:** #16 — **NÃO MESCLADO** (merge não autorizado)
 **Baseline do PR:** `484eee4788e553907e31f7b0528cac9ee41d9298`
 **SHA inicial desta fase:** `541c7d0000376b0fae8c321171c6190166e62b25` (confirmado no remoto)
-**SHA final medido:** `9bb607c40cef376ef4f39b137b725e345d663752`
+**SHA final medido:** `cad7caaad803b48b0af7c89ce9adf7d1e697398f`
 **Node:** v22.12.0 · **npm:** 10.9.0 · **Jest:** 29.7.0 · **Postgres:** 127.0.0.1:5432 · **Redis** disponível · **Docker:** 27.3.1
 **Relatório da Fase 1 (histórico, NÃO substituído):** `AI_MEMORY/evidence/p1-governance-hardening-2026-10-23/RELATORIO.md`
 
@@ -25,6 +25,9 @@
 | `85ca7e2cc` | Missão C — porteiro de publicação | `scripts/governance/publication-gate.sh` (novo), `scripts/docker-push.sh`, `scripts/docker-push-remote.sh`, `tests/unit/governance/releaseGovernanceBypassPhase2.test.js` (novo) |
 | `9bb607c40` | Missões D/E — escopo do veredito do checkout limpo + evidências | `scripts/ci/clean-checkout-verify.js`, `tests/unit/governance/cleanCheckoutTimeoutRag.test.js`, `AI_MEMORY/evidence/p1-governance-hardening-phase2/*` |
 | `c9ca2b435` | Missão G — **6 achados da revisão independente** corrigidos | `scripts/governance/lib/regularizationRun.js`, `scripts/create-release-tag.sh`, `scripts/governance/seal-release.sh`, `scripts/ci/bootstrap-ci-environment.js`, `scripts/ci/clean-checkout-verify.js`, 5 arquivos de teste |
+| `d6842b34e` | Missão D — relatório da Fase 2 + evidências dos 8 cenários | `AI_MEMORY/evidence/p1-governance-hardening-phase2/*`, `AI_MEMORY/evidence/ci-clean-checkout-*/` |
+| `9b9d67eb7` | Missão D — orçamento de conexão configurável + teto do cenário de banco | `api/db/sequelize.js`, `scripts/ci/clean-checkout-verify.js`, `tests/unit/governance/cleanCheckoutTimeoutRag.test.js` |
+| `cad7caaad` | Missão D — assinatura do motivo antes do teto (regressão do endurecimento) | `scripts/ci/clean-checkout-verify.js` |
 
 Nenhum arquivo de produto (`api/`, `engine/`, `frontend/`, `rag-service/`, `lib/`, `qa/`, `qa-mesh/`,
 `core/`, `src/`) foi alterado — verificado por `git diff --name-only 484eee478..HEAD` (vazio nesses
