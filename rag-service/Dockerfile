@@ -19,8 +19,23 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Pré-baixa o modelo de embeddings padrão (sentence-transformers/all-MiniLM-L6-v2)
 # nos backends torch e ONNX, para o cold start não depender de rede externa
-# ao HuggingFace (RAG_EMBEDDING_BACKEND=onnx no compose de produção)
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', backend='onnx', model_kwargs={'file_name': 'onnx/model.onnx'})"
+# ao HuggingFace (RAG_EMBEDDING_BACKEND=onnx no compose de produção).
+#
+# RETRY (medido no CI de 2026-10-24, run 40108935675): o HuggingFace respondeu
+# `429 Client Error: Too Many Requests` para o IP do runner e o build da imagem morreu —
+# um build de imagem não pode depender de uma janela de rate limit de terceiro. As
+# tentativas são finitas e o passo FALHA FECHADO (`exit 1`) se todas esgotarem: retry não
+# é tolerância a ausência do modelo.
+RUN ok=0; \
+    for tentativa in 1 2 3 4 5; do \
+      if python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', backend='onnx', model_kwargs={'file_name': 'onnx/model.onnx'})"; then \
+        ok=1; break; \
+      fi; \
+      espera=$((tentativa * 10)); \
+      echo "[rag] download do modelo falhou (tentativa ${tentativa}/5) — aguardando ${espera}s"; \
+      sleep "${espera}"; \
+    done; \
+    if [ "${ok}" != "1" ]; then echo "[rag] ERRO: modelo não pôde ser baixado após 5 tentativas"; exit 1; fi
 
 # Copia código da aplicação
 COPY . .
