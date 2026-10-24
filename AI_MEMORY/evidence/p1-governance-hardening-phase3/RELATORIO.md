@@ -5,7 +5,7 @@
 **PR:** #16 → `dev/engineering-hardening` — **NÃO MESCLADO**
 **Baseline do PR:** `484eee4788e553907e31f7b0528cac9ee41d9298`
 **Base desta fase (fim da Fase 2):** `a3aa22d2869ff6c162968cac64dd33de9403738c`
-**HEAD desta fase (código validado por CI + checkout limpo + L2):** `83b50f1e4209522593d554a84a40b1d02abeb6cc`
+**HEAD desta fase (código validado por CI, checkout limpo, L2 e cenários):** `7d3dcc5c1890cb95e6d0c5879385e901189f6429`
 **CI (SHA exato):** run `40114341579` — merge `56c435e3a6e0` — **success**
 **Diff da fase:**  21 files changed, 1167 insertions(+), 63 deletions(-)
 **Node:** v22.12.0 · **npm:** 10.9.0 · **Jest:** 29.7.0 · **Docker:** 27.3.1
@@ -407,19 +407,31 @@ Ver §11 (resultado e achados).
 4. **130 defeitos históricos** — seguem `FECHAMENTO_NAO_PROVADO`; nenhum estado foi alterado.
 5. **`modelDrivenE2e`** — depende do artefato do job `prod-like-smoke`; em árvore de desenvolvimento
    falha fechado e autoexplicativo (`ENVIRONMENT`, não regressão).
-6. **Passos mascarados em outros workflows** — a regra de errexit foi aplicada aos jobs certificantes
-   (`release-governance.yml`, `dev-branch-gate`). `e2e.yml`, `jest.yml`, `wave-reports.yml` e os jobs de
-   smoke ainda têm passos multi-comando sem errexit (levantados pelo scanner; nenhum deles decide
-   release). Fica como item de fila, não como exceção silenciosa.
-7. **Rate limit do HuggingFace** — retry reduz a flakiness, mas não elimina a dependência de rede no
-   build da imagem RAG; cache de modelo no runner seria a solução definitiva.
-8. **Branch sem protection** — `dev/engineering-hardening` não tem branch protection nem required
+6. ~~Passos mascarados em outros workflows~~ — **fechado** (`78eaacc22`): o shell explícito com
+   `pipefail` passou a valer em `prod-like-smoke`, `dev-branch-integration`, `e2e`, `jest`,
+   `jest-integration` e `refresh`. Cobertura medida: **37 passos multi-comando no repositório, 0 sem
+   proteção**; `stepExitMasking.test.js` passou a cobrir todos os jobs dos 5 workflows e a mutação
+   (remover o `defaults` do job `jest`) deixa o teste VERMELHO. Onde a falha é DADO, não erro (laços
+   de warmup de auth), a tolerância é explícita (`TOKEN=$(…) || true`, com o laço decidindo).
+7. **Rate limit do HuggingFace** — mitigado em duas camadas (`7d3dcc5c1`): retry com backoff e
+   `--mount=type=cache` no diretório do modelo, então o caso comum (imagem reconstruída a cada push)
+   não baixa o modelo de novo. A armadilha foi medida antes do commit: **cache mount não entra na
+   camada** — a primeira versão gerou imagem 174 MB menor com build verde e cold start offline
+   quebrado; a forma publicada baixa no cache, COPIA para `/root/.cache/huggingface` e prova o
+   conteúdo (`ls -A .../hub`, `du -sh` = 174M). No CI o passo rodou com o mount e o job ficou verde.
+8. **Backend ONNX não carrega com `HF_HUB_OFFLINE=1`** (achado colateral, **pré-existente**): com o
+   modelo presente e sem rede, `SentenceTransformer(..., backend='onnx')` chama
+   `list_repo_files` e morre com `OfflineModeIsEnabled`; o backend `torch` carrega e devolve 384
+   dimensões. Reproduzido **igualmente na imagem anterior** (`:latest`, 3 semanas), portanto não é
+   regressão desta fase — mas contradiz `RAG_EMBEDDING_BACKEND=onnx` + `HF_HUB_OFFLINE=1` do compose.
+   Não corrigido aqui: exige validação do serviço RAG (pytest/venv) e está fora do escopo autorizado.
+   Registrado para a fila oficial.
+9. **Branch sem protection** — `dev/engineering-hardening` não tem branch protection nem required
    checks (§5.7-bis). O CI verde é convenção, não imposição: um merge pode ignorar o vermelho.
-9. **Boot da aplicação é caro** — 12 suítes sobem `api/server` inteiro; o orçamento passou a ser
+10. **Boot da aplicação é caro** — 12 suítes sobem `api/server` inteiro; o orçamento passou a ser
    compartilhado (60 s) depois de medir 24,5 s a frio. A fragilidade de fundo (boot pesado por teste)
    permanece: a correção estrutural seria um `createServer` sob demanda, refactor fora deste escopo.
-10. **Rate limit do HuggingFace** — retry reduz a flakiness, mas não elimina a dependência de rede no
-    build da imagem RAG; cache de modelo no runner seria a solução definitiva.
+
 
 ---
 
@@ -463,8 +475,10 @@ runner difere da máquina de desenvolvimento):**
 | D3 | P1 | L0 não produzia as próprias entradas (artefatos ignorados pelo git) | árvore sem `reports/*.json` ⇒ `GRAPH_ABSENT` | passo `L0a-artefatos-canoeiros` + ordem travada por contrato |
 | D4 | P2 | build da imagem RAG morria por `429` do HuggingFace | CI `40108935675` (1ª tentativa) | retry com backoff e falha fechada |
 | D5 | P2 | **TIMEOUT** (não asserção) em `publicStorefrontPhysicalEndpoints` no clone limpo: 24,5 s a frio contra orçamento de 30 s | `ci:clean-checkout --scenario clean` em `c5230cbf0` | `tests/helpers/jestTimeouts.js` (`TIMEOUT_BOOT_APP_MS = 60000`) aplicado às 12 suítes que sobem `api/server`; asserções intactas |
+| D6 | P2 | classe do D1 sobrevivia em `e2e`/`jest`/`wave-reports`/smoke (pipeline com `\| tail` mascara falha) | scanner de workflows: 24 passos sem errexit fora dos jobs certificantes | `defaults.run.shell` com `pipefail` em 6 jobs; tolerância explícita nos laços de warmup; guard cobre os 5 workflows (37 passos, 0 desprotegidos) |
+| D7 | P2 | `--mount=type=cache` sem cópia deixava o modelo FORA da imagem (174 MB ausentes, build verde) | build local + `ls /root/.cache/huggingface` na imagem nova vs antiga | baixa no cache, copia para o caminho padrão e prova o conteúdo; validação de cold start offline (torch ⇒ 384 dimensões) e build real no CI (`40138500740`) |
 
-### 13.x Segunda revisão independente (delta pós-CI) — 3 achados, todos tratados
+### 11.x Rodadas de revisão independente — 3 grupos, todos tratados
 
 Revisor distinto (`code-review`, contexto próprio, 9 min) sobre `6770c3af1..c5230cbf0`.
 
@@ -502,8 +516,8 @@ PUBLISHED             = FALSE
 | `TESTED_SHA` (local) | `26f6acfdb5d414a8339512b05293c1ea90e5b56f` | L0 completo local: 9726 PASS, exit 0 |
 | `TESTED_SHA` (paridade CI) | `23ab5d768fa22a85d2f3804e29f7a3d66f519ec4` | worktree `--detach` + artefato prod-like: 1115/1115 suítes, exit 0 |
 | `REVIEWED_SHA` | `6770c3af12da6d69ba3ced36dad440c198211d7e` | intervalo revisado por agente distinto |
-| `DELIVERED_SHA` | `83b50f1e4209522593d554a84a40b1d02abeb6cc` (+ commit deste relatório) | **validado por CI no run `40123706119`** (success) |
-| `CI_VALIDATED_SHA` | `23ab5d768` (run `40114341579`), `c5230cbf0` (run `40116481472`), `83b50f1e4` (run `40123706119`) | job L0+L1 `success` nos três; `A2-sha-esperado` confirma identidade em cada um |
+| `DELIVERED_SHA` | `7d3dcc5c1890cb95e6d0c5879385e901189f6429` (+ commit deste relatório) | **validado por CI no run `40138500740`** (success) |
+| `CI_VALIDATED_SHA` | `23ab5d768` (`40114341579`), `c5230cbf0` (`40116481472`), `83b50f1e4` (`40123706119`), `78eaacc22` (`40137766146`), `7d3dcc5c1` (`40138500740`) | job L0+L1 `success` em todos; `A2-sha-esperado` confirma identidade |
 | `L2_VALIDATED_SHA` | `83b50f1e4` | `--scenario l2-system` **PASS** (clone limpo, bootstrap 102 s, `l2-test-system` 68 s) |
 | `CLEAN_VALIDATED_SHA` | `83b50f1e4` | `--scenario clean` **PASS**; `--scenario missing-artifact` **PASS** |
 
