@@ -5,7 +5,7 @@
 **PR:** #16 → `dev/engineering-hardening` — **NÃO MESCLADO**
 **Baseline do PR:** `484eee4788e553907e31f7b0528cac9ee41d9298`
 **Base desta fase (fim da Fase 2):** `a3aa22d2869ff6c162968cac64dd33de9403738c`
-**HEAD desta fase:** `95820c0fa480fd524518e6a40089c6610b3702c5`
+**HEAD desta fase:** `a964627fe5ae1f24837dd8c94d44f201b24e2c95`
 **Diff da fase:**  21 files changed, 1167 insertions(+), 63 deletions(-)
 **Node:** v22.12.0 · **npm:** 10.9.0 · **Jest:** 29.7.0 · **Docker:** 27.3.1
 **Ambiente:** Linux 6.8.0-146-generic (12 CPUs) · host `jmachado-Precision-5530`
@@ -207,7 +207,7 @@ desta fase — e portanto **não existe, hoje, validação de CI independente do
 
 | Suíte / gate | Comando | Resultado |
 |---|---|---|
-| L0 completo | `jest tests/unit` (com `.env` + runner) | **9712 testes · 9709 PASS · 1 FAIL · 2 SKIP** — ver §6.1 |
+| L0 completo | `jest tests/unit` (com `.env` + runner, após `ci:artifacts`) | **9723 testes · 9720 PASS · 1 FAIL · 2 SKIP** — ver §6.1 |
 | P1-A traversal | `tests/unit/governance/regularizadorPathTraversal.test.js` | PASS |
 | P1-B isolamento | `regularizadorRunIsolation.test.js` | PASS (36) |
 | P1-C preflight | `releaseAnchorsPreflightBlocking.test.js` | PASS |
@@ -281,10 +281,82 @@ Ver §11 (resultado e achados).
 
 ## 11. REVISÃO INDEPENDENTE — resultado
 
-_(preenchido no fechamento; ver §12 para o veredito final)_
+Subagente revisor **distinto** (tipo `code-review`, contexto próprio, ~16 min, 129 chamadas de
+ferramenta), sem premissa de correção. **Veredito: `CHANGES_REQUESTED` — 7 achados (2 P1, 3 P2, 2 P3).**
+
+| # | Sev | Achado | Reprodução | Tratamento |
+|---|---|---|---|---|
+| 1 | **P1** | modo local de teste contornável: `remote.*.receivepack` executa OUTRO comando no push; symlink no caminho autorizado escapa | fim-a-fim: gate imprimia "MODO LOCAL DE TESTE" e a tag aparecia em bare FORA do autorizado | recusa `receivepack/uploadpack` e `core.hooksPath/sshCommand`; `realpath` do caminho autorizado (recusa symlink); push vai para o **caminho validado** (`RAP_PUBLICATION_LOCAL_TARGET`), não para o nome do remote; verificação pós-push no mesmo alvo. Testes A10–A12, A14 |
+| 2 | **P1** | `deploy:prod`, `deploy:remote*`, `system:test-images:push` publicavam/implantavam **sem porteiro** | `grep rap_publication_gate scripts/*.sh` = 3 arquivos só | `deploy-prod.sh`, `docker-deploy.sh` e `prewarm-test-images.sh` exigem `SYSTEM_DEPLOY_EXECUTE=1` + `rap_publication_gate`; teste A13 verifica os 6 entrypoints |
+| 3 | P2 | `GIT_DIR`/`GIT_CONFIG_*` separavam repositório avaliado × repositório empurrado | revisão confirmou ausência no intervalo revisado | já corrigido em `3a9fbbef9` (`rap_ambiente_git_redirecionado`) — testes A8/A9 |
+| 4 | P2 | GO não vinculado ao commit tagueado | sha arbitrário recebia tag com GO de outro conteúdo | `create-release-tag.sh` exige `COMMIT == sourceCommit` do run governado |
+| 5 | P2 | commit anterior reescreveu evidência governada (`tenant-isolation` sem lineage, `rag-domain` FAIL) e quebrou o `evidence-manifest` | `sha256sum` divergente dos registros (`9340e595…`/`783fb018…`) | bytes restaurados + guard `governedEvidenceBinding.test.js` (compara `git show HEAD:<path>`) |
+| 6 | P3 | guards de certificação eram `toContain` de substring; A1 não isolava o ataque | leitura | `certificationSeparation` passou a EXECUTAR a suíte em fixture sem scorecard (exit ≠ 0 + `BLOCKED_BY_GOVERNED_EVIDENCE`); A1 assere motivo específico |
+| 7 | — | (itens corretos confirmados: fail-closed sem `/proc`, separação L2×certificação, gatilho de PR, testes de filesystem/trust) | — | — |
+
+**Nota de escopo do revisor:** o worktree mudou durante a revisão (`95820c0fa` → `3a9fbbef9`); ele
+revisou o intervalo pedido e reconfirmou os repros no estado atual.
+
+**Achado DERIVADO (não apontado pelo revisor, encontrado no fechamento):** `jest tests/unit` regera
+`reports/tenant-isolation-report.json` e `reports/rag-domain-segregation-report.json` — o `git add -A`
+capturou os bytes regerados DUAS vezes, detectadas pelo próprio guard. É a causa-raiz da classe do
+item 5 (risco residual §9.3 mantido).
+
 
 ---
 
 ## 12. VEREDITO
 
-_(preenchido no fechamento)_
+```
+NÍVEL DE DESENVOLVIMENTO .......... PARTIALLY_VERIFIED (ver critérios abaixo)
+NÍVEL DE CERTIFICAÇÃO ............. NO_GO
+
+RELEASE_CERTIFICATION = NO_GO
+MERGE_PR_16           = NOT_AUTHORIZED
+MAIN_MODIFIED         = FALSE
+PUBLISHED             = FALSE
+```
+
+### 12.1 Identidade de SHAs (regra da missão E)
+
+| Papel | SHA | Observação |
+|---|---|---|
+| `SOURCE_SHA` (base do PR) | `484eee4788e553907e31f7b0528cac9ee41d9298` | inalterado |
+| `TESTED_SHA` | `a964627fe5ae1f24837dd8c94d44f201b24e2c95` | L0 completo executado (9723 testes) |
+| `REVIEWED_SHA` | `6770c3af12da6d69ba3ced36dad440c198211d7e` | intervalo revisado por agente distinto |
+| `DELIVERED_SHA` | `a964627fe5ae1f24837dd8c94d44f201b24e2c95` | **não validado por CI** (push não autorizado) |
+
+`TESTED_SHA == DELIVERED_SHA` (`a964627fe`): o L0 completo foi executado nesse commit **depois** da
+restauração dos bytes governados. O que falta é a validação **independente** (CI no remoto), que exige
+push — não autorizado nesta missão.
+
+### 12.2 Critérios de aceite
+
+| Critério (mission §1) | Estado |
+|---|---|
+| Todas as vulnerabilidades reproduzidas corrigidas | **SIM** — A (2 vetores), B (fail-closed), C (trust), achados 1/2/4 da revisão |
+| Testes de regressão verdes | **SIM, com 1 falha esperada** (`modelDrivenE2e`, dependência do job `prod-like-smoke`) |
+| Nenhum caminho de publicação contorna a decisão canônica | **SIM** para os 6 entrypoints inventariados e testados |
+| Isolamento de filesystem comprovado no modelo de ameaça | **SIM** (18 ataques; sem `/proc` ⇒ recusa) |
+| L2 executado e dependência resolvida legitimamente | **SIM** — `L2 = PASS` em checkout limpo, com separação formal |
+| HEAD entregue == HEAD validado | **PARCIAL** — `TESTED_SHA == DELIVERED_SHA` localmente; **sem CI** no SHA (push não autorizado) |
+| Revisão adversarial independente concluída | **SIM** — `CHANGES_REQUESTED` → 6 de 7 tratados, item 3 já corrigido |
+
+### 12.3 Verificações reais das declarações
+
+```
+git rev-parse origin/main                      -> 04cad9c1b639cdae357687f7febf47e490834665  (inalterado)
+git rev-parse origin/dev/engineering-hardening  -> 484eee4788e553907e31f7b0528cac9ee41d9298  (inalterado)
+git tag --points-at HEAD                        -> (vazio)  # nenhuma tag criada
+git log origin/codex/... (antes do fechamento)  -> a3aa22d28 # HEAD desta fase NÃO empurrado
+```
+
+`MAIN_MODIFIED = FALSE` e `PUBLISHED = FALSE` conferidos por `git ls-remote`, não presumidos.
+
+### 12.4 Por que não `DEVELOPMENT_VERIFIED`
+
+1. `DELIVERED_SHA` não foi validado (sem CI e sem L0 no commit final exato).
+2. O L0 mantém 1 falha esperada fora do harness (`modelDrivenE2e`, artefato do job `prod-like-smoke`).
+3. Gate agregado permanece vermelho **por contrato** (130 defeitos sem prova; âncoras externas
+   ausentes) — o que é estado correto, mas impede declarar validação de desenvolvimento completa.
+
