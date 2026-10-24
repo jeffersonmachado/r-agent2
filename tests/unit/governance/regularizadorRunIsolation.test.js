@@ -38,11 +38,17 @@ function raiz() {
  */
 function inventarioNoRoot(root, ids = ['X']) {
   const fsx = require('fs');
-  const { digestDoInventario } = require('../../../governance/bug-closure/trusted-authorities');
+  // `state: VERIFIED` sem prova é o que faz o item ser CANDIDATO (fechamentoNaoProvado) — é
+  // assim que a fila real se parece. Devolve o digest da fila E o hash do ARQUIVO (usado como
+  // `hardeningQueueFingerprint` na identidade da execução).
   fsx.mkdirSync(path.join(root, 'AI_MEMORY'), { recursive: true });
-  const itens = ids.map((id) => ({ id, severity: 'P1', state: 'FIXED_PENDING_VERIFICATION', status: 'ready_for_approval' }));
-  fsx.writeFileSync(path.join(root, 'AI_MEMORY', 'hardening-queue.json'), JSON.stringify({ items: itens }, null, 2), 'utf8');
-  return digestDoInventario(itens);
+  const itens = ids.map((id) => ({ id, severity: 'P1', state: 'VERIFIED', status: 'prevention_active', title: id }));
+  const queuePath = path.join(root, 'AI_MEMORY', 'hardening-queue.json');
+  fsx.writeFileSync(queuePath, JSON.stringify({ items: itens }, null, 2), 'utf8');
+  return {
+    digest: require('../../../governance/bug-closure/trusted-authorities').digestDoInventario(itens),
+    queueSha256: crypto.createHash('sha256').update(fsx.readFileSync(queuePath)).digest('hex'),
+  };
 }
 
 function identidade(commit = 'a'.repeat(40), fp = 'b'.repeat(64), inventario = 'c'.repeat(64)) {
@@ -54,15 +60,23 @@ function identidade(commit = 'a'.repeat(40), fp = 'b'.repeat(64), inventario = '
   };
 }
 
-function abrirRun(root, { commit, fp, escopo, inventario } = {}) {
-  // Garante inventário real no root (a menos que o teste queira um digest divergente).
-  const digest = inventario || inventarioNoRoot(root);
+function abrirRun(root, { commit, fp, escopo, inventario, fila, reusarFila } = {}) {
+  // Garante inventário real no root. `reusarFila` mantém a fila já criada pelo teste (o hash
+  // precisa ser o do ARQUIVO real, então não dá para reescrevê-la aqui).
+  let inf;
+  if (reusarFila) {
+    const queuePath = path.join(root, 'AI_MEMORY', 'hardening-queue.json');
+    inf = { digest: 'i'.repeat(64), queueSha256: crypto.createHash('sha256').update(fs.readFileSync(queuePath)).digest('hex') };
+  } else {
+    inf = inventario ? { digest: inventario, queueSha256: inventario } : inventarioNoRoot(root);
+  }
   return runLib.iniciar({
     rootDir: root,
     baseRel: BASE,
     commit: commit || identidade().commit,
     sourceFingerprint: fp || identidade().sourceFingerprint,
-    inventoryFingerprint: digest,
+    inventoryFingerprint: inf.digest,
+    hardeningQueueFingerprint: fila || inf.queueSha256,
     testManifestFingerprint: 'd'.repeat(64),
     escopo: escopo || { tipo: 'PARCIAL', esperadoNoEscopo: 2 },
   });
@@ -212,7 +226,12 @@ describe('P1-B — execução parcial não finge cobertura integral', () => {
 
   test('run INTEGRAL completo é o ÚNICO caso com cobertura integral', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['C1', 'C2'] } });
+    // A fila do cenário tem de declarar exatamente os candidatos que a execução cobriu.
+    inventarioNoRoot(root, ['C1', 'C2']);
+    const a = abrirRun(root, {
+      reusarFila: true,
+      escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['C1', 'C2'] },
+    });
     fechar(root, a, ['C1', 'C2']);
     const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
     expect(r.ok).toBe(true);
@@ -322,7 +341,8 @@ describe('revisão independente 2ª passada (a) — cobertura integral exige a L
 
   test('cobertura integral só com a lista EXATA de ids esperados', () => {
     const root = raiz();
-    const a = abrirRun(root, { escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['D1', 'D2'] } });
+    inventarioNoRoot(root, ['D1', 'D2']);
+    const a = abrirRun(root, { reusarFila: true, escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['D1', 'D2'] } });
     fechar(root, a, ['D2', 'D1']);
     const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
     expect(r.ok).toBe(true);
@@ -340,7 +360,7 @@ describe('revisão independente 2ª passada — A1/A4/A5/A8', () => {
       items: [{ id: 'Q1', severity: 'P1' }, { id: 'Q2', severity: 'P1' }, { id: 'Q3', severity: 'P1' }],
     }), 'utf8');
     const a = abrirRun(root, {
-      inventario: 'f'.repeat(64),
+      fila: 'f'.repeat(64), // hash de fila inventado
       escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['Q1'] },
     });
     fechar(root, a, ['Q1']);
@@ -352,14 +372,14 @@ describe('revisão independente 2ª passada — A1/A4/A5/A8', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
 
-  test('A1: inventoryFingerprint precisa ser o digest do inventário do rootDir', () => {
+  test('A1: hardeningQueueFingerprint precisa ser o hash da fila do rootDir', () => {
     const root = raiz();
-    const digest = inventarioNoRoot(root, ['Z1']);
-    const a = abrirRun(root, { inventario: digest, escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['Z1'] } });
+    const inf = inventarioNoRoot(root, ['Z1']);
+    const a = abrirRun(root, { reusarFila: true, escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['Z1'] } });
     fechar(root, a, ['Z1']);
     const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
     expect(r.completo).toBe(true);
-    expect(r.coberturaIntegral.inventoryDigest).toBe(digest);
+    expect(r.coberturaIntegral.inventoryDigest).toBe(inf.queueSha256);
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
 
@@ -423,4 +443,72 @@ describe('revisão independente 2ª passada — A1/A4/A5/A8', () => {
     expect(fim.motivo).toMatch(/RESULTADO_ID_DIVERGENTE_DO_ARQUIVO/);
     fs.rmSync(root, { recursive: true, force: true });
   }, 60000);
+});
+
+describe('revisão independente 3ª passada — itens/ também é caminho', () => {
+  test('itens/ que é SYMLINK para fora é recusado (mesmo com artefato válido copiado)', () => {
+    const root = raiz();
+    const fora = fs.mkdtempSync(path.join(os.tmpdir(), 'p1b-itens-'));
+    const digest = inventarioNoRoot(root, ['S1']);
+    const a = abrirRun(root, { inventario: digest, escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['S1'] } });
+    fechar(root, a, ['S1']);
+    // Copia o artefato VÁLIDO para fora e troca itens/ por symlink.
+    fs.mkdirSync(path.join(fora, 'itens'), { recursive: true });
+    fs.copyFileSync(path.join(a.dir, 'itens', 'S1.json'), path.join(fora, 'itens', 'S1.json'));
+    fs.rmSync(path.join(a.dir, 'itens'), { recursive: true, force: true });
+    fs.symlinkSync(path.join(fora, 'itens'), path.join(a.dir, 'itens'));
+
+    const lido = runLib.lerResultados(root, BASE, a.runId);
+    expect(lido.ok).toBe(false);
+    expect(lido.motivo).toBe('ITENS_E_SYMLINK');
+    expect(lido.resultados).toHaveLength(0);
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(fora, { recursive: true, force: true });
+  }, 60000);
+});
+
+describe('revisão independente 3ª passada — escopo derivado da fila (A1-2) e relatório (A1-3)', () => {
+  test('A1-2: fila com 3 candidatos + manifesto cobrindo 1 NÃO vira cobertura integral', () => {
+    const root = raiz();
+    inventarioNoRoot(root, ['N1', 'N2', 'N3']);
+    const a = abrirRun(root, {
+      reusarFila: true,
+      escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 1, idsEsperados: ['N1'] },
+    });
+    fechar(root, a, ['N1']);
+    const r = runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] });
+    expect(r.ok).toBe(true);
+    expect(r.completo).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('A1-2: idsEsperados que não são o conjunto derivado da fila reprovam a cobertura', () => {
+    const root = raiz();
+    inventarioNoRoot(root, ['N1', 'N2']);
+    const a = abrirRun(root, {
+      reusarFila: true,
+      escopo: { tipo: 'INTEGRAL', esperadoNoEscopo: 2, idsEsperados: ['N1', 'INVENTADO'] },
+    });
+    fechar(root, a, ['N1', 'INVENTADO']);
+    expect(runLib.agregar({ rootDir: root, baseRel: BASE, runIds: [a.runId] }).completo).toBe(false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }, 60000);
+
+  test('A2-1: passo POSITIVO com exit 0 não vira INFRASTRUCTURE_ERROR por causa do output', () => {
+    const { classificarResultado } = require('../../../scripts/ci/lib/resultClassification');
+    for (const saida of ['EAI_AGAIN', 'command not found', 'Could not resolve host: x']) {
+      const r = classificarResultado({ exitCode: 0, esperado: 0, saida });
+      expect(r.classe).toBe('EXPECTED_SUCCESS');
+      expect(r.ok).toBe(true);
+    }
+  });
+
+  test('A2-2: o caminho de teste citado em cada cenário negativo EXISTE no repositório', () => {
+    const fsx = require('fs');
+    const fonte = fsx.readFileSync(path.join(__dirname, '..', '..', '..', 'scripts', 'ci', 'clean-checkout-verify.js'), 'utf8');
+    const citados = [...fonte.matchAll(/'(tests\/[A-Za-z0-9_./-]+\.test\.js)'/g)].map((m) => m[1]);
+    expect(citados.length).toBeGreaterThan(0);
+    const inexistentes = citados.filter((rel) => !fsx.existsSync(path.join(__dirname, '..', '..', '..', rel)));
+    expect(inexistentes).toEqual([]);
+  });
 });

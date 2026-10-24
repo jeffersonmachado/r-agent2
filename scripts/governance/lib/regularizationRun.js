@@ -119,10 +119,13 @@ function identidadeDoAmbiente(extra = {}) {
  * Cria a execução: diretório + manifesto com status RUNNING.
  * O manifesto é a autoridade de identidade — resultados só valem referenciando um runId.
  */
-function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerprint, testManifestFingerprint, escopo, ambiente }) {
+function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerprint, hardeningQueueFingerprint, testManifestFingerprint, escopo, ambiente }) {
   const runId = `run-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}-${crypto.randomBytes(4).toString('hex')}`;
   const dir = dirDaExecucao(rootDir, baseRel, runId);
-  fs.mkdirSync(path.join(dir, 'itens'), { recursive: true });
+  const dirItensNovo = path.join(dir, 'itens');
+  const stItensNovo = fs.lstatSync(dirItensNovo, { throwIfNoEntry: false });
+  if (stItensNovo && stItensNovo.isSymbolicLink()) throw new Error('ITENS_E_SYMLINK');
+  fs.mkdirSync(dirItensNovo, { recursive: true });
   const manifesto = {
     schemaVersion: 1,
     kind: 'bug-closure-regularization-run',
@@ -133,6 +136,9 @@ function iniciar({ rootDir, baseRel, commit, sourceFingerprint, inventoryFingerp
       commit,
       sourceFingerprint,
       inventoryFingerprint,
+      // Digest da FILA (candidatos) — distinto do inventário de sistema. É contra ele que a
+      // cobertura integral é conferida (achado A1-1 da 3ª passada).
+      hardeningQueueFingerprint: hardeningQueueFingerprint || null,
       testManifestFingerprint,
     },
     ambiente: ambiente || identidadeDoAmbiente(),
@@ -197,8 +203,34 @@ function gravarResultado({ rootDir, baseRel, runId, resultado, esperadoNoEscopo 
   };
   const semHash = JSON.stringify(corpo, null, 2);
   corpo.artifactSha256 = sha256Texto(semHash);
-  const destino = path.join(dirDaExecucao(rootDir, baseRel, runId), 'itens', `${resultado.id}.json`);
-  fs.writeFileSync(destino, `${JSON.stringify(corpo, null, 2)}\n`, 'utf8');
+  let dirDoRun;
+  try {
+    dirDoRun = dirDaExecucao(rootDir, baseRel, runId);
+  } catch (e) {
+    return { ok: false, motivo: e.message };
+  }
+  // Achado A4-1: `itens/` também é componente de caminho — symlink aqui ESCREVERIA fora.
+  const dirItensAlvo = path.join(dirDoRun, 'itens');
+  const stItens = fs.lstatSync(dirItensAlvo, { throwIfNoEntry: false });
+  if (stItens && stItens.isSymbolicLink()) return { ok: false, motivo: 'ITENS_E_SYMLINK' };
+  const destino = path.join(dirItensAlvo, `${resultado.id}.json`);
+  const stDestino = fs.lstatSync(destino, { throwIfNoEntry: false });
+  if (stDestino && stDestino.isSymbolicLink()) return { ok: false, motivo: 'RESULTADO_E_SYMLINK' };
+  // Escrita atômica: temporário imprevisível + rename (não segue symlink, não deixa parcial).
+  const tmp = path.join(dirItensAlvo, `.tmp-${process.pid}-${crypto.randomBytes(8).toString('hex')}`);
+  try {
+    const fd = fs.openSync(tmp, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+    try {
+      fs.writeSync(fd, `${JSON.stringify(corpo, null, 2)}\n`);
+      fs.fsyncSync(fd);
+    } finally {
+      try { fs.closeSync(fd); } catch (_) { /* já fechado */ }
+    }
+    fs.renameSync(tmp, destino);
+  } catch (e) {
+    try { fs.rmSync(tmp, { force: true }); } catch (_) { /* nada a limpar */ }
+    return { ok: false, motivo: `ESCRITA_FALHOU:${e.code || e.message}` };
+  }
   return { ok: true, abs: destino, sha256: corpo.artifactSha256 };
 }
 
@@ -218,6 +250,8 @@ function finalizar({ rootDir, baseRel, runId, status = STATUS.COMPLETED, observa
   m.resultados = processados;
   m.observacoes = observacoes;
   const idsEsperados = Array.isArray(m.escopo.idsEsperados) ? m.escopo.idsEsperados : [];
+  const stItensFinalizar = fs.lstatSync(dirItens, { throwIfNoEntry: false });
+  if (stItensFinalizar && stItensFinalizar.isSymbolicLink()) return { ok: false, motivo: 'ITENS_E_SYMLINK' };
   const arquivosItens = fs.existsSync(dirItens) ? fs.readdirSync(dirItens).filter((f) => f.endsWith('.json')) : [];
   const idsReais = [];
   for (const arquivo of arquivosItens) {
@@ -262,6 +296,12 @@ function lerResultados(rootDir, baseRel, runId) {
   const manifesto = lerManifesto(rootDir, baseRel, runId);
   if (!manifesto) return { ok: false, motivo: 'MANIFESTO_AUSENTE', resultados: [], manifesto: null };
   const dirItens = path.join(dir, 'itens');
+  // `itens/` também é componente de caminho: symlink aqui leria artefatos de fora da execução
+  // (achado (d) da 3ª passada). Recusa explícita, não confiança no hash do conteúdo.
+  const stItens = fs.lstatSync(dirItens, { throwIfNoEntry: false });
+  if (stItens && stItens.isSymbolicLink()) {
+    return { ok: false, motivo: 'ITENS_E_SYMLINK', resultados: [], manifesto, adulterados: [{ arquivo: 'itens', motivo: 'ITENS_E_SYMLINK' }] };
+  }
   const resultados = [];
   const adulterados = [];
   const arquivos = fs.existsSync(dirItens) ? fs.readdirSync(dirItens).filter((f) => f.endsWith('.json')).sort() : [];
@@ -284,7 +324,7 @@ function lerResultados(rootDir, baseRel, runId) {
       continue;
     }
     const ident = corpo.identidade || {};
-    for (const campo of ['commit', 'sourceFingerprint', 'inventoryFingerprint', 'testManifestFingerprint']) {
+    for (const campo of ['commit', 'sourceFingerprint', 'inventoryFingerprint', 'hardeningQueueFingerprint', 'testManifestFingerprint']) {
       if (String(ident[campo]) !== String(manifesto.identidade[campo])) {
         adulterados.push({ arquivo, motivo: `IDENTIDADE_DIVERGENTE:${campo}` });
         break;
@@ -310,18 +350,41 @@ function lerResultados(rootDir, baseRel, runId) {
  *   - algum artefato foi adulterado (hash não confere).
  */
 /**
+ * Candidatos REAIS do inventário do rootDir: defeitos que declaram fechamento sem prova válida,
+ * derivados pela MESMA regra do regularizador (`defect-registry`), com os mesmos filtros do
+ * escopo. É isso — e não a lista que o manifesto declara — que define "cobertura integral".
+ */
+function candidatosDoInventario(rootDir, escopo = {}) {
+  try {
+    // A REGRA vem do módulo (código); os DADOS vêm da fila do rootDir agregado. Carregar o
+    // registry do próprio rootDir faria de um diretório de evidência a autoridade da regra.
+    const registry = require('../../..' + '/governance/bug-closure/defect-registry');
+    const queuePath = path.join(rootDir, 'AI_MEMORY', 'hardening-queue.json');
+    const inventario = registry.carregarInventario({ queuePath, rootDir });
+    let candidatos = (inventario.defeitos || []).filter((d) => d.fechamentoNaoProvado === true);
+    const apenas = String(escopo.filtroSeveridade || 'ALL').toUpperCase();
+    if (apenas !== 'ALL') candidatos = candidatos.filter((d) => String(d.severity || '').toUpperCase() === apenas);
+    if (Array.isArray(escopo.idsSelecionados) && escopo.idsSelecionados.length > 0) {
+      candidatos = candidatos.filter((d) => escopo.idsSelecionados.includes(d.id));
+    }
+    const limite = Number(escopo.limite || 0);
+    if (limite > 0) candidatos = candidatos.slice(0, limite);
+    return candidatos.map((d) => String(d.id)).sort();
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
  * Digest canônico do inventário OFICIAL do rootDir (mesma função do resto do Bug Closure).
  * `null` quando não é possível calcular — o que impede declarar cobertura integral.
  */
 function digestDoInventarioOficial(rootDir) {
   try {
-    // A FUNÇÃO vem do módulo (código); os DADOS vêm do inventário do rootDir que está sendo
-    // agregado. Usar o módulo do próprio rootDir faria de um diretório de evidência a autoridade
-    // sobre o hash.
-    const { digestDoInventario } = require('../../..'
-      + '/governance/bug-closure/trusted-authorities');
-    const fila = JSON.parse(fs.readFileSync(path.join(rootDir, 'AI_MEMORY', 'hardening-queue.json'), 'utf8'));
-    return digestDoInventario(Array.isArray(fila.items) ? fila.items : []);
+    // Hash do ARQUIVO da fila — exatamente o valor que o regularizador grava em
+    // `identidade.hardeningQueueFingerprint`. Comparar digest-de-itens contra hash-de-arquivo
+    // reprovava toda execução genuína (achado A1-1 da 3ª passada).
+    return sha256Arquivo(path.join(rootDir, 'AI_MEMORY', 'hardening-queue.json'));
   } catch (_) {
     return null;
   }
@@ -362,7 +425,7 @@ function agregar({ rootDir, baseRel, runIds }) {
   }
 
   const referencia = execucoes[0].manifesto.identidade;
-  const campos = ['commit', 'sourceFingerprint', 'inventoryFingerprint', 'testManifestFingerprint'];
+  const campos = ['commit', 'sourceFingerprint', 'inventoryFingerprint', 'hardeningQueueFingerprint', 'testManifestFingerprint'];
   for (const e of execucoes) {
     for (const campo of campos) {
       if (String(e.manifesto.identidade[campo]) !== String(referencia[campo])) {
@@ -395,20 +458,30 @@ function agregar({ rootDir, baseRel, runIds }) {
     const esperado = Number(escopo.esperadoNoEscopo || 0);
     const idsEsperados = Array.isArray(escopo.idsEsperados) ? escopo.idsEsperados : [];
     const idsReais = e.resultados.map((r) => String(r.id));
-    // Cobertura INTEGRAL exige: escopo INTEGRAL, lista explícita de ids, e os artefatos
-    // cobrindo EXATAMENTE essa lista (nem a mais, nem a menos, sem repetição).
+    // Achado A1-2 (3ª passada): comparar com a lista do PRÓPRIO manifesto autenticava a fila,
+    // não o escopo — 1 id de 130 passava como integral. O conjunto esperado é DERIVADO da fila
+    // pela mesma regra do regularizador e tem de casar com o que foi executado.
+    const candidatosReais = candidatosDoInventario(rootDir, escopo);
+    const escopoConfere = Array.isArray(candidatosReais)
+      && candidatosReais.length > 0
+      && idsEsperados.length === candidatosReais.length
+      && candidatosReais.every((id, i) => String(idsEsperados[i]) === id);
     const cobreLista = idsEsperados.length > 0
       && new Set(idsReais).size === idsReais.length
       && idsReais.length === idsEsperados.length
       && idsEsperados.every((id) => idsReais.includes(String(id)));
-    const inventarioConfere = Boolean(digestRealDoInventario)
-      && String(e.manifesto.identidade.inventoryFingerprint) === String(digestRealDoInventario);
+    // Achado A1-1: o CLI grava `inventoryFingerprint` do system-inventory; o digest da FILA é
+    // outro campo. Comparar campos diferentes reprovava toda execução genuína.
+    const filaDoManifesto = e.manifesto.identidade.hardeningQueueFingerprint;
+    const filaConfere = Boolean(digestRealDoInventario)
+      && String(filaDoManifesto) === String(digestRealDoInventario);
     return escopo.tipo === 'INTEGRAL'
       && e.resultados.length > 0
       && esperado > 0
       && e.resultados.length >= esperado
       && cobreLista
-      && inventarioConfere
+      && escopoConfere
+      && filaConfere
       && Number(e.manifesto.resultados) === e.resultados.length;
   };
   const completo = execucoes.length === 1 && completaPorArtefatos(execucoes[0]);
@@ -447,5 +520,6 @@ module.exports = {
   validarBaseRel,
   validarIdResultado,
   digestDoInventarioOficial,
+  candidatosDoInventario,
   PADRAO_RUN_ID,
 };

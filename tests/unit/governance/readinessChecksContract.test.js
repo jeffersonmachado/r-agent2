@@ -203,3 +203,28 @@ describe('P1-D — resíduos do contrato exportado (A7)', () => {
     }
   });
 });
+
+// ─── 3ª passada da revisão independente (A7-1) ──────────────────────────────
+
+describe('P1-D — status usa ALLOWLIST de conclusivos (A7-1)', () => {
+  test('status desconhecido é inconclusivo, não passa por omissão', () => {
+    const checks = cheio({ QUEUE_CLOSURE_EVIDENCE: { ok: true, status: 'GARBAGE', bloqueante: true, detalhe: 'x' } });
+    const d = decidirVeredito({ checks, aprovacaoHumana: true });
+    expect(d.veredito).toBe('NOT_READY');
+    expect(d.problemas.some((p) => p.startsWith('CHECK_STATUS_DESCONHECIDO'))).toBe(true);
+  });
+
+  test('format chars fora da lista antiga também são removidos', () => {
+    for (const status of ['UNKNOWN\u2060', 'UNKNOWN\u00ad', 'UNKNOWN\u180e']) {
+      const checks = cheio({ QUEUE_CLOSURE_EVIDENCE: { ok: true, status, bloqueante: true, detalhe: 'x' } });
+      expect(decidirVeredito({ checks, aprovacaoHumana: true }).veredito).toBe('NOT_READY');
+    }
+  });
+
+  test('status conclusivo explícito continua passando', () => {
+    for (const status of ['PASS', 'OK', 'pass ']) {
+      const checks = cheio({ QUEUE_CLOSURE_EVIDENCE: { ok: true, status, bloqueante: true, detalhe: 'x' } });
+      expect(decidirVeredito({ checks, aprovacaoHumana: true }).veredito).toBe('ENGINEER_SUPERVISED_READY_GO');
+    }
+  });
+});

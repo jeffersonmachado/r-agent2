@@ -284,6 +284,7 @@ function executarAgregacao(runIds) {
     runIds,
     identidade: agregacao.identidade || null,
     completo: agregacao.completo === true,
+    coberturaIntegral: agregacao.coberturaIntegral || null,
     escopo: agregacao.escopo || null,
     duplicados: agregacao.duplicados || null,
     adulterados: agregacao.adulterados || null,
@@ -317,7 +318,8 @@ function main() {
   }
   const commit = headSha();
   const fingerprint = computeSourceFingerprint(ROOT);
-  const inventario = carregarInventario({ queuePath: path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json'), currentCommit: commit });
+  const queuePathOficial = path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json');
+  const inventario = carregarInventario({ queuePath: queuePathOficial, currentCommit: commit });
 
   const porId = new Map(JSON.parse(fs.readFileSync(path.join(ROOT, 'AI_MEMORY', 'hardening-queue.json'), 'utf8')).items.map((i) => [i.id, i]));
   let candidatos = inventario.defeitos.filter((d) => d.fechamentoNaoProvado === true);
@@ -365,9 +367,13 @@ function main() {
     esperadoNoEscopo: candidatos.length,
   };
   // Dry-run não produz evidência: não abre execução (nada é gravado).
+  // Digest da FILA (candidatos) — campo próprio: o `inventoryFingerprint` é o do system-inventory
+  // e comparar um contra o outro reprovava toda execução genuína (achado A1-1 da 3ª passada).
+  const hardeningQueueFingerprint = sha256De(queuePathOficial);
   const execucao = DRY_RUN ? null : runLib.iniciar({
     rootDir: ROOT, baseRel: EVIDENCIA_REL, commit,
-    sourceFingerprint: fingerprint, inventoryFingerprint, testManifestFingerprint, escopo,
+    sourceFingerprint: fingerprint, inventoryFingerprint, hardeningQueueFingerprint,
+    testManifestFingerprint, escopo,
   });
 
   // ── MODO PROPOSTA ────────────────────────────────────────────────────────

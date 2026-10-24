@@ -515,6 +515,8 @@ const CHECKS_OBRIGATORIOS = Object.freeze([
  * Resultados que NÃO são aprovação. Um check com `ok:true` e status inconclusivo é contraditório
  * e reprova: nunca se converte UNKNOWN/NOT_EXECUTED/TIMEOUT/SKIPPED em PASS.
  */
+const STATUS_CONCLUSIVOS = Object.freeze(new Set(['', 'PASS', 'OK', 'SUCCESS']));
+
 const STATUS_INCONCLUSIVOS = Object.freeze(new Set([
   'UNKNOWN', 'NOT_EXECUTED', 'TIMEOUT', 'SKIPPED', 'BLOCKED', 'ERROR', 'PENDING', 'INCONCLUSIVO', 'FLAKY',
 ]));
@@ -585,13 +587,17 @@ function decidirVeredito({ checks, aprovacaoHumana = false, catalogo = CHECKS_OB
     if (typeof check.ok !== 'boolean') problemas.push(`CHECK_SEM_RESULTADO_BOOLEANO:${id}`);
     if (typeof check.detalhe !== 'string' || check.detalhe.trim() === '') problemas.push(`CHECK_SEM_EVIDENCIA:${id}`);
 
-    // Achado A7: `UNKNOWN\u200b` e fullwidth `ＵＮＫＮＯＷＮ` escapavam. Normaliza NFKC e remove
-    // caracteres de largura zero/controle antes de comparar.
+    // Achado A7: `UNKNOWN\u200b` e fullwidth `ＵＮＫＮＯＷＮ` escapavam. Achado A7-1 (3ª passada):
+    // deny-list deixava passar U+2060/U+00AD/U+180E/combining e QUALQUER status desconhecido.
+    // Regra final: ALLOWLIST de status conclusivos; todo o resto é inconclusivo.
     const status = String(check.status || '')
       .normalize('NFKC')
-      .replace(/[\u200b-\u200f\u2028\u2029\ufeff]/g, '')
+      .replace(/[\p{Cf}\p{Mn}\p{Cc}]/gu, '')
       .trim()
       .toUpperCase();
+    if (status !== '' && !STATUS_CONCLUSIVOS.has(status) && !STATUS_INCONCLUSIVOS.has(status)) {
+      problemas.push(`CHECK_STATUS_DESCONHECIDO:${id}:${status}`);
+    }
     if (status && STATUS_INCONCLUSIVOS.has(status)) problemas.push(`CHECK_INCONCLUSIVO:${id}:${status}`);
 
     if (identidade && check.identidade) {
@@ -696,6 +702,7 @@ module.exports = {
   IMPEDIDOS,
   SECOES_OBRIGATORIAS,
   CHECKS_OBRIGATORIOS,
+  STATUS_CONCLUSIVOS,
   STATUS_INCONCLUSIVOS,
   decidirVeredito,
 };

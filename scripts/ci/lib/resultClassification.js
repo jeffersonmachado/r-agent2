@@ -77,12 +77,13 @@ function classificarResultado({
   if (timedOut) {
     return { classe: CLASSES.TIMEOUT, ok: false, motivo: 'orçamento de tempo estourado — timeout nunca é sucesso' };
   }
-  // Achado A2 da 2ª passada: a assinatura de infraestrutura só rebaixava quando `exitCode ===
-  // null`. Uma falha de ambiente que sai com exit 1 ("Could not resolve host", "Cannot connect to
-  // the Docker daemon") era aceita como "falha esperada" e o cenário negativo passava pelo motivo
-  // errado. Agora infraestrutura vence SEMPRE, com ou sem exit code.
+  // Achado A2 (2ª passada): a assinatura de infraestrutura só rebaixava quando `exitCode === null`
+  // — uma falha de ambiente com exit 1 era aceita como "falha esperada".
+  // Achado A2-1 (3ª passada): mover a checagem para ANTES do ramo positivo fazia um `npm test`
+  // VERDE (exit 0) cujo output mencionasse "EAI_AGAIN"/"command not found" virar BLOCKED.
+  // Regra final: infraestrutura só reclassifica quando o processo NÃO teve sucesso.
   const infra = ASSINATURAS_INFRA.find((re) => re.test(texto));
-  if (infra) {
+  if (infra && exitCode !== 0) {
     return { classe: CLASSES.INFRASTRUCTURE_ERROR, ok: false, motivo: `falha de infraestrutura: ${infra}` };
   }
   if (exitCode === null && signal) {

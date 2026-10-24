@@ -877,7 +877,10 @@ function cenarioDockerIndisponivel(ctx, args) {
   passo('bootstrap', 'npm', ['run', '-s', 'ci:bootstrap'], { cwd: clonePath, env, logDir, timeoutMs: args.timeoutMin * 60 * 1000 });
   const envSemDocker = { ...env, DOCKER_HOST: 'unix:///var/run/does-not-exist.sock' };
   passo('sandbox-sem-docker', 'npx', [
-    'jest', 'tests/integration/engineering/engineeringRouterExecutionSandboxSecurity.test.js',
+    // A2-2 (3ª passada): o caminho antigo (`tests/integration/engineering/...`) NÃO existe — o
+    // cenário `docker-unavailable` saía com "No tests found" e, antes do endurecimento, era
+    // aceito como "reprovou como esperado": a evidência de sandbox nunca mediu o sandbox.
+    'jest', 'tests/unit/engineeringRouterExecutionSandboxSecurity.test.js',
     '--runInBand', '--forceExit', '--silent',
   ], {
     cwd: clonePath, env: envSemDocker, logDir, esperado: 1,
