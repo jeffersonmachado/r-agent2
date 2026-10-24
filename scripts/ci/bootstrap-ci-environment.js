@@ -26,13 +26,45 @@
  *   5. grafo de impacto   → precisa ser construído DEPOIS de qualquer alteração de fonte
  *   6. geradores/validadores de artefato
  *   7. prova de existência dos artefatos exigidos pela suíte obrigatória
+ *
+ * MODO `--artifacts-only` (`npm run ci:artifacts`).
+ *
+ * Existe porque `jest tests/unit` NÃO é autossuficiente: ~20 asserções leem artefatos ignorados
+ * pelo git (`reports/*.json`, `governance/*.json`, `qa-mesh/meshRegistry.json`) que nenhum
+ * checkout contém. Medido em 2026-10-24 em duas árvores idênticas (mesmo Node, mesmo lockfile,
+ * mesmo `.env`): sem os artefatos o L0 reprovava 20-23 testes com `ENOENT`/`GRAPH_ABSENT`; com os
+ * artefatos produzidos pelos mesmos produtores canônicos, sobrava apenas
+ * `tests/unit/governance/modelDrivenE2e.test.js`, cuja prova (`qa/smoke/prod-like/*.json`) só
+ * existe depois de um smoke prod-like contra stack viva (job `prod-like-smoke` do CI).
+ *
+ * Este modo NÃO substitui o ambiente completo: ele só executa os passos 4-7 (índice do mesh,
+ * grafo de impacto, produtores de artefato e prova de existência), sem `system:bootstrap`, sem
+ * seed e sem Docker. Nada é fabricado: cada artefato é escrito pelo seu produtor canônico, o
+ * veredito de cada produtor (PASS/NO_GO/ESCALATE) fica registrado como está e o veredito do
+ * relatório continua sendo sobre o AMBIENTE (`READY`/`INCOMPLETE`), nunca sobre um gate.
  */
 
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const ROOT = path.join(__dirname, '..', '..');
+const ROOT = resolverRoot();
+
+/**
+ * Raiz do bootstrap. O override existe para TESTE de comportamento (montar uma raiz descartável
+ * com produtores falsos e provar a ordem/ausência de passos pesados) e é recusado em produção;
+ * quando usado, a raiz efetiva é registrada no relatório para ficar auditável.
+ */
+function resolverRoot() {
+  const override = process.env.CI_BOOTSTRAP_ROOT;
+  if (!override) return path.join(__dirname, '..', '..');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[ci:bootstrap] CI_BOOTSTRAP_ROOT recusado em NODE_ENV=production');
+    process.exit(2);
+  }
+  return path.resolve(override);
+}
+
 const REPORT_PATH = path.join(ROOT, 'reports', 'ci-bootstrap-report.json');
 
 const NODE_MIN = [20, 19];
@@ -326,8 +358,54 @@ function verificarArtefatos() {
   return faltando.length === 0;
 }
 
-function main() {
-  console.log('[ci:bootstrap] preparando ambiente reprodutível (clone limpo / runner efêmero)');
+/**
+ * Passos 4-7 do bootstrap: índice do mesh, grafo de impacto, produtores de artefato e prova de
+ * existência. Compartilhados entre o modo completo e o modo `--artifacts-only` para que exista
+ * UMA definição da ordem e da lista de produtores.
+ */
+function produzirArtefatos() {
+  // 3) índice do QA Mesh (manutenção de índice: não executa cenário).
+  npmRun('mesh-registry', 'qa:mesh:refresh');
+
+  // 4) grafo de impacto — DEPOIS de qualquer alteração de fonte.
+  rodar('impact-graph', 'node', ['scripts/governance/build-impact-graph.js']);
+
+  // 5) artefatos consumidos pela suíte obrigatória. Os exit codes de VEREDITO são registrados
+  //    como veredito (nunca como PASS) e a prova de existência é feita no passo 6.
+  npmRun('coverage-completeness', 'validate:coverage-completeness');
+  npmRun('benchmark-sufficiency', 'validate:benchmark-sufficiency');
+  npmRun('evo-contract', 'validate:evo-contract');
+  npmRun('layer-conventions', 'validate:layer-conventions');
+  npmRun('journey-projections', 'journey:projections');
+  npmRun('json-persistence-audit', 'audit:json-persistence');
+  npmRun('timeout-architecture', 'validate:timeout-architecture', { aceitaVeredito: [1] });
+  npmRun('engineering-router-v2', 'validate:engineering-router-v2', { aceitaVeredito: [1, 2] });
+  npmRun('governance-summary', 'validate:governance-summary', { aceitaVeredito: [1] });
+  npmRun('impact-validation', 'impact:validate', { aceitaVeredito: [2, 3] });
+
+  // 6) prova de existência dos artefatos exigidos pela suíte obrigatória.
+  return verificarArtefatos();
+}
+
+function parseArgs(argv) {
+  return {
+    // `--artifacts-only`: prepara SÓ os artefatos consumidos por `tests/unit`. Não toca `.env`,
+    // banco, seed, Docker ou build — pressupõe dependências instaladas e infra já disponível.
+    artifactsOnly: argv.includes('--artifacts-only'),
+  };
+}
+
+function main(argv = process.argv.slice(2)) {
+  const args = parseArgs(argv);
+  console.log(`[ci:bootstrap] preparando ambiente reprodutível (clone limpo / runner efêmero)${args.artifactsOnly ? ' — modo artifacts-only' : ''}`);
+
+  if (args.artifactsOnly) {
+    const artefatosOk = produzirArtefatos();
+    const veredito = artefatosOk && passos.every((p) => p.ok) ? 'READY' : 'INCOMPLETE';
+    escreverRelatorio({ veredito, modo: 'artifacts-only' });
+    console.log(`[ci:bootstrap] modo=artifacts-only veredito=${veredito} — relatório em reports/ci-bootstrap-report.json`);
+    return veredito === 'READY' ? 0 : 1;
+  }
 
   const preflightOk = preflight();
   if (!preflightOk) {
@@ -360,44 +438,29 @@ function main() {
   // 2) dados sintéticos mínimos (tenant `system` + superadmin) — sem clientes reais.
   rodar('seed-sintetico', 'node', ['api/db/seed.js']);
 
-  // 3) índice do QA Mesh (manutenção de índice: não executa cenário).
-  npmRun('mesh-registry', 'qa:mesh:refresh');
-
-  // 4) grafo de impacto — DEPOIS de qualquer alteração de fonte.
-  rodar('impact-graph', 'node', ['scripts/governance/build-impact-graph.js']);
-
-  // 5) artefatos consumidos pela suíte obrigatória. Os exit codes de VEREDITO são registrados
-  //    como veredito (nunca como PASS) e a prova de existência é feita no passo 6.
-  npmRun('coverage-completeness', 'validate:coverage-completeness');
-  npmRun('benchmark-sufficiency', 'validate:benchmark-sufficiency');
-  npmRun('evo-contract', 'validate:evo-contract');
-  npmRun('layer-conventions', 'validate:layer-conventions');
-  npmRun('journey-projections', 'journey:projections');
-  npmRun('json-persistence-audit', 'audit:json-persistence');
-  npmRun('timeout-architecture', 'validate:timeout-architecture', { aceitaVeredito: [1] });
-  npmRun('engineering-router-v2', 'validate:engineering-router-v2', { aceitaVeredito: [1, 2] });
-  npmRun('governance-summary', 'validate:governance-summary', { aceitaVeredito: [1] });
-  npmRun('impact-validation', 'impact:validate', { aceitaVeredito: [2, 3] });
-
-  const artefatosOk = verificarArtefatos();
+  // 3-6) artefatos (mesh, grafo de impacto, produtores, prova de existência).
+  const artefatosOk = produzirArtefatos();
 
   const veredito = artefatosOk && passos.every((p) => p.ok) ? 'READY' : 'INCOMPLETE';
-  escreverRelatorio({ veredito });
+  escreverRelatorio({ veredito, modo: 'completo' });
   console.log(`[ci:bootstrap] veredito=${veredito} — relatório em reports/ci-bootstrap-report.json`);
   return veredito === 'READY' ? 0 : 1;
 }
 
-function escreverRelatorio({ veredito }) {
+function escreverRelatorio({ veredito, modo = 'completo' }) {
   const relatorio = {
     artifactType: 'ci-bootstrap-report',
     artifactVersion: 1,
     generatedAt: nowIso(),
     veredito,
+    modo,
     /**
      * Veredito do bootstrap NÃO é veredito de gate: `READY` significa "ambiente preparado e
      * artefatos exigidos existentes". Os gates continuam sendo os validadores canônicos.
      */
     fonteDeVerdadeDeGate: 'reports/governance-score.json / validadores canônicos — nunca este arquivo',
+    raiz: ROOT,
+    raizOverride: Boolean(process.env.CI_BOOTSTRAP_ROOT),
     nodeVersion: process.versions.node,
     passos,
   };
@@ -409,4 +472,4 @@ if (require.main === module) {
   process.exit(main());
 }
 
-module.exports = { main, ARTEFATOS_OBRIGATORIOS };
+module.exports = { main, parseArgs, ARTEFATOS_OBRIGATORIOS };

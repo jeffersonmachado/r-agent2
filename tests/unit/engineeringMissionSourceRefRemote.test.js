@@ -26,7 +26,21 @@ const { execFileSync } = require('child_process');
 
 const missionSourceService = require('../../api/services/engineeringMission/missionSourceService');
 
-const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+/**
+ * AMBIENTE GIT SANEADO (medido 2026-10-24). O processo que executa a suíte pode injetar
+ * configuração de git por `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_n`/`GIT_CONFIG_VALUE_n` — nesta
+ * máquina vinha `safe.bareRepository=explicit`, e TODO comando `git` executado com `cwd` dentro
+ * do repositório BARE de prova (linha do `symbolic-ref HEAD`) morria com
+ * `fatal: cannot use bare repository`, reprovando as 3 asserções sem nenhum defeito de produto.
+ * O contrato testado aqui é a resolução de ref, não a política git do host: a injeção do processo
+ * pai é descartada (`GIT_CONFIG_COUNT=0`, mesma técnica de `scripts/ci/clean-checkout-verify.js`)
+ * em vez de afrouxar as asserções.
+ */
+const git = (cwd, ...args) => execFileSync('git', args, {
+  cwd,
+  encoding: 'utf8',
+  env: { ...process.env, GIT_CONFIG_COUNT: '0' },
+}).trim();
 
 describe('readMainCommit — fonte da missão quando a linha principal só existe no remoto', () => {
   let raiz = null;
