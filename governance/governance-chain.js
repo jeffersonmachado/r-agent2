@@ -512,8 +512,16 @@ function caminhosCanonicos(opcoes = {}) {
     const absolutoLayer = l && l.path ? path.resolve(String(l.path)) : null;
     // Re-base: o caminho canônico é SEMPRE relativo à raiz da verificação. Em produção a raiz é o
     // repositório; em teste é um sandbox com o MESMO layout canônico (nunca "caminho livre").
+    // Re-base SÓ quando o caminho da camada não está já dentro da raiz pedida. Sem esta checagem, um
+    // artefato declarado DENTRO do sandbox era reescrito por `join(raiz, relative(ROOT, …))` — que só
+    // coincide quando a profundidade de diretórios é a mesma. Medido no checkout limpo de 2026-10-25
+    // (clone em `/tmp/rap-ci-clean-*/ria/r-agent2`): `package` e `sidecar_manifest` viravam `null` e a
+    // fixture explodia com "path argument must be of type string".
+    const dentroDaRaizPedida = absolutoLayer ? !path.relative(raiz, absolutoLayer).startsWith('..') : false;
     const absoluto = absolutoLayer
-      ? (raiz === ROOT ? absolutoLayer : path.join(raiz, path.relative(ROOT, absolutoLayer)))
+      ? (dentroDaRaizPedida || raiz === ROOT
+        ? absolutoLayer
+        : path.join(raiz, path.relative(ROOT, absolutoLayer)))
       : null;
     const dentro = absoluto ? !path.relative(raiz, absoluto).startsWith('..') : false;
     return {
