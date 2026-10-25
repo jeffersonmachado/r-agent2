@@ -380,6 +380,21 @@ e consumido pelo L0 via `download-artifact`. Em árvore de desenvolvimento o pro
 paridade do §5.8) a suíte passa 6/6. Classificação: `ENVIRONMENT` (dependência declarada no workflow),
 não defeito de código — e o próprio teste falha de forma autoexplicativa.
 
+### 6.1-bis O commit ENTREGUE foi revalidado (não só o commit de trabalho)
+
+O merge muda o objeto que fica em `dev/engineering-hardening`: o entregue é o merge commit, não o
+último commit da branch de trabalho. Por isso o harness foi executado de novo **no merge commit**:
+
+| Cenário | Commit | Resultado |
+|---|---|---|
+| CI (push na branch de destino) | `16dac909b` (merge do #16) | run `40183216686` = **success** |
+| CI (push na branch de destino) | `eac0fae08` (merge do #17) | run `40185205480` = **success** |
+| `ci:clean-checkout --scenario clean` | `eac0fae08` | **PASS** (`clean-checkout-20261025115507853-9d0ec3`) |
+| `ci:clean-checkout --scenario l2-system` | `eac0fae08` | **PASS** (`clean-checkout-20261025123029082-702e93`) |
+
+Nos dois cenários os passos da fase R aparecem como `foraDeEscopo` / `FASE_R_NAO_SOLICITADA` — não
+como FAIL — porque certificação exige âncoras externas (ver §12.4).
+
 ### 6.2 Falhas de ENVIRONMENT encontradas durante a regressão (não são regressão)
 
 4 suítes `engineeringRouter*` reprovaram por **ausência de `.env`** na árvore (removido na limpeza da
@@ -532,6 +547,7 @@ PUBLISHED             = FALSE
 | `CI_VALIDATED_SHA` | `23ab5d768` (`40114341579`), `c5230cbf0` (`40116481472`), `83b50f1e4` (`40123706119`), `78eaacc22` (`40137766146`), `7d3dcc5c1` (`40138500740`) | job L0+L1 `success` em todos; `A2-sha-esperado` confirma identidade |
 | `L2_VALIDATED_SHA` | `83b50f1e4` | `--scenario l2-system` **PASS** (clone limpo, bootstrap 102 s, `l2-test-system` 68 s) |
 | `CLEAN_VALIDATED_SHA` | `83b50f1e4` | `--scenario clean` **PASS**; `--scenario missing-artifact` **PASS** |
+| `DELIVERED_COMMIT_VALIDATED` | `eac0fae08` (merge de #17 em `dev/engineering-hardening`) | CI `40185205480` = success · `--scenario clean` **PASS** (runId `clean-checkout-20261025115507853-9d0ec3`) · `--scenario l2-system` **PASS** (runId `clean-checkout-20261025123029082-702e93`) |
 
 O merge commit do PR é o objeto realmente testado pelo runner (é o que o `pull_request` executa), e o
 gate ASSERE a identidade (`test "$(git rev-parse HEAD)" = "$GITHUB_SHA"` + `A2-sha-esperado`), então a
