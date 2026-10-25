@@ -25,12 +25,16 @@ const {
   avaliarWorktreeParaReparo,
   parseStatusPorcelain,
   listarAllowlistDeReparo,
+  listarRastreados,
 } = require('../../../scripts/governance/lib/lineage-repair');
 
 const RAIZ = path.resolve(__dirname, '..', '..', '..');
 const SELO = path.join(RAIZ, 'scripts', 'governance', 'seal-release.sh');
 
 const ALLOW = ['governance/final-proof-report.json', 'governance/final-readiness-report.json', 'governance/.current-run.json'];
+// `governance/.current-run.json` está no .gitignore: entra na ALLOW (o estampador pode escrevê-lo) mas
+// não no conjunto RASTREADO — artefato ignorado não é versionado e `git add` o recusaria.
+const RASTREADOS = ['governance/final-proof-report.json', 'governance/final-readiness-report.json'];
 
 describe('reparo de lineage — decisão por allowlist (unidade)', () => {
   test('worktree sujo com arquivo NÃO autorizado ⇒ recusa nomeada e nada staged', () => {
@@ -38,7 +42,7 @@ describe('reparo de lineage — decisão por allowlist (unidade)', () => {
       ' M governance/final-proof-report.json',
       ' M api/services/algo.js',
     ].join('\n');
-    const d = avaliarWorktreeParaReparo(status, ALLOW);
+    const d = avaliarWorktreeParaReparo(status, ALLOW, RASTREADOS);
     expect(d.ok).toBe(false);
     expect(d.staged).toBe(false);
     expect(d.motivo).toContain('WORKTREE_COM_ARQUIVO_NAO_AUTORIZADO');
@@ -47,25 +51,30 @@ describe('reparo de lineage — decisão por allowlist (unidade)', () => {
 
   test('somente arquivos da allowlist sujos ⇒ permite reparo e informa o que commitar', () => {
     const status = [' M governance/final-proof-report.json', ' M governance/.current-run.json'].join('\n');
-    const d = avaliarWorktreeParaReparo(status, ALLOW);
+    const d = avaliarWorktreeParaReparo(status, ALLOW, RASTREADOS);
     expect(d.ok).toBe(true);
     expect(d.staged).toBe(true);
-    expect(d.paraCommitar).toEqual(['governance/.current-run.json', 'governance/final-proof-report.json']);
+    // Só o VERSIONADO entra no commit; o ponteiro do run é ignorado pelo git e não é persistível.
+    expect(d.paraCommitar).toEqual(['governance/final-proof-report.json']);
+    expect(d.ignoradosForaDoCommit).toEqual(['governance/.current-run.json']);
   });
 
   test('worktree limpo ⇒ NADA_A_REPARAR (sem commit vazio)', () => {
-    const d = avaliarWorktreeParaReparo('', ALLOW);
-    expect(d).toEqual({ ok: true, motivo: 'NADA_A_REPARAR', naoAutorizados: [], paraCommitar: [], staged: false });
+    const d = avaliarWorktreeParaReparo('', ALLOW, RASTREADOS);
+    expect(d.ok).toBe(true);
+    expect(d.motivo).toBe('NADA_A_REPARAR');
+    expect(d.paraCommitar).toEqual([]);
+    expect(d.staged).toBe(false);
   });
 
   test('arquivo NÃO rastreado nunca é autorizado, mesmo com nome parecido', () => {
-    const d = avaliarWorktreeParaReparo('?? governance/final-proof-report.json.bak', ALLOW);
+    const d = avaliarWorktreeParaReparo('?? governance/final-proof-report.json.bak', ALLOW, RASTREADOS);
     expect(d.ok).toBe(false);
     expect(d.naoAutorizados).toEqual(['governance/final-proof-report.json.bak']);
   });
 
   test('rename conta os DOIS lados (origem e destino precisam ser autorizados)', () => {
-    const d = avaliarWorktreeParaReparo('R  governance/antigo.json -> governance/final-proof-report.json', ALLOW);
+    const d = avaliarWorktreeParaReparo('R  governance/antigo.json -> governance/final-proof-report.json', ALLOW, RASTREADOS);
     expect(d.ok).toBe(false);
     expect(d.naoAutorizados).toContain('governance/antigo.json');
   });
@@ -74,6 +83,21 @@ describe('reparo de lineage — decisão por allowlist (unidade)', () => {
     expect(parseStatusPorcelain('\n M arquivo com espaço.json\n')).toEqual([
       { status: ' M', caminho: 'arquivo com espaço.json' },
     ]);
+  });
+
+  test('a allowlist REAL contém artefatos ignorados: o reparo nunca tenta `git add` neles', () => {
+    const al = listarAllowlistDeReparo();
+    const rastreados = listarRastreados(al);
+    // Medido em 2026-10-25: 62 caminhos na allowlist, 25 rastreados — 37 ignorados pelo .gitignore.
+    expect(rastreados.length).toBeGreaterThan(0);
+    expect(rastreados.length).toBeLessThan(al.length);
+    const ignorados = al.filter((caminho) => !rastreados.includes(caminho));
+    expect(ignorados.length).toBeGreaterThan(0);
+    // E a decisão nunca manda commitar um caminho ignorado.
+    const statusIgnorado = ignorados.map((caminho) => ` M ${caminho}`).join('\n');
+    const d = avaliarWorktreeParaReparo(statusIgnorado, al, rastreados);
+    expect(d.paraCommitar).toEqual([]);
+    expect(d.motivo).toBe('APENAS_ARTEFATOS_IGNORADOS');
   });
 
   test('allowlist deriva da MESMA taxonomia canônica e inclui o ponteiro do run', () => {
@@ -90,9 +114,11 @@ describe('reparo de lineage — comportamento em repositório git real (remoto l
   let work;
   let remoto;
 
-  const git = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  // `-c safe.bareRepository=all`: git >= 2.38 recusa uso IMPLÍCITO de repositório bare
+  // (`safe.bareRepository=explicit` é o default) e o teste falhava em máquina sem configuração.
+  const git = (cwd, args) => execFileSync('git', ['-c', 'safe.bareRepository=all', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   // `status --porcelain` NÃO pode passar por trim: o espaço à esquerda faz parte do formato XY.
-  const gitBruto = (cwd, args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const gitBruto = (cwd, args) => execFileSync('git', ['-c', 'safe.bareRepository=all', ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
   beforeAll(() => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'seal-repair-'));

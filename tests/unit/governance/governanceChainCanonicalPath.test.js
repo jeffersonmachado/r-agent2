@@ -82,6 +82,29 @@ function mapaReal() {
 
 afterAll(() => fs.rmSync(TMP, { recursive: true, force: true }));
 
+/** Sandbox mínimo com layout canônico (espelha tests/helpers/chainSandbox.js). */
+function criarSandboxLocal() {
+  const raiz = fs.mkdtempSync(path.join(os.tmpdir(), 'chain-canon-'));
+  const dist = path.join(raiz, 'dist', 'release');
+  fs.mkdirSync(dist, { recursive: true });
+  const artifact = { zipPath: path.join(dist, 'a.zip'), manifestPath: path.join(dist, 'a.manifest.json') };
+  fs.writeFileSync(artifact.zipPath, 'ZIP');
+  fs.writeFileSync(artifact.manifestPath, '{"a":1}');
+  const caminhos = caminhosCanonicos({ raiz, artifact });
+  for (const item of caminhos) {
+    if (!item.resolvido) continue;
+    const abs = path.join(raiz, item.path);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    if (!fs.existsSync(abs)) fs.writeFileSync(abs, JSON.stringify({ elo: item.id }));
+  }
+  return {
+    raiz,
+    caminhos,
+    opcoes: { raiz, artifact },
+    limpar: () => fs.rmSync(raiz, { recursive: true, force: true }),
+  };
+}
+
 describe('P0 — o caminho do elo não pode vir do manifesto verificado', () => {
   test('ATAQUE: ids canônicos apontando para arquivos substitutos com hashes recalculados', () => {
     const cadeia = montarCadeia((id) => arquivo(id));
@@ -135,6 +158,40 @@ describe('P0 — o caminho do elo não pode vir do manifesto verificado', () => 
     expect(sidecar.resolvido).toBe(false);
     // Os oito elos de caminho fixo continuam resolvidos.
     expect(mapa.filter((m) => m.resolvido)).toHaveLength(8);
+  });
+
+  // ── ACHADOS DA REVISÃO ADVERSARIAL DE 2026-10-25 (P0/P2 do revisor) ──────────
+  test('ATAQUE (revisor P0): barra final + homônimo em dist/ — o hash vinha do FALLBACK por basename', () => {
+    const sandbox = criarSandboxLocal();
+    // Substituto homônimo onde o fallback procuraria (dist/release/), com bytes diferentes.
+    fs.writeFileSync(path.join(sandbox.raiz, 'dist', 'release', 'evidence-manifest.json'), 'SUBSTITUTO');
+    let cumHash = GENESIS_HASH;
+    const links = sandbox.caminhos.map((item) => {
+      const rel = item.id === 'evidence_manifest' ? `${item.path}/` : item.path; // BARRA FINAL
+      const absHash = item.id === 'evidence_manifest'
+        ? path.join(sandbox.raiz, 'dist', 'release', 'evidence-manifest.json')
+        : path.join(sandbox.raiz, item.path);
+      const hash = sha256File(absHash);
+      cumHash = sha256String(`${cumHash}:${hash}`);
+      return { id: item.id, path: rel, exists: true, hash, cumulativeHash: cumHash };
+    });
+
+    const r = verifyChain({ chainRoot: cumHash, links }, sandbox.opcoes);
+    expect(r.valid).toBe(false);
+    expect(r.certifiable).toBe(false);
+    // Os BYTES de certificação vêm do caminho canônico, não do arquivo que o manifesto indicou.
+    const motivos = [...(r.structuralFailures || []), ...(r.hashFailures || [])].map((f) => f.reason);
+    expect(motivos).toEqual(expect.arrayContaining(['hash_from_canonical_mismatch']));
+    sandbox.limpar();
+  });
+
+  test('ATAQUE (revisor P2): elo apontando para DIRETÓRIO não faz a verificação lançar', () => {
+    const cadeia = montarCadeia((id) => arquivo(id));
+    cadeia.links[0].path = 'governance';
+    let r;
+    expect(() => { r = verifyChain(cadeia, { distDir: path.join(TMP, 'sem-dist') }); }).not.toThrow();
+    expect(r.valid).toBe(false);
+    expect(r.structuralFailures.map((f) => f.reason)).toContain('path_not_canonical');
   });
 
   test('CONTRATO: o mapa canônico cobre exatamente os 10 ids, na ordem canônica', () => {

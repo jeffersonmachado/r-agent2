@@ -32,8 +32,16 @@ const GENESIS_HASH = '0'.repeat(64);
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 function sha256File(filePath) {
-  if (!fs.existsSync(filePath)) return null;
-  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  // Nunca lança: caminho inexistente, diretório ou arquivo ilegível devolvem `null` (ausência de
+  // hash é dado da verificação, não exceção que aborta o gate). Medido na revisão de 2026-10-25:
+  // um elo apontando para `governance/` (diretório) fazia `verifyChain` lançar EISDIR.
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    if (!fs.statSync(filePath).isFile()) return null;
+    return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  } catch (_) {
+    return null;
+  }
 }
 
 function sha256String(str) {
@@ -359,21 +367,17 @@ function verifyChainHashes(storedChain, opcoes = {}) {
   let cumHash  = GENESIS_HASH;
 
   for (const link of storedChain.links) {
-    let abs = path.join(raiz, link.path);
+    const abs = path.join(raiz, link.path);
 
-    // Suportar nova estrutura normalizada: dist/release/ e dist/governance/ e dist/signatures/
-    // Se o arquivo não existe no caminho original, tentar caminhos alternativos
-    if (!fs.existsSync(abs)) {
-      const base = path.basename(link.path);
-      const alternatives = [
-        path.join(raiz, 'dist', 'release', base),       // dist/release/<zip|manifest>
-        path.join(raiz, 'dist', 'governance', base),    // dist/governance/<json>
-        path.join(raiz, 'dist', 'signatures', base),    // dist/signatures/<sig>
-      ];
-      for (const alt of alternatives) {
-        if (fs.existsSync(alt)) { abs = alt; break; }
-      }
-    }
+    // FALLBACK POR BASENAME REMOVIDO (P0 da revisão adversarial de 2026-10-25).
+    // Aqui havia: se `link.path` não existisse, procurar `dist/{release,governance,signatures}/<base>`.
+    // Dois problemas MEDIDOS: (a) `path.resolve` (usado na checagem de caminho canônico) normaliza
+    // barra final e `path.join` não, então `governance/x.json/` passava na checagem de caminho e o
+    // hash era lido de OUTRO arquivo em `dist/`; (b) `scripts/two-pass-release.sh` deixa cópias
+    // homônimas em `dist/governance/`, então o "slot substituto" existe sem escrever em `governance/`.
+    // Resultado: `valid: true` com os bytes certificados diferentes dos canônicos — o mesmo defeito
+    // que a missão anterior fechou, por outra porta. Bytes de certificação agora vêm SÓ do caminho
+    // canônico (ver `verificarHashesCanonicos`), e caminho ausente é falha, não motivo de fallback.
 
     const currentHash  = sha256File(abs);
     const exists       = currentHash !== null;
@@ -569,12 +573,57 @@ function verificarCaminhosCanonicos(chain, mapa, raiz = ROOT) {
       failures.push({ id, reason: 'path_not_canonical', esperado: canonico.path, declarado });
       continue;
     }
-    // Sem arquivo nos dois lados não há o que comparar: o contrato estrutural reprova a ausência.
-    if (realDeclarado && !realCanonico) {
+    // Declarado não existe (ou o canônico não existe): o elo NÃO pode passar por caminho. Antes, a
+    // condição exigia `realDeclarado`, então `link.path` apontando para um caminho inexistente
+    // (`...json/` com barra final, por exemplo) escapava da checagem e o hash vinha do fallback.
+    if (!realDeclarado || !realCanonico) {
       failures.push({ id, reason: 'path_not_canonical', esperado: canonico.path, declarado });
     }
   }
 
+  return failures;
+}
+
+/**
+ * Verificação de BYTES a partir do caminho CANÔNICO (P0 da revisão adversarial de 2026-10-25).
+ *
+ * `verifyChainHashes` continua sendo a matemática diagNÓSTICA sobre `link.path`. Certificação, porém,
+ * não pode depender de `link.path`: aqui cada elo é lido do caminho que a ARQUITETURA define para
+ * aquele id e comparado com o que o manifesto declara. Divergência ⇒ falha bloqueante, mesmo que a
+ * aritmética sobre `link.path` feche.
+ *
+ * @returns {Array<{id:string, reason:string, esperado?:string, canonico?:string}>}
+ */
+function verificarHashesCanonicos(chain, mapa, raiz) {
+  const links = chain && Array.isArray(chain.links) ? chain.links : [];
+  if (links.length === 0) return [];
+  const canonicos = mapa || caminhosCanonicos({ raiz });
+  const porId = new Map(canonicos.map((c) => [c.id, c]));
+  const failures = [];
+
+  let cumHash = GENESIS_HASH;
+  for (const link of links) {
+    const id = String((link && link.id) || '');
+    const canonico = porId.get(id);
+    const hash = canonico && canonico.absoluto ? sha256File(canonico.absoluto) : null;
+
+    if (hash === null) {
+      failures.push({ id, reason: 'canonical_file_missing', canonico: canonico ? canonico.path : null });
+      cumHash = sha256String(`${cumHash}:missing:${id}`);
+      continue;
+    }
+    if (String(link.hash || '') !== hash) {
+      failures.push({ id, reason: 'hash_from_canonical_mismatch', esperado: String(link.hash || ''), canonico: hash });
+    }
+    cumHash = sha256String(`${cumHash}:${hash}`);
+    if (String(link.cumulativeHash || '') !== cumHash) {
+      failures.push({ id, reason: 'cumulative_from_canonical_mismatch', esperado: String(link.cumulativeHash || ''), canonico: cumHash });
+    }
+  }
+
+  if (String(chain.chainRoot || '') !== cumHash) {
+    failures.push({ id: 'chain_root', reason: 'chain_root_from_canonical_mismatch', esperado: String(chain.chainRoot || ''), canonico: cumHash });
+  }
   return failures;
 }
 
@@ -661,6 +710,7 @@ function verifyChain(storedChain, opcoes = {}) {
   const structuralFailures = [
     ...verificarContratoEstrutural(storedChain),
     ...verificarCaminhosCanonicos(storedChain, mapaCanonico, raiz),
+    ...verificarHashesCanonicos(storedChain, mapaCanonico, raiz),
   ];
   const hashFailures = base.failures || [];
   const failures = [...structuralFailures, ...hashFailures];
@@ -699,6 +749,7 @@ module.exports = {
   ORDEM_CANONICA,
   caminhosCanonicos,
   verificarCaminhosCanonicos,
+  verificarHashesCanonicos,
   CLASSIFICACAO_ELOS,
   classificarElo,
   elosPorClasse,

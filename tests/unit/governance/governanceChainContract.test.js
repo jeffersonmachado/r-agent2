@@ -212,11 +212,13 @@ describe('§11 #7 — cadeia de OUTRO run não certifica', () => {
   });
 
   it('com o runId corrente e os três gates, a decisão é CERTIFIED_GO (controle positivo)', () => {
+    // Identidade COMPLETA: desde a missão 2026-10-25 §4, `clasificar` exige runId + sourceCommit +
+    // sourceFingerprint (presença e formato) para certificar — `{ runId }` sozinho agora é NO_GO.
     const d = clasificar({
       gates: gatesCompletos.map((g) => ({ ...g, runId: 'run-corrente' })),
       selado: true,
       certificado: true,
-      identidade: { runId: 'run-corrente' },
+      identidade: { runId: 'run-corrente', sourceCommit: '29372d7a3', sourceFingerprint: 'a'.repeat(64) },
     });
     expect(d.state).toBe('CERTIFIED_GO');
   });

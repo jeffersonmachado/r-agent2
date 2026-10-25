@@ -888,11 +888,13 @@ phase_verify_delivery() {
 
     if [ "$reparo_staged" = "1" ]; then
       node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp2.log" 2>&1
-      # `git add -- <caminhos>` (nunca `-A`): só o que a allowlist autoriza.
+      # `git add -- <caminhos>` (nunca `-A`): só o que a allowlist autoriza E o git rastreia.
+      # Artefato derivado é IGNORADO por `.gitignore` — `git add` o recusaria (exit 1) e, se
+      # forçado com `-f`, contrariaria a política de ignore. Reparo commita só o versionado.
       local caminhos=()
       while IFS= read -r caminho; do
         [ -n "$caminho" ] && [ -e "$caminho" ] && caminhos+=("$caminho")
-      done < <(node scripts/governance/lib/lineage-repair.js --allowlist)
+      done < <(node scripts/governance/lib/lineage-repair.js --rastreados)
       if [ "${#caminhos[@]}" -eq 0 ]; then
         warn "reparo de lineage sem arquivos existentes para estagiar"
       else
