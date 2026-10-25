@@ -175,7 +175,11 @@ function buildChain(artifact) {
  */
 function certifyChain(chain, opcoes = {}) {
   const { origem = 'nao-informada', agora = new Date().toISOString() } = opcoes;
-  const resultado  = verifyChain(chain);
+  // `verificar` é o MESMO seam de TESTE de `avaliarEstadoDaCadeia` (fixtures fora da árvore
+  // canônica). Produção não passa opções: o default é `verifyChain`, que exige o caminho canônico
+  // por id. Quem chama `certifyChain` em código de produção continua sem conseguir injetar nada.
+  const verificar = typeof opcoes.verificar === 'function' ? opcoes.verificar : verifyChain;
+  const resultado  = verificar(chain);
   const certificada = resultado.valid === true;
 
   chain.valid        = certificada;
@@ -230,7 +234,9 @@ function avaliarEstadoDaCadeia(chain, opcoes = {}) {
     return fs.existsSync(abs) ? fs.statSync(abs).mtimeMs : null;
   });
 
-  const recalc = verificar(chain);
+  // Repassa as opções (raiz/artifact) ao verificador: em produção não há opções; em fixture o sandbox
+  // precisa ser o MESMO na hora de recalcular.
+  const recalc = verificar(chain, opcoes);
   const motivos = [];
 
   if (!recalc.valid) {
@@ -340,26 +346,29 @@ function elosPorClasse(chain, classe) {
  * marcador `missing:<id>` e a conta fecha; por isso esta função sozinha não pode
  * autorizar certificação (ver `verifyChain`).
  */
-function verifyChainHashes(storedChain) {
+function verifyChainHashes(storedChain, opcoes = {}) {
   if (!storedChain || !Array.isArray(storedChain.links)) {
     return { valid: false, error: 'chain_missing_or_malformed' };
   }
+  // Raiz de hash = raiz da verificação. Em produção é o repositório; em fixture é um sandbox com o
+  // MESMO layout canônico (nunca "caminho livre").
+  const raiz = opcoes.raiz ? path.resolve(opcoes.raiz) : ROOT;
 
   const failures = [];
   let prevHash = GENESIS_HASH;
   let cumHash  = GENESIS_HASH;
 
   for (const link of storedChain.links) {
-    let abs = path.join(ROOT, link.path);
+    let abs = path.join(raiz, link.path);
 
     // Suportar nova estrutura normalizada: dist/release/ e dist/governance/ e dist/signatures/
     // Se o arquivo não existe no caminho original, tentar caminhos alternativos
     if (!fs.existsSync(abs)) {
       const base = path.basename(link.path);
       const alternatives = [
-        path.join(ROOT, 'dist', 'release', base),       // dist/release/<zip|manifest>
-        path.join(ROOT, 'dist', 'governance', base),    // dist/governance/<json>
-        path.join(ROOT, 'dist', 'signatures', base),    // dist/signatures/<sig>
+        path.join(raiz, 'dist', 'release', base),       // dist/release/<zip|manifest>
+        path.join(raiz, 'dist', 'governance', base),    // dist/governance/<json>
+        path.join(raiz, 'dist', 'signatures', base),    // dist/signatures/<sig>
       ];
       for (const alt of alternatives) {
         if (fs.existsSync(alt)) { abs = alt; break; }
@@ -456,6 +465,120 @@ const ORDEM_CANONICA = Object.freeze([
 ]);
 
 /**
+ * ─── CAMINHO CANÔNICO POR ID (P0 — missão 2026-10-25) ─────────────────────────
+ *
+ * DEFEITO REPRODUZIDO (antes desta correção): `verifyChainHashes` localizava o arquivo de cada elo
+ * por `link.path`, isto é, pelo caminho INFORMADO NO JSON que estava sendo verificado. Um atacante
+ * com escrita em `governance/governance-chain.json` mantinha ids, ordem e quantidade canônicos,
+ * apontava cada id para um ARQUIVO SUBSTITUTO (inclusive fora do repositório) e recalculava
+ * `hash`/`cumulativeHash`/`chainRoot` — e `verifyChain` devolvia `valid: true` / `certifiable: true`.
+ * Medição no HEAD anterior: 10 elos canônicos apontando para `/tmp/...` ⇒ aprovado.
+ *
+ * CAUSA RAIZ: a verificação confiava no dado que estava verificando. A correção deriva o caminho da
+ * ARQUITETURA — o MESMO `buildChainLayers` que constrói a cadeia legítima — e compara realpath com
+ * realpath. Symlink, `..`, caminho absoluto e arquivo substituto deixam de fechar a conta.
+ *
+ * `package`/`sidecar_manifest` dependem do artefato de release corrente: sem artefato resolvível o
+ * elo fica NÃO CERTIFICÁVEL (`canonical_path_unresolved`) — fail-closed, nunca "caminho livre".
+ */
+function artefatoParaCaminhos(opcoes = {}) {
+  if (opcoes.artifact) return opcoes.artifact;
+  try {
+    return findLatestReleaseArtifact({ distDir: opcoes.distDir, requireAuditPassed: true });
+  } catch (_) {
+    try {
+      return findLatestReleaseArtifact({ distDir: opcoes.distDir, requireAuditPassed: false });
+    } catch (_) {
+      return null; // sem artefato: os dois elos que dependem dele ficam NÃO CERTIFICÁVEIS
+    }
+  }
+}
+
+function caminhosCanonicos(opcoes = {}) {
+  const raiz = opcoes.raiz ? path.resolve(opcoes.raiz) : ROOT;
+  const artifact = artefatoParaCaminhos(opcoes);
+  const layers = buildChainLayers(artifact || {});
+  // Sem artefato de release NÃO existe caminho canônico para estes dois elos: derivar de um objeto
+  // vazio produziria `dist/` como "caminho canônico" e aceitaria uma cadeia apontando para o diretório.
+  const dependeDoArtefato = new Set(['package', 'sidecar_manifest']);
+  return layers.map((l) => {
+    if (!artifact && dependeDoArtefato.has(l.id)) {
+      return { id: l.id, path: null, absoluto: null, resolvido: false };
+    }
+    const absolutoLayer = l && l.path ? path.resolve(String(l.path)) : null;
+    // Re-base: o caminho canônico é SEMPRE relativo à raiz da verificação. Em produção a raiz é o
+    // repositório; em teste é um sandbox com o MESMO layout canônico (nunca "caminho livre").
+    const absoluto = absolutoLayer
+      ? (raiz === ROOT ? absolutoLayer : path.join(raiz, path.relative(ROOT, absolutoLayer)))
+      : null;
+    const dentro = absoluto ? !path.relative(raiz, absoluto).startsWith('..') : false;
+    return {
+      id: l.id,
+      path: absoluto && dentro ? path.relative(raiz, absoluto) : null,
+      absoluto,
+      resolvido: Boolean(absoluto && dentro),
+    };
+  });
+}
+
+/**
+ * Falhas de CAMINHO: o arquivo que o elo declara não é o arquivo canônico daquele id.
+ * @returns {Array<{id:string, reason:string, esperado?:string, declarado?:string}>}
+ */
+function verificarCaminhosCanonicos(chain, mapa, raiz = ROOT) {
+  const links = chain && Array.isArray(chain.links) ? chain.links : [];
+  if (links.length === 0) return [];
+  const canonicos = mapa || caminhosCanonicos({ raiz });
+  const porId = new Map(canonicos.map((c) => [c.id, c]));
+  const failures = [];
+
+  for (const link of links) {
+    const id = String((link && link.id) || '');
+    const canonico = porId.get(id);
+    if (!canonico) continue; // id fora do contrato já é tratado pelo contrato estrutural
+    if (!canonico.resolvido || !canonico.absoluto) {
+      failures.push({ id, reason: 'canonical_path_unresolved' });
+      continue;
+    }
+    const declarado = String((link && link.path) || '');
+    if (!declarado) {
+      failures.push({ id, reason: 'path_not_canonical', esperado: canonico.path, declarado: '' });
+      continue;
+    }
+    if (path.isAbsolute(declarado)) {
+      failures.push({ id, reason: 'path_outside_root', esperado: canonico.path, declarado });
+      failures.push({ id, reason: 'path_not_canonical', esperado: canonico.path, declarado });
+      continue;
+    }
+    const absoluto = path.resolve(raiz, declarado);
+    const foraDaRaiz = path.relative(raiz, absoluto).startsWith('..');
+    if (foraDaRaiz) {
+      failures.push({ id, reason: 'path_outside_root', esperado: canonico.path, declarado });
+      failures.push({ id, reason: 'path_not_canonical', esperado: canonico.path, declarado });
+      continue;
+    }
+    let realDeclarado = null;
+    let realCanonico = null;
+    try { realDeclarado = fs.realpathSync(absoluto); } catch (_) { realDeclarado = null; }
+    try { realCanonico = fs.realpathSync(canonico.absoluto); } catch (_) { realCanonico = null; }
+    // Symlink no caminho declarado: mesmo que aponte para o lugar certo hoje, o destino pode mudar.
+    let symlink = false;
+    try { symlink = fs.existsSync(absoluto) && fs.lstatSync(absoluto).isSymbolicLink(); } catch (_) { symlink = false; }
+
+    if (symlink || (realDeclarado && realCanonico && realDeclarado !== realCanonico)) {
+      failures.push({ id, reason: 'path_not_canonical', esperado: canonico.path, declarado });
+      continue;
+    }
+    // Sem arquivo nos dois lados não há o que comparar: o contrato estrutural reprova a ausência.
+    if (realDeclarado && !realCanonico) {
+      failures.push({ id, reason: 'path_not_canonical', esperado: canonico.path, declarado });
+    }
+  }
+
+  return failures;
+}
+
+/**
  * Verifica o CONTRATO ESTRUTURAL (independente de hash).
  * @returns {Array<{id:string, reason:string}>}
  */
@@ -520,8 +643,8 @@ function verificarContratoEstrutural(chain) {
  * cadeia vazia, incompleta, fora de ordem, duplicada ou com elo ausente NUNCA é
  * válida — mesmo que a aritmética de `cumulativeHash` feche.
  */
-function verifyChain(storedChain) {
-  const base = verifyChainHashes(storedChain);
+function verifyChain(storedChain, opcoes = {}) {
+  const base = verifyChainHashes(storedChain, opcoes);
   if (base.error) {
     return {
       ...base,
@@ -533,7 +656,12 @@ function verifyChain(storedChain) {
     };
   }
 
-  const structuralFailures = verificarContratoEstrutural(storedChain);
+  const raiz = opcoes.raiz ? path.resolve(opcoes.raiz) : ROOT;
+  const mapaCanonico = caminhosCanonicos({ ...opcoes, raiz });
+  const structuralFailures = [
+    ...verificarContratoEstrutural(storedChain),
+    ...verificarCaminhosCanonicos(storedChain, mapaCanonico, raiz),
+  ];
   const hashFailures = base.failures || [];
   const failures = [...structuralFailures, ...hashFailures];
 
@@ -569,6 +697,8 @@ function writeChain(chain) {
 module.exports = {
   GENESIS_HASH,
   ORDEM_CANONICA,
+  caminhosCanonicos,
+  verificarCaminhosCanonicos,
   CLASSIFICACAO_ELOS,
   classificarElo,
   elosPorClasse,

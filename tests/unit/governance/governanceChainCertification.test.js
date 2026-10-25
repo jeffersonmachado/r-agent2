@@ -25,6 +25,7 @@ const path = require('path');
 
 const {
   verifyChain,
+  caminhosCanonicos,
   GENESIS_HASH,
   ORDEM_CANONICA,
   sha256File,
@@ -34,34 +35,61 @@ const {
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const SELO = path.join(ROOT, 'scripts', 'governance', 'seal-release.sh');
 
-// Arquivo de prova DENTRO do repositório: `verifyChain` resolve `link.path` com
-// `path.join(ROOT, ...)`, então o alvo precisa ser relativo à raiz. `reports/` é
-// ignorado pelo git — o teste não polui a árvore versionada.
+/**
+ * SANDBOX COM O LAYOUT CANÔNICO (missão 2026-10-25).
+ *
+ * Antes esta fixture escrevia `reports/__chain-cert-test.json` DENTRO do repositório e apontava os
+ * 10 elos para arquivos irmãos: a matemática de hash fechava, mas os caminhos não eram os canônicos
+ * de cada id. Com o contrato de caminho canônico (`verifyChain`, P0 de 2026-10-25), uma cadeia só é
+ * válida quando cada id aponta para o arquivo canônico DAQUELE id — então a fixture passou a criar um
+ * `raiz` temporário com o MESMO layout de produção e a informar `{ raiz, artifact }` ao verificar.
+ * O invariante testado continua o mesmo: o hash cobre os BYTES do documento real.
+ */
+const RAIZ = fs.mkdtempSync(path.join(os.tmpdir(), 'chain-cert-'));
+const ARTEFATO = (() => {
+  const dist = path.join(RAIZ, 'dist', 'release');
+  fs.mkdirSync(dist, { recursive: true });
+  const zipPath = path.join(dist, 'r-agent2-teste.zip');
+  const manifestPath = path.join(dist, 'r-agent2-teste.manifest.json');
+  fs.writeFileSync(zipPath, 'ZIP-DE-TESTE');
+  fs.writeFileSync(manifestPath, JSON.stringify({ artifact: 'teste' }));
+  return { zipPath, manifestPath };
+})();
+
+const CAMINHOS = (() => {
+  const mapa = caminhosCanonicos({ raiz: RAIZ, artifact: ARTEFATO });
+  for (const item of mapa) {
+    if (!item.resolvido) continue;
+    const abs = path.join(RAIZ, item.path);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    if (!fs.existsSync(abs)) fs.writeFileSync(abs, JSON.stringify({ elo: item.id }));
+  }
+  return mapa;
+})();
+
 const ALVO_REL = 'reports/__chain-cert-test.json';
-const ALVO_ABS = path.join(ROOT, ALVO_REL);
+const ALVO_ABS = path.join(RAIZ, ALVO_REL);
 
 /**
- * Monta a cadeia ESTRUTURALMENTE canônica (10 elos, ordem do contrato) em que o
- * PRIMEIRO elo (id `package`) aponta para `caminhoRel`.
- *
- * Antes era uma cadeia de 1 elo com id `alvo`: a matemática de hash passava, mas
- * a cadeia não era a cadeia canônica. Depois de 2026-10-17 `verifyChain` aplica
- * também o contrato estrutural (10 elos obrigatórios, ordem fixa) — uma cadeia
- * curta não pode ser declarada válida.
+ * Monta a cadeia ESTRUTURALMENTE canônica (10 elos, ordem do contrato) sobre a raiz sandbox.
+ * `caminhoRel` (quando informado) substitui o caminho do PRIMEIRO elo — é assim que os testes de
+ * adulteração apontam um elo para outro arquivo.
  */
 function cadeiaCanonica(caminhoRel, conteudo) {
-  fs.mkdirSync(path.dirname(path.join(ROOT, caminhoRel)), { recursive: true });
-  fs.writeFileSync(path.join(ROOT, caminhoRel), conteudo);
+  fs.mkdirSync(path.dirname(path.join(RAIZ, ALVO_REL)), { recursive: true });
+  fs.writeFileSync(ALVO_ABS, conteudo === undefined ? JSON.stringify({ estado: 'congelado' }) : conteudo);
 
   let cumHash = GENESIS_HASH;
-  const links = ORDEM_CANONICA.map((id, i) => {
-    const rel = i === 0 ? caminhoRel : `${caminhoRel}.${id}`;
-    if (i > 0) fs.writeFileSync(path.join(ROOT, rel), JSON.stringify({ elo: id }));
-    const hash = sha256File(path.join(ROOT, rel));
+  const links = CAMINHOS.map((item, i) => {
+    const rel = i === 0 && caminhoRel ? caminhoRel : item.path;
+    const abs = path.join(RAIZ, rel);
+    if (i > 0) fs.writeFileSync(abs, JSON.stringify({ elo: item.id }));
+    if (i === 0 && caminhoRel) fs.writeFileSync(abs, fs.readFileSync(ALVO_ABS));
+    const hash = sha256File(abs);
     const cumulativeHash = sha256String(`${cumHash}:${hash}`);
     const link = {
       index: i,
-      id,
+      id: item.id,
       path: rel,
       exists: true,
       hash,
@@ -82,24 +110,32 @@ function cadeiaCanonica(caminhoRel, conteudo) {
   };
 }
 
-/** Remove os arquivos auxiliares criados por `cadeiaCanonica` (não versionados). */
-function limparCadeia(caminhoRel) {
-  fs.rmSync(path.join(ROOT, caminhoRel), { force: true });
-  for (const id of ORDEM_CANONICA.slice(1)) {
-    fs.rmSync(path.join(ROOT, `${caminhoRel}.${id}`), { force: true });
-  }
+/** Opções de verificação: raiz sandbox + artefato de teste (mesma forma da produção). */
+const VERIFICAR = { raiz: RAIZ, artifact: ARTEFATO };
+
+/** Remove o sandbox inteiro. */
+function limparCadeia() {
+  fs.rmSync(RAIZ, { recursive: true, force: true });
 }
 
 afterAll(() => {
-  limparCadeia(ALVO_REL);
+  limparCadeia();
 });
 
 describe('cadeia criptográfica — o hash cobre os BYTES do documento', () => {
   it('cadeia íntegra verifica (não-vacuidade: o teste não aprova por construção)', () => {
-    const cadeia = cadeiaCanonica(ALVO_REL, JSON.stringify({ estado: 'congelado' }));
-    const r = verifyChain(cadeia);
+    // Sem override: todos os 10 elos apontam para o caminho CANÔNICO de cada id dentro do sandbox.
+    const cadeia = cadeiaCanonica();
+    const r = verifyChain(cadeia, VERIFICAR);
     expect(r.valid).toBe(true);
     expect(r.failures).toEqual([]);
+
+    // Contraprova do MESMO teste: apontar um id para um arquivo que não é o canônico dele — ainda que
+    // os hashes sejam recalculados — não certifica.
+    const foraDoCanonico = cadeiaCanonica(ALVO_REL, JSON.stringify({ estado: 'congelado' }));
+    const adulterada = verifyChain(foraDoCanonico, VERIFICAR);
+    expect(adulterada.valid).toBe(false);
+    expect(adulterada.structuralFailures.map((f) => f.reason)).toContain('path_not_canonical');
   });
 
   it('ALTERAR o documento depois do hash ⇒ FAIL com hash_mismatch (critério da missão)', () => {
@@ -107,7 +143,7 @@ describe('cadeia criptográfica — o hash cobre os BYTES do documento', () => {
     // A alteração posterior — exatamente o que o `consolidate` fazia com os membros
     // certificados ao regravá-los depois da construção da cadeia.
     fs.writeFileSync(ALVO_ABS, JSON.stringify({ estado: 'MODIFICADO depois do hash' }));
-    const r = verifyChain(cadeia);
+    const r = verifyChain(cadeia, VERIFICAR);
     expect(r.valid).toBe(false);
     expect(r.failures.map((f) => f.reason)).toContain('hash_mismatch');
     expect(r.failures[0].id).toBe(ORDEM_CANONICA[0]);
@@ -116,7 +152,7 @@ describe('cadeia criptográfica — o hash cobre os BYTES do documento', () => {
   it('documento certificado REMOVIDO ⇒ file_deleted', () => {
     const cadeia = cadeiaCanonica(ALVO_REL, 'conteudo');
     fs.rmSync(ALVO_ABS, { force: true });
-    const r = verifyChain(cadeia);
+    const r = verifyChain(cadeia, VERIFICAR);
     expect(r.valid).toBe(false);
     expect(r.failures.map((f) => f.reason)).toContain('file_deleted');
   });
