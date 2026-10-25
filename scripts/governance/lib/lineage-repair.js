@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+'use strict';
+
+/**
+ * REPARO DE LINEAGE COM ALLOWLIST — P1 da missão 2026-10-25 (§5).
+ *
+ * DEFEITO MEDIDO em `scripts/governance/seal-release.sh` (`phase_verify_delivery`): quando o juiz
+ * estrito reprovava a entrega, o reparo fazia
+ *
+ *     node scripts/governance/stamp-report-lineage.js
+ *     git add -A                       # <-- TUDO o que estivesse sujo no worktree
+ *     git commit -m "fix(governance): re-stampa lineage clobberado…"
+ *     git push origin "$branch_atual"
+ *
+ * Consequências reais: (a) qualquer alteração alheia ao reparo (arquivo de trabalho, resíduo de run,
+ * relatório de outra fase) entrava no commit com mensagem de reparo de lineage — atribuição falsa;
+ * (b) o push publicava esse conteúdo sem que ninguém tivesse decidido publicá-lo; (c) com worktree
+ * sujo por outro motivo, o "reparo" virava um commit largo e o defeito ficava invisível no histórico.
+ *
+ * REGRA: o reparo só pode tocar os artefatos que o próprio estampador escreve — lista derivada da
+ * MESMA taxonomia canônica (`config/runtime-evidence-artifacts.json` via `listAuthoritativeArtifacts`)
+ * mais o ponteiro do run corrente. Qualquer caminho fora dessa lista bloqueia o reparo inteiro:
+ * nada é staged, nada é commitado, nada é empurrado.
+ */
+
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const ROOT = path.resolve(__dirname, '..', '..', '..');
+
+/** Ponteiro do run governado corrente: escrito por `create-governed-run`, lido pelo estampador. */
+const PONTEIRO_DO_RUN = 'governance/.current-run.json';
+
+/**
+ * Caminhos que o reparo de lineage pode legitimamente tocar.
+ * @returns {string[]} caminhos relativos à raiz, ordenados
+ */
+function listarAllowlistDeReparo() {
+  const { listAuthoritativeArtifacts } = require('./runtime-evidence-artifacts');
+  const artefatos = listAuthoritativeArtifacts();
+  const lista = new Set(artefatos);
+  lista.add(PONTEIRO_DO_RUN);
+  return [...lista].sort();
+}
+
+/**
+ * Normaliza saída de `git status --porcelain=v1` em pares `{ status, caminho }`.
+ * Renomeações (`R  antigo -> novo`) contam os DOIS lados: o antigo também foi mexido.
+ */
+function parseStatusPorcelain(saida) {
+  return String(saida || '')
+    .split('\n')
+    .map((linha) => linha.replace(/\s+$/, ''))
+    .filter((linha) => linha.length > 3)
+    .flatMap((linha) => {
+      const status = linha.slice(0, 2);
+      const resto = linha.slice(3);
+      const seta = resto.indexOf(' -> ');
+      if (seta >= 0) return [{ status, caminho: resto.slice(0, seta) }, { status, caminho: resto.slice(seta + 4) }];
+      return [{ status, caminho: resto }];
+    });
+}
+
+/**
+ * Decide se o reparo pode acontecer.
+ *
+ * @param {string} saidaStatus saída de `git status --porcelain=v1`
+ * @param {string[]} allowlist caminhos permitidos (relativos à raiz)
+ * @returns {{ok:boolean, motivo:string|null, naoAutorizados:string[], paraCommitar:string[], staged:boolean}}
+ */
+function avaliarWorktreeParaReparo(saidaStatus, allowlist = listarAllowlistDeReparo()) {
+  const permitidos = new Set(allowlist);
+  const entradas = parseStatusPorcelain(saidaStatus);
+
+  // Arquivo NÃO rastreado (`??`) nunca é permitido: o estampador só reescreve arquivo existente.
+  const naoAutorizados = entradas
+    .filter((e) => !permitidos.has(e.caminho))
+    .map((e) => e.caminho)
+    .sort();
+
+  const paraCommitar = entradas
+    .filter((e) => permitidos.has(e.caminho))
+    .map((e) => e.caminho)
+    .sort();
+
+  if (naoAutorizados.length > 0) {
+    return {
+      ok: false,
+      motivo: `WORKTREE_COM_ARQUIVO_NAO_AUTORIZADO:${naoAutorizados.join(',')}`,
+      naoAutorizados,
+      paraCommitar,
+      staged: false,
+    };
+  }
+  if (paraCommitar.length === 0) {
+    return { ok: true, motivo: 'NADA_A_REPARAR', naoAutorizados: [], paraCommitar: [], staged: false };
+  }
+  return { ok: true, motivo: null, naoAutorizados: [], paraCommitar, staged: true };
+}
+
+/** Executa `git status --porcelain=v1` na raiz informada. */
+function statusAtual(raiz = ROOT) {
+  try {
+    return execFileSync('git', ['status', '--porcelain=v1'], { cwd: raiz, encoding: 'utf8' });
+  } catch (_) {
+    return '';
+  }
+}
+
+function main(argv = process.argv.slice(2)) {
+  if (argv.includes('--allowlist')) {
+    process.stdout.write(`${listarAllowlistDeReparo().join('\n')}\n`);
+    return 0;
+  }
+  const raiz = argv.includes('--raiz') ? argv[argv.indexOf('--raiz') + 1] : ROOT;
+  const decisao = avaliarWorktreeParaReparo(statusAtual(raiz));
+  process.stdout.write(`${JSON.stringify(decisao, null, 2)}\n`);
+  return decisao.ok ? 0 : 1;
+}
+
+if (require.main === module) process.exitCode = main();
+
+module.exports = {
+  PONTEIRO_DO_RUN,
+  listarAllowlistDeReparo,
+  parseStatusPorcelain,
+  avaliarWorktreeParaReparo,
+  statusAtual,
+  main,
+};
