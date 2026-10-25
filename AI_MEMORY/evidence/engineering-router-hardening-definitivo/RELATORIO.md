@@ -1,0 +1,379 @@
+# RELATÓRIO — RAP HARDENING DEFINITIVO (missão 2026-10-25)
+
+**Repositório:** `jeffersonmachado/r-agent2`
+**Branch de trabalho:** `codex/engineering-router-hardening-20261025`
+**Worktree:** `/opt/results/ria/er-hardening`
+**SHA inicial (referência da missão):** `29372d7a34d4653b10e7375480094fa787bded37` — conferido no remoto antes de começar
+**SHA final:** ver §1 (commits por área)
+**Estado do remoto:** `main = 04cad9c1b` e `dev/engineering-hardening = 29372d7a3` — **inalterados**. Nenhum push, merge, tag, release, publicação ou deploy.
+
+> Regra da missão: *"A autoridade é a evidência produzida pela execução real, nunca a declaração do agente."*
+> Tudo abaixo é comando + exit code + saída. O que não rodou está marcado como **BLOCKED**, **NOT_EXECUTED** ou
+> **OUT_OF_SCOPE** — nunca como PASS.
+
+---
+
+## 1. Commits por área (locais, não empurrados)
+
+| # | SHA | Área | Conteúdo |
+|---|---|---|---|
+| 1 | `92587151d` | P0 cadeia | caminho canônico por id em `verifyChain` |
+| 2 | `5c0ec2c3b` | P1 decisão + P1 selo | identidade obrigatória em `clasificar`; allowlist no reparo de lineage |
+| 3 | `ea7b96198` | revisão adversarial | fecha bypass por fallback de basename, reparo morto, controle positivo, hermeticidade, EISDIR |
+| 4 | `7f87aeedc` | checkout limpo | re-base de caminho canônico que quebrava quando a raiz difere em profundidade |
+
+---
+
+## 2. P0 — CADEIA CRIPTOGRÁFICA (§3 do briefing)
+
+### 2.1 Hipótese × realidade
+
+A hipótese era: *"a validação usa `link.path` do manifesto para localizar artefatos, então um manifesto
+adulterado pode apontar IDs canônicos para arquivos substitutos com hashes recalculados"*. **Reproduzida.**
+
+### 2.2 Reprodução (HEAD `29372d7a3`, antes da correção)
+
+```
+$ node .repro-chain.js          # 10 ids canônicos apontando para arquivos em /tmp
+{
+  "valid": true,
+  "certifiable": true,
+  "checkedLinks": 10,
+  "structuralFailures": [],
+  "hashFailures": [],
+  "primeiroPath": "../repro-p0-8rMXtw/0-package.bin"
+}
+```
+
+Consumidores do campo `valid`: `validate-governance-chain`, `validate-self-proving`,
+`verify-delivery-strict`, `assert-canonical-release-decision` — todos no caminho certificante.
+
+### 2.3 Causa raiz
+
+`verifyChainHashes` montava `path.join(ROOT, link.path)`: localizava o arquivo pelo caminho **informado no
+JSON que estava sendo verificado**. O contrato estrutural checava ids/ordem/quantidade/existência, nunca
+*o caminho canônico daquele id*.
+
+### 2.4 Correção (duas camadas, porque a primeira tinha porta lateral)
+
+1. `caminhosCanonicos()` deriva o caminho de cada id da ARQUITETURA (`buildChainLayers`, o mesmo construtor
+   da cadeia legítima) e `verificarCaminhosCanonicos()` compara realpath com realpath, recusando
+   `path_not_canonical`, `path_outside_root`, symlink e caminho inexistente.
+2. **`verificarHashesCanonicos()`**: os bytes de certificação passam a ser lidos do caminho canônico de cada
+   id — nunca de `link.path` — conferindo `hash`, `cumulativeHash` e `chainRoot`.
+3. `package`/`sidecar_manifest` sem artefato resolvível ⇒ `canonical_path_unresolved` (fail-closed).
+4. Fallback por **basename** em `dist/{release,governance,signatures}/` **removido** do caminho certificante.
+
+### 2.5 A porta lateral (achado do revisor independente, também reproduzido)
+
+O revisor mostrou que só a camada (1) era contornável: `path.resolve` normaliza barra final e `path.join`
+não, e o fallback por basename procurava cópia homônima em `dist/` — que o `two-pass-release.sh` deixa
+lá de propósito. Reprodução do revisor reexecutada **após** a correção:
+
+```
+RESULTADO: {"valid":false,"certifiable":false,
+            "structural":["hash_from_canonical_mismatch","cumulative_from_canonical_mismatch", ...]}
+```
+
+### 2.6 Testes (regressão permanente)
+
+`tests/unit/governance/governanceChainCanonicalPath.test.js` — **9/9 PASS**: substituição de arquivos,
+traversal relativo, caminho absoluto, symlink, barra final + homônimo em `dist/`, elo apontando para
+diretório (não lança), fail-closed sem artefato, contrato do mapa, regressão positiva.
+Fixtures de `governanceChainContract` e `governanceChainCertification` migradas para
+`tests/helpers/chainSandbox.js` (sandbox com layout canônico real).
+
+---
+
+## 3. P1 — CONTRATO CENTRAL DE CERTIFICAÇÃO (§4)
+
+### 3.1 Reprodução no HEAD anterior
+
+```
+$ node -e "const {clasificar}=require('./governance/canonical-release-decision');
+           clasificar({gates:[final_governance,final_readiness,final_proof todos PASS],
+                       selado:true, certificado:true})"
+CERTIFIED_GO | reason: CERTIFICADO | identity: null
+identidade PARCIAL ({runId}) => CERTIFIED_GO
+```
+
+A comparação "gate de outro run" só disparava quando **ambos** os lados tinham `runId`: sem identidade no
+contrato, ela nunca rodava.
+
+### 3.2 Correção
+
+Identidade **completa e válida** (`runId` + `sourceCommit` + `sourceFingerprint`, presença **e** formato) é
+pré-requisito de `CERTIFIED_GO`/`PUBLISHED_VERIFIED`:
+`IDENTIDADE_AUSENTE_NO_CONTRATO:<campos>` / `IDENTIDADE_INVALIDA_NO_CONTRATO:<campos>`.
+Compatibilidade preservada só onde não há certificação (`PRE_PACKAGE_PASS` continua sem identidade).
+
+### 3.3 Matriz adversarial (15 cenários do briefing)
+
+`tests/unit/governance/canonicalReleaseDecisionIdentityContract.test.js` — **22/22 PASS**: runId ausente,
+sourceCommit ausente, sourceFingerprint ausente, identidade inteira ausente, formatos inválidos, gates
+vazio/1 PASS/2 PASS, NOT_EXECUTED/UNKNOWN/SKIPPED/BLOCKED, gate desconhecido, gate de outro run, evidência
+de outro commit, certificação sem prova, publicado sem entrega verificada.
+
+---
+
+## 4. P1 — SELO E PUBLICAÇÃO (§5)
+
+### 4.1 Defeito reproduzido
+
+`seal-release.sh` (`phase_verify_delivery`), quando o juiz estrito reprovava:
+
+```bash
+node scripts/governance/stamp-report-lineage.js
+git add -A                     # TUDO o que estivesse sujo
+git commit -m "fix(governance): re-stampa lineage clobberado…"
+git push origin "$branch_atual"
+```
+
+Todo o worktree sujo entrava num commit com mensagem de reparo de lineage e era empurrado.
+
+### 4.2 Correção
+
+`scripts/governance/lib/lineage-repair.js` deriva a allowlist da MESMA taxonomia canônica
+(`listAuthoritativeArtifacts` + `governance/.current-run.json`) e decide fail-closed: qualquer caminho fora
+da allowlist (incluindo `??` não rastreado e o lado de origem de um rename) **recusa o reparo inteiro** —
+nada é staged, nada é commitado, nada é empurrado. Staging passou a `git add -- <caminhos permitidos>`;
+commit só com diff staged; push só da branch corrente.
+
+### 4.3 Achado do revisor: o reparo nunca funcionava
+
+37 dos 62 caminhos da allowlist são **ignorados** pelo `.gitignore`; `git add` recusa caminho ignorado
+(exit 1) ⇒ o reparo falhava sempre, e falhava na última fase (depois da publicação). Correção: o commit usa
+o subconjunto **rastreado** (`git ls-files`); artefato ignorado não é persistível e não é forçado com `-f`.
+Novo motivo `APENAS_ARTEFATOS_IGNORADOS`.
+
+### 4.4 Testes
+
+`tests/unit/governance/sealReleaseLineageRepair.test.js` — **12/12 PASS**, incluindo repositório git REAL
+com remoto local descartável:
+
+| Cenário | Resultado medido |
+|---|---|
+| arquivo não autorizado sujo | recusa nomeada, **nenhum commit**, remoto intacto |
+| somente allowlist suja | commit toca **apenas** o arquivo autorizado; remoto avança |
+| allowlist real (62 caminhos / 25 rastreados) | nenhum caminho ignorado é estagiado |
+| `git add -A` / `git push origin main` | ausentes do caminho executável (asserção ignora comentários) |
+
+---
+
+## 5. TIMEOUT ARCHITECTURE (§7) — **GO**
+
+Números recalculados no HEAD (não herdados do briefing):
+
+```
+arquivos varridos: 2183      timeouts: 1133      LEGACY_UNKNOWN: 0
+REQUEST_TIMEOUT 45 · OPERATION_DEADLINE 575 · COMMAND_DEADLINE 23 · DATABASE_TIMEOUT 22
+PROVIDER_TIMEOUT 15 · LEASE_DURATION 214 · HEARTBEAT_INTERVAL 31 · NO_PROGRESS_TIMEOUT 1
+RETRY_BACKOFF 9 · POLL_INTERVAL 95 · TEST_TIMEOUT 3 · SHUTDOWN_GRACE_PERIOD 5
+DELAY_SLEEP 81 · USER_DEFINED_DEADLINE 14
+padrões destrutivos: 5 (críticos: 1)  · PID como corroboração local: 3 (exceções auditáveis)
+capacidades: LEASE ✓ FENCING ✓ HEARTBEAT ✓ NO_PROGRESS_DETECTION ✓ PROVIDER_TIMEOUT_ISOLATION ✓
+             PROVIDER_FALLBACK ✓ COMMAND_TIMEOUT_ISOLATION ✓ DATABASE_TIMEOUT_ISOLATION ✓
+             CIRCUIT_BREAKER ✓ CHECKPOINT_RESUME ✓
+```
+
+Antes: `NO_GO` por 4 provas runtime PENDING. Executado `npm run verify:timeout-architecture-e2e`
+(exit 0, 44,9 s) — **LONG_RUNNING_TASK, REAL_DEAD_WORKER_RECOVERY, NO_PROGRESS_E2E, PROVIDER_FALLBACK_E2E
+todos PASS** com execução real (a suíte de reroute roda 39,9 s contra provider 404 real).
+⇒ **`TIMEOUT_ARCHITECTURE = GREEN`**.
+
+---
+
+## 6. RECUPERAÇÃO APÓS SIGKILL E TASK REAL (§8) — **GO**
+
+`npm run verify:mission-crash-recovery` (exit 0) — **13/13 checks**, execução real:
+
+```
+[PASS] SIGKILL_REAL — signal=SIGKILL code=null      [PASS] PROCESSO_A_MORTO — pid=3226345
+[PASS] LEASE_ORFAO_DO_WORKER_MORTO — worker=verify-worker-A fence=2
+[PASS] RECOVERY_ENCONTROU_A_MISSAO — recovered=2     [PASS] LEASE_EXPIRADO_PARA_TAKEOVER
+[PASS] LEASE_NAO_PERTENCE_MAIS_AO_WORKER_MORTO — fence=4
+[PASS] ESCRITA_DO_WORKER_MORTO_RECUSADA — code=MISSION_LEASE_NOT_HELD
+[PASS] MISSAO_NAO_FOI_MARCADA_GREEN_PELO_MORTO — status=EXECUTING
+```
+
+`npm run validate:recovery` (exit 0) — **17/17 checks**: task em fase MATERIAL interrompida por SIGKILL,
+lease órfão, takeover com fence 1→2, escrita do worker morto recusada (`TASK_LEASE_NOT_HELD`), task
+retomada pelo novo dono (desfecho `CONTEXT_SOURCE_UNRESOLVABLE` — prova de que a recuperação não
+"consertou" o resultado, apenas retomou a execução).
+
+---
+
+## 7. ENGINEERING ROUTER V2 (§6) — **NO_GO**
+
+Medição no HEAD final (`node scripts/governance/validate-engineering-router-v2.js`, exit 1):
+
+```
+itens=12  falhas=2  pendencias=3
+[PASS] invariantes estruturais (9): LEASE_POLICY_PURE, PID_NAO_E_AUTORIDADE, POLICY_RESOLVER,
+       ESTADOS_TERMINAIS, RECOVERY_AUTOMATICO_NO_BOOT, FK_RESTRICT, RBAC_FAIL_CLOSED, ANTI_GREENWASHING_PORTA_UNICA
+[PASS] V2_CRASH_SIGKILL_VERDE            <- produzido nesta missão (§6)
+[PASS] V2_TIMEOUT_ARCHITECTURE_GREEN     <- produzido nesta missão (§5)
+[FAIL] V2_ANTI_GREENWASHING_VERDE        relatório ausente (depende da execução autoritativa)
+[FAIL] V2_BUG_AUTONOMOUS_LOOP_GREEN      relatório ausente (mesma dependência)
+[PENDING] V2_REQUIRED_TESTS              68 itens NOT_EXECUTED
+[PENDING] V2_REQUIREMENTS_MATRIX_STATUS   18 eixos sem prova
+[PENDING] ENVELOPE_VERIFICATION          envelope não selado
+```
+
+(antes desta missão: 4 falhas / 5 pendências — crash-recovery e timeout architecture saíram do vermelho)
+
+### 7.1 Por que os 68 testes não foram executados — **BLOCKED externo**
+
+`npm run test:release-authoritative` (o produtor de `reports/release-suite-execution.json`, insumo dos 68
+testes, da matriz e do anti-greenwashing) **recusa iniciar**:
+
+```
+[bug-closure] Nenhum processo extensivo começa com P0/P1 bloqueante aberto.
+[bug-closure] Corrija e VERIFIQUE o defeito (teste de regressão no mesmo SHA) antes de reexecutar.
+ação exigida: fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI), fora da árvore do repositório
+```
+
+É bloqueio **por contrato** e exige âncora externa + provas de fechamento humanas. Contornar seria
+exatamente o que a missão proíbe. O número de itens obrigatórios foi conferido no contrato atual: **68**
+(`validate:required-tests` ⇒ `status=FAIL itens=68 {"NOT_EXECUTED":68}`).
+
+### 7.2 Escopo do roteador: o que foi verificado e o que não foi
+
+Verificado por execução: recuperação após SIGKILL (mission e task), lease/fencing, recusa de escrita por
+worker morto, timeout por etapa/missão (inventário completo, 0 LEGACY_UNKNOWN), detecção de ausência de
+progresso, isolamento e fallback de provider. **Não** verificado nesta missão: ciclo autônomo de correção
+completo ponta a ponta (`validate:bug-autonomous-loop` depende da execução autoritativa) — **PENDING**.
+
+---
+
+## 8. RAG (§9)
+
+`npm run validate:rag-index-health` (exit 0): `status=HEALTHY indexed=3539 duplicados=0 semTexto=4
+failed=2 chunks=9221 violações=0`. Isolamento de domínio: coberto por `tests/unit/rag*` +
+`ragDomainRouter` + `ragDomainSegregationEvidence` dentro do L0 (§9 abaixo) — 173 testes, todos PASS.
+
+---
+
+## 9. REGRESSÃO (§10, §11)
+
+### 9.1 L0 completo (árvore de desenvolvimento, `bail=0`, 4 workers)
+
+```
+Test Suites: 3 failed, 1 skipped, 1115 passed, 1118 of 1119
+Tests:       4 failed, 2 skipped, 9769 passed, 9775
+```
+
+| Suíte | Causa | Classificação |
+|---|---|---|
+| `governanceChainContract.test.js` | controle positivo com identidade parcial — **corrigido** (`ea7b96198`) | FAIL → **PASS** (15/15) |
+| `coverage/impactRunner.test.js` | artefato `reports/impact-*` desatualizado após edição — regenerado com `ci:artifacts` | ambiente → **PASS** |
+| `governance/modelDrivenE2e.test.js` | exige `qa/smoke/prod-like/…` produzido pelo job `prod-like-smoke` do CI | **ENVIRONMENT** (declarado) |
+
+Reexecução após as correções: `impactRunner` + 5 suítes de governança ⇒ **117/117 PASS**.
+
+### 9.2 RPA — regressão da otimização Playwright (§10)
+
+- `tests/unit/rpa*` + `tests/rpa` + `core/rpa`: **21 suítes / 100 testes PASS** (após o lazy-load estar no
+  HEAD, o que prova inicialização, gravação, replay e tratamento de exceção).
+- Benchmark de boot (`require('api/server')`, 3 pares baseline `78eaacc22` × HEAD, mesmo `node_modules`):
+  `−45,0%`, `−27,5%`, `+4,8%` — **mediana ≈ −27%**, com ruído de cache quente declarado. A medição a frio
+  registrada na Fase 3 foi −48%. **Não** se declara ganho sem a série inteira; a variância é evidência.
+
+### 9.3 L1 / L2 / L3
+
+| Nível | Execução | Resultado |
+|---|---|---|
+| L1 | `validate:timeout-architecture`, `validate:recovery`, `validate:rag-index-health`, `verify:mission-crash-recovery` | **GREEN/GO/HEALTHY** (ver §5, §6, §8) |
+| L2 | não executado nesta rodada | **NOT_EXECUTED** — requer harness de checkout limpo (§9.4) |
+| L3 | jornadas E2E de recuperação/concorrência | **PARCIAL** — SIGKILL, takeover, fencing e provider fallback provados; ciclo autônomo completo **BLOCKED** (§7.1) |
+| `validate:required-tests` | 68 itens | **FAIL — NOT_EXECUTED** (bloqueio externo §7.1) |
+| `validate:engineering-router-v2` | 12 itens | **NO_GO** (2 falhas, 3 pendências — §7) |
+| `ci:clean-checkout` | `--scenario clean` | **FAIL** — L0 verde no clone; L0b `FLAKY_UNDER_LOAD` (§9.4) |
+
+### 9.4 Checkout limpo — executado três vezes, resultado real
+
+| Execução | Commit | Resultado | Achado |
+|---|---|---|---|
+| 1 | `HEAD` (literal) | **FAIL** (harness) | `commit pedido (HEAD) difere do HEAD do clone` — recusa correta de identidade; reexecutado com SHA literal |
+| 2 | `ea7b96198` | **FAIL** | `L0-suite-oficial` exit=1 em `governanceChainCanonicalPath.test.js` — **defeito real no meu código**, não no ambiente (§9.5) |
+| 3 | `7f87aeedc` | **L0 exit=0 (492 s)** · **FAIL no L0b** | `L0b-integracao-engenheiro` exit=1: `engineeringBugLoop.test.js` BUG-03 — `transição concorrente rejeitada … SUSPECTED (tentativa REPRODUCING → CONFIRMED)` |
+
+O passo `clone-limpo`, `npm-ci-bootstrap`, `build-api`, `build-frontend`, `prod-like-smoke` e
+`prod-like-artefato` passaram nas três execuções; `L0a-artefatos-canoeiros` passou (9,0 s) e
+`L0-suite-oficial` passou no clone limpo **depois** da correção de §9.5.
+
+**Classificação do L0b (não convertido em PASS):** a mesma suíte `tests/integration/engineeringBugLoop.test.js`
+executada **isolada no mesmo SHA** ⇒ **12/12 PASS** (aqui a BUG-02 leva 16,7 s; no harness a suíte inteira
+levou 60 s). O erro é do próprio serviço (`bugFindingService.transitionFinding`), que detecta transição
+concorrente — não há código deste delta no caminho (o delta toca cadeia/decisão/selo). Fica registrado como
+**FAIL de execução sob carga** e **item de fila**: um teste que passa isolado e falha no harness é
+`FLAKY_UNDER_LOAD` até alguém provar o contrário; não é evidência de regressão nem de aprovação.
+
+### 9.5 Defeito que só o checkout limpo pegou
+
+`caminhosCanonicos()` re-baseava `path.join(raiz, path.relative(ROOT, caminhoDaCamada))` sempre que
+`raiz !== ROOT`. Isso **só coincide quando as duas árvores têm a mesma profundidade**:
+
+```
+dev   : ROOT=/opt/results/ria/er-hardening        raiz=/tmp/chain-canon-x  -> join normalizava, acertava
+clone : ROOT=/tmp/rap-ci-clean-XXXX/ria/r-agent2  raiz=/tmp/chain-canon-x  -> resolvia FORA da raiz,
+        `package`/`sidecar_manifest` viravam `resolvido:false` e a fixture explodia com
+        "The path argument must be of type string"
+```
+
+Corrigido em `7f87aeedc` (re-base só quando o caminho **não** está já dentro da raiz pedida) e verificado nos
+dois layouts. É o exemplo mais claro desta missão de por que evidência de máquina de desenvolvimento não é
+evidência: o teste do P0 passava em casa e quebrava no clone.
+
+---
+
+## 10. REVISÃO ADVERSARIAL INDEPENDENTE (§12)
+
+Revisor distinto (`code-review`, contexto próprio, 359 s) sobre o delta. **5 achados — todos tratados:**
+
+| # | Sev | Achado | Reprodução do revisor | Tratamento |
+|---|---|---|---|---|
+| 1 | **P0** | bypass sobrevivia por fallback de basename + divergência `path.resolve` × `path.join` (barra final) | `valid:true` com bytes de `dist/release/<base>` | fallback removido; `verificarHashesCanonicos` lê do caminho canônico; regressão permanente |
+| 2 | P1 | reparo de lineage abortava sempre (37/62 caminhos ignorados) | `git add -n` ⇒ exit 1 | commit só do subconjunto rastreado; teste com a allowlist REAL |
+| 3 | P1 | controle positivo `§11 #7` quebrado (identidade parcial) | `Expected CERTIFIED_GO, Received NO_GO` | fixture com identidade completa |
+| 4 | P2 | teste não hermético (`safe.bareRepository=explicit`, git ≥ 2.38) | `fatal: cannot use bare repository` | helpers com `-c safe.bareRepository=all` |
+| 5 | P2 | `sha256File` lançava EISDIR | elo apontando para `governance/` | `statSync().isFile()` + regressão |
+
+O revisor também confirmou como **sólidos**: seams `verificar`/`raiz`/`artifact` inalcançáveis por dados de
+produção; duplicação/ordem/ausência de elos; caminhos absolutos e symlinks; contrato de identidade;
+quoting e fluxo do `seal-release.sh`.
+
+---
+
+## 11. RISCOS RESIDUAIS E BLOQUEIOS EXTERNOS
+
+| Item | Estado |
+|---|---|
+| 68 testes obrigatórios | **BLOCKED** — `test:release-authoritative` recusa com P0/P1 histórico aberto; exige `RAP_CLOSURE_INVENTORY_SHA256` do canal externo e provas de fechamento humanas |
+| Envelope de auditoria V2 | **PENDING** — selar envelope sobre estado incompleto seria greenwashing; não gerado |
+| `modelDrivenE2e` | **ENVIRONMENT** — depende do artefato do job `prod-like-smoke` |
+| Padrões destrutivos residuais | 5 identificados (1 crítico), **inventariados e classificados**; correção de cada sítio é trabalho de outra ordem |
+| Cache de módulos no benchmark | ruído de cache quente medido e declarado (3 pares) |
+| `engineeringBugLoop` sob carga | `FLAKY_UNDER_LOAD` — 12/12 isolado, falha de transição concorrente dentro do harness; **item de fila**, não fechado |
+
+---
+
+## 12. DECISÃO FINAL
+
+```
+TIMEOUT_ARCHITECTURE  = GO               (4 provas runtime reais, inventário 1133 sem LEGACY_UNKNOWN)
+CRASH_RECOVERY        = GO               (13 checks com SIGKILL real)
+REAL_TASK_RECOVERY    = GO               (17 checks com takeover e fencing)
+RAG_INDEX_HEALTH      = HEALTHY          (3539 indexados, 0 violações)
+ENGINEERING_ROUTER_V2 = NO_GO            (2 falhas, 3 pendências — §7)
+REQUIRED_TESTS        = FAIL/NOT_EXECUTED (68) — bloqueio externo
+DEVELOPMENT_VERIFIED  = NÃO DECLARADO    (testes obrigatórios não executados)
+RELEASE_CERTIFICATION = NO_GO
+MERGE                 = NOT_AUTHORIZED
+PUBLISH               = NOT_AUTHORIZED
+DEPLOY                = NOT_AUTHORIZED
+```
+
+Duas vulnerabilidades P0/P1 reais fechadas com reprodução antes/depois, uma delas tendo sobrevivido à
+primeira correção e sido pega por revisão independente. O que impede `DEVELOPMENT_VERIFIED` é dependência
+externa — não ausência de trabalho executável neste ambiente.

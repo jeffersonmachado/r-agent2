@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "ENGINEERING_ROUTER_HARDENING_DEFINITIVO",
+  "generatedAt": "2026-10-25T18:20:00.000Z",
+  "branch": "codex/engineering-router-hardening-20261025",
+  "worktree": "/opt/results/ria/er-hardening",
+  "sourceSha": "29372d7a34d4653b10e7375480094fa787bded37",
+  "finalSha": "7f87aeedc875d270a45991032a82a62eed7497f8",
+  "remote": {
+    "main": "04cad9c1b639cdae357687f7febf47e490834665",
+    "devEngineeringHardening": "29372d7a34d4653b10e7375480094fa787bded37",
+    "pushed": false
+  },
+  "commits": [
+    {
+      "sha": "92587151d",
+      "area": "P0-cadeia"
+    },
+    {
+      "sha": "5c0ec2c3b",
+      "area": "P1-decisao+P1-selo"
+    },
+    {
+      "sha": "ea7b96198",
+      "area": "revisao-adversarial"
+    },
+    {
+      "sha": "7f87aeedc",
+      "area": "checkout-limpo"
+    }
+  ],
+  "findings": [
+    {
+      "id": "P0-CHAIN-CANONICAL-PATH",
+      "severity": "P0",
+      "reproduced": true,
+      "reproduction": "10 ids canonicos apontando para /tmp => verifyChain { valid: true, certifiable: true, failures: [] }",
+      "rootCause": "verifyChainHashes localizava o arquivo por link.path (dado verificado) + fallback por basename em dist/",
+      "fix": "caminhosCanonicos + verificarCaminhosCanonicos + verificarHashesCanonicos; fallback por basename removido",
+      "tests": "tests/unit/governance/governanceChainCanonicalPath.test.js (9/9)",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-DECISION-IDENTITY",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "clasificar({3 gates PASS, selado:true, certificado:true}) => CERTIFIED_GO com identity:null",
+      "fix": "identidade completa e valida obrigatoria para CERTIFIED_GO/PUBLISHED_VERIFIED",
+      "tests": "tests/unit/governance/canonicalReleaseDecisionIdentityContract.test.js (22/22)",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-SEAL-GIT-ADD-ALL",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "phase_verify_delivery: git add -A + commit 're-stampa lineage' + push da branch",
+      "fix": "allowlist derivada da taxonomia canonica + subconjunto rastreado (git ls-files)",
+      "tests": "tests/unit/governance/sealReleaseLineageRepair.test.js (12/12)",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P0-BASENAME-FALLBACK",
+      "severity": "P0",
+      "source": "revisao independente",
+      "result": "PASS",
+      "note": "reproducao do revisor reexecutada => valid:false (hash_from_canonical_mismatch)"
+    },
+    {
+      "id": "REVIEW-P1-REPAIR-IGNORED-PATHS",
+      "severity": "P1",
+      "source": "revisao independente",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P1-PARTIAL-IDENTITY-TEST",
+      "severity": "P1",
+      "source": "revisao independente",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P2-BARE-REPO-HERMETICITY",
+      "severity": "P2",
+      "source": "revisao independente",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P2-EISDIR",
+      "severity": "P2",
+      "source": "revisao independente",
+      "result": "PASS"
+    }
+  ],
+  "gates": {
+    "TIMEOUT_ARCHITECTURE": "GO",
+    "CRASH_RECOVERY": "GO",
+    "REAL_TASK_RECOVERY": "GO",
+    "RAG_INDEX_HEALTH": "HEALTHY",
+    "ENGINEERING_ROUTER_V2": "NO_GO",
+    "REQUIRED_TESTS": "FAIL_NOT_EXECUTED",
+    "RELEASE_CERTIFICATION": "NO_GO"
+  },
+  "timeoutInventory": {
+    "files": 2183,
+    "timeouts": 1133,
+    "legacyUnknown": 0,
+    "destructivePatterns": 5,
+    "criticalPatterns": 1
+  },
+  "regression": {
+    "l0": {
+      "suitesPassed": 1115,
+      "suitesFailed": 3,
+      "testsPassed": 9769,
+      "testsFailed": 4,
+      "note": "3 falhas: 2 corrigidas/ambiente, 1 ENVIRONMENT (modelDrivenE2e)"
+    },
+    "rpa": {
+      "suites": 21,
+      "tests": 100,
+      "result": "PASS"
+    },
+    "bootBenchmark": {
+      "baseline": "78eaacc22",
+      "runs": [
+        "-45.0%",
+        "-27.5%",
+        "+4.8%"
+      ],
+      "note": "mediana ~-27%, ruido de cache quente declarado"
+    },
+    "cleanCheckout": {
+      "scenario": "clean",
+      "verdict": "FAIL",
+      "l0": "PASS no clone (492s)",
+      "l0b": "FAIL — engineeringBugLoop BUG-03 transicao concorrente; 12/12 isolado no mesmo SHA => FLAKY_UNDER_LOAD",
+      "fixesProduced": [
+        "re-base de caminho canonico (7f87aeedc)"
+      ]
+    }
+  },
+  "externalBlocks": [
+    "test:release-authoritative recusa iniciar: P0/P1 historico aberto sem prova + RAP_CLOSURE_INVENTORY_SHA256 ausente (canal externo)",
+    "envelope V2 nao selado: selar sobre estado incompleto seria greenwashing"
+  ],
+  "verdicts": {
+    "DEVELOPMENT_VERIFIED": false,
+    "reason": "68 testes obrigatorios NOT_EXECUTED por bloqueio externo",
+    "MERGE": "NOT_AUTHORIZED",
+    "PUBLISH": "NOT_AUTHORIZED",
+    "DEPLOY": "NOT_AUTHORIZED",
+    "MAIN_MODIFIED": false
+  }
+}
