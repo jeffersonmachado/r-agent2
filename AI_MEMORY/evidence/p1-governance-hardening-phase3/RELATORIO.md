@@ -312,11 +312,18 @@ janela de rate limit, não tolerância a modelo ausente. Validado com laço for�
 | Jobs puláveis | `continue-on-error` em passos de gate | nenhum (travado por `prCiCoverage.test.js`) |
 | Identidade do SHA | `test "$(git rev-parse HEAD)" = "$GITHUB_SHA"` + `A2-sha-esperado` | assertada em cada run |
 
-Consequência declarada: **o verde de CI não é imposto pelo GitHub** — é um gate *voluntário* na
-cultura do repositório. Quem pode fazer merge pode ignorar o vermelho. Mudar isso exige configuração
-de branch protection (fora do escopo autorizado desta missão: "não alterar a configuração de
-segurança do repositório apenas para obter CI verde"); fica registrado como risco residual e item de
-fila, não como sucesso presumido.
+Consequência declarada em 2026-10-24: **o verde de CI não era imposto pelo GitHub** — um gate
+*voluntário* na cultura do repositório; quem podia fazer merge podia ignorar o vermelho.
+
+**RESOLVIDO em 2026-10-25** (autorização explícita do usuário: "autorizado a fazer tudo"):
+
+| Branch | Configuração aplicada | Verificação |
+|---|---|---|
+| `dev/engineering-hardening` | required checks = `L0 (Jest oficial) + L1 (gates de governanca)`, `Smoke prod-like real (artefato GO consumido pelo L0)`, `Integração real do Engenheiro (Postgres + sandbox)`; force-push **bloqueado**; deleção **bloqueada**; conversa tem de estar resolvida | `gh api …/protection` devolve os 3 contexts |
+| `main` | force-push **bloqueado**; deleção **bloqueada**; sem required checks (o refresh semanal de waves empurra relatórios por `git push` e não pode ser travado) | `gh api …/protection` ⇒ `checks: null, force: false, deletions: false` |
+
+Isto é *enforcement*, não prosa: a partir de agora um PR para `dev/engineering-hardening` só entra com
+os três jobs verdes, e o histórico de `main` não pode ser reescrito nem apagado.
 
 ### 5.8 Harness de paridade com o CI (como o "um vermelho por run" foi encerrado)
 
@@ -430,8 +437,9 @@ Ver §11 (resultado e achados).
    ⇒ não é regressão desta fase. **Correção de registro:** a versão anterior deste relatório dizia que
    isso "contradiz o compose" — impreciso; o fallback é intencional e testado. O efeito real é
    **desempenho** (o caminho ONNX não é exercitado em ambiente offline), não corretude.
-9. **Branch sem protection** — `dev/engineering-hardening` não tem branch protection nem required
-   checks (§5.7-bis). O CI verde é convenção, não imposição: um merge pode ignorar o vermelho.
+9. ~~Branch sem protection~~ — **resolvido em 2026-10-25**: `dev/engineering-hardening` com os três
+   jobs do Dev Hardening CI como required checks (force-push e deleção bloqueados) e `main` com
+   force-push/deleção bloqueados (§5.7-bis).
 10. **Boot da aplicação é caro** — 12 suítes sobem `api/server` inteiro; o orçamento passou a ser
    compartilhado (60 s) depois de medir 24,5 s a frio. A fragilidade de fundo (boot pesado por teste)
    permanece: a correção estrutural seria um `createServer` sob demanda, refactor fora deste escopo.
@@ -507,7 +515,7 @@ NÍVEL DE DESENVOLVIMENTO .......... DEVELOPMENT_VERIFIED (ver 12.4)
 NÍVEL DE CERTIFICAÇÃO ............. NO_GO
 
 RELEASE_CERTIFICATION = NO_GO
-MERGE_PR_16           = NOT_AUTHORIZED
+MERGE_PR_16           = MERGED (autorizado pelo usuário; merge commit 16dac909b)
 MAIN_MODIFIED         = FALSE
 PUBLISHED             = FALSE
 ```
@@ -547,9 +555,10 @@ validação é do conteúdo do PR e não de um ref vizinho. O commit que adicion
 ```
 git rev-parse origin/main                       -> 04cad9c1b639cdae357687f7febf47e490834665  (inalterado)
 git rev-parse origin/dev/engineering-hardening  -> 484eee4788e553907e31f7b0528cac9ee41d9298  (inalterado)
-git tag --points-at 83b50f1e4                   -> (vazio)  # nenhuma tag criada
+git tag --points-at 165e6945f                   -> (vazio)  # nenhuma tag criada
 gh run view 40123706119 --json jobs             -> prod-like-smoke/integração/L0+L1 = success
-gh api .../branches/dev/engineering-hardening/protection -> 404 Branch not protected (§5.7-bis)
+gh api .../branches/dev/engineering-hardening/protection -> 200, 3 required checks (§5.7-bis)
+git rev-parse origin/dev/engineering-hardening   -> 16dac909be3c8052106736e1e27d9d5b1280b38d (merge do PR #16)
 ```
 
 `MAIN_MODIFIED = FALSE` e `PUBLISHED = FALSE` conferidos por `git ls-remote`, não presumidos.
@@ -580,9 +589,24 @@ O que **não** está provado — e por que não impede o rótulo de desenvolvime
    `RELEASE_CERTIFICATION = NO_GO`.
 2. **Gate agregado vermelho por contrato**: 130 itens da fila sem prova de fechamento. Nenhum estado
    foi alterado para forçar GO.
-3. **Branch sem protection** (§5.7-bis): o verde de CI é convenção, não imposição do GitHub.
-4. Nenhum release, tag, merge ou publicação executado (`MERGE_PR_16 = NOT_AUTHORIZED`,
-   `MAIN_MODIFIED = FALSE`, `PUBLISHED = FALSE`).
+3. ~~Branch sem protection~~ — resolvido em 2026-10-25 (§5.7-bis): required checks ativos em
+   `dev/engineering-hardening`, force-push/deleção bloqueados em `dev/engineering-hardening` e `main`.
+4. **Merge executado com autorização explícita** (2026-10-25): PR #16 integrado a
+   `dev/engineering-hardening` pelo merge commit `16dac909b`, vinculado ao SHA validado
+   `165e6945f` (`sha:` explícito no pedido de merge — não "o que estiver no topo"). Nenhuma tag foi
+   criada, nenhuma imagem publicada, `main` **não** foi alterada (`MAIN_MODIFIED = FALSE`,
+   `PUBLISHED = FALSE`).
 
-Resumo em uma frase: **o desenvolvimento está validado de forma independente; a certificação de
-release continua `NO_GO`, e não estava no escopo autorizado.**
+Resumo em uma frase: **o desenvolvimento está validado, mesclado na branch de desenvolvimento e agora
+*imposto* por required checks; a certificação de release continua `NO_GO` porque depende de âncoras
+externas que este ambiente não possui.**
+
+### 12.5 Por que `main` NÃO foi tocada, mesmo com autorização ampla
+
+"Tudo autorizado" remove travas de *permissão*, não converte `NO_GO` em `GO`. Levar
+`dev/engineering-hardening` para `main` é decisão de **release**, e a decisão canônica continua
+`NO_GO` (fase R exige âncoras `RAP_CLOSURE_*` inexistentes; 130 itens da fila sem prova de
+fechamento). Fazer esse merge seria exatamente o "release verde artificial" que a missão proíbe — e a
+regra do repositório é explícita: não declarar sucesso de release com governança canônica `NO_GO`.
+A autorização vale para o que é legítimo (proteção de branch, merge na branch de desenvolvimento),
+não para fabricar a decisão que falta.
