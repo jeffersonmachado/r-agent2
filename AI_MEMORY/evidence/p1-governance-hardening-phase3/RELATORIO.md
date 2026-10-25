@@ -419,13 +419,17 @@ Ver §11 (resultado e achados).
    camada** — a primeira versão gerou imagem 174 MB menor com build verde e cold start offline
    quebrado; a forma publicada baixa no cache, COPIA para `/root/.cache/huggingface` e prova o
    conteúdo (`ls -A .../hub`, `du -sh` = 174M). No CI o passo rodou com o mount e o job ficou verde.
-8. **Backend ONNX não carrega com `HF_HUB_OFFLINE=1`** (achado colateral, **pré-existente**): com o
-   modelo presente e sem rede, `SentenceTransformer(..., backend='onnx')` chama
-   `list_repo_files` e morre com `OfflineModeIsEnabled`; o backend `torch` carrega e devolve 384
-   dimensões. Reproduzido **igualmente na imagem anterior** (`:latest`, 3 semanas), portanto não é
-   regressão desta fase — mas contradiz `RAG_EMBEDDING_BACKEND=onnx` + `HF_HUB_OFFLINE=1` do compose.
-   Não corrigido aqui: exige validação do serviço RAG (pytest/venv) e está fora do escopo autorizado.
-   Registrado para a fila oficial.
+8. **Backend ONNX não é usado offline — e o fallback é DELIBERADO** (verificado, não presumido).
+   Com o modelo presente e sem rede, `SentenceTransformer(..., backend='onnx')` chama
+   `list_repo_files` e falha com `OfflineModeIsEnabled`. Isso **não derruba o serviço**:
+   `rag-service/services/embedding_service.py` captura a exceção, emite
+   `[EMBEDDING] Falha ao carregar backend ONNX (…); usando fallback torch` e segue com torch
+   (coberto por `rag-service/tests/test_embedding_backend.py`). Prova na imagem real, `--network none`,
+   `RAG_EMBEDDING_BACKEND=onnx`:
+   `DIMENSAO 384` com o warning do fallback. Reproduzido igualmente na imagem `:latest` (3 semanas)
+   ⇒ não é regressão desta fase. **Correção de registro:** a versão anterior deste relatório dizia que
+   isso "contradiz o compose" — impreciso; o fallback é intencional e testado. O efeito real é
+   **desempenho** (o caminho ONNX não é exercitado em ambiente offline), não corretude.
 9. **Branch sem protection** — `dev/engineering-hardening` não tem branch protection nem required
    checks (§5.7-bis). O CI verde é convenção, não imposição: um merge pode ignorar o vermelho.
 10. **Boot da aplicação é caro** — 12 suítes sobem `api/server` inteiro; o orçamento passou a ser
