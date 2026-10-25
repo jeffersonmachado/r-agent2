@@ -108,6 +108,30 @@ const {
 const PASSOS = Object.freeze({
   C: [
     {
+      /**
+       * PREPARO DE ENTRADAS DO L0 (medido no CI de 2026-10-24, run 40105995013).
+       *
+       * O L0 reprovou no runner com `GRAPH_ABSENT` em `tests/unit/coverage/impactRunner.test.js`:
+       * a suíte consome artefatos IGNORADOS pelo git (`reports/*.json`,
+       * `governance/json-persistence-audit.json`, `qa-mesh/meshRegistry.json`) e nenhum clone
+       * contém esses arquivos. Na máquina de desenvolvimento o vermelho não aparecia porque os
+       * artefatos já existiam de execuções anteriores — reprodutibilidade dependia de estado sujo.
+       *
+       * O gate passa a produzir as entradas com os MESMOS produtores canônicos (`ci:artifacts`,
+       * parte de `ci:bootstrap`) ANTES de cobrar a suíte. Passo que falha aqui derruba a fase:
+       * ausência de artefato é defeito de preparo, não motivo para pular asserção.
+       * Medição de referência: `reports/` vazio ⇒ L0 exit=1 (`Expected "EXPLICIT", Received
+       * "GRAPH_ABSENT"`); `npm run ci:artifacts` ⇒ mesmo conjunto ⇒ exit=0.
+       */
+      id: 'L0a-artefatos-canoeiros',
+      nivel: 'L0',
+      comando: 'npm run ci:artifacts',
+      descricao: 'Produz os artefatos canônicos (ignorados pelo git) que o L0 consome',
+      // Medido em 2026-10-24: 12 produtores + prova de existência/frescor ≈ 60-120 s em árvore
+      // limpa. Orçamento folgado porque produtor lento não é defeito de código.
+      orcamentoMs: Number(process.env.L0A_ORCAMENTO_MS) || 20 * 60 * 1000,
+    },
+    {
       id: 'L0-suite-oficial',
       nivel: 'L0',
       comando: 'npm test',
@@ -207,6 +231,16 @@ const PASSOS = Object.freeze({
       nivel: 'L1',
       comando: 'node scripts/governance/validate-self-proving.js',
       descricao: 'Self-proving sobre a cadeia recalculada',
+      orcamentoMs: 120 * 1000,
+    },
+    {
+      // Fase 3, missão D: a asserção de ESTADO CANÔNICO das projeções saiu do L2 (dependia de
+      // `governance/rap-master-scorecard.json`, artefato de run governado) e passou a viver aqui,
+      // na fase de CERTIFICAÇÃO. O controle continua exigido — só deixou de contaminar o L2.
+      id: 'L1-projecao-estado-canonico',
+      nivel: 'L1',
+      comando: 'npm run -s test:certification',
+      descricao: 'Projeções canônicas do estado real (BLOCKED_BY_GOVERNED_EVIDENCE sem scorecard governado)',
       orcamentoMs: 120 * 1000,
     },
     {
@@ -554,6 +588,15 @@ function definirContextoExecucao(sha) {
   return CONTEXTO_EXECUCAO;
 }
 
+/**
+ * Resultado que o passo DEVERIA ter. Passos negativos declaram `esperado` (ex.: 1); os demais
+ * esperam 0. Usado só para decidir QUANTO da saída guardar (diagnóstico) — nunca no veredito.
+ */
+function esperadoParaEstePasso(passo) {
+  const bruto = passo && passo.esperado;
+  return typeof bruto === 'number' ? bruto : 0;
+}
+
 function executar(passo) {
   const inicio = Date.now();
   // O ORÇAMENTO PRECISA MATAR O PROCESSO. Com `shell: true`, o `timeout` do spawnSync
@@ -613,7 +656,13 @@ function executar(passo) {
     sha: CONTEXTO_EXECUCAO.sha,
     execucaoId: CONTEXTO_EXECUCAO.execucaoId,
     saidaRef,
-    saidaFinal: saida.trim().split('\n').slice(-12).join('\n'),
+    // DIAGNÓSTICO DE FALHA (Fase 3): o `saidaFinal` guardava só a CAUDA (12 linhas). Num passo que
+    // roda a suíte inteira, a cauda traz "Tests: 1 failed" e o RESUMO — mas não o nome do teste nem
+    // `Expected/Received`, que ficam no MEIO da saída. Sem isso, um vermelho no CI obriga a
+    // reexecutar tudo para descobrir o que falhou (medido em 2026-10-24, run 40105995013).
+    saidaFinal: (estourouOrcamento || exitCode !== esperadoParaEstePasso(passo))
+      ? [saida.trim().split('\n').slice(0, 60).join('\n'), saida.trim().split('\n').slice(-25).join('\n')].join('\n…\n')
+      : saida.trim().split('\n').slice(-12).join('\n'),
   };
 }
 

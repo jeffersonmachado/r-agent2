@@ -32,6 +32,14 @@ jobs:
     name: "Jest (npm test: unit + flow + rpa)"
     runs-on: ubuntu-latest
 
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,6 +70,14 @@ jobs:
     name: "Jest Integration (tests/integration + tests/tenant c/ Postgres real)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     services:
       postgres:

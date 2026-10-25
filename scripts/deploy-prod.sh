@@ -178,6 +178,17 @@ if ! $SSH_RUN_CMD "${REMOTE_USER}@${REMOTE_HOST}" "echo 'Conexão SSH OK'" >/dev
 fi
 info "✅ SSH remoto validado"
 
+# PUBLICAÇÃO/IMPLANTAÇÃO (Fase 3, achado 2 da revisão): `npm run deploy:prod` faz ssh/rsync para
+# `${DEPLOY_HOST}` (default root@10.10.2.30) e não consultava decisão de release — o porteiro existia
+# só nos `docker-push*`. Implantação é publicação de artefato: exige autorização explícita + GO.
+if [[ "${SYSTEM_DEPLOY_EXECUTE:-}" != "1" && "${ALLOW_DEPLOY_WITHOUT_GO:-}" != "1" ]]; then
+    echo "[deploy-prod] BLOQUEADO: defina SYSTEM_DEPLOY_EXECUTE=1 (intenção explícita) para implantar."
+    exit 1
+fi
+# shellcheck source=/dev/null
+. "$(dirname "${BASH_SOURCE[0]}")/governance/publication-gate.sh"
+rap_publication_gate "deploy-prod"
+
 section "Backup Leve Remoto"
 RELEASE_TS="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_DIR="${REMOTE_DIR}/backups/light/${RELEASE_TS}"

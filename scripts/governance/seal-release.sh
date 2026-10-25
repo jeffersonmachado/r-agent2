@@ -557,6 +557,16 @@ phase_publish() {
   step publish "tag imutável + proveniência remota + recibo + publicação"
 
   [ -f "$LOG_DIR/release.env" ] || fail "release.env ausente — rode a fase final primeiro" "$LOG_DIR/release.env" publish
+
+  # DEFESA EM PROFUNDIDADE (Fase 2, achado 1 da revisão independente): `--from publish` começa na
+  # fase pedida e PULA a certificação. Publicar sem reexecutar a assertiva canônica deixaria o
+  # caminho aberto para "publicar GO que nunca foi verificado neste run".
+  step publish-check "revalidação da decisão canônica antes de publicar"
+  if node scripts/governance/assert-canonical-release-decision.js --json > "$LOG_DIR/publish-decision.log" 2>&1; then
+    ok "decisão canônica em GO definitivo"
+  else
+    fail "publicação BLOQUEADA: decisão canônica não é GO definitivo (--from publish não pode pular a certificação)" "$LOG_DIR/publish-decision.log" publish
+  fi
   RELEASE_ID="$(sed -n 1p "$LOG_DIR/release.env")"
   RELEASE_COMMIT="$(sed -n 2p "$LOG_DIR/release.env")"
 

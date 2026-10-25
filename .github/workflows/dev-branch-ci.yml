@@ -45,6 +45,13 @@ on:
   push:
     branches:
       - dev/engineering-hardening
+  # FASE 3 / missão E: o PR #16 (codex/** -> dev/engineering-hardening) NÃO disparava NENHUM
+  # workflow — medido em 2026-10-24 com `gh run list --branch codex/...` (vazio) e
+  # `gh run list --commit a3aa22d28` (vazio). Sem gatilho de PR, o L0/L1 nunca é validado de forma
+  # independente no SHA do PR; a validação só existia como execução local do agente.
+  pull_request:
+    branches:
+      - dev/engineering-hardening
   workflow_dispatch:
 
 permissions:
@@ -57,6 +64,9 @@ jobs:
   dev-branch-gate:
     name: "L0 (Jest oficial) + L1 (gates de governanca)"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
     # O L0 depende do artefato prod-like (gitignored, produzido pelo job acima). Dependência
     # explícita: se o produtor falhar, o gate NÃO roda com artefato ausente fingindo prova.
     needs: prod-like-smoke
@@ -289,6 +299,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -449,6 +467,14 @@ jobs:
     name: "Integração real do Engenheiro (Postgres + sandbox)"
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     services:
       postgres:

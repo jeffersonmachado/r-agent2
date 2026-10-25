@@ -138,6 +138,20 @@ describe('validate-model-driven-e2e — pipeline REAL, não simulação', () => 
       } catch (_) { return null; }
     })();
 
+    // FALHA AUTO-DESCRITIVA (medido 2026-10-24 nos cenários `missing-artifact` e
+    // `corrupt-artifact` do harness): quando a prova prod-like está ausente ou ilegível, o
+    // produtor devolve `pass:false` com a violação `EXECUTED: smoke report ausente (...)`. Sem
+    // nomear a dependência, a mensagem de reprovação era só `Expected: 0, Received: 1` e o harness
+    // classificava como `EXPECTED_FAILURE_SEM_ASSINATURA` (falha pelo motivo ERRADO) — o cenário
+    // negativo ficava vermelho sem dizer por quê. Aqui a dependência é nomeada e o relatório do
+    // produtor é anexado à mensagem.
+    if (report?.pass !== true) {
+      throw new Error(
+        'artefato prod-like ausente ou ilegivel: qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json '
+        + `(exit=${result.status}, decision=${report?.decision || 'sem-relatorio'}, `
+        + `violacoes=${JSON.stringify(report?.violations || [])}, saida=${output.slice(-400)})`,
+      );
+    }
     expect(result.status).toBe(0);
     expect(report?.pass).toBe(true);
     expect(report?.decision).toBe('MODEL_DRIVEN_E2E_VALIDATED');

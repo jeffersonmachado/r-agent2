@@ -21,8 +21,19 @@ function git(cwd, args) {
   return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
+/**
+ * O cenário usa um remote BARE em filesystem (não publica nada). Desde a Fase 3 o porteiro exige
+ * autorização + GO DEFINITIVO por padrão; a única dispensa é o modo local de teste EXPLÍCITO
+ * (`RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW` = caminho exato do destino de push configurado).
+ */
 function runScript(cwd, args) {
-  const result = spawnSync('bash', [SCRIPT, ...args], { cwd, encoding: 'utf8' });
+  const remoteBare = path.join(path.dirname(cwd), 'remote.git');
+  const result = spawnSync('bash', [SCRIPT, ...args], {
+    cwd,
+    encoding: 'utf8',
+    // `GIT_CONFIG_COUNT=0` descarta injeção de configuração git do processo pai (o porteiro a recusa).
+    env: { ...process.env, RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW: remoteBare, CI: '', NODE_ENV: 'test', GIT_CONFIG_COUNT: '0' },
+  });
   return {
     status: result.status,
     output: `${result.stdout || ''}\n${result.stderr || ''}`,

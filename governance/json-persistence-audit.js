@@ -69,6 +69,10 @@ const CLASSIFIED = {
   // Proposta mecânica de testes de regressão (derivada do inventário; reconstruível por
   // `node scripts/governance/regularize-bug-closures.js --propor-testes`).
   'reports/bug-closure-test-proposals.json': 'ARTIFACT_STORAGE',
+  // Manifesto e resultados POR EXECUÇÃO do regularizador (P1-B): `runs/<runId>/manifest.json`
+  // e `runs/<runId>/itens/<ID>.json`. Evidência regenerável a cada execução — nunca estado
+  // canônico. Classificados pelo PADRÃO porque o caminho carrega o runId.
+  'AI_MEMORY/evidence/bug-closure-regularization/runs': 'ARTIFACT_STORAGE',
   'reports/master-scorecard-regression-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/master-scorecard-test-report.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/coverage-gate-report.json': 'DB_CANONICAL_JSON_EXPORT',
@@ -141,6 +145,9 @@ const CLASSIFIED = {
 // (ex.: scripts/smoke escreve em qa/enterprise/ com caminho relativo variável).
 const BASENAME_CLASSIFIED = {
   'human-handoff-full-validation.json': 'ARTIFACT_STORAGE',
+  // Mapa CONFIRMADO por humano de defeito → teste (P1-A/P1-B). É configuração VERSIONADA lida
+  // pelo regularizador; o scanner estático só enxerga o basename (path.join em variável).
+  'bug-closure-test-map.json': 'STATIC_VERSIONED_CONFIG',
   'pbx-voice-flow-prod-like.json': 'ARTIFACT_STORAGE',
   'omnichannel-unified-replay.json': 'ARTIFACT_STORAGE',
   'enterprise-proof-report.json': 'ARTIFACT_STORAGE',

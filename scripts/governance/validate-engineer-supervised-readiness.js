@@ -224,6 +224,14 @@ function checkBloqueiosClassificados(sha) {
     registrar('QUEUE_EVIDENCE_READABLE', { ok: false, detalhe: `inventário ilegível: ${erro.message}` });
   }
   if (inventario) {
+    // Medido explicitamente também no caminho feliz: o catálogo da decisão exige COBERTURA
+    // declarada de cada check, e "não registrei porque deu certo" é indistinguível de
+    // "não medi". Registrado como não-bloqueante: quem decide bloqueio é o conteúdo.
+    registrar('QUEUE_EVIDENCE_READABLE', {
+      ok: true,
+      bloqueante: false,
+      detalhe: `inventário carregado: ${inventario.defeitos.length} defeito(s)`,
+    });
     const livro = verificarLivro(ROOT);
     const naoProvados = inventario.defeitos.filter((d) => d.fechamentoNaoProvado === true);
     registrar('QUEUE_CLOSURE_EVIDENCE', {
@@ -406,6 +414,16 @@ function checkAprovacaoHumana(sha) {
       detalhe: `sem assinatura humana em ${rel} — o veredito fica PENDING_HUMAN_APPROVAL (nunca GO)`,
       dados: { caminho: rel },
     });
+    // Cobertura EXPLÍCITA do catálogo: sem assinatura não há o que ancorar/validar, e isso é
+    // medido como "não aplicável" (não-bloqueante) — nunca como ausência silenciosa de check.
+    registrar('HUMAN_APPROVAL_ANCHORED', {
+      ok: false, bloqueante: false, status: 'NOT_EXECUTED',
+      detalhe: 'não medido: não há assinatura humana para ancorar',
+    });
+    registrar('HUMAN_APPROVAL_VALID', {
+      ok: false, bloqueante: false, status: 'NOT_EXECUTED',
+      detalhe: 'não medido: não há assinatura humana para validar',
+    });
     return { aprovado: false };
   }
   const obrigatorios = ['approver', 'approvedAt', 'missionId', 'scope', 'statement'];
@@ -464,11 +482,151 @@ function checkAprovacaoHumana(sha) {
  * @param {{checks:Array<{id:string,ok:boolean,bloqueante:boolean}>, aprovacaoHumana:boolean}} input
  * @returns {{veredito:string, exitCode:number, isGo:boolean, falhas:string[]}}
  */
-function decidirVeredito({ checks = [], aprovacaoHumana = false } = {}) {
-  const falhas = checks.filter((c) => c.bloqueante !== false && !c.ok).map((c) => c.id);
-  if (falhas.length > 0) return { veredito: 'NOT_READY', exitCode: 1, isGo: false, falhas };
-  if (!aprovacaoHumana) return { veredito: 'PENDING_HUMAN_APPROVAL', exitCode: 2, isGo: false, falhas: [] };
-  return { veredito: 'ENGINEER_SUPERVISED_READY_GO', exitCode: 0, isGo: true, falhas: [] };
+/**
+ * CATÁLOGO CANÔNICO dos checks que o gate pode produzir. A decisão exige COBERTURA EXPLÍCITA
+ * deste conjunto: `checks` vazio, parcial, desconhecido ou com resultado inconclusivo não é
+ * "nada falhou", é "nada foi medido".
+ */
+const CHECKS_OBRIGATORIOS = Object.freeze([
+  'QUEUE_READABLE',
+  'QUEUE_NO_OPEN_DEFECT',
+  'QUEUE_INVENTORY_ANCHORED',
+  'QUEUE_STATE_STATUS_COHERENT',
+  'QUEUE_NO_BLOCKED',
+  'QUEUE_BLOCKERS_CLASSIFIED',
+  'QUEUE_EVIDENCE_READABLE',
+  'QUEUE_CLOSURE_EVIDENCE',
+  'QUEUE_INVENTORY_COMPLETE',
+  'ROUTING_CONSISTENT_WITH_AUTHORITY',
+  'NON_WAIVABLE_ABSENT',
+  'READINESS_DECISIONS_PRESENT',
+  'EVIDENCE_COMMITS_EXIST',
+  'SEGREGATION_VISIBILITY',
+  'SEGREGATION_EXPERIENCE',
+  'SEGREGATION_EXPERIENCE_API',
+  'READINESS_DOC_PRESENT',
+  'READINESS_DOC_SECTIONS',
+  'HUMAN_APPROVAL_PRESENT',
+  'HUMAN_APPROVAL_ANCHORED',
+  'HUMAN_APPROVAL_VALID',
+]);
+
+/**
+ * Resultados que NÃO são aprovação. Um check com `ok:true` e status inconclusivo é contraditório
+ * e reprova: nunca se converte UNKNOWN/NOT_EXECUTED/TIMEOUT/SKIPPED em PASS.
+ */
+const STATUS_CONCLUSIVOS = Object.freeze(new Set(['', 'PASS', 'OK', 'SUCCESS']));
+
+const STATUS_INCONCLUSIVOS = Object.freeze(new Set([
+  'UNKNOWN', 'NOT_EXECUTED', 'TIMEOUT', 'SKIPPED', 'BLOCKED', 'ERROR', 'PENDING', 'INCONCLUSIVO', 'FLAKY',
+]));
+
+/**
+ * Decide o veredito a partir dos checks MEDIDOS.
+ *
+ * P1-D: a versão anterior devolvia `ENGINEER_SUPERVISED_READY_GO` com `checks=[]` (ou `undefined`,
+ * ou um único check inventado) desde que `aprovacaoHumana === true` — aprovação humana
+ * substituía teste técnico, exatamente o que o princípio "ausência de evidência não é aprovação"
+ * proíbe. O contrato agora é seguro MESMO quando chamado fora do script principal:
+ *
+ *   - `checks` precisa ser array não vazio;
+ *   - todo check precisa de `id` de string, `ok` booleano e `detalhe` (evidência textual);
+ *   - id duplicado, desconhecido (fora do catálogo) ou ausente do catálogo ⇒ NOT_READY;
+ *   - status inconclusivo ⇒ NOT_READY (mesmo com `ok:true`);
+ *   - `identidade` (commit/fingerprint) é conferida contra a declarada por cada check;
+ *   - aprovação humana continua NECESSÁRIA para GO, mas nunca suficiente.
+ *
+ * @returns {{veredito:string, exitCode:number, isGo:boolean, falhas:string[], problemas:string[], checksAusentes:string[]}}
+ */
+function decidirVeredito({ checks, aprovacaoHumana = false, catalogo = CHECKS_OBRIGATORIOS, identidade = null } = {}) {
+  // Achado 4 da 1ª passada: `catalogo: []`/`null` desligava as duas guardas de cobertura.
+  // Achado A7 da 2ª: um catálogo custom NÃO-VAZIO substituía o canônico (1 check inventado
+  // bastava). Agora catálogo custom só é aceito se for SUPERCONJUNTO do canônico.
+  const custom = Array.isArray(catalogo) && catalogo.length > 0 ? [...new Set(catalogo)] : null;
+  const catalogoEfetivo = CHECKS_OBRIGATORIOS;
+  if (custom) {
+    const faltandoDoCanonico = CHECKS_OBRIGATORIOS.filter((id) => !custom.includes(id));
+    if (faltandoDoCanonico.length > 0) {
+      return {
+        veredito: 'NOT_READY',
+        exitCode: 1,
+        isGo: false,
+        falhas: [],
+        problemas: faltandoDoCanonico.map((id) => `CATALOGO_CUSTOM_OMITE_OBRIGATORIO:${id}`),
+        checksAusentes: faltandoDoCanonico,
+      };
+    }
+  }
+  const problemas = [];
+  const falhas = [];
+
+  if (!Array.isArray(checks) || checks.length === 0) {
+    return {
+      veredito: 'NOT_READY',
+      exitCode: 1,
+      isGo: false,
+      falhas: [],
+      problemas: [Array.isArray(checks) ? 'CHECKS_VAZIOS' : 'CHECKS_AUSENTES'],
+      checksAusentes: [...catalogoEfetivo],
+    };
+  }
+
+  const vistos = new Set();
+  const porId = new Map();
+  for (const check of checks) {
+    if (!check || typeof check !== 'object' || typeof check.id !== 'string' || check.id.trim() === '') {
+      problemas.push('CHECK_SEM_ID');
+      continue;
+    }
+    const id = check.id.trim();
+    if (vistos.has(id)) { problemas.push(`CHECK_DUPLICADO:${id}`); continue; }
+    vistos.add(id);
+    porId.set(id, check);
+
+    if (catalogoEfetivo.length > 0 && !catalogoEfetivo.includes(id)) problemas.push(`CHECK_DESCONHECIDO:${id}`);
+    if (typeof check.ok !== 'boolean') problemas.push(`CHECK_SEM_RESULTADO_BOOLEANO:${id}`);
+    if (typeof check.detalhe !== 'string' || check.detalhe.trim() === '') problemas.push(`CHECK_SEM_EVIDENCIA:${id}`);
+
+    // Achado A7: `UNKNOWN\u200b` e fullwidth `ＵＮＫＮＯＷＮ` escapavam. Achado A7-1 (3ª passada):
+    // deny-list deixava passar U+2060/U+00AD/U+180E/combining e QUALQUER status desconhecido.
+    // Regra final: ALLOWLIST de status conclusivos; todo o resto é inconclusivo.
+    const status = String(check.status || '')
+      .normalize('NFKC')
+      .replace(/[\p{Cf}\p{Mn}\p{Cc}]/gu, '')
+      .trim()
+      .toUpperCase();
+    if (status !== '' && !STATUS_CONCLUSIVOS.has(status) && !STATUS_INCONCLUSIVOS.has(status)) {
+      problemas.push(`CHECK_STATUS_DESCONHECIDO:${id}:${status}`);
+    }
+    if (status && STATUS_INCONCLUSIVOS.has(status)) problemas.push(`CHECK_INCONCLUSIVO:${id}:${status}`);
+
+    if (identidade && check.identidade) {
+      for (const campo of ['commit', 'sourceFingerprint']) {
+        if (identidade[campo] !== undefined && check.identidade[campo] !== undefined
+          && String(check.identidade[campo]) !== String(identidade[campo])) {
+          problemas.push(`CHECK_DE_OUTRO_COMMIT:${id}:${campo}`);
+        }
+      }
+    }
+
+    if (check.ok !== true && check.bloqueante !== false) falhas.push(id);
+  }
+
+  const checados = [...vistos];
+  const checksAusentes = catalogoEfetivo.filter((id) => !vistos.has(id));
+  for (const id of checksAusentes) problemas.push(`CHECK_OBRIGATORIO_AUSENTE:${id}`);
+
+  if (falhas.length > 0 || problemas.length > 0 || checksAusentes.length > 0) {
+    return { veredito: 'NOT_READY', exitCode: 1, isGo: false, falhas, problemas, checksAusentes, checados };
+  }
+
+  // Aprovação humana é NECESSÁRIA, nunca suficiente: os checks técnicos acima já foram exigidos.
+  // Achado A7: era testada por truthiness (`aprovacaoHumana: 'false'` ⇒ READY_GO). Só o booleano
+  // `true` aprova.
+  if (aprovacaoHumana !== true) {
+    return { veredito: 'PENDING_HUMAN_APPROVAL', exitCode: 2, isGo: false, falhas: [], problemas: [], checksAusentes: [], checados };
+  }
+  return { veredito: 'ENGINEER_SUPERVISED_READY_GO', exitCode: 0, isGo: true, falhas: [], problemas: [], checksAusentes: [], checados };
 }
 
 function main() {
@@ -485,7 +643,12 @@ function main() {
   checkDocumento();
   const aprovacao = checkAprovacaoHumana(sha);
 
-  const decisao = decidirVeredito({ checks, aprovacaoHumana: Boolean(aprovacao.aprovado) });
+  const decisao = decidirVeredito({
+    checks,
+    aprovacaoHumana: Boolean(aprovacao.aprovado),
+    // Identidade de execução: qualquer check que declare commit/fingerprint tem de casar.
+    identidade: { commit: sha },
+  });
   const { veredito, exitCode } = decisao;
   const falhas = checks.filter((c) => c.bloqueante && !c.ok);
   const checksOk = falhas.length === 0;
@@ -493,9 +656,12 @@ function main() {
   const relatorio = {
     artifactType: 'ENGINEER_SUPERVISED_READINESS',
     artifactVersion: 1,
-    status: checksOk ? 'PASS' : 'FAIL',
+    status: checksOk && decisao.veredito === 'ENGINEER_SUPERVISED_READY_GO' ? 'PASS' : 'FAIL',
     veredito,
     exitCode,
+    // Problemas estruturais da decisão (cobertura incompleta, duplicidade, inconclusivo).
+    problemasDaDecisao: decisao.problemas || [],
+    checksAusentes: decisao.checksAusentes || [],
     checks,
     /** Quatro baldes SEPARADOS (§6): aceite nunca aparece como resolução. */
     bloqueios: {
@@ -514,6 +680,7 @@ function main() {
   fs.writeFileSync(JSON_OUT, `${JSON.stringify(relatorio, null, 2)}\n`);
 
   console.log(`[supervised-readiness] veredito=${veredito} (exit ${exitCode})`);
+  for (const p of decisao.problemas || []) console.log(`  PROBLEMA ${p}`);
   for (const c of checks) {
     console.log(`  ${c.ok ? 'PASS' : 'FAIL'} ${c.id} — ${c.detalhe}`);
   }
@@ -530,4 +697,12 @@ if (require.main === module) {
   }
 }
 
-module.exports = { ABERTOS, IMPEDIDOS, SECOES_OBRIGATORIAS, decidirVeredito };
+module.exports = {
+  ABERTOS,
+  IMPEDIDOS,
+  SECOES_OBRIGATORIAS,
+  CHECKS_OBRIGATORIOS,
+  STATUS_CONCLUSIVOS,
+  STATUS_INCONCLUSIVOS,
+  decidirVeredito,
+};
