@@ -455,9 +455,15 @@ Ver §11 (resultado e achados).
 9. ~~Branch sem protection~~ — **resolvido em 2026-10-25**: `dev/engineering-hardening` com os três
    jobs do Dev Hardening CI como required checks (force-push e deleção bloqueados) e `main` com
    force-push/deleção bloqueados (§5.7-bis).
-10. **Boot da aplicação é caro** — 12 suítes sobem `api/server` inteiro; o orçamento passou a ser
-   compartilhado (60 s) depois de medir 24,5 s a frio. A fragilidade de fundo (boot pesado por teste)
-   permanece: a correção estrutural seria um `createServer` sob demanda, refactor fora deste escopo.
+10. **Boot da aplicação é caro — atacado na causa, não só no orçamento.** A medição do grafo de
+   `require('api/server')` (frio) mostrou **4.678 ms / 7.204 módulos**, com `playwright` (~990 ms)
+   entrando no boot da API por `api/server → rpaService → rpaTestRunner → actionExecutor`. Correção
+   cirúrgica: `require('playwright')` passou a ser **tardio** em `actionExecutor.js` e
+   `rpaRecorder.js` (getter memoizado, mesmo objeto no primeiro uso) e o require **morto** de
+   `rpaPlayer.js` (nunca usado no módulo) foi removido. Resultado medido:
+   **2.413 ms / 5.872 módulos** (−48% de tempo, −1.332 módulos); a suíte que sobe a aplicação caiu de
+   ~10,8 s para ~6,2 s. O orçamento compartilhado de 60 s permanece como defesa, agora com folga real.
+   Regressão: 21 suítes RPA (100 testes) + L0 completo (1115 suítes / 9.730 testes) verdes.
 
 
 ---

@@ -1,0 +1,209 @@
+{
+  "artifactType": "ci-bootstrap-report",
+  "artifactVersion": 1,
+  "generatedAt": "2026-10-25T14:58:42.085Z",
+  "veredito": "INCOMPLETE",
+  "modo": "completo",
+  "fonteDeVerdadeDeGate": "reports/governance-score.json / validadores canônicos — nunca este arquivo",
+  "raiz": "/tmp/rap-ci-clean-dT8SBr/ria/r-agent2",
+  "raizOverride": false,
+  "nodeVersion": "22.12.0",
+  "passos": [
+    {
+      "id": "preflight",
+      "comando": "(verificação interna)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "",
+      "ambiente": {
+        "node": "22.12.0",
+        "npm": "10.9.0",
+        "jest": null,
+        "docker": "Docker version 27.3.1, build ce12230",
+        "psql": "psql (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+        "redisCli": "redis-cli 7.0.15"
+      }
+    },
+    {
+      "id": "identidade-git",
+      "comando": "git config --get user.email/user.name (cria --global só quando ausente)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "efetiva: user.email=jefferso@results.com.br user.name=Jefferson Carlos Machado",
+      "ambiente": {
+        "identidadeEfetiva": "user.email=jefferso@results.com.br user.name=Jefferson Carlos Machado"
+      }
+    },
+    {
+      "id": "pacotes-irmaos",
+      "comando": "(materialização de vendor/ → irmãos declarados no package.json)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "@results/auth: materializado de vendor/ em /tmp/rap-ci-clean-dT8SBr/packages/auth\n@results/whatsapp-qr-bridge: materializado de vendor/ em /tmp/rap-ci-clean-dT8SBr/ria/packages/whatsapp-qr-bridge"
+    },
+    {
+      "id": "system-bootstrap",
+      "comando": "npm run -s system:bootstrap",
+      "exitCode": 1,
+      "veredito": "FAIL",
+      "ok": null,
+      "duracaoMs": 296367,
+      "saida": ", tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:52:07.665Z] [WARN] [Sequelize] Tentativa 17/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:52:17.678Z] [WARN] [Sequelize] Tentativa 18/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:52:27.690Z] [WARN] [Sequelize] Tentativa 19/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:52:37.702Z] [WARN] [Sequelize] Tentativa 20/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:52:47.706Z] [WARN] [Sequelize] Tentativa 21/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:52:57.718Z] [WARN] [Sequelize] Tentativa 22/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:53:07.730Z] [WARN] [Sequelize] Tentativa 23/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:53:17.741Z] [WARN] [Sequelize] Tentativa 24/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:53:27.752Z] [WARN] [Sequelize] Tentativa 25/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:53:37.763Z] [WARN] [Sequelize] Tentativa 26/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:53:47.775Z] [WARN] [Sequelize] Tentativa 27/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:53:57.787Z] [WARN] [Sequelize] Tentativa 28/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:54:07.798Z] [WARN] [Sequelize] Tentativa 29/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:54:17.811Z] [ERROR] [Sequelize] Falha ao conectar ao PostgreSQL após todas as tentativas\n{\n  \"attempts\": 30,\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:54:17.812Z] [ERROR] [Migration] ❌ Erro ao executar migrations:\n{\n  \"message\": \"Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\",\n  \"stack\": \"Error: Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\\n    at connect (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/sequelize.js:150:15)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async runMigrations (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/migrate.js:112:5)\",\n  \"name\": \"Error\"\n}\n[2026-10-25T14:54:17.813Z] [ERROR] [Migration] Falha:\n{\n  \"message\": \"Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\",\n  \"stack\": \"Error: Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\\n    at connect (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/sequelize.js:150:15)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async runMigrations (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/migrate.js:112:5)\",\n  \"name\": \"Error\"\n}\n[2026-10-25T14:54:17.813Z] [ERROR] Erro detalhado:\n{\n  \"message\": \"Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\",\n  \"stack\": \"Error: Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\\n    at connect (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/sequelize.js:150:15)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async runMigrations (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/migrate.js:112:5)\"\n}\n[system:bootstrap] FAIL: Command failed: bash ./scripts/bootstrap/official.sh\n"
+    },
+    {
+      "id": "conectividade-infra",
+      "comando": "node --env-file=.env -e <sonda sequelize + rateLimitClient>",
+      "exitCode": 1,
+      "veredito": "FAIL",
+      "ok": false,
+      "duracaoMs": 0,
+      "saida": "postgres: Não foi possível conectar ao PostgreSQL após 3 tentativas: connect ECONNREFUSED 127.0.0.1:1[2026-10-25T14:54:18.503Z] [WARN] [Sequelize] Tentativa 1/3 falhou, tentando novamente em 500ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:54:19.008Z] [WARN] [Sequelize] Tentativa 2/3 falhou, tentando novamente em 750ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:54:19.762Z] [ERROR] [Sequelize] Falha ao conectar ao PostgreSQL após todas as tentativas\n{\n  \"attempts\": 3,\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}"
+    },
+    {
+      "id": "seed-sintetico",
+      "comando": "node api/db/seed.js",
+      "exitCode": 1,
+      "veredito": "FAIL",
+      "ok": null,
+      "duracaoMs": 251356,
+      "saida": ":1\"\n}\n[2026-10-25T14:55:30.898Z] [WARN] [Sequelize] Tentativa 12/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:55:40.910Z] [WARN] [Sequelize] Tentativa 13/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:55:50.922Z] [WARN] [Sequelize] Tentativa 14/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:56:00.934Z] [WARN] [Sequelize] Tentativa 15/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:56:10.945Z] [WARN] [Sequelize] Tentativa 16/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:56:20.957Z] [WARN] [Sequelize] Tentativa 17/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:56:30.968Z] [WARN] [Sequelize] Tentativa 18/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:56:40.980Z] [WARN] [Sequelize] Tentativa 19/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:56:50.991Z] [WARN] [Sequelize] Tentativa 20/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:57:01.003Z] [WARN] [Sequelize] Tentativa 21/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:57:11.013Z] [WARN] [Sequelize] Tentativa 22/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:57:21.026Z] [WARN] [Sequelize] Tentativa 23/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:57:31.038Z] [WARN] [Sequelize] Tentativa 24/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:57:41.049Z] [WARN] [Sequelize] Tentativa 25/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:57:51.060Z] [WARN] [Sequelize] Tentativa 26/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:58:01.071Z] [WARN] [Sequelize] Tentativa 27/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:58:11.085Z] [WARN] [Sequelize] Tentativa 28/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:58:21.100Z] [WARN] [Sequelize] Tentativa 29/30 falhou, tentando novamente em 10000ms...\n{\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:58:31.113Z] [ERROR] [Sequelize] Falha ao conectar ao PostgreSQL após todas as tentativas\n{\n  \"attempts\": 30,\n  \"error\": \"connect ECONNREFUSED 127.0.0.1:1\"\n}\n[2026-10-25T14:58:31.113Z] [ERROR] [Seed] ❌ Erro ao executar seed:\n{\n  \"message\": \"Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\",\n  \"stack\": \"Error: Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\\n    at connect (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/sequelize.js:150:15)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async runSeed (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/seed.js:454:5)\"\n}\n[2026-10-25T14:58:31.114Z] [ERROR] [Seed] Falha:\n{\n  \"message\": \"Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\",\n  \"stack\": \"Error: Não foi possível conectar ao PostgreSQL após 30 tentativas: connect ECONNREFUSED 127.0.0.1:1\\n    at connect (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/sequelize.js:150:15)\\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\\n    at async runSeed (/tmp/rap-ci-clean-dT8SBr/ria/r-agent2/api/db/seed.js:454:5)\"\n}\n"
+    },
+    {
+      "id": "mesh-registry",
+      "comando": "npm run -s qa:mesh:refresh",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 1375,
+      "saida": "Mesh registry atualizado: 143 cenários\n[pipeline/entrypoints/runQaMesh] Operação de MANUTENÇÃO DE ÍNDICE (--refresh-registry):\nnão executa cenários nem produz evidência canônica — Bug Closure First não se aplica.\n[pipeline/entrypoints/runQaMesh] SEM run governado ativo: o relatório do mesh\nserá gravado sem runId/sourceFingerprint (validate:qa-evidence-same-run =>\nQA_EVIDENCE_LINEAGE_MISSING). Para evidência governada, crie o run antes:\nnode scripts/governance/create-governed-run.js\n"
+    },
+    {
+      "id": "impact-graph",
+      "comando": "node scripts/governance/build-impact-graph.js",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 1490,
+      "saida": "[impact-graph] nós=4319 arestas=9652 produção=2825 testes=1494\n[impact-graph] arquivos de produção com dependentes: 2181 (77.2%)\n[impact-graph] escrito em reports/impact-graph.json (1237 kB)\n"
+    },
+    {
+      "id": "coverage-completeness",
+      "comando": "npm run -s validate:coverage-completeness",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 590,
+      "saida": "[coverage-completeness] Validando cobertura completa da plataforma...\n\n📊 Coletando fontes de verdade...\n  Frontend: 108 rotas\n  API:      91 módulos\n  Caps:     19 capabilities\n  QA:       143 cenários\n\n🔀 Cruzando referências...\n═══ Cobertura da Plataforma ═══\n  Rotas frontend:    108/108 cobertas (100%) — 51 diretas (47%)\n  Módulos API:       91/91 cobertos (100%) — 41 diretos (45%)\n  Capabilities:      19/19 (100%)\n  ─────────────────────────────\n  Completude nominal: 100%\n  Completude real:    64% (cobertura direta por cenário)\n  Cenários QA:        143\n  Issues:             0 críticos, 0 erros, 1 avisos\n\n═══ Análise de Negócio por Domínio ═══\n  🔴 beauty           33% | 12 cenários | 7 rotas | 2 APIs | 0 caps\n  ⚠️ omnichannel      58% | 3 cenários | 4 rotas | 4 APIs | 0 caps\n  ⚠️ core             65% | 90 cenários | 81 rotas | 75 APIs | 3 caps\n  ⚠️ bpmn             67% | 1 cenários | 1 rotas | 1 APIs | 0 caps\n  ⚠️ fitness          67% | 14 cenários | 3 rotas | 0 APIs | 13 caps\n  ⚠️ pbx              73% | 4 cenários | 5 rotas | 2 APIs | 0 caps\n  ✅ market           83% | 3 cenários | 0 rotas | 4 APIs | 0 caps\n  ✅ food             89% | 4 cenários | 6 rotas | 1 APIs | 0 caps\n  ✅ services        100% | 2 cenários | 1 rotas | 1 APIs | 0 caps\n  ✅ workspace       100% | 1 cenários | 0 rotas | 1 APIs | 0 caps\n  ✅ support         100% | 0 cenários | 0 rotas | 0 APIs | 3 caps\n  ✅ bakery          100% | 7 cenários | 0 rotas | 0 APIs | 0 caps\n  ✅ clinic          100% | 2 cenários | 0 rotas | 0 APIs | 0 caps\n\n═══ Top Issues (1 de 1) ═══\n  🟡 [api-weak-coverage] Módulo API \"domain-flow\" (bpmn) com cobertura fraca: 1 cenário(s) de domínio, 0 diretos\n  ⚠️  services: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  workspace: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  support: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  bakery: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n  ⚠️  clinic: 100% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (SAMPLE_NOT_RESEARCHED)\n\n📄 Relatório: /tmp/rap-ci-clean-dT8SBr/ria/r-agent2/reports/coverage-completeness-report.json\n"
+    },
+    {
+      "id": "benchmark-sufficiency",
+      "comando": "npm run -s validate:benchmark-sufficiency",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 345,
+      "saida": "[benchmark-sufficiency] status=PASS policy=v1.0.0 verticais=7 suficientes=1 violações=0\n[benchmark-sufficiency] saturacao=MEASURED cap(PASS=1/FAIL=5/NM=1) journey(PASS=1/FAIL=5/NM=1) bizRule(PASS=1/FAIL=5/NM=1)\n  - bakery (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - beauty (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - clinic (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - fitness (fitness-sample-v1): SAMPLE_SUFFICIENT\n  - food (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - market (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n  - services (2026-09-19-r2): SAMPLE_NOT_RESEARCHED\n"
+    },
+    {
+      "id": "evo-contract",
+      "comando": "npm run -s validate:evo-contract",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 273,
+      "saida": "[evo-contract] status=PASS certificação=UNVERIFIED recursos=7 violações=0\n"
+    },
+    {
+      "id": "layer-conventions",
+      "comando": "npm run -s validate:layer-conventions",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 888,
+      "saida": "[layer-conventions] Validando convenções de camada...\n\n  Criticals: 0\n  Errors:    0\n  Warnings:  0\n  Infos:     0\n  Total:     0\n\nViolações por camada:\n\n\nReport: /tmp/rap-ci-clean-dT8SBr/ria/r-agent2/reports/layer-conventions-report.json\n"
+    },
+    {
+      "id": "journey-projections",
+      "comando": "npm run -s journey:projections",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 230,
+      "saida": "✅ 28 projeções operacionais geradas\n   catálogo: 26 jornadas mapeadas\n   descartadas (sem estágio de negócio): 70\n   saída: reports/business-journey-projections.json\n"
+    },
+    {
+      "id": "json-persistence-audit",
+      "comando": "npm run -s audit:json-persistence",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 955,
+      "saida": "{\"totalWriteTargets\":570,\"byCategory\":{\"ARTIFACT_STORAGE\":48,\"STATIC_VERSIONED_CONFIG\":136,\"DB_CANONICAL_JSON_EXPORT\":358,\"TEST_FIXTURE\":20,\"SECRET_STORE\":2,\"TEMPORARY_CACHE\":6},\"unknown\":0,\"deprecated\":0,\"dbCanonicalState\":0,\"status\":\"PASS\"}\n"
+    },
+    {
+      "id": "timeout-architecture",
+      "comando": "npm run -s validate:timeout-architecture",
+      "exitCode": 1,
+      "veredito": "NO_GO",
+      "ok": true,
+      "duracaoMs": 2890,
+      "saida": "[timeout-architecture] inventário:\n  arquivos varridos: 2182\n  timeouts encontrados: 1133\n  LEGACY_UNKNOWN: 0\n    REQUEST_TIMEOUT            45\n    OPERATION_DEADLINE         575\n    COMMAND_DEADLINE           23\n    DATABASE_TIMEOUT           22\n    PROVIDER_TIMEOUT           15\n    LEASE_DURATION             214\n    HEARTBEAT_INTERVAL         31\n    NO_PROGRESS_TIMEOUT        1\n    RETRY_BACKOFF              9\n    POLL_INTERVAL              95\n    TEST_TIMEOUT               3\n    SHUTDOWN_GRACE_PERIOD      5\n    DELAY_SLEEP                81\n    USER_DEFINED_DEADLINE      14\n[timeout-architecture] padrões destrutivos: 5 (críticos: 1)\n  ⓘ PID como corroboração local (arquivo tem lease/fence): 3 — exceções auditáveis\n[timeout-architecture] capacidades:\n  ✓ LEASE                          \n  ✓ FENCING                        \n  ✓ HEARTBEAT                      \n  ✓ NO_PROGRESS_DETECTION          \n  ✓ PROVIDER_TIMEOUT_ISOLATION     \n  ✓ PROVIDER_FALLBACK              \n  ✓ COMMAND_TIMEOUT_ISOLATION      \n  ✓ DATABASE_TIMEOUT_ISOLATION     \n  ✓ CIRCUIT_BREAKER                \n  ✓ CHECKPOINT_RESUME              \n[timeout-architecture] veredictos:\n  NO_GO      TIMEOUT_ARCHITECTURE\n  COMPLETE   TIMEOUT_INVENTORY\n  GREEN      MISSION_TIMEOUT_POLICY\n  GREEN      TASK_DEADLINE_POLICY\n  GREEN      HEARTBEAT\n  GREEN      LEASE\n  GREEN      FENCING\n  GREEN      NO_PROGRESS_DETECTION\n  GREEN      PROVIDER_TIMEOUT_ISOLATION\n  GREEN      PROVIDER_FALLBACK\n  GREEN      COMMAND_TIMEOUT_ISOLATION\n  GREEN      DATABASE_TIMEOUT_ISOLATION\n  GREEN      CIRCUIT_BREAKER\n  GREEN      CHECKPOINT_RESUME\n  PENDING    LONG_RUNNING_TASK\n  PENDING    REAL_DEAD_WORKER_RECOVERY\n  PENDING    NO_PROGRESS_E2E\n  PENDING    PROVIDER_FALLBACK_E2E\n  false      downstreamGatesAssertedHere\n  veredito de gate pai não é afirmado por artefato filho (runtime → gate → selo → readiness → governança final) downstreamGatesNote\n[timeout-architecture] relatório: reports/TIMEOUT_ARCHITECTURE_REPORT.json\n[timeout-architecture] RESULTADO: NO_GO — arquitetura de timeout ainda não é GREEN\n"
+    },
+    {
+      "id": "engineering-router-v2",
+      "comando": "npm run -s validate:engineering-router-v2",
+      "exitCode": 1,
+      "veredito": "NO_GO",
+      "ok": true,
+      "duracaoMs": 580,
+      "saida": "  [PASS] V2_LEASE_POLICY_PURE — invariante verificada em engine/engineeringMission/leasePolicy.js\n  [PASS] V2_PID_NAO_E_AUTORIDADE — invariante verificada em api/services/engineeringMission/missionStoreService.js\n  [PASS] V2_POLICY_RESOLVER_SEM_MERGE_INGENUO — invariante verificada em api/services/engineeringMission/missionCompilerService.js\n  [PASS] V2_ESTADOS_TERMINAIS_CENTRALIZADOS — invariante verificada em engine/engineeringMission/constants.js\n  [PASS] V2_RECOVERY_AUTOMATICO_NO_BOOT — invariante verificada em api/bootstrap/startInitialization.js\n  [PASS] V2_FK_RESTRICT_NA_MIGRATION — invariante verificada em api/db/migrations/20260924160000-engineering-mission-distributed-lease.js\n  [PASS] V2_RBAC_FAIL_CLOSED — invariante verificada em api/modules/engineering-missions/routes.js\n  [PASS] V2_ANTI_GREENWASHING_PORTA_UNICA — invariante verificada em tests/helpers/infraGate.js\n  [FAIL] V2_ANTI_GREENWASHING_VERDE — evidência runtime ausente: reports/anti-greenwashing-report.json\n  [FAIL] V2_CRASH_SIGKILL_VERDE — evidência runtime ausente: reports/mission-crash-recovery-report.json\n  [FAIL] V2_TIMEOUT_ARCHITECTURE_GREEN — TIMEOUT_ARCHITECTURE=NO_GO\n  [FAIL] V2_BUG_AUTONOMOUS_LOOP_GREEN — evidência runtime ausente: reports/bug-autonomous-loop-report.json\n  [PENDING] REAL_TASK_RECOVERY — sem relatório de retomada de task real (rode npm run verify:real-task-recovery)\n  [PENDING] V2_REQUIREMENTS_MATRIX — matriz de requisitos ausente (rode npm run validate:v2-requirements-matrix)\n  [PENDING] V2_REQUIRED_TESTS — medição dos 68 testes obrigatórios ausente (rode npm run validate:required-tests)\n  [PENDING] ENGINEERING_RAG_ENRICHMENT — sem medição do corpus RAG (rode npm run validate:rag-index-health)\n  [PENDING] BUG_AUTONOMOUS_LOOP — sem medição do ciclo de bug (rode npm run validate:bug-autonomous-loop após a execução autoritativa das suítes)\n  [PENDING] ENVELOPE_VERIFICATION — envelope não selado em dist/engineering-router-v2-audit-envelope — gere com engineering-router:v2-envelope:generate e verifique com engineering-router:v2-envelope (a verificação NUNCA gera o envelope)\n[engineering-router-v2] status=NO_GO itens=12 falhas=4 pendencias=5\n"
+    },
+    {
+      "id": "governance-summary",
+      "comando": "npm run -s validate:governance-summary",
+      "exitCode": 1,
+      "veredito": "FAIL",
+      "ok": true,
+      "duracaoMs": 339,
+      "saida": ",\n    \"qaGovernance\": null,\n    \"replayIntegrity\": null,\n    \"releaseHardening\": null,\n    \"agentAdherence\": null,\n    \"selfProving\": null,\n    \"visibilityPolicy\": null,\n    \"coverageGate\": null,\n    \"ragDomainSegregation\": \"PASS\"\n  },\n  \"maxReportAgeMs\": 86400000,\n  \"evaluations\": {\n    \"architectureConsistency\": {\n      \"file\": \"reports/ai-memory-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"runtimeValidation\": {\n      \"file\": \"reports/runtime-routes-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"qaGovernance\": {\n      \"file\": \"reports/qa-governance-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"replayIntegrity\": {\n      \"file\": \"reports/replay-governance-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"releaseHardening\": {\n      \"file\": \"reports/release-governance-validation-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"agentAdherence\": {\n      \"file\": \"reports/agent-adherence-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"selfProving\": {\n      \"file\": \"reports/self-proving-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"visibilityPolicy\": {\n      \"file\": \"reports/visibility-policy-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"coverageGate\": {\n      \"file\": \"reports/coverage-gate-report.json\",\n      \"score\": 0,\n      \"status\": \"MISSING\",\n      \"sourceStatus\": null,\n      \"reason\": \"report_missing\"\n    },\n    \"ragDomainSegregation\": {\n      \"file\": \"reports/rag-domain-segregation-report.json\",\n      \"score\": 0,\n      \"status\": \"STALE\",\n      \"sourceStatus\": \"PASS\",\n      \"reason\": \"report_stale\",\n      \"ageMs\": 427666790\n    }\n  },\n  \"issues\": [\n    {\n      \"dimension\": \"architectureConsistency\",\n      \"file\": \"reports/ai-memory-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"runtimeValidation\",\n      \"file\": \"reports/runtime-routes-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"qaGovernance\",\n      \"file\": \"reports/qa-governance-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"replayIntegrity\",\n      \"file\": \"reports/replay-governance-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"releaseHardening\",\n      \"file\": \"reports/release-governance-validation-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"agentAdherence\",\n      \"file\": \"reports/agent-adherence-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"selfProving\",\n      \"file\": \"reports/self-proving-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"visibilityPolicy\",\n      \"file\": \"reports/visibility-policy-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"coverageGate\",\n      \"file\": \"reports/coverage-gate-report.json\",\n      \"status\": \"MISSING\",\n      \"reason\": \"report_missing\"\n    },\n    {\n      \"dimension\": \"ragDomainSegregation\",\n      \"file\": \"reports/rag-domain-segregation-report.json\",\n      \"status\": \"STALE\",\n      \"reason\": \"report_stale\"\n    }\n  ]\n}\n"
+    },
+    {
+      "id": "impact-validation",
+      "comando": "npm run -s impact:validate",
+      "exitCode": 2,
+      "veredito": "ESCALATE",
+      "ok": true,
+      "duracaoMs": 999,
+      "saida": "[L1] alterados=0 testes=0 camadas(t/j/v)=0/0/0 → ESCALATE (NO_CHANGED_FILES)\n[L1] relatório em reports/impact-validation-report.json — nível seguinte (L2) deve cobrir\n"
+    },
+    {
+      "id": "artefatos-obrigatorios",
+      "comando": "(verificação de existência e frescor)",
+      "exitCode": 0,
+      "veredito": "PASS",
+      "ok": true,
+      "duracaoMs": 0,
+      "saida": "",
+      "presentes": [
+        "reports/coverage-completeness-report.json",
+        "reports/benchmark-sufficiency-report.json",
+        "reports/evo-contract-report.json",
+        "reports/layer-conventions-report.json",
+        "reports/business-journey-projections.json",
+        "reports/impact-validation-report.json",
+        "governance/json-persistence-audit.json",
+        "qa-mesh/meshRegistry.json",
+        "reports/TIMEOUT_ARCHITECTURE_REPORT.json",
+        "reports/api-surface-report.json"
+      ],
+      "faltando": [],
+      "naoReescritos": []
+    }
+  ]
+}
