@@ -35,6 +35,14 @@
     {
       "sha": "f489994dd",
       "area": "bug-loop-concorrencia-fix"
+    },
+    {
+      "sha": "382e0a2a4",
+      "area": "bug-loop-lease-fix-loop"
+    },
+    {
+      "sha": "85a0cc9de",
+      "area": "budget-timeout-mission-source"
     }
   ],
   "findings": [
@@ -106,6 +114,15 @@
       "fix": "withFindingLeaseOwned unico; confirmFinding e reproduce sob posse; lease propagado pela varredura e por handleAnomaly; HTTP 409 na recusa",
       "tests": "BUG-03b (concorrencia recusada), BUG-03c (varredura respeita posse), suite 25/25 em 5 execucoes, naturalPath E2E 45,4s PASS, autonomousLoop E2E 3/3",
       "result": "PASS"
+    },
+    {
+      "id": "P2-BUG-LOOP-SWEEP-GLOBAL-COST",
+      "severity": "P2",
+      "reproduced": true,
+      "reproduction": "BUG-02 levava 53 789 ms de um orcamento de 60 000 ms varrendo a tabela global de findings; BUG-03c varria ate 200 findings alheios com runner FAIL (confirmando findings de outras suites)",
+      "rootCause": "runBugLoopSweep sem escopo: as tres consultas varrem a tabela inteira e cada finding paga lease + transicao + reproducao; custo O(estado acumulado)",
+      "fix": "opcao findingIds (default null = comportamento de producao inalterado) + ids em listFindings; os dois testes que varriam o mundo declaram escopo",
+      "tests": "engineeringBugLoop 26/26; BUG-02 53 789 ms -> 15 606 ms; suite 62,4 s -> 26,0 s"
     }
   ],
   "gates": {
@@ -126,11 +143,19 @@
   },
   "regression": {
     "l0": {
-      "suitesPassed": 1115,
-      "suitesFailed": 3,
-      "testsPassed": 9769,
-      "testsFailed": 4,
-      "note": "3 falhas: 2 corrigidas/ambiente, 1 ENVIRONMENT (modelDrivenE2e)"
+      "suitesTotal": 1119,
+      "suitesExecuted": 1118,
+      "suitesPassed": 1116,
+      "suitesSkipped": 1,
+      "suitesFailed": 2,
+      "testsPassed": 9771,
+      "testsSkipped": 2,
+      "testsFailed": 2,
+      "failures": {
+        "tests/unit/governance/modelDrivenE2e.test.js": "ENVIRONMENT — depende do artefato do job prod-like-smoke",
+        "tests/unit/governance/regularizadorFilesystemAttacks.test.js B2": "FLAKY sob carga — 10,404 s no lote (timeout 10 s), PASS 316 ms isolado; nao tocado por este delta"
+      },
+      "note": "medido DEPOIS das correcoes de lease (antes destas, 2 suites de unidade quebravam por duble desatualizado)"
     },
     "rpa": {
       "suites": 21,
@@ -155,17 +180,20 @@
         "re-base de caminho canonico (7f87aeedc)"
       ]
     },
-    "integrationBatch": {
-      "suitesTotal": 77,
-      "suitesFailed": 4,
-      "testsFailed": 26,
-      "testsPassed": 525,
-      "attribution": {
-        "crmTenantIsolation.postgres": "ENVIRONMENT (postgres 55432)",
-        "engineeringPatchApplyAndTestRunner": "PRE-EXISTING (falha igual na base)",
-        "engineeringPromotionService": "ENVIRONMENT (assume worktree == HEAD do repo principal)",
-        "governanceApprovalFullWorkerE2E": "INCONCLUSIVO/SOB CARGA (passa isolado em branch e base)"
-      }
+    "l0bCanonico": {
+      "shape": "npx jest tests/integration/engineering --bail=0 --runInBand --forceExit (forma canonica; o lote de 77 suites com --maxWorkers=2 e FORMA INVALIDA por config/canonical-release-suites.json e foi RETRATADO no relatorio 9.3-ter)",
+      "suitesTotal": 40,
+      "base": "2 suites / 3 testes falhando: engineeringPromotionService (2), engineeringPatchApplyAndTestRunner (1)",
+      "branchAmostra1": "4 suites / 6 testes: os 3 da base + ER-V1-SEAL-001, BUG-02 (timeout 60000ms), MISSION_SRC_14 (reconciled 0)",
+      "branchAmostra2": "2 suites / 3 testes — IDENTICO a base (1123 s); engineeringBugLoop PASS 58,065s; engineeringMissionSourceE2E PASS 11,992s",
+      "atribuicao": {
+        "engineeringPromotionService": "ENVIRONMENT — realHead() resolve o HEAD do repo principal (Expected 484eee4...) vs HEAD do worktree (Received 85a0cc9...)",
+        "engineeringPatchApplyAndTestRunner": "PRE-EXISTENTE — mesma assercao falhando na base: stdoutRef relativo ao runtime root, fora do repo",
+        "BUG-02": "INCONCLUSIVO/SOB CARGA — duas varreduras sobre a tabela global de findings (17 pending + 7 confirmed medidos); nao atribuido ao delta, nao declarado corrigido",
+        "MISSION_SRC_14": "INCONCLUSIVO/SOB CARGA — corrida com o Engineering Runner vivo do globalSetup pela reconciliacao de pending intents",
+        "ER-V1-SEAL-001": "INCONCLUSIVO/SOB CARGA — POST_PROMOTION_VERIFY_FAILED na amostra 1, PASS na amostra 2"
+      },
+      "conclusao": "nenhuma falha do L0b canonico e atribuivel a este delta: amostra 2 == base"
     }
   },
   "externalBlocks": [
@@ -190,6 +218,20 @@
       "what": "ReferenceError findingLease em handleAnomaly",
       "caughtBy": "engineeringBugAutonomousLoopE2E",
       "fixedIn": "f489994dd"
+    },
+    {
+      "what": "caminho handleAnomaly -> runFixLoop executava o coder 3x (fixAttempts 3 != 1) por falta de posse",
+      "caughtBy": "governanceApprovalFullWorkerE2E",
+      "fixedIn": "382e0a2a4",
+      "prova": "BUG-03d em tests/integration/engineeringBugLoop.test.js + E2E PASS 61,3s"
+    },
+    {
+      "what": "duas suites de unidade quebraram (withFindingLeaseOwned is not a function) porque o duble de bugFindingService nao conhecia a funcao nova; ao corrigir o duble, resetMocks apagou a implementacao de jest.fn() e o fix loop devolveu undefined — segundo erro medido",
+      "caughtBy": "npm run test:unit (bugLoopNonConvergenceGuard + governanceApprovalLifecycle, 10 testes)",
+      "fixedIn": "mesmo commit do escopo da varredura"
     }
+  ],
+  "retratacoes": [
+    "A tabela de atribuicao da rodada de integracao com 77 suites em --maxWorkers=2 foi retirada: forma de execucao invalida pelo contrato de estado global. Substituida pela comparacao canonica --runInBand (base vs branch, 3 amostras)."
   ]
 }

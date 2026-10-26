@@ -309,13 +309,15 @@ inteiros sob posse; identidade por OPERAÇÃO quando o chamador não declara uma
 operações do mesmo processo se enxergarem como o mesmo dono); a varredura **passa o lease adiante**;
 rota HTTP devolve **409** em recusa por posse (200 faria o cliente acreditar que confirmou).
 
-**Duas regressões minhas, encontradas pelos testes e corrigidas** (é o ciclo exigido, registrado como
+**Quatro regressões minhas, encontradas pelos testes e corrigidas** (é o ciclo exigido, registrado como
 aconteceu):
 
 | Regressão | Quem pegou | Correção |
 |---|---|---|
 | a varredura se recusava a si mesma (lease adquirido duas vezes) | `engineeringBugLoopNaturalPathE2E` — **900 s de timeout** | lease propagado de `withFindingLease` → `reproduce`; E2E voltou a **45,4 s PASS** (base: 36,9 s) |
 | `ReferenceError: findingLease is not defined` em `handleAnomaly` | bateria de integração (`engineeringBugAutonomousLoopE2E`) | `handleAnomaly` aceita e propaga `findingLease`; E2E **3/3 PASS** |
+| `governanceApprovalFullWorkerE2E` executava o coder **3×** (`fixAttempts 3 ≠ 1`) — o caminho `handleAnomaly → runFixLoop` não tomava o lease, então reprocessava depois da aprovação humana | bateria de integração | `runFixLoop` passou a ser wrapper que ADQUIRE o lease e delega a `executarFixLoop`; regressão permanente `BUG-03d` (`382e0a2a4`); E2E **PASS 61,3 s** |
+| **duas suítes de unidade quebraram** (`withFindingLeaseOwned is not a function`) porque o dublê de `bugFindingService` não conhecia a função nova | `npm run test:unit` — `bugLoopNonConvergenceGuard` + `governanceApprovalLifecycle`, **10 testes** | dublê passa a repassar o lease; e a implementação do dublê é função PURA, porque `resetMocks: true` apaga a implementação de `jest.fn()` e o fix loop devolveria `undefined` (foi o SEGUNDO erro, medido) |
 
 **Provas novas (permanentes):**
 
@@ -323,22 +325,77 @@ aconteceu):
 |---|---|
 | `BUG-03b` | duas reproduções concorrentes do MESMO finding: a segunda é **recusada** (`SKIPPED_LEASE_HELD`) e a primeira conclui CONFIRMED; o teste SEGURA o lease para não depender de quem chega primeiro |
 | `BUG-03c` | a varredura **pula** finding sob lease de outro worker e não toca no estado |
-| `engineeringBugLoop.test.js` | **25/25** em 5 execuções consecutivas (`--runInBand`) |
-| `engineeringBugLoopNaturalPathE2E` | **PASS 45,4 s** (base 36,9 s) |
+| `BUG-03d` | com o finding sob posse de outro worker, o fix loop **recusa** (`FINDING_LEASE_HELD_BY_OTHER_WORKER` / stage `LEASE_HELD_BY_OTHER_WORKER`) e não executa nada |
+| `engineeringBugLoop.test.js` | **26/26** em 5 execuções consecutivas (`--runInBand`) |
+| `engineeringBugLoopNaturalPathE2E` | **PASS 45,4 s** (base 36,9 s) · **58,065 s** no L0b canônico |
 | `engineeringBugAutonomousLoopE2E` | **3/3 PASS** (ciclo completo em 40,7 s) |
-| `governanceApprovalFullWorkerE2E` | **PASS** isolado (branch 74,1 s · base 82,9 s) |
-| L0 `tests/unit` | **1117/1118 suítes · 9772 testes** · 1 FAIL = `modelDrivenE2e` (ENVIRONMENT) |
+| `governanceApprovalFullWorkerE2E` | **PASS 61,3 s** isolado (branch 74,1 s · base 82,9 s) |
+| L0 `tests/unit` (**medido depois das correções de lease**) | **1116 de 1118 suítes executadas · 9771 testes** · 2 FAIL: `modelDrivenE2e` (ENVIRONMENT) e `regularizadorFilesystemAttacks` B2 (10,404 s no lote contra timeout de 10 s; **PASS 316 ms isolado** ⇒ flake sob carga, não tocado por este delta) |
 
-**Bateria de integração completa (77 suítes, 2 workers) — atribuição medida, não presumida:**
+**RETRATAÇÃO — a rodada anterior usou uma FORMA DE EXECUÇÃO INVÁLIDA.** A tabela de atribuição que
+esteve aqui veio de `npx jest tests/integration --maxWorkers=2` (77 suítes em paralelo). O próprio
+repositório declara que essa forma não é legítima: `config/canonical-release-suites.json` define um
+**grupo exclusivo** (uma suíte por lote) para as suítes que compartilham o runner do laço de bug e o
+banco de missões, e o L0b canônico é
+`npx jest tests/integration/engineering --bail=0 --runInBand --forceExit`. Rodar em paralelo viola o
+contrato de estado global e produz vítimas ROTATIVAS (`naturalPath`, `autonomousLoop`,
+`governanceApproval`, `missionSource` — todas passam isoladas). **Nenhuma dessas falhas foi tratada
+como defeito**: rodada de forma inválida não gera evidência de regressão nem de aprovação.
 
-| Suíte | Branch | Base | Classificação |
+### 9.3-ter L0b na forma CANÔNICA — branch vs base
+
+Mesmo comando, `--runInBand`, 40 suítes, banco real, três amostras:
+
+| Amostra | Suítes | Testes | Suítes que falharam |
 |---|---|---|---|
-| `crmTenantIsolation.postgres` | FAIL `SKIPPED_SEM_POSTGRES: ECONNREFUSED 127.0.0.1:55432` | mesma dependência | **ENVIRONMENT** |
-| `engineeringPatchApplyAndTestRunner` | FAIL | **FAIL igual** (executado na base) | **PRE-EXISTENTE** |
-| `engineeringPromotionService` | FAIL (`realHead()` da árvore == HEAD do worktree) | — | **ENVIRONMENT** (assume worktree = HEAD do repo principal) |
-| `governanceApprovalFullWorkerE2E` | FAIL só na bateria (`fixAttempts 3 ≠ 1`) | **PASS isolado** | **INCONCLUSIVO/SOB CARGA** — não atribuído a esta mudança, não declarado corrigido |
-| `engineeringBugLoopNaturalPathE2E` | **PASS** (era timeout) | PASS | corrigido |
-| `engineeringBugAutonomousLoopE2E` | **PASS** (era `ReferenceError`) | — | corrigido |
+| base `29372d7a3` | 2/40 | 3/219 | `engineeringPromotionService` (2), `engineeringPatchApplyAndTestRunner` (1) |
+| branch amostra 1 | 4/40 | 6/222 | as 3 acima **+** `engineeringPromotionBaselineSeal` ER-V1-SEAL-001 (1), `engineeringBugLoop` BUG-02 (1), `engineeringMissionSourceE2E` MISSION_SRC_14 (1) |
+| branch amostra 2 | 2/40 | 3/222 | **exatamente o conjunto da base** (2 suítes, 3 testes), 1123 s |
+
+`engineeringBugLoop` foi **PASS 58,065 s** e `engineeringMissionSourceE2E` **PASS 11,992 s** na
+amostra 2. A amostra 2 da branch é **idêntica à base** ⇒ nenhuma falha do L0b canônico é atribuível a
+este delta.
+
+**Classificação medida das 3 falhas estáveis (presentes na base e na branch):**
+
+| Suíte | Medição | Classificação |
+|---|---|---|
+| `engineeringPromotionService` (2 testes) | `Expected: "484eee4…"` (HEAD do repo principal) · `Received: "85a0cc9…"` (HEAD do worktree) | **ENVIRONMENT** — `realHead()` resolve o HEAD do repositório, e worktree ligada nunca tem o HEAD do repo; falha igual na base |
+| `engineeringPatchApplyAndTestRunner` (1 teste) | `fs.existsSync(path.join(__dirname,'..','..', stdoutRef))` ⇒ `false`; `stdoutRef = path.relative(ROOT, arquivo)` aponta para o runtime root, fora do repo | **PRE-EXISTENTE** — asserção idêntica falhando na base, mesmo motivo |
+
+**Falhas que só apareceram na amostra 1 (não recorrentes ⇒ estado global sob carga, NÃO atribuídas):**
+
+| Teste | Sintoma | Por que não é deste delta |
+|---|---|---|
+| BUG-02 | `Exceeded timeout of 60000 ms` (suíte inteira levou 58 s na amostra 2) | o teste faz DUAS varreduras sobre a tabela GLOBAL de findings (medido: 17 `SUSPECTED/REPRODUCING` + 7 `CONFIRMED/FIXING`, sem truncamento entre execuções) e cada finding varrido paga lease + reprodução; meu delta acrescenta **1 UPDATE de lease por finding varrido** (~24 por varredura), que não explica 60 s — o custo é O(estado acumulado) e o relógio é do host |
+| MISSION_SRC_14 | `reconciled >= 1` recebeu `0` (com `missions >= 1`) | corrida com o **Engineering Runner vivo** que o `globalSetup` sobe: ele reconcilia os pending intents do MESMO banco, e quando ganha a corrida não sobra nada para o teste reconciliar |
+| ER-V1-SEAL-001 | `POST_PROMOTION_VERIFY_FAILED` | etapa de verificação pós-promoção sobre git real, caminho de promoção — não tocado por este delta; PASS na amostra 2 |
+
+Direção de correção (registrada como trabalho seguinte, não feita aqui): isolar o estado global das
+suítes que varrem a tabela de findings (subsistema escopado por execução ou truncamento explícito do
+que a própria suíte criou) e reconciliar por intenção própria em MISSION_SRC_14. Enquanto isso, a
+classificação honesta é `INCONCLUSIVO/SOB CARGA`.
+
+### 9.3-quater Custo O(estado global) da varredura — medido e cortado na raiz
+
+A medição acima apontou a causa do aperto de orçamento: `runBugLoopSweep` **sem escopo** varre a tabela
+inteira (é o comportamento de produção, correto) e cada finding varrido paga lease + transição +
+reprodução. Um teste que só precisa do PRÓPRIO finding pagava a tabela acumulada de meses — e no caso de
+`BUG-03c` (varredura com `runner: FAIL`) ainda **confirmava findings de outras suítes**, efeito colateral
+fora do teste.
+
+**Correção (default OFF; produção intocada):** `runBugLoopSweep({ findingIds: [...] })` restringe as três
+consultas da varredura (pendentes, confirmados, fechados) a um conjunto explícito; sem a opção, nada muda.
+`listFindings` ganhou `ids` (mesmo filtro `IN`, opcional). Os dois testes que varriam o mundo passaram a
+declarar escopo.
+
+| Medição (mesmo commit, mesma máquina) | Antes | Depois |
+|---|---|---|
+| `BUG-02` (só o teste) | **53 789 ms** (orçamento 60 000 ms — estourou uma vez no L0b) | **15 606 ms** (baseline do próprio teste: 16,7 s medido isolado) |
+| `engineeringBugLoop.test.js` (suíte inteira) | 62,4 s · 63,4 s | **26,0 s** |
+| Efeito colateral de `BUG-03c` | varria até 200 findings alheios com `runner: FAIL` | apenas o finding do teste |
+
+O que **não** foi feito: subir o timeout de 60 s para "passar". O orçamento é o sintoma; o escopo é a causa.
 
 ### 9.4 Checkout limpo — executado três vezes, resultado real
 
@@ -355,9 +412,13 @@ O passo `clone-limpo`, `npm-ci-bootstrap`, `build-api`, `build-frontend`, `prod-
 **Classificação do L0b (não convertido em PASS):** a mesma suíte `tests/integration/engineeringBugLoop.test.js`
 executada **isolada no mesmo SHA** ⇒ **12/12 PASS** (aqui a BUG-02 leva 16,7 s; no harness a suíte inteira
 levou 60 s). O erro é do próprio serviço (`bugFindingService.transitionFinding`), que detecta transição
-concorrente — não há código deste delta no caminho (o delta toca cadeia/decisão/selo). Fica registrado como
-**FAIL de execução sob carga** e **item de fila**: um teste que passa isolado e falha no harness é
-`FLAKY_UNDER_LOAD` até alguém provar o contrário; não é evidência de regressão nem de aprovação.
+concorrente — não há código deste delta no caminho (o delta toca cadeia/decisão/selo).
+
+**Desfecho:** a suspeita de `FLAKY_UNDER_LOAD` foi investigada e o `BUG-03` era **defeito REAL** (falta de
+posse por lease em `reproduce`/`confirmFinding`, §9.3-bis, corrigido em `871024cec`). Reamostragem na forma
+CANÔNICA do L0b depois das correções: **branch amostra 2 == base** (§9.3-ter) ⇒ o `BUG-03` não recorre; o
+que resta de rotativo (`BUG-02` timeout, `MISSION_SRC_14`, `ER-V1-SEAL-001`) está classificado como
+`INCONCLUSIVO/SOB CARGA` com a medição que sustenta a classificação, e **não** foi declarado corrigido.
 
 ### 9.5 Defeito que só o checkout limpo pegou
 
@@ -404,7 +465,8 @@ quoting e fluxo do `seal-release.sh`.
 | `modelDrivenE2e` | **ENVIRONMENT** — depende do artefato do job `prod-like-smoke` |
 | Padrões destrutivos residuais | 5 identificados (1 crítico), **inventariados e classificados**; correção de cada sítio é trabalho de outra ordem |
 | Cache de módulos no benchmark | ruído de cache quente medido e declarado (3 pares) |
-| `engineeringBugLoop` sob carga | **causa raiz identificada e corrigida** (§9.3-bis): posse por lease em `reproduce`/`confirmFinding`; `governanceApprovalFullWorkerE2E` segue `INCONCLUSIVO/SOB CARGA` (passa isolado nas duas árvores) |
+| `engineeringBugLoop` / `engineeringMissionSourceE2E` sob carga | **BUG-03 = defeito real corrigido** (§9.3-bis, 3 correções + provas BUG-03b/c/d). Restam duas fragilidades de ESTADO GLOBAL, medidas e **não** declaradas corrigidas (`INCONCLUSIVO/SOB CARGA`, §9.3-ter): BUG-02 faz duas varreduras sobre a tabela global de findings (custo O(estado acumulado)) e MISSION_SRC_14 corre com o Engineering Runner vivo do `globalSetup` pela reconciliação dos pending intents do mesmo banco |
+| L0b canônico branch vs base | **amostra 2 da branch == base** (2 suítes/3 testes): `engineeringPromotionService` (ENVIRONMENT: worktree ≠ HEAD do repo) e `engineeringPatchApplyAndTestRunner` (PRE-EXISTENTE: `stdoutRef` relativo ao runtime root, fora do repo) |
 
 ---
 

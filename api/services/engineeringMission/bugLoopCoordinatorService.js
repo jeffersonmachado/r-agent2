@@ -1163,10 +1163,16 @@ async function runBugLoopSweep({
   limit = 10, actor = 'SYSTEM:BUG_LOOP', tenantId = null, autoFix = true,
   runner = bugReproductionService.defaultRunner, invariantResults = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   allowedPaths = null, policy = null, resumeMission = true, workerInstanceId = null,
+  // ESCOPO EXPLÍCITO (§9.3-quater da evidência da missão): sem esta opção a varredura é GLOBAL — o que é
+  // o comportamento de produção — e o custo cresce com o estado acumulado da tabela (medido: BUG-02
+  // levava 53,8 s de 60 s de orçamento só varrendo findings alheios). Com `findingIds` a operação fica
+  // limitada aos findings pedidos, e quem varre um conjunto conhecido não reprocessa o resto.
+  findingIds = null,
 } = {}) {
   const summary = { scanned: 0, confirmed: 0, triaged: 0, fixed: 0, awaitedApproval: 0, resumed: 0, blockedRecursive: 0, leaseSkipped: 0, items: [] };
+  const escopo = Array.isArray(findingIds) && findingIds.length > 0 ? { ids: findingIds } : {};
 
-  const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit });
+  const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit, ...escopo });
   for (const finding of pending) {
     summary.scanned += 1;
     const owned = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
@@ -1190,7 +1196,7 @@ async function runBugLoopSweep({
     summary.items.push({ findingId: finding.id, ...owned });
   }
 
-  const confirmed = await bugFindingService.listFindings({ status: ['CONFIRMED', 'FIXING'], limit });
+  const confirmed = await bugFindingService.listFindings({ status: ['CONFIRMED', 'FIXING'], limit, ...escopo });
   for (const finding of confirmed) {
     // Finding de missão de VERIFICAÇÃO/teste é registrado e auditável, mas não vira item de correção:
     // corrigir uma missão de prova seria trabalho sobre um artefato de verificação, não sobre o produto.
@@ -1271,7 +1277,7 @@ async function runBugLoopSweep({
   // substituta sob lease). Idempotente pela linhagem persistida e resiliente a crash: se o processo
   // morreu entre o fechamento e o resume, o próximo worker assume e conclui.
   if (resumeMission) {
-    const closedFindings = await bugFindingService.listFindings({ status: ['CLOSED'], limit });
+    const closedFindings = await bugFindingService.listFindings({ status: ['CLOSED'], limit, ...escopo });
     for (const finding of closedFindings) {
       if (!finding.mission_id) continue;
       const recorded = await isMissionResumeRecorded(finding.mission_id, finding.id);

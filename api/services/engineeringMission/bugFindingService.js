@@ -121,7 +121,7 @@ async function getFindingHistory(findingId) {
 
 async function listFindings({
   missionId = null, status = null, severity = null, category = null,
-  selfModification = null, fingerprint = null, limit = 50, offset = 0,
+  selfModification = null, fingerprint = null, ids = null, limit = 50, offset = 0,
 } = {}) {
   const where = {};
   if (missionId) where.mission_id = missionId;
@@ -130,6 +130,7 @@ async function listFindings({
   if (category) where.category = category;
   if (selfModification !== null) where.self_modification = Boolean(selfModification);
   if (fingerprint) where.fingerprint = fingerprint;
+  if (Array.isArray(ids) && ids.length > 0) where.id = { [Op.in]: ids };
   const rows = await model().findAll({
     where,
     order: [['last_seen_at', 'DESC']],

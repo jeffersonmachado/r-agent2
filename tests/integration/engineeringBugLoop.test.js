@@ -282,8 +282,11 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
 
     const lease = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-externo' });
     try {
+      // Escopo explícito: uma varredura GLOBAL com `runner: FAIL` CONFIRMARIA findings de outras
+      // suítes (efeito colateral fora do teste) e pagaria o custo da tabela inteira.
       const sweep = await bugLoop.runBugLoopSweep({
         limit: 200, autoFix: false, workerInstanceId: 'worker-varredura', runner: runnerReturning('FAIL'),
+        findingIds: [finding.id],
       });
       const item = (sweep.items || []).find((i) => i.findingId === finding.id);
       expect(item).toEqual(expect.objectContaining({ action: 'SKIPPED_LEASE_HELD' }));
@@ -299,10 +302,13 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
   /**
    * BUG-03d — O FIX NÃO PODE SER EXECUTADO DUAS VEZES (duplicação de efeitos).
    *
-   * DEFEITO MEDIDO (2026-10-25, `governanceApprovalFullWorkerE2E` na bateria de 77 suítes): depois do
-   * aval humano o coder foi executado TRÊS vezes onde o correto é UMA. `runFixLoop` chegava por
-   * `handleAnomaly` SEM posse do finding, então a varredura podia pegar o mesmo finding e rodar o fix
-   * em paralelo. Aqui a prova é direta: com o finding sob posse de outro worker, o fix loop RECUSA.
+   * DEFEITO OBSERVADO E DEPOIS PROVADO POR CONSTRUÇÃO (2026-10-25): depois do aval humano o coder foi
+   * executado TRÊS vezes onde o correto é UMA. `runFixLoop` chegava por `handleAnomaly` SEM posse do
+   * finding, então a varredura podia pegar o mesmo finding e rodar o fix em paralelo. A primeira
+   * observação veio de um lote de integração em paralelo — forma de execução que o contrato de estado
+   * global (`config/canonical-release-suites.json`) não autoriza —, portanto o defeito NÃO é aceito com
+   * base naquela rodada: aqui a prova é direta e independente de carga, com o finding sob posse de outro
+   * worker e recusa explícita.
    */
   test('BUG-03d: fix loop recusa rodar sem a posse do finding (lease de outro worker)', async () => {
     if (skipIfNoDatabase()) return;
@@ -344,7 +350,9 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
 
     // A varredura do laço NÃO transforma isso em correção: o finding continua auditável, mas não
     // vira trabalho — corrigir uma missão de prova seria trabalho sobre um artefato de verificação.
-    const sweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false });
+    // ESCOPO EXPLÍCITO: a varredura sem `findingIds` é GLOBAL e reprocessa toda a tabela acumulada
+    // (medido: 53,8 s de um orçamento de 60 s). Aqui interessa SÓ o finding deste teste.
+    const sweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false, findingIds: [finding.id] });
     const item = sweep.items.find((i) => i.findingId === finding.id);
     expect(item).toBeTruthy();
     expect(item.action).toBe('SKIPPED_VERIFICATION_PROVENANCE');
@@ -354,7 +362,7 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
 
     // Finding de trabalho real (WORK) continua elegível.
     const work = await registerConfirmed({ title: 'BUG-02 trabalho real elegível' });
-    const workSweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false });
+    const workSweep = await bugLoop.runBugLoopSweep({ limit: 50, actor: 'TEST', autoFix: false, findingIds: [work.id] });
     const workItem = workSweep.items.find((i) => i.findingId === work.id);
     expect(workItem?.action).not.toBe('SKIPPED_VERIFICATION_PROVENANCE');
   });

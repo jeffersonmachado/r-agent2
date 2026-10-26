@@ -22,6 +22,9 @@ jest.mock('../../../api/services/engineeringMission/bugFindingService', () => ({
   makeEvidence: jest.fn((input) => ({ ...input, at: 'fixed-for-test' })),
   recordEvent: jest.fn(),
   markFixApplied: jest.fn(),
+  // O fix loop só roda sob posse (BUG-03d); aqui a posse é apenas repassada. Função PURA de
+  // propósito: `resetMocks` limparia a implementação de um `jest.fn()` e o fix loop devolveria undefined.
+  withFindingLeaseOwned: async (id, opcoes, fn) => fn({ lease: (opcoes && opcoes.lease) || null, owned: false }),
 }));
 
 jest.mock('../../../api/services/engineeringRouter/engineeringRouterService', () => ({
