@@ -5,7 +5,7 @@
   "branch": "codex/engineering-router-hardening-20261025",
   "worktree": "/opt/results/ria/er-hardening",
   "sourceSha": "29372d7a34d4653b10e7375480094fa787bded37",
-  "finalSha": "7f87aeedc875d270a45991032a82a62eed7497f8",
+  "finalSha": "f489994dd",
   "remote": {
     "main": "04cad9c1b639cdae357687f7febf47e490834665",
     "devEngineeringHardening": "29372d7a34d4653b10e7375480094fa787bded37",
@@ -27,6 +27,14 @@
     {
       "sha": "7f87aeedc",
       "area": "checkout-limpo"
+    },
+    {
+      "sha": "871024cec",
+      "area": "bug-loop-concorrencia"
+    },
+    {
+      "sha": "f489994dd",
+      "area": "bug-loop-concorrencia-fix"
     }
   ],
   "findings": [
@@ -88,6 +96,16 @@
       "severity": "P2",
       "source": "revisao independente",
       "result": "PASS"
+    },
+    {
+      "id": "P1-BUG-LOOP-NO-LEASE",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "duas reproducoes concorrentes do mesmo finding: ambas executavam; a varredura externa devolvia o finding a SUSPECTED no meio da tentativa em curso (CAS: REPRODUCING -> CONFIRMED vs current SUSPECTED)",
+      "rootCause": "reproduce/confirmFinding nao tomavam o lease do finding; apenas runBugLoopSweep tomava",
+      "fix": "withFindingLeaseOwned unico; confirmFinding e reproduce sob posse; lease propagado pela varredura e por handleAnomaly; HTTP 409 na recusa",
+      "tests": "BUG-03b (concorrencia recusada), BUG-03c (varredura respeita posse), suite 25/25 em 5 execucoes, naturalPath E2E 45,4s PASS, autonomousLoop E2E 3/3",
+      "result": "PASS"
     }
   ],
   "gates": {
@@ -136,6 +154,18 @@
       "fixesProduced": [
         "re-base de caminho canonico (7f87aeedc)"
       ]
+    },
+    "integrationBatch": {
+      "suitesTotal": 77,
+      "suitesFailed": 4,
+      "testsFailed": 26,
+      "testsPassed": 525,
+      "attribution": {
+        "crmTenantIsolation.postgres": "ENVIRONMENT (postgres 55432)",
+        "engineeringPatchApplyAndTestRunner": "PRE-EXISTING (falha igual na base)",
+        "engineeringPromotionService": "ENVIRONMENT (assume worktree == HEAD do repo principal)",
+        "governanceApprovalFullWorkerE2E": "INCONCLUSIVO/SOB CARGA (passa isolado em branch e base)"
+      }
     }
   },
   "externalBlocks": [
@@ -149,5 +179,17 @@
     "PUBLISH": "NOT_AUTHORIZED",
     "DEPLOY": "NOT_AUTHORIZED",
     "MAIN_MODIFIED": false
-  }
+  },
+  "regressionsIntroducedAndFixed": [
+    {
+      "what": "varredura se recusava a si mesma (lease adquirido 2x)",
+      "caughtBy": "engineeringBugLoopNaturalPathE2E (900s timeout)",
+      "fixedIn": "871024cec"
+    },
+    {
+      "what": "ReferenceError findingLease em handleAnomaly",
+      "caughtBy": "engineeringBugAutonomousLoopE2E",
+      "fixedIn": "f489994dd"
+    }
+  ]
 }

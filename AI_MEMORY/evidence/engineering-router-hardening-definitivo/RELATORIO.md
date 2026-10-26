@@ -21,6 +21,8 @@
 | 2 | `5c0ec2c3b` | P1 decisão + P1 selo | identidade obrigatória em `clasificar`; allowlist no reparo de lineage |
 | 3 | `ea7b96198` | revisão adversarial | fecha bypass por fallback de basename, reparo morto, controle positivo, hermeticidade, EISDIR |
 | 4 | `7f87aeedc` | checkout limpo | re-base de caminho canônico que quebrava quando a raiz difere em profundidade |
+| 5 | `871024cec` | concorrência do ciclo de bug | posse por lease em `reproduce`/`confirmFinding`; 409 na rota; BUG-03b/c |
+| 6 | `f489994dd` | concorrência do ciclo de bug | `handleAnomaly` aceita/propaga o lease (ReferenceError pego pelo E2E) |
 
 ---
 
@@ -290,6 +292,54 @@ Reexecução após as correções: `impactRunner` + 5 suítes de governança ⇒
 | `validate:engineering-router-v2` | 12 itens | **NO_GO** (2 falhas, 3 pendências — §7) |
 | `ci:clean-checkout` | `--scenario clean` | **FAIL** — L0 verde no clone; L0b `FLAKY_UNDER_LOAD` (§9.4) |
 
+### 9.3-bis O `FLAKY_UNDER_LOAD` do laço de bug: defeito REAL reproduzido e fechado
+
+O harness acusou `transição concorrente rejeitada: … está em SUSPECTED (tentativa REPRODUCING →
+CONFIRMED)` e a suíte passava isolada. Investigado até a causa:
+
+**Causa raiz.** `reproduce()` e `confirmFinding()` **não tomavam o lease do finding** — só a varredura
+(`runBugLoopSweep`) tomava. A varredura de OUTRO processo (o runner vivo do harness usa o mesmo banco)
+pegava o mesmo finding em REPRODUCING, rodava a própria tentativa, recebia INCONCLUSIVE e o devolvia a
+SUSPECTED no meio da tentativa em curso, que então falhava no CAS. Andar por ANDAR: "vítima" diferente
+a cada execução (BUG-03, BUG-08, BUG-10, PROTECTED_GOVERNANCE_BASELINE, BUG_DURABLE_EXECUTION).
+
+**Correção** (reusa o mecanismo existente; nada de infraestrutura paralela):
+`withFindingLeaseOwned` como definição ÚNICA do ciclo de vida do lease; `confirmFinding` e `reproduce`
+inteiros sob posse; identidade por OPERAÇÃO quando o chamador não declara uma (`pid:<pid>` faria duas
+operações do mesmo processo se enxergarem como o mesmo dono); a varredura **passa o lease adiante**;
+rota HTTP devolve **409** em recusa por posse (200 faria o cliente acreditar que confirmou).
+
+**Duas regressões minhas, encontradas pelos testes e corrigidas** (é o ciclo exigido, registrado como
+aconteceu):
+
+| Regressão | Quem pegou | Correção |
+|---|---|---|
+| a varredura se recusava a si mesma (lease adquirido duas vezes) | `engineeringBugLoopNaturalPathE2E` — **900 s de timeout** | lease propagado de `withFindingLease` → `reproduce`; E2E voltou a **45,4 s PASS** (base: 36,9 s) |
+| `ReferenceError: findingLease is not defined` em `handleAnomaly` | bateria de integração (`engineeringBugAutonomousLoopE2E`) | `handleAnomaly` aceita e propaga `findingLease`; E2E **3/3 PASS** |
+
+**Provas novas (permanentes):**
+
+| Teste | O que prova |
+|---|---|
+| `BUG-03b` | duas reproduções concorrentes do MESMO finding: a segunda é **recusada** (`SKIPPED_LEASE_HELD`) e a primeira conclui CONFIRMED; o teste SEGURA o lease para não depender de quem chega primeiro |
+| `BUG-03c` | a varredura **pula** finding sob lease de outro worker e não toca no estado |
+| `engineeringBugLoop.test.js` | **25/25** em 5 execuções consecutivas (`--runInBand`) |
+| `engineeringBugLoopNaturalPathE2E` | **PASS 45,4 s** (base 36,9 s) |
+| `engineeringBugAutonomousLoopE2E` | **3/3 PASS** (ciclo completo em 40,7 s) |
+| `governanceApprovalFullWorkerE2E` | **PASS** isolado (branch 74,1 s · base 82,9 s) |
+| L0 `tests/unit` | **1117/1118 suítes · 9772 testes** · 1 FAIL = `modelDrivenE2e` (ENVIRONMENT) |
+
+**Bateria de integração completa (77 suítes, 2 workers) — atribuição medida, não presumida:**
+
+| Suíte | Branch | Base | Classificação |
+|---|---|---|---|
+| `crmTenantIsolation.postgres` | FAIL `SKIPPED_SEM_POSTGRES: ECONNREFUSED 127.0.0.1:55432` | mesma dependência | **ENVIRONMENT** |
+| `engineeringPatchApplyAndTestRunner` | FAIL | **FAIL igual** (executado na base) | **PRE-EXISTENTE** |
+| `engineeringPromotionService` | FAIL (`realHead()` da árvore == HEAD do worktree) | — | **ENVIRONMENT** (assume worktree = HEAD do repo principal) |
+| `governanceApprovalFullWorkerE2E` | FAIL só na bateria (`fixAttempts 3 ≠ 1`) | **PASS isolado** | **INCONCLUSIVO/SOB CARGA** — não atribuído a esta mudança, não declarado corrigido |
+| `engineeringBugLoopNaturalPathE2E` | **PASS** (era timeout) | PASS | corrigido |
+| `engineeringBugAutonomousLoopE2E` | **PASS** (era `ReferenceError`) | — | corrigido |
+
 ### 9.4 Checkout limpo — executado três vezes, resultado real
 
 | Execução | Commit | Resultado | Achado |
@@ -354,7 +404,7 @@ quoting e fluxo do `seal-release.sh`.
 | `modelDrivenE2e` | **ENVIRONMENT** — depende do artefato do job `prod-like-smoke` |
 | Padrões destrutivos residuais | 5 identificados (1 crítico), **inventariados e classificados**; correção de cada sítio é trabalho de outra ordem |
 | Cache de módulos no benchmark | ruído de cache quente medido e declarado (3 pares) |
-| `engineeringBugLoop` sob carga | `FLAKY_UNDER_LOAD` — 12/12 isolado, falha de transição concorrente dentro do harness; **item de fila**, não fechado |
+| `engineeringBugLoop` sob carga | **causa raiz identificada e corrigida** (§9.3-bis): posse por lease em `reproduce`/`confirmFinding`; `governanceApprovalFullWorkerE2E` segue `INCONCLUSIVO/SOB CARGA` (passa isolado nas duas árvores) |
 
 ---
 
