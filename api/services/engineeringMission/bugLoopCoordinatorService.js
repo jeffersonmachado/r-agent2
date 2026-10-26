@@ -137,7 +137,40 @@ function sameCommand(a, b) {
  * Nunca declara FIXED por "task terminou": exige reprodução verde + testes direcionados verdes +
  * parecer aprovado + execuções de regressão.
  */
-async function runFixLoop(findingId, {
+/**
+ * EXECUÇÃO DO FIX sob POSSE do finding.
+ *
+ * DEFEITO MEDIDO (2026-10-25, `governanceApprovalFullWorkerE2E` na bateria): depois do aval humano o
+ * coder foi executado TRÊS vezes (`fixAttempts.length` esperado 1, recebido 3). Causa: `runFixLoop`
+ * chegava por `handleAnomaly` SEM lease, então a varredura podia pegar o mesmo finding e rodar o fix
+ * em paralelo — duplicação de efeitos exatamente no caminho que a missão manda impedir.
+ *
+ * A partir daqui o fix loop adquire o lease quando ninguém o detém; a varredura já o passa adiante.
+ * Posse de outro worker ⇒ recusa explícita (`FINDING_LEASE_HELD_BY_OTHER_WORKER`), nunca execução dupla.
+ */
+async function runFixLoop(findingId, opcoes = {}) {
+  const { findingLease = null, workerInstanceId = null, ...resto } = opcoes;
+  const dono = await bugFindingService.withFindingLeaseOwned(
+    findingId,
+    { lease: findingLease, workerInstanceId },
+    async ({ lease }) => executarFixLoop(findingId, { ...resto, findingLease: lease, workerInstanceId }),
+  );
+  if (dono && dono.skipped) {
+    return {
+      finding: null,
+      executed: false,
+      fixed: false,
+      blocked: true,
+      stage: 'LEASE_HELD_BY_OTHER_WORKER',
+      code: 'FINDING_LEASE_HELD_BY_OTHER_WORKER',
+      reason: `finding ${findingId} está sob posse de outro worker — o fix não pode rodar em paralelo`,
+      lease: dono.lease || null,
+    };
+  }
+  return dono;
+}
+
+async function executarFixLoop(findingId, {
   actor = null, tenantId = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   credentialScope = undefined, specFreshnessGuard = null, missionLease = null, secondaryFindings = [],
   findingLease = null,

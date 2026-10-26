@@ -295,6 +295,31 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
     }
   });
 
+
+  /**
+   * BUG-03d — O FIX NÃO PODE SER EXECUTADO DUAS VEZES (duplicação de efeitos).
+   *
+   * DEFEITO MEDIDO (2026-10-25, `governanceApprovalFullWorkerE2E` na bateria de 77 suítes): depois do
+   * aval humano o coder foi executado TRÊS vezes onde o correto é UMA. `runFixLoop` chegava por
+   * `handleAnomaly` SEM posse do finding, então a varredura podia pegar o mesmo finding e rodar o fix
+   * em paralelo. Aqui a prova é direta: com o finding sob posse de outro worker, o fix loop RECUSA.
+   */
+  test('BUG-03d: fix loop recusa rodar sem a posse do finding (lease de outro worker)', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'BUG-03d posse do fix' });
+
+    const lease = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-dono' });
+    try {
+      const fix = await bugLoop.runFixLoop(finding.id, { actor: 'TEST', findingLease: null, workerInstanceId: 'worker-intruso' });
+      expect(fix.fixed).toBe(false);
+      expect(fix.blocked).toBe(true);
+      expect(fix.code).toBe('FINDING_LEASE_HELD_BY_OTHER_WORKER');
+      expect(fix.stage).toBe('LEASE_HELD_BY_OTHER_WORKER');
+    } finally {
+      await bugFindingService.releaseFindingLease(finding.id, { token: lease.token }).catch(() => {});
+    }
+  });
+
   test('BUG-02: missão de VERIFICAÇÃO/teste gera finding auditável, mas não vira item de correção', async () => {
     if (skipIfNoDatabase()) return;
     const { finding } = await bugFindingService.registerFinding({
