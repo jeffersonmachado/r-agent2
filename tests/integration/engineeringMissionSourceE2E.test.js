@@ -45,6 +45,11 @@ process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT = WORKSPACE_DIR;
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail: infraSkipOrFail } = require('../helpers/infraGate');
 
+// Orçamento de espera para suíte com I/O real (git). Ver tests/helpers/jestTimeouts.js.
+const { TIMEOUT_INTEGRATION_IO_MS } = require('../helpers/jestTimeouts');
+
+jest.setTimeout(TIMEOUT_INTEGRATION_IO_MS);
+
 /**
  * HIGIENE DE INFRAESTRUTURA DE TESTE (intervenção humana/externa, 2026-10-07).
  *
