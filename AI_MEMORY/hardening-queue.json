@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-26",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2265,6 +2265,28 @@
       "detail": "Defeitos reais encontrados pelo harness e corrigidos nesta mesma janela: adaptador de IA nao versionado, runner compartilhado entre arvores, artefato prod-like nao produzido no clone, segredos efemeros ausentes no host do smoke, HEAD destacado x checkout do actions/checkout e nomes de container colidindo entre runs.",
       "prevention": "O harness e versionado e roda em um comando; qualquer dependencia escondida do ambiente do operador aparece como falha no clone.",
       "commit": "2f8b5aa29"
+    },
+    {
+      "id": "ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
+      "title": "Testes de promocao/runner mediam o repositorio pelo __dirname; o servico usa ROOT (HOST_REPO_ROOT)",
+      "status": "verified",
+      "commit": "6e3f56f84",
+      "evidence": "tests/integration/engineeringPromotionService.test.js (10/10) + tests/integration/engineeringPatchApplyAndTestRunner.test.js (4/4) + L0b amostra 6 com os dois verdes; antes, 3 testes falhavam com Expected 484eee47 vs Received 8dbaec15 (worktree x checkout principal configurado em .env ENGINEERING_ROUTER_HOST_REPO_ROOT)",
+      "severity": "P2",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "regressionTest": "tests/integration/engineeringPromotionService.test.js"
+    },
+    {
+      "id": "ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
+      "title": "Plano derivado sobrescrevia o reproduction DECLARADO do finding (strategy/source sumiam na 1a tentativa)",
+      "status": "verified",
+      "commit": "6e3f56f84",
+      "evidence": "tests/integration/engineeringBugLoop.test.js (32/32) — \"tentativa REPRODUZIDA preserva strategy/source declarados\" e \"tentativa NOT_REPRODUCED tambem preserva\"; mecanismo observado como vermelho intermitente em tests/integration/engineeringMissionReviewEnforcement.test.js (ADVERSARIAL_TO_BUG_LOOP) quando o laco GLOBAL de outro processo reproduzia o finding",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js"
     }
   ],
   "schemaVersion": 2,

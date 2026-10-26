@@ -156,6 +156,11 @@ async function runFixLoop(findingId, opcoes = {}) {
     async ({ lease }) => executarFixLoop(findingId, { ...resto, findingLease: lease, workerInstanceId }),
   );
   if (dono && dono.skipped) {
+    // Recusa por posse é evento OPERACIONAL: sem esta linha, um fix que NÃO rodou fica
+    // indistinguível de um fix que rodou e não convergiu (mesmo `fixed:false`, causas opostas).
+    logger.warn('[bugLoopCoordinator] fix recusado: finding sob posse de outro worker', {
+      findingId, worker: dono.lease?.worker || null, expiresAt: dono.lease?.expiresAt || null,
+    });
     return {
       finding: null,
       executed: false,
