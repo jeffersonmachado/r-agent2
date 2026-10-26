@@ -14,12 +14,16 @@
  * Os runs de 2026-10-25 eram verdes no mesmo branch: a variável era o runner. A política do
  * repositório passou a ser imagem FIXA, e este teste é o enforcement dela — sem isso o rótulo volta
  * na próxima edição de workflow e o vermelho volta silenciosamente.
+ *
+ * Vive em `tests/unit/` de propósito: o L0 do gate de branch roda `npm test` (unit + flow + rpa), e é
+ * lá que um pin removido precisa doer. `tests/ci/` só é executado por `npm run test:system`, que o
+ * gate de branch de desenvolvimento NÃO roda.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const WORKFLOWS_DIR = path.join(__dirname, '..', '..', '.github', 'workflows');
+const WORKFLOWS_DIR = path.join(__dirname, '..', '..', '..', '.github', 'workflows');
 
 // Imagens que o repositório aceita como FIXAS. `-latest` nunca entra: é justamente o rótulo móvel.
 const IMAGENS_PERMITIDAS = new Set(['ubuntu-24.04', 'ubuntu-22.04', 'windows-2022', 'macos-14']);
