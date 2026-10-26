@@ -2275,7 +2275,8 @@
       "severity": "P2",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "regressionTest": "tests/integration/engineeringPromotionService.test.js"
+      "regressionTest": "tests/integration/engineeringPromotionService.test.js",
+      "legacyStatus": "verified"
     },
     {
       "id": "ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
@@ -2286,7 +2287,8 @@
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "regressionTest": "tests/integration/engineeringBugLoop.test.js"
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js",
+      "legacyStatus": "verified"
     }
   ],
   "schemaVersion": 2,
