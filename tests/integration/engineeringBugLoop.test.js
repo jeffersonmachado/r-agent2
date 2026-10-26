@@ -1002,3 +1002,49 @@ describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adv
     expect(rows.map((r) => r.id).sort()).toEqual([a.id, b.id, c.id].sort());
   });
 });
+
+/**
+ * PROVENIÊNCIA DA REPRODUÇÃO — regressão de 2026-10-26.
+ *
+ * DEFEITO MEDIDO: a primeira tentativa de reprodução gravava o PLANO DERIVADO no campo
+ * `reproduction`, apagando o que o finding havia DECLARADO (`strategy`, `source`, comando declarado).
+ * Um finding de revisão adversarial que declarava `strategy: DECLARED_TEST_COMMAND` passava a não ter
+ * `strategy` nenhum — e isso acontecia mesmo quando quem reproduzia era OUTRO processo (o laço global
+ * do runner), o que tornava o registro não auditável de forma intermitente.
+ *
+ * A prova aqui é direta e não depende de quem reproduz: reproduzido ou não, o registro de origem
+ * sobrevive; o plano entra por cima do que ele deriva.
+ */
+describe('ciclo de bug — proveniência da reprodução sobrevive à tentativa', () => {
+  const REPRODUCTION = { command: REPRODUCTION_COMMAND, expect: 'FAIL', strategy: 'DECLARED_TEST_COMMAND', source: 'ADVERSARIAL_CASE' };
+
+  test('tentativa REPRODUZIDA preserva strategy/source declarados', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({
+      title: 'proveniencia reproduzida', source: 'ADVERSARIAL_REVIEW', reproduction: REPRODUCTION,
+    });
+
+    const result = await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('FAIL'), actor: 'TEST' });
+    expect(result.outcome).toBe('REPRODUCED');
+
+    const depois = await bugFindingService.getFinding(finding.id);
+    expect(depois.reproduction.strategy).toBe('DECLARED_TEST_COMMAND');
+    expect(depois.reproduction.source).toBe('ADVERSARIAL_CASE');
+    expect(depois.reproduction.command).toBe(REPRODUCTION_COMMAND);
+    expect(depois.reproduction.expect).toBe('FAIL');
+  });
+
+  test('tentativa NOT_REPRODUCED também preserva a proveniência', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({
+      title: 'proveniencia nao reproduzida', source: 'ADVERSARIAL_REVIEW', reproduction: REPRODUCTION,
+    });
+
+    const result = await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('PASS'), actor: 'TEST' });
+    expect(result.outcome).toBe('NOT_REPRODUCED');
+
+    const depois = await bugFindingService.getFinding(finding.id);
+    expect(depois.reproduction.strategy).toBe('DECLARED_TEST_COMMAND');
+    expect(depois.reproduction.source).toBe('ADVERSARIAL_CASE');
+  });
+});

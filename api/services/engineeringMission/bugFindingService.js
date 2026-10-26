@@ -434,8 +434,11 @@ async function transitionFinding(findingId, toStatus, { actor = null, reason = n
   return { finding: refreshed, idempotent: false, from: finding.status };
 }
 
-async function markReproducing(findingId, { actor = null, plan = null } = {}) {
-  return transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'tentativa de reprodução iniciada', patch: plan ? { reproduction: plan } : {} });
+async function markReproducing(findingId, { actor = null, plan = null, reproduction = null } = {}) {
+  // `reproduction` vem pronto quando o chamador já sabe mesclar a PROVENIÊNCIA (o plano derivado não
+  // pode apagar `strategy`/`source` declarados pelo finding). Sem ele, o plano é gravado como antes.
+  const patch = reproduction ? { reproduction } : (plan ? { reproduction: plan } : {});
+  return transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'tentativa de reprodução iniciada', patch });
 }
 
 /**
@@ -484,8 +487,8 @@ async function confirmFinding(findingId, { basis, evidence = [], actor = null, r
   }
 }
 
-async function markNotReproduced(findingId, { actor = null, reason = null, evidence = [], plan = null } = {}) {
-  const patch = { ...(plan ? { reproduction: plan } : {}) };
+async function markNotReproduced(findingId, { actor = null, reason = null, evidence = [], plan = null, reproduction = null } = {}) {
+  const patch = { ...(reproduction ? { reproduction } : (plan ? { reproduction: plan } : {})) };
   return transitionFinding(findingId, 'NOT_REPRODUCED', { actor, reason: reason || 'reprodução executada sem manifestar a falha', patch });
 }
 

@@ -95,8 +95,17 @@ async function executarReproducao(findingId, {
   const plan = buildPlan(finding);
   const attempt = (attemptNumber || (finding.reproduction_attempts || []).length + 1);
 
+  // PROVENIÊNCIA PRESERVADA (defeito medido em 2026-10-26): gravar o plano DERIVADO como se fosse a
+  // reprodução do finding apagava o que o finding DECLAROU — `strategy`, `source` e o comando
+  // declarado sumiam na PRIMEIRA tentativa, inclusive quando quem reproduzia era outro processo (o
+  // laço global do runner). Quem declarou `DECLARED_TEST_COMMAND` continua auditável como tal; o plano
+  // entra por cima do que ele deriva (comando/expect), nunca no lugar do registro de origem.
+  const reproductionComProveniencia = plan && typeof plan === 'object'
+    ? { ...(finding.reproduction || {}), ...plan }
+    : null;
+
   if (finding.status === 'SUSPECTED' || finding.status === 'NOT_REPRODUCED') {
-    await bugFindingService.markReproducing(findingId, { actor, plan });
+    await bugFindingService.markReproducing(findingId, { actor, plan, reproduction: reproductionComProveniencia });
   }
 
   // Plano inexistente ou INVARIANT: nada é executado em sandbox.
@@ -120,7 +129,7 @@ async function executarReproducao(findingId, {
       return { outcome: evaluation.outcome, plan, evaluation, finding: confirmed.finding };
     }
     if (evaluation.outcome === 'NOT_REPRODUCED') {
-      const result = await bugFindingService.markNotReproduced(findingId, { actor, reason: evaluation.reason, plan });
+      const result = await bugFindingService.markNotReproduced(findingId, { actor, reason: evaluation.reason, plan, reproduction: reproductionComProveniencia });
       return { outcome: evaluation.outcome, plan, evaluation, finding: result.finding };
     }
     // INCONCLUSIVE: volta para SUSPECTED — a reprodução não provou nada e o finding não pode ficar
@@ -182,6 +191,9 @@ async function executarReproducao(findingId, {
       actor,
       reason: evaluation.reason,
       plan,
+      // Mesma preservação de proveniência do caminho acima: o plano derivado NÃO substitui o registro
+      // declarado pelo finding (`strategy`/`source`/comando declarado continuam auditáveis).
+      reproduction: reproductionComProveniencia,
       evidence: [evidenceForRun(run)],
     });
     return { outcome: evaluation.outcome, plan, evaluation, run, finding: result.finding };

@@ -18,7 +18,13 @@ const { execFileSync } = require('child_process');
 const { createWorkspace, applyPatch, destroyWorkspace } = require('../../api/services/engineeringRouter/patchApplyService');
 const { promoteValidatedPatch, candidateBranchName } = require('../../api/services/engineeringRouter/promotionService');
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
+// QUAL REPOSITÓRIO? O que o SERVIÇO usa, não o diretório deste arquivo.
+// `promotionService`/`patchApplyService` operam sobre `ROOT` de `contextBuilderService`, que honra
+// `ENGINEERING_ROUTER_HOST_REPO_ROOT` (o container do Router precisa do caminho do HOST). Numa worktree
+// ligada os dois divergem — medido em 2026-10-26: `.env` aponta `HOST_REPO_ROOT` para o checkout
+// principal (HEAD 484eee47), enquanto `__dirname/../..` é a worktree (HEAD 8dbaec15). O teste então
+// media um repositório e o serviço promovia em outro, e as duas asserções de HEAD invertiam.
+const { ROOT: REPO_ROOT } = require('../../api/services/engineeringRouter/contextBuilderService');
 const FIXTURE_FILE = 'tests/fixtures/engineering-router-sandbox/mathUtils.js';
 const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/fixtures/engineering-router-sandbox/mathUtils.test.js --no-coverage';
 
