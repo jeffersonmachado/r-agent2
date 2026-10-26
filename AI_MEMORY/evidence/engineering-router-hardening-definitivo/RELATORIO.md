@@ -516,12 +516,15 @@ CRASH_RECOVERY        = GO               (13 checks com SIGKILL real)
 REAL_TASK_RECOVERY    = GO               (17 checks com takeover e fencing)
 RAG_INDEX_HEALTH      = HEALTHY          (3539 indexados, 0 violações)
 ENGINEERING_ROUTER_V2 = NO_GO            (2 falhas, 3 pendências — §7)
+L0b_CANONICO          = PARIDADE COM A BASE (amostras 2, 3 e 4 idênticas à base — §9.3-ter)
+LEASES/ESCOPO         = 3 defeitos reais + 4 achados de revisão fechados com prova (§9.3-bis/quater, §10.1)
 REQUIRED_TESTS        = FAIL/NOT_EXECUTED (68) — bloqueio externo
 DEVELOPMENT_VERIFIED  = NÃO DECLARADO    (testes obrigatórios não executados)
 RELEASE_CERTIFICATION = NO_GO
 MERGE                 = NOT_AUTHORIZED
 PUBLISH               = NOT_AUTHORIZED
 DEPLOY                = NOT_AUTHORIZED
+MAIN_MODIFIED         = FALSE            (main e dev/engineering-hardening remotos intocados: 04cad9c1b / 29372d7a3)
 ```
 
 Duas vulnerabilidades P0/P1 reais fechadas com reprodução antes/depois, uma delas tendo sobrevivido à
