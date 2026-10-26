@@ -5,7 +5,7 @@
   "branch": "codex/engineering-router-hardening-20261025",
   "worktree": "/opt/results/ria/er-hardening",
   "sourceSha": "29372d7a34d4653b10e7375480094fa787bded37",
-  "finalSha": "69f044787",
+  "finalSha": "114e0cd7b",
   "remote": {
     "main": "04cad9c1b639cdae357687f7febf47e490834665",
     "devEngineeringHardening": "29372d7a34d4653b10e7375480094fa787bded37",
@@ -43,6 +43,10 @@
     {
       "sha": "85a0cc9de",
       "area": "budget-timeout-mission-source"
+    },
+    {
+      "sha": "114e0cd7b",
+      "area": "achados-da-revisao-lease-escopo"
     }
   ],
   "findings": [
@@ -193,8 +197,10 @@
         "MISSION_SRC_14": "INCONCLUSIVO/SOB CARGA — corrida com o Engineering Runner vivo do globalSetup pela reconciliacao de pending intents",
         "ER-V1-SEAL-001": "INCONCLUSIVO/SOB CARGA — POST_PROMOTION_VERIFY_FAILED na amostra 1, PASS na amostra 2"
       },
-      "conclusao": "nenhuma falha do L0b canonico e atribuivel a este delta: amostras 2 e 3 == base; as 3 falhas rotativas da amostra 1 nao voltaram depois das correcoes",
-      "branchAmostra3": "69f044787 (escopo da varredura): 2 suites / 3 testes — IDENTICO a base (1147,8 s); engineeringBugLoop PASS 28,905s; engineeringMissionSourceE2E PASS 12,160s; naturalPath PASS 53,332s"
+      "conclusao": "nenhuma falha do L0b canonico e atribuivel a este delta: amostras 2, 3 e 4 == base",
+      "branchAmostra3": "69f044787 (escopo da varredura): 2 suites / 3 testes — IDENTICO a base (1147,8 s); engineeringBugLoop PASS 28,905s; engineeringMissionSourceE2E PASS 12,160s; naturalPath PASS 53,332s",
+      "branchAmostra4": "114e0cd7b (achados da revisao): 2 suites / 3 testes em 226 testes — IDENTICO a base (1122,7 s); bugLoop PASS 26,044s; missionSourceE2E PASS 9,621s; naturalPath PASS 45,087s; autonomousLoop PASS 40,482s",
+      "escopoDoGate": "L0b = npx jest tests/integration/engineering --runInBand (scripts/ci/dev-branch-gate.js:181); suites do grupo exclusivo fora desse glob (governanceApprovalFullWorkerE2E) tem prova isolada + BUG-03d"
     }
   },
   "externalBlocks": [

@@ -358,12 +358,18 @@ Mesmo comando, `--runInBand`, 40 suítes, banco real, QUATRO amostras:
 | branch amostra 1 (antes das correções de lease) | 4/40 | 6/222 | as 3 acima **+** `engineeringPromotionBaselineSeal` ER-V1-SEAL-001 (1), `engineeringBugLoop` BUG-02 (1), `engineeringMissionSourceE2E` MISSION_SRC_14 (1) — 1294,0 s |
 | branch amostra 2 (depois das correções de lease) | 2/40 | 3/222 | **exatamente o conjunto da base** — 1123,2 s |
 | branch amostra 3 (`69f044787`, depois do escopo da varredura) | 2/40 | 3/222 | **exatamente o conjunto da base** — 1147,8 s |
+| branch amostra 4 (`114e0cd7b`, depois dos 4 achados da revisão do lease) | 2/40 | 3/226 | **exatamente o conjunto da base** — 1122,7 s (`engineeringBugLoop` PASS 26,0 s; `missionSourceE2E` PASS 9,6 s; `naturalPath` PASS 45,1 s; `autonomousLoop` PASS 40,5 s) |
 
-`engineeringBugLoop` foi **PASS 58,065 s** (amostra 2) e **PASS 28,905 s** (amostra 3, com escopo);
+`engineeringBugLoop` foi **PASS 58,065 s** (amostra 2), **PASS 28,905 s** (amostra 3, com escopo) e **PASS 26,044 s** (amostra 4, com as correções da revisão);
 `engineeringMissionSourceE2E` **PASS 11,992 s** e **PASS 12,160 s**; `engineeringBugLoopNaturalPathE2E`
-**PASS 53,332 s**. As duas últimas amostras da branch são **idênticas à base** ⇒ nenhuma falha do L0b
+**PASS 53,332 s**. As TRÊS últimas amostras da branch são **idênticas à base** ⇒ nenhuma falha do L0b
 canônico é atribuível a este delta, e as três falhas rotativas da amostra 1 não voltaram depois das
 correções.
+
+Nota de escopo do gate: `L0b` é `npx jest tests/integration/engineering --runInBand`
+(`scripts/ci/dev-branch-gate.js:181`) — suítes do grupo exclusivo que vivem FORA desse glob (por exemplo
+`tests/integration/governanceApprovalFullWorkerE2E.test.js`) não são cobertas por ele; a prova daquele
+caminho é a execução isolada (§9.3-bis) somada a `BUG-03d`.
 
 **Classificação medida das 3 falhas estáveis (presentes na base e na branch):**
 
