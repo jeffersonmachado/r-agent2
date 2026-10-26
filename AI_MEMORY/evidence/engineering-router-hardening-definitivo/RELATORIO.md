@@ -508,6 +508,31 @@ em §11 (risco residual), não corrigido aqui.
 
 ---
 
+## 11.1 CI em runner LIMPO (PR #20) — execução real, não máquina de desenvolvimento
+
+O que a máquina local não prova, o runner efêmero prova: **merge commit `8652f1554`**, run `40305840368`.
+
+| Job | Resultado | Tempo |
+|---|---|---|
+| L0 (Jest oficial) + L1 (gates de governança) | **SUCCESS** | 18m02s |
+| Integração real do Engenheiro (Postgres + sandbox) | **SUCCESS** | 12m19s |
+| Smoke prod-like real (artefato GO consumido pelo L0) | **SUCCESS** | 17m28s |
+
+Evidência do gate (`reports/dev-branch-ci-evidence.json`, artefato baixado): `veredito=PASS_PARCIAL`,
+`equivalenteAValidacaoCompleta=false`, `fasesFaltantes=[R,E,F]`, `fasesNaoAprovadas=[]`, 10 passos,
+**0 falhas** — `L0-suite-oficial` exit 0, **`L0b-integracao-engenheiro` exit 0**, `L1-release-dag`/
+`fila-oficial`/`ai-memory`/`aderencia-agente` exit 0. `PASS_PARCIAL` não é convertido em PASS completo.
+
+**Dois quebradores de AMBIENTE encontrados e fechados no caminho** (nenhum era deste delta; os runs de
+2026-10-25 no mesmo branch eram verdes): o rótulo `ubuntu-latest` passou a resolver para
+**ubuntu-26.04** e (a) `npx playwright install --with-deps chromium` morre com *"Playwright does not
+support chromium on ubuntu26.04-x64"*; (b) o systemd do 26.04 mudou a REDAÇÃO do diagnóstico
+(*"Unknown key 'X' in section [Unit]"*) e `devServicesSupervision` — que exige a mensagem antiga para
+provar que a verificação não é vacuosa — falha. Correção: imagem de runner FIXA em `ubuntu-24.04` nos
+três jobs, com a medição escrita no workflow; nenhuma asserção foi afrouxada para passar.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
@@ -524,7 +549,8 @@ RELEASE_CERTIFICATION = NO_GO
 MERGE                 = NOT_AUTHORIZED
 PUBLISH               = NOT_AUTHORIZED
 DEPLOY                = NOT_AUTHORIZED
-MAIN_MODIFIED         = FALSE            (main e dev/engineering-hardening remotos intocados: 04cad9c1b / 29372d7a3)
+CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
+MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só com autorização humana)
 ```
 
 Duas vulnerabilidades P0/P1 reais fechadas com reprodução antes/depois, uma delas tendo sobrevivido à
