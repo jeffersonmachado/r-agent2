@@ -21,8 +21,14 @@
 | 2 | `5c0ec2c3b` | P1 decisão + P1 selo | identidade obrigatória em `clasificar`; allowlist no reparo de lineage |
 | 3 | `ea7b96198` | revisão adversarial | fecha bypass por fallback de basename, reparo morto, controle positivo, hermeticidade, EISDIR |
 | 4 | `7f87aeedc` | checkout limpo | re-base de caminho canônico que quebrava quando a raiz difere em profundidade |
-| 5 | `871024cec` | concorrência do ciclo de bug | posse por lease em `reproduce`/`confirmFinding`; 409 na rota; BUG-03b/c |
-| 6 | `f489994dd` | concorrência do ciclo de bug | `handleAnomaly` aceita/propaga o lease (ReferenceError pego pelo E2E) |
+| 5 | `90c89e2c0` | evidência | relatório e `report.json` da missão |
+| 6 | `d41ee60c3` | evidência | gates medidos no checkout limpo |
+| 7 | `871024cec` | concorrência do ciclo de bug | posse por lease em `reproduce`/`confirmFinding`; 409 na rota; BUG-03b/c |
+| 8 | `f489994dd` | concorrência do ciclo de bug | `handleAnomaly` aceita/propaga o lease (ReferenceError pego pelo E2E) |
+| 9 | `740b416ef` | evidência | defeito de concorrência, as regressões que introduzi e a atribuição da bateria |
+| 10 | `382e0a2a4` | duplicação de efeito | fix loop sob posse do finding — impede o coder rodar duas vezes (BUG-03d) |
+| 11 | `85a0cc9de` | orçamento de teste | `TIMEOUT_INTEGRATION_IO_MS` para suíte com I/O real (git + Postgres) |
+| 12 | `69f044787` | custo O(estado global) | escopo `findingIds` na varredura + dublês de lease nas suítes de unidade |
 
 ---
 
@@ -344,17 +350,20 @@ como defeito**: rodada de forma inválida não gera evidência de regressão nem
 
 ### 9.3-ter L0b na forma CANÔNICA — branch vs base
 
-Mesmo comando, `--runInBand`, 40 suítes, banco real, três amostras:
+Mesmo comando, `--runInBand`, 40 suítes, banco real, QUATRO amostras:
 
 | Amostra | Suítes | Testes | Suítes que falharam |
 |---|---|---|---|
-| base `29372d7a3` | 2/40 | 3/219 | `engineeringPromotionService` (2), `engineeringPatchApplyAndTestRunner` (1) |
-| branch amostra 1 | 4/40 | 6/222 | as 3 acima **+** `engineeringPromotionBaselineSeal` ER-V1-SEAL-001 (1), `engineeringBugLoop` BUG-02 (1), `engineeringMissionSourceE2E` MISSION_SRC_14 (1) |
-| branch amostra 2 | 2/40 | 3/222 | **exatamente o conjunto da base** (2 suítes, 3 testes), 1123 s |
+| base `29372d7a3` | 2/40 | 3/219 | `engineeringPromotionService` (2), `engineeringPatchApplyAndTestRunner` (1) — 1131,6 s |
+| branch amostra 1 (antes das correções de lease) | 4/40 | 6/222 | as 3 acima **+** `engineeringPromotionBaselineSeal` ER-V1-SEAL-001 (1), `engineeringBugLoop` BUG-02 (1), `engineeringMissionSourceE2E` MISSION_SRC_14 (1) — 1294,0 s |
+| branch amostra 2 (depois das correções de lease) | 2/40 | 3/222 | **exatamente o conjunto da base** — 1123,2 s |
+| branch amostra 3 (`69f044787`, depois do escopo da varredura) | 2/40 | 3/222 | **exatamente o conjunto da base** — 1147,8 s |
 
-`engineeringBugLoop` foi **PASS 58,065 s** e `engineeringMissionSourceE2E` **PASS 11,992 s** na
-amostra 2. A amostra 2 da branch é **idêntica à base** ⇒ nenhuma falha do L0b canônico é atribuível a
-este delta.
+`engineeringBugLoop` foi **PASS 58,065 s** (amostra 2) e **PASS 28,905 s** (amostra 3, com escopo);
+`engineeringMissionSourceE2E` **PASS 11,992 s** e **PASS 12,160 s**; `engineeringBugLoopNaturalPathE2E`
+**PASS 53,332 s**. As duas últimas amostras da branch são **idênticas à base** ⇒ nenhuma falha do L0b
+canônico é atribuível a este delta, e as três falhas rotativas da amostra 1 não voltaram depois das
+correções.
 
 **Classificação medida das 3 falhas estáveis (presentes na base e na branch):**
 
@@ -392,7 +401,7 @@ declarar escopo.
 | Medição (mesmo commit, mesma máquina) | Antes | Depois |
 |---|---|---|
 | `BUG-02` (só o teste) | **53 789 ms** (orçamento 60 000 ms — estourou uma vez no L0b) | **15 606 ms** (baseline do próprio teste: 16,7 s medido isolado) |
-| `engineeringBugLoop.test.js` (suíte inteira) | 62,4 s · 63,4 s | **26,0 s** |
+| `engineeringBugLoop.test.js` (suíte inteira) | 62,4 s · 63,4 s (58,1 s no L0b) | **26,0 s** (28,9 s no L0b) |
 | Efeito colateral de `BUG-03c` | varria até 200 findings alheios com `runner: FAIL` | apenas o finding do teste |
 
 O que **não** foi feito: subir o timeout de 60 s para "passar". O orçamento é o sintoma; o escopo é a causa.
@@ -465,8 +474,9 @@ quoting e fluxo do `seal-release.sh`.
 | `modelDrivenE2e` | **ENVIRONMENT** — depende do artefato do job `prod-like-smoke` |
 | Padrões destrutivos residuais | 5 identificados (1 crítico), **inventariados e classificados**; correção de cada sítio é trabalho de outra ordem |
 | Cache de módulos no benchmark | ruído de cache quente medido e declarado (3 pares) |
-| `engineeringBugLoop` / `engineeringMissionSourceE2E` sob carga | **BUG-03 = defeito real corrigido** (§9.3-bis, 3 correções + provas BUG-03b/c/d). Restam duas fragilidades de ESTADO GLOBAL, medidas e **não** declaradas corrigidas (`INCONCLUSIVO/SOB CARGA`, §9.3-ter): BUG-02 faz duas varreduras sobre a tabela global de findings (custo O(estado acumulado)) e MISSION_SRC_14 corre com o Engineering Runner vivo do `globalSetup` pela reconciliação dos pending intents do mesmo banco |
-| L0b canônico branch vs base | **amostra 2 da branch == base** (2 suítes/3 testes): `engineeringPromotionService` (ENVIRONMENT: worktree ≠ HEAD do repo) e `engineeringPatchApplyAndTestRunner` (PRE-EXISTENTE: `stdoutRef` relativo ao runtime root, fora do repo) |
+| `engineeringBugLoop` sob carga | **BUG-03 = defeito real corrigido** (§9.3-bis: 4 correções + provas BUG-03b/c/d) e **BUG-02 = custo O(estado global) corrigido na raiz** (§9.3-quater: escopo `findingIds`, 53,8 s → 15,6 s no teste; suíte 62,4 s → 26,0 s; L0b 58,1 s → 28,9 s) |
+| `engineeringMissionSourceE2E` MISSION_SRC_14 | **NÃO corrigido** e **não** declarado corrigido: corrida com o Engineering Runner vivo do `globalSetup` pela reconciliação dos pending intents do mesmo banco. Não recorreu nas amostras 2 e 3 do L0b; permanece `INCONCLUSIVO/SOB CARGA` até o teste reconciliar por intenção própria |
+| L0b canônico branch vs base | **amostras 2 e 3 da branch == base** (2 suítes/3 testes): `engineeringPromotionService` (ENVIRONMENT: worktree ≠ HEAD do repo) e `engineeringPatchApplyAndTestRunner` (PRE-EXISTENTE: `stdoutRef` relativo ao runtime root, fora do repo) |
 
 ---
 

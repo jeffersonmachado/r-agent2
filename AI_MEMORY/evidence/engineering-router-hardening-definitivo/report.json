@@ -183,9 +183,9 @@
     "l0bCanonico": {
       "shape": "npx jest tests/integration/engineering --bail=0 --runInBand --forceExit (forma canonica; o lote de 77 suites com --maxWorkers=2 e FORMA INVALIDA por config/canonical-release-suites.json e foi RETRATADO no relatorio 9.3-ter)",
       "suitesTotal": 40,
-      "base": "2 suites / 3 testes falhando: engineeringPromotionService (2), engineeringPatchApplyAndTestRunner (1)",
+      "base": "2 suites / 3 testes falhando em 1131,6 s: engineeringPromotionService (2), engineeringPatchApplyAndTestRunner (1)",
       "branchAmostra1": "4 suites / 6 testes: os 3 da base + ER-V1-SEAL-001, BUG-02 (timeout 60000ms), MISSION_SRC_14 (reconciled 0)",
-      "branchAmostra2": "2 suites / 3 testes — IDENTICO a base (1123 s); engineeringBugLoop PASS 58,065s; engineeringMissionSourceE2E PASS 11,992s",
+      "branchAmostra2": "2 suites / 3 testes — IDENTICO a base (1123,2 s); engineeringBugLoop PASS 58,065s; engineeringMissionSourceE2E PASS 11,992s",
       "atribuicao": {
         "engineeringPromotionService": "ENVIRONMENT — realHead() resolve o HEAD do repo principal (Expected 484eee4...) vs HEAD do worktree (Received 85a0cc9...)",
         "engineeringPatchApplyAndTestRunner": "PRE-EXISTENTE — mesma assercao falhando na base: stdoutRef relativo ao runtime root, fora do repo",
@@ -193,7 +193,8 @@
         "MISSION_SRC_14": "INCONCLUSIVO/SOB CARGA — corrida com o Engineering Runner vivo do globalSetup pela reconciliacao de pending intents",
         "ER-V1-SEAL-001": "INCONCLUSIVO/SOB CARGA — POST_PROMOTION_VERIFY_FAILED na amostra 1, PASS na amostra 2"
       },
-      "conclusao": "nenhuma falha do L0b canonico e atribuivel a este delta: amostra 2 == base"
+      "conclusao": "nenhuma falha do L0b canonico e atribuivel a este delta: amostras 2 e 3 == base; as 3 falhas rotativas da amostra 1 nao voltaram depois das correcoes",
+      "branchAmostra3": "69f044787 (escopo da varredura): 2 suites / 3 testes — IDENTICO a base (1147,8 s); engineeringBugLoop PASS 28,905s; engineeringMissionSourceE2E PASS 12,160s; naturalPath PASS 53,332s"
     }
   },
   "externalBlocks": [
