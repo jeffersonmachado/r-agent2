@@ -296,7 +296,13 @@ jobs:
   # ===========================================================================
   prod-like-smoke:
     name: "Smoke prod-like real (artefato GO consumido pelo L0)"
-    runs-on: ubuntu-latest
+    # IMAGEM FIXA, não `ubuntu-latest` (medido 2026-10-26, run 40303567233): o rótulo
+    # `ubuntu-latest` passou a resolver para ubuntu-26.04 e `npx playwright install --with-deps
+    # chromium` morre com "Playwright does not support chromium on ubuntu26.04-x64" (Playwright
+    # 1.57.0), derrubando o job ANTES de qualquer código — os runs de 2026-10-25 no mesmo branch
+    # eram verdes, então a mudança é do runner, não do repositório. Este job precisa de navegador
+    # real: fica em 24.04 até o Playwright suportar 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
 
     # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
