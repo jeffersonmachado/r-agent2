@@ -131,10 +131,14 @@ async function listFindings({
   if (selfModification !== null) where.self_modification = Boolean(selfModification);
   if (fingerprint) where.fingerprint = fingerprint;
   if (Array.isArray(ids) && ids.length > 0) where.id = { [Op.in]: ids };
+  // ESCOPO EXPLÍCITO NÃO É TRUNCADO: com `ids` o chamador já delimitou o conjunto, e cortar em
+  // `limit` (default 50, teto 200) faria "escopo explícito" virar "escopo parcial silencioso".
+  const escopoExplicito = Array.isArray(ids) && ids.length > 0;
+  const limite = escopoExplicito ? ids.length : Math.min(Math.max(Number(limit) || 50, 1), 200);
   const rows = await model().findAll({
     where,
     order: [['last_seen_at', 'DESC']],
-    limit: Math.min(Math.max(Number(limit) || 50, 1), 200),
+    limit: limite,
     offset: Math.max(Number(offset) || 0, 0),
   });
   return rows.map(toPlain);
@@ -869,7 +873,17 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  */
 async function withFindingLeaseOwned(findingId, opcoes, fn) {
   const { workerInstanceId = null, lease = null, ttlMs = null } = opcoes || {};
-  if (lease && lease.token) return fn({ lease, owned: false });
+  if (lease && lease.token) {
+    // O lease herdado tem de ser DESTE finding: aceitar qualquer `{ token }` deixaria a operação
+    // rodar sem posse nenhuma (o token de outro finding nunca é validado pela escrita dos findings).
+    if (lease.findingId && lease.findingId !== findingId) {
+      const mismatch = new Error(`lease de ${lease.findingId} não pode ser usado no finding ${findingId}`);
+      mismatch.code = 'FINDING_LEASE_MISMATCH';
+      mismatch.detail = { findingId, leaseFindingId: lease.findingId };
+      throw mismatch;
+    }
+    return fn({ lease, owned: false });
+  }
 
   // Identidade POR OPERAÇÃO quando o chamador não declara uma. `pid:<pid>` faria duas operações
   // concorrentes do MESMO processo se enxergarem como o mesmo dono (a aquisição aceita reentrada do
@@ -922,15 +936,19 @@ async function acquireFindingLease(findingId, { workerInstanceId, ttlMs = DEFAUL
   const row = Array.isArray(rows) ? rows[0] : rows;
   if (!row) {
     const current = await getFinding(findingId).catch(() => null);
+    // Finding INEXISTENTE não é disputa de posse: o UPDATE casa 0 linhas nos dois casos, e rotular
+    // ausência como `FINDING_LEASE_HELD_BY_OTHER_WORKER` transformava 404 em 409/200 com
+    // `lease.worker: null` (medido em revisão adversarial de 2026-10-25).
+    if (!current) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found', detail: { findingId } });
     const err = new Error(`finding ${findingId} está sob lease de outro worker`);
     err.code = 'FINDING_LEASE_HELD_BY_OTHER_WORKER';
     err.lease = {
-      worker: current?.lease_worker_instance_id || null,
-      expiresAt: current?.lease_expires_at || null,
+      worker: current.lease_worker_instance_id || null,
+      expiresAt: current.lease_expires_at || null,
     };
     throw err;
   }
-  return { token: row.lease_token, fence: row.lease_fence, workerInstanceId, expiresAt: row.lease_expires_at };
+  return { token: row.lease_token, fence: row.lease_fence, workerInstanceId, findingId, expiresAt: row.lease_expires_at };
 }
 
 /** Renova a posse (heartbeat). Exige o token: quem perdeu o lease não renova. */

@@ -934,3 +934,71 @@ describe('ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)', () => {
     }
   });
 });
+
+/**
+ * REGRESSÕES DA REVISÃO ADVERSARIAL (2026-10-25) — contrato e escopo.
+ *
+ * A posse por lease criou duas bordas que a revisão independente mediu: (1) finding INEXISTENTE
+ * passou a responder "posse de outro worker" (o UPDATE casa 0 linhas nos dois casos), apagando o 404;
+ * (2) o lease herdado era aceito sem vínculo com o finding, então um lease de OUTRO finding rodava a
+ * operação sem posse nenhuma. E o escopo novo (`findingIds`) era fail-open: lista vazia virava
+ * varredura global.
+ */
+describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adversarial)', () => {
+  const ID_INEXISTENTE = '00000000-0000-4000-8000-000000000000';
+
+  test('finding inexistente é NOT_FOUND nos três caminhos (nunca "posse de outro worker")', async () => {
+    if (skipIfNoDatabase()) return;
+
+    const confirm = await bugFindingService
+      .confirmFinding(ID_INEXISTENTE, { basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'x' }], actor: 'TEST' })
+      .then((r) => ({ resolved: r }), (e) => ({ error: e.code }));
+    expect(confirm.error).toBe('not_found');
+
+    const repro = await bugReproductionService
+      .reproduce(ID_INEXISTENTE, { runner: runnerReturning('FAIL'), actor: 'TEST' })
+      .then((r) => ({ resolved: r }), (e) => ({ error: e.code }));
+    expect(repro.error).toBe('not_found');
+
+    const fix = await bugLoop
+      .runFixLoop(ID_INEXISTENTE, { actor: 'TEST' })
+      .then((r) => ({ resolved: r }), (e) => ({ error: e.code }));
+    expect(fix.error).toBe('not_found');
+  });
+
+  test('lease de OUTRO finding não é aceito como posse (FINDING_LEASE_MISMATCH)', async () => {
+    if (skipIfNoDatabase()) return;
+    const alvo = await registerConfirmed({ title: 'mismatch alvo do lease' });
+    const outro = await registerConfirmed({ title: 'mismatch dono do lease' });
+
+    const leaseDoOutro = await bugFindingService.acquireFindingLease(outro.id, { workerInstanceId: 'worker-dono' });
+    try {
+      await expect(bugFindingService.withFindingLeaseOwned(alvo.id, { lease: leaseDoOutro }, async () => 'nunca'))
+        .rejects.toMatchObject({ code: 'FINDING_LEASE_MISMATCH' });
+    } finally {
+      await bugFindingService.releaseFindingLease(outro.id, { token: leaseDoOutro.token }).catch(() => {});
+    }
+  });
+
+  test('escopo vazio não vira varredura global e tipo inválido é erro de contrato', async () => {
+    if (skipIfNoDatabase()) return;
+
+    const vazio = await bugLoop.runBugLoopSweep({ findingIds: [], actor: 'TEST', autoFix: false });
+    expect(vazio.scanned).toBe(0);
+    expect(vazio.items).toEqual([]);
+
+    await expect(bugLoop.runBugLoopSweep({ findingIds: 'id-solto', actor: 'TEST', autoFix: false }))
+      .rejects.toMatchObject({ code: 'INVALID_SWEEP_SCOPE' });
+  });
+
+  test('escopo explícito não é truncado por `limit` (nem pelo teto de 200)', async () => {
+    if (skipIfNoDatabase()) return;
+    const a = await registerConfirmed({ title: 'escopo não truncado A' });
+    const b = await registerConfirmed({ title: 'escopo não truncado B' });
+    const c = await registerConfirmed({ title: 'escopo não truncado C' });
+
+    const rows = await bugFindingService.listFindings({ ids: [a.id, b.id, c.id], limit: 1 });
+    expect(rows).toHaveLength(3);
+    expect(rows.map((r) => r.id).sort()).toEqual([a.id, b.id, c.id].sort());
+  });
+});

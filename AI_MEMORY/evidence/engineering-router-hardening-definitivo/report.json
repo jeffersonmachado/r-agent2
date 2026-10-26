@@ -236,5 +236,42 @@
     "A tabela de atribuicao da rodada de integracao com 77 suites em --maxWorkers=2 foi retirada: forma de execucao invalida pelo contrato de estado global. Substituida pela comparacao canonica --runInBand (base vs branch, 3 amostras)."
   ],
   "finalCommitNote": "69f044787 = ultimo commit de CODIGO; docs de evidencia seguem em commits proprios (c9718916d e posteriores). O SHA de evidencia nunca e auto-referente.",
-  "governanceSuites": "86/86 testes em 6 suites (governanceChainCanonicalPath, canonicalReleaseDecisionIdentityContract, sealReleaseLineageRepair, governanceChainAppearance/Certification/Contract) re-verificados no HEAD final"
+  "governanceSuites": "86/86 testes em 6 suites (governanceChainCanonicalPath, canonicalReleaseDecisionIdentityContract, sealReleaseLineageRepair, governanceChainAppearance/Certification/Contract) re-verificados no HEAD final",
+  "reviews": [
+    {
+      "scope": "api/services/engineeringMission/* + testes do laco de bug (delta de lease e escopo)",
+      "reviewer": "code-review independente",
+      "verdict": "FAIL",
+      "findings": [
+        {
+          "id": "REVIEW-P1-NOT-FOUND-VIRA-409",
+          "severity": "P1",
+          "result": "PASS",
+          "note": "finding inexistente respondia 409/200 'posse de outro worker'; acquireFindingLease agora distingue not_found; regressao nova nos 3 caminhos"
+        },
+        {
+          "id": "REVIEW-P2-HANDLEANOMALY-NULL",
+          "severity": "P2",
+          "result": "PASS",
+          "note": "reproduce podia devolver finding:null e handleAnomaly desreferenciava; guarda + FINDING_LEASE_MISMATCH + param findingLease removido; 2 testes novos"
+        },
+        {
+          "id": "REVIEW-P2-SCOPE-FAIL-OPEN",
+          "severity": "P2",
+          "result": "PASS",
+          "note": "findingIds []/invalido caia na varredura global; agora [] = escopo vazio, tipo invalido = INVALID_SWEEP_SCOPE"
+        },
+        {
+          "id": "REVIEW-P2-SCOPE-TRUNCATED",
+          "severity": "P2",
+          "result": "PASS",
+          "note": "escopo explicito era truncado por limit; com ids o limite e o tamanho do escopo"
+        }
+      ],
+      "residual": [
+        "duas implementacoes do ciclo de lease (withFindingLeaseOwned e withFindingLease); varredura HTTP sem workerInstanceId roda sem posse",
+        "lease_fence nao e validado nas escritas do finding"
+      ]
+    }
+  ]
 }

@@ -876,7 +876,7 @@ async function handleAnomaly(input = {}, {
   actor = null, tenantId = null, autoReproduce = true, autoFix = true, autoTriage = true,
   runner = bugReproductionService.defaultRunner, invariantResults = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   allowedPaths = null, forbiddenPaths = [], explicitPolicyAuthorization = false, policy = null,
-  secondaryFindings = [], continueOriginalMission = true, findingLease = null,
+  secondaryFindings = [], continueOriginalMission = true,
 } = {}) {
   const registered = await bugFindingService.registerFinding(input, { actor, tenantId });
   let finding = registered.finding;
@@ -900,8 +900,16 @@ async function handleAnomaly(input = {}, {
   if (autoReproduce) {
     const plan = bugReproductionService.buildPlan(finding);
     if (plan.kind !== 'UNAVAILABLE') {
-      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults, lease: findingLease });
+      // O `lease` repassado é de OUTRO finding por construção (o finding aqui é recém-registrado), então
+      // não é herdado: `reproduce` adquire a posse do finding novo. Recusa por posse devolve
+      // `finding: null` — tratada explicitamente, nunca desreferenciada.
+      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
       report.reproduced = reproduction.outcome;
+      if (reproduction.skipped || !reproduction.finding) {
+        report.outcome = reproduction.outcome || 'SKIPPED_LEASE_HELD';
+        report.skipped = true;
+        return report;
+      }
       finding = reproduction.finding;
     } else {
       report.reproduced = 'PLAN_UNAVAILABLE';
@@ -1170,7 +1178,18 @@ async function runBugLoopSweep({
   findingIds = null,
 } = {}) {
   const summary = { scanned: 0, confirmed: 0, triaged: 0, fixed: 0, awaitedApproval: 0, resumed: 0, blockedRecursive: 0, leaseSkipped: 0, items: [] };
-  const escopo = Array.isArray(findingIds) && findingIds.length > 0 ? { ids: findingIds } : {};
+  // SEMÂNTICA FECHADA: ausência de escopo (`null`/`undefined`) = varredura GLOBAL, explícita. Lista
+  // VAZIA não pode virar "o mundo inteiro" — quem pediu nenhum finding recebe nenhum (fail-closed), e
+  // tipo inválido é erro de contrato, não varredura global silenciosa.
+  if (findingIds !== null && findingIds !== undefined && !Array.isArray(findingIds)) {
+    const err = new Error('`findingIds` deve ser array de ids ou null para varredura global');
+    err.code = 'INVALID_SWEEP_SCOPE';
+    err.detail = { findingIdsType: typeof findingIds };
+    throw err;
+  }
+  const escopoVazio = Array.isArray(findingIds) && findingIds.length === 0;
+  if (escopoVazio) return summary;
+  const escopo = Array.isArray(findingIds) ? { ids: findingIds } : {};
 
   const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit, ...escopo });
   for (const finding of pending) {

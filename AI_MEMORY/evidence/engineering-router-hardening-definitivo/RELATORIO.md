@@ -463,6 +463,26 @@ O revisor também confirmou como **sólidos**: seams `verificar`/`raiz`/`artifac
 produção; duplicação/ordem/ausência de elos; caminhos absolutos e symlinks; contrato de identidade;
 quoting e fluxo do `seal-release.sh`.
 
+### 10.1 Segunda revisão adversarial — delta de posse por lease e escopo da varredura
+
+Revisor distinto (`code-review`, contexto próprio) sobre `api/services/engineeringMission/*` e os testes
+do laço de bug. **Veredito do revisor: FAIL**, com 4 achados — todos tratados nesta mesma missão:
+
+| # | Sev | Achado | Evidência do revisor | Tratamento |
+|---|---|---|---|---|
+| 1 | **P1** | finding INEXISTENTE passou a responder "posse de outro worker" (409 no `/confirm`, 200 `SKIPPED_LEASE_HELD` no `/reproduce` e no `/fix`, com `lease.worker: null`) — o `not_found`/404 sumiu dos três caminhos | probe real contra o Postgres: `confirm`, `reproduce` e `runFixLoop` com id aleatório devolveram recusa de posse | `acquireFindingLease` distingue ausência de disputa (`current === null` ⇒ `not_found`), no único ponto onde o UPDATE casa 0 linhas; regressão nova "finding inexistente é NOT_FOUND nos três caminhos" |
+| 2 | P2 | `handleAnomaly` desreferenciava `reproduction.finding`, que o delta passou a poder devolver `null` ⇒ `TypeError`; e lease aceito sem vínculo com o finding (lease de OUTRO finding rodava a operação sem posse) | recusa injetada ⇒ `CRASH: TypeError: Cannot read properties of null (reading 'status')` | guarda explícita de recusa (`skipped`/`outcome`, sem tocar em `finding`); `withFindingLeaseOwned` valida `lease.findingId` (`FINDING_LEASE_MISMATCH`); o param `findingLease` de `handleAnomaly` foi REMOVIDO (era inútil por construção: o finding é novo); 2 testes novos |
+| 3 | P2 | `findingIds: []` (ou tipo inválido) caía na varredura GLOBAL — fail-open | `listFindings({ ids: [] })` ⇒ 3 linhas (sem filtro) numa tabela de 21 | `null`/`undefined` = global explícito; `[]` ⇒ `summary` vazio, nada escaneado; tipo inválido ⇒ `INVALID_SWEEP_SCOPE`; teste cobre as três |
+| 4 | P2 | escopo explícito truncado por `limit` (default 10/50, teto 200) — "escopo parcial silencioso" | `listFindings({ ids: [3], limit: 1 })` ⇒ 1 linha | com `ids`, o limite é o tamanho do escopo (sem truncamento); teste com `limit: 1` e 3 ids |
+
+O revisor também **confirmou**: nenhuma posse vazada (`finally` + `unref`), nenhuma dupla aquisição,
+`REPRODUCING` órfão tem saída (lease expira e `MAX_INCONCLUSIVE_REPRODUCTIONS` vira `BLOCKED`), testes
+BUG-03b/c/d **não são vacuosos** e os consumidores (`startWorkers`, `bugLoopWorker`, rotas) seguem
+compatíveis. Confirmação parcial de premissa que fica registrada: existem DUAS implementações do ciclo de
+lease (`withFindingLeaseOwned` nos serviços e `withFindingLease` na varredura), e a varredura disparada por
+HTTP não detém posse quando não recebe `workerInstanceId` — comportamento pré-existente, agora explicitado
+em §11 (risco residual), não corrigido aqui.
+
 ---
 
 ## 11. RISCOS RESIDUAIS E BLOQUEIOS EXTERNOS
@@ -477,6 +497,8 @@ quoting e fluxo do `seal-release.sh`.
 | `engineeringBugLoop` sob carga | **BUG-03 = defeito real corrigido** (§9.3-bis: 4 correções + provas BUG-03b/c/d) e **BUG-02 = custo O(estado global) corrigido na raiz** (§9.3-quater: escopo `findingIds`, 53,8 s → 15,6 s no teste; suíte 62,4 s → 26,0 s; L0b 58,1 s → 28,9 s) |
 | `engineeringMissionSourceE2E` MISSION_SRC_14 | **NÃO corrigido** e **não** declarado corrigido: corrida com o Engineering Runner vivo do `globalSetup` pela reconciliação dos pending intents do mesmo banco. Não recorreu nas amostras 2 e 3 do L0b; permanece `INCONCLUSIVO/SOB CARGA` até o teste reconciliar por intenção própria |
 | L0b canônico branch vs base | **amostras 2 e 3 da branch == base** (2 suítes/3 testes): `engineeringPromotionService` (ENVIRONMENT: worktree ≠ HEAD do repo) e `engineeringPatchApplyAndTestRunner` (PRE-EXISTENTE: `stdoutRef` relativo ao runtime root, fora do repo) |
+| Duas implementações do ciclo de lease | `withFindingLeaseOwned` (serviços) e `withFindingLease` (varredura). A varredura disparada por `POST` sem `workerInstanceId` roda **sem posse** — comportamento pré-existente, agora explícito e coberto por BUG-03c quando há worker declarado; unificar as duas é trabalho do próximo ciclo |
+| `lease_fence` não é validado nas escritas do finding | o counter é incrementado, mas nenhuma escrita de finding o confere (fencing existe só em task). Herança do desenho, não introduzida aqui |
 
 ---
 
