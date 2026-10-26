@@ -60,10 +60,20 @@ permissions:
 env:
   NODE_VERSION_LTS: '20'
 
+# IMAGEM DE RUNNER FIXA (medido 2026-10-26, run 40303567233/40303874392): `ubuntu-latest` passou a
+# resolver para ubuntu-26.04 e os DOIS lados do gate de branch quebram por ambiente, não por código —
+#   * `npx playwright install --with-deps chromium` ⇒ "Playwright does not support chromium on
+#     ubuntu26.04-x64" (Playwright 1.57.0);
+#   * o systemd do 26.04 mudou a REDAÇÃO do diagnóstico ("Unknown key 'X' in section [Unit]") e a
+#     suíte `devServicesSupervision` (que exige a mensagem antiga para provar que a verificação NÃO é
+#     vacuosa) falha.
+# Os runs de 2026-10-25 no mesmo branch eram verdes: a mudança é do runner. Todo o workflow depende de
+# comportamento do sistema (systemd, navegador real, docker), então a imagem fica FIXA em 24.04 até que
+# Playwright e as asserções de mensagem do systemd sejam compatíveis com 26.04.
 jobs:
   dev-branch-gate:
     name: "L0 (Jest oficial) + L1 (gates de governanca)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         shell: bash --noprofile --norc -eo pipefail {0}
@@ -296,12 +306,7 @@ jobs:
   # ===========================================================================
   prod-like-smoke:
     name: "Smoke prod-like real (artefato GO consumido pelo L0)"
-    # IMAGEM FIXA, não `ubuntu-latest` (medido 2026-10-26, run 40303567233): o rótulo
-    # `ubuntu-latest` passou a resolver para ubuntu-26.04 e `npx playwright install --with-deps
-    # chromium` morre com "Playwright does not support chromium on ubuntu26.04-x64" (Playwright
-    # 1.57.0), derrubando o job ANTES de qualquer código — os runs de 2026-10-25 no mesmo branch
-    # eram verdes, então a mudança é do runner, não do repositório. Este job precisa de navegador
-    # real: fica em 24.04 até o Playwright suportar 26.04.
+    # Este job precisa de navegador REAL: fica em 24.04 (ver política no topo de `jobs`).
     runs-on: ubuntu-24.04
     timeout-minutes: 90
 
@@ -471,7 +476,7 @@ jobs:
   # ===========================================================================
   dev-branch-integration:
     name: "Integração real do Engenheiro (Postgres + sandbox)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
