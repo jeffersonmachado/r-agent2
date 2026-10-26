@@ -5,7 +5,7 @@
   "branch": "codex/engineering-router-hardening-20261025",
   "worktree": "/opt/results/ria/er-hardening",
   "sourceSha": "29372d7a34d4653b10e7375480094fa787bded37",
-  "finalSha": "114e0cd7b",
+  "finalSha": "6e3f56f84",
   "remote": {
     "main": "04cad9c1b639cdae357687f7febf47e490834665",
     "devEngineeringHardening": "29372d7a34d4653b10e7375480094fa787bded37",
@@ -47,6 +47,14 @@
     {
       "sha": "114e0cd7b",
       "area": "achados-da-revisao-lease-escopo"
+    },
+    {
+      "sha": "6e3f56f84",
+      "area": "repo-do-servico-nos-testes+proveniencia"
+    },
+    {
+      "sha": "5e4519ca2",
+      "area": "log-de-recusa+fila-oficial"
     }
   ],
   "findings": [
@@ -127,6 +135,24 @@
       "rootCause": "runBugLoopSweep sem escopo: as tres consultas varrem a tabela inteira e cada finding paga lease + transicao + reproducao; custo O(estado acumulado)",
       "fix": "opcao findingIds (default null = comportamento de producao inalterado) + ids em listFindings; os dois testes que varriam o mundo declaram escopo",
       "tests": "engineeringBugLoop 26/26; BUG-02 53 789 ms -> 15 606 ms; suite 62,4 s -> 26,0 s"
+    },
+    {
+      "id": "P2-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
+      "severity": "P2",
+      "reproduced": true,
+      "reproduction": "Expected 484eee47 (targetHead do servico) vs Received 8dbaec15 (realHead do teste) em toda worktree; stdoutRef resolvido a partir de __dirname em vez da raiz do servico",
+      "rootCause": "testes resolviam 'o repositorio' por path.resolve(__dirname,'..','..'), enquanto os servicos usam ROOT de contextBuilderService (ENGINEERING_ROUTER_HOST_REPO_ROOT)",
+      "fix": "testes passam a medir a MESMA raiz do servico; assercoes identicas",
+      "tests": "engineeringPromotionService 10/10 + engineeringPatchApplyAndTestRunner 4/4 + L0b amostra 6"
+    },
+    {
+      "id": "P1-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "finding com reproduction.strategy=DECLARED_TEST_COMMAND perde o campo na PRIMEIRA tentativa de reproducao (Expected DECLARED_TEST_COMMAND, Received undefined); qualquer processo que reproduza basta",
+      "rootCause": "markReproducing/markNotReproduced gravavam o PLANO DERIVADO no campo reproduction, substituindo o registro declarado pelo finding",
+      "fix": "plano entra POR CIMA do declarado nos tres caminhos (REPRODUCING, NOT_REPRODUCED COMMAND e INVARIANT)",
+      "tests": "engineeringBugLoop 32/32 com 2 regressoes novas (REPRODUCED e NOT_REPRODUCED preservam strategy/source)"
     }
   ],
   "gates": {
@@ -197,10 +223,12 @@
         "MISSION_SRC_14": "INCONCLUSIVO/SOB CARGA — corrida com o Engineering Runner vivo do globalSetup pela reconciliacao de pending intents",
         "ER-V1-SEAL-001": "INCONCLUSIVO/SOB CARGA — POST_PROMOTION_VERIFY_FAILED na amostra 1, PASS na amostra 2"
       },
-      "conclusao": "nenhuma falha do L0b canonico e atribuivel a este delta: amostras 2, 3 e 4 == base",
+      "conclusao": "as duas falhas permanentes da base foram corrigidas na raiz (testes mediam outro repositorio); resta 1 flake sob carga no laco de bug, com rastro de recusa por posse agora registrado",
       "branchAmostra3": "69f044787 (escopo da varredura): 2 suites / 3 testes — IDENTICO a base (1147,8 s); engineeringBugLoop PASS 28,905s; engineeringMissionSourceE2E PASS 12,160s; naturalPath PASS 53,332s",
       "branchAmostra4": "114e0cd7b (achados da revisao): 2 suites / 3 testes em 226 testes — IDENTICO a base (1122,7 s); bugLoop PASS 26,044s; missionSourceE2E PASS 9,621s; naturalPath PASS 45,087s; autonomousLoop PASS 40,482s",
-      "escopoDoGate": "L0b = npx jest tests/integration/engineering --runInBand (scripts/ci/dev-branch-gate.js:181); suites do grupo exclusivo fora desse glob (governanceApprovalFullWorkerE2E) tem prova isolada + BUG-03d"
+      "escopoDoGate": "L0b = npx jest tests/integration/engineering --runInBand (scripts/ci/dev-branch-gate.js:181); suites do grupo exclusivo fora desse glob (governanceApprovalFullWorkerE2E) tem prova isolada + BUG-03d",
+      "branchAmostra5": "e7601632d: 1 suite / 1 teste — engineeringMissionReviewEnforcement ADVERSARIAL_TO_BUG_LOOP (strategy undefined) = DEFEITO REAL de proveniencia (1573,0 s)",
+      "branchAmostra6": "6e3f56f84 (correcoes de raiz): 1 suite / 1 teste em 228 — engineeringBugLoop PROTECTED_GOVERNANCE_BASELINE (fixed:false em 559 ms) = flake sob carga, 14 execucoes isoladas 32/32 PASS; as 2 suites vermelhas da base NAO existem mais (1481,3 s)"
     }
   },
   "externalBlocks": [
@@ -236,12 +264,17 @@
       "what": "duas suites de unidade quebraram (withFindingLeaseOwned is not a function) porque o duble de bugFindingService nao conhecia a funcao nova; ao corrigir o duble, resetMocks apagou a implementacao de jest.fn() e o fix loop devolveu undefined — segundo erro medido",
       "caughtBy": "npm run test:unit (bugLoopNonConvergenceGuard + governanceApprovalLifecycle, 10 testes)",
       "fixedIn": "mesmo commit do escopo da varredura"
+    },
+    {
+      "what": "runFixLoop recusando por posse devolvia fixed:false sem nenhum rastro, indistinguivel de 'fix rodou e nao convergiu'",
+      "caughtBy": "diagnostico do L0b (falhas de ~300-500 ms sem motivo visivel)",
+      "fixedIn": "5e4519ca2"
     }
   ],
   "retratacoes": [
     "A tabela de atribuicao da rodada de integracao com 77 suites em --maxWorkers=2 foi retirada: forma de execucao invalida pelo contrato de estado global. Substituida pela comparacao canonica --runInBand (base vs branch, 3 amostras)."
   ],
-  "finalCommitNote": "69f044787 = ultimo commit de CODIGO; docs de evidencia seguem em commits proprios (c9718916d e posteriores). O SHA de evidencia nunca e auto-referente.",
+  "finalCommitNote": "6e3f56f84 = ultimo commit de CODIGO; 5e4519ca2 e docs/fila; commits de evidencia seguem e nunca sao auto-referentes.",
   "governanceSuites": "86/86 testes em 6 suites (governanceChainCanonicalPath, canonicalReleaseDecisionIdentityContract, sealReleaseLineageRepair, governanceChainAppearance/Certification/Contract) re-verificados no HEAD final",
   "reviews": [
     {

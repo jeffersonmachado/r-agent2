@@ -359,6 +359,8 @@ Mesmo comando, `--runInBand`, 40 suítes, banco real, QUATRO amostras:
 | branch amostra 2 (depois das correções de lease) | 2/40 | 3/222 | **exatamente o conjunto da base** — 1123,2 s |
 | branch amostra 3 (`69f044787`, depois do escopo da varredura) | 2/40 | 3/222 | **exatamente o conjunto da base** — 1147,8 s |
 | branch amostra 4 (`114e0cd7b`, depois dos 4 achados da revisão do lease) | 2/40 | 3/226 | **exatamente o conjunto da base** — 1122,7 s (`engineeringBugLoop` PASS 26,0 s; `missionSourceE2E` PASS 9,6 s; `naturalPath` PASS 45,1 s; `autonomousLoop` PASS 40,5 s) |
+| branch amostra 5 (`e7601632d`) | 1/40 | 1/226 | `engineeringMissionReviewEnforcement` ADVERSARIAL_TO_BUG_LOOP (`strategy` undefined) — **defeito real de proveniência**, §9.3-sexies — 1573,0 s |
+| branch amostra 6 (`6e3f56f84`, com §9.3-quinquies e §9.3-sexies) | 1/40 | 1/228 | `engineeringBugLoop` PROTECTED_GOVERNANCE_BASELINE (`fixed:false` em 559 ms) — **flake sob carga**, 14 execuções isoladas do arquivo 32/32 PASS depois; as duas falhas permanentes da base **não existem mais** — 1481,3 s |
 
 `engineeringBugLoop` foi **PASS 58,065 s** (amostra 2), **PASS 28,905 s** (amostra 3, com escopo) e **PASS 26,044 s** (amostra 4, com as correções da revisão);
 `engineeringMissionSourceE2E` **PASS 11,992 s** e **PASS 12,160 s**; `engineeringBugLoopNaturalPathE2E`
@@ -390,6 +392,47 @@ Direção de correção (registrada como trabalho seguinte, não feita aqui): is
 suítes que varrem a tabela de findings (subsistema escopado por execução ou truncamento explícito do
 que a própria suíte criou) e reconciliar por intenção própria em MISSION_SRC_14. Enquanto isso, a
 classificação honesta é `INCONCLUSIVO/SOB CARGA`.
+
+### 9.3-quinquies Os dois vermelhos permanentes do L0b: o teste media OUTRO repositório
+
+`engineeringPromotionService` (2 testes) e `engineeringPatchApplyAndTestRunner` (1) falhavam em **toda**
+execução dentro de worktree. Investigado até a causa, com reprodução:
+
+```
+Expected: "484eee4788e553907e31f7b0528cac9ee41d9298"   ← result.evidence.targetHead (serviço)
+Received: "8dbaec15ad154bdbd46efdf19c4bb1eb91012e94"   ← realHead() do teste (worktree)
+```
+
+**Causa raiz.** Os serviços operam sobre `ROOT` de `contextBuilderService`, que honra
+`ENGINEERING_ROUTER_HOST_REPO_ROOT` (o container do Runner precisa do caminho do HOST) — e o `.env`
+aponta para `/opt/results/ria/r-agent2`. Os testes, porém, resolviam "o repositório" por
+`path.resolve(__dirname, '..', '..')`, isto é, a worktree. Em checkout único os dois coincidem; em worktree
+ligada divergem — e então duas asserções de HEAD se invertiam e o `stdoutRef` era procurado no lugar
+errado (o arquivo é escrito sob a raiz do serviço).
+
+**Correção:** os testes passam a medir a MESMA raiz que o serviço usa (`ROOT` importado do módulo que o
+serviço consome). Nenhuma asserção foi afrouxada — muda de ONDE se mede, não O QUE se exige. Resultado:
+os 3 testes verdes no L0b canônico (amostra 6), 10/10 e 4/4 nas suítes.
+
+### 9.3-sexies Defeito de auditabilidade achado no L0b: o plano apagava a proveniência declarada
+
+A amostra 6 do L0b derrubou `engineeringMissionReviewEnforcement` (ADVERSARIAL_TO_BUG_LOOP) por um
+motivo que não era o teste:
+
+```
+Expected: "DECLARED_TEST_COMMAND"   Received: undefined
+```
+
+**Causa raiz.** A primeira tentativa de reprodução gravava o **plano derivado** no campo `reproduction`
+do finding, substituindo o que o finding havia **declarado** (`strategy`, `source`, comando declarado).
+Quem chegava como `DECLARED_TEST_COMMAND` deixava de ser auditável como tal — e o gatilho não é o teste:
+qualquer tentativa de reprodução, **inclusive de outro processo**, bastava. É perda de proveniência em
+produção, não flutuação de teste.
+
+**Correção.** O plano entra POR CIMA do declarado (`{...declarado, ...plano}`), nos três caminhos
+(`REPRODUCING`, `NOT_REPRODUCED` do plano `COMMAND` e do plano `INVARIANT`). Regressões permanentes:
+`engineeringBugLoop` prova que `strategy`/`source` sobrevivem tanto em `REPRODUCED` quanto em
+`NOT_REPRODUCED`.
 
 ### 9.3-quater Custo O(estado global) da varredura — medido e cortado na raiz
 
@@ -501,8 +544,9 @@ em §11 (risco residual), não corrigido aqui.
 | Padrões destrutivos residuais | 5 identificados (1 crítico), **inventariados e classificados**; correção de cada sítio é trabalho de outra ordem |
 | Cache de módulos no benchmark | ruído de cache quente medido e declarado (3 pares) |
 | `engineeringBugLoop` sob carga | **BUG-03 = defeito real corrigido** (§9.3-bis: 4 correções + provas BUG-03b/c/d) e **BUG-02 = custo O(estado global) corrigido na raiz** (§9.3-quater: escopo `findingIds`, 53,8 s → 15,6 s no teste; suíte 62,4 s → 26,0 s; L0b 58,1 s → 28,9 s) |
-| `engineeringMissionSourceE2E` MISSION_SRC_14 | **NÃO corrigido** e **não** declarado corrigido: corrida com o Engineering Runner vivo do `globalSetup` pela reconciliação dos pending intents do mesmo banco. Não recorreu nas amostras 2 e 3 do L0b; permanece `INCONCLUSIVO/SOB CARGA` até o teste reconciliar por intenção própria |
-| L0b canônico branch vs base | **amostras 2 e 3 da branch == base** (2 suítes/3 testes): `engineeringPromotionService` (ENVIRONMENT: worktree ≠ HEAD do repo) e `engineeringPatchApplyAndTestRunner` (PRE-EXISTENTE: `stdoutRef` relativo ao runtime root, fora do repo) |
+| `engineeringMissionSourceE2E` MISSION_SRC_14 | **NÃO corrigido** e **não** declarado corrigido: corrida pela reconciliação dos pending intents do mesmo banco. Não recorreu nas amostras 2–6 do L0b; permanece `INCONCLUSIVO/SOB CARGA` |
+| `engineeringBugLoop` PROTECTED_GOVERNANCE_BASELINE | **flake sob carga, NÃO corrigido**: falhou 1× na amostra 6 (`fixed:false` em 559 ms) e passou em **14 execuções isoladas consecutivas** do arquivo (32/32). Taxa medida: 2 falhas em ~6 execuções do L0b, 0 em 14 isoladas. A recusa agora **deixa rastro** (`logger.warn` com finding/worker/expiração) — antes era indistinguível de "fix rodou e não convergiu" |
+| L0b canônico branch vs base | as duas falhas da base foram **corrigidas na raiz** (§9.3-quinquies): os testes mediam outro repositório. Amostra 6: só resta 1 flake sob carga |
 | Duas implementações do ciclo de lease | `withFindingLeaseOwned` (serviços) e `withFindingLease` (varredura). A varredura disparada por `POST` sem `workerInstanceId` roda **sem posse** — comportamento pré-existente, agora explícito e coberto por BUG-03c quando há worker declarado; unificar as duas é trabalho do próximo ciclo |
 | `lease_fence` não é validado nas escritas do finding | o counter é incrementado, mas nenhuma escrita de finding o confere (fencing existe só em task). Herança do desenho, não introduzida aqui |
 
@@ -566,7 +610,6 @@ CRASH_RECOVERY        = GO               (13 checks com SIGKILL real)
 REAL_TASK_RECOVERY    = GO               (17 checks com takeover e fencing)
 RAG_INDEX_HEALTH      = HEALTHY          (3539 indexados, 0 violações)
 ENGINEERING_ROUTER_V2 = NO_GO            (2 falhas, 3 pendências — §7)
-L0b_CANONICO          = PARIDADE COM A BASE (amostras 2, 3 e 4 idênticas à base — §9.3-ter)
 LEASES/ESCOPO         = 3 defeitos reais + 4 achados de revisão fechados com prova (§9.3-bis/quater, §10.1)
 REQUIRED_TESTS        = FAIL/NOT_EXECUTED (68) — bloqueio externo
 DEVELOPMENT_VERIFIED  = NÃO DECLARADO    (testes obrigatórios não executados)
@@ -574,6 +617,7 @@ RELEASE_CERTIFICATION = NO_GO
 MERGE                 = NOT_AUTHORIZED
 PUBLISH               = NOT_AUTHORIZED
 DEPLOY                = NOT_AUTHORIZED
+L0b_CANONICO          = 39/40 SUITES     (amostra 6; as 2 suítes vermelhas da base foram corrigidas na raiz; resta 1 flake sob carga)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
 MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só com autorização humana)
 ```
