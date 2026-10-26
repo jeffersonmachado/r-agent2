@@ -531,6 +531,31 @@ support chromium on ubuntu26.04-x64"*; (b) o systemd do 26.04 mudou a REDAÇÃO 
 provar que a verificação não é vacuosa — falha. Correção: imagem de runner FIXA em `ubuntu-24.04` nos
 três jobs, com a medição escrita no workflow; nenhuma asserção foi afrouxada para passar.
 
+### 11.2 Política de imagem de runner — 7 workflows, 13 jobs (rollover do `ubuntu-latest`)
+
+O rollover `ubuntu-latest` → **ubuntu-26.04** não é um problema do `dev-branch-ci`: era do repositório
+inteiro. Levantamento e correção na mesma rodada:
+
+| Workflow | Jobs pinados | Por quê |
+|---|---|---|
+| `dev-branch-ci.yml` | 3 | medido: Playwright sem suporte a 26.04 + redação do systemd |
+| `e2e.yml` | 1 | instala Playwright 2× |
+| `wave-reports.yml` | 1 | instala Playwright e roda por **cron (domingo 03:17 UTC)** — falharia sem ninguém olhar, degradando as waves para STALE no coverage gate |
+| `jest.yml` | 2 | ambiente do runner (systemd/glibc) |
+| `frontend.yml` · `rag.yml` | 1 + 1 | idem |
+| `release-governance.yml` | 4 | idem — e é o workflow que protege publicação |
+
+**Enforcement durável:** `tests/unit/ci/workflowRunnerImage.test.js` reprova qualquer `runs-on: *-latest`
+ou imagem fora da lista suportada. Provado **não vacuoso**: revertendo um único pin
+(`wave-reports.yml`) três testes falham listando `wave-reports.yml: runs-on: ubuntu-latest`; restaurado
+em seguida. E o guarda roda **dentro do L0**: no run `40352055519`, o log do `L0-suite-oficial` contém
+`PASS tests/unit/ci/workflowRunnerImage.test.js`. Vive em `tests/unit/` de propósito — `tests/ci/` só é
+executado por `npm run test:system`, que o gate de branch não roda.
+
+Nota de escopo: `e2e`, `frontend`, `jest`, `rag` e `release-governance` só disparam em `main`/`develop`,
+portanto **não** são exercitados por PR para `dev/engineering-hardening`; a garantia deles é o guarda
+executado no L0, não uma execução real neste PR.
+
 ---
 
 ## 12. DECISÃO FINAL
