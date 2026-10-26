@@ -843,7 +843,7 @@ async function handleAnomaly(input = {}, {
   actor = null, tenantId = null, autoReproduce = true, autoFix = true, autoTriage = true,
   runner = bugReproductionService.defaultRunner, invariantResults = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   allowedPaths = null, forbiddenPaths = [], explicitPolicyAuthorization = false, policy = null,
-  secondaryFindings = [], continueOriginalMission = true,
+  secondaryFindings = [], continueOriginalMission = true, findingLease = null,
 } = {}) {
   const registered = await bugFindingService.registerFinding(input, { actor, tenantId });
   let finding = registered.finding;
