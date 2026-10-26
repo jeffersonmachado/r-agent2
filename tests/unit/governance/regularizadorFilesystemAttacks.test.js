@@ -31,6 +31,12 @@ const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 
 const runLib = require('../../../scripts/governance/lib/regularizationRun');
+// ORÇAMENTO DE ESPERA, não expectativa de comportamento (defeito medido em 2026-10-26): cada teste
+// desta suíte sobe processos FILHOS de verdade (`spawn`/`spawnSync`) e troca symlinks em janelas de
+// tempo; com o timeout global de 10 s, o B2 estourou 10,404 s sob carga do lote e reprovou o L0 —
+// passando em 316 ms isolado. 60 s ainda reprova um teste que trave de verdade; nenhuma asserção muda.
+const { TIMEOUT_INTEGRATION_IO_MS } = require('../../helpers/jestTimeouts');
+jest.setTimeout(TIMEOUT_INTEGRATION_IO_MS);
 
 const BASE = path.join('AI_MEMORY', 'evidence', 'bug-closure-regularization');
 const LIB = path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'lib', 'regularizationRun.js');

@@ -2289,6 +2289,18 @@
       "state": "VERIFIED",
       "regressionTest": "tests/integration/engineeringBugLoop.test.js",
       "legacyStatus": "verified"
+    },
+    {
+      "id": "TESTE-FILESYSTEM-ORCAMENTO-10S",
+      "title": "Suíte de ataques de filesystem reprovava o L0 sob carga por orçamento de 10 s",
+      "status": "verified",
+      "commit": "PENDENTE",
+      "evidence": "tests/unit/governance/regularizadorFilesystemAttacks.test.js (18/18) — B2 levou 10,404 s no lote (timeout global 10 s) e 316 ms isolado; orçamento TIMEOUT_INTEGRATION_IO_MS = 60 s, nenhuma asserção alterada",
+      "severity": "P2",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
     }
   ],
   "schemaVersion": 2,
