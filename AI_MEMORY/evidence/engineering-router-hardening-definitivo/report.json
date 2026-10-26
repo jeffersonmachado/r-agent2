@@ -5,7 +5,7 @@
   "branch": "codex/engineering-router-hardening-20261025",
   "worktree": "/opt/results/ria/er-hardening",
   "sourceSha": "29372d7a34d4653b10e7375480094fa787bded37",
-  "finalSha": "f489994dd",
+  "finalSha": "69f044787",
   "remote": {
     "main": "04cad9c1b639cdae357687f7febf47e490834665",
     "devEngineeringHardening": "29372d7a34d4653b10e7375480094fa787bded37",
@@ -234,5 +234,7 @@
   ],
   "retratacoes": [
     "A tabela de atribuicao da rodada de integracao com 77 suites em --maxWorkers=2 foi retirada: forma de execucao invalida pelo contrato de estado global. Substituida pela comparacao canonica --runInBand (base vs branch, 3 amostras)."
-  ]
+  ],
+  "finalCommitNote": "69f044787 = ultimo commit de CODIGO; docs de evidencia seguem em commits proprios (c9718916d e posteriores). O SHA de evidencia nunca e auto-referente.",
+  "governanceSuites": "86/86 testes em 6 suites (governanceChainCanonicalPath, canonicalReleaseDecisionIdentityContract, sealReleaseLineageRepair, governanceChainAppearance/Certification/Contract) re-verificados no HEAD final"
 }
