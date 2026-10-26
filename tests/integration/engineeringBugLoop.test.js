@@ -196,6 +196,105 @@ describe('ciclo de bug — detecção, reprodução e deduplicação', () => {
     expect(result.finding.evidence_refs.length).toBeGreaterThanOrEqual(2);
   });
 
+
+  /**
+   * BUG-03b — CONCORRÊNCIA REAL ENTRE A VARREDURA E UMA TENTATIVA EM CURSO.
+   *
+   * DEFEITO MEDIDO (checkout limpo de 2026-10-25, `L0b-integracao-engenheiro`): a suíte falhou com
+   *   `transição concorrente rejeitada: finding … está em SUSPECTED (tentativa REPRODUCING → CONFIRMED)`
+   * e a MESMA suíte passou 12/12 isolada. Causa: `reproduce()` NÃO toma o lease do finding — só a
+   * varredura (`runBugLoopSweep`) o toma. A varredura de outro processo (o runner vivo do harness)
+   * pega o mesmo finding em REPRODUCING, roda uma reprodução própria, recebe INCONCLUSIVE e o devolve
+   * para SUSPECTED — atropelando a tentativa em curso, que então falha no CAS ao confirmar.
+   *
+   * Prova aqui, sem depender de sorte de agendamento: duas reproduções concorrentes do MESMO finding,
+   * com a primeira parada dentro do runner. A segunda tem de ser RECUSADA por lease, e a primeira tem
+   * de terminar CONFIRMED.
+   */
+  test('BUG-03b: segunda reprodução concorrente do mesmo finding é recusada (lease), não atropela', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'BUG-03b concorrente' });
+
+    // O teste SEGURA o lease (como a varredura faz) para que nenhum sweep externo — o runner vivo do
+    // harness usa o MESMO banco — interfira na medição. Sem isso o experimento depende de quem chega
+    // primeiro, e o próprio teste vira flaky (medido: 1 falha em 4 execuções do arquivo completo).
+    let lease = null;
+    for (let tentativa = 0; tentativa < 50 && !lease; tentativa += 1) {
+      try {
+        lease = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-dono-do-teste' });
+      } catch (err) {
+        if (err.code !== 'FINDING_LEASE_HELD_BY_OTHER_WORKER') throw err;
+        await new Promise((resolve) => { setTimeout(resolve, 100); });
+      }
+    }
+    expect(lease).not.toBeNull();
+
+    try {
+      let liberar;
+      const bloqueio = new Promise((resolve) => { liberar = resolve; });
+      let entrouNoRunner;
+      const entrou = new Promise((resolve) => { entrouNoRunner = resolve; });
+
+      const runnerLento = runnerReturning('FAIL');
+      runnerLento.runCommands = jest.fn(async ({ commands }) => {
+        entrouNoRunner();
+        await bloqueio;
+        return {
+          allPass: false,
+          outcome: 'FAIL',
+          results: commands.map((command) => ({ command, status: 'FAIL', outcome: 'FAIL', exitCode: 1, durationMs: 12 })),
+        };
+      });
+
+      const primeira = bugReproductionService.reproduce(finding.id, { runner: runnerLento, actor: 'TEST', lease });
+      await entrou; // a tentativa 1 está DENTRO do runner, com o finding em REPRODUCING
+
+      const segunda = await bugReproductionService.reproduce(finding.id, {
+        runner: runnerReturning('FAIL'), actor: 'SWEEP', workerInstanceId: 'worker-concorrente',
+      });
+      // Recusa explícita, com motivo — nunca execução paralela silenciosa.
+      expect(segunda.outcome).toBe('SKIPPED_LEASE_HELD');
+      expect(segunda.skipped).toBe(true);
+
+      liberar();
+      const r1 = await primeira;
+      expect(r1.outcome).toBe('REPRODUCED');
+      expect(r1.finding.status).toBe('CONFIRMED');
+    } finally {
+      await bugFindingService.releaseFindingLease(finding.id, { token: lease.token }).catch(() => {});
+    }
+
+    // E o lease não fica preso depois da tentativa.
+    const depois = await bugFindingService.getFinding(finding.id);
+    expect(depois.lease_token).toBeNull();
+  });
+
+  /**
+   * BUG-03c — A VARREDURA respeita a posse: finding sob lease de outro worker é PULADO, não reprocessado.
+   *
+   * É a metade que faltava do mesmo defeito (BUG-03b): o dono não segura o lease, e a varredura não
+   * checa. Aqui o lease é tomado por um ator externo (como o runner faria) e a varredura tem de
+   * pular o finding com motivo, sem tocar no estado.
+   */
+  test('BUG-03c: varredura pula finding sob lease de outro worker (SKIPPED_LEASE_HELD)', async () => {
+    if (skipIfNoDatabase()) return;
+    const finding = await registerConfirmed({ title: 'BUG-03c posse pela varredura' });
+
+    const lease = await bugFindingService.acquireFindingLease(finding.id, { workerInstanceId: 'worker-externo' });
+    try {
+      const sweep = await bugLoop.runBugLoopSweep({
+        limit: 200, autoFix: false, workerInstanceId: 'worker-varredura', runner: runnerReturning('FAIL'),
+      });
+      const item = (sweep.items || []).find((i) => i.findingId === finding.id);
+      expect(item).toEqual(expect.objectContaining({ action: 'SKIPPED_LEASE_HELD' }));
+
+      const depois = await bugFindingService.getFinding(finding.id);
+      expect(depois.status).toBe(finding.status); // estado intocado pela varredura
+    } finally {
+      await bugFindingService.releaseFindingLease(finding.id, { token: lease.token }).catch(() => {});
+    }
+  });
+
   test('BUG-02: missão de VERIFICAÇÃO/teste gera finding auditável, mas não vira item de correção', async () => {
     if (skipIfNoDatabase()) return;
     const { finding } = await bugFindingService.registerFinding({

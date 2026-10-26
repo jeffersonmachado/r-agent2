@@ -852,7 +852,17 @@ function createEngineeringMissionRoutes({ buildDeps }) {
         actor: req.agent?.id || req.agent?.email || null,
         tenantId: requireTenantId(req.tenantId),
       });
-      deps.sendJson(res, 200, result);
+      // Recusa por POSSE não é confirmação. `confirmFinding` recusa quando o finding está sob lease
+      // de outro worker (defeito de concorrência medido em 2026-10-25): devolver 200 com
+      // `{ skipped: true, finding: null }` faria o cliente acreditar que confirmou. 409 explícito.
+      if (result && result.skipped) {
+        return deps.sendJson(res, 409, {
+          code: result.outcome || 'SKIPPED_LEASE_HELD',
+          message: 'finding está sob lease de outro worker — a confirmação não foi aplicada',
+          lease: result.lease || null,
+        });
+      }
+      return deps.sendJson(res, 200, result);
     } catch (err) {
       handleError(res, deps, err, 'confirm finding');
     }

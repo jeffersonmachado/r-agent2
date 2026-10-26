@@ -140,6 +140,7 @@ function sameCommand(a, b) {
 async function runFixLoop(findingId, {
   actor = null, tenantId = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   credentialScope = undefined, specFreshnessGuard = null, missionLease = null, secondaryFindings = [],
+  findingLease = null,
 } = {}) {
   const finding = await bugFindingService.getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
@@ -866,7 +867,7 @@ async function handleAnomaly(input = {}, {
   if (autoReproduce) {
     const plan = bugReproductionService.buildPlan(finding);
     if (plan.kind !== 'UNAVAILABLE') {
-      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
+      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults, lease: findingLease });
       report.reproduced = reproduction.outcome;
       finding = reproduction.finding;
     } else {
@@ -1135,13 +1136,16 @@ async function runBugLoopSweep({
   const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit });
   for (const finding of pending) {
     summary.scanned += 1;
-    const owned = await withFindingLease(finding.id, workerInstanceId, async () => {
+    const owned = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
       const plan = bugReproductionService.buildPlan(finding);
       if (plan.kind === 'UNAVAILABLE') {
         // Motivo EXPLÍCITO persistido na derivação: nunca um silêncio que finge ausência de plano.
         return { action: 'NO_REPRODUCTION_PLAN', detail: finding.reproduction?.derivation?.reason || plan.rationale || null };
       }
-      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
+      // O LEASE DA VARREDURA é passado adiante: `reproduce`/`confirmFinding` são donos da posse e não
+      // podem readquiri-la com outra identidade (fariam a própria varredura ser recusada — medido no
+      // E2E do caminho natural, que parava de progredir).
+      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults, lease });
       if (reproduction.outcome === 'REPRODUCED') summary.confirmed += 1;
       return { action: 'REPRODUCED', outcome: reproduction.outcome };
     });
@@ -1181,7 +1185,7 @@ async function runBugLoopSweep({
       continue;
     }
     if (!finding.fix_task_id) {
-      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
         const triage = await bugTriageService.triage(finding.id, { actor, tenantId, allowedPaths, policy });
         if (triage.requiresHumanApproval || triage.requiresNonApplicationAction) {
           return {
@@ -1192,7 +1196,7 @@ async function runBugLoopSweep({
           };
         }
         if (!autoFix) return { triaged: true, action: 'TRIAGED', taskId: triage.fixTask?.id || null };
-        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts, findingLease: lease });
         if (fix.blocked) {
           return {
             action: fix.stage === 'AWAITING_GOVERNANCE_APPROVAL' ? 'AWAITING_GOVERNANCE_APPROVAL' : 'AWAITING_HUMAN_APPROVAL',
@@ -1215,8 +1219,8 @@ async function runBugLoopSweep({
       continue;
     }
     if (finding.status === 'FIXING' && autoFix) {
-      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
-        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts, findingLease: lease });
         return { action: 'FIX_LOOP_RESUME', status: fix.finding?.status || null, closed: Boolean(fix.executed && fix.closed) };
       });
       if (outcome?.skipped) {

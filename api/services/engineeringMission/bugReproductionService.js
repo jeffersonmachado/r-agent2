@@ -17,6 +17,8 @@
 
 const engine = require('../../../engine/engineeringMission/bugFinding');
 const bugFindingService = require('./bugFindingService');
+// Lease do finding: MESMA definição usada por `confirmFinding` (aquisição + heartbeat + liberação).
+const { withFindingLeaseOwned } = bugFindingService;
 const patchApplyService = require('../engineeringRouter/patchApplyService');
 const testRunnerService = require('../engineeringRouter/testRunnerService');
 const logger = require('../../utils/logger');
@@ -67,7 +69,26 @@ function evidenceForRun(run) {
  */
 async function reproduce(findingId, {
   actor = null, tenantId = null, runner = defaultRunner, invariantResults = null, attemptNumber = null,
+  lease = null, workerInstanceId = null,
 } = {}) {
+  // EXCLUSIVIDADE (defeito medido em 2026-10-25): a tentativa inteira — inclusive a confirmação que
+  // ela dispara — roda sob o lease do finding. Sem isto, a varredura de OUTRO processo pegava o mesmo
+  // finding em REPRODUCING, rodava a própria tentativa e o devolvia a SUSPECTED no meio desta, que
+  // então falhava no CAS ao confirmar. Lease de outro worker ⇒ recusa explícita, nunca paralelismo.
+  const dono = await withFindingLeaseOwned(findingId, { lease, workerInstanceId }, async ({ lease: meuLease }) => {
+    return executarReproducao(findingId, {
+      actor, tenantId, runner, invariantResults, attemptNumber, lease: meuLease,
+    });
+  });
+  if (dono && dono.skipped) {
+    return { outcome: 'SKIPPED_LEASE_HELD', skipped: true, code: dono.code, lease: dono.lease, plan: null, finding: null };
+  }
+  return dono;
+}
+
+async function executarReproducao(findingId, {
+  actor, tenantId, runner, invariantResults, attemptNumber, lease,
+}) {
   const finding = await bugFindingService.getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
 
@@ -93,7 +114,9 @@ async function reproduce(findingId, {
         evidence: [bugFindingService.makeEvidence({ type: 'INVARIANT_EVALUATION', ref: `invariants:${findingId}`, detail: evaluation.reason, source: 'bugReproductionService' })],
         actor,
         tenantId,
+        lease,
       });
+      if (confirmed && confirmed.skipped) return { outcome: confirmed.outcome, skipped: true, plan, evaluation, finding: null };
       return { outcome: evaluation.outcome, plan, evaluation, finding: confirmed.finding };
     }
     if (evaluation.outcome === 'NOT_REPRODUCED') {
@@ -146,7 +169,11 @@ async function reproduce(findingId, {
         lastExitCode: run?.results?.[0]?.exitCode ?? null,
         confirmedAt: new Date().toISOString(),
       },
+      lease,
     });
+    if (confirmed && confirmed.skipped) {
+      return { outcome: confirmed.outcome, skipped: true, plan, evaluation, run, finding: null };
+    }
     return { outcome: evaluation.outcome, plan, evaluation, run, finding: confirmed.finding };
   }
 

@@ -437,10 +437,19 @@ async function markReproducing(findingId, { actor = null, plan = null } = {}) {
  * CONFIRMA com BASE OBJETIVA + evidência. Sem base objetiva (suspeita de LLM, heurística, timout
  * isolado) recusa com `INSUFFICIENT_CONFIRMATION_BASIS` — nunca "confirma por narrativa".
  */
-async function confirmFinding(findingId, { basis, evidence = [], actor = null, rootCause = null, reproduction = null, tenantId = null } = {}) {
-  const finding = await getFinding(findingId);
-  if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+async function confirmFinding(findingId, { basis, evidence = [], actor = null, rootCause = null, reproduction = null, tenantId = null, lease = null, workerInstanceId = null } = {}) {
+  // A CONFIRMAÇÃO inteira (SUSPECTED→REPRODUCING→CONFIRMED) roda sob o lease: sem isso a varredura
+  // de outro processo pode devolver o finding para SUSPECTED entre as duas transições (defeito
+  // medido em 2026-10-25). `lease` de quem já é dono evita reentrância e bump de fence.
+  const dono = await withFindingLeaseOwned(findingId, { lease, workerInstanceId }, async ({ lease: meuLease }) => {
+    const atual = await getFinding(findingId);
+    if (!atual) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+    return confirmarComLease(atual, meuLease);
+  });
+  if (dono && dono.skipped) return { skipped: true, outcome: 'SKIPPED_LEASE_HELD', lease: dono.lease, finding: null };
+  return dono;
 
+  async function confirmarComLease(finding, _lease) {
   const merged = appendEvidence(
     Array.isArray(finding.evidence_refs) ? finding.evidence_refs : [],
     (Array.isArray(evidence) ? evidence : [evidence]).filter(Boolean).map(makeEvidence),
@@ -467,6 +476,7 @@ async function confirmFinding(findingId, { basis, evidence = [], actor = null, r
     tenantId,
   });
   return { finding: result.finding, basis, idempotent: result.idempotent === true };
+  }
 }
 
 async function markNotReproduced(findingId, { actor = null, reason = null, evidence = [], plan = null } = {}) {
@@ -840,6 +850,55 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * O `lease_fence` é monotônico — é o que permite REJEITAR a escrita de um worker antigo depois do
  * takeover, exatamente como mission/task já fazem.
  */
+/**
+ * LEASE DO FINDING — DEFINIÇÃO ÚNICA do ciclo de vida (aquisição, heartbeat, liberação).
+ *
+ * DEFEITO MEDIDO (checkout limpo de 2026-10-25): `reproduce()` e `confirmFinding()` NÃO tomavam o
+ * lease; só a varredura (`runBugLoopSweep`) tomava. A varredura de outro processo pegava o mesmo
+ * finding em REPRODUCING, rodava a própria tentativa, recebia INCONCLUSIVE e o devolvia a SUSPECTED
+ * no meio da tentativa em curso — que então falhava no CAS (`transição concorrente rejeitada …
+ * SUSPECTED (tentativa REPRODUCING → CONFIRMED)`). Passava isolado, falhava sob carga.
+ *
+ * Regra: quem MUTA o ciclo de reprodução/confirmação é dono do lease. Lease de outro worker ⇒ a
+ * operação é RECUSADA explicitamente (`SKIPPED_LEASE_HELD`), nunca executada em paralelo.
+ *
+ * @param {string} findingId
+ * @param {{ workerInstanceId?:string, lease?:object|null, ttlMs?:number }} opcoes
+ * @param {(ctx:{lease:object|null, owned:boolean}) => Promise<any>} fn
+ */
+async function withFindingLeaseOwned(findingId, opcoes, fn) {
+  const { workerInstanceId = null, lease = null, ttlMs = null } = opcoes || {};
+  if (lease && lease.token) return fn({ lease, owned: false });
+
+  // Identidade POR OPERAÇÃO quando o chamador não declara uma. `pid:<pid>` faria duas operações
+  // concorrentes do MESMO processo se enxergarem como o mesmo dono (a aquisição aceita reentrada do
+  // mesmo worker) e o lease não excluiria nada. Reentrada legítima (reproduce → confirmFinding)
+  // passa o `lease` adiante explicitamente, que é o caminho que precisa ser reentrante.
+  const worker = workerInstanceId || `${process.pid}:${crypto.randomUUID()}`;
+  let adquirido;
+  try {
+    adquirido = await acquireFindingLease(findingId, { workerInstanceId: worker, ...(ttlMs ? { ttlMs } : {}) });
+  } catch (err) {
+    if (err.code === 'FINDING_LEASE_HELD_BY_OTHER_WORKER') {
+      return { skipped: true, code: err.code, lease: err.lease };
+    }
+    throw err;
+  }
+  const ttl = ttlMs || DEFAULT_LEASE_TTL_MS;
+  const heartbeat = setInterval(() => {
+    heartbeatFindingLease(findingId, { token: adquirido.token, ttlMs: ttl }).catch((err) => {
+      logger.warn('[bugFindingService] heartbeat do lease do finding falhou', { findingId, code: err.code || null });
+    });
+  }, Math.max(5000, Math.floor(ttl / 3)));
+  if (typeof heartbeat.unref === 'function') heartbeat.unref();
+  try {
+    return await fn({ lease: adquirido, owned: true });
+  } finally {
+    clearInterval(heartbeat);
+    await releaseFindingLease(findingId, { token: adquirido.token }).catch(() => {});
+  }
+}
+
 async function acquireFindingLease(findingId, { workerInstanceId, ttlMs = DEFAULT_LEASE_TTL_MS } = {}) {
   if (!workerInstanceId) throw Object.assign(new Error('lease exige `workerInstanceId`'), { code: 'INVALID_LEASE' });
   const token = crypto.randomUUID();
@@ -1097,6 +1156,7 @@ module.exports = {
   summarizeFindings,
   // Posse durável + dedup consultável (worker do laço)
   findNonTerminalFinding,
+  withFindingLeaseOwned,
   acquireFindingLease,
   heartbeatFindingLease,
   releaseFindingLease,
