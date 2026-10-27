@@ -389,7 +389,7 @@ async function addEvidence(findingId, evidenceInput, { actor = null, tenantId = 
 }
 
 /** Transição crua (validada). Preferir os helpers semânticos abaixo. */
-async function transitionFinding(findingId, toStatus, { actor = null, reason = null, patch = {}, tenantId = null } = {}) {
+async function transitionFinding(findingId, toStatus, { actor = null, reason = null, patch = {}, tenantId = null, lease = null } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
   const check = engine.assertTransition(finding.status, toStatus);
@@ -401,13 +401,29 @@ async function transitionFinding(findingId, toStatus, { actor = null, reason = n
   // Worker B (CONFIRMED→BLOCKED, com a mesma leitura antiga) escreviam as duas — a última vencia
   // sem detecção.
   const expectedVersion = Number(finding.version || 0);
+  // ── FENCING DO LEASE (defeito medido em 2026-10-26) ───────────────────────────────────────────
+  // `lease_fence` era incrementado na aquisição e NUNCA validado por nenhuma escrita: um worker cujo
+  // lease expirou e foi tomado por outro continuava gravando — "perdeu a posse, mas escreve". Quando
+  // a escrita DECLARA posse, o fence corrente entra no MESMO `UPDATE` (predicado atômico, sem TOCTOU
+  // entre checar e gravar): fence velho ⇒ 0 linhas ⇒ `FINDING_LEASE_LOST` nomeado.
+  const fenceEsperado = lease && lease.fence !== undefined && lease.fence !== null ? Number(lease.fence) : null;
+  const where = { id: findingId, version: expectedVersion };
+  if (fenceEsperado !== null) where.lease_fence = fenceEsperado;
+
   const [affected] = await model().update(
     { status: toStatus, ...patch, version: expectedVersion + 1 },
-    { where: { id: findingId, version: expectedVersion } },
+    { where },
   );
 
   if (!affected) {
     const current = await getFinding(findingId);
+    if (fenceEsperado !== null && current && Number(current.lease_fence) !== fenceEsperado) {
+      const perdido = new Error(`posse perdida: o lease do finding ${findingId} avançou (fence ${fenceEsperado} ≠ ${current.lease_fence}) — escrita recusada`);
+      perdido.code = 'FINDING_LEASE_LOST';
+      perdido.detail = { findingId, fenceEsperado, fenceAtual: current.lease_fence ?? null, toStatus };
+      logger.warn('[bugFindingService] escrita recusada: fence do lease não é mais o corrente', perdido.detail);
+      throw perdido;
+    }
     // Concorrência convergente: outra transação já levou o finding ao MESMO destino ⇒ idempotente.
     if (current && current.status === toStatus) return { finding: current, idempotent: true, concurrent: true };
     const err = new Error(`transição concorrente rejeitada: finding ${findingId} está em ${current?.status || 'desconhecido'} (tentativa ${finding.status} → ${toStatus})`);
@@ -434,11 +450,11 @@ async function transitionFinding(findingId, toStatus, { actor = null, reason = n
   return { finding: refreshed, idempotent: false, from: finding.status };
 }
 
-async function markReproducing(findingId, { actor = null, plan = null, reproduction = null } = {}) {
+async function markReproducing(findingId, { actor = null, plan = null, reproduction = null, lease = null } = {}) {
   // `reproduction` vem pronto quando o chamador já sabe mesclar a PROVENIÊNCIA (o plano derivado não
   // pode apagar `strategy`/`source` declarados pelo finding). Sem ele, o plano é gravado como antes.
   const patch = reproduction ? { reproduction } : (plan ? { reproduction: plan } : {});
-  return transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'tentativa de reprodução iniciada', patch });
+  return transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'tentativa de reprodução iniciada', patch, lease });
 }
 
 /**
@@ -470,7 +486,7 @@ async function confirmFinding(findingId, { basis, evidence = [], actor = null, r
     });
   }
 
-  if (finding.status === 'SUSPECTED') await transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'confirmação com base objetiva' });
+  if (finding.status === 'SUSPECTED') await transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'confirmação com base objetiva', lease: _lease });
   const patch = {
     confirmation_basis: basis,
     evidence_refs: merged,
@@ -482,14 +498,15 @@ async function confirmFinding(findingId, { basis, evidence = [], actor = null, r
     reason: `base objetiva ${basis}`,
     patch,
     tenantId,
+    lease: _lease,
   });
   return { finding: result.finding, basis, idempotent: result.idempotent === true };
   }
 }
 
-async function markNotReproduced(findingId, { actor = null, reason = null, evidence = [], plan = null, reproduction = null } = {}) {
+async function markNotReproduced(findingId, { actor = null, reason = null, evidence = [], plan = null, reproduction = null, lease = null } = {}) {
   const patch = { ...(reproduction ? { reproduction } : (plan ? { reproduction: plan } : {})) };
-  return transitionFinding(findingId, 'NOT_REPRODUCED', { actor, reason: reason || 'reprodução executada sem manifestar a falha', patch });
+  return transitionFinding(findingId, 'NOT_REPRODUCED', { actor, reason: reason || 'reprodução executada sem manifestar a falha', patch, lease });
 }
 
 async function markDuplicate(findingId, duplicateOfFindingId, { actor = null, reason = null } = {}) {

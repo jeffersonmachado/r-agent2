@@ -105,7 +105,7 @@ async function executarReproducao(findingId, {
     : null;
 
   if (finding.status === 'SUSPECTED' || finding.status === 'NOT_REPRODUCED') {
-    await bugFindingService.markReproducing(findingId, { actor, plan, reproduction: reproductionComProveniencia });
+    await bugFindingService.markReproducing(findingId, { actor, plan, reproduction: reproductionComProveniencia, lease });
   }
 
   // Plano inexistente ou INVARIANT: nada é executado em sandbox.
@@ -129,7 +129,7 @@ async function executarReproducao(findingId, {
       return { outcome: evaluation.outcome, plan, evaluation, finding: confirmed.finding };
     }
     if (evaluation.outcome === 'NOT_REPRODUCED') {
-      const result = await bugFindingService.markNotReproduced(findingId, { actor, reason: evaluation.reason, plan, reproduction: reproductionComProveniencia });
+      const result = await bugFindingService.markNotReproduced(findingId, { actor, reason: evaluation.reason, plan, reproduction: reproductionComProveniencia, lease });
       return { outcome: evaluation.outcome, plan, evaluation, finding: result.finding };
     }
     // INCONCLUSIVE: volta para SUSPECTED — a reprodução não provou nada e o finding não pode ficar
@@ -194,6 +194,7 @@ async function executarReproducao(findingId, {
       // Mesma preservação de proveniência do caminho acima: o plano derivado NÃO substitui o registro
       // declarado pelo finding (`strategy`/`source`/comando declarado continuam auditáveis).
       reproduction: reproductionComProveniencia,
+      lease,
       evidence: [evidenceForRun(run)],
     });
     return { outcome: evaluation.outcome, plan, evaluation, run, finding: result.finding };

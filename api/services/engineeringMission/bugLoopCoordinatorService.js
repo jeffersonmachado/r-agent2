@@ -1140,36 +1140,21 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
  * Idempotente: nunca duplica task e nunca reabre ciclo já fechado.
  */
 /**
- * POSSE DURÁVEL de um finding durante o processamento (§“dois workers não corrigem o mesmo
- * finding”). Lease adquirido por CAS no banco + heartbeat enquanto o trabalho roda + fence
- * monotônico; se o processo morrer, o lease EXPIRA e o próximo worker assume — sem lease vitalício
- * e sem posse por PID/tempo local.
+ * POSSE DURÁVEL de um finding durante a varredura — DELEGAÇÃO, não segunda implementação.
  *
- * `workerInstanceId` ausente (chamadas administrativas/testes) mantém o comportamento sem posse,
- * explicitamente, em vez de fingir exclusividade.
+ * DEFEITO MEDIDO (2026-10-26, revisão adversarial): existiam DUAS implementações do mesmo ciclo
+ * (adquirir → heartbeat → liberar → fence) — esta e `bugFindingService.withFindingLeaseOwned` — com
+ * semânticas divergentes (aqui, `workerInstanceId` ausente rodava SEM posse; lá, sem identidade
+ * declarada a operação adquiria a própria). Duas cópias do ciclo de vida significam duas chances de
+ * divergir: a segunda já não tinha o vínculo `lease.findingId` que a primeira ganhou.
+ *
+ * A autoridade única passou a ser `withFindingLeaseOwned`; esta função preserva o contrato do
+ * chamador (varredura administrativa sem identidade roda SEM posse, explicitamente) e devolve a
+ * mesma forma de recusa (`{ skipped, code, lease }`).
  */
 async function withFindingLease(findingId, workerInstanceId, fn, { ttlMs = null } = {}) {
   if (!workerInstanceId) return fn({ lease: null });
-  let lease;
-  try {
-    lease = await bugFindingService.acquireFindingLease(findingId, { workerInstanceId, ...(ttlMs ? { ttlMs } : {}) });
-  } catch (err) {
-    if (err.code === 'FINDING_LEASE_HELD_BY_OTHER_WORKER') return { skipped: true, code: err.code, lease: err.lease };
-    throw err;
-  }
-  const ttl = ttlMs || bugFindingService.DEFAULT_LEASE_TTL_MS;
-  const heartbeat = setInterval(() => {
-    bugFindingService.heartbeatFindingLease(findingId, { token: lease.token, ttlMs: ttl }).catch((err) => {
-      logger.warn('[bugLoopCoordinator] heartbeat do lease do finding falhou', { findingId, code: err.code || null });
-    });
-  }, Math.max(5000, Math.floor(ttl / 3)));
-  if (typeof heartbeat.unref === 'function') heartbeat.unref();
-  try {
-    return await fn({ lease });
-  } finally {
-    clearInterval(heartbeat);
-    await bugFindingService.releaseFindingLease(findingId, { token: lease.token }).catch(() => {});
-  }
+  return bugFindingService.withFindingLeaseOwned(findingId, { workerInstanceId, ttlMs }, fn);
 }
 
 async function runBugLoopSweep({

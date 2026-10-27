@@ -991,6 +991,67 @@ describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adv
       .rejects.toMatchObject({ code: 'INVALID_SWEEP_SCOPE' });
   });
 
+  /**
+   * FENCING DO LEASE — regressão de 2026-10-26.
+   *
+   * `lease_fence` era incrementado na aquisição e NUNCA validado por nenhuma escrita: um worker cujo
+   * lease expirou e foi tomado por outro continuava gravando ("perdeu a posse, mas escreve"). O fence
+   * agora entra no MESMO `UPDATE` da transição (predicado atômico, sem TOCTOU entre checar e gravar).
+   */
+  test('escrita com fence VELHO é recusada (FINDING_LEASE_LOST) e não altera o estado', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'fencing fence velho' });
+    await bugFindingService.confirmFinding(registrado.id, {
+      basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'fence:test' }], actor: 'TEST',
+    });
+    expect((await bugFindingService.getFinding(registrado.id)).status).toBe('CONFIRMED');
+
+    const lease = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-dono-fence' });
+    try {
+      // A posse avançou: quem apresenta um fence que não é o corrente perdeu a posse e NÃO escreve.
+      await expect(bugFindingService.transitionFinding(registrado.id, 'FIXING', {
+        actor: 'worker-antigo', lease: { token: lease.token, fence: Number(lease.fence) + 7 },
+      })).rejects.toMatchObject({ code: 'FINDING_LEASE_LOST' });
+
+      expect((await bugFindingService.getFinding(registrado.id)).status).toBe('CONFIRMED');
+
+      // Controle POSITIVO: com o fence corrente a transição passa.
+      const ok = await bugFindingService.transitionFinding(registrado.id, 'FIXING', {
+        actor: 'worker-dono-fence', lease,
+      });
+      expect(ok.finding.status).toBe('FIXING');
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: lease.token }).catch(() => {});
+    }
+  });
+
+  test('varredura com identidade declara posse de fato (delegação única do ciclo de lease)', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'varredura com posse delegada' });
+
+    // Com a posse TOMADA por outro worker, a varredura com identidade é recusada — a delegação em
+    // `withFindingLeaseOwned` mantém a exclusividade que a segunda implementação podia perder.
+    const lease = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-dono-varredura' });
+    try {
+      const comPosse = await bugLoop.runBugLoopSweep({
+        findingIds: [registrado.id], autoFix: false, actor: 'TEST', workerInstanceId: 'worker-intruso', runner: runnerReturning('FAIL'),
+      });
+      expect(comPosse.items.find((i) => i.findingId === registrado.id).action).toBe('SKIPPED_LEASE_HELD');
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: lease.token }).catch(() => {});
+    }
+
+    // Sem posse tomada, a varredura COM identidade processa (adquire o próprio lease e libera).
+    const semConcorrente = await bugLoop.runBugLoopSweep({
+      findingIds: [registrado.id], autoFix: false, actor: 'TEST', workerInstanceId: 'worker-varredura', runner: runnerReturning('FAIL'),
+    });
+    const item = semConcorrente.items.find((i) => i.findingId === registrado.id);
+    expect(item).toBeTruthy();
+    expect(item.action).not.toBe('SKIPPED_LEASE_HELD');
+    // E o lease não fica preso depois do ciclo.
+    expect((await bugFindingService.getFinding(registrado.id)).lease_token).toBeNull();
+  });
+
   test('escopo explícito não é truncado por `limit` (nem pelo teto de 200)', async () => {
     if (skipIfNoDatabase()) return;
     const a = await registerConfirmed({ title: 'escopo não truncado A' });
