@@ -509,12 +509,13 @@ async function markNotReproduced(findingId, { actor = null, reason = null, evide
   return transitionFinding(findingId, 'NOT_REPRODUCED', { actor, reason: reason || 'reprodução executada sem manifestar a falha', patch, lease });
 }
 
-async function markDuplicate(findingId, duplicateOfFindingId, { actor = null, reason = null } = {}) {
+async function markDuplicate(findingId, duplicateOfFindingId, { actor = null, reason = null, lease = null } = {}) {
   if (!duplicateOfFindingId) throw Object.assign(new Error('duplicata exige `duplicateOfFindingId`'), { code: 'INVALID_DUPLICATE' });
   const result = await transitionFinding(findingId, 'DUPLICATE', {
     actor,
     reason: reason || `duplicata de ${duplicateOfFindingId}`,
     patch: { duplicate_of: duplicateOfFindingId },
+    lease,
   });
   const original = await getFinding(duplicateOfFindingId);
   if (original) {
@@ -647,7 +648,7 @@ async function clearGovernanceBlock(findingId, { actor = null } = {}) {
  * aprovado). "Patch aplicado" NÃO é fix — é exatamente o que esta função recusa.
  */async function markFixed(findingId, {
   actor = null, reproductionPassed = false, targetedTestsPassed = false, reviewPassed = false,
-  reproduction = null, review = null, tenantId = null,
+  reproduction = null, review = null, tenantId = null, lease = null,
 } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
@@ -658,7 +659,7 @@ async function clearGovernanceBlock(findingId, { actor = null } = {}) {
   const patch = { resolved_at: nowIso() };
   if (reproduction) patch.reproduction = reproduction;
   if (review) patch.triage = { ...(finding.triage || {}), fixReview: review };
-  const result = await transitionFinding(findingId, 'FIXED', { actor, reason: 'reprodução verde + testes direcionados + parecer aprovado', patch, tenantId });
+  const result = await transitionFinding(findingId, 'FIXED', { actor, reason: 'reprodução verde + testes direcionados + parecer aprovado', patch, tenantId, lease });
   if (review?.regressionCommands) {
     await model().update({ regression_test_refs: review.regressionCommands }, { where: { id: findingId } });
   }
@@ -666,7 +667,7 @@ async function clearGovernanceBlock(findingId, { actor = null } = {}) {
 }
 
 /** Valida a REGRESSÃO. Exige evidência de execuções reais — teste verde isolado não valida nada. */
-async function markRegressionValidated(findingId, { actor = null, runs = [], tenantId = null } = {}) {
+async function markRegressionValidated(findingId, { actor = null, runs = [], tenantId = null, lease = null } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
   const gate = engine.canDeclareRegressionValidated({ finding, regressionRuns: runs });
@@ -682,6 +683,7 @@ async function markRegressionValidated(findingId, { actor = null, runs = [], ten
     reason: `${runs.length} execução(ões) de regressão aprovada(s)`,
     patch: { regression_runs: [...(finding.regression_runs || []), ...runs], regression_test_refs: refs },
     tenantId,
+    lease,
   });
   await recordEvent(findingId, 'REGRESSION_VALIDATED', { runs }, { actor });
   return result;
@@ -691,7 +693,7 @@ async function markRegressionValidated(findingId, { actor = null, runs = [], ten
  * Fecha o finding. ANTES de fechar, checa as formas de greenwashing conhecidas (fechar sem
  * reprodução, sem evidência, sem regressão executada) — o sistema não pode esconder um bug.
  */
-async function closeFinding(findingId, { actor = null, reason = null, tenantId = null } = {}) {
+async function closeFinding(findingId, { actor = null, reason = null, tenantId = null, lease = null } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
   const events = await getFindingHistory(findingId);
@@ -749,10 +751,10 @@ async function closeFinding(findingId, { actor = null, reason = null, tenantId =
     });
   }
 
-  return transitionFinding(findingId, 'CLOSED', { actor, reason: reason || 'ciclo concluído', patch: { resolved_at: finding.resolved_at || nowIso() }, tenantId });
+  return transitionFinding(findingId, 'CLOSED', { actor, reason: reason || 'ciclo concluído', patch: { resolved_at: finding.resolved_at || nowIso() }, tenantId, lease });
 }
 
-async function blockFinding(findingId, { actor = null, dependency, evidence = [], minimumHumanAction, tenantId = null } = {}) {
+async function blockFinding(findingId, { actor = null, dependency, evidence = [], minimumHumanAction, tenantId = null, lease = null } = {}) {
   if (!dependency || !minimumHumanAction) {
     throw Object.assign(new Error('BLOCKED exige `dependency` e `minimumHumanAction`'), { code: 'INVALID_BLOCK' });
   }
@@ -761,6 +763,7 @@ async function blockFinding(findingId, { actor = null, dependency, evidence = []
     reason: `dependência externa: ${dependency}`,
     patch: { blocked: { dependency, evidence, minimumHumanAction, at: nowIso() } },
     tenantId,
+    lease,
   });
 }
 

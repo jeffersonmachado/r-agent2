@@ -246,6 +246,7 @@ async function executarFixLoop(findingId, {
       // o histórico das tentativas: quem for destravar não recomeça do zero.
       await bugFindingService.blockFinding(findingId, {
         actor,
+        lease: findingLease,
         dependency: 'BUG_FIX_NOT_CONVERGING',
         evidence: [bugFindingService.makeEvidence({
           type: 'LOG_CORRELATION',
@@ -404,6 +405,7 @@ async function executarFixLoop(findingId, {
 
     await bugFindingService.markFixed(findingId, {
       actor,
+      lease: findingLease,
       reproductionPassed,
       targetedTestsPassed,
       reviewPassed,
@@ -440,7 +442,7 @@ async function executarFixLoop(findingId, {
   let regressionValidated = false;
   let regressionError = null;
   try {
-    await bugFindingService.markRegressionValidated(findingId, { actor, runs, tenantId });
+    await bugFindingService.markRegressionValidated(findingId, { actor, runs, tenantId, lease: findingLease });
     regressionValidated = true;
   } catch (err) {
     regressionError = { code: err.code, message: err.message };
@@ -475,7 +477,7 @@ async function executarFixLoop(findingId, {
       });
     }
     try {
-      await bugFindingService.closeFinding(findingId, { actor, reason: 'reprodução verde + testes + parecer + regressão', tenantId });
+      await bugFindingService.closeFinding(findingId, { actor, reason: 'reprodução verde + testes + parecer + regressão', tenantId, lease: findingLease });
       closed = true;
     } catch (err) {
       regressionError = { code: err.code, message: err.message };

@@ -1029,6 +1029,10 @@ describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adv
     if (skipIfNoDatabase()) return;
     const registrado = await registerConfirmed({ title: 'varredura com posse delegada' });
 
+    // A prova da DELEGAÇÃO é o espião: a implementação antiga (cópia local do ciclo) satisfazia todas
+    // as asserções de efeito abaixo, então só a chamada à autoridade única distingue as duas.
+    const espiao = jest.spyOn(bugFindingService, 'withFindingLeaseOwned');
+
     // Com a posse TOMADA por outro worker, a varredura com identidade é recusada — a delegação em
     // `withFindingLeaseOwned` mantém a exclusividade que a segunda implementação podia perder.
     const lease = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-dono-varredura' });
@@ -1050,6 +1054,11 @@ describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adv
     expect(item.action).not.toBe('SKIPPED_LEASE_HELD');
     // E o lease não fica preso depois do ciclo.
     expect((await bugFindingService.getFinding(registrado.id)).lease_token).toBeNull();
+
+    expect(espiao).toHaveBeenCalled();
+    const chamada = espiao.mock.calls.find(([id]) => id === registrado.id);
+    expect(chamada).toBeTruthy();
+    espiao.mockRestore();
   });
 
   test('escopo explícito não é truncado por `limit` (nem pelo teto de 200)', async () => {
@@ -1079,20 +1088,24 @@ describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adv
 describe('ciclo de bug — proveniência da reprodução sobrevive à tentativa', () => {
   const REPRODUCTION = { command: REPRODUCTION_COMMAND, expect: 'FAIL', strategy: 'DECLARED_TEST_COMMAND', source: 'ADVERSARIAL_CASE' };
 
-  test('tentativa REPRODUZIDA preserva strategy/source declarados', async () => {
+  test('tentativa INCONCLUSIVA preserva strategy/source declarados', async () => {
+    // ESTE é o caminho que prova a correção: INCONCLUSIVE devolve o finding para SUSPECTED com o que
+    // `markReproducing` gravou, SEM passar pelo spread de `confirmFinding`. No código antigo (plano
+    // gravado como se fosse a reprodução) `strategy`/`source` ficavam nulos aqui — o teste REPRODUZIDO
+    // que existia antes era vacuoso, porque o CONFIRMED já reespalhava o declarado.
     if (skipIfNoDatabase()) return;
     const finding = await registerConfirmed({
-      title: 'proveniencia reproduzida', source: 'ADVERSARIAL_REVIEW', reproduction: REPRODUCTION,
+      title: 'proveniencia inconclusiva', source: 'ADVERSARIAL_REVIEW', reproduction: REPRODUCTION,
     });
 
-    const result = await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('FAIL'), actor: 'TEST' });
-    expect(result.outcome).toBe('REPRODUCED');
+    const result = await bugReproductionService.reproduce(finding.id, { runner: runnerReturning('TIMEOUT'), actor: 'TEST' });
+    expect(result.outcome).toBe('INCONCLUSIVE');
+    expect(result.finding.status).toBe('SUSPECTED');
 
     const depois = await bugFindingService.getFinding(finding.id);
+    expect(depois.status).toBe('SUSPECTED');
     expect(depois.reproduction.strategy).toBe('DECLARED_TEST_COMMAND');
     expect(depois.reproduction.source).toBe('ADVERSARIAL_CASE');
-    expect(depois.reproduction.command).toBe(REPRODUCTION_COMMAND);
-    expect(depois.reproduction.expect).toBe('FAIL');
   });
 
   test('tentativa NOT_REPRODUCED também preserva a proveniência', async () => {

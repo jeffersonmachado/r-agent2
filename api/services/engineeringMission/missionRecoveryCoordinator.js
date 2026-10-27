@@ -317,40 +317,72 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
  * efeito git já estava autorizado, e marca RECOVERY_REQUIRED quando o estado é divergente. Nunca
  * reaplica um efeito já aplicado.
  */
-async function reconcilePendingIntents({ limit = 200 } = {}) {
+// O que a RECONCILIAÇÃO AUTOMÁTICA pode resolver. `RECOVERY_REQUIRED` NÃO entra: é o estado em que a
+// própria reconciliação declara "precisa de reparo humano" — reescanear essas linhas a cada boot
+// consome o orçamento do lote para sempre e deixa de fora justamente o intent recém-crashado
+// (medido em 2026-10-27: 138 missões varridas, 0 reconciliadas, e o intent do teste nem alcançado).
+const INTENTS_AUTORRECONCILIAVEIS = ['PREPARED', 'GIT_APPLIED', 'DB_APPLIED'];
+const INTENTS_NAO_TERMINAIS = [...INTENTS_AUTORRECONCILIAVEIS, 'RECOVERY_REQUIRED'];
+
+async function reconcilePendingIntents({ limit = 200, maxLotes = 5 } = {}) {
   const { EngineeringMissionIntegration } = require('../../db/models');
   const missionSourceService = require('./missionSourceService');
   const Integration = EngineeringMissionIntegration();
 
-  const rows = await Integration.findAll({
-    where: { integration_status: ['PREPARED', 'GIT_APPLIED', 'DB_APPLIED', 'RECOVERY_REQUIRED'] },
-    attributes: ['mission_id'],
-    limit,
-  });
-  const missionIds = [...new Set((rows || []).map((r) => String(r.mission_id)).filter(Boolean))];
-  if (missionIds.length === 0) return { missions: 0, reconciled: 0, outcomes: [] };
-
+  // DEFEITO MEDIDO (2026-10-27, L0b): o boot lia UM lote de `limit` linhas SEM ordenação e sem
+  // continuar. Com 306 intents não terminais no banco, o intent recém-crashado podia ficar FORA do
+  // lote para sempre — a reconciliação de boot "rodava" e não reconciliarva ninguém novo (medido:
+  // `missions >= 1`, `reconciled = 0`). Duas correções: ORDEM determinística (FIFO por atualização,
+  // para que boots sucessivos convirjam sem starvation) e DRENAGEM EM LOTES com teto explícito —
+  // o teto continua existindo para não transformar um boot em trabalho ilimitado, mas agora o que
+  // sobra é CONTADO e devolvido (`pending`), em vez de invisível.
   const outcomes = [];
   let reconciled = 0;
-  for (const missionId of missionIds) {
-    try {
-      const result = await missionSourceService.reconcileMissionSourceIntents({ missionId });
-      reconciled += result.reconciled;
-      for (const outcome of result.outcomes) outcomes.push({ missionId, ...outcome });
-    } catch (err) {
-      // Falha de uma missão não pode impedir a reconciliação das outras (fail-closed por missão).
-      logger.error('[missionRecovery] falha ao reconciliar intents de uma missão', {
-        missionId, errorName: err && err.name, errorMessage: err && err.message,
-      });
-      outcomes.push({ missionId, outcome: 'ERROR', reason: err && err.message });
+  let missions = 0;
+  const vistas = new Set();
+
+  for (let lote = 0; lote < Math.max(1, maxLotes); lote += 1) {
+    const rows = await Integration.findAll({
+      where: { integration_status: INTENTS_AUTORRECONCILIAVEIS },
+      attributes: ['mission_id', 'integration_key'],
+      order: [['updated_at', 'ASC'], ['integration_key', 'ASC']],
+      limit,
+    });
+    const novos = [...new Set((rows || [])
+      .map((r) => String(r.mission_id))
+      .filter((id) => id && !vistas.has(id)))];
+    if (novos.length === 0) break;
+
+    for (const missionId of novos) {
+      vistas.add(missionId);
+      missions += 1;
+      try {
+        const result = await missionSourceService.reconcileMissionSourceIntents({ missionId });
+        reconciled += result.reconciled;
+        for (const outcome of result.outcomes) outcomes.push({ missionId, ...outcome });
+      } catch (err) {
+        // Falha de uma missão não pode impedir a reconciliação das outras (fail-closed por missão).
+        logger.error('[missionRecovery] falha ao reconciliar intents de uma missão', {
+          missionId, errorName: err && err.name, errorMessage: err && err.message,
+        });
+        outcomes.push({ missionId, outcome: 'ERROR', reason: err && err.message });
+      }
     }
   }
+
+  // O que sobrou depois do teto é dívida VISÍVEL (nunca silêncio).
+  const [{ count: pendentes }] = await Integration.sequelize.query(
+    'SELECT COUNT(DISTINCT mission_id)::int AS count FROM engineering_mission_integrations WHERE integration_status IN (:status)',
+    { replacements: { status: INTENTS_AUTORRECONCILIAVEIS }, type: Integration.sequelize.QueryTypes.SELECT },
+  );
+  const pending = Number(pendentes || 0);
+
   if (outcomes.length > 0) {
     logger.warn('[missionRecovery] intents não terminais reconciliados no boot', {
-      missions: missionIds.length, reconciled, total: outcomes.length,
+      missions, reconciled, total: outcomes.length, pending,
     });
   }
-  return { missions: missionIds.length, reconciled, outcomes };
+  return { missions, reconciled, outcomes, pending };
 }
 
 /** Varredura de BOOT — chamada na subida da aplicação, antes de qualquer ação humana. */

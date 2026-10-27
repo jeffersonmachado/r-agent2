@@ -113,6 +113,7 @@ async function executarReproducao(findingId, {
     const evaluation = engine.evaluateReproduction({ plan, invariantResults });
     await persistAttempt(findingId, {
       plan, evaluation, attempt, actor,
+      lease,
       run: null,
       startedAt: new Date().toISOString(),
       finishedAt: new Date().toISOString(),
@@ -134,7 +135,7 @@ async function executarReproducao(findingId, {
     }
     // INCONCLUSIVE: volta para SUSPECTED — a reprodução não provou nada e o finding não pode ficar
     // "preso" em REPRODUCING fingindo que uma tentativa está em curso.
-    const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId });
+    const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId, lease });
     return { outcome: evaluation.outcome, plan, evaluation, finding: back.finding };
   }
 
@@ -162,7 +163,7 @@ async function executarReproducao(findingId, {
     ? { outcome: 'INCONCLUSIVE', reason: `falha ao executar a reprodução: ${error.message}`, code: engine.BUG_FAILURE_CODES.REPRODUCTION_INCONCLUSIVE }
     : engine.evaluateReproduction({ plan, run });
 
-  await persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt: new Date().toISOString() });
+  await persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt: new Date().toISOString(), lease });
 
   if (evaluation.outcome === 'REPRODUCED') {
     const confirmed = await bugFindingService.confirmFinding(findingId, {
@@ -213,6 +214,7 @@ async function executarReproducao(findingId, {
   if (consecutiveInconclusive >= MAX_INCONCLUSIVE_REPRODUCTIONS) {
     await bugFindingService.blockFinding(findingId, {
       actor,
+      lease,
       dependency: 'BUG_REPRODUCTION_INCONCLUSIVE',
       evidence: [bugFindingService.makeEvidence({
         type: 'LOG_CORRELATION',
@@ -226,12 +228,12 @@ async function executarReproducao(findingId, {
     return { outcome: evaluation.outcome, plan, evaluation, run, blocked: true, code: 'BUG_REPRODUCTION_INCONCLUSIVE', finding: await bugFindingService.getFinding(findingId) };
   }
 
-  const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId });
+  const back = await bugFindingService.transitionFinding(findingId, 'SUSPECTED', { actor, reason: evaluation.reason, tenantId, lease });
   return { outcome: evaluation.outcome, plan, evaluation, run, finding: back.finding };
 }
 
 /** Persiste a tentativa (estado + evento) — a trilha de auditoria de "tentou reproduzir". */
-async function persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt }) {
+async function persistAttempt(findingId, { plan, evaluation, attempt, actor, run, startedAt, finishedAt, lease = null }) {
   const finding = await bugFindingService.getFinding(findingId);
   const record = {
     attempt,
@@ -250,7 +252,19 @@ async function persistAttempt(findingId, { plan, evaluation, attempt, actor, run
   };
   const Model = require('../../db/models/EngineeringBugFinding');
   const M = Model();
-  await M.update({ reproduction_attempts: appendAttempt(finding, record) }, { where: { id: findingId } });
+  // FENCING também na trilha de tentativas: read-modify-write de `reproduction_attempts` sem predicado
+  // deixava um worker sem posse sobrescrever a trilha do dono atual (last-write-wins silencioso).
+  const where = { id: findingId };
+  const fence = lease && lease.fence !== undefined && lease.fence !== null ? Number(lease.fence) : null;
+  if (fence !== null) where.lease_fence = fence;
+  const [afetadas] = await M.update({ reproduction_attempts: appendAttempt(finding, record) }, { where });
+  if (!afetadas) {
+    const perdido = new Error(`posse perdida ao persistir tentativa do finding ${findingId} (fence ${fence})`);
+    perdido.code = 'FINDING_LEASE_LOST';
+    perdido.detail = { findingId, fence };
+    logger.warn('[bugReproductionService] tentativa não persistida: posse perdida', perdido.detail);
+    throw perdido;
+  }
   await bugFindingService.recordEvent(findingId, 'REPRODUCTION_ATTEMPTED', record, { actor });
   return record;
 }

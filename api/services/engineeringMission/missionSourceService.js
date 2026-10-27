@@ -900,7 +900,14 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
       continue;
     }
 
-    if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT') {
+    if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT'
+      || decision.outcome === 'BLOCKED_REQUIRES_REPAIR') {
+      // DEFEITO MEDIDO (2026-10-27): `BLOCKED_REQUIRES_REPAIR` NÃO era persistido. O intent voltava
+      // ao scan da reconciliação em TODO boot, sem nunca sair de PREPARED/GIT_APPLIED/DB_APPLIED —
+      // pílula envenenada que consumia o orçamento do lote e deixava de fora o intent recém-crashado
+      // (medido: 138 missões varridas, 0 reconciliadas, backlog de 209 e o intent novo sem vez).
+      // "Requer reparo" É um estado terminal para a reconciliação AUTOMÁTICA — e é o que o próprio
+      // desfecho se chama.
       await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
         extra: { phase: decision.outcome, code: decision.code, reason: decision.reason, reconciledAt: new Date().toISOString() },
       });
