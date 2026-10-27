@@ -361,6 +361,8 @@ Mesmo comando, `--runInBand`, 40 suítes, banco real, QUATRO amostras:
 | branch amostra 4 (`114e0cd7b`, depois dos 4 achados da revisão do lease) | 2/40 | 3/226 | **exatamente o conjunto da base** — 1122,7 s (`engineeringBugLoop` PASS 26,0 s; `missionSourceE2E` PASS 9,6 s; `naturalPath` PASS 45,1 s; `autonomousLoop` PASS 40,5 s) |
 | branch amostra 5 (`e7601632d`) | 1/40 | 1/226 | `engineeringMissionReviewEnforcement` ADVERSARIAL_TO_BUG_LOOP (`strategy` undefined) — **defeito real de proveniência**, §9.3-sexies — 1573,0 s |
 | branch amostra 6 (`6e3f56f84`, com §9.3-quinquies e §9.3-sexies) | 1/40 | 1/228 | `engineeringBugLoop` PROTECTED_GOVERNANCE_BASELINE (`fixed:false` em 559 ms) — **flake sob carga**, 14 execuções isoladas do arquivo 32/32 PASS depois; as duas falhas permanentes da base **não existem mais** — 1481,3 s |
+| branch amostra 7 (`76a31030c`, fencing do lease) | 1/40 | 1/230 | `engineeringMissionSourceE2E` MISSION_SRC_14 (`reconciled=0`) — **não era flake**: starvation da reconciliação de boot (§9.3-nonies) — 1265,1 s |
+| branch amostra 8 (`0e0f33e53`, com os 3 achados da 3ª revisão) | **0/40** | **0/230** | **L0b 100% VERDE** — 1252,4 s |
 
 `engineeringBugLoop` foi **PASS 58,065 s** (amostra 2), **PASS 28,905 s** (amostra 3, com escopo) e **PASS 26,044 s** (amostra 4, com as correções da revisão);
 `engineeringMissionSourceE2E` **PASS 11,992 s** e **PASS 12,160 s**; `engineeringBugLoopNaturalPathE2E`
@@ -459,6 +461,30 @@ recusada **e** controle positivo com o fence corrente; varredura com identidade 
 fato (recusa de um segundo worker) e lease liberado ao fim do ciclo. Medido: `engineeringBugLoop`
 **34/34**, review enforcement 7/7, autonomousLoop 3/3, **naturalPath E2E PASS 77,9 s**, unit
 `engineeringMission`+`bugFindingEngine` **499/499**.
+
+### 9.3-nonies Terceira revisão adversarial — 3 achados fechados e o L0b 100% verde
+
+Revisor independente sobre `114e0cd7b..HEAD`. Veredito **PASS com 3 lacunas P2** — todas fechadas:
+
+| # | Sev real | Achado | Reprodução | Tratamento |
+|---|---|---|---|---|
+| 1 | **P1** (descoberto investigando) | **reconciliação de boot com starvation**: `BLOCKED_REQUIRES_REPAIR` nunca era persistido, então o intent voltava ao scan em TODO boot sem sair de `PREPARED/GIT_APPLIED/DB_APPLIED` | medido no L0b: `missions=138, reconciled=0, pending=209` e o intent recém-crashado (o do teste) **nem alcançado** | persistir `RECOVERY_REQUIRED` (o desfecho se chama "requer reparo"), scan automático separado do estado de reparo, ordem FIFO e drenagem em lotes com `pending` devolvido. Depois: `missions=209, reconciled=1, pending=0` |
+| 2 | P2 | fencing era **opt-in**: `FIXED`/`REGRESSION_VALIDATED`/`CLOSED`/`BLOCKED`/`DUPLICATE` e `persistAttempt` escreviam sob posse sem declarar fence; `executarFixLoop` recebia `findingLease` e nunca o usava | probe do revisor: transição sob lease alheio **aceita** (`write: ACCEPTED`) | lease propagado por todo o fix loop e pelos retornos a `SUSPECTED`; `persistAttempt` com predicado de fence |
+| 3 | P2 | erro de posse virava **500**: `FINDING_LEASE_LOST`/`MISMATCH`/`STATE_CONFLICT` fora do mapa de `handleError` | `grep` no mapa + contrato incoerente (skip=409, perda=500) | 409 para os três, com 4 casos de teste no boundary |
+
+**O revisor também provou por mutação que DOIS dos meus testes eram vacuosos** — e isso vale mais que
+o achado em si: (a) o caso `REPRODUZIDO` já reespalhava o `reproduction` declarado em `confirmFinding`,
+então passaria sem a correção; (b) as asserções de efeito da delegação do lease passavam com a
+implementação antiga. Ambos substituídos por provas **verificadas por mutação**:
+
+| Prova nova | Mutação que a derruba (executada) |
+|---|---|
+| `INCONCLUSIVO preserva strategy/source` (caminho que PERDIA a proveniência) | `markReproducing` sem merge ⇒ **FAIL** (`Expected: DECLARED_TEST_COMMAND, Received: undefined`) |
+| `delegação única` com espião em `withFindingLeaseOwned` | cópia local do ciclo restaurada ⇒ **FAIL** |
+
+**L0b canônico no HEAD `0e0f33e53`: 40/40 suítes, 230/230 testes, exit 0, 1252 s** — primeira execução
+100% verde da série, e verde porque as duas causas restantes foram corrigidas na raiz (proveniência e
+starvation), não reclassificadas.
 
 ### 9.3-quater Custo O(estado global) da varredura — medido e cortado na raiz
 
@@ -570,7 +596,7 @@ em §11 (risco residual), não corrigido aqui.
 | Padrões destrutivos residuais | 5 identificados (1 crítico), **inventariados e classificados**; correção de cada sítio é trabalho de outra ordem |
 | Cache de módulos no benchmark | ruído de cache quente medido e declarado (3 pares) |
 | `engineeringBugLoop` sob carga | **BUG-03 = defeito real corrigido** (§9.3-bis: 4 correções + provas BUG-03b/c/d) e **BUG-02 = custo O(estado global) corrigido na raiz** (§9.3-quater: escopo `findingIds`, 53,8 s → 15,6 s no teste; suíte 62,4 s → 26,0 s; L0b 58,1 s → 28,9 s) |
-| `engineeringMissionSourceE2E` MISSION_SRC_14 | **NÃO corrigido** e **não** declarado corrigido: corrida pela reconciliação dos pending intents do mesmo banco. Não recorreu nas amostras 2–6 do L0b; permanece `INCONCLUSIVO/SOB CARGA` |
+| `engineeringMissionSourceE2E` MISSION_SRC_14 | **CORRIGIDO na raiz** (§9.3-nonies): não era corrida — o desfecho `BLOCKED_REQUIRES_REPAIR` não persistia estado e o intent do teste nunca era alcançado. Amostra 8 = verde. Registro histórico: **NÃO corrigido** e **não** declarado corrigido: corrida pela reconciliação dos pending intents do mesmo banco. Não recorreu nas amostras 2–6 do L0b; permanece `INCONCLUSIVO/SOB CARGA` |
 | `engineeringBugLoop` PROTECTED_GOVERNANCE_BASELINE | **flake sob carga LOCAL, não observado em CI**: o `L0` do PR passou **5 de 5 vezes** com o L0b dentro (o flake aparece nesta máquina, com banco e sessões concorrentes). Diagnóstico em aberto com rastro (`logger.warn` nomeia o worker dono do lease) : falhou 1× na amostra 6 (`fixed:false` em 559 ms) e passou em **14 execuções isoladas consecutivas** do arquivo (32/32). Taxa medida: 2 falhas em ~6 execuções do L0b, 0 em 14 isoladas. A recusa agora **deixa rastro** (`logger.warn` com finding/worker/expiração) — antes era indistinguível de "fix rodou e não convergiu" |
 | L0b canônico branch vs base | as duas falhas da base foram **corrigidas na raiz** (§9.3-quinquies): os testes mediam outro repositório. Amostra 6: só resta 1 flake sob carga |
 | Ciclo de lease | **FECHADO na Trilha 5** (§9.3-octies): autoridade única (`withFindingLeaseOwned`) e a varredura delega. Nota de contrato mantida: varredura disparada por `POST` sem `workerInstanceId` roda **sem posse**, por decisão explícita |
@@ -643,7 +669,7 @@ RELEASE_CERTIFICATION = NO_GO
 MERGE                 = NOT_AUTHORIZED
 PUBLISH               = NOT_AUTHORIZED
 DEPLOY                = NOT_AUTHORIZED
-L0b_CANONICO          = 39/40 SUITES     (amostra 6; as 2 suítes vermelhas da base foram corrigidas na raiz; resta 1 flake sob carga)
+L0b_CANONICO          = 40/40 SUITES · 230/230 TESTES PASS (amostra 8, exit 0 — §9.3-nonies)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
 MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só com autorização humana)
 ```

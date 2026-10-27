@@ -2325,6 +2325,54 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/integration/engineeringBugLoop.test.js"
+    },
+    {
+      "id": "ENG-RECONCILIACAO-BOOT-STARVATION",
+      "title": "Intent \"requer reparo\" nunca persistia estado: reconciliacao de boot reprocessava sempre os mesmos e nunca alcancava o intent novo",
+      "severity": "P1",
+      "evidence": "tests/integration/engineeringMissionSourceE2E.test.js (15/15) — MISSION_SRC_14. Antes: missions=138 reconciled=0 pending=209 e o intent do teste fora do lote. Depois: missions=209 reconciled=1 pending=0, intent reconciliado (FINISH_DB). Causa: BLOCKED_REQUIRES_REPAIR nao persistia RECOVERY_REQUIRED.",
+      "regressionTest": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "status": "verified",
+      "commit": "0e0f33e53",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified"
+    },
+    {
+      "id": "ENG-FENCING-OPT-IN-NO-FIX-LOOP",
+      "title": "Fencing do lease era opt-in: FIXED/REGRESSION_VALIDATED/CLOSED/BLOCKED/DUPLICATE e a trilha de tentativas escreviam sob posse sem declarar o fence",
+      "severity": "P2",
+      "evidence": "tests/integration/engineeringBugLoop.test.js (34/34) — fencing chega a executarFixLoop e aos retornos a SUSPECTED; persistAttempt com predicado de fence (recusa FINDING_LEASE_LOST)",
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js",
+      "status": "verified",
+      "commit": "0e0f33e53",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified"
+    },
+    {
+      "id": "ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP",
+      "title": "FINDING_LEASE_LOST/MISMATCH e FINDING_STATE_CONFLICT viravam 500 no boundary (concorrencia nomeada tratada como erro de servidor)",
+      "severity": "P2",
+      "evidence": "tests/unit/engineeringMissionRoutes.test.js (34/34) — 4 casos \"FINDING_LEASE_* no boundary e 409 (conflito de estado), nunca 500\"",
+      "regressionTest": "tests/unit/engineeringMissionRoutes.test.js",
+      "status": "verified",
+      "commit": "0e0f33e53",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified"
+    },
+    {
+      "id": "ENG-TESTES-VACUOSOS-PROVADOS-POR-MUTACAO",
+      "title": "Dois testes declarados como prova eram vacuosos (proveniencia REPRODUZIDA e delegacao do lease)",
+      "severity": "P2",
+      "evidence": "mutacao executada: markReproducing sem merge => proveniencia FAIL; copia local do ciclo restaurada => delegacao FAIL. Provas novas: INCONCLUSIVO preservando strategy/source + espiao em withFindingLeaseOwned",
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js",
+      "status": "verified",
+      "commit": "0e0f33e53",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified"
     }
   ],
   "schemaVersion": 2,
