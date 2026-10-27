@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-26",
+  "updatedAt": "2026-10-27",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2301,6 +2301,30 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
+    },
+    {
+      "id": "ENG-LEASE-FENCE-NAO-VALIDADO",
+      "title": "lease_fence era incrementado e nunca validado por escrita alguma (posse perdida continuava escrevendo)",
+      "evidence": "tests/integration/engineeringBugLoop.test.js (34/34) — \"escrita com fence VELHO e recusada (FINDING_LEASE_LOST)\" + controle positivo com o fence corrente; o fence entra no mesmo UPDATE do CAS",
+      "severity": "P1",
+      "status": "verified",
+      "commit": "1a9b1e10e",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js"
+    },
+    {
+      "id": "ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE",
+      "title": "Duas implementacoes do ciclo de posse (servicos e varredura) com semantica divergente",
+      "evidence": "tests/integration/engineeringBugLoop.test.js — \"varredura com identidade declara posse de fato (delegacao unica do ciclo de lease)\" + naturalPath E2E PASS 77,9 s",
+      "severity": "P2",
+      "status": "verified",
+      "commit": "1a9b1e10e",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js"
     }
   ],
   "schemaVersion": 2,

@@ -444,6 +444,22 @@ produção, não flutuação de teste.
 Nenhuma das duas "esconde" defeito: o orçamento é teto de espera (60 s ainda reprova trave real) e a
 drenagem é fail-closed (se o ciclo não drenar, o erro é explícito).
 
+### 9.3-octies Trilha 5 — fencing do lease e autoridade única do ciclo de posse
+
+Os dois itens que a revisão adversarial havia deixado **explicitamente em aberto** (§10.1, "residual"):
+
+| Item | Antes | Depois |
+|---|---|---|
+| `lease_fence` nas escritas | incrementado na aquisição e **validado por nenhuma escrita**: worker cujo lease expirou e foi tomado por outro **continuava gravando** | o fence corrente entra no **mesmo `UPDATE`** da transição (predicado atômico, sem TOCTOU entre checar e gravar): fence velho ⇒ 0 linhas ⇒ `FINDING_LEASE_LOST` nomeado, estado intocado |
+| Duas implementações do ciclo (adquirir → heartbeat → liberar → fence) | `withFindingLeaseOwned` (serviços) e `withFindingLease` (varredura) com semântica divergente; a segunda não tinha nem o vínculo `lease.findingId` | a varredura **delega** a `withFindingLeaseOwned`, preservando o contrato (sem identidade ⇒ sem posse, explícito). Uma definição só |
+
+Threading do lease: `confirmFinding` (transições `REPRODUCING` e `CONFIRMED`), `markReproducing` e
+`markNotReproduced` passam a declarar posse na escrita. **Provas novas:** escrita com fence velho
+recusada **e** controle positivo com o fence corrente; varredura com identidade declarando posse de
+fato (recusa de um segundo worker) e lease liberado ao fim do ciclo. Medido: `engineeringBugLoop`
+**34/34**, review enforcement 7/7, autonomousLoop 3/3, **naturalPath E2E PASS 77,9 s**, unit
+`engineeringMission`+`bugFindingEngine` **499/499**.
+
 ### 9.3-quater Custo O(estado global) da varredura — medido e cortado na raiz
 
 A medição acima apontou a causa do aperto de orçamento: `runBugLoopSweep` **sem escopo** varre a tabela
@@ -557,8 +573,8 @@ em §11 (risco residual), não corrigido aqui.
 | `engineeringMissionSourceE2E` MISSION_SRC_14 | **NÃO corrigido** e **não** declarado corrigido: corrida pela reconciliação dos pending intents do mesmo banco. Não recorreu nas amostras 2–6 do L0b; permanece `INCONCLUSIVO/SOB CARGA` |
 | `engineeringBugLoop` PROTECTED_GOVERNANCE_BASELINE | **flake sob carga LOCAL, não observado em CI**: o `L0` do PR passou **5 de 5 vezes** com o L0b dentro (o flake aparece nesta máquina, com banco e sessões concorrentes). Diagnóstico em aberto com rastro (`logger.warn` nomeia o worker dono do lease) : falhou 1× na amostra 6 (`fixed:false` em 559 ms) e passou em **14 execuções isoladas consecutivas** do arquivo (32/32). Taxa medida: 2 falhas em ~6 execuções do L0b, 0 em 14 isoladas. A recusa agora **deixa rastro** (`logger.warn` com finding/worker/expiração) — antes era indistinguível de "fix rodou e não convergiu" |
 | L0b canônico branch vs base | as duas falhas da base foram **corrigidas na raiz** (§9.3-quinquies): os testes mediam outro repositório. Amostra 6: só resta 1 flake sob carga |
-| Duas implementações do ciclo de lease | `withFindingLeaseOwned` (serviços) e `withFindingLease` (varredura). A varredura disparada por `POST` sem `workerInstanceId` roda **sem posse** — comportamento pré-existente, agora explícito e coberto por BUG-03c quando há worker declarado; unificar as duas é trabalho do próximo ciclo |
-| `lease_fence` não é validado nas escritas do finding | o counter é incrementado, mas nenhuma escrita de finding o confere (fencing existe só em task). Herança do desenho, não introduzida aqui |
+| Ciclo de lease | **FECHADO na Trilha 5** (§9.3-octies): autoridade única (`withFindingLeaseOwned`) e a varredura delega. Nota de contrato mantida: varredura disparada por `POST` sem `workerInstanceId` roda **sem posse**, por decisão explícita |
+| `lease_fence` | **FECHADO na Trilha 5** (§9.3-octies): o fence entra no CAS de toda transição que declara posse; escrita de posse perdida ⇒ `FINDING_LEASE_LOST` |
 
 ---
 
