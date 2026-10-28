@@ -272,6 +272,33 @@ jobs:
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate
 
+      # SERVIÇO RAG (medido 2026-10-28, run 40746356670): com tudo o mais verde, sobraram
+      # `missionSourceStaleReplanFullRouterE2E` e `governanceApprovalFullWorkerE2E` — as duas
+      # PASSAM localmente (78 s e 94 s) e aqui terminavam em ~3 s com `BLOCKED`, com
+      # `[RAGService] Falha de conexão com o rag-service` no log. Não é flake: é o mesmo defeito
+      # que o `dev-branch-ci` já documentou no L0b ("causa única: ECONNREFUSED 127.0.0.1:8001") —
+      # o Router consulta o plano de conhecimento e falha FECHADO quando o serviço não existe.
+      # A correção não é pular a suíte: é subir o serviço REAL do repositório (imagem oficial,
+      # token efêmero por execução, nunca versionado).
+      - name: Construir a imagem do serviço RAG
+        run: docker build -t r-agent2-rag-service:ci rag-service
+
+      - name: Subir o serviço RAG em 127.0.0.1:8001
+        run: |
+          RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          echo "RAG_INTERNAL_TOKEN=$RAG_TOKEN" >> "$GITHUB_ENV"
+          docker run -d --name ci-rag --network host             -e HOST=0.0.0.0             -e PORT=8001             -e RAG_ENVIRONMENT=development             -e RAG_INTERNAL_TOKEN="$RAG_TOKEN"             -e DATABASE_URL="$DATABASE_URL"             -e HF_HUB_OFFLINE=1             -e TRANSFORMERS_OFFLINE=1             r-agent2-rag-service:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+              echo "RAG pronto em 127.0.0.1:8001 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "RAG não respondeu em /health após 300s"
+          docker logs ci-rag | tail -60
+          exit 1
+
       # BASE DEDICADA DA MATRIZ DE ISOLAMENTO (medido 2026-10-28, run 40737265748): a suíte
       # `crmTenantIsolation.postgres` exige um banco próprio (`CRM_PG_TEST_URL`, default
       # 127.0.0.1:55432 na máquina de dev) e falhava com `ECONNREFUSED 127.0.0.1:55432` — 22 testes
