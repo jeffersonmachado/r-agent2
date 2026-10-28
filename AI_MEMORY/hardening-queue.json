@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-27",
+  "updatedAt": "2026-10-28",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2373,6 +2373,18 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified"
+    },
+    {
+      "id": "ENG-REPARO-NAO-VISIVEL-NA-MISSAO",
+      "title": "Desfecho \"requer reparo\" nao marcava o estado da MISSAO (operacao veria READY com a fonte irresolvivel)",
+      "status": "verified",
+      "commit": "2e35800d7",
+      "evidence": "tests/integration/engineeringMissionSourceE2E.test.js (16/16) — MISSION_SRC_15, verificada por mutacao: voltar ao if antigo => FAIL (Expected RECOVERY_REQUIRED, Received PREPARED)",
+      "severity": "P1",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "regressionTest": "tests/integration/engineeringMissionSourceE2E.test.js"
     }
   ],
   "schemaVersion": 2,
