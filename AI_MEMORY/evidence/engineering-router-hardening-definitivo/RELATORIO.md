@@ -755,7 +755,7 @@ inferido:
 | # | Bloqueio | Medição | Quem resolve |
 |---|---|---|---|
 | 1 | **branch errada** | `✗ branch atual é 'codex/engineering-router-hardening-20261025' (esperado main)` — `seal-release.sh:159` exige `main` | decisão humana: merge do PR #20 |
-| 2 | **`main` local divergente do remoto** | local `main = 9a70ee2b2` (*converge do ciclo de selagem (SEAL_PENDING)*) vs `origin/main = 04cad9c1b` ⇒ **1 commit não publicado** | decisão humana: publicar/descartar esse converge antes de selar (o `validate:remote-provenance` exige commit de release NO REMOTO + tag imutável criada fora do pipeline por `scripts/create-release-tag.sh`) |
+| 2 | **`main` está ATRÁS do hardening** | `origin/main = 04cad9c1b`; `origin/dev/engineering-hardening = e306b6a10`. `04cad9c1b` **é ancestral** de dev, então selar em `main` hoje selaria **código anterior a este hardening** | decisão humana: promover dev→main (ou autorizar a selagem sobre o ref que se quer certificar) |
 | 3 | **`dist/` sem payload** | `dist/release/*.payload.zip` ausente ⇒ a fase `prepare` (converge) é obrigatória, e o scorecard passa a contar RAP-052/RAP-054 como falha real (é o efeito de amplificação que já custou um ciclo) | pipeline (fase `prepare`), depois da autorização |
 | 4 | **guard de fechamento RECUSA** | `exigir_elegibilidade SELO_FINAL` ⇒ `RECUSADO (exit 1): existem defeitos abertos que bloqueiam esta operação`. Ações exigidas pelo próprio guard: **`RAP_CLOSURE_INVENTORY_SHA256` do canal externo** + prova de fechamento válida por defeito (ou reabrir) | **operador/CI externo** — não é código |
 
@@ -796,6 +796,29 @@ desenvolvimento, para não herdar artefato local):
 Nada foi "declarado verde": o que ficou vermelho ficou vermelho, e os dois vermelhos são o bloqueio
 externo já documentado. O que mudou de fato: **o código deste hardening está em
 `dev/engineering-hardening` e o gate do branch de desenvolvimento passou nele.**
+
+---
+
+## 11.6 Correção de uma medição minha: o commit `9a70ee2b2` NÃO estava "não publicado"
+
+Na primeira versão do §11.4 eu escrevi que `main` local divergia do remoto por *"1 commit não publicado"*
+(`9a70ee2b2`, converge do ciclo de selagem SEAL_PENDING) e que isso seria um bloqueio de proveniência.
+**Estava errado, e a medição de ancestry mostra o contrário:**
+
+```
+git merge-base --is-ancestor 9a70ee2b2 origin/main                        ⇒ NÃO é ancestral
+git merge-base --is-ancestor 9a70ee2b2 origin/dev/engineering-hardening   ⇒ É ancestral
+git merge-base --is-ancestor 04cad9c1b origin/dev/engineering-hardening   ⇒ É ancestral
+```
+
+Ou seja: o commit **existe no remoto** (é ancestral de `origin/dev/engineering-hardening` e de mais 9
+branches). Não há nada a "publicar ou descartar" — `validate:remote-provenance` já estaria satisfeito
+quanto a ele. O bloqueio real é outro e mais simples: **`origin/main` está atrás do hardening**, então
+selar em `main` certificaria código ANTERIOR a este trabalho.
+
+Corrigi a linha do §11.4 em vez de deixar a versão errada no relatório: uma medição que eu não refiz
+teria virado recomendação de operador ("publique ou descarte um commit") sobre um fato que não existe.
+O `9a70ee2b2` fica onde está: é conteúdo já integrado ao dev, sem ação pendente.
 
 ---
 
