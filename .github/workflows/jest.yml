@@ -115,6 +115,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # ESQUEMA COMPLETO ANTES DA SUÍTE (medido 2026-10-28, run 40728206519): com o banco presente
+      # mas sem migrations, as suítes que exercitam a autoridade contra Postgres morrem em
+      # `relation "mcp_connections" does not exist` (17 testes em `tests/unit/mcp/mcpDiscoveryReal`).
+      # Banco vazio não é banco: sem este passo o job reprova por ESQUEMA AUSENTE, não por código.
+      # Mesma etapa já usada por `jest-integration`.
+      - name: Run migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
+
       - name: Run official Jest suite (npm test)
         run: npm test
         env:
