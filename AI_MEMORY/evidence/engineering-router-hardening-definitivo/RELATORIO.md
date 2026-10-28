@@ -245,6 +245,24 @@ ação exigida: fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador
 exatamente o que a missão proíbe. O número de itens obrigatórios foi conferido no contrato atual: **68**
 (`validate:required-tests` ⇒ `status=FAIL itens=68 {"NOT_EXECUTED":68}`).
 
+### 7.1-bis `BUG_AUTONOMOUS_LOOP` — medido, e é o MESMO bloqueio externo (não trabalho pendente meu)
+
+`npm run validate:bug-autonomous-loop` foi executado nesta rodada. Resultado: **`status=NO_GO itens=31
+falhas=31 runtime=NOT_PROVEN`** — e a causa é única e verificável:
+
+- o gate **não roda testes**: ele COMPÕE provas do relatório de execução autoritativa
+  (`reports/release-suite-execution.json`), que **não existe** porque `test:release-authoritative`
+  recusa iniciar (§7.1);
+- por isso as 20 suítes aparecem como `NAO_EXECUTADA (PENDING)` e as provas de RUNTIME como
+  `state=null` — **PENDING, nunca FAIL de conteúdo**, exatamente como o gate declara;
+- `EVIDENCE_BINDING = PENDING_NO_GOVERNED_RUN` (sem run governado ativo).
+
+Conclusão honesta: este item **não é fechável por código neste ambiente**. Ele é o mesmo bloqueio
+externo dos 68 testes obrigatórios (§7.1) visto de outro ângulo — a cadeia é
+`RAP_CLOSURE_INVENTORY_SHA256` + P0/P1 históricos ⇒ `test:release-authoritative` ⇒
+`release-suite-execution.json` ⇒ matriz V2 e `BUG_AUTONOMOUS_LOOP`. Declarar `DEFINITIVO = GO` aqui
+seria greenwashing: o gate diria exatamente o contrário.
+
 ### 7.2 Escopo do roteador: o que foi verificado e o que não foi
 
 Verificado por execução: recuperação após SIGKILL (mission e task), lease/fencing, recusa de escrita por
