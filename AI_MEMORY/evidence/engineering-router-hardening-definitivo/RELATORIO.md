@@ -765,6 +765,40 @@ resultado de uma guarda que recusa começar, com razão escrita, e de uma pré-c
 
 ---
 
+## 11.5 O merge aconteceu, e o branch atualizado foi revalidado (não presumido)
+
+PR #20 mergeado com autorização explícita do usuário: **`dev/engineering-hardening = 53f7056d0`**
+(*Merge pull request #20*). O merge foi limpo — `git diff origin/dev/engineering-hardening
+codex/...` ⇒ **vazio** (nenhum conteúdo do branch se perdeu ou foi reescrito).
+
+**CI do push no branch de destino: `success`** (run do commit `53f7056d0`, não do PR — é o gate do ref
+final).
+
+Revalidação feita em worktree **novo, destacado no merge commit** (não no worktree de
+desenvolvimento, para não herdar artefato local):
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Artefatos canônicos | `npm run ci:artifacts` | exit 0 — `artefatos-obrigatorios veredito=PASS` |
+| **L0b canônico** | `npx jest tests/integration/engineering --runInBand` | **40/40 suítes · 234/234 testes · exit 0** · 2030 s |
+| Fila oficial | `validate:hardening-queue` | PASS |
+| Rotas montadas | `validate:route-mounts` | PASS — 63/63 |
+| DAG do release | `validate:release-dag` | PASS |
+| Convenções de camada | `validate:layer-conventions` | exit 0 |
+| Anti-greenwashing | `validate:anti-greenwashing` | **PASS — 91 suítes, 0 violações** |
+| Engineering Router V1 | `validate:engineering-router-v1` | PASS — 183 checks |
+| `ai-memory` · `state-sync` | idem | PASS |
+| **Arquitetura de timeout** | `verify:timeout-architecture-e2e` + `validate:timeout-architecture` | **GREEN** (o gate pai só vira verde com a evidência de runtime gerada: sem ela fica `PENDING` — comportamento correto, não afrouxado) |
+| Recuperação de task real | `validate:recovery` | PASS |
+| `BUG_AUTONOMOUS_LOOP` | `validate:bug-autonomous-loop` | NO_GO — mesma cascata do bloqueio externo (§7.1-bis) |
+| `required-tests` | `validate:required-tests` | NO_GO — `V2-01..` não provados, mesma cascata |
+
+Nada foi "declarado verde": o que ficou vermelho ficou vermelho, e os dois vermelhos são o bloqueio
+externo já documentado. O que mudou de fato: **o código deste hardening está em
+`dev/engineering-hardening` e o gate do branch de desenvolvimento passou nele.**
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
@@ -777,8 +811,8 @@ LEASES/ESCOPO         = 3 defeitos reais + 4 achados de revisão fechados com pr
 REQUIRED_TESTS        = FAIL/NOT_EXECUTED (68) — bloqueio externo
 DEVELOPMENT_VERIFIED  = NÃO DECLARADO    (testes obrigatórios não executados)
 RELEASE_CERTIFICATION = NO_GO
-MERGE                 = NOT_AUTHORIZED
-PUBLISH               = NOT_AUTHORIZED
+MERGE                 = DONE (PR #20 → dev/engineering-hardening = 53f7056d0, CI success)
+PUBLISH               = NOT_AUTHORIZED (selagem nao autorizada; 4 bloqueios medidos em §11.4)
 DEPLOY                = NOT_AUTHORIZED
 L0b_CANONICO          = 40/40 SUITES · 234/234 TESTES PASS (amostra 9, exit 0; amostra 8 também verde — §9.3-nonies/decies)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
