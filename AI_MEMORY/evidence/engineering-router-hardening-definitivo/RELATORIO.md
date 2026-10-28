@@ -245,6 +245,23 @@ ação exigida: fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador
 exatamente o que a missão proíbe. O número de itens obrigatórios foi conferido no contrato atual: **68**
 (`validate:required-tests` ⇒ `status=FAIL itens=68 {"NOT_EXECUTED":68}`).
 
+### 9.3-decies Quarta revisão adversarial — starvation da drenagem (P1 com prova empírica) e fencing sem prova
+
+Revisor independente sobre o delta dos três reparos anteriores. Veredito **PASS_PARCIAL**, 3 achados —
+todos fechados, cada um com a mutação que o revisor disse que a suíte NÃO pegava:
+
+| # | Sev | Achado | Evidência do revisor | Tratamento |
+|---|---|---|---|---|
+| 1 | **P1** | a drenagem "sem starvation" **não se sustentava**: excluir os já visitados EM MEMÓRIA não basta, porque o desfecho `PROCEED` **não muda** `integration_status`. Com o head da fila ocupado por esses intents, o lote seguinte devolve as mesmas linhas, `novos` fica vazio e a drenagem para — o intent recuperável (mais recente) **nunca** é alcançado | probe: 200 estacionários + 1 recuperável ⇒ `{"missions":200,...,"visitedNewMission":false}` | exclusão **no SQL** (`Op.notIn`), como `findMissionsWithExpiredLease` já fazia. Probe equivalente depois: `{"missions":201,"visitedNova":true,"pending":0}`. Regressão `MISSION_SRC_16` — **mutação: voltar à exclusão em memória ⇒ FAIL** (`Received: [0001, 0002]`, o recuperável de fora) |
+| 2 | P2 | depois do reparo, o único sinal automático de dívida deixou de cobrir o estado que **mais** exige ação: `RECOVERY_REQUIRED` não era contado por ninguém (`SELECT` no banco local: **306 linhas invisíveis**) | `pending` contava só os 3 estados auto-reconciliáveis | `reconcilePendingIntents` devolve **`pending`** (alcançável e não visitado no teto) e **`needsRepair`** (irresolvível automaticamente), ambos no log de boot |
+| 3 | P2 | o fencing propagado ao fix loop e à trilha de tentativas **não tinha prova**: remover `lease:` de `markFixed` ou o predicado de `persistAttempt` deixava a suíte verde — e a fila oficial declarava o contrário | `grep toHaveBeenCalledWith ... lease` → vazio; mutação não falhava | duas provas novas, **ambas verificadas por mutação**: (a) `markFixed` com fence velho ⇒ `FINDING_LEASE_LOST` e estado **continua FIXING** (mutação ⇒ FAIL); (b) `reproduce` sob posse perdida ⇒ tentativa **não persistida** (mutação ⇒ "promessa resolveu em vez de rejeitar") |
+
+O revisor também confirmou por leitura + probe: o SQL cru com `IN (:status)` expande corretamente no
+dialect postgres, `Integration.sequelize` existe, `lease: null` nos caminhos fora de posse não quebra, e
+os 409 de posse estão corretos e cobertos. E confirmou o que eu já sabia: existe um `api/server.js` vivo
+usando o **mesmo** Postgres, com worker de laço de bug disputando lease — daí rodadas isoladas darem
+34/34 e lotes darem flake (motivo pelo qual a evidência válida é o L0b canônico).
+
 ### 7.1-bis `BUG_AUTONOMOUS_LOOP` — medido, e é o MESMO bloqueio externo (não trabalho pendente meu)
 
 `npm run validate:bug-autonomous-loop` foi executado nesta rodada. Resultado: **`status=NO_GO itens=31

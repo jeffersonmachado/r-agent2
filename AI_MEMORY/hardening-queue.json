@@ -2342,10 +2342,10 @@
       "id": "ENG-FENCING-OPT-IN-NO-FIX-LOOP",
       "title": "Fencing do lease era opt-in: FIXED/REGRESSION_VALIDATED/CLOSED/BLOCKED/DUPLICATE e a trilha de tentativas escreviam sob posse sem declarar o fence",
       "severity": "P2",
-      "evidence": "tests/integration/engineeringBugLoop.test.js (34/34) — fencing chega a executarFixLoop e aos retornos a SUSPECTED; persistAttempt com predicado de fence (recusa FINDING_LEASE_LOST)",
+      "evidence": "tests/integration/engineeringBugLoop.test.js (36/36) — \"markFixed com fence VELHO e recusado\" e \"tentativa de reproducao sob posse perdida NAO e persistida\"; AMBAS verificadas por mutacao (remover lease do markFixed / o predicado do persistAttempt => FAIL)",
       "regressionTest": "tests/integration/engineeringBugLoop.test.js",
       "status": "verified",
-      "commit": "0e0f33e53",
+      "commit": "7b8f272b2",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified"
@@ -2385,6 +2385,30 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/integration/engineeringMissionSourceE2E.test.js"
+    },
+    {
+      "id": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
+      "title": "Drenagem da reconciliacao de boot por em memoria: head estacionario (PROCEED) travava a fila e o intent novo nunca era alcancado",
+      "severity": "P1",
+      "commit": "7b8f272b2",
+      "evidence": "tests/integration/engineeringMissionSourceE2E.test.js — MISSION_SRC_16, verificada por mutacao (voltar a exclusao em memoria => FAIL). Probe real: 200 estacionarios + 1 recuperavel => visited=true, pending=0",
+      "regressionTest": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "status": "verified",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified"
+    },
+    {
+      "id": "ENG-DIVIDA-REPARO-SEM-SINAL",
+      "title": "RECOVERY_REQUIRED nao era contado por nenhum sinal automatico (306 linhas invisiveis)",
+      "severity": "P2",
+      "commit": "7b8f272b2",
+      "evidence": "reconcilePendingIntents devolve pending (nao alcancado no teto) e needsRepair, ambos logados no boot",
+      "regressionTest": "tests/integration/engineeringMissionBootRecovery.test.js",
+      "status": "verified",
+      "severityStatus": "DECLARADA",
+      "state": "VERIFIED",
+      "legacyStatus": "verified"
     }
   ],
   "schemaVersion": 2,
