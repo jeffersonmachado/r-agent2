@@ -690,6 +690,28 @@ executado no L0, não uma execução real neste PR.
 
 ---
 
+### 11.2-bis Quinta revisão adversarial — o flip de estado da missão tinha raio de dano medido
+
+| # | Sev | Achado | Evidência do revisor | Tratamento |
+|---|---|---|---|---|
+| 1 | P2 | o flip `mission_source_state='RECOVERY_REQUIRED'` que eu havia adicionado tem **raio de dano**: a classificação usa o repositório DESTE processo, então num boot cujo repo não enxerga as refs de missão (clone novo, deploy sem as branches, repo sintético) **toda** missão com intent não-terminal seria marcada como "requer reparo" — sem caminho de volta | probe: missão alheia `READY → RECOVERY_REQUIRED` numa base compartilhada; e o `afterAll` não reverte | flip **REVERTIDO**. A dívida continua visível pelo agregado `needsRepair` — global, sem tocar estado individual. Motivo registrado no próprio código |
+| 2 | P2 | `ENG-DIVIDA-REPARO-SEM-SINAL` citava como `regressionTest` um arquivo que **nunca** chama `reconcilePendingIntents`, e nenhum teste mencionava `needsRepair`: o "sinal" estava sem cobertura | `grep -rn needsRepair tests/` ⇒ 0 | cobertura em `MISSION_SRC_16`: `needsRepair >= 1`, `pending` numérico e caso de **teto** (`pending >= 1` com `maxLotes` menor que a fila) |
+| 3 | P2 | a evidência de `ENG-REPARO-NAO-VISIVEL-NA-MISSAO` citava mensagem de mutação de outra asserção, e o teste chamava a varredura **GLOBAL** contra um repo sintético (classifica o banco inteiro) | mutação do revisor: `Expected RECOVERY_REQUIRED / Received READY` (missão), não `PREPARED` | `MISSION_SRC_15` passou a usar reconciliação **por missão**; a prova do scan global ficou em `MISSION_SRC_16` **com o serviço por missão dublado** (sem efeito colateral). Textos da fila corrigidos |
+
+**Mutações executadas para provar as asserções novas** (todas derrubam o teste, e foram revertidas):
+
+| Mutação | Resultado |
+|---|---|
+| A — `if` sem `BLOCKED_REQUIRES_REPAIR` | `MISSION_SRC_15` **FAIL** — `Expected "RECOVERY_REQUIRED" / Received "PREPARED"` |
+| B — `RECOVERY_REQUIRED` de volta ao scan automático | `MISSION_SRC_16` **FAIL** — `visitadas` inclui a missão que exige reparo |
+| C — `needsRepair` fixo em `0` | `MISSION_SRC_16` **FAIL** — `Expected >= 1 / Received 0` |
+
+Um ponto de honestidade sobre o processo, porque a revisão o expôs: eu havia declarado o flip como
+melhoria de observabilidade e ele era, na prática, **aumento de raio de dano**. A revisão adversarial
+não serviu para "confirmar" o trabalho — serviu para reverter uma decisão minha.
+
+---
+
 ## 11.3 Varredura de validadores executáveis no HEAD `5992186ec`
 
 Executados um a um (exit code real), porque "o agregado passa" não é afirmação que se faça de memória:
