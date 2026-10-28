@@ -382,9 +382,21 @@ describe('GOVERNANCE_APPROVAL — o worker autônomo bloqueia sem aval e conclui
       // DIAGNÓSTICO (não narrativa): quando o ciclo não fecha, o defeito é medido aqui — estado do
       // finding, contrato da task de correção e erro real das tentativas.
       const diagnostic = await bugFindingService.getFinding(finding.id);
+      // O finding ESPERADO pode não ser o único da missão: o laço pode criar/renomear linhas por
+      // dedupe e recorrência. Sem a lista completa, "status CONFIRMED" não distingue "não fechou"
+      // de "fechou OUTRO finding" — foi exatamente a ambiguidade que travou o diagnóstico no
+      // runner em 2026-10-29 (dois findings fecharam e o esperado continuou CONFIRMED).
+      const diagFindings = await bugFindingService
+        .listFindings({ missionId: mission.id, limit: 20 })
+        .catch(() => []);
       const diagTask = await engineeringTaskService.getTask(triaged.fix_task_id);
       const diagAttempts = await engineeringTaskService.listAttempts(triaged.fix_task_id);
       console.log('DIAG_NAO_FECHOU', JSON.stringify({
+        findingIdEsperado: finding.id,
+        findingsDaMissao: diagFindings.map((f) => ({
+          id: f.id, status: f.status, fix_task_id: f.fix_task_id, created_at: f.created_at,
+          recurrence_count: f.recurrence_count, dedupe_key: f.dedupe_key,
+        })),
         finding: {
           status: diagnostic.status, severity: diagnostic.severity, category: diagnostic.category,
           self_modification: diagnostic.self_modification,
