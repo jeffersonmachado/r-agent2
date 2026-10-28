@@ -45,6 +45,41 @@ jobs:
       run:
         shell: bash --noprofile --norc -eo pipefail {0}
 
+    # BANCO REAL NO JOB DE UNIT/FLOW/RPA (medido 2026-10-28, run 40726692268): `npm test` inclui
+    # `tests/unit/benchmarks/benchmarkChangeProposal.test.js`, que exercita a autoridade de propostas
+    # contra PostgreSQL de verdade e deliberadamente NÃO aceita banco falso. Sem serviço aqui, os 9
+    # testes morriam em `Não foi possível conectar ao PostgreSQL após 1 tentativas` — vermelho por
+    # AMBIENTE, não por código (os mesmos 9 passam 9/9 contra o Postgres local). Enquanto o job não
+    # tinha banco, o gate de unit não media esses testes: media a ausência do banco.
+    services:
+      postgres:
+        # pgvector/pgvector inclui a extensão vector exigida pelas migrations de RAG
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
     steps:
       # HISTÓRICO COMPLETO É REQUISITO DE TESTE, não conveniência (medido 2026-10-28).
       # O default do actions/checkout é `fetch-depth: 1` (clone raso) e isso reprova a suíte por
