@@ -123,6 +123,17 @@ jobs:
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate
 
+      # ARTEFATOS GOVERNADOS ANTES DA SUÍTE (medido 2026-10-28, run 40729073198): `jest tests/unit`
+      # NÃO é autossuficiente — asserções leem artefatos ignorados pelo git (`reports/*.json`,
+      # `governance/*.json`, `qa-mesh/meshRegistry.json`) que nenhum checkout contém. Sem eles o job
+      # morria em `ENOENT ... reports/benchmark-sufficiency-report.json`
+      # (`readinessCertificationSeparation`, `governance/convergenceFixpoint`).
+      # `ci:artifacts` executa os produtores CANÔNICOS (nada é fabricado) e registra o veredito de
+      # cada um como está; é o mecanismo já documentado em `scripts/ci/bootstrap-ci-environment.js`
+      # para runner efêmero. Ordem obrigatória: imediatamente antes da suíte.
+      - name: Produzir artefatos governados (produtores canônicos)
+        run: npm run ci:artifacts
+
       - name: Run official Jest suite (npm test)
         run: npm test
         env:
