@@ -746,6 +746,25 @@ declarando a mesma dívida histórica que o §7.1 já registra como bloqueio ext
 
 ---
 
+## 11.4 O plano de selagem: medido, e ele NÃO pode começar hoje (4 bloqueios verificados)
+
+`npm run release:seal:plan` foi executado. Ele é **read-only** por desenho (`--dry-run` pula só o guard
+de elegibilidade; as fases não rodam). Resultado e o que cada bloqueio significa — tudo medido, nada
+inferido:
+
+| # | Bloqueio | Medição | Quem resolve |
+|---|---|---|---|
+| 1 | **branch errada** | `✗ branch atual é 'codex/engineering-router-hardening-20261025' (esperado main)` — `seal-release.sh:159` exige `main` | decisão humana: merge do PR #20 |
+| 2 | **`main` local divergente do remoto** | local `main = 9a70ee2b2` (*converge do ciclo de selagem (SEAL_PENDING)*) vs `origin/main = 04cad9c1b` ⇒ **1 commit não publicado** | decisão humana: publicar/descartar esse converge antes de selar (o `validate:remote-provenance` exige commit de release NO REMOTO + tag imutável criada fora do pipeline por `scripts/create-release-tag.sh`) |
+| 3 | **`dist/` sem payload** | `dist/release/*.payload.zip` ausente ⇒ a fase `prepare` (converge) é obrigatória, e o scorecard passa a contar RAP-052/RAP-054 como falha real (é o efeito de amplificação que já custou um ciclo) | pipeline (fase `prepare`), depois da autorização |
+| 4 | **guard de fechamento RECUSA** | `exigir_elegibilidade SELO_FINAL` ⇒ `RECUSADO (exit 1): existem defeitos abertos que bloqueiam esta operação`. Ações exigidas pelo próprio guard: **`RAP_CLOSURE_INVENTORY_SHA256` do canal externo** + prova de fechamento válida por defeito (ou reabrir) | **operador/CI externo** — não é código |
+
+Conclusão factual: **`RELEASE_CERTIFICATION = NO_GO` não é uma escolha minha nem um defeito do PR** — é o
+resultado de uma guarda que recusa começar, com razão escrita, e de uma pré-condição que vem de fora da
+árvore. Nenhum desses quatro itens se resolve dentro do código deste PR.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
