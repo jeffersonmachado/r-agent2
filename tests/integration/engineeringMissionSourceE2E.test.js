@@ -756,4 +756,74 @@ describe('Mission Source Authority — E2E com git real', () => {
     expect(healed.currentCommit).toBe(candidate);
     expect(healed.state).toBe('READY');
   });
+
+  /**
+   * PÍLULA ENVENENADA DA RECONCILIAÇÃO DE BOOT — regressão de 2026-10-27.
+   *
+   * DEFEITO MEDIDO: o desfecho `BLOCKED_REQUIRES_REPAIR` não era PERSISTIDO, então o intent voltava
+   * ao scan em todo boot sem sair de PREPARED/GIT_APPLIED/DB_APPLIED. Com backlog de ~209 linhas
+   * nesse estado, a reconciliação de boot consumia o lote inteiro nesses intents para sempre e
+   * NUNCA alcançava o intent recém-crashado (medido: missions=138, reconciled=0).
+   *
+   * A prova é em dois passos, sem depender da ordem global da tabela:
+   *   1. o desfecho "requer reparo" PERSISTE estado (intent + missão) — antes ficava pendente;
+   *   2. na chamada SEGUINTE o intent não é mais reprocessado — antes voltava para sempre.
+   */
+  test('MISSION_SRC_15 — desfecho "requer reparo" PERSISTE e sai do scan automático (fim da pílula envenenada)', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const { EngineeringMission, EngineeringMissionIntegration } = require('../../api/db/models');
+    const Mission = EngineeringMission();
+    const Integration = EngineeringMissionIntegration();
+
+    // Intent cujo estado a reconciliação automática NÃO consegue resolver: tem candidate e task, mas
+    // nenhuma branch de integração — o desfecho é `BLOCKED_REQUIRES_REPAIR`. É exatamente a linha que,
+    // antes da correção, ficava presa em PREPARED e consumia o lote em todo boot.
+    const current = await missionSourceService.getMissionSource(mission.id);
+    const candidate = createCandidate({
+      baseCommit: current.currentCommit,
+      files: { 'src/nao-reconciliavel.js': 'module.exports = "poison";\n' },
+      message: 'candidate nao reconciliavel',
+    });
+    const task = await createTaskRow({
+      missionId: mission.id, sourceCommit: current.currentCommit, sourceRef: current.integrationBranch, title: 'task-nao-reconciliavel',
+    });
+    const integrationKey = source.buildIntegrationKey({ missionId: mission.id, taskId: task.id, candidateCommit: candidate });
+    const intent = await Integration.create({
+      mission_id: mission.id,
+      task_id: task.id,
+      integration_type: 'CANDIDATE',
+      integration_result: 'PENDING',
+      integration_status: 'PREPARED',
+      candidate_commit: candidate,
+      candidate_base_commit: current.currentCommit,
+      mission_commit_before: current.currentCommit,
+      mission_commit_after: null,
+      integration_branch: null,
+      integration_key: integrationKey,
+      source_fence: Number(current.fence || 0),
+    });
+
+    // PASSO 1 — o desfecho é PERSISTIDO (antes o intent voltava a ser escaneado em todo boot).
+    const primeira = await missionSourceService.reconcileMissionSourceIntents({ missionId: mission.id });
+    const outcome = primeira.outcomes.find((o) => o.intentId === intent.id);
+    expect(outcome.outcome).toBe('BLOCKED_REQUIRES_REPAIR');
+
+    const intentPersistido = await Integration.findByPk(intent.id);
+    expect(intentPersistido.integration_status).toBe('RECOVERY_REQUIRED');
+
+    // E a MISSÃO — que é o que a operação lê — também declara que precisa de reparo.
+    const missaoPersistida = await Mission.findByPk(mission.id);
+    expect(missaoPersistida.mission_source_state).toBe('RECOVERY_REQUIRED');
+
+    // PASSO 2 — o scan de BOOT não reprocessa mais esse intent (antes ele voltava em todo boot e
+    // consumia o lote). Nota de escopo: `reconcileMissionSourceIntents` POR MISSÃO continua incluindo
+    // RECOVERY_REQUIRED de propósito (reparo explícito pode reavaliar); o que ESTA correção fecha é o
+    // consumo do orçamento do boot por linhas que a reconciliação automática já declarou irresolvíveis.
+    const recovery = require('../../api/services/engineeringMission/missionRecoveryCoordinator');
+    const boot = await recovery.reconcilePendingIntents({ limit: 200, maxLotes: 1 });
+    expect((boot.outcomes || []).find((o) => o.intentId === intent.id)).toBeUndefined();
+    const aindaReparo = await Integration.findByPk(intent.id);
+    expect(aindaReparo.integration_status).toBe('RECOVERY_REQUIRED');
+  });
 });

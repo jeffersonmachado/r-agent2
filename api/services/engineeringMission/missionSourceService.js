@@ -911,6 +911,16 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
       await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
         extra: { phase: decision.outcome, code: decision.code, reason: decision.reason, reconciledAt: new Date().toISOString() },
       });
+      // O estado do INTENT terminal não pode ser a única marca de que a missão precisa de reparo:
+      // quem observa operação lê a MISSÃO. Sem isto, `mission_source_state` continuaria READY
+      // enquanto a fonte está num estado que a reconciliação automática recusa — o reparo existiria
+      // e ninguém saberia (mesma classe do defeito que a fila oficial cobra). Aplicado só ao
+      // desfecho que esta correção tornou terminal; DIVERGENCE mantém o comportamento anterior.
+      if (decision.outcome === 'BLOCKED_REQUIRES_REPAIR' && mission && mission.mission_source_state !== 'RECOVERY_REQUIRED') {
+        // Só o ESTADO (campo existente no modelo). O motivo já fica no intent, que é a fonte
+        // auditável do desfecho — não se inventa coluna para duplicar a mesma informação.
+        await mission.update({ mission_source_state: 'RECOVERY_REQUIRED' });
+      }
     }
 
     outcomes.push({ intentId: intent.id, candidateCommit: String(intent.candidate_commit).slice(0, 12), ...decision });
