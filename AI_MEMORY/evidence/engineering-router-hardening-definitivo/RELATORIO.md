@@ -1027,9 +1027,29 @@ Com apenas o status do finding esperado, "não fechou" e "fechou outro" são ind
 diagnóstico passou a trazer `findingIdEsperado` e `findingsDaMissao` (id, status, fix_task_id,
 created_at, recurrence_count, dedupe_key) — sem tocar em asserção nenhuma.
 
-**Estado declarado: causa NÃO concluída.** O que existe é medição (dois fechamentos, o esperado
-CONFIRMED) e o instrumento para o próximo ciclo. Não é "ambiental" — é desconhecida, e assim fica
-registrada.
+**Segundo ciclo de medição (run 40786037745), com o diagnóstico ampliado:** a missão tem **um único**
+finding (`c3b7cf52…`) — não é escolha de finding errado. E a linha do tempo mostra o mecanismo:
+
+```
+23:29:36.509  → FIXED
+23:29:36.522  → REGRESSION_VALIDATED
+23:29:36.551  → CLOSED            (resolved_at gravado)
+23:29:36.551+ "recurrenceCount": 1   ← 183 ms depois
+23:29:36.74   resumeOriginalMission  decision=REPLACE_TASK_RESUME_PHASE  resumedStatus=RED
+23:44:21      DIAG: status=CONFIRMED, recurrence_count=1, fixTask=GREEN
+```
+
+Ou seja: o worker **fecha** o finding e a **mesma anomalia é redetectada 183 ms depois**, reabrindo-o
+como `RECURRENCE` (`resolved_at` volta a `null`, `bugFindingService.js:207`). O teste faz poll de 1 s no
+status corrente e perde a janela.
+
+**Isso NÃO é "ambiental" e NÃO está concluído.** É uma corrida de ciclo de vida — fechamento ×
+redetecção da mesma anomalia dentro do mesmo sweep, logo após `resumeOriginalMission` — que aparece na
+base limpa e não aparece na base de desenvolvimento (lá a suíte fecha e permanece fechada). O caminho de
+código está localizado (`bugLoopCoordinatorService.js:574`, `resumeOriginalMission`); o que falta é a
+decisão de contrato (a recorrência nesse instante é legítima ou espúria?) e a regressão determinística
+correspondente. Enfraquecer a asserção para "basta ter fechado uma vez" mascararia justamente essa
+pergunta, e por isso NÃO foi feito.
 
 ---
 
