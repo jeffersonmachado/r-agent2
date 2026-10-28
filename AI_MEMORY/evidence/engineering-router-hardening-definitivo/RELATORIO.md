@@ -928,10 +928,12 @@ testada por medição, não por argumento:
 | ref `main` ausente | `git branch -f main origin/main` no job | **não é a causa** — o erro mudou de `ambiguous argument 'main'` para `status=BLOCKED` |
 | serviço RAG ausente | subir a imagem oficial em `:8001` (log: `RAG pronto … try 2`) | **não é a causa** — falham igual |
 | ambiente do runner | reprodução local com `npm run ci:bootstrap` (mesmo `.env`, 43 chaves) e `main = origin/main` | **passam localmente** (98 s e 94 s) |
-| versão de Node | runner usa `NODE_VERSION_LTS: '20'`; local é **v22.12.0** | **hipótese aberta** — não testada nesta sessão |
+| versão de Node | container `node:20.20.2` (mesmo `.env`, identidade git, socket do Docker) | **inconclusivo por artefato do experimento**: o container falhou antes, com `BLOCKED_INFRA / SANDBOX_INVALID_WORKSPACE` (o `docker run -v` do sandbox resolve caminhos do HOST, e o workspace em `/tmp` do container não existe no host) — falha DIFERENTE da do CI, que não tem `SANDBOX_INVALID_WORKSPACE` |
 
-Fato medido que sustenta a hipótese aberta: no runner as duas terminam em **~3 s** com `BLOCKED` e **nenhuma
-chamada de provider** no log; localmente levam **78–98 s** e executam o pipeline inteiro. Nenhuma das duas
+Fato medido que continua sem explicação: no runner as duas terminam em **~3 s** com `BLOCKED` e **nenhuma
+chamada de provider** no log; localmente levam **78–98 s** e executam o pipeline inteiro. O experimento com
+Node 20 NÃO reproduziu isso (reproduziu outro defeito, do próprio experimento), então a hipótese de versão de
+runtime fica **não confirmada** — o registro correto é "causa desconhecida", não "é o Node". Nenhuma das duas
 pertence ao gate canônico (`tests/integration/engineering` não as alcança) — elas são do manifesto de
 release (`config/canonical-release-suites.json`), executado pelo runner de suítes, não pelo CI.
 

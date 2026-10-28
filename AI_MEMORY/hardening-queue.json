@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-28T19:49:03.912Z",
+  "updatedAt": "2026-10-28T21:35:11.674Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2451,17 +2451,17 @@
     },
     {
       "id": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
-      "title": "jest-integration: 2 suítes do manifesto de release falham SÓ no runner (hipótese Node 20)",
+      "title": "jest-integration: 2 suítes do manifesto de release bloqueiam em ~3 s SÓ no runner (causa desconhecida)",
       "status": "blocked_external",
       "commit": "5e1ff762d",
-      "evidence": "Medição completa em RELATORIO.md §11.7.7. Sobram tests/integration/missionSourceStaleReplanFullRouterE2E e tests/integration/governanceApprovalFullWorkerE2E. Hipóteses TESTADAS e descartadas: contenção entre suítes (29 lotes, cada exclusiva sozinha — 40746356670), ref main ausente (git branch -f main origin/main mudou o erro de \"ambiguous argument main\" para status=BLOCKED), serviço RAG ausente (imagem oficial no ar em :8001, log \"RAG pronto … try 2\" — 40752124806). Reprodução local com o MESMO .env do ci:bootstrap (43 chaves), main=origin/main e --runInBand: PASSA (98 s e 94 s). No runner as duas terminam em ~3 s com BLOCKED e NENHUMA chamada de provider. Diferença remanescente medida: runner usa NODE_VERSION_LTS=20; local é v22.12.0.",
+      "evidence": "Medição completa em RELATORIO.md §11.7.7. Sobram tests/integration/missionSourceStaleReplanFullRouterE2E e tests/integration/governanceApprovalFullWorkerE2E. Hipóteses TESTADAS e descartadas: contenção entre suítes (29 lotes, cada exclusiva sozinha — 40746356670), ref main ausente (git branch -f main origin/main mudou o erro de \"ambiguous argument main\" para status=BLOCKED), serviço RAG ausente (imagem oficial no ar em :8001, log \"RAG pronto … try 2\" — 40752124806). Reprodução local com o MESMO .env do ci:bootstrap (43 chaves), main=origin/main e --runInBand: PASSA (98 s e 94 s). No runner as duas terminam em ~3 s com BLOCKED e NENHUMA chamada de provider. Hipótese de versão de Node TESTADA e NÃO confirmada: container node:20.20.2 com o mesmo .env, identidade git e socket do Docker falhou ANTES, com BLOCKED_INFRA/SANDBOX_INVALID_WORKSPACE — artefato do experimento (o docker run -v do sandbox resolve caminhos do HOST e o /tmp do container não existe no host). O CI não mostra SANDBOX_INVALID_WORKSPACE, logo é outro defeito. Causa permanece DESCONHECIDA.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "blocked",
       "severityBasis": "vermelho de CI que se recusa a ser explicado por ambiente já equalizado; nenhuma das 2 suítes pertence ao gate canônico (tests/integration/engineering)",
       "severitySource": "medicao-ci-2026-10-28",
-      "blocked_reason": "Exige investigação específica de runtime Node 20 (runner) contra Node 22 (workstation) num Router E2E completo: cada iteração de CI custa ~25-30 min e o ciclo local não reproduz. Não é enfraquecível por skip: as duas são do manifesto de release (config/canonical-release-suites.json) e a instrução da missão proíbe pular prova. Próximo passo objetivo: rodar as duas suítes dentro de container node:20 no worktree local com o mesmo .env e capturar o reasonCode do BLOCKED (a asserção só mostra status)."
+      "blocked_reason": "Exige capturar o reasonCode real do BLOCKED no runner (a asserção só mostra status) — o código não aparece no log do job hoje. Não é enfraquecível por skip: as duas são do manifesto de release (config/canonical-release-suites.json). Próximo passo objetivo: fazer a suíte REPORTAR runB.reasonCode na mensagem de falha (diagnóstico, sem afrouxar asserção) e rodar o job de integração uma vez para ler o código."
     }
   ],
   "schemaVersion": 2,

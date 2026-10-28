@@ -484,7 +484,7 @@
         "ref main ausente",
         "serviço RAG ausente"
       ],
-      "openHypothesis": "versão de Node: runner usa NODE_VERSION_LTS=20, reprodução local em v22.12.0 passa (78-98 s) com o MESMO .env do ci:bootstrap e main=origin/main; no runner as duas terminam em ~3 s com BLOCKED e nenhuma chamada de provider",
+      "openHypothesis": "CAUSA DESCONHECIDA (não é Node): o experimento em container node:20.20.2 falhou antes, com BLOCKED_INFRA/SANDBOX_INVALID_WORKSPACE — artefato do experimento (docker run -v do sandbox resolve caminhos do HOST e o workspace em /tmp do container não existe no host). O CI não mostra SANDBOX_INVALID_WORKSPACE, portanto o defeito do runner é outro.",
       "notInCanonicalGate": "tests/integration/engineering (L0b) não alcança as duas; elas são do manifesto de release (config/canonical-release-suites.json), executado pelo runner de suítes, não pelo CI"
     }
   }
