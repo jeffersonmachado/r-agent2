@@ -326,25 +326,32 @@ const INTENTS_NAO_TERMINAIS = [...INTENTS_AUTORRECONCILIAVEIS, 'RECOVERY_REQUIRE
 
 async function reconcilePendingIntents({ limit = 200, maxLotes = 5 } = {}) {
   const { EngineeringMissionIntegration } = require('../../db/models');
+  const { Op } = require('sequelize');
   const missionSourceService = require('./missionSourceService');
   const Integration = EngineeringMissionIntegration();
 
   // DEFEITO MEDIDO (2026-10-27, L0b): o boot lia UM lote de `limit` linhas SEM ordenação e sem
   // continuar. Com 306 intents não terminais no banco, o intent recém-crashado podia ficar FORA do
-  // lote para sempre — a reconciliação de boot "rodava" e não reconciliarva ninguém novo (medido:
-  // `missions >= 1`, `reconciled = 0`). Duas correções: ORDEM determinística (FIFO por atualização,
-  // para que boots sucessivos convirjam sem starvation) e DRENAGEM EM LOTES com teto explícito —
-  // o teto continua existindo para não transformar um boot em trabalho ilimitado, mas agora o que
-  // sobra é CONTADO e devolvido (`pending`), em vez de invisível.
+  // lote para sempre — a reconciliação de boot "rodava" e não reconciliava ninguém novo (medido:
+  // `missions >= 1`, `reconciled = 0`).
+  //
+  // SEGUNDO DEFEITO, medido em revisão em 2026-10-28: excluir os já vistos EM MEMÓRIA não basta. O
+  // desfecho `PROCEED` NÃO muda `integration_status`, então se o head da fila for ocupado por esses
+  // intents o lote seguinte devolve as MESMAS linhas, `novos` fica vazio e a drenagem para — o intent
+  // novo (mais recente) nunca é alcançado. A exclusão tem de ir no SQL (`Op.notIn`), como
+  // `missionStore.findMissionsWithExpiredLease` já faz. Aqui, além disso, o teto deixa de ser um
+  // silêncio: `pending` conta o que NÃO foi alcançado e `needsRepair` conta a dívida de reparo.
   const outcomes = [];
   let reconciled = 0;
   let missions = 0;
   const vistas = new Set();
 
   for (let lote = 0; lote < Math.max(1, maxLotes); lote += 1) {
+    const where = { integration_status: INTENTS_AUTORRECONCILIAVEIS };
+    if (vistas.size > 0) where.mission_id = { [Op.notIn]: [...vistas] };
     const rows = await Integration.findAll({
-      where: { integration_status: INTENTS_AUTORRECONCILIAVEIS },
-      attributes: ['mission_id', 'integration_key'],
+      where,
+      attributes: ['mission_id'],
       order: [['updated_at', 'ASC'], ['integration_key', 'ASC']],
       limit,
     });
@@ -370,19 +377,33 @@ async function reconcilePendingIntents({ limit = 200, maxLotes = 5 } = {}) {
     }
   }
 
-  // O que sobrou depois do teto é dívida VISÍVEL (nunca silêncio).
-  const [{ count: pendentes }] = await Integration.sequelize.query(
-    'SELECT COUNT(DISTINCT mission_id)::int AS count FROM engineering_mission_integrations WHERE integration_status IN (:status)',
-    { replacements: { status: INTENTS_AUTORRECONCILIAVEIS }, type: Integration.sequelize.QueryTypes.SELECT },
-  );
-  const pending = Number(pendentes || 0);
+  // Dívida VISÍVEL, em duas medidas distintas porque significam coisas diferentes:
+  //   pending     — alcançável pela reconciliação AUTOMÁTICA e não visitado neste boot (teto);
+  //   needsRepair — declarado irresolvível automaticamente: exige humano/ação, não outro boot.
+  // Antes deste ajuste o único sinal eram `missions`/`outcomes` da rodada: um intent que saía do
+  // scan para `RECOVERY_REQUIRED` deixava de aparecer em QUALQUER número (306 linhas invisíveis
+  // medidas no banco local).
+  const contarMissoes = async (status) => {
+    const [{ count }] = await Integration.sequelize.query(
+      'SELECT COUNT(DISTINCT mission_id)::int AS count FROM engineering_mission_integrations WHERE integration_status IN (:status)',
+      { replacements: { status }, type: Integration.sequelize.QueryTypes.SELECT },
+    );
+    return Number(count || 0);
+  };
+  const pending = vistas.size === 0
+    ? await contarMissoes(INTENTS_AUTORRECONCILIAVEIS)
+    : await Integration.sequelize.query(
+      'SELECT COUNT(DISTINCT mission_id)::int AS count FROM engineering_mission_integrations WHERE integration_status IN (:status) AND mission_id NOT IN (:vistas)',
+      { replacements: { status: INTENTS_AUTORRECONCILIAVEIS, vistas: [...vistas] }, type: Integration.sequelize.QueryTypes.SELECT },
+    ).then(([r]) => Number(r.count || 0));
+  const needsRepair = await contarMissoes(['RECOVERY_REQUIRED']);
 
-  if (outcomes.length > 0) {
+  if (outcomes.length > 0 || needsRepair > 0) {
     logger.warn('[missionRecovery] intents não terminais reconciliados no boot', {
-      missions, reconciled, total: outcomes.length, pending,
+      missions, reconciled, total: outcomes.length, pending, needsRepair,
     });
   }
-  return { missions, reconciled, outcomes, pending };
+  return { missions, reconciled, outcomes, pending, needsRepair };
 }
 
 /** Varredura de BOOT — chamada na subida da aplicação, antes de qualquer ação humana. */

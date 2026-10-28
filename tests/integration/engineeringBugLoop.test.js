@@ -1025,6 +1025,81 @@ describe('ciclo de bug — contrato de posse e escopo da varredura (revisão adv
     }
   });
 
+  /**
+   * FENCING PROPAGADO AO FIX LOOP E À TRILHA DE TENTATIVAS — regressão de 2026-10-28.
+   *
+   * A revisão adversarial mediu que o fencing só existia em `transitionFinding`: as escritas do fix
+   * loop (`markFixed`/`markRegressionValidated`/`closeFinding`/`blockFinding`) e a persistência da
+   * tentativa de reprodução escreviam sob posse SEM declarar o fence — e nenhum teste pegava a
+   * mutação. Estes dois provam o caminho REAL: posse perdida (fence avançado) ⇒ escrita recusada.
+   */
+  test('markFixed com fence VELHO é recusado (posse perdida no fix loop não declara FIXED)', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'fencing no fix loop' });
+    await bugFindingService.confirmFinding(registrado.id, {
+      basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'fence:fix' }], actor: 'TEST',
+    });
+
+    // Posse original (fence f) avançando o finding para FIXING — de CONFIRMED não se declara FIXED
+    // direto (a máquina de estados exige passar por FIXING).
+    const antigo = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-original' });
+    await bugFindingService.transitionFinding(registrado.id, 'FIXING', { actor: 'worker-original', lease: antigo });
+
+    // A posse é PERDIDA: liberada e retomada por outro worker (fence f+1).
+    await bugFindingService.releaseFindingLease(registrado.id, { token: antigo.token });
+    const atual = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-novo' });
+    try {
+      expect(Number(atual.fence)).toBeGreaterThan(Number(antigo.fence));
+
+      // O dono ANTIGO tenta declarar FIXED: o fence dele não é mais o corrente ⇒ recusa explícita.
+      await expect(bugFindingService.markFixed(registrado.id, {
+        actor: 'worker-original',
+        reproductionPassed: true, targetedTestsPassed: true, reviewPassed: true,
+        lease: antigo,
+      })).rejects.toMatchObject({ code: 'FINDING_LEASE_LOST' });
+
+      // O estado NÃO mentiu: continua FIXING (nunca FIXED).
+      expect((await bugFindingService.getFinding(registrado.id)).status).toBe('FIXING');
+
+      // Controle POSITIVO: o dono atual declara FIXED com o próprio fence.
+      const ok = await bugFindingService.markFixed(registrado.id, {
+        actor: 'worker-novo',
+        reproductionPassed: true, targetedTestsPassed: true, reviewPassed: true,
+        lease: atual,
+      });
+      expect(ok.finding.status).toBe('FIXED');
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: atual.token }).catch(() => {});
+    }
+  });
+
+  test('tentativa de reprodução sob posse perdida NÃO é persistida (persistAttempt com fence)', async () => {
+    if (skipIfNoDatabase()) return;
+    const registrado = await registerConfirmed({ title: 'fencing na trilha de tentativas' });
+    await bugFindingService.confirmFinding(registrado.id, {
+      basis: 'UNEQUIVOCAL_EVIDENCE', evidence: [{ type: 'ARTIFACT', ref: 'fence:attempt' }], actor: 'TEST',
+    });
+    const antes = await bugFindingService.getFinding(registrado.id);
+    const tentativasAntes = Array.isArray(antes.reproduction_attempts) ? antes.reproduction_attempts.length : 0;
+
+    const antigo = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-antigo' });
+    await bugFindingService.releaseFindingLease(registrado.id, { token: antigo.token });
+    const atual = await bugFindingService.acquireFindingLease(registrado.id, { workerInstanceId: 'worker-atual' });
+    try {
+      // `reproduce` aceita o lease herdado sem readquirir (reentrância): com o fence velho, a escrita
+      // da tentativa tem de ser recusada — a trilha do dono atual não pode ser sobrescrita.
+      await expect(bugReproductionService.reproduce(registrado.id, {
+        actor: 'worker-antigo', runner: runnerReturning('FAIL'), lease: antigo,
+      })).rejects.toMatchObject({ code: 'FINDING_LEASE_LOST' });
+
+      const depois = await bugFindingService.getFinding(registrado.id);
+      const tentativasDepois = Array.isArray(depois.reproduction_attempts) ? depois.reproduction_attempts.length : 0;
+      expect(tentativasDepois).toBe(tentativasAntes);
+    } finally {
+      await bugFindingService.releaseFindingLease(registrado.id, { token: atual.token }).catch(() => {});
+    }
+  });
+
   test('varredura com identidade declara posse de fato (delegação única do ciclo de lease)', async () => {
     if (skipIfNoDatabase()) return;
     const registrado = await registerConfirmed({ title: 'varredura com posse delegada' });

@@ -769,6 +769,64 @@ describe('Mission Source Authority — E2E com git real', () => {
    *   1. o desfecho "requer reparo" PERSISTE estado (intent + missão) — antes ficava pendente;
    *   2. na chamada SEGUINTE o intent não é mais reprocessado — antes voltava para sempre.
    */
+  /**
+   * DRENAGEM COM HEAD ESTACIONÁRIO — regressão de 2026-10-28 (achado P1 da revisão).
+   *
+   * DEFEITO MEDIDO: excluir os já visitados EM MEMÓRIA não bastava. O desfecho `PROCEED` NÃO muda
+   * `integration_status`; se o head da fila é ocupado por esses intents, o lote seguinte devolve as
+   * MESMAS linhas, `novos` fica vazio e a drenagem PARA — o intent recuperável (mais recente) nunca
+   * é alcançado. A exclusão passou a ir no SQL (`Op.notIn`), como o resto da casa já fazia.
+   *
+   * Prova: 2 intents estacionários ANTIGOS + 1 recuperável logo depois, varredura com `limit` menor
+   * que a fila. A asserção é sobre o recuperável ser ALCANÇADO.
+   */
+  test('MISSION_SRC_16 — fila com head estacionário não impede alcançar o intent recuperável', async () => {
+    if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
+
+    const { EngineeringMissionIntegration } = require('../../api/db/models');
+    const Integration = EngineeringMissionIntegration();
+    const recovery = require('../../api/services/engineeringMission/missionRecoveryCoordinator');
+
+    const missaoEstacionaria = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+    const RECUPERAVEL = '00000000-0000-4000-8000-000000007777';
+    const inserir = async (missionId, status, quando) => {
+      const row = await Integration.create({
+        mission_id: missionId, task_id: null, integration_type: 'CANDIDATE', integration_result: 'PENDING',
+        integration_status: status, candidate_commit: 'a'.repeat(40), integration_branch: null,
+        integration_key: source.buildIntegrationKey({ missionId, taskId: `t${missionId.slice(-6)}`, candidateCommit: 'a'.repeat(40) }),
+        source_fence: 0,
+      });
+      // `updated_at` controlado: são os mais ANTIGOS do banco, então entram no primeiro lote.
+      await Integration.sequelize.query(
+        'UPDATE engineering_mission_integrations SET updated_at = :q WHERE id = :id',
+        { replacements: { q: quando, id: row.id } },
+      );
+      return row;
+    };
+
+    const criadas = [];
+    try {
+      criadas.push(await inserir(missaoEstacionaria(1), 'PREPARED', '1990-01-01T00:00:00Z'));
+      criadas.push(await inserir(missaoEstacionaria(2), 'PREPARED', '1990-01-02T00:00:00Z'));
+      criadas.push(await inserir(RECUPERAVEL, 'GIT_APPLIED', '1990-01-03T00:00:00Z'));
+
+      // `PROCEED` = intent que NÃO sai do conjunto auto-reconciliável (o caso que travava a drenagem).
+      const svc = require('../../api/services/engineeringMission/missionSourceService');
+      const espiao = jest.spyOn(svc, 'reconcileMissionSourceIntents')
+        .mockResolvedValue({ reconciled: 0, outcomes: [{ intentId: 'estacionario', outcome: 'PROCEED' }] });
+      try {
+        const r = await recovery.reconcilePendingIntents({ limit: 2, maxLotes: 3 });
+        const visitadas = espiao.mock.calls.map(([args]) => args.missionId);
+        expect(visitadas).toContain(RECUPERAVEL);
+        expect(r.missions).toBeGreaterThanOrEqual(3);
+      } finally {
+        espiao.mockRestore();
+      }
+    } finally {
+      for (const row of criadas) await row.destroy().catch(() => {});
+    }
+  });
+
   test('MISSION_SRC_15 — desfecho "requer reparo" PERSISTE e sai do scan automático (fim da pílula envenenada)', async () => {
     if (skipReason) return skipOrFail(SUITE_NAME, skipReason);
 
