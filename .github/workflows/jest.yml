@@ -239,6 +239,17 @@ jobs:
           cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
           npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
 
+      # LINHA PRINCIPAL LOCAL (medido 2026-10-28, run 40741496599): `missionSourceStaleReplanFullRouterE2E`
+      # resolve a fonte pelo branch `main` do repositório (`git rev-parse main`) e falhava com
+      # `fatal: ambiguous argument 'main'`. O `actions/checkout` deixa só a ref do evento; o teste
+      # assume um repositório com linha principal — que é o que o `dev-branch-ci` materializa antes
+      # das suítes. Nada é inventado: `main` aponta para o commit REAL de `origin/main`.
+      - name: Materializar a linha principal (origin/main)
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          git branch --force main refs/remotes/origin/main
+          git rev-parse --short main
+
       - name: Install dependencies
         run: npm ci
 

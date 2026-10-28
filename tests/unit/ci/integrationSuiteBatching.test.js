@@ -49,6 +49,24 @@ describe('executor de integração do CI — lotes respeitam os grupos exclusivo
     expect(batches[0].suites).toEqual(suites);
   });
 
+  test('suíte de grupo exclusivo roda SOZINHA no lote, mesmo cercada de suítes fora do grupo', () => {
+    const grupo = exclusiveGroups[0];
+    const fora = [
+      'tests/integration/alpha.test.js',
+      'tests/integration/beta.test.js',
+      'tests/integration/gamma.test.js',
+      'tests/integration/delta.test.js',
+      'tests/integration/epsilon.test.js',
+    ];
+    const { batches } = planBatches([...grupo.suites, ...fora].sort(), { exclusiveGroups });
+    const daGrupo = new Set(grupo.suites);
+    for (const batch of batches) {
+      const noLote = batch.suites.filter((suite) => daGrupo.has(suite));
+      if (noLote.length > 0) expect(batch.suites).toEqual(noLote);
+    }
+    expect(batches.length).toBe(grupo.suites.length + 1);
+  });
+
   test('cada suíte do grupo exclusivo cai em lote próprio quando só elas existem', () => {
     const grupo = exclusiveGroups[0];
     const { batches } = planBatches([...grupo.suites].sort(), { exclusiveGroups });

@@ -69,10 +69,34 @@ function parseListTestsOutput(stdout) {
     .filter((linha) => linha.startsWith('/') && /\.test\.c?js$/.test(linha));
 }
 
-/** Exposto para teste: nenhum lote pode conter duas suítes do mesmo grupo exclusivo. */
+/**
+ * Lotes do CI. Duas regras, ambas derivadas do manifesto:
+ *
+ *   1. `batchPaths` (fonte canônica) nunca põe duas suítes do MESMO grupo no mesmo lote;
+ *   2. aqui vai um passo além, medido em 2026-10-28 (run 40741496599): suíte que pertence a
+ *      QUALQUER grupo exclusivo roda SOZINHA no lote. Com a regra 1 apenas,
+ *      `governanceApprovalFullWorkerE2E` dividiu lote com 5 suítes fora do grupo e continuou
+ *      vermelha (`closed` null: o worker global não fechou o finding). O manifesto diz "uma por
+ *      lote" na justificativa do grupo — e a justificativa é a especificação.
+ */
 function planBatches(suitePaths, { exclusiveGroups = [] } = {}) {
   const { batchPaths } = require(path.join(ROOT, 'scripts', 'governance', 'run-release-suites.js'));
-  return batchPaths(suitePaths, { exclusiveGroups });
+  const base = batchPaths(suitePaths, { exclusiveGroups });
+
+  const membros = new Set();
+  for (const grupo of Array.isArray(exclusiveGroups) ? exclusiveGroups : []) {
+    for (const suite of (grupo && grupo.suites) || []) membros.add(suite);
+  }
+  if (membros.size === 0) return base;
+
+  const batches = [];
+  for (const batch of base.batches) {
+    const sozinhos = batch.suites.filter((suite) => membros.has(suite));
+    const restantes = batch.suites.filter((suite) => !membros.has(suite));
+    if (restantes.length > 0) batches.push({ index: batches.length, suites: restantes });
+    for (const suite of sozinhos) batches.push({ index: batches.length, suites: [suite] });
+  }
+  return { batches, groups: base.groups };
 }
 
 /**
