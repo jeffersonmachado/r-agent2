@@ -822,6 +822,84 @@ O `9a70ee2b2` fica onde está: é conteúdo já integrado ao dev, sem ação pen
 
 ---
 
+## 11.7 O CI do `main` (`jest.yml`): cinco lacunas de AMBIENTE medidas e fechadas, uma residual declarada
+
+O §11.1 mediu o CI em runner limpo pelo `dev-branch-ci`. Este bloco fecha o outro lado: o `jest.yml`,
+que é o único workflow que roda em `main`/`develop` e que estava vermelho desde 2026-10-20. A diferença
+importante: **nenhuma das falhas era de código**. Cada rodada revelou uma peça de ambiente ausente, e
+cada peça foi fechada com o produtor canônico que o `dev-branch-ci` já usa — sem tocar em asserção.
+
+### 11.7.1 A progressão medida (rodada a rodada, mesma suíte `npm test`)
+
+| rodada | commit | o que foi adicionado | suítes | testes | falha restante |
+|---|---|---|---|---|---|
+| 40726692268 | `3d283cf0d` | `fetch-depth: 0` | 47 | 1460 (9 ✕) | `benchmarkChangeProposal`: `Não foi possível conectar ao PostgreSQL` |
+| 40728206519 | `79ee59add` | serviços `postgres`+`redis` | 3 | 86 (17 ✕) | `mcpDiscoveryReal`: `relation "mcp_connections" does not exist` |
+| 40729073198 | `e698bdf7d` | `db:migrate` | 106 | 2598 (1 ✕) | `ENOENT reports/benchmark-sufficiency-report.json` (2 suítes) |
+| 40730595851 | `e7592acda` | `ci:artifacts` | 208 | 3940 (8 ✕) | `engineeringRouterExecutionSandboxSecurity`: `docker run` exit **125** |
+| 40734125941 | `2d5803e0d` | build da imagem do sandbox | 328 | 5385 (1 ✕) | `modelDrivenE2e` |
+| 40735242329 | `d74d5826b` | **sonda `--bail=0`** (medição, branch descartável) | **1121** | **9785 (10 ✕)** | 4 suítes, ver 11.7.2 |
+| 40737265748 | `251a11a20` | `ci:bootstrap` + identidade git | 328 | 5385 (1 ✕) | **só** `modelDrivenE2e` |
+
+A sonda `--bail=0` existiu porque `jest.config.cjs` tem `bail: 1`: sem ela, cada rodada parava na
+primeira suíte vermelha e o número publicado seria sempre "1 suíte" — um número que esconde o tamanho
+do problema. Com ela, o estado real de uma suíte de 1121 arquivos ficou visível de uma vez.
+
+### 11.7.2 As quatro suítes vermelhas na sonda, e o que cada uma era
+
+| suíte | testes | causa medida | fechada por |
+|---|---|---|---|
+| `governance/modelDrivenE2e` | 1 | exige `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` | **não** — artefato de outro job (11.7.3) |
+| `engineeringRouter/workspaceStateSeeding` | 3 | `.env` e `api/data/config.json` não existem num checkout limpo | `npm run ci:bootstrap` |
+| `engineeringRouterSafeEnvironment` | 3 | sandbox devolvia `exitCode: null` (mesma ausência de estado) | `npm run ci:bootstrap` |
+| `governance/releaseTagPolicyBlock` | 3 | `git commit` nos cenários saía **128** (sem `user.name`/`user.email`) | identidade git |
+
+Nenhuma delas foi "consertada" no teste. O que mudou foi o ambiente onde o teste roda — e a prova é que
+depois do `ci:bootstrap` + identidade git, a mesma suíte fecha **327/328 com uma única falha**, a de
+artefato.
+
+### 11.7.3 A residual: `modelDrivenE2e` depende de um artefato que só outro job produz
+
+O teste roda `validate-model-driven-e2e` e exige um smoke prod-like real (`status=GO`). Esse artefato é
+produzido pelo job `prod-like-smoke` do `dev-branch-ci` e baixado pelo `dev-branch-gate`
+(`dev-branch-ci.yml:139-146`) exatamente para não reprovar por ausência. O `jest.yml` não tem esse job,
+então **em `main` esse teste não pode passar por construção** — e continuará assim até que uma de duas
+decisões seja tomada:
+
+1. **Extrair `prod-like-smoke` para um workflow reutilizável** (`workflow_call`) e chamá-lo nos dois
+   workflows — uma definição só, dois consumidores. É a opção que mantém o gate medindo o mesmo em todo
+   lugar; custo real: todo push em `main` passa a subir a stack prod-like (~90 min).
+2. **Aposentar o `jest.yml`** como gate de `main` e deixar a validação canônica no `dev-branch-ci`, já
+   que a promoção `dev → main` é fast-forward de commits que aquele gate já aprovou.
+
+Isso é decisão de dono do repositório, não de agente: as duas opções mudam QUAIS gates rodam em `main`.
+Não escolhi por conta própria e não mascarei o vermelho.
+
+### 11.7.4 O `jest-integration` nunca chegou a medir nada
+
+Em três rodadas consecutivas (`40729073198`, `40730595851`, `40734125941`) o job terminou `cancelled` em
+**15m17s / 15m18s / 15m16s** — exatamente o `timeout-minutes: 15` — **sem publicar um único `Tests:`**.
+Um gate que morre antes do veredito não é um gate vermelho: é um gate que não existe. O timeout foi para
+**90 min** (o `dev-branch-ci` usa 45 min só para o subconjunto `engineering`, que mede 2030 s aqui) e o
+job recebeu os mesmos pré-requisitos de ambiente. Se ainda não couber, o próximo passo é `jest --shard`,
+não voltar a um timeout que estrangula.
+
+### 11.7.5 O que já estava verde, e continua verde: o gate canônico
+
+Enquanto o `jest.yml` era destrinchado, o gate canônico rodava nos mesmos commits e passava:
+
+```
+40729083196  e698bdf7d  dev-branch-ci  success   (prod-like-smoke, L0+L1, integração real)
+40730607495  e7592acda  dev-branch-ci  success
+40734136725  2d5803e0d  dev-branch-ci  success
+```
+
+Ou seja: o vermelho que estava sendo investigado era do **workflow-sombra** de `main`, não do trabalho de
+hardening. Corrigir o sombra importa porque é ele que decide o CI de `main` — mas a conclusão sobre o
+código não mudou por causa dele.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
@@ -839,6 +917,9 @@ PUBLISH               = NOT_AUTHORIZED (selagem nao autorizada; 4 bloqueios medi
 DEPLOY                = NOT_AUTHORIZED
 L0b_CANONICO          = 40/40 SUITES · 234/234 TESTES PASS (amostra 9, exit 0; amostra 8 também verde — §9.3-nonies/decies)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
+CI_DO_MAIN (jest.yml) = 5 lacunas de AMBIENTE fechadas; 327/328 suítes PASS (1121 medidas na sonda);
+                        residual ÚNICA = modelDrivenE2e (artefato prod-like de outro job) — §11.7
+GATE_CANONICO (dev)   = PASS nos 3 últimos commits do branch (prod-like-smoke + L0/L1 + integração real)
 MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só com autorização humana)
 ```
 

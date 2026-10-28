@@ -312,5 +312,117 @@
         "lease_fence nao e validado nas escritas do finding"
       ]
     }
-  ]
+  ],
+  "ciMainJestWorkflow": {
+    "workflow": ".github/workflows/jest.yml",
+    "measuredAt": "2026-10-28",
+    "conclusion": "AMBIENTE (não código): 5 lacunas fechadas com produtores canônicos; residual única = modelDrivenE2e (artefato prod-like de outro job)",
+    "runs": [
+      {
+        "runId": 40726692268,
+        "commit": "3d283cf0d",
+        "added": "fetch-depth: 0",
+        "suites": "47",
+        "tests": "1460 (9 falhas)",
+        "remaining": "benchmarkChangeProposal: PostgreSQL inacessível"
+      },
+      {
+        "runId": 40728206519,
+        "commit": "79ee59add",
+        "added": "serviços postgres+redis",
+        "suites": "3",
+        "tests": "86 (17 falhas)",
+        "remaining": "mcpDiscoveryReal: relation \"mcp_connections\" does not exist"
+      },
+      {
+        "runId": 40729073198,
+        "commit": "e698bdf7d",
+        "added": "db:migrate",
+        "suites": "106",
+        "tests": "2598 (1 falha)",
+        "remaining": "ENOENT reports/benchmark-sufficiency-report.json"
+      },
+      {
+        "runId": 40730595851,
+        "commit": "e7592acda",
+        "added": "ci:artifacts",
+        "suites": "208",
+        "tests": "3940 (8 falhas)",
+        "remaining": "sandbox docker run exit 125"
+      },
+      {
+        "runId": 40734125941,
+        "commit": "2d5803e0d",
+        "added": "build da imagem do sandbox",
+        "suites": "328",
+        "tests": "5385 (1 falha)",
+        "remaining": "modelDrivenE2e"
+      },
+      {
+        "runId": 40735242329,
+        "commit": "d74d5826b",
+        "added": "sonda --bail=0 (medição descartável)",
+        "suites": "1121 (1116 pass, 4 fail, 1 skipped)",
+        "tests": "9785 (9773 pass, 10 falhas)",
+        "remaining": "modelDrivenE2e(1), workspaceStateSeeding(3), engineeringRouterSafeEnvironment(3), releaseTagPolicyBlock(3)"
+      },
+      {
+        "runId": 40737265748,
+        "commit": "251a11a20",
+        "added": "ci:bootstrap + identidade git",
+        "suites": "328",
+        "tests": "5385 (1 falha)",
+        "remaining": "modelDrivenE2e"
+      }
+    ],
+    "canonicalGate": {
+      "workflow": ".github/workflows/dev-branch-ci.yml",
+      "runs": [
+        {
+          "runId": 40729083196,
+          "commit": "e698bdf7d",
+          "conclusion": "success"
+        },
+        {
+          "runId": 40730607495,
+          "commit": "e7592acda",
+          "conclusion": "success"
+        },
+        {
+          "runId": 40734136725,
+          "commit": "2d5803e0d",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "jestIntegrationTimeout": {
+      "previousMinutes": 15,
+      "measuredCancellations": [
+        {
+          "runId": 40729073198,
+          "elapsed": "15m17s"
+        },
+        {
+          "runId": 40730595851,
+          "elapsed": "15m18s"
+        },
+        {
+          "runId": 40734125941,
+          "elapsed": "15m16s"
+        }
+      ],
+      "newMinutes": 90,
+      "reason": "job morria antes do veredito e não publicava nenhum Tests: — gate que não mede"
+    },
+    "residual": {
+      "test": "tests/unit/governance/modelDrivenE2e.test.js",
+      "requires": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json (job prod-like-smoke do dev-branch-ci)",
+      "decisionPending": [
+        "extrair prod-like-smoke para workflow_call e chamar nos dois workflows",
+        "aposentar jest.yml como gate de main"
+      ]
+    },
+    "assertionsTouched": 0,
+    "section": "RELATORIO.md §11.7"
+  }
 }
