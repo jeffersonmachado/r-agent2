@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-28T17:49:06.901Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2420,6 +2420,34 @@
       "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "blocked",
       "evidence": "medido: base 29372d7a3 => 1/3 falhas; HEAD => 5/7 isoladas PASS, 2/2 lotes falharam; CI (L0) verde em 6 de 6 execucoes, onde nao ha servidor concorrente"
+    },
+    {
+      "id": "CI-MAIN-JEST-AMBIENTE",
+      "title": "CI de main (jest.yml): 5 lacunas de AMBIENTE reprovavam a suíte oficial",
+      "status": "verified",
+      "commit": "251a11a20",
+      "evidence": "RELATORIO.md §11.7 + report.json ciMainJestWorkflow. Progressão medida em runner limpo (mesma suíte npm test): run 40726692268 (fetch-depth 0) 47 suítes/9 falhas PostgreSQL; 40728206519 (+services) 17 falhas relation \"mcp_connections\" does not exist; 40729073198 (+db:migrate) 1 falha ENOENT reports/benchmark-sufficiency-report.json; 40730595851 (+ci:artifacts) 8 falhas docker run exit 125; 40734125941 (+imagem do sandbox) 1 falha; sonda 40735242329 --bail=0 mediu a suíte inteira: 1121 suítes / 9785 testes, 4 suítes e 10 testes vermelhos; 40737265748 (+ci:bootstrap +identidade git) fechou 3 das 4 suítes — 327/328 PASS. Nenhuma asserção de teste foi tocada: as lacunas eram clone raso, banco ausente, banco sem schema, artefatos governados/.env ausentes, imagem do sandbox ausente e identidade git ausente. Gate canônico dev-branch-ci PASS nos 3 últimos commits (runs 40729083196, 40730607495, 40734136725).",
+      "resolution": "jest.yml passou a declarar o ambiente que a suíte exige, com os mesmos produtores canônicos do dev-branch-ci: fetch-depth 0, services postgres+redis, ci:bootstrap (que cobre .env/api-data/artefatos/migrations), db:migrate, docker build da imagem r-agent2-engineering-router-sandbox:latest e identidade git. Também corrigido o jest-integration, que morria como cancelled em 15m16s–15m18s (timeout-minutes: 15) sem publicar nenhum Tests: — timeout para 90 min com o motivo medido escrito no workflow.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "severityBasis": "gate de CI vermelho por ambiente: 0 suítes medidas de 1121; falso vermelho permanente em main desde 2026-10-20",
+      "severitySource": "medicao-ci-2026-10-28"
+    },
+    {
+      "id": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
+      "title": "modelDrivenE2e exige artefato prod-like que só o job prod-like-smoke produz",
+      "status": "blocked_external",
+      "commit": "251a11a20",
+      "evidence": "Última falha da suíte oficial do jest.yml depois de fechar as 5 lacunas de ambiente: run 40737265748, 327/328 suítes PASS, única vermelha tests/unit/governance/modelDrivenE2e.test.js — \"artefato prod-like ausente ou ilegivel: qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json\". O artefato é produzido pelo job prod-like-smoke do dev-branch-ci e baixado pelo dev-branch-gate (dev-branch-ci.yml:139-146); o jest.yml não tem esse job, então em main o teste não pode passar por construção. Documentado em RELATORIO.md §11.7.3 sem mascarar o vermelho.",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "BLOCKED_EXTERNAL",
+      "legacyStatus": "blocked",
+      "severityBasis": "vermelho residual de CI em main por dependência de artefato de outro workflow (não é defeito de código)",
+      "severitySource": "medicao-ci-2026-10-28",
+      "blocked_reason": "DECISÃO DE DONO DO REPOSITÓRIO, não de agente: (1) extrair prod-like-smoke para um workflow reutilizável (workflow_call) e chamá-lo no jest.yml e no dev-branch-ci — uma definição, dois consumidores, custo de subir a stack prod-like a cada push em main; ou (2) aposentar o jest.yml como gate de main, já que a promoção dev→main é fast-forward de commits já aprovados pelo gate canônico. As duas opções mudam QUAIS gates rodam em main."
     }
   ],
   "schemaVersion": 2,
