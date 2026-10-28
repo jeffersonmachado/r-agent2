@@ -261,11 +261,24 @@ jobs:
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate
 
-      - name: Run integration + tenant suites
-        # --forceExit: as suítes sobem o servidor completo (workers, sequelize,
-        # redis, websocket); no runner (Node 20) o processo principal do Jest
-        # não encerra após o "20 passed" (handles de infra). forceExit encerra
-        # APÓS os resultados — não mascara falhas de teste (exit code preservado).
-        run: npx jest tests/integration tests/tenant --bail=0 --forceExit
+      # BASE DEDICADA DA MATRIZ DE ISOLAMENTO (medido 2026-10-28, run 40737265748): a suíte
+      # `crmTenantIsolation.postgres` exige um banco próprio (`CRM_PG_TEST_URL`, default
+      # 127.0.0.1:55432 na máquina de dev) e falhava com `ECONNREFUSED 127.0.0.1:55432` — 22 testes
+      # vermelhos por indisponibilidade de banco. Ela roda as migrations sozinha, então basta existir
+      # o banco; usar o MESMO serviço efêmero evita subir outro Postgres.
+      - name: Base dedicada da matriz de isolamento (crm_p0_test)
+        run: |
+          node -e "const {Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();const r=await c.query(\"SELECT 1 FROM pg_database WHERE datname='crm_p0_test'\");if(r.rowCount===0){await c.query('CREATE DATABASE crm_p0_test');console.log('crm_p0_test criado');}else{console.log('crm_p0_test já existe');}await c.end();})().catch((e)=>{console.error(e.message);process.exit(1);});"
+
+      # FORMATO DE EXECUÇÃO CANÔNICO (medido 2026-10-28, run 40737265748): `npx jest
+      # tests/integration tests/tenant` com o paralelismo default deixou 5 suítes / 26 testes
+      # vermelhos — todas da família que `config/canonical-release-suites.json` declara EXCLUSIVA
+      # (worker GLOBAL do laço de bugs e banco de missões compartilhados). O executor lê o manifesto
+      # e roda em LOTES SERIAIS: as suítes exclusivas ficam sozinhas no lote, o resto divide lote.
+      # Nenhuma asserção muda — muda o formato de execução, que é o que o manifesto exige.
+      - name: Run integration + tenant suites (lotes canônicos)
+        run: node scripts/ci/run-integration-suites.js
         env:
           CI: true
+          CRM_PG_TEST_URL: postgresql://postgres:postgres@localhost:5432/crm_p0_test
+          CRM_PG_REQUIRED: '1'
