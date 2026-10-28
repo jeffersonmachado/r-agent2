@@ -316,7 +316,7 @@
   "ciMainJestWorkflow": {
     "workflow": ".github/workflows/jest.yml",
     "measuredAt": "2026-10-28",
-    "conclusion": "AMBIENTE (não código): 5 lacunas fechadas com produtores canônicos; residual única = modelDrivenE2e (artefato prod-like de outro job)",
+    "conclusion": "AMBIENTE (não código): 5 lacunas de ambiente do job de unit fechadas e o job de integração passou a produzir veredito; residuais nomeados (artefato prod-like + 2 suítes com hipótese Node 20 aberta)",
     "runs": [
       {
         "runId": 40726692268,
@@ -373,6 +373,27 @@
         "suites": "328",
         "tests": "5385 (1 falha)",
         "remaining": "modelDrivenE2e"
+      },
+      {
+        "runId": 40741496599,
+        "commit": "6b1e9e4de",
+        "added": "lotes canônicos + crm_p0_test",
+        "suites": "integration: 5 suítes ✕ / 26 testes ✕ → 2 suítes ✕ / 2 testes ✕",
+        "remaining": "governanceApprovalFullWorkerE2E, missionSourceStaleReplanFullRouterE2E"
+      },
+      {
+        "runId": 40746356670,
+        "commit": "c0fddb6fe",
+        "added": "exclusiva sozinha no lote + ref main local",
+        "suites": "integration: 2 suítes ✕ / 2 testes ✕ (29 lotes, 27 min)",
+        "remaining": "mesmas duas — não era contenção nem ref main"
+      },
+      {
+        "runId": 40752124806,
+        "commit": "5e1ff762d",
+        "added": "serviço RAG real em :8001",
+        "suites": "integration: 2 suítes ✕ / 2 testes ✕ (24 min)",
+        "remaining": "mesmas duas — não era RAG"
       }
     ],
     "canonicalGate": {
@@ -423,6 +444,48 @@
       ]
     },
     "assertionsTouched": 0,
-    "section": "RELATORIO.md §11.7"
+    "section": "RELATORIO.md §11.7",
+    "jestIntegration": {
+      "previousTimeoutMinutes": 15,
+      "measuredCancellations": [
+        "15m17s (40729073198)",
+        "15m18s (40730595851)",
+        "15m16s (40734125941)"
+      ],
+      "newTimeoutMinutes": 90,
+      "outcomes": [
+        {
+          "runId": 40737265748,
+          "duration": "18m16s",
+          "suites": "5 ✕ / 26 testes ✕ (paralelo default)"
+        },
+        {
+          "runId": 40741496599,
+          "duration": "26m",
+          "suites": "2 ✕ / 2 testes ✕ (lotes canônicos)"
+        },
+        {
+          "runId": 40746356670,
+          "duration": "27m",
+          "suites": "2 ✕ / 2 testes ✕ (exclusiva sozinha + main)"
+        },
+        {
+          "runId": 40752124806,
+          "duration": "24m",
+          "suites": "2 ✕ / 2 testes ✕ (RAG no ar)"
+        }
+      ],
+      "residualSuites": [
+        "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+        "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js"
+      ],
+      "hypothesesRuledOut": [
+        "contenção entre suítes",
+        "ref main ausente",
+        "serviço RAG ausente"
+      ],
+      "openHypothesis": "versão de Node: runner usa NODE_VERSION_LTS=20, reprodução local em v22.12.0 passa (78-98 s) com o MESMO .env do ci:bootstrap e main=origin/main; no runner as duas terminam em ~3 s com BLOCKED e nenhuma chamada de provider",
+      "notInCanonicalGate": "tests/integration/engineering (L0b) não alcança as duas; elas são do manifesto de release (config/canonical-release-suites.json), executado pelo runner de suítes, não pelo CI"
+    }
   }
 }

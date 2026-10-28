@@ -900,6 +900,54 @@ código não mudou por causa dele.
 
 ---
 
+### 11.7.6 Segunda metade: o `jest-integration` também não media nada, e agora quase mede
+
+O mesmo tratamento foi aplicado ao job de integração. Ele morria em 15m16s–15m18s (`timeout-minutes: 15`)
+**sem publicar um único `Tests:`**. Com timeout de 90 min, o job passou a produzir veredito — e o
+veredito mostrou o que o timeout escondia.
+
+| rodada | commit | o que foi adicionado | resultado |
+|---|---|---|---|
+| 40737265748 | `251a11a20` | timeout 90 min + ambiente do job `jest` | 18m16s · 82 suítes · 5 suítes ✕ / 26 testes ✕ |
+| 40741496599 | `6b1e9e4de` | lotes canônicos (manifesto) + `crm_p0_test` | 26m · **2 suítes ✕ / 2 testes ✕** |
+| 40746356670 | `c0fddb6fe` | exclusiva sozinha no lote + ref `main` local | 27m · 2 suítes ✕ / 2 testes ✕ |
+| 40752124806 | `5e1ff762d` | serviço RAG real em `127.0.0.1:8001` | 24m · 2 suítes ✕ / 2 testes ✕ |
+
+O lote canônico sozinho fechou três das cinco famílias: `bugWorkerBootFindsRealWorkE2E` (worker global
+não drenava com outra suíte no mesmo lote), a matriz de isolamento de tenant (**22 testes**, exigia
+`CRM_PG_TEST_URL`) e `ticketLifecycleHandoverWhatsapp` (timeout de 10 s sob contenção).
+
+### 11.7.7 As duas suítes que restam: medição completa do que NÃO é a causa
+
+Sobram `missionSourceStaleReplanFullRouterE2E` e `governanceApprovalFullWorkerE2E`. Cada hipótese foi
+testada por medição, não por argumento:
+
+| hipótese | teste | veredito |
+|---|---|---|
+| contenção entre suítes | rodar cada uma SOZINHA no lote (29 lotes) | **não é a causa** — falham igual |
+| ref `main` ausente | `git branch -f main origin/main` no job | **não é a causa** — o erro mudou de `ambiguous argument 'main'` para `status=BLOCKED` |
+| serviço RAG ausente | subir a imagem oficial em `:8001` (log: `RAG pronto … try 2`) | **não é a causa** — falham igual |
+| ambiente do runner | reprodução local com `npm run ci:bootstrap` (mesmo `.env`, 43 chaves) e `main = origin/main` | **passam localmente** (98 s e 94 s) |
+| versão de Node | runner usa `NODE_VERSION_LTS: '20'`; local é **v22.12.0** | **hipótese aberta** — não testada nesta sessão |
+
+Fato medido que sustenta a hipótese aberta: no runner as duas terminam em **~3 s** com `BLOCKED` e **nenhuma
+chamada de provider** no log; localmente levam **78–98 s** e executam o pipeline inteiro. Nenhuma das duas
+pertence ao gate canônico (`tests/integration/engineering` não as alcança) — elas são do manifesto de
+release (`config/canonical-release-suites.json`), executado pelo runner de suítes, não pelo CI.
+
+### 11.7.8 O que o `main` mede hoje, em número
+
+```
+job `jest`            → 327/328 suítes PASS; 5385 testes; ÚNICA falha: modelDrivenE2e (artefato prod-like)
+job `jest-integration`→ 80/82 suítes PASS; 2 suítes ✕ (investigação aberta, hipótese Node 20)
+gate canônico (dev)   → PASS 3/3 jobs nos últimos commits do branch
+```
+
+Antes desta campanha: **0 suítes medidas** em `main` e um gate de integração que jamais chegava ao
+veredito. Isso é o que mudou — e o que ainda não mudou está nomeado acima, não escondido.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
@@ -918,7 +966,9 @@ DEPLOY                = NOT_AUTHORIZED
 L0b_CANONICO          = 40/40 SUITES · 234/234 TESTES PASS (amostra 9, exit 0; amostra 8 também verde — §9.3-nonies/decies)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
 CI_DO_MAIN (jest.yml) = 5 lacunas de AMBIENTE fechadas; 327/328 suítes PASS (1121 medidas na sonda);
-                        residual ÚNICA = modelDrivenE2e (artefato prod-like de outro job) — §11.7
+                        residual de unit = modelDrivenE2e (artefato prod-like de outro job) — §11.7
+CI_INTEGRACAO (jest.yml) = timeout que matava o job corrigido; 80/82 suítes PASS em 24-27 min;
+                        residual = 2 suítes do manifesto de release, hipótese ABERTA (Node 20) — §11.7.7
 GATE_CANONICO (dev)   = PASS nos 3 últimos commits do branch (prod-like-smoke + L0/L1 + integração real)
 MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só com autorização humana)
 ```
