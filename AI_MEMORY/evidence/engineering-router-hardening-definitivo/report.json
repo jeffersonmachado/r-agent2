@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "artifactType": "ENGINEERING_ROUTER_HARDENING_DEFINITIVO",
+  "generatedAt": "2026-10-25T18:20:00.000Z",
+  "branch": "codex/engineering-router-hardening-20261025",
+  "worktree": "/opt/results/ria/er-hardening",
+  "sourceSha": "29372d7a34d4653b10e7375480094fa787bded37",
+  "finalSha": "6e3f56f84",
+  "remote": {
+    "main": "04cad9c1b639cdae357687f7febf47e490834665",
+    "devEngineeringHardening": "29372d7a34d4653b10e7375480094fa787bded37",
+    "pushed": false
+  },
+  "commits": [
+    {
+      "sha": "92587151d",
+      "area": "P0-cadeia"
+    },
+    {
+      "sha": "5c0ec2c3b",
+      "area": "P1-decisao+P1-selo"
+    },
+    {
+      "sha": "ea7b96198",
+      "area": "revisao-adversarial"
+    },
+    {
+      "sha": "7f87aeedc",
+      "area": "checkout-limpo"
+    },
+    {
+      "sha": "871024cec",
+      "area": "bug-loop-concorrencia"
+    },
+    {
+      "sha": "f489994dd",
+      "area": "bug-loop-concorrencia-fix"
+    },
+    {
+      "sha": "382e0a2a4",
+      "area": "bug-loop-lease-fix-loop"
+    },
+    {
+      "sha": "85a0cc9de",
+      "area": "budget-timeout-mission-source"
+    },
+    {
+      "sha": "114e0cd7b",
+      "area": "achados-da-revisao-lease-escopo"
+    },
+    {
+      "sha": "6e3f56f84",
+      "area": "repo-do-servico-nos-testes+proveniencia"
+    },
+    {
+      "sha": "5e4519ca2",
+      "area": "log-de-recusa+fila-oficial"
+    }
+  ],
+  "findings": [
+    {
+      "id": "P0-CHAIN-CANONICAL-PATH",
+      "severity": "P0",
+      "reproduced": true,
+      "reproduction": "10 ids canonicos apontando para /tmp => verifyChain { valid: true, certifiable: true, failures: [] }",
+      "rootCause": "verifyChainHashes localizava o arquivo por link.path (dado verificado) + fallback por basename em dist/",
+      "fix": "caminhosCanonicos + verificarCaminhosCanonicos + verificarHashesCanonicos; fallback por basename removido",
+      "tests": "tests/unit/governance/governanceChainCanonicalPath.test.js (9/9)",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-DECISION-IDENTITY",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "clasificar({3 gates PASS, selado:true, certificado:true}) => CERTIFIED_GO com identity:null",
+      "fix": "identidade completa e valida obrigatoria para CERTIFIED_GO/PUBLISHED_VERIFIED",
+      "tests": "tests/unit/governance/canonicalReleaseDecisionIdentityContract.test.js (22/22)",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-SEAL-GIT-ADD-ALL",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "phase_verify_delivery: git add -A + commit 're-stampa lineage' + push da branch",
+      "fix": "allowlist derivada da taxonomia canonica + subconjunto rastreado (git ls-files)",
+      "tests": "tests/unit/governance/sealReleaseLineageRepair.test.js (12/12)",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P0-BASENAME-FALLBACK",
+      "severity": "P0",
+      "source": "revisao independente",
+      "result": "PASS",
+      "note": "reproducao do revisor reexecutada => valid:false (hash_from_canonical_mismatch)"
+    },
+    {
+      "id": "REVIEW-P1-REPAIR-IGNORED-PATHS",
+      "severity": "P1",
+      "source": "revisao independente",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P1-PARTIAL-IDENTITY-TEST",
+      "severity": "P1",
+      "source": "revisao independente",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P2-BARE-REPO-HERMETICITY",
+      "severity": "P2",
+      "source": "revisao independente",
+      "result": "PASS"
+    },
+    {
+      "id": "REVIEW-P2-EISDIR",
+      "severity": "P2",
+      "source": "revisao independente",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-BUG-LOOP-NO-LEASE",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "duas reproducoes concorrentes do mesmo finding: ambas executavam; a varredura externa devolvia o finding a SUSPECTED no meio da tentativa em curso (CAS: REPRODUCING -> CONFIRMED vs current SUSPECTED)",
+      "rootCause": "reproduce/confirmFinding nao tomavam o lease do finding; apenas runBugLoopSweep tomava",
+      "fix": "withFindingLeaseOwned unico; confirmFinding e reproduce sob posse; lease propagado pela varredura e por handleAnomaly; HTTP 409 na recusa",
+      "tests": "BUG-03b (concorrencia recusada), BUG-03c (varredura respeita posse), suite 25/25 em 5 execucoes, naturalPath E2E 45,4s PASS, autonomousLoop E2E 3/3",
+      "result": "PASS"
+    },
+    {
+      "id": "P2-BUG-LOOP-SWEEP-GLOBAL-COST",
+      "severity": "P2",
+      "reproduced": true,
+      "reproduction": "BUG-02 levava 53 789 ms de um orcamento de 60 000 ms varrendo a tabela global de findings; BUG-03c varria ate 200 findings alheios com runner FAIL (confirmando findings de outras suites)",
+      "rootCause": "runBugLoopSweep sem escopo: as tres consultas varrem a tabela inteira e cada finding paga lease + transicao + reproducao; custo O(estado acumulado)",
+      "fix": "opcao findingIds (default null = comportamento de producao inalterado) + ids em listFindings; os dois testes que varriam o mundo declaram escopo",
+      "tests": "engineeringBugLoop 26/26; BUG-02 53 789 ms -> 15 606 ms; suite 62,4 s -> 26,0 s"
+    },
+    {
+      "id": "P2-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
+      "severity": "P2",
+      "reproduced": true,
+      "reproduction": "Expected 484eee47 (targetHead do servico) vs Received 8dbaec15 (realHead do teste) em toda worktree; stdoutRef resolvido a partir de __dirname em vez da raiz do servico",
+      "rootCause": "testes resolviam 'o repositorio' por path.resolve(__dirname,'..','..'), enquanto os servicos usam ROOT de contextBuilderService (ENGINEERING_ROUTER_HOST_REPO_ROOT)",
+      "fix": "testes passam a medir a MESMA raiz do servico; assercoes identicas",
+      "tests": "engineeringPromotionService 10/10 + engineeringPatchApplyAndTestRunner 4/4 + L0b amostra 6"
+    },
+    {
+      "id": "P1-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
+      "severity": "P1",
+      "reproduced": true,
+      "reproduction": "finding com reproduction.strategy=DECLARED_TEST_COMMAND perde o campo na PRIMEIRA tentativa de reproducao (Expected DECLARED_TEST_COMMAND, Received undefined); qualquer processo que reproduza basta",
+      "rootCause": "markReproducing/markNotReproduced gravavam o PLANO DERIVADO no campo reproduction, substituindo o registro declarado pelo finding",
+      "fix": "plano entra POR CIMA do declarado nos tres caminhos (REPRODUCING, NOT_REPRODUCED COMMAND e INVARIANT)",
+      "tests": "engineeringBugLoop 32/32 com 2 regressoes novas (REPRODUCED e NOT_REPRODUCED preservam strategy/source)"
+    }
+  ],
+  "gates": {
+    "TIMEOUT_ARCHITECTURE": "GO",
+    "CRASH_RECOVERY": "GO",
+    "REAL_TASK_RECOVERY": "GO",
+    "RAG_INDEX_HEALTH": "HEALTHY",
+    "ENGINEERING_ROUTER_V2": "NO_GO",
+    "REQUIRED_TESTS": "FAIL_NOT_EXECUTED",
+    "RELEASE_CERTIFICATION": "NO_GO"
+  },
+  "timeoutInventory": {
+    "files": 2183,
+    "timeouts": 1133,
+    "legacyUnknown": 0,
+    "destructivePatterns": 5,
+    "criticalPatterns": 1
+  },
+  "regression": {
+    "l0": {
+      "suitesTotal": 1119,
+      "suitesExecuted": 1118,
+      "suitesPassed": 1116,
+      "suitesSkipped": 1,
+      "suitesFailed": 2,
+      "testsPassed": 9771,
+      "testsSkipped": 2,
+      "testsFailed": 2,
+      "failures": {
+        "tests/unit/governance/modelDrivenE2e.test.js": "ENVIRONMENT — depende do artefato do job prod-like-smoke",
+        "tests/unit/governance/regularizadorFilesystemAttacks.test.js B2": "FLAKY sob carga — 10,404 s no lote (timeout 10 s), PASS 316 ms isolado; nao tocado por este delta"
+      },
+      "note": "medido DEPOIS das correcoes de lease (antes destas, 2 suites de unidade quebravam por duble desatualizado)"
+    },
+    "rpa": {
+      "suites": 21,
+      "tests": 100,
+      "result": "PASS"
+    },
+    "bootBenchmark": {
+      "baseline": "78eaacc22",
+      "runs": [
+        "-45.0%",
+        "-27.5%",
+        "+4.8%"
+      ],
+      "note": "mediana ~-27%, ruido de cache quente declarado"
+    },
+    "cleanCheckout": {
+      "scenario": "clean",
+      "verdict": "FAIL",
+      "l0": "PASS no clone (492s)",
+      "l0b": "FAIL — engineeringBugLoop BUG-03 transicao concorrente; 12/12 isolado no mesmo SHA => FLAKY_UNDER_LOAD",
+      "fixesProduced": [
+        "re-base de caminho canonico (7f87aeedc)"
+      ]
+    },
+    "l0bCanonico": {
+      "shape": "npx jest tests/integration/engineering --bail=0 --runInBand --forceExit (forma canonica; o lote de 77 suites com --maxWorkers=2 e FORMA INVALIDA por config/canonical-release-suites.json e foi RETRATADO no relatorio 9.3-ter)",
+      "suitesTotal": 40,
+      "base": "2 suites / 3 testes falhando em 1131,6 s: engineeringPromotionService (2), engineeringPatchApplyAndTestRunner (1)",
+      "branchAmostra1": "4 suites / 6 testes: os 3 da base + ER-V1-SEAL-001, BUG-02 (timeout 60000ms), MISSION_SRC_14 (reconciled 0)",
+      "branchAmostra2": "2 suites / 3 testes — IDENTICO a base (1123,2 s); engineeringBugLoop PASS 58,065s; engineeringMissionSourceE2E PASS 11,992s",
+      "atribuicao": {
+        "engineeringPromotionService": "ENVIRONMENT — realHead() resolve o HEAD do repo principal (Expected 484eee4...) vs HEAD do worktree (Received 85a0cc9...)",
+        "engineeringPatchApplyAndTestRunner": "PRE-EXISTENTE — mesma assercao falhando na base: stdoutRef relativo ao runtime root, fora do repo",
+        "BUG-02": "INCONCLUSIVO/SOB CARGA — duas varreduras sobre a tabela global de findings (17 pending + 7 confirmed medidos); nao atribuido ao delta, nao declarado corrigido",
+        "MISSION_SRC_14": "INCONCLUSIVO/SOB CARGA — corrida com o Engineering Runner vivo do globalSetup pela reconciliacao de pending intents",
+        "ER-V1-SEAL-001": "INCONCLUSIVO/SOB CARGA — POST_PROMOTION_VERIFY_FAILED na amostra 1, PASS na amostra 2"
+      },
+      "conclusao": "as duas falhas permanentes da base foram corrigidas na raiz (testes mediam outro repositorio); resta 1 flake sob carga no laco de bug, com rastro de recusa por posse agora registrado",
+      "branchAmostra3": "69f044787 (escopo da varredura): 2 suites / 3 testes — IDENTICO a base (1147,8 s); engineeringBugLoop PASS 28,905s; engineeringMissionSourceE2E PASS 12,160s; naturalPath PASS 53,332s",
+      "branchAmostra4": "114e0cd7b (achados da revisao): 2 suites / 3 testes em 226 testes — IDENTICO a base (1122,7 s); bugLoop PASS 26,044s; missionSourceE2E PASS 9,621s; naturalPath PASS 45,087s; autonomousLoop PASS 40,482s",
+      "escopoDoGate": "L0b = npx jest tests/integration/engineering --runInBand (scripts/ci/dev-branch-gate.js:181); suites do grupo exclusivo fora desse glob (governanceApprovalFullWorkerE2E) tem prova isolada + BUG-03d",
+      "branchAmostra5": "e7601632d: 1 suite / 1 teste — engineeringMissionReviewEnforcement ADVERSARIAL_TO_BUG_LOOP (strategy undefined) = DEFEITO REAL de proveniencia (1573,0 s)",
+      "branchAmostra6": "6e3f56f84 (correcoes de raiz): 1 suite / 1 teste em 228 — engineeringBugLoop PROTECTED_GOVERNANCE_BASELINE (fixed:false em 559 ms) = flake sob carga, 14 execucoes isoladas 32/32 PASS; as 2 suites vermelhas da base NAO existem mais (1481,3 s)"
+    }
+  },
+  "externalBlocks": [
+    "test:release-authoritative recusa iniciar: P0/P1 historico aberto sem prova + RAP_CLOSURE_INVENTORY_SHA256 ausente (canal externo)",
+    "envelope V2 nao selado: selar sobre estado incompleto seria greenwashing"
+  ],
+  "verdicts": {
+    "DEVELOPMENT_VERIFIED": false,
+    "reason": "68 testes obrigatorios NOT_EXECUTED por bloqueio externo",
+    "MERGE": "NOT_AUTHORIZED",
+    "PUBLISH": "NOT_AUTHORIZED",
+    "DEPLOY": "NOT_AUTHORIZED",
+    "MAIN_MODIFIED": false
+  },
+  "regressionsIntroducedAndFixed": [
+    {
+      "what": "varredura se recusava a si mesma (lease adquirido 2x)",
+      "caughtBy": "engineeringBugLoopNaturalPathE2E (900s timeout)",
+      "fixedIn": "871024cec"
+    },
+    {
+      "what": "ReferenceError findingLease em handleAnomaly",
+      "caughtBy": "engineeringBugAutonomousLoopE2E",
+      "fixedIn": "f489994dd"
+    },
+    {
+      "what": "caminho handleAnomaly -> runFixLoop executava o coder 3x (fixAttempts 3 != 1) por falta de posse",
+      "caughtBy": "governanceApprovalFullWorkerE2E",
+      "fixedIn": "382e0a2a4",
+      "prova": "BUG-03d em tests/integration/engineeringBugLoop.test.js + E2E PASS 61,3s"
+    },
+    {
+      "what": "duas suites de unidade quebraram (withFindingLeaseOwned is not a function) porque o duble de bugFindingService nao conhecia a funcao nova; ao corrigir o duble, resetMocks apagou a implementacao de jest.fn() e o fix loop devolveu undefined — segundo erro medido",
+      "caughtBy": "npm run test:unit (bugLoopNonConvergenceGuard + governanceApprovalLifecycle, 10 testes)",
+      "fixedIn": "mesmo commit do escopo da varredura"
+    },
+    {
+      "what": "runFixLoop recusando por posse devolvia fixed:false sem nenhum rastro, indistinguivel de 'fix rodou e nao convergiu'",
+      "caughtBy": "diagnostico do L0b (falhas de ~300-500 ms sem motivo visivel)",
+      "fixedIn": "5e4519ca2"
+    }
+  ],
+  "retratacoes": [
+    "A tabela de atribuicao da rodada de integracao com 77 suites em --maxWorkers=2 foi retirada: forma de execucao invalida pelo contrato de estado global. Substituida pela comparacao canonica --runInBand (base vs branch, 3 amostras)."
+  ],
+  "finalCommitNote": "6e3f56f84 = ultimo commit de CODIGO; 5e4519ca2 e docs/fila; commits de evidencia seguem e nunca sao auto-referentes.",
+  "governanceSuites": "86/86 testes em 6 suites (governanceChainCanonicalPath, canonicalReleaseDecisionIdentityContract, sealReleaseLineageRepair, governanceChainAppearance/Certification/Contract) re-verificados no HEAD final",
+  "reviews": [
+    {
+      "scope": "api/services/engineeringMission/* + testes do laco de bug (delta de lease e escopo)",
+      "reviewer": "code-review independente",
+      "verdict": "FAIL",
+      "findings": [
+        {
+          "id": "REVIEW-P1-NOT-FOUND-VIRA-409",
+          "severity": "P1",
+          "result": "PASS",
+          "note": "finding inexistente respondia 409/200 'posse de outro worker'; acquireFindingLease agora distingue not_found; regressao nova nos 3 caminhos"
+        },
+        {
+          "id": "REVIEW-P2-HANDLEANOMALY-NULL",
+          "severity": "P2",
+          "result": "PASS",
+          "note": "reproduce podia devolver finding:null e handleAnomaly desreferenciava; guarda + FINDING_LEASE_MISMATCH + param findingLease removido; 2 testes novos"
+        },
+        {
+          "id": "REVIEW-P2-SCOPE-FAIL-OPEN",
+          "severity": "P2",
+          "result": "PASS",
+          "note": "findingIds []/invalido caia na varredura global; agora [] = escopo vazio, tipo invalido = INVALID_SWEEP_SCOPE"
+        },
+        {
+          "id": "REVIEW-P2-SCOPE-TRUNCATED",
+          "severity": "P2",
+          "result": "PASS",
+          "note": "escopo explicito era truncado por limit; com ids o limite e o tamanho do escopo"
+        }
+      ],
+      "residual": [
+        "duas implementacoes do ciclo de lease (withFindingLeaseOwned e withFindingLease); varredura HTTP sem workerInstanceId roda sem posse",
+        "lease_fence nao e validado nas escritas do finding"
+      ]
+    }
+  ]
+}

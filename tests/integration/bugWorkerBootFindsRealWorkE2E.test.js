@@ -46,6 +46,12 @@ const path = require('path');
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const bugFindingService = require('../../api/services/engineeringMission/bugFindingService');
+// DRENAGEM (defeito medido em 2026-10-26): `stopWorkers()` apenas PARA DE AGENDAR — o ciclo em voo
+// continua rodando e atravessa a fronteira da suíte. Com `--runInBand` todas as suítes dividem o
+// processo, então o sweep desta suíte seguia varrendo a tabela GLOBAL e tomava lease de findings de
+// suítes SEGUINTES, que falhavam em ~300-500 ms por "posse de outro worker". É o mesmo mecanismo que
+// `tests/helpers/drainEngineeringWorker.js` já resolve para naturalPath/governanceApproval.
+const { stopWorkerAndDrain } = require('../helpers/drainEngineeringWorker');
 const bugLoopWorker = require('../../api/services/engineeringMission/bugLoopWorker');
 
 const SUITE_NAME = 'bug-worker-boot-finds-real-work-e2e';
@@ -81,6 +87,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   try { require('../../api/runtime/startWorkers').stopWorkers(); } catch (_) { /* best-effort */ }
+  // Espera o ciclo em voo terminar: `stopWorkers` só limpa o timer.
+  await stopWorkerAndDrain({ timeoutMs: 120000 }).catch(() => { /* ciclo já drenado */ });
   if (dbAvailable) {
     const models = require('../../api/db/models');
     for (const id of createdFindingIds) {
@@ -186,6 +194,9 @@ describe('BOOT_TO_REAL_BUG_PROCESSING_E2E', () => {
     // ── SHUTDOWN LIMPO ───────────────────────────────────────────────────────
     const { stopWorkers } = require('../../api/runtime/startWorkers');
     stopWorkers();
+    // Para de agendar E espera o ciclo em curso: sem isso o sweep desta suíte continua vivo durante
+    // as suítes seguintes (medido: refusões por posse de ~300-500 ms em engineeringBugLoop).
+    await stopWorkerAndDrain({ timeoutMs: 120000 });
     const afterStop = bugLoopWorker.getBugLoopWorkerStatus();
     expect(afterStop.running).toBe(false);
     expect(afterStop.workerInstanceId).toBeNull();

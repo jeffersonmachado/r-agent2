@@ -64,13 +64,18 @@ env:
   NODE_VERSION_CURRENT: '22'
   RELEASE_GOVERNANCE_STRICT: ${{ github.event.inputs.strict_mode || 'true' }}
 
+# IMAGEM DE RUNNER FIXA (política do repositório desde 2026-10-26): `ubuntu-latest` passou a resolver
+# para ubuntu-26.04 e quebra a validação por AMBIENTE, não por código — `npx playwright install
+# --with-deps chromium` morre com "Playwright does not support chromium on ubuntu26.04-x64" e o systemd
+# do 26.04 mudou a redação de diagnósticos que suítes nossas asseveram. Medido no run 40303567233/40303874392
+# (dev-branch-ci). Imagem fixa até que Playwright e as asserções de mensagem suportem 26.04.
 jobs:
   # ===========================================================================
   # JOB 1: Build + Validação Core
   # ===========================================================================
   governance-core:
     name: "Governance Core (Node ${{ matrix.node-version }})"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # SHELL EXPLÍCITO COM `pipefail` (revisão independente + docs oficiais, 2026-10-24).
     #
@@ -324,7 +329,7 @@ jobs:
   # ===========================================================================
   governance-regression:
     name: "Regression Tests"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: []  # Independente — detecta regressões no próprio CI
     defaults:
       run:
@@ -381,7 +386,7 @@ jobs:
   # ===========================================================================
   anchors-attestation:
     name: "Atestação do preflight de âncoras"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - governance-core
     defaults:
@@ -445,7 +450,7 @@ jobs:
   # ===========================================================================
   release-gate:
     name: "Release Gate (bloqueio de tag/publish)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - governance-core
       - governance-regression

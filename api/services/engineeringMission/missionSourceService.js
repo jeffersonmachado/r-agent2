@@ -900,10 +900,29 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
       continue;
     }
 
-    if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT') {
+    if (decision.outcome === 'DIVERGENCE' || decision.outcome === 'DB_AHEAD_OF_GIT'
+      || decision.outcome === 'BLOCKED_REQUIRES_REPAIR') {
+      // DEFEITO MEDIDO (2026-10-27): `BLOCKED_REQUIRES_REPAIR` NÃO era persistido. O intent voltava
+      // ao scan da reconciliação em TODO boot, sem nunca sair de PREPARED/GIT_APPLIED/DB_APPLIED —
+      // pílula envenenada que consumia o orçamento do lote e deixava de fora o intent recém-crashado
+      // (medido: 138 missões varridas, 0 reconciliadas, backlog de 209 e o intent novo sem vez).
+      // "Requer reparo" É um estado terminal para a reconciliação AUTOMÁTICA — e é o que o próprio
+      // desfecho se chama.
       await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
         extra: { phase: decision.outcome, code: decision.code, reason: decision.reason, reconciledAt: new Date().toISOString() },
       });
+      // NÃO se marca o estado da MISSÃO aqui — decisão revertida por medição (revisão de 2026-10-28).
+      //
+      // A intenção era boa (quem opera lê a missão, não o intent), mas o RAIO DE DANO é grande demais:
+      // a classificação é feita contra o repositório DESTE processo. Num boot cujo repo não enxerga as
+      // refs de missão (clone novo, deploy sem as branches, processo apontando para repo sintético),
+      // TODA missão com intent não-terminal vira `BLOCKED_REQUIRES_REPAIR` — e passar a escrever
+      // `mission_source_state='RECOVERY_REQUIRED'` na missão marcaria como "requer reparo" missões que
+      // estão sadias, sem caminho de volta. Medido: mutação/probe marcaram missão alheia READY→
+      // RECOVERY_REQUIRED numa base compartilhada.
+      //
+      // A dívida continua VISÍVEL e sem esse risco pelo agregado do boot (`needsRepair`, contado de
+      // todas as linhas em RECOVERY_REQUIRED) — sinal global, sem tocar estado de missão individual.
     }
 
     outcomes.push({ intentId: intent.id, candidateCommit: String(intent.candidate_commit).slice(0, 12), ...decision });

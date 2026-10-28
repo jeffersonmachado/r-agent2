@@ -137,9 +137,48 @@ function sameCommand(a, b) {
  * Nunca declara FIXED por "task terminou": exige reprodução verde + testes direcionados verdes +
  * parecer aprovado + execuções de regressão.
  */
-async function runFixLoop(findingId, {
+/**
+ * EXECUÇÃO DO FIX sob POSSE do finding.
+ *
+ * DEFEITO MEDIDO (2026-10-25, `governanceApprovalFullWorkerE2E` na bateria): depois do aval humano o
+ * coder foi executado TRÊS vezes (`fixAttempts.length` esperado 1, recebido 3). Causa: `runFixLoop`
+ * chegava por `handleAnomaly` SEM lease, então a varredura podia pegar o mesmo finding e rodar o fix
+ * em paralelo — duplicação de efeitos exatamente no caminho que a missão manda impedir.
+ *
+ * A partir daqui o fix loop adquire o lease quando ninguém o detém; a varredura já o passa adiante.
+ * Posse de outro worker ⇒ recusa explícita (`FINDING_LEASE_HELD_BY_OTHER_WORKER`), nunca execução dupla.
+ */
+async function runFixLoop(findingId, opcoes = {}) {
+  const { findingLease = null, workerInstanceId = null, ...resto } = opcoes;
+  const dono = await bugFindingService.withFindingLeaseOwned(
+    findingId,
+    { lease: findingLease, workerInstanceId },
+    async ({ lease }) => executarFixLoop(findingId, { ...resto, findingLease: lease, workerInstanceId }),
+  );
+  if (dono && dono.skipped) {
+    // Recusa por posse é evento OPERACIONAL: sem esta linha, um fix que NÃO rodou fica
+    // indistinguível de um fix que rodou e não convergiu (mesmo `fixed:false`, causas opostas).
+    logger.warn('[bugLoopCoordinator] fix recusado: finding sob posse de outro worker', {
+      findingId, worker: dono.lease?.worker || null, expiresAt: dono.lease?.expiresAt || null,
+    });
+    return {
+      finding: null,
+      executed: false,
+      fixed: false,
+      blocked: true,
+      stage: 'LEASE_HELD_BY_OTHER_WORKER',
+      code: 'FINDING_LEASE_HELD_BY_OTHER_WORKER',
+      reason: `finding ${findingId} está sob posse de outro worker — o fix não pode rodar em paralelo`,
+      lease: dono.lease || null,
+    };
+  }
+  return dono;
+}
+
+async function executarFixLoop(findingId, {
   actor = null, tenantId = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   credentialScope = undefined, specFreshnessGuard = null, missionLease = null, secondaryFindings = [],
+  findingLease = null,
 } = {}) {
   const finding = await bugFindingService.getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
@@ -207,6 +246,7 @@ async function runFixLoop(findingId, {
       // o histórico das tentativas: quem for destravar não recomeça do zero.
       await bugFindingService.blockFinding(findingId, {
         actor,
+        lease: findingLease,
         dependency: 'BUG_FIX_NOT_CONVERGING',
         evidence: [bugFindingService.makeEvidence({
           type: 'LOG_CORRELATION',
@@ -365,6 +405,7 @@ async function runFixLoop(findingId, {
 
     await bugFindingService.markFixed(findingId, {
       actor,
+      lease: findingLease,
       reproductionPassed,
       targetedTestsPassed,
       reviewPassed,
@@ -401,7 +442,7 @@ async function runFixLoop(findingId, {
   let regressionValidated = false;
   let regressionError = null;
   try {
-    await bugFindingService.markRegressionValidated(findingId, { actor, runs, tenantId });
+    await bugFindingService.markRegressionValidated(findingId, { actor, runs, tenantId, lease: findingLease });
     regressionValidated = true;
   } catch (err) {
     regressionError = { code: err.code, message: err.message };
@@ -436,7 +477,7 @@ async function runFixLoop(findingId, {
       });
     }
     try {
-      await bugFindingService.closeFinding(findingId, { actor, reason: 'reprodução verde + testes + parecer + regressão', tenantId });
+      await bugFindingService.closeFinding(findingId, { actor, reason: 'reprodução verde + testes + parecer + regressão', tenantId, lease: findingLease });
       closed = true;
     } catch (err) {
       regressionError = { code: err.code, message: err.message };
@@ -866,8 +907,16 @@ async function handleAnomaly(input = {}, {
   if (autoReproduce) {
     const plan = bugReproductionService.buildPlan(finding);
     if (plan.kind !== 'UNAVAILABLE') {
+      // O `lease` repassado é de OUTRO finding por construção (o finding aqui é recém-registrado), então
+      // não é herdado: `reproduce` adquire a posse do finding novo. Recusa por posse devolve
+      // `finding: null` — tratada explicitamente, nunca desreferenciada.
       const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
       report.reproduced = reproduction.outcome;
+      if (reproduction.skipped || !reproduction.finding) {
+        report.outcome = reproduction.outcome || 'SKIPPED_LEASE_HELD';
+        report.skipped = true;
+        return report;
+      }
       finding = reproduction.finding;
     } else {
       report.reproduced = 'PLAN_UNAVAILABLE';
@@ -1093,55 +1142,60 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
  * Idempotente: nunca duplica task e nunca reabre ciclo já fechado.
  */
 /**
- * POSSE DURÁVEL de um finding durante o processamento (§“dois workers não corrigem o mesmo
- * finding”). Lease adquirido por CAS no banco + heartbeat enquanto o trabalho roda + fence
- * monotônico; se o processo morrer, o lease EXPIRA e o próximo worker assume — sem lease vitalício
- * e sem posse por PID/tempo local.
+ * POSSE DURÁVEL de um finding durante a varredura — DELEGAÇÃO, não segunda implementação.
  *
- * `workerInstanceId` ausente (chamadas administrativas/testes) mantém o comportamento sem posse,
- * explicitamente, em vez de fingir exclusividade.
+ * DEFEITO MEDIDO (2026-10-26, revisão adversarial): existiam DUAS implementações do mesmo ciclo
+ * (adquirir → heartbeat → liberar → fence) — esta e `bugFindingService.withFindingLeaseOwned` — com
+ * semânticas divergentes (aqui, `workerInstanceId` ausente rodava SEM posse; lá, sem identidade
+ * declarada a operação adquiria a própria). Duas cópias do ciclo de vida significam duas chances de
+ * divergir: a segunda já não tinha o vínculo `lease.findingId` que a primeira ganhou.
+ *
+ * A autoridade única passou a ser `withFindingLeaseOwned`; esta função preserva o contrato do
+ * chamador (varredura administrativa sem identidade roda SEM posse, explicitamente) e devolve a
+ * mesma forma de recusa (`{ skipped, code, lease }`).
  */
 async function withFindingLease(findingId, workerInstanceId, fn, { ttlMs = null } = {}) {
   if (!workerInstanceId) return fn({ lease: null });
-  let lease;
-  try {
-    lease = await bugFindingService.acquireFindingLease(findingId, { workerInstanceId, ...(ttlMs ? { ttlMs } : {}) });
-  } catch (err) {
-    if (err.code === 'FINDING_LEASE_HELD_BY_OTHER_WORKER') return { skipped: true, code: err.code, lease: err.lease };
-    throw err;
-  }
-  const ttl = ttlMs || bugFindingService.DEFAULT_LEASE_TTL_MS;
-  const heartbeat = setInterval(() => {
-    bugFindingService.heartbeatFindingLease(findingId, { token: lease.token, ttlMs: ttl }).catch((err) => {
-      logger.warn('[bugLoopCoordinator] heartbeat do lease do finding falhou', { findingId, code: err.code || null });
-    });
-  }, Math.max(5000, Math.floor(ttl / 3)));
-  if (typeof heartbeat.unref === 'function') heartbeat.unref();
-  try {
-    return await fn({ lease });
-  } finally {
-    clearInterval(heartbeat);
-    await bugFindingService.releaseFindingLease(findingId, { token: lease.token }).catch(() => {});
-  }
+  return bugFindingService.withFindingLeaseOwned(findingId, { workerInstanceId, ttlMs }, fn);
 }
 
 async function runBugLoopSweep({
   limit = 10, actor = 'SYSTEM:BUG_LOOP', tenantId = null, autoFix = true,
   runner = bugReproductionService.defaultRunner, invariantResults = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   allowedPaths = null, policy = null, resumeMission = true, workerInstanceId = null,
+  // ESCOPO EXPLÍCITO (§9.3-quater da evidência da missão): sem esta opção a varredura é GLOBAL — o que é
+  // o comportamento de produção — e o custo cresce com o estado acumulado da tabela (medido: BUG-02
+  // levava 53,8 s de 60 s de orçamento só varrendo findings alheios). Com `findingIds` a operação fica
+  // limitada aos findings pedidos, e quem varre um conjunto conhecido não reprocessa o resto.
+  findingIds = null,
 } = {}) {
   const summary = { scanned: 0, confirmed: 0, triaged: 0, fixed: 0, awaitedApproval: 0, resumed: 0, blockedRecursive: 0, leaseSkipped: 0, items: [] };
+  // SEMÂNTICA FECHADA: ausência de escopo (`null`/`undefined`) = varredura GLOBAL, explícita. Lista
+  // VAZIA não pode virar "o mundo inteiro" — quem pediu nenhum finding recebe nenhum (fail-closed), e
+  // tipo inválido é erro de contrato, não varredura global silenciosa.
+  if (findingIds !== null && findingIds !== undefined && !Array.isArray(findingIds)) {
+    const err = new Error('`findingIds` deve ser array de ids ou null para varredura global');
+    err.code = 'INVALID_SWEEP_SCOPE';
+    err.detail = { findingIdsType: typeof findingIds };
+    throw err;
+  }
+  const escopoVazio = Array.isArray(findingIds) && findingIds.length === 0;
+  if (escopoVazio) return summary;
+  const escopo = Array.isArray(findingIds) ? { ids: findingIds } : {};
 
-  const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit });
+  const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit, ...escopo });
   for (const finding of pending) {
     summary.scanned += 1;
-    const owned = await withFindingLease(finding.id, workerInstanceId, async () => {
+    const owned = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
       const plan = bugReproductionService.buildPlan(finding);
       if (plan.kind === 'UNAVAILABLE') {
         // Motivo EXPLÍCITO persistido na derivação: nunca um silêncio que finge ausência de plano.
         return { action: 'NO_REPRODUCTION_PLAN', detail: finding.reproduction?.derivation?.reason || plan.rationale || null };
       }
-      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
+      // O LEASE DA VARREDURA é passado adiante: `reproduce`/`confirmFinding` são donos da posse e não
+      // podem readquiri-la com outra identidade (fariam a própria varredura ser recusada — medido no
+      // E2E do caminho natural, que parava de progredir).
+      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults, lease });
       if (reproduction.outcome === 'REPRODUCED') summary.confirmed += 1;
       return { action: 'REPRODUCED', outcome: reproduction.outcome };
     });
@@ -1153,7 +1207,7 @@ async function runBugLoopSweep({
     summary.items.push({ findingId: finding.id, ...owned });
   }
 
-  const confirmed = await bugFindingService.listFindings({ status: ['CONFIRMED', 'FIXING'], limit });
+  const confirmed = await bugFindingService.listFindings({ status: ['CONFIRMED', 'FIXING'], limit, ...escopo });
   for (const finding of confirmed) {
     // Finding de missão de VERIFICAÇÃO/teste é registrado e auditável, mas não vira item de correção:
     // corrigir uma missão de prova seria trabalho sobre um artefato de verificação, não sobre o produto.
@@ -1181,7 +1235,7 @@ async function runBugLoopSweep({
       continue;
     }
     if (!finding.fix_task_id) {
-      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
         const triage = await bugTriageService.triage(finding.id, { actor, tenantId, allowedPaths, policy });
         if (triage.requiresHumanApproval || triage.requiresNonApplicationAction) {
           return {
@@ -1192,7 +1246,7 @@ async function runBugLoopSweep({
           };
         }
         if (!autoFix) return { triaged: true, action: 'TRIAGED', taskId: triage.fixTask?.id || null };
-        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts, findingLease: lease });
         if (fix.blocked) {
           return {
             action: fix.stage === 'AWAITING_GOVERNANCE_APPROVAL' ? 'AWAITING_GOVERNANCE_APPROVAL' : 'AWAITING_HUMAN_APPROVAL',
@@ -1215,8 +1269,8 @@ async function runBugLoopSweep({
       continue;
     }
     if (finding.status === 'FIXING' && autoFix) {
-      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
-        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts, findingLease: lease });
         return { action: 'FIX_LOOP_RESUME', status: fix.finding?.status || null, closed: Boolean(fix.executed && fix.closed) };
       });
       if (outcome?.skipped) {
@@ -1234,7 +1288,7 @@ async function runBugLoopSweep({
   // substituta sob lease). Idempotente pela linhagem persistida e resiliente a crash: se o processo
   // morreu entre o fechamento e o resume, o próximo worker assume e conclui.
   if (resumeMission) {
-    const closedFindings = await bugFindingService.listFindings({ status: ['CLOSED'], limit });
+    const closedFindings = await bugFindingService.listFindings({ status: ['CLOSED'], limit, ...escopo });
     for (const finding of closedFindings) {
       if (!finding.mission_id) continue;
       const recorded = await isMissionResumeRecorded(finding.mission_id, finding.id);

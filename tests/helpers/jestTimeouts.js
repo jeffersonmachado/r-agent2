@@ -21,4 +21,18 @@
  */
 const TIMEOUT_BOOT_APP_MS = 60000;
 
-module.exports = { TIMEOUT_BOOT_APP_MS };
+/**
+ * ORÇAMENTO DE SUÍTE DE INTEGRAÇÃO COM I/O REAL (git, Postgres, Docker).
+ *
+ * O default do projeto é 10 s (`jest.config.cjs`). Medido em 2026-10-25 na bateria de 77 suítes com 2
+ * workers: `engineeringMissionSourceE2E` reprovou com `Exceeded timeout of 10000 ms` numa suíte que
+ * passa 15/15 isolada — o teste faz `git` real e reconciliação de boot. O próprio repositório já
+ * registrou esse diagnóstico em `engineeringBugLoop.test.js` ("rodando em lote … estourou 10s e o
+ * `bail: 1` abortou o lote inteiro sem sequer produzir o relatório do Jest").
+ *
+ * É TETO DE ESPERA, não expectativa de comportamento: nenhuma asserção muda. 60 s ainda reprova um
+ * teste que trave de verdade.
+ */
+const TIMEOUT_INTEGRATION_IO_MS = 60000;
+
+module.exports = { TIMEOUT_BOOT_APP_MS, TIMEOUT_INTEGRATION_IO_MS };

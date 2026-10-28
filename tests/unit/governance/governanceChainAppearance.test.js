@@ -33,6 +33,7 @@ const {
   buildChain,
   certifyChain,
   verifyChain,
+  verifyChainHashes,
   avaliarEstadoDaCadeia,
   elosPorClasse,
   sha256File,
@@ -179,7 +180,7 @@ describe('(2) CONTRADIÇÃO — declarar validade contra a recalculação é FAI
     const chain = cadeiaCoerente({ certificada: true });
     fs.writeFileSync(alvoAbs('b.json'), JSON.stringify({ elo: 'b', v: 'ALTERADO depois do hash' }));
 
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimeAnterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimeAnterior });
     expect(estado.status).toBe('FAIL');
     expect(estado.recalculadaIntegra).toBe(false);
     expect(estado.autoDeclaracao).toBe('FALSA');
@@ -194,7 +195,7 @@ describe('(2) CONTRADIÇÃO — declarar validade contra a recalculação é FAI
     chain.missingLayers = [];
     fs.writeFileSync(alvoAbs('a.json'), '{ "elo": "a", "v": 2 }');
 
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimeAnterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimeAnterior });
     expect(estado.status).not.toBe('PASS');
     expect(estado.autoDeclaracao).toBe('FALSA');
   });
@@ -203,7 +204,7 @@ describe('(2) CONTRADIÇÃO — declarar validade contra a recalculação é FAI
     const chain = cadeiaCoerente();
     chain.valid = true;               // declara validade
     chain.certification = null;       // mas não diz quem certificou nem quando
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimeAnterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimeAnterior });
     expect(estado.status).toBe('FAIL');
     expect(estado.autoDeclaracao).toBe('SEM_CERTIFICACAO');
     expect(estado.codes).toContain('AUTO_DECLARACAO_DE_VALIDADE_SEM_CERTIFICACAO');
@@ -211,7 +212,7 @@ describe('(2) CONTRADIÇÃO — declarar validade contra a recalculação é FAI
 
   it('cadeia coerente e certificada, sem escritas posteriores ⇒ PASS', () => {
     const chain = cadeiaCoerente({ certificada: true });
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimeAnterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimeAnterior });
     expect(estado.status).toBe('PASS');
     expect(estado.autoDeclaracao).toBe('VALIDA');
     expect(estado.codes).toEqual([]);
@@ -219,7 +220,7 @@ describe('(2) CONTRADIÇÃO — declarar validade contra a recalculação é FAI
 
   it('cadeia íntegra mas apenas construída (não certificada) ⇒ PASS sem auto-declaração', () => {
     const chain = cadeiaCoerente({ certificada: false });
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimeAnterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimeAnterior });
     expect(estado.status).toBe('PASS');
     expect(estado.autoDeclaracao).toBe('AUSENTE');
   });
@@ -231,7 +232,7 @@ describe('(3) TEMPO — escritas posteriores à certificação', () => {
     // antiga reprovava. Conteúdo comprovadamente igual (mesmo hash) não invalida
     // certificação alguma — reprovar ali é falso NO_GO.
     const chain = cadeiaCoerente({ certificada: true, checkedAt: '2026-10-16T00:00:00.000Z' });
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimePosterior });
     expect(estado.status).toBe('PASS');
     expect(estado.codes).not.toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
     expect(estado.escritasPosteriores.ids.sort()).toEqual(['blocker_engine', 'consistency_report', 'cross_report', 'evidence_manifest', 'final_proof_report', 'final_readiness', 'package', 'package_validation', 'proof_signature', 'sidecar_manifest'].sort());
@@ -243,7 +244,7 @@ describe('(3) TEMPO — escritas posteriores à certificação', () => {
     const chain = cadeiaCoerente({ certificada: true, checkedAt: '2026-10-16T00:00:00.000Z' });
     // Bytes realmente trocados DEPOIS da certificação, e mtime posterior.
     fs.writeFileSync(alvoAbs('b.json'), JSON.stringify({ elo: 'b', v: 'TROCADO' }));
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimePosterior });
     expect(estado.status).toBe('FAIL');
     expect(estado.codes).toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
     expect(estado.escritasPosteriores.comConteudoAlterado).toEqual(['sidecar_manifest']);
@@ -254,7 +255,7 @@ describe('(3) TEMPO — escritas posteriores à certificação', () => {
     const chain = cadeiaCoerente({ certificada: true, checkedAt: '2026-10-16T00:00:00.000Z' });
     chain.generatedAt = '2026-01-01T00:00:00.000Z';
     fs.writeFileSync(alvoAbs('a.json'), '{ "elo": "a", "v": 9 }');
-    const estado = avaliarEstadoDaCadeia(chain, { lerMtime: mtimePosterior });
+    const estado = avaliarEstadoDaCadeia(chain, { verificar: verifyChainHashes, lerMtime: mtimePosterior });
     expect(estado.codes).toContain('CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA');
   });
 });
@@ -262,7 +263,7 @@ describe('(3) TEMPO — escritas posteriores à certificação', () => {
 describe('certifyChain — recalcula antes de rotular', () => {
   it('cadeia coerente ⇒ CERTIFICADA com data e raiz medidas', () => {
     const chain = cadeiaCoerente();
-    const r = certifyChain(chain, { origem: 'teste', agora: '2026-10-16T12:00:00.000Z' });
+    const r = certifyChain(chain, { origem: 'teste', agora: '2026-10-16T12:00:00.000Z', verificar: verifyChainHashes });
     expect(r.certificada).toBe(true);
     expect(chain.valid).toBe(true);
     expect(chain.verification).toBe('RECALCULADA_INTEGRA');
@@ -275,7 +276,7 @@ describe('certifyChain — recalcula antes de rotular', () => {
   it('cadeia divergente ⇒ NÃO certifica, grava DIVERGENTE e mantém valid=false', () => {
     const chain = cadeiaCoerente();
     fs.writeFileSync(alvoAbs('a.json'), '{ "elo": "a", "v": 99 }');
-    const r = certifyChain(chain, { origem: 'teste', agora: '2026-10-16T12:00:00.000Z' });
+    const r = certifyChain(chain, { origem: 'teste', agora: '2026-10-16T12:00:00.000Z', verificar: verifyChainHashes });
     expect(r.certificada).toBe(false);
     expect(chain.valid).toBe(false);
     expect(chain.verification).toBe('RECALCULADA_DIVERGENTE');
@@ -322,9 +323,19 @@ describe('fiação — os gates consomem o veredito recalculado, nunca o campo p
   });
 
   it('verifyChain continua sendo a autoridade de hash usada pela avaliação', () => {
+    // A fixture vive FORA da árvore canônica de propósito (não polui o repositório). O que este
+    // teste mede é a MATEMÁTICA de hash: elo alterado ⇒ raiz não confere. Desde a missão de
+    // 2026-10-25, `verifyChain` TAMBÉM exige que cada id aponte para o caminho canônico — contrato
+    // coberto por `governanceChainCanonicalPath.test.js`, que constrói a cadeia sobre os arquivos
+    // canônicos reais.
     const chain = cadeiaCoerente({ certificada: true });
-    expect(verifyChain(chain).valid).toBe(true);
+    expect(verifyChainHashes(chain).valid).toBe(true);
     fs.writeFileSync(alvoAbs('a.json'), 'x');
+    expect(verifyChainHashes(chain).valid).toBe(false);
+
+    // E o contrato canônico REPROVA esta fixture (caminhos fora da árvore) — prova de que a
+    // autoridade de certificação não é a matemática isolada.
     expect(verifyChain(chain).valid).toBe(false);
+    expect(verifyChain(chain).structuralFailures.map((f) => f.reason)).toContain('path_not_canonical');
   });
 });

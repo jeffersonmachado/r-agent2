@@ -873,16 +873,50 @@ phase_verify_delivery() {
     ok "entrega verificada pelo juiz estrito ($(grep -oE 'code=[A-Z_]+' "$vlog" | tail -1 || echo ''))"
   else
     warn "entrega não verificada — repetindo o reparo de lineage"
-    node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp2.log" 2>&1
-    git add -A >/dev/null 2>&1
-    git commit -q -m "fix(governance): re-stampa lineage clobberado pela varredura agregada" >/dev/null 2>&1
-    # O reparo persiste na branch ATUAL. Sem push embutido para `main`: o selo não
-    # publica em branch protegida nem empurra ref que não seja a que está em uso
-    # (era `git push origin main` — medido e removido em 2026-10-16).
-    local branch_atual
-    branch_atual="$(git rev-parse --abbrev-ref HEAD)"
-    if [ "$branch_atual" != "main" ] && [ "$branch_atual" != "master" ] && [ "$branch_atual" != "HEAD" ]; then
-      git push origin "$branch_atual" -q >/dev/null 2>&1 || warn "push do reparo de lineage falhou (não bloqueante)"
+
+    # ALLOWLIST OBRIGATÓRIA (missão 2026-10-25 §5). Aqui era `git add -A`: qualquer
+    # alteração alheia ao reparo entrava num commit com mensagem de lineage — e era
+    # empurrada. Agora o reparo só toca os artefatos que o estampador escreve (lista
+    # derivada da MESMA taxonomia canônica) e, se houver QUALQUER outro caminho sujo,
+    # o reparo inteiro é recusado: nada é staged, nada é commitado, nada é empurrado.
+    local reparo_json
+    if ! reparo_json="$(node scripts/governance/lib/lineage-repair.js)"; then
+      fail "reparo de lineage RECUSADO: worktree tem alteração não autorizada ($(printf '%s' "$reparo_json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).motivo||'')}catch{console.log('')}})"))" "$LOG_DIR/stamp2.log" verify-delivery
+    fi
+    local reparo_staged
+    reparo_staged="$(printf '%s' "$reparo_json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{console.log(JSON.parse(d).staged?'1':'0')}catch{console.log('0')}})")"
+
+    if [ "$reparo_staged" = "1" ]; then
+      node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp2.log" 2>&1
+      # `git add -- <caminhos>` (nunca `-A`): só o que a allowlist autoriza E o git rastreia.
+      # Artefato derivado é IGNORADO por `.gitignore` — `git add` o recusaria (exit 1) e, se
+      # forçado com `-f`, contrariaria a política de ignore. Reparo commita só o versionado.
+      local caminhos=()
+      while IFS= read -r caminho; do
+        [ -n "$caminho" ] && [ -e "$caminho" ] && caminhos+=("$caminho")
+      done < <(node scripts/governance/lib/lineage-repair.js --rastreados)
+      if [ "${#caminhos[@]}" -eq 0 ]; then
+        warn "reparo de lineage sem arquivos existentes para estagiar"
+      else
+        git add -- "${caminhos[@]}" || fail "falha ao estagiar a allowlist do reparo de lineage" "$LOG_DIR/stamp2.log" verify-delivery
+        if git diff --cached --quiet; then
+          warn "reparo de lineage: nada mudou depois do re-stamp"
+        else
+          git commit -q -m "fix(governance): re-stampa lineage clobberado pela varredura agregada" || \
+            fail "falha ao commitar o reparo de lineage" "$LOG_DIR/stamp2.log" verify-delivery
+          # O reparo persiste na branch ATUAL. Sem push embutido para `main`: o selo não
+          # publica em branch protegida nem empurra ref que não seja a que está em uso
+          # (era `git push origin main` — medido e removido em 2026-10-16).
+          local branch_atual
+          branch_atual="$(git rev-parse --abbrev-ref HEAD)"
+          if [ "$branch_atual" != "main" ] && [ "$branch_atual" != "master" ] && [ "$branch_atual" != "HEAD" ]; then
+            git push origin "$branch_atual" -q >/dev/null 2>&1 || warn "push do reparo de lineage falhou (não bloqueante)"
+          fi
+        fi
+      fi
+    else
+      warn "reparo de lineage: nada a reparar (nenhum artefato da allowlist está sujo)"
+      node scripts/governance/stamp-report-lineage.js > "$LOG_DIR/stamp2.log" 2>&1
     fi
     if node scripts/governance/verify-delivery-strict.js > "$vlog" 2>&1; then
       ok "entrega verificada após reparo de lineage"
