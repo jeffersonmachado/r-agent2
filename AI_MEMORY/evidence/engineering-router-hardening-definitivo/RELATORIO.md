@@ -690,6 +690,34 @@ executado no L0, não uma execução real neste PR.
 
 ---
 
+## 11.3 Varredura de validadores executáveis no HEAD `5992186ec`
+
+Executados um a um (exit code real), porque "o agregado passa" não é afirmação que se faça de memória:
+
+| Validador | Exit | Resultado |
+|---|---|---|
+| `validate:route-mounts` | 0 | PASS — 63 declarados, 63 montados |
+| `validate:release-dag` | 0 | PASS — 29 nós, 25 artefatos, 0 ciclos |
+| `validate:layer-conventions` | 0 | 0 criticals, 0 errors (o `engine/` foi zerado em ciclos anteriores) |
+| `validate:timeout-architecture` | 0 | GREEN |
+| `validate:state-sync` | 0 | PASS — 22 arquivos, 24 ocorrências, 0 violações |
+| `validate:stack-versions` | 0 | PASS — menu, rota e handler de versão presentes |
+| `validate:ai-memory` | 0 | PASS |
+| `validate:worktree-integrity` | 0 | PASS |
+| `validate:hardening-queue` | 0 | PASS — 6 abertos, todos `blocked_external` |
+| `validate:engineering-router-v1` | 0 | PASS — 183 checks, 0 falhas |
+| `validate:anti-greenwashing` | 0 | **PASS — 91 suítes, 0 violações** (nenhum teste meu é `.skip`/`.only`) |
+| `validate:model-field-contracts` | 0 | PASS |
+| `validate:invariants` | 0 | PASS |
+| `validate:runtime` | **1** | FAIL em `/channel-health` (6 requisições de rede falharam) — **NÃO atribuível a este delta**: o app medido em `127.0.0.1:5173` é servido por `vite` a partir do **outro checkout** (`/opt/results/ria/r-agent2/frontend`, commit `484eee478`), não desta worktree. Registrado como estado da instância viva, não como regressão do PR |
+| `validate:required-tests` | **1** | `V2-01..` NÃO provados — mesma cascata do bloqueio externo (§7.1): sem `release-suite-execution.json` nada é "provado" |
+| `validate:bug-closure-status` | **1** | `FECHAMENTO_NAO_PROVADO` — 142 defeitos **históricos** (P0-1..P1-17, H9..H20, DEF-…) declaram fechamento sem prova válida; `authoritative=false`. **Nenhum item deste delta está na lista** (verificado: zero ids `ENG-*`) e é exatamente a dívida P0/P1 histórica que faz o `test:release-authoritative` recusar iniciar |
+
+Nenhum validador falhou por causa deste delta. Os três vermelhos são: um medindo OUTRO checkout, e dois
+declarando a mesma dívida histórica que o §7.1 já registra como bloqueio externo.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
