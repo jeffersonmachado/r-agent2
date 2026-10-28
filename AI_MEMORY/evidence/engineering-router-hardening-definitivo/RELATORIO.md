@@ -398,6 +398,7 @@ Mesmo comando, `--runInBand`, 40 suítes, banco real, QUATRO amostras:
 | branch amostra 6 (`6e3f56f84`, com §9.3-quinquies e §9.3-sexies) | 1/40 | 1/228 | `engineeringBugLoop` PROTECTED_GOVERNANCE_BASELINE (`fixed:false` em 559 ms) — **flake sob carga**, 14 execuções isoladas do arquivo 32/32 PASS depois; as duas falhas permanentes da base **não existem mais** — 1481,3 s |
 | branch amostra 7 (`76a31030c`, fencing do lease) | 1/40 | 1/230 | `engineeringMissionSourceE2E` MISSION_SRC_14 (`reconciled=0`) — **não era flake**: starvation da reconciliação de boot (§9.3-nonies) — 1265,1 s |
 | branch amostra 8 (`0e0f33e53`, com os 3 achados da 3ª revisão) | **0/40** | **0/230** | **L0b 100% VERDE** — 1252,4 s |
+| branch amostra 9 (`2ce574859`, com os 3 achados da 4ª revisão: drenagem no SQL, `needsRepair`, fencing provado) | **0/40** | **0/234** | **L0b 100% VERDE** — 2144,6 s (2 execuções canônicas consecutivas verdes) |
 
 `engineeringBugLoop` foi **PASS 58,065 s** (amostra 2), **PASS 28,905 s** (amostra 3, com escopo) e **PASS 26,044 s** (amostra 4, com as correções da revisão);
 `engineeringMissionSourceE2E` **PASS 11,992 s** e **PASS 12,160 s**; `engineeringBugLoopNaturalPathE2E`
@@ -704,7 +705,7 @@ RELEASE_CERTIFICATION = NO_GO
 MERGE                 = NOT_AUTHORIZED
 PUBLISH               = NOT_AUTHORIZED
 DEPLOY                = NOT_AUTHORIZED
-L0b_CANONICO          = 40/40 SUITES · 230/230 TESTES PASS (amostra 8, exit 0 — §9.3-nonies)
+L0b_CANONICO          = 40/40 SUITES · 234/234 TESTES PASS (amostra 9, exit 0; amostra 8 também verde — §9.3-nonies/decies)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
 MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só com autorização humana)
 ```
