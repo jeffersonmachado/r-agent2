@@ -115,6 +115,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # IDENTIDADE GIT (medido 2026-10-28, run 40735242329): `releaseTagPolicyBlock` exercita
+      # `create-release-tag.sh` em repositórios reais e faz `git commit`; sem `user.name`/`user.email`
+      # o git sai 128 e o teste lê "erro de git" onde deveria ler o código de política (3). Os três
+      # cenários reprovavam por isso. Mesmo passo do `dev-branch-ci`.
+      - name: Identidade git (commits reais nos cenários de teste)
+        run: |
+          git config --global user.email "ci-runner@r-agent2.invalid"
+          git config --global user.name "RAP CI Runner"
+          git config --get user.email
+
       # IMAGEM DO EXECUTION SANDBOX (mesma causa medida em 2026-10-21 no dev-branch-ci, run
       # 39593921911, e de novo aqui em 2026-10-28, run 40730595851): sem a imagem
       # `r-agent2-engineering-router-sandbox:latest`, `engineeringRouterExecutionSandboxSecurity`
@@ -125,24 +135,23 @@ jobs:
       - name: Construir a imagem do Execution Sandbox
         run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
 
-      # ESQUEMA COMPLETO ANTES DA SUÍTE (medido 2026-10-28, run 40728206519): com o banco presente
-      # mas sem migrations, as suítes que exercitam a autoridade contra Postgres morrem em
-      # `relation "mcp_connections" does not exist` (17 testes em `tests/unit/mcp/mcpDiscoveryReal`).
-      # Banco vazio não é banco: sem este passo o job reprova por ESQUEMA AUSENTE, não por código.
-      # Mesma etapa já usada por `jest-integration`.
+      # AMBIENTE CANÔNICO ANTES DA SUÍTE (medido 2026-10-28, runs 40728206519 / 40729073198 /
+      # 40735242329). `jest tests/unit` NÃO é autossuficiente num checkout limpo e cada ausência
+      # aparece como um vermelho diferente:
+      #   · sem banco            → `Não foi possível conectar ao PostgreSQL` (9 testes);
+      #   · banco sem migrations → `relation "mcp_connections" does not exist` (17 testes);
+      #   · sem artefatos        → `ENOENT reports/benchmark-sufficiency-report.json`
+      #                            (`readinessCertificationSeparation`, `convergenceFixpoint`);
+      #   · sem `.env`/`api/data`→ `workspaceStateSeeding` (3 testes) e o sandbox devolve
+      #                            `exitCode: null` em `engineeringRouterSafeEnvironment`.
+      # `ci:bootstrap` é o produtor CANÔNICO do ambiente (`.env` com ENCRYPTION_KEY/tokens válidos,
+      # seed sintético, índices, artefatos exigidos pelos gates) — nada é fabricado — e é o mesmo
+      # passo do `dev-branch-ci`. `db:migrate` roda em seguida, como lá.
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
+
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate
-
-      # ARTEFATOS GOVERNADOS ANTES DA SUÍTE (medido 2026-10-28, run 40729073198): `jest tests/unit`
-      # NÃO é autossuficiente — asserções leem artefatos ignorados pelo git (`reports/*.json`,
-      # `governance/*.json`, `qa-mesh/meshRegistry.json`) que nenhum checkout contém. Sem eles o job
-      # morria em `ENOENT ... reports/benchmark-sufficiency-report.json`
-      # (`readinessCertificationSeparation`, `governance/convergenceFixpoint`).
-      # `ci:artifacts` executa os produtores CANÔNICOS (nada é fabricado) e registra o veredito de
-      # cada um como está; é o mecanismo já documentado em `scripts/ci/bootstrap-ci-environment.js`
-      # para runner efêmero. Ordem obrigatória: imediatamente antes da suíte.
-      - name: Produzir artefatos governados (produtores canônicos)
-        run: npm run ci:artifacts
 
       - name: Run official Jest suite (npm test)
         run: npm test
@@ -152,7 +161,13 @@ jobs:
   jest-integration:
     name: "Jest Integration (tests/integration + tests/tenant c/ Postgres real)"
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # TIMEOUT MEDIDO, NÃO ESTIMADO (2026-10-28): com `timeout-minutes: 15` o job morreu como
+    # `cancelled` em 15m17s / 15m18s em TODOS os runs (40729073198, 40730595851, 40734125941), sem
+    # publicar um único `Tests:` — um gate que não chega ao veredito não mede nada. A suíte inteira
+    # de `tests/integration` + `tests/tenant` é maior que a do L0b (só o subconjunto `engineering`
+    # mede 2030 s), então 90 min com margem; se ainda não couber, o próximo passo é SHARD
+    # (`jest --shard`), não voltar a um timeout que estrangula.
+    timeout-minutes: 90
 
     # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
     # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
@@ -226,6 +241,22 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Mesmos pré-requisitos de ambiente do job `jest` (identidade git, imagem do sandbox e
+      # bootstrap canônico) — sem eles as suítes de integração do Engineering Router reprovam por
+      # ausência de infraestrutura, exatamente como foi medido no job de unit (runs 40728206519,
+      # 40729073198, 40730595851, 40735242329).
+      - name: Identidade git (commits reais nos cenários de teste)
+        run: |
+          git config --global user.email "ci-runner@r-agent2.invalid"
+          git config --global user.name "RAP CI Runner"
+          git config --get user.email
+
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
+
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
 
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate
