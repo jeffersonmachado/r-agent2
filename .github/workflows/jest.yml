@@ -144,8 +144,14 @@ jobs:
       - name: Produzir artefatos governados (produtores canônicos)
         run: npm run ci:artifacts
 
-      - name: Run official Jest suite (npm test)
-        run: npm test
+      # SONDA TEMPORÁRIA (não mesclar): medir a suíte inteira com --bail=0 para saber quantas
+      # falhas restam além da que depende do artefato prod-like.
+      - name: Probe full suite (bail=0)
+        run: |
+          npx jest tests/unit --bail=0 --forceExit || true
+          npx jest tests/flow engine/__tests__ --bail=0 --forceExit || true
+          RPA_SKIP_BROWSER_TESTS=true SKIP_RPA_INTEGRATION_TESTS=true npx jest --runTestsByPath tests/rpa/rpa.test.js tests/rpa/login.test.js tests/rpa/createTenantByAI.test.js --testPathIgnorePatterns=/node_modules/ --bail=0 --forceExit || true
+          echo PROBE_DONE
         env:
           CI: true
 
