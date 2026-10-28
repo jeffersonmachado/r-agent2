@@ -950,6 +950,31 @@ veredito. Isso é o que mudou — e o que ainda não mudou está nomeado acima, 
 
 ---
 
+### 11.7.9 Pista medida para as duas suítes: o coder não é selecionado
+
+O `governanceApprovalFullWorkerE2E` imprime um diagnóstico próprio quando `closed` é nulo, e no runner ele
+saiu com a causa explícita:
+
+```
+"fixTask": { "status": "BLOCKED",
+  "routing_decision": { "coder": { "selected": null, "reasonCodes": ["NO_QUALIFIED_CANDIDATE"],
+                                   "qualifiedCandidates": [] } } }
+```
+
+`NO_QUALIFIED_CANDIDATE` vem de `engine/engineeringRouter/modelSelector.js:144` — a lista de candidatos
+QUALIFICADOS ficou vazia. O produtor dessa lista é
+`engineeringModelAvailabilityService.buildAvailableModels`, que combina a allowlist estática
+(`modelCapabilities.js`) com `getRuntimeProviders()`, `getCredentialDetailsMap(tenantId)` e
+`providerModelDiscoveryCache`. As suítes salvam credenciais FAKE para os providers candidatos; se
+`getCredentialDetailsMap` não devolver essas credenciais no ambiente do runner, **nenhum** modelo fica
+disponível e a task é BLOCKED antes de qualquer chamada de provider — exatamente os ~3 s observados.
+
+Isso é uma **pista com endereço**, não uma conclusão: falta medir `getCredentialDetailsMap` no runner. Não
+declarei causa porque não medi — e a hipótese anterior (Node 20) foi descartada por experimento, não por
+opinião.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
