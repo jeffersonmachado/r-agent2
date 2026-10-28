@@ -911,16 +911,18 @@ async function reconcileMissionSourceIntents({ missionId } = {}) {
       await transitionIntegrationIntent(intent.id, 'RECOVERY_REQUIRED', {
         extra: { phase: decision.outcome, code: decision.code, reason: decision.reason, reconciledAt: new Date().toISOString() },
       });
-      // O estado do INTENT terminal não pode ser a única marca de que a missão precisa de reparo:
-      // quem observa operação lê a MISSÃO. Sem isto, `mission_source_state` continuaria READY
-      // enquanto a fonte está num estado que a reconciliação automática recusa — o reparo existiria
-      // e ninguém saberia (mesma classe do defeito que a fila oficial cobra). Aplicado só ao
-      // desfecho que esta correção tornou terminal; DIVERGENCE mantém o comportamento anterior.
-      if (decision.outcome === 'BLOCKED_REQUIRES_REPAIR' && mission && mission.mission_source_state !== 'RECOVERY_REQUIRED') {
-        // Só o ESTADO (campo existente no modelo). O motivo já fica no intent, que é a fonte
-        // auditável do desfecho — não se inventa coluna para duplicar a mesma informação.
-        await mission.update({ mission_source_state: 'RECOVERY_REQUIRED' });
-      }
+      // NÃO se marca o estado da MISSÃO aqui — decisão revertida por medição (revisão de 2026-10-28).
+      //
+      // A intenção era boa (quem opera lê a missão, não o intent), mas o RAIO DE DANO é grande demais:
+      // a classificação é feita contra o repositório DESTE processo. Num boot cujo repo não enxerga as
+      // refs de missão (clone novo, deploy sem as branches, processo apontando para repo sintético),
+      // TODA missão com intent não-terminal vira `BLOCKED_REQUIRES_REPAIR` — e passar a escrever
+      // `mission_source_state='RECOVERY_REQUIRED'` na missão marcaria como "requer reparo" missões que
+      // estão sadias, sem caminho de volta. Medido: mutação/probe marcaram missão alheia READY→
+      // RECOVERY_REQUIRED numa base compartilhada.
+      //
+      // A dívida continua VISÍVEL e sem esse risco pelo agregado do boot (`needsRepair`, contado de
+      // todas as linhas em RECOVERY_REQUIRED) — sinal global, sem tocar estado de missão individual.
     }
 
     outcomes.push({ intentId: intent.id, candidateCommit: String(intent.candidate_commit).slice(0, 12), ...decision });
