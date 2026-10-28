@@ -115,6 +115,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # IMAGEM DO EXECUTION SANDBOX (mesma causa medida em 2026-10-21 no dev-branch-ci, run
+      # 39593921911, e de novo aqui em 2026-10-28, run 40730595851): sem a imagem
+      # `r-agent2-engineering-router-sandbox:latest`, `engineeringRouterExecutionSandboxSecurity`
+      # reprova com `docker run` exit 125 (8 testes). A suíte RECUSA pular de propósito ("ambiente
+      # sem Docker não pode alegar SANDBOX_RUNTIME=PASS"), então a correção é CONSTRUIR a imagem: o
+      # runner do GitHub tem Docker e a prova de isolamento passa a ser executada de verdade
+      # (non-root, sem rede, sem socket, FS read-only). Mesmo passo do `dev-branch-ci`.
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
+
       # ESQUEMA COMPLETO ANTES DA SUÍTE (medido 2026-10-28, run 40728206519): com o banco presente
       # mas sem migrations, as suítes que exercitam a autoridade contra Postgres morrem em
       # `relation "mcp_connections" does not exist` (17 testes em `tests/unit/mcp/mcpDiscoveryReal`).
