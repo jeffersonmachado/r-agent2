@@ -44,6 +44,8 @@ const { execFileSync } = require('child_process');
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
+const { DEFAULT_TENANT_ID } = require('../../api/services/engineeringRouter/engineeringModelAvailabilityService');
+const CREDENTIAL_SCOPE_PROVISIONED = new Map(); // provider -> 'criada' | 'preservada'
 const compiler = require('../../api/services/engineeringMission/missionCompilerService');
 const approvalService = require('../../api/services/engineeringMission/missionApprovalService');
 const orchestrator = require('../../api/services/engineeringMission/missionOrchestratorService');
@@ -180,11 +182,66 @@ beforeAll(async () => {
     registerAiProvider(provider, makeFakeProvider(provider));
     await saveAICredentials(TEST_TENANT_KEY, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
   }
+
+  // CREDENCIAL DO ESCOPO DE CREDENCIAL, NÃO DO TENANT DO TESTE (medido 2026-10-29).
+  //
+  // O Router resolve credencial por `credentialScope`, FIXO em `SYSTEM_ENGINEERING`
+  // (`DEFAULT_TENANT_ID`): por decisão de segurança ele nunca usa a credencial do tenant de quem
+  // abre a tela (`engineeringRouterService.js:18-25`). Sem chaves no ESCOPO, o diagnóstico do
+  // próprio teste no runner mostrou `routing_decision.coder = {selected: null,
+  // reasonCodes: [NO_QUALIFIED_CANDIDATE]}` e `fixTask.status = BLOCKED` — nada a ver com o
+  // finding: nenhum modelo era qualificado porque a camada de disponibilidade não achava
+  // credencial alguma. A base local mascarava isso por já ter credenciais no escopo (dependência
+  // de estado ambiente). O estado anterior é preservado e restaurado no `afterAll`.
+  await provisionCredentialScope(CANDIDATE_PROVIDERS);
 }, 60000);
+
+
+/**
+ * Garante credencial no ESCOPO DE CREDENCIAL do Router, mexendo o mínimo possível:
+ *   - provider que JÁ tem chave no escopo é PRESERVADO (nunca sobrescrito, nem re-cifrado — o
+ *     desenvolvedor pode ter chaves reais ali e o teste não é dono delas);
+ *   - provider sem chave recebe a chave fake e é REMOVIDO no `afterAll`.
+ * Sem isso, a suíte só passava onde o banco já tinha credenciais no escopo (dependência de estado
+ * ambiente) e falhava em base limpa com `NO_QUALIFIED_CANDIDATE`.
+ */
+async function provisionCredentialScope(providers) {
+  const models = require('../../api/db/models');
+  const { saveAICredentials, getDecryptedAPIKey } = require('../../api/services/tenantAIService');
+  await models.getTenant().findOrCreate({
+    where: { tenant_key: DEFAULT_TENANT_ID },
+    defaults: { tenant_key: DEFAULT_TENANT_ID, name: 'Escopo de credencial do Router (fixture E2E)', status: 'active', plan: 'enterprise' },
+  });
+  for (const provider of providers) {
+    const existente = await getDecryptedAPIKey(DEFAULT_TENANT_ID, provider).catch(() => null);
+    if (existente) {
+      CREDENTIAL_SCOPE_PROVISIONED.set(provider, 'preservada');
+      continue;
+    }
+    CREDENTIAL_SCOPE_PROVISIONED.set(provider, 'criada');
+    await saveAICredentials(DEFAULT_TENANT_ID, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
+  }
+}
+
+/** Remove SÓ as chaves fake que este teste criou; nenhuma chave pré-existente é tocada. */
+async function restoreCredentialScope() {
+  if (CREDENTIAL_SCOPE_PROVISIONED.size === 0) return;
+  const models = require('../../api/db/models');
+  const { invalidateAIConfigCache } = require('../../api/services/tenantAIService');
+  const criadas = [...CREDENTIAL_SCOPE_PROVISIONED].filter(([, estado]) => estado === 'criada').map(([provider]) => provider);
+  CREDENTIAL_SCOPE_PROVISIONED.clear();
+  if (criadas.length === 0) return;
+  const tenant = await models.getTenant().findOne({ where: { tenant_key: DEFAULT_TENANT_ID } });
+  if (!tenant) return;
+  await models.getTenantAICredential().destroy({ where: { tenant_id: tenant.id, provider: criadas } }).catch(() => {});
+  if (typeof invalidateAIConfigCache === 'function') invalidateAIConfigCache(DEFAULT_TENANT_ID);
+}
 
 afterAll(async () => {
   if (!dbAvailable) return;
   clearAiProviderConfig();
+  // Restaura o escopo de credencial antes de qualquer outra limpeza (ver comentário no setup).
+  await restoreCredentialScope().catch(() => {});
   const index = require('../../api/db/models');
   await stopWorkerAndDrain();
   try {

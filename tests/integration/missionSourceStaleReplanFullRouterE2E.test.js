@@ -43,6 +43,8 @@ const { execFileSync } = require('child_process');
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
+const { DEFAULT_TENANT_ID } = require('../../api/services/engineeringRouter/engineeringModelAvailabilityService');
+const CREDENTIAL_SCOPE_PROVISIONED = new Map(); // provider -> 'criada' | 'preservada'
 const compiler = require('../../api/services/engineeringMission/missionCompilerService');
 const approvalService = require('../../api/services/engineeringMission/missionApprovalService');
 const missionStore = require('../../api/services/engineeringMission/missionStoreService');
@@ -195,6 +197,62 @@ async function setupTenantAndProviders() {
     registerAiProvider(provider, makeFakeProvider(provider));
     await saveAICredentials(TEST_TENANT_KEY, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
   }
+
+  // CREDENCIAL DO ESCOPO DE CREDENCIAL, NÃO DO TENANT DO TESTE (medido 2026-10-29).
+  //
+  // O Router resolve credencial por `credentialScope`, que é FIXO em `SYSTEM_ENGINEERING`
+  // (`DEFAULT_TENANT_ID`, ver `engineeringRouterService.js:18-25` e `ENGINEERING_CREDENTIAL_SCOPE`):
+  // por decisão de segurança, ele NUNCA usa a credencial do tenant de quem abre a tela. Este teste
+  // salvava as chaves fake SÓ no tenant de fixture (`jest-e2e-stale-full-router`) e, por isso,
+  // passava apenas onde o banco já tinha credenciais no escopo — numa base limpa
+  // `getCredentialDetailsMap(scope)` voltava vazio, `buildAvailableModels` não qualificava nenhum
+  // modelo e a task virava `BLOCKED` com `NO_QUALIFIED_CANDIDATE` (reproduzido em base limpa local:
+  // BLOCKED em ~5 s; com as chaves no escopo: PASS).
+  //
+  // O estado anterior do escopo é PRESERVADO e restaurado no `afterAll`: um banco de
+  // desenvolvimento tem credenciais reais ali e o teste não pode substituí-las por chaves fake.
+  await provisionCredentialScope(CANDIDATE_PROVIDERS);
+}
+
+
+/**
+ * Garante credencial no ESCOPO DE CREDENCIAL do Router, mexendo o mínimo possível:
+ *   - provider que JÁ tem chave no escopo é PRESERVADO (nunca sobrescrito, nem re-cifrado — o
+ *     desenvolvedor pode ter chaves reais ali e o teste não é dono delas);
+ *   - provider sem chave recebe a chave fake e é REMOVIDO no `afterAll`.
+ * Sem isso, a suíte só passava onde o banco já tinha credenciais no escopo (dependência de estado
+ * ambiente) e falhava em base limpa com `NO_QUALIFIED_CANDIDATE`.
+ */
+async function provisionCredentialScope(providers) {
+  const models = require('../../api/db/models');
+  const { saveAICredentials, getDecryptedAPIKey } = require('../../api/services/tenantAIService');
+  await models.getTenant().findOrCreate({
+    where: { tenant_key: DEFAULT_TENANT_ID },
+    defaults: { tenant_key: DEFAULT_TENANT_ID, name: 'Escopo de credencial do Router (fixture E2E)', status: 'active', plan: 'enterprise' },
+  });
+  for (const provider of providers) {
+    const existente = await getDecryptedAPIKey(DEFAULT_TENANT_ID, provider).catch(() => null);
+    if (existente) {
+      CREDENTIAL_SCOPE_PROVISIONED.set(provider, 'preservada');
+      continue;
+    }
+    CREDENTIAL_SCOPE_PROVISIONED.set(provider, 'criada');
+    await saveAICredentials(DEFAULT_TENANT_ID, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
+  }
+}
+
+/** Remove SÓ as chaves fake que este teste criou; nenhuma chave pré-existente é tocada. */
+async function restoreCredentialScope() {
+  if (CREDENTIAL_SCOPE_PROVISIONED.size === 0) return;
+  const models = require('../../api/db/models');
+  const { invalidateAIConfigCache } = require('../../api/services/tenantAIService');
+  const criadas = [...CREDENTIAL_SCOPE_PROVISIONED].filter(([, estado]) => estado === 'criada').map(([provider]) => provider);
+  CREDENTIAL_SCOPE_PROVISIONED.clear();
+  if (criadas.length === 0) return;
+  const tenant = await models.getTenant().findOne({ where: { tenant_key: DEFAULT_TENANT_ID } });
+  if (!tenant) return;
+  await models.getTenantAICredential().destroy({ where: { tenant_id: tenant.id, provider: criadas } }).catch(() => {});
+  if (typeof invalidateAIConfigCache === 'function') invalidateAIConfigCache(DEFAULT_TENANT_ID);
 }
 
 beforeAll(async () => {
@@ -210,6 +268,9 @@ beforeAll(async () => {
 afterAll(async () => {
   clearAiProviderConfig();
   if (dbAvailable) {
+    // Restaura o escopo de credencial ANTES de qualquer outra limpeza: um banco de desenvolvimento
+    // tem chaves reais em `DEFAULT_TENANT_ID` e este teste só pode ter emprestado as dele.
+    await restoreCredentialScope().catch(() => {});
     const models = require('../../api/db/models');
     try {
       for (const taskId of created.tasks) {
