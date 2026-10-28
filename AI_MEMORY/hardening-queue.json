@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-28T21:36:45.895Z",
+  "updatedAt": "2026-10-28T23:16:10.076Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2451,17 +2451,31 @@
     },
     {
       "id": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
-      "title": "jest-integration: 2 suítes do manifesto de release bloqueiam em ~3 s SÓ no runner (causa desconhecida)",
+      "title": "jest-integration: 1 suíte do manifesto de release ainda falha no runner (fechamento do finding esperado)",
       "status": "blocked_external",
       "commit": "5e1ff762d",
-      "evidence": "Medição completa em RELATORIO.md §11.7.7. Sobram tests/integration/missionSourceStaleReplanFullRouterE2E e tests/integration/governanceApprovalFullWorkerE2E. Hipóteses TESTADAS e descartadas: contenção entre suítes (29 lotes, cada exclusiva sozinha — 40746356670), ref main ausente (git branch -f main origin/main mudou o erro de \"ambiguous argument main\" para status=BLOCKED), serviço RAG ausente (imagem oficial no ar em :8001, log \"RAG pronto … try 2\" — 40752124806). Reprodução local com o MESMO .env do ci:bootstrap (43 chaves), main=origin/main e --runInBand: PASSA (98 s e 94 s). No runner as duas terminam em ~3 s com BLOCKED e NENHUMA chamada de provider. Hipótese de versão de Node TESTADA e NÃO confirmada: container node:20.20.2 com o mesmo .env, identidade git e socket do Docker falhou ANTES, com BLOCKED_INFRA/SANDBOX_INVALID_WORKSPACE — artefato do experimento (o docker run -v do sandbox resolve caminhos do HOST e o /tmp do container não existe no host). O CI não mostra SANDBOX_INVALID_WORKSPACE, logo é outro defeito. Causa permanece DESCONHECIDA. | PISTA MEDIDA (RELATORIO.md §11.7.9): o diagnóstico que a própria suíte governanceApprovalFullWorkerE2E imprime mostra routing_decision.coder = {selected: null, reasonCodes:[NO_QUALIFIED_CANDIDATE], qualifiedCandidates: []} no runner — engine/engineeringRouter/modelSelector.js:144. A lista de qualificados vem de engineeringModelAvailabilityService.buildAvailableModels (allowlist estática + getRuntimeProviders + getCredentialDetailsMap(tenantId) + providerModelDiscoveryCache). As suítes salvam credenciais FAKE; se getCredentialDetailsMap não as devolver no runner, nenhum modelo fica disponível e a task vira BLOCKED antes de qualquer chamada de provider — compatível com os ~3 s observados.",
+      "evidence": "Medição completa em RELATORIO.md §11.7.7. Sobram tests/integration/missionSourceStaleReplanFullRouterE2E e tests/integration/governanceApprovalFullWorkerE2E. Hipóteses TESTADAS e descartadas: contenção entre suítes (29 lotes, cada exclusiva sozinha — 40746356670), ref main ausente (git branch -f main origin/main mudou o erro de \"ambiguous argument main\" para status=BLOCKED), serviço RAG ausente (imagem oficial no ar em :8001, log \"RAG pronto … try 2\" — 40752124806). Reprodução local com o MESMO .env do ci:bootstrap (43 chaves), main=origin/main e --runInBand: PASSA (98 s e 94 s). No runner as duas terminam em ~3 s com BLOCKED e NENHUMA chamada de provider. Hipótese de versão de Node TESTADA e NÃO confirmada: container node:20.20.2 com o mesmo .env, identidade git e socket do Docker falhou ANTES, com BLOCKED_INFRA/SANDBOX_INVALID_WORKSPACE — artefato do experimento (o docker run -v do sandbox resolve caminhos do HOST e o /tmp do container não existe no host). O CI não mostra SANDBOX_INVALID_WORKSPACE, logo é outro defeito. Causa permanece DESCONHECIDA. | PISTA MEDIDA (RELATORIO.md §11.7.9): o diagnóstico que a própria suíte governanceApprovalFullWorkerE2E imprime mostra routing_decision.coder = {selected: null, reasonCodes:[NO_QUALIFIED_CANDIDATE], qualifiedCandidates: []} no runner — engine/engineeringRouter/modelSelector.js:144. A lista de qualificados vem de engineeringModelAvailabilityService.buildAvailableModels (allowlist estática + getRuntimeProviders + getCredentialDetailsMap(tenantId) + providerModelDiscoveryCache). As suítes salvam credenciais FAKE; se getCredentialDetailsMap não as devolver no runner, nenhum modelo fica disponível e a task vira BLOCKED antes de qualquer chamada de provider — compatível com os ~3 s observados. | ATUALIZADO 2026-10-29: a causa das DUAS suítes era credencial no escopo errado (item CI-E2E-CREDENTIAL-SCOPE, verificado — missionSourceStaleReplanFullRouterE2E PASS no run 40781349215). Resta SÓ tests/integration/governanceApprovalFullWorkerE2E.test.js, que agora seleciona modelo e chega a fixTask GREEN, mas o finding acompanhado pelo teste continua CONFIRMED enquanto o ciclo fecha DOIS outros findings da missão (b6b331aa, d01963c8). Diagnóstico ampliado (findingIdEsperado + findingsDaMissao) aguardando o próximo ciclo de CI.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "blocked",
       "severityBasis": "vermelho de CI que se recusa a ser explicado por ambiente já equalizado; nenhuma das 2 suítes pertence ao gate canônico (tests/integration/engineering)",
       "severitySource": "medicao-ci-2026-10-28",
-      "blocked_reason": "Falta MEDIR getCredentialDetailsMap(tenantId) no runner (não no workstation). Não é enfraquecível por skip: as duas suítes são do manifesto de release (config/canonical-release-suites.json). Próximo passo objetivo: passo de diagnóstico no job que imprima, para o tenant de fixture, o mapa de credenciais e os providerIds registrados antes da suíte."
+      "blocked_reason": "CAUSA NÃO CONCLUÍDA (não classificada como ambiental): falta o dump do próximo ciclo, que agora traz o id esperado e todos os findings da missão (status, fix_task_id, recurrence_count, dedupe_key). Pode ser dedupe/recorrência criando linha paralela, ou listFindings()[0] escolhendo finding errado. Não é enfraquecível por skip."
+    },
+    {
+      "id": "CI-E2E-CREDENTIAL-SCOPE",
+      "title": "Suítes E2E do Router salvavam credencial no tenant do teste (Router resolve pelo ESCOPO)",
+      "status": "verified",
+      "commit": "c0edd189c",
+      "evidence": "Relatório §11.8. Experimento controlado em base limpa (rap_ci_sim, só migrations): SEM credencial no escopo → BLOCKED em ~5 s (NO_QUALIFIED_CANDIDATE); COM chaves fake no escopo → PASS 103 s. Causa: engineeringRouterService.credentialScope é FIXO em SYSTEM_ENGINEERING/DEFAULT_TENANT_ID por decisão de segurança (ERV1, engineeringRouterService.js:18-25); as suítes salvavam as chaves fake só no tenant de fixture, então getCredentialDetailsMap(escopo) voltava vazio e buildAvailableModels não qualificava modelo. Passavam no dev apenas por já haver credenciais reais no escopo. Efeito no runner: run 40752124806 (2 suítes ✕) → run 40781349215 (1 suíte ✕), com missionSourceStaleReplanFullRouterE2E = PASS.",
+      "resolution": "Fixtures passaram a provisionar o ESCOPO: provider com chave existente é PRESERVADO (nunca sobrescrito nem re-cifrado) e provider sem chave recebe a fake, removida no afterAll. Nenhuma asserção alterada. Prova de não-destrutividade: sha256 do TEXTO CLARO das 4 chaves reais do banco de desenvolvimento idêntico antes e depois; a suíte passa na base limpa e na de desenvolvimento.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "severityBasis": "2 suítes obrigatórias do CI ficavam vermelhas por ausência de credencial no escopo; o único motivo de passarem no dev era estado ambiente",
+      "severitySource": "medicao-local-e-ci-2026-10-29"
     }
   ],
   "schemaVersion": 2,

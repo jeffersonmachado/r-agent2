@@ -975,6 +975,64 @@ opinião.
 
 ---
 
+## 11.8 Defeito P1 PROVADO e corrigido: credencial do ESCOPO do Router × credencial do tenant do teste
+
+### 11.8.1 A causa que sobreviveu a todas as hipóteses anteriores
+
+As duas suítes residuais passavam na máquina de desenvolvimento e falhavam no runner em ~3 s com
+`BLOCKED`. As hipóteses de contenção, ref `main`, RAG e Node 20 foram testadas e descartadas (§11.7.7).
+
+O experimento decisivo foi criar uma base **limpa** (`rap_ci_sim`, só migrations) e rodar a suíte contra ela:
+
+```
+base limpa, SEM credencial no escopo      → BLOCKED em ~5 s   (NO_QUALIFIED_CANDIDATE)
+base limpa, COM chaves fake no escopo     → PASS  103 s
+```
+
+Causa raiz: `engineeringRouterService` resolve credencial por `credentialScope`, **fixo** em
+`SYSTEM_ENGINEERING`/`DEFAULT_TENANT_ID` — por decisão de segurança ele NUNCA usa a credencial do tenant
+de quem abre a tela (`engineeringRouterService.js:18-25`, correção ERV1). As duas suítes salvavam as
+chaves fake **só no tenant de fixture**; `getCredentialDetailsMap(escopo)` voltava vazio,
+`buildAvailableModels` não qualificava nenhum modelo e a task virava `BLOCKED_INFRA`.
+
+Passavam na máquina de desenvolvimento **apenas porque o banco local já tinha credenciais reais no
+escopo** — dependência de estado ambiente, precisamente o que o CI recusa.
+
+### 11.8.2 Correção (fixture hermética; nenhuma asserção alterada)
+
+- provider que já tem chave no escopo é **preservado** — nunca sobrescrito nem re-cifrado;
+- provider sem chave recebe a fake e é **removido** no `afterAll`.
+
+Prova de não-destrutividade medida no banco de desenvolvimento: `sha256` do **texto claro** das 4 chaves
+reais (`deepseek`, `kimi`, `openai`, `qwen`) idêntico antes e depois da execução; a suíte passa tanto na
+base limpa (103 s) quanto na de desenvolvimento (113 s).
+
+### 11.8.3 Efeito medido no runner
+
+```
+run 40752124806  → 2 suítes ✕ (missionSource…, governanceApproval…)
+run 40781349215  → 1 suíte  ✕ (só governanceApproval…; missionSourceStaleReplanFullRouterE2E = PASS)
+```
+
+`missionSourceStaleReplanFullRouterE2E` está **verde no runner** com a correção. A segunda suíte muda de
+causa a cada camada removida — o que ela mostra agora está no §11.8.4.
+
+### 11.8.4 O que resta: fechamento do finding esperado × findings da missão
+
+No runner, o ciclo fechou **dois** findings da missão (`→ FIXED / REGRESSION_VALIDATED / CLOSED` em
+`b6b331aa…` e `d01963c8…`), mas `getFinding(finding.id)` continuou devolvendo `CONFIRMED` até o deadline.
+O suite escolhe o finding por `listFindings({ missionId })[0]` e depois acompanha **aquele id**.
+
+Com apenas o status do finding esperado, "não fechou" e "fechou outro" são indistinguíveis. O dump de
+diagnóstico passou a trazer `findingIdEsperado` e `findingsDaMissao` (id, status, fix_task_id,
+created_at, recurrence_count, dedupe_key) — sem tocar em asserção nenhuma.
+
+**Estado declarado: causa NÃO concluída.** O que existe é medição (dois fechamentos, o esperado
+CONFIRMED) e o instrumento para o próximo ciclo. Não é "ambiental" — é desconhecida, e assim fica
+registrada.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

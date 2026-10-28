@@ -153,6 +153,17 @@
       "rootCause": "markReproducing/markNotReproduced gravavam o PLANO DERIVADO no campo reproduction, substituindo o registro declarado pelo finding",
       "fix": "plano entra POR CIMA do declarado nos tres caminhos (REPRODUCING, NOT_REPRODUCED COMMAND e INVARIANT)",
       "tests": "engineeringBugLoop 32/32 com 2 regressoes novas (REPRODUCED e NOT_REPRODUCED preservam strategy/source)"
+    },
+    {
+      "id": "CI-E2E-CREDENTIAL-SCOPE",
+      "severity": "P1",
+      "title": "Suítes E2E do Router salvavam credencial no tenant do teste; o Router resolve pelo ESCOPO fixo (SYSTEM_ENGINEERING)",
+      "rootCause": "engineeringRouterService.credentialScope é FIXO em SYSTEM_ENGINEERING/DEFAULT_TENANT_ID por decisão de segurança (ER-V1: nunca usar a credencial do tenant do usuário). As suítes salvavam chaves fake só no tenant de fixture; getCredentialDetailsMap(escopo) voltava vazio, buildAvailableModels não qualificava modelo e a task virava BLOCKED_INFRA/NO_QUALIFIED_CANDIDATE.",
+      "reproduction": "Base limpa (rap_ci_sim, só migrations): BLOCKED em ~5 s com NO_QUALIFIED_CANDIDATE. Mesma base com chaves fake no escopo: PASS 103 s. Na base de desenvolvimento passava por já ter credenciais reais no escopo.",
+      "fix": "Fixtures provisionam o ESCOPO preservando credencial existente (nunca sobrescreve/re-cifra) e removem no afterAll só as chaves que criaram. Nenhuma asserção alterada.",
+      "regression": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js + tests/integration/governanceApprovalFullWorkerE2E.test.js — passam em base limpa E na base de desenvolvimento; sha256 do texto claro das 4 chaves reais do dev idêntico antes/depois.",
+      "runnerEffect": "run 40752124806: 2 suítes ✕; run 40781349215: 1 suíte ✕ (missionSourceStaleReplanFullRouterE2E = PASS)",
+      "commit": "c0edd189c"
     }
   ],
   "gates": {
@@ -394,6 +405,13 @@
         "added": "serviço RAG real em :8001",
         "suites": "integration: 2 suítes ✕ / 2 testes ✕ (24 min)",
         "remaining": "mesmas duas — não era RAG"
+      },
+      {
+        "runId": 40781349215,
+        "commit": "c0edd189c",
+        "added": "credencial do ESCOPO (fix provado)",
+        "suites": "integration: 81/82 PASS; 1 suíte ✕",
+        "remaining": "governanceApprovalFullWorkerE2E (fechamento do finding esperado)"
       }
     ],
     "canonicalGate": {
@@ -476,15 +494,14 @@
         }
       ],
       "residualSuites": [
-        "tests/integration/governanceApprovalFullWorkerE2E.test.js",
-        "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js"
+        "tests/integration/governanceApprovalFullWorkerE2E.test.js"
       ],
       "hypothesesRuledOut": [
         "contenção entre suítes",
         "ref main ausente",
         "serviço RAG ausente"
       ],
-      "openHypothesis": "CAUSA DESCONHECIDA (não é Node): o experimento em container node:20.20.2 falhou antes, com BLOCKED_INFRA/SANDBOX_INVALID_WORKSPACE — artefato do experimento (docker run -v do sandbox resolve caminhos do HOST e o workspace em /tmp do container não existe no host). O CI não mostra SANDBOX_INVALID_WORKSPACE, portanto o defeito do runner é outro.",
+      "openHypothesis": "governanceApprovalFullWorkerE2E: no runner o ciclo fechou DOIS findings da missão (b6b331aa, d01963c8) e o finding acompanhado pelo teste continuou CONFIRMED até o deadline. Diagnóstico ampliado (findingIdEsperado + findingsDaMissao) para o próximo ciclo. CAUSA NÃO CONCLUÍDA — não classificada como ambiental.",
       "notInCanonicalGate": "tests/integration/engineering (L0b) não alcança as duas; elas são do manifesto de release (config/canonical-release-suites.json), executado pelo runner de suítes, não pelo CI"
     }
   }
