@@ -46,8 +46,22 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail {0}
 
     steps:
-      - name: Checkout
+      # HISTÓRICO COMPLETO É REQUISITO DE TESTE, não conveniência (medido 2026-10-28).
+      # O default do actions/checkout é `fetch-depth: 1` (clone raso) e isso reprova a suíte por
+      # AMBIENTE, não por código:
+      #   · `tests/unit/governance/bugClosureBypassDefense.test.js` materializa módulos da BASELINE
+      #     com `git show 0023634244ad...:governance/bug-closure/defect-states.js` — commit que não
+      #     existe num clone raso (`fatal: path ... exists on disk, but not in <sha>`). Reproduzido
+      #     em clone `--depth 1` (92 testes vermelhos) e verde depois de `git fetch --unshallow`.
+      #   · as suítes de missão resolvem a linha principal como `refs/remotes/origin/main`
+      #     (`resolveRefCommit`, missionSourceService) — ref que também não existe no clone raso,
+      #     produzindo `não foi possível resolver o commit de origem "main"`.
+      # Custo: o clone completo deste repositório (~7 mil arquivos). É o preço de um gate que
+      # consegue medir; a alternativa era continuar vermelho por ambiente.
+      - name: Checkout (histórico completo)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -115,8 +129,22 @@ jobs:
       REDIS_URL: redis://localhost:6379
 
     steps:
-      - name: Checkout
+      # HISTÓRICO COMPLETO É REQUISITO DE TESTE, não conveniência (medido 2026-10-28).
+      # O default do actions/checkout é `fetch-depth: 1` (clone raso) e isso reprova a suíte por
+      # AMBIENTE, não por código:
+      #   · `tests/unit/governance/bugClosureBypassDefense.test.js` materializa módulos da BASELINE
+      #     com `git show 0023634244ad...:governance/bug-closure/defect-states.js` — commit que não
+      #     existe num clone raso (`fatal: path ... exists on disk, but not in <sha>`). Reproduzido
+      #     em clone `--depth 1` (92 testes vermelhos) e verde depois de `git fetch --unshallow`.
+      #   · as suítes de missão resolvem a linha principal como `refs/remotes/origin/main`
+      #     (`resolveRefCommit`, missionSourceService) — ref que também não existe no clone raso,
+      #     produzindo `não foi possível resolver o commit de origem "main"`.
+      # Custo: o clone completo deste repositório (~7 mil arquivos). É o preço de um gate que
+      # consegue medir; a alternativa era continuar vermelho por ambiente.
+      - name: Checkout (histórico completo)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
