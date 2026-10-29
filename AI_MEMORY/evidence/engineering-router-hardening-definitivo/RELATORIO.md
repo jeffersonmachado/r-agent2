@@ -1658,6 +1658,83 @@ em `main` aprovar (em 25/10 ele aprovou — a falha foi no lineage), o que é pr
 não reproduzi o erro localmente: nesta branch o guard de bug-closure recusa **antes** do lineage
 (`INVENTARIO_NAO_ANCORADO` — a âncora externa), então a ordem de falha local difere da de `main`.
 
+## 11.22 Ciclo autorizado de promoção: até onde foi, o que travou, e por quê
+
+Autorização recebida para promover `dev → main` e empurrar, executando o caminho até o selo. Registro do
+que foi FEITO, do que o gate MEDIU e do ponto em que parar era a única conduta honesta.
+
+### 11.22.1 Executado (com SHA)
+
+| passo | resultado |
+|---|---|
+| merge `docs/main-ci-environment-gaps` → `fix/jest-ci-history` | `dd379d820` (sem conflito; base comum era `3386a4547`) |
+| `dev/engineering-hardening` FF no remoto | `3386a4547 → dd379d820` |
+| merge do fix da fila (§11.22.2) | `bfd2ce9a3` |
+| `dev/engineering-hardening` FF novamente | `dd379d820 → bfd2ce9a3` |
+
+**Não promovi `main`** — e a razão é medida, não opinião (§11.22.3).
+
+### 11.22.2 Regressão que EU introduzi, pega pelo gate real
+
+O run 40946909215 (Jest unit em `dev` `dd379d820`) reprovou **1 suíte / 1 teste**:
+`tests/unit/governance/bugClosureQueueModel.test.js` → *"a fila REAL tem estado canônico em TODOS os itens"*.
+
+Causa: os 4 itens que criei nesta missão usavam `state: "DONE_MEASURED"`, que **não existe** no vocabulário
+canônico (`OPEN, REPRODUCED, FIX_IN_PROGRESS, FIXED_PENDING_VERIFICATION, VERIFIED, RESOLVED,
+BLOCKED_EXTERNAL, RISK_ACCEPTED`). O `validate:hardening-queue` passava — o teste do modelo de dados não.
+Corrigido para `VERIFIED` (`2fa75a88a`), verificado localmente **12/12 PASS**, e a contagem da fila volta a
+`133 VERIFIED / 8 BLOCKED_EXTERNAL / 19 RESOLVED` sem item fora do vocabulário.
+
+Lição: "o validador que eu rodei passou" ≠ "o gate real passa". Só o CI mediu essa diferença.
+
+### 11.22.3 O que impede `main` e o selo — medido, não estimado
+
+O gate canônico `Dev Hardening CI (L0 + L1 governança)` reprovou no run do `dd379d820`:
+
+```
+[dev-branch-gate] C autorizacao L0_COMPLETO: DENIED
+                  (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, TESTE_DIRECIONADO_PENDENTE)
+```
+
+E, medido na própria árvore (`validate-bug-closure-status` em `bfd2ce9a3`):
+
+```
+[bug-closure-status] abertos=160 (P0=0 P1=0 externos=8) bloqueantesParaCertificacao=107
+[bug-closure-status] FAIL: FECHAMENTO_NAO_PROVADO 152 defeito(s) DECLARAM fechamento
+                     sem prova válida (P0=31, P1=76) — declarar não é fechar
+```
+
+O guard do próprio selo (`exigir_elegibilidade SELO_FINAL`, primeira linha executável de
+`seal-release.sh` depois do argparse) recusa:
+
+```
+[bug-closure-guard] RECUSADO (exit 1): SELO_FINAL não pode começar.
+  · fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI), fora da árvore do repositório
+  · anexar prova de fechamento válida (testes reais com exit 0, SHA atual, fingerprint, livro de
+    transições e assinatura de autoridade com mayCloseDefects) ou reabrir o defeito
+```
+
+**É um impasse fechado, não um bug**: o selo exige `L0_COMPLETO`; `L0_COMPLETO` é negado porque existem
+defeitos `BLOCKED_EXTERNAL` (8) e 152 fechamentos sem prova válida; a prova válida exige
+`RAP_CLOSURE_INVENTORY_SHA256` + assinatura de autoridade, que só existem com as âncoras provisionadas. E
+cinco desses itens bloqueados (**H15/H19/H20** e os dois `P1-*`) têm como `blocked_reason` exatamente *"exige
+ciclo de selagem"*. Ou seja: **o selo não começa porque falta o selo.** Promover `main` com esse estado seria
+declarar release verde sobre governança `NO_GO` — proibido pela Constituição do repositório e pela missão.
+
+### 11.22.4 Dois vermelhos pré-existentes que o run de `dev` expôs (não são meus)
+
+1. **E2E Playwright** (2 falhas): `qa-waves-replay.spec.ts:209` (timeout de 420 s no click) e
+   `support-agent-flow.spec.ts:306/314` (`ticketList` `element(s) not found`). **Idênticos em `main` no run
+   39447249603 (2026-10-20)**, mesma linha 314 — logo anteriores a esta rodada. O segundo cheira à superfície
+   `/support` legada (deprecated e gated por `caseManagement`), o que faria o spec estar medindo uma tela
+   que já não é a canônica.
+2. **Frontend Tests** (1 de 569): `SecurityIntelligencePage.test.jsx` → filtro "apenas pendências". Passou
+   em `dd379d820` e falhou em `bfd2ce9a3`, cuja única diferença é **4 valores de `state` num JSON**:
+   é flake, não regressão. Não reproduzi em 3 execuções locais da suíte (4/4 PASS nas três).
+
+Nenhum dos dois foi registrado como item `pending` na fila — não vou criar compromisso de fila que eu não
+vou cumprir neste turno. Ficam aqui como próximos passos com medição.
+
 ---
 
 ## 12. DECISÃO FINAL
