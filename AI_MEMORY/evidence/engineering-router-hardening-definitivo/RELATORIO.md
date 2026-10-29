@@ -1386,6 +1386,41 @@ A asserção `ageHours < 168` permanece **idêntica**. Ficou apenas observabilid
 que teria encurtado esta arqueologia de 40 minutos — com ele, "leu o checkout errado" é visível em uma
 linha de log. Commit `99d1ee878`.
 
+## 11.15 L0b local: três armadilhas do AMBIENTE de execução (nenhuma do produto)
+
+Ao reexecutar o L0b local no HEAD `99d1ee878` apareceram **três** lotes inválidos consecutivos. Nenhum
+era defeito do repositório; os três eram o mesmo skip do `globalSetup` em worktree ligado
+(`tests/setup/engineeringRunnerGlobalSetup.js`) deixando o cliente apontado para algo que não existe.
+
+| # | sintoma medido | causa medida | custo |
+|---|---|---|---|
+| 1 | 16 suítes `ECONNREFUSED 127.0.0.1:8090` → `BLOCKED_INFRA`, uma com 900 s de timeout | o skip não define `ENGINEERING_RUNNER_URL`; o cliente cai no valor do `.env` (**8090**), enquanto o runner de teste usa **8097** | ~35 min |
+| 2 | 16 suítes `engineering_runner_unauthorized` (runner vivo em 8090, `/health` OK) | runner subido com token diferente do que o cliente usa; `/health` é **não autenticado por design**, então "vivo" não implica "autenticando" | ~30 min |
+| 3 | `engineeringPatchApplyAndTestRunner` 3/4 (`git status` com exitCode 128 no workspace) | runner subido sem `--env-file-if-exists=.env`: quando o setup o sobe, ele herda `process.env` **já carregado** com o `.env`; subindo à mão sem a flag, faltam as variáveis | ~12 min |
+
+### 11.15.1 O que foi entregue (diagnóstico, zero afrouxamento)
+
+No ramo de skip do `globalSetup` passam a existir dois probes, ambos escrevendo em **stderr** (o stdout do
+globalSetup é parseado pelo coletor):
+
+1. **Probe de vida** — se o `ENGINEERING_RUNNER_URL` em vigor não responde, imprime o comando exato de
+   subida do runner, com a porta/token que o próprio skip deixa em vigor e a flag `--env-file-if-exists=.env`.
+2. **Probe autenticado sem efeito** — `POST /execute` com corpo vazio: a auth é validada **antes** do
+   contrato, então `401` = token errado e `400` = token ok, sem executar nada. Detecta a armadilha 2,
+   que é invisível no `/health`.
+
+Nenhuma asserção, porta, token ou comportamento de teste foi alterado. Commits `4c4284a49` e `ec4d9b5b3`.
+
+### 11.15.2 Receita local correta (a que produz amostra VÁLIDA)
+
+```bash
+cd <worktree> && node --env-file-if-exists=.env services/engineering-runner/src/index.js   # porta/token do .env
+npx jest tests/integration/engineering --runInBand --bail=0
+```
+
+Subir o runner em 8097 com `ENGINEERING_RUNNER_TOKEN=jest-test-engineering-runner-token` **sem** carregar o
+`.env` produz lote inválido — foi exatamente o erro das armadilhas 1 e 3.
+
 ---
 
 ## 12. DECISÃO FINAL
