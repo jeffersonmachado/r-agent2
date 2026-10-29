@@ -1053,6 +1053,38 @@ pergunta, e por isso NÃO foi feito.
 
 ---
 
+### 11.8.5 Ordem exata do artefato de recorrência (medida no runner)
+
+```
+23:29:35.866  missionSource: IntegrationIntent PREPARED (task e4dbdd70 = fix task)
+23:29:35.880  missionSource: candidate integrado  BUG_FIX_CANDIDATE  04cad9c1b → db83173a84fa
+23:29:36.509  finding c3b7cf52 → FIXED
+23:29:36.522  finding c3b7cf52 → REGRESSION_VALIDATED
+23:29:36.550  finding c3b7cf52 → CLOSED            (resolved_at gravado)
+23:29:36.609  engineeringRouterService: execução com posse de lease (task 88942609 = SUBSTITUTA)
+23:29:36.692  engineeringRouterService: RED->FIX "nova tentativa"  iterationsUsed=1
+              failureKind=PATCH_CONTRACT_VIOLATION  reason=PATCH_VALIDATION
+23:29:36.731  bugFindingService: reincidência de finding  previousStatus=CLOSED  recurrenceCount=1
+23:29:36.741  bugLoopCoordinator: missão original retomada (REPLACE_TASK_RESUME_PHASE, resumedStatus=RED)
+```
+
+O fix **estava** na fonte da missão quando a substituta nasceu (integração 730 ms antes do fechamento). A
+substituta então reexecuta o cenário original da missão — que já está satisfeito — e o coder devolve um
+patch que viola o contrato (`PATCH_CONTRACT_VIOLATION`), porque o artefato já existe. A falha dessa
+primeira tentativa é registrada como **reincidência** do finding que acabou de ser fechado.
+
+Caminho do código localizado: `runMissionTask` → `runTask` → `if (result.status !== 'GREEN')`
+`bugLoopCoordinator.hookMissionFailure(...)` ([missionOrchestratorService.js:264](/opt/results/ria/er-fixci/api/services/engineeringMission/missionOrchestratorService.js:264)),
+que registra ocorrência/reincidência em `bugFindingService.applyToExisting`.
+
+**O que falta decidir é contrato de produto, não ambiental:** a retomada deve reexecutar o cenário original
+pelo coder (e então a primeira tentativa falhar é esperada e NÃO pode contar como recorrência), ou deve
+reconhecer que o spec já está satisfeito e concluir a missão sem recodificar? As duas mudanças são
+cirúrgicas, mas produzem comportamentos opostos — e a asserção do teste (`closed` no fim) só é justa na
+segunda. Registrado como **impedimento de decisão**, com a medição acima como prova.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
