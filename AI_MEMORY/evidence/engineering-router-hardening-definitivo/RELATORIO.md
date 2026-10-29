@@ -1204,6 +1204,34 @@ tests/unit/engineeringMission/postFixFailureClassification.test.js  9 casos
 tests/unit/engineeringRouter                                    40 suítes / 409 testes PASS
 ```
 
+### 11.11.2-bis REGRESSÃO que eu introduzi, encontrada pelo CI, e a condição que faltava
+
+O CI (run 40816307878) reprovou `missionSourceStaleReplanFullRouterE2E`: esperado
+`READY_FOR_PROMOTION`/`STALE_CANDIDATE`, obtido **`GREEN`**. Não era flake — era a minha
+pré-verificação larga demais, e a lição é estrutural: **“os `test_commands` passam” NÃO prova que a
+spec está satisfeita.** Um smoke verde passa em qualquer base, inclusive numa task de implementação
+que ainda precisa CRIAR o artefato exigido pela spec.
+
+Duas condições semânticas foram acrescentadas, cada uma travando um modo de falso GREEN:
+
+| condição | o que impede |
+|---|---|
+| `task.source_commit === mission.currentCommit` | task ancorada em fonte ANTERIOR (trabalho pendente) ser dada como pronta — a retomada pós-fix **reancora** a substituta; a task do stale-replan não é reancorada |
+| última integração da missão é `BUG_FIX_CANDIDATE` `COMMITTED` cujo `candidate_commit` é o corrente | fase NORMAL da missão (integração de task de implementação) usar o atalho — a pré-verificação existe para retomada **pós-fix**, e só ela tem essa assinatura |
+
+Com as duas, `SPEC_ALREADY_SATISFIED` fica restrito ao caso para o qual foi decidido. Medições depois:
+
+```
+missionSourceStaleReplanFullRouterE2E   PASS 82,1 s   (era RED no CI)
+governanceApprovalFullWorkerE2E         PASS 55,4 s   0 recorrências
+engineeringRouterSpecPreVerification    4/4           inclui “task ancorada em fonte ANTIGA
+                                                      não é dada como satisfeita”
+postFixFailureVsRecurrence              2/2
+tests/unit/{engineeringMission,engineeringRouter,ci}  82 suítes / 893 testes PASS
+    (3 suítes / 14 testes de SANDBOX falham IDENTICAMENTE no commit-base f8bf7cc6e —
+     provado em worktree separado: não são regressão deste commit)
+```
+
 ### 11.11.3 Efeito medido na suíte de aceitação
 
 ```
