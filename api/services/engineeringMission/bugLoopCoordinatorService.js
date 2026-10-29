@@ -610,21 +610,40 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
         await missionSourceService.ensureMissionSource(missionId, { actor });
         const missionSource = await missionSourceService.resolveTaskSource(missionId);
 
-        const contract = orch.buildTaskContract(spec, {
-          createdBy: actor,
-          sourceCommit: missionSource.currentCommit,
-          sourceRef: missionSource.integrationBranch,
-          sourceMissionFence: missionSource.fence,
-        });
+        // ── ESCOPO DA SUBSTITUTA NUNCA PODE NASCER VAZIO (defeito medido 2026-10-29) ─────────
+        // DEFEITO: a substituta era criada com `scopeDeferred: true` e o escopo do spec, que nasce
+        // `allowedPaths: []` e é enriquecido só em alguns fluxos. Quando o enriquecimento não vinha,
+        // NADA preenchia `allowed_paths` (nenhum caminho de código escreve esse campo depois da
+        // criação), o validador recusava todo patch com `NO_PATCH_SCOPE` e a retomada pós-fix
+        // esgotava as tentativas sem NUNCA conseguir entregar correção — medido em
+        // `engineeringBugLoopNaturalPathE2E` (3 ocorrências no run 40824588991).
+        //
+        // CORREÇÃO: o escopo vem, nesta ordem, do que já foi DECLARADO e validado —
+        //   1. `spec.allowedPaths` (o contrato aprovado da missão);
+        //   2. `originalTask.allowed_paths` (o escopo com que a correção foi de fato validada).
+        // Só quando NENHUM dos dois existe a task nasce `scopeDeferred` (comportamento anterior,
+        // fail-closed preservado: nada é inventado).
+        const escopoSpec = Array.isArray(spec.allowedPaths) ? spec.allowedPaths.filter(Boolean) : [];
+        const escopoOriginal = Array.isArray(originalTask?.allowed_paths) ? originalTask.allowed_paths.filter(Boolean) : [];
+        const escopoHerdado = escopoSpec.length > 0 ? escopoSpec : escopoOriginal;
+        const contract = {
+          ...orch.buildTaskContract(spec, {
+            createdBy: actor,
+            sourceCommit: missionSource.currentCommit,
+            sourceRef: missionSource.integrationBranch,
+            sourceMissionFence: missionSource.fence,
+          }),
+          ...(escopoHerdado.length > 0 ? { allowedPaths: escopoHerdado } : {}),
+        };
         const created = await engineeringTaskService.createTask(contract, {
           createdBy: actor,
           idempotencyKey: `mission:${missionId}:postbug:${findingId || 'na'}`,
-          // Mesma natureza da task inicial da missão: o spec nasce com
-          // `allowedPaths: []` e o escopo é resolvido no planejamento. Sem a
-          // declaração, a retomada pós-bug não conseguiria criar a task
-          // substituta (regressão medida em 2026-10-13).
-          scopeDeferred: true,
+          // `scopeDeferred` SÓ quando não há escopo declarado em lugar nenhum (ver bloco acima).
+          scopeDeferred: escopoHerdado.length === 0,
         });
+        lineage.scopeOrigin = escopoHerdado.length === 0
+          ? 'DEFERRED_NO_SCOPE_DECLARED'
+          : (escopoSpec.length > 0 ? 'MISSION_SPEC' : 'ORIGINAL_TASK');
         replacementTaskId = created.id;
         // UMA TASK CRIADA ANTES DA INTEGRAÇÃO PRECISA SER REANCORADA. A idempotência da chave acima
         // pode devolver uma task substituta de uma retomada ANTERIOR (criada sob um commit antigo):

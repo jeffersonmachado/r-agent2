@@ -374,5 +374,27 @@ describe('BUG_AUTONOMOUS_LOOP — CAMINHO NATURAL (sem sweep manual)', () => {
     const fixtureAtSource = execFileSync('git', ['show', `${replacement.source_commit}:${FIXTURE_FILE}`], { cwd: root, encoding: 'utf8' });
     // O fix adiciona `add()` à fixture: o conteúdo no commit da missão tem de refleti-lo.
     expect(fixtureAtSource).toMatch(/function add\s*\(/);
+
+    // (d) ESCOPO DA SUBSTITUTA — DEFEITO MEDIDO 2026-10-29 (run 40824588991, 3 ocorrências):
+    //     a substituta nascia com `allowed_paths: []`, NENHUM caminho de código preenche esse campo
+    //     depois da criação, e todo patch era recusado com `NO_PATCH_SCOPE` — a retomada pós-fix
+    //     esgotava as tentativas sem nunca conseguir entregar correção (e o finding recém-fechado
+    //     reabria como recorrência).
+    //     O escopo tem de ser HERDADO de algo já declarado e validado (spec da missão ou a task
+    //     original), nunca inventado e nunca vazio por omissão.
+    const escopo = Array.isArray(replacement.allowed_paths) ? replacement.allowed_paths.filter(Boolean) : [];
+    expect(escopo.length).toBeGreaterThan(0);
+    // A task ORIGINAL da missão (a que falhou e gerou o finding) — é dela que o escopo pode ter
+    // sido herdado quando o spec não declara nenhum.
+    const taskOriginal = await engineeringTaskService.getTask(originalTaskId);
+    const escopoOriginal = Array.isArray(taskOriginal.allowed_paths) ? taskOriginal.allowed_paths.filter(Boolean) : [];
+    if (escopoOriginal.length > 0) {
+      // Herança verificável: a substituta não pode operar num escopo DIFERENTE do que validou o fix.
+      for (const caminho of escopo) expect(escopoOriginal).toContain(caminho);
+    }
+    // E o registro da linhagem diz DE ONDE veio o escopo (auditável, nunca implícito).
+    const linhagem = (missionAfter && missionAfter.resume_metadata && missionAfter.resume_metadata.bugLoop
+      && missionAfter.resume_metadata.bugLoop.lineage) || lineage || {};
+    expect(['MISSION_SPEC', 'ORIGINAL_TASK']).toContain(linhagem.scopeOrigin);
   });
 });
