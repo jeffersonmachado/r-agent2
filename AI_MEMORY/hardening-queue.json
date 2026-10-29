@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-29T00:13:21.566Z",
+  "updatedAt": "2026-10-29T00:16:40.236Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2490,6 +2490,20 @@
       "severityBasis": "sem execução autoritativa não existe certificação nem DEVELOPMENT_VERIFIED; o guard recusa fail-closed",
       "severitySource": "medicao-local-2026-10-29",
       "blocked_reason": "ÂNCORA EXTERNA: o guard de bug-closure exige RAP_CLOSURE_INVENTORY_SHA256 vindo de canal externo (operador/CI), fora da árvore do repositório, e prova de fechamento por defeito (testes reais com exit 0 no SHA atual, fingerprint, livro de transições e assinatura de autoridade com mayCloseDefects). Nada disso pode ser fabricado dentro do repo — inventar âncora seria violar o próprio guard. Ação do operador: publicar a âncora e as provas; depois rodar npm run test:release-authoritative e reavaliar validate:required-tests / validate:bug-autonomous-loop / validate:engineering-router-v2."
+    },
+    {
+      "id": "V2-EVIDENCIA-REAL-NO-HEAD",
+      "title": "Router V2: 3 gates provados no HEAD com produtores canônicos (4 falhas → 1)",
+      "status": "verified",
+      "commit": "53c37167e",
+      "evidence": "RELATORIO §11.10. Medições reais no HEAD 53c37167e: verify:timeout-architecture-e2e → TODOS OS CENÁRIOS PASS (61 s) e validate:timeout-architecture → GREEN; engineering-router:v2-envelope:generate + verify → VERIFIED checks=22 falhas=0 (declara honestamente os 3 insumos ausentes); validate:rag-index-health → HEALTHY indexed=3539 violações=0; validate:recovery → GO checks=17 falhas=0 (takeover real, fence 1→2, escrita do worker morto recusada TASK_LEASE_NOT_HELD); verify:mission-crash-recovery → GO checks=13 falhas=0 (SIGKILL real). Efeito: validate:engineering-router-v2 de 4 falhas/5 pendências para 1 falha/3 pendências.",
+      "resolution": "Nenhum artefato foi fabricado: cada prova veio do produtor canônico do próprio repositório. O que resta no gate é a MESMA causa única — execução autoritativa das suítes recusada por INVENTARIO_NAO_ANCORADO (item REQUIRED-TESTS-ANCORA-EXTERNA).",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "severityBasis": "gate de certificação V2 em NO_GO por falta de prova executada; provas locais disponíveis não estavam sendo produzidas",
+      "severitySource": "medicao-local-2026-10-29"
     }
   ],
   "schemaVersion": 2,

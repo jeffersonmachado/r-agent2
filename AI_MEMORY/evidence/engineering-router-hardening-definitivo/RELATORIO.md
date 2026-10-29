@@ -1132,14 +1132,45 @@ acima que passam.
 
 ---
 
+## 11.10 Rodada de evidência real no HEAD: 3 gates saíram do vermelho
+
+Executando os **produtores canônicos** (nenhum artefato inventado), o estado do `engineering-router-v2`
+mudou de `4 falhas / 5 pendências` para `1 falha / 3 pendências`:
+
+| produtor executado | resultado medido | efeito no gate |
+|---|---|---|
+| `verify:timeout-architecture-e2e` | `TODOS OS CENÁRIOS PASS` (61 s) | `validate:timeout-architecture` → **GREEN** |
+| `engineering-router:v2-envelope:generate` + `:v2-envelope` | `status=VERIFIED checks=22 falhas=0` (sourceCommit do HEAD) | `ENVELOPE_VERIFICATION` → **[PASS]** |
+| `validate:rag-index-health` | `HEALTHY indexed=3539 duplicados=0 violações=0` | `ENGINEERING_RAG_ENRICHMENT` → PASS |
+| `validate:recovery` | `status=GO checks=17 falhas=0` (takeover real, fence 1→2) | `REAL_TASK_RECOVERY` → **[PASS]** |
+| `verify:mission-crash-recovery` | `status=GO checks=13 falhas=0` (SIGKILL real, escrita do worker morto recusada) | `V2_CRASH_SIGKILL_VERDE` → **[PASS]** |
+
+O envelope registra honestamente os insumos que **não existem** nesta árvore (`release-suite-execution.json`,
+`engineering-router-v2-status-report.json`, `release-attestation.json`) — declarados, nunca omitidos.
+
+### 11.10.1 O que sobrou tem uma causa única
+
+```
+[FAIL]    V2_BUG_AUTONOMOUS_LOOP_GREEN   BUG_AUTONOMOUS_LOOP=NO_GO (31 itens sem prova)
+[PENDING] V2_REQUIRED_TESTS              68 testes obrigatórios NOT_EXECUTED
+[PENDING] V2_REQUIREMENTS_MATRIX_STATUS  17 eixos sem prova
+[PENDING] BUG_AUTONOMOUS_LOOP            31 itens sem prova
+```
+
+Os quatro são a **mesma** causa: a execução autoritativa das suítes está recusada por
+`INVENTARIO_NAO_ANCORADO` (§11.9.1). Não existe trabalho local que os prove sem a âncora externa — e
+fabricar prova seria violar o próprio guard.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
-TIMEOUT_ARCHITECTURE  = GO               (4 provas runtime reais, inventário 1133 sem LEGACY_UNKNOWN)
+TIMEOUT_ARCHITECTURE  = GO               (re-medido no HEAD 53c37167e: verify:timeout-architecture-e2e PASS → gate GREEN — §11.10)
 CRASH_RECOVERY        = GO               (13 checks com SIGKILL real)
 REAL_TASK_RECOVERY    = GO               (17 checks com takeover e fencing)
 RAG_INDEX_HEALTH      = HEALTHY          (3539 indexados, 0 violações)
-ENGINEERING_ROUTER_V2 = NO_GO            (2 falhas, 3 pendências — §7)
+ENGINEERING_ROUTER_V2 = NO_GO            (HEAD 53c37167e: 1 falha / 3 pendências — todos pela MESMA causa, a âncora externa — §11.10)
 LEASES/ESCOPO         = 3 defeitos reais + 4 achados de revisão fechados com prova (§9.3-bis/quater, §10.1)
 REQUIRED_TESTS        = FAIL/NOT_EXECUTED (68) — bloqueio externo
 DEVELOPMENT_VERIFIED  = NÃO DECLARADO    (testes obrigatórios não executados)
