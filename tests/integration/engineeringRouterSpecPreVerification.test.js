@@ -34,6 +34,15 @@ const router = require('../../api/services/engineeringRouter/engineeringRouterSe
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+// O WORKSPACE NASCE DA FONTE DA MISSÃO (`main`), não do branch de trabalho: o comando da spec
+// precisa passar NAQUELE tree. `mathUtils.test.js` existe em `main` e é RED por design apenas no
+// caso de `add` (o defeito que o laço de bugs corrige); o caso de `multiply` já passa. Filtrar por
+// `--testNamePattern` é, literalmente, declarar qual contrato a spec exige — e esse contrato está
+// satisfeito no commit da fonte.
+// A fonte da missão nasce do BRANCH EM TESTE (não de `main`): é o único tree que contém o fixture
+// da spec (`specPreVerifyPasses.test.js`), e o sandbox materializa o workspace DESSE commit.
+const SOURCE_REF = require('child_process')
+  .execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
 const SMOKE_FILE = 'tests/fixtures/engineering-router-sandbox/specPreVerifyPasses.test.js';
 const COMANDO_QUE_PASSA = `npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=${SMOKE_FILE} --no-coverage`;
 const COMANDO_QUE_FALHA = 'npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/fixtures/engineering-router-sandbox/inexistente-spec-preverify.test.js --no-coverage';
@@ -79,14 +88,17 @@ function git(args) {
 
 /** Avança a fonte da missão por um candidato REAL (commit descendente do base). */
 async function avancarFonteDaMissao(missionId, taskId) {
-  await missionSourceService.ensureMissionSource(missionId, { actor: 'jest-spec-preverify' });
+  await missionSourceService.ensureMissionSource(missionId, { actor: 'jest-spec-preverify', sourceRef: SOURCE_REF });
   const fonte = await missionSourceService.getMissionSource(missionId);
   const tree = git(['rev-parse', `${fonte.baseCommit}^{tree}`]);
   const candidato = git(['commit-tree', tree, '-p', fonte.baseCommit, '-m', 'spec pre-verify: fix integrado']);
+  // `BUG_FIX_CANDIDATE` é o que caracteriza RETOMADA PÓS-FIX (o caso que a pré-verificação atende).
   await missionSourceService.integrateCandidate({
     missionId,
     taskId,
     candidateCommit: candidato,
+    integrationType: 'BUG_FIX_CANDIDATE',
+    findingId: null,
     preconditions: PRECONDITIONS_OK,
     actor: 'jest-spec-preverify',
   });
@@ -167,9 +179,12 @@ describe('Router — spec já satisfeita na retomada pós-fix', () => {
 
     const missionId = await criarMissaoEEndereco();
     const task = await criarTask({ missionId, testCommands: [COMANDO_QUE_PASSA] });
-    // FONTE AVANÇOU de verdade: candidato real integrado na branch da missão (retomada pós-fix).
+    // FONTE AVANÇOU de verdade: candidato real integrado na branch da missão.
     const fonte = await avancarFonteDaMissao(missionId, task.id);
     expect(fonte.depois).not.toBe(fonte.antes);
+    // A retomada pós-fix REANCORA a task substituta no commit corrente — é o que caracteriza
+    // "o trabalho já está feito no ponto de partida" (mesma chamada de resumeOriginalMission).
+    await missionSourceService.reanchorTaskToCurrentSource(task.id, { actor: 'jest-spec-preverify' });
     const antes = chamadasCoder.total;
     {
       const resultado = await router.runTask(task.id);
@@ -197,6 +212,7 @@ describe('Router — spec já satisfeita na retomada pós-fix', () => {
     const missionId = await criarMissaoEEndereco();
     const task = await criarTask({ missionId, testCommands: [COMANDO_QUE_FALHA] });
     await avancarFonteDaMissao(missionId, task.id);
+    await missionSourceService.reanchorTaskToCurrentSource(task.id, { actor: 'jest-spec-preverify' });
     const antes = chamadasCoder.total;
     const resultado = await router.runTask(task.id);
     // Não conclui GREEN por pré-verificação: a spec NÃO está satisfeita.
@@ -205,13 +221,29 @@ describe('Router — spec já satisfeita na retomada pós-fix', () => {
     expect(chamadasCoder.total).toBeGreaterThan(antes);
   }, 300000);
 
+  test('task ancorada em fonte ANTIGA não é dada como satisfeita (regressão do stale-replan)', async () => {
+    if (!dbAvailable) return skipOrFail({ reason: `banco indisponível: ${dbReason}`, code: 'DB_UNAVAILABLE' });
+    if (!isSandboxAvailable()) return skipOrFail({ reason: 'Docker sandbox indisponível', code: 'SANDBOX_UNAVAILABLE' });
+
+    const missionId = await criarMissaoEEndereco();
+    const task = await criarTask({ missionId, testCommands: [COMANDO_QUE_PASSA] });
+    // Fonte avança, mas a task continua ancorada no commit ANTERIOR — é trabalho PENDENTE
+    // (o caso de `missionSourceStaleReplanFullRouterE2E`: precisa ir pelo Router e ser recusada).
+    await avancarFonteDaMissao(missionId, task.id);
+    const antes = chamadasCoder.total;
+    const resultado = await router.runTask(task.id);
+    expect(resultado.reasonCode).not.toBe('SPEC_ALREADY_SATISFIED');
+    expect(resultado.specAlreadySatisfied).toBeUndefined();
+    expect(chamadasCoder.total).toBeGreaterThan(antes);
+  }, 240000);
+
   test('fonte NÃO avançou ⇒ pré-verificação não se aplica (fluxo normal)', async () => {
     if (!dbAvailable) return skipOrFail({ reason: `banco indisponível: ${dbReason}`, code: 'DB_UNAVAILABLE' });
 
     const missionId = await criarMissaoEEndereco();
     const task = await criarTask({ missionId, testCommands: [COMANDO_QUE_PASSA] });
     // Fonte criada mas NÃO avançada: nenhuma correção integrada ⇒ não há o que pré-verificar.
-    await missionSourceService.ensureMissionSource(missionId, { actor: 'jest-spec-preverify' });
+    await missionSourceService.ensureMissionSource(missionId, { actor: 'jest-spec-preverify', sourceRef: SOURCE_REF });
     const fonte = await missionSourceService.getMissionSource(missionId);
     expect(fonte.currentCommit).toBe(fonte.baseCommit);
     const antes = chamadasCoder.total;

@@ -1321,6 +1321,53 @@ async function preVerifySpecSatisfied({ task, eventAudienceTenantId = null }) {
     return { status: 'NOT_APPLICABLE', reason: 'MISSION_SOURCE_NOT_ADVANCED' };
   }
 
+  // ── A TASK TEM DE NASCER NA FONTE JÁ CORRIGIDA ──────────────────────────────────────────────
+  // CONDIÇÃO APRENDIDA POR REGRESSÃO (medida no CI em 2026-10-29, run 40816307878): sem ela, uma
+  // task de trabalho LEGÍTIMO ancorada numa fonte ANTIGA era dada como satisfeita porque o
+  // `test_commands` dela (um smoke que passa em qualquer base) passava — e o Router concluía GREEN
+  // sobre trabalho que a missão não tem, derrubando `missionSourceStaleReplanFullRouterE2E`
+  // (esperado `READY_FOR_PROMOTION`/`STALE_CANDIDATE`, obtido `GREEN`).
+  //
+  // A retomada pós-fix REANCORA a task substituta no commit corrente da fonte
+  // (`reanchorTaskToCurrentSource`): é isso que caracteriza "o trabalho já está feito no ponto de
+  // partida". Task ancorada numa fonte anterior é trabalho PENDENTE e segue o fluxo normal — pelo
+  // Router, com a recusa de stale quando for o caso.
+  const ancoradaNaFonteCorrigida = Boolean(task.source_commit)
+    && String(task.source_commit) === String(source.currentCommit);
+  if (!ancoradaNaFonteCorrigida) {
+    return {
+      status: 'NOT_APPLICABLE',
+      reason: 'TASK_NOT_ANCHORED_ON_CORRECTED_SOURCE',
+      taskSourceCommit: task.source_commit || null,
+      missionCurrentCommit: source.currentCommit,
+    };
+  }
+
+  // ── É RETOMADA PÓS-FIX, E NÃO UMA FASE NORMAL DA MISSÃO ─────────────────────────────────────
+  // SEGUNDA CONDIÇÃO APRENDIDA POR REGRESSÃO (run 40816307878 e reprodução local da suíte
+  // `missionSourceStaleReplanFullRouterE2E`): `test_commands` que PASSA não prova que a spec está
+  // satisfeita — um smoke verde não mostra que o artefato exigido pela spec (ex.: o patch B) foi
+  // criado. A pré-verificação existe para UM caso: a missão foi retomada DEPOIS de uma correção ser
+  // integrada. Esse é o único caso em que a última integração da missão é um `BUG_FIX_CANDIDATE`;
+  // qualquer outra (fase normal, replan, task de implementação) é trabalho PENDENTE e segue o fluxo
+  // normal pelo Router. Sem esta condição, uma task de implementação ancorada na fonte corrente
+  // concluiria GREEN sem nunca produzir o artefato — GREEN falso, que é o pior desfecho possível.
+  const integracoes = await missionSourceService.listIntegrations(task.mission_id, { limit: 200 }).catch(() => []);
+  const ultimaIntegracao = integracoes.length ? integracoes[integracoes.length - 1] : null;
+  const retomadaPosFix = Boolean(ultimaIntegracao
+    // `candidate_commit` é o commit que a integração colocou na fonte; ele É o `currentCommit` quando
+    // a última integração é a que produziu o estado corrente.
+    && String(ultimaIntegracao.candidate_commit || '') === String(source.currentCommit)
+    && String(ultimaIntegracao.integration_type || '').toUpperCase() === 'BUG_FIX_CANDIDATE'
+    && String(ultimaIntegracao.integration_status || 'COMMITTED').toUpperCase() === 'COMMITTED');
+  if (!retomadaPosFix) {
+    return {
+      status: 'NOT_APPLICABLE',
+      reason: 'NOT_A_POST_FIX_RESUME',
+      lastIntegrationType: ultimaIntegracao ? ultimaIntegracao.integration_type || null : null,
+    };
+  }
+
   let workspace = null;
   try {
     workspace = await createWorkspace(task.id, 0);
