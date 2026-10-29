@@ -1785,6 +1785,11 @@ clique passa a ter timeout de 15 s — ausência falha em segundos NOMEANDO o qu
 | `support-agent-flow.spec.ts` **sem** a correção (stash) | **5/6** — cenário 1 passa por sorte de dado residual e o **cenário 3** cai no MESMO `open_ticket_exists` |
 | `qa-waves-replay.spec.ts` com a correção | falha em **segundos**: `journey_with_support_scenario: []` |
 
+Ressalva declarada: o Vite em `:5173` e a API em `:3001` eram os do worktree principal
+(`/opt/results/ria/r-agent2`, 17 h no ar) — não os desta worktree. O código de APLICAÇÃO é idêntico entre
+os dois (as mudanças desta branch são de teste/workflow/AI_MEMORY), então a verificação vale para o que ela
+mede: o comportamento das SPECS contra a aplicação real.
+
 Conclusão honesta: a correção do cenário 1 é real e verificada (`+1` determinístico), mas a família de
 cenários tem **dependência de estado compartilhado** pré-existente: 3, 4 e 5 contam com "algum chamado
 visível na lista" deixado pelos anteriores. Tentativa de corrigir o cenário 4 com o helper do cenário 1
