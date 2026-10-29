@@ -1614,6 +1614,50 @@ Fecha o mapa de execução desta rodada. Todos os grupos foram rodados nesta wor
 Nenhum defeito novo apareceu nesta varredura: os grupos acima já estavam verdes depois das correções
 §11.16–§11.19, e o valor desta rodada é a MEDIÇÃO, não um conserto.
 
+## 11.21 O refresh agendado das evidências de wave estava morto por falta de identidade de run
+
+Descoberto ao verificar uma afirmação da própria fila ("Actions bloqueado por budget"). A evidência
+contradiz a fila e revela um defeito de código:
+
+```
+run 40158423635 · 2026-10-25 · main 04cad9c1b · "Wave Reports Refresh" (schedule)
+  ✓ 12 passos verdes (containers, migrations, API :3001, frontend :5173, warmup)
+  X Database Integrity Wave (Postgres real)
+      [db-integrity-wave] models no inventário: 224 | relações: 9
+      [db-integrity-wave] dbAvailable=true
+      [db-integrity-wave] erro fatal: nenhum run governado encontrado — crie o run antes de produzir evidência
+  - API Surface Wave / Page Surface Wave      (nem rodaram)
+```
+
+**Não é billing**: o run agendado EXECUTOU (1m35s, 19 passos). O que aconteceu é fail-closed correto do
+produtor (`scripts/governance/lib/report-lineage.js` → `LINEAGE_RUN_UNDEFINED`): evidência de runtime sem
+run é evidência sem origem. O job agendado **nunca abria o run** — portanto o refresh não atualizava nada e
+as evidências de wave venciam (o coverage gate degrada `VALIDATED → STALE` acima de 7 dias). O padrão de
+sucesso/falha alternado por semana (04/10 e 18/10 verdes; 27/09, 11/10 e 25/10 vermelhos) é compatível com
+a janela de validade das provas de fechamento de bug que o guard consome antes do lineage.
+
+**Correção** (commit `1ad166d97`): o workflow passa a **abrir** o run antes das waves
+(`create-governed-run.js`) e a **fechar** depois com `if: always()` — para não deixar run órfão quando uma
+wave falhar (a classe de defeito do H20). O run é de **manutenção**: fecha como `SUPERSEDED`, com motivo e
+evidência obrigatórios, e **nunca certifica release**.
+
+**Prova local do mecanismo** (banco descartável `rap_wave_proof`, criado e removido; migrations aplicadas):
+
+| estado | resultado medido |
+|---|---|
+| SEM run governado | `comLineage` lança `LINEAGE_RUN_UNDEFINED` — a classe exata do erro de CI |
+| COM run criado | `comLineage` devolve `runId`/`sourceFingerprint`/`sourceCommit`, e `verifyDb` confere a linha do run no banco |
+| fechamento | `close-run-context` grava `status=SUPERSEDED`, `closedAt`, `closedBy` com motivo e evidência |
+
+`governance/.current-run.json` é gitignored (`.gitignore:123`) e o passo de commit adiciona **apenas** os três
+relatórios — o ponteiro do run nunca entra no commit. Testes de CI: `tests/ci` 6/6 e
+`stepExitMasking` 8/8 (o lint de mascaramento de exit passa com `pipefail` já declarado no job).
+
+**O que NÃO está provado:** que o próximo run agendado fique verde. Isso depende de o guard de bug-closure
+em `main` aprovar (em 25/10 ele aprovou — a falha foi no lineage), o que é previsão, não medição. Também
+não reproduzi o erro localmente: nesta branch o guard de bug-closure recusa **antes** do lineage
+(`INVENTARIO_NAO_ANCORADO` — a âncora externa), então a ordem de falha local difere da de `main`.
+
 ---
 
 ## 12. DECISÃO FINAL

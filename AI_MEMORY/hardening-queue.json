@@ -2571,6 +2571,19 @@
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "flake de teste sob carga (execução completa em paralelo); não afeta produto, mas produz vermelho não determinístico no gate de unit",
       "severitySource": "medicao-local-2026-10-29"
+    },
+    {
+      "id": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
+      "title": "Refresh agendado das waves falhava por não abrir run governado (evidências de wave venciam)",
+      "status": "done",
+      "legacyStatus": "done",
+      "state": "DONE_MEASURED",
+      "commit": "1ad166d97",
+      "evidence": "RELATORIO §11.21. Medido no run 40158423635 (2026-10-25, main 04cad9c1b): 'Database Integrity Wave' morreu com 'nenhum run governado encontrado' e as duas waves seguintes nem rodaram; o run EXECUTOU (1m35s), logo não é billing. Causa: o produtor é fail-closed (LINEAGE_RUN_UNDEFINED em scripts/governance/lib/report-lineage.js) e o job agendado nunca abria o run. Correção em 1ad166d97: passo create-governed-run antes das waves e close-run-context (SUPERSEDED, if: always()) depois. Prova local em banco descartável rap_wave_proof: sem run => LINEAGE_RUN_UNDEFINED; com run => runId/fingerprint/commit e verifyDb conferindo a linha; close grava status/closedAt/closedBy. tests/ci 6/6 e stepExitMasking 8/8 PASS. NÃO provado: verde no próximo run agendado (depende do guard de bug-closure em main).",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "evidência de wave vencida degrada VALIDATED->STALE no coverage gate; é insumo de release, não cosmético",
+      "severitySource": "medicao-ci-2026-10-25"
     }
   ],
   "schemaVersion": 2,
