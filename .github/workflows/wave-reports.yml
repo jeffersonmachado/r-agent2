@@ -188,6 +188,22 @@ jobs:
           VITE_PROXY_TARGET: http://localhost:3001
           API_PORT: '3001'
 
+      # IDENTIDADE DO RUN — defeito medido 2026-10-25 (run 40158423635): `npm run wave:db-integrity`
+      # morreu com "nenhum run governado encontrado — crie o run antes de produzir evidência" e as duas
+      # waves seguintes nem rodaram. O produtor é fail-closed por projeto (scripts/governance/lib/
+      # report-lineage.js: LINEAGE_RUN_UNDEFINED) porque evidência de runtime sem run é evidência sem
+      # origem. Este job agendado NUNCA abria o run, então o refresh não atualizava nada e as evidências
+      # de wave venciam (o coverage gate degrada VALIDATED -> STALE após 7 dias).
+      #
+      # O run aqui é de MANUTENÇÃO: existe só para dar identidade aos três relatórios e é FECHADO como
+      # SUPERSEDED no fim — ele nunca certifica release, e o fechamento é `if: always()` para não deixar
+      # run órfão quando uma wave falhar (a classe de defeito "run abandonado" do H20).
+      #
+      # `governance/.current-run.json` é gitignored (.gitignore:123) e o passo de commit abaixo adiciona
+      # apenas os três relatórios — o ponteiro do run NUNCA entra no commit.
+      - name: Abrir run governado (identidade dos artefatos de wave)
+        run: node scripts/governance/create-governed-run.js | tee /tmp/wave-run-context.json
+
       - name: Database Integrity Wave (Postgres real)
         run: npm run wave:db-integrity
 
@@ -196,6 +212,22 @@ jobs:
 
       - name: Page Surface Wave (navegação Playwright contra o frontend vivo)
         run: npm run wave:page-surface
+
+      - name: Fechar run governado (manutenção — não certifica release)
+        if: always()
+        run: |
+          # Fechar NÃO esconde divergência: o motivo e a evidência são obrigatórios por projeto
+          # (scripts/governance/close-run-context.js devolve 2 sem --reason/--evidence).
+          # Sem ponteiro (ex.: falha antes de abrir o run) o fechamento é no-op, não erro.
+          if [ ! -f governance/.current-run.json ]; then
+            echo "sem run aberto — nada a fechar"
+            exit 0
+          fi
+          node scripts/governance/close-run-context.js \
+            --status SUPERSEDED \
+            --reason "refresh agendado de evidências de wave; run de manutenção, não certifica release" \
+            --evidence "reports/db-integrity-report.json,reports/api-surface-report.json,reports/page-surface-report.json" \
+            --by "wave-reports-ci"
 
       - name: Commit e push dos relatórios atualizados (se houver mudança)
         run: |
