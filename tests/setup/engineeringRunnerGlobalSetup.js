@@ -241,9 +241,10 @@ module.exports = async function engineeringRunnerGlobalSetup() {
         `[jest-global-setup] ATENÇÃO: ENGINEERING_RUNNER_URL=${configuredUrl} não responde — as suítes de sandbox `
         + 'vão falhar com ECONNREFUSED/BLOCKED_INFRA (e uma delas espera 900 s de timeout). Suba o runner manualmente '
         + 'antes do lote, na MESMA porta e com o MESMO token que este skip deixa em vigor (os do `.env`, '
-        + 'porque `ENGINEERING_RUNNER_URL`/`ENGINEERING_RUNNER_TOKEN` só são reescritos quando o setup SOBE o runner):\n'
-        + '  ENGINEERING_RUNNER_PORT=<porta de ${configuredUrl}> ENGINEERING_RUNNER_TOKEN=<ENGINEERING_RUNNER_TOKEN do .env> '
-        + 'node services/engineering-runner/src/index.js\n',
+        + 'porque `ENGINEERING_RUNNER_URL`/`ENGINEERING_RUNNER_TOKEN` só são reescritos quando o setup SOBE o runner). '
+        + 'O runner TAMBÉM precisa do `.env`: quando o setup o sobe, ele herda `process.env` já carregado.\n'
+        + `  ENGINEERING_RUNNER_PORT=<porta de ${configuredUrl}> ENGINEERING_RUNNER_TOKEN=<ENGINEERING_RUNNER_TOKEN do .env> `
+        + 'node --env-file-if-exists=.env services/engineering-runner/src/index.js\n',
       );
     } else if (process.env.ENGINEERING_RUNNER_TOKEN) {
       const status = await probeAuthOnce(configuredUrl, process.env.ENGINEERING_RUNNER_TOKEN);
