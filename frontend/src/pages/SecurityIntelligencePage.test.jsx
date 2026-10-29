@@ -152,7 +152,13 @@ describe('SecurityIntelligencePage — ações no grid inicial', () => {
     await waitFor(() => expect(screen.getByText('Achados de segurança')).toBeTruthy());
 
     // Sem filtro: os 3 achados estão no grid.
-    expect(screen.getByTestId(`finding-actions-${COM_CORRECAO}`)).toBeTruthy();
+    // CORRIDA MEDIDA (run 40949091209, Frontend Tests em dev bfd2ce9a3): a asserção era SÍNCRONA
+    // (`getByTestId`) logo depois de esperar apenas o título estático "Achados de segurança" — o grid
+    // depende de `listSecurityFindings`, e quando essa promise resolve depois o teste falha com
+    // `Unable to find an element by: [data-testid="finding-actions-A|npm:pacote-a@1.0.0"]`, exatamente
+    // o erro de CI (reproduzido aqui atrasando o mock em 80 ms). Os testes irmãos deste arquivo já
+    // usam `findBy*`; este passou a usar também. A asserção é a MESMA, apenas aguardada.
+    expect(await screen.findByTestId(`finding-actions-${COM_CORRECAO}`)).toBeTruthy();
 
     await user.click(screen.getByTestId('findings-only-pending'));
 
