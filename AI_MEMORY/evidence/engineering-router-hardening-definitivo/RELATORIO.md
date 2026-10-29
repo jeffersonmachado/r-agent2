@@ -1421,6 +1421,32 @@ npx jest tests/integration/engineering --runInBand --bail=0
 Subir o runner em 8097 com `ENGINEERING_RUNNER_TOKEN=jest-test-engineering-runner-token` **sem** carregar o
 `.env` produz lote inválido — foi exatamente o erro das armadilhas 1 e 3.
 
+### 11.15.3 Amostra canônica final (VÁLIDA) — L0b 100% verde
+
+Receita de §11.15.2, HEAD `ec4d9b5b3` (árvore idêntica à medida), log `/tmp/rap-ev/l0b_valid4.log`:
+
+```
+Test Suites: 41 passed, 41 total
+Tests:       238 passed, 238 total
+Time:        1699.487 s
+EXIT=0
+```
+
+Inclui, verdes, as suítes que sustentam o aceite desta rodada:
+
+| suíte | resultado |
+|---|---|
+| `engineeringBugLoopNaturalPathE2E` | **PASS** 90,1 s |
+| `engineeringRouterSpecPreVerification` | **PASS** 32,5 s (4/4) |
+| `engineeringMissionCrashRecoveryE2E` | **PASS** 5,2 s (inclui `CRASH_SIGKILL_RUNTIME_EVIDENCE`) |
+
+E, rodadas explicitamente (fora do diretório `engineering/`), 12/12 PASS: `governanceApprovalFullWorkerE2E`
+(106,1 s), `postFixFailureVsRecurrence` e `postFixFailureClassification` (unit, 9 casos).
+
+Comparação com o estado anterior: a amostra de `ea1435ab7` era **39/40 com 1 vermelho** e **41 arquivos**
+hoje (a suíte nova `engineeringRouterSpecPreVerification` é desta rodada). O vermelho remanescente era o
+harness (§11.14), não o produto.
+
 ---
 
 ## 12. DECISÃO FINAL
