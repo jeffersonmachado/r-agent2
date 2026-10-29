@@ -153,6 +153,17 @@
       "rootCause": "markReproducing/markNotReproduced gravavam o PLANO DERIVADO no campo reproduction, substituindo o registro declarado pelo finding",
       "fix": "plano entra POR CIMA do declarado nos tres caminhos (REPRODUCING, NOT_REPRODUCED COMMAND e INVARIANT)",
       "tests": "engineeringBugLoop 32/32 com 2 regressoes novas (REPRODUCED e NOT_REPRODUCED preservam strategy/source)"
+    },
+    {
+      "id": "CI-E2E-CREDENTIAL-SCOPE",
+      "severity": "P1",
+      "title": "Suítes E2E do Router salvavam credencial no tenant do teste; o Router resolve pelo ESCOPO fixo (SYSTEM_ENGINEERING)",
+      "rootCause": "engineeringRouterService.credentialScope é FIXO em SYSTEM_ENGINEERING/DEFAULT_TENANT_ID por decisão de segurança (ER-V1: nunca usar a credencial do tenant do usuário). As suítes salvavam chaves fake só no tenant de fixture; getCredentialDetailsMap(escopo) voltava vazio, buildAvailableModels não qualificava modelo e a task virava BLOCKED_INFRA/NO_QUALIFIED_CANDIDATE.",
+      "reproduction": "Base limpa (rap_ci_sim, só migrations): BLOCKED em ~5 s com NO_QUALIFIED_CANDIDATE. Mesma base com chaves fake no escopo: PASS 103 s. Na base de desenvolvimento passava por já ter credenciais reais no escopo.",
+      "fix": "Fixtures provisionam o ESCOPO preservando credencial existente (nunca sobrescreve/re-cifra) e removem no afterAll só as chaves que criaram. Nenhuma asserção alterada.",
+      "regression": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js + tests/integration/governanceApprovalFullWorkerE2E.test.js — passam em base limpa E na base de desenvolvimento; sha256 do texto claro das 4 chaves reais do dev idêntico antes/depois.",
+      "runnerEffect": "run 40752124806: 2 suítes ✕; run 40781349215: 1 suíte ✕ (missionSourceStaleReplanFullRouterE2E = PASS)",
+      "commit": "c0edd189c"
     }
   ],
   "gates": {
@@ -312,5 +323,186 @@
         "lease_fence nao e validado nas escritas do finding"
       ]
     }
-  ]
+  ],
+  "ciMainJestWorkflow": {
+    "workflow": ".github/workflows/jest.yml",
+    "measuredAt": "2026-10-28",
+    "conclusion": "AMBIENTE (não código): 5 lacunas de ambiente do job de unit fechadas e o job de integração passou a produzir veredito; residuais nomeados (artefato prod-like + 2 suítes com hipótese Node 20 aberta)",
+    "runs": [
+      {
+        "runId": 40726692268,
+        "commit": "3d283cf0d",
+        "added": "fetch-depth: 0",
+        "suites": "47",
+        "tests": "1460 (9 falhas)",
+        "remaining": "benchmarkChangeProposal: PostgreSQL inacessível"
+      },
+      {
+        "runId": 40728206519,
+        "commit": "79ee59add",
+        "added": "serviços postgres+redis",
+        "suites": "3",
+        "tests": "86 (17 falhas)",
+        "remaining": "mcpDiscoveryReal: relation \"mcp_connections\" does not exist"
+      },
+      {
+        "runId": 40729073198,
+        "commit": "e698bdf7d",
+        "added": "db:migrate",
+        "suites": "106",
+        "tests": "2598 (1 falha)",
+        "remaining": "ENOENT reports/benchmark-sufficiency-report.json"
+      },
+      {
+        "runId": 40730595851,
+        "commit": "e7592acda",
+        "added": "ci:artifacts",
+        "suites": "208",
+        "tests": "3940 (8 falhas)",
+        "remaining": "sandbox docker run exit 125"
+      },
+      {
+        "runId": 40734125941,
+        "commit": "2d5803e0d",
+        "added": "build da imagem do sandbox",
+        "suites": "328",
+        "tests": "5385 (1 falha)",
+        "remaining": "modelDrivenE2e"
+      },
+      {
+        "runId": 40735242329,
+        "commit": "d74d5826b",
+        "added": "sonda --bail=0 (medição descartável)",
+        "suites": "1121 (1116 pass, 4 fail, 1 skipped)",
+        "tests": "9785 (9773 pass, 10 falhas)",
+        "remaining": "modelDrivenE2e(1), workspaceStateSeeding(3), engineeringRouterSafeEnvironment(3), releaseTagPolicyBlock(3)"
+      },
+      {
+        "runId": 40737265748,
+        "commit": "251a11a20",
+        "added": "ci:bootstrap + identidade git",
+        "suites": "328",
+        "tests": "5385 (1 falha)",
+        "remaining": "modelDrivenE2e"
+      },
+      {
+        "runId": 40741496599,
+        "commit": "6b1e9e4de",
+        "added": "lotes canônicos + crm_p0_test",
+        "suites": "integration: 5 suítes ✕ / 26 testes ✕ → 2 suítes ✕ / 2 testes ✕",
+        "remaining": "governanceApprovalFullWorkerE2E, missionSourceStaleReplanFullRouterE2E"
+      },
+      {
+        "runId": 40746356670,
+        "commit": "c0fddb6fe",
+        "added": "exclusiva sozinha no lote + ref main local",
+        "suites": "integration: 2 suítes ✕ / 2 testes ✕ (29 lotes, 27 min)",
+        "remaining": "mesmas duas — não era contenção nem ref main"
+      },
+      {
+        "runId": 40752124806,
+        "commit": "5e1ff762d",
+        "added": "serviço RAG real em :8001",
+        "suites": "integration: 2 suítes ✕ / 2 testes ✕ (24 min)",
+        "remaining": "mesmas duas — não era RAG"
+      },
+      {
+        "runId": 40781349215,
+        "commit": "c0edd189c",
+        "added": "credencial do ESCOPO (fix provado)",
+        "suites": "integration: 81/82 PASS; 1 suíte ✕",
+        "remaining": "governanceApprovalFullWorkerE2E (fechamento do finding esperado)"
+      }
+    ],
+    "canonicalGate": {
+      "workflow": ".github/workflows/dev-branch-ci.yml",
+      "runs": [
+        {
+          "runId": 40729083196,
+          "commit": "e698bdf7d",
+          "conclusion": "success"
+        },
+        {
+          "runId": 40730607495,
+          "commit": "e7592acda",
+          "conclusion": "success"
+        },
+        {
+          "runId": 40734136725,
+          "commit": "2d5803e0d",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "jestIntegrationTimeout": {
+      "previousMinutes": 15,
+      "measuredCancellations": [
+        {
+          "runId": 40729073198,
+          "elapsed": "15m17s"
+        },
+        {
+          "runId": 40730595851,
+          "elapsed": "15m18s"
+        },
+        {
+          "runId": 40734125941,
+          "elapsed": "15m16s"
+        }
+      ],
+      "newMinutes": 90,
+      "reason": "job morria antes do veredito e não publicava nenhum Tests: — gate que não mede"
+    },
+    "residual": {
+      "test": "tests/unit/governance/modelDrivenE2e.test.js",
+      "requires": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json (job prod-like-smoke do dev-branch-ci)",
+      "decisionPending": [
+        "extrair prod-like-smoke para workflow_call e chamar nos dois workflows",
+        "aposentar jest.yml como gate de main"
+      ]
+    },
+    "assertionsTouched": 0,
+    "section": "RELATORIO.md §11.7",
+    "jestIntegration": {
+      "previousTimeoutMinutes": 15,
+      "measuredCancellations": [
+        "15m17s (40729073198)",
+        "15m18s (40730595851)",
+        "15m16s (40734125941)"
+      ],
+      "newTimeoutMinutes": 90,
+      "outcomes": [
+        {
+          "runId": 40737265748,
+          "duration": "18m16s",
+          "suites": "5 ✕ / 26 testes ✕ (paralelo default)"
+        },
+        {
+          "runId": 40741496599,
+          "duration": "26m",
+          "suites": "2 ✕ / 2 testes ✕ (lotes canônicos)"
+        },
+        {
+          "runId": 40746356670,
+          "duration": "27m",
+          "suites": "2 ✕ / 2 testes ✕ (exclusiva sozinha + main)"
+        },
+        {
+          "runId": 40752124806,
+          "duration": "24m",
+          "suites": "2 ✕ / 2 testes ✕ (RAG no ar)"
+        }
+      ],
+      "residualSuites": [
+        "tests/integration/governanceApprovalFullWorkerE2E.test.js"
+      ],
+      "hypothesesRuledOut": [
+        "contenção entre suítes",
+        "ref main ausente",
+        "serviço RAG ausente"
+      ],
+      "openHypothesis": "governanceApprovalFullWorkerE2E: no runner o ciclo fechou DOIS findings da missão (b6b331aa, d01963c8) e o finding acompanhado pelo teste continuou CONFIRMED até o deadline. Diagnóstico ampliado (findingIdEsperado + findingsDaMissao) para o próximo ciclo. CAUSA NÃO CONCLUÍDA — não classificada como ambiental.",
+      "notInCanonicalGate": "tests/integration/engineering (L0b) não alcança as duas; elas são do manifesto de release (config/canonical-release-suites.json), executado pelo runner de suítes, não pelo CI"
+    }
+  }
 }

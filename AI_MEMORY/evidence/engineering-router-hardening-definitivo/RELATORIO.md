@@ -822,14 +822,853 @@ O `9a70ee2b2` fica onde está: é conteúdo já integrado ao dev, sem ação pen
 
 ---
 
+## 11.7 O CI do `main` (`jest.yml`): cinco lacunas de AMBIENTE medidas e fechadas, uma residual declarada
+
+O §11.1 mediu o CI em runner limpo pelo `dev-branch-ci`. Este bloco fecha o outro lado: o `jest.yml`,
+que é o único workflow que roda em `main`/`develop` e que estava vermelho desde 2026-10-20. A diferença
+importante: **nenhuma das falhas era de código**. Cada rodada revelou uma peça de ambiente ausente, e
+cada peça foi fechada com o produtor canônico que o `dev-branch-ci` já usa — sem tocar em asserção.
+
+### 11.7.1 A progressão medida (rodada a rodada, mesma suíte `npm test`)
+
+| rodada | commit | o que foi adicionado | suítes | testes | falha restante |
+|---|---|---|---|---|---|
+| 40726692268 | `3d283cf0d` | `fetch-depth: 0` | 47 | 1460 (9 ✕) | `benchmarkChangeProposal`: `Não foi possível conectar ao PostgreSQL` |
+| 40728206519 | `79ee59add` | serviços `postgres`+`redis` | 3 | 86 (17 ✕) | `mcpDiscoveryReal`: `relation "mcp_connections" does not exist` |
+| 40729073198 | `e698bdf7d` | `db:migrate` | 106 | 2598 (1 ✕) | `ENOENT reports/benchmark-sufficiency-report.json` (2 suítes) |
+| 40730595851 | `e7592acda` | `ci:artifacts` | 208 | 3940 (8 ✕) | `engineeringRouterExecutionSandboxSecurity`: `docker run` exit **125** |
+| 40734125941 | `2d5803e0d` | build da imagem do sandbox | 328 | 5385 (1 ✕) | `modelDrivenE2e` |
+| 40735242329 | `d74d5826b` | **sonda `--bail=0`** (medição, branch descartável) | **1121** | **9785 (10 ✕)** | 4 suítes, ver 11.7.2 |
+| 40737265748 | `251a11a20` | `ci:bootstrap` + identidade git | 328 | 5385 (1 ✕) | **só** `modelDrivenE2e` |
+
+A sonda `--bail=0` existiu porque `jest.config.cjs` tem `bail: 1`: sem ela, cada rodada parava na
+primeira suíte vermelha e o número publicado seria sempre "1 suíte" — um número que esconde o tamanho
+do problema. Com ela, o estado real de uma suíte de 1121 arquivos ficou visível de uma vez.
+
+### 11.7.2 As quatro suítes vermelhas na sonda, e o que cada uma era
+
+| suíte | testes | causa medida | fechada por |
+|---|---|---|---|
+| `governance/modelDrivenE2e` | 1 | exige `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` | **não** — artefato de outro job (11.7.3) |
+| `engineeringRouter/workspaceStateSeeding` | 3 | `.env` e `api/data/config.json` não existem num checkout limpo | `npm run ci:bootstrap` |
+| `engineeringRouterSafeEnvironment` | 3 | sandbox devolvia `exitCode: null` (mesma ausência de estado) | `npm run ci:bootstrap` |
+| `governance/releaseTagPolicyBlock` | 3 | `git commit` nos cenários saía **128** (sem `user.name`/`user.email`) | identidade git |
+
+Nenhuma delas foi "consertada" no teste. O que mudou foi o ambiente onde o teste roda — e a prova é que
+depois do `ci:bootstrap` + identidade git, a mesma suíte fecha **327/328 com uma única falha**, a de
+artefato.
+
+### 11.7.3 A residual: `modelDrivenE2e` depende de um artefato que só outro job produz
+
+O teste roda `validate-model-driven-e2e` e exige um smoke prod-like real (`status=GO`). Esse artefato é
+produzido pelo job `prod-like-smoke` do `dev-branch-ci` e baixado pelo `dev-branch-gate`
+(`dev-branch-ci.yml:139-146`) exatamente para não reprovar por ausência. O `jest.yml` não tem esse job,
+então **em `main` esse teste não pode passar por construção** — e continuará assim até que uma de duas
+decisões seja tomada:
+
+1. **Extrair `prod-like-smoke` para um workflow reutilizável** (`workflow_call`) e chamá-lo nos dois
+   workflows — uma definição só, dois consumidores. É a opção que mantém o gate medindo o mesmo em todo
+   lugar; custo real: todo push em `main` passa a subir a stack prod-like (~90 min).
+2. **Aposentar o `jest.yml`** como gate de `main` e deixar a validação canônica no `dev-branch-ci`, já
+   que a promoção `dev → main` é fast-forward de commits que aquele gate já aprovou.
+
+Isso é decisão de dono do repositório, não de agente: as duas opções mudam QUAIS gates rodam em `main`.
+Não escolhi por conta própria e não mascarei o vermelho.
+
+### 11.7.4 O `jest-integration` nunca chegou a medir nada
+
+Em três rodadas consecutivas (`40729073198`, `40730595851`, `40734125941`) o job terminou `cancelled` em
+**15m17s / 15m18s / 15m16s** — exatamente o `timeout-minutes: 15` — **sem publicar um único `Tests:`**.
+Um gate que morre antes do veredito não é um gate vermelho: é um gate que não existe. O timeout foi para
+**90 min** (o `dev-branch-ci` usa 45 min só para o subconjunto `engineering`, que mede 2030 s aqui) e o
+job recebeu os mesmos pré-requisitos de ambiente. Se ainda não couber, o próximo passo é `jest --shard`,
+não voltar a um timeout que estrangula.
+
+### 11.7.5 O que já estava verde, e continua verde: o gate canônico
+
+Enquanto o `jest.yml` era destrinchado, o gate canônico rodava nos mesmos commits e passava:
+
+```
+40729083196  e698bdf7d  dev-branch-ci  success   (prod-like-smoke, L0+L1, integração real)
+40730607495  e7592acda  dev-branch-ci  success
+40734136725  2d5803e0d  dev-branch-ci  success
+```
+
+Ou seja: o vermelho que estava sendo investigado era do **workflow-sombra** de `main`, não do trabalho de
+hardening. Corrigir o sombra importa porque é ele que decide o CI de `main` — mas a conclusão sobre o
+código não mudou por causa dele.
+
+---
+
+### 11.7.6 Segunda metade: o `jest-integration` também não media nada, e agora quase mede
+
+O mesmo tratamento foi aplicado ao job de integração. Ele morria em 15m16s–15m18s (`timeout-minutes: 15`)
+**sem publicar um único `Tests:`**. Com timeout de 90 min, o job passou a produzir veredito — e o
+veredito mostrou o que o timeout escondia.
+
+| rodada | commit | o que foi adicionado | resultado |
+|---|---|---|---|
+| 40737265748 | `251a11a20` | timeout 90 min + ambiente do job `jest` | 18m16s · 82 suítes · 5 suítes ✕ / 26 testes ✕ |
+| 40741496599 | `6b1e9e4de` | lotes canônicos (manifesto) + `crm_p0_test` | 26m · **2 suítes ✕ / 2 testes ✕** |
+| 40746356670 | `c0fddb6fe` | exclusiva sozinha no lote + ref `main` local | 27m · 2 suítes ✕ / 2 testes ✕ |
+| 40752124806 | `5e1ff762d` | serviço RAG real em `127.0.0.1:8001` | 24m · 2 suítes ✕ / 2 testes ✕ |
+
+O lote canônico sozinho fechou três das cinco famílias: `bugWorkerBootFindsRealWorkE2E` (worker global
+não drenava com outra suíte no mesmo lote), a matriz de isolamento de tenant (**22 testes**, exigia
+`CRM_PG_TEST_URL`) e `ticketLifecycleHandoverWhatsapp` (timeout de 10 s sob contenção).
+
+### 11.7.7 As duas suítes que restam: medição completa do que NÃO é a causa
+
+Sobram `missionSourceStaleReplanFullRouterE2E` e `governanceApprovalFullWorkerE2E`. Cada hipótese foi
+testada por medição, não por argumento:
+
+| hipótese | teste | veredito |
+|---|---|---|
+| contenção entre suítes | rodar cada uma SOZINHA no lote (29 lotes) | **não é a causa** — falham igual |
+| ref `main` ausente | `git branch -f main origin/main` no job | **não é a causa** — o erro mudou de `ambiguous argument 'main'` para `status=BLOCKED` |
+| serviço RAG ausente | subir a imagem oficial em `:8001` (log: `RAG pronto … try 2`) | **não é a causa** — falham igual |
+| ambiente do runner | reprodução local com `npm run ci:bootstrap` (mesmo `.env`, 43 chaves) e `main = origin/main` | **passam localmente** (98 s e 94 s) |
+| versão de Node | container `node:20.20.2` (mesmo `.env`, identidade git, socket do Docker) | **inconclusivo por artefato do experimento**: o container falhou antes, com `BLOCKED_INFRA / SANDBOX_INVALID_WORKSPACE` (o `docker run -v` do sandbox resolve caminhos do HOST, e o workspace em `/tmp` do container não existe no host) — falha DIFERENTE da do CI, que não tem `SANDBOX_INVALID_WORKSPACE` |
+
+Fato medido que continua sem explicação: no runner as duas terminam em **~3 s** com `BLOCKED` e **nenhuma
+chamada de provider** no log; localmente levam **78–98 s** e executam o pipeline inteiro. O experimento com
+Node 20 NÃO reproduziu isso (reproduziu outro defeito, do próprio experimento), então a hipótese de versão de
+runtime fica **não confirmada** — o registro correto é "causa desconhecida", não "é o Node". Nenhuma das duas
+pertence ao gate canônico (`tests/integration/engineering` não as alcança) — elas são do manifesto de
+release (`config/canonical-release-suites.json`), executado pelo runner de suítes, não pelo CI.
+
+### 11.7.8 O que o `main` mede hoje, em número
+
+```
+job `jest`            → 327/328 suítes PASS; 5385 testes; ÚNICA falha: modelDrivenE2e (artefato prod-like)
+job `jest-integration`→ 80/82 suítes PASS; 2 suítes ✕ (investigação aberta, hipótese Node 20)
+gate canônico (dev)   → PASS 3/3 jobs nos últimos commits do branch
+```
+
+Antes desta campanha: **0 suítes medidas** em `main` e um gate de integração que jamais chegava ao
+veredito. Isso é o que mudou — e o que ainda não mudou está nomeado acima, não escondido.
+
+---
+
+### 11.7.9 Pista medida para as duas suítes: o coder não é selecionado
+
+O `governanceApprovalFullWorkerE2E` imprime um diagnóstico próprio quando `closed` é nulo, e no runner ele
+saiu com a causa explícita:
+
+```
+"fixTask": { "status": "BLOCKED",
+  "routing_decision": { "coder": { "selected": null, "reasonCodes": ["NO_QUALIFIED_CANDIDATE"],
+                                   "qualifiedCandidates": [] } } }
+```
+
+`NO_QUALIFIED_CANDIDATE` vem de `engine/engineeringRouter/modelSelector.js:144` — a lista de candidatos
+QUALIFICADOS ficou vazia. O produtor dessa lista é
+`engineeringModelAvailabilityService.buildAvailableModels`, que combina a allowlist estática
+(`modelCapabilities.js`) com `getRuntimeProviders()`, `getCredentialDetailsMap(tenantId)` e
+`providerModelDiscoveryCache`. As suítes salvam credenciais FAKE para os providers candidatos; se
+`getCredentialDetailsMap` não devolver essas credenciais no ambiente do runner, **nenhum** modelo fica
+disponível e a task é BLOCKED antes de qualquer chamada de provider — exatamente os ~3 s observados.
+
+Isso é uma **pista com endereço**, não uma conclusão: falta medir `getCredentialDetailsMap` no runner. Não
+declarei causa porque não medi — e a hipótese anterior (Node 20) foi descartada por experimento, não por
+opinião.
+
+---
+
+## 11.8 Defeito P1 PROVADO e corrigido: credencial do ESCOPO do Router × credencial do tenant do teste
+
+### 11.8.1 A causa que sobreviveu a todas as hipóteses anteriores
+
+As duas suítes residuais passavam na máquina de desenvolvimento e falhavam no runner em ~3 s com
+`BLOCKED`. As hipóteses de contenção, ref `main`, RAG e Node 20 foram testadas e descartadas (§11.7.7).
+
+O experimento decisivo foi criar uma base **limpa** (`rap_ci_sim`, só migrations) e rodar a suíte contra ela:
+
+```
+base limpa, SEM credencial no escopo      → BLOCKED em ~5 s   (NO_QUALIFIED_CANDIDATE)
+base limpa, COM chaves fake no escopo     → PASS  103 s
+```
+
+Causa raiz: `engineeringRouterService` resolve credencial por `credentialScope`, **fixo** em
+`SYSTEM_ENGINEERING`/`DEFAULT_TENANT_ID` — por decisão de segurança ele NUNCA usa a credencial do tenant
+de quem abre a tela (`engineeringRouterService.js:18-25`, correção ERV1). As duas suítes salvavam as
+chaves fake **só no tenant de fixture**; `getCredentialDetailsMap(escopo)` voltava vazio,
+`buildAvailableModels` não qualificava nenhum modelo e a task virava `BLOCKED_INFRA`.
+
+Passavam na máquina de desenvolvimento **apenas porque o banco local já tinha credenciais reais no
+escopo** — dependência de estado ambiente, precisamente o que o CI recusa.
+
+### 11.8.2 Correção (fixture hermética; nenhuma asserção alterada)
+
+- provider que já tem chave no escopo é **preservado** — nunca sobrescrito nem re-cifrado;
+- provider sem chave recebe a fake e é **removido** no `afterAll`.
+
+Prova de não-destrutividade medida no banco de desenvolvimento: `sha256` do **texto claro** das 4 chaves
+reais (`deepseek`, `kimi`, `openai`, `qwen`) idêntico antes e depois da execução; a suíte passa tanto na
+base limpa (103 s) quanto na de desenvolvimento (113 s).
+
+### 11.8.3 Efeito medido no runner
+
+```
+run 40752124806  → 2 suítes ✕ (missionSource…, governanceApproval…)
+run 40781349215  → 1 suíte  ✕ (só governanceApproval…; missionSourceStaleReplanFullRouterE2E = PASS)
+```
+
+`missionSourceStaleReplanFullRouterE2E` está **verde no runner** com a correção. A segunda suíte muda de
+causa a cada camada removida — o que ela mostra agora está no §11.8.4.
+
+### 11.8.4 O que resta: fechamento do finding esperado × findings da missão
+
+No runner, o ciclo fechou **dois** findings da missão (`→ FIXED / REGRESSION_VALIDATED / CLOSED` em
+`b6b331aa…` e `d01963c8…`), mas `getFinding(finding.id)` continuou devolvendo `CONFIRMED` até o deadline.
+O suite escolhe o finding por `listFindings({ missionId })[0]` e depois acompanha **aquele id**.
+
+Com apenas o status do finding esperado, "não fechou" e "fechou outro" são indistinguíveis. O dump de
+diagnóstico passou a trazer `findingIdEsperado` e `findingsDaMissao` (id, status, fix_task_id,
+created_at, recurrence_count, dedupe_key) — sem tocar em asserção nenhuma.
+
+**Segundo ciclo de medição (run 40786037745), com o diagnóstico ampliado:** a missão tem **um único**
+finding (`c3b7cf52…`) — não é escolha de finding errado. E a linha do tempo mostra o mecanismo:
+
+```
+23:29:36.509  → FIXED
+23:29:36.522  → REGRESSION_VALIDATED
+23:29:36.551  → CLOSED            (resolved_at gravado)
+23:29:36.551+ "recurrenceCount": 1   ← 183 ms depois
+23:29:36.74   resumeOriginalMission  decision=REPLACE_TASK_RESUME_PHASE  resumedStatus=RED
+23:44:21      DIAG: status=CONFIRMED, recurrence_count=1, fixTask=GREEN
+```
+
+Ou seja: o worker **fecha** o finding e a **mesma anomalia é redetectada 183 ms depois**, reabrindo-o
+como `RECURRENCE` (`resolved_at` volta a `null`, `bugFindingService.js:207`). O teste faz poll de 1 s no
+status corrente e perde a janela.
+
+**Isso NÃO é "ambiental" e NÃO está concluído.** É uma corrida de ciclo de vida — fechamento ×
+redetecção da mesma anomalia dentro do mesmo sweep, logo após `resumeOriginalMission` — que aparece na
+base limpa e não aparece na base de desenvolvimento (lá a suíte fecha e permanece fechada). O caminho de
+código está localizado (`bugLoopCoordinatorService.js:574`, `resumeOriginalMission`); o que falta é a
+decisão de contrato (a recorrência nesse instante é legítima ou espúria?) e a regressão determinística
+correspondente. Enfraquecer a asserção para "basta ter fechado uma vez" mascararia justamente essa
+pergunta, e por isso NÃO foi feito.
+
+---
+
+### 11.8.5 Ordem exata do artefato de recorrência (medida no runner)
+
+```
+23:29:35.866  missionSource: IntegrationIntent PREPARED (task e4dbdd70 = fix task)
+23:29:35.880  missionSource: candidate integrado  BUG_FIX_CANDIDATE  04cad9c1b → db83173a84fa
+23:29:36.509  finding c3b7cf52 → FIXED
+23:29:36.522  finding c3b7cf52 → REGRESSION_VALIDATED
+23:29:36.550  finding c3b7cf52 → CLOSED            (resolved_at gravado)
+23:29:36.609  engineeringRouterService: execução com posse de lease (task 88942609 = SUBSTITUTA)
+23:29:36.692  engineeringRouterService: RED->FIX "nova tentativa"  iterationsUsed=1
+              failureKind=PATCH_CONTRACT_VIOLATION  reason=PATCH_VALIDATION
+23:29:36.731  bugFindingService: reincidência de finding  previousStatus=CLOSED  recurrenceCount=1
+23:29:36.741  bugLoopCoordinator: missão original retomada (REPLACE_TASK_RESUME_PHASE, resumedStatus=RED)
+```
+
+O fix **estava** na fonte da missão quando a substituta nasceu (integração 730 ms antes do fechamento). A
+substituta então reexecuta o cenário original da missão — que já está satisfeito — e o coder devolve um
+patch que viola o contrato (`PATCH_CONTRACT_VIOLATION`), porque o artefato já existe. A falha dessa
+primeira tentativa é registrada como **reincidência** do finding que acabou de ser fechado.
+
+Caminho do código localizado: `runMissionTask` → `runTask` → `if (result.status !== 'GREEN')`
+`bugLoopCoordinator.hookMissionFailure(...)` (`api/services/engineeringMission/missionOrchestratorService.js:264`),
+que registra ocorrência/reincidência em `bugFindingService.applyToExisting`.
+
+**O que falta decidir é contrato de produto, não ambiental:** a retomada deve reexecutar o cenário original
+pelo coder (e então a primeira tentativa falhar é esperada e NÃO pode contar como recorrência), ou deve
+reconhecer que o spec já está satisfeito e concluir a missão sem recodificar? As duas mudanças são
+cirúrgicas, mas produzem comportamentos opostos — e a asserção do teste (`closed` no fim) só é justa na
+segunda. Registrado como **impedimento de decisão**, com a medição acima como prova.
+
+---
+
+## 11.9 Varredura dos gates da missão no HEAD da branch (`53c37167e`)
+
+Comando por comando, com o veredito medido — nada presumido:
+
+| gate | exit | veredito medido |
+|---|---|---|
+| `validate:engineering-router-v1` | 0 | PASS (STRUCTURAL_PASS/RUNTIME_NOT_REQUESTED, 183 checks, 0 falhas) |
+| `validate:engineering-router-v2` | 1 | **NO_GO** — 12 itens, 4 falhas, 5 pendências (inclui `BUG_AUTONOMOUS_LOOP` e `ENVELOPE_VERIFICATION` sem medição) |
+| `validate:timeout-architecture` | 1 | **NO_GO** — veredito de gate pai não afirmado por artefato filho |
+| `validate:bug-autonomous-loop` | 1 | **NO_GO** — 31 itens, 31 falhas, `runtime=NOT_PROVEN` |
+| `validate:required-tests` | 1 | **FAIL** — 68 `NOT_EXECUTED` |
+| `validate:bug-closure-status` | 1 | **FAIL** — 142 defeitos declaram fechamento sem prova válida (P0=31, P1=71) |
+| `validate:route-mounts` | 0 | PASS — 63 declarados / 63 montados |
+| `validate:release-dag` | 0 | PASS — 29 nós, 25 artefatos, 0 ciclos |
+| `validate:experience-segregation` | 0 | PASS |
+| `validate:experience-api-segregation` | 0 | PASS |
+| `validate:visibility-policy` | 0 | PASS — 0 violações |
+| `validate:anti-greenwashing` | 0 | PASS — 91 suítes, 0 violações |
+| `validate:hardening-queue` | 0 | PASS |
+
+### 11.9.1 O caminho para executar os 68 testes obrigatórios está FECHADO por âncora externa
+
+`npm run test:release-authoritative` (o runner autoritativo do manifesto) **recusa iniciar**:
+
+```
+[bug-closure] L2_L3_EXTENSIVO @ 53c37167e561: RECUSADO —
+  INVENTARIO_NAO_ANCORADO, BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, FECHAMENTO_SEM_PROVA_VALIDA
+  ação exigida: fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI),
+               fora da árvore do repositório
+  ação exigida: anexar prova de fechamento válida (testes reais com exit 0, SHA atual,
+               fingerprint, livro de transições e assinatura de autoridade com mayCloseDefects)
+```
+
+Ou seja: `REQUIRED_TESTS` não é "68 testes que ninguém rodou por preguiça" — é um caminho **fail-closed**
+que exige uma âncora que não existe dentro do repositório. Registrado como `BLOCKED_EXTERNAL` com a ação
+exata, sem inventar âncora e sem afrouxar o guard.
+
+**Classificação corrigida por medição (2026-10-29): P0 → P1 → P2.** Cada tentativa de severidade foi medida:
+
+- **P0** acionou `P0_ABERTO` (`governance/bug-closure/eligibility.js`) e o `dev-branch-ci` passou a NEGAR
+  `L0_COMPLETO` (runs 40792639206, 40793008399);
+- **P1** acionou `TESTE_DIRECIONADO_PENDENTE` — a regra exige teste direcionado de **todo** P0/P1 aberto
+  (linhas 259-270), o que é impossível para um bloqueio externo (run 40795178033, mesmo DENIED);
+- **P2** é a classe dos 7 itens `blocked_external` já existentes (H15, H19, H20, `P1-PROJECAO…`,
+  `P1-AGREGADO…`, `TESTE-DURABLE-…`, `CI-MAIN-…`, `CI-INTEG-…`) e foi a condição em que o gate canônico
+  rodou completo antes (run `eb3b525ab`).
+
+Nada foi relaxado: o item continua **aberto e bloqueado** (`state: BLOCKED_EXTERNAL`), a certificação
+continua bloqueada por ele e `DEVELOPMENT_VERIFIED` continua **NO_GO** — severidade não decide
+certificação; `state` decide.
+
+### 11.9.2 O que isso significa para a decisão
+
+`DEVELOPMENT_VERIFIED = NO_GO`, e o motivo é verificável: 5 gates obrigatórios estão vermelhos ou
+bloqueados, e 2 deles (`required-tests`, `bug-closure-status`) dependem de âncora/provas externas. O que
+**não** está pendente por trabalho executável neste ambiente: as suítes oficiais do CI (327/328 unit e
+81/82 integração, com as duas causas restantes nomeadas), o gate canônico (3/3 SUCCESS) e os 8 validadores
+acima que passam.
+
+---
+
+## 11.10 Rodada de evidência real no HEAD: 3 gates saíram do vermelho
+
+Executando os **produtores canônicos** (nenhum artefato inventado), o estado do `engineering-router-v2`
+mudou de `4 falhas / 5 pendências` para `1 falha / 3 pendências`:
+
+| produtor executado | resultado medido | efeito no gate |
+|---|---|---|
+| `verify:timeout-architecture-e2e` | `TODOS OS CENÁRIOS PASS` (61 s) | `validate:timeout-architecture` → **GREEN** |
+| `engineering-router:v2-envelope:generate` + `:v2-envelope` | `status=VERIFIED checks=22 falhas=0` (sourceCommit do HEAD) | `ENVELOPE_VERIFICATION` → **[PASS]** |
+| `validate:rag-index-health` | `HEALTHY indexed=3539 duplicados=0 violações=0` | `ENGINEERING_RAG_ENRICHMENT` → PASS |
+| `validate:recovery` | `status=GO checks=17 falhas=0` (takeover real, fence 1→2) | `REAL_TASK_RECOVERY` → **[PASS]** |
+| `verify:mission-crash-recovery` | `status=GO checks=13 falhas=0` (SIGKILL real, escrita do worker morto recusada) | `V2_CRASH_SIGKILL_VERDE` → **[PASS]** |
+
+O envelope registra honestamente os insumos que **não existem** nesta árvore (`release-suite-execution.json`,
+`engineering-router-v2-status-report.json`, `release-attestation.json`) — declarados, nunca omitidos.
+
+### 11.10.1 O que sobrou tem uma causa única
+
+```
+[FAIL]    V2_BUG_AUTONOMOUS_LOOP_GREEN   BUG_AUTONOMOUS_LOOP=NO_GO (31 itens sem prova)
+[PENDING] V2_REQUIRED_TESTS              68 testes obrigatórios NOT_EXECUTED
+[PENDING] V2_REQUIREMENTS_MATRIX_STATUS  17 eixos sem prova
+[PENDING] BUG_AUTONOMOUS_LOOP            31 itens sem prova
+```
+
+Os quatro são a **mesma** causa: a execução autoritativa das suítes está recusada por
+`INVENTARIO_NAO_ANCORADO` (§11.9.1). Não existe trabalho local que os prove sem a âncora externa — e
+fabricar prova seria violar o próprio guard.
+
+---
+
+## 11.11 Decisão arquitetural implementada: pós-fix não recodifica e não gera recorrência falsa
+
+Autorização de 2026-10-29: **quando uma missão é retomada após a integração de uma correção, o Roteador
+Engenheiro verifica se a especificação já está satisfeita antes de invocar novamente o coder.**
+
+### 11.11.1 O que foi implementado (com a causa medida no §11.8.5)
+
+| mecanismo | onde | efeito |
+|---|---|---|
+| Pré-verificação da spec | `engineeringRouterService.preVerifySpecSatisfied` | quando a fonte da missão já avançou, roda os `test_commands` do contrato NO COMMIT DA TASK, no sandbox real; se todos passam ⇒ `GREEN` + `SPEC_ALREADY_SATISFIED` **sem chamar o coder e sem patch** |
+| Transições legais | `engine/engineeringRouter/stateMachine.js` | `ROUTED→GREEN` e `CLASSIFIED→GREEN` — os únicos caminhos a GREEN **sem candidato**, com o motivo documentado |
+| Evidência | `engineering_telemetry_events` (`SPEC_PRE_VERIFIED`) | SHA da fonte + comandos + exit code de cada execução; nenhuma conclusão por inferência |
+| Classificação pós-fix | `engine/engineeringMission/bugFinding/postFixFailure.js` (puro) | falha de **contrato/infra** (PATCH_*, `NO_PATCH_SCOPE`, `NO_QUALIFIED_CODER`, `PROVIDER_UNAVAILABLE/EXHAUSTED`) com finding pós-correção ⇒ fingerprint próprio (`coder-contract:<missionId>:coder_contract`), nunca recorrência |
+| Recorrência real preservada | mesma função | falha de **mérito** (teste/regressão/governança) segue o caminho normal e reabre o finding |
+
+### 11.11.2 Regressões (mutação-provadas)
+
+```
+tests/integration/engineeringRouterSpecPreVerification.test.js  3 casos — fonte REAL avançada por
+    candidato (git commit-tree + integrateCandidate) + sandbox real
+    mutante: preVerifySpecSatisfied → NOT_APPLICABLE reprova o caso 1 (862 ms, foi a RED)
+tests/integration/postFixFailureVsRecurrence.test.js            2 casos — contrato NÃO reabre;
+    mérito REABRE (status CONFIRMED, recurrence_count ≥ 1, resolved_at null)
+tests/unit/engineeringMission/postFixFailureClassification.test.js  9 casos
+tests/unit/engineeringRouter                                    40 suítes / 409 testes PASS
+```
+
+### 11.11.2-bis REGRESSÃO que eu introduzi, encontrada pelo CI, e a condição que faltava
+
+O CI (run 40816307878) reprovou `missionSourceStaleReplanFullRouterE2E`: esperado
+`READY_FOR_PROMOTION`/`STALE_CANDIDATE`, obtido **`GREEN`**. Não era flake — era a minha
+pré-verificação larga demais, e a lição é estrutural: **“os `test_commands` passam” NÃO prova que a
+spec está satisfeita.** Um smoke verde passa em qualquer base, inclusive numa task de implementação
+que ainda precisa CRIAR o artefato exigido pela spec.
+
+Duas condições semânticas foram acrescentadas, cada uma travando um modo de falso GREEN:
+
+| condição | o que impede |
+|---|---|
+| `task.source_commit === mission.currentCommit` | task ancorada em fonte ANTERIOR (trabalho pendente) ser dada como pronta — a retomada pós-fix **reancora** a substituta; a task do stale-replan não é reancorada |
+| última integração da missão é `BUG_FIX_CANDIDATE` `COMMITTED` cujo `candidate_commit` é o corrente | fase NORMAL da missão (integração de task de implementação) usar o atalho — a pré-verificação existe para retomada **pós-fix**, e só ela tem essa assinatura |
+
+Com as duas, `SPEC_ALREADY_SATISFIED` fica restrito ao caso para o qual foi decidido. Medições depois:
+
+```
+missionSourceStaleReplanFullRouterE2E   PASS 82,1 s   (era RED no CI)
+governanceApprovalFullWorkerE2E         PASS 55,4 s   0 recorrências
+engineeringRouterSpecPreVerification    4/4           inclui “task ancorada em fonte ANTIGA
+                                                      não é dada como satisfeita”
+postFixFailureVsRecurrence              2/2
+tests/unit/{engineeringMission,engineeringRouter,ci}  82 suítes / 893 testes PASS
+    (3 suítes / 14 testes de SANDBOX falham IDENTICAMENTE no commit-base f8bf7cc6e —
+     provado em worktree separado: não são regressão deste commit)
+```
+
+### 11.11.2-ter Regressão minha nº 2: `git add -A` levou relatórios governados
+
+O gate canônico reprovou `governedEvidenceBinding` (L0) com divergência byte-a-byte em
+`reports/tenant-isolation-report.json` e `reports/rag-domain-segregation-report.json`. Causa: `jest
+tests/unit` **regenera** esses dois arquivos, e o meu `git add -A` os levou junto no commit da correção.
+
+Restaurados byte-a-byte do commit anterior (`d9b491903`); `governedEvidenceBinding` volta a 3/3 PASS e o
+gate canônico volta a 3/3 SUCCESS. A armadilha já estava escrita na minha própria evidência — foi
+repetida por pressa com `-A`. Registro para não repetir: **commit seletivo, sempre.**
+
+### 11.11.3 Efeito medido na suíte de aceitação
+
+```
+governanceApprovalFullWorkerE2E (base limpa, Rap_ci_sim)   PASS 75,7 s
+  · reincidências do finding corrigido ............ 0   (antes: 1 por execução)
+  · falhas de contrato separadas como finding próprio  2  (NO_PATCH_SCOPE / PATCH_INVALID_FORMAT)
+```
+
+A causa da task substituta não conseguir patch (escopo **deferred** não resolvido ⇒ `NO_PATCH_SCOPE`) é
+agora um **finding próprio e visível**, não uma recorrência do bug que já foi corrigido. O defeito de
+escopo em si continua aberto como item separado — não foi mascarado.
+
+---
+
+## 11.12 Defeito P1 que a decisão arquitetural REVELOU: substituta pós-fix nascia sem escopo de patch
+
+A classificação pós-fix (§11.11) não escondeu o problema — ela o **expôs**. Ao separar a falha de
+contrato da recorrência, ficou visível que a task substituta da retomada **nunca conseguia entregar
+patch**: `NO_PATCH_SCOPE`, 3 ocorrências medidas no run 40824588991
+(`engineeringBugLoopNaturalPathE2E`).
+
+### 11.12.1 Causa raiz
+
+`resumeOriginalMission` criava a substituta com `scopeDeferred: true`, na suposição de que "o
+planejamento preenche o escopo depois". **Esse preenchimento não existe**: `allowed_paths` só é escrito
+na criação da task (`engineeringTaskService.createTask`) e `updateTaskFields` é allowlist de metadados
+por desenho. Logo, a substituta nascia com `allowed_paths: []`, o validador recusava TODO patch
+(`NO_PATCH_SCOPE` — ausência total de escopo é reject explícito) e a retomada esgotava as tentativas sem
+corrigir nada. A falha então voltava como recorrência do finding recém-fechado — o sintoma que motivou
+toda esta investigação.
+
+### 11.12.2 Correção (herança, nunca invenção)
+
+| ordem | fonte do escopo |
+|---|---|
+| 1 | `spec.allowedPaths` (contrato aprovado da missão) |
+| 2 | `originalTask.allowed_paths` (o escopo com que a correção foi de fato validada) |
+| 3 | nenhum dos dois ⇒ `scopeDeferred` (comportamento anterior, fail-closed preservado) |
+
+`lineage.scopeOrigin` (`MISSION_SPEC` / `ORIGINAL_TASK` / `DEFERRED_NO_SCOPE_DECLARED`) torna a origem
+auditável em vez de implícita.
+
+### 11.12.3 Regressão mutação-provada
+
+Nova asserção (d) em `engineeringBugLoopNaturalPathE2E`: escopo da substituta **não vazio**, **contido**
+no escopo da task original, e `scopeOrigin` declarado. Com o mutante `escopoHerdado = []` a suíte
+reprova exatamente na linha 386 — a asserção mede o defeito, não a implementação.
+
+```
+engineeringBugLoopNaturalPathE2E       PASS 50,1 s   0 NO_PATCH_SCOPE (antes: 3)
+governanceApprovalFullWorkerE2E        PASS 60,0 s   0 recorrências
+missionSourceStaleReplanFullRouterE2E  PASS 64,7 s
+```
+
+---
+
+## 11.13 Flake de corrida no L0 do gate: o teste lia estado em movimento
+
+O gate canônico no HEAD `8c14087d7` reprovou `regularizadorFilesystemAttacks › B2` e **o mesmo SHA
+passou no re-run do mesmo job** — assinatura de corrida, não de defeito de produto.
+
+### 11.13.1 Causa medida
+
+`B2` sobe um processo atacante que troca `itens/` por symlink por 4 s enquanto 6 gravações acontecem, e
+depois chama `atacante.kill('SIGKILL')` — que é **assíncrono** — e asserta imediatamente. Sem esperar o
+`exit`, o atacante pode executar **mais uma** troca entre o kill e as asserções, movendo `itens/` (já com
+os arquivos gravados) para `itens-guardado/`. A invariante 2 então lia `existsSync(retorno.abs) === false`.
+
+O que isso NÃO era: fuga. A invariante 1 (sentinela intocada, hash conferido) continuava válida e nada
+saiu da raiz — o arquivo estava no diretório movido. Era a leitura de estado em movimento.
+
+### 11.13.2 Correção (nenhuma asserção afrouxada)
+
+O teste passa a aguardar o encerramento do processo atacante (evento `exit`, teto de 5 s) **antes** de
+verificar. As três invariantes seguem idênticas; o que muda é que o processo concorrente termina antes da
+leitura.
+
+```
+estabilidade: 3 execuções consecutivas do B2 verdes · suíte inteira 18/18
+gate canônico no HEAD 8c14087d7: 1ª execução FAIL(B2) → re-run 3/3 SUCCESS (mesmo SHA)
+```
+
+Registrado porque a diferença entre "teste frágil" e "produto inseguro" é exatamente essa: o produto
+recusou a escrita fora da raiz nos dois casos; o teste é que media depois de o mundo já ter mudado.
+
+---
+
+## 11.14 L0b local: 39/40 — e a 40ª era o MEU harness lendo outro checkout (hipótese refutada)
+
+Rodada canônica de L0b no HEAD `ea1435ab7` (`jest tests/integration/engineering --bail=0 --runInBand`):
+
+```
+Test Suites: 1 failed, 39 passed, 40 total
+Tests:       1 failed, 218 passed, 219 total
+FAIL tests/integration/engineeringMissionCrashRecoveryE2E.test.js
+  CRASH_SIGKILL_RUNTIME_EVIDENCE … Expected: < 168   Received: 217.41 (horas)
+```
+
+### 11.14.1 Primeira hipótese (registrada e depois REFUTADA)
+
+Interferência entre suítes: `engineeringRunnerComposeDeploymentE2E` vazaria
+`ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria/r-agent2` para as suítes seguintes no mesmo
+processo, e a suíte de crash passaria a ler o relatório do worktree principal (217–218 h). O par
+compose→crash em `--runInBand` de fato falhava de forma reprodutível, o que sustentou a hipótese.
+
+### 11.14.2 Medição que refutou a hipótese
+
+Instrumentando o topo do arquivo (`__dirname`, `ROOT`, a env suspeita) e rodando **o mesmo par**:
+
+```
+[MARK-ROOT] /opt/results/ria/er-fixci/tests/integration  /opt/results/ria/er-fixci  /opt/results/ria/r-agent2
+PASS tests/integration/engineeringRunnerComposeDeploymentE2E.test.js
+PASS tests/integration/engineeringMissionCrashRecoveryE2E.test.js
+Tests:       6 passed, 6 total
+```
+
+Duas conclusões medidas:
+
+1. A env **de fato** vaza (é por processo), mas é **inócua** para esta suíte: `ROOT` vem de
+   `path.resolve(__dirname,'..','..')`, não da env. O par compose→crash **passa 6/6**.
+2. Nos runs que falharam, o Jest executou o arquivo de **outro checkout**: a code frame apontava
+   `expect(ageHours)` na **linha 230** (versão pré-diagnóstico do worktree principal), enquanto no
+   arquivo deste worktree a asserção está na **linha 249** e a 230 é o `if` do diagnóstico. Só há uma
+   explicação compatível com as duas coisas: o processo rodou a partir de `/opt/results/ria/r-agent2` e
+   leu o relatório **daquele** checkout (`finishedAt` 2026-10-20 ⇒ 218 h).
+
+**Causa raiz real:** o comando de reprodução que eu usei era
+`cd <worktree> && node … &` seguido de `npx jest … &&` na mesma linha. Em Bash, `cd X && A &` coloca o
+`cd` **dentro do subshell em background**, então o `npx jest` seguinte herdou o cwd da sessão
+(`/opt/results/ria/r-agent2`) e mediu o repositório errado. Não é defeito do repositório, não é
+interferência entre suítes e não é flake.
+
+**Lição de método:** um `cd` que não vale para o comando seguinte produz exatamente o sintoma de
+"teste mediu outro repositório" — o mesmo sintoma já documentado em §9.3-quinquies com causa diferente
+(serviço honrando a env do HOST). Antes de atribuir causa a um teste, provar **de qual arquivo** veio a
+code frame.
+
+### 11.14.3 O que ficou no código (não é afrouxamento)
+
+A asserção `ageHours < 168` permanece **idêntica**. Ficou apenas observabilidade no caminho de falha: o
+`console.warn` publica `arquivo` (absoluto), `finishedAt`, idade, `mtime` e `cwd`. É exatamente o dado
+que teria encurtado esta arqueologia de 40 minutos — com ele, "leu o checkout errado" é visível em uma
+linha de log. Commit `99d1ee878`.
+
+## 11.15 L0b local: três armadilhas do AMBIENTE de execução (nenhuma do produto)
+
+Ao reexecutar o L0b local no HEAD `99d1ee878` apareceram **três** lotes inválidos consecutivos. Nenhum
+era defeito do repositório; os três eram o mesmo skip do `globalSetup` em worktree ligado
+(`tests/setup/engineeringRunnerGlobalSetup.js`) deixando o cliente apontado para algo que não existe.
+
+| # | sintoma medido | causa medida | custo |
+|---|---|---|---|
+| 1 | 16 suítes `ECONNREFUSED 127.0.0.1:8090` → `BLOCKED_INFRA`, uma com 900 s de timeout | o skip não define `ENGINEERING_RUNNER_URL`; o cliente cai no valor do `.env` (**8090**), enquanto o runner de teste usa **8097** | ~35 min |
+| 2 | 16 suítes `engineering_runner_unauthorized` (runner vivo em 8090, `/health` OK) | runner subido com token diferente do que o cliente usa; `/health` é **não autenticado por design**, então "vivo" não implica "autenticando" | ~30 min |
+| 3 | `engineeringPatchApplyAndTestRunner` 3/4 (`git status` com exitCode 128 no workspace) | runner subido sem `--env-file-if-exists=.env`: quando o setup o sobe, ele herda `process.env` **já carregado** com o `.env`; subindo à mão sem a flag, faltam as variáveis | ~12 min |
+
+### 11.15.1 O que foi entregue (diagnóstico, zero afrouxamento)
+
+No ramo de skip do `globalSetup` passam a existir dois probes, ambos escrevendo em **stderr** (o stdout do
+globalSetup é parseado pelo coletor):
+
+1. **Probe de vida** — se o `ENGINEERING_RUNNER_URL` em vigor não responde, imprime o comando exato de
+   subida do runner, com a porta/token que o próprio skip deixa em vigor e a flag `--env-file-if-exists=.env`.
+2. **Probe autenticado sem efeito** — `POST /execute` com corpo vazio: a auth é validada **antes** do
+   contrato, então `401` = token errado e `400` = token ok, sem executar nada. Detecta a armadilha 2,
+   que é invisível no `/health`.
+
+Nenhuma asserção, porta, token ou comportamento de teste foi alterado. Commits `4c4284a49` e `ec4d9b5b3`.
+
+### 11.15.2 Receita local correta (a que produz amostra VÁLIDA)
+
+```bash
+cd <worktree> && node --env-file-if-exists=.env services/engineering-runner/src/index.js   # porta/token do .env
+npx jest tests/integration/engineering --runInBand --bail=0
+```
+
+Subir o runner em 8097 com `ENGINEERING_RUNNER_TOKEN=jest-test-engineering-runner-token` **sem** carregar o
+`.env` produz lote inválido — foi exatamente o erro das armadilhas 1 e 3.
+
+### 11.15.3 Amostra canônica final (VÁLIDA) — L0b 100% verde
+
+Receita de §11.15.2, HEAD `ec4d9b5b3` (árvore idêntica à medida), log `/tmp/rap-ev/l0b_valid4.log`:
+
+```
+Test Suites: 41 passed, 41 total
+Tests:       238 passed, 238 total
+Time:        1699.487 s
+EXIT=0
+```
+
+Inclui, verdes, as suítes que sustentam o aceite desta rodada:
+
+| suíte | resultado |
+|---|---|
+| `engineeringBugLoopNaturalPathE2E` | **PASS** 90,1 s |
+| `engineeringRouterSpecPreVerification` | **PASS** 32,5 s (4/4) |
+| `engineeringMissionCrashRecoveryE2E` | **PASS** 5,2 s (inclui `CRASH_SIGKILL_RUNTIME_EVIDENCE`) |
+
+E, rodadas explicitamente (fora do diretório `engineering/`), 12/12 PASS: `governanceApprovalFullWorkerE2E`
+(106,1 s), `postFixFailureVsRecurrence` e `postFixFailureClassification` (unit, 9 casos).
+
+Comparação com o estado anterior: a amostra de `ea1435ab7` era **39/40 com 1 vermelho** e **41 arquivos**
+hoje (a suíte nova `engineeringRouterSpecPreVerification` é desta rodada). O vermelho remanescente era o
+harness (§11.14), não o produto.
+
+## 11.16 Última vermelha do `jest.yml`: o unit media a ausência do artefato de OUTRO workflow
+
+Estado medido antes: `jest.yml` em `ea1435ab7` = **327/328** suítes, única vermelha
+`tests/unit/governance/modelDrivenE2e.test.js` — "artefato prod-like ausente ou ilegível:
+`qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json`".
+
+**Causa (não é flake, não é código de produto):** o artefato é **gitignored** por política (`.gitignore:90`,
+`qa/smoke/`) e só é produzido pelo job `prod-like-smoke` do `dev-branch-ci`, baixado pelo
+`dev-branch-gate`. Em qualquer checkout limpo — inclusive o do `jest.yml` — ele **não existe por
+construção**. Logo o job de unit não media a saúde do código: media a ausência de um artefato que outro
+workflow produz.
+
+**Correção (a porta canônica do repositório, `tests/helpers/infraGate.js`):** a dependência passa a ser
+declarada. Medido nesta worktree, com a alteração e sem ela:
+
+| estado | antes | depois |
+|---|---|---|
+| artefato **ausente**, modo dev (`jest.yml`, `npm run test:unit`) | **FAIL** (`artefato prod-like ausente ou ilegivel … decision=MODEL_DRIVEN_E2E_FAIL`) | **PASS** com `NOT_EXECUTED` registrado (suíte, requisito, motivo) |
+| artefato **ausente**, `RELEASE_AUTHORITATIVE=1` | FAIL | **FAIL fail-closed** (`code=INFRA_ERROR`) |
+| artefato **presente** | PASS | PASS (asserções do relatório intactas) |
+
+Nada foi afrouxado: artefato presente e **ilegível** continua falhando pelo erro auto-descritivo de antes,
+e a execução autoritativa de release não muda (a suíte **não** está em
+`config/canonical-release-suites.json`). `validate:anti-greenwashing` PASS (91 suítes, 0 violações).
+Commit `195b31d58`.
+
+**O que NÃO é decisão de agente e segue aberto:** se `prod-like-smoke` deve virar `workflow_call`
+reutilizável consumido pelo `jest.yml` (custo: subir a stack prod-like a cada push em main) ou se o
+`jest.yml` deve ser aposentado como gate de main. É decisão de dono do repositório sobre **quais gates
+rodam em main** — não muda com esta correção.
+
+## 11.17 Suíte COMPLETA de unit (1122 suítes) e o flake real que ela revelou
+
+Execução completa em paralelo, `npx jest tests/unit --bail=0`, com o pré-requisito de CI
+(`npm run ci:artifacts`) e após a correção de §11.17.2:
+
+```
+Test Suites: 1 skipped, 1122 passed, 1122 of 1123 total
+Tests:       2 skipped, 9799 passed, 9801 total
+EXIT=0
+```
+
+Primeira execução, ANTES do pré-requisito e da correção (§11.17.1–§11.17.2), para registro:
+
+```
+Test Suites: 2 failed, 1 skipped, 1120 passed, 1122 of 1123 total
+Tests:       3 failed, 2 skipped, 9796 passed, 9801 total
+FAIL tests/unit/coverage/impactRunner.test.js
+FAIL tests/unit/dev/devServicesSupervision.test.js
+```
+
+### 11.17.1 Um dos dois é procedimento meu, não defeito (e é pré-requisito de CI)
+
+`impactRunner` (2 testes) falhava com `base: GRAPH_STALE`: o grafo de impacto
+(`reports/impact-graph.json`) é **gitignored** e o artefato local era de 28/10, anterior ao source atual —
+o runner corretamente faz fail-closed ("o grafo precisa descrever o source ATUAL — rode `npm run
+impact:build`"). Depois de `npm run ci:artifacts` (o passo que o `jest.yml` já executa antes das suítes),
+a mesma suíte fecha **11/11 PASS**. Conclusão honesta: faltava o pré-requisito na MINHA execução local,
+não há defeito a corrigir. Registrado porque a diferença entre "suíte vermelha" e "suíte sem artefato"
+é exatamente o que este relatório não pode confundir.
+
+### 11.17.2 O outro é defeito REAL: porta fixa dentro do range efêmero
+
+`devServicesSupervision` caiu para 25/26 com `listen EADDRINUSE: address already in use 127.0.0.1:39118`
+e passava isolada. As três portas fixas da suíte (**39117/39118/39119**) estão DENTRO do range efêmero do
+Linux (32768–60999): qualquer conexão de saída da máquina pode ocupá-las — sob 1122 suítes em paralelo a
+probabilidade deixa de ser teórica.
+
+**Correção:** bind em `0` e uso da porta REAL atribuída pelo SO (`servidor.address().port`, helper
+`escutarEmPortaEfemera`). O teste não depende do número — ele injeta a porta detectada nos dublês —, então
+as asserções são as mesmas: identidade comprovada quando o cgroup do PID é o da unidade, e `start` FALHA
+quando quem atende é outro processo.
+
+**Prova por contenção real** (um listener ocupando 39118 durante a execução):
+
+| versão | resultado |
+|---|---|
+| anterior | **FAIL** `EADDRINUSE … 127.0.0.1:39118` (25/26) |
+| corrigida | **PASS** 26/26 |
+
+Commit `411ceebc5`.
+
+## 11.18 `npm test` COMPLETO local = verde (o conteúdo exato do `jest.yml`)
+
+Depois das correções §11.16 (artefato prod-like) e §11.17.2 (portas efêmeras), os TRÊS componentes do
+`npm test` — que é o que o job `jest` do `jest.yml` executa — fecharam verdes nesta worktree:
+
+| componente | comando | resultado |
+|---|---|---|
+| unit | `npx jest tests/unit --bail=0` | **1122/1122 suítes**, 9799/9801 testes, EXIT=0 |
+| flow | `npx jest tests/flow engine/__tests__ --bail=0` | **30/30 suítes**, 264/264 testes, EXIT=0 |
+| rpa | `npm run test:rpa:jest` | **3/3 suítes**, 7 PASS + 4 SKIP declarados, EXIT=0 |
+
+Consequência medida, não narrativa: a única vermelha que restava no `jest.yml` (run 40737265748, 327/328)
+era o artefato prod-like de §11.16, e ela deixou de ser vermelha por construção. O que **não** está provado
+aqui é o CI: nenhum destes números foi obtido em runner do GitHub — são a mesma suíte, mesmo comando,
+máquina diferente.
+
+## 11.19 Durable-resume: a opção "isolar por tenant" está REFUTADA (medido no código)
+
+O item `TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO` está bloqueado com a justificativa "exige banco
+isolado por suíte". Fui verificar se havia uma saída mais barata — isolar as missões do teste em um TENANT
+próprio, de modo que o servidor vivo (mesmo Postgres, loop de recovery a cada 5 min) não as visse:
+
+```
+sweep({ tenantId = 'system', ... })            missionRecoveryCoordinator.js:87
+  → missionStore.findMissionsWithExpiredLease({ limit, excludeIds })
+  → missionStore.findMissionsWithoutLease({ limit, excludeIds })     missionStoreService.js:581
+      where = { status: IN RESUME_STATES, lease_token: null }   ← SEM filtro de tenant
+```
+
+`sweep` recebe `tenantId` e **não o usa nas duas fontes de candidatos**: a varredura é global no banco.
+Portanto "tenant dedicado no teste" **não resolve** — o servidor vivo alcança a missão de qualquer tenant.
+As únicas saídas reais continuam sendo: (a) banco/schema dedicado por suíte, (b) servidor de teste sem
+loop, ou (c) o servidor vivo rodar com `ENGINEERING_MISSION_RECOVERY_ENABLED=0`
+(`recoveryEnabled()` desliga com `NODE_ENV=test`, e o intervalo é
+`ENGINEERING_MISSION_RECOVERY_INTERVAL_MS`, default **5 min**).
+
+Janela de corrida quantificada: a missão do teste fica em estado retomável com `lease_token: null` durante
+a execução; o tick de 5 min a alcança com probabilidade ≈ `duração_do_teste / 300 s` — coerente com o
+histórico medido (1/3 execuções na base, 2/2 em lotes, 6/6 verde no CI sem servidor concorrente). **Não é
+defeito de produto**: a varredura global é o comportamento pretendido de recovery.
+
+Isto é decisão de ambiente/infra, não de código de aplicação — e agora está delimitada, com a opção barata
+eliminada por medição em vez de suposição.
+
+**O que ficou no código** (commit `2d92987e8`): `diagnosticarInterferencia` na suíte de durable-resume. Quando
+a missão do teste não aparece na retomada que ELE chamou, o log publica `statusAtual`, `leaseWorker`,
+`leaseHost`, `leaseExpiraEm`, `atualizadoEm` e quantos itens a retomada trouxe — em vez de deixar a falha
+parecer defeito da retomada. Prova do caminho de warn por mutação (parâmetro `esperado` invertido): o warn
+sai com os campos preenchidos e o teste segue passando; revertido, 6/6 PASS sem warn.
+
+O próprio mutante já entregou um dado: a retomada do teste trouxe **19 itens** — o banco compartilhado
+acumula missões resumíveis de execuções anteriores, e é essa população que o servidor vivo também varre.
+
+## 11.20 Superfície de validação local COMPLETA — tudo verde, e o que isso NÃO prova
+
+Fecha o mapa de execução desta rodada. Todos os grupos foram rodados nesta worktree, no HEAD
+`2d92987e8` (ou imediatamente anterior para os que não tocam os arquivos alterados):
+
+| grupo | comando | resultado |
+|---|---|---|
+| unit | `npx jest tests/unit --bail=0` | **1122/1122 suítes**, 9799/9801 testes |
+| flow | `npx jest tests/flow engine/__tests__ --bail=0` | **30/30**, 264/264 |
+| rpa | `npm run test:rpa:jest` | **3/3**, 7 PASS + 4 SKIP |
+| system (contracts/governance/ci/runtime/organizational/stress/rate-limit) | `npm run test:system` | **18/18**, 162/162 |
+| tenant (isolamento) | `npx jest tests/tenant --bail=0` | **5/5**, 44/44 |
+| integração do Roteador (L0b) | `npx jest tests/integration/engineering --runInBand` | **41/41**, 238/238 — duas execuções consecutivas |
+| aceite da decisão arquitetural | `governanceApprovalFullWorkerE2E`, `postFixFailureVsRecurrence`, `postFixFailureClassification` | **12/12** |
+| frontend | `cd frontend && npx vitest run --config vitest.config.mjs` | **141/141 arquivos**, 1065/1065 testes |
+| memória operacional | `validate:ai-memory` + `validate:ai-memory-consistency` | **PASS** (0 blockers; 2 warnings, 56 infos) |
+| fila oficial | `validate:hardening-queue` | **PASS** (159 itens, 0 pending/in_progress) |
+
+**O que isso NÃO prova** (e não será apresentado como se provasse):
+- **CI**: nada aqui rodou em runner do GitHub. Os números de CI citados no relatório (§11.7–§11.10) vêm dos
+  runs identificados por ID; os desta tabela são desta máquina.
+- **Certificação**: `DEVELOPMENT_VERIFIED`, `RELEASE_CERTIFICATION` e `ENGINEERING_ROUTER_V2` continuam
+  **NO_GO** — a âncora de fechamento externa (inventário assinado, chaves Ed25519, artefato prod-like)
+  não existe.
+- **Durable-resume**: o flake por banco compartilhado segue aberto por decisão de ambiente (§11.19); a
+  suíte passou 6/6 nesta rodada, o que não o encerra.
+- **Vermelhos pré-existentes de governança de camadas**: `validate:layer-conventions` continua com os 118
+  erros conhecidos só em `engine/` (pureza) — nenhum deles tocado ou mascarado aqui.
+
+Nenhum defeito novo apareceu nesta varredura: os grupos acima já estavam verdes depois das correções
+§11.16–§11.19, e o valor desta rodada é a MEDIÇÃO, não um conserto.
+
+## 11.21 O refresh agendado das evidências de wave estava morto por falta de identidade de run
+
+Descoberto ao verificar uma afirmação da própria fila ("Actions bloqueado por budget"). A evidência
+contradiz a fila e revela um defeito de código:
+
+```
+run 40158423635 · 2026-10-25 · main 04cad9c1b · "Wave Reports Refresh" (schedule)
+  ✓ 12 passos verdes (containers, migrations, API :3001, frontend :5173, warmup)
+  X Database Integrity Wave (Postgres real)
+      [db-integrity-wave] models no inventário: 224 | relações: 9
+      [db-integrity-wave] dbAvailable=true
+      [db-integrity-wave] erro fatal: nenhum run governado encontrado — crie o run antes de produzir evidência
+  - API Surface Wave / Page Surface Wave      (nem rodaram)
+```
+
+**Não é billing**: o run agendado EXECUTOU (1m35s, 19 passos). O que aconteceu é fail-closed correto do
+produtor (`scripts/governance/lib/report-lineage.js` → `LINEAGE_RUN_UNDEFINED`): evidência de runtime sem
+run é evidência sem origem. O job agendado **nunca abria o run** — portanto o refresh não atualizava nada e
+as evidências de wave venciam (o coverage gate degrada `VALIDATED → STALE` acima de 7 dias). O padrão de
+sucesso/falha alternado por semana (04/10 e 18/10 verdes; 27/09, 11/10 e 25/10 vermelhos) é compatível com
+a janela de validade das provas de fechamento de bug que o guard consome antes do lineage.
+
+**Correção** (commit `1ad166d97`): o workflow passa a **abrir** o run antes das waves
+(`create-governed-run.js`) e a **fechar** depois com `if: always()` — para não deixar run órfão quando uma
+wave falhar (a classe de defeito do H20). O run é de **manutenção**: fecha como `SUPERSEDED`, com motivo e
+evidência obrigatórios, e **nunca certifica release**.
+
+**Prova local do mecanismo** (banco descartável `rap_wave_proof`, criado e removido; migrations aplicadas):
+
+| estado | resultado medido |
+|---|---|
+| SEM run governado | `comLineage` lança `LINEAGE_RUN_UNDEFINED` — a classe exata do erro de CI |
+| COM run criado | `comLineage` devolve `runId`/`sourceFingerprint`/`sourceCommit`, e `verifyDb` confere a linha do run no banco |
+| fechamento | `close-run-context` grava `status=SUPERSEDED`, `closedAt`, `closedBy` com motivo e evidência |
+
+`governance/.current-run.json` é gitignored (`.gitignore:123`) e o passo de commit adiciona **apenas** os três
+relatórios — o ponteiro do run nunca entra no commit. Testes de CI: `tests/ci` 6/6 e
+`stepExitMasking` 8/8 (o lint de mascaramento de exit passa com `pipefail` já declarado no job).
+
+**O que NÃO está provado:** que o próximo run agendado fique verde. Isso depende de o guard de bug-closure
+em `main` aprovar (em 25/10 ele aprovou — a falha foi no lineage), o que é previsão, não medição. Também
+não reproduzi o erro localmente: nesta branch o guard de bug-closure recusa **antes** do lineage
+(`INVENTARIO_NAO_ANCORADO` — a âncora externa), então a ordem de falha local difere da de `main`.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
-TIMEOUT_ARCHITECTURE  = GO               (4 provas runtime reais, inventário 1133 sem LEGACY_UNKNOWN)
+TIMEOUT_ARCHITECTURE  = GO               (re-medido no HEAD 53c37167e: verify:timeout-architecture-e2e PASS → gate GREEN — §11.10)
 CRASH_RECOVERY        = GO               (13 checks com SIGKILL real)
 REAL_TASK_RECOVERY    = GO               (17 checks com takeover e fencing)
 RAG_INDEX_HEALTH      = HEALTHY          (3539 indexados, 0 violações)
-ENGINEERING_ROUTER_V2 = NO_GO            (2 falhas, 3 pendências — §7)
+ENGINEERING_ROUTER_V2 = NO_GO            (HEAD d9b491903: pós-fix resolvido (§11.11); o que resta é a
+                                          âncora externa — §11.10)
 LEASES/ESCOPO         = 3 defeitos reais + 4 achados de revisão fechados com prova (§9.3-bis/quater, §10.1)
 REQUIRED_TESTS        = FAIL/NOT_EXECUTED (68) — bloqueio externo
 DEVELOPMENT_VERIFIED  = NÃO DECLARADO    (testes obrigatórios não executados)
@@ -837,8 +1676,14 @@ RELEASE_CERTIFICATION = NO_GO
 MERGE                 = DONE (PR #20 → dev/engineering-hardening = 53f7056d0, CI success)
 PUBLISH               = NOT_AUTHORIZED (selagem nao autorizada; 4 bloqueios medidos em §11.4)
 DEPLOY                = NOT_AUTHORIZED
-L0b_CANONICO          = 40/40 SUITES · 234/234 TESTES PASS (amostra 9, exit 0; amostra 8 também verde — §9.3-nonies/decies)
+L0b_CANONICO          = 41/41 SUITES · 237/237 TESTES PASS (HEAD d9b491903, com a suíte nova de
+                        pré-verificação de spec — §11.11)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
+CI_DO_MAIN (jest.yml) = 5 lacunas de AMBIENTE fechadas; 327/328 suítes PASS (1121 medidas na sonda);
+                        residual de unit = modelDrivenE2e (artefato prod-like de outro job) — §11.7
+CI_INTEGRACAO (jest.yml) = timeout que matava o job corrigido; 80/82 suítes PASS em 24-27 min;
+                        residual = 2 suítes do manifesto de release, hipótese ABERTA (Node 20) — §11.7.7
+GATE_CANONICO (dev)   = PASS nos 3 últimos commits do branch (prod-like-smoke + L0/L1 + integração real)
 MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só com autorização humana)
 ```
 
