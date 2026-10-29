@@ -1791,6 +1791,25 @@ visível na lista" deixado pelos anteriores. Tentativa de corrigir o cenário 4 
 foi **revertida** porque não provou efeito (o helper faz takeover, e o chamado sai do filtro padrão da
 lista) — registrar em vez de empurrar remendo.
 
+### 11.23.4 O "flake" de frontend era CORRIDA, reproduzida e corrigida
+
+Run 40949091209 (`Frontend Tests` em `dev` `bfd2ce9a3`): 1 de 569 vermelho com
+
+```
+Unable to find an element by: [data-testid="finding-actions-A|npm:pacote-a@1.0.0"]
+```
+
+A asserção (`SecurityIntelligencePage.test.jsx`) era **síncrona** (`getByTestId`) logo depois de esperar
+apenas o título estático "Achados de segurança" — o grid depende de `listSecurityFindings`, e sob carga a
+promise resolve depois. Os testes irmãos do arquivo já usavam `findBy*`.
+
+**Reprodução determinística:** atrasando o mock de `listSecurityFindings` em 80 ms, o teste falha com a
+**mensagem idêntica** à do CI. Com a correção (`findByTestId`, mesma asserção) e o **mesmo atraso ativo**,
+passa. O atraso era experimento e foi removido; 4/4 em quatro execuções depois disso. Commit `f884f94fb`.
+
+Ficou registrado (sem alterar) que o mesmo atraso artificial derruba também o teste irmão do agrupamento —
+mesma classe de corrida, mas ele nunca falhou em CI, e corrigir o que não foi medido seria adivinhação.
+
 **Próximo passo do E2E (não feito aqui, de propósito):** ou o workflow semeia a jornada
 `support_ticket_flow` com o cenário `support-inbox-nota-ui`, ou cada cenário garante o chamado **no
 estado que ele exige** (helper de chamado em fila, sem takeover). As duas mudam dados de E2E e merecem
