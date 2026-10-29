@@ -1478,6 +1478,48 @@ reutilizável consumido pelo `jest.yml` (custo: subir a stack prod-like a cada p
 `jest.yml` deve ser aposentado como gate de main. É decisão de dono do repositório sobre **quais gates
 rodam em main** — não muda com esta correção.
 
+## 11.17 Suíte COMPLETA de unit (1122 suítes) e o flake real que ela revelou
+
+Execução completa em paralelo, `npx jest tests/unit --bail=0`:
+
+```
+Test Suites: 2 failed, 1 skipped, 1120 passed, 1122 of 1123 total
+Tests:       3 failed, 2 skipped, 9796 passed, 9801 total
+FAIL tests/unit/coverage/impactRunner.test.js
+FAIL tests/unit/dev/devServicesSupervision.test.js
+```
+
+### 11.17.1 Um dos dois é procedimento meu, não defeito (e é pré-requisito de CI)
+
+`impactRunner` (2 testes) falhava com `base: GRAPH_STALE`: o grafo de impacto
+(`reports/impact-graph.json`) é **gitignored** e o artefato local era de 28/10, anterior ao source atual —
+o runner corretamente faz fail-closed ("o grafo precisa descrever o source ATUAL — rode `npm run
+impact:build`"). Depois de `npm run ci:artifacts` (o passo que o `jest.yml` já executa antes das suítes),
+a mesma suíte fecha **11/11 PASS**. Conclusão honesta: faltava o pré-requisito na MINHA execução local,
+não há defeito a corrigir. Registrado porque a diferença entre "suíte vermelha" e "suíte sem artefato"
+é exatamente o que este relatório não pode confundir.
+
+### 11.17.2 O outro é defeito REAL: porta fixa dentro do range efêmero
+
+`devServicesSupervision` caiu para 25/26 com `listen EADDRINUSE: address already in use 127.0.0.1:39118`
+e passava isolada. As três portas fixas da suíte (**39117/39118/39119**) estão DENTRO do range efêmero do
+Linux (32768–60999): qualquer conexão de saída da máquina pode ocupá-las — sob 1122 suítes em paralelo a
+probabilidade deixa de ser teórica.
+
+**Correção:** bind em `0` e uso da porta REAL atribuída pelo SO (`servidor.address().port`, helper
+`escutarEmPortaEfemera`). O teste não depende do número — ele injeta a porta detectada nos dublês —, então
+as asserções são as mesmas: identidade comprovada quando o cgroup do PID é o da unidade, e `start` FALHA
+quando quem atende é outro processo.
+
+**Prova por contenção real** (um listener ocupando 39118 durante a execução):
+
+| versão | resultado |
+|---|---|
+| anterior | **FAIL** `EADDRINUSE … 127.0.0.1:39118` (25/26) |
+| corrigida | **PASS** 26/26 |
+
+Commit `411ceebc5`.
+
 ---
 
 ## 12. DECISÃO FINAL

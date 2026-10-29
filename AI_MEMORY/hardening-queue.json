@@ -2558,6 +2558,19 @@
       "severityBasis": "muda QUAIS gates rodam em main e o custo por push; não é corrigível por código sem essa decisão",
       "severitySource": "medicao-ci-2026-10-29",
       "blocked_reason": "DECISÃO DE DONO DO REPOSITÓRIO: (1) extrair prod-like-smoke para workflow_call reutilizável e chamá-lo no jest.yml e no dev-branch-ci — uma definição, dois consumidores, custo de subir a stack prod-like a cada push em main; ou (2) aposentar o jest.yml como gate de main, já que a promoção dev→main é fast-forward de commits já aprovados pelo gate canônico dev-branch-ci."
+    },
+    {
+      "id": "TESTE-DEV-SUPERVISAO-PORTA-EFEMERA",
+      "title": "devServicesSupervision usava portas fixas (39117/39118/39119) dentro do range efêmero do Linux",
+      "status": "done",
+      "legacyStatus": "done",
+      "state": "DONE_MEASURED",
+      "commit": "411ceebc5",
+      "evidence": "RELATORIO §11.17.2. Medido na execução COMPLETA de unit (1122 suítes em paralelo): 'listen EADDRINUSE 127.0.0.1:39118', suíte 25/26, passando isolada. Portas fixas dentro do range efêmero (32768–60999) podem ser ocupadas por qualquer conexão de saída. Correção: bind em 0 + servidor.address().port (helper escutarEmPortaEfemera). Prova por contenção real: com um listener ocupando 39118, a versão anterior FAIL (EADDRINUSE, 25/26) e a corrigida PASS 26/26. Nenhuma asserção alterada.",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "flake de teste sob carga (execução completa em paralelo); não afeta produto, mas produz vermelho não determinístico no gate de unit",
+      "severitySource": "medicao-local-2026-10-29"
     }
   ],
   "schemaVersion": 2,
