@@ -1573,6 +1573,15 @@ defeito de produto**: a varredura global é o comportamento pretendido de recove
 Isto é decisão de ambiente/infra, não de código de aplicação — e agora está delimitada, com a opção barata
 eliminada por medição em vez de suposição.
 
+**O que ficou no código** (commit `2d92987e8`): `diagnosticarInterferencia` na suíte de durable-resume. Quando
+a missão do teste não aparece na retomada que ELE chamou, o log publica `statusAtual`, `leaseWorker`,
+`leaseHost`, `leaseExpiraEm`, `atualizadoEm` e quantos itens a retomada trouxe — em vez de deixar a falha
+parecer defeito da retomada. Prova do caminho de warn por mutação (parâmetro `esperado` invertido): o warn
+sai com os campos preenchidos e o teste segue passando; revertido, 6/6 PASS sem warn.
+
+O próprio mutante já entregou um dado: a retomada do teste trouxe **19 itens** — o banco compartilhado
+acumula missões resumíveis de execuções anteriores, e é essa população que o servidor vivo também varre.
+
 ---
 
 ## 12. DECISÃO FINAL
