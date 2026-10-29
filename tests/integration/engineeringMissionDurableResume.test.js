@@ -43,6 +43,32 @@ let dbAvailable = false;
 let dbReason = null;
 const createdMissionIds = [];
 
+/**
+ * DIAGNÓSTICO de interferência (medido 2026-10-29, RELATORIO §11.19): a varredura de recovery é GLOBAL no
+ * banco e o servidor de dev na MESMA máquina/Postgres tem o loop ligado (tick default 5 min). Quando a
+ * missão do teste não aparece na NOSSA retomada, o log precisa dizer se outro worker já a pegou — senão a
+ * falha parece defeito do código de retomada. Nenhuma asserção muda: só publica QUEM tocou a missão.
+ */
+async function diagnosticarInterferencia(missionId, summary, esperado) {
+  const existeNaRetomada = (summary.items || []).some((i) => i.missionId === missionId);
+  if (existeNaRetomada === esperado) return;
+  let atual = null;
+  try { atual = await missionStore.getMission(missionId); } catch (_) { /* diagnóstico nunca derruba o teste */ }
+  // eslint-disable-next-line no-console
+  console.warn('[durable-resume] missão divergente da NOSSA retomada', JSON.stringify({
+    missionId,
+    esperadoNoResumo: esperado,
+    statusAtual: atual && atual.status,
+    leaseWorker: atual && atual.lease_worker_instance_id,
+    leaseHost: atual && atual.lease_host,
+    leaseExpiraEm: atual && atual.lease_expires_at,
+    atualizadoEm: atual && atual.updated_at,
+    itensNoResumo: (summary.items || []).length,
+    meuHost: require('os').hostname(),
+    meuPid: process.pid,
+  }));
+}
+
 function skipIfNoDatabase() {
   if (dbAvailable) return false;
   // Porta ÚNICA de infraestrutura (§11/§12): em RELEASE_AUTHORITATIVE=1 isto LANÇA INFRA_ERROR
@@ -110,6 +136,7 @@ describe('Engineering Mission — durable resume e idempotência', () => {
     const versionsBefore = await missionStore.listVersions(mission.id);
     const summary = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
 
+    await diagnosticarInterferencia(mission.id, summary, true);
     expect(summary.items.some((i) => i.missionId === mission.id && i.action === 'ENRICHED')).toBe(true);
     const after = await missionStore.getMission(mission.id);
     expect(after.status).toBe('AWAITING_APPROVAL');
@@ -151,6 +178,7 @@ describe('Engineering Mission — durable resume e idempotência', () => {
 
     const summary = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
     // Missões em AWAITING_APPROVAL não são "retomáveis" por execução nem re-enriquecidas.
+    await diagnosticarInterferencia(mission.id, summary, false);
     expect(summary.items.some((i) => i.missionId === mission.id)).toBe(false);
 
     const after = await missionStore.getMission(mission.id);
@@ -173,6 +201,7 @@ describe('Engineering Mission — durable resume e idempotência', () => {
 
     // Crash logo após aprovar (nenhuma task criada). Retomada real:
     const summary = await orchestrator.resumeInterruptedMissions({ tenantId: 'system', autoStart: false });
+    await diagnosticarInterferencia(mission.id, summary, true);
     expect(summary.items.some((i) => i.missionId === mission.id)).toBe(true);
 
     const detail = await compiler.getMissionDetail(mission.id);
