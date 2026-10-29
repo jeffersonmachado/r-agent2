@@ -16,6 +16,14 @@ const fs   = require('fs');
 const path = require('path');
 
 const { preservarArtefato } = require('../../helpers/preserveGovernedArtifact');
+const infraGate = require('../../helpers/infraGate');
+
+// Artefato PROD-LIKE exigido pela prova: produzido pelo job `prod-like-smoke` do
+// dev-branch-ci (e baixado pelo dev-branch-gate). Ele é gitignored por política (`qa/smoke/`),
+// então em qualquer checkout limpo — inclusive o do `jest.yml` — ele NÃO existe por
+// construção. Antes desta porta o `test:unit` media a AUSÊNCIA do artefato de outro workflow
+// e ficava permanentemente vermelho em main (run 40737265748: 327/328, única vermelha aqui).
+const ARTEFATO_PROD_LIKE = path.join(__dirname, '..', '..', '..', 'qa', 'smoke', 'prod-like', 'qa-waves-operational-prod-like-smoke.json');
 
 const SCRIPT = path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'validate-model-driven-e2e.js');
 
@@ -120,6 +128,16 @@ describe('validate-model-driven-e2e — pipeline REAL, não simulação', () => 
   });
 
   test('Script passa com smoke report real presente', () => {
+    // Dependência declarada (porta ÚNICA §11/§12): artefato ausente em modo dev é NOT_EXECUTED
+    // registrado; em `RELEASE_AUTHORITATIVE=1` continua FAIL-CLOSED (INFRA_ERROR). O artefato
+    // presente porém ilegível NUNCA é pulado — cai no erro auto-descritivo mais abaixo.
+    if (infraGate.skipOrFail({
+      suite: 'model-driven-e2e-prod-like',
+      available: fs.existsSync(ARTEFATO_PROD_LIKE),
+      reason: `artefato prod-like ausente (${ARTEFATO_PROD_LIKE}); ele é produzido pelo job prod-like-smoke do dev-branch-ci`,
+      requirement: 'prod-like-smoke-report',
+    })) return;
+
     // Verificar que o script atual (com arquivos reais) passa
     const { spawnSync } = require('child_process');
     const result = spawnSync(process.execPath, [SCRIPT], {
