@@ -263,10 +263,22 @@ test.describe('QA Waves -> RPA Replays', () => {
       // pode reabrir tardiamente (após as queries da página) — garantir que
       // está fechado antes de interagir com a árvore.
       await ensureTenantSelected(page);
-      await page
-        .locator('.qa-journey-tree-journey', { hasText: 'Support Ticket Flow' })
-        .first()
-        .click();
+      // DEFEITO MEDIDO 2026-10-29 (run 40946909310, artefato playwright-report): o clique abaixo não
+      // tinha timeout e a árvore do ambiente de E2E contém apenas as jornadas do vertical `beauty`
+      // ("Beauty New Customer", "Beauty Booking") — NÃO existe "Support Ticket Flow". O teste então
+      // consumia os 420 s inteiros esperando o locator e o vermelho falava de `locator.click`, sem
+      // dizer que a jornada não existe. Agora a pré-condição é explícita e limitada: se a jornada de
+      // suporte não estiver na árvore, falha em SEGUNDOS nomeando o que existe de fato.
+      const jornadasDeSuporte = page.locator('.qa-journey-tree-journey', { hasText: /support|ticket|atendimento/i });
+      if ((await jornadasDeSuporte.count()) === 0) {
+        const disponiveis = await page.locator('.qa-journey-tree-journey').allInnerTexts().catch(() => []);
+        throw new Error(JSON.stringify({
+          status: 'NO_GO',
+          reason: 'PRECONDITION_FAILED',
+          missing: ['journey_with_support_scenario: ' + JSON.stringify(disponiveis)],
+        }));
+      }
+      await jornadasDeSuporte.first().click({ timeout: 15000 });
       await page.getByRole('button', { name: 'Cenários', exact: true }).click();
       const runnableScenarioButton = page
         .locator('button', { hasText: 'support-inbox-nota-ui@' })
