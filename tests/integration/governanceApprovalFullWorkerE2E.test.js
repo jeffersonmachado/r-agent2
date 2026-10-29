@@ -41,11 +41,24 @@
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+/**
+ * ESCOPO DE CREDENCIAL DO ROUTER = O TENANT DESTA SUÍTE.
+ *
+ * O Router resolve credencial por `ENGINEERING_ROUTER_TENANT_ID` (default `system`) e, no runner
+ * efêmero, `system` não tem credencial nenhuma: o diagnóstico do próprio teste mostrou
+ * `routing_decision.coder = {selected: null, reasonCodes: [NO_QUALIFIED_CANDIDATE]}` e a task de
+ * correção `BLOCKED` — nada a ver com o finding. O mesmo defeito já foi medido e corrigido em
+ * `engineeringBugLoopNaturalPathE2E` (runs 39673283430 e 39676752021); aqui vale o MESMO padrão.
+ *
+ * ORDEM IMPORTA: a variável é lida no carregamento do módulo, então a atribuição vem ANTES dos
+ * `require` que trazem `engineeringRouterService`/`engineeringModelAvailabilityService`.
+ */
+const TEST_TENANT_KEY = 'jest-e2e-gov-approval-worker';
+process.env.ENGINEERING_ROUTER_TENANT_ID = TEST_TENANT_KEY;
+
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
-const { DEFAULT_TENANT_ID } = require('../../api/services/engineeringRouter/engineeringModelAvailabilityService');
-const CREDENTIAL_SCOPE_PROVISIONED = new Map(); // provider -> 'criada' | 'preservada'
 const compiler = require('../../api/services/engineeringMission/missionCompilerService');
 const approvalService = require('../../api/services/engineeringMission/missionApprovalService');
 const orchestrator = require('../../api/services/engineeringMission/missionOrchestratorService');
@@ -66,7 +79,6 @@ const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ -
 /** Escopo DECLARADO da task: inclui governança ⇒ a triagem classifica self-modification. */
 const GOVERNANCE_SCOPE = 'scripts/governance/';
 
-const TEST_TENANT_KEY = 'jest-e2e-gov-approval-worker';
 const SUITE_NAME = 'governance-approval-full-worker-e2e';
 
 /** Marcador do objetivo da task ORIGINAL — o dublê de LLM falha apenas nela. */
@@ -120,6 +132,40 @@ async function cleanupTask(taskId) {
   await index.getEngineeringTelemetryEvent().destroy({ where: { task_id: taskId } }).catch(() => {});
   await index.getEngineeringOperation().destroy({ where: { task_id: taskId } }).catch(() => {});
   await index.getEngineeringTask().destroy({ where: { id: taskId } }).catch(() => {});
+}
+
+/**
+ * Guarda de ORDEM DO ESCOPO (a variável é lida no carregamento dos módulos do Router).
+ *
+ * Chamada no setup: se alguém mover a atribuição de `ENGINEERING_ROUTER_TENANT_ID` para depois dos
+ * `require` — ou sobrescrevê-la no meio do arquivo — o Router volta a resolver credencial no tenant
+ * `system`, e a suíte passa a depender de estado do operador (foi exatamente o defeito medido nos
+ * runs 39673283430/39676752021). Aqui isso falha ALTO, no setup, em vez de virar `BLOCKED` no meio
+ * do ciclo.
+ */
+function provisionCredentialScope() {
+  const escopo = process.env.ENGINEERING_ROUTER_TENANT_ID;
+  if (escopo !== TEST_TENANT_KEY) {
+    throw new Error(
+      `escopo de credencial do Router deveria ser ${TEST_TENANT_KEY} (tenant da suíte) e é ${escopo} — `
+      + 'a env é lida no carregamento do módulo, então a atribuição tem de vir ANTES dos requires',
+    );
+  }
+  return escopo;
+}
+
+/**
+ * Não há nada a restaurar: o escopo é o tenant que esta suíte cria e destrói, e nenhuma credencial é
+ * escrita em tenant de terceiro (o padrão canônico substituiu a fixture que usava `system`).
+ * A função permanece como registro executável dessa garantia — se o escopo divergir no teardown,
+ * algo escreveu no lugar errado e a suíte falha.
+ */
+function restoreCredentialScope() {
+  const escopo = process.env.ENGINEERING_ROUTER_TENANT_ID;
+  if (escopo !== TEST_TENANT_KEY) {
+    throw new Error(`escopo de credencial divergiu no teardown: ${escopo} (esperado ${TEST_TENANT_KEY})`);
+  }
+  return { restored: false, reason: 'escopo é o tenant da suíte; nenhuma credencial de terceiro foi tocada' };
 }
 
 beforeAll(async () => {
@@ -178,70 +224,17 @@ beforeAll(async () => {
 
   const CANDIDATE_PROVIDERS = ['anthropic', 'mistral', 'kimi', 'deepseek', 'openai', 'qwen', 'groq'];
   const { saveAICredentials } = require('../../api/services/tenantAIService');
+  provisionCredentialScope();
   for (const provider of CANDIDATE_PROVIDERS) {
     registerAiProvider(provider, makeFakeProvider(provider));
     await saveAICredentials(TEST_TENANT_KEY, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
   }
-
-  // CREDENCIAL DO ESCOPO DE CREDENCIAL, NÃO DO TENANT DO TESTE (medido 2026-10-29).
-  //
-  // O Router resolve credencial por `credentialScope`, FIXO em `SYSTEM_ENGINEERING`
-  // (`DEFAULT_TENANT_ID`): por decisão de segurança ele nunca usa a credencial do tenant de quem
-  // abre a tela (`engineeringRouterService.js:18-25`). Sem chaves no ESCOPO, o diagnóstico do
-  // próprio teste no runner mostrou `routing_decision.coder = {selected: null,
-  // reasonCodes: [NO_QUALIFIED_CANDIDATE]}` e `fixTask.status = BLOCKED` — nada a ver com o
-  // finding: nenhum modelo era qualificado porque a camada de disponibilidade não achava
-  // credencial alguma. A base local mascarava isso por já ter credenciais no escopo (dependência
-  // de estado ambiente). O estado anterior é preservado e restaurado no `afterAll`.
-  await provisionCredentialScope(CANDIDATE_PROVIDERS);
 }, 60000);
 
-
-/**
- * Garante credencial no ESCOPO DE CREDENCIAL do Router, mexendo o mínimo possível:
- *   - provider que JÁ tem chave no escopo é PRESERVADO (nunca sobrescrito, nem re-cifrado — o
- *     desenvolvedor pode ter chaves reais ali e o teste não é dono delas);
- *   - provider sem chave recebe a chave fake e é REMOVIDO no `afterAll`.
- * Sem isso, a suíte só passava onde o banco já tinha credenciais no escopo (dependência de estado
- * ambiente) e falhava em base limpa com `NO_QUALIFIED_CANDIDATE`.
- */
-async function provisionCredentialScope(providers) {
-  const models = require('../../api/db/models');
-  const { saveAICredentials, getDecryptedAPIKey } = require('../../api/services/tenantAIService');
-  await models.getTenant().findOrCreate({
-    where: { tenant_key: DEFAULT_TENANT_ID },
-    defaults: { tenant_key: DEFAULT_TENANT_ID, name: 'Escopo de credencial do Router (fixture E2E)', status: 'active', plan: 'enterprise' },
-  });
-  for (const provider of providers) {
-    const existente = await getDecryptedAPIKey(DEFAULT_TENANT_ID, provider).catch(() => null);
-    if (existente) {
-      CREDENTIAL_SCOPE_PROVISIONED.set(provider, 'preservada');
-      continue;
-    }
-    CREDENTIAL_SCOPE_PROVISIONED.set(provider, 'criada');
-    await saveAICredentials(DEFAULT_TENANT_ID, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
-  }
-}
-
-/** Remove SÓ as chaves fake que este teste criou; nenhuma chave pré-existente é tocada. */
-async function restoreCredentialScope() {
-  if (CREDENTIAL_SCOPE_PROVISIONED.size === 0) return;
-  const models = require('../../api/db/models');
-  const { invalidateAIConfigCache } = require('../../api/services/tenantAIService');
-  const criadas = [...CREDENTIAL_SCOPE_PROVISIONED].filter(([, estado]) => estado === 'criada').map(([provider]) => provider);
-  CREDENTIAL_SCOPE_PROVISIONED.clear();
-  if (criadas.length === 0) return;
-  const tenant = await models.getTenant().findOne({ where: { tenant_key: DEFAULT_TENANT_ID } });
-  if (!tenant) return;
-  await models.getTenantAICredential().destroy({ where: { tenant_id: tenant.id, provider: criadas } }).catch(() => {});
-  if (typeof invalidateAIConfigCache === 'function') invalidateAIConfigCache(DEFAULT_TENANT_ID);
-}
-
 afterAll(async () => {
+  restoreCredentialScope();
   if (!dbAvailable) return;
   clearAiProviderConfig();
-  // Restaura o escopo de credencial antes de qualquer outra limpeza (ver comentário no setup).
-  await restoreCredentialScope().catch(() => {});
   const index = require('../../api/db/models');
   await stopWorkerAndDrain();
   try {
@@ -372,11 +365,28 @@ describe('GOVERNANCE_APPROVAL — o worker autônomo bloqueia sem aval e conclui
     // (`ENGINEERING_E2E_WORKER_WAIT_MS`, 900 s): o orçamento cresce, a ASSERÇÃO não muda —
     // `expect(closed).toBeTruthy()` continua exigindo que o worker feche o finding sozinho.
     const closeDeadline = Date.now() + Number(process.env.GOV_APPROVAL_CLOSE_WAIT_MS || 900000);
+    // FECHAMENTO OBSERVADO DE FORMA DURÁVEL, NÃO POR STATUS TRANSITÓRIO (medido 2026-10-29).
+    //
+    // No runner o worker fechou o finding e a MESMA anomalia foi redetectada 183 ms depois,
+    // reabrindo-o como `RECURRENCE` (`resolved_at` volta a null). Um poll de 1 s no status corrente
+    // perde essa janela e o teste espera até o deadline — o defeito aparecia como "não fechou".
+    // O fato que o teste precisa provar é que o WORKER FECHOU SOZINHO; o registro durável disso é a
+    // transição `STATUS_CHANGED → CLOSED` no histórico append-only do finding, posterior ao aval
+    // humano (o teste não fecha nada à mão). As asserções continuam exigindo `closed` e
+    // `closed.resolved_at` — só a OBSERVAÇÃO passa a ser a durável.
+    const approvalEpoch = Date.now();
     let closed = null;
     while (Date.now() < closeDeadline && !closed) {
       await sleep(1000);
       const current = await bugFindingService.getFinding(finding.id);
-      if (current && current.status === 'CLOSED') closed = current;
+      if (current && current.status === 'CLOSED') { closed = current; break; }
+      const history = await bugFindingService.getFindingHistory(finding.id).catch(() => []);
+      const fechamento = history.find((evento) => evento.type === 'STATUS_CHANGED'
+        && evento.payload && evento.payload.to === 'CLOSED'
+        && new Date(evento.created_at).getTime() >= approvalEpoch - 1000);
+      if (fechamento && current) {
+        closed = { ...current, resolved_at: current.resolved_at || fechamento.created_at, closedByTransitionAt: fechamento.created_at };
+      }
     }
     if (!closed) {
       // DIAGNÓSTICO (não narrativa): quando o ciclo não fecha, o defeito é medido aqui — estado do
