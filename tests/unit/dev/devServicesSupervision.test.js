@@ -34,6 +34,21 @@ const SERVICE = path.join(ROOT, 'scripts', 'dev', 'service.sh');
 const LIB = path.join(ROOT, 'scripts', 'dev', 'lib', 'servicos-dev-state.sh');
 const SMOKE = path.join(ROOT, 'scripts', 'smoke', 'run-scheduled-production-health-smoke.sh');
 
+/**
+ * Porta EFÊMERA atribuída pelo SO (bind em 0) em vez de número fixo. As portas fixas usadas antes
+ * (39117/39118/39119) estão DENTRO do range efêmero do Linux (32768–60999), então qualquer conexão de
+ * saída da máquina pode ocupá-las: medido 2026-10-29, `EADDRINUSE` em 1 de 1122 suítes na execução
+ * completa em paralelo, com a suíte passando isolada. O teste não depende do número — ele injeta a
+ * porta detectada nos dublês — então usar a porta REAL atribuída preserva a mesma asserção.
+ */
+async function escutarEmPortaEfemera(servidor) {
+  await new Promise((resolve, reject) => {
+    servidor.once('error', reject);
+    servidor.listen(0, '127.0.0.1', resolve);
+  });
+  return servidor.address().port;
+}
+
 const serviceCode = fs
   .readFileSync(SERVICE, 'utf8')
   .split('\n')
@@ -364,9 +379,8 @@ describe('D5 — identidade de quem responde na porta', () => {
   });
 
   test('EXECUÇÃO: processo REAL fora da unidade => identidade NÃO comprovada (fail-closed)', async () => {
-    const porta = 39117;
     const servidor = require('http').createServer((_req, res) => res.end('ok'));
-    await new Promise((resolve) => servidor.listen(porta, '127.0.0.1', resolve));
+    const porta = await escutarEmPortaEfemera(servidor);
     try {
       const pidReal = String(process.pid);
       // 1) o PID que escuta É encontrado;
@@ -395,9 +409,8 @@ describe('D5 — identidade de quem responde na porta', () => {
   });
 
   test('identidade COMPROVADA quando o cgroup do PID é o da unidade', async () => {
-    const porta = 39118;
     const servidor = require('http').createServer((_req, res) => res.end('ok'));
-    await new Promise((resolve) => servidor.listen(porta, '127.0.0.1', resolve));
+    const porta = await escutarEmPortaEfemera(servidor);
     try {
       const cgroupReal = execFileSync(
         'bash',
@@ -506,13 +519,12 @@ describe('D6 — start exige identidade e recupera "ativa sem servir"', () => {
     expect(posFail).toBeGreaterThan(posHealth);
   });
 
-  test('PROVA FUNCIONAL: porta servida por outro processo => start FALHA (antes: "no ar")', () => {
+  test('PROVA FUNCIONAL: porta servida por outro processo => start FALHA (antes: "no ar")', async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-svc-dubles-'));
     const net = require('net');
     const cgroupFalso = '/fake.slice/unidade-alheia.service';
     const servidor = net.createServer(() => {});
-    servidor.listen(39119, '127.0.0.1');
-    const portaFalsa = 39119;
+    const portaFalsa = await escutarEmPortaEfemera(servidor);
     fs.writeFileSync(
       path.join(tmp, 'ss'),
       `#!/usr/bin/env bash\nprintf 'LISTEN 0 511 127.0.0.1:${portaFalsa} 0.0.0.0:* users:(("node",pid=${process.pid},fd=1))\\n'\n`
