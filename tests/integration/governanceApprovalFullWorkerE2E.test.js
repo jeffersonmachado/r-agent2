@@ -365,28 +365,11 @@ describe('GOVERNANCE_APPROVAL — o worker autônomo bloqueia sem aval e conclui
     // (`ENGINEERING_E2E_WORKER_WAIT_MS`, 900 s): o orçamento cresce, a ASSERÇÃO não muda —
     // `expect(closed).toBeTruthy()` continua exigindo que o worker feche o finding sozinho.
     const closeDeadline = Date.now() + Number(process.env.GOV_APPROVAL_CLOSE_WAIT_MS || 900000);
-    // FECHAMENTO OBSERVADO DE FORMA DURÁVEL, NÃO POR STATUS TRANSITÓRIO (medido 2026-10-29).
-    //
-    // No runner o worker fechou o finding e a MESMA anomalia foi redetectada 183 ms depois,
-    // reabrindo-o como `RECURRENCE` (`resolved_at` volta a null). Um poll de 1 s no status corrente
-    // perde essa janela e o teste espera até o deadline — o defeito aparecia como "não fechou".
-    // O fato que o teste precisa provar é que o WORKER FECHOU SOZINHO; o registro durável disso é a
-    // transição `STATUS_CHANGED → CLOSED` no histórico append-only do finding, posterior ao aval
-    // humano (o teste não fecha nada à mão). As asserções continuam exigindo `closed` e
-    // `closed.resolved_at` — só a OBSERVAÇÃO passa a ser a durável.
-    const approvalEpoch = Date.now();
     let closed = null;
     while (Date.now() < closeDeadline && !closed) {
       await sleep(1000);
       const current = await bugFindingService.getFinding(finding.id);
-      if (current && current.status === 'CLOSED') { closed = current; break; }
-      const history = await bugFindingService.getFindingHistory(finding.id).catch(() => []);
-      const fechamento = history.find((evento) => evento.type === 'STATUS_CHANGED'
-        && evento.payload && evento.payload.to === 'CLOSED'
-        && new Date(evento.created_at).getTime() >= approvalEpoch - 1000);
-      if (fechamento && current) {
-        closed = { ...current, resolved_at: current.resolved_at || fechamento.created_at, closedByTransitionAt: fechamento.created_at };
-      }
+      if (current && current.status === 'CLOSED') closed = current;
     }
     if (!closed) {
       // DIAGNÓSTICO (não narrativa): quando o ciclo não fecha, o defeito é medido aqui — estado do
