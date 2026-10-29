@@ -1232,6 +1232,16 @@ tests/unit/{engineeringMission,engineeringRouter,ci}  82 suítes / 893 testes PA
      provado em worktree separado: não são regressão deste commit)
 ```
 
+### 11.11.2-ter Regressão minha nº 2: `git add -A` levou relatórios governados
+
+O gate canônico reprovou `governedEvidenceBinding` (L0) com divergência byte-a-byte em
+`reports/tenant-isolation-report.json` e `reports/rag-domain-segregation-report.json`. Causa: `jest
+tests/unit` **regenera** esses dois arquivos, e o meu `git add -A` os levou junto no commit da correção.
+
+Restaurados byte-a-byte do commit anterior (`d9b491903`); `governedEvidenceBinding` volta a 3/3 PASS e o
+gate canônico volta a 3/3 SUCCESS. A armadilha já estava escrita na minha própria evidência — foi
+repetida por pressa com `-A`. Registro para não repetir: **commit seletivo, sempre.**
+
 ### 11.11.3 Efeito medido na suíte de aceitação
 
 ```
