@@ -99,6 +99,29 @@ function probeHealthOnce(url, timeoutMs = 1000) {
   });
 }
 
+/**
+ * Probe AUTENTICADO sem efeito: `POST /execute` valida a auth ANTES do contrato, então um corpo
+ * vazio devolve `401` (token errado) ou `400 invalid_execute_contract` (token ok) — nada é
+ * executado. MEDIDO 2026-10-29: um runner vivo na porta certa com TOKEN diferente do que o cliente
+ * usa passa no `/health` (que é não autenticado por design) e faz TODA execução de sandbox falhar
+ * com `engineering_runner_unauthorized` → `BLOCKED_INFRA`, sem pista na saída do Jest.
+ */
+function probeAuthOnce(url, token, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const parsed = new URL(`${url.replace(/\/$/, '')}/execute`);
+    const req = http.request(
+      { hostname: parsed.hostname, port: parsed.port, path: parsed.pathname, method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` } },
+      (res) => {
+        res.resume();
+        res.on('end', () => resolve(res.statusCode));
+      },
+    );
+    req.setTimeout(timeoutMs, () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+    req.end('{}');
+  });
+}
+
 function waitForHealth(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   return new Promise((resolve, reject) => {
@@ -205,6 +228,33 @@ async function waitForPortFree(url, timeoutMs) {
 module.exports = async function engineeringRunnerGlobalSetup() {
   if (isInsideLinkedGitWorktree()) {
     process.stderr.write('[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).\n');
+    // MEDIDO 2026-10-29: sem o spawn, NINGUÉM define `ENGINEERING_RUNNER_URL`, e o cliente cai no
+    // valor que veio do `.env` (127.0.0.1:8090) — que não é a porta que o runner de teste usa
+    // (8097). Se ninguém escutar ali, TODA suíte de sandbox falha com `ECONNREFUSED` →
+    // `BLOCKED_INFRA`, e uma delas consome 900 s de timeout: dois lotes locais de ~30 min foram
+    // invalidados por isso sem nenhuma pista na saída. O probe imediato abaixo transforma o lote
+    // inválido em uma linha acionável (diagnóstico, nunca mudança de asserção).
+    const configuredUrl = process.env.ENGINEERING_RUNNER_URL || `http://127.0.0.1:${RUNNER_PORT}`;
+    const alive = await probeHealthOnce(`${configuredUrl.replace(/\/$/, '')}/health`, 1500);
+    if (!alive) {
+      process.stderr.write(
+        `[jest-global-setup] ATENÇÃO: ENGINEERING_RUNNER_URL=${configuredUrl} não responde — as suítes de sandbox `
+        + 'vão falhar com ECONNREFUSED/BLOCKED_INFRA (e uma delas espera 900 s de timeout). Suba o runner manualmente '
+        + 'antes do lote, na MESMA porta e com o MESMO token que este skip deixa em vigor (os do `.env`, '
+        + 'porque `ENGINEERING_RUNNER_URL`/`ENGINEERING_RUNNER_TOKEN` só são reescritos quando o setup SOBE o runner):\n'
+        + '  ENGINEERING_RUNNER_PORT=<porta de ${configuredUrl}> ENGINEERING_RUNNER_TOKEN=<ENGINEERING_RUNNER_TOKEN do .env> '
+        + 'node services/engineering-runner/src/index.js\n',
+      );
+    } else if (process.env.ENGINEERING_RUNNER_TOKEN) {
+      const status = await probeAuthOnce(configuredUrl, process.env.ENGINEERING_RUNNER_TOKEN);
+      if (status === 401) {
+        process.stderr.write(
+          `[jest-global-setup] ATENÇÃO: o runner em ${configuredUrl} está no ar mas RECUSA o ENGINEERING_RUNNER_TOKEN em vigor `
+          + '(401) — toda execução de sandbox vai falhar com `engineering_runner_unauthorized`/BLOCKED_INFRA. '
+          + 'Suba o runner com o MESMO token do `.env` (ou exporte ENGINEERING_RUNNER_URL/TOKEN do runner que você subiu).\n',
+        );
+      }
+    }
     return;
   }
 
