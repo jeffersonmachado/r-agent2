@@ -1074,7 +1074,7 @@ patch que viola o contrato (`PATCH_CONTRACT_VIOLATION`), porque o artefato já e
 primeira tentativa é registrada como **reincidência** do finding que acabou de ser fechado.
 
 Caminho do código localizado: `runMissionTask` → `runTask` → `if (result.status !== 'GREEN')`
-`bugLoopCoordinator.hookMissionFailure(...)` ([missionOrchestratorService.js:264](/opt/results/ria/er-fixci/api/services/engineeringMission/missionOrchestratorService.js:264)),
+`bugLoopCoordinator.hookMissionFailure(...)` (`api/services/engineeringMission/missionOrchestratorService.js:264`),
 que registra ocorrência/reincidência em `bugFindingService.applyToExisting`.
 
 **O que falta decidir é contrato de produto, não ambiental:** a retomada deve reexecutar o cenário original
