@@ -1674,6 +1674,17 @@ que foi FEITO, do que o gate MEDIU e do ponto em que parar era a única conduta 
 
 **Não promovi `main`** — e a razão é medida, não opinião (§11.22.3).
 
+Estado dos checks em `dev` `bfd2ce9a3` (medido, não estimado):
+
+| check | resultado |
+|---|---|
+| **Jest (unit + integration)** | **SUCCESS** — os dois jobs. É o gate que estava 327/328 |
+| RAG Service Tests | **SUCCESS** |
+| Frontend Tests | FAILURE — 1 de 569 (flake, §11.22.4) |
+| E2E Playwright | FAILURE — 2 specs, idênticos em `main` em 2026-10-20 (§11.22.4) |
+| Release Governance — ENVELOPE + PAYLOAD | FAILURE — depende das âncoras/Ed25519 (§11.22.3) |
+| Dev Hardening CI (L0 + L1) | DENIED `L0_COMPLETO` (§11.22.3) |
+
 ### 11.22.2 Regressão que EU introduzi, pega pelo gate real
 
 O run 40946909215 (Jest unit em `dev` `dd379d820`) reprovou **1 suíte / 1 teste**:
