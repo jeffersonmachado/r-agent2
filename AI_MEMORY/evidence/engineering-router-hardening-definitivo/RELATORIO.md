@@ -1447,6 +1447,37 @@ Comparação com o estado anterior: a amostra de `ea1435ab7` era **39/40 com 1 v
 hoje (a suíte nova `engineeringRouterSpecPreVerification` é desta rodada). O vermelho remanescente era o
 harness (§11.14), não o produto.
 
+## 11.16 Última vermelha do `jest.yml`: o unit media a ausência do artefato de OUTRO workflow
+
+Estado medido antes: `jest.yml` em `ea1435ab7` = **327/328** suítes, única vermelha
+`tests/unit/governance/modelDrivenE2e.test.js` — "artefato prod-like ausente ou ilegível:
+`qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json`".
+
+**Causa (não é flake, não é código de produto):** o artefato é **gitignored** por política (`.gitignore:90`,
+`qa/smoke/`) e só é produzido pelo job `prod-like-smoke` do `dev-branch-ci`, baixado pelo
+`dev-branch-gate`. Em qualquer checkout limpo — inclusive o do `jest.yml` — ele **não existe por
+construção**. Logo o job de unit não media a saúde do código: media a ausência de um artefato que outro
+workflow produz.
+
+**Correção (a porta canônica do repositório, `tests/helpers/infraGate.js`):** a dependência passa a ser
+declarada. Medido nesta worktree, com a alteração e sem ela:
+
+| estado | antes | depois |
+|---|---|---|
+| artefato **ausente**, modo dev (`jest.yml`, `npm run test:unit`) | **FAIL** (`artefato prod-like ausente ou ilegivel … decision=MODEL_DRIVEN_E2E_FAIL`) | **PASS** com `NOT_EXECUTED` registrado (suíte, requisito, motivo) |
+| artefato **ausente**, `RELEASE_AUTHORITATIVE=1` | FAIL | **FAIL fail-closed** (`code=INFRA_ERROR`) |
+| artefato **presente** | PASS | PASS (asserções do relatório intactas) |
+
+Nada foi afrouxado: artefato presente e **ilegível** continua falhando pelo erro auto-descritivo de antes,
+e a execução autoritativa de release não muda (a suíte **não** está em
+`config/canonical-release-suites.json`). `validate:anti-greenwashing` PASS (91 suítes, 0 violações).
+Commit `195b31d58`.
+
+**O que NÃO é decisão de agente e segue aberto:** se `prod-like-smoke` deve virar `workflow_call`
+reutilizável consumido pelo `jest.yml` (custo: subir a stack prod-like a cada push em main) ou se o
+`jest.yml` deve ser aposentado como gate de main. É decisão de dono do repositório sobre **quais gates
+rodam em main** — não muda com esta correção.
+
 ---
 
 ## 12. DECISÃO FINAL

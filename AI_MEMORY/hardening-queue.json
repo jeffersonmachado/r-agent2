@@ -2438,16 +2438,15 @@
     {
       "id": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
       "title": "modelDrivenE2e exige artefato prod-like que só o job prod-like-smoke produz",
-      "status": "blocked_external",
-      "commit": "251a11a20",
-      "evidence": "Última falha da suíte oficial do jest.yml depois de fechar as 5 lacunas de ambiente: run 40737265748, 327/328 suítes PASS, única vermelha tests/unit/governance/modelDrivenE2e.test.js — \"artefato prod-like ausente ou ilegivel: qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json\". O artefato é produzido pelo job prod-like-smoke do dev-branch-ci e baixado pelo dev-branch-gate (dev-branch-ci.yml:139-146); o jest.yml não tem esse job, então em main o teste não pode passar por construção. Documentado em RELATORIO.md §11.7.3 sem mascarar o vermelho.",
+      "status": "done",
+      "commit": "195b31d58",
+      "evidence": "RELATORIO §11.16. CAUSA: o artefato qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json é gitignored (.gitignore:90) e só o job prod-like-smoke do dev-branch-ci o produz, então em checkout limpo do jest.yml ele não existe POR CONSTRUÇÃO — o unit media a ausência do artefato de outro workflow. CORREÇÃO: porta canônica tests/helpers/infraGate.js. Três estados medidos nesta worktree: (a) sem a correção o teste FALHA; (b) com a correção, artefato ausente em modo dev = PASS com NOT_EXECUTED registrado; (c) artefato ausente com RELEASE_AUTHORITATIVE=1 = FAIL fail-closed code=INFRA_ERROR; (d) artefato presente = PASS com as asserções do relatório intactas. Artefato presente e ILEGÍVEL continua falhando. validate:anti-greenwashing PASS (91 suítes, 0 violações). A suíte não está em config/canonical-release-suites.json ⇒ execução autoritativa de release inalterada.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "BLOCKED_EXTERNAL",
-      "legacyStatus": "blocked",
-      "severityBasis": "vermelho residual de CI em main por dependência de artefato de outro workflow (não é defeito de código)",
-      "severitySource": "medicao-ci-2026-10-28",
-      "blocked_reason": "DECISÃO DE DONO DO REPOSITÓRIO, não de agente: (1) extrair prod-like-smoke para um workflow reutilizável (workflow_call) e chamá-lo no jest.yml e no dev-branch-ci — uma definição, dois consumidores, custo de subir a stack prod-like a cada push em main; ou (2) aposentar o jest.yml como gate de main, já que a promoção dev→main é fast-forward de commits já aprovados pelo gate canônico. As duas opções mudam QUAIS gates rodam em main."
+      "state": "DONE_MEASURED",
+      "legacyStatus": "done",
+      "severityBasis": "vermelho permanente de CI em main por dependência de artefato de outro workflow; corrigido sem afrouxar o modo autoritativo",
+      "severitySource": "medicao-ci-2026-10-28"
     },
     {
       "id": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
@@ -2545,6 +2544,20 @@
       "legacyStatus": "done",
       "severityBasis": "falso vermelho do harness de reprodução local (cwd errado); não havia defeito no repositório. Mantida observabilidade para diagnóstico em 1 linha.",
       "severitySource": "medicao-local-2026-10-29"
+    },
+    {
+      "id": "POLITICA-PROD-LIKE-EM-MAIN",
+      "title": "Decisão de dono: prod-like-smoke vira workflow_call consumido pelo jest.yml, ou jest.yml deixa de ser gate de main",
+      "status": "blocked_external",
+      "legacyStatus": "blocked",
+      "state": "BLOCKED_EXTERNAL",
+      "commit": "195b31d58",
+      "evidence": "RELATORIO §11.16. O defeito de código (unit vermelho por construção) foi fechado em 195b31d58; resta a escolha de POLÍTICA sobre quais gates rodam em main.",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "muda QUAIS gates rodam em main e o custo por push; não é corrigível por código sem essa decisão",
+      "severitySource": "medicao-ci-2026-10-29",
+      "blocked_reason": "DECISÃO DE DONO DO REPOSITÓRIO: (1) extrair prod-like-smoke para workflow_call reutilizável e chamá-lo no jest.yml e no dev-branch-ci — uma definição, dois consumidores, custo de subir a stack prod-like a cada push em main; ou (2) aposentar o jest.yml como gate de main, já que a promoção dev→main é fast-forward de commits já aprovados pelo gate canônico dev-branch-ci."
     }
   ],
   "schemaVersion": 2,
