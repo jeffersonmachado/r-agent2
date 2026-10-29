@@ -1177,6 +1177,47 @@ fabricar prova seria violar o próprio guard.
 
 ---
 
+## 11.11 Decisão arquitetural implementada: pós-fix não recodifica e não gera recorrência falsa
+
+Autorização de 2026-10-29: **quando uma missão é retomada após a integração de uma correção, o Roteador
+Engenheiro verifica se a especificação já está satisfeita antes de invocar novamente o coder.**
+
+### 11.11.1 O que foi implementado (com a causa medida no §11.8.5)
+
+| mecanismo | onde | efeito |
+|---|---|---|
+| Pré-verificação da spec | `engineeringRouterService.preVerifySpecSatisfied` | quando a fonte da missão já avançou, roda os `test_commands` do contrato NO COMMIT DA TASK, no sandbox real; se todos passam ⇒ `GREEN` + `SPEC_ALREADY_SATISFIED` **sem chamar o coder e sem patch** |
+| Transições legais | `engine/engineeringRouter/stateMachine.js` | `ROUTED→GREEN` e `CLASSIFIED→GREEN` — os únicos caminhos a GREEN **sem candidato**, com o motivo documentado |
+| Evidência | `engineering_telemetry_events` (`SPEC_PRE_VERIFIED`) | SHA da fonte + comandos + exit code de cada execução; nenhuma conclusão por inferência |
+| Classificação pós-fix | `engine/engineeringMission/bugFinding/postFixFailure.js` (puro) | falha de **contrato/infra** (PATCH_*, `NO_PATCH_SCOPE`, `NO_QUALIFIED_CODER`, `PROVIDER_UNAVAILABLE/EXHAUSTED`) com finding pós-correção ⇒ fingerprint próprio (`coder-contract:<missionId>:coder_contract`), nunca recorrência |
+| Recorrência real preservada | mesma função | falha de **mérito** (teste/regressão/governança) segue o caminho normal e reabre o finding |
+
+### 11.11.2 Regressões (mutação-provadas)
+
+```
+tests/integration/engineeringRouterSpecPreVerification.test.js  3 casos — fonte REAL avançada por
+    candidato (git commit-tree + integrateCandidate) + sandbox real
+    mutante: preVerifySpecSatisfied → NOT_APPLICABLE reprova o caso 1 (862 ms, foi a RED)
+tests/integration/postFixFailureVsRecurrence.test.js            2 casos — contrato NÃO reabre;
+    mérito REABRE (status CONFIRMED, recurrence_count ≥ 1, resolved_at null)
+tests/unit/engineeringMission/postFixFailureClassification.test.js  9 casos
+tests/unit/engineeringRouter                                    40 suítes / 409 testes PASS
+```
+
+### 11.11.3 Efeito medido na suíte de aceitação
+
+```
+governanceApprovalFullWorkerE2E (base limpa, Rap_ci_sim)   PASS 75,7 s
+  · reincidências do finding corrigido ............ 0   (antes: 1 por execução)
+  · falhas de contrato separadas como finding próprio  2  (NO_PATCH_SCOPE / PATCH_INVALID_FORMAT)
+```
+
+A causa da task substituta não conseguir patch (escopo **deferred** não resolvido ⇒ `NO_PATCH_SCOPE`) é
+agora um **finding próprio e visível**, não uma recorrência do bug que já foi corrigido. O defeito de
+escopo em si continua aberto como item separado — não foi mascarado.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
@@ -1184,7 +1225,8 @@ TIMEOUT_ARCHITECTURE  = GO               (re-medido no HEAD 53c37167e: verify:ti
 CRASH_RECOVERY        = GO               (13 checks com SIGKILL real)
 REAL_TASK_RECOVERY    = GO               (17 checks com takeover e fencing)
 RAG_INDEX_HEALTH      = HEALTHY          (3539 indexados, 0 violações)
-ENGINEERING_ROUTER_V2 = NO_GO            (HEAD 53c37167e: 1 falha / 3 pendências — todos pela MESMA causa, a âncora externa — §11.10)
+ENGINEERING_ROUTER_V2 = NO_GO            (HEAD d9b491903: pós-fix resolvido (§11.11); o que resta é a
+                                          âncora externa — §11.10)
 LEASES/ESCOPO         = 3 defeitos reais + 4 achados de revisão fechados com prova (§9.3-bis/quater, §10.1)
 REQUIRED_TESTS        = FAIL/NOT_EXECUTED (68) — bloqueio externo
 DEVELOPMENT_VERIFIED  = NÃO DECLARADO    (testes obrigatórios não executados)
@@ -1192,7 +1234,8 @@ RELEASE_CERTIFICATION = NO_GO
 MERGE                 = DONE (PR #20 → dev/engineering-hardening = 53f7056d0, CI success)
 PUBLISH               = NOT_AUTHORIZED (selagem nao autorizada; 4 bloqueios medidos em §11.4)
 DEPLOY                = NOT_AUTHORIZED
-L0b_CANONICO          = 40/40 SUITES · 234/234 TESTES PASS (amostra 9, exit 0; amostra 8 também verde — §9.3-nonies/decies)
+L0b_CANONICO          = 41/41 SUITES · 237/237 TESTES PASS (HEAD d9b491903, com a suíte nova de
+                        pré-verificação de spec — §11.11)
 CI_EM_RUNNER_LIMPO    = PASS_PARCIAL     (fases A/B/C/D PASS, 0 falhas; R/E/F fora do gate de branch)
 CI_DO_MAIN (jest.yml) = 5 lacunas de AMBIENTE fechadas; 327/328 suítes PASS (1121 medidas na sonda);
                         residual de unit = modelDrivenE2e (artefato prod-like de outro job) — §11.7
