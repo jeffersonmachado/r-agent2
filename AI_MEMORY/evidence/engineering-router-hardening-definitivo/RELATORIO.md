@@ -1919,6 +1919,31 @@ mentia** (artefato renovado por outro processo, primeiro teste que media a ausê
 workflow, árvore que dependia de um arquivo de estado residual). Em nenhum deles a resposta correta foi
 afrouxar asserção — em todos, medir o ambiente.
 
+## 11.25 O vermelho do replay NÃO era só o merge: a UI não renderiza a árvore
+
+Depois do merge de §11.24 (API devolvendo 10 domínios / 253 jornadas com `core::Support Ticket Flow`
+presente), o E2E de CI **continuou** vermelho em 8 s, com a mesma lista de duas jornadas beauty. Então
+acrescentei ao diagnóstico a resposta CRUA da API, e a medição local mostrou uma terceira camada:
+
+```
+API   → {"dominios":1,"jornadasPorDominio":["core:1"],"temSupport":true}
+DOM   → 0 elementos .qa-journey-tree-journey
+```
+
+Ou seja: **a API entrega a jornada e a UI não renderiza a árvore**. Isso separa o problema em dois, e o
+primeiro (dados/produtor) está resolvido; o segundo é de renderização/carga na página `QaWavesPage`
+(que depende de dois endpoints — `/api/qa-waves/journeys` e `/api/qa-waves/journey-status` — e do estado de
+domínio selecionado) e **não** do produtor.
+
+O spec agora carrega, na própria mensagem de falha, `status` + resumo da API + a lista do DOM (commit
+`0c8ed2e15`), de modo que a próxima execução de CI diga qual dos dois lados falhou — em vez de repetir
+"element(s) not found".
+
+**Estado honesto deste item:** parcialmente corrigido e **não** verde. O que está provado: produtor
+corrigido (verificado por serviço + mutação), falha passou de 7,2 min para 8 s, `support-agent-flow` 6/6 em
+CI. O que falta: descobrir por que a árvore não renderiza nesse ambiente — e só com a resposta de CI, que
+agora está no relatório de falha, isso deixa de ser adivinhação.
+
 ---
 
 ## 12. DECISÃO FINAL
