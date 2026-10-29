@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-29T09:53:06.759Z",
+  "updatedAt": "2026-10-29T12:51:02.064Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2518,6 +2518,20 @@
       "legacyStatus": "verified",
       "severityBasis": "a retomada pós-fix não conseguia entregar correção nenhuma; falha voltava como recorrência falsa do bug corrigido",
       "severitySource": "medicao-local-e-ci-2026-10-29"
+    },
+    {
+      "id": "FLAKE-B2-REGULARIZADOR-CORRIDA",
+      "title": "B2 do regularizador lia estado em movimento: kill do atacante é assíncrono",
+      "status": "verified",
+      "commit": "ea1435ab7",
+      "evidence": "RELATORIO §11.13. Run 40853040259 (L0 do gate canônico): B2 falhou em expect(fs.existsSync(retorno.abs)).toBe(true) e o MESMO SHA passou no re-run do mesmo job — assinatura de corrida. Causa: atacante.kill(SIGKILL) é assíncrono; sem aguardar exit, o processo pode executar mais uma troca entre o kill e as asserções e mover itens/ (já gravado) para itens-guardado/. Invariante 1 (sentinela intocada) seguia válida: não houve fuga, houve leitura de estado em movimento.",
+      "resolution": "O teste aguarda o encerramento do atacante (evento exit, teto 5 s) antes de assertar. Nenhuma asserção afrouxada: as três invariantes continuam idênticas. Estabilidade: 3 execuções consecutivas do B2 verdes e suíte 18/18; gate canônico no mesmo SHA passou no re-run (3/3).",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "severityBasis": "gate canônico vermelho por corrida do próprio teste (falso vermelho), com risco de ser lido como falha de segurança do produto",
+      "severitySource": "medicao-ci-2026-10-29"
     }
   ],
   "schemaVersion": 2,

@@ -1298,6 +1298,37 @@ missionSourceStaleReplanFullRouterE2E  PASS 64,7 s
 
 ---
 
+## 11.13 Flake de corrida no L0 do gate: o teste lia estado em movimento
+
+O gate canônico no HEAD `8c14087d7` reprovou `regularizadorFilesystemAttacks › B2` e **o mesmo SHA
+passou no re-run do mesmo job** — assinatura de corrida, não de defeito de produto.
+
+### 11.13.1 Causa medida
+
+`B2` sobe um processo atacante que troca `itens/` por symlink por 4 s enquanto 6 gravações acontecem, e
+depois chama `atacante.kill('SIGKILL')` — que é **assíncrono** — e asserta imediatamente. Sem esperar o
+`exit`, o atacante pode executar **mais uma** troca entre o kill e as asserções, movendo `itens/` (já com
+os arquivos gravados) para `itens-guardado/`. A invariante 2 então lia `existsSync(retorno.abs) === false`.
+
+O que isso NÃO era: fuga. A invariante 1 (sentinela intocada, hash conferido) continuava válida e nada
+saiu da raiz — o arquivo estava no diretório movido. Era a leitura de estado em movimento.
+
+### 11.13.2 Correção (nenhuma asserção afrouxada)
+
+O teste passa a aguardar o encerramento do processo atacante (evento `exit`, teto de 5 s) **antes** de
+verificar. As três invariantes seguem idênticas; o que muda é que o processo concorrente termina antes da
+leitura.
+
+```
+estabilidade: 3 execuções consecutivas do B2 verdes · suíte inteira 18/18
+gate canônico no HEAD 8c14087d7: 1ª execução FAIL(B2) → re-run 3/3 SUCCESS (mesmo SHA)
+```
+
+Registrado porque a diferença entre "teste frágil" e "produto inseguro" é exatamente essa: o produto
+recusou a escrita fora da raiz nos dois casos; o teste é que media depois de o mundo já ter mudado.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
