@@ -1880,6 +1880,45 @@ ou dados.
 estado que ele exige** (helper de chamado em fila, sem takeover). As duas mudam dados de E2E e merecem
 verificação própria.
 
+## 11.24 Correção de PRODUTO: jornada salva não esconde mais as derivadas (a causa do último vermelho do E2E)
+
+Escolhida a opção de produto de §11.23.6, com prova própria. Commit `0d9e1b927`.
+
+### 11.24.1 O defeito
+
+```js
+// antes (api/services/qaWavesService.js)
+const journeyStore = storedJourneys.length > 0 ? storedJourneys : derivadas;
+```
+
+Uma jornada salva pelo tenant **substituía** o conjunto inteiro. Consequências medidas:
+
+| cenário | antes | depois |
+|---|---|---|
+| árvore com os dados versionados e sem `journey-store` | 10 domínios / 253 jornadas | idêntico (o merge só age quando há jornada salva) |
+| árvore com `journey-store.json` de 2 jornadas `beauty` | **só as 2 beauty** — `core::Support Ticket Flow` desaparecia | 10 domínios / 253 jornadas, `core::Support Ticket Flow` presente |
+| E2E `qa-waves-replay` nesse ambiente | 420 s de timeout esperando a jornada existente | encontra a jornada e segue o fluxo |
+
+### 11.24.2 A correção e as provas
+
+`mergeJourneyStores(derivadas, salvas)`: derivadas são a BASE, a salva SOBREPÕE a de mesmo par
+`(id, vertical)`. Nada de "descartar o que o usuário salvou" nem "esconder o que ele não salvou".
+
+- **Serviço real** após a correção: `10 domínios / 253 jornadas`, `core tem Support Ticket Flow? true`.
+- **3 testes novos** em `qaWavesService.journey.test.js`: (a) com jornada salva as derivadas continuam;
+  (b) a salva sobrepõe a derivada de mesmo `id`+`vertical` (título e steps do tenant ganham); (c) sem
+  jornada salva o resultado é **exatamente** o derivado (`toEqual`). Suíte 10/10.
+- **Prova por mutação**: reintroduzindo a precedência antiga, o teste falha com
+  `Expected "core::support_ticket_flow"` / `Received ["beauty::beauty_new_customer"]`.
+- `api/modules/qa-waves` + suíte do serviço: **97/97**.
+
+### 11.24.3 O que isso ensina sobre os "flakes" deste repositório
+
+Três dos vermelhos investigados nesta rodada tinham a mesma forma: **o teste estava certo e o ambiente
+mentia** (artefato renovado por outro processo, primeiro teste que media a ausência de um artefato de outro
+workflow, árvore que dependia de um arquivo de estado residual). Em nenhum deles a resposta correta foi
+afrouxar asserção — em todos, medir o ambiente.
+
 ---
 
 ## 12. DECISÃO FINAL
