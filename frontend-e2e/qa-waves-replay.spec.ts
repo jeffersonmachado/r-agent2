@@ -272,10 +272,44 @@ test.describe('QA Waves -> RPA Replays', () => {
       const jornadasDeSuporte = page.locator('.qa-journey-tree-journey', { hasText: /support|ticket|atendimento/i });
       if ((await jornadasDeSuporte.count()) === 0) {
         const disponiveis = await page.locator('.qa-journey-tree-journey').allInnerTexts().catch(() => []);
+        // DIAGNÓSTICO (medido 2026-10-29): a árvore do ambiente de CI mostrou apenas 2 jornadas beauty
+        // mesmo depois de o produtor passar a MESCLAR as jornadas derivadas dos 547 cenários do
+        // scenario-store. Sem a resposta CRUA da API no relatório é impossível distinguir "endpoint
+        // recusou" de "derivação vazia" de "UI filtrou" — então a falha passa a carregar a resposta.
+        const apiCrua = await page.evaluate(async () => {
+          const token = localStorage.getItem('auth_token');
+          const tenantId = localStorage.getItem('auth_effective_tenant_id') || 'system';
+          try {
+            const r = await fetch('/api/qa-waves/journeys', {
+              credentials: 'include',
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                'X-Tenant-Id': String(tenantId),
+              },
+            });
+            const texto = await r.text();
+            let resumo: any = texto.slice(0, 200);
+            try {
+              const json = JSON.parse(texto);
+              const doms = Array.isArray(json?.domains) ? json.domains : [];
+              resumo = {
+                dominios: doms.length,
+                jornadasPorDominio: doms.slice(0, 6).map((d: any) => `${d.id}:${(d.journeys || []).length}`),
+                temSupport: doms.some((d: any) => (d.journeys || []).some((j: any) => /support|ticket/i.test(String(j.journeyName || '')))),
+              };
+            } catch { /* resposta não-JSON: mantém o texto */ }
+            return { status: r.status, resumo };
+          } catch (error) {
+            return { status: 'fetch_falhou', resumo: String((error as Error)?.message || error) };
+          }
+        }).catch((error: any) => ({ status: 'evaluate_falhou', resumo: String(error?.message || error) }));
         throw new Error(JSON.stringify({
           status: 'NO_GO',
           reason: 'PRECONDITION_FAILED',
-          missing: ['journey_with_support_scenario: ' + JSON.stringify(disponiveis)],
+          missing: [
+            'journey_with_support_scenario: ' + JSON.stringify(disponiveis),
+            'api:/api/qa-waves/journeys: ' + JSON.stringify(apiCrua),
+          ],
         }));
       }
       await jornadasDeSuporte.first().click({ timeout: 15000 });
