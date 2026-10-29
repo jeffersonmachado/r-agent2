@@ -1122,12 +1122,19 @@ Ou seja: `REQUIRED_TESTS` não é "68 testes que ninguém rodou por preguiça" �
 que exige uma âncora que não existe dentro do repositório. Registrado como `BLOCKED_EXTERNAL` com a ação
 exata, sem inventar âncora e sem afrouxar o guard.
 
-**Classificação corrigida por medição (2026-10-29): P0 → P1.** Declarar este item como P0 acionou a regra
-dura de `governance/bug-closure/eligibility.js` (`P0_ABERTO` / `TESTE_DIRECIONADO_PENDENTE`) e passou a
-**NEGAR o L0 completo no `dev-branch-ci`** — ou seja, a declaração do bloqueio impedia o próprio gate
-canônico de validar a branch, sem que exista defeito de código a corrigir. A classe correta é a de
-`MISSAO-B9-CI-GITHUB-ACTIONS` (P1, `blocked_external`). Nada foi relaxado: o item continua **aberto e
-bloqueado** e `DEVELOPMENT_VERIFIED` continua **NO_GO**.
+**Classificação corrigida por medição (2026-10-29): P0 → P1 → P2.** Cada tentativa de severidade foi medida:
+
+- **P0** acionou `P0_ABERTO` (`governance/bug-closure/eligibility.js`) e o `dev-branch-ci` passou a NEGAR
+  `L0_COMPLETO` (runs 40792639206, 40793008399);
+- **P1** acionou `TESTE_DIRECIONADO_PENDENTE` — a regra exige teste direcionado de **todo** P0/P1 aberto
+  (linhas 259-270), o que é impossível para um bloqueio externo (run 40795178033, mesmo DENIED);
+- **P2** é a classe dos 7 itens `blocked_external` já existentes (H15, H19, H20, `P1-PROJECAO…`,
+  `P1-AGREGADO…`, `TESTE-DURABLE-…`, `CI-MAIN-…`, `CI-INTEG-…`) e foi a condição em que o gate canônico
+  rodou completo antes (run `eb3b525ab`).
+
+Nada foi relaxado: o item continua **aberto e bloqueado** (`state: BLOCKED_EXTERNAL`), a certificação
+continua bloqueada por ele e `DEVELOPMENT_VERIFIED` continua **NO_GO** — severidade não decide
+certificação; `state` decide.
 
 ### 11.9.2 O que isso significa para a decisão
 
