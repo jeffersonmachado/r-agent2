@@ -1746,6 +1746,56 @@ declarar release verde sobre governança `NO_GO` — proibido pela Constituiçã
 Nenhum dos dois foi registrado como item `pending` na fila — não vou criar compromisso de fila que eu não
 vou cumprir neste turno. Ficam aqui como próximos passos com medição.
 
+## 11.23 Os dois vermelhos pré-existentes do E2E: causa medida nos artefatos, não suposta
+
+Sem stack local eu não teria diagnóstico — então baixei o artefato do run 40946909310
+(`gh run download`, `playwright-report/data/*.md` contém snapshot da página e o call log exato).
+
+### 11.23.1 `support-agent-flow` cenário 1 — o guard era CÓDIGO MORTO
+
+```
+Locator: getByTestId('ticket-list')   Expected: visible   Error: element(s) not found
+Page snapshot: … paragraph: "Nenhum chamado disponível"
+```
+
+`SupportTicketList.jsx:187` só renderiza o contêiner `ticket-list` quando há chamado visível; com fila
+vazia renderiza o vazio. A asserção de visibilidade vinha **antes** do guard `count === 0 →
+PRECONDITION_FAILED`, portanto numa execução de fila limpa o teste estourava em timeout e o guard nunca
+era alcançado — o vermelho acusava "locator" quando o problema era pré-condição. Correção: garantir o
+chamado antes, com o MESMO helper que o cenário 2 já usava. Asserção intacta.
+
+### 11.23.2 `qa-waves-replay` — clique sem timeout sobre uma jornada que o ambiente não tem
+
+```
+Error: locator.click: Test timeout of 420000ms exceeded.
+  waiting for locator('.qa-journey-tree-journey').filter({ hasText: 'Support Ticket Flow' }).first()
+Page snapshot: árvore contém APENAS "Beauty New Customer" e "Beauty Booking"
+```
+
+A árvore do ambiente de E2E é populada por jornadas derivadas do vertical **beauty**; a jornada de
+suporte que a spec presume (`config/journey-scenario-links.json` liga `support_ticket_flow` ao cenário
+`support-inbox-nota-ui`) **não é semeada**. Correção: a árvore é lida, a pré-condição é verificada e o
+clique passa a ter timeout de 15 s — ausência falha em segundos NOMEANDO o que existe.
+
+### 11.23.3 Verificação local (stack viva: API :3001 + Vite :5173)
+
+| execução | resultado |
+|---|---|
+| `support-agent-flow.spec.ts` **com** a correção | **5/6, cenário 1 PASSANDO** (6,4 min) |
+| `support-agent-flow.spec.ts` **sem** a correção (stash) | **5/6** — cenário 1 passa por sorte de dado residual e o **cenário 3** cai no MESMO `open_ticket_exists` |
+| `qa-waves-replay.spec.ts` com a correção | falha em **segundos**: `journey_with_support_scenario: []` |
+
+Conclusão honesta: a correção do cenário 1 é real e verificada (`+1` determinístico), mas a família de
+cenários tem **dependência de estado compartilhado** pré-existente: 3, 4 e 5 contam com "algum chamado
+visível na lista" deixado pelos anteriores. Tentativa de corrigir o cenário 4 com o helper do cenário 1
+foi **revertida** porque não provou efeito (o helper faz takeover, e o chamado sai do filtro padrão da
+lista) — registrar em vez de empurrar remendo.
+
+**Próximo passo do E2E (não feito aqui, de propósito):** ou o workflow semeia a jornada
+`support_ticket_flow` com o cenário `support-inbox-nota-ui`, ou cada cenário garante o chamado **no
+estado que ele exige** (helper de chamado em fila, sem takeover). As duas mudam dados de E2E e merecem
+verificação própria.
+
 ---
 
 ## 12. DECISÃO FINAL
