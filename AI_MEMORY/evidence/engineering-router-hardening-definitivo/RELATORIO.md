@@ -1529,6 +1529,50 @@ quando quem atende é outro processo.
 
 Commit `411ceebc5`.
 
+## 11.18 `npm test` COMPLETO local = verde (o conteúdo exato do `jest.yml`)
+
+Depois das correções §11.16 (artefato prod-like) e §11.17.2 (portas efêmeras), os TRÊS componentes do
+`npm test` — que é o que o job `jest` do `jest.yml` executa — fecharam verdes nesta worktree:
+
+| componente | comando | resultado |
+|---|---|---|
+| unit | `npx jest tests/unit --bail=0` | **1122/1122 suítes**, 9799/9801 testes, EXIT=0 |
+| flow | `npx jest tests/flow engine/__tests__ --bail=0` | **30/30 suítes**, 264/264 testes, EXIT=0 |
+| rpa | `npm run test:rpa:jest` | **3/3 suítes**, 7 PASS + 4 SKIP declarados, EXIT=0 |
+
+Consequência medida, não narrativa: a única vermelha que restava no `jest.yml` (run 40737265748, 327/328)
+era o artefato prod-like de §11.16, e ela deixou de ser vermelha por construção. O que **não** está provado
+aqui é o CI: nenhum destes números foi obtido em runner do GitHub — são a mesma suíte, mesmo comando,
+máquina diferente.
+
+## 11.19 Durable-resume: a opção "isolar por tenant" está REFUTADA (medido no código)
+
+O item `TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO` está bloqueado com a justificativa "exige banco
+isolado por suíte". Fui verificar se havia uma saída mais barata — isolar as missões do teste em um TENANT
+próprio, de modo que o servidor vivo (mesmo Postgres, loop de recovery a cada 5 min) não as visse:
+
+```
+sweep({ tenantId = 'system', ... })            missionRecoveryCoordinator.js:87
+  → missionStore.findMissionsWithExpiredLease({ limit, excludeIds })
+  → missionStore.findMissionsWithoutLease({ limit, excludeIds })     missionStoreService.js:581
+      where = { status: IN RESUME_STATES, lease_token: null }   ← SEM filtro de tenant
+```
+
+`sweep` recebe `tenantId` e **não o usa nas duas fontes de candidatos**: a varredura é global no banco.
+Portanto "tenant dedicado no teste" **não resolve** — o servidor vivo alcança a missão de qualquer tenant.
+As únicas saídas reais continuam sendo: (a) banco/schema dedicado por suíte, (b) servidor de teste sem
+loop, ou (c) o servidor vivo rodar com `ENGINEERING_MISSION_RECOVERY_ENABLED=0`
+(`recoveryEnabled()` desliga com `NODE_ENV=test`, e o intervalo é
+`ENGINEERING_MISSION_RECOVERY_INTERVAL_MS`, default **5 min**).
+
+Janela de corrida quantificada: a missão do teste fica em estado retomável com `lease_token: null` durante
+a execução; o tick de 5 min a alcança com probabilidade ≈ `duração_do_teste / 300 s` — coerente com o
+histórico medido (1/3 execuções na base, 2/2 em lotes, 6/6 verde no CI sem servidor concorrente). **Não é
+defeito de produto**: a varredura global é o comportamento pretendido de recovery.
+
+Isto é decisão de ambiente/infra, não de código de aplicação — e agora está delimitada, com a opção barata
+eliminada por medição em vez de suposição.
+
 ---
 
 ## 12. DECISÃO FINAL

@@ -2414,12 +2414,12 @@
       "id": "TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO",
       "title": "engineeringMissionDurableResume (§17/TEST 44) flaka por concorrencia com o loop de recovery de um servidor vivo no MESMO banco",
       "status": "blocked",
-      "blocked_reason": "PRE-EXISTENTE e comprovado por comparacao: a suite falha do mesmo jeito na worktree da base 29372d7a3 (1 de 3 execucoes, exatamente §17 e TEST 44), com `git diff 29372d7a3..HEAD` VAZIO nos arquivos do caminho de resume. Causa: o api/server.js vivo (mesma maquina, mesmo Postgres) roda startRecoveryLoop a cada 5 min + runBootRecovery e retoma missoes que o teste esta montando; o lease de missao tem TTL de 60 s (politica LEASE do registry). Correcao exige BANCO ISOLADO por suite (ou servidor de teste sem loop) — decisao de infraestrutura, nao codigo de aplicacao. NAO corrigido por decisao explicita: afrouxar a assercao (SKIPPED_LOCKED) reduziria a sensibilidade do teste sem provar nada melhor",
+      "blocked_reason": "DECISÃO DE AMBIENTE (não de código): a varredura de recovery é GLOBAL no banco (sweep recebe tenantId e as fontes de candidatos não filtram tenant — medido em missionRecoveryCoordinator.js:87 e missionStoreService.js:581), logo isolar por tenant não resolve. Opções: banco/schema dedicado por suíte; servidor de teste sem o loop; ou o servidor vivo rodar com ENGINEERING_MISSION_RECOVERY_ENABLED=0. Enquanto o servidor de dev na 3001 compartilhar este Postgres, a corrida é ≈ duração_do_teste/300 s. Não corrigido por decisão explícita: afrouxar asserção reduziria a sensibilidade sem provar nada melhor.",
       "severity": "P2",
       "severityStatus": "DECLARADA",
       "state": "BLOCKED_EXTERNAL",
       "legacyStatus": "blocked",
-      "evidence": "medido: base 29372d7a3 => 1/3 falhas; HEAD => 5/7 isoladas PASS, 2/2 lotes falharam; CI (L0) verde em 6 de 6 execucoes, onde nao ha servidor concorrente"
+      "evidence": "medido: base 29372d7a3 => 1/3 falhas; HEAD => 5/7 isoladas PASS, 2/2 lotes falharam; CI (L0) verde em 6 de 6 execucoes, onde nao ha servidor concorrente | REFUTAÇÃO MEDIDA 2026-10-29 (RELATORIO §11.19): a saída barata \"isolar as missões em tenant próprio\" NÃO funciona — sweep({tenantId}) recebe o tenant e não o usa: missionStore.findMissionsWithoutLease (missionStoreService.js:581) filtra só status IN RESUME_STATES e lease_token null, sem tenant, então o servidor vivo alcança missão de QUALQUER tenant. Saídas reais: (a) banco/schema dedicado por suíte, (b) servidor de teste sem loop, ou (c) servidor vivo com ENGINEERING_MISSION_RECOVERY_ENABLED=0. Janela de corrida ≈ duração_do_teste / 300 s (intervalo default 5 min)."
     },
     {
       "id": "CI-MAIN-JEST-AMBIENTE",
