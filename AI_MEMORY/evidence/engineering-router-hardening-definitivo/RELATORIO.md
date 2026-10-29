@@ -1834,6 +1834,47 @@ Ou seja: o ambiente de E2E só tem as jornadas do vertical **beauty**; a jornada
 `support-inbox-nota-ui` (`support_ticket_flow`, conforme `config/journey-scenario-links.json`) **não é
 semeada**. Antes isso custava 7 minutos de timeout silencioso; agora é uma linha.
 
+### 11.23.6 CAUSA RAIZ do último vermelho: a árvore PREFERE o `journey-store` e esconde as derivadas
+
+Medido nesta máquina, chamando o serviço real (`qaWavesService.listJourneys('system')`) com os dados
+versionados:
+
+```
+domínios: 10
+ - beauty | 2 jornadas | Beauty New Customer / Beauty Booking
+ - core   | 74 jornadas | Support Ticket Flow / Booking Flow / Payment Charge Flow
+ - fitness| 10 | agent-os | 156 | bakery | 5 | food | 2 | clinic | 1 | services | 1 | market | 1 | omnichannel | 1
+```
+
+A jornada `Support Ticket Flow` **existe** — derivada de `qa/qa-waves/scenario-store.json` (8 cenários com
+`journeyId: support_ticket_flow`, incluindo `support-inbox-nota-ui`, nenhum com `requiresOfficialPipeline`).
+O que a esconde é esta linha:
+
+```js
+// api/services/qaWavesService.js:614
+const journeyStore = storedJourneys.length > 0
+  ? storedJourneys                        // ← basta UM jornada salva para as derivadas desaparecerem
+  : buildJourneyStoreFromScenarioStore(combinedScenarios);
+```
+
+No ambiente de E2E havia um `journey-store.json` com **duas** jornadas `beauty` — e a árvore passou a
+mostrar só elas. Confirmação no snapshot do CI: `arvore=["Beauty New Customer
+pending","Beauty Booking
+pending"]`.
+Ou seja: **salvar uma jornada faz as 84 jornadas derivadas sumirem da UI** — é defeito de produto, não de
+spec, e explica por que o mesmo teste passa ou falha conforme o estado residual do runner.
+
+**Tentativa descartada (declarada):** fiz a spec provisionar a jornada via `POST /api/qa-waves/journeys`.
+O POST funciona (a API passa a devolver `core → Support Ticket Flow`), mas a UI continuou sem renderizá-la e
+a segunda execução caiu em `page.evaluate: Failed to fetch`. **Revertido** — não vou deixar no repositório
+patch que não provei. Efeito colateral limpo: o `journey-store.json` criado por esse POST em
+`/opt/results/ria/r-agent2` foi removido (o processo da API mantém cache em memória até o próximo restart).
+
+**As duas correções reais, para decisão:** (a) mesclar armazenadas + derivadas na árvore (`stored` ganha em
+caso de mesmo `id`+`vertical`) — muda o que o usuário vê na superfície DEVELOPMENT de QA Waves; (b) semear
+`support_ticket_flow` no workflow de E2E. Nenhuma das duas é "consertar teste": as duas mudam comportamento
+ou dados.
+
 **Próximo passo do E2E (não feito aqui, de propósito):** ou o workflow semeia a jornada
 `support_ticket_flow` com o cenário `support-inbox-nota-ui`, ou cada cenário garante o chamado **no
 estado que ele exige** (helper de chamado em fila, sem takeover). As duas mudam dados de E2E e merecem
