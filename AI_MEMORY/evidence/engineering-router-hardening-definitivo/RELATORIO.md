@@ -1256,6 +1256,48 @@ escopo em si continua aberto como item separado — não foi mascarado.
 
 ---
 
+## 11.12 Defeito P1 que a decisão arquitetural REVELOU: substituta pós-fix nascia sem escopo de patch
+
+A classificação pós-fix (§11.11) não escondeu o problema — ela o **expôs**. Ao separar a falha de
+contrato da recorrência, ficou visível que a task substituta da retomada **nunca conseguia entregar
+patch**: `NO_PATCH_SCOPE`, 3 ocorrências medidas no run 40824588991
+(`engineeringBugLoopNaturalPathE2E`).
+
+### 11.12.1 Causa raiz
+
+`resumeOriginalMission` criava a substituta com `scopeDeferred: true`, na suposição de que "o
+planejamento preenche o escopo depois". **Esse preenchimento não existe**: `allowed_paths` só é escrito
+na criação da task (`engineeringTaskService.createTask`) e `updateTaskFields` é allowlist de metadados
+por desenho. Logo, a substituta nascia com `allowed_paths: []`, o validador recusava TODO patch
+(`NO_PATCH_SCOPE` — ausência total de escopo é reject explícito) e a retomada esgotava as tentativas sem
+corrigir nada. A falha então voltava como recorrência do finding recém-fechado — o sintoma que motivou
+toda esta investigação.
+
+### 11.12.2 Correção (herança, nunca invenção)
+
+| ordem | fonte do escopo |
+|---|---|
+| 1 | `spec.allowedPaths` (contrato aprovado da missão) |
+| 2 | `originalTask.allowed_paths` (o escopo com que a correção foi de fato validada) |
+| 3 | nenhum dos dois ⇒ `scopeDeferred` (comportamento anterior, fail-closed preservado) |
+
+`lineage.scopeOrigin` (`MISSION_SPEC` / `ORIGINAL_TASK` / `DEFERRED_NO_SCOPE_DECLARED`) torna a origem
+auditável em vez de implícita.
+
+### 11.12.3 Regressão mutação-provada
+
+Nova asserção (d) em `engineeringBugLoopNaturalPathE2E`: escopo da substituta **não vazio**, **contido**
+no escopo da task original, e `scopeOrigin` declarado. Com o mutante `escopoHerdado = []` a suíte
+reprova exatamente na linha 386 — a asserção mede o defeito, não a implementação.
+
+```
+engineeringBugLoopNaturalPathE2E       PASS 50,1 s   0 NO_PATCH_SCOPE (antes: 3)
+governanceApprovalFullWorkerE2E        PASS 60,0 s   0 recorrências
+missionSourceStaleReplanFullRouterE2E  PASS 64,7 s
+```
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

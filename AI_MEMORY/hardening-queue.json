@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-29T05:59:33.677Z",
+  "updatedAt": "2026-10-29T09:53:06.759Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2504,6 +2504,20 @@
       "legacyStatus": "verified",
       "severityBasis": "gate de certificação V2 em NO_GO por falta de prova executada; provas locais disponíveis não estavam sendo produzidas",
       "severitySource": "medicao-local-2026-10-29"
+    },
+    {
+      "id": "RESUME-SUBSTITUTA-SEM-ESCOPO",
+      "title": "Substituta da retomada pós-fix nascia sem escopo de patch (NO_PATCH_SCOPE em toda tentativa)",
+      "status": "verified",
+      "commit": "8c14087d7",
+      "evidence": "RELATORIO §11.12. Medido no run 40824588991 (engineeringBugLoopNaturalPathE2E): 3 ocorrências de NO_PATCH_SCOPE. Causa: resumeOriginalMission criava a substituta com scopeDeferred: true esperando preenchimento no planejamento — preenchimento que NÃO existe (allowed_paths só é escrito na criação; updateTaskFields é allowlist de metadados). Resultado: escopo vazio ⇒ validador recusa todo patch ⇒ tentativas esgotadas sem correção ⇒ finding recém-fechado reabria como recorrência.",
+      "resolution": "Herança do escopo já validado: spec.allowedPaths, senão originalTask.allowed_paths; só sem nenhum dos dois a task nasce scopeDeferred (fail-closed preservado). lineage.scopeOrigin registra a origem. Regressão mutação-provada em engineeringBugLoopNaturalPathE2E (asserção (d): escopo não vazio, contido no da task original, scopeOrigin declarado; mutante escopoHerdado=[] reprova na linha 386). Medições: natural path PASS 50,1 s com 0 NO_PATCH_SCOPE; governance PASS 60,0 s com 0 recorrências; stale-replan PASS 64,7 s.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "VERIFIED",
+      "legacyStatus": "verified",
+      "severityBasis": "a retomada pós-fix não conseguia entregar correção nenhuma; falha voltava como recorrência falsa do bug corrigido",
+      "severitySource": "medicao-local-e-ci-2026-10-29"
     }
   ],
   "schemaVersion": 2,
