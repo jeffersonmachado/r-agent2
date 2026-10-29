@@ -1329,7 +1329,7 @@ recusou a escrita fora da raiz nos dois casos; o teste é que media depois de o 
 
 ---
 
-## 11.14 L0b local: 39/40 + 1 interferência entre suítes (reprodutível, escopo worktree)
+## 11.14 L0b local: 39/40 — e a 40ª era o MEU harness lendo outro checkout (hipótese refutada)
 
 Rodada canônica de L0b no HEAD `ea1435ab7` (`jest tests/integration/engineering --bail=0 --runInBand`):
 
@@ -1340,28 +1340,51 @@ FAIL tests/integration/engineeringMissionCrashRecoveryE2E.test.js
   CRASH_SIGKILL_RUNTIME_EVIDENCE … Expected: < 168   Received: 217.41 (horas)
 ```
 
-### 11.14.1 O que foi medido (e não é regressão do produto)
+### 11.14.1 Primeira hipótese (registrada e depois REFUTADA)
 
-| observação | resultado |
-|---|---|
-| suíte isolada | **PASS** (2/2) — relatório em disco com `finishedAt` de ~11 h |
-| reprodutível | `engineeringRunnerComposeDeploymentE2E` **antes** desta suíte, mesmo `--runInBand` ⇒ falha **determinística** com 217,5 h |
-| origem do valor | 217,5 h corresponde ao relatório do **worktree principal** `/opt/results/ria/r-agent2` (`finishedAt` 2026-10-20T12:17Z) |
-| sinal coletado | `ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria/r-agent2` **vaza** da suíte anterior para as seguintes (env é por processo) |
-| CI | gate canônico **verde** no mesmo HEAD: clone não é worktree linkado, então o vazamento não ocorre |
+Interferência entre suítes: `engineeringRunnerComposeDeploymentE2E` vazaria
+`ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria/r-agent2` para as suítes seguintes no mesmo
+processo, e a suíte de crash passaria a ler o relatório do worktree principal (217–218 h). O par
+compose→crash em `--runInBand` de fato falhava de forma reprodutível, o que sustentou a hipótese.
 
-### 11.14.2 O que foi feito e o que NÃO foi
+### 11.14.2 Medição que refutou a hipótese
 
-A asserção **não** foi afrouxada (`ageHours < 168` continua idêntica). O que foi adicionado é
-observabilidade: quando a prova vence, o log passa a trazer arquivo, `finishedAt`, idade, `mtime`, `cwd` e
-`ENGINEERING_ROUTER_HOST_REPO_ROOT` — sem isso, cada ocorrência exigia a mesma arqueologia de 40 minutos.
+Instrumentando o topo do arquivo (`__dirname`, `ROOT`, a env suspeita) e rodando **o mesmo par**:
 
-**O que NÃO está provado:** o último elo do mecanismo. O caminho lido pela asserção é
-`<ROOT>/reports/mission-crash-recovery-report.json` com `ROOT` = este worktree, e o arquivo em disco tem
-~11 h; o valor de 217,5 h vem do relatório do worktree principal. Falta identificar **quem** reescreve o
-artefato nesse instante (candidatos medidos: ambiente vazado de `ENGINEERING_ROUTER_HOST_REPO_ROOT`,
-reexecução de produtor por suíte de infraestrutura). Registrado como item próprio, sem declarar causa
-que não medi.
+```
+[MARK-ROOT] /opt/results/ria/er-fixci/tests/integration  /opt/results/ria/er-fixci  /opt/results/ria/r-agent2
+PASS tests/integration/engineeringRunnerComposeDeploymentE2E.test.js
+PASS tests/integration/engineeringMissionCrashRecoveryE2E.test.js
+Tests:       6 passed, 6 total
+```
+
+Duas conclusões medidas:
+
+1. A env **de fato** vaza (é por processo), mas é **inócua** para esta suíte: `ROOT` vem de
+   `path.resolve(__dirname,'..','..')`, não da env. O par compose→crash **passa 6/6**.
+2. Nos runs que falharam, o Jest executou o arquivo de **outro checkout**: a code frame apontava
+   `expect(ageHours)` na **linha 230** (versão pré-diagnóstico do worktree principal), enquanto no
+   arquivo deste worktree a asserção está na **linha 249** e a 230 é o `if` do diagnóstico. Só há uma
+   explicação compatível com as duas coisas: o processo rodou a partir de `/opt/results/ria/r-agent2` e
+   leu o relatório **daquele** checkout (`finishedAt` 2026-10-20 ⇒ 218 h).
+
+**Causa raiz real:** o comando de reprodução que eu usei era
+`cd <worktree> && node … &` seguido de `npx jest … &&` na mesma linha. Em Bash, `cd X && A &` coloca o
+`cd` **dentro do subshell em background**, então o `npx jest` seguinte herdou o cwd da sessão
+(`/opt/results/ria/r-agent2`) e mediu o repositório errado. Não é defeito do repositório, não é
+interferência entre suítes e não é flake.
+
+**Lição de método:** um `cd` que não vale para o comando seguinte produz exatamente o sintoma de
+"teste mediu outro repositório" — o mesmo sintoma já documentado em §9.3-quinquies com causa diferente
+(serviço honrando a env do HOST). Antes de atribuir causa a um teste, provar **de qual arquivo** veio a
+code frame.
+
+### 11.14.3 O que ficou no código (não é afrouxamento)
+
+A asserção `ageHours < 168` permanece **idêntica**. Ficou apenas observabilidade no caminho de falha: o
+`console.warn` publica `arquivo` (absoluto), `finishedAt`, idade, `mtime` e `cwd`. É exatamente o dado
+que teria encurtado esta arqueologia de 40 minutos — com ele, "leu o checkout errado" é visível em uma
+linha de log. Commit `99d1ee878`.
 
 ---
 

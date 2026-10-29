@@ -2535,17 +2535,16 @@
     },
     {
       "id": "INTERFERENCIA-CRASH-EVIDENCE-L0B",
-      "title": "L0b local: suíte de crash-recovery lê evidência de outro worktree após suíte de infra",
-      "status": "blocked",
-      "commit": "f3595a03e",
-      "evidence": "RELATORIO §11.14. L0b no HEAD ea1435ab7: 39/40 suítes, 218/219 testes; única falha engineeringMissionCrashRecoveryE2E em CRASH_SIGKILL_RUNTIME_EVIDENCE (ageHours 217,41 > 168). Medições: suíte isolada PASSA (relatório com finishedAt ~11 h); rodar engineeringRunnerComposeDeploymentE2E ANTES dela em --runInBand reproduz a falha deterministicamente; 217,5 h corresponde ao relatório do worktree principal /opt/results/ria/r-agent2 (finishedAt 2026-10-20T12:17Z); ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria/r-agent2 vaza da suíte anterior (env é por processo). CI: gate canônico verde no mesmo HEAD (clone não é worktree linkado).",
+      "title": "L0b local: falso vermelho de crash-recovery era o harness lendo outro checkout (causa medida, hipótese de interferência refutada)",
+      "status": "done",
+      "commit": "99d1ee878",
+      "evidence": "RELATORIO §11.14 (reescrito). CAUSA MEDIDA: o Jest executou o arquivo de /opt/results/ria/r-agent2 — a code frame apontava expect(ageHours) na linha 230 (versão pré-diagnóstico do worktree principal), enquanto no arquivo do worktree a asserção está na linha 249. O comando de repro usava \"cd <worktree> && node … &\", que põe o cd DENTRO do subshell em background; o \"npx jest\" seguinte herdou o cwd da sessão (/opt/results/ria/r-agent2) e mediu o repositório errado. Com cwd correto o par compose→crash PASSA 6/6 (log /tmp/rap-ev/repro_mark.log): __dirname=/opt/results/ria/er-fixci/tests/integration, ROOT=/opt/results/ria/er-fixci. A env ENGINEERING_ROUTER_HOST_REPO_ROOT de fato vaza entre suítes, mas é INÓCUA aqui: ROOT vem de __dirname, não da env. Não é defeito do produto, não é interferência, não é flake. Entregue: observabilidade no caminho de falha (arquivo absoluto, finishedAt, idade, mtime, cwd) com a asserção ageHours<168 IDÊNTICA.",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
-      "state": "BLOCKED_EXTERNAL",
-      "legacyStatus": "blocked",
-      "severityBasis": "falso vermelho no L0b LOCAL (worktree linkado); não reproduz em CI. Risco real: mascarar evidência vencida se algum dia reproduzir em CI.",
-      "severitySource": "medicao-local-2026-10-29",
-      "blocked_reason": "Falta identificar QUEM reescreve/fornece o artefato durante o lote: o caminho lido é <ROOT deste worktree>/reports/... e o arquivo em disco tem ~11 h, mas o valor observado vem do relatório do worktree principal. Causa NÃO declarada. Próximo passo objetivo: no repro de 2 suítes, instrumentar fs.readFileSync do caminho e capturar mtime/hash no instante da leitura; verificar se alguma suíte de infra reexecuta o produtor (verify:mission-crash-recovery) com ENGINEERING_ROUTER_HOST_REPO_ROOT herdado. Não reproduz em CI (gate 3/3 SUCCESS), por isso não bloqueia a entrega."
+      "state": "DONE_MEASURED",
+      "legacyStatus": "done",
+      "severityBasis": "falso vermelho do harness de reprodução local (cwd errado); não havia defeito no repositório. Mantida observabilidade para diagnóstico em 1 linha.",
+      "severitySource": "medicao-local-2026-10-29"
     }
   ],
   "schemaVersion": 2,
