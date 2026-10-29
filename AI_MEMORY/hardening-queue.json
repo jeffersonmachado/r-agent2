@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-29T12:51:02.064Z",
+  "updatedAt": "2026-10-29T13:18:49.134Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2510,7 +2510,7 @@
       "title": "Substituta da retomada pós-fix nascia sem escopo de patch (NO_PATCH_SCOPE em toda tentativa)",
       "status": "verified",
       "commit": "8c14087d7",
-      "evidence": "RELATORIO §11.12. Medido no run 40824588991 (engineeringBugLoopNaturalPathE2E): 3 ocorrências de NO_PATCH_SCOPE. Causa: resumeOriginalMission criava a substituta com scopeDeferred: true esperando preenchimento no planejamento — preenchimento que NÃO existe (allowed_paths só é escrito na criação; updateTaskFields é allowlist de metadados). Resultado: escopo vazio ⇒ validador recusa todo patch ⇒ tentativas esgotadas sem correção ⇒ finding recém-fechado reabria como recorrência.",
+      "evidence": "RELATORIO §11.12. Medido no run 40824588991 (engineeringBugLoopNaturalPathE2E): 3 ocorrências de NO_PATCH_SCOPE. Causa: resumeOriginalMission criava a substituta com scopeDeferred: true esperando preenchimento no planejamento — preenchimento que NÃO existe (allowed_paths só é escrito na criação; updateTaskFields é allowlist de metadados). Resultado: escopo vazio ⇒ validador recusa todo patch ⇒ tentativas esgotadas sem correção ⇒ finding recém-fechado reabria como recorrência. | HEAD final ea1435ab7: dev-branch-ci 3/3 SUCCESS (L0+L1 completos) e jest.yml Jest Integration SUCCESS; unit falha só em modelDrivenE2e (item CI-MAIN-MODELDRIVEN-PROD-LIKE).",
       "resolution": "Herança do escopo já validado: spec.allowedPaths, senão originalTask.allowed_paths; só sem nenhum dos dois a task nasce scopeDeferred (fail-closed preservado). lineage.scopeOrigin registra a origem. Regressão mutação-provada em engineeringBugLoopNaturalPathE2E (asserção (d): escopo não vazio, contido no da task original, scopeOrigin declarado; mutante escopoHerdado=[] reprova na linha 386). Medições: natural path PASS 50,1 s com 0 NO_PATCH_SCOPE; governance PASS 60,0 s com 0 recorrências; stale-replan PASS 64,7 s.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
@@ -2524,7 +2524,7 @@
       "title": "B2 do regularizador lia estado em movimento: kill do atacante é assíncrono",
       "status": "verified",
       "commit": "ea1435ab7",
-      "evidence": "RELATORIO §11.13. Run 40853040259 (L0 do gate canônico): B2 falhou em expect(fs.existsSync(retorno.abs)).toBe(true) e o MESMO SHA passou no re-run do mesmo job — assinatura de corrida. Causa: atacante.kill(SIGKILL) é assíncrono; sem aguardar exit, o processo pode executar mais uma troca entre o kill e as asserções e mover itens/ (já gravado) para itens-guardado/. Invariante 1 (sentinela intocada) seguia válida: não houve fuga, houve leitura de estado em movimento.",
+      "evidence": "RELATORIO §11.13. Run 40853040259 (L0 do gate canônico): B2 falhou em expect(fs.existsSync(retorno.abs)).toBe(true) e o MESMO SHA passou no re-run do mesmo job — assinatura de corrida. Causa: atacante.kill(SIGKILL) é assíncrono; sem aguardar exit, o processo pode executar mais uma troca entre o kill e as asserções e mover itens/ (já gravado) para itens-guardado/. Invariante 1 (sentinela intocada) seguia válida: não houve fuga, houve leitura de estado em movimento. | HEAD final ea1435ab7: dev-branch-ci 3/3 SUCCESS (L0+L1 completos) e jest.yml Jest Integration SUCCESS; unit falha só em modelDrivenE2e (item CI-MAIN-MODELDRIVEN-PROD-LIKE).",
       "resolution": "O teste aguarda o encerramento do atacante (evento exit, teto 5 s) antes de assertar. Nenhuma asserção afrouxada: as três invariantes continuam idênticas. Estabilidade: 3 execuções consecutivas do B2 verdes e suíte 18/18; gate canônico no mesmo SHA passou no re-run (3/3).",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
