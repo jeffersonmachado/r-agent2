@@ -1480,7 +1480,16 @@ rodam em main** — não muda com esta correção.
 
 ## 11.17 Suíte COMPLETA de unit (1122 suítes) e o flake real que ela revelou
 
-Execução completa em paralelo, `npx jest tests/unit --bail=0`:
+Execução completa em paralelo, `npx jest tests/unit --bail=0`, com o pré-requisito de CI
+(`npm run ci:artifacts`) e após a correção de §11.17.2:
+
+```
+Test Suites: 1 skipped, 1122 passed, 1122 of 1123 total
+Tests:       2 skipped, 9799 passed, 9801 total
+EXIT=0
+```
+
+Primeira execução, ANTES do pré-requisito e da correção (§11.17.1–§11.17.2), para registro:
 
 ```
 Test Suites: 2 failed, 1 skipped, 1120 passed, 1122 of 1123 total
