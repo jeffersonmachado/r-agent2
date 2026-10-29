@@ -1329,6 +1329,42 @@ recusou a escrita fora da raiz nos dois casos; o teste é que media depois de o 
 
 ---
 
+## 11.14 L0b local: 39/40 + 1 interferência entre suítes (reprodutível, escopo worktree)
+
+Rodada canônica de L0b no HEAD `ea1435ab7` (`jest tests/integration/engineering --bail=0 --runInBand`):
+
+```
+Test Suites: 1 failed, 39 passed, 40 total
+Tests:       1 failed, 218 passed, 219 total
+FAIL tests/integration/engineeringMissionCrashRecoveryE2E.test.js
+  CRASH_SIGKILL_RUNTIME_EVIDENCE … Expected: < 168   Received: 217.41 (horas)
+```
+
+### 11.14.1 O que foi medido (e não é regressão do produto)
+
+| observação | resultado |
+|---|---|
+| suíte isolada | **PASS** (2/2) — relatório em disco com `finishedAt` de ~11 h |
+| reprodutível | `engineeringRunnerComposeDeploymentE2E` **antes** desta suíte, mesmo `--runInBand` ⇒ falha **determinística** com 217,5 h |
+| origem do valor | 217,5 h corresponde ao relatório do **worktree principal** `/opt/results/ria/r-agent2` (`finishedAt` 2026-10-20T12:17Z) |
+| sinal coletado | `ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria/r-agent2` **vaza** da suíte anterior para as seguintes (env é por processo) |
+| CI | gate canônico **verde** no mesmo HEAD: clone não é worktree linkado, então o vazamento não ocorre |
+
+### 11.14.2 O que foi feito e o que NÃO foi
+
+A asserção **não** foi afrouxada (`ageHours < 168` continua idêntica). O que foi adicionado é
+observabilidade: quando a prova vence, o log passa a trazer arquivo, `finishedAt`, idade, `mtime`, `cwd` e
+`ENGINEERING_ROUTER_HOST_REPO_ROOT` — sem isso, cada ocorrência exigia a mesma arqueologia de 40 minutos.
+
+**O que NÃO está provado:** o último elo do mecanismo. O caminho lido pela asserção é
+`<ROOT>/reports/mission-crash-recovery-report.json` com `ROOT` = este worktree, e o arquivo em disco tem
+~11 h; o valor de 217,5 h vem do relatório do worktree principal. Falta identificar **quem** reescreve o
+artefato nesse instante (candidatos medidos: ambiente vazado de `ENGINEERING_ROUTER_HOST_REPO_ROOT`,
+reexecução de produtor por suíte de infraestrutura). Registrado como item próprio, sem declarar causa
+que não medi.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

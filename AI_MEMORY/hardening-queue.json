@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-29T13:18:49.134Z",
+  "updatedAt": "2026-10-29T13:54:02.550Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2532,6 +2532,20 @@
       "legacyStatus": "verified",
       "severityBasis": "gate canônico vermelho por corrida do próprio teste (falso vermelho), com risco de ser lido como falha de segurança do produto",
       "severitySource": "medicao-ci-2026-10-29"
+    },
+    {
+      "id": "INTERFERENCIA-CRASH-EVIDENCE-L0B",
+      "title": "L0b local: suíte de crash-recovery lê evidência de outro worktree após suíte de infra",
+      "status": "blocked",
+      "commit": "f3595a03e",
+      "evidence": "RELATORIO §11.14. L0b no HEAD ea1435ab7: 39/40 suítes, 218/219 testes; única falha engineeringMissionCrashRecoveryE2E em CRASH_SIGKILL_RUNTIME_EVIDENCE (ageHours 217,41 > 168). Medições: suíte isolada PASSA (relatório com finishedAt ~11 h); rodar engineeringRunnerComposeDeploymentE2E ANTES dela em --runInBand reproduz a falha deterministicamente; 217,5 h corresponde ao relatório do worktree principal /opt/results/ria/r-agent2 (finishedAt 2026-10-20T12:17Z); ENGINEERING_ROUTER_HOST_REPO_ROOT=/opt/results/ria/r-agent2 vaza da suíte anterior (env é por processo). CI: gate canônico verde no mesmo HEAD (clone não é worktree linkado).",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "BLOCKED_EXTERNAL",
+      "legacyStatus": "blocked",
+      "severityBasis": "falso vermelho no L0b LOCAL (worktree linkado); não reproduz em CI. Risco real: mascarar evidência vencida se algum dia reproduzir em CI.",
+      "severitySource": "medicao-local-2026-10-29",
+      "blocked_reason": "Falta identificar QUEM reescreve/fornece o artefato durante o lote: o caminho lido é <ROOT deste worktree>/reports/... e o arquivo em disco tem ~11 h, mas o valor observado vem do relatório do worktree principal. Causa NÃO declarada. Próximo passo objetivo: no repro de 2 suítes, instrumentar fs.readFileSync do caminho e capturar mtime/hash no instante da leitura; verificar se alguma suíte de infra reexecuta o produtor (verify:mission-crash-recovery) com ENGINEERING_ROUTER_HOST_REPO_ROOT herdado. Não reproduz em CI (gate 3/3 SUCCESS), por isso não bloqueia a entrega."
     }
   ],
   "schemaVersion": 2,
