@@ -1815,6 +1815,25 @@ passa. O atraso era experimento e foi removido; 4/4 em quatro execuções depois
 Ficou registrado (sem alterar) que o mesmo atraso artificial derruba também o teste irmão do agrupamento —
 mesma classe de corrida, mas ele nunca falhou em CI, e corrigir o que não foi medido seria adivinhação.
 
+### 11.23.5 Resultado em CI depois das correções (run 40956126956)
+
+| spec | antes | depois |
+|---|---|---|
+| `support-agent-flow.spec.ts` | cenário 1 vermelho, 2 vermelhos no job | **6/6 PASS** — cenário 1 em 4,2 s |
+| `qa-waves-replay.spec.ts` | 7,2 min queimados em timeout de locator | **falha em 8,2 s** com a causa nomeada |
+| job inteiro | 11m20s, 2 vermelhos | **2,6 min, 1 vermelho** |
+
+E a mensagem agora diz exatamente o que falta no ambiente:
+
+```
+{"status":"NO_GO","reason":"PRECONDITION_FAILED",
+ "missing":["journey_with_support_scenario: [\"Beauty New Customer\\npending\",\"Beauty Booking\\npending\"]"]}
+```
+
+Ou seja: o ambiente de E2E só tem as jornadas do vertical **beauty**; a jornada que possui o cenário
+`support-inbox-nota-ui` (`support_ticket_flow`, conforme `config/journey-scenario-links.json`) **não é
+semeada**. Antes isso custava 7 minutos de timeout silencioso; agora é uma linha.
+
 **Próximo passo do E2E (não feito aqui, de propósito):** ou o workflow semeia a jornada
 `support_ticket_flow` com o cenário `support-inbox-nota-ui`, ou cada cenário garante o chamado **no
 estado que ele exige** (helper de chamado em fila, sem takeover). As duas mudam dados de E2E e merecem
