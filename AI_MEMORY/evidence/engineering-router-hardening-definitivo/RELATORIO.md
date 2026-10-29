@@ -1582,6 +1582,38 @@ sai com os campos preenchidos e o teste segue passando; revertido, 6/6 PASS sem 
 O próprio mutante já entregou um dado: a retomada do teste trouxe **19 itens** — o banco compartilhado
 acumula missões resumíveis de execuções anteriores, e é essa população que o servidor vivo também varre.
 
+## 11.20 Superfície de validação local COMPLETA — tudo verde, e o que isso NÃO prova
+
+Fecha o mapa de execução desta rodada. Todos os grupos foram rodados nesta worktree, no HEAD
+`2d92987e8` (ou imediatamente anterior para os que não tocam os arquivos alterados):
+
+| grupo | comando | resultado |
+|---|---|---|
+| unit | `npx jest tests/unit --bail=0` | **1122/1122 suítes**, 9799/9801 testes |
+| flow | `npx jest tests/flow engine/__tests__ --bail=0` | **30/30**, 264/264 |
+| rpa | `npm run test:rpa:jest` | **3/3**, 7 PASS + 4 SKIP |
+| system (contracts/governance/ci/runtime/organizational/stress/rate-limit) | `npm run test:system` | **18/18**, 162/162 |
+| tenant (isolamento) | `npx jest tests/tenant --bail=0` | **5/5**, 44/44 |
+| integração do Roteador (L0b) | `npx jest tests/integration/engineering --runInBand` | **41/41**, 238/238 — duas execuções consecutivas |
+| aceite da decisão arquitetural | `governanceApprovalFullWorkerE2E`, `postFixFailureVsRecurrence`, `postFixFailureClassification` | **12/12** |
+| frontend | `cd frontend && npx vitest run --config vitest.config.mjs` | **141/141 arquivos**, 1065/1065 testes |
+| memória operacional | `validate:ai-memory` + `validate:ai-memory-consistency` | **PASS** (0 blockers; 2 warnings, 56 infos) |
+| fila oficial | `validate:hardening-queue` | **PASS** (159 itens, 0 pending/in_progress) |
+
+**O que isso NÃO prova** (e não será apresentado como se provasse):
+- **CI**: nada aqui rodou em runner do GitHub. Os números de CI citados no relatório (§11.7–§11.10) vêm dos
+  runs identificados por ID; os desta tabela são desta máquina.
+- **Certificação**: `DEVELOPMENT_VERIFIED`, `RELEASE_CERTIFICATION` e `ENGINEERING_ROUTER_V2` continuam
+  **NO_GO** — a âncora de fechamento externa (inventário assinado, chaves Ed25519, artefato prod-like)
+  não existe.
+- **Durable-resume**: o flake por banco compartilhado segue aberto por decisão de ambiente (§11.19); a
+  suíte passou 6/6 nesta rodada, o que não o encerra.
+- **Vermelhos pré-existentes de governança de camadas**: `validate:layer-conventions` continua com os 118
+  erros conhecidos só em `engine/` (pureza) — nenhum deles tocado ou mascarado aqui.
+
+Nenhum defeito novo apareceu nesta varredura: os grupos acima já estavam verdes depois das correções
+§11.16–§11.19, e o valor desta rodada é a MEDIÇÃO, não um conserto.
+
 ---
 
 ## 12. DECISÃO FINAL
