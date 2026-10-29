@@ -214,7 +214,7 @@ describe('P2-B — ataques de filesystem com processos concorrentes', () => {
     expect(crypto.createHash('sha256').update(fs.readFileSync(sen.arquivo)).digest('hex')).toBe(sen.hash);
   });
 
-  test('B2 — troca REPETIDA de symlink durante a gravação: nada escapa para a sentinela', () => {
+  test('B2 — troca REPETIDA de symlink durante a gravação: nada escapa para a sentinela', async () => {
     const root = novaRaiz();
     const sen = sentinela();
     raizes.push(sen.dir);
@@ -225,7 +225,20 @@ describe('P2-B — ataques de filesystem com processos concorrentes', () => {
     const atacante = spawn(process.execPath, ['-e', SCRIPT_ATACANTE, JSON.stringify({ alvo: itens, guardado, destinoSymlink: sen.dir, ms: 4000 })], { stdio: 'ignore' });
     const itensDoPlano = ['X1', 'X2', 'X3', 'X4', 'X5', 'X6'].map((id) => resultado(id));
     const retornos = rodarEscritor({ root, baseRel: BASE, runId: run.runId, itens: itensDoPlano });
-    atacante.kill('SIGKILL');
+
+    // ESPERAR O ATACANTE MORRER ANTES DE ASSERTAR (flake medida 2026-10-29, run 40853040259):
+    // `kill('SIGKILL')` é ASSÍNCRONO — sem aguardar o `exit`, o atacante pode executar mais uma
+    // troca de diretório entre o kill e as asserções, movendo `itens/` (com os arquivos já gravados)
+    // para `itens-guardado/`. A invariante 2 então via `existsSync(retorno.abs) === false` e falhava
+    // num cenário que NÃO é fuga: nada foi para a sentinela (invariante 1 continuava válida) e nada
+    // saiu da raiz. O mesmo SHA passou no re-run. Nenhuma asserção é afrouxada aqui: o que muda é
+    // que o processo concorrente termina ANTES da verificação, eliminando a janela de corrida.
+    await new Promise((resolve) => {
+      if (atacante.exitCode !== null || atacante.signalCode !== null) { resolve(); return; }
+      const encerrar = setTimeout(() => { try { atacante.kill('SIGKILL'); } catch { /* já morto */ } resolve(); }, 5000);
+      atacante.once('exit', () => { clearTimeout(encerrar); resolve(); });
+      atacante.kill('SIGKILL');
+    });
 
     // Invariante 1: a sentinela não recebeu NADA (nem artefato, nem temporário).
     expect(fs.readdirSync(sen.dir)).toEqual(['sentinela.txt']);
