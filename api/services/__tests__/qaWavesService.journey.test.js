@@ -95,6 +95,43 @@ describe('qaWavesService journey model compatibility', () => {
     }
   });
 
+  describe('mergeJourneyStores — jornada salva não pode esconder as derivadas', () => {
+    // DEFEITO MEDIDO 2026-10-29: a árvore usava `storedJourneys.length > 0 ? storedJourneys : derivadas`.
+    // Um `journey-store.json` com 2 jornadas `beauty` fazia a API devolver só elas, e a UI de QA Waves
+    // deixava de listar as 253 jornadas derivadas dos cenários — inclusive "Support Ticket Flow" (dona do
+    // cenário `support-inbox-nota-ui`), o que quebrava o E2E `qa-waves-replay` com timeout de 420 s.
+    test('com jornada salva, as DERIVADAS continuam presentes', () => {
+      const derivadas = [
+        { id: 'support_ticket_flow', vertical: 'core', title: 'Support Ticket Flow' },
+        { id: 'beauty_new_customer', vertical: 'beauty', title: 'Beauty New Customer' },
+      ];
+      const salvas = [{ id: 'beauty_new_customer', vertical: 'beauty', title: 'Beauty New Customer' }];
+
+      const merged = qaWavesService.mergeJourneyStores(derivadas, salvas);
+      const ids = merged.map((j) => `${j.vertical}::${j.id}`);
+
+      expect(ids).toContain('core::support_ticket_flow');
+      expect(ids).toContain('beauty::beauty_new_customer');
+      expect(merged).toHaveLength(2);
+    });
+
+    test('a jornada SALVA sobrepõe a derivada de mesmo id+vertical (edição do usuário ganha)', () => {
+      const derivadas = [{ id: 'support_ticket_flow', vertical: 'core', title: 'Derivado', script: { steps: [] } }];
+      const salvas = [{ id: 'support_ticket_flow', vertical: 'core', title: 'Editado pelo tenant', script: { steps: [{ id: 's1', name: 'S1' }] } }];
+
+      const merged = qaWavesService.mergeJourneyStores(derivadas, salvas);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].title).toBe('Editado pelo tenant');
+      expect(merged[0].script.steps).toHaveLength(1);
+    });
+
+    test('sem jornada salva o resultado é exatamente o derivado (sem mudança de comportamento)', () => {
+      const derivadas = [{ id: 'a', vertical: 'core', title: 'A' }, { id: 'b', vertical: 'food', title: 'B' }];
+      expect(qaWavesService.mergeJourneyStores(derivadas, [])).toEqual(derivadas);
+      expect(qaWavesService.mergeJourneyStores(derivadas, null)).toEqual(derivadas);
+    });
+  });
+
   test('mantem listagem de waves legada', () => {
     const waves = qaWavesService.listWaves();
     const fitnessWave = waves.find((wave) => wave.domain === 'fitness');
