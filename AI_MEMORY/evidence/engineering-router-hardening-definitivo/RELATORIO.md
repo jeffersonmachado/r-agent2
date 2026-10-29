@@ -1085,6 +1085,53 @@ segunda. Registrado como **impedimento de decisão**, com a medição acima como
 
 ---
 
+## 11.9 Varredura dos gates da missão no HEAD da branch (`53c37167e`)
+
+Comando por comando, com o veredito medido — nada presumido:
+
+| gate | exit | veredito medido |
+|---|---|---|
+| `validate:engineering-router-v1` | 0 | PASS (STRUCTURAL_PASS/RUNTIME_NOT_REQUESTED, 183 checks, 0 falhas) |
+| `validate:engineering-router-v2` | 1 | **NO_GO** — 12 itens, 4 falhas, 5 pendências (inclui `BUG_AUTONOMOUS_LOOP` e `ENVELOPE_VERIFICATION` sem medição) |
+| `validate:timeout-architecture` | 1 | **NO_GO** — veredito de gate pai não afirmado por artefato filho |
+| `validate:bug-autonomous-loop` | 1 | **NO_GO** — 31 itens, 31 falhas, `runtime=NOT_PROVEN` |
+| `validate:required-tests` | 1 | **FAIL** — 68 `NOT_EXECUTED` |
+| `validate:bug-closure-status` | 1 | **FAIL** — 142 defeitos declaram fechamento sem prova válida (P0=31, P1=71) |
+| `validate:route-mounts` | 0 | PASS — 63 declarados / 63 montados |
+| `validate:release-dag` | 0 | PASS — 29 nós, 25 artefatos, 0 ciclos |
+| `validate:experience-segregation` | 0 | PASS |
+| `validate:experience-api-segregation` | 0 | PASS |
+| `validate:visibility-policy` | 0 | PASS — 0 violações |
+| `validate:anti-greenwashing` | 0 | PASS — 91 suítes, 0 violações |
+| `validate:hardening-queue` | 0 | PASS |
+
+### 11.9.1 O caminho para executar os 68 testes obrigatórios está FECHADO por âncora externa
+
+`npm run test:release-authoritative` (o runner autoritativo do manifesto) **recusa iniciar**:
+
+```
+[bug-closure] L2_L3_EXTENSIVO @ 53c37167e561: RECUSADO —
+  INVENTARIO_NAO_ANCORADO, BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, FECHAMENTO_SEM_PROVA_VALIDA
+  ação exigida: fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI),
+               fora da árvore do repositório
+  ação exigida: anexar prova de fechamento válida (testes reais com exit 0, SHA atual,
+               fingerprint, livro de transições e assinatura de autoridade com mayCloseDefects)
+```
+
+Ou seja: `REQUIRED_TESTS` não é "68 testes que ninguém rodou por preguiça" — é um caminho **fail-closed**
+que exige uma âncora que não existe dentro do repositório. Registrado como `BLOCKED_EXTERNAL` com a ação
+exata, sem inventar âncora e sem afrouxar o guard.
+
+### 11.9.2 O que isso significa para a decisão
+
+`DEVELOPMENT_VERIFIED = NO_GO`, e o motivo é verificável: 5 gates obrigatórios estão vermelhos ou
+bloqueados, e 2 deles (`required-tests`, `bug-closure-status`) dependem de âncora/provas externas. O que
+**não** está pendente por trabalho executável neste ambiente: as suítes oficiais do CI (327/328 unit e
+81/82 integração, com as duas causas restantes nomeadas), o gate canônico (3/3 SUCCESS) e os 8 validadores
+acima que passam.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

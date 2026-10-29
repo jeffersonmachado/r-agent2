@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-29T00:07:51.881Z",
+  "updatedAt": "2026-10-29T00:13:21.566Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -2476,6 +2476,20 @@
       "legacyStatus": "verified",
       "severityBasis": "2 suítes obrigatórias do CI ficavam vermelhas por ausência de credencial no escopo; o único motivo de passarem no dev era estado ambiente",
       "severitySource": "medicao-local-e-ci-2026-10-29"
+    },
+    {
+      "id": "REQUIRED-TESTS-ANCORA-EXTERNA",
+      "title": "68 testes obrigatórios não executam: o runner autoritativo recusa por âncora externa",
+      "status": "blocked_external",
+      "commit": "53c37167e",
+      "evidence": "npm run test:release-authoritative (scripts/governance/run-release-suites.js) no HEAD 53c37167e sai com exit=3 ANTES de rodar qualquer suíte: “[bug-closure] L2_L3_EXTENSIVO @ 53c37167e561: RECUSADO — INVENTARIO_NAO_ANCORADO, BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, FECHAMENTO_SEM_PROVA_VALIDA”, com 15 defeitos FECHAMENTO_SEM_PROVA_VALIDA (P0-1..P0-5, P1-1..P1-8, P2-1). validate:required-tests segue FAIL com 68 NOT_EXECUTED; validate:bug-autonomous-loop NO_GO com runtime=NOT_PROVEN (31/31). Relatório §11.9.",
+      "severity": "P0",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "state": "BLOCKED_EXTERNAL",
+      "legacyStatus": "blocked",
+      "severityBasis": "sem execução autoritativa não existe certificação nem DEVELOPMENT_VERIFIED; o guard recusa fail-closed",
+      "severitySource": "medicao-local-2026-10-29",
+      "blocked_reason": "ÂNCORA EXTERNA: o guard de bug-closure exige RAP_CLOSURE_INVENTORY_SHA256 vindo de canal externo (operador/CI), fora da árvore do repositório, e prova de fechamento por defeito (testes reais com exit 0 no SHA atual, fingerprint, livro de transições e assinatura de autoridade com mayCloseDefects). Nada disso pode ser fabricado dentro do repo — inventar âncora seria violar o próprio guard. Ação do operador: publicar a âncora e as provas; depois rodar npm run test:release-authoritative e reavaliar validate:required-tests / validate:bug-autonomous-loop / validate:engineering-router-v2."
     }
   ],
   "schemaVersion": 2,
