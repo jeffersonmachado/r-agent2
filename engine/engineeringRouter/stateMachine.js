@@ -16,8 +16,15 @@ const TERMINAL_SET = new Set(TERMINAL_STATES);
 
 const TRANSITIONS = Object.freeze({
   CREATED: ['CLASSIFIED', 'CANCELLED', 'BLOCKED'],
-  CLASSIFIED: ['ROUTED', 'CANCELLED', 'BLOCKED'],
-  ROUTED: ['CODING', 'CANCELLED', 'BLOCKED'],
+  // CLASSIFIED -> GREEN (2026-10-29): a spec já está satisfeita no commit da fonte da missão e a
+  // pré-verificação rodou os `test_commands` reais com sucesso. Não há o que codar e nem sequer é
+  // preciso rotear modelo — concluir sem tocar em provider é o comportamento correto.
+  CLASSIFIED: ['ROUTED', 'GREEN', 'CANCELLED', 'BLOCKED'],
+  // ROUTED -> GREEN (2026-10-29): SPEC JÁ SATISFEITA. Verificado ANTES de codificar que o contrato
+  // da task (test_commands da spec) já passa no commit da fonte dela — não há o que codar. É o
+  // único caminho para GREEN que NÃO produz candidato, e ele só existe com a evidência da
+  // execução real dos comandos (ver preVerifySpecSatisfied no router).
+  ROUTED: ['CODING', 'GREEN', 'CANCELLED', 'BLOCKED'],
   // CODING -> RED cobre patch inválido / apply falhou / provider indisponível sem fallback.
   CODING: ['TESTING', 'RED', 'CANCELLED', 'BLOCKED'],
   // TESTING -> CODING é o loop RED→FIX (nova tentativa); TESTING -> RED é ENGINEERING_TASK_EXHAUSTED.

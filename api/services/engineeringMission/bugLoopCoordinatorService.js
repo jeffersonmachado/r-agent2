@@ -1092,6 +1092,7 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
   // no produto. `classifySourceFailure` é pura e decide a origem; `classifyStaleCandidateDisposition`
   // já descrevia exatamente este caso e nunca estava ligada ao hook.
   const { classifySourceFailure } = require('../../../engine/engineeringMission/missionSource');
+const { classifyPostFixFailure } = require('../../../engine/engineeringMission/bugFinding/postFixFailure');
   const sourceFailure = classifySourceFailure({
     reasonCode: result.reasonCode || null,
     candidateBaseCommit: extra.candidateBaseCommit || null,
@@ -1107,12 +1108,59 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
     });
   }
 
+  // ── FALHA DE CONTRATO DO CODER NÃO É RECORRÊNCIA DO BUG (medido 2026-10-29) ───────────────────
+  // Distingue as classes antes de tocar no finding: sem isto, um patch recusado na task substituta
+  // (o fix JÁ está na fonte) reabre como REINCIDÊNCIA o finding que acabou de ser fechado. A
+  // classificação é pura e estreita (engine/engineeringMission/bugFinding/postFixFailure.js):
+  // só falha de PATCH conta, e só quando já existe finding pós-correção para a MESMA missão.
+  let postFix = null;
+  if (!sourceFailure.isSourceFailure) {
+    try {
+      const tentativas = await engineeringTaskService.listAttempts(taskId).catch(() => []);
+      const failureKinds = [
+        ...tentativas.map((t) => (t && t.failure_bundle && t.failure_bundle.failureKind) || null),
+        ...tentativas.map((t) => (t && t.error && t.error.failureClass) || null),
+      ].filter(Boolean);
+      const reasonCodes = [
+        // O código REAL da tentativa vive em `attempt.error.code` quando o patch nem chegou a ser
+        // aplicado (ex.: `PATCH_INVALID_FORMAT` do coder que devolveu diff vazio). `failure_bundle`
+        // é do RETRY e pode estar nulo justamente no caso medido.
+        ...tentativas.map((t) => (t && t.error && t.error.code) || null),
+        ...tentativas.map((t) => (t && t.failure_bundle && t.failure_bundle.code) || null),
+      ].filter(Boolean);
+      const tarefaFalha = await engineeringTaskService.getTask(taskId).catch(() => null);
+      const codigoTarefa = tarefaFalha && tarefaFalha.last_error ? tarefaFalha.last_error.code : null;
+      const findingsDaMissao = await bugFindingService.listFindings({ missionId, limit: 20 }).catch(() => []);
+      postFix = classifyPostFixFailure({
+        failureKinds,
+        reasonCodes: [...reasonCodes, codigoTarefa],
+        reasonCode: result.reasonCode || null,
+        findings: findingsDaMissao,
+      });
+      if (postFix.isFalseRecurrence) {
+        logger.warn('[bugLoopCoordinator] falha de contrato do coder pós-correção — registrada SEPARADA da recorrência', {
+          missionId, taskId, failureKinds, reasonCode: result.reasonCode || null, reason: postFix.reason,
+        });
+      }
+    } catch (err) {
+      logger.warn('[bugLoopCoordinator] falha ao classificar falha pós-fix — segue o caminho normal', { missionId, taskId, error: err.message });
+      postFix = null;
+    }
+  }
+  const separarDaRecorrencia = Boolean(postFix && postFix.isFalseRecurrence);
+
   return bugFindingService.registerFinding({
     missionId,
     taskId,
     provenance,
+    // fingerprint explícito pelo ESCOPO decidido pela classificação pura: 'coder_contract' nunca
+    // casa com o fingerprint do bug corrigido (que é de aplicação) e, portanto, nunca o reabre.
+    ...(separarDaRecorrencia ? { fingerprint: `coder-contract:${missionId}:${postFix.fingerprintScope}` } : {}),
+    ...(separarDaRecorrencia ? { symbol: 'mission_task:coder_contract' } : {}),
     source: sourceFailure.isSourceFailure ? 'MISSION_SOURCE' : (extra.source || 'EXCEPTION'),
-    title,
+    title: separarDaRecorrencia
+      ? `Missão ${missionId}: coder não entregou patch aplicável na retomada pós-fix (${postFix.reason})`
+      : title,
     description: sourceFailure.isSourceFailure
       ? `${sourceFailure.reason} (código ${sourceFailure.code}; disposição ${sourceFailure.disposition})`
       : (extra.description || `resultado real da execução: ${status}`),

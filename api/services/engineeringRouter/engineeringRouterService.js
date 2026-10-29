@@ -1286,9 +1286,126 @@ async function rerouteRole({
   };
 }
 
+/**
+ * SPEC JÁ SATISFEITA ANTES DE CODIFICAR (decisão arquitetural 2026-10-29).
+ *
+ * PROBLEMA MEDIDO (run 40786037745, `governanceApprovalFullWorkerE2E`): a missão foi retomada
+ * depois de a correção ter sido integrada na fonte (integração `BUG_FIX_CANDIDATE` 04cad9c1b →
+ * db83173a, 730 ms ANTES do fechamento do finding). A task substituta nasceu JÁ no commit
+ * corrigido — ou seja, o cenário da spec já passava ali — mas o Router despachou o coder assim
+ * mesmo. O modelo devolveu o patch do que já existia, o `git apply` recusou
+ * (`failureKind=PATCH_CONTRACT_VIOLATION`), a task foi a RED e essa falha foi registrada como
+ * RECORRÊNCIA (`recurrenceCount=1`, `previousStatus=CLOSED`) do finding que acabara de ser
+ * fechado — recorrência FALSA, criada por trabalho inventado.
+ *
+ * Regra implementada: quando a missão da task já avançou a fonte (candidato integrado), os
+ * `test_commands` do contrato são executados NO COMMIT DA PRÓPRIA TASK, no mesmo sandbox real da
+ * fase TESTING. Se TODOS passam, a spec está satisfeita naquele commit: a task conclui GREEN, sem
+ * invocar o coder e sem patch (nada de diff vazio artificial).
+ *
+ * Nunca conclui por inferência:
+ *   · sem `mission_id` ou sem `test_commands` → NOT_APPLICABLE (segue o fluxo normal);
+ *   · fonte da missão não avançou → NOT_APPLICABLE (nada a verificar: não há fix integrado);
+ *   · workspace/comando com erro de infraestrutura → INCONCLUSIVE (segue o fluxo normal e o
+ *     motivo fica registrado — inconclusivo NUNCA vira GREEN).
+ */
+async function preVerifySpecSatisfied({ task, eventAudienceTenantId = null }) {
+  const commands = Array.isArray(task.test_commands) ? task.test_commands.filter(Boolean) : [];
+  if (!task.mission_id || commands.length === 0) {
+    return { status: 'NOT_APPLICABLE', reason: 'SEM_MISSAO_OU_SEM_TEST_COMMANDS' };
+  }
+
+  const source = await missionSourceService.getMissionSource(task.mission_id).catch(() => null);
+  const fonteAvancou = Boolean(source && source.baseCommit && source.currentCommit && source.currentCommit !== source.baseCommit);
+  if (!fonteAvancou) {
+    return { status: 'NOT_APPLICABLE', reason: 'MISSION_SOURCE_NOT_ADVANCED' };
+  }
+
+  let workspace = null;
+  try {
+    workspace = await createWorkspace(task.id, 0);
+    emitTaskStage(eventAudienceTenantId, task.id, {
+      stage: 'SPEC_PRE_VERIFY',
+      status: 'running',
+      message: `Fonte da missão já contém correção integrada (${String(source.baseCommit).slice(0, 7)} → ${String(source.currentCommit).slice(0, 7)}): verificando se a spec já está satisfeita antes de codificar.`,
+      meta: { commands, sourceCommit: task.source_commit || null, missionCurrentCommit: source.currentCommit },
+    });
+    const testResult = await runTestCommands({
+      taskId: task.id,
+      attemptNumber: 'spec-pre-verify',
+      commands,
+      cwd: workspace,
+    });
+    const execucoes = Array.isArray(testResult?.results) ? testResult.results : [];
+    const todasPassaram = execucoes.length === commands.length
+      && execucoes.every((r) => r && r.exitCode === 0);
+    return {
+      status: todasPassaram ? 'SATISFIED' : 'NOT_SATISFIED',
+      sourceCommit: task.source_commit || null,
+      missionCurrentCommit: source.currentCommit,
+      commands,
+      executions: execucoes.map((r) => ({ command: r.command, exitCode: r.exitCode })),
+    };
+  } catch (err) {
+    logger.warn('[engineeringRouterService] pré-verificação de spec INCONCLUSIVA — segue o fluxo normal', {
+      taskId: task.id, missionId: task.mission_id, error: err.message,
+    });
+    return { status: 'INCONCLUSIVE', reason: err.message };
+  } finally {
+    if (workspace) await destroyWorkspace(workspace).catch(() => {});
+  }
+}
+
 async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null, run = null }) {
   const taskId = task.id;
   const ts = writesFor(run);
+
+  // ── SPEC JÁ SATISFEITA: nunca codificar o que já está feito ──────────────────────────────────
+  // Só é consultado quando a fonte da missão já avançou (candidato integrado). Ver
+  // `preVerifySpecSatisfied` para o defeito medido que motivou este caminho.
+  const preVerificacao = await preVerifySpecSatisfied({ task, eventAudienceTenantId });
+  if (preVerificacao.status === 'SATISFIED') {
+    await ts.recordTelemetry({
+      task_id: taskId,
+      attempt_id: null,
+      // `role` é NOT NULL no modelo de telemetria: a pré-verificação não tem provider/model (não
+      // houve chamada de LLM), mas precisa de um papel declarado para a evidência existir.
+      role: 'ROUTER',
+      provider: null,
+      model: null,
+      event_type: 'SPEC_PRE_VERIFIED',
+      result: 'SATISFIED',
+      detail: {
+        sourceCommit: preVerificacao.sourceCommit,
+        missionCurrentCommit: preVerificacao.missionCurrentCommit,
+        commands: preVerificacao.commands,
+        executions: preVerificacao.executions,
+      },
+    }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar telemetria de pré-verificação', { taskId, error: err.message }));
+    await ts.transitionTask(taskId, 'GREEN');
+    emitTaskStage(eventAudienceTenantId, taskId, {
+      stage: 'GREEN',
+      status: 'success',
+      message: 'Spec já satisfeita no commit da fonte da missão — concluída sem codificar e sem patch.',
+      meta: { reasonCode: FAILURE_CODES.SPEC_ALREADY_SATISFIED, ...preVerificacao },
+    });
+    return {
+      taskId,
+      status: 'GREEN',
+      reasonCode: FAILURE_CODES.SPEC_ALREADY_SATISFIED,
+      specAlreadySatisfied: true,
+      sourceCommit: preVerificacao.sourceCommit,
+      missionCurrentCommit: preVerificacao.missionCurrentCommit,
+    };
+  }
+  if (preVerificacao.status !== 'NOT_APPLICABLE') {
+    // NOT_SATISFIED / INCONCLUSIVE seguem o fluxo normal (codificar). A decisão fica registrada
+    // para auditoria: nunca se conclui GREEN por ausência de informação.
+    logger.info('[engineeringRouterService] pré-verificação de spec não concluiu — seguindo para o coder', {
+      taskId, status: preVerificacao.status, reason: preVerificacao.reason || null,
+    });
+  }
+
   task = await ensureRouted(task, { credentialScope, eventAudienceTenantId, run });
 
   if (!task.routing_decision?.coder?.selected) {

@@ -148,6 +148,13 @@ const FAILURE_CODES = Object.freeze({
   // autorizacao so por campo explicito de contrato aprovado por humano.
   PATCH_REMOVES_TESTS: 'PATCH_REMOVES_TESTS',
   PATCH_APPLY_FAILED: 'PATCH_APPLY_FAILED',
+  // SPEC JÁ SATISFEITA NO FIX (decisão arquitetural 2026-10-29). Quando a missão é retomada
+  // depois que a correção foi integrada na fonte, a task substituta nasce sobre um commit onde o
+  // cenário da spec JÁ passa. Invocar o coder nesse estado é trabalho inventado: o modelo devolve
+  // um patch do que já existe e o `git apply` o recusa (PATCH_CONTRACT_VIOLATION), o que virava
+  // RED e — pior — RECORRÊNCIA falsa do finding recém-fechado. O Router verifica a spec antes de
+  // codificar e conclui GREEN sem patch e sem chamar o coder, registrando este código.
+  SPEC_ALREADY_SATISFIED: 'SPEC_ALREADY_SATISFIED',
   ENGINEERING_TASK_EXHAUSTED: 'ENGINEERING_TASK_EXHAUSTED',
   COMMAND_NOT_ALLOWED: 'COMMAND_NOT_ALLOWED',
   PROVIDER_UNAVAILABLE: 'PROVIDER_UNAVAILABLE',
