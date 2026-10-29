@@ -1122,6 +1122,13 @@ Ou seja: `REQUIRED_TESTS` não é "68 testes que ninguém rodou por preguiça" �
 que exige uma âncora que não existe dentro do repositório. Registrado como `BLOCKED_EXTERNAL` com a ação
 exata, sem inventar âncora e sem afrouxar o guard.
 
+**Classificação corrigida por medição (2026-10-29): P0 → P1.** Declarar este item como P0 acionou a regra
+dura de `governance/bug-closure/eligibility.js` (`P0_ABERTO` / `TESTE_DIRECIONADO_PENDENTE`) e passou a
+**NEGAR o L0 completo no `dev-branch-ci`** — ou seja, a declaração do bloqueio impedia o próprio gate
+canônico de validar a branch, sem que exista defeito de código a corrigir. A classe correta é a de
+`MISSAO-B9-CI-GITHUB-ACTIONS` (P1, `blocked_external`). Nada foi relaxado: o item continua **aberto e
+bloqueado** e `DEVELOPMENT_VERIFIED` continua **NO_GO**.
+
 ### 11.9.2 O que isso significa para a decisão
 
 `DEVELOPMENT_VERIFIED = NO_GO`, e o motivo é verificável: 5 gates obrigatórios estão vermelhos ou
