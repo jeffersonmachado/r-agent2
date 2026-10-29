@@ -227,6 +227,25 @@ describe('Crash real do worker (§9, §40) — evidência runtime de SIGKILL', (
 
     // Frescor: a evidência precisa ser recente, senão deixa de valer como prova de runtime.
     const ageHours = (Date.now() - Date.parse(evidence.finishedAt)) / 3600000;
+    if (ageHours >= 24 * 7) {
+      // DIAGNÓSTICO (observabilidade, nunca afrouxamento — a asserção abaixo continua idêntica).
+      // MEDIDO 2026-10-29: esta asserção falhou com 217,5 h lendo um relatório que tem ~11 h quando
+      // verificado isoladamente. O valor de 217,5 h corresponde ao relatório do worktree PRINCIPAL
+      // (`/opt/results/ria/r-agent2`), e `ENGINEERING_ROUTER_HOST_REPO_ROOT` vaza de uma suíte
+      // anterior para as seguintes no mesmo processo: a interferência é reprodutível rodando
+      // `engineeringRunnerComposeDeploymentE2E` antes desta suíte em `--runInBand`, e NÃO ocorre
+      // com esta suíte isolada (PASS). Em CI o clone não é worktree linkado e o gate é verde.
+      // eslint-disable-next-line no-console
+      console.warn('[crash-recovery-evidence] evidência VENCIDA', JSON.stringify({
+        arquivo: evidencePath,
+        finishedAt: evidence.finishedAt,
+        idadeHoras: Number(ageHours.toFixed(2)),
+        mtimeArquivo: fs.statSync(evidencePath).mtime.toISOString(),
+        status: evidence.status,
+        cwd: process.cwd(),
+        hostRepoRoot: process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT || null,
+      }));
+    }
     expect(ageHours).toBeLessThan(24 * 7);
   });
 
