@@ -2814,6 +2814,45 @@ auditada) e UI DEVELOPMENT consumindo o SSE.
 
 ---
 
+## 11.45 LRO — recuperação de órfãs: `SLOW != STUCK != DEAD` respeitado (6/6 em banco real)
+
+`api/services/lro/lroRecoveryService.js` (`findOrphans`, `recoverOperation`, `recoverOrphans`).
+
+Órfã é definida **só** por `lease_owner` preenchido **e** `lease_expires_at` vencido. Ausência de
+progresso, por si, nunca autoriza agir — é a taxonomia de `docs/architecture/timeout-architecture.md`.
+A reconciliação: pausa (`PAUSED`, nunca "conclui por timeout"), libera o lease, **avança o
+`fencing_token`** e grava evento `ORPHAN_RECOVERED` com dono anterior, prazo anterior, status anterior
+e motivo. Sem registro, reconciliação é indistinguível de adulteração.
+
+| Prova (PostgreSQL descartável) | Resultado |
+|---|---|
+| lease válido **não** é órfã; lease vencido é | PASS |
+| recuperar órfã ⇒ `PAUSED`, `lease_owner = NULL`, fencing maior, evento com motivo e dono anterior | PASS |
+| worker antigo **não** escreve depois (heartbeat com token velho) ⇒ `FENCE_STALE` | PASS |
+| segunda recuperação da mesma operação ⇒ `OPERACAO_NAO_ORFA` | PASS |
+| operações **sem lease** e **terminais** nunca são tocadas | PASS |
+| `recoverOrphans` devolve resumo; `recoverOperation` sem motivo ⇒ `MOTIVO_OBRIGATORIO` | PASS |
+
+**Defeito meu corrigido no caminho:** o evento registrava `previousLeaseOwner: null` porque o valor
+era lido do snapshot da instância depois de `op.update()`. O snapshot passou a ser capturado **antes**
+de qualquer update da transação — auditoria sem o dono anterior não serve para nada.
+
+---
+
+## 11.46 Os dois vermelhos pré-existentes ficaram VERDES — por isolamento e contrato, não por afrouxamento
+
+| Suíte | Causa real medida | Correção |
+|---|---|---|
+| `qa-mesh/__tests__/scheduler.test.js` (2 falhas) | o guard de bug-closure roda **antes** do lock de pipeline **por projeto** (`meshScheduler.js:147-170`); o teste não isolava essa dependência, então `reason` vinha `bug_closure_blocked`. Com stub ingênuo o guard caía em `bug_closure_indisponivel` porque `resetMocks: true` limpa a implementação entre casos | stub de `governance/bug-closure/command-policy` **rearmado no `beforeEach`**; asserção original mantida (`skipped: true` + `reason: 'pipeline_active'`) — **12/12 PASS** |
+| `qa-mesh/__tests__/meshRunner.test.js` (1 falha) | o teste exigia `repairPlan.json`/`baseline.json`/`metrics.json` de uma execução **não canônica**. `writeCanonicalOutputs` **não** vem da opção homônima: deriva de `isCanonicalExecution` (`meshRunner.js:2347-2373`), que exige `RUNNING_IN_PIPELINE=1`. Ou seja: o teste pedia o comportamento que o hardening **removeu** (execução ad-hoc sobrescrevendo evidência canônica) | asserção passou a provar o contrato real: `summary.json`/`history.json` escritos, `isCanonicalExecution === false`, `canonicalPromotion === null`, e o plano de reparo continua provado **em memória** (`result.repairPlan.orderedFixList[0]`) — **15/15 PASS** |
+
+Nenhuma das duas correções relaxou asserção de comportamento: uma removeu dependência externa do
+teste (isolamento), a outra corrigiu a expectativa para o contrato **mais estrito** que o produto
+passou a garantir. Ambas as entradas da fila foram de `BLOCKED_EXTERNAL` para `VERIFIED` com
+`regressionTest`, `commit` e a medição registrada.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

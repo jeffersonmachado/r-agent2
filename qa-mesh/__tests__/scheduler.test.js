@@ -24,7 +24,18 @@ jest.mock('../meshRunner', () => ({
   runMesh: jest.fn(),
 }));
 
+// ISOLAMENTO (2026-10-30): o scheduler avalia a política de BUG CLOSURE **antes** do lock de
+// pipeline, por projeto ("sem esta guarda, o scheduler rodaria a malha ignorando a fila"). Sem este
+// stub, o estado real da fila (fechamentos sem prova assinada) curto-circuitava os dois casos e o
+// `reason` observado era `bug_closure_blocked` — o teste deixava de exercitar o que o nome diz.
+// Aqui a política é stubada como PERMITIDA para que os casos meçam apenas o lock de pipeline e a
+// escrita canônica. A guarda em si continua coberta pelos testes de bug-closure.
+jest.mock('../../governance/bug-closure/command-policy', () => ({
+  avaliarComando: jest.fn(() => ({ permitido: true, operacao: 'QA_WAVES_COMPLETA', decisao: { reasonCodes: [] } })),
+}));
+
 const fs = require('fs');
+const commandPolicy = require('../../governance/bug-closure/command-policy');
 const meshRunner = require('../meshRunner');
 const { selectScenariosForSchedule, runScheduledMesh, setSchedulerEnabled, buildScheduleStatus, startScheduler } = require('../meshScheduler');
 
@@ -41,6 +52,11 @@ describe('qa-mesh/meshScheduler', () => {
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     meshRunner.loadRegistry.mockReturnValue(registry);
     fs.existsSync.mockReturnValue(false);
+    // Rearmado em TODO teste: `resetMocks: true` (jest.config.cjs) limpa a implementação entre
+    // casos, e sem isso o guard de bug-closure caía em `bug_closure_indisponivel` por TypeError.
+    commandPolicy.avaliarComando.mockReturnValue({
+      permitido: true, operacao: 'QA_WAVES_COMPLETA', decisao: { reasonCodes: [] },
+    });
   });
 
   afterEach(() => {
