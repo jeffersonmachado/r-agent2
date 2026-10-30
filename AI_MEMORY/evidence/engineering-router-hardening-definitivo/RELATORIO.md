@@ -1658,6 +1658,540 @@ em `main` aprovar (em 25/10 ele aprovou — a falha foi no lineage), o que é pr
 não reproduzi o erro localmente: nesta branch o guard de bug-closure recusa **antes** do lineage
 (`INVENTARIO_NAO_ANCORADO` — a âncora externa), então a ordem de falha local difere da de `main`.
 
+## 11.22 Ciclo autorizado de promoção: até onde foi, o que travou, e por quê
+
+Autorização recebida para promover `dev → main` e empurrar, executando o caminho até o selo. Registro do
+que foi FEITO, do que o gate MEDIU e do ponto em que parar era a única conduta honesta.
+
+### 11.22.1 Executado (com SHA)
+
+| passo | resultado |
+|---|---|
+| merge `docs/main-ci-environment-gaps` → `fix/jest-ci-history` | `dd379d820` (sem conflito; base comum era `3386a4547`) |
+| `dev/engineering-hardening` FF no remoto | `3386a4547 → dd379d820` |
+| merge do fix da fila (§11.22.2) | `bfd2ce9a3` |
+| `dev/engineering-hardening` FF novamente | `dd379d820 → bfd2ce9a3` |
+
+**Não promovi `main`** — e a razão é medida, não opinião (§11.22.3).
+
+Estado dos checks em `dev` `bfd2ce9a3` (medido, não estimado):
+
+| check | resultado |
+|---|---|
+| **Jest (unit + integration)** | **SUCCESS** — os dois jobs. É o gate que estava 327/328 |
+| RAG Service Tests | **SUCCESS** |
+| Frontend Tests | FAILURE — 1 de 569 (flake, §11.22.4) |
+| E2E Playwright | FAILURE — 2 specs, idênticos em `main` em 2026-10-20 (§11.22.4) |
+| Release Governance — ENVELOPE + PAYLOAD | FAILURE — depende das âncoras/Ed25519 (§11.22.3) |
+| Dev Hardening CI (L0 + L1) | DENIED `L0_COMPLETO` (§11.22.3) |
+
+### 11.22.2 Regressão que EU introduzi, pega pelo gate real
+
+O run 40946909215 (Jest unit em `dev` `dd379d820`) reprovou **1 suíte / 1 teste**:
+`tests/unit/governance/bugClosureQueueModel.test.js` → *"a fila REAL tem estado canônico em TODOS os itens"*.
+
+Causa: os 4 itens que criei nesta missão usavam `state: "DONE_MEASURED"`, que **não existe** no vocabulário
+canônico (`OPEN, REPRODUCED, FIX_IN_PROGRESS, FIXED_PENDING_VERIFICATION, VERIFIED, RESOLVED,
+BLOCKED_EXTERNAL, RISK_ACCEPTED`). O `validate:hardening-queue` passava — o teste do modelo de dados não.
+Corrigido para `VERIFIED` (`2fa75a88a`), verificado localmente **12/12 PASS**, e a contagem da fila volta a
+`133 VERIFIED / 8 BLOCKED_EXTERNAL / 19 RESOLVED` sem item fora do vocabulário.
+
+Lição: "o validador que eu rodei passou" ≠ "o gate real passa". Só o CI mediu essa diferença.
+
+### 11.22.3 O que impede `main` e o selo — medido, não estimado
+
+O gate canônico `Dev Hardening CI (L0 + L1 governança)` reprovou no run do `dd379d820`:
+
+```
+[dev-branch-gate] C autorizacao L0_COMPLETO: DENIED
+                  (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, TESTE_DIRECIONADO_PENDENTE)
+```
+
+E, medido na própria árvore (`validate-bug-closure-status` em `bfd2ce9a3`):
+
+```
+[bug-closure-status] abertos=160 (P0=0 P1=0 externos=8) bloqueantesParaCertificacao=107
+[bug-closure-status] FAIL: FECHAMENTO_NAO_PROVADO 152 defeito(s) DECLARAM fechamento
+                     sem prova válida (P0=31, P1=76) — declarar não é fechar
+```
+
+O guard do próprio selo (`exigir_elegibilidade SELO_FINAL`, primeira linha executável de
+`seal-release.sh` depois do argparse) recusa:
+
+```
+[bug-closure-guard] RECUSADO (exit 1): SELO_FINAL não pode começar.
+  · fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI), fora da árvore do repositório
+  · anexar prova de fechamento válida (testes reais com exit 0, SHA atual, fingerprint, livro de
+    transições e assinatura de autoridade com mayCloseDefects) ou reabrir o defeito
+```
+
+**É um impasse fechado, não um bug**: o selo exige `L0_COMPLETO`; `L0_COMPLETO` é negado porque existem
+defeitos `BLOCKED_EXTERNAL` (8) e 152 fechamentos sem prova válida; a prova válida exige
+`RAP_CLOSURE_INVENTORY_SHA256` + assinatura de autoridade, que só existem com as âncoras provisionadas. E
+cinco desses itens bloqueados (**H15/H19/H20** e os dois `P1-*`) têm como `blocked_reason` exatamente *"exige
+ciclo de selagem"*. Ou seja: **o selo não começa porque falta o selo.** Promover `main` com esse estado seria
+declarar release verde sobre governança `NO_GO` — proibido pela Constituição do repositório e pela missão.
+
+### 11.22.4 Dois vermelhos pré-existentes que o run de `dev` expôs (não são meus)
+
+1. **E2E Playwright** (2 falhas): `qa-waves-replay.spec.ts:209` (timeout de 420 s no click) e
+   `support-agent-flow.spec.ts:306/314` (`ticketList` `element(s) not found`). **Idênticos em `main` no run
+   39447249603 (2026-10-20)**, mesma linha 314 — logo anteriores a esta rodada. O segundo cheira à superfície
+   `/support` legada (deprecated e gated por `caseManagement`), o que faria o spec estar medindo uma tela
+   que já não é a canônica.
+2. **Frontend Tests** (1 de 569): `SecurityIntelligencePage.test.jsx` → filtro "apenas pendências". Passou
+   em `dd379d820` e falhou em `bfd2ce9a3`, cuja única diferença é **4 valores de `state` num JSON**:
+   é flake, não regressão. Não reproduzi em 3 execuções locais da suíte (4/4 PASS nas três).
+
+Nenhum dos dois foi registrado como item `pending` na fila — não vou criar compromisso de fila que eu não
+vou cumprir neste turno. Ficam aqui como próximos passos com medição.
+
+## 11.23 Os dois vermelhos pré-existentes do E2E: causa medida nos artefatos, não suposta
+
+Sem stack local eu não teria diagnóstico — então baixei o artefato do run 40946909310
+(`gh run download`, `playwright-report/data/*.md` contém snapshot da página e o call log exato).
+
+### 11.23.1 `support-agent-flow` cenário 1 — o guard era CÓDIGO MORTO
+
+```
+Locator: getByTestId('ticket-list')   Expected: visible   Error: element(s) not found
+Page snapshot: … paragraph: "Nenhum chamado disponível"
+```
+
+`SupportTicketList.jsx:187` só renderiza o contêiner `ticket-list` quando há chamado visível; com fila
+vazia renderiza o vazio. A asserção de visibilidade vinha **antes** do guard `count === 0 →
+PRECONDITION_FAILED`, portanto numa execução de fila limpa o teste estourava em timeout e o guard nunca
+era alcançado — o vermelho acusava "locator" quando o problema era pré-condição. Correção: garantir o
+chamado antes, com o MESMO helper que o cenário 2 já usava. Asserção intacta.
+
+### 11.23.2 `qa-waves-replay` — clique sem timeout sobre uma jornada que o ambiente não tem
+
+```
+Error: locator.click: Test timeout of 420000ms exceeded.
+  waiting for locator('.qa-journey-tree-journey').filter({ hasText: 'Support Ticket Flow' }).first()
+Page snapshot: árvore contém APENAS "Beauty New Customer" e "Beauty Booking"
+```
+
+A árvore do ambiente de E2E é populada por jornadas derivadas do vertical **beauty**; a jornada de
+suporte que a spec presume (`config/journey-scenario-links.json` liga `support_ticket_flow` ao cenário
+`support-inbox-nota-ui`) **não é semeada**. Correção: a árvore é lida, a pré-condição é verificada e o
+clique passa a ter timeout de 15 s — ausência falha em segundos NOMEANDO o que existe.
+
+### 11.23.3 Verificação local (stack viva: API :3001 + Vite :5173)
+
+| execução | resultado |
+|---|---|
+| `support-agent-flow.spec.ts` **com** a correção | **5/6, cenário 1 PASSANDO** (6,4 min) |
+| `support-agent-flow.spec.ts` **sem** a correção (stash) | **5/6** — cenário 1 passa por sorte de dado residual e o **cenário 3** cai no MESMO `open_ticket_exists` |
+| `qa-waves-replay.spec.ts` com a correção | falha em **segundos**: `journey_with_support_scenario: []` |
+
+Ressalva declarada: o Vite em `:5173` e a API em `:3001` eram os do worktree principal
+(`/opt/results/ria/r-agent2`, 17 h no ar) — não os desta worktree. O código de APLICAÇÃO é idêntico entre
+os dois (as mudanças desta branch são de teste/workflow/AI_MEMORY), então a verificação vale para o que ela
+mede: o comportamento das SPECS contra a aplicação real.
+
+Conclusão honesta: a correção do cenário 1 é real e verificada (`+1` determinístico), mas a família de
+cenários tem **dependência de estado compartilhado** pré-existente: 3, 4 e 5 contam com "algum chamado
+visível na lista" deixado pelos anteriores. Tentativa de corrigir o cenário 4 com o helper do cenário 1
+foi **revertida** porque não provou efeito (o helper faz takeover, e o chamado sai do filtro padrão da
+lista) — registrar em vez de empurrar remendo.
+
+### 11.23.4 O "flake" de frontend era CORRIDA, reproduzida e corrigida
+
+Run 40949091209 (`Frontend Tests` em `dev` `bfd2ce9a3`): 1 de 569 vermelho com
+
+```
+Unable to find an element by: [data-testid="finding-actions-A|npm:pacote-a@1.0.0"]
+```
+
+A asserção (`SecurityIntelligencePage.test.jsx`) era **síncrona** (`getByTestId`) logo depois de esperar
+apenas o título estático "Achados de segurança" — o grid depende de `listSecurityFindings`, e sob carga a
+promise resolve depois. Os testes irmãos do arquivo já usavam `findBy*`.
+
+**Reprodução determinística:** atrasando o mock de `listSecurityFindings` em 80 ms, o teste falha com a
+**mensagem idêntica** à do CI. Com a correção (`findByTestId`, mesma asserção) e o **mesmo atraso ativo**,
+passa. O atraso era experimento e foi removido; 4/4 em quatro execuções depois disso. Commit `f884f94fb`.
+
+Ficou registrado (sem alterar) que o mesmo atraso artificial derruba também o teste irmão do agrupamento —
+mesma classe de corrida, mas ele nunca falhou em CI, e corrigir o que não foi medido seria adivinhação.
+
+### 11.23.5 Resultado em CI depois das correções (run 40956126956)
+
+| spec | antes | depois |
+|---|---|---|
+| `support-agent-flow.spec.ts` | cenário 1 vermelho, 2 vermelhos no job | **6/6 PASS** — cenário 1 em 4,2 s |
+| `qa-waves-replay.spec.ts` | 7,2 min queimados em timeout de locator | **falha em 8,2 s** com a causa nomeada |
+| job inteiro | 11m20s, 2 vermelhos | **2,6 min, 1 vermelho** |
+
+E a mensagem agora diz exatamente o que falta no ambiente:
+
+```
+{"status":"NO_GO","reason":"PRECONDITION_FAILED",
+ "missing":["journey_with_support_scenario: [\"Beauty New Customer\\npending\",\"Beauty Booking\\npending\"]"]}
+```
+
+Ou seja: o ambiente de E2E só tem as jornadas do vertical **beauty**; a jornada que possui o cenário
+`support-inbox-nota-ui` (`support_ticket_flow`, conforme `config/journey-scenario-links.json`) **não é
+semeada**. Antes isso custava 7 minutos de timeout silencioso; agora é uma linha.
+
+### 11.23.6 CAUSA RAIZ do último vermelho: a árvore PREFERE o `journey-store` e esconde as derivadas
+
+Medido nesta máquina, chamando o serviço real (`qaWavesService.listJourneys('system')`) com os dados
+versionados:
+
+```
+domínios: 10
+ - beauty | 2 jornadas | Beauty New Customer / Beauty Booking
+ - core   | 74 jornadas | Support Ticket Flow / Booking Flow / Payment Charge Flow
+ - fitness| 10 | agent-os | 156 | bakery | 5 | food | 2 | clinic | 1 | services | 1 | market | 1 | omnichannel | 1
+```
+
+A jornada `Support Ticket Flow` **existe** — derivada de `qa/qa-waves/scenario-store.json` (8 cenários com
+`journeyId: support_ticket_flow`, incluindo `support-inbox-nota-ui`, nenhum com `requiresOfficialPipeline`).
+O que a esconde é esta linha:
+
+```js
+// api/services/qaWavesService.js:614
+const journeyStore = storedJourneys.length > 0
+  ? storedJourneys                        // ← basta UM jornada salva para as derivadas desaparecerem
+  : buildJourneyStoreFromScenarioStore(combinedScenarios);
+```
+
+No ambiente de E2E havia um `journey-store.json` com **duas** jornadas `beauty` — e a árvore passou a
+mostrar só elas. Confirmação no snapshot do CI: `arvore=["Beauty New Customer
+pending","Beauty Booking
+pending"]`.
+Ou seja: **salvar uma jornada faz as 84 jornadas derivadas sumirem da UI** — é defeito de produto, não de
+spec, e explica por que o mesmo teste passa ou falha conforme o estado residual do runner.
+
+**Tentativa descartada (declarada):** fiz a spec provisionar a jornada via `POST /api/qa-waves/journeys`.
+O POST funciona (a API passa a devolver `core → Support Ticket Flow`), mas a UI continuou sem renderizá-la e
+a segunda execução caiu em `page.evaluate: Failed to fetch`. **Revertido** — não vou deixar no repositório
+patch que não provei. Efeito colateral limpo: o `journey-store.json` criado por esse POST em
+`/opt/results/ria/r-agent2` foi removido (o processo da API mantém cache em memória até o próximo restart).
+
+**As duas correções reais, para decisão:** (a) mesclar armazenadas + derivadas na árvore (`stored` ganha em
+caso de mesmo `id`+`vertical`) — muda o que o usuário vê na superfície DEVELOPMENT de QA Waves; (b) semear
+`support_ticket_flow` no workflow de E2E. Nenhuma das duas é "consertar teste": as duas mudam comportamento
+ou dados.
+
+**Próximo passo do E2E (não feito aqui, de propósito):** ou o workflow semeia a jornada
+`support_ticket_flow` com o cenário `support-inbox-nota-ui`, ou cada cenário garante o chamado **no
+estado que ele exige** (helper de chamado em fila, sem takeover). As duas mudam dados de E2E e merecem
+verificação própria.
+
+## 11.24 Correção de PRODUTO: jornada salva não esconde mais as derivadas (a causa do último vermelho do E2E)
+
+Escolhida a opção de produto de §11.23.6, com prova própria. Commit `0d9e1b927`.
+
+### 11.24.1 O defeito
+
+```js
+// antes (api/services/qaWavesService.js)
+const journeyStore = storedJourneys.length > 0 ? storedJourneys : derivadas;
+```
+
+Uma jornada salva pelo tenant **substituía** o conjunto inteiro. Consequências medidas:
+
+| cenário | antes | depois |
+|---|---|---|
+| árvore com os dados versionados e sem `journey-store` | 10 domínios / 253 jornadas | idêntico (o merge só age quando há jornada salva) |
+| árvore com `journey-store.json` de 2 jornadas `beauty` | **só as 2 beauty** — `core::Support Ticket Flow` desaparecia | 10 domínios / 253 jornadas, `core::Support Ticket Flow` presente |
+| E2E `qa-waves-replay` nesse ambiente | 420 s de timeout esperando a jornada existente | encontra a jornada e segue o fluxo |
+
+### 11.24.2 A correção e as provas
+
+`mergeJourneyStores(derivadas, salvas)`: derivadas são a BASE, a salva SOBREPÕE a de mesmo par
+`(id, vertical)`. Nada de "descartar o que o usuário salvou" nem "esconder o que ele não salvou".
+
+- **Serviço real** após a correção: `10 domínios / 253 jornadas`, `core tem Support Ticket Flow? true`.
+- **3 testes novos** em `qaWavesService.journey.test.js`: (a) com jornada salva as derivadas continuam;
+  (b) a salva sobrepõe a derivada de mesmo `id`+`vertical` (título e steps do tenant ganham); (c) sem
+  jornada salva o resultado é **exatamente** o derivado (`toEqual`). Suíte 10/10.
+- **Prova por mutação**: reintroduzindo a precedência antiga, o teste falha com
+  `Expected "core::support_ticket_flow"` / `Received ["beauty::beauty_new_customer"]`.
+- `api/modules/qa-waves` + suíte do serviço: **97/97**.
+
+### 11.24.3 O que isso ensina sobre os "flakes" deste repositório
+
+Três dos vermelhos investigados nesta rodada tinham a mesma forma: **o teste estava certo e o ambiente
+mentia** (artefato renovado por outro processo, primeiro teste que media a ausência de um artefato de outro
+workflow, árvore que dependia de um arquivo de estado residual). Em nenhum deles a resposta correta foi
+afrouxar asserção — em todos, medir o ambiente.
+
+## 11.25 O vermelho do replay NÃO era só o merge: a UI não renderiza a árvore
+
+Depois do merge de §11.24 (API devolvendo 10 domínios / 253 jornadas com `core::Support Ticket Flow`
+presente), o E2E de CI **continuou** vermelho em 8 s, com a mesma lista de duas jornadas beauty. Então
+acrescentei ao diagnóstico a resposta CRUA da API, e a medição local mostrou uma terceira camada:
+
+```
+API   → {"dominios":1,"jornadasPorDominio":["core:1"],"temSupport":true}
+DOM   → 0 elementos .qa-journey-tree-journey
+```
+
+Ou seja: **a API entrega a jornada e a UI não renderiza a árvore**. Isso separa o problema em dois, e o
+primeiro (dados/produtor) está resolvido; o segundo é de renderização/carga na página `QaWavesPage`
+(que depende de dois endpoints — `/api/qa-waves/journeys` e `/api/qa-waves/journey-status` — e do estado de
+domínio selecionado) e **não** do produtor.
+
+O spec agora carrega, na própria mensagem de falha, `status` + resumo da API + a lista do DOM (commit
+`0c8ed2e15`), de modo que a próxima execução de CI diga qual dos dois lados falhou — em vez de repetir
+"element(s) not found".
+
+**Estado honesto deste item:** parcialmente corrigido e **não** verde. O que está provado: produtor
+corrigido (verificado por serviço + mutação), falha passou de 7,2 min para 8 s, `support-agent-flow` 6/6 em
+CI. O que falta: descobrir por que a árvore não renderiza nesse ambiente — e só com a resposta de CI, que
+agora está no relatório de falha, isso deixa de ser adivinhação.
+
+## 11.26 E2E fechado: 8/8 verdes em CI (a cadeia completa de causas)
+
+O que parecia um "flake" de 7 minutos tinha **três** causas encadeadas, cada uma medida com artefato:
+
+| # | causa | onde foi medida | correção |
+|---|---|---|---|
+| 1 | `journey-store` com 1 jornada escondia TODAS as 253 derivadas dos cenários | serviço real + mutação (§11.24) | `mergeJourneyStores` (`0d9e1b927`) |
+| 2 | a sidebar mostra **só o domínio selecionado**; a jornada de suporte vive em `core` e a árvore abria em `beauty` | run 40975061143: API com 10 domínios/`temSupport=true`, DOM com 2 jornadas beauty | a spec resolve o domínio pela API e clica no pill (`4c46c1d3c`) |
+| 3 | o "tab" **Cenários não existe mais** (virou seção sempre visível) e o clique sem timeout consumia os 420 s | snapshot local com a jornada já selecionada | clique removido; espera limitada pelo botão do cenário |
+
+**Resultado em CI (run 40983078065, `dev` `4c46c1d3c`):**
+
+```
+✓ fitness-customer-checkin (3,0 s)   ✓ qa-waves-replay (4,4 min — antes: timeout de 420 s)
+✓ support cenários 1..6 (3,8 s · 3,8 s · 2,7 s · 2,8 s · 3,9 s · 2,1 min)
+8 passed (6,9 min)     → job SUCCESS
+```
+
+Estado dos checks em `4c46c1d3c`: **Frontend SUCCESS**, **RAG SUCCESS**, **E2E 8/8 SUCCESS**, Jest em
+andamento (verde no mesmo commit anterior), `Release Governance` FAILURE (âncoras/Ed25519 — externo) e
+`Dev Hardening CI` DENIED em `L0_COMPLETO` (impasse de âncora, §11.22.3).
+
+**Lições de método desta caçada (registradas porque custaram horas):**
+1. **Artefato de CI é prova**: `gh run download` do `playwright-report` entregou snapshot da página e call
+   log exatos — três hipóteses minhas morreram ali.
+2. **Não confiar em `curl` para concluir sobre a UI**: o mesmo teste local passou a dar "API 200 / DOM
+   vazio" enquanto a API respondia 500 intermitente em `/auth/login` e `/config`. Medição em momentos
+   diferentes do mesmo ambiente não compõe uma prova.
+3. **Toda espera precisa de limite**: três vezes o vermelho foi "locator sem timeout"; hoje todas as
+   esperas críticas da spec têm prazo e nomeiam o que faltou.
+
+## 11.27 Duas premissas da fila foram falsificadas por medição (e corrigidas)
+
+### 11.27.1 "GitHub Actions bloqueado por budget" — NÃO está (item fechado)
+
+O item `MISSAO-B9-CI-GITHUB-ACTIONS` afirmava, desde 2026-10-14, que todo push falhava em 3–5 s sem
+executar job por limite de gastos. Medido em 2026-10-30 no `dev` `4c46c1d3c`:
+
+| workflow | resultado |
+|---|---|
+| Jest | **SUCCESS** |
+| Frontend Tests | **SUCCESS** |
+| RAG Service Tests | **SUCCESS** |
+| E2E Playwright | **SUCCESS 8/8** (6,9 min) |
+| Dev Hardening CI | **SUCCESS**, veredito `PASS_PARCIAL` (`L0-suite-oficial` exit=0 em 475,9 s, `L0b` exit=0 em 495,3 s) |
+
+Nenhuma anotação de "Actions budget" em nenhum run. O único vermelho restante é
+`Release Governance — ENVELOPE + PAYLOAD`, e a causa **não é billing**: os jobs `Governance Core`
+(Node 20 e 22) falham no passo *"Provisionar chave de attestation Ed25519 (runtime root, fora do
+checkout)"* — falta `RAP_RELEASE_ATTESTATION_PRIVATE_KEY` — e todo o resto fica `skipped`; o `Release Gate`
+falha em *"Baixar a atestação do preflight de âncoras"*. Item fechado com essa causa apontada para
+`REQUIRED-TESTS-ANCORA-EXTERNA`.
+
+### 11.27.2 "L0_COMPLETO DENIED" — virou ALLOWED (mas o veredito é PARCIAL)
+
+Registro anterior (§11.22.3) dizia `DENIED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO,
+TESTE_DIRECIONADO_PENDENTE)`. Hoje:
+
+```
+B autorizacao TESTES_NEGATIVOS_REGRESSAO: ALLOWED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO)
+C autorizacao L0_COMPLETO:               ALLOWED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO)
+D autorizacao L1_AMPLO:                  ALLOWED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO)
+veredito=PASS_PARCIAL (completo=false)
+```
+
+O `TESTE_DIRECIONADO_PENDENTE` desapareceu (os P0/P1 não estão abertos sem teste direcionado); o que
+mantém `completo=false` é **apenas** a classe de bloqueio externo declarada. Ou seja: **todos os gates
+L0/L1 passam** — o que impede o veredito completo é a âncora, não o código.
+
+Correção de honestidade sobre a rodada anterior: eu descrevi o L0 como `DENIED` e isso **era verdade no
+commit de então** (`dd379d820`); no commit atual ele é `ALLOWED`. Registro os dois estados para que a
+auditoria não leia a mudança como contradição.
+
+## 11.28 Gate agregado: 0/64 NÃO é "64 gates reprovados" — e um defeito real no fechamento de run
+
+### 11.28.1 O agregado nunca executou um passo sequer (medido)
+
+`npm run validate:governance-enforcement` em `4c46c1d3c`, três medições em sequência:
+
+| identidade | resultado |
+|---|---|
+| sem identidade | `BLOCKED passos=0/64` — "identidade de run incompleta (runId,sourceFingerprint)" |
+| com `.current-run.json` (run criado pelo próprio repositório) | **ainda** `BLOCKED 0/64` — o agregado **não lê o ponteiro**; exige `GOVERNANCE_RUN_ID`/`GOVERNANCE_SOURCE_FINGERPRINT` no ambiente (`run-governance-enforcement.js:135-149`) |
+| com as duas variáveis do run real | `BLOCKED 0/64` — **autorização negada**: `INVENTARIO_NAO_ANCORADO, BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, FECHAMENTO_SEM_PROVA_VALIDA` |
+
+Conclusão honesta: o `0/64` que aparece nos relatórios **não** significa que 64 gates estejam vermelhos — significa
+que a autorização nega ANTES do primeiro passo, pela âncora externa. É a mesma raiz de §11.22.3.
+
+O run de manutenção aberto para essa medição foi fechado como `SUPERSEDED` e o ponteiro removido.
+
+### 11.28.2 DEFEITO REAL encontrado no caminho: fechar o run não fechava o banco
+
+`close-run-context.js` gravava apenas `governance/.current-run.json`. Medido logo após fechar o run de
+manutenção:
+
+```
+ponteiro .current-run.json  → status=SUPERSEDED
+governance_runs (Postgres)  → status=CREATED
+```
+
+E `scripts/governance/lib/governed-run-status.js` declara, no próprio cabeçalho, que **"o banco (autoridade
+do desfecho)"** e que o ponteiro é sincronizado A PARTIR dele. Fechar só o ponteiro **inverte a
+autoridade** — a mesma classe de divergência que o H20 descreve (run fechado localmente, aberto no banco).
+
+**Correção** (`4037f4aac`): `fecharNoBanco()` atualiza `governance_runs.status` com o status declarado; o
+comando aplica ponteiro **e** banco, e falha de banco **nunca** é silenciosa (AVISO em stderr + `{ erro }`
+devolvido). Provas: medição end-to-end (`banco: 1 linha(s) com status=SUPERSEDED`, confirmada por consulta
+SQL depois de estar `CREATED`), 2 testes novos com injeção de dependência, os 6 existentes atualizados para
+`await main(...)` (main passou a ser assíncrono) — **8/8**, e a suíte inteira de governance **2359 passed,
+2 skipped**.
+
+## 11.29 Estado consolidado da rodada (2026-10-30) — e o detalhe de auditoria que faltava
+
+### 11.29.1 Checks em `dev` `4037f4aac` (medição completa)
+
+| check | resultado |
+|---|---|
+| Jest (unit + integration) | **SUCCESS** |
+| Frontend Tests | **SUCCESS** |
+| RAG Service Tests | **SUCCESS** |
+| E2E Playwright | **SUCCESS** — 8/8 |
+| Dev Hardening CI (L0+L1) | **SUCCESS**, veredito `PASS_PARCIAL (completo=false)`; B/C/D `ALLOWED` |
+| Release Governance — ENVELOPE + PAYLOAD | FAILURE — passo "Provisionar chave de attestation Ed25519" (secret ausente) |
+
+A única classe que mantém `completo=false` é `BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO`.
+
+### 11.29.2 Detalhe de auditoria corrigido (`c7ef74031`)
+
+O gate imprimia `evidencia=reports/dev-branch-ci-evidence.json + AI_MEMORY/evidence/dev-branch-ci-<sha>-parcial.md`.
+Esses são caminhos **locais**; no workflow o par vai como **artifact** (`dev-branch-ci-evidence-<sha>`) e o job
+**não** faz push (`permissions: contents: read`). Um auditor seguindo o caminho do repositório num run de CI
+não encontra o arquivo — e não há como distinguir "execução manual" de "publicada". O gate agora declara o
+destino em CI na linha seguinte ao veredito. Contratos do gate: 40/40 verdes.
+
+### 11.29.3 Fila
+
+163 itens, **0 abertos**, 8 impedidos (`blocked`/`blocked_external`). Checagem de coerência executada:
+**nenhum** item `VERIFIED` sem `commit` + `evidence`. Três correções desta rodada foram registradas com
+prova: `E2E-SUPPORT-CENARIO1-PRECONDICAO` (`83dfe295a`), `E2E-REPLAY-DOMINIO-E-TAB` (`4c46c1d3c`),
+`JOURNEY-STORE-ESCONDE-DERIVADAS` (`0d9e1b927`). O item de billing foi fechado por medição (§11.27.1).
+
+## 11.30 Achado de fiação: o agregado inclui um gate de fase POSTERIOR sem produtor no caminho
+
+Fui re-medir as premissas dos itens impedidos (mesma disciplina que fechou o item de billing) e achei uma
+fiação inconsistente que **não** é âncora externa.
+
+### 11.30.1 Medições
+
+| medição | resultado |
+|---|---|
+| `npm run ci:artifacts` (bootstrap canônico de CI) exit | **0** — e `governance/rap-master-scorecard.json` **continua ausente** |
+| `npm run validate:final-status-projection` | **FAIL** — `ISSUE [governance/rap-master-scorecard.json] canonical_unreadable:missing` |
+| `npm run validate:governance-chain` | FAIL — elos derivados `conteudoIdentico=false` (H20; exige selagem) |
+| `npm run validate:dist` | FAIL — `check-dist-clean.sh`, dezenas de `AUSENTE` (não há envelope em `dist/`) |
+| `npm run validate:release-dag` | **PASS** — `RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE`, 29 nós, 0 ciclos |
+
+### 11.30.2 O que isso revela
+
+`governance/rap-master-scorecard.json` é **gitignored** e produzido por `scripts/governance/run-persisted-scorecard.js`,
+que só é chamado por `converge-governance.sh` e `seal-release.sh`. No DAG
+(`governance/release-dag.js:215`) o nó `final_status_projection` está na fase **FINAL_GOVERNANCE**, dependente
+de `platform_readiness` ← `final_governance` ← `master_scorecard_delivered`.
+
+Mas o **agregado** (`validate:governance-enforcement`) inclui `validate:final-status-projection` na sua cadeia
+sem declarar fase nem produtor — e o `validate:release-dag` **não detecta**, porque o DAG modela
+produtores/saídas e não a lista de passos do agregado. Resultado: num workspace que não passou por
+`converge`/selagem, esse passo **falha por artefato de fase posterior** — a classe
+`RELEASE_PHASE_ORDER_VIOLATION`, aqui fora do radar do gate que existe para pegá-la.
+
+### 11.30.3 O que eu NÃO fiz (e por quê)
+
+Não "consertei" de duas maneiras possíveis, porque as duas mudam política de gate e exigem decisão sua:
+
+1. **Rodar o produtor do scorecard dentro do agregado** — proibido na prática: o próprio `seal-release.sh`
+   documenta que rodar o scorecard com `dist/` vazio **re-envenena** as projeções (below10 salta de 2 para
+   ~29 e o `zip:release` trava). Seria fabricar artefato no lugar errado.
+2. **Rebaixar o `canonical_unreadable` ausente para `PENDING_PHASE` (exit 0)** — existe precedente declarado
+   (`validate:release-artifact-identity`: "sem payload no disco a verificação é PENDING_PHASE, nunca FAIL de
+   conteúdo"), mas aplicá-lo aqui **afrouxa** o gate de projeção. Não faço isso por conta própria.
+
+Registrado aqui, não na fila, para não criar item `pending` que eu não vou cumprir neste turno.
+
+## 11.31 Fecho de rodada: `dev` `c7ef74031` com 5 de 6 checks verdes e as 5 premissas remedidas
+
+### 11.31.1 Checks (run 40996140886 e irmãos, `dev` `c7ef74031`)
+
+| check | resultado |
+|---|---|
+| Jest | **SUCCESS** |
+| Frontend Tests | **SUCCESS** |
+| RAG Service Tests | **SUCCESS** |
+| E2E Playwright | **SUCCESS** (8/8) |
+| Dev Hardening CI | **SUCCESS** — `L0_COMPLETO` e `L1_AMPLO` `ALLOWED`; veredito `PASS_PARCIAL (completo=false)` |
+| Release Governance | FAILURE — chave Ed25519 ausente |
+
+### 11.31.2 As cinco premissas impedidas, remedidas (não repetidas)
+
+| item | medição de 2026-10-30 |
+|---|---|
+| `H15-DIST-RECIBO-STALE` | `validate:dist` FAIL — `check-dist-clean.sh` com dezenas de `AUSENTE`: não há envelope em `dist/`. Premissa válida. |
+| `H19-DIST-CAUSA-UNICA` | mesma medição; a causa única continua sendo payload ausente. Premissa válida. |
+| `H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE` | `validate:governance-chain` FAIL — `proof_signature`/`package_validation` com `conteudoIdentico=false`. Premissa válida. |
+| `P1-PROJECAO-FINAL-DIVERGE…` | `validate:final-status-projection` FAIL por `canonical_unreadable:missing` do scorecard; `ci:artifacts` **não** o produz (§11.30). Premissa válida e ampliada. |
+| `P1-AGREGADO-SEM-IDENTIDADE…` | `0/64` em **três** estados; o bloqueio é de AUTORIZAÇÃO, não de passos. Premissa válida e agora explicada. |
+
+Nenhum item mudou de status: todos seguem impedidos, mas nenhum segue com motivo narrativo — cada um tem
+agora o comando, o exit e a causa medidos em `c7ef74031`.
+
+## 11.32 Gate local em `c7ef74031`: FAIL medido, causa isolada por A/B — e uma afirmação falsa removida do gerador de evidência
+
+Rodei o **gate canônico local** (`scripts/ci/dev-branch-gate.js --fases A,B,C,D`) para produzir a prova
+vinculada ao SHA, como nas rodadas anteriores. Resultado: `veredito=FAIL`, com um único passo vermelho:
+
+```
+L0b-integracao-engenheiro  exit=1  1212.7s
+FAIL tests/integration/engineeringBugLoopNaturalPathE2E.test.js
+  expect(lineage.replacementTaskId).not.toBe(originalTaskId)   ← recebeu o MESMO id
+```
+
+### 11.32.1 A/B que isola a variável (banco, não código)
+
+| ambiente | resultado |
+|---|---|
+| Postgres de dev **compartilhado** | **FAIL** em 65 s (mesmo id) |
+| banco descartável `rap_l0b_proof` (criado, migrado, removido) | **PASS** em 55 s |
+| CI no **mesmo SHA** (`c7ef74031`) | **SUCCESS** — `L0-suite-oficial` e `L0b` exit=0 |
+
+Conclusão: não é regressão. A suíte depende de o bug-loop criar uma task **substituta**; com achados e
+missões residuais de execuções anteriores no banco compartilhado, o coordenador reaproveita o vínculo e o id
+volta igual ao original. É a mesma classe do flake de durable-resume — registrada como item próprio
+(`ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO`, `blocked_external`, decisão de ambiente).
+
+### 11.32.2 DEFEITO no gerador de evidência: ele afirmava o bloqueio de billing como FATO
+
+O arquivo de evidência produzido trazia, hardcoded:
+
+```
+- **gate efetivo**: LOCAL — o runner do GitHub não inicia jobs por limite de gastos da conta
+```
+
+Isso é **falso desde** a medição de §11.27.1 (os cinco workflows executam). Publicar isso num artefato de
+evidência faz um auditor concluir que o CI não roda. Corrigido em `0e7918ac0`: o campo e a linha agora dizem
+o que é verdade — este par é do runner LOCAL; em CI o mesmo par vai como artifact
+`dev-branch-ci-evidence-<sha>` — e o cabeçalho registra a medição que derrubou a premissa.
+
+A evidência local gerada **antes** da correção foi **descartada** (não commitada): publicar um arquivo com
+afirmação falsa seria pior do que não publicar. Em CI, o artifact do run 40996140886 é a prova real do SHA.
+
 ---
 
 ## 12. DECISÃO FINAL
