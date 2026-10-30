@@ -1276,6 +1276,15 @@ function finalizar({
     `[dev-branch-gate] veredito=${veredito} (completo=${nucleo.equivalenteAValidacaoCompleta}) ` +
     `evidencia=${outJson} + ${mdRel}\n`
   );
+  // CLAREZA DE AUDITORIA (medido 2026-10-30): os caminhos acima são LOCAIS desta execução. No workflow
+  // `dev-branch-ci.yml` o mesmo par é publicado como ARTIFACT (`dev-branch-ci-evidence-<sha>`) e o job
+  // NÃO faz push (`permissions: contents: read`, com passo de asserção de escopo) — então um auditor que
+  // seguir o caminho do repositório num run de CI não encontra o arquivo. Declarar isso aqui evita a
+  // leitura errada de "evidência publicada no repo".
+  process.stdout.write(
+    '[dev-branch-gate] nota: em CI este par é publicado como artifact '
+    + `dev-branch-ci-evidence-${shaCurto}; o repositório NÃO recebe push deste workflow.\n`
+  );
 
   if (veredito === 'PASS') return 0;
   // PASS_PARCIAL: as fases pedidas passaram, mas NÃO equivalem a validação completa.
