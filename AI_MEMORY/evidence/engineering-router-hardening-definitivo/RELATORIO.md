@@ -3078,6 +3078,42 @@ disso muda comportamento sem flag. Restam apenas os degraus de certificação qu
 
 ---
 
+## 11.53 Varredura dos validadores NÃO bloqueantes: um deles estava vacuoso por premissa velha, não por código
+
+Rodados nesta ordem, todos com exit 0:
+
+| Validador | Resultado |
+|---|---|
+| `validate:layer-conventions` | **PASS — `totalIssues: 0`** (149 arquivos de `engine/`, 1.525 de `api/`) |
+| `validate:invariants` | PASS (epistemologia no QA, persistência determinística, logs de decisão) |
+| `validate:cleanup` | PASS (0 não-canônicos, diretório de evidência inexistente) |
+| `validate:business-needs` | 4 avisos `🟡` (deriva de confiança em 2 jornadas, 68 entradas derivadas, `cases` sem precondições) — **sem bloqueio** |
+| `validate:agent-adherence` · `validate:anti-greenwashing` | PASS (91 suítes, 0 violações) |
+
+### 11.53.1 O achado: `AGENTS.md` carregava um baseline que o repositório já tinha superado
+
+O arquivo de instruções afirmava **"118 hard errors / 118 issues — TODOS em `engine/`"** e listava
+"46 `new Date`, 24 `fs`, 23 `console.*`, 13 `process.*`, 7 timers, 5 `Math.random` em 32 arquivos".
+Medição de hoje: o validador devolve **0 issues** em 149 arquivos de `engine/`, e o resíduo real fora
+das portas é **20 ocorrências** de `new Date(`/`Math.random` em 10 arquivos.
+
+Antes de corrigir o texto, verifiquei se o PASS era vacuoso (o padrão de falso verde que este repositório
+persegue): `listFiles('engine')` devolve 149 arquivos, `listFiles('api')` 1.525, e os dois `console.*`
+remanescentes são **comentários** (`engine/fallbackController.js:74`, `engine/shared/logger.js:8`) — o
+scanner ignora comentário. Ou seja: **o PASS é legítimo**; o **texto** é que estava desatualizado.
+
+Correção aplicada em `AGENTS.md` (duas afirmações, com data e comando), incluindo a ressalva que
+importa: `new Date(` e `Math.random` **não são padrões deste validador** — o gate mede
+`fs`/`process`/`console`, e a dívida real de **determinismo de replay** dessas classes é medida pela
+regressão de replay, não por ele. Sem essa ressalva, o "0 issues" viraria prova de pureza total.
+
+Por que isso importa mais que o número: um agente que lê "118 erros em `engine/`" planeja um refactor
+de 32 arquivos que **não existe mais**, com risco de replay e build de frontend — trabalho e risco
+inventados a partir de premissa velha. É a mesma classe de defeito que a missão chama de "não presuma
+que um problema permanece aberto".
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
