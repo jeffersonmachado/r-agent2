@@ -2438,6 +2438,65 @@ o que importa para esta rodada: ele roda o L0 oficial e os gates de governança 
 
 ---
 
+## 11.38 Checagem da página /dev/qa-waves: servidor antigo explica "1 jornada", e um defeito real de bootstrap parcial
+
+### 11.38.1 O que a página mostra
+
+| Medida | Valor |
+|---|---|
+| Jornadas na tela (`core`) | **1** — `Support Ticket Flow`, 11 cenários, 85% sucesso |
+| Cenários no domínio | 255 · 1 crítico · 100% cobertura |
+| `/api/qa-waves/journey-status` no servidor vivo | **1 item** |
+| Código do `dev` sobre as **mesmas** bases | **253 jornadas** em 10 domínios (`core`: 74) |
+| Console / HTTP | zero erro de console e zero resposta ≥ 400 (antes do cold load) |
+
+Causa: a API na 3001 (`pid 2150`) subiu em **2026-10-29 00:56** de um checkout cujo
+`api/services/qaWavesService.js` é de **2026-08-14** e **não tem** `mergeJourneyStores` (grep = 0).
+É o defeito `JOURNEY-STORE-ESCONDE-DERIVADAS` (`0d9e1b927`) rodando ao vivo: uma jornada salva
+esconde as 253 derivadas. Não é problema de dado nem de página — é binário velho.
+
+### 11.38.2 DEFEITO REAL achado na checagem: uma chamada lenta zera a página inteira
+
+No cold load, os endpoints se comportam de forma desigual. Capturado no console (API viva):
+
+```
+[ERROR] Request timeout { "url": "/api/qa-waves/executions?limit=50", "timeout": 90000 }
+[ERROR] Request timeout { "url": "/api/qa-waves/intelligence/coverage?vertical=core" }
+[ERROR] Request timeout { "url": "/api/qa-waves/intelligence/drafts" }
+[ERROR] Request timeout { "url": "/api/qa-waves/step-status?journeyId=support_ticket_flow" }
+```
+
+Enquanto `journeys`, `journey-status` e `scenarios` respondiam **200**. Mas `loadAll()` usava
+`Promise.all` sobre as quatro dependências: **uma** falha descartava as três respostas boas. A página
+ficava em `0 Cenários / 0% / sem pílula de domínio` e — como o toast expira em 6 s — sem nenhuma
+mensagem. Visualmente idêntico a "não existe dado".
+
+### 11.38.3 Correção e prova
+
+`Promise.allSettled` aplicando cada resposta que chegou; falha parcial é anunciada; o que veio é
+preservado. A **primeira** versão da correção reportava apenas as duas primeiras promessas — o próprio
+teste reprovou isso, e o report passou a cobrir as quatro.
+
+| Cenário (arquivo isolado) | Código ANTIGO | Código NOVO |
+|---|---|---|
+| `/executions` rejeitando | **FAIL** `Unable to find role=button` (painel vazio) | **PASS** |
+| suíte da página | — | 3/3 PASS |
+| frontend completo | — | **141 arquivos, 1066 testes PASS** |
+
+Duas armadilhas de teste encontradas e corrigidas no caminho, ambas registradas no código:
+(a) asserção `Fitness` **solta** casava outros botões e passava nas DUAS versões — a asserção passou a
+ser escopada em `nav[aria-label="Verticais"]`; (b) o DOM do render anterior sobrevivia ao teste
+seguinte — `cleanup()` explícito no bloco. A variante que rejeita `/scenarios` foi **removida** por não
+discriminar: teste que finge guardar algo não entra.
+
+### 11.38.4 CI em `d92572e35` (dev)
+
+Dev Hardening CI (L0 + L1) **SUCCESS** · Jest **SUCCESS** · E2E Playwright **SUCCESS** ·
+Frontend **SUCCESS** · RAG **SUCCESS** · Release Governance **FAILURE** (falta a chave privada do dono).
+5 de 6; o único vermelho continua sendo o gate que depende de segredo privado.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
