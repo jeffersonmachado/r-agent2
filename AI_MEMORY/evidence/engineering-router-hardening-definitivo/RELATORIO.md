@@ -2194,6 +2194,118 @@ afirmação falsa seria pior do que não publicar. Em CI, o artifact do run 4099
 
 ---
 
+## 11.33 Fase B: banco descartável por suíte — a sensibilidade a ambiente deixou de existir, e um defeito meu apareceu no caminho
+
+A classe de falha era conhecida: duas suítes do Roteador reprovavam no Postgres de **desenvolvimento
+compartilhado** e passavam no CI (banco efêmero) e num banco recém-criado. Ambas estavam `blocked_external`
+com o motivo "decisão de ambiente", e os dois itens listavam **banco/schema dedicado por suíte** como a saída
+real. Foi essa saída que foi implementada — não um afrouxamento de asserção.
+
+### 11.33.1 A porta nova
+
+`tests/helpers/suiteDatabase.js` cria `rap_suite_<slug>_<hex>`, aplica as migrations canônicas, aponta
+`DATABASE_URL` para esse banco e o **destrói** no fim. Contratos: recusa nome sem o prefixo da porta
+(nunca derruba banco alheio), nunca loga a connection string, e `cleanup()` **restaura o `DATABASE_URL`
+anterior** — sem isso, em `--runInBand` (mesmo processo para todas as suítes) a suíte seguinte herdaria a
+URL de um banco já destruído.
+
+### 11.33.2 Provas
+
+| Medida | Antes | Depois |
+|---|---|---|
+| `engineeringBugLoopNaturalPathE2E` no banco compartilhado | FAIL 65 s (`replacementTaskId` igual ao original) | **4/4 PASS** (88,2 s / 82,5 s / 87,2 s / 77,5 s) |
+| `engineeringMissionDurableResume` no banco compartilhado | 1/3 isoladas, 2/2 lotes falhando | **3/3 PASS** (6/6 testes; 44,7 s / 56,0 s / 60,4 s) |
+| Lote canônico L0b no banco compartilhado | 2 suítes vermelhas | **41/41 suítes, 238/238 testes, exit 0** (1249 s) |
+| Bancos residuais após as execuções | — | **zero** |
+
+A restauração do `DATABASE_URL` tem prova de mutação: com o mutante "cleanup sem restaurar", o teste
+`tests/integration/suiteDatabaseIsolation.test.js` **falha** apontando a URL vazada (Expected `r_agent2` /
+Received `rap_suite_selfcheck_33beca`); com o código correto, 2/2 verde.
+
+### 11.33.3 DEFEITO MEU, medido no lote: o hook herdava o timeout do fixture
+
+Primeira passada do L0b depois da mudança: **40/41 suítes, 232/238 testes**, com as 6 asserções de
+durable-resume falhando por `Exceeded timeout of 20000 ms for a hook`. A causa era minha: o `beforeAll`
+passou a provisionar banco (`CREATE DATABASE` + 234 migrations = dezenas de segundos) mas continuou com o
+timeout do fixture — 20 s numa suíte e 60 s na outra. Isoladas passavam porque o custo do provisionamento
+cabia; no lote, não. Timeout do hook elevado para 300 s com o motivo escrito no código. Segunda passada:
+**41/41, 238/238, exit 0**.
+
+Lição registrada: mover trabalho para dentro de `beforeAll` muda o **orçamento de tempo do hook**, e um
+teste que passa isolado pode não passar no lote por esse motivo — não por estado compartilhado.
+
+---
+
+## 11.34 Fase Zero: 59 fechamentos sem suíte de regressão — 48 resolvidos por medição, 11 viram decisão de dono
+
+A máquina canônica exige `regressionTest` para `FIXED_PENDING_VERIFICATION`, `VERIFIED` e `RESOLVED`
+(`governance/bug-closure/defect-states.js:218`). Medido: **59 itens em estado de fechamento sem o campo**.
+Declarar não é fechar — é exatamente o que `validate:bug-closure-status` acusa como `FECHAMENTO_NAO_PROVADO`.
+
+`scripts/governance/backfill-regression-tests.js` resolve a suíte por três fontes reais, em precedência
+explícita — **teste que cita o id > teste citado na evidência do item > teste tocado pelo commit do fix** —,
+**re-executa** no código atual e só grava o campo com exit 0. A nota registra comando, exit e SHA.
+
+| Resultado da passada real (`0bfda6315522`) | Itens |
+|---|---|
+| `BACKFILL_APLICADO` (teste executado verde agora) | **48** |
+| `DECLARADO_E2E` (spec Playwright; prova é o job de CI, não execução local) | 2 |
+| `SEM_TESTE_RESOLVIVEL` (item intocado — nenhum caminho inventado) | **11** |
+
+### 11.34.1 Dois defeitos da própria ferramenta, encontrados pelo uso
+
+1. **O fixture media a si mesmo.** Os ids estavam literais no arquivo de teste, então o `grep` por "arquivo
+   que cita o id" encontrava o próprio teste e a resolução virava tautologia. Corrigido com ids compostos em
+   runtime e um teste que **documenta o limite conhecido**: um arquivo que apenas menciona o id é aceito como
+   `CITA_O_ID`, e é por isso que a fonte vai registrada no relatório — a execução verde é o que separa
+   declaração de prova.
+2. **Escolha alfabética apontava o item errado.** O commit de `E2E-SUPPORT-CENARIO1-PRECONDICAO` tocou dois
+   specs e a ordem alfabética ligava o item de **suporte** ao spec de **replay** — ponteiro errado é falso
+   verde com cara de prova. A escolha passou a ser por sobreposição de tokens com o id, com empate estável.
+
+### 11.34.2 O gate de taxonomia pegou o alvo de escrita novo (CI vermelho, corretamente)
+
+O `Job npm test` reprovou o commit `8061d2798` em `ci:bootstrap` com `json-persistence-audit veredito=FAIL`:
+o relatório `reports/regression-test-backfill.json` não estava na taxonomia de persistência. Duas tentativas
+medidas: entrada por caminho em `CLASSIFIED` **não resolve** (o scanner resolve `path.join` em variável para
+o **basename**, então entradas por caminho não são alcançadas — unknown seguia 1); regra por basename, ao lado
+das demais, fechou em **unknown: 0 / status PASS** (572 alvos). Suíte `tests/unit/governance` completa:
+**201 suítes, 2365 testes, 2 skipped**.
+
+### 11.34.3 Os dois itens de ambiente foram fechados por refutação medida
+
+`TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO` e `ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO`
+declaravam bloqueio por "decisão de ambiente". A decisão foi tomada e medida; ambos foram para `VERIFIED`
+com `regressionTest`, `verificationCommit` e a refutação no campo `evidence`. O motivo original fica
+preservado em `blocked_reason_historico` — auditoria não perde o porquê.
+
+### 11.34.4 Os 11 restantes NÃO foram reclassificados por ferramenta
+
+`FECHAMENTOS-SEM-SUITE-DE-REGRESSAO` (`blocked_external`) registra o conjunto e as três saídas possíveis por
+item: escrever a suíte, reabrir (`VERIFIED -> OPEN`) ou aceitar risco declarado. Mudar a classificação de 11
+fechamentos é decisão de dono, não efeito colateral de script — e inventar um caminho de teste que não existe
+seria o pior desfecho possível.
+
+---
+
+## 11.35 Fase C: a fase `FINAL_GOVERNANCE` e a detecção de violação de ordem JÁ existem — medição, não reescrita
+
+Antes de escrever qualquer linha, medi. `governance/release-dag.js` já declara a fase e o código de violação:
+
+- `phases` do relatório: `SOURCE_VALIDATED, PRE_PACKAGE, CANDIDATE_BUILT, CANDIDATE_VALIDATED, SEALED,
+  DELIVERED, FINAL_GOVERNANCE, PUBLISHED_VERIFIED` — `terminalPhases: [PUBLISHED_VERIFIED]`;
+- `detectPhaseOrderViolations()` devolve `RELEASE_CODES.PHASE_ORDER_VIOLATION` quando um gate exige artefato
+  de fase posterior, quando o produtor não existe no DAG e quando o artefato não está declarado;
+- `tests/unit/governance/releaseDag.test.js:130-140` já assere o caso `gate DELIVERED` exigindo
+  `final_governance_report` (`FINAL_GOVERNANCE`) e recebe a violação com gate/artefato/`gatePhase`/`artifactPhase`.
+
+`validate:release-dag` no HEAD: `status=PASS`, `decision=RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE`, 29 nós,
+25 artefatos, 0 ciclos, `phaseOrderViolations: []`. Portanto a opção (a) do §11.30 **está satisfeita**; o que
+continua aberto é o outro lado do §11.30 — o agregado incluir um gate de fase POSTERIOR (`final_status_projection`)
+sem produtor no caminho, que só é suprido pelo ciclo de selagem.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
