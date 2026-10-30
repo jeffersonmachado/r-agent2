@@ -2782,6 +2782,32 @@ lease/fencing, progresso, feedback e autorização — está pronta e provada em
 
 ---
 
+## 11.44 LRO — dispatcher da outbox: publicar é etapa separada, com backoff e DLQ (4/4 em banco real)
+
+`api/services/lro/lroOutboxDispatcher.js`. O evento é gravado na **mesma transação** do estado
+(`lroService`); publicar é etapa separada e idempotente. Se o processo morrer entre o commit e o
+publish, a linha continua `PENDING` e o próximo ciclo publica — é o que fecha a lacuna #2.
+
+Concorrência por `FOR UPDATE SKIP LOCKED`: dois dispatchers não pegam a mesma linha e não há fila
+serial. Falha: backoff exponencial com jitter; ao atingir `maxAttempts` a linha vira `DEAD` (DLQ) e
+não é mais tentada automaticamente (reconciliação é ação explícita).
+
+| Prova (PostgreSQL descartável) | Resultado |
+|---|---|
+| publica pendências e marca `PUBLISHED` (sem sobra `PENDING` da operação) | PASS |
+| falha de transporte ⇒ volta a `PENDING` com `attempts+1`, `available_at` futuro e `last_error` | PASS |
+| no limite de tentativas ⇒ `DEAD`, e um segundo ciclo **não** a publica | PASS |
+| `claimBatch` não entrega a mesma linha duas vezes | PASS |
+
+Somando as fases, o LRO tem hoje **56 testes próprios** (10 núcleo puro + 4 schema real +
+10 transação/lease/fencing + 9 rotas + 15 adaptador/núcleo + 9 feedback + 4 outbox), todos verdes, a
+maioria contra PostgreSQL real em banco descartável.
+
+**Ainda falta** (honesto): worker de retomada de operação órfã (lease vencido ⇒ reconciliação
+auditada) e UI DEVELOPMENT consumindo o SSE.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
