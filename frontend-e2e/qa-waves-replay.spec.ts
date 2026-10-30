@@ -263,74 +263,59 @@ test.describe('QA Waves -> RPA Replays', () => {
       // pode reabrir tardiamente (após as queries da página) — garantir que
       // está fechado antes de interagir com a árvore.
       await ensureTenantSelected(page);
-      // DEFEITO MEDIDO 2026-10-29 (run 40946909310, artefato playwright-report): o clique abaixo não
-      // tinha timeout e a árvore do ambiente de E2E contém apenas as jornadas do vertical `beauty`
-      // ("Beauty New Customer", "Beauty Booking") — NÃO existe "Support Ticket Flow". O teste então
-      // consumia os 420 s inteiros esperando o locator e o vermelho falava de `locator.click`, sem
-      // dizer que a jornada não existe. Agora a pré-condição é explícita e limitada: se a jornada de
-      // suporte não estiver na árvore, falha em SEGUNDOS nomeando o que existe de fato.
-      // ESPERAR a árvore POPULAR antes de contar. Medido 2026-10-29 (execução local): a contagem era feita
-      // logo após o reload, com a árvore ainda vazia, e o diagnóstico acusava "jornada ausente" quando o
-      // problema era TEMPO DE CARGA. A espera é limitada e não esconde ausência real: se a árvore não
-      // popular em 20 s, o erro abaixo nomeia `arvoreNaoPopulou_em_20s` junto com a resposta da API.
-      const arvoreCarregada = await page
-        .locator('.qa-journey-tree-journey')
-        .first()
-        .waitFor({ state: 'visible', timeout: 20000 })
-        .then(() => true)
-        .catch(() => false);
-      const jornadasDeSuporte = page.locator('.qa-journey-tree-journey', { hasText: /support|ticket|atendimento/i });
-      if (!arvoreCarregada) {
-        throw new Error(JSON.stringify({
-          status: 'NO_GO',
-          reason: 'PRECONDITION_FAILED',
-          missing: ['arvoreNaoPopulou_em_20s'],
-        }));
-      }
-      if ((await jornadasDeSuporte.count()) === 0) {
-        const disponiveis = await page.locator('.qa-journey-tree-journey').allInnerTexts().catch(() => []);
-        // DIAGNÓSTICO (medido 2026-10-29): a árvore do ambiente de CI mostrou apenas 2 jornadas beauty
-        // mesmo depois de o produtor passar a MESCLAR as jornadas derivadas dos 547 cenários do
-        // scenario-store. Sem a resposta CRUA da API no relatório é impossível distinguir "endpoint
-        // recusou" de "derivação vazia" de "UI filtrou" — então a falha passa a carregar a resposta.
-        const apiCrua = await page.evaluate(async () => {
-          const token = localStorage.getItem('auth_token');
-          const tenantId = localStorage.getItem('auth_effective_tenant_id') || 'system';
-          try {
-            const r = await fetch('/api/qa-waves/journeys', {
-              credentials: 'include',
-              headers: {
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                'X-Tenant-Id': String(tenantId),
-              },
-            });
-            const texto = await r.text();
-            let resumo: any = texto.slice(0, 200);
-            try {
-              const json = JSON.parse(texto);
-              const doms = Array.isArray(json?.domains) ? json.domains : [];
-              resumo = {
-                dominios: doms.length,
-                jornadasPorDominio: doms.slice(0, 6).map((d: any) => `${d.id}:${(d.journeys || []).length}`),
-                temSupport: doms.some((d: any) => (d.journeys || []).some((j: any) => /support|ticket/i.test(String(j.journeyName || '')))),
-              };
-            } catch { /* resposta não-JSON: mantém o texto */ }
-            return { status: r.status, resumo };
-          } catch (error) {
-            return { status: 'fetch_falhou', resumo: String((error as Error)?.message || error) };
+      // A SIDEBAR MOSTRA APENAS O DOMÍNIO SELECIONADO (QaWavesPage.jsx:321-322 — a navegação entre
+      // domínios é feita pelos pills do topo). Medido no run 40975061143: a API devolvia
+      // 10 domínios com `temSupport: true`, mas o DOM tinha só as 2 jornadas do domínio `beauty`
+      // (o primeiro da lista), porque a jornada de suporte vive em `core`. O teste presumia a jornada
+      // visível sem antes selecionar o domínio — a pré-condição agora resolve o DOMÍNIO pela API e
+      // clica no pill correspondente antes de procurar a jornada.
+      const dominioDaJornada = await page.evaluate(async () => {
+        const token = localStorage.getItem('auth_token');
+        const tenantId = localStorage.getItem('auth_effective_tenant_id') || 'system';
+        try {
+          const r = await fetch('/api/qa-waves/journeys', {
+            credentials: 'include',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              'X-Tenant-Id': String(tenantId),
+            },
+          });
+          const json = await r.json();
+          const domains = Array.isArray(json?.domains) ? json.domains : [];
+          for (const domain of domains) {
+            const journey = (domain.journeys || []).find((j: any) => /support|ticket|atendimento/i.test(String(j.journeyName || j.journeyId || '')));
+            if (journey) {
+              return { ok: true, domainId: domain.id, domainName: domain.name || domain.id, journeyName: journey.journeyName || journey.journeyId };
+            }
           }
-        }).catch((error: any) => ({ status: 'evaluate_falhou', resumo: String(error?.message || error) }));
+          return { ok: false, dominios: domains.map((d: any) => `${d.id}:${(d.journeys || []).length}`) };
+        } catch (error) {
+          return { ok: false, erro: String((error as Error)?.message || error) };
+        }
+      });
+
+      if (!dominioDaJornada.ok) {
         throw new Error(JSON.stringify({
           status: 'NO_GO',
           reason: 'PRECONDITION_FAILED',
-          missing: [
-            'journey_with_support_scenario: ' + JSON.stringify(disponiveis),
-            'api:/api/qa-waves/journeys: ' + JSON.stringify(apiCrua),
-          ],
+          missing: ['journey_with_support_scenario na API: ' + JSON.stringify(dominioDaJornada)],
         }));
       }
-      await jornadasDeSuporte.first().click({ timeout: 15000 });
-      await page.getByRole('button', { name: 'Cenários', exact: true }).click();
+
+      // Seleciona o DOMÍNIO dono da jornada (pill do topo) e espera a árvore popular com ele.
+      const pillDoDominio = page.locator('.qa-domain-pill', { hasText: new RegExp(String(dominioDaJornada.domainName), 'i') }).first();
+      if (await pillDoDominio.isVisible().catch(() => false)) {
+        await pillDoDominio.click({ timeout: 15000 });
+      }
+      const jornadaAlvo = page
+        .locator('.qa-journey-tree-journey', { hasText: String(dominioDaJornada.journeyName) })
+        .first();
+      await expect(jornadaAlvo).toBeVisible({ timeout: 20000 });
+      await jornadaAlvo.click({ timeout: 15000 });
+      // O "tab" Cenários NÃO EXISTE MAIS (medido 2026-10-30, execução local com a árvore já selecionada):
+      // a lista de cenários virou uma SEÇÃO sempre visível (`QaWavesPage.jsx:1440`) e o clique num
+      // controle inexistente consumia os 420 s inteiros do teste. A espera pelo botão do cenário é
+      // limitada e nomeia o que existe quando ele não aparece.
       const runnableScenarioButton = page
         .locator('button', { hasText: 'support-inbox-nota-ui@' })
         .first();
