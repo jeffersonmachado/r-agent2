@@ -13,12 +13,17 @@
  *
  *     gh run list --branch dev/engineering-hardening   ->   []
  *
- * E o runner do GitHub não inicia jobs (limite de gastos da conta):
+ * E o runner do GitHub não iniciava jobs (limite de gastos da conta):
  *
  *     gh run view 38881780959  ->  "The job was not started because an Actions
  *     budget is preventing further use."
  *
- * Um workflow que não roda não é gate. A proteção EFETIVA é este runner LOCAL.
+ * ATUALIZAÇÃO MEDIDA (2026-10-30): o bloqueio de billing CAIU. Em
+ * `dev/engineering-hardening` `c7ef74031` os cinco workflows executaram e publicaram resultado
+ * (Jest, Frontend, RAG e E2E SUCCESS; Dev Hardening CI SUCCESS com veredito PASS_PARCIAL). Portanto
+ * "o runner do GitHub não inicia jobs" NÃO é mais verdade e não pode ser afirmado numa evidência:
+ * este runner LOCAL continua sendo a proteção verificável por SHA a qualquer momento, e em CI o
+ * par relatório+md é publicado como artifact (`dev-branch-ci-evidence-<sha>`).
  *
  * O QUE MUDOU NESTA VERSÃO (missão BUG CLOSURE FIRST, 2026-10-17)
  * --------------------------------------------------------------
@@ -1175,7 +1180,7 @@ function finalizar({
     branch,
     escopoDefeitos: escopo || null,
     runnerDoGithub: runner,
-    gateEfetivo: 'LOCAL (o runner do GitHub nao inicia jobs por limite de gastos da conta)',
+    gateEfetivo: 'LOCAL (execucao deste runner; em CI o par e publicado como artifact dev-branch-ci-evidence-<sha>)',
     preVoo: faseA ? {
       ok: faseA.ok,
       checks: faseA.checks,
@@ -1215,7 +1220,7 @@ function finalizar({
     `- **branch**: \`${branch}\``,
     `- **sha exato avaliado**: \`${sha || '(vazio)'}\``,
     `- **gerado em**: ${new Date().toISOString()}`,
-    `- **gate efetivo**: LOCAL — o runner do GitHub não inicia jobs por limite de gastos da conta`,
+    `- **gate efetivo**: LOCAL — este arquivo é produzido por este runner; em CI o mesmo par é publicado como artifact \`dev-branch-ci-evidence-<sha>\``,
     '',
     '## Estado por fase (comprovação, não intenção)',
     '',
