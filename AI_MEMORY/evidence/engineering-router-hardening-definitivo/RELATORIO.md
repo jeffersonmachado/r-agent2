@@ -2306,6 +2306,93 @@ sem produtor no caminho, que só é suprido pelo ciclo de selagem.
 
 ---
 
+## 11.36 Fase D: as evidências de wave estão VENCIDAS (230 h) e o refresh automático está ESTRUTURALMENTE impedido
+
+### 11.36.1 Medição do frescor
+
+| Relatório | `generatedAt` | Idade | Limite do gate |
+|---|---|---|---|
+| `reports/db-integrity-report.json` | 2026-10-20T15:09:23Z | **231 h** | 7 dias (168 h) |
+| `reports/api-surface-report.json` | 2026-10-20T16:03:48Z | **230 h** | 7 dias |
+| `reports/page-surface-report.json` | 2026-10-20T16:10:42Z | **230 h** | 7 dias |
+
+Os três estão acima do limite (`COVERAGE_GATE_WAVE_REPORT_MAX_AGE_MS`), logo o coverage gate degrada
+`VALIDATED -> STALE` — evidência vencida não conta como cobertura válida.
+
+### 11.36.2 Por que estão vencidas: o workflow agendado falha há duas semanas
+
+`gh run list --workflow wave-reports.yml`:
+
+| Data | Evento | Resultado | SHA |
+|---|---|---|---|
+| 2026-10-25 | schedule | **failure** | `04cad9c1b` (main) |
+| 2026-10-18 | schedule | success | `3f619de2a` |
+| 2026-10-11 | schedule | **failure** | `2f1795454` |
+| 2026-10-04 | schedule | success | `b6256dce9` |
+
+A última execução bem-sucedida é de **2026-10-18** — coerente com relatórios de 10-20 e nenhum posterior.
+
+### 11.36.3 Causa nº 1 (já corrigida): `LINEAGE_RUN_UNDEFINED`
+
+Log do run 40158423635, passo Database Integrity Wave:
+
+```
+[db-integrity-wave] models no inventário: 224 | relações: 9
+[db-integrity-wave] dbAvailable=true
+[db-integrity-wave] erro fatal: Error: nenhum run governado encontrado — crie o run antes de produzir evidência
+##[error]Process completed with exit code 1
+```
+
+Era o item `CI-WAVE-REFRESH-SEM-RUN-GOVERNADO`. O reparo (abrir/fechar um run governado de MANUTENÇÃO em
+volta das três waves, fechado como `SUPERSEDED` com `if: always()`) está no `dev` e foi **provado agora**:
+disparo sob demanda (`workflow_dispatch`, run **41012060858**) → o passo "Abrir run governado" **passou** e o
+"Fechar run governado" também. A causa nº 1 não existe mais.
+
+### 11.36.4 Causa nº 2 (NOVA, medida hoje): o guard de bug-closure recusa `QA_WAVES_COMPLETA`
+
+No mesmo run, o passo seguinte falhou com exit 3:
+
+```
+[bug-closure] QA_WAVES_COMPLETA @ d5cd34f04962: RECUSADO — INVENTARIO_NAO_ANCORADO,
+  BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, FECHAMENTO_SEM_PROVA_VALIDA, P1_BLOQUEANTE_ABERTO
+```
+
+Reproduzido localmente: `evaluate-execution-eligibility --operation QA_WAVES_COMPLETA` → **DENIED**.
+`QA_WAVES_COMPLETA` é `certifica: true` com `comP0/comP1: BLOQUEADO`
+(`governance/bug-closure/eligibility.js:77`), e as três waves chamam `exigirElegibilidade('QA_WAVES_COMPLETA')`
+(`db-integrity-wave.js:261`, `api-surface-wave.js:238`, `page-surface-wave.js:292`).
+
+**O ciclo fechado:** as waves produzem a evidência que o coverage gate consome; o guard exige que não exista
+fechamento sem prova para deixá-las rodar; a prova de fechamento exige assinatura de autoridade ancorada, que é
+do dono. Ou seja: desde que a CAMADA B (2026-10-22) entrou, o refresh automático de waves **não pode** rodar —
+e é por isso que a última execução boa é de 2026-10-18, quatro dias antes da CAMADA B. Não é flakiness, é
+ordem de dependências.
+
+### 11.36.5 REGRESSÃO MINHA, medida e removida: um item P1 de registro derrubava o gate
+
+O item `FECHAMENTOS-SEM-SUITE-DE-REGRESSAO` (criado no §11.34) nasceu **P1** e `blocked_external`. Medição
+A/B com a mesma árvore:
+
+| Fila avaliada | Razões da recusa |
+|---|---|
+| com o item meta em **P1** | 4: `INVENTARIO_NAO_ANCORADO`, `BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO`, `FECHAMENTO_SEM_PROVA_VALIDA`, **`P1_BLOQUEANTE_ABERTO`** |
+| com o item meta em **P2** | 3: as mesmas, sem `P1_BLOQUEANTE_ABERTO` |
+| fila do `main` (`04cad9c1b`, 107 itens) | 3: as mesmas |
+
+Causa: `eligibility.js:447` (`bloquearP1 = p1.length > 0 && politica.comP1 === 'BLOQUEADO'`) e o bucket `p1` é
+preenchido por severidade declarada. Um item de **registro** herdava a severidade dos defeitos que ele apenas
+lista — e esses defeitos **já contam individualmente** por `FECHAMENTO_SEM_PROVA_VALIDA`. Declarar P1 no
+agregado somava um segundo bloqueio pela mesma causa (dupla contagem). Corrigido para P2 com
+`severityBasis` explicando o motivo; a fila voltou a produzir exatamente as 3 razões pré-existentes.
+
+**O que NÃO foi feito:** não toquei na política de `QA_WAVES_COMPLETA` (`certifica: true`), não usei
+`DIAGNOSTICO`/`REPRODUCAO` (que permitem P0/P1) para "passar por baixo", e não liguei nenhum override. Baixar a
+política para as waves rodarem seria exatamente enfraquecer o gate que a missão manda preservar. O caminho
+correto é assinatura de prova pelo dono — ou uma decisão explícita de política para operação de MANUTENÇÃO de
+evidência, que é decisão de governança, não de agente.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
