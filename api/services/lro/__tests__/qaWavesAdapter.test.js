@@ -9,6 +9,7 @@
 
 jest.mock('../lroService', () => ({
   createOperation: jest.fn(),
+  getOperation: jest.fn(),
   transition: jest.fn(),
   recordProgress: jest.fn(),
 }));
@@ -22,6 +23,8 @@ describe('adaptador LRO do QA Waves', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     delete process.env.LRO_QA_WAVES_MIRROR;
+    // Padrão: operação existente em QUEUED (não-terminal), para os fluxos de execução/conclusão.
+    lroService.getOperation.mockResolvedValue({ id: 'op-x', status: 'QUEUED' });
   });
 
   afterAll(() => {
@@ -38,7 +41,7 @@ describe('adaptador LRO do QA Waves', () => {
 
   test('flag ON: cria operação DEVELOPMENT idempotente por execução e enfileira com total conhecido', async () => {
     process.env.LRO_QA_WAVES_MIRROR = '1';
-    lroService.createOperation.mockResolvedValue({ id: 'op-1' });
+    lroService.createOperation.mockResolvedValue({ id: 'op-1', status: 'CREATED' });
     lroService.transition.mockResolvedValue({ status: 'QUEUED' });
 
     const id = await adaptador.iniciar({ tenantId: 'system', executionId: 'exec-1', scenarioIds: ['a', 'b'] });
@@ -59,7 +62,7 @@ describe('adaptador LRO do QA Waves', () => {
 
   test('flag ON: escopo sem lista explícita deixa o total INDETERMINADO', async () => {
     process.env.LRO_QA_WAVES_MIRROR = '1';
-    lroService.createOperation.mockResolvedValue({ id: 'op-2' });
+    lroService.createOperation.mockResolvedValue({ id: 'op-2', status: 'CREATED' });
     lroService.transition.mockResolvedValue({});
 
     await adaptador.iniciar({ tenantId: 'system', executionId: 'exec-2', scenarioIds: [] });

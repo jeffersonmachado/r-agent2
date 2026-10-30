@@ -2891,6 +2891,36 @@ autoridade ancorada + `RAP_RELEASE_ATTESTATION_PRIVATE_KEY`).
 
 ---
 
+## 11.48 LRO × QA Waves — espelho com a flag LIGADA em banco real (4/4) e um defeito de idempotência
+
+Até aqui o adaptador era provado com o serviço **mockado**. `tests/integration/lroQaWavesMirror.test.js`
+fecha o elo que faltava: adaptador → serviço → tabelas → eventos → outbox, em PostgreSQL descartável.
+
+| Prova | Resultado |
+|---|---|
+| flag **OFF** não cria operação (contagem antes/depois igual) | PASS |
+| flag **ON**: ciclo `QUEUED → RUNNING → 2×PROGRESS → COMPLETED(NO_GO)`; `progress_total=3`; `visibility_class=DEVELOPMENT`; `correlation_id` = execução | PASS |
+| eventos na ordem `CREATED, QUEUED, RUNNING, PROGRESS×2, COMPLETED`; progresso `current:1,total:3,percent:33` | PASS |
+| outbox alimentada em cada passo (`>=` nº de eventos) | PASS |
+| erro no run ⇒ `FAILED` com `error_code` registrado | PASS |
+| **mesma execução espelhada duas vezes ⇒ MESMA operação** (uma linha por `idempotency_key`) | PASS após correção |
+
+### 11.48.1 Defeito real encontrado pela integração
+
+`iniciar()` criava (ou recuperava, via `idempotencyKey`) a operação e **sempre** tentava a transição
+para `QUEUED`. Na segunda vez o estado já era `QUEUED` ⇒ `TRANSICAO_INVALIDA` ⇒ o adaptador engolia o
+erro e devolvia `null`. Ou seja: **o espelho não era idempotente na prática**, apesar do
+`idempotencyKey`.
+
+Correção: transicionar **só a partir de `CREATED`**; `marcarExecutando` não faz nada se já está
+`RUNNING`; `finalizar` não repete conclusão de operação terminal. Os dublês do teste unitário foram
+atualizados para o contrato dirigido por estado (o mock de `createOperation` passou a devolver
+`status: 'CREATED'` e `getOperation` a existir) — sem afrouxar asserção.
+
+Consolidado: **4 suítes, 25 testes** verdes na varredura LRO desta rodada.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

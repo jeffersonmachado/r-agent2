@@ -39,15 +39,20 @@ async function iniciar({ tenantId, executionId, scenarioIds = [] } = {}) {
       correlationId: String(executionId),
       idempotencyKey: `qa_waves:${executionId}`,
     });
-    await lro.transition(operacao.id, {
-      to: 'QUEUED',
-      actorId: 'qa_mesh',
-      context: {
-        phase: 'queued',
-        // Total conhecido quando o escopo é explícito; senão fica NULL (indeterminado).
-        progress: { current: 0, total: scenarioIds.length > 0 ? scenarioIds.length : null, unit: 'scenario' },
-      },
-    });
+    // IDEMPOTÊNCIA ponta a ponta (defeito medido 2026-10-30): re-espelhar a MESMA execução devolvia
+    // a operação existente e então tentava `QUEUED` outra vez — `TRANSICAO_INVALIDA`, o adaptador
+    // engolia e retornava `null`. Agora só transiciona a partir de CREATED.
+    if (operacao.status === 'CREATED') {
+      await lro.transition(operacao.id, {
+        to: 'QUEUED',
+        actorId: 'qa_mesh',
+        context: {
+          phase: 'queued',
+          // Total conhecido quando o escopo é explícito; senão fica NULL (indeterminado).
+          progress: { current: 0, total: scenarioIds.length > 0 ? scenarioIds.length : null, unit: 'scenario' },
+        },
+      });
+    }
     return operacao.id;
   } catch (error) {
     logger.warn('[lro:qa-waves] falha ao iniciar espelho', { executionId, code: error.code || null });
@@ -58,6 +63,9 @@ async function iniciar({ tenantId, executionId, scenarioIds = [] } = {}) {
 async function marcarExecutando(operationId) {
   if (!espelhoAtivo() || !operationId) return;
   try {
+    const atual = await servico().getOperation(operationId);
+    // Já executando (retry/duplicata de sinal): nada a fazer — não é erro.
+    if (atual.status === 'RUNNING') return;
     await servico().transition(operationId, {
       to: 'RUNNING', actorId: 'qa_mesh', context: { phase: 'execution' },
     });
@@ -85,6 +93,10 @@ async function finalizar(operationId, { goNoGo = null, errorCode = null } = {}) 
   if (!espelhoAtivo() || !operationId) return;
   try {
     const lro = servico();
+    // Já terminal (duplicata/retry): conclusão não se repete.
+    const atual = await lro.getOperation(operationId).catch(() => null);
+    if (atual && ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(atual.status)) return;
+
     if (errorCode) {
       await lro.transition(operationId, {
         to: 'FAILED', actorId: 'qa_mesh', context: { errorCode: String(errorCode) },
