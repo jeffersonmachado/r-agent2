@@ -98,7 +98,10 @@ beforeAll(async () => {
     dbAvailable = false;
     dbReason = error.message;
   }
-}, 20000);
+  // Timeout do HOOK é o do provisionamento (CREATE DATABASE + 234 migrations = dezenas de segundos),
+  // não os 20 s herdados do `connect`. Medido 2026-10-30: isolada cabia nos 20 s, no lote L0b
+  // estourava o hook e as 6 asserções falhavam como "Exceeded timeout of 20000 ms for a hook".
+}, 300000);
 
 afterAll(async () => {
   if (!dbAvailable) {

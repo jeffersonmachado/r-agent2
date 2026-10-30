@@ -210,7 +210,9 @@ beforeAll(async () => {
   for (const provider of CANDIDATE_PROVIDERS) {
     await saveAICredentials(TEST_TENANT_KEY, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
   }
-}, 60000);
+  // Inclui o provisionamento do banco da suíte (CREATE DATABASE + 234 migrations), que sozinho
+  // consome dezenas de segundos num lote; os 60 s herdados do fixture não o cobriam.
+}, 300000);
 
 afterAll(async () => {
   if (!dbAvailable) {
