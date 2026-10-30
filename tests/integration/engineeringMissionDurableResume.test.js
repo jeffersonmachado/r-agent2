@@ -76,7 +76,21 @@ function skipIfNoDatabase() {
   return require('../helpers/infraGate').skipOrFail({ suite: 'engineering-mission-resume', available: dbAvailable, reason: dbReason, requirement: 'postgres' });
 }
 
+// BANCO PRÓPRIO DA SUÍTE (medido 2026-10-30): no Postgres de dev COMPARTILHADO esta suíte flakava —
+// 1/3 execuções na base e 2/2 em lotes — porque a varredura de recovery é GLOBAL e um servidor vivo no
+// mesmo banco retomava as missões que o teste estava montando. Isolamento por banco descartável elimina a
+// variável sem tocar em dado de ninguém (o banco criado aqui é destruído no afterAll).
+let bancoDaSuite = null;
+
 beforeAll(async () => {
+  try {
+    const { provisionSuiteDatabase } = require('../helpers/suiteDatabase');
+    bancoDaSuite = await provisionSuiteDatabase('mission-durable-resume');
+  } catch (error) {
+    dbAvailable = false;
+    dbReason = `provisionamento de banco falhou: ${error.message}`;
+    return;
+  }
   try {
     await sequelizeModule.connect(2, 250);
     dbAvailable = true;
@@ -87,7 +101,10 @@ beforeAll(async () => {
 }, 20000);
 
 afterAll(async () => {
-  if (!dbAvailable) return;
+  if (!dbAvailable) {
+    if (bancoDaSuite) await bancoDaSuite.cleanup().catch(() => {});
+    return;
+  }
   const getModels = require('../../api/db/models');
   try {
     if (createdMissionIds.length > 0) {
@@ -109,6 +126,11 @@ afterAll(async () => {
     }
   } catch (_) { /* best-effort */ }
   await sequelizeModule.close().catch(() => {});
+
+  // O banco desta suíte é descartável: destruí-lo É o isolamento (não é limpeza global).
+  if (bancoDaSuite) {
+    await bancoDaSuite.cleanup().catch(() => {});
+  }
 }, 20000);
 
 describe('Engineering Mission — durable resume e idempotência', () => {
@@ -255,4 +277,5 @@ describe('Engineering Mission — durable resume e idempotência', () => {
     await approvalService.approve(mission.id, { actor: 'jest-resume' });
     expect((await missionStore.listApprovals(mission.id)).length).toBe(1);
   }, 60000);
+
 });

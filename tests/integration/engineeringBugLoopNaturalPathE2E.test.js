@@ -133,7 +133,22 @@ async function cleanupTask(taskId) {
   await index.getEngineeringTask().destroy({ where: { id: taskId } }).catch(() => {});
 }
 
+// BANCO PRÓPRIO DA SUÍTE (medido 2026-10-30, A/B): com o Postgres de dev COMPARTILHADO esta suíte falha
+// em 65 s (lineage.replacementTaskId volta igual ao original por causa de missões/tasks residuais de
+// execuções anteriores); num banco recém-criado passa em 55 s, e o CI (banco efêmero) é verde no mesmo
+// SHA. O `purgeTestFindings()` abaixo limpava apenas findings — não missões, tasks nem vínculos.
+// Isolar por banco descartável elimina a variável sem tocar em dado de ninguém.
+let bancoDaSuite = null;
+
 beforeAll(async () => {
+  try {
+    const { provisionSuiteDatabase } = require('../helpers/suiteDatabase');
+    bancoDaSuite = await provisionSuiteDatabase('bugloop-natural-path');
+  } catch (error) {
+    dbAvailable = false;
+    dbReason = `provisionamento de banco falhou: ${error.message}`;
+    return;
+  }
   try {
     await sequelizeModule.connect(2, 250);
     dbAvailable = true;
@@ -198,7 +213,10 @@ beforeAll(async () => {
 }, 60000);
 
 afterAll(async () => {
-  if (!dbAvailable) return;
+  if (!dbAvailable) {
+    if (bancoDaSuite) await bancoDaSuite.cleanup().catch(() => {});
+    return;
+  }
   clearAiProviderConfig();
   const index = require('../../api/db/models');
   await stopWorkerAndDrain();
@@ -222,6 +240,8 @@ afterAll(async () => {
     }
   } catch (_) { /* best-effort */ }
   await sequelizeModule.close().catch(() => {});
+  // O banco desta suíte é descartável: destruí-lo É o isolamento (não é limpeza global).
+  if (bancoDaSuite) await bancoDaSuite.cleanup().catch(() => {});
 }, 60000);
 
 describe('BUG_AUTONOMOUS_LOOP — CAMINHO NATURAL (sem sweep manual)', () => {
