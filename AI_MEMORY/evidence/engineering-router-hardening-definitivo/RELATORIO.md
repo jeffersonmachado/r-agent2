@@ -2497,6 +2497,87 @@ Frontend **SUCCESS** · RAG **SUCCESS** · Release Governance **FAILURE** (falta
 
 ---
 
+## 11.39 Fase D: os 68 `NOT_EXECUTED` não são testes faltando — a execução autoritativa é RECUSADA antes de rodar
+
+### 11.39.1 Validadores canônicos no HEAD `d8a6500d3`
+
+| Gate | Resultado |
+|---|---|
+| `validate:hardening-queue` | **PASS** — 165 itens (83 done · 35 prevention_active · 39 verified · 8 blocked_external) |
+| `validate:ai-memory` | **PASS** (exit 0) |
+| `validate:release-dag` | **PASS** — `RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE`, 29 nós, 25 artefatos, 0 ciclos |
+| `validate:required-tests` | **FAIL** — `status=FAIL itens=68 {"NOT_EXECUTED":68}` |
+
+Itens não provados: `V2-01..V2-42`, `MISSION-SRC-01..13`, `BUG-WORKER-01/02`, `GOV-BASE-01`,
+`SELF-RBAC-01`, `RELEASE-COHERENCE-01`, `RELEASE-V2-01`, `BUG-MEMORY-01`, `TEMPORAL-01..06`.
+
+### 11.39.2 A causa real, medida em duas camadas
+
+O validador resolve o estado de cada item a partir de **uma** fonte autoritativa:
+`reports/release-suite-execution.json` (lido em `validate-engineering-router-v2-required-tests.js:22`).
+Esse arquivo **não existe** — e não existe porque o produtor dele é recusado antes de executar:
+
+```
+$ RELEASE_AUTHORITATIVE=1 node scripts/governance/run-release-suites.js
+[bug-closure] L2_L3_EXTENSIVO @ d8a6500d32fa: RECUSADO — INVENTARIO_NAO_ANCORADO,
+  BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, FECHAMENTO_SEM_PROVA_VALIDA
+  ação exigida: fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI)
+  ação exigida: anexar prova de fechamento válida ... ou reabrir o defeito
+## exit code 3
+$ ls reports/release-suite-execution.json  ->  AUSENTE
+```
+
+Ou seja: **nenhuma suíte chegou a rodar**. O gate de required-tests não mede "teste que falhou";
+mede "registro de execução que o guard impede de produzir".
+
+### 11.39.3 Mapa de elegibilidade no SHA atual (medido, não declarado)
+
+| Operação | `certifica` | Veredito |
+|---|---|---|
+| `DIAGNOSTICO` | não | **ALLOWED** |
+| `TESTES_DIRECIONADOS` | não | **ALLOWED** |
+| `L0_COMPLETO` | não | **ALLOWED** |
+| `L1_AMPLO` | não | **ALLOWED** |
+| `L2_L3_EXTENSIVO` | sim | **DENIED** — `INVENTARIO_NAO_ANCORADO`, `BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO`, `FECHAMENTO_SEM_PROVA_VALIDA` |
+| `QA_WAVES_COMPLETA` | sim | **DENIED** — mesmas 3 |
+| `SELO_FINAL` | sim | **DENIED** — mesmas 3 |
+
+Contagens no mesmo commit: `p0=31 p1=78 abertos=165 bloqueantes=109`.
+
+### 11.39.4 A cadeia circular, agora medida em DOIS gates independentes
+
+```
+fechamento sem prova assinada  ──►  L2_L3_EXTENSIVO / QA_WAVES_COMPLETA DENIED
+                                          │                    │
+                    reports/release-suite-execution.json    waves técnicas
+                    nunca é produzido                       nunca são atualizadas
+                                          │                    │
+                    validate:required-tests = 68 NOT_EXECUTED   evidência de wave vence (230 h)
+```
+
+É a mesma raiz do §11.36: as duas pontas que produzem evidência exigem prova assinada por autoridade
+ancorada, que é do dono. Não é flakiness, não é teste faltando, não é bug de código.
+
+### 11.39.5 O que eu NÃO fiz (e por quê)
+
+- **Não fabriquei** `reports/release-suite-execution.json`. Escrever esse arquivo à mão seria falsificar
+  a fonte autoritativa — a classe exata de falso verde que a missão proíbe (§1.6 e §1.11).
+- **Não** rodei as suítes por `DIAGNOSTICO`/`L0`/`L1` (permitidas) para depois *apresentá-las* como a
+  execução autoritativa. Operação não certificante pode ser executada (e tem sido), mas não substitui a
+  autoritativa — declarar o contrário seria trocar a natureza da prova (missão §7, "sem apresentá-la
+  como prova certificante").
+- **Não** alterei a política de `L2_L3_EXTENSIVO` para liberar a execução.
+
+### 11.39.6 O que destrava isto (ação de dono, em ordem)
+
+1. `RAP_CLOSURE_INVENTORY_SHA256` do canal externo (âncora do inventário) + assinatura das provas de
+   fechamento ⇒ `FECHAMENTO_SEM_PROVA_VALIDA` e `INVENTARIO_NAO_ANCORADO` deixam de bloquear;
+2. então `run-release-suites.js` roda de verdade e `validate:required-tests` passa a medir os 68 itens
+   em vez de reportá-los como `NOT_EXECUTED`;
+3. `wave-reports.yml` volta a conseguir atualizar as três waves (mesma raiz).
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
