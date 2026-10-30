@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-29T13:54:02.550Z",
+  "updatedAt": "2026-10-30T05:56:45.232Z",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -865,7 +865,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "integridade criptografica: cadeia existia e NENHUM gate recalculava (falso GO de integridade)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:18.298Z)"
     },
     {
       "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
@@ -1011,7 +1013,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "regressionTest": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:27.324Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-5",
@@ -1023,7 +1027,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "regressionTest": "tests/unit/coverage/impactRunnerBinding.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/coverage/impactRunnerBinding.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:36.134Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
@@ -1035,7 +1041,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "regressionTest": "tests/unit/governance/governanceChainCertification.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/governanceChainCertification.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:39.687Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-3",
@@ -1047,7 +1055,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "regressionTest": "tests/unit/governance/sealPhaseOrder.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/sealPhaseOrder.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:43.635Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-4",
@@ -1059,7 +1069,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:48.644Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
@@ -1089,7 +1101,9 @@
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "regressionTest": "tests/unit/governance/evidenceTtl.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/evidenceTtl.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:54.813Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
@@ -1117,7 +1131,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "proveniencia: evidencia runtime so vale dentro da janela do run (identidade da prova)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/waveEvidenceSameRunPreflight.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:00.083Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
@@ -1164,7 +1180,9 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "severityBasis": "handshake ambiguo aceitava log JSON do produto; poderia mascarar ausencia de worker de lease",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:05.629Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
@@ -1193,7 +1211,9 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "severityBasis": "SBOM anterior ao run derrubava security gate (falso NO_GO)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:14.953Z)"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
@@ -1473,7 +1493,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:20.201Z)"
     },
     {
       "id": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
@@ -1486,7 +1508,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:23.753Z)"
     },
     {
       "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
@@ -1499,7 +1523,9 @@
       "severity": "P0",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:27.056Z)"
     },
     {
       "id": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
@@ -1526,7 +1552,9 @@
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "regressionTest": "tests/unit/governance/deliveryVerification.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:30.810Z)"
     },
     {
       "id": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
@@ -1581,7 +1609,9 @@
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
-      "legacyStatus": "prevention_active"
+      "legacyStatus": "prevention_active",
+      "regressionTest": "tests/unit/governance/devBranchCiGate.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:34.685Z)"
     },
     {
       "id": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
@@ -1656,7 +1686,9 @@
       "state": "VERIFIED",
       "legacyStatus": "done",
       "severityBasis": "produz tela que parece funcionar e não reflete a escrita; não gera falso GO de release",
-      "severitySource": "medicao-2026-10-19-browser-crm"
+      "severitySource": "medicao-2026-10-19-browser-crm",
+      "regressionTest": "tests/unit/crmRealtimeEvents.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/crmRealtimeEvents.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:39.618Z)"
     },
     {
       "id": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
@@ -1920,7 +1952,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "perda silenciosa de prova (testes e guardas) com suite verde; risco direto de falso GO",
-      "severitySource": "medicao-direta-2026-10-20"
+      "severitySource": "medicao-direta-2026-10-20",
+      "regressionTest": "tests/unit/governance/worktreeIntegrity.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:49.708Z)"
     },
     {
       "id": "L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL",
@@ -1951,7 +1985,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "criterios 5/6/7/8/13/14 da missao L-1 dependiam desta jornada",
-      "severitySource": "medicao-direta-2026-10-20"
+      "severitySource": "medicao-direta-2026-10-20",
+      "regressionTest": "tests/integration/engineeringMissionFullE2E.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionFullE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:52.469Z)"
     },
     {
       "id": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
@@ -1966,7 +2002,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "execucao dupla de uma task de engenharia: dois workers com posse, risco de escrita concorrente",
-      "severitySource": "medicao-direta-2026-10-20"
+      "severitySource": "medicao-direta-2026-10-20",
+      "regressionTest": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:56.731Z)"
     },
     {
       "id": "P0-FILAS-ROLLBACK-DESTRUTIVO",
@@ -1981,7 +2019,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "perda de atendimentos em andamento por falha de persistencia",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:59.731Z)"
     },
     {
       "id": "P0-FILAS-ISOLAMENTO-TENANT",
@@ -1996,7 +2036,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "vazamento entre tenants e fechamento de tickets alheios",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/unit/queueTenantIsolation.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:02.393Z)"
     },
     {
       "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
@@ -2011,7 +2053,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "revisao nao independente mascara defeitos de codigo",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:06.319Z)"
     },
     {
       "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
@@ -2026,7 +2070,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "missao declarava cobertura unitaria sem execucao unitaria",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:10.552Z)"
     },
     {
       "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
@@ -2041,7 +2087,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "gate de concorrencia verde sem executar",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:14.225Z)"
     },
     {
       "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
@@ -2056,7 +2104,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "cobertura desligada sem deixar rastro na contagem; mutacao commitada nao detectada",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/unit/governance/worktreeIntegrity.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:19.072Z)"
     },
     {
       "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
@@ -2071,7 +2121,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "evidencia carimbada com identidade de outro run",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/unit/governance/reportLineageExplicit.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/reportLineageExplicit.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:21.969Z)"
     },
     {
       "id": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
@@ -2086,7 +2138,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "registro de auditoria (lineage de retomada) descrevia estado que nunca valeu",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionMergeConcurrency.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:26.394Z)"
     },
     {
       "id": "P1-CI-SEM-INTEGRACAO",
@@ -2117,7 +2171,9 @@
       "legacyStatus": "done",
       "severityBasis": "degradacao de reprodutibilidade das medicoes e das operacoes git",
       "severitySource": "auditoria-externa-2026-10-20",
-      "approved_by": "dono do repositorio (decisao explicita na sessao de 2026-10-21): \"Aplicar tudo (3007)\""
+      "approved_by": "dono do repositorio (decisao explicita na sessao de 2026-10-21): \"Aplicar tudo (3007)\"",
+      "regressionTest": "tests/unit/governance/pruneEngineeringMissionBranches.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/pruneEngineeringMissionBranches.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:28.796Z)"
     },
     {
       "id": "P1-PATCH-SYMLINK-ESCAPE",
@@ -2132,7 +2188,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "escape de isolamento: leitura/escrita fora do workspace via alvo de symlink",
-      "severitySource": "auditoria-adversarial-2026-10-21"
+      "severitySource": "auditoria-adversarial-2026-10-21",
+      "regressionTest": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:31.578Z)"
     },
     {
       "id": "P1-EVIDENCIA-COMMIT-ORFAO",
@@ -2147,7 +2205,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "falso verde de governanca: prova citada nao existe",
-      "severitySource": "auditoria-adversarial-2026-10-21"
+      "severitySource": "auditoria-adversarial-2026-10-21",
+      "regressionTest": "tests/unit/governance/hardeningQueueCommitExists.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:33.837Z)"
     },
     {
       "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
@@ -2162,7 +2222,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "decisao de prontidao sem prova executavel",
-      "severitySource": "missao-engineer-supervised-2026-10-21"
+      "severitySource": "missao-engineer-supervised-2026-10-21",
+      "regressionTest": "tests/unit/governance/engineerSupervisedReadinessGate.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/engineerSupervisedReadinessGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:36.381Z)"
     },
     {
       "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
@@ -2177,7 +2239,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "falso INFRA_ERROR em execucao legivel",
-      "severitySource": "auditoria-2026-10-21"
+      "severitySource": "auditoria-2026-10-21",
+      "regressionTest": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterSandboxAvailabilityCache.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:38.989Z)"
     },
     {
       "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
@@ -2192,7 +2256,9 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "gate que reprova por contencao treina a ignorar vermelho",
-      "severitySource": "auditoria-2026-10-21"
+      "severitySource": "auditoria-2026-10-21",
+      "regressionTest": "tests/unit/ciGateL0Determinism.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:40.939Z)"
     },
     {
       "id": "L1-NPM-TEST-CI-VERMELHO",
@@ -2224,7 +2290,9 @@
       "evidence": "Medido em clone limpo do commit 382f83b37 (`npm run ci:clean-checkout`): `validate-ai-memory` FAIL `required_file_missing: .github/copilot-instructions.md` e `validate-agent-adherence` FAIL `agent_instruction_missing: .github/copilot-instructions.md`. Em QUALQUER checkout (CI, runner efemero, outra pessoa) os dois gates bloqueantes reprovavam; na maquina do operador passavam porque o arquivo estava em `.git/info/exclude`. Correcao: adaptador versionado, lista canonica unica em `scripts/governance/lib/required-agent-files.js` (consumida pelos dois validadores) e regressao `tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js`, que exige o arquivo NO INDICE do git e tem controle negativo (arquivo gitignored de proposito precisa falhar). Depois da correcao o inventario L1 no clone mostra os dois verdes: `AI_MEMORY/evidence/ci-clean-checkout-382f83b37/clean/RESULT.md`.",
       "detail": "O indicador de falso verde era a propria documentacao: `AI_MEMORY/validation-rules.md` afirmava que os dois validadores 'PASSAM' — verdade apenas na arvore do operador. Medicao em clone contradisse a afirmacao.",
       "prevention": "Lista unica + teste que compara com o INDICE do git (nao com o disco).",
-      "commit": "c4b3fc70e"
+      "commit": "c4b3fc70e",
+      "regressionTest": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:43.795Z)"
     },
     {
       "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
@@ -2237,7 +2305,9 @@
       "evidence": "Medido em 2026-10-21 no clone do harness: `[engineering-runner-jest] runner REUTILIZADO: pid=4134758 porta=8097 sessaoDona=4134676` — o clone reutilizou um runner de OUTRA arvore do mesmo host. Com porta fixa, dois checkouts compartilham o processo e a suite de isolamento de sandbox deixa de provar o commit em analise. Correcao: o harness escolhe porta livre por run (`ENGINEERING_RUNNER_TEST_PORT`/`ENGINEERING_RUNNER_URL`). Registro: `scripts/ci/clean-checkout-verify.js`.",
       "detail": "Nao era defeito do produto: `tests/setup/engineeringRunnerGlobalSetup.js` tem posse por porta; o defeito era o ambiente de medicao fixar 8097 para qualquer arvore.",
       "prevention": "Porta por run no harness; o gate do CI continua usando 8097 porque o job e efemero e isolado.",
-      "commit": "3f97c7b65"
+      "commit": "3f97c7b65",
+      "regressionTest": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:46.182Z)"
     },
     {
       "id": "CI-FLOW-GATE-VACUOSO",
@@ -2250,7 +2320,9 @@
       "evidence": "`package.json` mantinha `jest tests/flow engine/__tests__ --passWithNoTests`. `tests/flow` nao contem nenhum `*.test.js` (0 arquivos; medido) — foi exatamente o gate vacuoso corrigido em 2026-07 acrescentando `engine/__tests__` (30 arquivos), mas a flag que permite o verde vazio continuou armada para a proxima selecao errada. Correcao: flag removida e regressao `tests/unit/governance/officialTestScriptsNoVacuousPass.test.js` (proibe a flag nos tres scripts oficiais e exige que cada selecao contenha arquivos de teste, com controle negativo).",
       "detail": "Missao CI DEFINITIVO §1 ('nunca aceitar testes com zero assertions efetivas') e §8 ('nao usar passWithNoTests').",
       "prevention": "Teste que falha se a flag voltar ou se uma selecao ficar vazia.",
-      "commit": "3f97c7b65"
+      "commit": "3f97c7b65",
+      "regressionTest": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:48.557Z)"
     },
     {
       "id": "CI-CHECKOUT-LIMPO-HARNESS",
@@ -2263,7 +2335,9 @@
       "evidence": "Novo `npm run ci:clean-checkout` (`scripts/ci/clean-checkout-verify.js`): clona o commit exato em diretorio temporario, recusa residuo (`git status --ignored`), provisiona Postgres/Redis/RAG/Engineering Runner/containers PROPRIOS do run, executa `ci:bootstrap`, o produtor prod-like real e o gate versionado, grava evidencia com identidade de run e SHA-256 por log, e destroi tudo. MEDICAO FINAL (runId clean-checkout-20261022033303272-e0bbfe, commit 2f8b5aa29): clone limpo PASS; ci:bootstrap exit 0 em 97 s; produtor prod-like exit 0 (status=GO, 9 fluxos); L0 `npm test` exit 0 em 437 s (1095 suites + 1 skip, 30 suites de flow/engine, 3 de RPA, zero falhas); L0b exit 0 em 983 s (40 suites / 219 testes); inventario L1 = 4 verdes / 3 vermelhos da familia de release. Cenarios negativos implementados: bootstrap-twice, missing-artifact, corrupt-artifact, db-unavailable, docker-unavailable e l0-full (bail=0). Evidencia versionada: AI_MEMORY/evidence/ci-clean-checkout-2f8b5aa29/clean/; relatorio completo em reports/ci-clean-checkout-report.json. | CI REAL (run 39722271457): o job do runner passou por bootstrap + prod-like + L0/L0b com o MESMO padrao do harness local.",
       "detail": "Defeitos reais encontrados pelo harness e corrigidos nesta mesma janela: adaptador de IA nao versionado, runner compartilhado entre arvores, artefato prod-like nao produzido no clone, segredos efemeros ausentes no host do smoke, HEAD destacado x checkout do actions/checkout e nomes de container colidindo entre runs.",
       "prevention": "O harness e versionado e roda em um comando; qualquer dependencia escondida do ambiente do operador aparece como falha no clone.",
-      "commit": "2f8b5aa29"
+      "commit": "2f8b5aa29",
+      "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:52.200Z)"
     },
     {
       "id": "ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
@@ -2412,13 +2486,18 @@
     {
       "id": "TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO",
       "title": "engineeringMissionDurableResume (§17/TEST 44) flaka por concorrencia com o loop de recovery de um servidor vivo no MESMO banco",
-      "status": "blocked",
-      "blocked_reason": "DECISÃO DE AMBIENTE (não de código): a varredura de recovery é GLOBAL no banco (sweep recebe tenantId e as fontes de candidatos não filtram tenant — medido em missionRecoveryCoordinator.js:87 e missionStoreService.js:581), logo isolar por tenant não resolve. Opções: banco/schema dedicado por suíte; servidor de teste sem o loop; ou o servidor vivo rodar com ENGINEERING_MISSION_RECOVERY_ENABLED=0. Enquanto o servidor de dev na 3001 compartilhar este Postgres, a corrida é ≈ duração_do_teste/300 s. Não corrigido por decisão explícita: afrouxar asserção reduziria a sensibilidade sem provar nada melhor.",
+      "status": "verified",
       "severity": "P2",
       "severityStatus": "DECLARADA",
-      "state": "BLOCKED_EXTERNAL",
+      "state": "VERIFIED",
       "legacyStatus": "blocked",
-      "evidence": "medido: base 29372d7a3 => 1/3 falhas; HEAD => 5/7 isoladas PASS, 2/2 lotes falharam; CI (L0) verde em 6 de 6 execucoes, onde nao ha servidor concorrente | REFUTAÇÃO MEDIDA 2026-10-29 (RELATORIO §11.19): a saída barata \"isolar as missões em tenant próprio\" NÃO funciona — sweep({tenantId}) recebe o tenant e não o usa: missionStore.findMissionsWithoutLease (missionStoreService.js:581) filtra só status IN RESUME_STATES e lease_token null, sem tenant, então o servidor vivo alcança missão de QUALQUER tenant. Saídas reais: (a) banco/schema dedicado por suíte, (b) servidor de teste sem loop, ou (c) servidor vivo com ENGINEERING_MISSION_RECOVERY_ENABLED=0. Janela de corrida ≈ duração_do_teste / 300 s (intervalo default 5 min). | ENTREGUE 2026-10-29 (2d92987e8): diagnosticarInterferencia publica status/lease/host/expiração/updated_at + itensNoResumo quando a missão do teste não aparece na retomada dele; prova do warn por mutação (parâmetro invertido) e 6/6 PASS sem warn no caminho normal. O mutante mediu 19 itens na retomada — o banco compartilhado acumula missões resumíveis de execuções anteriores."
+      "evidence": "medido: base 29372d7a3 => 1/3 falhas; HEAD => 5/7 isoladas PASS, 2/2 lotes falharam; CI (L0) verde em 6 de 6 execucoes, onde nao ha servidor concorrente | REFUTAÇÃO MEDIDA 2026-10-29 (RELATORIO §11.19): a saída barata \"isolar as missões em tenant próprio\" NÃO funciona — sweep({tenantId}) recebe o tenant e não o usa: missionStore.findMissionsWithoutLease (missionStoreService.js:581) filtra só status IN RESUME_STATES e lease_token null, sem tenant, então o servidor vivo alcança missão de QUALQUER tenant. Saídas reais: (a) banco/schema dedicado por suíte, (b) servidor de teste sem loop, ou (c) servidor vivo com ENGINEERING_MISSION_RECOVERY_ENABLED=0. Janela de corrida ≈ duração_do_teste / 300 s (intervalo default 5 min). | ENTREGUE 2026-10-29 (2d92987e8): diagnosticarInterferencia publica status/lease/host/expiração/updated_at + itensNoResumo quando a missão do teste não aparece na retomada dele; prova do warn por mutação (parâmetro invertido) e 6/6 PASS sem warn no caminho normal. O mutante mediu 19 itens na retomada — o banco compartilhado acumula missões resumíveis de execuções anteriores. || REFUTACAO MEDIDA 2026-10-30: o bloqueio era \"decisao de ambiente\" e a decisao foi tomada — provisionamento automatico por suite (tests/helpers/suiteDatabase.js) elimina a corrida com o servidor vivo sem afrouxar assercao. Evidencia: 3/3 isoladas + lote L0b 41/41 suites; ver reports/regression-test-backfill.json.",
+      "blocked_reason_historico": "DECISÃO DE AMBIENTE (não de código): a varredura de recovery é GLOBAL no banco (sweep recebe tenantId e as fontes de candidatos não filtram tenant — medido em missionRecoveryCoordinator.js:87 e missionStoreService.js:581), logo isolar por tenant não resolve. Opções: banco/schema dedicado por suíte; servidor de teste sem o loop; ou o servidor vivo rodar com ENGINEERING_MISSION_RECOVERY_ENABLED=0. Enquanto o servidor de dev na 3001 compartilhar este Postgres, a corrida é ≈ duração_do_teste/300 s. Não corrigido por decisão explícita: afrouxar asserção reduziria a sensibilidade sem provar nada melhor.",
+      "regressionTest": "tests/integration/engineeringMissionDurableResume.test.js",
+      "verificationCommit": "0bfda6315522",
+      "verificationNote": "backfill manual 2026-10-30: a opcao (a) \"banco/schema dedicado por suite\" foi IMPLEMENTADA e medida no MESMO Postgres de dev compartilhado com o servidor vivo na 3001 — tests/helpers/suiteDatabase.js cria rap_suite_<slug>_<hex>, aplica as migrations, executa e destroi. Suite: 3/3 execucoes isoladas PASS (6/6 testes; 44,7s/56,0s/60,4s) e PASS dentro do lote L0b (41/41 suites, 238/238 testes, exit 0 em 1249s). Antes: 1/3 isoladas e 2/2 lotes falhando. Bancos residuais: zero. sha 0bfda6315522",
+      "verifiedAt": "2026-10-30T05:56:06.473Z",
+      "commit": "0bfda6315"
     },
     {
       "id": "CI-MAIN-JEST-AMBIENTE",
@@ -2445,7 +2524,9 @@
       "state": "VERIFIED",
       "legacyStatus": "done",
       "severityBasis": "vermelho permanente de CI em main por dependência de artefato de outro workflow; corrigido sem afrouxar o modo autoritativo",
-      "severitySource": "medicao-ci-2026-10-28"
+      "severitySource": "medicao-ci-2026-10-28",
+      "regressionTest": "tests/unit/governance/modelDrivenE2e.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:56.702Z)"
     },
     {
       "id": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
@@ -2459,7 +2540,9 @@
       "legacyStatus": "verified",
       "severityBasis": "vermelho de CI que se recusa a ser explicado por ambiente já equalizado; nenhuma das 2 suítes pertence ao gate canônico (tests/integration/engineering)",
       "severitySource": "medicao-ci-2026-10-28",
-      "resolution": "Implementado em api/services/engineeringRouter/engineeringRouterService.js (preVerifySpecSatisfied + transições ROUTED→GREEN e CLASSIFIED→GREEN), engine/engineeringMission/bugFinding/postFixFailure.js (classificador puro) e bugLoopCoordinatorService.hookMissionFailure (fingerprint separado). Testes: engineeringRouterSpecPreVerification (3), postFixFailureVsRecurrence (2), postFixFailureClassification (9)."
+      "resolution": "Implementado em api/services/engineeringRouter/engineeringRouterService.js (preVerifySpecSatisfied + transições ROUTED→GREEN e CLASSIFIED→GREEN), engine/engineeringMission/bugFinding/postFixFailure.js (classificador puro) e bugLoopCoordinatorService.hookMissionFailure (fingerprint separado). Testes: engineeringRouterSpecPreVerification (3), postFixFailureVsRecurrence (2), postFixFailureClassification (9).",
+      "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:50:02.476Z)"
     },
     {
       "id": "CI-E2E-CREDENTIAL-SCOPE",
@@ -2473,7 +2556,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "2 suítes obrigatórias do CI ficavam vermelhas por ausência de credencial no escopo; o único motivo de passarem no dev era estado ambiente",
-      "severitySource": "medicao-local-e-ci-2026-10-29"
+      "severitySource": "medicao-local-e-ci-2026-10-29",
+      "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:51:24.183Z)"
     },
     {
       "id": "REQUIRED-TESTS-ANCORA-EXTERNA",
@@ -2501,7 +2586,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "gate de certificação V2 em NO_GO por falta de prova executada; provas locais disponíveis não estavam sendo produzidas",
-      "severitySource": "medicao-local-2026-10-29"
+      "severitySource": "medicao-local-2026-10-29",
+      "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:52:55.375Z)"
     },
     {
       "id": "RESUME-SUBSTITUTA-SEM-ESCOPO",
@@ -2515,7 +2602,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "a retomada pós-fix não conseguia entregar correção nenhuma; falha voltava como recorrência falsa do bug corrigido",
-      "severitySource": "medicao-local-e-ci-2026-10-29"
+      "severitySource": "medicao-local-e-ci-2026-10-29",
+      "regressionTest": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:25.543Z)"
     },
     {
       "id": "FLAKE-B2-REGULARIZADOR-CORRIDA",
@@ -2529,7 +2618,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "gate canônico vermelho por corrida do próprio teste (falso vermelho), com risco de ser lido como falha de segurança do produto",
-      "severitySource": "medicao-ci-2026-10-29"
+      "severitySource": "medicao-ci-2026-10-29",
+      "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:35.740Z)"
     },
     {
       "id": "INTERFERENCIA-CRASH-EVIDENCE-L0B",
@@ -2542,7 +2633,9 @@
       "state": "VERIFIED",
       "legacyStatus": "done",
       "severityBasis": "falso vermelho do harness de reprodução local (cwd errado); não havia defeito no repositório. Mantida observabilidade para diagnóstico em 1 linha.",
-      "severitySource": "medicao-local-2026-10-29"
+      "severitySource": "medicao-local-2026-10-29",
+      "regressionTest": "tests/integration/engineeringMissionCrashRecoveryE2E.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionCrashRecoveryE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:43.650Z)"
     },
     {
       "id": "POLITICA-PROD-LIKE-EM-MAIN",
@@ -2569,7 +2662,9 @@
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "flake de teste sob carga (execução completa em paralelo); não afeta produto, mas produz vermelho não determinístico no gate de unit",
-      "severitySource": "medicao-local-2026-10-29"
+      "severitySource": "medicao-local-2026-10-29",
+      "regressionTest": "tests/unit/dev/devServicesSupervision.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:22.750Z)"
     },
     {
       "id": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
@@ -2595,7 +2690,9 @@
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "vermelho de E2E por pré-condição não declarada; mascarava o motivo real (locator em vez de dado ausente)",
-      "severitySource": "medicao-ci-2026-10-29"
+      "severitySource": "medicao-ci-2026-10-29",
+      "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:26.121Z)"
     },
     {
       "id": "E2E-REPLAY-DOMINIO-E-TAB",
@@ -2608,7 +2705,9 @@
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "spec de replay RPA inviável de passar; era o único vermelho do job E2E",
-      "severitySource": "medicao-ci-2026-10-29"
+      "severitySource": "medicao-ci-2026-10-29",
+      "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:29.636Z)"
     },
     {
       "id": "JOURNEY-STORE-ESCONDE-DERIVADAS",
@@ -2621,21 +2720,43 @@
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "perda de visibilidade de 251 jornadas na superfície DEVELOPMENT de QA Waves; bloqueava E2E de replay RPA",
-      "severitySource": "medicao-servico-2026-10-29"
+      "severitySource": "medicao-servico-2026-10-29",
+      "regressionTest": "api/services/__tests__/qaWavesService.journey.test.js",
+      "verificationNote": "backfill-regression-tests.js: npx jest api/services/__tests__/qaWavesService.journey.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:32.970Z)"
     },
     {
       "id": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
       "title": "engineeringBugLoopNaturalPathE2E falha em banco COMPARTILHADO e passa em banco limpo (mesmo código)",
-      "status": "blocked_external",
+      "status": "verified",
       "legacyStatus": "blocked_external",
-      "state": "BLOCKED_EXTERNAL",
+      "state": "VERIFIED",
       "commit": "0e7918ac0",
-      "evidence": "MEDIDO 2026-10-30 em c7ef74031, A/B controlado: (a) no Postgres de dev COMPARTILHADO a suíte tests/integration/engineeringBugLoopNaturalPathE2E.test.js FALHA em 65s com `expect(lineage.replacementTaskId).not.toBe(originalTaskId)` recebendo o MESMO id; (b) no banco descartável rap_l0b_proof (criado, migrado e removido) a MESMA suíte PASSA em 55s. O CI no mesmo SHA é verde (ephemeral DB). Não é regressão de código: é sensibilidade ao estado acumulado do banco compartilhado, a MESMA classe do item de durable-resume.",
+      "evidence": "MEDIDO 2026-10-30 em c7ef74031, A/B controlado: (a) no Postgres de dev COMPARTILHADO a suíte tests/integration/engineeringBugLoopNaturalPathE2E.test.js FALHA em 65s com `expect(lineage.replacementTaskId).not.toBe(originalTaskId)` recebendo o MESMO id; (b) no banco descartável rap_l0b_proof (criado, migrado e removido) a MESMA suíte PASSA em 55s. O CI no mesmo SHA é verde (ephemeral DB). Não é regressão de código: é sensibilidade ao estado acumulado do banco compartilhado, a MESMA classe do item de durable-resume. || REFUTACAO MEDIDA 2026-10-30: nao e mais dependencia de ambiente — o banco e criado e destruido pela propria suite; a falha de 65s nao se reproduz (4/4 PASS no mesmo Postgres compartilhado).",
       "severity": "P2",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "vermelho local não determinístico que pode ser lido como regressão; CI verde no mesmo SHA",
       "severitySource": "medicao-local-2026-10-30",
-      "blocked_reason": "DECISÃO DE AMBIENTE (não de código): a suíte depende de o bug-loop criar uma task SUBSTITUTA; com achados/missões residuais de execuções anteriores o coordenador reaproveita o vínculo e o id retorna igual ao original. Opções: banco/schema dedicado por suíte, ou limpeza explícita do que a própria suíte cria antes de rodar. Enquanto o Postgres de dev for compartilhado com execuções anteriores e com o servidor vivo, o vermelho local é esperado — e o CI, que usa banco efêmero, é a medida válida."
+      "blocked_reason_historico": "DECISÃO DE AMBIENTE (não de código): a suíte depende de o bug-loop criar uma task SUBSTITUTA; com achados/missões residuais de execuções anteriores o coordenador reaproveita o vínculo e o id retorna igual ao original. Opções: banco/schema dedicado por suíte, ou limpeza explícita do que a própria suíte cria antes de rodar. Enquanto o Postgres de dev for compartilhado com execuções anteriores e com o servidor vivo, o vermelho local é esperado — e o CI, que usa banco efêmero, é a medida válida.",
+      "regressionTest": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+      "verificationCommit": "0bfda6315522",
+      "verificationNote": "backfill manual 2026-10-30: a suite PROVISIONA o proprio banco e passou 4/4 execucoes no Postgres de dev COMPARTILHADO (88,2s/82,5s/87,2s/77,5s) — a mesma configuracao em que falhava em 65s com lineage.replacementTaskId === originalTaskId. Dentro do lote L0b: PASS (41/41 suites, 238/238 testes, exit 0). Bancos residuais: zero. sha 0bfda6315522",
+      "verifiedAt": "2026-10-30T05:56:06.473Z"
+    },
+    {
+      "id": "FECHAMENTOS-SEM-SUITE-DE-REGRESSAO",
+      "title": "11 itens declararam fechamento sem suíte de regressão identificável",
+      "status": "blocked_external",
+      "state": "BLOCKED_EXTERNAL",
+      "severity": "P1",
+      "severityStatus": "DERIVADA_DE_MEDICAO",
+      "severityBasis": "inclui 1 P0 e 4 P1 cujo fechamento não tem prova executável; o estado VERIFIED/RESOLVED canônico EXIGE regressionTest (governance/bug-closure/defect-states.js:218)",
+      "severitySource": "backfill-regression-tests-2026-10-30",
+      "commit": "0bfda6315522",
+      "evidence": "MEDIDO 2026-10-30 (commit 0bfda6315522) por scripts/governance/backfill-regression-tests.js: de 59 itens em estado de fechamento sem \"regressionTest\", 48 foram resolvidos por fonte real (teste que cita o id, teste citado na evidência, ou teste tocado pelo commit do fix) e RE-EXECUTADOS verdes no código atual — relatório em reports/regression-test-backfill.json. Restaram 11 sem nenhuma suíte identificável por essas três fontes: MISSAO-B8-ESTADOS-FILA (P2, RESOLVED); MISSAO-B3-REUSO-PROVENIENCIA (P3, VERIFIED); MISSAO-B4-REVISAO-INDEPENDENTE (P3, VERIFIED); MISSAO-DEMO-SELF-ENGINEERING (P3, VERIFIED); HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN (P0, VERIFIED); HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS (P2, RESOLVED); HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO (P2, RESOLVED); FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT (P1, VERIFIED); P1-CI-SEM-INTEGRACAO (P1, VERIFIED); CI-MAIN-JEST-AMBIENTE (P1, VERIFIED); CI-WAVE-REFRESH-SEM-RUN-GOVERNADO (P1, VERIFIED). Nenhum deles ganhou caminho de teste inventado (o script deixa o item intocado nesse caso).",
+      "blocked_reason": "DECISÃO DE DONO (não é bloqueio externo de infraestrutura, é ausência de prova executável): 11 itens declaram fechamento (VERIFIED/RESOLVED) sem suíte de regressão, e a máquina canônica de estados exige o campo em ambos. Saídas possíveis, por item: (a) escrever a suíte de regressão que reproduz o defeito e apontá-la; (b) reabrir o item (VERIFIED -> OPEN) e refazer com prova; (c) aceitar risco de forma declarada (RISK_ACCEPTED, sujeito a CONTROLES_INEGOCIAVEIS em governance/bug-closure/defect-states.js). Os itens foram deixados no estado original de propósito: mudar a classificação de 11 fechamentos é decisão de dono, não efeito colateral de ferramenta.",
+      "regressionTest": null,
+      "verificationNote": "backfill-regression-tests.js: 11 itens sem suíte resolvível — nenhum campo gravado por ausência de prova (nunca por heurística)",
+      "legacyStatus": "blocked_external"
     }
   ],
   "schemaVersion": 2,
