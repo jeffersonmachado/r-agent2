@@ -15,6 +15,30 @@ function startWorkers({
   processRef = process,
 }) {
   outboundWorkerRef = outboundWorker || null;
+
+  // LRO — worker da OUTBOX (opt-in por LRO_OUTBOX_WORKER=1). Sem ele, `lro_outbox` é uma tabela que
+  // ninguém drena e o cliente nunca recebe o evento. Desligado por padrão: um worker ligado por
+  // acidente em ambiente de teste publicaria evento de teste para cliente real.
+  if (String(processRef.env.LRO_OUTBOX_WORKER || '').trim() === '1') {
+    try {
+      const { criarWorker, criarPublicadorWebSocket } = require('../services/lro/lroOutboxWorker');
+      const dispatcher = require('../services/lro/lroOutboxDispatcher');
+      const lroService = require('../services/lro/lroService');
+      const { broadcastToTenant } = require('../services/websocketService');
+      const lroWorker = criarWorker({
+        dispatch: dispatcher.dispatch,
+        publish: criarPublicadorWebSocket({
+          broadcastToTenant,
+          obterOperacao: (id) => lroService.getOperation(id).catch(() => null),
+        }),
+      });
+      const iniciado = lroWorker.start();
+      logger.info('[LROOutboxWorker] start', iniciado);
+      processRef.__lroOutboxWorker = lroWorker;
+    } catch (err) {
+      logger.warn('[LROOutboxWorker] falha ao iniciar (ignorado)', { error: err?.message });
+    }
+  }
   // Playwright browser check (best-effort): validators de runtime/RPA dependem
   // do Chromium do Playwright; avisa cedo se o cache de browsers foi apagado.
   if (processRef.env.ENABLE_PLAYWRIGHT_BOOT_CHECK !== 'false') {
@@ -256,6 +280,11 @@ function stopWorkers() {
     () => require('../services/marketing/googleAdsRecommendationSchedulerService').stopMarketingGoogleAdsScheduler(),
     () => require('../services/engineeringMission/bugLoopWorker').stopBugLoopWorker(),
     () => require('../services/securityIntel/securityIntelWorker').stopSecurityIntelWorker(),
+    () => {
+      const worker = process && process.__lroOutboxWorker;
+      if (worker && typeof worker.stop === 'function') return worker.stop();
+      return undefined;
+    },
   ];
 
   for (const stopFn of stopFns) {

@@ -3040,6 +3040,43 @@ muda sempre que a fila muda legitimamente** — cada alteração aprovada exige 
 
 ---
 
+## 11.52 LRO — worker da outbox: a fila deixou de ser tabela órfã (7/7, sem timer real no teste)
+
+Até aqui `lro_outbox` era uma tabela que **ninguém drenava**: o evento ficava `PENDING` para sempre e o
+cliente nunca recebia o que aconteceu. `api/services/lro/lroOutboxWorker.js` fecha essa ponta.
+
+| Contrato | Como está garantido |
+|---|---|
+| **OPT-IN** por `LRO_OUTBOX_WORKER=1` | flag off (default) ⇒ `start()` devolve `started: false`; nada roda |
+| agenda **injetável** (teste determinístico) | `setIntervalFn`/`clearIntervalFn` recebidos por parâmetro — nenhum segundo real no teste |
+| tick **não reentrante** | chamada concorrente devolve `{skipped:true}` enquanto a anterior está em voo |
+| falha de publicação **não derruba** o processo | `dispatch` registra backoff/DLQ e o worker devolve resumo com `erros` |
+| `start`/`stop` idempotentes | segundo `start` ⇒ `ja_rodando`; segundo `stop` ⇒ `stopped:false` |
+| publicador WebSocket **fail-closed** | sem tenant resolvido NÃO publica (`TENANT_NAO_RESOLVIDO`) — melhor ficar na fila do que vazar evento para cliente errado |
+
+Ligado ao boot em `api/runtime/startWorkers.js` (opt-in) e ao shutdown (`stop`), e documentado em
+`.env.example` junto com `LRO_QA_WAVES_MIRROR`.
+
+Regressão: `tests/unit/governance` + `api/services/lro` ⇒ **2394 passaram, 2 skipped**.
+
+### 11.52.1 LRO fechado ponta a ponta (o que existe agora)
+
+```
+execução real (QA Waves)  ──►  lro_operations (estado/fase/progresso/lease/fencing)
+                                   │  mesma transação
+                                   ├──► lro_events (cursor do SSE / Last-Event-ID)
+                                   └──► lro_outbox ──► worker ──► WebSocket do tenant
+                                                            └──► SSE com replay (UI)
+decisão humana: lro_feedback_requests/responses (prazo, versão, idempotência, autorização)
+órfãs: recuperação pausa + fencing avança + evento ORPHAN_RECOVERED
+```
+
+Tudo isso tem teste próprio contra PostgreSQL descartável ou com agenda/transporte injetados, e nada
+disso muda comportamento sem flag. Restam apenas os degraus de certificação que dependem do dono
+(§11.51).
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
