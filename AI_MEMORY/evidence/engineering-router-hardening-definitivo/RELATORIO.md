@@ -2085,6 +2085,47 @@ destino em CI na linha seguinte ao veredito. Contratos do gate: 40/40 verdes.
 prova: `E2E-SUPPORT-CENARIO1-PRECONDICAO` (`83dfe295a`), `E2E-REPLAY-DOMINIO-E-TAB` (`4c46c1d3c`),
 `JOURNEY-STORE-ESCONDE-DERIVADAS` (`0d9e1b927`). O item de billing foi fechado por medição (§11.27.1).
 
+## 11.30 Achado de fiação: o agregado inclui um gate de fase POSTERIOR sem produtor no caminho
+
+Fui re-medir as premissas dos itens impedidos (mesma disciplina que fechou o item de billing) e achei uma
+fiação inconsistente que **não** é âncora externa.
+
+### 11.30.1 Medições
+
+| medição | resultado |
+|---|---|
+| `npm run ci:artifacts` (bootstrap canônico de CI) exit | **0** — e `governance/rap-master-scorecard.json` **continua ausente** |
+| `npm run validate:final-status-projection` | **FAIL** — `ISSUE [governance/rap-master-scorecard.json] canonical_unreadable:missing` |
+| `npm run validate:governance-chain` | FAIL — elos derivados `conteudoIdentico=false` (H20; exige selagem) |
+| `npm run validate:dist` | FAIL — `check-dist-clean.sh`, dezenas de `AUSENTE` (não há envelope em `dist/`) |
+| `npm run validate:release-dag` | **PASS** — `RELEASE_DAG_ACYCLIC_AND_PHASE_AWARE`, 29 nós, 0 ciclos |
+
+### 11.30.2 O que isso revela
+
+`governance/rap-master-scorecard.json` é **gitignored** e produzido por `scripts/governance/run-persisted-scorecard.js`,
+que só é chamado por `converge-governance.sh` e `seal-release.sh`. No DAG
+(`governance/release-dag.js:215`) o nó `final_status_projection` está na fase **FINAL_GOVERNANCE**, dependente
+de `platform_readiness` ← `final_governance` ← `master_scorecard_delivered`.
+
+Mas o **agregado** (`validate:governance-enforcement`) inclui `validate:final-status-projection` na sua cadeia
+sem declarar fase nem produtor — e o `validate:release-dag` **não detecta**, porque o DAG modela
+produtores/saídas e não a lista de passos do agregado. Resultado: num workspace que não passou por
+`converge`/selagem, esse passo **falha por artefato de fase posterior** — a classe
+`RELEASE_PHASE_ORDER_VIOLATION`, aqui fora do radar do gate que existe para pegá-la.
+
+### 11.30.3 O que eu NÃO fiz (e por quê)
+
+Não "consertei" de duas maneiras possíveis, porque as duas mudam política de gate e exigem decisão sua:
+
+1. **Rodar o produtor do scorecard dentro do agregado** — proibido na prática: o próprio `seal-release.sh`
+   documenta que rodar o scorecard com `dist/` vazio **re-envenena** as projeções (below10 salta de 2 para
+   ~29 e o `zip:release` trava). Seria fabricar artefato no lugar errado.
+2. **Rebaixar o `canonical_unreadable` ausente para `PENDING_PHASE` (exit 0)** — existe precedente declarado
+   (`validate:release-artifact-identity`: "sem payload no disco a verificação é PENDING_PHASE, nunca FAIL de
+   conteúdo"), mas aplicá-lo aqui **afrouxa** o gate de projeção. Não faço isso por conta própria.
+
+Registrado aqui, não na fila, para não criar item `pending` que eu não vou cumprir neste turno.
+
 ---
 
 ## 12. DECISÃO FINAL
