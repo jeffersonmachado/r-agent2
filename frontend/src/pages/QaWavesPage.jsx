@@ -10,6 +10,7 @@ import { useExecutionPolling } from '../components/qa-waves/useExecutionPolling'
 import { ExecutionProgress } from '../components/qa-waves/ExecutionProgress';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
+import { LroOperationsPanel } from '../components/lro/LroOperationsPanel';
 import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
 import '../components/qa-waves/qaWaves.css';
@@ -1064,6 +1065,14 @@ export function QaWavesPage() {
           </div>
         </div>
       </header>
+
+      {/* Operações de longa duração (LRO) — superfície DEVELOPMENT.
+          Recolhida por padrão: não compete com o fluxo principal de QA Waves e carrega por si
+          (falha da lista não afeta o painel de domínios). */}
+      <details className="qa-lro-operacoes" style={{ margin: '8px 0' }}>
+        <summary style={{ cursor: 'pointer' }}>Operações (LRO)</summary>
+        <LroOperationsPanel token={typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') : null} />
+      </details>
 
       {/* Navegação por domínio */}
       <nav className="qa-domain-pills" aria-label="Verticais">

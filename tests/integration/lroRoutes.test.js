@@ -171,6 +171,40 @@ describe('LRO rotas — entrega e segurança', () => {
     expect(corpo).toMatch(/event: QUEUED/);
   }, 60000);
 
+  test('lista: ator DEVELOPMENT vê as operações do seu tenant', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await criar({ visibilityClass: 'DEVELOPMENT' });
+    const resposta = await fetch(`${base}/api/lro?limit=50`, {
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'engineer' },
+    });
+    expect(resposta.status).toBe(200);
+    const corpo = await resposta.json();
+    expect(corpo.classification).toBe('DEVELOPMENT');
+    expect(corpo.items.map((i) => i.id)).toContain(op.id);
+  }, 60000);
+
+  test('lista: ator PRODUCTION NÃO enxerga operação DEVELOPMENT (nem por listagem)', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await criar({ visibilityClass: 'DEVELOPMENT' });
+    const resposta = await fetch(`${base}/api/lro?limit=100`, {
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'operator' },
+    });
+    expect(resposta.status).toBe(200);
+    const corpo = await resposta.json();
+    expect(corpo.classification).toBe('PRODUCTION');
+    expect(corpo.items.map((i) => i.id)).not.toContain(op.id);
+  }, 60000);
+
+  test('lista: operação de OUTRO tenant não aparece', async () => {
+    if (skipIfUnavailable()) return;
+    const alheia = await criar({ tenantId: 'tenant-alheio', visibilityClass: 'DEVELOPMENT' });
+    const resposta = await fetch(`${base}/api/lro?limit=100`, {
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'engineer', 'X-Test-Tenant': 'system' },
+    });
+    const corpo = await resposta.json();
+    expect(corpo.items.map((i) => i.id)).not.toContain(alheia.id);
+  }, 60000);
+
   test('feedback: abre pedido (201) e resposta autorizada devolve a operação em RUNNING', async () => {
     if (skipIfUnavailable()) return;
     const op = await criar();

@@ -169,6 +169,12 @@ function mockFetchJson(url, init) {
     return Promise.resolve({ items: [] });
   }
 
+  // Painel de operações longas (LRO) montado na página: lista vazia por padrão nos testes daqui.
+  // O painel é coberto por `components/lro/LroOperationsPanel.test.jsx`.
+  if (String(url).startsWith('/api/lro')) {
+    return Promise.resolve({ items: [] });
+  }
+
   throw new Error(`Unexpected fetchJson call: ${url}`);
 }
 

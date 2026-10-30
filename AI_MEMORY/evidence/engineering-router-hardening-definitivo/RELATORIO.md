@@ -2921,6 +2921,44 @@ Consolidado: **4 suítes, 25 testes** verdes na varredura LRO desta rodada.
 
 ---
 
+## 11.49 LRO — superfície de operações na UI DEVELOPMENT (lista + detalhe ao vivo)
+
+Faltava o que o mandato §9 pede explicitamente: "lista de operações, detalhes, eventos, estado de
+conexão, reconexão, falhas parciais".
+
+| Entrega | Onde |
+|---|---|
+| `GET /api/lro` — lista do tenant, filtrada pela CLASSIFICAÇÃO do ator | `api/modules/lro/routes.js` + `lroService.listOperations` |
+| Painel com tabela, progresso indeterminado honesto e desfecho ao lado de `COMPLETED` | `frontend/src/components/lro/LroOperationsPanel.jsx` |
+| Detalhe com stream ao vivo, estado de conexão explícito | idem (usa `useLroStream`) |
+| Montagem recolhível dentro da página QA Waves | `frontend/src/pages/QaWavesPage.jsx` |
+
+### 11.49.1 Provas
+
+| Prova | Resultado |
+|---|---|
+| `GET /api/lro`: ator DEVELOPMENT vê as operações do tenant | PASS |
+| `GET /api/lro`: ator PRODUCTION **não** vê operação DEVELOPMENT (nem por listagem) | PASS |
+| `GET /api/lro`: operação de outro tenant não aparece | PASS |
+| painel: `2/5 scenario` renderiza; `COMPLETED` aparece como `Concluída (NO_GO)`; nada de "100%" quando o total é desconhecido | PASS |
+| painel: falha da LISTA é anunciada (`role="alert"`) e não derruba a tela | PASS |
+| painel: lista vazia ⇒ "Nenhuma operação registrada." | PASS |
+| painel: selecionar abre detalhe, `conexão: ao vivo`, eventos `CREATED`/`PROGRESS` chegam | PASS |
+| página QA Waves com o painel montado (mock de `/api/lro` vazio) | 3/3 PASS |
+
+Frontend completo: **143 arquivos, 1074 testes, verde**. Rotas LRO: **12/12**. `validate:route-mounts`
+PASS (64/64).
+
+### 11.49.2 Observação de escopo
+
+O painel é superfície **DEVELOPMENT** e está recolhido por padrão: não compete com o fluxo principal
+de QA Waves e carrega por conta própria (a falha da lista não afeta o painel de domínios). Continua
+faltando — e é decisão de produto, não pendência técnica — expor decisões humanas
+(`WAITING_FEEDBACK`) na UI com botões de aprovar/rejeitar: o backend já valida prazo, versão,
+idempotência e autorização, e o endpoint existe (`POST /api/lro/feedback/:requestId/respond`).
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

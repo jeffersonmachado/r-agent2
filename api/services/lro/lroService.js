@@ -113,6 +113,46 @@ async function getOperation(id, { tenantId = null } = {}) {
 }
 
 /**
+ * Lista operações do tenant, opcionalmente por status.
+ * `visibility_classes` filtra o que o ator PODE ver — quem chama passa a partir da classificação
+ * do ator (a política vive em `experience-segregation.js`, não aqui).
+ */
+async function listOperations({ tenantId, statuses = null, visibilityClasses = null, limit = 50 } = {}) {
+  if (!tenantId) throw codigoErro('TENANT_OBRIGATORIO');
+  const models = modelos();
+  const { Op } = require('sequelize');
+  const where = { tenant_id: String(tenantId) };
+  if (statuses && statuses.length) where.status = { [Op.in]: statuses.map((x) => String(x).toUpperCase()) };
+  if (visibilityClasses && visibilityClasses.length) {
+    where.visibility_class = { [Op.in]: visibilityClasses.map((x) => String(x).toUpperCase()) };
+  }
+  const linhas = await models.getLroOperation().findAll({
+    where,
+    order: [['created_at', 'DESC']],
+    limit: Math.min(Number(limit) || 50, 200),
+  });
+  return linhas.map((l) => {
+    const p = l.get({ plain: true });
+    return {
+      id: p.id,
+      tenantId: p.tenant_id,
+      operationType: p.operation_type,
+      visibilityClass: p.visibility_class,
+      status: p.status,
+      phase: p.phase,
+      outcome: p.outcome,
+      progressCurrent: p.progress_current,
+      progressTotal: p.progress_total,
+      progressUnit: p.progress_unit,
+      messageCode: p.message_code,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
+      completedAt: p.completed_at,
+    };
+  });
+}
+
+/**
  * Transição legal de estado, com lock de linha, versão otimista e fencing.
  *
  * @returns {Promise<object>} operação atualizada (plain)
@@ -372,5 +412,6 @@ module.exports = {
   claimLease,
   heartbeat,
   recordProgress,
+  listOperations,
   listEvents,
 };

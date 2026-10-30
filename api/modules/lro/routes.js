@@ -72,6 +72,41 @@ function criarRouterLro() {
     return { tenantId, operacao };
   }
 
+  /**
+   * Lista operações do tenant. O ator só vê as classes que PODE ver: DEVELOPMENT vê tudo,
+   * SUPPORT vê SUPPORT+PRODUCTION, PRODUCTION vê só PRODUCTION (política de experience-segregation).
+   */
+  router.get('/api/lro', async (req, res, next) => {
+    try {
+      const auth = requireAuth(req);
+      if (!auth || auth.valid === false) return res.status(401).json({ error: 'unauthorized' });
+      req.agent = req.agent || auth.agent;
+
+      const { tenantFromRequest } = require('../../../lib/rpaSecurity');
+      const tenantId = tenantFromRequest(req, auth);
+      if (!tenantId) return res.status(400).json({ error: 'tenant_required' });
+
+      const { getClassificationForAgent } = require('../agent-os/experience-segregation');
+      const classificacao = getClassificationForAgent(req.agent);
+      const visiveis = {
+        DEVELOPMENT: ['PRODUCTION', 'SUPPORT', 'DEVELOPMENT'],
+        SUPPORT: ['PRODUCTION', 'SUPPORT'],
+        PRODUCTION: ['PRODUCTION'],
+      }[classificacao] || ['PRODUCTION'];
+
+      const status = req.query.status ? String(req.query.status).split(',').filter(Boolean) : null;
+      const items = await lroService.listOperations({
+        tenantId,
+        statuses: status,
+        visibilityClasses: visiveis,
+        limit: req.query.limit || 50,
+      });
+      return res.json({ items, count: items.length, classification: classificacao });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   router.get('/api/lro/:id', async (req, res, next) => {
     try {
       const ctx = await autorizar(req, res);
