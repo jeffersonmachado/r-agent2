@@ -115,17 +115,37 @@ function getAllExecutions(limit = 20, options = {}) {
     .slice(0, limit);
 }
 
-function getActiveExecution() {
+/** Chave de tenant de um registro. `null` agrupa execuções sem tenant declarado. */
+function tenantKeyOf(record) {
+  const bruto = record && record.payload ? record.payload.tenantId : null;
+  if (bruto === null || bruto === undefined || bruto === '') return null;
+  return String(bruto);
+}
+
+/**
+ * Execução ativa (running/queued).
+ *
+ * DEFEITO CORRIGIDO (2026-10-30, LRO Fase 0 — docs/architecture/lro-qa-waves.md §3.1): sem filtro de
+ * tenant esta função fazia a onda em execução do tenant A bloquear o `enqueue` do tenant B com
+ * `EXECUTION_ALREADY_RUNNING` — indisponibilidade CRUZADA entre clientes, sem relação entre os
+ * payloads. A exclusão mútua passou a ser POR TENANT; sem argumento o comportamento antigo (global)
+ * é preservado para leitores de diagnóstico.
+ *
+ * @param {string|null|undefined} tenantId `undefined` = varredura global (compatibilidade)
+ */
+function getActiveExecution(tenantId) {
+  const escopo = tenantId === undefined ? undefined : (tenantId === null || tenantId === '' ? null : String(tenantId));
   for (const record of executions.values()) {
-    if (record.status === 'running' || record.status === 'queued') {
-      return record;
-    }
+    if (record.status !== 'running' && record.status !== 'queued') continue;
+    if (escopo === undefined) return record;
+    if (tenantKeyOf(record) === escopo) return record;
   }
   return null;
 }
 
 function enqueueExecution(kind, payload, runner) {
-  const active = getActiveExecution();
+  const tenantIdBruto = payload && payload.tenantId != null ? payload.tenantId : null;
+  const active = getActiveExecution(tenantIdBruto === '' ? null : tenantIdBruto);
   if (active) {
     const err = new Error(
       `Já existe uma execução em andamento (${active.executionId}). Aguarde a conclusão antes de iniciar uma nova onda.`

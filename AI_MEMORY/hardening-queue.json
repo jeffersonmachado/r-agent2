@@ -2757,6 +2757,22 @@
       "regressionTest": null,
       "verificationNote": "backfill-regression-tests.js: 11 itens sem suíte resolvível — nenhum campo gravado por ausência de prova (nunca por heurística)",
       "legacyStatus": "blocked_external"
+    },
+    {
+      "id": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
+      "title": "qa-mesh scheduler.test.js reprova em 2 casos: reason virou bug_closure_blocked onde o teste espera pipeline_active",
+      "status": "blocked_external",
+      "state": "BLOCKED_EXTERNAL",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_MEDICAO",
+      "severityBasis": "vermelho pré-existente em suite fora dos gates padrão (nao roda em test:unit nem no L0b); nao bloqueia certificacao (P2 aberto), mas deixa o sinal do scheduler ambíguo",
+      "severitySource": "medicao-2026-10-30",
+      "commit": "11a9301b195c",
+      "evidence": "MEDIDO 2026-10-30 em 11a9301b195c: npx jest qa-mesh/__tests__/scheduler.test.js -> 2 failed / 10 passed. 'não executa scheduler quando pipeline oficial está ativo' recebe {\"reason\":\"bug_closure_blocked\",\"skipped\":true} onde espera {\"reason\":\"pipeline_active\",\"skipped\":true}; 'execução agendada desabilita escrita canônica' falha pelo mesmo motivo. A/B: com a minha alteracao de qa-mesh/executionQueue.js REMOVIDA (git stash) o resultado é identico (2 failed) -> NAO é causado pela correcao de R1. Causa: o guard de bug-closure (CAMADA B, 2026-10-22) passou a recusar antes do caminho pipeline_active; a mesma recusa é observada na fila do main 04cad9c1b, entao a condicao é anterior a esta sessao.",
+      "blocked_reason": "DECISÃO DE GOVERNAÇA (não é bug novo): o scheduler hoje recusa com reason=bug_closure_blocked ANTES do caminho pipeline_active. Fail-closed parece CORRETO (não rodar mesh com fechamento sem prova), mas o teste automatizado assevera a razão antiga. Duas saídas legítimas: (a) aceitar o comportamento e atualizar a expectativa do teste declarando a ordem dos guards — exige decisão explícita, porque mexer em expectativa é justamente o que a missão proíbe fazer sem justificar; (b) mudar a ordem/precedência dos guards no produto. Não escolhi por conta própria. Enquanto isso, a suíte fica vermelha fora dos gates padrão (não roda em test:unit nem no L0b).",
+      "regressionTest": "qa-mesh/__tests__/scheduler.test.js",
+      "verificationNote": "verificação pendente: decidir se o produto deve reportar bug_closure_blocked (fail-closed, provavelmente correto) ou se o teste deve passar a declarar a ordem dos guards; a expectativa NAO foi relaxada",
+      "legacyStatus": "blocked_external"
     }
   ],
   "schemaVersion": 2,
