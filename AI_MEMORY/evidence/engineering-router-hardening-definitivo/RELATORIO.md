@@ -2997,6 +2997,49 @@ Regressão adjacente: `qa-mesh` + `api/services/lro` **147**; frontend **1080**.
 
 ---
 
+## 11.51 Escada de certificação executável: o diagnóstico da cadeia, com `BLOCKED ≠ PASS` por construção
+
+`governance/certification-ladder.js` (núcleo puro) + `scripts/governance/certification-ladder.js`
+(`npm run cert:ladder`) + `docs/governance/CERTIFICATION_RUNBOOK.md`.
+
+Motivo: cada gate isolado mostra *o vermelho*, nunca *a ordem*. A escada declara os 10 degraus com
+dependências e executa na ordem, reportando `PASS`/`FAIL`/`BLOCKED`/`SKIPPED` — e **nenhum** desses
+dois últimos é lido como sucesso.
+
+Medição real no `dev` (2026-10-30):
+
+```
+OK    fila                    npm run validate:hardening-queue
+OK    memoria                 npm run validate:ai-memory
+OK    dag                     npm run validate:release-dag
+FALHA ancoras                 node scripts/governance/provision-closure-anchors.js --check   (AÇÃO DE DONO)
+BLOQ  fechamentos             (falta: ancoras)
+BLOQ  execucao-autoritativa   (falta: fechamentos)
+BLOQ  required-tests          (falta: execucao-autoritativa)
+BLOQ  waves                   (falta: fechamentos)
+BLOQ  cobertura               (falta: waves)
+BLOQ  agregado                (falta: fechamentos, required-tests, cobertura)
+resumo={"PASS":3,"FAIL":1,"BLOCKED":6,"SKIPPED":0} certificavel=false
+```
+
+**Isto é o mapa da cadeia medida**: um único `FAIL` (âncoras externas) bloqueia seis degraus. Os
+"68 NOT_EXECUTED", as waves vencidas e o agregado `0/64` são **consequências**, não causas
+independentes — o que o §11.39 já havia medido em um gate agora aparece na ordem inteira.
+
+Contrato provado (7/7 em `tests/unit/governance/certificationLadder.test.js`): ordem nunca exige
+degrau posterior; pré-requisito não cumprido ⇒ `BLOCKED` com o nome que faltou; `FAIL` não vira `PASS`
+adiante; `SKIPPED` não certifica; runner que lança é `FAIL` (a escada não cai); `certificavel` só com
+zero `FAIL` e zero `BLOCKED`.
+
+### 11.51.1 Runbook do que só o dono pode fazer
+
+`docs/governance/CERTIFICATION_RUNBOOK.md` (indexado) com 7 passos e a verificação de cada um:
+pins versionados → segredos no cofre → assinatura das provas → execução autoritativa → required-tests →
+waves → veredito. Inclui a consequência operacional que mais custa: **`RAP_CLOSURE_INVENTORY_SHA256`
+muda sempre que a fila muda legitimamente** — cada alteração aprovada exige reprovisionar.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

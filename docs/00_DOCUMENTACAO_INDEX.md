@@ -22,6 +22,7 @@ Este índice organiza a documentação do projeto em camadas (visão → arquite
 - **Arquitetura técnica (visão de módulos)**: `ARQUITETURA_TECNICA.md`
 - **Timeouts, deadlines, lease, heartbeat e detecção de ausência de progresso (`SLOW != STUCK != DEAD`)**: `architecture/timeout-architecture.md`
 - **Long-Running Operations (LRO) — auditoria, contrato e plano incremental (piloto QA Waves)**: `architecture/lro-qa-waves.md`
+- **Runbook de certificação (passos que só o dono pode executar, com verificação por passo)**: `governance/CERTIFICATION_RUNBOOK.md`
 - **Guardrails de implementação e convergência**: `../PROJECT_RULES.md`
 - **O que falta (fonte única, backlog operacional)**: `O_QUE_FALTA.md`
 - (Histórico) **Gaps vs benchmarks (legado)**: `O_QUE_FALTA_GAPS_VS_BENCHMARKS.md`
