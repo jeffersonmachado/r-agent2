@@ -2959,6 +2959,44 @@ idempotência e autorização, e o endpoint existe (`POST /api/lro/feedback/:req
 
 ---
 
+## 11.50 LRO — decisão humana na UI: idempotência e recusa sem retentativa provadas (6/6)
+
+`frontend/src/components/lro/LroFeedbackDecision.jsx`, montado no detalhe da operação quando ela está
+em `WAITING_FEEDBACK` (o `feedbackRequestId` passou a vir na listagem, sem segunda chamada).
+
+Regras do mandato §7 que a UI **não** pode quebrar — e como cada uma foi provada:
+
+| Regra | Prova |
+|---|---|
+| silêncio/prazo **nunca** aprova (não existe auto-aprovação na UI) | não há caminho de decisão sem clique; `FEEDBACK_EXPIRADO` desarma os botões |
+| cada decisão carrega `idempotencyKey` **estável** por (pedido, decisão) | corpo enviado é exatamente `{decision:'approve', idempotencyKey:'ui:req-1:approve'}` (asserção no payload) |
+| duplo clique não duplica efeito | segundo clique durante o envio **não** dispara segunda chamada (1 chamada, botão desabilitado) |
+| recusa do servidor é mostrada com código | `FEEDBACK_EXPIRADO` e `classification_forbidden` aparecem em `role="alert"` |
+| recusa definitiva desarma; recusa recuperável permite nova tentativa | expirado ⇒ `disabled`; 403 ⇒ botão segue habilitado |
+| reenvio idempotente do servidor é sinalizado | `replayed: true` ⇒ "reenvio idempotente" em `role="status"` |
+| componente sem pedido não renderiza | container vazio |
+
+Frontend completo: **143 arquivos, 1080 testes, verde** (painel de operações 4/4 + decisão 6/6).
+
+### 11.50.1 Estado do LRO ao fim desta rodada
+
+| Camada | Testes próprios |
+|---|---|
+| Núcleo puro, schema/reversibilidade em cascata, transação/lease/fencing/progresso | 34 |
+| Rotas REST + SSE + lista (replay, autorização, classificação) | 12 |
+| Feedback humano (backend) | 9 |
+| Outbox (backoff/DLQ/`SKIP LOCKED`) | 4 |
+| Recuperação de órfãs | 6 |
+| Espelho QA Waves (mock + Postgres real) | 9 |
+| UI: hook de stream, painel, decisão | 4 + 4 + 6 |
+| **Total** | **78** |
+
+Regressão adjacente: `qa-mesh` + `api/services/lro` **147**; frontend **1080**. Gates de segregação,
+`route-mounts` (64/64) e `hardening-queue` seguem verdes. Restam apenas os itens que dependem do dono:
+`L2`/`L3`/certificação (prova assinada, âncora do inventário, chave privada).
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

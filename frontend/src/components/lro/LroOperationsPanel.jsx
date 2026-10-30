@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { fetchJson } from '../../api/client';
 import { useLroStream } from '../../shared/useLroStream';
+import { LroFeedbackDecision } from './LroFeedbackDecision';
 
 /**
  * LroOperationsPanel — superfície DEVELOPMENT para operações longas.
@@ -110,16 +111,18 @@ export function LroOperationsPanel({ baseUrl = '', token = null, tenantId = null
       {selecionada ? (
         <LroOperationDetail
           operationId={selecionada}
+          feedbackRequestId={(itens.find((i) => i.id === selecionada) || {}).feedbackRequestId || null}
           baseUrl={baseUrl}
           token={token}
           tenantId={tenantId}
+          onDecided={carregar}
         />
       ) : null}
     </section>
   );
 }
 
-function LroOperationDetail({ operationId, baseUrl, token, tenantId }) {
+function LroOperationDetail({ operationId, feedbackRequestId, baseUrl, token, tenantId, onDecided }) {
   const [eventos, setEventos] = useState([]);
   const { state, lastSeq } = useLroStream({
     operationId,
@@ -134,6 +137,10 @@ function LroOperationDetail({ operationId, baseUrl, token, tenantId }) {
       <p className="lro-detalhe__conexao" data-state={state}>
         conexão: {ROTULO_CONEXAO[state] || state} · último evento: {lastSeq}
       </p>
+      {feedbackRequestId ? (
+        <LroFeedbackDecision requestId={feedbackRequestId} onDecided={onDecided} />
+      ) : null}
+
       {eventos.length === 0 ? (
         <p className="lro-detalhe__vazio">Sem eventos ainda.</p>
       ) : (

@@ -145,6 +145,8 @@ async function listOperations({ tenantId, statuses = null, visibilityClasses = n
       progressTotal: p.progress_total,
       progressUnit: p.progress_unit,
       messageCode: p.message_code,
+      // Necessário para a UI abrir a decisão humana sem uma segunda chamada.
+      feedbackRequestId: p.feedback_request_id,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
       completedAt: p.completed_at,
