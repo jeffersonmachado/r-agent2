@@ -2017,6 +2017,44 @@ Correção de honestidade sobre a rodada anterior: eu descrevi o L0 como `DENIED
 commit de então** (`dd379d820`); no commit atual ele é `ALLOWED`. Registro os dois estados para que a
 auditoria não leia a mudança como contradição.
 
+## 11.28 Gate agregado: 0/64 NÃO é "64 gates reprovados" — e um defeito real no fechamento de run
+
+### 11.28.1 O agregado nunca executou um passo sequer (medido)
+
+`npm run validate:governance-enforcement` em `4c46c1d3c`, três medições em sequência:
+
+| identidade | resultado |
+|---|---|
+| sem identidade | `BLOCKED passos=0/64` — "identidade de run incompleta (runId,sourceFingerprint)" |
+| com `.current-run.json` (run criado pelo próprio repositório) | **ainda** `BLOCKED 0/64` — o agregado **não lê o ponteiro**; exige `GOVERNANCE_RUN_ID`/`GOVERNANCE_SOURCE_FINGERPRINT` no ambiente (`run-governance-enforcement.js:135-149`) |
+| com as duas variáveis do run real | `BLOCKED 0/64` — **autorização negada**: `INVENTARIO_NAO_ANCORADO, BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO, FECHAMENTO_SEM_PROVA_VALIDA` |
+
+Conclusão honesta: o `0/64` que aparece nos relatórios **não** significa que 64 gates estejam vermelhos — significa
+que a autorização nega ANTES do primeiro passo, pela âncora externa. É a mesma raiz de §11.22.3.
+
+O run de manutenção aberto para essa medição foi fechado como `SUPERSEDED` e o ponteiro removido.
+
+### 11.28.2 DEFEITO REAL encontrado no caminho: fechar o run não fechava o banco
+
+`close-run-context.js` gravava apenas `governance/.current-run.json`. Medido logo após fechar o run de
+manutenção:
+
+```
+ponteiro .current-run.json  → status=SUPERSEDED
+governance_runs (Postgres)  → status=CREATED
+```
+
+E `scripts/governance/lib/governed-run-status.js` declara, no próprio cabeçalho, que **"o banco (autoridade
+do desfecho)"** e que o ponteiro é sincronizado A PARTIR dele. Fechar só o ponteiro **inverte a
+autoridade** — a mesma classe de divergência que o H20 descreve (run fechado localmente, aberto no banco).
+
+**Correção** (`4037f4aac`): `fecharNoBanco()` atualiza `governance_runs.status` com o status declarado; o
+comando aplica ponteiro **e** banco, e falha de banco **nunca** é silenciosa (AVISO em stderr + `{ erro }`
+devolvido). Provas: medição end-to-end (`banco: 1 linha(s) com status=SUPERSEDED`, confirmada por consulta
+SQL depois de estar `CREATED`), 2 testes novos com injeção de dependência, os 6 existentes atualizados para
+`await main(...)` (main passou a ser assíncrono) — **8/8**, e a suíte inteira de governance **2359 passed,
+2 skipped**.
+
 ---
 
 ## 12. DECISÃO FINAL
