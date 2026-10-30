@@ -2126,6 +2126,32 @@ Não "consertei" de duas maneiras possíveis, porque as duas mudam política de 
 
 Registrado aqui, não na fila, para não criar item `pending` que eu não vou cumprir neste turno.
 
+## 11.31 Fecho de rodada: `dev` `c7ef74031` com 5 de 6 checks verdes e as 5 premissas remedidas
+
+### 11.31.1 Checks (run 40996140886 e irmãos, `dev` `c7ef74031`)
+
+| check | resultado |
+|---|---|
+| Jest | **SUCCESS** |
+| Frontend Tests | **SUCCESS** |
+| RAG Service Tests | **SUCCESS** |
+| E2E Playwright | **SUCCESS** (8/8) |
+| Dev Hardening CI | **SUCCESS** — `L0_COMPLETO` e `L1_AMPLO` `ALLOWED`; veredito `PASS_PARCIAL (completo=false)` |
+| Release Governance | FAILURE — chave Ed25519 ausente |
+
+### 11.31.2 As cinco premissas impedidas, remedidas (não repetidas)
+
+| item | medição de 2026-10-30 |
+|---|---|
+| `H15-DIST-RECIBO-STALE` | `validate:dist` FAIL — `check-dist-clean.sh` com dezenas de `AUSENTE`: não há envelope em `dist/`. Premissa válida. |
+| `H19-DIST-CAUSA-UNICA` | mesma medição; a causa única continua sendo payload ausente. Premissa válida. |
+| `H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE` | `validate:governance-chain` FAIL — `proof_signature`/`package_validation` com `conteudoIdentico=false`. Premissa válida. |
+| `P1-PROJECAO-FINAL-DIVERGE…` | `validate:final-status-projection` FAIL por `canonical_unreadable:missing` do scorecard; `ci:artifacts` **não** o produz (§11.30). Premissa válida e ampliada. |
+| `P1-AGREGADO-SEM-IDENTIDADE…` | `0/64` em **três** estados; o bloqueio é de AUTORIZAÇÃO, não de passos. Premissa válida e agora explicada. |
+
+Nenhum item mudou de status: todos seguem impedidos, mas nenhum segue com motivo narrativo — cada um tem
+agora o comando, o exit e a causa medidos em `c7ef74031`.
+
 ---
 
 ## 12. DECISÃO FINAL
