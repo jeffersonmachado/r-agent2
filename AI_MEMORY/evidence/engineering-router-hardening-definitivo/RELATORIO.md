@@ -2636,6 +2636,58 @@ replay. Nenhum corte de fonte antes de os testes adversariais 1–3 e 6 estarem 
 
 ---
 
+## 11.41 LRO Fase 2 (entrega): SSE com `Last-Event-ID` + autorização por operação
+
+### 11.41.1 O que foi entregue
+
+`api/modules/lro/routes.js` (montado em `registerRoutes.js` **e** `routeRegistry.js` — router fora da
+lista não é montado, `validate:route-mounts` PASS 64/64):
+
+| Endpoint | Contrato |
+|---|---|
+| `GET /api/lro/:id` | consulta REST da operação |
+| `GET /api/lro/:id/events` | SSE com `Last-Event-ID`/`?after=` para **replay sem lacuna**; `?snapshot=1` faz catch-up e encerra; heartbeat de 15 s |
+| `POST /api/lro/:id/transition` | comando com versão otimista e fencing; erro do núcleo puro volta como **409** com código |
+
+### 11.41.2 Segurança (menu não é autorização)
+
+Autorização é feita **por operação**, contra a `visibility_class` da própria linha, revalidada em
+**cada** subscribe e em **cada** replay. Tenant vem do ator autenticado, nunca da query. Operação de
+outro tenant responde **404** (não confirma existência).
+
+Medido em HTTP real (`tests/integration/lroRoutes.test.js`, banco descartável, **7/7 PASS**):
+
+| Caso | Resultado |
+|---|---|
+| `Last-Event-ID: 2` com eventos 1..3 | volta **só** `id: 3` (replay sem lacuna) |
+| sem cursor | volta 1, 2 em ordem |
+| operação de outro tenant | **404** `operation_not_found` |
+| ator PRODUCTION em operação DEVELOPMENT | **403** `classification_forbidden` |
+| `CREATED → COMPLETED` | **409** `TRANSICAO_INVALIDA` |
+| transição válida | **200**, e o evento `QUEUED` fica disponível no stream |
+| token inválido | **401** |
+
+**Defeito do meu fixture, não do produto:** a primeira versão do teste usava `role: 'engineer'` e
+recebia 403. A classificação vem de **`platformRole`** (`users.platform_role`), nunca do role do
+tenant (`experience-segregation.js`) — a política está correta e o teste passou a refleti-la. Isso
+reforça o achado já registrado: role de tenant não concede superfície de engenharia.
+
+### 11.41.3 Gates com a rota nova
+
+`validate:route-mounts` **PASS** (64/64) · `validate:experience-api-segregation` **PASS**
+(`productionTechnicalLeaks=0`, `supportEngineeringLeaks=0`, `directUrlBypasses=0`) ·
+`validate:visibility-policy` **PASS** (0 violações) · `validate:ai-memory` **PASS**.
+
+### 11.41.4 O que ainda NÃO existe (honesto)
+
+- **Adaptador QA Waves** (`LRO_QA_WAVES_MIRROR`): a execução real ainda vive no `Map` de processo;
+  o LRO já sabe persistir, mas ninguém escreve nele a partir do mesh.
+- **Dispatcher da outbox** (publicar `PENDING` e marcar `published_at` com backoff/DLQ).
+- **Feedback humano** (`lro_feedback_requests/responses`) — Fase 4.
+- Worker/retomada automática após crash (a base — lease, fencing, eventos, cursor — está pronta).
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
