@@ -2688,6 +2688,51 @@ reforça o achado já registrado: role de tenant não concede superfície de eng
 
 ---
 
+## 11.42 LRO Fase 3 (piloto): espelho do QA Waves atrás de flag, com progresso real
+
+### 11.42.1 O que foi ligado (e o que NÃO foi)
+
+`api/services/lro/qaWavesAdapter.js` + 3 pontos de instrumentação em `api/services/qaMeshService.js`
+(`queueMeshRun`): iniciar → marcar executando → progresso por cenário → finalizar. **Tudo atrás de
+`LRO_QA_WAVES_MIRROR` (default desligada)**: com a flag off o motor do QA Waves se comporta
+exatamente como antes — a fila em memória continua sendo a fonte autoritativa nesta fase.
+
+Pontos de progresso usam os callbacks REAIS do runner (`onScenarioComplete(meta.index/meta.total)`),
+não invenção de percentual. `recordProgress` no serviço grava progresso + evento `PROGRESS` + outbox
+na mesma transação, sem mudar de estado.
+
+### 11.42.2 Provas
+
+| Prova | Resultado |
+|---|---|
+| `recordProgress` grava progresso, emite `PROGRESS`, mantém `RUNNING` | **PASS** (real DB) |
+| progresso com `total` desconhecido | `percent: null`, `indeterminate: true` no evento (**PASS**) |
+| adapter: flag OFF ⇒ **zero** chamadas ao serviço LRO | **PASS** |
+| adapter: flag ON ⇒ operação `DEVELOPMENT`, `idempotencyKey=qa_waves:<execução>`, `total` = nº de cenários | **PASS** |
+| adapter: escopo sem lista ⇒ `total: null` (indeterminado) | **PASS** |
+| adapter: `NO_GO` ⇒ `COMPLETED` **com desfecho `NO_GO`**; desfecho nulo ⇒ `INCONCLUSIVE` | **PASS** |
+| adapter: falha do espelho **não propaga** | **PASS** |
+| suíte do adaptador + máquina de estados | **15/15 PASS** |
+
+### 11.42.3 Dois vermelhos PRÉ-EXISTENTES encontrados na varredura (não são meus, com A/B)
+
+| Suíte | Falha | A/B |
+|---|---|---|
+| `qa-mesh/__tests__/scheduler.test.js` | `reason` virou `bug_closure_blocked` onde o teste espera `pipeline_active` (2 casos) | falha com a minha alteração removida |
+| `qa-mesh/__tests__/meshRunner.test.js` | espera `repairPlanPath` num run **verde** | reproduzido com `qaMeshService.js` restaurado do **HEAD puro** |
+
+Ambos ficam fora dos gates padrão (`test:unit` roda só `tests/unit`; o L0b roda `tests/integration/engineering`),
+por isso nunca apareceram. Registrados na fila como decisão (`QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE`,
+`QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE`) — **nenhuma expectativa foi relaxada**.
+
+### 11.42.4 Pendências honestas do LRO
+
+Dispatcher da outbox (publicar `PENDING` com backoff/DLQ), feedback humano
+(`lro_feedback_requests/responses`), worker de retomada após crash e a UI DEVELOPMENT consumindo o SSE.
+A base (estado, eventos, cursor, lease/fencing, progresso, adaptador) está pronta e provada.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

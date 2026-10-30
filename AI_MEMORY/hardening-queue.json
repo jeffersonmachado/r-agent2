@@ -2773,6 +2773,22 @@
       "regressionTest": "qa-mesh/__tests__/scheduler.test.js",
       "verificationNote": "verificação pendente: decidir se o produto deve reportar bug_closure_blocked (fail-closed, provavelmente correto) ou se o teste deve passar a declarar a ordem dos guards; a expectativa NAO foi relaxada",
       "legacyStatus": "blocked_external"
+    },
+    {
+      "id": "QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE",
+      "title": "meshRunner.test.js espera repairPlanPath gerado num run sem falhas (vermelho pre-existente)",
+      "status": "blocked_external",
+      "state": "BLOCKED_EXTERNAL",
+      "legacyStatus": "blocked_external",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_MEDICAO",
+      "severityBasis": "suite fora dos gates padrao (nao roda em test:unit nem no L0b); nao bloqueia certificacao",
+      "severitySource": "medicao-2026-10-30",
+      "commit": "f171cbfcea8c",
+      "evidence": "MEDIDO 2026-10-30 em f171cbfcea8c: npx jest qa-mesh/__tests__/meshRunner.test.js -> 1 failed / 14 passed; 'executa 3 cenarios mockados e gera summary coerente' falha em expect(fs.existsSync(repairPlanPath)).toBe(true). A/B com api/services/qaMeshService.js RESTAURADO do HEAD puro (git show HEAD:... > arquivo, teste, arquivo restaurado) reproduz 1 failed -> NAO e causado pela instrumentacao LRO. Causa provavel: o repair plan so e escrito quando ha falha/plano de reparo, e o teste exige o arquivo num run verde.",
+      "blocked_reason": "DECISAO NECESSARIA: (a) o produto deve sempre emitir repairPlan (mesmo vazio) para dar previsibilidade ao consumidor, ou (b) o teste deve refletir que o arquivo so existe quando ha o que reparar. Nenhuma das duas e mudanca que eu deva fazer sem decisao — (b) altera expectativa de teste e (a) muda contrato de artefato.",
+      "regressionTest": "qa-mesh/__tests__/meshRunner.test.js",
+      "verificationNote": "verificacao pendente da decisao; expectativa NAO foi relaxada"
     }
   ],
   "schemaVersion": 2,

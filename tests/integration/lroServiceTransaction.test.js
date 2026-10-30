@@ -175,3 +175,35 @@ describe('LRO Fase 2 — transação, lease e fencing', () => {
     expect(depois.version).toBe(op.version);
   }, 60000);
 });
+
+describe('LRO Fase 2 — progresso real (sem mudar de estado)', () => {
+  test('recordProgress grava progresso, emite evento PROGRESS e mantém o status', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await novaOperacao();
+    await lro.transition(op.id, { to: 'QUEUED', actorId: 'jest' });
+    await lro.transition(op.id, { to: 'RUNNING', actorId: 'jest' });
+
+    const comProgresso = await lro.recordProgress(op.id, {
+      current: 3, total: 10, unit: 'scenario', phase: 'execution', actorId: 'jest',
+    });
+    expect(comProgresso.status).toBe('RUNNING');
+    expect(comProgresso.progress_current).toBe(3);
+    expect(comProgresso.progress_total).toBe(10);
+
+    const eventos = await lro.listEvents(op.id, { afterSeq: 0 });
+    expect(eventos.map((e) => e.type)).toEqual(['CREATED', 'QUEUED', 'RUNNING', 'PROGRESS']);
+    expect(eventos[3].payload).toMatchObject({ current: 3, total: 10, percent: 30, indeterminate: false });
+  }, 60000);
+
+  test('progresso com total desconhecido é INDETERMINADO e nunca vira 100%', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await novaOperacao();
+    const r = await lro.recordProgress(op.id, { current: 7, total: null, unit: 'scenario' });
+    expect(r.progress_total).toBeNull();
+    expect(r.indeterminate).toBe(true);
+
+    const eventos = await lro.listEvents(op.id, { afterSeq: 0 });
+    const progresso = eventos.find((e) => e.type === 'PROGRESS');
+    expect(progresso.payload).toMatchObject({ percent: null, indeterminate: true });
+  }, 60000);
+});

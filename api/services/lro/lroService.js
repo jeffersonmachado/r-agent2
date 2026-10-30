@@ -270,6 +270,77 @@ async function heartbeat(operationId, { owner, fencingToken, ttlMs = 60000 } = {
   });
 }
 
+/**
+ * Registra PROGRESSO sem mudar de estado (RUNNING continua RUNNING).
+ *
+ * Progresso é dado de trabalho real: `total` desconhecido fica NULL (indeterminado, nunca 100%).
+ * Emite evento `PROGRESS` e entrada de outbox na mesma transação — é isso que permite a UI
+ * reidratar depois de reconectar.
+ */
+async function recordProgress(operationId, {
+  current = null, total = null, unit = null, revision = null, phase = null, messageCode = null,
+  actorId = null, fencingToken = null,
+} = {}) {
+  const models = modelos();
+  const { getLroOperation, getLroEvent, getLroOutbox } = models;
+  const sequelize = getLroOperation().sequelize;
+
+  return sequelize.transaction(async (t) => {
+    const op = await getLroOperation().findByPk(operationId, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!op) throw codigoErro('OPERATION_NOT_FOUND', `operação inexistente: ${operationId}`);
+    const atual = op.get({ plain: true });
+
+    if (fencingToken !== null && fencingToken !== undefined
+        && Number(fencingToken) < Number(atual.fencing_token)) {
+      throw codigoErro('FENCE_STALE', `fence ${fencingToken} < atual ${atual.fencing_token}`);
+    }
+
+    const progresso = normalizeProgress({ current, total, unit });
+    const patch = {
+      progress_current: progresso.current,
+      progress_total: progresso.total,
+      progress_unit: progresso.unit,
+      version: Number(atual.version) + 1,
+    };
+    if (revision !== null && revision !== undefined) patch.progress_revision = Number(revision);
+    if (phase) patch.phase = phase;
+    if (messageCode) patch.message_code = messageCode;
+    await op.update(patch, { transaction: t });
+
+    const [linhasSeq] = await sequelize.query(
+      'SELECT COALESCE(MAX(seq), 0) + 1 AS proximo FROM lro_events WHERE operation_id = :id',
+      { replacements: { id: operationId }, transaction: t },
+    );
+    const proximo = linhasSeq && linhasSeq[0] ? linhasSeq[0].proximo : 1;
+
+    const evento = await getLroEvent().create({
+      operation_id: operationId,
+      seq: Number(proximo),
+      type: 'PROGRESS',
+      payload: {
+        current: progresso.current,
+        total: progresso.total,
+        unit: progresso.unit,
+        percent: progresso.percent,
+        indeterminate: progresso.indeterminate,
+        phase: phase || atual.phase || null,
+      },
+      actor_id: actorId,
+    }, { transaction: t });
+
+    await getLroOutbox().create({
+      operation_id: operationId,
+      event_id: evento.id,
+      topic: TOPIC,
+      payload: { operationId, seq: Number(proximo), type: 'PROGRESS' },
+      status: 'PENDING',
+      available_at: agora(),
+    }, { transaction: t });
+
+    return { ...atual, ...patch, seq: Number(proximo), indeterminate: progresso.indeterminate };
+  });
+}
+
 /** Eventos em ordem de `seq`; `afterSeq` é o cursor de replay (Last-Event-ID). */
 async function listEvents(operationId, { afterSeq = 0, limit = 500, tenantId = null } = {}) {
   const models = modelos();
@@ -295,5 +366,6 @@ module.exports = {
   transition,
   claimLease,
   heartbeat,
+  recordProgress,
   listEvents,
 };

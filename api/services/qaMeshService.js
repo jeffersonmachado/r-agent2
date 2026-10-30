@@ -7,6 +7,7 @@ const os = require('os');
 const { loadRegistry, refreshRegistry, runMesh, loadHistory, normalizeExecutionRecord } = require('../../qa-mesh/meshRunner');
 const { buildScheduleStatus, runScheduledMesh, startScheduler, setSchedulerEnabled } = require('../../qa-mesh/meshScheduler');
 const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecution } = require('../../qa-mesh/executionQueue');
+const lroQaWaves = require('./lro/qaWavesAdapter');
 const { emitEvent } = require('./websocketService');
 const qaWavesLogger = require('../utils/qaWavesLogger');
 const logger = require('../utils/logger');
@@ -345,6 +346,16 @@ function queueMeshRun(options = {}) {
     acquireMeshLock();
 
     try {
+      // LRO (docs/architecture/lro-qa-waves.md §5): espelho DURÁVEL da execução, atrás de
+      // LRO_QA_WAVES_MIRROR. Flag off ⇒ nada muda (a fila em memória continua autoritativa);
+      // falha do espelho nunca derruba a execução.
+      const lroOperationId = await lroQaWaves.iniciar({
+        tenantId,
+        executionId,
+        scenarioIds: options.scenarioIds,
+      });
+      await lroQaWaves.marcarExecutando(lroOperationId);
+
       qaWavesLogger.info(`[RUN] Iniciando execução`, { executionId, tenantId, scenarioIds: options.scenarioIds });
       const result = await runMesh({
       executionId,
@@ -373,6 +384,7 @@ function queueMeshRun(options = {}) {
       },
       onScenarioComplete(meta) {
         qaWavesLogger.info(`[RUN] Cenário concluído: ${meta.scenarioId}`, { executionId, index: meta.index, total: meta.total });
+        void lroQaWaves.progresso(lroOperationId, { index: meta.index, total: meta.total });
         updateExecution(executionId, {
           progress: meta.total > 0 ? Math.round((meta.index / meta.total) * 100) : 100,
           currentScenarioId: meta.scenarioId,
@@ -391,6 +403,8 @@ function queueMeshRun(options = {}) {
     });
     const finalStatus = result?.summary?.goNoGo === 'NO_GO' ? 'failed' : 'completed';
     qaWavesLogger.info(`[RUN] Execução finalizada: ${finalStatus}`, { executionId, goNoGo: result?.summary?.goNoGo });
+    // Conclusão NÃO é aprovação: o desfecho real (GO/NO_GO/INCONCLUSIVE) vai para a operação LRO.
+    await lroQaWaves.finalizar(lroOperationId, { goNoGo: result?.summary?.goNoGo || null });
     updateExecution(executionId, {
       status: finalStatus,
       finishedAt: new Date().toISOString(),
