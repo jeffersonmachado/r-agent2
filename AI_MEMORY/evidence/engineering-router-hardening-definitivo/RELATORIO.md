@@ -2393,6 +2393,51 @@ evidência, que é decisão de governança, não de agente.
 
 ---
 
+## 11.37 Corrida na asserção de KPI vertical (não era regressão) e o estado do CI em `11765c597`
+
+### 11.37.1 O vermelho que apareceu num commit que só mudou markdown
+
+`Frontend Tests` reprovou o commit `d5cd34f04` (que altera **apenas** `RELATORIO.md`):
+
+```
+FAIL src/pages/VerticalOperationalDashboardPage.test.jsx > … > exibe o card de Clínica com KPIs para a vertical saude
+TestingLibraryElementError: Unable to find an element with the text: 3
+```
+
+O teste esperava só o **título estático** do card (`getByRole('heading', { name: 'Clínica' })`) e em seguida
+afirmava o **valor do KPI** com `getByText` síncrono — mas o valor vem de `getClinicDashboard()` assíncrono.
+Quando a resposta do mock demora, o título já está na tela e o número ainda não. É a mesma classe do
+`SecurityIntelligencePage` (`f884f94fb`), não regressão de produto.
+
+Prova determinística (mocks com atraso de 80 ms; arquivos temporários removidos depois):
+
+| Variante | Resultado |
+|---|---|
+| asserção ANTIGA (`getByText`) + atraso | **FAIL** 1/10 — exatamente `Unable to find an element with the text: 3` |
+| asserção NOVA (`await findByText`) + mesmo atraso | **PASS** 10/10 |
+| arquivo real (`VerticalOperationalDashboardPage.test.jsx`) | **PASS** 10/10 |
+
+Convertidas as 9 asserções de **valor** (`3, 9, 18, 33%, 120, 88%, 3, 40%, 2.5d`); as de **rótulo**
+estático continuam síncronas.
+
+### 11.37.2 CI em `11765c597` (dev)
+
+| Check | Resultado |
+|---|---|
+| Dev Hardening CI (L0 + L1 governança) | **SUCCESS** |
+| Jest (unit + flow + rpa) | **SUCCESS** (9m03s) |
+| Jest Integration (Postgres real) | **SUCCESS** |
+| E2E Playwright | **SUCCESS** |
+| Frontend Tests | **SUCCESS** |
+| RAG Service Tests | **SUCCESS** |
+| Release Governance — ENVELOPE + PAYLOAD | **FAILURE** — falta `RAP_RELEASE_ATTESTATION_PRIVATE_KEY` (chave do dono; inalterado) |
+
+5 de 6 verdes; o único vermelho é o gate que depende de segredo privado do dono. O `Dev Hardening CI` verde é
+o que importa para esta rodada: ele roda o L0 oficial e os gates de governança **com a fila alterada**
+(165 itens, 8 impedidos) e com a ferramenta nova de backfill.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
