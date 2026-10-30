@@ -2853,6 +2853,44 @@ passou a garantir. Ambas as entradas da fila foram de `BLOCKED_EXTERNAL` para `V
 
 ---
 
+## 11.47 LRO — UI DEVELOPMENT consumindo o stream (reconexão com `Last-Event-ID` provada)
+
+`frontend/src/shared/useLroStream.js` + 4 testes (Vitest).
+
+**Decisão técnica:** `EventSource` **não** envia cabeçalhos, e `/api/lro/:id/events` exige
+`Authorization`. Token na query string vazaria credencial em log/proxy — então o hook usa
+`fetch` + `ReadableStream` e manda `Authorization`, `X-Tenant-Id` e `Last-Event-ID` no cabeçalho.
+
+| Prova | Resultado |
+|---|---|
+| eventos entregues PROGRESSIVAMENTE (callback por evento, `seq` final exposto) | PASS |
+| reconexão manda `Last-Event-ID: 2` e recebe **só** o 3 — sem lacuna e **sem duplicar** | PASS |
+| `enabled: false` não abre conexão | PASS |
+| HTTP 403 não vira "conectado" (estado `closed`) | PASS |
+
+Frontend completo: **142 arquivos, 1070 testes, verde**.
+
+### 11.47.1 Estado final do LRO (o que existe e está provado)
+
+| Camada | Estado |
+|---|---|
+| Contrato, migrations reversíveis (cascata), modelos | provado em Postgres descartável |
+| Núcleo puro de estados (terminal imutável, `COMPLETED ≠ GO`, progresso indeterminado) | 10/10 |
+| Transação: lock, versão otimista, fencing, evento+outbox atômicos, progresso | 10/10 |
+| Rotas REST + SSE com replay e autorização por operação | 9/9 |
+| Feedback humano (prazo, versão, idempotência, autorização) | 9/9 |
+| Outbox: backoff, DLQ, `SKIP LOCKED` | 4/4 |
+| Recuperação de órfãs (`SLOW != STUCK != DEAD`, fencing avança) | 6/6 |
+| Piloto QA Waves espelhado atrás de `LRO_QA_WAVES_MIRROR` (off) | 15/15 |
+| UI: hook de stream com reconexão sem lacuna | 4/4 |
+
+**Total: 67 testes próprios do LRO + 147 em `qa-mesh`/`api/services/lro`, todos verdes.**
+
+O que continua fora do meu alcance: `L2`/`L3` e `RELEASE_CERTIFICATION` (prova assinada por
+autoridade ancorada + `RAP_RELEASE_ATTESTATION_PRIVATE_KEY`).
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
