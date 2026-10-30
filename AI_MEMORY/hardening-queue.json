@@ -2583,6 +2583,45 @@
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "evidência de wave vencida degrada VALIDATED->STALE no coverage gate; é insumo de release, não cosmético",
       "severitySource": "medicao-ci-2026-10-25"
+    },
+    {
+      "id": "E2E-SUPPORT-CENARIO1-PRECONDICAO",
+      "title": "support-agent-flow cenário 1: guard de pré-condição era código morto (ticket-list só existe com chamado)",
+      "status": "done",
+      "legacyStatus": "done",
+      "state": "VERIFIED",
+      "commit": "83dfe295a",
+      "evidence": "RELATORIO §11.23.1/§11.23.5. Causa medida no artefato do run 40946909310: snapshot da página com 'Nenhum chamado disponível' e locator ticket-list ausente; SupportTicketList.jsx:187 só renderiza o contêiner com ao menos um chamado, e a asserção vinha ANTES do guard count===0. Correção: garantir o chamado com o mesmo helper do cenário 2 (asserção intacta). CI após: support-agent-flow 6/6, cenário 1 em 4,2 s.",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "vermelho de E2E por pré-condição não declarada; mascarava o motivo real (locator em vez de dado ausente)",
+      "severitySource": "medicao-ci-2026-10-29"
+    },
+    {
+      "id": "E2E-REPLAY-DOMINIO-E-TAB",
+      "title": "qa-waves-replay: jornada vive em outro domínio e o clique num tab inexistente consumia 420 s",
+      "status": "done",
+      "legacyStatus": "done",
+      "state": "VERIFIED",
+      "commit": "4c46c1d3c",
+      "evidence": "RELATORIO §11.26. Duas causas: (a) a sidebar mostra SÓ o domínio selecionado (QaWavesPage.jsx:321-322) e a jornada de suporte vive em `core` enquanto a árvore abria em `beauty` — prova no run 40975061143 (API com 10 domínios/temSupport=true, DOM com 2 jornadas beauty); (b) o tab 'Cenários' não existe mais (virou seção) e o clique sem timeout queimava os 420 s. Correções: resolver o domínio pela API e clicar no pill; remover o clique; esperas limitadas. CI após: qa-waves-replay verde em 4,4 min, E2E 8/8.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "spec de replay RPA inviável de passar; era o único vermelho do job E2E",
+      "severitySource": "medicao-ci-2026-10-29"
+    },
+    {
+      "id": "JOURNEY-STORE-ESCONDE-DERIVADAS",
+      "title": "QA Waves: uma jornada salva escondia TODAS as derivadas dos cenários (produto)",
+      "status": "done",
+      "legacyStatus": "done",
+      "state": "VERIFIED",
+      "commit": "0d9e1b927",
+      "evidence": "RELATORIO §11.24. qaWavesService.buildJourneyTreeWithStatus usava `storedJourneys.length > 0 ? storedJourneys : derivadas`: com journey-store de 2 jornadas beauty a API devolvia SÓ essas 2, embora a árvore derivada tenha 10 domínios/253 jornadas (incluindo core::Support Ticket Flow). Correção: mergeJourneyStores (derivadas são base, salva sobrepõe mesmo id+vertical). Provas: serviço real 10 domínios/253 jornadas; 3 testes novos; mutação reintroduzindo a precedência antiga falha com Expected core::support_ticket_flow; routes+serviço 97/97.",
+      "severity": "P1",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "perda de visibilidade de 251 jornadas na superfície DEVELOPMENT de QA Waves; bloqueava E2E de replay RPA",
+      "severitySource": "medicao-servico-2026-10-29"
     }
   ],
   "schemaVersion": 2,
