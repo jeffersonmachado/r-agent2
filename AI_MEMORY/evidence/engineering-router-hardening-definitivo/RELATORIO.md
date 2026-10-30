@@ -1975,6 +1975,48 @@ andamento (verde no mesmo commit anterior), `Release Governance` FAILURE (âncor
 3. **Toda espera precisa de limite**: três vezes o vermelho foi "locator sem timeout"; hoje todas as
    esperas críticas da spec têm prazo e nomeiam o que faltou.
 
+## 11.27 Duas premissas da fila foram falsificadas por medição (e corrigidas)
+
+### 11.27.1 "GitHub Actions bloqueado por budget" — NÃO está (item fechado)
+
+O item `MISSAO-B9-CI-GITHUB-ACTIONS` afirmava, desde 2026-10-14, que todo push falhava em 3–5 s sem
+executar job por limite de gastos. Medido em 2026-10-30 no `dev` `4c46c1d3c`:
+
+| workflow | resultado |
+|---|---|
+| Jest | **SUCCESS** |
+| Frontend Tests | **SUCCESS** |
+| RAG Service Tests | **SUCCESS** |
+| E2E Playwright | **SUCCESS 8/8** (6,9 min) |
+| Dev Hardening CI | **SUCCESS**, veredito `PASS_PARCIAL` (`L0-suite-oficial` exit=0 em 475,9 s, `L0b` exit=0 em 495,3 s) |
+
+Nenhuma anotação de "Actions budget" em nenhum run. O único vermelho restante é
+`Release Governance — ENVELOPE + PAYLOAD`, e a causa **não é billing**: os jobs `Governance Core`
+(Node 20 e 22) falham no passo *"Provisionar chave de attestation Ed25519 (runtime root, fora do
+checkout)"* — falta `RAP_RELEASE_ATTESTATION_PRIVATE_KEY` — e todo o resto fica `skipped`; o `Release Gate`
+falha em *"Baixar a atestação do preflight de âncoras"*. Item fechado com essa causa apontada para
+`REQUIRED-TESTS-ANCORA-EXTERNA`.
+
+### 11.27.2 "L0_COMPLETO DENIED" — virou ALLOWED (mas o veredito é PARCIAL)
+
+Registro anterior (§11.22.3) dizia `DENIED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO,
+TESTE_DIRECIONADO_PENDENTE)`. Hoje:
+
+```
+B autorizacao TESTES_NEGATIVOS_REGRESSAO: ALLOWED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO)
+C autorizacao L0_COMPLETO:               ALLOWED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO)
+D autorizacao L1_AMPLO:                  ALLOWED (BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO)
+veredito=PASS_PARCIAL (completo=false)
+```
+
+O `TESTE_DIRECIONADO_PENDENTE` desapareceu (os P0/P1 não estão abertos sem teste direcionado); o que
+mantém `completo=false` é **apenas** a classe de bloqueio externo declarada. Ou seja: **todos os gates
+L0/L1 passam** — o que impede o veredito completo é a âncora, não o código.
+
+Correção de honestidade sobre a rodada anterior: eu descrevi o L0 como `DENIED` e isso **era verdade no
+commit de então** (`dd379d820`); no commit atual ele é `ALLOWED`. Registro os dois estados para que a
+auditoria não leia a mudança como contradição.
+
 ---
 
 ## 12. DECISÃO FINAL
