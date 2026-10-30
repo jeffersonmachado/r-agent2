@@ -27,7 +27,8 @@ function skipIfUnavailable() {
   });
 }
 
-const migration = require('../../api/db/migrations/20261030120000-create-lro-core');
+const migrationCore = require('../../api/db/migrations/20261030120000-create-lro-core');
+const migrationFeedback = require('../../api/db/migrations/20261030140000-create-lro-feedback');
 
 beforeAll(async () => {
   try {
@@ -89,19 +90,29 @@ describe('LRO Fase 1 — schema durável e reversível', () => {
     ).rejects.toThrow();
   }, 60000);
 
-  test('a migration é REVERSÍVEL: down remove, up recria, dados sobrevivem ao ciclo? não — e isso é o contrato', async () => {
+  test('migrations são REVERSÍVEIS em CASCATA (a ordem inversa é obrigatória por causa das FKs)', async () => {
     if (skipIfUnavailable()) return;
     const qi = sequelize.getQueryInterface();
+    const Sequelize = sequelize.Sequelize || require('sequelize');
 
-    await migration.down(qi, sequelize.Sequelize || require('sequelize'));
+    // ACHADO 2026-10-30: reverter SÓ a migration core falha porque `lro_feedback_requests`
+    // referencia `lro_operations`. Migração tem de ser revertida na ordem INVERSA à aplicação —
+    // o teste passou a provar a cascata em vez de assumir que cada `down` é isolado.
+    await migrationFeedback.down(qi, Sequelize);
+    await migrationCore.down(qi, Sequelize);
+
+    expect(await tabelaExiste('public.lro_feedback_responses')).toBe(false);
+    expect(await tabelaExiste('public.lro_feedback_requests')).toBe(false);
     expect(await tabelaExiste('public.lro_operations')).toBe(false);
     expect(await tabelaExiste('public.lro_events')).toBe(false);
     expect(await tabelaExiste('public.lro_outbox')).toBe(false);
 
-    await migration.up(qi, sequelize.Sequelize || require('sequelize'));
+    await migrationCore.up(qi, Sequelize);
+    await migrationFeedback.up(qi, Sequelize);
+
     expect(await tabelaExiste('public.lro_operations')).toBe(true);
-    expect(await tabelaExiste('public.lro_events')).toBe(true);
-    expect(await tabelaExiste('public.lro_outbox')).toBe(true);
+    expect(await tabelaExiste('public.lro_feedback_requests')).toBe(true);
+    expect(await tabelaExiste('public.lro_feedback_responses')).toBe(true);
   }, 120000);
 
   test('estado + evento + outbox são graváveis no mesmo fluxo', async () => {

@@ -2803,6 +2803,12 @@ Somando as fases, o LRO tem hoje **56 testes próprios** (10 núcleo puro + 4 sc
 10 transação/lease/fencing + 9 rotas + 15 adaptador/núcleo + 9 feedback + 4 outbox), todos verdes, a
 maioria contra PostgreSQL real em banco descartável.
 
+**Achado na regressão consolidada (2026-10-30):** reverter **só** a migration core falha, porque
+`lro_feedback_requests` tem FK para `lro_operations`. Migração se reverte na ordem **inversa** à
+aplicação — o teste passou a provar a cascata (`feedback.down` → `core.down` → `core.up` →
+`feedback.up`) em vez de assumir `down` isolado. Sem essa correção o teste de reversibilidade mentia
+por omissão de dependência.
+
 **Ainda falta** (honesto): worker de retomada de operação órfã (lease vencido ⇒ reconciliação
 auditada) e UI DEVELOPMENT consumindo o SSE.
 
