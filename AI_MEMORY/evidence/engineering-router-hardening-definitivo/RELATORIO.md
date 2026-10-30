@@ -2733,6 +2733,55 @@ A base (estado, eventos, cursor, lease/fencing, progresso, adaptador) está pron
 
 ---
 
+## 11.43 LRO Fase 4 (feedback humano): "silêncio nunca aprova" provado em 9 casos adversariais
+
+### 11.43.1 O que entrou
+
+Migration `20261030140000-create-lro-feedback.js` (reversível) com `lro_feedback_requests` (prazo,
+opções, schema de resposta, **versão da operação**) e `lro_feedback_responses` (ator, decisão,
+`idempotency_key`, versão) — índice único `(request_id, idempotency_key)`. Serviço
+`api/services/lro/lroFeedbackService.js` (`requestFeedback`, `respond`, `expireOverdue`) e duas rotas
+REST (`POST /api/lro/:id/feedback`, `POST /api/lro/feedback/:requestId/respond`).
+
+`transition()` passou a aceitar **transação externa** para que "resposta + fechamento do pedido +
+avanço da operação" sejam atômicos.
+
+### 11.43.2 Matriz adversarial (#4) — 9/9 em PostgreSQL real
+
+| Caso | Resultado |
+|---|---|
+| pedido move a operação para `WAITING_FEEDBACK` e grava a versão do momento | PASS |
+| resposta de **outro tenant** | `FEEDBACK_NAO_ENCONTRADO`, operação intacta |
+| ator **sem autorização** | `FEEDBACK_NAO_AUTORIZADO`, operação intacta |
+| resposta **tardia** | pedido vira `EXPIRED`, operação **permanece** em `WAITING_FEEDBACK` |
+| **versão obsoleta** (operação andou depois do pedido) | `FEEDBACK_VERSAO_OBSOLETA` |
+| resposta válida | pedido `ANSWERED`, operação volta a `RUNNING` |
+| reenvio com a **mesma** idempotency key | `replayed: true`, **1** linha de resposta |
+| segunda resposta com **outra** chave | `FEEDBACK_JA_RESPONDIDO` |
+| `defer` | operação continua em `WAITING_FEEDBACK` (não é aprovação) |
+
+Rotas: 9/9 (inclui `201` ao abrir pedido, `403` para ator não autorizado via HTTP, `409` no comando
+ilegal, `401` sem token). `validate:route-mounts` PASS (64/64).
+
+### 11.43.3 Três defeitos MEUS, achados pelo próprio teste
+
+1. **Versão gravada antes da transição** — o ato de abrir o pedido já a deixava obsoleta ("pedido v2,
+   operação v3") e **nenhuma** resposta podia ser aceita. Passou a gravar a versão **pós-transição**,
+   na mesma transação.
+2. **`EXPIRED` desfeito pelo rollback** — marcar e lançar na mesma transação revertia a marcação
+   (pedido voltava a `PENDING`). A expiração agora commita em transação própria **antes** da recusa.
+3. **Deadlock de si mesmo** — a correção do item 2 abria uma segunda transação segurando o
+   `FOR UPDATE` da mesma linha: travava até o timeout. O prazo passou a ser verificado **antes** do
+   lock, e dentro da transação só há recusa defensiva.
+
+### 11.43.4 Pendências do LRO (o que ainda falta, sem maquiar)
+
+Dispatcher da outbox (publicar `PENDING` com backoff/DLQ), worker de retomada após crash
+(reconciliação de operação órfã) e UI DEVELOPMENT consumindo o SSE. A base — estado, eventos, cursor,
+lease/fencing, progresso, feedback e autorização — está pronta e provada em banco real.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```

@@ -171,6 +171,54 @@ describe('LRO rotas — entrega e segurança', () => {
     expect(corpo).toMatch(/event: QUEUED/);
   }, 60000);
 
+  test('feedback: abre pedido (201) e resposta autorizada devolve a operação em RUNNING', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await criar();
+    await lro.transition(op.id, { to: 'QUEUED', actorId: 'jest' });
+    await lro.transition(op.id, { to: 'RUNNING', actorId: 'jest' });
+
+    const aberto = await fetch(`${base}/api/lro/${op.id}/feedback`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'engineer', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assigneeActorId: 'agent-engineer', options: [{ id: 'aprovar' }] }),
+    });
+    expect(aberto.status).toBe(201);
+    const { requestId, operation } = await aberto.json();
+    expect(operation.status).toBe('WAITING_FEEDBACK');
+
+    const respondido = await fetch(`${base}/api/lro/feedback/${requestId}/respond`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'engineer', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision: 'approve', idempotencyKey: 'via-rota-1' }),
+    });
+    expect(respondido.status).toBe(200);
+    const corpo = await respondido.json();
+    expect(corpo.replayed).toBe(false);
+    expect(corpo.operation.status).toBe('RUNNING');
+  }, 60000);
+
+  test('feedback: ator não autorizado recebe 403 e a operação não avança', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await criar();
+    await lro.transition(op.id, { to: 'QUEUED', actorId: 'jest' });
+    await lro.transition(op.id, { to: 'RUNNING', actorId: 'jest' });
+
+    const aberto = await (await fetch(`${base}/api/lro/${op.id}/feedback`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'engineer', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assigneeActorId: 'outra-pessoa' }),
+    })).json();
+
+    const resposta = await fetch(`${base}/api/lro/feedback/${aberto.requestId}/respond`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${TOKEN}`, 'X-Test-Role': 'engineer', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision: 'approve', idempotencyKey: 'nao-autorizado' }),
+    });
+    expect(resposta.status).toBe(403);
+    expect((await resposta.json()).error).toBe('FEEDBACK_NAO_AUTORIZADO');
+    expect((await lro.getOperation(op.id)).status).toBe('WAITING_FEEDBACK');
+  }, 60000);
+
   test('sem token não há acesso (401)', async () => {
     if (skipIfUnavailable()) return;
     const op = await criar();

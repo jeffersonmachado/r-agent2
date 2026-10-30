@@ -113,6 +113,8 @@ const getCrmRecord = require('./CrmRecord');
 const getLroOperation = require('./LroOperation');
 const getLroEvent = require('./LroEvent');
 const getLroOutbox = require('./LroOutbox');
+const getLroFeedbackRequest = require('./LroFeedbackRequest');
+const getLroFeedbackResponse = require('./LroFeedbackResponse');
 const getMarketingForm = require('./MarketingForm');
 const getMarketingLead = require('./MarketingLead');
 const getMarketingFormSubmission = require('./MarketingFormSubmission');
@@ -343,6 +345,8 @@ const CrmRecord = () => getCrmRecord();
 const LroOperation = () => getLroOperation();
 const LroEvent = () => getLroEvent();
 const LroOutbox = () => getLroOutbox();
+const LroFeedbackRequest = () => getLroFeedbackRequest();
+const LroFeedbackResponse = () => getLroFeedbackResponse();
 const MarketingForm = () => getMarketingForm();
 const MarketingLead = () => getMarketingLead();
 const MarketingFormSubmission = () => getMarketingFormSubmission();
@@ -1059,6 +1063,8 @@ module.exports = {
   LroOperation,
   LroEvent,
   LroOutbox,
+  LroFeedbackRequest,
+  LroFeedbackResponse,
   MarketingForm,
   MarketingLead,
   MarketingFormSubmission,
@@ -1271,6 +1277,8 @@ module.exports = {
   getLroOperation,
   getLroEvent,
   getLroOutbox,
+  getLroFeedbackRequest,
+  getLroFeedbackResponse,
   getMarketingForm,
   getMarketingLead,
   getMarketingFormSubmission,

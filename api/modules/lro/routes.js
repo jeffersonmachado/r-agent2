@@ -16,6 +16,7 @@ const { requireAuth } = require('../../middleware/auth');
 const { checkClassification } = require('../../middleware/requireClassification');
 const logger = require('../../utils/logger');
 const lroService = require('../../services/lro/lroService');
+const lroFeedback = require('../../services/lro/lroFeedbackService');
 
 const HEARTBEAT_MS = 15000;
 const PAGINA_EVENTOS = 200;
@@ -171,6 +172,62 @@ function criarRouterLro() {
       return next(error);
     }
     return undefined;
+  });
+
+  /** Abre um pedido de decisão humana (WAITING_FEEDBACK só existe com pedido identificado). */
+  router.post('/api/lro/:id/feedback', express.json({ limit: '64kb' }), async (req, res, next) => {
+    try {
+      const ctx = await autorizar(req, res);
+      if (!ctx) return undefined;
+      const { assigneeActorId, assigneeRole, options, responseSchema, deadlineAt } = req.body || {};
+
+      const aberto = await lroFeedback.requestFeedback(ctx.operacao.id, {
+        tenantId: ctx.tenantId,
+        requestedBy: req.agent ? req.agent.id : null,
+        actorId: req.agent ? req.agent.id : null,
+        assigneeActorId: assigneeActorId || null,
+        assigneeRole: assigneeRole || null,
+        options: options || null,
+        responseSchema: responseSchema || null,
+        deadlineAt: deadlineAt || null,
+      });
+      return res.status(201).json({ requestId: aberto.requestId, operation: aberto.operation });
+    } catch (error) {
+      if (error.code === 'FEEDBACK_OPERACAO_NAO_ESTA_RUNNING') {
+        return res.status(409).json({ error: error.code, message: error.message });
+      }
+      if (error.code === 'OPERATION_NOT_FOUND') return res.status(404).json({ error: 'operation_not_found' });
+      return next(error);
+    }
+  });
+
+  /** Responde um pedido. Silêncio/tempo esgotado nunca aprova; códigos do serviço viram 403/409. */
+  router.post('/api/lro/feedback/:requestId/respond', express.json({ limit: '64kb' }), async (req, res, next) => {
+    try {
+      const auth = requireAuth(req);
+      if (!auth || auth.valid === false) return res.status(401).json({ error: 'unauthorized' });
+      req.agent = req.agent || auth.agent;
+      const { tenantFromRequest } = require('../../../lib/rpaSecurity');
+      const tenantId = tenantFromRequest(req, auth);
+      if (!tenantId) return res.status(400).json({ error: 'tenant_required' });
+
+      const { decision, optionId, payload, idempotencyKey } = req.body || {};
+      const respondido = await lroFeedback.respond(req.params.requestId, {
+        tenantId,
+        actorId: req.agent ? req.agent.id : null,
+        decision,
+        optionId: optionId || null,
+        payload: payload || null,
+        idempotencyKey,
+        actorRoles: req.agent && req.agent.role ? [String(req.agent.role)] : [],
+      });
+      return res.json(respondido);
+    } catch (error) {
+      if (error.code === 'FEEDBACK_NAO_AUTORIZADO') return res.status(403).json({ error: error.code });
+      if (error.code === 'FEEDBACK_NAO_ENCONTRADO') return res.status(404).json({ error: error.code });
+      if (error.code && /^FEEDBACK_/.test(error.code)) return res.status(409).json({ error: error.code, message: error.message });
+      return next(error);
+    }
   });
 
   /** Comandos com escopo: só transições legais; versão otimista e fencing opcionais. */

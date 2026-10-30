@@ -119,13 +119,15 @@ async function getOperation(id, { tenantId = null } = {}) {
  * @throws {{code:string}} VERSION_CONFLICT, FENCE_STALE, ou o código do núcleo puro
  */
 async function transition(operationId, {
-  to, actorId = null, context = {}, expectedVersion = null, fencingToken = null,
+  to, actorId = null, context = {}, expectedVersion = null, fencingToken = null, transaction = null,
 } = {}) {
   const models = modelos();
   const { getLroOperation, getLroEvent, getLroOutbox } = models;
   const sequelize = getLroOperation().sequelize;
 
-  return sequelize.transaction(async (t) => {
+  // `transaction` permite compor a transição com OUTRA escrita na MESMA transação (é o caso da
+  // resposta humana: resposta + fechamento do pedido + avanço da operação precisam ser atômicos).
+  const executar = async (t) => {
     const op = await getLroOperation().findByPk(operationId, { transaction: t, lock: t.LOCK.UPDATE });
     if (!op) throw codigoErro('OPERATION_NOT_FOUND', `operação inexistente: ${operationId}`);
 
@@ -207,7 +209,10 @@ async function transition(operationId, {
     const depois = await getLroOperation().findByPk(operationId, { transaction: t });
     const plain = depois.get({ plain: true });
     return { ...plain, fencingToken: plain.fencing_token, warnings: decisao.warnings };
-  });
+  };
+
+  if (transaction) return executar(transaction);
+  return sequelize.transaction(executar);
 }
 
 /**
