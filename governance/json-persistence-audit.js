@@ -87,6 +87,10 @@ const CLASSIFIED = {
   // estes dois são EXPORT regenerável a cada execução dos validadores.
   'reports/bug-closure-status.json': 'DB_CANONICAL_JSON_EXPORT',
   'reports/hardening-queue-migration.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Backfill da suíte de regressão (2026-10-30): relatório DERIVADO da fila oficial,
+  // regenerado a cada `node scripts/governance/backfill-regression-tests.js`. A fonte
+  // canônica dos fechamentos continua sendo `AI_MEMORY/hardening-queue.json`.
+  'reports/regression-test-backfill.json': 'DB_CANONICAL_JSON_EXPORT',
   // Veredito PRÓPRIO do gate agregado (P1: antes só existia o exit code do
   // processo que invocava a cadeia `&&`).
   'reports/governance-enforcement-verdict.json': 'DB_CANONICAL_JSON_EXPORT',
@@ -300,6 +304,10 @@ function classifyByPattern(norm, writer) {
   // `audit:json-persistence` inteiro. Não é estado de banco nem cache: é configuração versionada,
   // imutável em runtime — mesma classe dos demais arquivos de `config/`.
   if (base === 'mandatory-gate-dependencies.json') return 'STATIC_VERSIONED_CONFIG';
+  // Relatório derivado do backfill da suíte de regressão (2026-10-30). O scanner estático
+  // resolve `path.join` em variável para o BASENAME, então a entrada por caminho em
+  // CLASSIFIED não é alcançada — a regra por basename é o que classifica de fato.
+  if (base === 'regression-test-backfill.json') return 'DB_CANONICAL_JSON_EXPORT';
   if (base === 'latest.json' || base === 'index.json' || /learning-routine|cenario2|demo/.test(base) || /demo/.test(writer)) return 'DB_CANONICAL_JSON_EXPORT';
   return null;
 }
