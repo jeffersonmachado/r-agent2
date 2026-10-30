@@ -2578,6 +2578,64 @@ ancorada, que é do dono. Não é flakiness, não é teste faltando, não é bug
 
 ---
 
+## 11.40 LRO Fase 1: estado durável provado em Postgres descartável, com migration reversível
+
+Executado após autorização do dono para "tudo o que for necessário até o fim da missão". Sequência TDD:
+teste vermelho → implementação → prova real.
+
+### 11.40.1 Núcleo puro (`api/services/lro/lroStateMachine.js`)
+
+Sem I/O, sem banco, sem relógio (`now` é injetado). Encarna as invariantes do mandato:
+
+| Invariante | Como foi provada |
+|---|---|
+| só transições declaradas são legais | `CREATED → RUNNING` e `CREATED → COMPLETED` recusadas com `TRANSICAO_INVALIDA` |
+| terminal é imutável | `COMPLETED → RUNNING` recusada com `TERMINAL_IMUTAVEL`; só passa com reconciliação **com motivo e fence** |
+| reconciliação exige motivo e fence válido | `RECONCILIACAO_SEM_MOTIVO` e `RECONCILIACAO_FENCE_INVALIDO` |
+| `COMPLETED` **não** é GO | desfecho obrigatório (`DESFECHO_AUSENTE`), valor restrito a `GO|NO_GO|INCONCLUSIVE` (`DESFECHO_INVALIDO`), e conclusão sem GO emite o aviso `COMPLETED_NAO_E_GO` |
+| progresso sem total é indeterminado | `normalizeProgress({current:3,total:null})` → `percent: null, indeterminate: true`; corrente > total limita a 100 mas mantém o bruto |
+| `WAITING_FEEDBACK` exige solicitação | sem `feedbackRequestId` → `FEEDBACK_SEM_SOLICITACAO` |
+| visibilidade é uma das três classes | `PUBLIC` → `VISIBILIDADE_INVALIDA` |
+| estado desconhecido nunca é "aberto" silencioso | `RUNNING_TALVEZ` → `ESTADO_DESCONHECIDO` |
+
+Resultado: **10/10 PASS** (`api/services/lro/__tests__/lroStateMachine.test.js`), nascido **vermelho**
+(`Cannot find module`).
+
+### 11.40.2 Schema (`api/db/migrations/20261030120000-create-lro-core.js`)
+
+`lro_operations` (status/fase/progresso/**progress_revision**/desfecho/lease/fencing/version/
+correlation/idempotency/retention), `lro_events` (append-only, `seq` monotônico por operação),
+`lro_outbox` (fila transacional). Lease/fencing **copiados** de `engineering_tasks`
+(migrations 20260924/20260925) em vez de semântica nova.
+
+Prova em **PostgreSQL real e descartável** (`tests/integration/lroCoreSchema.test.js`, banco próprio via
+`tests/helpers/suiteDatabase.js`, destruído no fim — **4/4 PASS**):
+
+1. as três tabelas existem após as migrations canônicas;
+2. índice único `lro_events_operation_seq_uniq` existe e o **banco** recusa `seq` repetido na mesma
+   operação (é o cursor do SSE);
+3. **reversibilidade**: `down` remove as três tabelas, `up` as recria;
+4. estado + evento + outbox gravam no mesmo fluxo, e operação com `progress_total = NULL` mantém
+   `outcome = NULL` e `fencing_token = 0` (nada presumido).
+
+### 11.40.3 Estado dos gates
+
+| Gate | Estado |
+|---|---|
+| `IMPLEMENTATION` | Fase 1 (schema + núcleo) — sem UI, sem adaptador ainda |
+| `TESTS` | PASS — 10/10 núcleo, 4/4 schema real, regressão `dbReindexBloated` 14/14 |
+| `L0`/`L1` | verdes no CI do HEAD anterior |
+| `L2`/`L3` | **BLOCKED** (guard de fechamento não provado — decisão de dono) |
+| `RELEASE_CERTIFICATION` | **BLOCKED** (chave privada do dono) |
+
+### 11.40.4 Próximo (Fase 2), atrás de flag desligada
+
+Adaptador QA Waves com dual-write em `lro_operations` (`LRO_QA_WAVES_MIRROR`), outbox com backoff
+reaproveitando o padrão de `outboundQueueService`, e SSE `/api/lro/:id/events` com `Last-Event-ID` e
+replay. Nenhum corte de fonte antes de os testes adversariais 1–3 e 6 estarem verdes.
+
+---
+
 ## 12. DECISÃO FINAL
 
 ```
