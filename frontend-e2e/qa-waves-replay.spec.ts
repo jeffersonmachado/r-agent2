@@ -269,7 +269,24 @@ test.describe('QA Waves -> RPA Replays', () => {
       // consumia os 420 s inteiros esperando o locator e o vermelho falava de `locator.click`, sem
       // dizer que a jornada não existe. Agora a pré-condição é explícita e limitada: se a jornada de
       // suporte não estiver na árvore, falha em SEGUNDOS nomeando o que existe de fato.
+      // ESPERAR a árvore POPULAR antes de contar. Medido 2026-10-29 (execução local): a contagem era feita
+      // logo após o reload, com a árvore ainda vazia, e o diagnóstico acusava "jornada ausente" quando o
+      // problema era TEMPO DE CARGA. A espera é limitada e não esconde ausência real: se a árvore não
+      // popular em 20 s, o erro abaixo nomeia `arvoreNaoPopulou_em_20s` junto com a resposta da API.
+      const arvoreCarregada = await page
+        .locator('.qa-journey-tree-journey')
+        .first()
+        .waitFor({ state: 'visible', timeout: 20000 })
+        .then(() => true)
+        .catch(() => false);
       const jornadasDeSuporte = page.locator('.qa-journey-tree-journey', { hasText: /support|ticket|atendimento/i });
+      if (!arvoreCarregada) {
+        throw new Error(JSON.stringify({
+          status: 'NO_GO',
+          reason: 'PRECONDITION_FAILED',
+          missing: ['arvoreNaoPopulou_em_20s'],
+        }));
+      }
       if ((await jornadasDeSuporte.count()) === 0) {
         const disponiveis = await page.locator('.qa-journey-tree-journey').allInnerTexts().catch(() => []);
         // DIAGNÓSTICO (medido 2026-10-29): a árvore do ambiente de CI mostrou apenas 2 jornadas beauty
