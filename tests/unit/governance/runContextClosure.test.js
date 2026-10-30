@@ -37,32 +37,32 @@ afterEach(() => {
 });
 
 describe('fechamento de run órfão', () => {
-  it('exige --reason (fechar sem motivo é apagar prova)', () => {
-    expect(main(['--context', contexto, '--evidence', 'x'])).toBe(2);
+  it('exige --reason (fechar sem motivo é apagar prova)', async () => {
+    expect(await main(['--context', contexto, '--evidence', 'x'])).toBe(2);
     expect(JSON.parse(fs.readFileSync(contexto, 'utf8')).status).toBe('CREATED');
   });
 
-  it('exige --evidence', () => {
-    expect(main(['--context', contexto, '--reason', 'interrompido'])).toBe(2);
+  it('exige --evidence', async () => {
+    expect(await main(['--context', contexto, '--reason', 'interrompido'])).toBe(2);
   });
 
-  it('recusa status fora de SUPERSEDED|ABANDONED', () => {
+  it('recusa status fora de SUPERSEDED|ABANDONED', async () => {
     expect(ESTADOS_DE_FECHAMENTO).toEqual(['SUPERSEDED', 'ABANDONED']);
-    expect(main(['--context', contexto, '--reason', 'r', '--evidence', 'e', '--status', 'GREEN'])).toBe(2);
+    expect(await main(['--context', contexto, '--reason', 'r', '--evidence', 'e', '--status', 'GREEN'])).toBe(2);
   });
 
-  it('run inexistente não é "fechado às cegas"', () => {
+  it('run inexistente não é "fechado às cegas"', async () => {
     const vazio = path.join(tmpDir, 'nao-existe.json');
-    expect(main(['--context', vazio, '--reason', 'r', '--evidence', 'e'])).toBe(1);
+    expect(await main(['--context', vazio, '--reason', 'r', '--evidence', 'e'])).toBe(1);
   });
 
-  it('--dry-run não grava', () => {
-    expect(main(['--context', contexto, '--reason', 'r', '--evidence', 'e', '--dry-run'])).toBe(0);
+  it('--dry-run não grava', async () => {
+    expect(await main(['--context', contexto, '--reason', 'r', '--evidence', 'e', '--dry-run'])).toBe(0);
     expect(JSON.parse(fs.readFileSync(contexto, 'utf8')).status).toBe('CREATED');
   });
 
-  it('fecha com motivo, autor, data e evidência preservando o runId', () => {
-    expect(main(['--context', contexto, '--reason', 'ciclo interrompido', '--evidence', 'reports/x.json', '--by', 'qa'])).toBe(0);
+  it('fecha com motivo, autor, data e evidência preservando o runId', async () => {
+    expect(await main(['--context', contexto, '--reason', 'ciclo interrompido', '--evidence', 'reports/x.json', '--by', 'qa'])).toBe(0);
     const r = JSON.parse(fs.readFileSync(contexto, 'utf8'));
     expect(r.status).toBe('ABANDONED');
     expect(r.runId).toBe('rap-governed-20261017111858007-5d93eee8');
@@ -71,4 +71,32 @@ describe('fechamento de run órfão', () => {
     expect(r.closedReason).toBe('ciclo interrompido');
     expect(r.closedEvidence).toBe('reports/x.json');
   });
+
+  it('fechamento no BANCO usa o status declarado e o runId do ponteiro (banco é a autoridade)', async () => {
+    // DEFEITO MEDIDO 2026-10-30: só o ponteiro era fechado; a linha em governance_runs permanecia CREATED.
+    const update = jest.fn().mockResolvedValue([1]);
+    const deps = {
+      sequelize: { connect: jest.fn(), getSequelize: () => ({}) },
+      getGovernanceRun: () => ({ update }),
+    };
+    const { fecharNoBanco } = require('../../../scripts/governance/close-run-context');
+
+    const resultado = await fecharNoBanco({ runId: 'rap-governed-x', status: 'SUPERSEDED' }, deps);
+
+    expect(resultado).toEqual({ atualizadas: 1 });
+    expect(update).toHaveBeenCalledWith({ status: 'SUPERSEDED' }, { where: { run_id: 'rap-governed-x' } });
+  });
+
+  it('falha de banco NÃO é silenciosa: devolve o motivo para o chamador publicar', async () => {
+    const deps = {
+      sequelize: { connect: jest.fn(), getSequelize: () => ({}) },
+      getGovernanceRun: () => ({ update: jest.fn(() => { throw new Error('sem banco'); }) }),
+    };
+    const { fecharNoBanco } = require('../../../scripts/governance/close-run-context');
+
+    const resultado = await fecharNoBanco({ runId: 'rap-governed-x', status: 'ABANDONED' }, deps);
+
+    expect(resultado.erro).toBe('sem banco');
+  });
+
 });
