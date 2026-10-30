@@ -2055,6 +2055,36 @@ SQL depois de estar `CREATED`), 2 testes novos com injeção de dependência, os
 `await main(...)` (main passou a ser assíncrono) — **8/8**, e a suíte inteira de governance **2359 passed,
 2 skipped**.
 
+## 11.29 Estado consolidado da rodada (2026-10-30) — e o detalhe de auditoria que faltava
+
+### 11.29.1 Checks em `dev` `4037f4aac` (medição completa)
+
+| check | resultado |
+|---|---|
+| Jest (unit + integration) | **SUCCESS** |
+| Frontend Tests | **SUCCESS** |
+| RAG Service Tests | **SUCCESS** |
+| E2E Playwright | **SUCCESS** — 8/8 |
+| Dev Hardening CI (L0+L1) | **SUCCESS**, veredito `PASS_PARCIAL (completo=false)`; B/C/D `ALLOWED` |
+| Release Governance — ENVELOPE + PAYLOAD | FAILURE — passo "Provisionar chave de attestation Ed25519" (secret ausente) |
+
+A única classe que mantém `completo=false` é `BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO`.
+
+### 11.29.2 Detalhe de auditoria corrigido (`c7ef74031`)
+
+O gate imprimia `evidencia=reports/dev-branch-ci-evidence.json + AI_MEMORY/evidence/dev-branch-ci-<sha>-parcial.md`.
+Esses são caminhos **locais**; no workflow o par vai como **artifact** (`dev-branch-ci-evidence-<sha>`) e o job
+**não** faz push (`permissions: contents: read`). Um auditor seguindo o caminho do repositório num run de CI
+não encontra o arquivo — e não há como distinguir "execução manual" de "publicada". O gate agora declara o
+destino em CI na linha seguinte ao veredito. Contratos do gate: 40/40 verdes.
+
+### 11.29.3 Fila
+
+163 itens, **0 abertos**, 8 impedidos (`blocked`/`blocked_external`). Checagem de coerência executada:
+**nenhum** item `VERIFIED` sem `commit` + `evidence`. Três correções desta rodada foram registradas com
+prova: `E2E-SUPPORT-CENARIO1-PRECONDICAO` (`83dfe295a`), `E2E-REPLAY-DOMINIO-E-TAB` (`4c46c1d3c`),
+`JOURNEY-STORE-ESCONDE-DERIVADAS` (`0d9e1b927`). O item de billing foi fechado por medição (§11.27.1).
+
 ---
 
 ## 12. DECISÃO FINAL
