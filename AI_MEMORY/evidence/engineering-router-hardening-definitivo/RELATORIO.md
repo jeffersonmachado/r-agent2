@@ -1944,6 +1944,37 @@ corrigido (verificado por serviço + mutação), falha passou de 7,2 min para 8 
 CI. O que falta: descobrir por que a árvore não renderiza nesse ambiente — e só com a resposta de CI, que
 agora está no relatório de falha, isso deixa de ser adivinhação.
 
+## 11.26 E2E fechado: 8/8 verdes em CI (a cadeia completa de causas)
+
+O que parecia um "flake" de 7 minutos tinha **três** causas encadeadas, cada uma medida com artefato:
+
+| # | causa | onde foi medida | correção |
+|---|---|---|---|
+| 1 | `journey-store` com 1 jornada escondia TODAS as 253 derivadas dos cenários | serviço real + mutação (§11.24) | `mergeJourneyStores` (`0d9e1b927`) |
+| 2 | a sidebar mostra **só o domínio selecionado**; a jornada de suporte vive em `core` e a árvore abria em `beauty` | run 40975061143: API com 10 domínios/`temSupport=true`, DOM com 2 jornadas beauty | a spec resolve o domínio pela API e clica no pill (`4c46c1d3c`) |
+| 3 | o "tab" **Cenários não existe mais** (virou seção sempre visível) e o clique sem timeout consumia os 420 s | snapshot local com a jornada já selecionada | clique removido; espera limitada pelo botão do cenário |
+
+**Resultado em CI (run 40983078065, `dev` `4c46c1d3c`):**
+
+```
+✓ fitness-customer-checkin (3,0 s)   ✓ qa-waves-replay (4,4 min — antes: timeout de 420 s)
+✓ support cenários 1..6 (3,8 s · 3,8 s · 2,7 s · 2,8 s · 3,9 s · 2,1 min)
+8 passed (6,9 min)     → job SUCCESS
+```
+
+Estado dos checks em `4c46c1d3c`: **Frontend SUCCESS**, **RAG SUCCESS**, **E2E 8/8 SUCCESS**, Jest em
+andamento (verde no mesmo commit anterior), `Release Governance` FAILURE (âncoras/Ed25519 — externo) e
+`Dev Hardening CI` DENIED em `L0_COMPLETO` (impasse de âncora, §11.22.3).
+
+**Lições de método desta caçada (registradas porque custaram horas):**
+1. **Artefato de CI é prova**: `gh run download` do `playwright-report` entregou snapshot da página e call
+   log exatos — três hipóteses minhas morreram ali.
+2. **Não confiar em `curl` para concluir sobre a UI**: o mesmo teste local passou a dar "API 200 / DOM
+   vazio" enquanto a API respondia 500 intermitente em `/auth/login` e `/config`. Medição em momentos
+   diferentes do mesmo ambiente não compõe uma prova.
+3. **Toda espera precisa de limite**: três vezes o vermelho foi "locator sem timeout"; hoje todas as
+   esperas críticas da spec têm prazo e nomeiam o que faltou.
+
 ---
 
 ## 12. DECISÃO FINAL
