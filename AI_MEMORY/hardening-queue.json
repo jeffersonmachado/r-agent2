@@ -2622,6 +2622,20 @@
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "perda de visibilidade de 251 jornadas na superfície DEVELOPMENT de QA Waves; bloqueava E2E de replay RPA",
       "severitySource": "medicao-servico-2026-10-29"
+    },
+    {
+      "id": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
+      "title": "engineeringBugLoopNaturalPathE2E falha em banco COMPARTILHADO e passa em banco limpo (mesmo código)",
+      "status": "blocked_external",
+      "legacyStatus": "blocked_external",
+      "state": "BLOCKED_EXTERNAL",
+      "commit": "0e7918ac0",
+      "evidence": "MEDIDO 2026-10-30 em c7ef74031, A/B controlado: (a) no Postgres de dev COMPARTILHADO a suíte tests/integration/engineeringBugLoopNaturalPathE2E.test.js FALHA em 65s com `expect(lineage.replacementTaskId).not.toBe(originalTaskId)` recebendo o MESMO id; (b) no banco descartável rap_l0b_proof (criado, migrado e removido) a MESMA suíte PASSA em 55s. O CI no mesmo SHA é verde (ephemeral DB). Não é regressão de código: é sensibilidade ao estado acumulado do banco compartilhado, a MESMA classe do item de durable-resume.",
+      "severity": "P2",
+      "severityStatus": "DECLARADA_POR_ANALISE",
+      "severityBasis": "vermelho local não determinístico que pode ser lido como regressão; CI verde no mesmo SHA",
+      "severitySource": "medicao-local-2026-10-30",
+      "blocked_reason": "DECISÃO DE AMBIENTE (não de código): a suíte depende de o bug-loop criar uma task SUBSTITUTA; com achados/missões residuais de execuções anteriores o coordenador reaproveita o vínculo e o id retorna igual ao original. Opções: banco/schema dedicado por suíte, ou limpeza explícita do que a própria suíte cria antes de rodar. Enquanto o Postgres de dev for compartilhado com execuções anteriores e com o servidor vivo, o vermelho local é esperado — e o CI, que usa banco efêmero, é a medida válida."
     }
   ],
   "schemaVersion": 2,

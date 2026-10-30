@@ -2152,6 +2152,46 @@ Registrado aqui, não na fila, para não criar item `pending` que eu não vou cu
 Nenhum item mudou de status: todos seguem impedidos, mas nenhum segue com motivo narrativo — cada um tem
 agora o comando, o exit e a causa medidos em `c7ef74031`.
 
+## 11.32 Gate local em `c7ef74031`: FAIL medido, causa isolada por A/B — e uma afirmação falsa removida do gerador de evidência
+
+Rodei o **gate canônico local** (`scripts/ci/dev-branch-gate.js --fases A,B,C,D`) para produzir a prova
+vinculada ao SHA, como nas rodadas anteriores. Resultado: `veredito=FAIL`, com um único passo vermelho:
+
+```
+L0b-integracao-engenheiro  exit=1  1212.7s
+FAIL tests/integration/engineeringBugLoopNaturalPathE2E.test.js
+  expect(lineage.replacementTaskId).not.toBe(originalTaskId)   ← recebeu o MESMO id
+```
+
+### 11.32.1 A/B que isola a variável (banco, não código)
+
+| ambiente | resultado |
+|---|---|
+| Postgres de dev **compartilhado** | **FAIL** em 65 s (mesmo id) |
+| banco descartável `rap_l0b_proof` (criado, migrado, removido) | **PASS** em 55 s |
+| CI no **mesmo SHA** (`c7ef74031`) | **SUCCESS** — `L0-suite-oficial` e `L0b` exit=0 |
+
+Conclusão: não é regressão. A suíte depende de o bug-loop criar uma task **substituta**; com achados e
+missões residuais de execuções anteriores no banco compartilhado, o coordenador reaproveita o vínculo e o id
+volta igual ao original. É a mesma classe do flake de durable-resume — registrada como item próprio
+(`ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO`, `blocked_external`, decisão de ambiente).
+
+### 11.32.2 DEFEITO no gerador de evidência: ele afirmava o bloqueio de billing como FATO
+
+O arquivo de evidência produzido trazia, hardcoded:
+
+```
+- **gate efetivo**: LOCAL — o runner do GitHub não inicia jobs por limite de gastos da conta
+```
+
+Isso é **falso desde** a medição de §11.27.1 (os cinco workflows executam). Publicar isso num artefato de
+evidência faz um auditor concluir que o CI não roda. Corrigido em `0e7918ac0`: o campo e a linha agora dizem
+o que é verdade — este par é do runner LOCAL; em CI o mesmo par vai como artifact
+`dev-branch-ci-evidence-<sha>` — e o cabeçalho registra a medição que derrubou a premissa.
+
+A evidência local gerada **antes** da correção foi **descartada** (não commitada): publicar um arquivo com
+afirmação falsa seria pior do que não publicar. Em CI, o artifact do run 40996140886 é a prova real do SHA.
+
 ---
 
 ## 12. DECISÃO FINAL
