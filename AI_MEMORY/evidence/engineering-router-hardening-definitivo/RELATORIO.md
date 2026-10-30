@@ -3055,7 +3055,8 @@ cliente nunca recebia o que aconteceu. `api/services/lro/lroOutboxWorker.js` fec
 | publicador WebSocket **fail-closed** | sem tenant resolvido NÃO publica (`TENANT_NAO_RESOLVIDO`) — melhor ficar na fila do que vazar evento para cliente errado |
 
 Ligado ao boot em `api/runtime/startWorkers.js` (opt-in) e ao shutdown (`stop`), e documentado em
-`.env.example` junto com `LRO_QA_WAVES_MIRROR`.
+`env.example` junto com `LRO_QA_WAVES_MIRROR` (o arquivo do repositório é `env.example`; `.env` é
+gerado pelo `system:bootstrap` e nunca versionado).
 
 Regressão: `tests/unit/governance` + `api/services/lro` ⇒ **2394 passaram, 2 skipped**.
 
