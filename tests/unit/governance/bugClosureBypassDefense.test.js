@@ -533,8 +533,18 @@ describe('CASO HISTÓRICO — L1-NPM-TEST-CI-VERMELHO (fechado por edição de J
     expect(item.closureProof || null).toBeNull();
   });
 
-  test('o mecanismo corrigido o classifica como fechamento NÃO provado', () => {
-    const item = inventarioReal().defeitos.find((d) => d.id === 'L1-NPM-TEST-CI-VERMELHO');
+  // ATUALIZADO em 2026-10-31: esta asserção lia o ESTADO VIVO da fila e passou a falhar quando o
+  // item ganhou prova ASSINADA real (batch + autoridade ancorada). O MECANISMO não pode depender de
+  // qual item está aberto hoje: a prova é feita numa fixture (fechamento declarado sem prova), e a
+  // realidade do item histórico é verificada explicitamente abaixo.
+  test('o mecanismo corrigido o classifica como fechamento NÃO provado (fixture)', () => {
+    const root = novaRaiz();
+    escreverFila(root, [itemBase({ id: 'L1-NPM-TEST-CI-VERMELHO', state: 'RESOLVED', status: 'verified', closureProof: null })]);
+    const inv = ATUAL.registry.carregarInventario({
+      queuePath: path.join(root, 'AI_MEMORY', 'hardening-queue.json'),
+      rootDir: root, currentCommit: SHA, currentFingerprint: FP,
+    });
+    const item = inv.defeitos.find((d) => d.id === 'L1-NPM-TEST-CI-VERMELHO');
     expect(item.fechamentoNaoProvado).toBe(true);
     expect(item.stateEfetivo).toBe('OPEN');
     expect(item.provaDeFechamento.code).toBe('PROVA_DE_FECHAMENTO_AUSENTE');
