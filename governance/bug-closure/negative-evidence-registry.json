@@ -1,0 +1,45 @@
+{
+  "_doc": "Registro de MUTAÇÕES para provar EVIDÊNCIA NEGATIVA (P0). Cada entrada neutraliza UM controle específico e declara qual teste tem de FALHAR quando o controle desaparece. Sem isso, 'o teste passa' não prova que o teste testa alguma coisa: passaria igual se o guard nunca existisse. A mutação é textual e exata (find/replace) justamente para ser revisável: qualquer pessoa lê o que foi desativado.",
+  "_schema": {
+    "defectId": "id do item da fila (P0)",
+    "targetFile": "arquivo do CONTROLE (não do teste)",
+    "control": "descrição curta do que a mutação desativa",
+    "find": "trecho EXATO presente UMA vez no arquivo",
+    "replace": "substituto que neutraliza o controle",
+    "test": "suíte que precisa FALHAR com a mutação aplicada"
+  },
+  "mutations": [
+    {
+      "defectId": "P0-2",
+      "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
+      "control": "ausência de baseline deixa de ser FAIL e passa a PASS (\"não há dado\" == \"dado confere\")",
+      "find": "  if (!recordedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.BASELINE_MISSING,",
+      "replace": "  if (false && !recordedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.BASELINE_MISSING,",
+      "test": "tests/unit/governance/evidenceManifestHashBaseline.test.js"
+    },
+    {
+      "defectId": "P0-2",
+      "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
+      "control": "manifest ilegível deixa de ser FAIL (fail-closed quebrado na origem)",
+      "find": "  if (!computedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.UNREADABLE,",
+      "replace": "  if (false && !computedHash) {\n    return {\n      pass: false,\n      severity: 'HIGH',\n      code: CODES.UNREADABLE,",
+      "test": "tests/unit/governance/evidenceManifestHashBaseline.test.js"
+    },
+    {
+      "defectId": "P0-3",
+      "targetFile": "scripts/governance/lib/security-gate-provenance.js",
+      "control": "run SUPERSEDED/ABANDONED deixa de bloquear a avaliação de evidência (run encerrado passaria como corrente)",
+      "find": "  if (statusRun === 'SUPERSEDED' || statusRun === 'ABANDONED') {",
+      "replace": "  if (false && (statusRun === 'SUPERSEDED' || statusRun === 'ABANDONED')) {",
+      "test": "tests/unit/securityIntel/securityGateProvenance.test.js"
+    },
+    {
+      "defectId": "P0-4",
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "aprovação de waiver deixa de exigir aprovador identificado (segregação de funções quebrada)",
+      "find": "  if (!cleanApprover) throw codedError('waiver_approver_required');",
+      "replace": "  if (false && !cleanApprover) throw codedError('waiver_approver_required');",
+      "test": "tests/unit/securityIntel/waiverService.test.js"
+    }
+  ]
+}
