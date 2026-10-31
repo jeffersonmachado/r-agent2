@@ -73,10 +73,12 @@ function criarWorker({
   let timer = null;
   let rodando = false;
   let emExecucao = false;
+  const parada = { aguardando: 0 };
 
   const tick = async () => {
     if (emExecucao) return { skipped: true, reason: 'tick_anterior_em_andamento' };
     emExecucao = true;
+    parada.aguardando += 1;
     let resultado = null;
     let dispatchError = null;
     let sweepResultado = null;
@@ -108,6 +110,7 @@ function criarWorker({
       };
     } finally {
       emExecucao = false;
+      parada.aguardando -= 1;
     }
   };
 
@@ -123,13 +126,22 @@ function criarWorker({
     return { started: true };
   };
 
-  const stop = async () => {
+  const stop = async ({ timeoutMs = 30000 } = {}) => {
     if (!rodando) return { stopped: false, reason: 'nao_estava_rodando' };
     rodando = false;
     if (timer) clearIntervalFn(timer);
     timer = null;
-    loggerRef.info('[lro:outbox-worker] parado', {});
-    return { stopped: true };
+
+    // P1-D: parar de agendar não é parar de executar. Se havia tick em andamento, o desligamento
+    // precisa AGUARDAR (até o deadline) para não abandonar linhas recém-reclamadas em PUBLISHING.
+    // Estourado o deadline, o resultado diz que foi forçado — estado recuperável via reclaimStale.
+    const inicio = Date.now();
+    while (emExecucao && Date.now() - inicio < Number(timeoutMs)) {
+      await new Promise((resolve) => { setTimeout(resolve, 25); });
+    }
+    const forcado = emExecucao;
+    loggerRef.info('[lro:outbox-worker] parado', { forcado, esperouMs: Date.now() - inicio });
+    return { stopped: true, forcado };
   };
 
   return { start, stop, tick, isRunning: () => rodando };

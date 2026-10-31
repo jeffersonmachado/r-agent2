@@ -180,4 +180,40 @@ describe('worker da outbox de LRO', () => {
       .rejects.toMatchObject({ code: 'TENANT_NAO_RESOLVIDO' });
     expect(broadcastToTenant).not.toHaveBeenCalled();
   });
+
+  // P1-D (prompt duro 2026-10-31): `stop()` apenas parava de agendar. Se houvesse tick em
+  // andamento, ele era abandonado — e as linhas já reclamadas (PUBLISHING) ficavam órfãs.
+  test('stop AGUARDA o tick em andamento concluir', async () => {
+    let liberar;
+    const emVoo = new Promise((resolve) => { liberar = resolve; });
+    const dispatch = jest.fn(async () => { await emVoo; return { publicados: 1 }; });
+    const worker = criarWorker({
+      dispatch, publish: async () => {}, habilitado: true,
+      setIntervalFn: () => ({ unref: jest.fn() }), clearIntervalFn: jest.fn(),
+    });
+
+    worker.start(); // `stop()` só age em worker iniciado
+    const tick = worker.tick();
+    const parada = worker.stop({ timeoutMs: 2000 });
+    setTimeout(() => liberar(), 80);
+
+    const [resultadoTick, resultadoParada] = await Promise.all([tick, parada]);
+    expect(resultadoTick.publicados).toBe(1);
+    expect(resultadoParada.stopped).toBe(true);
+    expect(resultadoParada.forcado).toBe(false);
+  });
+
+  test('stop com deadline estourado devolve forcado=true (estado recuperável, sem travar)', async () => {
+    const dispatch = jest.fn(() => new Promise(() => {})); // nunca resolve
+    const worker = criarWorker({
+      dispatch, publish: async () => {}, habilitado: true,
+      setIntervalFn: () => ({ unref: jest.fn() }), clearIntervalFn: jest.fn(),
+    });
+    worker.start();
+    void worker.tick();
+    const r = await worker.stop({ timeoutMs: 100 });
+    expect(r.stopped).toBe(true);
+    expect(r.forcado).toBe(true);
+  });
+
 });
