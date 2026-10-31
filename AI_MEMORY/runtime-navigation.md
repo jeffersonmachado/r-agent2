@@ -311,9 +311,24 @@ rota resolve o tenant por `X-Tenant-Id`, e `QaWavesPage` montava o painel só co
 esquecer o tenant; opções explícitas continuam vencendo. Regressão em
 `frontend/src/shared/useLroStream.test.jsx`.
 
-**Gap de ambiente (NÃO é defeito do LRO, é do dev server)**: `ws://127.0.0.1:<porta>/ws` (e
-`/dev/ws`) falha com `ERR_CONNECTION_REFUSED`/handshake timeout porque `frontend/vite.config.mjs`
-não declara proxy para WebSocket — só HTTP. Consequência: em dev, realtime por WS não funciona via
-Vite, para qualquer porta. O LRO não depende disso (usa SSE por HTTP), o que é justamente o motivo
-de o piloto funcionar onde o WS falha. Não "consertar" adicionando proxy de WS sem decisão, porque
-o comportamento em produção passa por Apache.
+**WebSocket desconectado no dev — CAUSA ENCONTRADA E CORRIGIDA (2026-10-31)**. Eram DOIS defeitos
+somados, ambos medidos:
+
+1. **URL errada (código)**: `frontend/src/utils/wsUrl.js` tratava o PRIMEIRO SEGMENTO DO PATHNAME
+   como prefixo de deployment. Servido na raiz, o pathname é a ROTA: em `/dev/qa-waves` o cliente
+   tentava `ws://host/dev/ws`, em `/login` tentava `ws://host/login/ws`. O servidor WS da API
+   escuta em `/ws` (`api/services/websocketService.js`, `new WebSocketServer({ path: '/ws' })`),
+   então todo handshake ia para caminho inexistente. Além disso o branch de dev usava porta padrão
+   `3000`, com a API em `3001`. Correção: o prefixo vem do `base` do build (`BASE_URL` do Vite,
+   alimentado por `VITE_BASE_PATH`); na raiz o caminho é sempre `/ws`; `VITE_API_DEV_PORT` só é
+   usado quando o frontend fala direto com a API (sem proxy).
+2. **Proxy ausente (dev server)**: `frontend/vite.config.mjs` tinha 55 entradas de proxy HTTP e
+   NENHUMA com `ws: true`. Mesmo com a URL certa o upgrade não acontecia. Correção: entrada
+   `'^/ws'` com `ws: true` apontando para a API.
+
+Prova no browser real: `new WebSocket('ws://127.0.0.1:5199/ws')` → `open`, e o contexto registra
+`[WebSocketContext] Resposta de autenticação recebida { type: "auth", status: "success" }`. Antes o
+console mostrava `ws://127.0.0.1:5199/dev/ws failed: WebSocket opening handshake timed out`.
+
+O LRO não dependia disso (usa SSE sobre HTTP), o que é exatamente por que o piloto de operações
+funcionava enquanto o realtime geral estava fora.
