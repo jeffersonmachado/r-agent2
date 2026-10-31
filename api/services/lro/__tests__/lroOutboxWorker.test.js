@@ -14,6 +14,7 @@ jest.mock('../../../utils/logger', () => ({
 const {
   criarWorker, criarPublicadorWebSocket, workerHabilitado, FLAG,
 } = require('../lroOutboxWorker');
+const { serializarOperacao } = require('../lroService');
 
 describe('worker da outbox de LRO', () => {
   const envOriginal = process.env[FLAG];
@@ -75,11 +76,20 @@ describe('worker da outbox de LRO', () => {
     expect((await worker.stop()).stopped).toBe(false);
   });
 
+  // REGRESSÃO MEDIDA EM PRODUÇÃO-LOCAL (2026-10-31): o publicador lia `operacao.tenant_id`, mas a
+  // operação chega serializada pelo contrato público (`serializarOperacao` → camelCase). Com o
+  // contrato unificado, TODO evento passou a morrer com `TENANT_NAO_RESOLVIDO` (5 linhas DEAD no
+  // outbox real). O fixture aqui é construído PELO SERIALIZADOR — fixture escrita à mão mascarou o
+  // defeito porque o mock devolvia o shape antigo.
+  function operacaoSerializada(extra = {}) {
+    return serializarOperacao({ id: 'op-1', tenant_id: 'system', status: 'RUNNING', ...extra });
+  }
+
   test('publicador WebSocket: publica para o TENANT da operação', async () => {
     const broadcastToTenant = jest.fn();
     const publicar = criarPublicadorWebSocket({
       broadcastToTenant,
-      obterOperacao: async () => ({ tenant_id: 'system' }),
+      obterOperacao: async () => operacaoSerializada(),
     });
     await publicar('lro.events', { operationId: 'op-1', seq: 7, type: 'PROGRESS' });
     expect(broadcastToTenant).toHaveBeenCalledWith('system', {
@@ -91,7 +101,7 @@ describe('worker da outbox de LRO', () => {
     const broadcastToTenant = jest.fn();
     const publicar = criarPublicadorWebSocket({
       broadcastToTenant,
-      obterOperacao: async () => ({ tenant_id: null }),
+      obterOperacao: async () => operacaoSerializada({ tenant_id: null }),
     });
     await expect(publicar('lro.events', { operationId: 'op-2', seq: 1 }))
       .rejects.toMatchObject({ code: 'TENANT_NAO_RESOLVIDO' });

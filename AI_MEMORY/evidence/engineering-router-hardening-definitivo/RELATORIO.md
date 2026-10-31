@@ -3332,3 +3332,61 @@ que funciona onde o WS falha. Registrado em `AI_MEMORY/runtime-navigation.md`.
 
 Suítes após as correções: frontend **144 arquivos / 1081 testes**; LRO + governança **84 testes**
 (12 suítes), zero falhas.
+
+### 11.56. Regressão que eu mesmo introduzi, pega pela observação do sistema vivo
+
+O contrato unificado (§11.55.1) tinha **um consumidor** que não passou pela varredura: o publicador
+WebSocket do worker de outbox lia `operacao.tenant_id`. Como `getOperation` passou a devolver
+`tenantId`, TODO evento novo morreu com `TENANT_NAO_RESOLVIDO`.
+
+#### 11.56.1 Como apareceu
+
+Não apareceu em teste. Apareceu ao inspecionar a tabela real depois de validar a decisão humana:
+
+```
+outbox por status: DEAD=5 PENDING=1 PUBLISHED=6   (último PUBLISHED criado às 02:08, antes da mudança)
+ - DEAD tent=5 err="tenant da operação não resolvido"
+```
+
+Cinco linhas `DEAD` e uma `PENDING` com a mesma causa: o publicador recusava tudo. Fail-closed
+funcionou (nada vazou), mas o efeito prático era **outbox que nunca drena** — exatamente o modo de
+falha que o mandato chama de "job verde com gate interno NO_GO".
+
+#### 11.56.2 Por que o teste não pegou
+
+O fixture do teste era escrito à mão: `obterOperacao: async () => ({ tenant_id: 'system' })`. Um mock
+que devolve o shape ANTIGO sempre concorda com o código que lê o shape antigo — **mock drift**.
+Correção: o fixture passa a ser construído pelo próprio serializador
+(`serializarOperacao({ id, tenant_id, status })`), então qualquer renome de campo quebra o teste.
+
+Prova antes/depois: com o fixture serializado, o teste falha (`✕ publica para o TENANT da operação`),
+o publicador passa a ler `tenantId` e fica verde (7/7 na suíte).
+
+#### 11.56.3 Prova no sistema vivo depois do fix
+
+Reconciliação explícita dos `DEAD` (volta para `PENDING`, `attempts=0`) + duas transições novas:
+
+```
+antes:  DEAD=6 PUBLISHED=6
+depois: PUBLISHED=15            (DEAD=0, PENDING=0, todas tent=1, last_error=null)
+```
+
+Ou seja: os 6 eventos reconciliados e os novos foram publicados na primeira tentativa. A outbox
+transacional + worker está funcionando de fato, não só em teste.
+
+#### 11.56.4 Varredura de consumidores (para não repetir)
+
+| Consumidor de operação | Campo lido | Estado |
+|---|---|---|
+| `api/modules/lro/routes.js` (authz do detalhe) | `visibilityClass` | OK (ajustado) |
+| `api/modules/lro/routes.js` (loop do SSE) | `status` | OK |
+| `api/services/lro/qaWavesAdapter.js` | `status` | OK |
+| `api/runtime/startWorkers.js` → publicador WS | `tenantId` | **estava quebrado — corrigido** |
+| `api/services/lro/lroFeedbackService.js` | `version` | OK |
+
+Leituras `snake_case` restantes em `lroService`/`lroRecoveryService` são internas (`get({plain:true})`
+da linha do Sequelize), não do contrato público — permanecem de propósito.
+
+Lição registrada: contrato único exige **varredura de consumidores no mesmo commit**. O teste de
+contrato novo (`lroOperationContract.test.js`) cobre lista×detalhe; o publicador agora também deriva
+do serializador.

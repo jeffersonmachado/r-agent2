@@ -34,10 +34,13 @@ function criarPublicadorWebSocket({ broadcastToTenant, obterOperacao } = {}) {
     const operationId = payload && payload.operationId;
     if (!operationId) throw Object.assign(new Error('payload sem operationId'), { code: 'PAYLOAD_SEM_OPERACAO' });
     const operacao = await obterOperacao(operationId);
-    if (!operacao || !operacao.tenant_id) {
+    // `getOperation` respeita o contrato público (`serializarOperacao` → camelCase). Ler
+    // `tenant_id` aqui já custou 5 eventos DEAD em execução real: o campo não existia e o
+    // publicador recusava tudo como TENANT_NAO_RESOLVIDO.
+    if (!operacao || !operacao.tenantId) {
       throw Object.assign(new Error('tenant da operação não resolvido'), { code: 'TENANT_NAO_RESOLVIDO' });
     }
-    broadcastToTenant(operacao.tenant_id, {
+    broadcastToTenant(operacao.tenantId, {
       type: 'lro.event',
       operationId,
       seq: payload.seq || null,
