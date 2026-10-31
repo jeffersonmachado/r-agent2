@@ -205,11 +205,104 @@ function podeRodar(id, resultados = {}) {
  * Executa a escada com runners injetados (o script real passa spawn; os testes passam funções).
  * @param {{runners: Object<string, Function>, resultados?: object}} opcoes
  */
-async function executarEscada({ runners = {}, resultados = {} } = {}) {
+/**
+ * Decide se a escada está CERTIFICADA. Fail-closed por construção (P1-A):
+ *
+ * Ausência de FAIL/BLOCKED não é prova de PASS. Exige:
+ *   1. conjunto ESPERADO completo — todo degrau declarado precisa ter resultado;
+ *   2. estado VÁLIDO (um dos quatro) e igual a PASS em TODOS os degraus;
+ *   3. nenhum resultado de degrau DESCONHECIDO (resultado forjado/renomeado não conta);
+ *   4. lista não vazia.
+ *
+ * `SKIPPED` é "não executou", nunca "passou": ambiente sem runner não certifica nada.
+ *
+ * @param {Record<string,{state:string}>} resultados
+ * @returns {{certificavel:boolean, problemas:Array<{code:string, id:string|null, detail:string}>}}
+ */
+function avaliarCertificabilidade(resultados = {}) {
+  const problemas = [];
+  const esperados = DEGRAUS.map((d) => d.id);
+  const validos = new Set(Object.values(ESTADOS));
+  const informados = Object.keys(resultados || {});
+
+  if (esperados.length === 0) {
+    problemas.push({ code: 'ESCADA_VAZIA', id: null, detail: 'nenhum degrau declarado' });
+    return { certificavel: false, problemas };
+  }
+
+  for (const id of informados) {
+    if (!esperados.includes(id)) {
+      problemas.push({ code: 'DEGRAU_DESCONHECIDO', id, detail: 'resultado não corresponde a degrau declarado' });
+    }
+  }
+
+  for (const id of esperados) {
+    const r = resultados ? resultados[id] : undefined;
+    if (!r) {
+      problemas.push({ code: 'DEGRAU_AUSENTE', id, detail: 'degrau sem resultado — não executado não passa' });
+      continue;
+    }
+    const estado = String(r.state || '');
+    if (!validos.has(estado)) {
+      problemas.push({ code: 'ESTADO_INVALIDO', id, detail: `estado "${estado}" não é reconhecido` });
+      continue;
+    }
+    if (estado !== ESTADOS.PASS) {
+      problemas.push({ code: 'DEGRAU_NAO_PASSOU', id, detail: `estado ${estado}` });
+    }
+  }
+
+  return { certificavel: problemas.length === 0, problemas };
+}
+
+/**
+ * Fecho de execução de um `--only`: alvo + dependências ESTRITAMENTE necessárias, na ordem da
+ * escada. P1-B: `--only` precisa restringir EXECUÇÃO, não só exibição — rodar um gate não
+ * selecionado tem efeito colateral real (wave, suíte, selagem).
+ *
+ * @param {string[]|null} alvos
+ * @returns {{ok:boolean, ids:string[], erro:string|null}}
+ */
+function selecionarDegraus(alvos) {
+  const lista = Array.isArray(alvos) ? alvos.filter(Boolean) : [];
+  if (lista.length === 0) return { ok: true, ids: DEGRAUS.map((d) => d.id), erro: null };
+
+  const porId = new Map(DEGRAUS.map((d) => [d.id, d]));
+  for (const alvo of lista) {
+    if (!porId.has(alvo)) return { ok: false, ids: [], erro: 'DEGRAU_DESCONHECIDO' };
+  }
+
+  const necessarios = new Set();
+  const visitar = (id) => {
+    if (necessarios.has(id)) return;
+    necessarios.add(id);
+    for (const dep of porId.get(id).requires || []) visitar(dep);
+  };
+  for (const alvo of lista) visitar(alvo);
+
+  // Ordem da escada, sem duplicar.
+  return { ok: true, ids: DEGRAUS.map((d) => d.id).filter((id) => necessarios.has(id)), erro: null };
+}
+
+async function executarEscada({ runners = {}, resultados = {}, apenas = null } = {}) {
   const saida = { ...resultados };
   const trilha = [];
 
+  const selecao = selecionarDegraus(apenas);
+  if (!selecao.ok) {
+    return { trilha, resultados: saida, resumo: {}, certificavel: false, problemas: [{ code: selecao.erro, id: null, detail: 'seleção inválida' }], erro: selecao.erro };
+  }
+  const executaveis = new Set(selecao.ids);
+  if (apenas && Array.isArray(apenas) && apenas.length > 0) {
+    for (const passo of DEGRAUS) {
+      if (executaveis.has(passo.id)) continue;
+      // Fora do fecho: NÃO executa e NÃO entra no trilho (não foi avaliado).
+      delete saida[passo.id];
+    }
+  }
+
   for (const passo of DEGRAUS) {
+    if (apenas && Array.isArray(apenas) && apenas.length > 0 && !executaveis.has(passo.id)) continue;
     const { runnable, blockedBy } = podeRodar(passo.id, saida);
     if (!runnable) {
       saida[passo.id] = {
@@ -247,7 +340,37 @@ async function executarEscada({ runners = {}, resultados = {} } = {}) {
     return acc;
   }, {});
 
-  return { trilha, resultados: saida, resumo, certificavel: resumo.FAIL === 0 && resumo.BLOCKED === 0 };
+  const parcial = Boolean(apenas && Array.isArray(apenas) && apenas.length > 0);
+  if (parcial) {
+    // Execução PARCIAL (--only) é DIAGNÓSTICO, nunca certificação: os degraus fora do fecho não
+    // foram avaliados, então `certificavel` é false por definição. O estado do alvo é reportado em
+    // `parcialResumo` para o operador saber se o degrau escolhido passou.
+    const alvo = apenas[apenas.length - 1];
+    const alvoResultado = saida[alvo] || null;
+    const problemasAlvo = (alvoResultado && alvoResultado.state !== ESTADOS.PASS)
+      ? [{ code: 'DEGRAU_NAO_PASSOU', id: alvo, detail: `estado ${alvoResultado.state}` }]
+      : [];
+    return {
+      trilha,
+      resultados: saida,
+      resumo,
+      parcial: true,
+      parcialResumo: { alvo, state: alvoResultado ? alvoResultado.state : null },
+      certificavel: false,
+      problemas: problemasAlvo,
+    };
+  }
+
+  const avaliacao = avaliarCertificabilidade(saida);
+  return {
+    trilha,
+    resultados: saida,
+    resumo,
+    parcial: false,
+    // Só true com TODOS os degraus em PASS (SKIPPED/missing reprovam).
+    certificavel: avaliacao.certificavel,
+    problemas: avaliacao.problemas,
+  };
 }
 
-module.exports = { ESTADOS, DEGRAUS, degrau, podeRodar, executarEscada };
+module.exports = { ESTADOS, DEGRAUS, degrau, podeRodar, executarEscada, avaliarCertificabilidade, selecionarDegraus };

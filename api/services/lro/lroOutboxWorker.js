@@ -77,19 +77,35 @@ function criarWorker({
   const tick = async () => {
     if (emExecucao) return { skipped: true, reason: 'tick_anterior_em_andamento' };
     emExecucao = true;
+    let resultado = null;
+    let dispatchError = null;
+    let sweepResultado = null;
+    let sweepError = null;
     try {
-      const resultado = await dispatch({ publish, limit });
+      // P1-C: dispatch e varredura são responsabilidades INDEPENDENTES. Antes, exceção do dispatch
+      // pulava a varredura — prazo de decisão humana nunca era avaliado enquanto a outbox estivesse
+      // quebrada (starvation de um pelo outro). Cada uma tem seu try e seu resultado.
+      try {
+        resultado = await dispatch({ publish, limit });
+      } catch (error) {
+        dispatchError = { code: error.code || null, message: String(error && error.message) };
+        loggerRef.warn('[lro:outbox-worker] falha no ciclo', dispatchError);
+      }
       if (typeof sweep === 'function') {
         try {
-          await sweep();
+          sweepResultado = await sweep();
         } catch (erroSweep) {
-          loggerRef.warn('[lro:outbox-worker] falha na varredura de prazos', { code: erroSweep.code || null });
+          sweepError = { code: erroSweep.code || null, message: String(erroSweep && erroSweep.message) };
+          loggerRef.warn('[lro:outbox-worker] falha na varredura de prazos', sweepError);
         }
       }
-      return resultado;
-    } catch (error) {
-      loggerRef.warn('[lro:outbox-worker] falha no ciclo', { code: error.code || null });
-      return { publicados: 0, reagendados: 0, mortos: 0, erros: [{ message: String(error && error.message) }] };
+      return {
+        ...(resultado || { publicados: 0, reagendados: 0, mortos: 0 }),
+        // `erros` mantido por compatibilidade com consumidores existentes (resumo de ciclo).
+        ...(dispatchError ? { dispatchError, erros: [{ message: dispatchError.message }] } : {}),
+        ...(sweepResultado !== null ? { sweep: sweepResultado } : {}),
+        ...(sweepError ? { sweepError } : {}),
+      };
     } finally {
       emExecucao = false;
     }

@@ -97,6 +97,51 @@ describe('worker da outbox de LRO', () => {
     expect(r.publicados).toBe(2);
   });
 
+  // P1-C (prompt duro 2026-10-31): a varredura rodava DEPOIS de `dispatch()` no mesmo try — se a
+  // outbox falhasse, o prazo de decisão humana NUNCA era avaliado (starvation). As duas
+  // responsabilidades precisam ser isoladas nas DUAS direções.
+  test('falha PERSISTENTE do dispatch não impede a varredura de rodar a cada ciclo', async () => {
+    const dispatch = jest.fn(async () => { throw Object.assign(new Error('db down'), { code: 'DISPATCH_FALHOU' }); });
+    const sweep = jest.fn(async () => ({ expirados: 0 }));
+    const worker = criarWorker({
+      dispatch, publish: async () => {}, sweep,
+      setIntervalFn: () => ({ unref: jest.fn() }), clearIntervalFn: jest.fn(),
+    });
+
+    await worker.tick();
+    await worker.tick();
+    await worker.tick();
+
+    expect(dispatch).toHaveBeenCalledTimes(3);
+    expect(sweep).toHaveBeenCalledTimes(3);
+  });
+
+  test('resultado do ciclo distingue falha de dispatch e desfecho da varredura', async () => {
+    const dispatch = jest.fn(async () => { throw Object.assign(new Error('db down'), { code: 'DISPATCH_FALHOU' }); });
+    const sweep = jest.fn(async () => ({ expirados: 2 }));
+    const worker = criarWorker({
+      dispatch, publish: async () => {}, sweep,
+      setIntervalFn: () => ({ unref: jest.fn() }), clearIntervalFn: jest.fn(),
+    });
+
+    const r = await worker.tick();
+    expect(r.dispatchError).toMatchObject({ code: 'DISPATCH_FALHOU' });
+    expect(r.sweep).toMatchObject({ expirados: 2 });
+  });
+
+  test('flag desligada: worker não agenda ciclo (não há expiração automática sem executor)', async () => {
+    const sweep = jest.fn();
+    const agendar = jest.fn(() => ({ unref: jest.fn() }));
+    const worker = criarWorker({
+      dispatch: async () => ({}), publish: async () => {}, sweep,
+      setIntervalFn: agendar, clearIntervalFn: jest.fn(), habilitado: false,
+    });
+    const r = worker.start();
+    expect(r.started).toBe(false);
+    expect(agendar).not.toHaveBeenCalled();
+    expect(sweep).not.toHaveBeenCalled();
+  });
+
   test('falha da varredura NÃO impede a outbox de drenar', async () => {
     const dispatch = jest.fn(async () => ({ publicados: 3, reagendados: 0, mortos: 0 }));
     const sweep = jest.fn(async () => { throw Object.assign(new Error('boom'), { code: 'SWEEP_FALHOU' }); });

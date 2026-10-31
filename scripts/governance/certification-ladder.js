@@ -22,7 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { ESTADOS, DEGRAUS, executarEscada } = require('../../governance/certification-ladder');
+const { ESTADOS, DEGRAUS, executarEscada, selecionarDegraus } = require('../../governance/certification-ladder');
 
 const ROOT = path.join(__dirname, '..', '..');
 const RELATORIO = path.join(ROOT, 'reports', 'certification-ladder-report.json');
@@ -55,32 +55,32 @@ function rodarComando(comando) {
 }
 
 async function principal() {
-  const runners = {};
-  for (const d of DEGRAUS) {
-    runners[d.id] = async (passo) => rodarComando(passo.comando);
+  // P1-B: a SELEÇÃO decide o que executa. Antes, `--only` filtrava só a exibição DEPOIS de rodar a
+  // escada inteira — gate não selecionado rodava e produzia efeito colateral real (wave, suíte,
+  // selagem) sem aparecer no relatório. Seleção inválida falha fechado sem rodar nada.
+  const selecao = selecionarDegraus(SOMENTE ? [SOMENTE] : null);
+  if (!selecao.ok) {
+    process.stderr.write(`[escada] degrau desconhecido: ${SOMENTE}\n`);
+    return 2;
   }
 
-  let escada = DEGRAUS;
-  if (SOMENTE) {
-    escada = DEGRAUS.filter((d) => d.id === SOMENTE);
-    if (escada.length === 0) {
-      process.stderr.write(`[escada] degrau desconhecido: ${SOMENTE}\n`);
-      return 2;
-    }
+  // Runners só existem para os degraus selecionados: defesa em profundidade contra execução
+  // acidental de algo fora do fecho de dependências.
+  const runners = {};
+  for (const id of selecao.ids) {
+    const passo = DEGRAUS.find((d) => d.id === id);
+    runners[id] = async () => rodarComando(passo.comando);
   }
 
   const resultado = await executarEscada({
     runners,
-    // `--only` executa só o degrau pedido; os demais não entram como SKIPPED.
-    ...(SOMENTE ? { resultados: {} } : {}),
+    apenas: SOMENTE ? [SOMENTE] : null,
   });
 
-  const trilha = SOMENTE
-    ? resultado.trilha.filter((t) => t.id === SOMENTE)
-    : resultado.trilha;
+  const trilha = resultado.trilha;
 
   if (flag('--json')) {
-    process.stdout.write(`${JSON.stringify({ generatedAt: new Date().toISOString(), trilha, resumo: resultado.resumo, certificavel: resultado.certificavel }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ generatedAt: new Date().toISOString(), trilha, resumo: resultado.resumo, certificavel: resultado.certificavel, problemas: resultado.problemas || [] }, null, 2)}\n`);
   } else {
     process.stdout.write('[escada] ordem oficial de certificação\n');
     for (const t of trilha) {
@@ -95,6 +95,9 @@ async function principal() {
       }
     }
     process.stdout.write(`[escada] resumo=${JSON.stringify(resultado.resumo)} certificavel=${resultado.certificavel}\n`);
+    for (const problema of resultado.problemas || []) {
+      process.stdout.write(`[escada] NAO_CERTIFICAVEL ${problema.code} ${problema.id || ''} — ${problema.detail}\n`);
+    }
     process.stdout.write(`[escada] relatório: ${path.relative(ROOT, RELATORIO)}\n`);
   }
 
@@ -104,8 +107,16 @@ async function principal() {
     trilha,
     resumo: resultado.resumo,
     certificavel: resultado.certificavel,
+    problemas: resultado.problemas || [],
   }, null, 2)}\n`);
 
+  // `--only` é diagnóstico: o exit reflete o degrau pedido, sem nunca declarar certificação.
+  if (resultado.parcial) {
+    const alvo = resultado.parcialResumo && resultado.parcialResumo.alvo;
+    const estado = resultado.parcialResumo && resultado.parcialResumo.state;
+    process.stdout.write(`[escada] execução PARCIAL (--only ${alvo}): estado=${estado} — não é certificação\n`);
+    return estado === ESTADOS.PASS ? 0 : 1;
+  }
   return resultado.certificavel ? 0 : 1;
 }
 
