@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b14a2ec8-f78d-48c4-839c-58a19160bfe9",
+  "defectId": "E2E-REPLAY-DOMINIO-E-TAB",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/backfillRegressionTests.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/backfillRegressionTests.test.js",
+      "command": "npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:38:55.850Z",
+      "finishedAt": "2026-10-31T19:38:58.791Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/E2E-REPLAY-DOMINIO-E-TAB.log",
+      "outputSha256": "97a91cda5103253753949405642f6bfccc61cb48bed5f8c0181d5f619c3493ec"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/backfillRegressionTests.test.js",
+      "sha256": "a94506d129f3c997b02eac0af431da5d30bf32d281c97109db60adaa7a2a6270"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:38:58.801Z",
+  "proofHash": "418b171ac6f337157d201c20ad563833132c085283e541256c5a2c98e5c59173",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "f0FoUlMwLwcdbu10Vm7TeiAie4BURRykHnr1/2pr3W20VkQEVUjWEwt2oQetDCW7Jh0pWjZ8Hf48XgzUzdmNCw==",
+    "signedAt": "2026-10-31T20:02:52.655Z"
+  }
+}

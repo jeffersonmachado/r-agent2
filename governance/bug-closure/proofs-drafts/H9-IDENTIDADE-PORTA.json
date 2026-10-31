@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4533a1a0-bccc-4d7f-bc8c-6730d86bfc77",
+  "transitionId": "9464228b-a5ed-46ea-be68-a3c0c9e7d38e",
   "defectId": "H9-IDENTIDADE-PORTA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
-  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
   "requiredTests": [
     "tests/unit/dev/devServicesSupervision.test.js"
   ],
@@ -18,17 +18,17 @@
       "command": "npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T16:35:28.811Z",
-      "finishedAt": "2026-10-23T16:36:04.841Z",
+      "startedAt": "2026-10-31T19:57:50.820Z",
+      "finishedAt": "2026-10-31T19:58:28.174Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H9-IDENTIDADE-PORTA.log",
-      "outputSha256": "ca42252f33ce75fa2aff0c67a834abc1033addedaf7bc7a7fe2382850ef886d1"
+      "outputSha256": "6cf4582b2c16db54cc40b5f470e7e5748074d2b4bd43b6763527722bbf1f56e5"
     }
   ],
   "negativeEvidence": [],
   "artifactHashes": [
     {
       "path": "tests/unit/dev/devServicesSupervision.test.js",
-      "sha256": "7eeb92b9b058a96497cecaaf95cf9e1b2692fc92d8aaa36c03f292233bd25631"
+      "sha256": "62f4628fcf762cbaf0e9e3dad48a45987c36428275e9d683e8f914e661f7f298"
     }
   ],
   "actor": {
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T16:36:04.842Z",
-  "proofHash": "a6c7d3322524a6fae6184d2fcf4d698c542ead80ae3008ec4fc3af3eeb942c0c"
+  "createdAt": "2026-10-31T19:58:28.182Z",
+  "proofHash": "52e098feeb55e98c70b092aa584e54729d21be224ddaa217374a982d59f86528"
 }

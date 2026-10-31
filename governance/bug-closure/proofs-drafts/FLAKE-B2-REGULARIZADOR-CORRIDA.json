@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9361ffc6-60b8-42ff-ac4f-d5d368c439da",
+  "defectId": "FLAKE-B2-REGULARIZADOR-CORRIDA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "command": "npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:57:07.637Z",
+      "finishedAt": "2026-10-31T19:57:22.467Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/FLAKE-B2-REGULARIZADOR-CORRIDA.log",
+      "outputSha256": "ad87b6c4f4b59f1b1779badca0d64d14a4a005f17cc9bf1e2ae571cf88abbcd6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "sha256": "77dcd36c5649783e7feb69cf14ae94a5a335a75dd53dd4fb2efa8fc557c67c5f"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:57:22.475Z",
+  "proofHash": "2fae912a6ab45b179bdb5745ab90476ac10e0cb14c73e3252768f0240876f03d"
+}

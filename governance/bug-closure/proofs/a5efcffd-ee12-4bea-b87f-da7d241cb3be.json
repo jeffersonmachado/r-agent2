@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a5efcffd-ee12-4bea-b87f-da7d241cb3be",
+  "defectId": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/integration/engineeringMissionSourceE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:40:21.017Z",
+      "finishedAt": "2026-10-31T19:40:29.129Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
+      "outputSha256": "dd6aa0325158cad6f648280aadaffe189b59d2e0a4e64edd41d130700a0713b7"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "sha256": "e8b417ce6cd96391b8366bb15fd3a992afc34e9c4ecae7072b3df00226768407"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:40:29.138Z",
+  "proofHash": "529e3c4ab51db3eb362000f877a39a514b918ebb5cacb0543e082ec3a94262b9",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "7q7rfL/QP3zo7agTKWrcwTFrQYf7+3zOo0f95hLxuonYAXbjwfxPbKbmqHuFk516C2nnKRb48DDU1DztyHH5DQ==",
+    "signedAt": "2026-10-31T20:02:53.236Z"
+  }
+}

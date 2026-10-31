@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "0ecd6543-1c02-40ce-8988-6be6e3ffc97d",
+  "defectId": "PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/integration/lroOutboxDispatcher.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/lroOutboxDispatcher.test.js",
+      "command": "npx jest tests/integration/lroOutboxDispatcher.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:45:28.237Z",
+      "finishedAt": "2026-10-31T19:45:51.918Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL.log",
+      "outputSha256": "70372066663a5d25a67409e96e5c7afba3e66fad433cd3a64984b74c44c512bf"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/lroOutboxDispatcher.test.js",
+      "sha256": "2163566a5c4955fb53de00b70aeb74c97f5e2179b4c4ead30dc64488a76be912"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:45:51.927Z",
+  "proofHash": "423838ae276dedad9a2e9a179e62ed2d85b121efd20d766a433be7581dd7c518"
+}

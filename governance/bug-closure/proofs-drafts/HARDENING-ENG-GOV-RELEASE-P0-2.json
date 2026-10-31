@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "bac17be3-ba49-4474-b70e-a5d68e4027de",
+  "transitionId": "ef351319-7de7-4caa-9c16-669f0e783590",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-2",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
-  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
   "requiredTests": [
     "tests/unit/governance/governanceChainCertification.test.js"
   ],
@@ -18,17 +18,17 @@
       "command": "npx jest tests/unit/governance/governanceChainCertification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T16:23:01.392Z",
-      "finishedAt": "2026-10-23T16:23:05.785Z",
+      "startedAt": "2026-10-31T19:33:39.037Z",
+      "finishedAt": "2026-10-31T19:33:41.780Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-2.log",
-      "outputSha256": "7e37e0c6cfc711388ce092794c9c5bee3238717f98c22d2e2c4320b02ff482da"
+      "outputSha256": "732173348d8d65899d9f6f37c4eef13052518ac748bfa626c475a293dc4dddb1"
     }
   ],
   "negativeEvidence": [],
   "artifactHashes": [
     {
       "path": "tests/unit/governance/governanceChainCertification.test.js",
-      "sha256": "4760733867db0f7c7e55eed30272cb408dfda9b831c7251f521396a128ceaf34"
+      "sha256": "e72e0a28bd5e987d6d271541d276eae0be0cd94e595bf5d501bd052f3ee9543e"
     }
   ],
   "actor": {
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T16:23:05.785Z",
-  "proofHash": "9e9363ad4ef4a0a901fa99c70e980157e9758da4fd6d5aea564a56f317d9451f"
+  "createdAt": "2026-10-31T19:33:41.787Z",
+  "proofHash": "def2cdda13db3a97f1ad3b15e9444bef61c96d47cb95216625e0c8bfd72be911"
 }

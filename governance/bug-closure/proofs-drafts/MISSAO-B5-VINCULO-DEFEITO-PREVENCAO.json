@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "fecabed7-6e2e-441b-bce3-5251cfe7ff0a",
+  "transitionId": "02fce92f-5d68-42e4-8d0f-40819380a566",
   "defectId": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
-  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
   "requiredTests": [
     "tests/integration/evoSyncIntegration.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/evoSyncIntegration.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T16:36:13.684Z",
-      "finishedAt": "2026-10-23T16:36:21.951Z",
+      "startedAt": "2026-10-31T19:58:44.644Z",
+      "finishedAt": "2026-10-31T19:58:55.183Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.log",
-      "outputSha256": "b1c4ecf5d4a0e3b95a3fa6297c6b8efb4274aa3a6d7b99083aa755e0c289acbf"
+      "outputSha256": "52cb3af111c8b8f01af9bd21444eee064e969d9bd5ca4370c4dad12c5ccd4685"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T16:36:21.951Z",
-  "proofHash": "4e79ffb3a343ee6e621c7f19f2f49f99af3b2a49c01827d766e542e1192770b9"
+  "createdAt": "2026-10-31T19:58:55.189Z",
+  "proofHash": "964cab45017b253a0e929e6dff0f385a7603cc3ec9018e0f3c9c6af018169c90"
 }

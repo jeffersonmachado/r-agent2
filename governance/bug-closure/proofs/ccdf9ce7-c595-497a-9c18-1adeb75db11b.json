@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ccdf9ce7-c595-497a-9c18-1adeb75db11b",
+  "defectId": "PROMPT-P1A-CERTIFICACAO-SKIPPED",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/certificationLadder.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/certificationLadder.test.js",
+      "command": "npx jest tests/unit/governance/certificationLadder.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:45:17.338Z",
+      "finishedAt": "2026-10-31T19:45:21.060Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1A-CERTIFICACAO-SKIPPED.log",
+      "outputSha256": "a1b096d10402e9415abde1f7385af6f75c9ad7c65608ee5d1bc7e70cdee7b94b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/certificationLadder.test.js",
+      "sha256": "89fb783b3ddc353409e6c9b51b35f68f1e26b284cf72c8cf31906986fcc00d40"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:45:21.067Z",
+  "proofHash": "8181b71e612cffff0698125bf59a37bca1601f44d2cfb5b6b542f5a339ec6811",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Eg6ugRGXa8jlWItZVpqKGRuavcKdpWel2posYI2tyAYGlvanjz1oitPUN5Yj1gp67bsGlufsQF5Ms/fKor5KBA==",
+    "signedAt": "2026-10-31T20:03:00.700Z"
+  }
+}

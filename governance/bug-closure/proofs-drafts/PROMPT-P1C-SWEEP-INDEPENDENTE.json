@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5ea1733d-acc5-4260-8e78-2c39ed7267d9",
+  "defectId": "PROMPT-P1C-SWEEP-INDEPENDENTE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "api/services/lro/__tests__/lroOutboxWorker.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "api/services/lro/__tests__/lroOutboxWorker.test.js",
+      "command": "npx jest api/services/lro/__tests__/lroOutboxWorker.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:45:24.721Z",
+      "finishedAt": "2026-10-31T19:45:28.221Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1C-SWEEP-INDEPENDENTE.log",
+      "outputSha256": "230d3957740424ab762516c1f0cb13e82cd24cbbe87a668ffb3346a73fb04535"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "api/services/lro/__tests__/lroOutboxWorker.test.js",
+      "sha256": "7bbbe5f2b6655ff629ae3a45b211b00b605e377fe2fdca543273043ff1deab7d"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:45:28.229Z",
+  "proofHash": "9d3926792f118a0e0b00da10a5c950322a05ea4e8c8305162c67f09b9a2b677d"
+}

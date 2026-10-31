@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "92d6e24a-dabf-445e-958e-162dbb873ea1",
+  "transitionId": "6c36f3b6-76f2-48a3-8330-d54324fb41f0",
   "defectId": "N5-REENTREGA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
-  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
   "requiredTests": [
     "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js"
   ],
@@ -18,17 +18,17 @@
       "command": "npx jest tests/integration/missionSourceStaleReplanFullRouterE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T17:04:41.965Z",
-      "finishedAt": "2026-10-23T17:06:17.322Z",
+      "startedAt": "2026-10-31T19:58:55.203Z",
+      "finishedAt": "2026-10-31T20:00:09.026Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log",
-      "outputSha256": "0c0e8c651ed66dcb2a190f9332e08a3c9ef2ad86fbea96758a6f9929e69b8718"
+      "outputSha256": "a3b0314e4b7c7c3bf963c8323a273d7448e15a4324bb1a79c5da3fc78f960739"
     }
   ],
   "negativeEvidence": [],
   "artifactHashes": [
     {
       "path": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
-      "sha256": "be169da9aa41489102432bef9488c87cdaf5514067a92777854936b550e6d84a"
+      "sha256": "927798f461030bac288d64a169b77acd574379f91412790ef2c3634f61cdaa71"
     }
   ],
   "actor": {
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T17:06:17.325Z",
-  "proofHash": "cdb350e6b1b846101c08385d2ae45173c0e67060261e7cf96485eaf282fe2da3"
+  "createdAt": "2026-10-31T20:00:09.035Z",
+  "proofHash": "3c34da0a8777bffbd9e443eeab991a999babc5ecca59a4920b1a75db85fd2b42"
 }

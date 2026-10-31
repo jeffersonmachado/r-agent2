@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "d89aa55f-bc2b-4068-84a2-23c65c69788e",
+  "transitionId": "eeea8ef1-d3b3-4e7a-9b41-0fdafdccdfac",
   "defectId": "H16-V2SEAL-PASSO-SEM-MOTIVO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
-  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
   "requiredTests": [
     "tests/unit/governance/v2SealStepDiagnostics.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/v2SealStepDiagnostics.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T16:31:24.255Z",
-      "finishedAt": "2026-10-23T16:31:29.427Z",
+      "startedAt": "2026-10-31T19:40:55.218Z",
+      "finishedAt": "2026-10-31T19:40:57.821Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
-      "outputSha256": "b1c445a6d395de29559087ccd6688c6dbb999bd01b179ed15088b0f91a587bff"
+      "outputSha256": "d4793a0a1dab53f9c3421c12d4739dc54c7cd99f1b8553cc296d979260099925"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T16:31:29.428Z",
-  "proofHash": "229b3142bc876ac27a7337b2b8e23d68f8a4fc3d90886dddcf2511086be47c2f"
+  "createdAt": "2026-10-31T19:40:57.828Z",
+  "proofHash": "808b4b0db4b87d453f3f35f18fa49b25579ecca0e5627f828e5fc167f2b9f05a"
 }

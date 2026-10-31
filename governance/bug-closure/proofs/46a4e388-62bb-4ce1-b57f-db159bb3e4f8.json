@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "46a4e388-62bb-4ce1-b57f-db159bb3e4f8",
+  "defectId": "E2E-SUPPORT-CENARIO1-PRECONDICAO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/backfillRegressionTests.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/backfillRegressionTests.test.js",
+      "command": "npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:51:03.248Z",
+      "finishedAt": "2026-10-31T19:51:05.923Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/E2E-SUPPORT-CENARIO1-PRECONDICAO.log",
+      "outputSha256": "2394b711644dd603ff2d672f575682f106bc6631fcb526f574532437c4cba675"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/backfillRegressionTests.test.js",
+      "sha256": "a94506d129f3c997b02eac0af431da5d30bf32d281c97109db60adaa7a2a6270"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:51:05.928Z",
+  "proofHash": "7e19f0fb60ca0df8a3a280b666ec2bfe7703a581e63b2d82d9fc1ac243ad7866",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "gD2sZNedlR/yWfruEccDzJoIxseD+8VdBxzYuSUKKPqHhyEUzzpPZRTQJ94hnJT78RdXM1H6hKMUu1paP6TwDg==",
+    "signedAt": "2026-10-31T20:02:52.752Z"
+  }
+}

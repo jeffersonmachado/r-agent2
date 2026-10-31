@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "8e5418c2-22e0-44a9-8e5f-ed05a73d16f5",
+  "defectId": "PROMPT-P1H-RUN-CLOSURE-CONDICIONAL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/runClosureTransition.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/runClosureTransition.test.js",
+      "command": "npx jest tests/unit/governance/runClosureTransition.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:46:30.216Z",
+      "finishedAt": "2026-10-31T19:46:35.276Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1H-RUN-CLOSURE-CONDICIONAL.log",
+      "outputSha256": "510602308b59d0e22ca6988b0e93206feb80da46102f43bed70725e6242e19f4"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/runClosureTransition.test.js",
+      "sha256": "142ec4436bbd880d05d528c872f29ebd3f570404fa1d0e53fdba4d011a85d9f7"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:46:35.282Z",
+  "proofHash": "f7dafee7c0ba9a1c81dcc82105246968a55cad07ff963fe3afe0c491c9445888"
+}

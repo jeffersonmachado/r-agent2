@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f79e0c39-ba73-42a5-9461-657fc3680fda",
+  "transitionId": "f1a80281-655e-4774-b815-77981f7d1da7",
   "defectId": "DEF-TEARDOWN-DRAIN-WORKER",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "32edd8e765ba167e3ed53831caacb772739810d8",
-  "codeFingerprint": "a351e0628dcd54f616244382a8b209b91da0d7e97ed196ad77f057e01285f7f9",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
   "requiredTests": [
     "tests/integration/governanceApprovalFullWorkerE2E.test.js"
   ],
@@ -18,17 +18,17 @@
       "command": "npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-23T16:59:50.522Z",
-      "finishedAt": "2026-10-23T17:01:07.823Z",
+      "startedAt": "2026-10-31T19:37:29.895Z",
+      "finishedAt": "2026-10-31T19:38:51.350Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log",
-      "outputSha256": "dfcb9d0c834115fcc2792c6a56f921c6367735f59e15793ab5dad209195844a5"
+      "outputSha256": "2e15f269f0668c067a218d4e8fdf99abf653049227b1cc5aba3caea8de1033aa"
     }
   ],
   "negativeEvidence": [],
   "artifactHashes": [
     {
       "path": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
-      "sha256": "a9fdc82fe3641fa60648d490f742e8b767f74797487a4699e3b56af98ecc2705"
+      "sha256": "fadebfb26ad896bc03d702569fb62d65f98222a76d8ef2b2b1abb701de1e157a"
     }
   ],
   "actor": {
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-23T17:01:07.824Z",
-  "proofHash": "d4e0c24b0f4f32ae939e3d3c1847795cd5a2d21a41d4625250e4bdac9554ece7"
+  "createdAt": "2026-10-31T19:38:51.371Z",
+  "proofHash": "5342e8d17943844ded1b59994d1a133b6fc4fbf8f271bd5303f662e487651650"
 }
