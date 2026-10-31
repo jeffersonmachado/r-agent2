@@ -31,7 +31,13 @@ const crypto = require('crypto');
  * Vazio = nenhuma autoridade reconhecida ⇒ certificação bloqueada.
  * Para registrar: `node -e "console.log(require('./governance/bug-closure/trusted-authorities').fingerprintDaChavePem(require('fs').readFileSync('autoridade.pub','utf8')))"`
  */
-const PINNED_AUTHORITY_FINGERPRINTS = Object.freeze([]);
+const PINNED_AUTHORITY_FINGERPRINTS = Object.freeze([
+  // Chave de FECHAMENTO de defeito (Ed25519). Provisionada em 2026-10-31: par gerado fora da
+  // árvore (~/.local/share/rap-closure), chave privada nunca versionada. Aqui só o fingerprint
+  // público — é política revisável, não segredo. A âncora externa
+  // (RAP_CLOSURE_TRUST_ANCHOR_SHA256) continua obrigatória: o pin sozinho não autoriza nada.
+  'f6102938cf6a0d350c6f345cb685d409d127f5d1d0f7ab3ef49a51789a0f14cb',
+]);
 
 /** Normaliza a PEM e devolve sha256 do DER (SPKI) — estável a espaços/quebras de linha. */
 function fingerprintDaChavePem(publicKeyPem) {
@@ -59,7 +65,12 @@ function ancoraExterna() {
  * Pins das chaves de APROVAÇÃO HUMANA (missões/readiness). Separados dos de fechamento:
  * quem fecha defeito não é necessariamente quem aprova a missão.
  */
-const PINNED_APPROVAL_FINGERPRINTS = Object.freeze([]);
+const PINNED_APPROVAL_FINGERPRINTS = Object.freeze([
+  // Chave de APROVAÇÃO de missão (Ed25519), distinta da de fechamento de propósito: quem fecha
+  // defeito não aprova a própria missão. Mesmo critério: fingerprint público versionado, chave
+  // privada fora da árvore, âncora externa RAP_APPROVAL_TRUST_ANCHOR_SHA256 obrigatória.
+  '44334ec66395ff66bbf52cf5b0661d770a73af298306e64224a437a145e51b5b',
+]);
 
 /**
  * Âncora externa da chave de aprovação. Mesmo achado do Alert 1, aplicado ao gate de
