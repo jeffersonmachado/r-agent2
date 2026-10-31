@@ -38,7 +38,11 @@ const arg = (nome, padrao = null) => {
 };
 const flag = (nome) => process.argv.includes(nome);
 
-const REGISTRY = path.resolve(ROOT, arg('--registry', path.join('governance', 'bug-closure', 'negative-evidence-registry.json')));
+// `--registry` é override de diagnóstico; o caminho PADRÃO é lido com o literal inline dentro do
+// readFileSync (ver `lerRegistro`). Motivo medido: com o caminho numa variável, o auditor
+// `json-persistence` não reconhece contexto de LEITURA, classifica o alvo como UNKNOWN e derruba o
+// bootstrap do CI (aconteceu em 2026-10-31).
+const REGISTRY_OVERRIDE = arg('--registry');
 const TIMEOUT = Number(arg('--timeout-ms', '600000'));
 const ONLY = (arg('--only') || '').split(',').map((x) => x.trim()).filter(Boolean);
 const EVIDENCIA_DIR = path.join(ROOT, 'AI_MEMORY', 'evidence', 'prova-negativa');
@@ -142,8 +146,15 @@ function provar(mutacao) {
   };
 }
 
+function lerRegistro() {
+  const texto = REGISTRY_OVERRIDE
+    ? fs.readFileSync(path.resolve(ROOT, REGISTRY_OVERRIDE), 'utf8')
+    : fs.readFileSync(path.join(ROOT, 'governance', 'bug-closure', 'negative-evidence-registry.json'), 'utf8');
+  return JSON.parse(texto);
+}
+
 function main() {
-  const registro = JSON.parse(fs.readFileSync(REGISTRY, 'utf8'));
+  const registro = lerRegistro();
   const mutacoes = (registro.mutations || []).filter((m) => ONLY.length === 0 || ONLY.includes(m.defectId));
   if (mutacoes.length === 0) {
     process.stderr.write('[prova-negativa] nenhuma mutação selecionada\n');
