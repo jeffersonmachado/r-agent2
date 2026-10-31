@@ -445,7 +445,8 @@
     "ci:artifacts": "node scripts/ci/bootstrap-ci-environment.js --artifacts-only",
     "ci:clean-checkout": "node scripts/ci/clean-checkout-verify.js",
     "ci:clean-checkout:all": "node scripts/ci/clean-checkout-verify.js --scenario all",
-    "cert:ladder": "node scripts/governance/certification-ladder.js"
+    "cert:ladder": "node scripts/governance/certification-ladder.js",
+    "prove:lro-outbox-claim": "node scripts/governance/prove-lro-outbox-claim.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",
