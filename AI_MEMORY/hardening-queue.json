@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-10-30T05:56:45.232Z",
+  "updatedAt": "2026-10-31",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -56,7 +56,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceManifestHashBaseline.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceManifestHashBaseline.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/bba68152-a815-4894-9210-0c7b7c2a92df.json",
+      "attestationId": "bba68152-a815-4894-9210-0c7b7c2a92df",
+      "attestedAt": "2026-10-31T21:49:05.539Z"
     },
     {
       "id": "P0-3",
@@ -73,7 +76,10 @@
       "targetedTestAt": "2026-10-17T12:43:16.839Z",
       "targetedTestExit": 0,
       "verificationCommit": "9308a01d944eac08b98dd3b7861c39be81ac90e8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/securityGateProvenance.test.js exit=0 em 9308a01d944e"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/securityGateProvenance.test.js exit=0 em 9308a01d944e",
+      "closureProof": "governance/bug-closure/proofs/9b427f93-65a0-4917-80bd-963f92c65c7a.json",
+      "attestationId": "9b427f93-65a0-4917-80bd-963f92c65c7a",
+      "attestedAt": "2026-10-31T21:49:05.676Z"
     },
     {
       "id": "P0-4",
@@ -90,7 +96,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/waiverService.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/waiverService.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/ad249f47-f1b2-4f77-92b9-273c435b7267.json",
+      "attestationId": "ad249f47-f1b2-4f77-92b9-273c435b7267",
+      "attestedAt": "2026-10-31T21:49:05.819Z"
     },
     {
       "id": "P0-5",
@@ -124,7 +133,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/testSuiteClassifier.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/testSuiteClassifier.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/55480a36-6905-4b6e-af02-677dc875d77c.json",
+      "attestationId": "55480a36-6905-4b6e-af02-677dc875d77c",
+      "attestedAt": "2026-10-31T21:49:06.019Z"
     },
     {
       "id": "P1-2",
@@ -141,7 +153,10 @@
       "targetedTestAt": "2026-10-17T13:15:15.321Z",
       "targetedTestExit": 0,
       "verificationCommit": "64ea653190c5b5fe49614277f99229a6fb004397",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMissionReviewEngines.test.js exit=0 em 64ea653190c5"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMissionReviewEngines.test.js exit=0 em 64ea653190c5",
+      "closureProof": "governance/bug-closure/proofs/5ff45efb-534a-46a5-bfb1-401f101b9631.json",
+      "attestationId": "5ff45efb-534a-46a5-bfb1-401f101b9631",
+      "attestedAt": "2026-10-31T21:49:07.122Z"
     },
     {
       "id": "P1-3",
@@ -158,7 +173,10 @@
       "targetedTestAt": "2026-10-17T13:15:15.322Z",
       "targetedTestExit": 0,
       "verificationCommit": "64ea653190c5b5fe49614277f99229a6fb004397",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/deriveGatesEvidence.test.js exit=0 em 64ea653190c5"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/deriveGatesEvidence.test.js exit=0 em 64ea653190c5",
+      "closureProof": "governance/bug-closure/proofs/c0183ba0-7601-4703-ad9e-9b8bd64f0f83.json",
+      "attestationId": "c0183ba0-7601-4703-ad9e-9b8bd64f0f83",
+      "attestedAt": "2026-10-31T21:49:07.256Z"
     },
     {
       "id": "P1-4",
@@ -175,7 +193,10 @@
       "targetedTestAt": "2026-10-17T13:15:15.322Z",
       "targetedTestExit": 0,
       "verificationCommit": "64ea653190c5b5fe49614277f99229a6fb004397",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/activePreventiveRules.test.js exit=0 em 64ea653190c5"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/activePreventiveRules.test.js exit=0 em 64ea653190c5",
+      "closureProof": "governance/bug-closure/proofs/f665598b-62f9-4108-a04a-894c6ced26cd.json",
+      "attestationId": "f665598b-62f9-4108-a04a-894c6ced26cd",
+      "attestedAt": "2026-10-31T21:49:07.383Z"
     },
     {
       "id": "P1-5",
@@ -226,7 +247,10 @@
       "targetedTestAt": "2026-10-17T15:15:41.384Z",
       "targetedTestExit": 0,
       "verificationCommit": "6c5b105469beba5647f2d523676c6bbd3f9edcad",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/triageRemediation.test.js exit=0 em 6c5b105469be"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/triageRemediation.test.js exit=0 em 6c5b105469be",
+      "closureProof": "governance/bug-closure/proofs/14408d77-5c0f-43b7-827b-b0c53efab969.json",
+      "attestationId": "14408d77-5c0f-43b7-827b-b0c53efab969",
+      "attestedAt": "2026-10-31T21:49:07.522Z"
     },
     {
       "id": "P1-8",
@@ -243,7 +267,10 @@
       "targetedTestAt": "2026-10-17T15:06:09.902Z",
       "targetedTestExit": 0,
       "verificationCommit": "f8b28264914a5d6c2658cf4be852886dc7480fbf",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/qa/systemInventoryIntegrity.test.js exit=0 em f8b28264914a"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/qa/systemInventoryIntegrity.test.js exit=0 em f8b28264914a",
+      "closureProof": "governance/bug-closure/proofs/0022fc52-3eb3-4946-b485-3fbd28aae05b.json",
+      "attestationId": "0022fc52-3eb3-4946-b485-3fbd28aae05b",
+      "attestedAt": "2026-10-31T21:49:07.655Z"
     },
     {
       "id": "P2-1",
@@ -260,7 +287,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/remoteProvenanceAuthority.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/remoteProvenanceAuthority.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/56c00e34-a199-4cca-80dc-5e631a127138.json",
+      "attestationId": "56c00e34-a199-4cca-80dc-5e631a127138",
+      "attestedAt": "2026-10-31T21:49:10.595Z"
     },
     {
       "id": "P1-9",
@@ -277,7 +307,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceContract.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceContract.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/d520c64b-91e6-4e10-a351-30f115cbbe86.json",
+      "attestationId": "d520c64b-91e6-4e10-a351-30f115cbbe86",
+      "attestedAt": "2026-10-31T21:49:07.784Z"
     },
     {
       "id": "P1-12",
@@ -294,7 +327,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceFreshness.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceFreshness.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/6fcbf078-6d1d-42dc-b308-5354bebd55c7.json",
+      "attestationId": "6fcbf078-6d1d-42dc-b308-5354bebd55c7",
+      "attestedAt": "2026-10-31T21:49:06.409Z"
     },
     {
       "id": "P1-13",
@@ -312,7 +348,10 @@
       "targetedTestAt": "2026-10-17T21:37:42.001Z",
       "targetedTestExit": 0,
       "verificationCommit": "2dc073a8b57941059bef45abe9c710e4733d55b2",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/smokeEvidenceSummary.test.js exit=0 em 2dc073a8b579"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/smokeEvidenceSummary.test.js exit=0 em 2dc073a8b579",
+      "closureProof": "governance/bug-closure/proofs/3cf8ce42-ad37-4c2f-8ea0-1d0c3188c16a.json",
+      "attestationId": "3cf8ce42-ad37-4c2f-8ea0-1d0c3188c16a",
+      "attestedAt": "2026-10-31T21:49:06.544Z"
     },
     {
       "id": "P1-10",
@@ -329,7 +368,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringRouterProviderChainPolicy.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringRouterProviderChainPolicy.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/af95db54-429b-4155-9cf2-af8a68667e39.json",
+      "attestationId": "af95db54-429b-4155-9cf2-af8a68667e39",
+      "attestedAt": "2026-10-31T21:49:06.146Z"
     },
     {
       "id": "P1-11",
@@ -347,7 +389,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/v2SealOrchestration.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/v2SealOrchestration.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/3667910e-ea5d-4bc0-b417-59401a62fc5f.json",
+      "attestationId": "3667910e-ea5d-4bc0-b417-59401a62fc5f",
+      "attestedAt": "2026-10-31T21:49:06.286Z"
     },
     {
       "id": "P1-15",
@@ -364,7 +409,10 @@
       "targetedTestAt": "2026-10-17T12:53:37.118Z",
       "targetedTestExit": 0,
       "verificationCommit": "c81f11081b77",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/attestationOrder.test.js exit=0 em c81f11081b77"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/attestationOrder.test.js exit=0 em c81f11081b77",
+      "closureProof": "governance/bug-closure/proofs/7ab55f63-ff8c-4cf1-8e90-89da85e69e8f.json",
+      "attestationId": "7ab55f63-ff8c-4cf1-8e90-89da85e69e8f",
+      "attestedAt": "2026-10-31T21:49:06.722Z"
     },
     {
       "id": "P1-16",
@@ -381,7 +429,10 @@
       "targetedTestAt": "2026-10-17T15:03:55.638Z",
       "targetedTestExit": 0,
       "verificationCommit": "1de31fa4a17687b29c475c1af9c426d6c4b2c220",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/releaseSuiteRunner.test.js exit=0 em 1de31fa4a176"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/releaseSuiteRunner.test.js exit=0 em 1de31fa4a176",
+      "closureProof": "governance/bug-closure/proofs/7230c057-e3bc-488a-b014-dba2dfd4b0c9.json",
+      "attestationId": "7230c057-e3bc-488a-b014-dba2dfd4b0c9",
+      "attestedAt": "2026-10-31T21:49:06.851Z"
     },
     {
       "id": "P2-2",
@@ -398,7 +449,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/reportWriteLineage.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/reportWriteLineage.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/4d0e4019-5c1c-47b1-a9ae-0c9277caab44.json",
+      "attestationId": "4d0e4019-5c1c-47b1-a9ae-0c9277caab44",
+      "attestedAt": "2026-10-31T21:49:10.740Z"
     },
     {
       "id": "P1-17",
@@ -415,7 +469,10 @@
       "targetedTestAt": "2026-10-17T15:48:35.969Z",
       "targetedTestExit": 0,
       "verificationCommit": "0f6957675d9f03c4e68493f618ef570b06ecc15b",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/securityGateProvenance.test.js exit=0 em 0f6957675d9f"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/securityGateProvenance.test.js exit=0 em 0f6957675d9f",
+      "closureProof": "governance/bug-closure/proofs/a2fb434e-e993-4972-85e8-19ae3647cde0.json",
+      "attestationId": "a2fb434e-e993-4972-85e8-19ae3647cde0",
+      "attestedAt": "2026-10-31T21:49:06.993Z"
     },
     {
       "id": "H9-IDENTIDADE-PORTA",
@@ -434,7 +491,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/dev/devServicesSupervision.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/dev/devServicesSupervision.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/f7c5d6c9-0c88-4f67-8d46-242aa68fd5a7.json",
+      "attestationId": "f7c5d6c9-0c88-4f67-8d46-242aa68fd5a7",
+      "attestedAt": "2026-10-31T21:49:01.936Z"
     },
     {
       "id": "H10-VEREDITO-GATE-SEGURANCA",
@@ -453,7 +513,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/securityGateState.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/securityGateState.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/e23e83b4-28d3-40e6-bb39-d99eb0d918d9.json",
+      "attestationId": "e23e83b4-28d3-40e6-bb39-d99eb0d918d9",
+      "attestedAt": "2026-10-31T21:49:00.213Z"
     },
     {
       "id": "H11-ESCOPO-DIFERIDO",
@@ -472,7 +535,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringRouter/taskContractScope.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringRouter/taskContractScope.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/fb7f2925-d2bf-4f5f-98a1-edd9b15cbcd0.json",
+      "attestationId": "fb7f2925-d2bf-4f5f-98a1-edd9b15cbcd0",
+      "attestedAt": "2026-10-31T21:49:00.342Z"
     },
     {
       "id": "H12-RAG-REPARO",
@@ -491,7 +557,10 @@
       "targetedTestAt": "2026-10-17T21:02:41.594Z",
       "targetedTestExit": 0,
       "verificationCommit": "e8ee2116d73102a7935c036f6125bf90548088df",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/ragIndexHealthPolicy.test.js exit=0 em e8ee2116d731"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/ragIndexHealthPolicy.test.js exit=0 em e8ee2116d731",
+      "closureProof": "governance/bug-closure/proofs/5dc1b490-a9b8-4df4-a629-6980cf188f9c.json",
+      "attestationId": "5dc1b490-a9b8-4df4-a629-6980cf188f9c",
+      "attestedAt": "2026-10-31T21:49:00.463Z"
     },
     {
       "id": "H13-RUNNER-COMPLETO",
@@ -510,7 +579,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/allValidatorsRunner.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/allValidatorsRunner.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/9cebff23-9150-44f4-97a4-133cbbee1a6d.json",
+      "attestationId": "9cebff23-9150-44f4-97a4-133cbbee1a6d",
+      "attestedAt": "2026-10-31T21:49:00.595Z"
     },
     {
       "id": "H14-CDR-SUPERVISIONADO",
@@ -529,7 +601,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/pbx/pbxCdrHealth.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/pbx/pbxCdrHealth.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/26168442-f763-46ed-8a11-576eaff56024.json",
+      "attestationId": "26168442-f763-46ed-8a11-576eaff56024",
+      "attestedAt": "2026-10-31T21:49:00.744Z"
     },
     {
       "id": "H15-DIST-RECIBO-STALE",
@@ -562,7 +637,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/allValidatorsRunner.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/allValidatorsRunner.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/f9154d10-edbd-422d-b787-d83d8edace89.json",
+      "attestationId": "f9154d10-edbd-422d-b787-d83d8edace89",
+      "attestedAt": "2026-10-31T21:49:01.059Z"
     },
     {
       "id": "H17-HOOKS-EDITOR",
@@ -581,7 +659,10 @@
       "targetedTestAt": "2026-10-17T12:46:15.330Z",
       "targetedTestExit": 0,
       "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
-      "verificationNote": "reconcile-hardening-queue.js: frontend/src/components/FlowTemplateSelector.test.jsx exit=0 em 3a824ad53d87"
+      "verificationNote": "reconcile-hardening-queue.js: frontend/src/components/FlowTemplateSelector.test.jsx exit=0 em 3a824ad53d87",
+      "closureProof": "governance/bug-closure/proofs/8a63aeaa-dc69-4ec2-b7b3-f4d3cc8ef663.json",
+      "attestationId": "8a63aeaa-dc69-4ec2-b7b3-f4d3cc8ef663",
+      "attestedAt": "2026-10-31T21:49:01.331Z"
     },
     {
       "id": "H18-JORNADA-FUNCIONAL-BROWSER",
@@ -600,7 +681,10 @@
       "targetedTestAt": "2026-10-17T21:27:52.377Z",
       "targetedTestExit": 0,
       "verificationCommit": "02f9367db40a00b32642cc13bf47fff5b18b1225",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/journeyDetectors.test.js exit=0 em 02f9367db40a"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/journeyDetectors.test.js exit=0 em 02f9367db40a",
+      "closureProof": "governance/bug-closure/proofs/c62795f6-4fc4-42fd-aa3d-0d5003b2acde.json",
+      "attestationId": "c62795f6-4fc4-42fd-aa3d-0d5003b2acde",
+      "attestedAt": "2026-10-31T21:49:01.581Z"
     },
     {
       "id": "H19-DIST-CAUSA-UNICA",
@@ -635,7 +719,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engine/enginePurityPorts.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/engine/enginePurityPorts.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/a18f8bb2-d49f-4949-9e39-44884f6d3bf6.json",
+      "attestationId": "a18f8bb2-d49f-4949-9e39-44884f6d3bf6",
+      "attestedAt": "2026-10-31T21:48:57.990Z"
     },
     {
       "id": "N5-REENTREGA",
@@ -654,7 +741,10 @@
       "targetedTestAt": "2026-10-17T21:51:19.093Z",
       "targetedTestExit": 0,
       "verificationCommit": "2bfa8199829f1285fdc206dba6cec8909286fad5",
-      "verificationNote": "reconcile-hardening-queue.js: tests/integration/missionSourceStaleReplanFullRouterE2E.test.js exit=0 em 2bfa8199829f"
+      "verificationNote": "reconcile-hardening-queue.js: tests/integration/missionSourceStaleReplanFullRouterE2E.test.js exit=0 em 2bfa8199829f",
+      "closureProof": "governance/bug-closure/proofs/305a5204-63a8-4582-a53d-0248e9219bca.json",
+      "attestationId": "305a5204-63a8-4582-a53d-0248e9219bca",
+      "attestedAt": "2026-10-31T21:49:05.348Z"
     },
     {
       "id": "DEF-TEARDOWN-DRAIN-WORKER",
@@ -675,7 +765,10 @@
       "targetedTestAt": "2026-10-17T21:05:00.983Z",
       "targetedTestExit": 0,
       "verificationCommit": "da1b9be965c22dba2cbbc9a3b96284171b913233",
-      "blocked_reason": null
+      "blocked_reason": null,
+      "closureProof": "governance/bug-closure/proofs/2255f2a5-e320-4e1d-98bf-4bd96c0c363d.json",
+      "attestationId": "2255f2a5-e320-4e1d-98bf-4bd96c0c363d",
+      "attestedAt": "2026-10-31T21:48:57.686Z"
     },
     {
       "id": "DEF-WS-AUTH-POS-LOGIN",
@@ -695,7 +788,10 @@
       "targetedTestAt": "2026-10-17T12:46:15.330Z",
       "targetedTestExit": 0,
       "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
-      "verificationNote": "reconcile-hardening-queue.js: frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx exit=0 em 3a824ad53d87"
+      "verificationNote": "reconcile-hardening-queue.js: frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx exit=0 em 3a824ad53d87",
+      "closureProof": "governance/bug-closure/proofs/8d274fb8-0e90-4230-aefc-9c1eadbbf4db.json",
+      "attestationId": "8d274fb8-0e90-4230-aefc-9c1eadbbf4db",
+      "attestedAt": "2026-10-31T21:48:57.889Z"
     },
     {
       "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
@@ -715,7 +811,10 @@
       "targetedTestAt": "2026-10-17T12:46:15.330Z",
       "targetedTestExit": 0,
       "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
-      "verificationNote": "reconcile-hardening-queue.js: frontend/src/__tests__/supportHeaderEnhancement.test.js exit=0 em 3a824ad53d87"
+      "verificationNote": "reconcile-hardening-queue.js: frontend/src/__tests__/supportHeaderEnhancement.test.js exit=0 em 3a824ad53d87",
+      "closureProof": "governance/bug-closure/proofs/58b5ec9b-ccee-476d-8ce4-9e4db5c15063.json",
+      "attestationId": "58b5ec9b-ccee-476d-8ce4-9e4db5c15063",
+      "attestedAt": "2026-10-31T21:48:57.465Z"
     },
     {
       "id": "DEF-QUEUE-DELETE-DB-ONLY",
@@ -735,7 +834,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/queueModuleRoutes.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/queueModuleRoutes.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/5091de13-b4e8-46ae-92d5-07054a337da1.json",
+      "attestationId": "5091de13-b4e8-46ae-92d5-07054a337da1",
+      "attestedAt": "2026-10-31T21:48:57.354Z"
     },
     {
       "id": "MISSAO-A-L1-IMPACTO",
@@ -755,7 +857,10 @@
       "targetedTestAt": "2026-10-17T15:55:26.630Z",
       "targetedTestExit": 0,
       "verificationCommit": "0224b5ebadee043b9e95e54da9f4a4d20bb72535",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/coverage/impactGraph.test.js exit=0 em 0224b5ebadee"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/coverage/impactGraph.test.js exit=0 em 0224b5ebadee",
+      "closureProof": "governance/bug-closure/proofs/3758cd35-d13f-48a9-bd89-ebaf52e9bda6.json",
+      "attestationId": "3758cd35-d13f-48a9-bd89-ebaf52e9bda6",
+      "attestedAt": "2026-10-31T21:49:04.909Z"
     },
     {
       "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
@@ -775,7 +880,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/integration/evoSyncIntegration.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/integration/evoSyncIntegration.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/ca708354-a5e8-4648-968e-3d7a0a8bfe19.json",
+      "attestationId": "ca708354-a5e8-4648-968e-3d7a0a8bfe19",
+      "attestedAt": "2026-10-31T21:48:57.795Z"
     },
     {
       "id": "DEF-STATESYNC-EXEMPTION-STALE",
@@ -795,7 +903,10 @@
       "targetedTestAt": "2026-10-17T16:01:50.042Z",
       "targetedTestExit": 0,
       "verificationCommit": "df8a47f65a710b56506f0d257efc3f2787a59eec",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/frontend/stateSyncExemptionExactness.test.js exit=0 em df8a47f65a71"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/frontend/stateSyncExemptionExactness.test.js exit=0 em df8a47f65a71",
+      "closureProof": "governance/bug-closure/proofs/d73d87d4-7b65-4673-bbd6-4d9a835f709f.json",
+      "attestationId": "d73d87d4-7b65-4673-bbd6-4d9a835f709f",
+      "attestedAt": "2026-10-31T21:48:57.570Z"
     },
     {
       "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
@@ -836,7 +947,10 @@
       "targetedTestAt": "2026-10-17T21:00:12.486Z",
       "targetedTestExit": 0,
       "verificationCommit": "fd6cdeed4afad932da4f8ada1c85af49115df429",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/effectiveAggregateChain.test.js exit=0 em fd6cdeed4afa"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/effectiveAggregateChain.test.js exit=0 em fd6cdeed4afa",
+      "closureProof": "governance/bug-closure/proofs/7393646e-54e2-425a-b499-23b1158e5ba3.json",
+      "attestationId": "7393646e-54e2-425a-b499-23b1158e5ba3",
+      "attestedAt": "2026-10-31T21:48:57.206Z"
     },
     {
       "id": "MISSAO-B8-ESTADOS-FILA",
@@ -887,7 +1001,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/devBranchCiGate.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/devBranchCiGate.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/7128c518-d8f1-4bb1-9935-9f8ca999006e.json",
+      "attestationId": "7128c518-d8f1-4bb1-9935-9f8ca999006e",
+      "attestedAt": "2026-10-31T21:49:05.204Z"
     },
     {
       "id": "MISSAO-B3-REUSO-PROVENIENCIA",
@@ -930,7 +1047,10 @@
       "legacyStatus": "verified",
       "regressionTest": "tests/integration/evoSyncIntegration.test.js",
       "severityBasis": "rastreabilidade defeito->commit->prevencao (governanca, nao controle inegociavel)",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "closureProof": "governance/bug-closure/proofs/d6792ce7-4434-4faa-97d5-a78c0af067cf.json",
+      "attestationId": "d6792ce7-4434-4faa-97d5-a78c0af067cf",
+      "attestedAt": "2026-10-31T21:49:05.053Z"
     },
     {
       "id": "MISSAO-DEMO-SELF-ENGINEERING",
@@ -963,7 +1083,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/pbx/pbxCdrHealth.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/pbx/pbxCdrHealth.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/3122a98f-c5b7-4cf9-8498-bf11416e5db4.json",
+      "attestationId": "3122a98f-c5b7-4cf9-8498-bf11416e5db4",
+      "attestedAt": "2026-10-31T21:49:00.894Z"
     },
     {
       "id": "H16-V2SEAL-PASSO-SEM-MOTIVO",
@@ -982,7 +1105,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/v2SealStepDiagnostics.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/v2SealStepDiagnostics.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/355a42c3-70e9-41e5-9d34-5683ffbc7b97.json",
+      "attestationId": "355a42c3-70e9-41e5-9d34-5683ffbc7b97",
+      "attestedAt": "2026-10-31T21:49:01.198Z"
     },
     {
       "id": "H17-PREFLIGHT-ASK-AI-TTL",
@@ -1001,7 +1127,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/0aa44cb5-12eb-421a-b441-7e0cca0abc6b.json",
+      "attestationId": "0aa44cb5-12eb-421a-b441-7e0cca0abc6b",
+      "attestedAt": "2026-10-31T21:49:01.468Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
@@ -1103,7 +1232,10 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/evidenceTtl.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/evidenceTtl.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:54.813Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/evidenceTtl.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:54.813Z)",
+      "closureProof": "governance/bug-closure/proofs/e9426d77-62a3-47c3-950a-bd2257d02196.json",
+      "attestationId": "e9426d77-62a3-47c3-950a-bd2257d02196",
+      "attestedAt": "2026-10-31T21:49:03.096Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
@@ -1166,7 +1298,10 @@
       "targetedTestExit": 0,
       "verificationCommit": "c81f11081b77",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/qa-mesh/meshZeroResultsPromotion.test.js exit=0 em c81f11081b77",
-      "blocked_reason": "RESOLVIDO 2026-10-17: a decisao de politica foi tomada no sentido mais restritivo (prova de execucao exige execucao); nao ha mais decisao pendente do dono."
+      "blocked_reason": "RESOLVIDO 2026-10-17: a decisao de politica foi tomada no sentido mais restritivo (prova de execucao exige execucao); nao ha mais decisao pendente do dono.",
+      "closureProof": "governance/bug-closure/proofs/b89dd232-01a3-4a39-b2d6-85e783e9fd06.json",
+      "attestationId": "b89dd232-01a3-4a39-b2d6-85e783e9fd06",
+      "attestedAt": "2026-10-31T21:49:02.819Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
@@ -1182,7 +1317,10 @@
       "severityBasis": "handshake ambiguo aceitava log JSON do produto; poderia mascarar ausencia de worker de lease",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:05.629Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:05.629Z)",
+      "closureProof": "governance/bug-closure/proofs/7aeb835d-9e66-4d98-8b48-ca77c858d5a7.json",
+      "attestationId": "7aeb835d-9e66-4d98-8b48-ca77c858d5a7",
+      "attestedAt": "2026-10-31T21:49:02.472Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
@@ -1197,7 +1335,10 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
       "severityBasis": "FENCE_AVANCOU com antes=undefined: mesmo defeito de parsing de handshake",
-      "severitySource": "analise-tecnica-2026-10-17"
+      "severitySource": "analise-tecnica-2026-10-17",
+      "closureProof": "governance/bug-closure/proofs/5aa22936-058b-4bfc-997f-63ccef3ee347.json",
+      "attestationId": "5aa22936-058b-4bfc-997f-63ccef3ee347",
+      "attestedAt": "2026-10-31T21:49:02.624Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
@@ -1213,7 +1354,10 @@
       "severityBasis": "SBOM anterior ao run derrubava security gate (falso NO_GO)",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:14.953Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:14.953Z)",
+      "closureProof": "governance/bug-closure/proofs/eee6452b-945a-4632-b87a-6ec784a0b869.json",
+      "attestationId": "eee6452b-945a-4632-b87a-6ec784a0b869",
+      "attestedAt": "2026-10-31T21:49:03.518Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
@@ -1233,7 +1377,10 @@
       "targetedTestAt": "2026-10-17T15:53:04.961Z",
       "targetedTestExit": 0,
       "verificationCommit": "525116fd2828038fcd414a08e830dcdb75b15f1e",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 525116fd2828"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 525116fd2828",
+      "closureProof": "governance/bug-closure/proofs/54b0ce96-edcc-4523-a159-d14e385a5382.json",
+      "attestationId": "54b0ce96-edcc-4523-a159-d14e385a5382",
+      "attestedAt": "2026-10-31T21:49:02.318Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
@@ -1253,7 +1400,10 @@
       "verificationCommit": "261095f66ade",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/aggregateVerdict.test.js exit=0 em 261095f66ade",
       "commit": "261095f66ade",
-      "blocked_reason": "RESOLVIDO 2026-10-17: o custo alegado (mudar sourceFingerprint invalida o release selado) deixou de ser bloqueio — o release sera re-selado apos o fechamento dos P0/P1; a correcao e aditiva e nao altera o veredito."
+      "blocked_reason": "RESOLVIDO 2026-10-17: o custo alegado (mudar sourceFingerprint invalida o release selado) deixou de ser bloqueio — o release sera re-selado apos o fechamento dos P0/P1; a correcao e aditiva e nao altera o veredito.",
+      "closureProof": "governance/bug-closure/proofs/40a2dd4f-2ade-4232-bb76-048a7ab9a406.json",
+      "attestationId": "40a2dd4f-2ade-4232-bb76-048a7ab9a406",
+      "attestedAt": "2026-10-31T21:49:02.118Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
@@ -1300,7 +1450,10 @@
       "targetedTestExit": 0,
       "verificationCommit": "92e7410464fda6890aa7ad8633b6ea27c8778c5a",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/runtimeEvidenceDiagnosis.test.js exit=0 em 92e7410464fd",
-      "commit": "92e7410464fd"
+      "commit": "92e7410464fd",
+      "closureProof": "governance/bug-closure/proofs/32cffce8-86a1-42d4-bae9-9557bd3c9165.json",
+      "attestationId": "32cffce8-86a1-42d4-bae9-9557bd3c9165",
+      "attestedAt": "2026-10-31T21:49:03.269Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
@@ -1339,7 +1492,10 @@
       "targetedTestExit": 0,
       "verificationCommit": "ffc746419a72d6d507e518047c9538523ab94b3e",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js exit=0 em ffc746419a72",
-      "commit": "ffc746419a72"
+      "commit": "ffc746419a72",
+      "closureProof": "governance/bug-closure/proofs/fbae1528-b875-4bb6-b06f-3ecbe210fb2a.json",
+      "attestationId": "fbae1528-b875-4bb6-b06f-3ecbe210fb2a",
+      "attestedAt": "2026-10-31T21:49:03.679Z"
     },
     {
       "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
@@ -1359,7 +1515,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/checkpointTool.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/checkpointTool.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/9aa109df-b101-401d-8a6e-4a762e0ec6dd.json",
+      "attestationId": "9aa109df-b101-401d-8a6e-4a762e0ec6dd",
+      "attestedAt": "2026-10-31T21:48:55.882Z"
     },
     {
       "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
@@ -1379,7 +1538,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/9ce457ba-6f55-4133-93de-5163332e8381.json",
+      "attestationId": "9ce457ba-6f55-4133-93de-5163332e8381",
+      "attestedAt": "2026-10-31T21:48:56.051Z"
     },
     {
       "id": "AUDITORIA-BRANCH-INVENTORY",
@@ -1399,7 +1561,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/branchInventory.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/branchInventory.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/6be5d6c7-0f54-40da-a83d-be27a48e081d.json",
+      "attestationId": "6be5d6c7-0f54-40da-a83d-be27a48e081d",
+      "attestedAt": "2026-10-31T21:48:55.757Z"
     },
     {
       "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
@@ -1419,7 +1584,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/ca4dc98e-3881-4b26-9949-43ab22439d95.json",
+      "attestationId": "ca4dc98e-3881-4b26-9949-43ab22439d95",
+      "attestedAt": "2026-10-31T21:48:56.381Z"
     },
     {
       "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
@@ -1440,7 +1608,10 @@
       "targetedTestAt": "2026-10-17T12:34:51.113Z",
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
-      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101"
+      "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
+      "closureProof": "governance/bug-closure/proofs/f84c48a4-9a67-4e6f-8c2c-7b78287ae7ff.json",
+      "attestationId": "f84c48a4-9a67-4e6f-8c2c-7b78287ae7ff",
+      "attestedAt": "2026-10-31T21:48:56.169Z"
     },
     {
       "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
@@ -1466,7 +1637,10 @@
       "targetedTestExit": 0,
       "verificationCommit": "ffc746419a72d6d507e518047c9538523ab94b3e",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js exit=0 em ffc746419a72",
-      "commit": "ffc746419a72"
+      "commit": "ffc746419a72",
+      "closureProof": "governance/bug-closure/proofs/6b83fdce-e681-4adf-857e-995e28836880.json",
+      "attestationId": "6b83fdce-e681-4adf-857e-995e28836880",
+      "attestedAt": "2026-10-31T21:48:56.275Z"
     },
     {
       "id": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
@@ -1539,7 +1713,10 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "regressionTest": "tests/unit/governance/deliveryVerification.test.js"
+      "regressionTest": "tests/unit/governance/deliveryVerification.test.js",
+      "closureProof": "governance/bug-closure/proofs/a4a2fe0c-0075-4971-a41d-72fdb886e66e.json",
+      "attestationId": "a4a2fe0c-0075-4971-a41d-72fdb886e66e",
+      "attestedAt": "2026-10-31T21:49:08.605Z"
     },
     {
       "id": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
@@ -1554,7 +1731,10 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/deliveryVerification.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:30.810Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:30.810Z)",
+      "closureProof": "governance/bug-closure/proofs/e21c1c2b-680e-424f-977a-592f2b996244.json",
+      "attestationId": "e21c1c2b-680e-424f-977a-592f2b996244",
+      "attestedAt": "2026-10-31T21:49:10.170Z"
     },
     {
       "id": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
@@ -1611,7 +1791,10 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/devBranchCiGate.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:34.685Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:34.685Z)",
+      "closureProof": "governance/bug-closure/proofs/25dff595-d6de-41e8-ae53-440111bb8163.json",
+      "attestationId": "25dff595-d6de-41e8-ae53-440111bb8163",
+      "attestedAt": "2026-10-31T21:49:10.308Z"
     },
     {
       "id": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
@@ -1625,7 +1808,10 @@
       "severityStatus": "DECLARADA",
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
-      "regressionTest": "tests/unit/governance/governedArtifactPreservation.test.js"
+      "regressionTest": "tests/unit/governance/governedArtifactPreservation.test.js",
+      "closureProof": "governance/bug-closure/proofs/6350db5c-3f0f-4e3d-9038-25683826ce63.json",
+      "attestationId": "6350db5c-3f0f-4e3d-9038-25683826ce63",
+      "attestedAt": "2026-10-31T21:49:10.901Z"
     },
     {
       "id": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
@@ -1658,7 +1844,10 @@
       "targetedTestExit": 0,
       "verificationCommit": "3486717b0678",
       "verificationNote": "reconcile: convergenceFixpoint PASS em arvore limpa",
-      "commit": "3486717b0678"
+      "commit": "3486717b0678",
+      "closureProof": "governance/bug-closure/proofs/f4255860-6e3f-468f-a3fa-eb0d92990a03.json",
+      "attestationId": "f4255860-6e3f-468f-a3fa-eb0d92990a03",
+      "attestedAt": "2026-10-31T21:49:01.693Z"
     },
     {
       "id": "H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE",
@@ -1688,7 +1877,10 @@
       "severityBasis": "produz tela que parece funcionar e não reflete a escrita; não gera falso GO de release",
       "severitySource": "medicao-2026-10-19-browser-crm",
       "regressionTest": "tests/unit/crmRealtimeEvents.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/crmRealtimeEvents.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:39.618Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/crmRealtimeEvents.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:39.618Z)",
+      "closureProof": "governance/bug-closure/proofs/23f64be1-193b-4824-9c08-3a9bf35a3c3c.json",
+      "attestationId": "23f64be1-193b-4824-9c08-3a9bf35a3c3c",
+      "attestedAt": "2026-10-31T21:49:01.817Z"
     },
     {
       "id": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
@@ -1755,7 +1947,10 @@
       "severitySource": "auditoria-2026-10-19-missao-hardening",
       "reanchoredFrom": "5f6d0c1c9",
       "reanchoredAt": "2026-10-21",
-      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9"
+      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9",
+      "closureProof": "governance/bug-closure/proofs/a964c305-7a4a-44b4-a659-79138affc6d4.json",
+      "attestationId": "a964c305-7a4a-44b4-a659-79138affc6d4",
+      "attestedAt": "2026-10-31T21:49:08.319Z"
     },
     {
       "id": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
@@ -1774,7 +1969,10 @@
       "severitySource": "auditoria-2026-10-19-missao-hardening",
       "reanchoredFrom": "5f6d0c1c9",
       "reanchoredAt": "2026-10-21",
-      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9"
+      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9",
+      "closureProof": "governance/bug-closure/proofs/b339a013-deff-421c-8c92-0462d348f13b.json",
+      "attestationId": "b339a013-deff-421c-8c92-0462d348f13b",
+      "attestedAt": "2026-10-31T21:49:08.458Z"
     },
     {
       "id": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
@@ -1793,7 +1991,10 @@
       "severitySource": "auditoria-2026-10-19-missao-hardening",
       "reanchoredFrom": "5f6d0c1c9",
       "reanchoredAt": "2026-10-21",
-      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por ad92da172"
+      "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por ad92da172",
+      "closureProof": "governance/bug-closure/proofs/7ce84e45-8c04-495f-be94-2d40ab6ac549.json",
+      "attestationId": "7ce84e45-8c04-495f-be94-2d40ab6ac549",
+      "attestedAt": "2026-10-31T21:49:08.048Z"
     },
     {
       "id": "P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO",
@@ -1873,7 +2074,10 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
       "severityBasis": "docs publicavam decisao diferente da canonica (falso verde documental)",
-      "severitySource": "auditoria-2026-10-19-projecao-stale"
+      "severitySource": "auditoria-2026-10-19-projecao-stale",
+      "closureProof": "governance/bug-closure/proofs/65515353-dab6-4ee8-ac1d-45ed01c52245.json",
+      "attestationId": "65515353-dab6-4ee8-ac1d-45ed01c52245",
+      "attestedAt": "2026-10-31T21:49:09.758Z"
     },
     {
       "id": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
@@ -1889,7 +2093,10 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
       "severityBasis": "patch gerado sobre base errada: correcao silenciosamente ineficaz (falso verde de engenharia)",
-      "severitySource": "missao-L1-item-F"
+      "severitySource": "missao-L1-item-F",
+      "closureProof": "governance/bug-closure/proofs/6d5e897b-7997-44f4-887e-e07ed5def4e0.json",
+      "attestationId": "6d5e897b-7997-44f4-887e-e07ed5def4e0",
+      "attestedAt": "2026-10-31T21:49:04.081Z"
     },
     {
       "id": "L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO",
@@ -1905,7 +2112,10 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/governance/releaseStateService.test.js",
       "severityBasis": "release declarado 'entregue verificado' com gate canonico vermelho (falso GO de entrega)",
-      "severitySource": "missao-L1-itens-A-C"
+      "severitySource": "missao-L1-itens-A-C",
+      "closureProof": "governance/bug-closure/proofs/6f42864f-9943-4944-b2b2-9f1dd0461358.json",
+      "attestationId": "6f42864f-9943-4944-b2b2-9f1dd0461358",
+      "attestedAt": "2026-10-31T21:49:04.212Z"
     },
     {
       "id": "L1-RUNNER-CONTAINER-MODULE-NOT-FOUND",
@@ -1921,7 +2131,10 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
       "severityBasis": "todo trabalho de execucao do Engenheiro em deploy containerizado falhava em silencio contra a API real",
-      "severitySource": "missao-L1-execucao-isolada"
+      "severitySource": "missao-L1-execucao-isolada",
+      "closureProof": "governance/bug-closure/proofs/d1e813ec-9fdc-4fdf-9695-a3cbf5911397.json",
+      "attestationId": "d1e813ec-9fdc-4fdf-9695-a3cbf5911397",
+      "attestedAt": "2026-10-31T21:49:04.775Z"
     },
     {
       "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",
@@ -1937,7 +2150,10 @@
       "legacyStatus": "done",
       "regressionTest": "tests/unit/governance/devGovernanceModels.test.js",
       "severityBasis": "ato irreversivel de release oferecido a partir de estado nao verificado",
-      "severitySource": "missao-L1-item-B"
+      "severitySource": "missao-L1-item-B",
+      "closureProof": "governance/bug-closure/proofs/44f83c11-642f-458e-a7d5-61aed53ab4cb.json",
+      "attestationId": "44f83c11-642f-458e-a7d5-61aed53ab4cb",
+      "attestedAt": "2026-10-31T21:49:04.639Z"
     },
     {
       "id": "L1-WORKTREE-MUTILACAO-RECORRENTE",
@@ -1987,7 +2203,10 @@
       "severityBasis": "criterios 5/6/7/8/13/14 da missao L-1 dependiam desta jornada",
       "severitySource": "medicao-direta-2026-10-20",
       "regressionTest": "tests/integration/engineeringMissionFullE2E.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionFullE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:52.469Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionFullE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:52.469Z)",
+      "closureProof": "governance/bug-closure/proofs/6259cd42-9357-44af-bf6a-47cb77b1d079.json",
+      "attestationId": "6259cd42-9357-44af-bf6a-47cb77b1d079",
+      "attestedAt": "2026-10-31T21:49:04.364Z"
     },
     {
       "id": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
@@ -2055,7 +2274,10 @@
       "severityBasis": "revisao nao independente mascara defeitos de codigo",
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:06.319Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:06.319Z)",
+      "closureProof": "governance/bug-closure/proofs/02d3607b-30f9-4838-97e8-35b68e605414.json",
+      "attestationId": "02d3607b-30f9-4838-97e8-35b68e605414",
+      "attestedAt": "2026-10-31T21:49:09.894Z"
     },
     {
       "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
@@ -2072,7 +2294,10 @@
       "severityBasis": "missao declarava cobertura unitaria sem execucao unitaria",
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:10.552Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:10.552Z)",
+      "closureProof": "governance/bug-closure/proofs/82f043f4-806b-49e0-97ea-5710d7700296.json",
+      "attestationId": "82f043f4-806b-49e0-97ea-5710d7700296",
+      "attestedAt": "2026-10-31T21:49:10.462Z"
     },
     {
       "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
@@ -2089,7 +2314,10 @@
       "severityBasis": "gate de concorrencia verde sem executar",
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:14.225Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:14.225Z)",
+      "closureProof": "governance/bug-closure/proofs/b79800dc-9cbb-4035-8040-a3ae295d21c1.json",
+      "attestationId": "b79800dc-9cbb-4035-8040-a3ae295d21c1",
+      "attestedAt": "2026-10-31T21:49:08.185Z"
     },
     {
       "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
@@ -2106,7 +2334,10 @@
       "severityBasis": "cobertura desligada sem deixar rastro na contagem; mutacao commitada nao detectada",
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/governance/worktreeIntegrity.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:19.072Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:19.072Z)",
+      "closureProof": "governance/bug-closure/proofs/71ae0369-944b-42df-b740-fea67bda4370.json",
+      "attestationId": "71ae0369-944b-42df-b740-fea67bda4370",
+      "attestedAt": "2026-10-31T21:49:09.045Z"
     },
     {
       "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
@@ -2123,7 +2354,10 @@
       "severityBasis": "evidencia carimbada com identidade de outro run",
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/governance/reportLineageExplicit.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/reportLineageExplicit.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:21.969Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/reportLineageExplicit.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:21.969Z)",
+      "closureProof": "governance/bug-closure/proofs/443b9339-4837-4269-96ad-9c349aeaae39.json",
+      "attestationId": "443b9339-4837-4269-96ad-9c349aeaae39",
+      "attestedAt": "2026-10-31T21:49:09.331Z"
     },
     {
       "id": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
@@ -2140,7 +2374,10 @@
       "severityBasis": "registro de auditoria (lineage de retomada) descrevia estado que nunca valeu",
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/integration/engineeringMissionMergeConcurrency.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionMergeConcurrency.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:26.394Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionMergeConcurrency.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:26.394Z)",
+      "closureProof": "governance/bug-closure/proofs/4b95f803-b45f-4f18-b8bc-fd21144d8c0f.json",
+      "attestationId": "4b95f803-b45f-4f18-b8bc-fd21144d8c0f",
+      "attestedAt": "2026-10-31T21:49:09.475Z"
     },
     {
       "id": "P1-CI-SEM-INTEGRACAO",
@@ -2173,7 +2410,10 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "approved_by": "dono do repositorio (decisao explicita na sessao de 2026-10-21): \"Aplicar tudo (3007)\"",
       "regressionTest": "tests/unit/governance/pruneEngineeringMissionBranches.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/pruneEngineeringMissionBranches.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:28.796Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/pruneEngineeringMissionBranches.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:28.796Z)",
+      "closureProof": "governance/bug-closure/proofs/13741495-10b3-49b7-8087-f3f9fa5347c3.json",
+      "attestationId": "13741495-10b3-49b7-8087-f3f9fa5347c3",
+      "attestedAt": "2026-10-31T21:49:07.923Z"
     },
     {
       "id": "P1-PATCH-SYMLINK-ESCAPE",
@@ -2190,7 +2430,10 @@
       "severityBasis": "escape de isolamento: leitura/escrita fora do workspace via alvo de symlink",
       "severitySource": "auditoria-adversarial-2026-10-21",
       "regressionTest": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:31.578Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:31.578Z)",
+      "closureProof": "governance/bug-closure/proofs/b4b28889-cd98-49b2-9695-c9f822bcf92e.json",
+      "attestationId": "b4b28889-cd98-49b2-9695-c9f822bcf92e",
+      "attestedAt": "2026-10-31T21:49:09.610Z"
     },
     {
       "id": "P1-EVIDENCIA-COMMIT-ORFAO",
@@ -2207,7 +2450,10 @@
       "severityBasis": "falso verde de governanca: prova citada nao existe",
       "severitySource": "auditoria-adversarial-2026-10-21",
       "regressionTest": "tests/unit/governance/hardeningQueueCommitExists.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:33.837Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:33.837Z)",
+      "closureProof": "governance/bug-closure/proofs/cb498317-b8e2-4234-9594-93425f06ffee.json",
+      "attestationId": "cb498317-b8e2-4234-9594-93425f06ffee",
+      "attestedAt": "2026-10-31T21:49:08.736Z"
     },
     {
       "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
@@ -2224,7 +2470,10 @@
       "severityBasis": "decisao de prontidao sem prova executavel",
       "severitySource": "missao-engineer-supervised-2026-10-21",
       "regressionTest": "tests/unit/governance/engineerSupervisedReadinessGate.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/engineerSupervisedReadinessGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:36.381Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/engineerSupervisedReadinessGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:36.381Z)",
+      "closureProof": "governance/bug-closure/proofs/b9bacd27-05c5-4e3d-9961-4ca6ad6ed72c.json",
+      "attestationId": "b9bacd27-05c5-4e3d-9961-4ca6ad6ed72c",
+      "attestedAt": "2026-10-31T21:49:08.890Z"
     },
     {
       "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
@@ -2241,7 +2490,10 @@
       "severityBasis": "falso INFRA_ERROR em execucao legivel",
       "severitySource": "auditoria-2026-10-21",
       "regressionTest": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterSandboxAvailabilityCache.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:38.989Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterSandboxAvailabilityCache.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:38.989Z)",
+      "closureProof": "governance/bug-closure/proofs/74711692-762a-4d03-8946-ed3792bc139c.json",
+      "attestationId": "74711692-762a-4d03-8946-ed3792bc139c",
+      "attestedAt": "2026-10-31T21:49:10.038Z"
     },
     {
       "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
@@ -2258,7 +2510,10 @@
       "severityBasis": "gate que reprova por contencao treina a ignorar vermelho",
       "severitySource": "auditoria-2026-10-21",
       "regressionTest": "tests/unit/ciGateL0Determinism.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:40.939Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:40.939Z)",
+      "closureProof": "governance/bug-closure/proofs/85afda6e-d261-454f-9893-a829723516e2.json",
+      "attestationId": "85afda6e-d261-454f-9893-a829723516e2",
+      "attestedAt": "2026-10-31T21:49:09.192Z"
     },
     {
       "id": "L1-NPM-TEST-CI-VERMELHO",
@@ -2277,7 +2532,10 @@
       "targetedTestPassing": true,
       "blocked_reason": "Escopo de CI/testes CONCLUIDO e verificado no runner. O que resta vermelho e o passo L1 de DECISAO de release: a cadeia de governanca nao cobre o conteudo atual porque o release nao esta selado (dist/ vazio em checkout) e o bootstrap regenera elos derivados. Resolver exige `npm run release:seal` + publicacao do artefato — mission separada e maior, fora do escopo desta fila de CI. Nao pode ser declarado verde sem isso (Constituicao: nunca declarar release com governanca canonica NO_GO).",
       "commit": "e503591b5",
-      "resolution": "CI de desenvolvimento pode ficar verde porque passou a medir o que pode medir; a certificacao de release continua obrigatoria (em R e no pipeline de selagem) e bloqueada pelos mesmos P1 que bloqueiam a selagem."
+      "resolution": "CI de desenvolvimento pode ficar verde porque passou a medir o que pode medir; a certificacao de release continua obrigatoria (em R e no pipeline de selagem) e bloqueada pelos mesmos P1 que bloqueiam a selagem.",
+      "closureProof": "governance/bug-closure/proofs/b470a9ac-99a3-488e-8dfc-2d24d9dafc63.json",
+      "attestationId": "b470a9ac-99a3-488e-8dfc-2d24d9dafc63",
+      "attestedAt": "2026-10-31T21:49:04.508Z"
     },
     {
       "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
@@ -2292,7 +2550,10 @@
       "prevention": "Lista unica + teste que compara com o INDICE do git (nao com o disco).",
       "commit": "c4b3fc70e",
       "regressionTest": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:43.795Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:43.795Z)",
+      "closureProof": "governance/bug-closure/proofs/819369ec-3e70-40a1-901b-3156f43ab171.json",
+      "attestationId": "819369ec-3e70-40a1-901b-3156f43ab171",
+      "attestedAt": "2026-10-31T21:48:56.496Z"
     },
     {
       "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
@@ -2307,7 +2568,10 @@
       "prevention": "Porta por run no harness; o gate do CI continua usando 8097 porque o job e efemero e isolado.",
       "commit": "3f97c7b65",
       "regressionTest": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:46.182Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:46.182Z)",
+      "closureProof": "governance/bug-closure/proofs/2c9f722c-91c2-43db-804a-a03a3c027631.json",
+      "attestationId": "2c9f722c-91c2-43db-804a-a03a3c027631",
+      "attestedAt": "2026-10-31T21:48:57.091Z"
     },
     {
       "id": "CI-FLOW-GATE-VACUOSO",
@@ -2322,7 +2586,10 @@
       "prevention": "Teste que falha se a flag voltar ou se uma selecao ficar vazia.",
       "commit": "3f97c7b65",
       "regressionTest": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:48.557Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:48.557Z)",
+      "closureProof": "governance/bug-closure/proofs/6fe2f73e-42a7-4c1e-9229-5868ec305701.json",
+      "attestationId": "6fe2f73e-42a7-4c1e-9229-5868ec305701",
+      "attestedAt": "2026-10-31T21:48:56.803Z"
     },
     {
       "id": "CI-CHECKOUT-LIMPO-HARNESS",
@@ -2337,7 +2604,10 @@
       "prevention": "O harness e versionado e roda em um comando; qualquer dependencia escondida do ambiente do operador aparece como falha no clone.",
       "commit": "2f8b5aa29",
       "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:52.200Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:52.200Z)",
+      "closureProof": "governance/bug-closure/proofs/f0ebd6c9-fe8c-4880-990d-d83c909fbc9e.json",
+      "attestationId": "f0ebd6c9-fe8c-4880-990d-d83c909fbc9e",
+      "attestedAt": "2026-10-31T21:48:56.606Z"
     },
     {
       "id": "ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
@@ -2349,7 +2619,10 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "regressionTest": "tests/integration/engineeringPromotionService.test.js",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/e25df77a-aa5f-4c56-a834-8bbe216dc977.json",
+      "attestationId": "e25df77a-aa5f-4c56-a834-8bbe216dc977",
+      "attestedAt": "2026-10-31T21:48:59.607Z"
     },
     {
       "id": "ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
@@ -2361,7 +2634,10 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "regressionTest": "tests/integration/engineeringBugLoop.test.js",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/ad7914c0-7705-4769-8db1-7371e9ad1036.json",
+      "attestationId": "ad7914c0-7705-4769-8db1-7371e9ad1036",
+      "attestedAt": "2026-10-31T21:48:59.134Z"
     },
     {
       "id": "TESTE-FILESYSTEM-ORCAMENTO-10S",
@@ -2373,7 +2649,10 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
+      "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "closureProof": "governance/bug-closure/proofs/d0cc0fc8-731c-445e-a493-7414500b5896.json",
+      "attestationId": "d0cc0fc8-731c-445e-a493-7414500b5896",
+      "attestedAt": "2026-10-31T21:49:13.041Z"
     },
     {
       "id": "ENG-LEASE-FENCE-NAO-VALIDADO",
@@ -2385,7 +2664,10 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "regressionTest": "tests/integration/engineeringBugLoop.test.js"
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js",
+      "closureProof": "governance/bug-closure/proofs/f8c30d5e-3eb8-452c-8c68-44c47ec23dc7.json",
+      "attestationId": "f8c30d5e-3eb8-452c-8c68-44c47ec23dc7",
+      "attestedAt": "2026-10-31T21:48:58.958Z"
     },
     {
       "id": "ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE",
@@ -2397,7 +2679,10 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "regressionTest": "tests/integration/engineeringBugLoop.test.js"
+      "regressionTest": "tests/integration/engineeringBugLoop.test.js",
+      "closureProof": "governance/bug-closure/proofs/04ca1558-2c44-43cc-be64-bd17a08dae25.json",
+      "attestationId": "04ca1558-2c44-43cc-be64-bd17a08dae25",
+      "attestedAt": "2026-10-31T21:48:58.529Z"
     },
     {
       "id": "ENG-RECONCILIACAO-BOOT-STARVATION",
@@ -2409,7 +2694,10 @@
       "commit": "0e0f33e53",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/047fdb8f-f552-4574-ba0c-eb7bd5fad67e.json",
+      "attestationId": "047fdb8f-f552-4574-ba0c-eb7bd5fad67e",
+      "attestedAt": "2026-10-31T21:48:59.245Z"
     },
     {
       "id": "ENG-FENCING-OPT-IN-NO-FIX-LOOP",
@@ -2421,7 +2709,10 @@
       "commit": "7b8f272b2",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/3cdb5974-5e17-4ad3-b91f-cd5505990296.json",
+      "attestationId": "3cdb5974-5e17-4ad3-b91f-cd5505990296",
+      "attestedAt": "2026-10-31T21:48:58.666Z"
     },
     {
       "id": "ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP",
@@ -2433,7 +2724,10 @@
       "commit": "0e0f33e53",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/99f332b1-9798-49c9-9d20-ed24ba58524e.json",
+      "attestationId": "99f332b1-9798-49c9-9d20-ed24ba58524e",
+      "attestedAt": "2026-10-31T21:48:58.804Z"
     },
     {
       "id": "ENG-TESTES-VACUOSOS-PROVADOS-POR-MUTACAO",
@@ -2445,7 +2739,10 @@
       "commit": "0e0f33e53",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/913e0b95-b4bc-4cf2-9e46-1aedb82ca0be.json",
+      "attestationId": "913e0b95-b4bc-4cf2-9e46-1aedb82ca0be",
+      "attestedAt": "2026-10-31T21:48:59.744Z"
     },
     {
       "id": "ENG-REPARO-NAO-VISIVEL-NA-MISSAO",
@@ -2457,7 +2754,10 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "regressionTest": "tests/integration/engineeringMissionSourceE2E.test.js"
+      "regressionTest": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "closureProof": "governance/bug-closure/proofs/a9512f18-3ba8-4516-911b-a9143d09b3b3.json",
+      "attestationId": "a9512f18-3ba8-4516-911b-a9143d09b3b3",
+      "attestedAt": "2026-10-31T21:48:59.475Z"
     },
     {
       "id": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
@@ -2469,7 +2769,10 @@
       "status": "verified",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/1123d25a-5254-4cc9-8edc-185226ac2f38.json",
+      "attestationId": "1123d25a-5254-4cc9-8edc-185226ac2f38",
+      "attestedAt": "2026-10-31T21:48:59.362Z"
     },
     {
       "id": "ENG-DIVIDA-REPARO-SEM-SINAL",
@@ -2481,7 +2784,10 @@
       "status": "verified",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
-      "legacyStatus": "verified"
+      "legacyStatus": "verified",
+      "closureProof": "governance/bug-closure/proofs/c7ba6b38-b7b9-4ac5-bac6-e99b805c3724.json",
+      "attestationId": "c7ba6b38-b7b9-4ac5-bac6-e99b805c3724",
+      "attestedAt": "2026-10-31T21:48:58.396Z"
     },
     {
       "id": "TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO",
@@ -2497,7 +2803,10 @@
       "verificationCommit": "0bfda6315522",
       "verificationNote": "backfill manual 2026-10-30: a opcao (a) \"banco/schema dedicado por suite\" foi IMPLEMENTADA e medida no MESMO Postgres de dev compartilhado com o servidor vivo na 3001 — tests/helpers/suiteDatabase.js cria rap_suite_<slug>_<hex>, aplica as migrations, executa e destroi. Suite: 3/3 execucoes isoladas PASS (6/6 testes; 44,7s/56,0s/60,4s) e PASS dentro do lote L0b (41/41 suites, 238/238 testes, exit 0 em 1249s). Antes: 1/3 isoladas e 2/2 lotes falhando. Bancos residuais: zero. sha 0bfda6315522",
       "verifiedAt": "2026-10-30T05:56:06.473Z",
-      "commit": "0bfda6315"
+      "commit": "0bfda6315",
+      "closureProof": "governance/bug-closure/proofs/1cfe6981-d8f3-49f7-9e9f-793066031bfa.json",
+      "attestationId": "1cfe6981-d8f3-49f7-9e9f-793066031bfa",
+      "attestedAt": "2026-10-31T21:49:12.901Z"
     },
     {
       "id": "CI-MAIN-JEST-AMBIENTE",
@@ -2526,7 +2835,10 @@
       "severityBasis": "vermelho permanente de CI em main por dependência de artefato de outro workflow; corrigido sem afrouxar o modo autoritativo",
       "severitySource": "medicao-ci-2026-10-28",
       "regressionTest": "tests/unit/governance/modelDrivenE2e.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:56.702Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:56.702Z)",
+      "closureProof": "governance/bug-closure/proofs/8187a828-ce3c-4cbd-963f-0e58b6e56720.json",
+      "attestationId": "8187a828-ce3c-4cbd-963f-0e58b6e56720",
+      "attestedAt": "2026-10-31T21:48:56.987Z"
     },
     {
       "id": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
@@ -2542,7 +2854,10 @@
       "severitySource": "medicao-ci-2026-10-28",
       "resolution": "Implementado em api/services/engineeringRouter/engineeringRouterService.js (preVerifySpecSatisfied + transições ROUTED→GREEN e CLASSIFIED→GREEN), engine/engineeringMission/bugFinding/postFixFailure.js (classificador puro) e bugLoopCoordinatorService.hookMissionFailure (fingerprint separado). Testes: engineeringRouterSpecPreVerification (3), postFixFailureVsRecurrence (2), postFixFailureClassification (9).",
       "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:50:02.476Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:50:02.476Z)",
+      "closureProof": "governance/bug-closure/proofs/a519e6b5-8568-40ba-b4a5-0a1c1733bf81.json",
+      "attestationId": "a519e6b5-8568-40ba-b4a5-0a1c1733bf81",
+      "attestedAt": "2026-10-31T21:48:56.893Z"
     },
     {
       "id": "CI-E2E-CREDENTIAL-SCOPE",
@@ -2558,7 +2873,10 @@
       "severityBasis": "2 suítes obrigatórias do CI ficavam vermelhas por ausência de credencial no escopo; o único motivo de passarem no dev era estado ambiente",
       "severitySource": "medicao-local-e-ci-2026-10-29",
       "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:51:24.183Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:51:24.183Z)",
+      "closureProof": "governance/bug-closure/proofs/095978c8-817a-48ed-9dbe-62a3b56a92c1.json",
+      "attestationId": "095978c8-817a-48ed-9dbe-62a3b56a92c1",
+      "attestedAt": "2026-10-31T21:48:56.710Z"
     },
     {
       "id": "REQUIRED-TESTS-ANCORA-EXTERNA",
@@ -2588,7 +2906,10 @@
       "severityBasis": "gate de certificação V2 em NO_GO por falta de prova executada; provas locais disponíveis não estavam sendo produzidas",
       "severitySource": "medicao-local-2026-10-29",
       "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:52:55.375Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:52:55.375Z)",
+      "closureProof": "governance/bug-closure/proofs/e32c3935-0b0b-4e92-a9e0-82fb001ffee6.json",
+      "attestationId": "e32c3935-0b0b-4e92-a9e0-82fb001ffee6",
+      "attestedAt": "2026-10-31T21:49:13.229Z"
     },
     {
       "id": "RESUME-SUBSTITUTA-SEM-ESCOPO",
@@ -2604,7 +2925,10 @@
       "severityBasis": "a retomada pós-fix não conseguia entregar correção nenhuma; falha voltava como recorrência falsa do bug corrigido",
       "severitySource": "medicao-local-e-ci-2026-10-29",
       "regressionTest": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:25.543Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:25.543Z)",
+      "closureProof": "governance/bug-closure/proofs/5bc670fd-8cdb-4e88-892a-835e59450b95.json",
+      "attestationId": "5bc670fd-8cdb-4e88-892a-835e59450b95",
+      "attestedAt": "2026-10-31T21:49:12.626Z"
     },
     {
       "id": "FLAKE-B2-REGULARIZADOR-CORRIDA",
@@ -2620,7 +2944,10 @@
       "severityBasis": "gate canônico vermelho por corrida do próprio teste (falso vermelho), com risco de ser lido como falha de segurança do produto",
       "severitySource": "medicao-ci-2026-10-29",
       "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:35.740Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:35.740Z)",
+      "closureProof": "governance/bug-closure/proofs/394ecf99-c70b-4b43-92a2-94532ce2b366.json",
+      "attestationId": "394ecf99-c70b-4b43-92a2-94532ce2b366",
+      "attestedAt": "2026-10-31T21:49:00.037Z"
     },
     {
       "id": "INTERFERENCIA-CRASH-EVIDENCE-L0B",
@@ -2635,7 +2962,10 @@
       "severityBasis": "falso vermelho do harness de reprodução local (cwd errado); não havia defeito no repositório. Mantida observabilidade para diagnóstico em 1 linha.",
       "severitySource": "medicao-local-2026-10-29",
       "regressionTest": "tests/integration/engineeringMissionCrashRecoveryE2E.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionCrashRecoveryE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:43.650Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionCrashRecoveryE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:43.650Z)",
+      "closureProof": "governance/bug-closure/proofs/08b85bfd-c5e8-4a1a-b8d4-2360326728fa.json",
+      "attestationId": "08b85bfd-c5e8-4a1a-b8d4-2360326728fa",
+      "attestedAt": "2026-10-31T21:49:03.817Z"
     },
     {
       "id": "POLITICA-PROD-LIKE-EM-MAIN",
@@ -2664,7 +2994,10 @@
       "severityBasis": "flake de teste sob carga (execução completa em paralelo); não afeta produto, mas produz vermelho não determinístico no gate de unit",
       "severitySource": "medicao-local-2026-10-29",
       "regressionTest": "tests/unit/dev/devServicesSupervision.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:22.750Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:22.750Z)",
+      "closureProof": "governance/bug-closure/proofs/22c2036f-283e-42bc-aafa-ac57842446b4.json",
+      "attestationId": "22c2036f-283e-42bc-aafa-ac57842446b4",
+      "attestedAt": "2026-10-31T21:49:12.759Z"
     },
     {
       "id": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
@@ -2692,7 +3025,10 @@
       "severityBasis": "vermelho de E2E por pré-condição não declarada; mascarava o motivo real (locator em vez de dado ausente)",
       "severitySource": "medicao-ci-2026-10-29",
       "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:26.121Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:26.121Z)",
+      "closureProof": "governance/bug-closure/proofs/4deb2128-fc58-4418-b2c7-e3dfaa1dbac5.json",
+      "attestationId": "4deb2128-fc58-4418-b2c7-e3dfaa1dbac5",
+      "attestedAt": "2026-10-31T21:48:58.247Z"
     },
     {
       "id": "E2E-REPLAY-DOMINIO-E-TAB",
@@ -2707,7 +3043,10 @@
       "severityBasis": "spec de replay RPA inviável de passar; era o único vermelho do job E2E",
       "severitySource": "medicao-ci-2026-10-29",
       "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:29.636Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:29.636Z)",
+      "closureProof": "governance/bug-closure/proofs/5e283156-b827-4f9d-9e15-924330e743ba.json",
+      "attestationId": "5e283156-b827-4f9d-9e15-924330e743ba",
+      "attestedAt": "2026-10-31T21:48:58.124Z"
     },
     {
       "id": "JOURNEY-STORE-ESCONDE-DERIVADAS",
@@ -2722,7 +3061,10 @@
       "severityBasis": "perda de visibilidade de 251 jornadas na superfície DEVELOPMENT de QA Waves; bloqueava E2E de replay RPA",
       "severitySource": "medicao-servico-2026-10-29",
       "regressionTest": "api/services/__tests__/qaWavesService.journey.test.js",
-      "verificationNote": "backfill-regression-tests.js: npx jest api/services/__tests__/qaWavesService.journey.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:32.970Z)"
+      "verificationNote": "backfill-regression-tests.js: npx jest api/services/__tests__/qaWavesService.journey.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:32.970Z)",
+      "closureProof": "governance/bug-closure/proofs/32f7f744-044b-4981-84b2-12373e31ef7e.json",
+      "attestationId": "32f7f744-044b-4981-84b2-12373e31ef7e",
+      "attestedAt": "2026-10-31T21:49:03.938Z"
     },
     {
       "id": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
@@ -2740,7 +3082,10 @@
       "regressionTest": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
       "verificationCommit": "0bfda6315522",
       "verificationNote": "backfill manual 2026-10-30: a suite PROVISIONA o proprio banco e passou 4/4 execucoes no Postgres de dev COMPARTILHADO (88,2s/82,5s/87,2s/77,5s) — a mesma configuracao em que falhava em 65s com lineage.replacementTaskId === originalTaskId. Dentro do lote L0b: PASS (41/41 suites, 238/238 testes, exit 0). Bancos residuais: zero. sha 0bfda6315522",
-      "verifiedAt": "2026-10-30T05:56:06.473Z"
+      "verifiedAt": "2026-10-30T05:56:06.473Z",
+      "closureProof": "governance/bug-closure/proofs/44fc4716-4cce-4136-94be-935d858f9d8d.json",
+      "attestationId": "44fc4716-4cce-4136-94be-935d858f9d8d",
+      "attestedAt": "2026-10-31T21:48:59.902Z"
     },
     {
       "id": "FECHAMENTOS-SEM-SUITE-DE-REGRESSAO",
@@ -2774,7 +3119,10 @@
       "legacyStatus": "verified",
       "blocked_reason_historico": "DECISÃO DE GOVERNAÇA (não é bug novo): o scheduler hoje recusa com reason=bug_closure_blocked ANTES do caminho pipeline_active. Fail-closed parece CORRETO (não rodar mesh com fechamento sem prova), mas o teste automatizado assevera a razão antiga. Duas saídas legítimas: (a) aceitar o comportamento e atualizar a expectativa do teste declarando a ordem dos guards — exige decisão explícita, porque mexer em expectativa é justamente o que a missão proíbe fazer sem justificar; (b) mudar a ordem/precedência dos guards no produto. Não escolhi por conta própria. Enquanto isso, a suíte fica vermelha fora dos gates padrão (não roda em test:unit nem no L0b).",
       "verificationCommit": "e3fb9d6015ae",
-      "verifiedAt": "2026-10-30T17:39:45.569Z"
+      "verifiedAt": "2026-10-30T17:39:45.569Z",
+      "closureProof": "governance/bug-closure/proofs/4e0de725-2665-4984-845c-8ce0b215d839.json",
+      "attestationId": "4e0de725-2665-4984-845c-8ce0b215d839",
+      "attestedAt": "2026-10-31T21:49:12.484Z"
     },
     {
       "id": "QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE",
@@ -2792,7 +3140,10 @@
       "verificationNote": "RESOLVIDO 2026-10-30: o teste exigia comportamento que o hardening REMOVEU. writeCanonicalOutputs NAO vem da opcao homonima: deriva de isCanonicalExecution (exige RUNNING_IN_PIPELINE=1 + origem pipeline + registry canonico; meshRunner.js:2347-2373). Execucao nao canonica NAO escreve repairPlan/baseline/metrics (protecao contra execucao ad-hoc sobrescrever evidencia canonica). Assertion passou a provar o contrato real: summary/history escritos, isCanonicalExecution=false, canonicalPromotion=null, e o plano de reparo continua provado EM MEMORIA (result.repairPlan). qa-mesh/__tests__/meshRunner.test.js 15/15 PASS em e3fb9d6015ae",
       "blocked_reason_historico": "DECISAO NECESSARIA: (a) o produto deve sempre emitir repairPlan (mesmo vazio) para dar previsibilidade ao consumidor, ou (b) o teste deve refletir que o arquivo so existe quando ha o que reparar. Nenhuma das duas e mudanca que eu deva fazer sem decisao — (b) altera expectativa de teste e (a) muda contrato de artefato.",
       "verificationCommit": "e3fb9d6015ae",
-      "verifiedAt": "2026-10-30T17:39:45.569Z"
+      "verifiedAt": "2026-10-30T17:39:45.569Z",
+      "closureProof": "governance/bug-closure/proofs/1942105b-9fac-44a0-bbea-a3aede511f6e.json",
+      "attestationId": "1942105b-9fac-44a0-bbea-a3aede511f6e",
+      "attestedAt": "2026-10-31T21:49:12.346Z"
     },
     {
       "status": "done",
@@ -2807,7 +3158,10 @@
       "severity": "P1",
       "commit": "be004faa2",
       "evidence": "tests/unit/governance/certificationLadder.test.js (20 casos, inclui 18 degraus SKIPPED e degrau folha)",
-      "regressionTest": "tests/unit/governance/certificationLadder.test.js"
+      "regressionTest": "tests/unit/governance/certificationLadder.test.js",
+      "closureProof": "governance/bug-closure/proofs/2d0be716-51cc-4600-b2a6-19aef9f11f7b.json",
+      "attestationId": "2d0be716-51cc-4600-b2a6-19aef9f11f7b",
+      "attestedAt": "2026-10-31T21:49:11.132Z"
     },
     {
       "status": "done",
@@ -2822,7 +3176,10 @@
       "severity": "P1",
       "commit": "be004faa2",
       "evidence": "tests/unit/governance/certificationLadder.test.js + CLI real: --only fila executa so fila, invalido exit 2",
-      "regressionTest": "tests/unit/governance/certificationLadder.test.js"
+      "regressionTest": "tests/unit/governance/certificationLadder.test.js",
+      "closureProof": "governance/bug-closure/proofs/79da4cc6-7837-4b00-9c83-5630a9ffa5bb.json",
+      "attestationId": "79da4cc6-7837-4b00-9c83-5630a9ffa5bb",
+      "attestedAt": "2026-10-31T21:49:11.328Z"
     },
     {
       "status": "done",
@@ -2837,7 +3194,10 @@
       "severity": "P1",
       "commit": "be004faa2",
       "evidence": "api/services/lro/__tests__/lroOutboxWorker.test.js (falha persistente do dispatch nao impede sweep)",
-      "regressionTest": "api/services/lro/__tests__/lroOutboxWorker.test.js"
+      "regressionTest": "api/services/lro/__tests__/lroOutboxWorker.test.js",
+      "closureProof": "governance/bug-closure/proofs/5f3ab4c5-4ba4-437a-b5f3-f9a4ccbef996.json",
+      "attestationId": "5f3ab4c5-4ba4-437a-b5f3-f9a4ccbef996",
+      "attestedAt": "2026-10-31T21:49:11.492Z"
     },
     {
       "status": "done",
@@ -2852,7 +3212,10 @@
       "severity": "P1",
       "commit": "884b3fb83",
       "evidence": "tests/integration/lroOutboxDispatcher.test.js (topic/topico, claim expirado, claim recente) + worker stop",
-      "regressionTest": "tests/integration/lroOutboxDispatcher.test.js"
+      "regressionTest": "tests/integration/lroOutboxDispatcher.test.js",
+      "closureProof": "governance/bug-closure/proofs/181a3302-2b35-46d7-ae73-e58959e0fc86.json",
+      "attestationId": "181a3302-2b35-46d7-ae73-e58959e0fc86",
+      "attestedAt": "2026-10-31T21:49:11.627Z"
     },
     {
       "status": "done",
@@ -2867,7 +3230,10 @@
       "severity": "P1",
       "commit": "e2369c7c8",
       "evidence": "tests/integration/lroServiceTransaction.test.js P1-E (7 casos)",
-      "regressionTest": "tests/integration/lroServiceTransaction.test.js"
+      "regressionTest": "tests/integration/lroServiceTransaction.test.js",
+      "closureProof": "governance/bug-closure/proofs/b6dfe8df-7be9-40d6-a616-4e12558baac2.json",
+      "attestationId": "b6dfe8df-7be9-40d6-a616-4e12558baac2",
+      "attestedAt": "2026-10-31T21:49:11.786Z"
     },
     {
       "status": "done",
@@ -2882,7 +3248,10 @@
       "severity": "P1",
       "commit": "8f9b8332b",
       "evidence": "frontend/src/shared/useLroStream.test.jsx (troca de operacao sem perda e sem contaminacao)",
-      "regressionTest": "frontend/src/shared/useLroStream.test.jsx"
+      "regressionTest": "frontend/src/shared/useLroStream.test.jsx",
+      "closureProof": "governance/bug-closure/proofs/e415beb4-fbd0-4f33-ae92-bff83b7afbad.json",
+      "attestationId": "e415beb4-fbd0-4f33-ae92-bff83b7afbad",
+      "attestedAt": "2026-10-31T21:49:11.924Z"
     },
     {
       "status": "done",
@@ -2897,7 +3266,10 @@
       "severity": "P1",
       "commit": "f7ac63b96",
       "evidence": "qa-mesh/__tests__/executionQueueOutcome.test.js (9 casos)",
-      "regressionTest": "qa-mesh/__tests__/executionQueueOutcome.test.js"
+      "regressionTest": "qa-mesh/__tests__/executionQueueOutcome.test.js",
+      "closureProof": "governance/bug-closure/proofs/b41aab52-2b31-4c1b-8e1d-e3523ad212d9.json",
+      "attestationId": "b41aab52-2b31-4c1b-8e1d-e3523ad212d9",
+      "attestedAt": "2026-10-31T21:49:12.065Z"
     },
     {
       "status": "done",
@@ -2912,7 +3284,10 @@
       "severity": "P1",
       "commit": "6210241fd",
       "evidence": "tests/unit/governance/runClosureTransition.test.js (7 casos) + deliveryVerification/lineageRepair ja verdes",
-      "regressionTest": "tests/unit/governance/runClosureTransition.test.js"
+      "regressionTest": "tests/unit/governance/runClosureTransition.test.js",
+      "closureProof": "governance/bug-closure/proofs/53310995-a7f1-4f18-984b-b0d794ceb3c1.json",
+      "attestationId": "53310995-a7f1-4f18-984b-b0d794ceb3c1",
+      "attestedAt": "2026-10-31T21:49:12.198Z"
     }
   ],
   "schemaVersion": 2,
