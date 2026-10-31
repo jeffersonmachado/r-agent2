@@ -33,7 +33,37 @@ function modelos() {
  * Reclama um lote de pendências, incrementando tentativas e virando `PUBLISHING` (visível).
  * @returns {Promise<Array<object>>} linhas reclamadas (plain)
  */
-async function claimBatch({ limit = 20, now = null } = {}) {
+/**
+ * Recupera claims EXPIRADOS: linhas deixadas em `PUBLISHING` por um processo que morreu entre o claim
+ * e a publicação voltam para `PENDING` (e `claimed_at` é limpo). Sem isto o evento ficava preso para
+ * sempre — órfão invisível, nem entregue nem na DLQ.
+ *
+ * @returns {Promise<{recuperadas:number}>}
+ */
+async function reclaimStale({ olderThanMs = 60000, now = null, limit = 100 } = {}) {
+  const models = modelos();
+  const outbox = models.getLroOutbox();
+  const sequelize = outbox.sequelize;
+  const instante = now ? new Date(now) : new Date();
+  const corte = new Date(instante.getTime() - Number(olderThanMs));
+
+  const [recuperadas] = await sequelize.query(
+    `UPDATE lro_outbox
+        SET status = 'PENDING', claimed_at = NULL, available_at = :agora,
+            last_error = COALESCE(last_error, 'CLAIM_EXPIRADO')
+      WHERE id IN (
+        SELECT id FROM lro_outbox
+         WHERE status = 'PUBLISHING' AND claimed_at IS NOT NULL AND claimed_at < :corte
+         ORDER BY id
+         LIMIT :limite
+      )
+      RETURNING id`,
+    { replacements: { agora: instante, corte, limite: Number(limit) || 100 } },
+  );
+  return { recuperadas: (recuperadas || []).length };
+}
+
+async function claimBatch({ limit = 20, now = null, topic = null } = {}) {
   const models = modelos();
   const outbox = models.getLroOutbox();
   const sequelize = outbox.sequelize;
@@ -41,12 +71,16 @@ async function claimBatch({ limit = 20, now = null } = {}) {
 
   return sequelize.transaction(async (t) => {
     const [rows] = await sequelize.query(
+      // Filtro de `topic` DENTRO do claim (P1-D). Antes ele era aplicado DEPOIS: a linha já tinha
+      // virado PUBLISHING e as tentativas já tinham subido, e então era descartada do lote — ficava
+      // presa em PUBLISHING para sempre, com attempts inflado.
       `SELECT id FROM lro_outbox
         WHERE status = 'PENDING' AND available_at <= :agora
+          AND (:topico IS NULL OR topic = :topico)
         ORDER BY id
         LIMIT :limite
         FOR UPDATE SKIP LOCKED`,
-      { replacements: { agora: instante, limite: Number(limit) || 20 }, transaction: t },
+      { replacements: { agora: instante, limite: Number(limit) || 20, topico: topic || null }, transaction: t },
     );
     const ids = (rows || []).map((r) => r.id);
     if (ids.length === 0) return [];
@@ -58,6 +92,7 @@ async function claimBatch({ limit = 20, now = null } = {}) {
       await linha.update({
         status: 'PUBLISHING',
         attempts: Number(linha.attempts || 0) + 1,
+        claimed_at: instante,
       }, { transaction: t });
       reclamadas.push(linha.get({ plain: true }));
     }
@@ -79,8 +114,13 @@ async function dispatch({
   const sequelize = outbox.sequelize;
   const instante = now ? new Date(now) : new Date();
 
-  let reclamadas = await claimBatch({ limit, now: instante });
-  if (topic) reclamadas = reclamadas.filter((l) => l.topic === topic);
+  // Claims EXPIRADOS voltam para a fila antes de reclamar (P1-D): publicação órfã não fica presa.
+  const { recuperadas } = await reclaimStale({ now: instante });
+  if (recuperadas > 0) logger.warn('[lro:outbox] claims expirados recuperados', { recuperadas });
+
+  // O filtro de `topic` acontece DENTRO do claim: pós-filtro descartava linha já reclamada e a
+  // deixava presa em PUBLISHING com attempts inflado.
+  const reclamadas = await claimBatch({ limit, now: instante, topic });
 
   const resultado = { publicados: 0, reagendados: 0, mortos: 0, erros: [] };
 
@@ -118,4 +158,5 @@ async function dispatch({
   return resultado;
 }
 
-module.exports = { backoffMs, claimBatch, dispatch, BACKOFF_BASE_MS, BACKOFF_CAP_MS };
+module.exports = {
+  reclaimStale, backoffMs, claimBatch, dispatch, BACKOFF_BASE_MS, BACKOFF_CAP_MS };

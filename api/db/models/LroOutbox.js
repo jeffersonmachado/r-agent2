@@ -31,6 +31,8 @@ function getLroOutboxModel() {
       available_at: { type: DataTypes.DATE, allowNull: false },
       published_at: { type: DataTypes.DATE, allowNull: true },
       last_error: { type: DataTypes.TEXT, allowNull: true },
+      // Claim de publicação (P1-D): permite distinguir "publicando agora" de "morreu publicando".
+      claimed_at: { type: DataTypes.DATE, allowNull: true },
     }, {
       tableName: 'lro_outbox',
       timestamps: true,

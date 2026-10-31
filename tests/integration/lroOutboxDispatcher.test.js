@@ -134,3 +134,85 @@ describe('LRO outbox — publicação, backoff e DLQ', () => {
     expect(pendentes).toBe(0); // todas reclamadas (PUBLISHING), nenhuma duplicada
   }, 60000);
 });
+
+/**
+ * P1-D (prompt duro 2026-10-31): dois buracos no despacho da outbox.
+ *
+ * 1. O filtro de `topic` era aplicado DEPOIS do claim: a linha já estava `PUBLISHING` com
+ *    `attempts` incrementado quando era descartada do lote — presa para sempre e nunca entregue.
+ * 2. Não havia recuperação de claim EXPIRADO: processo morto entre claim e publicação deixava a
+ *    linha em `PUBLISHING` indefinidamente (nem entregue, nem na DLQ).
+ */
+describe('P1-D — filtro de tópico no claim e recuperação de claim expirado', () => {
+  test('dispatch com topic NÃO toca linhas de outro tópico (nem attempts)', async () => {
+    if (skipIfUnavailable()) return;
+    const alvo = await lro.createOperation({
+      tenantId: 'system', operationType: 'qa_waves', visibilityClass: 'DEVELOPMENT',
+      ownerActorId: 'jest', idempotencyKey: `p1d-alvo-${Date.now()}`,
+    });
+    const outro = await lro.createOperation({
+      tenantId: 'system', operationType: 'qa_waves', visibilityClass: 'DEVELOPMENT',
+      ownerActorId: 'jest', idempotencyKey: `p1d-outro-${Date.now()}`,
+    });
+    const models = require('../../api/db/models');
+    const outbox = models.getLroOutbox();
+    await outbox.update({ status: 'PENDING' }, { where: { operation_id: alvo.id } });
+    await outbox.update({ status: 'PENDING', topic: 'outro.topico' }, { where: { operation_id: outro.id } });
+
+    const publicados = [];
+    const r = await dispatcher.dispatch({
+      publish: async (topico) => { publicados.push(topico); },
+      limit: 50,
+      topic: 'lro.events',
+    });
+
+    expect(r.publicados).toBeGreaterThan(0);
+    const linhasOutro = await outbox.findAll({ where: { operation_id: outro.id } });
+    for (const l of linhasOutro) {
+      expect(l.status).toBe('PENDING');   // não foi reclamada
+      expect(Number(l.attempts)).toBe(0); // attempts não foi inflado
+      expect(l.claimed_at).toBeNull();
+    }
+  });
+
+  test('claim expirado em PUBLISHING volta para PENDING e é publicável depois', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await lro.createOperation({
+      tenantId: 'system', operationType: 'qa_waves', visibilityClass: 'DEVELOPMENT',
+      ownerActorId: 'jest', idempotencyKey: `p1d-stale-${Date.now()}`,
+    });
+    const models = require('../../api/db/models');
+    const outbox = models.getLroOutbox();
+    // Simula processo morto entre claim e publicação.
+    await outbox.update(
+      { status: 'PUBLISHING', claimed_at: new Date(Date.now() - 10 * 60_000), attempts: 1 },
+      { where: { operation_id: op.id } },
+    );
+
+    const recuperacao = await dispatcher.reclaimStale({ olderThanMs: 60_000 });
+    expect(recuperacao.recuperadas).toBeGreaterThan(0);
+
+    const linhas = await outbox.findAll({ where: { operation_id: op.id } });
+    expect(linhas.every((l) => l.status === 'PENDING' && l.claimed_at === null)).toBe(true);
+
+    const r = await dispatcher.dispatch({ publish: async () => {}, limit: 50 });
+    expect(r.publicados).toBeGreaterThan(0);
+    const depois = await outbox.findAll({ where: { operation_id: op.id } });
+    expect(depois.every((l) => l.status === 'PUBLISHED')).toBe(true);
+  });
+
+  test('claim RECENTE não é recuperado (não rouba publicação em voo)', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await lro.createOperation({
+      tenantId: 'system', operationType: 'qa_waves', visibilityClass: 'DEVELOPMENT',
+      ownerActorId: 'jest', idempotencyKey: `p1d-voo-${Date.now()}`,
+    });
+    const models = require('../../api/db/models');
+    const outbox = models.getLroOutbox();
+    await outbox.update({ status: 'PUBLISHING', claimed_at: new Date() }, { where: { operation_id: op.id } });
+
+    await dispatcher.reclaimStale({ olderThanMs: 60_000 });
+    const linhas = await outbox.findAll({ where: { operation_id: op.id } });
+    expect(linhas.every((l) => l.status === 'PUBLISHING')).toBe(true);
+  });
+});

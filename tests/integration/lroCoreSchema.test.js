@@ -29,6 +29,7 @@ function skipIfUnavailable() {
 
 const migrationCore = require('../../api/db/migrations/20261030120000-create-lro-core');
 const migrationFeedback = require('../../api/db/migrations/20261030140000-create-lro-feedback');
+const migrationClaimedAt = require('../../api/db/migrations/20261031150000-lro-outbox-claimed-at');
 
 beforeAll(async () => {
   try {
@@ -98,6 +99,7 @@ describe('LRO Fase 1 — schema durável e reversível', () => {
     // ACHADO 2026-10-30: reverter SÓ a migration core falha porque `lro_feedback_requests`
     // referencia `lro_operations`. Migração tem de ser revertida na ordem INVERSA à aplicação —
     // o teste passou a provar a cascata em vez de assumir que cada `down` é isolado.
+    await migrationClaimedAt.down(qi, Sequelize);
     await migrationFeedback.down(qi, Sequelize);
     await migrationCore.down(qi, Sequelize);
 
@@ -109,6 +111,7 @@ describe('LRO Fase 1 — schema durável e reversível', () => {
 
     await migrationCore.up(qi, Sequelize);
     await migrationFeedback.up(qi, Sequelize);
+    await migrationClaimedAt.up(qi, Sequelize);
 
     expect(await tabelaExiste('public.lro_operations')).toBe(true);
     expect(await tabelaExiste('public.lro_feedback_requests')).toBe(true);
