@@ -3144,3 +3144,120 @@ MAIN_MODIFIED         = FALSE            (main intocado: 04cad9c1b; merge só co
 Duas vulnerabilidades P0/P1 reais fechadas com reprodução antes/depois, uma delas tendo sobrevivido à
 primeira correção e sido pega por revisão independente. O que impede `DEVELOPMENT_VERIFIED` é dependência
 externa — não ausência de trabalho executável neste ambiente.
+
+---
+
+### 11.54. Matriz completa de validadores + dois defeitos reais fechados na varredura
+
+**Contexto.** A rodada anterior fechou o LRO ponta a ponta e corrigiu o baseline stale do `AGENTS.md`.
+Faltava a pergunta que um auditor faz primeiro: *"de todos os gates do repositório, quais estão verdes
+AGORA e por que os vermelhos estão vermelhos?"* Narrativa por gate não responde isso; medir responde.
+
+#### 11.54.1 Defeito 1 — `governance/replay-integrity.js` morria com `TypeError` em vez de falhar fechado
+
+Sintoma medido (`node governance/replay-integrity.js` fora do ciclo de release):
+
+```
+TypeError: Cannot read properties of undefined (reading 'length')
+    at Object.<anonymous> (governance/replay-integrity.js:361:109)
+```
+
+Causa: o engine tem **dois shapes de retorno**. Quando `resolveArtifact()` falha (workspace sem payload
+de release em `dist/`), ele retorna `{ generatedAt, pass:false, error }` — sem `issues` nem
+`totalReplays`. O entrypoint assumia o shape completo:
+
+```js
+console.log(`[replay-integrity] pass=${report.pass} replays=${report.totalReplays} issues=${report.issues.length}`);
+```
+
+Um engine de governança que **crasha** é pior que um que reprova: o operador recebe stack trace em vez
+de causa, e o `process.exit` correto nunca roda. Correção: helper puro `formatCliSummary(report)` que
+cobre os dois shapes, exportado e usado pelo CLI.
+
+Prova antes/depois (mesma máquina, mesmo workspace):
+
+| Estado | Saída | Exit |
+|---|---|---|
+| antes | `TypeError: Cannot read properties of undefined (reading 'length')` | 1 (crash) |
+| depois | `[replay-integrity] pass=false error=artifact_missing:none_found_in_dist` | 1 (fail-closed com causa) |
+
+Regressão: `tests/unit/governance/replayIntegrityCliSummary.test.js` (3 casos: shape completo, shape de
+erro, relatório ausente). Escrito primeiro, vermelho (`formatCliSummary is not a function`), verde após a
+implementação. Suíte vizinha (`replayHardeningHashOnly.test.js`) preservada: 6/6.
+
+#### 11.54.2 O mesmo achado explica o vermelho de `validate:replay-governance`
+
+`validate-replay-governance` reprovava com `replay_report_stale` (`governance/replay-integrity-report.json`
+de 2026-10-17). Investigação: **não existe script npm produtor** desse relatório. Os únicos invocadores do
+engine são `scripts/release-package.sh:276` e `scripts/two-pass-release.sh:929` — ou seja, o relatório só
+é regenerado **dentro do ciclo de selagem**. E a execução direta prova por quê: sem payload em `dist/`, o
+engine não tem o que verificar (`artifact_missing:none_found_in_dist`).
+
+Conclusão honesta: `replay-governance` não é um gate que eu possa fechar por trabalho de código — ele é
+downstream do mesmo bloqueio de selagem. Fica registrado como **BLOQUEADO POR SELAGEM**, não como "quase
+verde".
+
+#### 11.54.3 Escada de certificação estendida de 10 → 18 degraus
+
+A escada anterior só modelava a cadeia de dono (âncora → fechamento → execução → waves → cobertura →
+agregado). Isso deixava de fora os gates **estáticos e independentes**, o que fazia o operador supor que
+o vermelho vinha deles. Degraus novos, todos sem `requires` (independentes de segredo):
+
+`higiene` (release-hygiene) · `rotas` (route-mounts) · `segregacao` (experience-api-segregation) ·
+`visibilidade` (visibility-policy) · `camadas` (layer-conventions) · `dist` (requer `fechamentos`) ·
+`projecao` (requer `fechamentos`) · `resumo` (requer `fechamentos`,`waves`,`cobertura`).
+
+Execução real (`node scripts/governance/certification-ladder.js`):
+
+```
+  OK   fila · memoria · dag · higiene · rotas · segregacao · visibilidade · camadas
+  FALHA ancoras           (3 segredos + pins versionados — AÇÃO DE DONO)
+  BLOQ  fechamentos · execucao-autoritativa · required-tests · waves · cobertura
+        dist · projecao · resumo · agregado
+[escada] resumo={"PASS":8,"FAIL":1,"BLOCKED":9,"SKIPPED":0} certificavel=false
+```
+
+**Um único FAIL.** Todo o resto é consequência transitiva dele. Esse é o diagnóstico que faltava: não há
+dez problemas independentes, há **um** bloqueio de dono com nove dependentes.
+
+#### 11.54.4 Matriz de validadores (medida 2026-10-31, worktree `er-fixci`)
+
+| Validador | Estado | Causa / família |
+|---|---|---|
+| `hardening-queue` | PASS | — |
+| `ai-memory` (+`ai-memory-consistency`) | PASS | — |
+| `release-dag` | PASS | — |
+| `release-hygiene` | PASS | resíduo de release limpo |
+| `route-mounts` | PASS | 64 declarados / 64 montados |
+| `experience-api-segregation` | PASS | 0 leaks, 0 bypass |
+| `visibility-policy` | PASS | 0 violações |
+| `layer-conventions` | PASS | `totalIssues: 0` (149 engine / 1525 api) |
+| `invariants` | PASS | — |
+| `cleanup` | PASS | — |
+| `operational-rules` | PASS | — |
+| `coverage-completeness` | PASS | — |
+| `agent-adherence` | PASS | — |
+| `anti-greenwashing` | PASS | 91 suítes |
+| `business-needs` | PASS (4 avisos) | avisos não bloqueantes |
+| `runtime` | PASS | — |
+| `rag-domain-segregation` | PASS (regenerado) | relatório estava STALE; 7 métricas reais em zero |
+| `ancoras` | **FAIL** | `PINNED_*_FINGERPRINTS` vazios + 3 segredos ausentes — **DONO** |
+| `fechamentos` | BLOQUEADO | requer `ancoras` |
+| `execucao-autoritativa` / `required-tests` | BLOQUEADO | `run-release-suites.js` negado antes de rodar (`L2_L3_EXTENSIVO` DENIED, 68 NOT_EXECUTED) |
+| `waves` (db/api/page-surface) | BLOQUEADO | requer `fechamentos` |
+| `cobertura` (`coverage-gate`) | BLOQUEADO | requer `waves` frescas |
+| `dist` | BLOQUEADO | `check-dist-clean`: sem envelope selado |
+| `final-status-projection` | BLOQUEADO | `governance/rap-master-scorecard.json` só nasce do ciclo |
+| `replay-governance` | BLOQUEADO | relatório só regenerado na selagem (§11.54.2) |
+| `qa-governance` | BLOQUEADO | falta `meshHistory` canônico + QA Waves enterprise `no_go` |
+| `release-governance` | BLOQUEADO | envelope de release ausente |
+| `self-proving` | BLOQUEADO | cadeia exige certificação do ciclo |
+| `governance-summary` | BLOQUEADO | requer os produtores acima |
+| `governance-enforcement` (agregado) | BLOQUEADO | 0/64 por transitividade |
+
+#### 11.54.5 O que isso muda no julgamento
+
+Antes desta rodada havia dois riscos de leitura errada: (a) supor que os gates estáticos também estavam
+vermelhos, e (b) tratar `replay_report_stale` como defeito de código à espera de correção. Medido: os 15
+gates estáticos estão verdes; o vermelho é **um**, de dono, com nove dependentes transitivos. Nenhum gate
+foi afrouxado, nenhuma âncora foi inventada, nenhum relatório de selagem foi editado à mão.
