@@ -184,7 +184,7 @@ describe('LRO Fase 2 — progresso real (sem mudar de estado)', () => {
     await lro.transition(op.id, { to: 'RUNNING', actorId: 'jest' });
 
     const comProgresso = await lro.recordProgress(op.id, {
-      current: 3, total: 10, unit: 'scenario', phase: 'execution', actorId: 'jest',
+      current: 3, total: 10, unit: 'scenario', phase: 'execution', actorId: 'jest', origin: 'human',
     });
     expect(comProgresso.status).toBe('RUNNING');
     expect(comProgresso.progressCurrent).toBe(3);
@@ -198,7 +198,7 @@ describe('LRO Fase 2 — progresso real (sem mudar de estado)', () => {
   test('progresso com total desconhecido é INDETERMINADO e nunca vira 100%', async () => {
     if (skipIfUnavailable()) return;
     const op = await novaOperacao();
-    const r = await lro.recordProgress(op.id, { current: 7, total: null, unit: 'scenario' });
+    const r = await lro.recordProgress(op.id, { current: 7, total: null, unit: 'scenario', origin: 'human', actorId: 'jest' });
     expect(r.progressTotal).toBeNull();
     expect(r.indeterminate).toBe(true);
 
@@ -206,4 +206,75 @@ describe('LRO Fase 2 — progresso real (sem mudar de estado)', () => {
     const progresso = eventos.find((e) => e.type === 'PROGRESS');
     expect(progresso.payload).toMatchObject({ percent: null, indeterminate: true });
   }, 60000);
+});
+
+/**
+ * P1-E (prompt duro 2026-10-31): fencing era OPCIONAL — `recordProgress` só comparava quando o
+ * token vinha; `null`/`undefined` pulava a checagem (bypass genérico) e `heartbeat` com token
+ * ausente comparava `NaN < fence` (sempre false) e renovava o lease de qualquer um. Comando de
+ * worker sem fencing tem de ser RECUSADO, e comando humano autorizado tem de ser distinguível.
+ */
+describe('P1-E — fencing obrigatório para worker, humano explícito', () => {
+  const preparar = async () => {
+    const op = await novaOperacao({ idempotencyKey: `p1e-${Date.now()}-${Math.random()}` });
+    await lro.transition(op.id, { to: 'QUEUED', actorId: 'jest', context: {} });
+    await lro.transition(op.id, { to: 'RUNNING', actorId: 'jest', context: {} });
+    const lease = await lro.claimLease(op.id, { owner: 'worker-fence', ttlMs: 60000 });
+    return { op, lease };
+  };
+
+  test('recordProgress de WORKER sem fencingToken é recusado', async () => {
+    if (skipIfUnavailable()) return;
+    const { op } = await preparar();
+    await expect(lro.recordProgress(op.id, { current: 1, total: 2, unit: 'scenario' }))
+      .rejects.toMatchObject({ code: 'FENCE_OBRIGATORIO' });
+  });
+
+  test('recordProgress com fencing OBSOLETO é recusado', async () => {
+    if (skipIfUnavailable()) return;
+    const { op, lease } = await preparar();
+    // Mesmo dono retoma o lease: o fence AVANÇA e o token anterior deixa de valer. (Outro dono
+    // receberia LEASE_HELD — lease ainda não venceu, e isso é o comportamento correto.)
+    await lro.claimLease(op.id, { owner: 'worker-fence', ttlMs: 60000 });
+    await expect(lro.recordProgress(op.id, { current: 1, total: 2, fencingToken: lease.fencingToken }))
+      .rejects.toMatchObject({ code: 'FENCE_STALE' });
+  });
+
+  test('recordProgress com fencing válido é aceito', async () => {
+    if (skipIfUnavailable()) return;
+    const { op, lease } = await preparar();
+    const r = await lro.recordProgress(op.id, { current: 1, total: 2, fencingToken: lease.fencingToken });
+    expect(r.progressCurrent).toBe(1);
+  });
+
+  test('comando HUMANO explícito (origin=human) exige ator e dispensa fencing', async () => {
+    if (skipIfUnavailable()) return;
+    const { op } = await preparar();
+    await expect(lro.recordProgress(op.id, { current: 1, total: 2, origin: 'human' }))
+      .rejects.toMatchObject({ code: 'ATOR_OBRIGATORIO' });
+    const r = await lro.recordProgress(op.id, { current: 1, total: 2, origin: 'human', actorId: 'humano@results' });
+    expect(r.progressCurrent).toBe(1);
+  });
+
+  test('heartbeat sem fencingToken é recusado (NaN não pode passar na comparação)', async () => {
+    if (skipIfUnavailable()) return;
+    const { op } = await preparar();
+    await expect(lro.heartbeat(op.id, { owner: 'worker-fence' }))
+      .rejects.toMatchObject({ code: 'FENCE_OBRIGATORIO' });
+  });
+
+  test('heartbeat com fencing obsoleto é recusado', async () => {
+    if (skipIfUnavailable()) return;
+    const { op, lease } = await preparar();
+    await lro.claimLease(op.id, { owner: 'worker-fence', ttlMs: 60000 }); // fence avança
+    await expect(lro.heartbeat(op.id, { owner: 'worker-fence', fencingToken: lease.fencingToken }))
+      .rejects.toMatchObject({ code: 'FENCE_STALE' });
+  });
+
+  test('heartbeat com fencing válido renova o lease', async () => {
+    if (skipIfUnavailable()) return;
+    const { op, lease } = await preparar();
+    const r = await lro.heartbeat(op.id, { owner: 'worker-fence', fencingToken: lease.fencingToken });
+    expect(r.fencingToken).toBe(lease.fencingToken);
+  });
 });

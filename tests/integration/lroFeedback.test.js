@@ -123,7 +123,7 @@ describe('LRO feedback humano', () => {
     });
 
     // Progresso muda a versão da operação sem mudar de estado.
-    await lro.recordProgress(op.id, { current: 1, total: 5, unit: 'scenario', actorId: 'jest' });
+    await lro.recordProgress(op.id, { current: 1, total: 5, unit: 'scenario', actorId: 'jest', origin: 'human' });
 
     await expect(feedback.respond(requestId, {
       tenantId: 'system', actorId: 'supervisor-1', decision: 'approve', idempotencyKey: 'k4',

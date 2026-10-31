@@ -313,6 +313,12 @@ async function claimLease(operationId, { owner, ttlMs = 60000 } = {}) {
 
 /** Renova o lease; token antigo é recusado (quem perdeu a posse não pode seguir escrevendo). */
 async function heartbeat(operationId, { owner, fencingToken, ttlMs = 60000 } = {}) {
+  // P1-E: sem token, `Number(undefined) < fence` é `NaN < fence` = false — o check passava e o
+  // lease era renovado por qualquer um. Fencing ausente agora é recusa nomeada.
+  if (fencingToken === null || fencingToken === undefined || String(fencingToken).trim() === ''
+      || !Number.isFinite(Number(fencingToken))) {
+    throw codigoErro('FENCE_OBRIGATORIO', 'heartbeat exige fencingToken numérico');
+  }
   const models = modelos();
   const { getLroOperation } = models;
   const sequelize = getLroOperation().sequelize;
@@ -344,8 +350,20 @@ async function heartbeat(operationId, { owner, fencingToken, ttlMs = 60000 } = {
  */
 async function recordProgress(operationId, {
   current = null, total = null, unit = null, revision = null, phase = null, messageCode = null,
-  actorId = null, fencingToken = null,
+  actorId = null, fencingToken = null, origin = 'worker',
 } = {}) {
+  // P1-E: fencing é OBRIGATÓRIO para comando de worker. Antes, `fencingToken` nulo PULAVA a
+  // checagem (bypass genérico por null): qualquer processo escrevia progresso. Comando humano
+  // autorizado é explícito (`origin: 'human'`), exige ator identificado e não usa fence.
+  // `Number(null) === 0` (número finito!) — por isso a checagem é por ausência explícita, não só
+  // por finitude: null/undefined/vazio pulavam o fence e escreviam progresso.
+  const semFence = fencingToken === null || fencingToken === undefined || String(fencingToken).trim() === '';
+  if (origin !== 'human' && (semFence || !Number.isFinite(Number(fencingToken)))) {
+    throw codigoErro('FENCE_OBRIGATORIO', 'comando de worker exige fencingToken numérico');
+  }
+  if (origin === 'human' && (!actorId || String(actorId).trim() === '')) {
+    throw codigoErro('ATOR_OBRIGATORIO', 'comando humano exige actorId identificado');
+  }
   const models = modelos();
   const { getLroOperation, getLroEvent, getLroOutbox } = models;
   const sequelize = getLroOperation().sequelize;
@@ -355,8 +373,9 @@ async function recordProgress(operationId, {
     if (!op) throw codigoErro('OPERATION_NOT_FOUND', `operação inexistente: ${operationId}`);
     const atual = op.get({ plain: true });
 
-    if (fencingToken !== null && fencingToken !== undefined
-        && Number(fencingToken) < Number(atual.fencing_token)) {
+    // Worker: fencing numérico já validado acima E precisa ser >= o atual (token vencido não
+    // escreve). Humano autorizado (`origin: 'human'`) é identificado por `actorId`, não por fence.
+    if (origin !== 'human' && Number(fencingToken) < Number(atual.fencing_token)) {
       throw codigoErro('FENCE_STALE', `fence ${fencingToken} < atual ${atual.fencing_token}`);
     }
 

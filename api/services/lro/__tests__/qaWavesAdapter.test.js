@@ -12,6 +12,7 @@ jest.mock('../lroService', () => ({
   getOperation: jest.fn(),
   transition: jest.fn(),
   recordProgress: jest.fn(),
+  claimLease: jest.fn(async () => ({ fencingToken: 1 })),
 }));
 
 const lroService = require('../lroService');

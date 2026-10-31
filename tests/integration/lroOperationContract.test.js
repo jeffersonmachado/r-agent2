@@ -65,7 +65,7 @@ describe('lro: contrato único entre lista e detalhe', () => {
     opId = op.id;
     await lro.transition(opId, { to: 'QUEUED', actorId: 'jest', context: { phase: 'queued' } });
     await lro.transition(opId, { to: 'RUNNING', actorId: 'jest', context: { phase: 'execution' } });
-    await lro.recordProgress(opId, { current: 2, total: 5, unit: 'scenario', messageCode: 'QA_WAVES_PROGRESS' });
+    await lro.recordProgress(opId, { current: 2, total: 5, unit: 'scenario', messageCode: 'QA_WAVES_PROGRESS', origin: 'human', actorId: 'jest' });
   }, 60000);
 
   test('detalhe expõe os MESMOS nomes e valores do item de lista', async () => {

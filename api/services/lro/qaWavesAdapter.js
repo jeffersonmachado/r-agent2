@@ -16,6 +16,20 @@
 const logger = require('../../utils/logger');
 
 const FLAG = 'LRO_QA_WAVES_MIRROR';
+const LEASE_OWNER = 'qa_mesh';
+
+/**
+ * Fencing por operação espelhada (P1-E). Escrever progresso é comando de WORKER: exige lease.
+ * O espelho toma o lease ao marcar RUNNING e reaproveita o token; sem token ele tenta retomar.
+ */
+const fencingPorOperacao = new Map();
+
+async function garantirFencing(operationId) {
+  if (fencingPorOperacao.has(operationId)) return fencingPorOperacao.get(operationId);
+  const lease = await servico().claimLease(operationId, { owner: LEASE_OWNER, ttlMs: 300000 });
+  fencingPorOperacao.set(operationId, lease.fencingToken);
+  return lease.fencingToken;
+}
 
 function espelhoAtivo() {
   return String(process.env[FLAG] || '').trim() === '1';
@@ -64,11 +78,16 @@ async function marcarExecutando(operationId) {
   if (!espelhoAtivo() || !operationId) return;
   try {
     const atual = await servico().getOperation(operationId);
-    // Já executando (retry/duplicata de sinal): nada a fazer — não é erro.
-    if (atual.status === 'RUNNING') return;
+    // Já executando (retry/duplicata de sinal): não transiciona, mas garante o lease — sem ele o
+    // espelho não pode escrever progresso (fencing obrigatório).
+    if (atual.status === 'RUNNING') {
+      await garantirFencing(operationId).catch(() => {});
+      return;
+    }
     await servico().transition(operationId, {
       to: 'RUNNING', actorId: 'qa_mesh', context: { phase: 'execution' },
     });
+    await garantirFencing(operationId).catch(() => {});
   } catch (error) {
     logger.warn('[lro:qa-waves] falha ao marcar RUNNING', { operationId, code: error.code || null, error: error.message });
   }
@@ -77,8 +96,9 @@ async function marcarExecutando(operationId) {
 async function progresso(operationId, { index = null, total = null, phase = 'execution' } = {}) {
   if (!espelhoAtivo() || !operationId) return;
   try {
+    const fencingToken = await garantirFencing(operationId);
     await servico().recordProgress(operationId, {
-      current: index, total, unit: 'scenario', phase, actorId: 'qa_mesh',
+      current: index, total, unit: 'scenario', phase, actorId: LEASE_OWNER, fencingToken,
     });
   } catch (error) {
     logger.warn('[lro:qa-waves] falha ao registrar progresso', { operationId, code: error.code || null, error: error.message });
