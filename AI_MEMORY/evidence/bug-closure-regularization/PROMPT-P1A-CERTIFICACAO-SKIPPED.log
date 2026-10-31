@@ -2,32 +2,32 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/governance/certificationLadder.test.js
   escada de certificação (puro)
-    ✓ a ordem declarada nunca exige um degrau POSTERIOR (107 ms)
-    ✓ pré-requisito não cumprido ⇒ BLOCKED (nunca PASS/SKIPPED) (109 ms)
+    ✓ a ordem declarada nunca exige um degrau POSTERIOR (112 ms)
+    ✓ pré-requisito não cumprido ⇒ BLOCKED (nunca PASS/SKIPPED) (114 ms)
     ✓ FAIL num degrau não vira PASS adiante e zera a certificabilidade (105 ms)
     ✓ sem runner injetado o degrau é SKIPPED — e SKIPPED não certifica (105 ms)
     ✓ tudo verde ⇒ certificável (108 ms)
     ✓ runner que lança é FAIL, não queda da escada (104 ms)
-    ✓ podeRodar consulta apenas os pré-requisitos declarados (106 ms)
+    ✓ podeRodar consulta apenas os pré-requisitos declarados (107 ms)
   certificação fail-closed (P1-A)
     ✓ todos os degraus em PASS ⇒ certificável (105 ms)
-    ✓ DEGRAU SKIPPED (sem runner) ⇒ NÃO certificável, com motivo (104 ms)
-    ✓ SKIPPED declarado pelo runner ⇒ NÃO certificável (103 ms)
+    ✓ DEGRAU SKIPPED (sem runner) ⇒ NÃO certificável, com motivo (109 ms)
+    ✓ SKIPPED declarado pelo runner ⇒ NÃO certificável (106 ms)
     ✓ mistura PASS + SKIPPED ⇒ NÃO certificável (não basta não ter FAIL/BLOCKED) (105 ms)
     ✓ resultado pré-semeado com estado UNKNOWN/ inválido ⇒ NÃO certificável (103 ms)
-    ✓ resultado de degrau DESCONHECIDO ⇒ NÃO certificável (103 ms)
-    ✓ lista vazia de resultados ⇒ NÃO certificável (104 ms)
-    ✓ degrau ausente do trilho ⇒ NÃO certificável mesmo sem FAIL/BLOCKED (105 ms)
+    ✓ resultado de degrau DESCONHECIDO ⇒ NÃO certificável (104 ms)
+    ✓ lista vazia de resultados ⇒ NÃO certificável (102 ms)
+    ✓ degrau ausente do trilho ⇒ NÃO certificável mesmo sem FAIL/BLOCKED (104 ms)
   seleção restringe EXECUÇÃO (P1-B)
-    ✓ seleção inclui o alvo e suas dependências, na ordem da escada (105 ms)
-    ✓ seleção de degrau sem dependência roda só ele (101 ms)
-    ✓ --only inválido falha fechado e não seleciona nada (102 ms)
-    ✓ executarEscada com seleção NÃO invoca runner fora do alvo (103 ms)
-    ✓ executarEscada com seleção roda apenas alvo + dependências (104 ms)
+    ✓ seleção inclui o alvo e suas dependências, na ordem da escada (106 ms)
+    ✓ seleção de degrau sem dependência roda só ele (104 ms)
+    ✓ --only inválido falha fechado e não seleciona nada (104 ms)
+    ✓ executarEscada com seleção NÃO invoca runner fora do alvo (104 ms)
+    ✓ executarEscada com seleção roda apenas alvo + dependências (105 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       20 passed, 20 total
 Snapshots:   0 total
-Time:        2.313 s, estimated 3 s
+Time:        2.543 s, estimated 3 s
 Ran all test suites matching /tests\/unit\/governance\/certificationLadder.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

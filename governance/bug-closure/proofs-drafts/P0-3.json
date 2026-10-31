@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9b427f93-65a0-4917-80bd-963f92c65c7a",
+  "transitionId": "72a7fcf4-c394-4fe2-84c5-3f7b0ec92618",
   "defectId": "P0-3",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/securityIntel/securityGateProvenance.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/securityIntel/securityGateProvenance.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:18:12.862Z",
-      "finishedAt": "2026-10-31T21:18:16.133Z",
+      "startedAt": "2026-10-31T22:21:34.023Z",
+      "finishedAt": "2026-10-31T22:21:39.591Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-3.log",
-      "outputSha256": "517f5134782f0d227618f5da745189189a6d4d8b8697101af30bdd2ab88779cf"
+      "outputSha256": "64f0185b36896d22c21d9c12acb87b3402d9a397c0f1c2cecb374eb685833c6c"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-10-31T21:48:54.289Z",
+    "at": "2026-10-31T22:56:18.327Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -72,8 +72,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:18:16.139Z",
-  "proofHash": "dd2904054e61df4556d4354e995ff42b716964a97a3d75e531fde3d5e58e78fe"
+  "createdAt": "2026-10-31T22:21:39.598Z",
+  "proofHash": "8cfccdcb361d2ae6b403abd08d10fc721e124488a9af3cefc0b104c6a0b0607a"
 }

@@ -2,15 +2,15 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/audit/checkpointTool.test.js
   tools/audit/checkpoint.js — prova bidirecional
-    ✓ teste verde => escreve o checkpoint com o commit-base e os testes executados (334 ms)
-    ✓ teste VERMELHO => recusa e NÃO escreve nada (impossível fabricar checkpoint verde) (489 ms)
-    ✓ misto (um verde e um vermelho) => recusa: basta um vermelho (585 ms)
-    ✓ sem --tests => recusa (checkpoint sem teste não é checkpoint) (349 ms)
-    ✓ o arquivo de evidência real do repositorio nao e tocado por esta suite (510 ms)
+    ✓ teste verde => escreve o checkpoint com o commit-base e os testes executados (348 ms)
+    ✓ teste VERMELHO => recusa e NÃO escreve nada (impossível fabricar checkpoint verde) (294 ms)
+    ✓ misto (um verde e um vermelho) => recusa: basta um vermelho (335 ms)
+    ✓ sem --tests => recusa (checkpoint sem teste não é checkpoint) (234 ms)
+    ✓ o arquivo de evidência real do repositorio nao e tocado por esta suite (597 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       5 passed, 5 total
 Snapshots:   0 total
-Time:        2.48 s, estimated 3 s
+Time:        2.166 s, estimated 3 s
 Ran all test suites matching /tests\/unit\/audit\/checkpointTool.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

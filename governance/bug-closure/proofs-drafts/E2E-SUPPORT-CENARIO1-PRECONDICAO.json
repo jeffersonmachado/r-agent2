@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4deb2128-fc58-4418-b2c7-e3dfaa1dbac5",
+  "transitionId": "2eda349a-9f3d-4623-8ae9-14801c70ec44",
   "defectId": "E2E-SUPPORT-CENARIO1-PRECONDICAO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/governance/backfillRegressionTests.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:35:12.126Z",
-      "finishedAt": "2026-10-31T21:35:14.848Z",
+      "startedAt": "2026-10-31T22:41:34.927Z",
+      "finishedAt": "2026-10-31T22:41:38.966Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/E2E-SUPPORT-CENARIO1-PRECONDICAO.log",
-      "outputSha256": "93deef8ddf5c715f15768803441caf1889912dff650752e12c15c12bdc536827"
+      "outputSha256": "5f507d158ffde7ad7859083c81bf959951cac554f0e78832a67ee8e2106b1f91"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:35:14.854Z",
-  "proofHash": "cd56118169c099dbc75789db51e6dc7308eec9bea546d58bd8cd93a94d47b018"
+  "createdAt": "2026-10-31T22:41:38.972Z",
+  "proofHash": "0c1bdf01883a29484e7cab6c05c418ec783391f18f3718cf1e28425523ad6e1e"
 }

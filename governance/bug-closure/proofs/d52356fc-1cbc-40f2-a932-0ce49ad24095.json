@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "d52356fc-1cbc-40f2-a932-0ce49ad24095",
+  "defectId": "H16-V2SEAL-PASSO-SEM-MOTIVO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/v2SealStepDiagnostics.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "command": "npx jest tests/unit/governance/v2SealStepDiagnostics.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:29:15.943Z",
+      "finishedAt": "2026-10-31T22:29:19.322Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
+      "outputSha256": "4bc34c1a188ed9927e98bc218e04dcc5b6a14346179c74c583f888ed5154745f"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "sha256": "fb6d6f394555da944e35fc40d4ac1269816a5285b6000e1b5cd118fed94e4a30"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:29:19.330Z",
+  "proofHash": "bb4456a9ad61375ea26974762dfa6a9f5931283ee9e8f6764cb3c67f84922ee3",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "tcjKJjAANSbRdcAnN2NhIchevs2Hy5vgVu2rhWp4tQv4DuwU5wVCtusZMuIPIezM3GdWMKSPP0PdQQQKdTxaDg==",
+    "signedAt": "2026-10-31T22:56:36.110Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ad249f47-f1b2-4f77-92b9-273c435b7267",
+  "transitionId": "58e210c2-7aed-44f7-ad3b-31eb2b2e64dc",
   "defectId": "P0-4",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/securityIntel/waiverService.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/securityIntel/waiverService.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:18:16.147Z",
-      "finishedAt": "2026-10-31T21:18:21.549Z",
+      "startedAt": "2026-10-31T22:21:39.607Z",
+      "finishedAt": "2026-10-31T22:21:47.223Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-4.log",
-      "outputSha256": "396bbb45c5ce82425e16546ae9f7e809af6e1dff784a6fdff4488611dce6a9de"
+      "outputSha256": "d89db4bfe0631ddb31efffe3563e8dd141700d87499c9f0b8a724dbfdbcf5486"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-10-31T21:48:54.289Z",
+    "at": "2026-10-31T22:56:18.328Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -72,8 +72,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:18:21.556Z",
-  "proofHash": "c3f5d682281917bdf96abdd72b09ad5388772da6cb6630e516cf01f76e0a2abb"
+  "createdAt": "2026-10-31T22:21:47.232Z",
+  "proofHash": "e2f139d0ff254b258e7e613613924d8a7c724ab3fa33e1a7d151ce6c1844817d"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a519e6b5-8568-40ba-b4a5-0a1c1733bf81",
+  "transitionId": "15888ea1-49a6-4ebd-9413-ff738910c31a",
   "defectId": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/integration/governanceApprovalFullWorkerE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:33:27.132Z",
-      "finishedAt": "2026-10-31T21:34:45.061Z",
+      "startedAt": "2026-10-31T22:39:30.082Z",
+      "finishedAt": "2026-10-31T22:41:16.928Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-INTEG-JEST-DUAS-SUITES-BLOCKED.log",
-      "outputSha256": "ecf1996df79431e0fcc910e7842469ad57edf5b61a0dec32fafd272685d8d68f"
+      "outputSha256": "5ec1e59881318d4a761118ea7e83d385565c292ee4d4c1486567f5f38ce587e5"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:34:45.079Z",
-  "proofHash": "9bc04878b900f8475f96e632ac1edfd3215eff74e2457ef0d450e9e6baabe188"
+  "createdAt": "2026-10-31T22:41:16.944Z",
+  "proofHash": "f011b538f1eaeb3aab14053897c99a3ec8a33974dce2c5ee27977c339cfe0dfe"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "04ca1558-2c44-43cc-be64-bd17a08dae25",
+  "transitionId": "6257ef99-3133-4c2a-a91c-ed5e2b78dbb2",
   "defectId": "ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/integration/engineeringBugLoop.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringBugLoop.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:35:22.120Z",
-      "finishedAt": "2026-10-31T21:35:54.784Z",
+      "startedAt": "2026-10-31T22:41:52.469Z",
+      "finishedAt": "2026-10-31T22:42:29.418Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE.log",
-      "outputSha256": "48b812bb551033569e9d5ccaf82f9c828c053f579dd25e4846e530301c7d0312"
+      "outputSha256": "15a02c5e03605928696b1b9a927fb17c71e8bf66bf39cd8d9a75a3f121ec92cd"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:35:54.801Z",
-  "proofHash": "51a339890f85956327fa522c97f5d798d10f1f6e1bf2f10d386fd199189f4c33"
+  "createdAt": "2026-10-31T22:42:29.451Z",
+  "proofHash": "bfc386d27540bbba3e6ccbfc68e8e9006aeab67500a7fb1595ffed6726a811f5"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "6fe2f73e-42a7-4c1e-9229-5868ec305701",
+  "transitionId": "61b8dab6-d09a-4fe8-b1d4-5db81617c6cb",
   "defectId": "CI-FLOW-GATE-VACUOSO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:33:24.058Z",
-      "finishedAt": "2026-10-31T21:33:27.107Z",
+      "startedAt": "2026-10-31T22:39:26.797Z",
+      "finishedAt": "2026-10-31T22:39:30.062Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-FLOW-GATE-VACUOSO.log",
-      "outputSha256": "dc7fc81fdaf8e013eb981cb4f8cfaa9c44d2771e44fccfef76a24904ea8064f9"
+      "outputSha256": "ce6296a4d34112240ff7f9accffcf261d54bc85aa68d4fb9064f9310dfae1c1b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:33:27.117Z",
-  "proofHash": "a89e4f6d10e8ea79ea3ea93173003a270becbab8740ba7237c0755d13a2eccd9"
+  "createdAt": "2026-10-31T22:39:30.070Z",
+  "proofHash": "af5ea63a2cab66d30456829e4184f8f74e60e26e3476a31bb1508347f843907a"
 }

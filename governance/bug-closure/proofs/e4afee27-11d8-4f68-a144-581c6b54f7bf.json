@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e4afee27-11d8-4f68-a144-581c6b54f7bf",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-P1-11",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/evidenceTtl.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/evidenceTtl.test.js",
+      "command": "npx jest tests/unit/governance/evidenceTtl.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:29:47.191Z",
+      "finishedAt": "2026-10-31T22:29:52.828Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P1-11.log",
+      "outputSha256": "b8b0d2c9650eecaec666a4c408970e405cd749143c37824d6a84de5451dd712a"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/evidenceTtl.test.js",
+      "sha256": "25e4a2a26b32c1f86031961fe283a7f8a6e2a7d1d1fc19eaeed600d30aad17c6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:29:57.481Z",
+  "proofHash": "a131edfbcdf6e485d1b0052ec44ab3a45ef3ec6402840372e00a65a4a84923e1",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "uWpJOUtA7U57QVCmxtnFo+ZBFY3bWSczhLsa4bY0NIYujOkqzzwVVDy89sNcRr3ttiMmFROUUYhAa87K2xQACQ==",
+    "signedAt": "2026-10-31T22:56:38.035Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "c306bfc5-5203-466b-90a7-4ea0e7116d7a",
+  "transitionId": "d982b3d3-3fd9-45cf-80ec-5e812e778346",
   "defectId": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/governance/bugClosureHistoricalGuards.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:17:55.296Z",
-      "finishedAt": "2026-10-31T21:17:58.849Z",
+      "startedAt": "2026-10-31T22:21:21.796Z",
+      "finishedAt": "2026-10-31T22:21:24.967Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
-      "outputSha256": "cf4df6b6bec3aa3c4fad4f023d0d8243b5f4f1cacb9ab4ec3153fc2a19cdeac3"
+      "outputSha256": "c8637aec134fa233fbe037049c19b50fa4aa5165a5f83aa181f5b3afce2f4b96"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T21:18:03.482Z",
-  "proofHash": "fe70261fa54f7a947354b1a6e05d78cf82a29159a177a756e8041904f0a95834"
+  "createdAt": "2026-10-31T22:21:24.974Z",
+  "proofHash": "cb606fdf4712d35bad8b851b3a94e6832567fc4188e05cb61a7787c1daa6aac8"
 }

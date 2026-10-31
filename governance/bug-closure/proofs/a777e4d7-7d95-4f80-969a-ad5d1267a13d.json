@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a777e4d7-7d95-4f80-969a-ad5d1267a13d",
+  "defectId": "PROMPT-P1B-ONLY-RESTRINGE-EXECUCAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/certificationLadder.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/certificationLadder.test.js",
+      "command": "npx jest tests/unit/governance/certificationLadder.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:34:36.103Z",
+      "finishedAt": "2026-10-31T22:34:41.370Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1B-ONLY-RESTRINGE-EXECUCAO.log",
+      "outputSha256": "e16a2a72ccf00e0899eabdde2717397e5344da8ca8ff598d83c4012ecb0a2c31"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/certificationLadder.test.js",
+      "sha256": "89fb783b3ddc353409e6c9b51b35f68f1e26b284cf72c8cf31906986fcc00d40"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:34:41.377Z",
+  "proofHash": "d29e303deab87bd29d14fa7e48d60d4b7e4bc2c8dc92ccb69ab0c8b9aaaeaf1a",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "yxITRemr0qTiLXUgJqYbN95cV/8fvJvr3fyBml0/6PfHRHXw2fXK49cQz6iNClJabfB6sdJfOdHlc9JcrxpbDQ==",
+    "signedAt": "2026-10-31T22:56:47.422Z"
+  }
+}

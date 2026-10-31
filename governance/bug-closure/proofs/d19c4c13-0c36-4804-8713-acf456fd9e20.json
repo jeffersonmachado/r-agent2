@@ -1,0 +1,109 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "d19c4c13-0c36-4804-8713-acf456fd9e20",
+  "defectId": "P0-2",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/evidenceManifestHashBaseline.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
+      "command": "npx jest tests/unit/governance/evidenceManifestHashBaseline.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:21:28.875Z",
+      "finishedAt": "2026-10-31T22:21:34.005Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-2.log",
+      "outputSha256": "3f74ef99bbd177dbb110ccf96cd9fd3cce9ce1a7c185337813e4bb293e0271d1"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
+      "control": "ausência de baseline deixa de ser FAIL e passa a PASS (\"não há dado\" == \"dado confere\")",
+      "mutatedFromSha256": "66f9aaa25a1625f056dfd41813bdb8ec0ed2f5c491aa89034ce8ad7ded63f287",
+      "mutatedToSha256": "09852403ce1b7cc0d0057b7ea80af16eb73d56dd9cdfb6c73c758da88a8f9a6e",
+      "testPath": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
+      "command": "npx jest tests/unit/governance/evidenceManifestHashBaseline.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-2-baseline-729b5335.log",
+        "logSha256": "78bd21d2c1608f17a72b8181c5b6fb46b43574a62fafc5d7bcb23e8ec02a8aea"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-2-mutado-729b5335.log",
+        "logSha256": "eb4406acf87a28359c9521831ad4a54a1415961af6837ad6a1fd42dc7c04360a"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-2-restaurado-729b5335.log",
+        "logSha256": "be7797777586aa995f10fa89bcf71d3555a315913cf409402fefd7d4e02e1674"
+      },
+      "capturedAt": "2026-10-31T21:48:08.464Z"
+    },
+    {
+      "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
+      "control": "manifest ilegível deixa de ser FAIL (fail-closed quebrado na origem)",
+      "mutatedFromSha256": "66f9aaa25a1625f056dfd41813bdb8ec0ed2f5c491aa89034ce8ad7ded63f287",
+      "mutatedToSha256": "6074671f3a3bcd8df6204ae5ac2a0460a4c65ee05b84227b6853843edcffcf11",
+      "testPath": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
+      "command": "npx jest tests/unit/governance/evidenceManifestHashBaseline.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-2-baseline-8dcb35ff.log",
+        "logSha256": "3ca90ef157dbe4dd0d6c01d05c01d3f4acd26b387eadf916c8e189062e3a1e7e"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-2-mutado-8dcb35ff.log",
+        "logSha256": "466d8a9f2a4eb5adecd08795340ddf704cf293748f163aedadf376a86e5f212a"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-2-restaurado-8dcb35ff.log",
+        "logSha256": "786c6057827c6021e837bbf447e9d4433fa1aa176f4347cb037122c7842c05fd"
+      },
+      "capturedAt": "2026-10-31T21:48:18.792Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
+      "sha256": "b82a72d7f66d764c4fe9ffb28d27aa28cf91a0bf746988b9847117df0a842fa1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-10-31T22:56:18.315Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:21:34.013Z",
+  "proofHash": "9ce3193230cd74271b22023864370a1039a2b508b97f51cffe3ebb1558d86757",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Kv5lc08P06nNQe0sH0ZOKjzUyoRfP00IDPRbeIFwPgU36hvd0z6eWfkwxfFguSzCanajpcmkN0Ppf8ywfvYqDw==",
+    "signedAt": "2026-10-31T22:56:40.835Z"
+  }
+}

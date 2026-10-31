@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "08b85bfd-c5e8-4a1a-b8d4-2360326728fa",
+  "transitionId": "b30576b7-4e29-4487-9939-21d2f20b5355",
   "defectId": "INTERFERENCIA-CRASH-EVIDENCE-L0B",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/integration/engineeringMissionCrashRecoveryE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionCrashRecoveryE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:42:37.294Z",
-      "finishedAt": "2026-10-31T21:42:47.440Z",
+      "startedAt": "2026-10-31T22:50:34.596Z",
+      "finishedAt": "2026-10-31T22:50:49.943Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/INTERFERENCIA-CRASH-EVIDENCE-L0B.log",
-      "outputSha256": "2019cb6c6d16251d63051ca2a3e8d7d1ecfda3a15d3695f936447dfa0351c881"
+      "outputSha256": "e3ad9e19f3cac1859e089519a5f57d1a7ee4e0ff4c56794efbbf9629cbe35325"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:42:47.446Z",
-  "proofHash": "9712407c1d0f38146fd4ac290f197476fea43beb91049b95a06e7050e661def8"
+  "createdAt": "2026-10-31T22:50:49.951Z",
+  "proofHash": "81c6303773ed67273ea1f40effa133f09ed5954f2440b1d764f173359fbcec0b"
 }

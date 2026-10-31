@@ -2,22 +2,22 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/qa-mesh/meshZeroResultsPromotion.test.js
   §2.1 — zero cenários não promove
-    ✓ lista vazia ⇒ MESH_SEM_RESULTADOS (105 ms)
-    ✓ results ausente/malformado ⇒ não promove (fail-closed) (102 ms)
+    ✓ lista vazia ⇒ MESH_SEM_RESULTADOS (110 ms)
+    ✓ results ausente/malformado ⇒ não promove (fail-closed) (104 ms)
   §2.2 — resultado fabricado ou sem identidade não promove
     ✓ objeto fora do contrato (sem janela de execução e sem evidência) (105 ms)
     ✓ resultado não-objeto ⇒ MESH_RESULTADO_MALFORMADO (103 ms)
-    ✓ startedAt posterior a finishedAt ⇒ malformado (103 ms)
-    ✓ sintético / importado / reaproveitado ⇒ não promove (108 ms)
-    ✓ identidade de execução incompleta ⇒ MESH_SEM_IDENTIDADE_DE_EXECUCAO (102 ms)
+    ✓ startedAt posterior a finishedAt ⇒ malformado (105 ms)
+    ✓ sintético / importado / reaproveitado ⇒ não promove (111 ms)
+    ✓ identidade de execução incompleta ⇒ MESH_SEM_IDENTIDADE_DE_EXECUCAO (104 ms)
   §2.3 — resultado de outro run / anterior ao run não promove
-    ✓ runId do resultado difere do run da execução (100 ms)
-    ✓ sourceCommit do resultado difere do código avaliado (101 ms)
+    ✓ runId do resultado difere do run da execução (104 ms)
+    ✓ sourceCommit do resultado difere do código avaliado (104 ms)
     ✓ resultado iniciado ANTES do run ⇒ evidência reaproveitada (103 ms)
   §2.4 — SKIPPED/NOT_EXECUTED/UNKNOWN não promovem
     ✓ status SKIPPED não prova execução (103 ms)
-    ✓ status NOT_EXECUTED não prova execução (102 ms)
-    ✓ status UNKNOWN não prova execução (102 ms)
+    ✓ status NOT_EXECUTED não prova execução (103 ms)
+    ✓ status UNKNOWN não prova execução (101 ms)
     ✓ status PENDING não prova execução (101 ms)
     ✓ status BLOCKED não prova execução (101 ms)
     ✓ status skipped não prova execução (102 ms)
@@ -27,13 +27,13 @@ PASS tests/unit/qa-mesh/meshZeroResultsPromotion.test.js
     ✓ resultado completo e identidade coerente ⇒ permitido (104 ms)
     ✓ promoção desabilitada pelo pipeline continua desabilitada, sem motivo de defeito (101 ms)
   §2.6/§2.7 — o caminho REAL de escrita é gated pela decisão
-    ✓ a decisão precede a escrita dos artefatos governados (104 ms)
-    ✓ o escritor canônico é a própria decisão (writeCanonicalOutputs rebaixado na recusa) (104 ms)
+    ✓ a decisão precede a escrita dos artefatos governados (103 ms)
+    ✓ o escritor canônico é a própria decisão (writeCanonicalOutputs rebaixado na recusa) (105 ms)
     ✓ a recusa deixa evidência diagnóstica sem simular aprovação (104 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       23 passed, 23 total
 Snapshots:   0 total
-Time:        2.946 s, estimated 4 s
+Time:        4.295 s
 Ran all test suites matching /tests\/unit\/qa-mesh\/meshZeroResultsPromotion.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

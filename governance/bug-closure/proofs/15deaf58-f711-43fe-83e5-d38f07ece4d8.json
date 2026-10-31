@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "15deaf58-f711-43fe-83e5-d38f07ece4d8",
+  "defectId": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:39:24.211Z",
+      "finishedAt": "2026-10-31T22:39:26.781Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
+      "outputSha256": "89e0162d8311f6f1ac8a7ee277e96b53885b202d28e833a7f18ad53ffd78fa4b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "sha256": "7fce957e336d1928efadaef558488c04fd43a4db2df989cf589e7d7d6b5aa8fb"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:39:26.788Z",
+  "proofHash": "e9c9578bfe0bb6951346ec4011c0d9cc1a866bf3f26df6b1dab225294e32880a",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "3jaopA9BJWxr57Ti391O8ADKabo04vm6UuNfGAgxnv6q/c6jKXMb5o98L0Z0qRGbRyT2p55u4VX/gM/mH+jMCw==",
+    "signedAt": "2026-10-31T22:56:29.740Z"
+  }
+}

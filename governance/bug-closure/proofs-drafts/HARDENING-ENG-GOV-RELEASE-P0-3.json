@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "60e0c79d-2052-4001-aff8-97e5354734e7",
+  "transitionId": "018e2188-2e09-4179-96fd-0f80b46a5aa0",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-3",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/governance/sealPhaseOrder.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/sealPhaseOrder.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:17:20.120Z",
-      "finishedAt": "2026-10-31T21:17:22.454Z",
+      "startedAt": "2026-10-31T22:20:37.722Z",
+      "finishedAt": "2026-10-31T22:20:40.922Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-3.log",
-      "outputSha256": "37f6ea2d93ec7d63a94b2effd77d48317f4d7daa3314322b04a30c8ef44d9dcd"
+      "outputSha256": "6471b2d6c47712d2e324a951db7124a67c806471d9ac7b73dbbfd8024911fb24"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T21:17:22.464Z",
-  "proofHash": "0b4c561dbd15d367c628baf4e5c77bd1d9139aa7375031b1c840e9ba1ab129e5"
+  "createdAt": "2026-10-31T22:20:40.928Z",
+  "proofHash": "5251ca9bcee6a2f476fb460991015046b645886e600f07905f6c7dc13e53001a"
 }

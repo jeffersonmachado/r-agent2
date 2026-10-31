@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e7cf671c-2743-46e9-8ab6-731bb40d103d",
+  "defectId": "ENG-FENCING-OPT-IN-NO-FIX-LOOP",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/integration/engineeringBugLoop.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringBugLoop.test.js",
+      "command": "npx jest tests/integration/engineeringBugLoop.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:42:29.462Z",
+      "finishedAt": "2026-10-31T22:43:10.037Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-FENCING-OPT-IN-NO-FIX-LOOP.log",
+      "outputSha256": "4491a518733bacb8c9625827774be74ed9d105486f534cf90a1d122b5d3c1b07"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringBugLoop.test.js",
+      "sha256": "3a1bc90410a2fa92290856e6c2ae73001653068a77a6c9c6668dec041b00932d"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:43:10.046Z",
+  "proofHash": "9d06d2019c3848a79045e7e4d30bf4aaa57e8b666f7f9c55144586bf59964e15",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "DUWT5Yk93eCtx111Z4+yvktT9a/aFlhR680wCyN/K/xFv+i8M5w+Kyq+NyIa5ONOJmJcDpFss+OIzb98W7A7Cw==",
+    "signedAt": "2026-10-31T22:56:33.182Z"
+  }
+}

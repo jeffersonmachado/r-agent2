@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "82f043f4-806b-49e0-97ea-5710d7700296",
+  "transitionId": "69f8f74b-e92f-40f5-a2a8-41f922269d51",
   "defectId": "P1-UNIT-GATE-ACEITA-UNKNOWN",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/engineeringMission/missionGatesEvidence.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:29:04.934Z",
-      "finishedAt": "2026-10-31T21:29:08.852Z",
+      "startedAt": "2026-10-31T22:34:24.975Z",
+      "finishedAt": "2026-10-31T22:34:31.025Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-UNIT-GATE-ACEITA-UNKNOWN.log",
-      "outputSha256": "da8a0e238df0e1a1b570d0d618e086f0e56c811a3295af8cea09a0e30f4b7935"
+      "outputSha256": "236566226267c57dcab887597a5a5905899b8a40b5b3ac62521ec50661b2371a"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:29:08.859Z",
-  "proofHash": "06643ed877f65786dad26dd644ae7fe06a0ee4224f66e109fd355f2574c64c06"
+  "createdAt": "2026-10-31T22:34:31.032Z",
+  "proofHash": "6c8b8e5595711bfa08d65442b5159f776493fa631a1024774dfe8cdba9a7b675"
 }

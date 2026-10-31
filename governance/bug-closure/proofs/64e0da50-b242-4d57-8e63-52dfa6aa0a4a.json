@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "64e0da50-b242-4d57-8e63-52dfa6aa0a4a",
+  "defectId": "DEF-WS-AUTH-POS-LOGIN",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "command": "npm --prefix frontend run test -- src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:26:39.490Z",
+      "finishedAt": "2026-10-31T22:26:44.743Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-WS-AUTH-POS-LOGIN.log",
+      "outputSha256": "11fd2e5134bf88cebe3df9d64c139ce1676f4b73ca426bcf6aa6d7e1680e3536"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "sha256": "f5e9b22cb017852c22a4b7ca058f8e4294e3cc62ea53d5d2ea8cd4bcb5020017"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:26:44.752Z",
+  "proofHash": "5cbb2659fe3168e17c69f40158595b1a82339d5bf42f25e870a6dd51e1d172bc",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "xLgzOvZ8+ythD84AKjQb1oSnf2G4z40duaUlrwag/YZpS05lGpKQ8/fnnHccHKO4VA4nhHkE19YtuBqnh5YCDg==",
+    "signedAt": "2026-10-31T22:56:32.150Z"
+  }
+}

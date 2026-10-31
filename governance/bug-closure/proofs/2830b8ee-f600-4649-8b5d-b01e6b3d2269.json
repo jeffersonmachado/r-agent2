@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "2830b8ee-f600-4649-8b5d-b01e6b3d2269",
+  "defectId": "P1-BRANCHES-MISSAO-RESIDUO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/pruneEngineeringMissionBranches.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/pruneEngineeringMissionBranches.test.js",
+      "command": "npx jest tests/unit/governance/pruneEngineeringMissionBranches.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:32:52.440Z",
+      "finishedAt": "2026-10-31T22:32:56.048Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-BRANCHES-MISSAO-RESIDUO.log",
+      "outputSha256": "0e25be073b09f86015062004ecc46be70b56aac322680c123488d6062ae1458c"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/pruneEngineeringMissionBranches.test.js",
+      "sha256": "e05b764d385f288f4ecd1b54d1c6d4c2fdcd3a51cfa3b273e6d5e7121a2a87e1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:32:56.056Z",
+  "proofHash": "322abe8a2f643a5ae55bd3bf18efbc0c875ddd9711308af3460824c8a483726c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "NukoeeCPWpSyxEJ+V+HZa9ZgcSUvdkmbeg5cGAwpul9/HqHAAK3Mcjah4a6Dc9KbE7//TZAPbP3EgB8oCrBqBQ==",
+    "signedAt": "2026-10-31T22:56:44.138Z"
+  }
+}

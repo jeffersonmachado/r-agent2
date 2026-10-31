@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "7398f32e-22a5-4df1-8111-e819450d3440",
+  "defectId": "E2E-REPLAY-DOMINIO-E-TAB",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/backfillRegressionTests.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/backfillRegressionTests.test.js",
+      "command": "npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:26:44.763Z",
+      "finishedAt": "2026-10-31T22:26:48.678Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/E2E-REPLAY-DOMINIO-E-TAB.log",
+      "outputSha256": "a3bccc23fa2fb8b00a3c35e97af725cba9c58184b63695f45171474a0459abd3"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/backfillRegressionTests.test.js",
+      "sha256": "a94506d129f3c997b02eac0af431da5d30bf32d281c97109db60adaa7a2a6270"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:26:48.686Z",
+  "proofHash": "740aad33897128812017ad2d45329cf8730ce3d737bca16f85175546b9ded690",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "foVMpxH+qpDKBrc2qSCgsHgxAVo8M3C2RNbYWPs0jbWvEcie4vxasQNonHKFiPb4/7b6bXj41NMZeHeyhr9RAg==",
+    "signedAt": "2026-10-31T22:56:32.446Z"
+  }
+}

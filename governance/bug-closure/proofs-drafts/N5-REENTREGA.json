@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "305a5204-63a8-4582-a53d-0248e9219bca",
+  "transitionId": "bea3608c-3f50-4a90-b8ec-993826ef3430",
   "defectId": "N5-REENTREGA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/missionSourceStaleReplanFullRouterE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:42:57.482Z",
-      "finishedAt": "2026-10-31T21:44:22.018Z",
+      "startedAt": "2026-10-31T22:51:08.483Z",
+      "finishedAt": "2026-10-31T22:52:46.200Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log",
-      "outputSha256": "db9143198016209d6de03b86742bbbeecdaf1d31619c8d27c39310be8d4821ef"
+      "outputSha256": "aec517c526a488d4491f658d217db020433426d591cfdbc553fbc624a44f120f"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:44:22.034Z",
-  "proofHash": "d5abeebf9ff630a4a6f8a7d42db0313da8eaf32251f8ebf65647f2b53032e335"
+  "createdAt": "2026-10-31T22:52:46.231Z",
+  "proofHash": "605b715f0ca4d12fd7a57c4571ebbc816550365ac2a3863e8401b7e8c62e47a1"
 }

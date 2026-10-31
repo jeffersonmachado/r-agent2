@@ -1,5 +1,5 @@
   console.error
-    [2026-10-31T21:41:49.054Z] [ERROR] [CRM] Falha de persistência
+    [2026-10-31T22:49:36.783Z] [ERROR] [CRM] Falha de persistência
     {
       "erro": "banco indisponível (teste)"
     }
@@ -20,24 +20,24 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/crmRealtimeEvents.test.js
   CRM — toda mutação emite crm.metrics.updated
-    ✓ POST /api/crm/accounts emite evento de criação (147 ms)
-    ✓ POST /api/crm/contacts emite evento de criação (121 ms)
-    ✓ POST /api/crm/leads emite evento de criação (120 ms)
-    ✓ POST /api/crm/pipelines emite evento de criação (119 ms)
-    ✓ POST /api/crm/opportunities emite evento de criação (120 ms)
-    ✓ POST /api/crm/activities emite evento de criação (116 ms)
-    ✓ GET não emite evento (leitura não é mutação) (555 ms)
+    ✓ POST /api/crm/accounts emite evento de criação (287 ms)
+    ✓ POST /api/crm/contacts emite evento de criação (122 ms)
+    ✓ POST /api/crm/leads emite evento de criação (114 ms)
+    ✓ POST /api/crm/pipelines emite evento de criação (116 ms)
+    ✓ POST /api/crm/opportunities emite evento de criação (115 ms)
+    ✓ POST /api/crm/activities emite evento de criação (112 ms)
+    ✓ GET não emite evento (leitura não é mutação) (747 ms)
   CRM — persistência de verdade (mesma fonte para escrita e leitura)
-    ✓ conta criada aparece no GET seguinte e sobrevive à releitura (128 ms)
-    ✓ oportunidade criada é lida de volta com os campos do contrato (123 ms)
-    ✓ lead criado aparece na lista de leads E na de contatos (marketing_leads) (121 ms)
+    ✓ conta criada aparece no GET seguinte e sobrevive à releitura (139 ms)
+    ✓ oportunidade criada é lida de volta com os campos do contrato (115 ms)
+    ✓ lead criado aparece na lista de leads E na de contatos (marketing_leads) (127 ms)
     ✓ DELETE remove de verdade (GET passa a 404) (120 ms)
-    ✓ mover oportunidade persiste a nova etapa (126 ms)
-    ✓ falha de banco responde 500 persistence_required (sem fallback em memória) (263 ms)
+    ✓ mover oportunidade persiste a nova etapa (124 ms)
+    ✓ falha de banco responde 500 persistence_required (sem fallback em memória) (276 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       13 passed, 13 total
 Snapshots:   0 total
-Time:        2.607 s, estimated 3 s
+Time:        3.631 s
 Ran all test suites matching /tests\/unit\/crmRealtimeEvents.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,5 +1,5 @@
   console.error
-    [2026-10-31T21:45:25.485Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+    [2026-10-31T22:54:02.821Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
 
     [0m [90m 183 |[39m       
      [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
@@ -19,17 +19,17 @@
       at Object.require (tests/integration/engineeringMissionDurableResume.test.js:20:18)
 
   console.info
-    [2026-10-31T21:45:47.554Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+    [2026-10-31T22:54:25.919Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
 
       at Object.info (api/utils/logger.js:155:15)
 
   console.log
-    [2026-10-31T21:45:47.700Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:26.167Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.warn
-    [2026-10-31T21:45:51.639Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:54:32.371Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -53,17 +53,17 @@
       at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:144:25)
 
   console.log
-    [2026-10-31T21:45:51.866Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:32.678Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:09.226Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:47.918Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.warn
-    [2026-10-31T21:46:15.191Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:54:51.077Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -87,17 +87,17 @@
       at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:162:21)
 
   console.log
-    [2026-10-31T21:46:15.694Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:51.295Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:15.897Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:51.472Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.warn
-    [2026-10-31T21:46:21.548Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:54:54.240Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -121,17 +121,17 @@
       at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:177:25)
 
   console.log
-    [2026-10-31T21:46:21.741Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:54.379Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:22.036Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:54.595Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.warn
-    [2026-10-31T21:46:27.341Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:54:58.047Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -155,17 +155,17 @@
       at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:200:25)
 
   console.log
-    [2026-10-31T21:46:27.535Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:58.153Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:27.762Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:54:58.316Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.warn
-    [2026-10-31T21:46:32.696Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:55:02.390Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -189,22 +189,22 @@
       at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:221:25)
 
   console.log
-    [2026-10-31T21:46:32.807Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:02.522Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:32.905Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:02.614Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:33.182Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:02.973Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.warn
-    [2026-10-31T21:46:37.436Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:55:07.228Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -228,31 +228,31 @@
       at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:244:25)
 
   console.log
-    [2026-10-31T21:46:37.632Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:07.436Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:37.762Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:07.514Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.info
-    [2026-10-31T21:46:37.883Z] [INFO] [missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte
+    [2026-10-31T22:55:07.576Z] [INFO] [missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte
     {
-      "missionId": "2805d424-a605-4423-8825-d7f464abbca7",
-      "branch": "engineering/missions/2805d424-a605-4423-8825-d7f464abbca7",
+      "missionId": "f351e82f-89f2-450b-9d9d-dd77ab53049a",
+      "branch": "engineering/missions/f351e82f-89f2-450b-9d9d-dd77ab53049a",
       "baseCommit": "04cad9c1b639",
-      "worker": "pid-1368507"
+      "worker": "pid-1470235"
     }
 
       at Object.info (api/utils/logger.js:155:15)
 
   console.info
-    [2026-10-31T21:46:37.990Z] [INFO] [missionSource] fonte da missão inicializada
+    [2026-10-31T22:55:07.624Z] [INFO] [missionSource] fonte da missão inicializada
     {
-      "missionId": "2805d424-a605-4423-8825-d7f464abbca7",
-      "branch": "engineering/missions/2805d424-a605-4423-8825-d7f464abbca7",
+      "missionId": "f351e82f-89f2-450b-9d9d-dd77ab53049a",
+      "branch": "engineering/missions/f351e82f-89f2-450b-9d9d-dd77ab53049a",
       "baseCommit": "04cad9c1b639",
       "actor": "jest-resume",
       "alreadyPersisted": null
@@ -261,22 +261,22 @@
       at Object.info (api/utils/logger.js:155:15)
 
   console.log
-    [2026-10-31T21:46:38.217Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:07.745Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:38.507Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:07.894Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:38.726Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:08.049Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.warn
-    [2026-10-31T21:46:42.514Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:55:10.955Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -300,18 +300,18 @@
       at Object.<anonymous> (tests/integration/engineeringMissionDurableResume.test.js:264:25)
 
   console.log
-    [2026-10-31T21:46:42.704Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:11.070Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.log
-    [2026-10-31T21:46:42.789Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:11.124Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
           at async Promise.all (index 0)
 
   console.warn
-    [2026-10-31T21:46:46.283Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:55:15.247Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -334,19 +334,19 @@
           at async Promise.all (index 0)
 
   console.log
-    [2026-10-31T21:46:46.380Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:15.338Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
           at async Promise.all (index 0)
 
   console.log
-    [2026-10-31T21:46:46.787Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:15.788Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
           at async Promise.all (index 1)
 
   console.warn
-    [2026-10-31T21:46:50.639Z] [WARN] [TenantService] Tenant não encontrado
+    [2026-10-31T22:55:19.649Z] [WARN] [TenantService] Tenant não encontrado
     {
       "identifier": "system"
     }
@@ -369,35 +369,35 @@
           at async Promise.all (index 1)
 
   console.log
-    [2026-10-31T21:46:50.705Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:19.891Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
           at async Promise.all (index 1)
 
   console.log
-    [2026-10-31T21:46:50.783Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+    [2026-10-31T22:55:20.041Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
 
       at Object.log [as debug] (api/utils/logger.js:142:15)
 
   console.info
-    [2026-10-31T21:46:50.980Z] [INFO] [Sequelize] Conexão fechada
+    [2026-10-31T22:55:20.301Z] [INFO] [Sequelize] Conexão fechada
 
       at Object.info (api/utils/logger.js:155:15)
 
 [jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
-PASS tests/integration/engineeringMissionDurableResume.test.js (88.713 s)
+PASS tests/integration/engineeringMissionDurableResume.test.js (79.916 s)
   Engineering Mission — durable resume e idempotência
-    ✓ §17 crash durante ENRICHMENT: retomada completa o enriquecimento sem duplicar versão (28259 ms)
-    ✓ §17 lease órfão expira e outro worker assume (idade de locked_at NÃO concede posse) (6129 ms)
-    ✓ TEST 43 crash em AWAITING_APPROVAL preserva estado, preview e decisão pendente (5718 ms)
-    ✓ TEST 44 crash após approval não perde a aprovação (nem autoriza outra versão) (5431 ms)
-    ✓ §18 crash entre "criar task" e "vincular task" não duplica a EngineeringTask (5525 ms)
-    ✓ §18 aprovar/enriquecer repetidamente é idempotente (uma decisão, uma versão por hash) (12296 ms)
+    ✓ §17 crash durante ENRICHMENT: retomada completa o enriquecimento sem duplicar versão (25489 ms)
+    ✓ §17 lease órfão expira e outro worker assume (idade de locked_at NÃO concede posse) (3133 ms)
+    ✓ TEST 43 crash em AWAITING_APPROVAL preserva estado, preview e decisão pendente (3725 ms)
+    ✓ TEST 44 crash após approval não perde a aprovação (nem autoriza outra versão) (4642 ms)
+    ✓ §18 crash entre "criar task" e "vincular task" não duplica a EngineeringTask (5086 ms)
+    ✓ §18 aprovar/enriquecer repetidamente é idempotente (uma decisão, uma versão por hash) (12200 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       6 passed, 6 total
 Snapshots:   0 total
-Time:        88.834 s
+Time:        79.972 s, estimated 89 s
 Ran all test suites matching /tests\/integration\/engineeringMissionDurableResume.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

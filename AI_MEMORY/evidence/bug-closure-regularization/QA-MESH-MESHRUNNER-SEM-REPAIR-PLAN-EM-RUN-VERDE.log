@@ -14,7 +14,7 @@
       at log (qa-mesh/meshRunner.js:2442:13)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-R647Im/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-emOga0/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -35,7 +35,7 @@
       at log (qa-mesh/meshRunner.js:2442:13)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-noncanonical-iZM5pY/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-noncanonical-M0R8RX/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -51,7 +51,7 @@
       at Object.<anonymous> (qa-mesh/__tests__/meshRunner.test.js:276:22)
 
   console.info
-    [2026-10-31T21:44:31.126Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+    [2026-10-31T22:53:03.302Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
 
       at Object.info (api/utils/logger.js:155:15)
 
@@ -74,7 +74,7 @@
       at log (qa-mesh/meshRunner.js:2442:13)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-local-noncanonical-sFQEyj/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-local-noncanonical-wazERj/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -89,13 +89,31 @@
       at Object.runMesh (qa-mesh/meshRunner.js:2334:12)
       at Object.<anonymous> (qa-mesh/__tests__/meshRunner.test.js:369:22)
 
+  console.info
+    [2026-10-31T22:53:04.176Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.error
+    [dbStateStore] persistence_required: qa/checkpoints/state/current-wave.json: Sequelize não inicializado. Chame connect() primeiro.
+
+    [0m [90m 121 |[39m   save(stateKey[33m,[39m data)[33m.[39m[36mcatch[39m((error) [33m=>[39m {
+     [90m 122 |[39m     [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 123 |[39m     console[33m.[39merror([32m`[dbStateStore] persistence_required: ${stateKey}: ${error?.message || error}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 124 |[39m   })[33m;[39m
+     [90m 125 |[39m }
+     [90m 126 |[39m[0m
+
+      at error (qa/state/dbStateStore.js:123:13)
+
   console.log
     EXECUTING_SCENARIO workspace-core-status-separation
 
       at log (qa-mesh/meshRunner.js:2442:13)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-partial-pipeline-rWSJ5x/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-partial-pipeline-32LjWO/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -111,7 +129,7 @@
       at Object.<anonymous> (qa-mesh/__tests__/meshRunner.test.js:460:22)
 
   console.info
-    [2026-10-31T21:44:32.074Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+    [2026-10-31T22:53:04.886Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
 
       at Object.info (api/utils/logger.js:155:15)
 
@@ -129,25 +147,7 @@
       at error (qa/state/dbStateStore.js:123:13)
 
   console.info
-    [2026-10-31T21:44:32.255Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
-
-      at Object.info (api/utils/logger.js:155:15)
-
-  console.error
-    [dbStateStore] persistence_required: qa/checkpoints/state/current-wave.json: Sequelize não inicializado. Chame connect() primeiro.
-
-    [0m [90m 121 |[39m   save(stateKey[33m,[39m data)[33m.[39m[36mcatch[39m((error) [33m=>[39m {
-     [90m 122 |[39m     [90m// eslint-disable-next-line no-console[39m
-    [31m[1m>[22m[39m[90m 123 |[39m     console[33m.[39merror([32m`[dbStateStore] persistence_required: ${stateKey}: ${error?.message || error}`[39m)[33m;[39m
-     [90m     |[39m             [31m[1m^[22m[39m
-     [90m 124 |[39m   })[33m;[39m
-     [90m 125 |[39m }
-     [90m 126 |[39m[0m
-
-      at error (qa/state/dbStateStore.js:123:13)
-
-  console.info
-    [2026-10-31T21:44:32.682Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+    [2026-10-31T22:53:05.813Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
 
       at Object.info (api/utils/logger.js:155:15)
 
@@ -880,7 +880,7 @@
       at log (qa-mesh/meshRunner.js:2442:13)
 
   console.info
-    [2026-10-31T21:44:33.478Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+    [2026-10-31T22:53:07.236Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
 
       at Object.info (api/utils/logger.js:155:15)
 
@@ -929,7 +929,7 @@
       at error (qa/state/dbStateStore.js:123:13)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-R647Im/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-emOga0/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -1010,7 +1010,7 @@
       at error (qa/state/dbStateStore.js:123:13)
 
   console.info
-    [2026-10-31T21:44:33.644Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+    [2026-10-31T22:53:07.629Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
 
       at Object.info (api/utils/logger.js:155:15)
 
@@ -1059,7 +1059,7 @@
       at error (qa/state/dbStateStore.js:123:13)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-R647Im/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-emOga0/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -1171,17 +1171,17 @@
       at error (qa/state/dbStateStore.js:123:13)
 
   console.info
-    [2026-10-31T21:44:34.969Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+    [2026-10-31T22:53:09.486Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
 
       at Object.info (api/utils/logger.js:155:15)
 
   console.info
-    [2026-10-31T21:44:35.017Z] [INFO] [Sequelize] Conexão fechada
+    [2026-10-31T22:53:09.571Z] [INFO] [Sequelize] Conexão fechada
 
       at Object.info (api/utils/logger.js:155:15)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-R647Im/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-runner-test-emOga0/intelligence/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -1263,27 +1263,27 @@
 
 [jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
-PASS qa-mesh/__tests__/meshRunner.test.js (5.334 s)
+PASS qa-mesh/__tests__/meshRunner.test.js (8.686 s)
   qa-mesh/meshRunner
-    ✓ executa 3 cenários mockados e gera summary coerente (322 ms)
-    ✓ não grava saídas canônicas quando writeCanonicalOutputs=false (428 ms)
-    ✓ execução local fora do pipeline é marcada como não canônica mesmo sem writeCanonicalOutputs=false (487 ms)
-    ✓ pipeline com registry parcial não sobrescreve saídas canônicas (540 ms)
-    ✓ execução canônica concorrente falha rápido com lock explícito (601 ms)
-    ✓ recupera lock canônico stale quando o processo dono não existe mais (691 ms)
-    ✓ classifica bloqueio de pipeline como pipeline_required e não flaky (154 ms)
-    ✓ normaliza origem legada segura para pipeline e execuções manuais da UI (102 ms)
-    ✓ meshRunner.run aplica mode=failure no workspace-core (153 ms)
-    ✓ governance cria AutoCorrectionRun e Workspace insight/action quando decision=REVIEW (102 ms)
+    ✓ executa 3 cenários mockados e gera summary coerente (712 ms)
+    ✓ não grava saídas canônicas quando writeCanonicalOutputs=false (514 ms)
+    ✓ execução local fora do pipeline é marcada como não canônica mesmo sem writeCanonicalOutputs=false (904 ms)
+    ✓ pipeline com registry parcial não sobrescreve saídas canônicas (695 ms)
+    ✓ execução canônica concorrente falha rápido com lock explícito (964 ms)
+    ✓ recupera lock canônico stale quando o processo dono não existe mais (1370 ms)
+    ✓ classifica bloqueio de pipeline como pipeline_required e não flaky (233 ms)
+    ✓ normaliza origem legada segura para pipeline e execuções manuais da UI (104 ms)
+    ✓ meshRunner.run aplica mode=failure no workspace-core (252 ms)
+    ✓ governance cria AutoCorrectionRun e Workspace insight/action quando decision=REVIEW (113 ms)
     ✓ governance GO_WITH_WARNINGS não cria AutoCorrectionRun e mantém insight/action (107 ms)
-    ✓ governance pode preservar conexão compartilhada quando executa dentro do servidor (103 ms)
-    ✓ governance GO cria apenas timeline leve qa_execution (105 ms)
-    ✓ mantém status técnico original mesmo quando decision=REVIEW (809 ms)
-    ✓ meshRegistry contém cenário workspace-core oficial (111 ms)
+    ✓ governance pode preservar conexão compartilhada quando executa dentro do servidor (104 ms)
+    ✓ governance GO cria apenas timeline leve qa_execution (108 ms)
+    ✓ mantém status técnico original mesmo quando decision=REVIEW (1315 ms)
+    ✓ meshRegistry contém cenário workspace-core oficial (114 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       15 passed, 15 total
 Snapshots:   0 total
-Time:        5.447 s
+Time:        8.803 s
 Ran all test suites matching /qa-mesh\/__tests__\/meshRunner.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "25dff595-d6de-41e8-ae53-440111bb8163",
+  "transitionId": "9aae562a-1b53-48bc-a361-a403ba94cf34",
   "defectId": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "tests/unit/governance/devBranchCiGate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:29:00.691Z",
-      "finishedAt": "2026-10-31T21:29:04.918Z",
+      "startedAt": "2026-10-31T22:34:20.436Z",
+      "finishedAt": "2026-10-31T22:34:24.960Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log",
-      "outputSha256": "691efaf9af8836e87e46eb132e4738b757d485496ebdad9da0ffac900342feda"
+      "outputSha256": "22ff3b9ebab97b78221b92fcd0c811c29e60a4fa154d9942b19226c0084b726c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:29:04.924Z",
-  "proofHash": "e0f5cebd2e4218a15404a7ba61e9aae16c30ebcd683e467089b964e012238a11"
+  "createdAt": "2026-10-31T22:34:24.966Z",
+  "proofHash": "57c467e5c74167ca7180e40cacbef250bb551b9e622765fa380f31cff44ed10f"
 }

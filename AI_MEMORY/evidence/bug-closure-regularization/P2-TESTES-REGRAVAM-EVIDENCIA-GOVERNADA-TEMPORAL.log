@@ -2,15 +2,15 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/governance/governedArtifactPreservation.test.js
   artefato governado sobrevive a um teste que executa o produtor real
-    ✓ bytes alterados durante o teste são RESTAURADOS byte a byte (106 ms)
-    ✓ sem alteração real devolve `inalterado` (não reescreve à toa) (105 ms)
-    ✓ artefato que NÃO existia e nasceu no teste é removido (104 ms)
-    ✓ artefato apagado durante o teste é recriado com o conteúdo original (108 ms)
-    ✓ o teste que executa o produtor real USA a preservação (fiação) (107 ms)
+    ✓ bytes alterados durante o teste são RESTAURADOS byte a byte (112 ms)
+    ✓ sem alteração real devolve `inalterado` (não reescreve à toa) (104 ms)
+    ✓ artefato que NÃO existia e nasceu no teste é removido (105 ms)
+    ✓ artefato apagado durante o teste é recriado com o conteúdo original (105 ms)
+    ✓ o teste que executa o produtor real USA a preservação (fiação) (105 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       5 passed, 5 total
 Snapshots:   0 total
-Time:        0.747 s, estimated 1 s
+Time:        1.116 s
 Ran all test suites matching /tests\/unit\/governance\/governedArtifactPreservation.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

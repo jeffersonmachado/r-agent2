@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "4469cfc3-6694-4ce9-84f4-ccae7a10b9ba",
+  "defectId": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/realtimeTenantIsolation.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/realtimeTenantIsolation.test.js",
+      "command": "npx jest tests/unit/realtimeTenantIsolation.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:33:16.826Z",
+      "finishedAt": "2026-10-31T22:33:24.574Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.log",
+      "outputSha256": "81afc2a42b7cfbb2769d1916cb35aa986221ca89bbc92639334e88ea79e01c96"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/realtimeTenantIsolation.test.js",
+      "sha256": "57176e47a9958cc506da714ae7636e01329eaa959015fa0c8d8597682730dc05"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:33:24.580Z",
+  "proofHash": "bedd5eb7b954c5bf4171618320ebf28561d792d0ec0efa46a6d576b4a8e42dc0",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "6p1zMg5jJ/SCVur2oJF9/ftEgwGRxasAP7yoMKnptIg4tr93ulbqcuxt6B0yNOTFCeXNbU8vkhRR5UlM6DbaBw==",
+    "signedAt": "2026-10-31T22:56:44.924Z"
+  }
+}

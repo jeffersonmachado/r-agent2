@@ -3,11 +3,6 @@
 
       at log (qa-mesh/meshScheduler.js:116:11)
 
-  console.info
-    [2026-10-31T21:44:38.885Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
-
-      at Object.info (api/utils/logger.js:155:15)
-
   console.error
     [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
 
@@ -84,6 +79,11 @@
       at safeReadState (qa-mesh/meshScheduler.js:226:17)
       at buildScheduleStatus (qa-mesh/meshScheduler.js:345:10)
       at Object.setSchedulerEnabled (qa-mesh/__tests__/scheduler.test.js:126:5)
+
+  console.info
+    [2026-10-31T22:53:16.936Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
 
   console.error
     [qa-mesh/meshScheduler] estado inválido ou ausente em /opt/results/ria/er-fixci/qa-mesh/scheduler-state.json: "undefined" is not valid JSON
@@ -429,17 +429,17 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS qa-mesh/__tests__/scheduler.test.js
   qa-mesh/meshScheduler
-    ✓ seleciona apenas smoke para schedule smoke (107 ms)
+    ✓ seleciona apenas smoke para schedule smoke (116 ms)
     ✓ seleciona apenas blocking para schedule critical (104 ms)
-    ✓ regression executa toda a malha (103 ms)
-    ✓ não executa scheduler quando pipeline oficial está ativo (224 ms)
-    ✓ execução agendada desabilita escrita canônica (404 ms)
+    ✓ regression executa toda a malha (102 ms)
+    ✓ não executa scheduler quando pipeline oficial está ativo (246 ms)
+    ✓ execução agendada desabilita escrita canônica (385 ms)
   qa-mesh/meshScheduler — setSchedulerEnabled
-    ✓ desativa o scheduler e reflete no status (150 ms)
-    ✓ reativa o scheduler e reflete no status (209 ms)
-    ✓ env var QA_MESH_SCHEDULER_DISABLED mantém desligado (fail-closed) (155 ms)
-    ✓ altera a frequência e reflete no status (175 ms)
-    ✓ ignora chave de frequência inválida (194 ms)
+    ✓ desativa o scheduler e reflete no status (207 ms)
+    ✓ reativa o scheduler e reflete no status (323 ms)
+    ✓ env var QA_MESH_SCHEDULER_DISABLED mantém desligado (fail-closed) (159 ms)
+    ✓ altera a frequência e reflete no status (186 ms)
+    ✓ ignora chave de frequência inválida (196 ms)
   qa-mesh/meshScheduler — startScheduler (habilitação explícita)
     ✓ permanece desligado por padrão (sem enabled:true nem env opt-in) (112 ms)
     ✓ kill-switch QA_MESH_SCHEDULER_DISABLED=true vence qualquer estado (103 ms)
@@ -447,6 +447,6 @@ PASS qa-mesh/__tests__/scheduler.test.js
 Test Suites: 1 passed, 1 total
 Tests:       12 passed, 12 total
 Snapshots:   0 total
-Time:        2.477 s, estimated 3 s
+Time:        3.726 s
 Ran all test suites matching /qa-mesh\/__tests__\/scheduler.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

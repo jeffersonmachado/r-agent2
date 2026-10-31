@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "8a63aeaa-dc69-4ec2-b7b3-f4d3cc8ef663",
+  "transitionId": "076ac267-58b0-4486-bf0a-ec04beb33203",
   "defectId": "H17-HOOKS-EDITOR",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
-  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
   "requiredTests": [
     "frontend/src/components/FlowTemplateSelector.test.jsx"
   ],
@@ -18,10 +18,10 @@
       "command": "npm --prefix frontend run test -- src/components/FlowTemplateSelector.test.jsx",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T21:25:16.261Z",
-      "finishedAt": "2026-10-31T21:25:20.056Z",
+      "startedAt": "2026-10-31T22:29:19.360Z",
+      "finishedAt": "2026-10-31T22:29:25.013Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H17-HOOKS-EDITOR.log",
-      "outputSha256": "b2dde7d1c29c62a1c1c601fd87126de635a0fbd86e4789d6fee57460c547424d"
+      "outputSha256": "2c8dfa088e34b6364581a9abcccf3e01e255c8f568f87c0e54aefb53f5040296"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T21:25:20.063Z",
-  "proofHash": "83b3e56c5fe040bfdeaecb34f04664e598ff111a446e97d8b4c5125b9dc117b4"
+  "createdAt": "2026-10-31T22:29:25.021Z",
+  "proofHash": "ceee05a0c84522147609fa059b0f4fdc4673c4875e153ea01d171dabf67ea607"
 }

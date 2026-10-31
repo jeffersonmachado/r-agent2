@@ -2,21 +2,21 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS api/services/__tests__/qaWavesService.journey.test.js
   qaWavesService journey model compatibility
-    ✓ mantem listagem de waves legada (110 ms)
-    ✓ gera arvore de jornadas com passos e status agregado (370 ms)
-    ✓ retorna status por jornada e por passo (348 ms)
-    ✓ permite filtrar replay por jornada e passo sem quebrar retorno legado (114 ms)
-    ✓ aceita replayId qa_wave_replay_* e resolve para replay real por executionId (172 ms)
-    ✓ retorna payload queued quando replay real ainda não existe (122 ms)
-    ✓ resolve replay com mesmo id somente dentro do tenant autenticado (135 ms)
+    ✓ mantem listagem de waves legada (106 ms)
+    ✓ gera arvore de jornadas com passos e status agregado (275 ms)
+    ✓ retorna status por jornada e por passo (267 ms)
+    ✓ permite filtrar replay por jornada e passo sem quebrar retorno legado (110 ms)
+    ✓ aceita replayId qa_wave_replay_* e resolve para replay real por executionId (154 ms)
+    ✓ retorna payload queued quando replay real ainda não existe (112 ms)
+    ✓ resolve replay com mesmo id somente dentro do tenant autenticado (130 ms)
     mergeJourneyStores — jornada salva não pode esconder as derivadas
-      ✓ com jornada salva, as DERIVADAS continuam presentes (110 ms)
-      ✓ a jornada SALVA sobrepõe a derivada de mesmo id+vertical (edição do usuário ganha) (102 ms)
-      ✓ sem jornada salva o resultado é exatamente o derivado (sem mudança de comportamento) (104 ms)
+      ✓ com jornada salva, as DERIVADAS continuam presentes (114 ms)
+      ✓ a jornada SALVA sobrepõe a derivada de mesmo id+vertical (edição do usuário ganha) (106 ms)
+      ✓ sem jornada salva o resultado é exatamente o derivado (sem mudança de comportamento) (107 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       10 passed, 10 total
 Snapshots:   0 total
-Time:        1.974 s, estimated 2 s
+Time:        2.144 s
 Ran all test suites matching /api\/services\/__tests__\/qaWavesService.journey.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9bd302c7-6836-453d-86c0-aac841929c15",
+  "defectId": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "command": "npx jest tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T22:22:53.686Z",
+      "finishedAt": "2026-10-31T22:22:56.576Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-ADAPTADOR-IA-NAO-VERSIONADO.log",
+      "outputSha256": "db3f4b3182b17bf537124aeef8b8a1491f56f2af2bdabedd601e5ec2a4a986b4"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "sha256": "26238c5848d11f21ab65aae9229c61a269b348abad9ce1bf957b762a63eb201f"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T22:22:56.584Z",
+  "proofHash": "73d3a44e1e3c2aa33dbc21642b4e275d79d463c204afe74d839cb9d73d38189d",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "QKDp3FzPwvOwQEB47bC8PHai3WTxCOxbHo5rwGiQf3uaJV6c3hcQ/P6RKGS2m5l5SQ/Ern0H4ojLWrvyGh7nBg==",
+    "signedAt": "2026-10-31T22:56:30.088Z"
+  }
+}
