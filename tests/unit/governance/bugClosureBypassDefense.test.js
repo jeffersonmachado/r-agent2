@@ -628,14 +628,22 @@ describe('ALERT 1 (P0) — registro em JSON editável não é âncora de confian
     expect(veredito.ok).toBe(true);
   });
 
-  test('estado do repositório: nenhuma chave pinada ⇒ certificação bloqueada (declarado, não contornado)', () => {
-    expect(TA.PINNED_AUTHORITY_FINGERPRINTS.length).toBe(0);
+  // ATUALIZADO em 2026-10-31: a asserção anterior era sobre o ESTADO do repositório ("nenhuma
+  // chave pinada"), não sobre comportamento — e ficou obsoleta quando o dono provisionou as
+  // âncoras. O que continua valendo é a PROPRIEDADE: chave cujo fingerprint NÃO está pinado não
+  // confere autoridade. O teste agora fixa isso, e também que todo pin é um sha256 bem formado.
+  test('pin versionado: chave NÃO pinada não confere autoridade (certificação bloqueada)', () => {
+    expect(Array.isArray(TA.PINNED_AUTHORITY_FINGERPRINTS)).toBe(true);
+    for (const pin of TA.PINNED_AUTHORITY_FINGERPRINTS) {
+      expect(String(pin)).toMatch(/^[0-9a-f]{64}$/);
+    }
     const root = novaRaiz({ comAutoridade: true });
     const { prova } = provaValida(root);
-    // `ancoragem` omitida ⇒ usa os pins versionados (vazios hoje).
+    // Ancoragem EXTERNA válida, mas com um pin que não é o da chave usada na prova.
     const veredito = ATUAL.proof.verificarProvaDeFechamento(prova, {
       defeito: { id: 'P1-ADVERSARIAL', severity: 'P1', state: 'FIXED_PENDING_VERIFICATION' },
       currentCommit: SHA, currentFingerprint: FP, rootDir: root, livro: null,
+      ancoragem: { pins: ['0'.repeat(64)], externa: '0'.repeat(64) },
       agora: Date.parse('2026-10-22T10:00:10.000Z'),
     });
     expect(veredito.ok).toBe(false);

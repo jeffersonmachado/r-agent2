@@ -205,6 +205,41 @@ function carregarAutoridadesDeFechamento(rootDir) {
 }
 
 /** Núcleo de validação estrutural (sem assinatura/ledger): usado por verificação e por testes. */
+/**
+ * Valida a autorização humana de um fechamento, por CANAL.
+ *
+ * Política do dono (2026-10-31): a aprovação interativa na UI é obrigatória para o fluxo que NASCE
+ * na UI; quando o humano autoriza explicitamente dentro de uma sessão do VS Code, o agente registra
+ * a autorização em nome dele, com proveniência (quem, quando, referência e sessão), e o gate a
+ * considera adequada. O canal muda a PROVENIÊNCIA — nunca a exigência de autoria humana.
+ *
+ * Canais aceitos: `UI` (padrão quando ausente, retrocompatível) e `VSCODE_AGENT` (exige
+ * `agentSession`). Qualquer outro valor é recusado: não existe canal livre.
+ */
+const CANAIS_DE_AUTORIZACAO = Object.freeze(['UI', 'VSCODE_AGENT']);
+
+function validarAutorizacaoHumana(autorizacao) {
+  if (!autorizacao || typeof autorizacao !== 'object') {
+    return { ok: false, reason: 'AUTORIZACAO_AUSENTE' };
+  }
+  const channel = autorizacao.channel === undefined || autorizacao.channel === null
+    ? 'UI'
+    : String(autorizacao.channel).toUpperCase();
+  if (!CANAIS_DE_AUTORIZACAO.includes(channel)) {
+    return { ok: false, reason: 'CANAL_DESCONHECIDO' };
+  }
+  // Autoria humana é obrigatória em TODOS os canais.
+  if (!naoVazio(autorizacao.by) || PADRAO_IDENTIDADE_AGENTE.test(String(autorizacao.by || ''))) {
+    return { ok: false, reason: 'AUTOR_HUMANO_AUSENTE' };
+  }
+  if (!naoVazio(autorizacao.at)) return { ok: false, reason: 'INSTANTE_AUSENTE' };
+  if (!naoVazio(autorizacao.ref)) return { ok: false, reason: 'REFERENCIA_AUSENTE' };
+  if (channel === 'VSCODE_AGENT' && !naoVazio(autorizacao.agentSession)) {
+    return { ok: false, reason: 'SESSAO_DO_AGENTE_AUSENTE' };
+  }
+  return { ok: true, reason: null };
+}
+
 function validarEstrutura(prova, ctx) {
   const reasons = [];
   const detalhe = {};
@@ -334,10 +369,10 @@ function validarEstrutura(prova, ctx) {
 
   // P0 exige autorização humana explícita (missão §24: aprovação obrigatória ausente = DENY).
   if (sevParaExigencias === 'P0') {
-    const ha = prova.humanAuthorization;
-    if (!ha || !naoVazio(ha.by) || !naoVazio(ha.at) || !naoVazio(ha.ref)) {
-      reasons.push(CODIGOS.APROVACAO_HUMANA_AUSENTE);
-    }
+    // Autorização por canal: UI (interativa) ou VSCODE_AGENT (humano autoriza na sessão do
+    // agente, com proveniência). Autoria humana é exigida nos dois; ausência/ invalidez recusa.
+    const autorizacao = validarAutorizacaoHumana(prova.humanAuthorization);
+    if (!autorizacao.ok) reasons.push(CODIGOS.APROVACAO_HUMANA_AUSENTE);
   }
 
   // Ator: identificado e NÃO pode ser identidade de agente.
@@ -504,6 +539,8 @@ function verificarProvaDeFechamento(prova, ctx = {}) {
 
 module.exports = {
   ARTIFACT_TYPE,
+  CANAIS_DE_AUTORIZACAO,
+  validarAutorizacaoHumana,
   ARTIFACT_VERSION,
   CODIGOS,
   CAMPOS_ASSINADOS,

@@ -31,7 +31,7 @@ mecânicos** que destravam sozinhos depois delas:
 |---|---|---|---|
 | 1 | Pins versionados | **decisão** | escolher as chaves e commitar o fingerprint é ato de política |
 | 2 | Segredos no cofre | **segredo** | valores não podem existir na árvore nem ser gerados por agente |
-| 3 | Assinar provas + resolver os 11 itens | **decisão + autoridade** | assinatura com `mayCloseDefects` e aceite de risco declarado |
+| 3 | Assinar provas + resolver os 11 itens | **decisão + autoridade** | assinatura com `mayCloseDefects` e aceite de risco declarado. Autorização humana por canal: `HUMAN_AUTHORIZATION_CHANNELS.md` (UI interativa quando o fluxo nasce na UI; `VSCODE_AGENT` com proveniência quando o humano autoriza na sessão do agente) |
 | 4 | Execução autoritativa | mecânico | guard libera quando 3 passar |
 | 5 | Testes obrigatórios | mecânico | depende do artefato de 4 |
 | 6 | Waves frescas | mecânico | guard `QA_WAVES_COMPLETA` libera quando 3 passar |
