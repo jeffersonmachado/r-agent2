@@ -3390,3 +3390,69 @@ da linha do Sequelize), não do contrato público — permanecem de propósito.
 Lição registrada: contrato único exige **varredura de consumidores no mesmo commit**. O teste de
 contrato novo (`lroOperationContract.test.js`) cobre lista×detalhe; o publicador agora também deriva
 do serializador.
+
+### 11.57. Buraco de durabilidade: prazo de decisão humana não tinha caminho de runtime
+
+Continuando a validação no sistema vivo (mesma stack: API 3101 + Vite 5199 + PostgreSQL real),
+exercitei recuperação de órfã, cancelamento e replay do SSE. Três resultados corretos, um buraco.
+
+#### 11.57.1 O que estava correto (medido, não presumido)
+
+| Cenário | Medição |
+|---|---|
+| Replay do SSE com `Last-Event-ID: 2` | voltaram só `seq 3,4,5` — sem lacuna, sem repetição |
+| Órfã (lease `worker-A` ttl 800ms vencido) | `PAUSED`, fencing `1→2`, lease liberado, eventos `CREATED→QUEUED→RUNNING→PAUSED→ORPHAN_RECOVERED` |
+| Worker antigo após recuperação | `recordProgress` recusado com `FENCE_STALE` |
+| Transição ilegal (`PAUSED→WAITING_FEEDBACK`) | HTTP **409** `TRANSICAO_INVALIDA` com o par |
+| Cancelamento (`PAUSED→CANCELLED`) | HTTP **200**, status `CANCELLED` |
+| Reabrir terminal (`CANCELLED→RUNNING`) | HTTP **409** `TERMINAL_IMUTAVEL` |
+
+#### 11.57.2 O buraco: `expireOverdue` existia e ninguém chamava
+
+Duas falhas somadas:
+
+1. **Sem chamador em runtime.** `grep` por `expireOverdue` fora de testes devolvia apenas a própria
+   definição. Nenhum worker, cron ou rota chamava a varredura.
+2. **Escopo incompleto.** Mesmo chamada à mão, ela só marcava o pedido como `EXPIRED`:
+
+```
+imediato -> op: WAITING_FEEDBACK | pedido: PENDING
+expireOverdue -> marcou: 2
+depois  -> pedido: EXPIRED | op: WAITING_FEEDBACK     <-- presa para sempre
+```
+
+O estado `TIMED_OUT` estava declarado na máquina e **nenhum caminho de runtime chegava nele**. Efeito
+prático: uma decisão obrigatória sem prazo vira bloqueio eterno — operação "Aguardando decisão" para
+sempre, sem escalonamento e sem terminal. É o espelho do erro que a política proíbe: silêncio não
+pode virar aprovação, mas também não pode virar bloqueio infinito.
+
+#### 11.57.3 Correção (TDD, dois níveis)
+
+- `lroFeedbackService.expireOverdue`: ao expirar um pedido, se a operação está em `WAITING_FEEDBACK`
+  **e** espera exatamente aquele pedido (`feedbackRequestId === pedido.id`), ela transita para
+  `TIMED_OUT` com `errorCode=FEEDBACK_EXPIRADO` e `reason=deadline_exceeded:<prazo>`, na MESMA
+  transação. Operação que já saiu do estado (respondeu e voltou a `RUNNING`) não é tocada.
+- `lroOutboxWorker`: ganhou `sweep` opcional, executado no **mesmo tick** do dreno da outbox (sem
+  criar um segundo mecanismo de agenda) e **isolado** — falha da varredura não impede a outbox de
+  drenar.
+- `api/runtime/startWorkers.js`: injeta `sweep: () => lroFeedback.expireOverdue({})` no worker já
+  existente (opt-in `LRO_OUTBOX_WORKER=1`).
+
+Testes escritos vermelhos antes: `#6 prazo vencido: pedido EXPIRED e a OPERAÇÃO termina em TIMED_OUT`
+(integration, banco real), `#6 varredura não derruba operação que JÁ saiu de WAITING_FEEDBACK`,
+`tick também roda a varredura de prazos`, `falha da varredura NÃO impede a outbox de drenar`.
+
+#### 11.57.4 Prova no processo real, sem chamada manual
+
+API reiniciada; operação criada com prazo já vencido; **nada** foi chamado à mão:
+
+```
+criado  -> WAITING_FEEDBACK | pedido PENDING
+6s depois (sem chamada manual) -> TIMED_OUT | pedido: EXPIRED | erro: FEEDBACK_EXPIRADO
+eventos: 1:CREATED,2:QUEUED,3:RUNNING,4:WAITING_FEEDBACK,5:TIMED_OUT
+```
+
+E na UI DEVELOPMENT: a linha aparece como **`Expirada`** com progresso `—` (indeterminado, nunca
+100% presumido).
+
+Suítes LRO após as correções: **81 testes / 11 suítes**, zero falhas.

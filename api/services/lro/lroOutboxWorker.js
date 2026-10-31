@@ -62,6 +62,9 @@ function criarWorker({
   clearIntervalFn = clearInterval,
   habilitado = null,
   loggerRef = logger,
+  // Varredura periódica opcional (prazos de feedback vencidos). Roda no MESMO tick para não criar
+  // um segundo mecanismo de agenda; é ISOLADA — falha dela nunca impede o dreno da outbox.
+  sweep = null,
 } = {}) {
   if (typeof dispatch !== 'function' || typeof publish !== 'function') {
     throw Object.assign(new Error('dispatch e publish são obrigatórios'), { code: 'WORKER_INCOMPLETO' });
@@ -75,7 +78,15 @@ function criarWorker({
     if (emExecucao) return { skipped: true, reason: 'tick_anterior_em_andamento' };
     emExecucao = true;
     try {
-      return await dispatch({ publish, limit });
+      const resultado = await dispatch({ publish, limit });
+      if (typeof sweep === 'function') {
+        try {
+          await sweep();
+        } catch (erroSweep) {
+          loggerRef.warn('[lro:outbox-worker] falha na varredura de prazos', { code: erroSweep.code || null });
+        }
+      }
+      return resultado;
     } catch (error) {
       loggerRef.warn('[lro:outbox-worker] falha no ciclo', { code: error.code || null });
       return { publicados: 0, reagendados: 0, mortos: 0, erros: [{ message: String(error && error.message) }] };

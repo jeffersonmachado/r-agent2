@@ -197,4 +197,61 @@ describe('LRO feedback humano', () => {
     expect(r.operation).toBeNull();
     expect((await lro.getOperation(op.id)).status).toBe('WAITING_FEEDBACK');
   }, 60000);
+
+  // BURACO MEDIDO (2026-10-31, execução real): `expireOverdue` existia mas NINGUÉM chamava, e mesmo
+  // chamado só marcava o pedido como EXPIRED — a operação ficava em WAITING_FEEDBACK para sempre.
+  // Silêncio não é aprovação, mas também não pode ser bloqueio eterno: o estado declarado TIMED_OUT
+  // existia na máquina e nenhum caminho de runtime chegava nele.
+  test('#6 prazo vencido: pedido EXPIRED e a OPERAÇÃO termina em TIMED_OUT (nunca aprovação)', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await operacaoRodando();
+    const { requestId } = await feedback.requestFeedback(op.id, {
+      tenantId: 'system',
+      assigneeActorId: 'supervisor-tarde',
+      deadlineAt: new Date(Date.now() - 60_000).toISOString(),
+      actorId: 'jest',
+    });
+
+    const models = require('../../api/db/models');
+    const marcados = await feedback.expireOverdue({ tenantId: 'system' });
+    expect(marcados).toContain(requestId);
+
+    const pedido = await models.getLroFeedbackRequest().findByPk(requestId);
+    expect(pedido.status).toBe('EXPIRED');
+
+    const depois = await lro.getOperation(op.id);
+    expect(depois.status).toBe('TIMED_OUT');
+    expect(depois.errorCode).toBe('FEEDBACK_EXPIRADO');
+
+    // Resposta depois do prazo continua recusada e não reabre terminal.
+    await expect(feedback.respond(requestId, {
+      tenantId: 'system', actorId: 'supervisor-tarde', decision: 'approve', idempotencyKey: 'late-x',
+    })).rejects.toBeTruthy();
+    expect((await lro.getOperation(op.id)).status).toBe('TIMED_OUT');
+  }, 60000);
+
+  test('#6 varredura não derruba operação que JÁ saiu de WAITING_FEEDBACK', async () => {
+    if (skipIfUnavailable()) return;
+    const op = await operacaoRodando();
+    const { requestId } = await feedback.requestFeedback(op.id, {
+      tenantId: 'system',
+      assigneeActorId: 'supervisor-ok',
+      deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+      actorId: 'jest',
+    });
+    await feedback.respond(requestId, {
+      tenantId: 'system', actorId: 'supervisor-ok', decision: 'approve', idempotencyKey: 'ok-1',
+    });
+    expect((await lro.getOperation(op.id)).status).toBe('RUNNING');
+
+    const models = require('../../api/db/models');
+    // Força o vencimento DEPOIS da resposta: o pedido já não é PENDING, a varredura não toca na op.
+    await models.getLroFeedbackRequest().update(
+      { deadline_at: new Date(Date.now() - 60_000).toISOString() },
+      { where: { id: requestId } },
+    );
+    await feedback.expireOverdue({ tenantId: 'system' });
+
+    expect((await lro.getOperation(op.id)).status).toBe('RUNNING');
+  }, 60000);
 });

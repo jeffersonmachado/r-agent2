@@ -249,6 +249,26 @@ async function expireOverdue({ tenantId = null, now = null, limit = 100 } = {}) 
       if (!atual || atual.status !== 'PENDING') return;
       await atual.update({ status: 'EXPIRED' }, { transaction: t });
       ids.push(pedido.id);
+
+      // BURACO MEDIDO (2026-10-31): marcar só o pedido deixava a OPERAÇÃO presa em
+      // WAITING_FEEDBACK para sempre — o estado declarado TIMED_OUT não tinha caminho de runtime, e
+      // um bloqueio obrigatório sem prazo é um bloqueio eterno. Prazo vencido NÃO aprova: termina em
+      // TIMED_OUT, que é terminal e imutável. Só toca a operação que está esperando ESTE pedido.
+      const op = await lroService.getOperation(atual.operation_id, {
+        tenantId: atual.tenant_id,
+      }).catch(() => null);
+      if (!op || op.status !== 'WAITING_FEEDBACK' || op.feedbackRequestId !== atual.id) return;
+
+      await lroService.transition(atual.operation_id, {
+        to: 'TIMED_OUT',
+        actorId: 'lro-feedback-sweep',
+        context: {
+          errorCode: CODIGOS.FEEDBACK_EXPIRADO,
+          reason: `deadline_exceeded:${atual.deadline_at ? new Date(atual.deadline_at).toISOString() : 'sem_prazo'}`,
+          phase: 'awaiting_feedback',
+        },
+        transaction: t,
+      });
     });
   }
   return ids;

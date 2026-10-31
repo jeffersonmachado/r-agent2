@@ -25,12 +25,17 @@ function startWorkers({
       const dispatcher = require('../services/lro/lroOutboxDispatcher');
       const lroService = require('../services/lro/lroService');
       const { broadcastToTenant } = require('../services/websocketService');
+      const lroFeedback = require('../services/lro/lroFeedbackService');
       const lroWorker = criarWorker({
         dispatch: dispatcher.dispatch,
         publish: criarPublicadorWebSocket({
           broadcastToTenant,
           obterOperacao: (id) => lroService.getOperation(id).catch(() => null),
         }),
+        // Prazo de decisão humana vencido precisa de um caminho de RUNTIME: sem esta varredura, o
+        // pedido ficava PENDING e a operação presa em WAITING_FEEDBACK para sempre (buraco medido
+        // em 2026-10-31 — `expireOverdue` existia e ninguém chamava).
+        sweep: () => lroFeedback.expireOverdue({}),
       });
       const iniciado = lroWorker.start();
       logger.info('[LROOutboxWorker] start', iniciado);

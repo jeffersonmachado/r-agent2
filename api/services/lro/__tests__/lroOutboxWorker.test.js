@@ -81,6 +81,34 @@ describe('worker da outbox de LRO', () => {
   // contrato unificado, TODO evento passou a morrer com `TENANT_NAO_RESOLVIDO` (5 linhas DEAD no
   // outbox real). O fixture aqui é construído PELO SERIALIZADOR — fixture escrita à mão mascarou o
   // defeito porque o mock devolvia o shape antigo.
+  // A varredura de feedback vencido roda no MESMO tick do outbox (não há segundo mecanismo). Ela é
+  // isolada: falha dela não pode parar o dreno da outbox nem derrubar o worker.
+  test('tick também roda a varredura de prazos, sem depender dela', async () => {
+    const dispatch = jest.fn(async () => ({ publicados: 2, reagendados: 0, mortos: 0 }));
+    const sweep = jest.fn(async () => ({ expirados: 1 }));
+    const worker = criarWorker({
+      dispatch, publish: async () => {}, sweep,
+      setIntervalFn: () => ({ unref: jest.fn() }), clearIntervalFn: jest.fn(),
+    });
+
+    const r = await worker.tick();
+    expect(dispatch).toHaveBeenCalled();
+    expect(sweep).toHaveBeenCalled();
+    expect(r.publicados).toBe(2);
+  });
+
+  test('falha da varredura NÃO impede a outbox de drenar', async () => {
+    const dispatch = jest.fn(async () => ({ publicados: 3, reagendados: 0, mortos: 0 }));
+    const sweep = jest.fn(async () => { throw Object.assign(new Error('boom'), { code: 'SWEEP_FALHOU' }); });
+    const worker = criarWorker({
+      dispatch, publish: async () => {}, sweep,
+      setIntervalFn: () => ({ unref: jest.fn() }), clearIntervalFn: jest.fn(),
+    });
+
+    const r = await worker.tick();
+    expect(r.publicados).toBe(3);
+  });
+
   function operacaoSerializada(extra = {}) {
     return serializarOperacao({ id: 'op-1', tenant_id: 'system', status: 'RUNNING', ...extra });
   }
