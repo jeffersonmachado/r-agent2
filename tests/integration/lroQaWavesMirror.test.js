@@ -131,3 +131,56 @@ describe('LRO × QA Waves — espelho real (flag ligada)', () => {
     expect(final.errorCode).toBe('SANDBOX_INDISPONIVEL');
   }, 60000);
 });
+
+/**
+ * P1-H (prompt duro 2026-10-31): "não presumir que os quatro testes escritos provem concorrência".
+ * O espelho roda em processo concorrente ao motor; dois sinais podem chegar juntos. Aqui a prova é
+ * CONCORRENTE de verdade (Promise.all contra PostgreSQL real):
+ *   - mesma execução espelhada duas vezes ⇒ UMA operação (idempotência sob corrida);
+ *   - execuções distintas de tenants distintos ⇒ duas operações, cada uma no seu tenant.
+ */
+describe('espelho QA Waves sob CONCORRÊNCIA (PostgreSQL real)', () => {
+  test('dois sinais simultâneos da MESMA execução produzem UMA operação', async () => {
+    if (skipIfUnavailable()) return;
+    process.env.LRO_QA_WAVES_MIRROR = '1';
+    const adapter = require('../../api/services/lro/qaWavesAdapter');
+    const models = require('../../api/db/models');
+    const executionId = `conc-same-${Date.now()}`;
+
+    const resultados = await Promise.all([
+      adapter.iniciar({ tenantId: 'system', executionId, scenarioIds: ['a', 'b'] }),
+      adapter.iniciar({ tenantId: 'system', executionId, scenarioIds: ['a', 'b'] }),
+    ]);
+
+    const linhas = await models.getLroOperation().findAll({ where: { idempotency_key: `qa_waves:${executionId}` } });
+    expect(linhas).toHaveLength(1);
+    // Pelo menos um sinal devolveu o id (o outro pode apenas reconhecer a existente).
+    expect(resultados.filter(Boolean)).toHaveLength(1);
+    const eventos = await models.getLroEvent().findAll({ where: { operation_id: linhas[0].id } });
+    // Sem duplicação de CREATED: a sequência é monotônica e única.
+    expect(eventos.filter((e) => e.type === 'CREATED')).toHaveLength(1);
+  }, 60000);
+
+  test('execuções simultâneas de tenants distintos não se misturam', async () => {
+    if (skipIfUnavailable()) return;
+    process.env.LRO_QA_WAVES_MIRROR = '1';
+    const adapter = require('../../api/services/lro/qaWavesAdapter');
+    const models = require('../../api/db/models');
+    const marca = Date.now();
+
+    const [a, b] = await Promise.all([
+      adapter.iniciar({ tenantId: 'system', executionId: `conc-a-${marca}`, scenarioIds: ['x'] }),
+      adapter.iniciar({ tenantId: 'tenant-concorrente', executionId: `conc-b-${marca}`, scenarioIds: ['y'] }),
+    ]);
+
+    expect(a).toBeTruthy();
+    expect(b).toBeTruthy();
+    expect(a).not.toBe(b);
+
+    const opA = await models.getLroOperation().findByPk(a);
+    const opB = await models.getLroOperation().findByPk(b);
+    expect(opA.tenant_id).toBe('system');
+    expect(opB.tenant_id).toBe('tenant-concorrente');
+    expect(opB.visibility_class).toBe('DEVELOPMENT');
+  }, 60000);
+});
