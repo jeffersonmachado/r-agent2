@@ -112,4 +112,35 @@ describe('useLroStream (LRO — UI DEVELOPMENT)', () => {
     const { result } = renderHook(() => useLroStream({ operationId: 'op-4', token: 'tk', maxReconexoes: 0 }));
     await waitFor(() => expect(result.current.state).toBe('closed'));
   });
+
+  // P1-F (prompt duro 2026-10-31): o hook não reiniciava cursor/histórico por identidade. Ao trocar
+  // de operação, `cursorRef` continuava no seq da anterior — eventos novos com seq menor eram
+  // DESCARTADOS como "replay" — e `events` mantinha a lista antiga na tela (contaminação de outra
+  // operação/tenant). Além disso o timer de reconexão não era cancelado, então um reconnect
+  // agendado reabria o stream da operação ANTIGA.
+  it('trocar de operação reinicia cursor e histórico (sem descartar eventos novos)', async () => {
+    const chamadas = [];
+    global.fetch = vi.fn(async (url) => {
+      chamadas.push(url);
+      const id = String(url).split('/api/lro/')[1].split('/events')[0];
+      return { ok: true, status: 200, body: streamDe([bloco(5, 'CREATED', { operationId: id })]) };
+    });
+
+    const { result, rerender } = renderHook(
+      ({ opId }) => useLroStream({ operationId: opId, token: 'tk', tenantId: 'system' }),
+      { initialProps: { opId: 'op-A' } },
+    );
+    await waitFor(() => expect(result.current.lastSeq).toBe(5));
+
+    rerender({ opId: 'op-B' });
+
+    // Novo stream começa em seq 5 (mesmo número da anterior): NÃO pode ser descartado.
+    await waitFor(() => expect(result.current.events.length).toBeGreaterThan(0));
+    await waitFor(() => {
+      const doB = chamadas.filter((u) => String(u).includes('op-B'));
+      expect(doB.length).toBeGreaterThan(0);
+    });
+    // Histórico não mistura operações: todos os eventos visíveis são do stream atual.
+    expect(result.current.events.every((e) => e.payload && e.payload.operationId === 'op-B')).toBe(true);
+  });
 });

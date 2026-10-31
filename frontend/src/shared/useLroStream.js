@@ -50,6 +50,9 @@ export function useLroStream({
   const [lastSeq, setLastSeq] = useState(0);
   const [events, setEvents] = useState([]);
   const cursorRef = useRef(0);
+  // Identidade da assinatura em curso: cada troca de operação/tenant/ambiente incrementa a geração,
+  // e continuações assíncronas antigas passam a ser ignoradas (P1-F).
+  const geracaoRef = useRef(0);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
@@ -59,9 +62,20 @@ export function useLroStream({
     let cancelado = false;
     let controlador = null;
     let reconexoes = 0;
+    let timerReconexao = null;
+    const minhaGeracao = geracaoRef.current + 1;
+    geracaoRef.current = minhaGeracao;
+
+    // P1-F: cursor e histórico são POR IDENTIDADE. Sem este reset, trocar de operação mantinha o
+    // seq anterior (eventos novos com seq menor eram descartados como "replay") e a lista de eventos
+    // da operação ANTIGA continuava na tela — vazamento entre operações/tenants.
+    cursorRef.current = 0;
+    setLastSeq(0);
+    setEvents([]);
 
     const aplicar = (evento) => {
       if (!evento) return;
+      if (geracaoRef.current !== minhaGeracao) return; // resposta atrasada de assinatura antiga
       if (evento.seq !== null) {
         if (evento.seq <= cursorRef.current) return; // replay não duplica
         cursorRef.current = evento.seq;
@@ -130,7 +144,11 @@ export function useLroStream({
         }
         setState(ESTADOS.RECONNECTING);
         const espera = Math.min(1000 * Math.pow(2, reconexoes - 1), 8000);
-        setTimeout(conectar, espera);
+        // Timer rastreado: sem isso um reconnect agendado reabria o stream da operação ANTERIOR.
+        timerReconexao = setTimeout(() => {
+          timerReconexao = null;
+          if (!cancelado && geracaoRef.current === minhaGeracao) conectar();
+        }, espera);
       }
     };
 
@@ -138,6 +156,9 @@ export function useLroStream({
 
     return () => {
       cancelado = true;
+      geracaoRef.current += 1; // invalida continuações em voo desta assinatura
+      if (timerReconexao) clearTimeout(timerReconexao);
+      timerReconexao = null;
       if (controlador) controlador.abort();
       setState(ESTADOS.CLOSED);
     };
