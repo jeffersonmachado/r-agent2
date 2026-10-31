@@ -175,3 +175,32 @@ describe('âncoras — provisionamento não pode virar âncora versionada', () =
     expect(JSON.parse(r.stdout).achados.join(' ')).toMatch(/a fila mudou desde o provisionamento/);
   }, 120000);
 });
+
+/**
+ * REGRESSÃO MEDIDA 2026-10-31: a classe `AGUARDA_ASSINATURA_E_ANCORA` era inalcançável porque
+ * `ASSINATURA_INVALIDA` caía em "falta técnica" (ESTRUTURA_INCOMPLETA), e nesse caminho o script
+ * NÃO grava draft. Ou seja: o Passo 3 do CERTIFICATION_RUNBOOK ("assinar as provas") não tinha o
+ * que assinar — 145 itens com teste verde ficavam sem rascunho por causa da classificação.
+ */
+describe('regularizador: classificação da pendência (assinatura não é defeito de estrutura)', () => {
+  const { classificarPendencia } = require('../../../scripts/governance/regularize-bug-closures');
+
+  test('só falta assinatura => AGUARDA_ASSINATURA_E_ANCORA (gera draft)', () => {
+    expect(classificarPendencia(false, ['ASSINATURA_INVALIDA'])).toBe('AGUARDA_ASSINATURA_E_ANCORA');
+    expect(classificarPendencia(false, ['SEM_ANCORA_DE_CONFIANCA'])).toBe('AGUARDA_ASSINATURA_E_ANCORA');
+  });
+
+  test('P0 sem evidência negativa nem autorização humana => insumos humanos', () => {
+    expect(classificarPendencia(false, ['ASSINATURA_INVALIDA', 'EVIDENCIA_NEGATIVA_AUSENTE', 'APROVACAO_HUMANA_AUSENTE']))
+      .toBe('AGUARDA_INSUMOS_HUMANOS');
+  });
+
+  test('pendência técnica de verdade continua ESTRUTURA_INCOMPLETA', () => {
+    expect(classificarPendencia(false, ['PROVA_VENCIDA_AUSENTE_DE_TESTE'])).toBe('ESTRUTURA_INCOMPLETA');
+    expect(classificarPendencia(false, ['ASSINATURA_INVALIDA', 'TESTE_NAO_EXECUTADO'])).toBe('ESTRUTURA_INCOMPLETA');
+  });
+
+  test('prova completa => PRONTA', () => {
+    expect(classificarPendencia(true, [])).toBe('PRONTA');
+  });
+});

@@ -226,6 +226,28 @@ function executarTeste(idDefeito, relTeste) {
  * `fromState` é o estado PERSISTIDO (o item já declara fechamento); `toState` é RESOLVED,
  * única transição de fechamento válida a partir de VERIFIED na máquina canônica.
  */
+/**
+ * Classifica o que falta para a prova valer.
+ *
+ * DEFEITO MEDIDO (2026-10-31): `ASSINATURA_INVALIDA` caía em "falta técnica", então a classe
+ * `AGUARDA_ASSINATURA_E_ANCORA` era INALCANÇÁVEL e o script não gravava draft nenhum para itens
+ * cujo único insumo pendente é a assinatura do dono. Resultado: o Passo 3 do runbook ("assinar as
+ * provas") não tinha nem o que assinar. Assinatura/âncora não são defeito de estrutura — são
+ * insumo do dono, e precisam produzir draft pronto para assinatura.
+ */
+function classificarPendencia(ok, pendentes) {
+  if (ok) return 'PRONTA';
+  const INSUMOS_HUMANOS = new Set(['EVIDENCIA_NEGATIVA_AUSENTE', 'APROVACAO_HUMANA_AUSENTE']);
+  const INSUMOS_DE_ASSINATURA = new Set(['ASSINATURA_INVALIDA', 'SEM_ANCORA_DE_CONFIANCA', 'PROVA_VENCIDA']);
+  const faltaHumano = pendentes.filter((r) => INSUMOS_HUMANOS.has(r));
+  const faltaAssinatura = pendentes.filter((r) => INSUMOS_DE_ASSINATURA.has(r));
+  const faltaTecnica = pendentes.filter((r) => !INSUMOS_HUMANOS.has(r) && !INSUMOS_DE_ASSINATURA.has(r));
+  if (faltaTecnica.length > 0) return 'ESTRUTURA_INCOMPLETA';
+  if (faltaHumano.length > 0) return 'AGUARDA_INSUMOS_HUMANOS';
+  if (faltaAssinatura.length > 0) return 'AGUARDA_ASSINATURA_E_ANCORA';
+  return 'AGUARDA_ASSINATURA_E_ANCORA';
+}
+
 function montarDraft(item, provaDeFechamento, execucao, ctx) {
   const estado = String(item.state || '').toUpperCase();
   // Item que JÁ está em estado de fechamento não tem transição a executar: a prova é uma
@@ -455,14 +477,7 @@ function main() {
     });
 
     const pendenteAssinatura = (veredito.reasons || []).filter((r) => r !== 'SEM_ANCORA_DE_CONFIANCA');
-    const INSUMOS_HUMANOS = new Set(['EVIDENCIA_NEGATIVA_AUSENTE', 'APROVACAO_HUMANA_AUSENTE']);
-    const faltaHumano = pendenteAssinatura.filter((r) => INSUMOS_HUMANOS.has(r));
-    const faltaTecnica = pendenteAssinatura.filter((r) => !INSUMOS_HUMANOS.has(r));
-    let classe;
-    if (veredito.ok) classe = 'PRONTA';
-    else if (faltaTecnica.length > 0) classe = 'ESTRUTURA_INCOMPLETA';
-    else if (faltaHumano.length > 0) classe = 'AGUARDA_INSUMOS_HUMANOS';
-    else classe = 'AGUARDA_ASSINATURA_E_ANCORA';
+    const classe = classificarPendencia(veredito.ok, pendenteAssinatura);
 
     // Caminho RELATIVO do draft sempre pelo contrato (mesmo em dry-run), nunca por concatenação.
     const draftAlvo = resolverCaminhoDeEvidencia({ id: item.id, dirRel: DRAFTS_REL, ext: '.json' });
@@ -771,6 +786,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  classificarPendencia,
   testeCitado,
   testeDaEvidencia,
   testeDoCommitDoFix,
