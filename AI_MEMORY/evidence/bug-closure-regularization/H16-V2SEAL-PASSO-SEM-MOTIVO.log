@@ -1,0 +1,15 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/v2SealStepDiagnostics.test.js
+  selo V2 — passo que falha deixa o MOTIVO no relatório
+    ✓ falha reportada em STDOUT aparece em stdoutTail (o caso medido em 2026-10-14) (244 ms)
+    ✓ falha reportada em STDERR continua capturada em stderrTail (237 ms)
+    ✓ passo que passa NÃO carrega stdoutTail (o relatório não incha com o QA Mesh) (266 ms)
+    ✓ o passo obrigatório que falhou sem motivo é um passo real do selo (V1_RUNTIME_EVIDENCE) (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.629 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/v2SealStepDiagnostics.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

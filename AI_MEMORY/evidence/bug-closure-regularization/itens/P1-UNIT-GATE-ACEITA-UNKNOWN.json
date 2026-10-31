@@ -1,0 +1,14 @@
+{
+  "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate unit era satisfeito por qualquer execucao verde (inclusive UNKNOWN/integracao)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-UNIT-GATE-ACEITA-UNKNOWN.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-UNIT-GATE-ACEITA-UNKNOWN.json",
+  "camposParaAssinar": 18
+}

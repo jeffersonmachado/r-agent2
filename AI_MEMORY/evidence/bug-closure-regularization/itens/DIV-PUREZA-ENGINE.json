@@ -1,0 +1,14 @@
+{
+  "id": "DIV-PUREZA-ENGINE",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Dívida de pureza de camadas em engine/ (83 issues; ~70 reais) — exige injeção de relógio/logger",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engine/enginePurityPorts.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log",
+  "draft": "governance/bug-closure/proofs-drafts/DIV-PUREZA-ENGINE.json",
+  "camposParaAssinar": 18
+}

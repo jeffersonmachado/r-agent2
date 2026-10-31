@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "6c4e81d3-da87-45d3-bb66-9aea06fbbbd6",
+  "defectId": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/engineeringMission/missionGatesEvidence.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+      "command": "npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:44:51.520Z",
+      "finishedAt": "2026-10-31T19:45:00.421Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log",
+      "outputSha256": "b3e8e93281b9bb7902d9504ea18b7381de938faf184d5fbb45db2982c506c1f7"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+      "sha256": "13fbde1dc7ea9c8328a2307e4646f0b057d8381a1d77e27675b1d89eeeed4862"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:45:00.429Z",
+  "proofHash": "684806f0819a7a7f71afb721ab83b48c953a3c141836ce7aae51eb36d1b943b1"
+}

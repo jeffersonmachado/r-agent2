@@ -154,6 +154,29 @@ function buildJourneyStoreFromScenarioStore(scenarios = []) {
   return Array.from(journeys.values());
 }
 
+/**
+ * Mescla as jornadas DERIVADAS dos cenários com as SALVAS pelo tenant.
+ *
+ * DEFEITO MEDIDO 2026-10-29: `buildJourneyTreeWithStatus` usava
+ * `storedJourneys.length > 0 ? storedJourneys : derivadas`, isto é, UMA jornada salva escondia TODAS as
+ * derivadas. Com os dados versionados a árvore derivada tem 10 domínios e 253 jornadas (entre elas
+ * "Support Ticket Flow", em `core`, dona do cenário `support-inbox-nota-ui`); com um `journey-store.json`
+ * contendo 2 jornadas `beauty`, a API devolvia só essas 2 — e a UI de QA Waves deixava de listar o resto
+ * (medido no E2E: `arvore=["Beauty New Customer","Beauty Booking"]`).
+ *
+ * Regra: derivadas são a BASE; a jornada salva SOBREPÕE a de mesmo par (id, vertical). O que o usuário
+ * editou continua ganhando; o que ele não editou continua visível.
+ */
+function mergeJourneyStores(derivadas = [], salvas = []) {
+  const porChave = new Map(
+    (Array.isArray(derivadas) ? derivadas : []).map((j) => [`${j.vertical || 'core'}::${j.id}`, j]),
+  );
+  for (const salva of (Array.isArray(salvas) ? salvas : [])) {
+    porChave.set(`${salva.vertical || 'core'}::${salva.id}`, salva);
+  }
+  return Array.from(porChave.values());
+}
+
 function normalizeStatus(status) {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'passed' || normalized === 'pass' || normalized === 'success') return 'success';
@@ -611,9 +634,12 @@ function buildJourneyTreeWithStatus(tenantId = 'system') {
     ),
   ];
 
-  const journeyStore = storedJourneys.length > 0
-    ? storedJourneys
-    : buildJourneyStoreFromScenarioStore(combinedScenarios);
+  // As derivadas são a BASE; a jornada salva sobrepõe a de mesmo par (id, vertical) — ver
+  // `mergeJourneyStores` para o defeito medido (uma jornada salva escondia todas as derivadas).
+  const journeyStore = mergeJourneyStores(
+    buildJourneyStoreFromScenarioStore(combinedScenarios),
+    storedJourneys,
+  );
   const scenarioStats = collectScenarioLatestStats(250, scopedTenantId);
 
   // Agrupar jornadas por vertical (domínio)
@@ -1561,6 +1587,7 @@ module.exports = {
   reexecuteReplay,
   getExecutionStatus,
   collectScenarioLatestStats,
+  mergeJourneyStores,
   _internal: {
     screenshotDataUrlCache,
     cacheScreenshotDataUrl,

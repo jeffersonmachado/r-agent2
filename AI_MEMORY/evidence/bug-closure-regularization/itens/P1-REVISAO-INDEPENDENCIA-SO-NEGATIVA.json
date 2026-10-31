@@ -1,0 +1,14 @@
+{
+  "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate review aceitava APPROVE sem prova positiva de independencia",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.json",
+  "camposParaAssinar": 18
+}

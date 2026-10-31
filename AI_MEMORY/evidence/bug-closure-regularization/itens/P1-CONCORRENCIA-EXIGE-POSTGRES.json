@@ -1,0 +1,14 @@
+{
+  "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Teste de concorrencia HTTP passava sem PostgreSQL (retorno silencioso)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CONCORRENCIA-EXIGE-POSTGRES.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-CONCORRENCIA-EXIGE-POSTGRES.json",
+  "camposParaAssinar": 18
+}

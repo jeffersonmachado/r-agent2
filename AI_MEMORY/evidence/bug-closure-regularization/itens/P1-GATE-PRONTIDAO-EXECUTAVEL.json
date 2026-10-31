@@ -1,0 +1,14 @@
+{
+  "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Veredito ENGINEER_SUPERVISED_READY_GO vivia em prosa; agora e gate executavel",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/engineerSupervisedReadinessGate.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-GATE-PRONTIDAO-EXECUTAVEL.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-GATE-PRONTIDAO-EXECUTAVEL.json",
+  "camposParaAssinar": 18
+}

@@ -1,0 +1,14 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "TTL/frescor de evidencia: autoridade unica com 5 regras e vinculacao por run",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/evidenceTtl.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P1-11.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P1-11.json",
+  "camposParaAssinar": 18
+}

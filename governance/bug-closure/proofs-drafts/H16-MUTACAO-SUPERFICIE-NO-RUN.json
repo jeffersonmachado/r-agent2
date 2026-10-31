@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "3c1ce5ab-c089-4a78-858b-a79e4bb3f4b7",
+  "defectId": "H16-MUTACAO-SUPERFICIE-NO-RUN",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/allValidatorsRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/allValidatorsRunner.test.js",
+      "command": "npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:57:28.019Z",
+      "finishedAt": "2026-10-31T19:57:40.720Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-MUTACAO-SUPERFICIE-NO-RUN.log",
+      "outputSha256": "1f186d5865dc73d49845ce694299c7de6b330ee51c925fc83daa9632a5f09065"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/allValidatorsRunner.test.js",
+      "sha256": "29c83d3c713f5b29a3d9e0cafa917e7123b955703ac4735a7f1cbcba8fcf3026"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:57:40.728Z",
+  "proofHash": "89dbfdbeb7f0ab98254f28a9f396c12ce5b979e364ada20b15e4c1fca2e90e95"
+}

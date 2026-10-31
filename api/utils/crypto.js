@@ -28,21 +28,33 @@ function getEncryptionKey() {
     throw new Error('ENCRYPTION_KEY não configurada. Configure uma chave de 32 bytes em base64.');
   }
   
-  try {
-    // Decodifica base64
-    const keyBuffer = Buffer.from(envKey, 'base64');
-    
-    if (keyBuffer.length !== KEY_LENGTH) {
-      throw new Error(`ENCRYPTION_KEY deve ter exatamente ${KEY_LENGTH} bytes (${KEY_LENGTH * 2} caracteres em hex ou ${Math.ceil(KEY_LENGTH * 4 / 3)} caracteres em base64)`);
-    }
-    
-    return keyBuffer;
-  } catch (err) {
-    if (err.message.includes('ENCRYPTION_KEY')) {
-      throw err;
-    }
-    throw new Error(`ENCRYPTION_KEY inválida: ${err.message}`);
+  // HEX **E** BASE64 — a mensagem de erro sempre prometeu as duas formas, mas o código só
+  // decodificava base64.
+  //
+  // DEFEITO REAL MEDIDO (2026-10-21, run 39673283430, L0b do gate): `scripts/bootstrap/
+  // ensure-local-secrets.js` considera válida (e GERA) uma chave de 64 caracteres hexadecimais —
+  // `isValidEncryptionKey` aceita `/^[a-f0-9]{64}$/` e `crypto.randomBytes(32).toString('hex')`.
+  // Aqui essa chave era decodificada como base64, produzindo 48 bytes, e toda cifragem de
+  // credencial morria com "ENCRYPTION_KEY deve ter exatamente 32 bytes" — 33 testes de 11 suítes
+  // de integração vermelhos num ambiente que o próprio bootstrap declarou pronto. Localmente o
+  // `.env` do operador tem chave base64, então o defeito nunca aparecia: produtores e consumidor
+  // discordavam sobre o formato.
+  //
+  // Ordem: base64 primeiro (formato histórico, nenhuma chave em uso é hex — uma string de 64 hex
+  // decodificada como base64 dá 48 bytes e era REJEITADA), hex quando a forma é inequívoca.
+  const rawKey = String(envKey).trim();
+  const candidatos = [Buffer.from(rawKey, 'base64')];
+  if (/^[a-f0-9]{64}$/i.test(rawKey)) {
+    const hex = Buffer.from(rawKey, 'hex');
+    if (hex.length === KEY_LENGTH) candidatos.push(hex);
   }
+  const keyBuffer = candidatos.find((candidato) => candidato.length === KEY_LENGTH);
+
+  if (!keyBuffer) {
+    throw new Error(`ENCRYPTION_KEY deve ter exatamente ${KEY_LENGTH} bytes (${KEY_LENGTH * 2} caracteres em hex ou ${Math.ceil(KEY_LENGTH * 4 / 3)} caracteres em base64)`);
+  }
+
+  return keyBuffer;
 }
 
 /**

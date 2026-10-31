@@ -1,0 +1,14 @@
+{
+  "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "removeChild (React) por enhancement de header que movia/substituia nos do React",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-REMOVECHILD-HEADER-ENHANCEMENT.json",
+  "camposParaAssinar": 18
+}

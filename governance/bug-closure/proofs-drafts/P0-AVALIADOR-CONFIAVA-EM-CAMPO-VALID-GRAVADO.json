@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "92878be5-dadb-4ec8-8f6e-a67830d53373",
+  "defectId": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:34:50.070Z",
+      "finishedAt": "2026-10-31T19:34:53.155Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
+      "outputSha256": "4e19581b9ae337c484ae8f5f1d8de34f81289dc889ca1ed9279b2a0ec2f80f3f"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "sha256": "89ff645c3d9b701c188b76512bec44088eed4cfecc3095e1849e306bfe43b0be"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:34:53.162Z",
+  "proofHash": "f8ab0c5bbd8ccf35db051961f06c543a6dd7c083627d24375d377e33012afa3b"
+}

@@ -1,0 +1,31 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+[L1] ESCALATE: grafo de OUTRO source (artefato=deadbeefdeadbeef… atual=a351e0628dcd54f6…)
+[L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build
+[L1] ESCALATE: artefato sem `sourceFingerprint` (não declara de qual source foi construído)
+[L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build
+[L1] ESCALATE: artefato sem `reverse` (grafo inutilizável)
+[L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build
+[L1] ESCALATE: artefato do grafo ilegível (Expected property name or '}' in JSON at position 15 (line 1 column 16)) — rode: npm run impact:build
+[L1] ERRO: artefato do grafo ausente (rode: node scripts/governance/build-impact-graph.js)
+PASS tests/unit/coverage/impactRunnerBinding.test.js (12.237 s)
+  run-impact-validation — extrairUltimoJson (veredito do mesh)
+    ✓ extrai o JSON final mesmo com logs antes (113 ms)
+    ✓ aceita JSON puro na saída (sem log antes) (104 ms)
+    ✓ saída sem JSON devolve null (o chamador ESCALA — nunca presume veredito) (104 ms)
+  run-impact-validation — vínculo e integridade do grafo (P0-5)
+    ✓ grafo de OUTRO source ⇒ ESCALATE (nunca decidir sobre árvore que não é a analisada) (2767 ms)
+    ✓ grafo SEM vínculo (formato anterior) ⇒ ESCALATE (2527 ms)
+    ✓ artefato estruturalmente inútil (sem `reverse`) ⇒ ESCALATE (2355 ms)
+    ✓ artefato ilegível (JSON quebrado) ⇒ ESCALATE, não INFRA silencioso (1225 ms)
+    ✓ artefato AUSENTE ⇒ INFRA (erro de infraestrutura, não de decisão) (261 ms)
+  run-impact-validation — dry-run é NOT_EXECUTED, nunca verde (P0-5)
+    ✓ --dry-run devolve exit 4 e estado explícito no relatório (1997 ms)
+    ✓ o código de NOT_EXECUTED é distinto de TODOS os outros (nenhum consumidor confunde) (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        12.351 s, estimated 16 s
+Ran all test suites matching /tests\/unit\/coverage\/impactRunnerBinding.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -74,6 +74,43 @@ function resetSkips() {
 }
 
 /**
+ * Executa `fn` com PRAZO EXPLÍCITO.
+ *
+ * MEDIDO no CI (run 39585223390, commit ac92a70ab): `tests/unit/engineeringRouterQwenProvider.test.js`
+ * reprovou o passo L0 com `Exceeded timeout of 60000 ms` em `connect()` — sem Postgres no runner,
+ * a conexão do Sequelize fica pendurada e o teste NUNCA chega ao `skipOrFail` que registraria
+ * `NOT_EXECUTED`. Resultado: a suíte ficava vermelha por AMBIENTE, indistinguível de defeito — e,
+ * com `bail: 1`, derrubava a suíte oficial inteira.
+ *
+ * Aqui "infra não respondeu" vira erro `INFRA_TIMEOUT` em tempo limitado, então o chamador cai no
+ * caminho explícito (`skipOrFail`: NOT_EXECUTED em dev, INFRA_ERROR em release-authoritative).
+ * O prazo NÃO transforma falha em sucesso: só impede que a ausência de infra vire espera infinita.
+ *
+ * @param {() => Promise<any>} fn
+ * @param {{ms?: number, requisito?: string}} [opcoes]
+ */
+async function comPrazo(fn, { ms = 8000, requisito = 'infra' } = {}) {
+  let timer = null;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(fn),
+      new Promise((_, rejeitar) => {
+        timer = setTimeout(() => {
+          const erro = new Error(`${requisito} não respondeu em ${ms} ms`);
+          erro.code = 'INFRA_TIMEOUT';
+          erro.requisito = requisito;
+          erro.prazoMs = ms;
+          rejeitar(erro);
+        }, ms);
+        if (typeof timer.unref === 'function') timer.unref();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
  * Evidência de execução: o que pulou e por quê. `verdict` é explícito — com pulos registrados o
  * veredito NUNCA é PASS pleno.
  */
@@ -102,6 +139,7 @@ function writeExecutionEvidence(filePath, options) {
 module.exports = {
   isAuthoritative,
   skipOrFail,
+  comPrazo,
   recordedSkips,
   resetSkips,
   buildExecutionEvidence,

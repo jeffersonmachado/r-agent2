@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "60ed2599-397a-4dc8-85fa-7e116dd8fa68",
+  "defectId": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/worktreeIntegrity.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/worktreeIntegrity.test.js",
+      "command": "npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:44:22.068Z",
+      "finishedAt": "2026-10-31T19:44:27.825Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.log",
+      "outputSha256": "03a68a51e61bab011fcea3676c6dae697fd7089455095aee0d5d7c490fdcc051"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/worktreeIntegrity.test.js",
+      "sha256": "d863a97c934cc903bc49d0277f4f89aa73cd0210a946a7cc6ffdc2d094dfc535"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:44:27.834Z",
+  "proofHash": "d278aeede34727488c744d02b62e3a55d4c4543e3a1caebe59201a6ca743c035"
+}

@@ -91,6 +91,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# PORTEIRO DE PUBLICAÇÃO (Fase 2 / MISSÃO C) — mesmo motivo de `docker-push.sh`: publicação
+# remota de imagens também é PUBLICAÇÃO e não pode existir sem decisão canônica em GO definitivo.
+. "$(dirname "${BASH_SOURCE[0]}")/governance/publication-gate.sh"
+rap_publication_gate "docker-push-remote"
+
 # Validação
 if [ -z "$REMOTE_HOST" ]; then
     error "Host remoto não especificado."

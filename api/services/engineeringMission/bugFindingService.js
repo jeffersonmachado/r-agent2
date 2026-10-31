@@ -121,7 +121,7 @@ async function getFindingHistory(findingId) {
 
 async function listFindings({
   missionId = null, status = null, severity = null, category = null,
-  selfModification = null, fingerprint = null, limit = 50, offset = 0,
+  selfModification = null, fingerprint = null, ids = null, limit = 50, offset = 0,
 } = {}) {
   const where = {};
   if (missionId) where.mission_id = missionId;
@@ -130,10 +130,15 @@ async function listFindings({
   if (category) where.category = category;
   if (selfModification !== null) where.self_modification = Boolean(selfModification);
   if (fingerprint) where.fingerprint = fingerprint;
+  if (Array.isArray(ids) && ids.length > 0) where.id = { [Op.in]: ids };
+  // ESCOPO EXPLÍCITO NÃO É TRUNCADO: com `ids` o chamador já delimitou o conjunto, e cortar em
+  // `limit` (default 50, teto 200) faria "escopo explícito" virar "escopo parcial silencioso".
+  const escopoExplicito = Array.isArray(ids) && ids.length > 0;
+  const limite = escopoExplicito ? ids.length : Math.min(Math.max(Number(limit) || 50, 1), 200);
   const rows = await model().findAll({
     where,
     order: [['last_seen_at', 'DESC']],
-    limit: Math.min(Math.max(Number(limit) || 50, 1), 200),
+    limit: limite,
     offset: Math.max(Number(offset) || 0, 0),
   });
   return rows.map(toPlain);
@@ -384,7 +389,7 @@ async function addEvidence(findingId, evidenceInput, { actor = null, tenantId = 
 }
 
 /** Transição crua (validada). Preferir os helpers semânticos abaixo. */
-async function transitionFinding(findingId, toStatus, { actor = null, reason = null, patch = {}, tenantId = null } = {}) {
+async function transitionFinding(findingId, toStatus, { actor = null, reason = null, patch = {}, tenantId = null, lease = null } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
   const check = engine.assertTransition(finding.status, toStatus);
@@ -396,13 +401,29 @@ async function transitionFinding(findingId, toStatus, { actor = null, reason = n
   // Worker B (CONFIRMED→BLOCKED, com a mesma leitura antiga) escreviam as duas — a última vencia
   // sem detecção.
   const expectedVersion = Number(finding.version || 0);
+  // ── FENCING DO LEASE (defeito medido em 2026-10-26) ───────────────────────────────────────────
+  // `lease_fence` era incrementado na aquisição e NUNCA validado por nenhuma escrita: um worker cujo
+  // lease expirou e foi tomado por outro continuava gravando — "perdeu a posse, mas escreve". Quando
+  // a escrita DECLARA posse, o fence corrente entra no MESMO `UPDATE` (predicado atômico, sem TOCTOU
+  // entre checar e gravar): fence velho ⇒ 0 linhas ⇒ `FINDING_LEASE_LOST` nomeado.
+  const fenceEsperado = lease && lease.fence !== undefined && lease.fence !== null ? Number(lease.fence) : null;
+  const where = { id: findingId, version: expectedVersion };
+  if (fenceEsperado !== null) where.lease_fence = fenceEsperado;
+
   const [affected] = await model().update(
     { status: toStatus, ...patch, version: expectedVersion + 1 },
-    { where: { id: findingId, version: expectedVersion } },
+    { where },
   );
 
   if (!affected) {
     const current = await getFinding(findingId);
+    if (fenceEsperado !== null && current && Number(current.lease_fence) !== fenceEsperado) {
+      const perdido = new Error(`posse perdida: o lease do finding ${findingId} avançou (fence ${fenceEsperado} ≠ ${current.lease_fence}) — escrita recusada`);
+      perdido.code = 'FINDING_LEASE_LOST';
+      perdido.detail = { findingId, fenceEsperado, fenceAtual: current.lease_fence ?? null, toStatus };
+      logger.warn('[bugFindingService] escrita recusada: fence do lease não é mais o corrente', perdido.detail);
+      throw perdido;
+    }
     // Concorrência convergente: outra transação já levou o finding ao MESMO destino ⇒ idempotente.
     if (current && current.status === toStatus) return { finding: current, idempotent: true, concurrent: true };
     const err = new Error(`transição concorrente rejeitada: finding ${findingId} está em ${current?.status || 'desconhecido'} (tentativa ${finding.status} → ${toStatus})`);
@@ -429,18 +450,30 @@ async function transitionFinding(findingId, toStatus, { actor = null, reason = n
   return { finding: refreshed, idempotent: false, from: finding.status };
 }
 
-async function markReproducing(findingId, { actor = null, plan = null } = {}) {
-  return transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'tentativa de reprodução iniciada', patch: plan ? { reproduction: plan } : {} });
+async function markReproducing(findingId, { actor = null, plan = null, reproduction = null, lease = null } = {}) {
+  // `reproduction` vem pronto quando o chamador já sabe mesclar a PROVENIÊNCIA (o plano derivado não
+  // pode apagar `strategy`/`source` declarados pelo finding). Sem ele, o plano é gravado como antes.
+  const patch = reproduction ? { reproduction } : (plan ? { reproduction: plan } : {});
+  return transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'tentativa de reprodução iniciada', patch, lease });
 }
 
 /**
  * CONFIRMA com BASE OBJETIVA + evidência. Sem base objetiva (suspeita de LLM, heurística, timout
  * isolado) recusa com `INSUFFICIENT_CONFIRMATION_BASIS` — nunca "confirma por narrativa".
  */
-async function confirmFinding(findingId, { basis, evidence = [], actor = null, rootCause = null, reproduction = null, tenantId = null } = {}) {
-  const finding = await getFinding(findingId);
-  if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+async function confirmFinding(findingId, { basis, evidence = [], actor = null, rootCause = null, reproduction = null, tenantId = null, lease = null, workerInstanceId = null } = {}) {
+  // A CONFIRMAÇÃO inteira (SUSPECTED→REPRODUCING→CONFIRMED) roda sob o lease: sem isso a varredura
+  // de outro processo pode devolver o finding para SUSPECTED entre as duas transições (defeito
+  // medido em 2026-10-25). `lease` de quem já é dono evita reentrância e bump de fence.
+  const dono = await withFindingLeaseOwned(findingId, { lease, workerInstanceId }, async ({ lease: meuLease }) => {
+    const atual = await getFinding(findingId);
+    if (!atual) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
+    return confirmarComLease(atual, meuLease);
+  });
+  if (dono && dono.skipped) return { skipped: true, outcome: 'SKIPPED_LEASE_HELD', lease: dono.lease, finding: null };
+  return dono;
 
+  async function confirmarComLease(finding, _lease) {
   const merged = appendEvidence(
     Array.isArray(finding.evidence_refs) ? finding.evidence_refs : [],
     (Array.isArray(evidence) ? evidence : [evidence]).filter(Boolean).map(makeEvidence),
@@ -453,7 +486,7 @@ async function confirmFinding(findingId, { basis, evidence = [], actor = null, r
     });
   }
 
-  if (finding.status === 'SUSPECTED') await transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'confirmação com base objetiva' });
+  if (finding.status === 'SUSPECTED') await transitionFinding(findingId, 'REPRODUCING', { actor, reason: 'confirmação com base objetiva', lease: _lease });
   const patch = {
     confirmation_basis: basis,
     evidence_refs: merged,
@@ -465,21 +498,24 @@ async function confirmFinding(findingId, { basis, evidence = [], actor = null, r
     reason: `base objetiva ${basis}`,
     patch,
     tenantId,
+    lease: _lease,
   });
   return { finding: result.finding, basis, idempotent: result.idempotent === true };
+  }
 }
 
-async function markNotReproduced(findingId, { actor = null, reason = null, evidence = [], plan = null } = {}) {
-  const patch = { ...(plan ? { reproduction: plan } : {}) };
-  return transitionFinding(findingId, 'NOT_REPRODUCED', { actor, reason: reason || 'reprodução executada sem manifestar a falha', patch });
+async function markNotReproduced(findingId, { actor = null, reason = null, evidence = [], plan = null, reproduction = null, lease = null } = {}) {
+  const patch = { ...(reproduction ? { reproduction } : (plan ? { reproduction: plan } : {})) };
+  return transitionFinding(findingId, 'NOT_REPRODUCED', { actor, reason: reason || 'reprodução executada sem manifestar a falha', patch, lease });
 }
 
-async function markDuplicate(findingId, duplicateOfFindingId, { actor = null, reason = null } = {}) {
+async function markDuplicate(findingId, duplicateOfFindingId, { actor = null, reason = null, lease = null } = {}) {
   if (!duplicateOfFindingId) throw Object.assign(new Error('duplicata exige `duplicateOfFindingId`'), { code: 'INVALID_DUPLICATE' });
   const result = await transitionFinding(findingId, 'DUPLICATE', {
     actor,
     reason: reason || `duplicata de ${duplicateOfFindingId}`,
     patch: { duplicate_of: duplicateOfFindingId },
+    lease,
   });
   const original = await getFinding(duplicateOfFindingId);
   if (original) {
@@ -612,7 +648,7 @@ async function clearGovernanceBlock(findingId, { actor = null } = {}) {
  * aprovado). "Patch aplicado" NÃO é fix — é exatamente o que esta função recusa.
  */async function markFixed(findingId, {
   actor = null, reproductionPassed = false, targetedTestsPassed = false, reviewPassed = false,
-  reproduction = null, review = null, tenantId = null,
+  reproduction = null, review = null, tenantId = null, lease = null,
 } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
@@ -623,7 +659,7 @@ async function clearGovernanceBlock(findingId, { actor = null } = {}) {
   const patch = { resolved_at: nowIso() };
   if (reproduction) patch.reproduction = reproduction;
   if (review) patch.triage = { ...(finding.triage || {}), fixReview: review };
-  const result = await transitionFinding(findingId, 'FIXED', { actor, reason: 'reprodução verde + testes direcionados + parecer aprovado', patch, tenantId });
+  const result = await transitionFinding(findingId, 'FIXED', { actor, reason: 'reprodução verde + testes direcionados + parecer aprovado', patch, tenantId, lease });
   if (review?.regressionCommands) {
     await model().update({ regression_test_refs: review.regressionCommands }, { where: { id: findingId } });
   }
@@ -631,7 +667,7 @@ async function clearGovernanceBlock(findingId, { actor = null } = {}) {
 }
 
 /** Valida a REGRESSÃO. Exige evidência de execuções reais — teste verde isolado não valida nada. */
-async function markRegressionValidated(findingId, { actor = null, runs = [], tenantId = null } = {}) {
+async function markRegressionValidated(findingId, { actor = null, runs = [], tenantId = null, lease = null } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
   const gate = engine.canDeclareRegressionValidated({ finding, regressionRuns: runs });
@@ -647,6 +683,7 @@ async function markRegressionValidated(findingId, { actor = null, runs = [], ten
     reason: `${runs.length} execução(ões) de regressão aprovada(s)`,
     patch: { regression_runs: [...(finding.regression_runs || []), ...runs], regression_test_refs: refs },
     tenantId,
+    lease,
   });
   await recordEvent(findingId, 'REGRESSION_VALIDATED', { runs }, { actor });
   return result;
@@ -656,7 +693,7 @@ async function markRegressionValidated(findingId, { actor = null, runs = [], ten
  * Fecha o finding. ANTES de fechar, checa as formas de greenwashing conhecidas (fechar sem
  * reprodução, sem evidência, sem regressão executada) — o sistema não pode esconder um bug.
  */
-async function closeFinding(findingId, { actor = null, reason = null, tenantId = null } = {}) {
+async function closeFinding(findingId, { actor = null, reason = null, tenantId = null, lease = null } = {}) {
   const finding = await getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
   const events = await getFindingHistory(findingId);
@@ -714,10 +751,10 @@ async function closeFinding(findingId, { actor = null, reason = null, tenantId =
     });
   }
 
-  return transitionFinding(findingId, 'CLOSED', { actor, reason: reason || 'ciclo concluído', patch: { resolved_at: finding.resolved_at || nowIso() }, tenantId });
+  return transitionFinding(findingId, 'CLOSED', { actor, reason: reason || 'ciclo concluído', patch: { resolved_at: finding.resolved_at || nowIso() }, tenantId, lease });
 }
 
-async function blockFinding(findingId, { actor = null, dependency, evidence = [], minimumHumanAction, tenantId = null } = {}) {
+async function blockFinding(findingId, { actor = null, dependency, evidence = [], minimumHumanAction, tenantId = null, lease = null } = {}) {
   if (!dependency || !minimumHumanAction) {
     throw Object.assign(new Error('BLOCKED exige `dependency` e `minimumHumanAction`'), { code: 'INVALID_BLOCK' });
   }
@@ -726,6 +763,7 @@ async function blockFinding(findingId, { actor = null, dependency, evidence = []
     reason: `dependência externa: ${dependency}`,
     patch: { blocked: { dependency, evidence, minimumHumanAction, at: nowIso() } },
     tenantId,
+    lease,
   });
 }
 
@@ -840,6 +878,65 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * O `lease_fence` é monotônico — é o que permite REJEITAR a escrita de um worker antigo depois do
  * takeover, exatamente como mission/task já fazem.
  */
+/**
+ * LEASE DO FINDING — DEFINIÇÃO ÚNICA do ciclo de vida (aquisição, heartbeat, liberação).
+ *
+ * DEFEITO MEDIDO (checkout limpo de 2026-10-25): `reproduce()` e `confirmFinding()` NÃO tomavam o
+ * lease; só a varredura (`runBugLoopSweep`) tomava. A varredura de outro processo pegava o mesmo
+ * finding em REPRODUCING, rodava a própria tentativa, recebia INCONCLUSIVE e o devolvia a SUSPECTED
+ * no meio da tentativa em curso — que então falhava no CAS (`transição concorrente rejeitada …
+ * SUSPECTED (tentativa REPRODUCING → CONFIRMED)`). Passava isolado, falhava sob carga.
+ *
+ * Regra: quem MUTA o ciclo de reprodução/confirmação é dono do lease. Lease de outro worker ⇒ a
+ * operação é RECUSADA explicitamente (`SKIPPED_LEASE_HELD`), nunca executada em paralelo.
+ *
+ * @param {string} findingId
+ * @param {{ workerInstanceId?:string, lease?:object|null, ttlMs?:number }} opcoes
+ * @param {(ctx:{lease:object|null, owned:boolean}) => Promise<any>} fn
+ */
+async function withFindingLeaseOwned(findingId, opcoes, fn) {
+  const { workerInstanceId = null, lease = null, ttlMs = null } = opcoes || {};
+  if (lease && lease.token) {
+    // O lease herdado tem de ser DESTE finding: aceitar qualquer `{ token }` deixaria a operação
+    // rodar sem posse nenhuma (o token de outro finding nunca é validado pela escrita dos findings).
+    if (lease.findingId && lease.findingId !== findingId) {
+      const mismatch = new Error(`lease de ${lease.findingId} não pode ser usado no finding ${findingId}`);
+      mismatch.code = 'FINDING_LEASE_MISMATCH';
+      mismatch.detail = { findingId, leaseFindingId: lease.findingId };
+      throw mismatch;
+    }
+    return fn({ lease, owned: false });
+  }
+
+  // Identidade POR OPERAÇÃO quando o chamador não declara uma. `pid:<pid>` faria duas operações
+  // concorrentes do MESMO processo se enxergarem como o mesmo dono (a aquisição aceita reentrada do
+  // mesmo worker) e o lease não excluiria nada. Reentrada legítima (reproduce → confirmFinding)
+  // passa o `lease` adiante explicitamente, que é o caminho que precisa ser reentrante.
+  const worker = workerInstanceId || `${process.pid}:${crypto.randomUUID()}`;
+  let adquirido;
+  try {
+    adquirido = await acquireFindingLease(findingId, { workerInstanceId: worker, ...(ttlMs ? { ttlMs } : {}) });
+  } catch (err) {
+    if (err.code === 'FINDING_LEASE_HELD_BY_OTHER_WORKER') {
+      return { skipped: true, code: err.code, lease: err.lease };
+    }
+    throw err;
+  }
+  const ttl = ttlMs || DEFAULT_LEASE_TTL_MS;
+  const heartbeat = setInterval(() => {
+    heartbeatFindingLease(findingId, { token: adquirido.token, ttlMs: ttl }).catch((err) => {
+      logger.warn('[bugFindingService] heartbeat do lease do finding falhou', { findingId, code: err.code || null });
+    });
+  }, Math.max(5000, Math.floor(ttl / 3)));
+  if (typeof heartbeat.unref === 'function') heartbeat.unref();
+  try {
+    return await fn({ lease: adquirido, owned: true });
+  } finally {
+    clearInterval(heartbeat);
+    await releaseFindingLease(findingId, { token: adquirido.token }).catch(() => {});
+  }
+}
+
 async function acquireFindingLease(findingId, { workerInstanceId, ttlMs = DEFAULT_LEASE_TTL_MS } = {}) {
   if (!workerInstanceId) throw Object.assign(new Error('lease exige `workerInstanceId`'), { code: 'INVALID_LEASE' });
   const token = crypto.randomUUID();
@@ -862,15 +959,19 @@ async function acquireFindingLease(findingId, { workerInstanceId, ttlMs = DEFAUL
   const row = Array.isArray(rows) ? rows[0] : rows;
   if (!row) {
     const current = await getFinding(findingId).catch(() => null);
+    // Finding INEXISTENTE não é disputa de posse: o UPDATE casa 0 linhas nos dois casos, e rotular
+    // ausência como `FINDING_LEASE_HELD_BY_OTHER_WORKER` transformava 404 em 409/200 com
+    // `lease.worker: null` (medido em revisão adversarial de 2026-10-25).
+    if (!current) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found', detail: { findingId } });
     const err = new Error(`finding ${findingId} está sob lease de outro worker`);
     err.code = 'FINDING_LEASE_HELD_BY_OTHER_WORKER';
     err.lease = {
-      worker: current?.lease_worker_instance_id || null,
-      expiresAt: current?.lease_expires_at || null,
+      worker: current.lease_worker_instance_id || null,
+      expiresAt: current.lease_expires_at || null,
     };
     throw err;
   }
-  return { token: row.lease_token, fence: row.lease_fence, workerInstanceId, expiresAt: row.lease_expires_at };
+  return { token: row.lease_token, fence: row.lease_fence, workerInstanceId, findingId, expiresAt: row.lease_expires_at };
 }
 
 /** Renova a posse (heartbeat). Exige o token: quem perdeu o lease não renova. */
@@ -1097,6 +1198,7 @@ module.exports = {
   summarizeFindings,
   // Posse durável + dedup consultável (worker do laço)
   findNonTerminalFinding,
+  withFindingLeaseOwned,
   acquireFindingLease,
   heartbeatFindingLease,
   releaseFindingLease,

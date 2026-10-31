@@ -12,10 +12,44 @@ NC='\033[0m'
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP_API_PORT="${SYSTEM_BOOTSTRAP_API_PORT:-13001}"
 BOOTSTRAP_FRONTEND_PORT="${SYSTEM_BOOTSTRAP_FRONTEND_PORT:-14173}"
-API_URL="${SYSTEM_BOOTSTRAP_API_URL:-http://127.0.0.1:${BOOTSTRAP_API_PORT}}"
-FRONTEND_URL="${SYSTEM_BOOTSTRAP_FRONTEND_URL:-http://127.0.0.1:${BOOTSTRAP_FRONTEND_PORT}}"
 CHECK_ONLY=false
 SKIP_SERVICE_PROBES=false
+
+# ── PORTAS LIVRES (medido 2026-10-21, missão CI DEFINITIVO) ──────────────────────────────────
+# Os defaults 13001/14173 eram FIXOS e o preview sobe com `--strictPort`. Resultado real: um
+# preview órfão de uma execução anterior (ou de outro checkout na mesma máquina/runner) fazia o
+# bootstrap INTEIRO reprovar com "Port 14173 is already in use" — o ambiente de validação só
+# funcionava na primeira execução do computador, que é exatamente o que esta missão elimina.
+# Agora: porta explícita (SYSTEM_BOOTSTRAP_*_PORT) é honrada e falha com mensagem clara se
+# estiver ocupada; porta default ocupada é substituída por uma porta efêmera livre, registrada
+# no log. `--strictPort` continua garantindo que a porta escolhida é a NOSSA.
+porta_ocupada() {
+        node -e "const net=require('net');const s=net.createServer();s.once('error',()=>process.exit(0));s.once('listening',()=>s.close(()=>process.exit(1)));s.listen(Number(process.argv[1]),'127.0.0.1');" "$1"
+}
+
+porta_livre() {
+        node -e "const s=require('net').createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>process.stdout.write(String(p)))})"
+}
+
+escolher_porta() {
+        local rotulo="$1"
+        local explicita="$2"
+        local padrao="$3"
+        if ! porta_ocupada "$padrao"; then printf '%s' "$padrao"; return 0; fi
+        if [[ -n "$explicita" ]]; then
+                echo -e "${RED}  x porta ${padrao} (${rotulo}) já está em uso e foi fixada explicitamente — libere a porta ou defina ${rotulo}" >&2
+                return 1
+        fi
+        local alternativa
+        alternativa="$(porta_livre)"
+        echo -e "${YELLOW}  ! porta ${padrao} (${rotulo}) estava em uso; usando ${alternativa} (efêmera livre)${NC}" >&2
+        printf '%s' "$alternativa"
+}
+
+BOOTSTRAP_API_PORT="$(escolher_porta SYSTEM_BOOTSTRAP_API_PORT "${SYSTEM_BOOTSTRAP_API_PORT:-}" "$BOOTSTRAP_API_PORT")" || exit 1
+BOOTSTRAP_FRONTEND_PORT="$(escolher_porta SYSTEM_BOOTSTRAP_FRONTEND_PORT "${SYSTEM_BOOTSTRAP_FRONTEND_PORT:-}" "$BOOTSTRAP_FRONTEND_PORT")" || exit 1
+API_URL="${SYSTEM_BOOTSTRAP_API_URL:-http://127.0.0.1:${BOOTSTRAP_API_PORT}}"
+FRONTEND_URL="${SYSTEM_BOOTSTRAP_FRONTEND_URL:-http://127.0.0.1:${BOOTSTRAP_FRONTEND_PORT}}"
 
 step() { echo -e "${BLUE}[bootstrap:official] $*${NC}"; }
 ok() { echo -e "${GREEN}  ✓ $*${NC}"; }
@@ -41,18 +75,27 @@ wait_http() {
 	local url="$1"
 	local name="$2"
 	local timeout_secs="${3:-60}"
-	local started_at
-	started_at="$(date +%s)"
-	while true; do
-		if curl -fsS "$url" >/dev/null 2>&1; then
-			ok "$name respondeu em $url"
-			return 0
-		fi
-		if (( $(date +%s) - started_at >= timeout_secs )); then
-			fail "$name não respondeu em $url dentro de ${timeout_secs}s"
-		fi
-		sleep 1
-	done
+        local log_file="${4:-}"
+        local started_at
+        started_at="$(date +%s)"
+        while true; do
+                if curl -fsS "$url" >/dev/null 2>&1; then
+                        ok "$name respondeu em $url"
+                        return 0
+                fi
+                if (( $(date +%s) - started_at >= timeout_secs )); then
+                        # DIAGNÓSTICO OBRIGATÓRIO: sem a cauda do log, a falha obriga a
+                        # reexecutar para descobrir o motivo (medido: preview reprovava por
+                        # porta ocupada e a mensagem só dizia "não respondeu").
+                        if [[ -n "$log_file" && -f "$log_file" ]]; then
+                                echo -e "${RED}── últimas linhas de ${log_file} ──${NC}" >&2
+                                tail -n 15 "$log_file" >&2 || true
+                                echo -e "${RED}── fim de ${log_file} ──${NC}" >&2
+                        fi
+                        fail "$name não respondeu em $url dentro de ${timeout_secs}s"
+                fi
+                sleep 1
+        done
 }
 
 probe_json_status() {
@@ -175,14 +218,14 @@ trap cleanup EXIT
 step 'Subindo backend para validação determinística'
 API_PORT="$BOOTSTRAP_API_PORT" node api/server.js >"$API_LOG" 2>&1 &
 API_PID=$!
-wait_http "$API_URL/health" 'API'
+wait_http "$API_URL/health" 'API' 60 "$API_LOG"
 probe_json_status "$API_URL/health/ready" "payload && String(payload.status||'').toLowerCase()==='ready'" 'Health ready'
 probe_json_status "$API_URL/health/selftest" "payload && payload.checks && typeof payload.checks === 'object'" 'Selftest'
 
 step 'Subindo frontend preview para validação determinística'
 (cd frontend && npm run preview -- --host 127.0.0.1 --port "$BOOTSTRAP_FRONTEND_PORT" --strictPort) >"$FRONTEND_LOG" 2>&1 &
 FRONTEND_PID=$!
-wait_http "$FRONTEND_URL/" 'Frontend preview'
+wait_http "$FRONTEND_URL/" 'Frontend preview' 60 "$FRONTEND_LOG"
 
 step 'Validando serviços essenciais via selftest'
 probe_json_status "$API_URL/health/selftest" "payload && payload.checks && payload.checks.db && String(payload.checks.db.status||'').toLowerCase()!=='unhealthy'" 'Banco'

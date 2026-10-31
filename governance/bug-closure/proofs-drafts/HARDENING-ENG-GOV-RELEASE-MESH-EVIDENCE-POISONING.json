@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "c9c5cbc2-97c6-40a5-a670-bff868ed727b",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/qa-mesh/failureIntelligenceLineage.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+      "command": "npx jest tests/unit/qa-mesh/failureIntelligenceLineage.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:33:36.300Z",
+      "finishedAt": "2026-10-31T19:33:39.020Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
+      "outputSha256": "3de07ec9e9cddccccac7a1b72888d39f090dc7ac98b3fdc2e59402dc9402b504"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
+      "sha256": "797b1fcf448ded2987d6971c5454e492d317fddb6dd59b40a017733ea4efb369"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:33:39.028Z",
+  "proofHash": "cfc3f15090d1b6e0eb2ee224157562865f7daeaeeb2494b4ab0f44f6072faa73"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Inventario de persistencia registra escrita fantasma da fila oficial (falso positivo do scanner)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
+  "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.json",
+  "camposParaAssinar": 18
+}

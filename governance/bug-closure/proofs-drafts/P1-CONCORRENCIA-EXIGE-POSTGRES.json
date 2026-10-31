@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "211c99f7-b5f6-4f7f-b761-57eb535cedf4",
+  "defectId": "P1-CONCORRENCIA-EXIGE-POSTGRES",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "command": "npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:43:57.868Z",
+      "finishedAt": "2026-10-31T19:44:02.244Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CONCORRENCIA-EXIGE-POSTGRES.log",
+      "outputSha256": "ade05289b1e8c8fd183c82fbd4ab6e294a3704a4e87a9598d8d2d24975afab57"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "sha256": "ff769ca53e44c73b73f33bbadfb702bf8ae1bfe6ed50e5568783bebab89e96ae"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:44:02.252Z",
+  "proofHash": "003ae1db88dfa50b965b9d59185486c2f594be08e4f99aa3030f4e1e2fed1140"
+}

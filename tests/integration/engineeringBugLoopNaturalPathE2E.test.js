@@ -32,6 +32,28 @@ const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 
+/**
+ * ESCOPO DE CREDENCIAL DO ROUTER — o MESMO tenant que esta suíte provisiona.
+ *
+ * DEFEITO REAL MEDIDO (2026-10-21, runs 39673283430 e 39676752021, passo L0b do gate): a suíte
+ * provisiona credenciais de IA para `TEST_TENANT_KEY` (`saveAICredentials` abaixo), mas o Router
+ * consulta as credenciais do tenant `ENGINEERING_ROUTER_TENANT_ID`, cujo default é `system`
+ * (`api/services/engineeringRouter/engineeringModelAvailabilityService.js`). Localmente o banco do
+ * operador TEM credenciais no tenant `system`, então o ciclo convergia; no runner efêmero o tenant
+ * `system` não tem nenhuma — nenhum modelo ficava disponível, a task de correção ia a
+ * `BLOCKED`/`NO_QUALIFIED_CODER` no primeiro ciclo e o worker passava 895 ciclos sem nada a fazer
+ * até estourar o próprio orçamento de espera (901 s). O sintoma reportado era "timeout", mas a
+ * causa era DEPENDÊNCIA DE ESTADO AMBIENTAL: a suíte nunca foi auto-suficiente.
+ *
+ * A correção aponta o escopo para o tenant que a suíte cria e limpa (nenhuma asserção muda, nenhum
+ * skip é usado): o teste passa a depender APENAS do que ele próprio provisiona.
+ *
+ * ORDEM IMPORTA — a variável é lida no carregamento do módulo, por isso a atribuição vem ANTES dos
+ * `require` que trazem `engineeringRouterService`/`engineeringModelAvailabilityService`.
+ */
+const TEST_TENANT_KEY = 'jest-e2e-bug-natural';
+process.env.ENGINEERING_ROUTER_TENANT_ID = TEST_TENANT_KEY;
+
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
@@ -53,7 +75,8 @@ const FIXTURE_TEST_COMMAND = 'npx jest --testPathIgnorePatterns=/node_modules/ -
 
 const CODER_PROVIDER = 'anthropic';
 const REVIEWER_PROVIDER = 'mistral';
-const TEST_TENANT_KEY = 'jest-e2e-bug-natural';
+// `TEST_TENANT_KEY` é declarado no topo do arquivo, ANTES dos `require`, porque o escopo de
+// credencial do Router (`ENGINEERING_ROUTER_TENANT_ID`) é lido no carregamento do módulo.
 
 const SUITE_NAME = 'engineering-bug-loop-natural-path-e2e';
 
@@ -110,7 +133,22 @@ async function cleanupTask(taskId) {
   await index.getEngineeringTask().destroy({ where: { id: taskId } }).catch(() => {});
 }
 
+// BANCO PRÓPRIO DA SUÍTE (medido 2026-10-30, A/B): com o Postgres de dev COMPARTILHADO esta suíte falha
+// em 65 s (lineage.replacementTaskId volta igual ao original por causa de missões/tasks residuais de
+// execuções anteriores); num banco recém-criado passa em 55 s, e o CI (banco efêmero) é verde no mesmo
+// SHA. O `purgeTestFindings()` abaixo limpava apenas findings — não missões, tasks nem vínculos.
+// Isolar por banco descartável elimina a variável sem tocar em dado de ninguém.
+let bancoDaSuite = null;
+
 beforeAll(async () => {
+  try {
+    const { provisionSuiteDatabase } = require('../helpers/suiteDatabase');
+    bancoDaSuite = await provisionSuiteDatabase('bugloop-natural-path');
+  } catch (error) {
+    dbAvailable = false;
+    dbReason = `provisionamento de banco falhou: ${error.message}`;
+    return;
+  }
   try {
     await sequelizeModule.connect(2, 250);
     dbAvailable = true;
@@ -172,10 +210,15 @@ beforeAll(async () => {
   for (const provider of CANDIDATE_PROVIDERS) {
     await saveAICredentials(TEST_TENANT_KEY, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
   }
-}, 60000);
+  // Inclui o provisionamento do banco da suíte (CREATE DATABASE + 234 migrations), que sozinho
+  // consome dezenas de segundos num lote; os 60 s herdados do fixture não o cobriam.
+}, 300000);
 
 afterAll(async () => {
-  if (!dbAvailable) return;
+  if (!dbAvailable) {
+    if (bancoDaSuite) await bancoDaSuite.cleanup().catch(() => {});
+    return;
+  }
   clearAiProviderConfig();
   const index = require('../../api/db/models');
   await stopWorkerAndDrain();
@@ -199,6 +242,8 @@ afterAll(async () => {
     }
   } catch (_) { /* best-effort */ }
   await sequelizeModule.close().catch(() => {});
+  // O banco desta suíte é descartável: destruí-lo É o isolamento (não é limpeza global).
+  if (bancoDaSuite) await bancoDaSuite.cleanup().catch(() => {});
 }, 60000);
 
 describe('BUG_AUTONOMOUS_LOOP — CAMINHO NATURAL (sem sweep manual)', () => {
@@ -351,5 +396,27 @@ describe('BUG_AUTONOMOUS_LOOP — CAMINHO NATURAL (sem sweep manual)', () => {
     const fixtureAtSource = execFileSync('git', ['show', `${replacement.source_commit}:${FIXTURE_FILE}`], { cwd: root, encoding: 'utf8' });
     // O fix adiciona `add()` à fixture: o conteúdo no commit da missão tem de refleti-lo.
     expect(fixtureAtSource).toMatch(/function add\s*\(/);
+
+    // (d) ESCOPO DA SUBSTITUTA — DEFEITO MEDIDO 2026-10-29 (run 40824588991, 3 ocorrências):
+    //     a substituta nascia com `allowed_paths: []`, NENHUM caminho de código preenche esse campo
+    //     depois da criação, e todo patch era recusado com `NO_PATCH_SCOPE` — a retomada pós-fix
+    //     esgotava as tentativas sem nunca conseguir entregar correção (e o finding recém-fechado
+    //     reabria como recorrência).
+    //     O escopo tem de ser HERDADO de algo já declarado e validado (spec da missão ou a task
+    //     original), nunca inventado e nunca vazio por omissão.
+    const escopo = Array.isArray(replacement.allowed_paths) ? replacement.allowed_paths.filter(Boolean) : [];
+    expect(escopo.length).toBeGreaterThan(0);
+    // A task ORIGINAL da missão (a que falhou e gerou o finding) — é dela que o escopo pode ter
+    // sido herdado quando o spec não declara nenhum.
+    const taskOriginal = await engineeringTaskService.getTask(originalTaskId);
+    const escopoOriginal = Array.isArray(taskOriginal.allowed_paths) ? taskOriginal.allowed_paths.filter(Boolean) : [];
+    if (escopoOriginal.length > 0) {
+      // Herança verificável: a substituta não pode operar num escopo DIFERENTE do que validou o fix.
+      for (const caminho of escopo) expect(escopoOriginal).toContain(caminho);
+    }
+    // E o registro da linhagem diz DE ONDE veio o escopo (auditável, nunca implícito).
+    const linhagem = (missionAfter && missionAfter.resume_metadata && missionAfter.resume_metadata.bugLoop
+      && missionAfter.resume_metadata.bugLoop.lineage) || lineage || {};
+    expect(['MISSION_SPEC', 'ORIGINAL_TASK']).toContain(linhagem.scopeOrigin);
   });
 });

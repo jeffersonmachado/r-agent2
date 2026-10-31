@@ -1,0 +1,15 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/qa/systemInventoryIntegrity.test.js
+  inventário do sistema — contrato do artefato versionado
+    ✓ tem versão, data ISO válida e lista de itens (109 ms)
+    ✓ todo item tem id único, kind conhecido e classificação canônica (2668 ms)
+    ✓ as contagens declaradas refletem os itens (nada de número inventado) (109 ms)
+    ✓ as waves encontram no inventário o que afirmam cobrir (amostra não vazia) (116 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        3.487 s
+Ran all test suites matching /tests\/unit\/qa\/systemInventoryIntegrity.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

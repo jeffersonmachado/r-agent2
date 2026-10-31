@@ -1,0 +1,14 @@
+{
+  "id": "AUDITORIA-BRANCH-INVENTORY",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Inventário auditável das 2497 branches locais (2468 do loop autônomo)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/audit/branchInventory.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-BRANCH-INVENTORY.log",
+  "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-BRANCH-INVENTORY.json",
+  "camposParaAssinar": 18
+}

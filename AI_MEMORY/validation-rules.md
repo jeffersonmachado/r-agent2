@@ -22,6 +22,211 @@ ambiente reduz o número de workers (`clamped: true`), nunca estoura o banco. Os
 evidência (`run-release-suites.js`, `generate-*-evidence.js`) usam `--runInBand` e não dependem
 deste orçamento.
 
+## CI no runner efêmero (`.github/workflows/dev-branch-ci.yml`)
+
+Três jobs, todos com produtores REAIS (nenhum `continue-on-error`, nenhum skip):
+
+| Job | Produz | Depende de |
+|---|---|---|
+| `prod-like-smoke` | artefato `prod-like-smoke-<sha>` (status GO, 9 jornadas) a partir de API+frontend em Docker | imagens `api/Dockerfile.base` → `api/Dockerfile` → `frontend/Dockerfile`, Chromium |
+| `dev-branch-integration` | veredito de integração real | `ci:bootstrap`, RAG 8001, sandbox image, Postgres/Redis de serviço |
+| `dev-branch-gate` | `reports/dev-branch-ci-evidence.json` + logs por passo | artefato prod-like do job anterior, `ci:bootstrap`, RAG, sandbox image |
+
+Passos do gate (`scripts/ci/dev-branch-gate.js`): `B1..B3` (contratos) → `L0` (`npm test`, 4 workers)
+→ `L0b` (`npx jest tests/integration/engineering --runInBand`) → `L1` em DUAS fases de escopo
+diferente (separação de 2026-10-22):
+
+- **fase D — integridade de DESENVOLVIMENTO** (roda no CI): `L1-release-dag`, `L1-fila-oficial`,
+  `L1-ai-memory`, `L1-aderencia-agente`;
+- **fase R — CERTIFICAÇÃO DE RELEASE** (`SELO_FINAL`, não roda no CI): `L1-cadeia-criptografica`,
+  `L1-self-proving`, `L1-decisao-canonica`.
+
+O CI roda `--fases A,B,C,D` e o veredito é **`PASS_PARCIAL` (exit 0)** — `equivalenteAValidacaoCompleta`
+é `false`, porque R/E/F não foram executadas. Nunca é `PASS`.
+**Estado medido 2026-10-21 (runs 39682918570 e 39686396365):** smoke e integração SUCCESS,
+`L0` exit 0 (~445 s) e `L0b` exit 0 (~475 s, 40 suítes / 219 testes); o gate para em
+`L1-cadeia-criptografica` porque a cadeia aponta para `dist/release/*.zip` (não versionado) —
+`CADEIA_DIVERGENTE`, decisão canônica `NO_GO`. Só `npm run release:seal` (fase PACKAGE) muda esse
+veredito; a CI não pode substituir isso.
+
+> **CORREÇÃO MEDIDA em 2026-10-21 (checkout limpo, `npm run ci:clean-checkout`):** a causa é
+> **UMA** — os bytes do pacote selado não são versionáveis (`dist/` é gitignored), então qualquer
+> clone recalcula a cadeia sem o `package` e cascateia `cumulative_hash_broken`. A afirmação
+> anterior de que `ci:bootstrap` "regrava elos derivados" está **errada**: no clone, depois do
+> bootstrap, `governance/*.json` mantêm o mtime do checkout e aparecem limpos em `git status`. A
+> regravação de 2026-10-20T13:13 foi de um `zip:release` local
+> (`scripts/release-package.sh` → `tools/system/platform-readiness.js`), não do bootstrap.
+
+O `L1` vermelho em `dev/engineering-hardening` é **estrutural, não defeito de teste**: medido em
+2026-10-21, `npm run release:seal:plan` recusa antes de qualquer fase com
+`✗ branch atual é 'dev/engineering-hardening' (esperado main)` (guard em
+`scripts/governance/seal-release.sh`, `[ "$branch" = "main" ]`). Ou seja, o artefato da fase PACKAGE
+só existe depois que o conteúdo está em `main` e o selo roda lá. Fechar o `L1` = promover para
+`main` + `npm run release:seal` — nunca afrouxar o validador da cadeia.
+
+**Reprodutibilidade medida 5× (commits `43b8825dd`, `02336a9e2`, `5e5a4196e`, `fe6837562` e o do
+checkpoint):** `L0` exit 0 em 431–449 s e `L0b` exit 0 em 468–474 s em TODAS as execuções, com
+`prod-like-smoke` e `dev-branch-integration` SUCCESS. O `L1` para sempre no MESMO ponto
+(`L1-cadeia-criptografica`, exit 1, ≤1 s) — é um bloqueio determinístico, não flake.
+
+**Por que R saiu de D (2026-10-22):** os três gates de R certificam o PACOTE SELADO — a cadeia
+encadeia o ZIP, o self-proving recalcula essa cadeia e a decisão canônica exige GO definitivo. Nenhum
+deles pode passar antes de `npm run release:seal` em `main`. Mantê-los em D fazia o CI de
+desenvolvimento reprovar para sempre por um controle de RELEASE. R continua **obrigatória para
+validação completa** (`FASES_OBRIGATORIAS_VALIDACAO_COMPLETA = A,B,C,D,R,E,F`), é **requerida pelo
+pipeline de selagem** e o contrato está PINado em `tests/unit/governance/phaseStepContract.test.js`
+(mover um gate de escopo sem atualizar o contrato falha o teste).
+
+**O bloqueio do `L1` tem UMA causa, não três:** os validadores seguintes ainda não executam no CI
+(a fase aborta no primeiro), mas medindo-os localmente o veredito é o mesmo e aponta para a cadeia —
+`validate-self-proving` reprova com `governance_chain_invalid` / `auto_declaracao_falsa` /
+`certificacao_ultrapassada` e `assert-canonical-release-decision` devolve
+`CADEIA_RECOMPUTADA_INVALIDA (divergências=11, raizConfere=false)`. `validate-release-dag`,
+`validate-hardening-queue`, `validate-ai-memory` e `validate-agent-adherence` PASSAM. Portanto o CI
+está a UM ciclo de selagem da matriz completa — e esse ciclo exige `main`.
+
+> **CORREÇÃO MEDIDA em 2026-10-21 (checkout limpo, commit `382f83b37`):** `validate-ai-memory` e
+> `validate-agent-adherence` **NÃO** passavam num clone — eles exigiam
+> `.github/copilot-instructions.md`, que existia só em `.git/info/exclude` da máquina de
+> desenvolvimento. Medido: `required_file_missing` e `agent_instruction_missing` em TODO checkout
+> limpo. Corrigido em `c4b3fc70e` (adaptador versionado + lista canônica em
+> `scripts/governance/lib/required-agent-files.js` + regressão
+> `tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js`). Depois da correção, o
+> inventário do L1 medido no clone é **4 verdes / 3 vermelhos**, e os três vermelhos são
+> exatamente a família de certificação de release (`cadeia-criptografica`, `self-proving`,
+> `decisao-canonica`).
+
+### Regras que o CI aprendeu (não regredir)
+
+- **Engineering Runner é recurso de SESSÃO, não de porta**: `tests/setup/engineeringRunnerGlobalSetup.js`
+  grava dono por porta e uma sessão Jest aninhada (ex.: `run-impact-validation` dentro de um teste)
+  REUTILIZA o runner da sessão-mãe. Antes disto o aninhado matava o runner alheio (SIGKILL + spawn
+  em 3 ms) e as suítes de sandbox falhavam com `SANDBOX_UNAVAILABLE`/`ECONNREFUSED`.
+- **Suítes de integração do engenheiro são serializadas** (`--runInBand`) nos DOIS jobs: o padrão
+  `tests/integration/engineering` casa o grupo exclusivo `MISSION_WORKER_SHARED_RUNNER_AND_DB` de
+  `config/canonical-release-suites.json`.
+- **`ci:bootstrap` é o único preparo de ambiente** e roda nos dois jobs (inclui identidade git e
+  `ENCRYPTION_KEY`); job sem ele divergiu e travou uma suíte por 900 s.
+- **`ENCRYPTION_KEY` aceita hex de 64 caracteres e base64** (`api/utils/crypto.js`); o bootstrap
+  GERA hex. Regressão: `tests/unit/cryptoEncryptionKeyFormats.test.js`.
+- **Suíte E2E que provisiona credenciais de IA deve apontar `ENGINEERING_ROUTER_TENANT_ID`** para o
+  próprio tenant, senão depende das credenciais de `system` da máquina do operador.
+- **O Engineering Runner NÃO pode ser compartilhado entre árvores**: com a porta fixa 8097, um
+  clone reutiliza o runner de OUTRA árvore (`runner REUTILIZADO: pid=… sessaoDona=…`, medido em
+  2026-10-21) e a prova de sandbox passa a medir o código do vizinho. `ci:clean-checkout` sobe o
+  runner em porta livre por run (`ENGINEERING_RUNNER_TEST_PORT`).
+- **Artefato gitignored consumido por teste tem de ser PRODUZIDO na run**: o
+  `qa/smoke/prod-like/…json` vem do job `prod-like-smoke`; num checkout limpo local ele não existe
+  e `modelDrivenE2e` reprova (medido: L0 379 suítes / 5568 testes, 1 vermelha). O harness executa o
+  produtor real (imagens do commit + API no banco da run + smoke no Chromium).
+
+## Checkout limpo como prova (não como intenção)
+
+`npm run ci:clean-checkout` (`scripts/ci/clean-checkout-verify.js`) é o teste adversarial de
+instalação limpa. Ele clona o commit exato em diretório temporário, recusa continuar se o clone
+trouxer resíduo (`git status --ignored`), provisiona banco/redis/RAG/runner próprios do run, executa
+`ci:bootstrap`, o produtor prod-like e o gate versionado, grava evidência com identidade de run
+(`runId`, `sourceCommit`, `sourceFingerprint`, `environmentId`, SHA-256 de cada log) e destrói o que
+criou. O relatório fica em `reports/ci-clean-checkout-report.json` e o resumo versionado em
+`AI_MEMORY/evidence/ci-clean-checkout-<sha>/<cenario>/RESULT.md` (ou `RUN-NOTES.md` + `gate/`, quando o run é interrompido).
+
+Cenários negativos (provam não vacuidade, nunca "verde por ausência"). **Exercitados em 2026-10-22**,
+todos com `veredito=PASS`:
+
+| cenário | prova medida | evidência |
+|---|---|---|
+| `bootstrap-twice` | bootstrap 94 s + 77 s, contagem de tenants `antes=1 depois=1` | `ci-clean-checkout-3f6c30d0c/bootstrap-twice/` |
+| `missing-artifact` | com artefato PASS (8 s); artefato apagado ⇒ consumidor **exit 1** (5 s); produtor regenera (69 s); consumidor volta a PASS (6 s) | `ci-clean-checkout-1e6a64b58/missing-artifact/` |
+| `corrupt-artifact` | JSON prod-like truncado ⇒ consumidor **exit 1** (7 s) | `ci-clean-checkout-1e6a64b58/corrupt-artifact/` |
+| `docker-unavailable` | sem Docker a suíte de sandbox **exit 1** (2 s) — nunca `SANDBOX_RUNTIME=PASS` | `ci-clean-checkout-33ef95718/docker-unavailable/` |
+| `db-unavailable` | sem Postgres o bootstrap foi **abortado em 480 s** pelo orçamento (nunca virou sucesso) | `ci-clean-checkout-e38734867/db-unavailable/` |
+| `l0-full` | seleção oficial inteira com `--bail=0` (bail=1 esconde o resto) | executado |
+
+**Defeito que a própria execução negativa revelou (2026-10-22):** o primeiro par escolhido para
+`missing-artifact` era `reports/coverage-completeness-report.json` ×
+`coverageCompletenessCanonicalDomains.test.js` — mas esse teste **roda o produtor no `beforeAll`**, então
+apagar o relatório não o reprova. O cenário passou a usar o artefato prod-like × `modelDrivenE2e`, que
+apenas lê o arquivo. Um cenário negativo que nunca falha não prova nada.
+
+**Medição DEFINITIVA (commit `133eb147c`, runId `clean-checkout-20261022094712520-9f4605`, run
+completo sem interrupção):** clone limpo PASS · `ci:bootstrap` exit 0 em 102 s · imagens do commit
+exit 0 em 54 s · produtor prod-like exit 0 (`status=GO`, 9 fluxos, 111 s) · **`L0` exit 0 em
+418,4 s** (1095 suítes + 1 skip em tests/unit, 30 em flow/engine, 3 em RPA) · **`L0b` exit 0 em
+927,7 s (40 suítes / 219 testes)** · inventário L1: 4 verdes / 3 vermelhos (`cadeia-criptografica`,
+`self-proving`, `decisao-canonica` = família de certificação de release). Medição anterior
+(`2f8b5aa29`): L0 437 s / L0b 983 s — mesmo padrão.
+
+**`l2-system` em checkout limpo:** 1 suíte vermelha (`finalStatusProjection`, falta
+`governance/rap-master-scorecard.json` — artefato gitignored que só existe após run selado); na árvore
+de desenvolvimento com esses artefatos, `npm run test:system` = 18 suítes / 162 testes exit 0. É a
+MESMA família de release, não defeito de teste.
+
+**Primeira medição (commit `382f83b37`, histórico):** `L0` 379 suítes / 5568 testes com 1 vermelha
+(`modelDrivenE2e`, artefato prod-like ausente — hoje o produtor é executado pelo harness).
+
+## Bug Closure First — âncoras externas e como provisioná-las
+
+A blindagem do Bug Closure First (PR #6, 2026-10-22) exige **três valores que não podem viver
+no repositório**, porque tudo que está na árvore é reescrevível por quem tem write access a ela:
+
+| Variável | O que é | Sem ela |
+|---|---|---|
+| `RAP_CLOSURE_TRUST_ANCHOR_SHA256` | fingerprint (sha256 do SPKI) da chave que **fecha** defeito | nenhuma prova de fechamento é aceita (`SEM_ANCORA_EXTERNA`) |
+| `RAP_APPROVAL_TRUST_ANCHOR_SHA256` | fingerprint da chave que **aprova** missão | aprovação humana não conta (`HUMAN_APPROVAL_ANCHORED=false`) |
+| `RAP_CLOSURE_INVENTORY_SHA256` | digest canônico do inventário (`[id, severity, state]` ordenados) | operação certificante negada (`INVENTARIO_NAO_ANCORADO`/`INVENTARIO_ADULTERADO`) |
+
+**Provisionamento (ação do dono, não do agente):**
+
+```bash
+# 1. derive o bloco de valores a partir da chave pública da autoridade
+node scripts/governance/provision-closure-anchors.js --key <chave-publica.pem>
+#    --out ~/.config/ragent2/closure-anchors.env   grava fora do workspace (modo 600);
+#    --out dentro do repositório é RECUSADO: âncora versionada deixa de ser âncora.
+
+# 2. registre os valores no cofre do orquestrador (CI secrets / vault) e pin a impressão em
+#    governance/bug-closure/trusted-authorities.js (PINNED_AUTHORITY_FINGERPRINTS).
+#    O pin sozinho não autoriza nada — a âncora externa é obrigatória.
+
+# 3. preflight antes de selar
+node scripts/governance/provision-closure-anchors.js --check    # exit 0 = pronto
+```
+
+**Custo operacional declarado:** `RAP_CLOSURE_INVENTORY_SHA256` muda **sempre** que a fila muda
+legitimamente. Toda alteração aprovada em `AI_MEMORY/hardening-queue.json` exige reprovisionar e
+atualizar o segredo — esse é o preço de autenticar a pertença dos itens sem assinar o arquivo.
+
+**Limites que o mecanismo NÃO cobre** (declarados em
+`AI_MEMORY/evidence/p0-bug-closure-2026-10-22/RELATORIO.md` §11):
+
+1. As âncoras são valores **portadores (bearer)** no ambiente do processo: quem controla o env do
+   release certifica o que quiser. O canal de injeção tem de ser o orquestrador/CI.
+2. Nenhum workflow define as âncoras hoje ⇒ default fail-closed: toda operação certificante é
+   `DENIED`.
+3. O pin em código é cache, não raiz de confiança.
+4. `sourceFingerprint` é integridade relativa; o livro de transições é hash-chain **sem assinatura**.
+5. O digest cobre `[id, severity, state]`, não todos os campos do item.
+6. O histórico da máquina de estados não é reconstruído (`fromState` é o estado persistido).
+7. O **verificador** vive na mesma árvore gravável: âncoras autenticam dados, não código.
+8. `validate-bug-closure-status`, `validate-hardening-queue` e `validate-bug-closure-risk` são
+   **não autoritativos** (`authoritative: false`): só `SELO_FINAL`/`PUBLICACAO_RELEASE` autorizam
+   release.
+
+## Regularização de fechamentos históricos
+
+`node scripts/governance/regularize-bug-closures.js [--only P0|P1|P2|P3] [--dry-run]` re-executa
+o teste de regressão citado por cada item que declara fechamento sem prova, guarda a saída real
+com sha256 e monta a prova **não assinada**. Ele nunca altera `AI_MEMORY/hardening-queue.json` e
+nunca assina: a assinatura é da autoridade ancorada. Classes do relatório:
+
+| Classe | Significado |
+|---|---|
+| `AGUARDA_ASSINATURA_E_ANCORA` | teste passou no HEAD, prova estruturalmente válida; falta só assinatura + âncoras |
+| `AGUARDA_INSUMOS_HUMANOS` | teste passou; falta `negativeEvidence`/`humanAuthorization` (exigidos em P0) |
+| `TESTE_FALHOU_AGORA` | a correção declarada não se sustenta no código atual ⇒ candidato a REABRIR |
+| `AMBIENTE_INDISPONIVEL` | teste exigiu infraestrutura ausente; não é veredito sobre o defeito |
+| `REQUER_AJUSTE_DE_MODELO` | estado persistido (RESOLVED/RISK_ACCEPTED) sem transição canônica de fechamento |
+| `REQUER_DECISAO_HUMANA` | nenhum teste de regressão citado/existente: reabrir ou aceitar risco |
+
 ## NO_GO conditions
 
 - Canonical mesh `NO_GO`

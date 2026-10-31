@@ -49,8 +49,33 @@ const envLoad = loadEnvFile(ROOT);
 // já resolvidos — o alerta existia, e foi ignorado na linha de cima.
 process.stderr.write(`[jest-global-setup] .env ${envLoad.loaded ? `carregado (${envLoad.keys} chave(s) aplicada(s); ambiente explícito vence)` : `não aplicado: ${envLoad.reason}`}\n`);
 
-const PID_FILE = path.join(ROOT, '.jest-engineering-runner.pid');
+// PID FILE POR PORTA (2026-10-20).
+//
+// DEFEITO MEDIDO: o arquivo tinha nome FIXO (`.jest-engineering-runner.pid`), então duas sessões
+// de teste no MESMO repositório — ou um run em porta alternativa — compartilhavam o mesmo registro.
+// O `globalTeardown` da sessão A lia o pid gravado pela sessão B (que acabara de subir seu runner)
+// e matava o runner ALHEIO. Sintoma observado: `SANDBOX_UNAVAILABLE ... fetch failed` em uma suíte
+// que passa isolada, e `RUNTIME_FAIL` em um item diferente a cada coleta — sempre dependente de
+// promoção. O nome agora carrega a porta, que é a identidade do runner de teste.
 const RUNNER_PORT = Number(process.env.ENGINEERING_RUNNER_TEST_PORT || 8097);
+const PID_FILE = path.join(ROOT, `.jest-engineering-runner-${RUNNER_PORT}.pid`);
+/**
+ * DONO DO RUNNER (sessão Jest que o subiu) — arquivo por porta, como o PID_FILE.
+ *
+ * DEFEITO REAL MEDIDO (2026-10-21, runs 39660840381 / 39664853124): a suíte
+ * `engineeringRouterExecutionSandboxSecurity` falhava 9/9 com `SANDBOX_UNAVAILABLE` e
+ * `causa: ECONNREFUSED` na porta CORRETA (8097). O log do runner mostrou a causa:
+ * `runner 7620 ENCERROU: signal=SIGKILL` às 19:58:22 e um runner NOVO subindo 3 ms depois —
+ * assinatura exata da AUTO-CURA do pré-check, disparada por uma SEGUNDA sessão Jest no
+ * mesmo host. Essa segunda sessão é legítima: `tests/unit/coverage/impactRunnerBinding.test.js`
+ * executa `scripts/governance/run-impact-validation.js`, que roda um `npx jest --runInBand`
+ * aninhado (stdio piped, por isso a invisibilidade no log). O aninhado encontrava o runner
+ * da sessão-mãe na porta, concluía "resíduo meu" e o matava — deixando a suíte de sandbox
+ * da sessão-mãe sem NADA escutando. O registro de dono separa as duas coisas: runner de
+ * sessão VIVA é recurso compartilhado (reutiliza-se); runner sem dono vivo é resíduo
+ * (limpa-se, como antes).
+ */
+const SESSION_FILE = path.join(ROOT, `.jest-engineering-runner-${RUNNER_PORT}.session`);
 const RUNNER_TOKEN = 'jest-test-engineering-runner-token';
 const READY_TIMEOUT_MS = 15000;
 
@@ -71,6 +96,29 @@ function probeHealthOnce(url, timeoutMs = 1000) {
     });
     req.setTimeout(timeoutMs, () => { req.destroy(); resolve(null); });
     req.on('error', () => resolve(null));
+  });
+}
+
+/**
+ * Probe AUTENTICADO sem efeito: `POST /execute` valida a auth ANTES do contrato, então um corpo
+ * vazio devolve `401` (token errado) ou `400 invalid_execute_contract` (token ok) — nada é
+ * executado. MEDIDO 2026-10-29: um runner vivo na porta certa com TOKEN diferente do que o cliente
+ * usa passa no `/health` (que é não autenticado por design) e faz TODA execução de sandbox falhar
+ * com `engineering_runner_unauthorized` → `BLOCKED_INFRA`, sem pista na saída do Jest.
+ */
+function probeAuthOnce(url, token, timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const parsed = new URL(`${url.replace(/\/$/, '')}/execute`);
+    const req = http.request(
+      { hostname: parsed.hostname, port: parsed.port, path: parsed.pathname, method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` } },
+      (res) => {
+        res.resume();
+        res.on('end', () => resolve(res.statusCode));
+      },
+    );
+    req.setTimeout(timeoutMs, () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+    req.end('{}');
   });
 }
 
@@ -145,6 +193,25 @@ function isOwnEngineeringRunnerProcess(pid) {
   }
 }
 
+/**
+ * A sessão Jest dona do runner que ocupa a porta está VIVA?
+ *
+ * Lê o registro de dono (`SESSION_FILE`, escrito no spawn) e confirma por `process.kill(pid, 0)`
+ * que aquele processo ainda existe. Registro ausente, ilegível ou com pid morto ⇒ `null`: aí o
+ * ocupante é resíduo e o caminho antigo (limpar o próprio lixo) continua valendo.
+ */
+function lerDonoVivo() {
+  try {
+    const bruto = fs.readFileSync(SESSION_FILE, 'utf8').trim();
+    const pidDono = Number(bruto);
+    if (!Number.isFinite(pidDono) || pidDono <= 0 || pidDono === process.pid) return null;
+    process.kill(pidDono, 0);
+    return pidDono;
+  } catch (_) {
+    return null;
+  }
+}
+
 /** Espera a porta parar de responder (usado APÓS encerrar um resíduo nosso). */
 async function waitForPortFree(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -161,8 +228,75 @@ async function waitForPortFree(url, timeoutMs) {
 module.exports = async function engineeringRunnerGlobalSetup() {
   if (isInsideLinkedGitWorktree()) {
     process.stderr.write('[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).\n');
+    // MEDIDO 2026-10-29: sem o spawn, NINGUÉM define `ENGINEERING_RUNNER_URL`, e o cliente cai no
+    // valor que veio do `.env` (127.0.0.1:8090) — que não é a porta que o runner de teste usa
+    // (8097). Se ninguém escutar ali, TODA suíte de sandbox falha com `ECONNREFUSED` →
+    // `BLOCKED_INFRA`, e uma delas consome 900 s de timeout: dois lotes locais de ~30 min foram
+    // invalidados por isso sem nenhuma pista na saída. O probe imediato abaixo transforma o lote
+    // inválido em uma linha acionável (diagnóstico, nunca mudança de asserção).
+    const configuredUrl = process.env.ENGINEERING_RUNNER_URL || `http://127.0.0.1:${RUNNER_PORT}`;
+    const alive = await probeHealthOnce(`${configuredUrl.replace(/\/$/, '')}/health`, 1500);
+    if (!alive) {
+      process.stderr.write(
+        `[jest-global-setup] ATENÇÃO: ENGINEERING_RUNNER_URL=${configuredUrl} não responde — as suítes de sandbox `
+        + 'vão falhar com ECONNREFUSED/BLOCKED_INFRA (e uma delas espera 900 s de timeout). Suba o runner manualmente '
+        + 'antes do lote, na MESMA porta e com o MESMO token que este skip deixa em vigor (os do `.env`, '
+        + 'porque `ENGINEERING_RUNNER_URL`/`ENGINEERING_RUNNER_TOKEN` só são reescritos quando o setup SOBE o runner). '
+        + 'O runner TAMBÉM precisa do `.env`: quando o setup o sobe, ele herda `process.env` já carregado.\n'
+        + `  ENGINEERING_RUNNER_PORT=<porta de ${configuredUrl}> ENGINEERING_RUNNER_TOKEN=<ENGINEERING_RUNNER_TOKEN do .env> `
+        + 'node --env-file-if-exists=.env services/engineering-runner/src/index.js\n',
+      );
+    } else if (process.env.ENGINEERING_RUNNER_TOKEN) {
+      const status = await probeAuthOnce(configuredUrl, process.env.ENGINEERING_RUNNER_TOKEN);
+      if (status === 401) {
+        process.stderr.write(
+          `[jest-global-setup] ATENÇÃO: o runner em ${configuredUrl} está no ar mas RECUSA o ENGINEERING_RUNNER_TOKEN em vigor `
+          + '(401) — toda execução de sandbox vai falhar com `engineering_runner_unauthorized`/BLOCKED_INFRA. '
+          + 'Suba o runner com o MESMO token do `.env` (ou exporte ENGINEERING_RUNNER_URL/TOKEN do runner que você subiu).\n',
+        );
+      }
+    }
     return;
   }
+
+  // DIAGNÓSTICO DO RUNNER (medido 2026-10-09): o `stderr` do filho era DESCARTA DO
+  // (`stdio: ['ignore','ignore','ignore']`), então um `INFRA_ERROR`/`exitCode: null`
+  // chegava ao chamador sem NENHUMA pista da causa — foi o que tornou o diagnóstico
+  // do sandbox um exercício de adivinhação. O destino é ARQUIVO, nunca stdout: o
+  // stdout do globalSetup é parseado pelo coletor (ver aviso no topo deste arquivo).
+  //
+  // STDOUT TAMBÉM, NÃO SÓ STDERR (medido 2026-10-21, run 39660840381): o banner de
+  // subida do runner (`[engineering-runner] serviço pronto na porta N`) é escrito em
+  // `console.log` — stdout — e o `stdio` descartava exatamente esse canal. O artefato
+  // `logs/engineering-runner-jest.log` voltou VAZIO (0 linhas) enquanto a suíte
+  // `engineeringRouterExecutionSandboxSecurity` falhava 9/9 com `fetch failed`/exitCode
+  // null: sem stdout, um runner que subiu e morreu e um que nunca escreveu nada produzem
+  // o MESMO arquivo vazio — a evidência some justamente quando é necessária.
+  const runnerLogFd = (() => {
+    try {
+      const logDir = path.join(ROOT, 'logs');
+      fs.mkdirSync(logDir, { recursive: true });
+      return fs.openSync(path.join(logDir, 'engineering-runner-jest.log'), 'a');
+    } catch (_) {
+      return 'ignore';
+    }
+  })();
+
+  /**
+   * Linha de diagnóstico da VIDA do runner (subida, reuso e MORTE).
+   *
+   * Vai para stderr E para o arquivo. O stderr aparece no log do gate (onde se vê a
+   * sequência junto com as suítes); o arquivo é o artefato publicado
+   * (`logs/engineering-runner-jest.log`), que precisa ser legível sozinho — quem audita
+   * o run baixa só o artefato.
+   */
+  const registrarNoLog = (texto) => {
+    const linha = `[engineering-runner-jest ${new Date().toISOString()}] ${texto}\n`;
+    process.stderr.write(linha);
+    if (typeof runnerLogFd === 'number') {
+      try { fs.writeSync(runnerLogFd, linha); } catch (_) { /* log é diagnóstico */ }
+    }
+  };
 
   // PRÉ-CHECAGEM DA PORTA — antes de subir qualquer coisa.
   //
@@ -176,6 +310,28 @@ module.exports = async function engineeringRunnerGlobalSetup() {
   // erro nomeia o remédio em vez de se acumular.
   const occupant = await probeHealthOnce(`http://127.0.0.1:${RUNNER_PORT}/health`);
   if (occupant) {
+    // REUTILIZAR O RUNNER DE UMA SESSÃO-MÃE VIVA (nunca matá-lo).
+    //
+    // Ver o comentário de SESSION_FILE: uma sessão Jest ANINHADA (ex.: o `npx jest
+    // --runInBand` disparado por `run-impact-validation.js` dentro de um teste) herda
+    // `ENGINEERING_RUNNER_URL`/`TOKEN` da sessão-mãe. Se o ocupante da porta foi subido
+    // por uma sessão cujo processo AINDA está vivo, ele não é resíduo: é o runner que a
+    // sessão-mãe está usando. Reutilizá-lo é o comportamento correto — matá-lo derrubava
+    // qualquer suíte da sessão-mãe que dependa de execução real (medido: 9/9 da suíte de
+    // sandbox com ECONNREFUSED).
+    const dono = lerDonoVivo();
+    if (dono) {
+      process.env.ENGINEERING_RUNNER_URL = `http://127.0.0.1:${RUNNER_PORT}`;
+      process.env.ENGINEERING_RUNNER_TOKEN = RUNNER_TOKEN;
+      process.stderr.write(
+        `[jest-global-setup] Engineering Runner já está no ar em http://127.0.0.1:${RUNNER_PORT} ` +
+        `(pid ${occupant.pid}) subido pela sessão Jest ${dono} — REUTILIZANDO (sessão aninhada ` +
+        'não sobe um segundo runner nem encerra o da sessão-mãe).\n',
+      );
+      registrarNoLog(`runner REUTILIZADO: pid=${occupant.pid} porta=${RUNNER_PORT} sessaoDona=${dono}`);
+      return;
+    }
+    registrarNoLog(`porta ${RUNNER_PORT} ocupada por pid=${occupant.pid} sem sessão dona viva — avaliando resíduo`);
     // AUTO-CURA CIRCUNSCRITA AO PRÓPRIO RESÍDUO.
     //
     // O aborto abaixo é fail-closed e evita ACUMULAR órfãos, mas tem um efeito colateral medido
@@ -215,15 +371,16 @@ module.exports = async function engineeringRunnerGlobalSetup() {
   // chegava ao chamador sem NENHUMA pista da causa — foi o que tornou o diagnóstico
   // do sandbox um exercício de adivinhação. O destino é ARQUIVO, nunca stdout: o
   // stdout do globalSetup é parseado pelo coletor (ver aviso no topo deste arquivo).
-  const runnerLogFd = (() => {
-    try {
-      const logDir = path.join(ROOT, 'logs');
-      fs.mkdirSync(logDir, { recursive: true });
-      return fs.openSync(path.join(logDir, 'engineering-runner-jest.log'), 'a');
-    } catch (_) {
-      return 'ignore';
-    }
-  })();
+  // STDOUT TAMBÉM, NÃO SÓ STDERR (medido 2026-10-21, run 39660840381): o banner de
+  // subida do runner (`[engineering-runner] serviço pronto na porta N`) é escrito em
+  // `console.log` — stdout — e o `stdio` acima descartava exatamente esse canal. O
+  // artefato `logs/engineering-runner-jest.log` voltou VAZIO (0 linhas) enquanto a suíte
+  // `engineeringRouterExecutionSandboxSecurity` falhava 9/9 com `fetch failed`/exitCode
+  // null: sem stdout, um runner que subiu, morreu e um que nunca escreveu nada produzem o
+  // MESMO arquivo vazio — a evidência some justamente quando é necessária. O destino
+  // continua sendo ARQUIVO (nunca o stdout do Jest, que é parseado pelo coletor).
+  // `runnerLogFd` e `registrarNoLog` são declarados no INÍCIO da função, antes do
+  // pré-check da porta, porque o caminho de REUSO também precisa registrar diagnóstico.
 
   // ORDEM IMPORTA — as variáveis são definidas ANTES do spawn, não depois.
   //
@@ -243,11 +400,42 @@ module.exports = async function engineeringRunnerGlobalSetup() {
       ENGINEERING_RUNNER_TOKEN: RUNNER_TOKEN,
       ENGINEERING_RUNNER_PORT: String(RUNNER_PORT),
     },
-    stdio: ['ignore', 'ignore', runnerLogFd],
+    // stdout E stderr do filho vão para o MESMO arquivo: o banner de prontidão do runner
+    // é `console.log` (stdout) e era justamente o canal descartado antes.
+    stdio: ['ignore', runnerLogFd, runnerLogFd],
     detached: false,
   });
 
+  registrarNoLog(
+    `runner spawn: pid=${child.pid} porta=${RUNNER_PORT} url=${process.env.ENGINEERING_RUNNER_URL} ` +
+    `workspaceRoot=${process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT || '(nao definido)'}`,
+  );
+
+  /**
+   * TESTEMUNHA DA MORTE DO RUNNER.
+   *
+   * Sem isto, um runner que morre no meio da bateria produz exatamente o mesmo sintoma
+   * de um runner que nunca existiu (`fetch failed` → `SANDBOX_UNAVAILABLE`, exitCode
+   * null) e o log fica vazio. Medido em 2026-10-21 (run 39660840381): a suíte
+   * engineeringRouterExecutionSandboxSecurity falhou 9/9 no FIM de uma execução de ~2,5
+   * min, com o runner confirmado em /health no início. Registrar exit code/sinal (SIGKILL
+   * de OOM killer é silencioso) e re-sondar /health fecha a pergunta "ele morreu?" com
+   * evidência, não com hipótese.
+   */
+  child.on('exit', (code, signal) => {
+    registrarNoLog(`runner ENCERROU: pid=${child.pid} code=${code} signal=${signal}`);
+    probeHealthOnce(`http://127.0.0.1:${RUNNER_PORT}/health`).then((dono) => {
+      registrarNoLog(`apos o encerramento, /health na porta ${RUNNER_PORT}: ${dono ? `ainda responde (pid ${dono.pid})` : 'sem resposta'}`);
+    }).catch(() => { /* diagnóstico */ });
+  });
+  child.on('error', (err) => {
+    registrarNoLog(`runner falhou ao iniciar (spawn): pid=${child.pid} erro=${err.message}`);
+  });
+
   fs.writeFileSync(PID_FILE, String(child.pid));
+  // Registro de DONO: qual sessão Jest subiu este runner. O teardown encerra apenas o runner
+  // que ESTA sessão subiu; uma sessão aninhada (que reutiliza) nunca apaga o runner alheio.
+  fs.writeFileSync(SESSION_FILE, String(process.pid));
 
   const health = await waitForHealth(`http://127.0.0.1:${RUNNER_PORT}/health`, READY_TIMEOUT_MS);
 
@@ -271,6 +459,7 @@ module.exports = async function engineeringRunnerGlobalSetup() {
     // globalSetup lança, então a limpeza precisa acontecer aqui).
     try { child.kill('SIGKILL'); } catch (_) { /* já morto */ }
     try { fs.rmSync(PID_FILE, { force: true }); } catch (_) { /* sem arquivo */ }
+    try { fs.rmSync(SESSION_FILE, { force: true }); } catch (_) { /* sem arquivo */ }
     throw new Error(
       `Engineering Runner na porta ${RUNNER_PORT} respondeu como pid ${Number.isFinite(answeringPid) ? answeringPid : 'desconhecido'} ` +
       `mas o runner que subimos é pid ${child.pid} (exit=${child.exitCode}, signal=${child.signalCode}) — ` +
@@ -289,8 +478,10 @@ module.exports = async function engineeringRunnerGlobalSetup() {
   // quebra o JSON.parse do coletor (achado real: os 25 itens de runtime evidence quebravam com
   // "saída do Jest não pôde ser parseada como JSON" até esta correção).
   process.stderr.write(`[jest-global-setup] Engineering Runner real (pid ${child.pid}) pronto em http://127.0.0.1:${RUNNER_PORT}\n`);
+  registrarNoLog(`runner pronto e verificado por /health: pid=${child.pid} porta=${RUNNER_PORT}`);
 };
 
 module.exports.PID_FILE = PID_FILE;
+module.exports.SESSION_FILE = SESSION_FILE;
 module.exports.RUNNER_PORT = RUNNER_PORT;
 module.exports.RUNNER_TOKEN = RUNNER_TOKEN;

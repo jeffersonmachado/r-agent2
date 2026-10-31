@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "cba54ebb-4992-481e-9b65-fcf637635681",
+  "defectId": "ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/integration/engineeringPromotionService.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringPromotionService.test.js",
+      "command": "npx jest tests/integration/engineeringPromotionService.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:52:42.746Z",
+      "finishedAt": "2026-10-31T19:55:02.715Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO.log",
+      "outputSha256": "c20f30de60e42e79c40b8421daf8042eda3df1763a03bd615f8c29270f848903"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringPromotionService.test.js",
+      "sha256": "a5eccbf4f5f6963d3c5cf0c7324c43ed6d1eddff7bd9626dda8876b59b9c2ecb"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:55:02.726Z",
+  "proofHash": "8cc7514c73cb527b943b39b5d25fed36cfd83b89700b7fa2204471bf1d1a222d"
+}

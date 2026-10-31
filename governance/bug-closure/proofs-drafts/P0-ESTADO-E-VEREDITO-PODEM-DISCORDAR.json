@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "0f84a75f-b1b5-4ccf-8383-be3271d10dbd",
+  "defectId": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:35:06.604Z",
+      "finishedAt": "2026-10-31T19:35:09.949Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.log",
+      "outputSha256": "7002364c8526e2b50cdd21496a84a423ebdd9c4e41ce4fb4f6735fb5b51f0ea4"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "sha256": "89ff645c3d9b701c188b76512bec44088eed4cfecc3095e1849e306bfe43b0be"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:35:09.957Z",
+  "proofHash": "66b9373862660e72a1b9356291f48a8582cfe68f0dbcbe13ff1e88dd124910d2"
+}

@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "bd072c87-b9df-4af0-8446-e15c55969e56",
+  "defectId": "ENG-REPARO-NAO-VISIVEL-NA-MISSAO",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/integration/engineeringMissionSourceE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:52:31.880Z",
+      "finishedAt": "2026-10-31T19:52:42.726Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-REPARO-NAO-VISIVEL-NA-MISSAO.log",
+      "outputSha256": "cb17119d3e5576566d31ff266add82a1e967ac0a9ec507c70eedd4f5305f1e2b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "sha256": "e8b417ce6cd96391b8366bb15fd3a992afc34e9c4ecae7072b3df00226768407"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:52:42.735Z",
+  "proofHash": "32572d3c625af4b8c75199e5b76098cefcdc38db7124fad7f9fa08782ae9592c"
+}

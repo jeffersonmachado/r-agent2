@@ -1,0 +1,45 @@
+  console.log
+    {
+      "runId": null,
+      "ok": true,
+      "violacoes": [],
+      "resultados": [
+        {
+          "wave": "db-integrity",
+          "status": "SEM_RUN_CORRENTE",
+          "runIdEvidencia": "rap-governed-20261020150721180-09a2168d"
+        },
+        {
+          "wave": "api-surface",
+          "status": "SEM_RUN_CORRENTE",
+          "runIdEvidencia": "rap-governed-20261020150721180-09a2168d"
+        },
+        {
+          "wave": "page-surface",
+          "status": "SEM_RUN_CORRENTE",
+          "runIdEvidencia": "rap-governed-20261020150721180-09a2168d"
+        }
+      ],
+      "remedio": []
+    }
+
+      at log (scripts/governance/check-wave-evidence-same-run.js:132:13)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/waveEvidenceSameRunPreflight.test.js
+  preflight de evidência de wave — vinculação por run
+    ✓ todas as waves do run corrente => PASS (não-vacuidade: o gate sabe ficar verde) (115 ms)
+    ✓ wave de OUTRO run => violação nomeada + remédio com o produtor exato (105 ms)
+    ✓ wave SEM runId => NO_LINEAGE (não pode passar como se fosse do run) (104 ms)
+    ✓ wave ausente é ignorada aqui (quem trata é o coverage gate, fonte missing) (104 ms)
+    ✓ sem run corrente não inventa violação (não reprova por ausência de contexto) (105 ms)
+    ✓ avaliar() é puro: mesma entrada, mesma saída, sem tocar disco (104 ms)
+    ✓ main() no repo real devolve código coerente com o estado medido (257 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.385 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/waveEvidenceSameRunPreflight.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

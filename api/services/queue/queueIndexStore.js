@@ -36,8 +36,17 @@ function getQueueTicketIds(queues, queueName) {
   return Array.from(queueSet);
 }
 
-function getQueueStats({ tickets, queues, queueName }) {
-  const ticketIds = getQueueTicketIds(queues, queueName);
+function getQueueStats({ tickets, queues, queueName, tenantId = null }) {
+  const allTicketIds = getQueueTicketIds(queues, queueName);
+  // ESCOPO DE TENANT (P0 de isolamento, 2026-10-20). O índice é chaveado só por
+  // nome de fila; sem este filtro, uma exclusão forçada do tenant A fechava
+  // tickets do tenant B que estivessem na mesma fila nominal.
+  const ticketIds = tenantId
+    ? allTicketIds.filter((id) => {
+      const ticket = tickets.get(id);
+      return ticket && String(ticket.tenantId || '') === String(tenantId);
+    })
+    : allTicketIds;
   let activeTickets = 0;
   let closedTickets = 0;
 

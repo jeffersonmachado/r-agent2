@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "41f0f62f-6b8d-471e-b6ee-472bc6ce5fba",
+  "defectId": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/crmOpportunityUpdate.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/crmOpportunityUpdate.test.js",
+      "command": "npx jest tests/unit/crmOpportunityUpdate.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:44:02.261Z",
+      "finishedAt": "2026-10-31T19:44:06.348Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
+      "outputSha256": "0982b6d6b12bf294d4ea02434f914a4b0521d588053a1c5873e45fd61d708f08"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/crmOpportunityUpdate.test.js",
+      "sha256": "2de59f68d8a9f420899ac8e4c94e06a38f6bc9895c15a9915f352a3c68b9da63"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:44:06.357Z",
+  "proofHash": "cb76d93b7ce30cf36ae3a158f7773d3b04bc3f8538a5b9d526bf512ca573060d"
+}

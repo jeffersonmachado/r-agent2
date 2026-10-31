@@ -263,11 +263,59 @@ test.describe('QA Waves -> RPA Replays', () => {
       // pode reabrir tardiamente (após as queries da página) — garantir que
       // está fechado antes de interagir com a árvore.
       await ensureTenantSelected(page);
-      await page
-        .locator('.qa-journey-tree-journey', { hasText: 'Support Ticket Flow' })
-        .first()
-        .click();
-      await page.getByRole('button', { name: 'Cenários', exact: true }).click();
+      // A SIDEBAR MOSTRA APENAS O DOMÍNIO SELECIONADO (QaWavesPage.jsx:321-322 — a navegação entre
+      // domínios é feita pelos pills do topo). Medido no run 40975061143: a API devolvia
+      // 10 domínios com `temSupport: true`, mas o DOM tinha só as 2 jornadas do domínio `beauty`
+      // (o primeiro da lista), porque a jornada de suporte vive em `core`. O teste presumia a jornada
+      // visível sem antes selecionar o domínio — a pré-condição agora resolve o DOMÍNIO pela API e
+      // clica no pill correspondente antes de procurar a jornada.
+      const dominioDaJornada = await page.evaluate(async () => {
+        const token = localStorage.getItem('auth_token');
+        const tenantId = localStorage.getItem('auth_effective_tenant_id') || 'system';
+        try {
+          const r = await fetch('/api/qa-waves/journeys', {
+            credentials: 'include',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              'X-Tenant-Id': String(tenantId),
+            },
+          });
+          const json = await r.json();
+          const domains = Array.isArray(json?.domains) ? json.domains : [];
+          for (const domain of domains) {
+            const journey = (domain.journeys || []).find((j: any) => /support|ticket|atendimento/i.test(String(j.journeyName || j.journeyId || '')));
+            if (journey) {
+              return { ok: true, domainId: domain.id, domainName: domain.name || domain.id, journeyName: journey.journeyName || journey.journeyId };
+            }
+          }
+          return { ok: false, dominios: domains.map((d: any) => `${d.id}:${(d.journeys || []).length}`) };
+        } catch (error) {
+          return { ok: false, erro: String((error as Error)?.message || error) };
+        }
+      });
+
+      if (!dominioDaJornada.ok) {
+        throw new Error(JSON.stringify({
+          status: 'NO_GO',
+          reason: 'PRECONDITION_FAILED',
+          missing: ['journey_with_support_scenario na API: ' + JSON.stringify(dominioDaJornada)],
+        }));
+      }
+
+      // Seleciona o DOMÍNIO dono da jornada (pill do topo) e espera a árvore popular com ele.
+      const pillDoDominio = page.locator('.qa-domain-pill', { hasText: new RegExp(String(dominioDaJornada.domainName), 'i') }).first();
+      if (await pillDoDominio.isVisible().catch(() => false)) {
+        await pillDoDominio.click({ timeout: 15000 });
+      }
+      const jornadaAlvo = page
+        .locator('.qa-journey-tree-journey', { hasText: String(dominioDaJornada.journeyName) })
+        .first();
+      await expect(jornadaAlvo).toBeVisible({ timeout: 20000 });
+      await jornadaAlvo.click({ timeout: 15000 });
+      // O "tab" Cenários NÃO EXISTE MAIS (medido 2026-10-30, execução local com a árvore já selecionada):
+      // a lista de cenários virou uma SEÇÃO sempre visível (`QaWavesPage.jsx:1440`) e o clique num
+      // controle inexistente consumia os 420 s inteiros do teste. A espera pelo botão do cenário é
+      // limitada e nomeia o que existe quando ele não aparece.
       const runnableScenarioButton = page
         .locator('button', { hasText: 'support-inbox-nota-ui@' })
         .first();

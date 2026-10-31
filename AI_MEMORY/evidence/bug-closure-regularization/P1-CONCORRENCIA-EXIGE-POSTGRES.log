@@ -1,0 +1,197 @@
+  console.error
+    [2026-10-23T16:34:18.542Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/tenantAIService.js:13:71)
+      at Object.require (api/services/engineeringRouter/engineeringModelAvailabilityService.js:35:57)
+      at Object.require (api/services/engineeringRouter/engineeringRouterService.js:36:53)
+      at Object.require (tests/integration/engineeringRouterConcurrentRunHttp.test.js:21:34)
+
+  console.info
+    [2026-10-23T16:34:18.763Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-10-23T16:34:18.900Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "9d309ee3-7fa3-4d53-864f-da65884f5686",
+      "runnerId": "http-unknown-42e0e416-ce73-4148-b368-7c6c04db9764",
+      "fence": 1,
+      "pid": 3417662
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-10-23T16:34:18.928Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "system",
+      "tenant_id": "3b7ec7e9-e773-420c-ae31-2c09884f70c9",
+      "tenant_key": "system"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.error
+    [2026-10-23T16:34:19.027Z] [ERROR] [TenantAIService] Erro ao obter API key descriptografada:
+    {
+      "message": "Erro ao descriptografar: Unsupported state or unable to authenticate data",
+      "stack": "Error: Erro ao descriptografar: Unsupported state or unable to authenticate data\n    at decrypt (/tmp/rbc-audit/api/utils/crypto.js:132:11)\n    at decrypt (/tmp/rbc-audit/api/services/tenantAIService.js:354:12)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /tmp/rbc-audit/api/services/engineeringRouter/engineeringModelAvailabilityService.js:131:22\n    at async Promise.all (index 2)"
+    }
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at error (api/services/tenantAIService.js:356:12)
+      at api/services/engineeringRouter/engineeringModelAvailabilityService.js:131:22
+          at async Promise.all (index 2)
+
+  console.warn
+    [2026-10-23T16:34:19.031Z] [WARN] [engineeringModelAvailability] falha ao descobrir modelos reais do provider
+    {
+      "providerId": "deepseek",
+      "error": "Erro ao descriptografar: Unsupported state or unable to authenticate data"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringRouter/engineeringModelAvailabilityService.js:152:14)
+          at async Promise.all (index 2)
+
+  console.error
+    [2026-10-23T16:34:19.101Z] [ERROR] [TenantAIService] Erro ao obter API key descriptografada:
+    {
+      "message": "Erro ao descriptografar: Unsupported state or unable to authenticate data",
+      "stack": "Error: Erro ao descriptografar: Unsupported state or unable to authenticate data\n    at decrypt (/tmp/rbc-audit/api/utils/crypto.js:132:11)\n    at decrypt (/tmp/rbc-audit/api/services/tenantAIService.js:354:12)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /tmp/rbc-audit/api/services/engineeringRouter/engineeringModelAvailabilityService.js:131:22\n    at async Promise.all (index 5)"
+    }
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at error (api/services/tenantAIService.js:356:12)
+      at api/services/engineeringRouter/engineeringModelAvailabilityService.js:131:22
+          at async Promise.all (index 5)
+
+  console.warn
+    [2026-10-23T16:34:19.103Z] [WARN] [engineeringModelAvailability] falha ao descobrir modelos reais do provider
+    {
+      "providerId": "kimi",
+      "error": "Erro ao descriptografar: Unsupported state or unable to authenticate data"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringRouter/engineeringModelAvailabilityService.js:152:14)
+          at async Promise.all (index 5)
+
+  console.error
+    [2026-10-23T16:34:19.179Z] [ERROR] [TenantAIService] Erro ao obter API key descriptografada:
+    {
+      "message": "Erro ao descriptografar: Unsupported state or unable to authenticate data",
+      "stack": "Error: Erro ao descriptografar: Unsupported state or unable to authenticate data\n    at decrypt (/tmp/rbc-audit/api/utils/crypto.js:132:11)\n    at decrypt (/tmp/rbc-audit/api/services/tenantAIService.js:354:12)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at /tmp/rbc-audit/api/services/engineeringRouter/engineeringModelAvailabilityService.js:131:22\n    at async Promise.all (index 6)"
+    }
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at error (api/services/tenantAIService.js:356:12)
+      at api/services/engineeringRouter/engineeringModelAvailabilityService.js:131:22
+          at async Promise.all (index 6)
+
+  console.warn
+    [2026-10-23T16:34:19.181Z] [WARN] [engineeringModelAvailability] falha ao descobrir modelos reais do provider
+    {
+      "providerId": "qwen",
+      "error": "Erro ao descriptografar: Unsupported state or unable to authenticate data"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringRouter/engineeringModelAvailabilityService.js:152:14)
+          at async Promise.all (index 6)
+
+  console.error
+    [2026-10-23T16:34:19.223Z] [ERROR] [engineeringRouterService] beginRun: execução em background falhou
+    {
+      "taskId": "9d309ee3-7fa3-4d53-864f-da65884f5686",
+      "error": "ConnectionManager.getConnection was called after the connection manager was closed!"
+    }
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at error (api/services/engineeringRouter/engineeringRouterService.js:963:28)
+
+  console.info
+    [2026-10-23T16:34:19.329Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/engineeringRouterConcurrentRunHttp.test.js
+  ER-V1-SEAL-002 — concurrent start via HTTP real (POST /engineering/tasks/:id/run)
+    ✓ duas requisições HTTP reais e simultâneas para a mesma task: só uma é aceita (202), a outra recebe 409 real (435 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        2.087 s, estimated 4 s
+Ran all test suites matching /tests\/integration\/engineeringRouterConcurrentRunHttp.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,39 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/qa-mesh/meshZeroResultsPromotion.test.js (5.674 s)
+  §2.1 — zero cenários não promove
+    ✓ lista vazia ⇒ MESH_SEM_RESULTADOS (107 ms)
+    ✓ results ausente/malformado ⇒ não promove (fail-closed) (104 ms)
+  §2.2 — resultado fabricado ou sem identidade não promove
+    ✓ objeto fora do contrato (sem janela de execução e sem evidência) (104 ms)
+    ✓ resultado não-objeto ⇒ MESH_RESULTADO_MALFORMADO (105 ms)
+    ✓ startedAt posterior a finishedAt ⇒ malformado (102 ms)
+    ✓ sintético / importado / reaproveitado ⇒ não promove (104 ms)
+    ✓ identidade de execução incompleta ⇒ MESH_SEM_IDENTIDADE_DE_EXECUCAO (103 ms)
+  §2.3 — resultado de outro run / anterior ao run não promove
+    ✓ runId do resultado difere do run da execução (102 ms)
+    ✓ sourceCommit do resultado difere do código avaliado (102 ms)
+    ✓ resultado iniciado ANTES do run ⇒ evidência reaproveitada (102 ms)
+  §2.4 — SKIPPED/NOT_EXECUTED/UNKNOWN não promovem
+    ✓ status SKIPPED não prova execução (100 ms)
+    ✓ status NOT_EXECUTED não prova execução (102 ms)
+    ✓ status UNKNOWN não prova execução (101 ms)
+    ✓ status PENDING não prova execução (101 ms)
+    ✓ status BLOCKED não prova execução (101 ms)
+    ✓ status skipped não prova execução (102 ms)
+    ✓ lista mista com um SKIPPED já derruba a promoção (101 ms)
+    ✓ o conjunto de status não-executados é explícito (nunca heurística) (102 ms)
+  §2.5 — execução válida promove (controle positivo)
+    ✓ resultado completo e identidade coerente ⇒ permitido (103 ms)
+    ✓ promoção desabilitada pelo pipeline continua desabilitada, sem motivo de defeito (103 ms)
+  §2.6/§2.7 — o caminho REAL de escrita é gated pela decisão
+    ✓ a decisão precede a escrita dos artefatos governados (104 ms)
+    ✓ o escritor canônico é a própria decisão (writeCanonicalOutputs rebaixado na recusa) (106 ms)
+    ✓ a recusa deixa evidência diagnóstica sem simular aprovação (105 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       23 passed, 23 total
+Snapshots:   0 total
+Time:        5.738 s, estimated 6 s
+Ran all test suites matching /tests\/unit\/qa-mesh\/meshZeroResultsPromotion.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,14 @@
+{
+  "id": "H14-CDR-SUPERVISIONADO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H14-CDR-SUPERVISIONADO.log",
+  "draft": "governance/bug-closure/proofs-drafts/H14-CDR-SUPERVISIONADO.json",
+  "camposParaAssinar": 18
+}

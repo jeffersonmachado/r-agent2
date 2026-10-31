@@ -1,0 +1,14 @@
+{
+  "id": "P1-10",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Self-engineering E2E governado (relatorio agregado obsoleto)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-10.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-10.json",
+  "camposParaAssinar": 18
+}

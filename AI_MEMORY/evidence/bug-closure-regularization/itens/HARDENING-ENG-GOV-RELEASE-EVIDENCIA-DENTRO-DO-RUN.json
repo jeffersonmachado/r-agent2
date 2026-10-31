@@ -1,0 +1,17 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.json",
+  "camposParaAssinar": 18
+}

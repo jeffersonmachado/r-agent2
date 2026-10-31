@@ -294,5 +294,41 @@ delta de campos visíveis + `aria-expanded`), nunca por contagem de nós genéri
   ruído e esconde o defeito real (foi exatamente o caso — a quebra de hooks só
   apareceu quando os falsos positivos saíram do caminho).
 
+## LRO no QA Waves — validado no browser real (2026-10-31)
 
+Stack usada na medição: worktree `er-fixci`, API `3101` (código atual), Vite `5199` com
+`VITE_PROXY_TARGET=http://127.0.0.1:3101`, login `systemadmin` / tenant `system`.
 
+- `/dev/qa-waves` → painel `Operações (LRO)` (colapsado por padrão) lista operações REAIS do
+  PostgreSQL: `qa_waves · Em execução · 2/3 scenario` e `qa_waves · Na fila · 0/3 scenario`.
+- Clicar na operação abre `Detalhe da operação` com `conexão: ao vivo · último evento: 4` e os
+  eventos `CREATED → QUEUED → RUNNING → PROGRESS` vindos por SSE (rota `/api/lro/:id/events`).
+
+**Defeito REAL encontrado e corrigido nesta validação** (não aparecia em teste unitário): o detalhe
+abria em `conexão: reconectando` e a requisição SSE voltava `400 {"error":"tenant_required"}` — a
+rota resolve o tenant por `X-Tenant-Id`, e `QaWavesPage` montava o painel só com `token`. O hook
+`useLroStream` agora herda os cabeçalhos da sessão (`getAuthHeaders()`), então nenhum chamador pode
+esquecer o tenant; opções explícitas continuam vencendo. Regressão em
+`frontend/src/shared/useLroStream.test.jsx`.
+
+**WebSocket desconectado no dev — CAUSA ENCONTRADA E CORRIGIDA (2026-10-31)**. Eram DOIS defeitos
+somados, ambos medidos:
+
+1. **URL errada (código)**: `frontend/src/utils/wsUrl.js` tratava o PRIMEIRO SEGMENTO DO PATHNAME
+   como prefixo de deployment. Servido na raiz, o pathname é a ROTA: em `/dev/qa-waves` o cliente
+   tentava `ws://host/dev/ws`, em `/login` tentava `ws://host/login/ws`. O servidor WS da API
+   escuta em `/ws` (`api/services/websocketService.js`, `new WebSocketServer({ path: '/ws' })`),
+   então todo handshake ia para caminho inexistente. Além disso o branch de dev usava porta padrão
+   `3000`, com a API em `3001`. Correção: o prefixo vem do `base` do build (`BASE_URL` do Vite,
+   alimentado por `VITE_BASE_PATH`); na raiz o caminho é sempre `/ws`; `VITE_API_DEV_PORT` só é
+   usado quando o frontend fala direto com a API (sem proxy).
+2. **Proxy ausente (dev server)**: `frontend/vite.config.mjs` tinha 55 entradas de proxy HTTP e
+   NENHUMA com `ws: true`. Mesmo com a URL certa o upgrade não acontecia. Correção: entrada
+   `'^/ws'` com `ws: true` apontando para a API.
+
+Prova no browser real: `new WebSocket('ws://127.0.0.1:5199/ws')` → `open`, e o contexto registra
+`[WebSocketContext] Resposta de autenticação recebida { type: "auth", status: "success" }`. Antes o
+console mostrava `ws://127.0.0.1:5199/dev/ws failed: WebSocket opening handshake timed out`.
+
+O LRO não dependia disso (usa SSE sobre HTTP), o que é exatamente por que o piloto de operações
+funcionava enquanto o realtime geral estava fora.

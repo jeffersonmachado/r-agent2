@@ -1,0 +1,14 @@
+{
+  "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Teste de unidade regravava artefato governado e derrubava a integridade temporal",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log",
+  "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.json",
+  "camposParaAssinar": 18
+}

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "80d1e0c3-5653-4b88-b03a-7d009624553a",
+  "defectId": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "qa-mesh/__tests__/scheduler.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "qa-mesh/__tests__/scheduler.test.js",
+      "command": "npx jest qa-mesh/__tests__/scheduler.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T20:00:22.278Z",
+      "finishedAt": "2026-10-31T20:00:26.164Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+      "outputSha256": "c54c3fef58e8e0b1da0d93b9bba2a392f76cd547a03adda574b7446ab3b9b397"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "qa-mesh/__tests__/scheduler.test.js",
+      "sha256": "f1a9e9ab121dce205d14254b97861d5afe66777227fda56001b72d799c8feb72"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T20:00:26.170Z",
+  "proofHash": "e6a212a5028a66f310954bb7b28f9bbb0fdfe2df5efae57ac09507a22b46450d",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "6SGmRUkCT3StNycStZ4aNeK5uyvsl33YW3VrNOEw14dNqyMzu0G+gGvKSSDpYGLLYHGWweiN7Qk7Sk694xDmAw==",
+    "signedAt": "2026-10-31T20:03:01.543Z"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Ponteiros de fechamento na raiz estao stale e nenhum gate os mantem",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

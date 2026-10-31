@@ -1,0 +1,14 @@
+{
+  "id": "N5-REENTREGA",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Reentregar o release depois das melhorias N1-N3 (ciclo de selagem pos-commit em superficie provada)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log",
+  "draft": "governance/bug-closure/proofs-drafts/N5-REENTREGA.json",
+  "camposParaAssinar": 18
+}

@@ -4,7 +4,17 @@
  * Executa ações gravadas usando Playwright.
  */
 
-const { chromium } = require('playwright');
+/**
+ * Playwright é carregado TARDIO. Medição (2026-10-25, `require('api/server')` frio = 4.678 ms /
+ * 7.204 módulos): `playwright` sozinho custa ~990 ms e entrava no boot da API por esta cadeia —
+ * `api/server` → rpaService → rpaTestRunner → actionExecutor. Quem sobe a API para servir HTTP não
+ * precisa do browser; quem executa RPA continua recebendo o MESMO objeto no primeiro uso.
+ */
+let chromiumCarregado = null;
+function obterChromium() {
+  if (!chromiumCarregado) chromiumCarregado = require('playwright').chromium;
+  return chromiumCarregado;
+}
 const config = require('./rpaConfig');
 const { ErrorDetector } = require('./errorDetection');
 const { ErrorRecovery } = require('./errorRecovery');
@@ -802,7 +812,7 @@ class ActionExecutor {
    * Inicializa browser e página.
    */
   async init() {
-    const launchResult = await launchChromiumWithFallback(chromium, {
+    const launchResult = await launchChromiumWithFallback(obterChromium(), {
       headless: this.options.headless,
       slowMo: this.options.slowMo,
       devtools: this.options.devtools, // Abre DevTools se solicitado

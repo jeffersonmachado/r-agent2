@@ -125,8 +125,24 @@ async function runInSandbox({ executable, args, cwd, env, timeoutMs, network = '
       cancelled.code = 'OPERATION_CANCELLED';
       throw cancelled;
     }
-    logger.warn('[engineeringRunnerClient] falha ao alcançar o Engineering Runner', { executionId, error: err.message });
-    throw sandboxUnavailable(`falha ao alcançar o Engineering Runner em ${runnerUrl()}: ${err.message}`);
+    // DIAGNÓSTICO DA CAUSA (medido 2026-10-21, run 39660840381): `err.message` de uma
+    // falha do `fetch` do Node/undici é SEMPRE a string genérica "fetch failed" — o que
+    // distingue ECONNREFUSED (ninguém escutando na porta) de UND_ERR_CONNECT_TIMEOUT
+    // (algo escutando, mas sem responder) ou de ECONNRESET vive em `err.cause`. Sem
+    // registrar url/cause, o log do gate mostrou 9× "fetch failed" e a causa teve de ser
+    // caçada por correlação de tempo — exatamente o tipo de evidência que o gate deve
+    // produzir sozinho.
+    const causa = err && err.cause ? {
+      code: err.cause.code || null,
+      message: err.cause.message || null,
+    } : null;
+    logger.warn('[engineeringRunnerClient] falha ao alcançar o Engineering Runner', {
+      executionId,
+      error: err.message,
+      url: runnerUrl(),
+      causa,
+    });
+    throw sandboxUnavailable(`falha ao alcançar o Engineering Runner em ${runnerUrl()}: ${err.message}${causa && causa.code ? ` (${causa.code})` : ''}`);
   } finally {
     clearTimeout(timer);
     if (signal) signal.removeEventListener('abort', onCallerAbort);

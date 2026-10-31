@@ -26,7 +26,7 @@ const {
   sha256,
 } = require('../../../scripts/ci/phase-step-contract');
 
-const { PASSOS, parseFases, decidirVeredito } = require('../../../scripts/ci/dev-branch-gate.js');
+const { PASSOS, parseFases, decidirVeredito, FASES_OBRIGATORIAS_VALIDACAO_COMPLETA } = require('../../../scripts/ci/dev-branch-gate.js');
 
 const SHA = '511ae5249d906eca21d2cb1f818b110e09ca896f';
 const RUN = 'exec-p0-01';
@@ -87,11 +87,56 @@ function validar(resultados, { definicao = DEFINICAO_D, contexto = CONTEXTO, tim
   });
 }
 
-describe('P0-01 — contrato de cobertura: a fase D tem 7 passos obrigatórios', () => {
-  test('a definição canônica da fase D expõe exatamente 7 passos obrigatórios', () => {
-    expect(IDS_D).toHaveLength(7);
-    expect(new Set(IDS_D).size).toBe(7);
+const TOTAL_D = IDS_D.length;
+
+describe('P0-01 — contrato de cobertura: a fase D é o conjunto EXATO de integridade de desenvolvimento', () => {
+  test('a fase D contém só gates de desenvolvimento, na ordem canônica', () => {
+    // MISSÃO 2026-10-22: a certificação de release (cadeia, self-proving, decisão canônica) saiu de D
+    // para a fase R. Este teste PINa o conjunto — mover um gate de escopo sem atualizar o contrato
+    // falha aqui em vez de passar silenciosamente.
+    expect(IDS_D).toEqual([
+      'L1-release-dag',
+      'L1-fila-oficial',
+      'L1-ai-memory',
+      'L1-aderencia-agente',
+    ]);
+    expect(new Set(IDS_D).size).toBe(TOTAL_D);
     expect(Object.isFrozen(PASSOS)).toBe(true);
+  });
+
+  test('a fase R (certificação de release) é obrigatória para validação completa', () => {
+    const idsR = passosObrigatoriosDaFase(PASSOS.R);
+    // Fase 3 (missão D): a asserção de ESTADO CANÔNICO das projeções saiu do L2 (dependia de
+    // `governance/rap-master-scorecard.json`, artefato de run governado) e passou a ser exigida
+    // AQUI — o controle de certificação continua obrigatório, apenas no lugar certo.
+    expect(idsR).toEqual([
+      'L1-cadeia-criptografica',
+      'L1-self-proving',
+      'L1-projecao-estado-canonico',
+      'L1-decisao-canonica',
+    ]);
+    const certificacao = PASSOS.R.find((p) => p.id === 'L1-projecao-estado-canonico');
+    expect(certificacao.comando).toContain('test:certification');
+    // Se R deixar de ser obrigatória, "validação completa" passaria a não exigir certificação de
+    // release — exatamente o furo que a separação existe para evitar.
+    expect(FASES_OBRIGATORIAS_VALIDACAO_COMPLETA).toContain('R');
+  });
+
+  /**
+   * Defeito medido no runner (CI 2026-10-24, run 40105995013): o L0 reprovou com `GRAPH_ABSENT`
+   * porque a suíte consome artefatos ignorados pelo git e o gate cobrava a suíte sem produzi-los.
+   * O vermelho era real e reprodutível (reports/ vazio ⇒ exit=1), mas nenhuma máquina de
+   * desenvolvimento o via: os artefatos sobreviviam de execuções anteriores. Sem esta asserção a
+   * ordem volta a ser acidental e o gate fica verde só em árvore suja.
+   */
+  test('o L0 é precedido pelo preparo dos artefatos canônicos que ele consome', () => {
+    const ids = PASSOS.C.map((p) => p.id);
+    const iArtefatos = ids.indexOf('L0a-artefatos-canoeiros');
+    const iSuite = ids.indexOf('L0-suite-oficial');
+    expect(iArtefatos).toBeGreaterThanOrEqual(0);
+    expect(iSuite).toBeGreaterThan(iArtefatos);
+    expect(PASSOS.C[iArtefatos].comando).toBe('npm run ci:artifacts');
+    expect(PASSOS.C[iArtefatos]['continue-on-error']).toBeUndefined();
   });
 });
 
@@ -101,23 +146,23 @@ describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {
     expect(r.estado).toBe(ESTADOS.NOT_EXECUTED);
   });
 
-  test('2. apenas um passo aprovado em fase com sete obrigatórios', () => {
+  test('2. apenas um passo aprovado em fase com vários obrigatórios', () => {
     const r = validar([passoD(IDS_D[0])]);
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
     expect(r.motivo).toContain('PASSOS_AUSENTES');
-    expect(r.detalhes.ausentes).toHaveLength(6);
+    expect(r.detalhes.ausentes).toHaveLength(TOTAL_D - 1);
   });
 
   test('3. seis de sete passos aprovados', () => {
-    const r = validar(conjuntoCompleto().slice(0, 6));
+    const r = validar(conjuntoCompleto().slice(0, TOTAL_D - 1));
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
-    expect(r.detalhes.ausentes).toEqual([IDS_D[6]]);
+    expect(r.detalhes.ausentes).toEqual([IDS_D[TOTAL_D - 1]]);
   });
 
   test('4. sete resultados com um id duplicado e outro ausente', () => {
     const sete = conjuntoCompleto();
     // remove o último obrigatório e duplica o primeiro: continua "7 resultados"
-    const fraudulento = [...sete.slice(0, 6), passoD(IDS_D[0])];
+    const fraudulento = [...sete.slice(0, TOTAL_D - 1), passoD(IDS_D[0])];
     const r = validar(fraudulento);
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
     expect(r.motivo).toContain('PASSO_DUPLICADO');
@@ -141,14 +186,14 @@ describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {
 
   test('7. RunId divergente', () => {
     const outro = conjuntoCompleto();
-    outro[4] = passoD(IDS_D[4], { execucaoId: 'exec-anterior' });
+    outro[TOTAL_D - 1] = passoD(IDS_D[TOTAL_D - 1], { execucaoId: 'exec-anterior' });
     const r = validar(outro);
     expect(r.estado).toBe(ESTADOS.UNKNOWN);
     expect(r.motivo).toContain('EVIDENCIA_DE_OUTRA_EXECUCAO');
   });
 
   test('8. passo desconhecido no lugar de um obrigatório', () => {
-    const invadido = conjuntoCompleto().slice(0, 6);
+    const invadido = conjuntoCompleto().slice(0, TOTAL_D - 1);
     invadido.push(passoD('L1-passo-inventado'));
     const r = validar(invadido);
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
@@ -164,7 +209,7 @@ describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {
 
   test('10. passo obrigatório com UNKNOWN', () => {
     const parcial = conjuntoCompleto();
-    parcial[5] = passoD(IDS_D[5], { status: 'UNKNOWN' });
+    parcial[TOTAL_D - 2] = passoD(IDS_D[TOTAL_D - 2], { status: 'UNKNOWN' });
     const r = validar(parcial);
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
     expect(r.motivo).toContain('PASSO_EM_ESTADO_NAO_APROVADO');
@@ -172,7 +217,7 @@ describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {
 
   test('11. passo obrigatório com SKIPPED não autorizado', () => {
     const parcial = conjuntoCompleto();
-    parcial[6] = passoD(IDS_D[6], { status: 'SKIPPED' });
+    parcial[TOTAL_D - 1] = passoD(IDS_D[TOTAL_D - 1], { status: 'SKIPPED' });
     const r = validar(parcial);
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
     expect(r.motivo).toContain('PASSO_PULADO_NAO_AUTORIZADO');
@@ -217,7 +262,7 @@ describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {
 
   test('17. evidência alterada depois da execução', () => {
     const adulterado = conjuntoCompleto();
-    fs.appendFileSync(adulterado[5].saidaRef, '\nlinha injetada apos a execucao', 'utf8');
+    fs.appendFileSync(adulterado[TOTAL_D - 1].saidaRef, '\nlinha injetada apos a execucao', 'utf8');
     const r = validar(adulterado);
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
     expect(r.motivo).toContain('EVIDENCIA_ADULTERADA');
@@ -264,7 +309,7 @@ describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {
 
   test('21. execução parcial interrompida (resultado sem exit code)', () => {
     const interrompido = conjuntoCompleto();
-    delete interrompido[4].exitCode;
+    delete interrompido[TOTAL_D - 1].exitCode;
     const r = validar(interrompido);
     expect(r.estado).toBe(ESTADOS.BLOCKED);
   });
@@ -278,7 +323,7 @@ describe('P0-01 — 23 cenários inválidos NUNCA produzem PASS', () => {
     }));
     const r = validar(fraudulento);
     expect(r.estado).toBe(ESTADOS.INCOMPLETE);
-    expect(r.detalhes.esperados).toHaveLength(7);
+    expect(r.detalhes.esperados).toHaveLength(TOTAL_D);
   });
 
   test('23. tentativa de falsificar o número de passos', () => {
@@ -298,7 +343,7 @@ describe('P0-01 — o cenário legítimo continua APROVADO (não vacuidade)', ()
     const r = validar(conjuntoCompleto());
     expect(r.motivo).toBeNull();
     expect(r.estado).toBe(ESTADOS.PASS);
-    expect(r.detalhes.aprovados).toBe(7);
+    expect(r.detalhes.aprovados).toBe(TOTAL_D);
   });
 
   test('o mesmo conjunto SEM uma evidência passa a INCOMPLETE (o PASS depende do contrato)', () => {
@@ -312,14 +357,10 @@ describe('P0-01 — o cenário legítimo continua APROVADO (não vacuidade)', ()
 
 describe('P0-01 — integração com decidirVeredito', () => {
   test('fase D INCOMPLETE nunca vira PASS global', () => {
-    const estados = [
-      { fase: 'A', estado: 'PASS' },
-      { fase: 'B', estado: 'NOT_APPLICABLE' },
-      { fase: 'C', estado: 'PASS' },
-      { fase: 'D', estado: 'INCOMPLETE' },
-      { fase: 'E', estado: 'PASS' },
-      { fase: 'F', estado: 'PASS' },
-    ];
+    const estados = FASES_OBRIGATORIAS_VALIDACAO_COMPLETA.map((fase) => ({
+      fase,
+      estado: fase === 'D' ? 'INCOMPLETE' : (fase === 'A' ? 'PASS' : (fase === 'B' ? 'NOT_APPLICABLE' : 'PASS')),
+    }));
     expect(decidirVeredito({ entradaInvalida: null, identidade: { ok: true }, estados })).toBe('INCONCLUSIVO');
   });
 });

@@ -1,0 +1,31 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/v2SealOrchestration.test.js
+  seal V2 — orquestração
+    sequência real
+      ✓ não tem violação de ordem entre fases (108 ms)
+      ✓ todo passo tem fase conhecida, descrição e uma implementação declarada (150 ms)
+      ✓ GERAR e VERIFICAR o envelope são passos SEPARADOS, e verificar depende de gerar (107 ms)
+      ✓ nada depois da DECISÃO tem poder de decisão (não a reescreve nem rebaixa o selo) (106 ms)
+      ✓ existe um passo que exercita o CRASH REAL da task (não só a decisão de recuperação) (103 ms)
+      ✓ o passo de recuperação REAL de task carrega o .env (senão falha por configuração, não por produto) (104 ms)
+      ✓ o verificador de recuperação REAL de task declara escopo diferido (contrato da Fase 9) (102 ms)
+    detecção de violação de ordem (não-vacuidade)
+      ✓ dependência de fase POSTERIOR é detectada como SEAL_PHASE_ORDER_VIOLATION (102 ms)
+      ✓ auto-dependência e ciclo curto também são violação (fase própria não é anterior) (105 ms)
+      ✓ dependência inexistente é reportada (não silenciada) (102 ms)
+      ✓ mesma fase pode depender entre si (ordem dentro da fase é livre) (102 ms)
+    estados declarados
+      ✓ ausência de credencial tem estado PRÓPRIO (nunca PASS, nunca FAIL genérico) (102 ms)
+    derivação do STATUS GLOBAL
+      ✓ todos os passos obrigatórios PASS ⇒ GO (102 ms)
+      ✓ passo OBRIGATÓRIO em FAIL ⇒ NO_GO (fail-closed, com o ID nomeado) (103 ms)
+      ✓ passo NÃO obrigatório em FAIL ⇒ GO, com a falha DECLARADA como pendência de evidência (105 ms)
+      ✓ passo não executado (retomada com --from) ⇒ NO_GO (não se presume o que não rodou) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        2.194 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/v2SealOrchestration.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

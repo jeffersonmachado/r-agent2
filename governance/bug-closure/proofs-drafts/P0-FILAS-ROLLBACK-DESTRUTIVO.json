@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "cf8d4ca1-ee15-4fe4-9169-32e2035fb8eb",
+  "defectId": "P0-FILAS-ROLLBACK-DESTRUTIVO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/queueCreatePersistBeforeResponse.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+      "command": "npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:35:19.688Z",
+      "finishedAt": "2026-10-31T19:35:22.206Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
+      "outputSha256": "723aa01f3e12b1c38127b36a107a08246def4450e014a3fe25473dc915d192f7"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+      "sha256": "9512984c1b0721bd22feae7ea6ac8c5f430ff87ccf764c10094cd14381b6bb1a"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:35:22.211Z",
+  "proofHash": "a1be45754c8c4685ae5535afaa9a4686dcf481e889cb0e1199d9291755014fa1"
+}

@@ -20,6 +20,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const {
   ESTADOS,
@@ -28,15 +29,62 @@ const {
   eBloqueanteParaCertificacao,
   estaAberto,
 } = require('./defect-states');
+const { verificarProvaDeFechamento } = require('./closure-proof');
+const { verificarLivro } = require('./transition-ledger');
+
+const ESTADOS_FECHADOS = Object.freeze([ESTADOS.VERIFIED, ESTADOS.RESOLVED]);
+
+/**
+ * Contexto de verificação de fechamento (Camada B).
+ *
+ * Sem prova válida, um item que DECLARA estado de fechamento NÃO deixa de bloquear
+ * operações certificantes: `stateEfetivo` volta a OPEN e o motivo fica registrado em
+ * `provaDeFechamento`. `RISK_ACCEPTED` continua usando o mecanismo próprio de aceite
+ * (assinatura + validade), que já é verificado em `eligibility.js`.
+ */
+function montarContextoDeFechamento(opcoes = {}) {
+  const rootDir = opcoes.rootDir || path.resolve(__dirname, '..', '..');
+  let livro = opcoes.livro;
+  if (!livro) {
+    const l = verificarLivro(rootDir, opcoes.livroPath);
+    livro = { eventos: l.eventos, integridadeOk: l.integridadeOk, problemas: l.problemas };
+  }
+  return {
+    rootDir,
+    currentCommit: opcoes.currentCommit || null,
+    currentFingerprint: opcoes.currentFingerprint || null,
+    autoridades: opcoes.autoridades,
+    ancoragem: opcoes.ancoragem,
+    livro,
+    agora: opcoes.agora,
+    existeArquivo: (rel) => fs.existsSync(path.join(rootDir, rel)),
+  };
+}
+
+function carregarProvaDoItem(item, ctx) {
+  const declarada = item && (item.closureProof || item.provaDeFechamento);
+  if (!declarada) return null;
+  if (typeof declarada === 'object') return declarada;
+  if (typeof declarada === 'string') {
+    const abs = path.isAbsolute(declarada) ? declarada : path.join(ctx.rootDir, declarada);
+    try {
+      return JSON.parse(fs.readFileSync(abs, 'utf8'));
+    } catch (_) {
+      return { __ilegivel: declarada };
+    }
+  }
+  return null;
+}
 
 const CODIGOS = Object.freeze({
   FILA_AUSENTE: 'FILA_AUSENTE',
   FILA_ILEGIVEL: 'FILA_ILEGIVEL',
   FILA_MALFORMADA: 'FILA_MALFORMADA',
+  OVERRIDE_DE_INVENTARIO_RECUSADO: 'OVERRIDE_DE_INVENTARIO_RECUSADO',
 });
 
 /** Migra um item legado para o contrato canônico de defeito. */
-function migrarItem(item) {
+function migrarItem(item, opcoesDeFechamento = null) {
   const legacyStatus = String((item && item.status) || '').toLowerCase();
 
   // ── AUTORIDADE DO ESTADO (defeito medido 2026-10-17) ─────────────────────
@@ -71,8 +119,38 @@ function migrarItem(item) {
     touches: Array.isArray(item.touches) ? item.touches : [],
   };
 
-  defeito.aberto = estaAberto(defeito);
-  defeito.bloqueanteParaCertificacao = eBloqueanteParaCertificacao(defeito);
+  // ── CAMADA B: PROVA DE FECHAMENTO ────────────────────────────────────────
+  // O `state` declarado é PROJEÇÃO. Quem decide se o defeito ainda bloqueia
+  // certificação é a prova verificada contra o código ATUAL, o livro de transições
+  // e a assinatura de autoridade registrada. Sem prova válida, um `RESOLVED`
+  // escrito à mão continua bloqueando (defeito do bypass de 2026-10-22).
+  defeito.estadoDeclarado = estado;
+  defeito.stateEfetivo = estado;
+  defeito.provaDeFechamento = null;
+  defeito.fechamentoNaoProvado = false;
+
+  if (ESTADOS_FECHADOS.includes(estado)) {
+    if (!opcoesDeFechamento) {
+      // Sem contexto NÃO se presume fechado: fail-closed explícito.
+      defeito.fechamentoNaoProvado = true;
+      defeito.provaDeFechamento = { ok: false, code: 'CONTEXTO_DE_VERIFICACAO_AUSENTE', reasons: ['CONTEXTO_DE_VERIFICACAO_AUSENTE'] };
+    } else {
+      const prova = carregarProvaDoItem(item, opcoesDeFechamento);
+      const veredito = prova && prova.__ilegivel
+        ? { ok: false, code: 'PROVA_MALFORMADA', reasons: ['PROVA_MALFORMADA'] }
+        : (prova
+          ? verificarProvaDeFechamento(prova, { ...opcoesDeFechamento, defeito })
+          : { ok: false, code: 'PROVA_DE_FECHAMENTO_AUSENTE', reasons: ['PROVA_DE_FECHAMENTO_AUSENTE'] });
+      defeito.provaDeFechamento = { ok: veredito.ok, code: veredito.code || null, reasons: veredito.reasons || [], detalhe: veredito.detalhe || {} };
+      if (!veredito.ok) {
+        defeito.fechamentoNaoProvado = true;
+        defeito.stateEfetivo = ESTADOS.OPEN;
+      }
+    }
+  }
+
+  defeito.aberto = estaAberto({ ...defeito, state: defeito.stateEfetivo });
+  defeito.bloqueanteParaCertificacao = eBloqueanteParaCertificacao({ ...defeito, state: defeito.stateEfetivo });
   return defeito;
 }
 
@@ -87,11 +165,49 @@ function carregarInventario(opcoes = {}) {
   // Aqui o caminho é resolvido numa variável e lido depois, então `path.join`
   // virava "alvo de ESCRITA fantasma" da fila no inventário. `path.resolve`
   // produz o mesmo caminho sem o falso positivo.
+  // ALERT 2 (revisor independente, P0): a variável de ambiente era um bypass de UM comando —
+  // `BUG_CLOSURE_INVENTORY_PATH=/tmp/vazia.json node ...` fazia `{"items":[]}` conceder
+  // ALLOWED para SELO_FINAL. Override de caminho só vale em contexto EXPLÍCITO de teste;
+  // em qualquer execução normal (gate, CI, release) o caminho é o oficial, sempre.
+  const overrideAmbiente = process.env.BUG_CLOSURE_INVENTORY_PATH
+    && String(process.env.BUG_CLOSURE_INVENTORY_PATH).trim();
+  const ambienteDeTeste = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+  const recusarOverride = (motivo) => {
+    const erro = new Error(`${CODIGOS.OVERRIDE_DE_INVENTARIO_RECUSADO}: ${motivo}`);
+    erro.code = CODIGOS.OVERRIDE_DE_INVENTARIO_RECUSADO;
+    return erro;
+  };
+  if (overrideAmbiente && !ambienteDeTeste) {
+    throw recusarOverride(
+      'BUG_CLOSURE_INVENTORY_PATH só é aceito em contexto de teste (NODE_ENV=test); '
+      + 'execução real usa o inventário oficial',
+    );
+  }
+  // Além do contexto de teste, o override tem de apontar para um FIXTURE VERSIONADO:
+  // um arquivo arbitrário (/tmp/vazio.json) não pode substituir a fila oficial, nem em teste.
+  if (overrideAmbiente) {
+    const raizRepo = path.resolve(__dirname, '..', '..');
+    const rel = path.relative(raizRepo, path.resolve(overrideAmbiente)).split(path.sep).join('/');
+    const dentroDeFixtures = rel.startsWith('tests/fixtures/');
+    let versionado = false;
+    if (dentroDeFixtures) {
+      try {
+        execFileSync('git', ['ls-files', '--error-unmatch', rel], { cwd: raizRepo, stdio: 'ignore' });
+        versionado = true;
+      } catch (_) { versionado = false; }
+    }
+    if (!dentroDeFixtures || !versionado) {
+      throw recusarOverride(
+        `BUG_CLOSURE_INVENTORY_PATH tem de apontar para fixture versionado em tests/fixtures/ `
+        + `(recebido: ${rel || overrideAmbiente})`,
+      );
+    }
+  }
   const queuePath = opcoes.queuePath
     // Override EXPLÍCITO para testes: sem ele, testes de RECUSA passam a depender do
     // estado vivo da fila e ficam vermelhos exatamente quando todos os defeitos são
     // fechados (medido em 2026-10-17). A política não muda: só o CAMINHO do inventário.
-    || (process.env.BUG_CLOSURE_INVENTORY_PATH && String(process.env.BUG_CLOSURE_INVENTORY_PATH).trim())
+    || (ambienteDeTeste ? overrideAmbiente : null)
     || path.resolve(__dirname, '..', '..', 'AI_MEMORY', 'hardening-queue.json');
 
   if (!fs.existsSync(queuePath)) {
@@ -115,7 +231,44 @@ function carregarInventario(opcoes = {}) {
     throw erro;
   }
 
-  const defeitos = fila.items.map(migrarItem);
+  // Só monta o contexto (e calcula fingerprint) quando ALGUM item declara fechamento:
+  // o cálculo percorre as fontes do repositório e não pode onerar toda leitura da fila.
+  const declaraFechamento = fila.items.some((i) => i && ESTADOS_FECHADOS.includes(String(i.state || '').toUpperCase()));
+  let contexto = opcoes.opcoesDeFechamento || null;
+  if (!contexto && declaraFechamento && (opcoes.currentCommit || opcoes.currentFingerprint || opcoes.livro)) {
+    contexto = montarContextoDeFechamento({
+      rootDir: opcoes.rootDir,
+      currentCommit: opcoes.currentCommit,
+      currentFingerprint: opcoes.currentFingerprint,
+      autoridades: opcoes.autoridades,
+      // Âncoras do chamador (teste/operador). Sem repasse, toda leitura considerava a prova
+      // SEM_ANCORA_DE_CONFIANCA mesmo quando o cenário tinha pin + âncora externa.
+      ancoragem: opcoes.ancoragem,
+      livro: opcoes.livro,
+      livroPath: opcoes.livroPath,
+      agora: opcoes.agora,
+    });
+  }
+  if (!contexto && declaraFechamento) {
+    let fingerprint = null;
+    try {
+      // eslint-disable-next-line global-require
+      fingerprint = require('../proof-engine/fingerprint-chain').computeSourceFingerprint(path.resolve(__dirname, '..', '..'));
+    } catch (_) {
+      fingerprint = null;
+    }
+    let commit = null;
+    try {
+      commit = execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: path.resolve(__dirname, '..', '..'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+    } catch (_) {
+      commit = null;
+    }
+    contexto = montarContextoDeFechamento({ currentCommit: commit, currentFingerprint: fingerprint });
+  }
+
+  const defeitos = fila.items.map((item) => migrarItem(item, contexto));
 
   const resumo = {
     total: defeitos.length,
@@ -136,6 +289,7 @@ function carregarInventario(opcoes = {}) {
     if (d.bloqueanteParaCertificacao) resumo.bloqueantesParaCertificacao += 1;
     if (d.aberto && !d.severity) resumo.semSeveridadeAbertos += 1;
     if (d.state === ESTADOS.BLOCKED_EXTERNAL) resumo.bloqueioExterno += 1;
+    if (d.fechamentoNaoProvado) resumo.fechamentoNaoProvado = (resumo.fechamentoNaoProvado || 0) + 1;
     if (d.state === ESTADOS.RISK_ACCEPTED) resumo.riscoAceito += 1;
   }
 
@@ -147,4 +301,4 @@ function carregarInventario(opcoes = {}) {
   };
 }
 
-module.exports = { carregarInventario, migrarItem, CODIGOS };
+module.exports = { carregarInventario, migrarItem, montarContextoDeFechamento, CODIGOS };

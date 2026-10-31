@@ -58,6 +58,20 @@ git cat-file -e "$COMMIT^{commit}" 2>/dev/null || {
   exit 1
 }
 
+# ── VÍNCULO ENTRE A DECISÃO E O COMMIT TAGUEADO (Fase 3, achado 4 da revisão) ──
+# `assert-canonical-release-decision` valida a árvore de trabalho; sem esta checagem qualquer sha
+# local passava a receber uma tag de "release", usando um GO de outro conteúdo. Quando existe run
+# governado corrente, o commit tagueado tem de ser o MESMO que ele selou.
+CURRENT_RUN="$REPO_ROOT/governance/.current-run.json"
+if [[ -f "$CURRENT_RUN" ]]; then
+  RUN_COMMIT="$(node -pe "try{JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).sourceCommit||''}catch(_){''}" "$CURRENT_RUN" 2>/dev/null || true)"
+  if [[ -n "$RUN_COMMIT" && "$RUN_COMMIT" != "$COMMIT" ]]; then
+    echo "[release-tag] ERRO: commit $COMMIT != sourceCommit do run governado ($RUN_COMMIT)" >&2
+    echo "[release-tag] A decisão canônica vale para o commit que ela selou — não para outro conteúdo." >&2
+    exit 1
+  fi
+fi
+
 # ── Conflito local: tag existente apontando para outro commit ────────────────
 if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>&1; then
   LOCAL_TARGET="$(git rev-parse "$TAG^{}")"
@@ -93,9 +107,25 @@ if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>&1; then
   echo "[release-tag] tag anotada $TAG criada em $COMMIT"
 fi
 
+# ── Porteiro de publicação (Fase 2, achado 1 da revisão independente) ─────────
+# O PUSH da tag de release é PUBLICAÇÃO e passa SEMPRE pelo porteiro. Na Fase 2 existia uma
+# dispensa por "remote local", classificada por `git remote get-url`; a Fase 3 demonstrou que isso
+# é contornável (`remote.*.pushurl` externo com fetch local, e `url.*.pushInsteadOf` reescrevendo
+# o destino) — a dispensa por string foi REMOVIDA. A única exceção é o modo local de teste
+# explícito (`RAP_RELEASE_TAG_LOCAL_REMOTE_ALLOW`), que não vale em CI/produção, recusa qualquer
+# regra de reescrita e exige que TODOS os destinos de push sejam exatamente o caminho autorizado.
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/governance/publication-gate.sh"
+rap_publication_gate "create-release-tag:$TAG" "$REMOTE"
+
+# ALVO DO PUSH: quando o porteiro liberou o modo local de teste, ele exportou o CAMINHO validado
+# (realpath, sem symlink). Empurrar para o caminho — e não para o nome do remote — elimina a classe
+# `remote.*.receivepack`/`pushurl` (o nome pode apontar para outro lugar; o caminho validado, não).
+PUSH_TARGET="${RAP_PUBLICATION_LOCAL_TARGET:-$REMOTE}"
+
 PUSH_LOG="$(mktemp)"
 PUSH_RC=0
-if ! git push "$REMOTE" "refs/tags/$TAG" >"$PUSH_LOG" 2>&1; then
+if ! git push "$PUSH_TARGET" "refs/tags/$TAG" >"$PUSH_LOG" 2>&1; then
   PUSH_RC=$?
   cat "$PUSH_LOG" >&2
   # BLOQUEIO DE POLÍTICA ≠ ERRO. MEDIDO (2026-10-13): neste repositório existe um
@@ -133,7 +163,7 @@ while read -r sha ref; do
   elif [[ "$ref" == "refs/tags/$TAG" && -z "$VERIFY_TARGET" ]]; then
     VERIFY_TARGET="$sha"
   fi
-done < <(git ls-remote "$REMOTE" "refs/tags/$TAG" "refs/tags/$TAG^{}")
+done < <(git ls-remote "$PUSH_TARGET" "refs/tags/$TAG" "refs/tags/$TAG^{}")
 
 if [[ "$VERIFY_TARGET" != "$COMMIT" ]]; then
   echo "[release-tag] ERRO pós-push: remote reporta target='$VERIFY_TARGET' (esperado $COMMIT)" >&2

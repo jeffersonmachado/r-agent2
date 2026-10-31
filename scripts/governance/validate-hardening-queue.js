@@ -29,6 +29,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const RAIZ = path.resolve(__dirname, '..', '..');
 // `path.resolve` de propósito: leitura não pode ser registrada como alvo de
@@ -72,6 +73,45 @@ const FECHADOS = new Set(['done', 'verified', 'prevention_active', 'ready_for_ap
 const IMPEDIDOS = new Set(['blocked', 'blocked_external']);
 
 /**
+ * O commit citado como prova EXISTE no repositório?
+ *
+ * DEFEITO MEDIDO (2026-10-21): 3 itens `done` citavam `5f6d0c1c9`, um hash que não existe em
+ * nenhum objeto do repositório (foi reescrito num rebase anterior). O validador só checava
+ * "campo não vazio", então a fila exibia 3 provas que ninguém podia abrir — falso verde com
+ * aparência de rigor. As correções eram reais; o PONTEIRO estava órfão.
+ *
+ * Guard: hash em formato inválido ou inexistente no git é violação (`COMMIT_INEXISTENTE`).
+ * `git ok === false` desliga a checagem com falha explícita independente — nunca "passa por não
+ * ter conseguido olhar".
+ * @param {string} commit
+ * @param {{ok:boolean}} gitEstado
+ * @returns {boolean} true quando o commit existe
+ */
+function commitExiste(commit, gitEstado) {
+  if (!gitEstado.ok) return true; // já existe violação própria (GIT_INDISPONIVEL)
+  const valor = String(commit || '').trim();
+  if (!/^[0-9a-f]{7,40}$/i.test(valor)) return false;
+  try {
+    execFileSync('git', ['cat-file', '-e', `${valor}^{commit}`], {
+      cwd: RAIZ, stdio: 'pipe', timeout: 5000,
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/** O repositório permite resolver objetos git? (sem git, a checagem é declarada, não ignorada) */
+function gitDisponivel() {
+  try {
+    execFileSync('git', ['rev-parse', '--git-dir'], { cwd: RAIZ, stdio: 'pipe', timeout: 5000 });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Valida a fila.
  * @param {object} fila
  * @returns {{violations: object[], counts: object, open: string[]}}
@@ -80,6 +120,14 @@ function validar(fila) {
   const violations = [];
   const counts = {};
   const open = [];
+
+  const gitEstado = { ok: gitDisponivel() };
+  if (!gitEstado.ok) {
+    violations.push({
+      code: 'GIT_INDISPONIVEL',
+      detail: 'não foi possível resolver objetos git — a existência dos commits de prova NÃO foi verificada',
+    });
+  }
 
   const items = Array.isArray(fila && fila.items) ? fila.items : null;
   if (!items) {
@@ -123,6 +171,14 @@ function validar(fila) {
           detail: `status "${status}" exige "${campo}" (afirmar sem prova é falso verde)`,
         });
       }
+    }
+    // Prova precisa ser ABRÍVEL: hash órfão (reescrito/typo) é falso verde com cara de rigor.
+    if (NAO_VAZIO(item.commit) && !commitExiste(item.commit, gitEstado)) {
+      violations.push({
+        code: 'COMMIT_INEXISTENTE',
+        item: id,
+        detail: `commit "${item.commit}" não existe no repositório — a prova citada não pode ser aberta`,
+      });
     }
     for (const campo of spec.forbids) {
       if (NAO_VAZIO(item[campo])) {

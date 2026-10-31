@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "34625312-d0ac-4899-b0b5-5563b73f1aba",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:41:05.349Z",
+      "finishedAt": "2026-10-31T19:41:07.768Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
+      "outputSha256": "d804dd934be3134a91da9254eafe40c5ad5f28242aa755c7c9351d14f2a9abbb"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "sha256": "51c40610fd231607184dff94d56bff7a069f0e3bb0892e6d324f0405e98580f5"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:41:07.776Z",
+  "proofHash": "7c833203f3dbaa185ff3779e5c2b6498f331bdbc1f5eacd3957584985651e5c7"
+}

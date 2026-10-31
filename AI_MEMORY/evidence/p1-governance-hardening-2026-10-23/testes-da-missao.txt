@@ -1,0 +1,177 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/regularizadorPathTraversal.test.js
+  P1-A — contrato de identificador de defeito
+    ✓ todo ataque é recusado com motivo explícito (nunca silencioso) (141 ms)
+    ✓ os 135 identificadores históricos da fila continuam válidos (compatibilidade) (115 ms)
+    ✓ colisão em filesystem case-insensitive é recusada (não "o último vence") (103 ms)
+  P1-A — resolução de destino e escrita (filesystem real)
+    ✓ ataque de traversal não cria, não trunca e não remove NADA fora da raiz (127 ms)
+    ✓ symlink de DIRETÓRIO apontando para fora é recusado (contenção por realpath) (111 ms)
+    ✓ destino que é SYMLINK: recusa e não toca no alvo do link (TOCTOU no ponto de uso) (112 ms)
+    ✓ id legítimo grava dentro da raiz e o conteúdo confere (116 ms)
+  P1-A — o regularizador usa o contrato em TODO caminho derivado de id
+    ✓ o código não concatena id cru em caminho (contrato de fonte) (106 ms)
+    ✓ executarTeste recusa id inválido ANTES de executar qualquer processo (223 ms)
+
+PASS tests/unit/governance/cleanCheckoutTimeoutRag.test.js
+  P1-E1 — classificação explícita de resultado
+    ✓ exit 0 no passo positivo ⇒ EXPECTED_SUCCESS (aprovável) (125 ms)
+    ✓ exit != 0 no passo positivo ⇒ UNEXPECTED_FAILURE (104 ms)
+    ✓ exit 0 no passo negativo ⇒ UNEXPECTED_SUCCESS (102 ms)
+    ✓ falha esperada SEM assinatura do motivo ⇒ EXPECTED_FAILURE_SEM_ASSINATURA (não passa) (103 ms)
+    ✓ falha esperada COM assinatura do motivo ⇒ EXPECTED_FAILURE (aprovável) (103 ms)
+    ✓ exitCode=null SEM sinal e SEM timeout ⇒ NOT_EXECUTED (nunca PASS) (103 ms)
+    ✓ exitCode=null por SINAL ⇒ SIGNALLED (nunca PASS) (102 ms)
+    ✓ sinal aceito por contrato explícito pode passar (nunca por omissão) (103 ms)
+    ✓ timeout ⇒ TIMEOUT e nunca PASS, mesmo com exit code esperado (104 ms)
+    ✓ veredito do run: TIMEOUT reprova, INFRA bloqueia, tudo-ok passa (103 ms)
+  P1-E1 — processos REAIS: timeout e sinal não viram sucesso
+    ✓ processo travado até o timeout ⇒ TIMEOUT (não PASS) (514 ms)
+    ✓ processo morto por SINAL ⇒ SIGNALLED (não PASS) (121 ms)
+    ✓ processo que falha com exit 1 mas SEM a assinatura esperada ⇒ não passa (119 ms)
+  P1-E1/E2 — contrato do harness (fonte e comportamento observável)
+    ✓ o cenário db-unavailable exige assinatura do motivo e não aceita exitCode nulo (127 ms)
+    ✓ não existe fallback para o RAG preexistente em 8001 (106 ms)
+    ✓ passo() classifica com a lib e registra a classe no relatório (107 ms)
+    ✓ falha de infraestrutura produz BLOCKED e exit code próprio (108 ms)
+    ✓ a identidade do RAG é validada por container próprio + health (105 ms)
+  P1-E — cenário negativo é fail-closed e infra vence sempre
+    ✓ A2: falha esperada SEM assinatura declarada NÃO aprova (108 ms)
+    ✓ A2: falha de INFRAESTRUTURA reprova mesmo saindo com exit code não-nulo (107 ms)
+    ✓ A2: contrato explícito aceitarQualquerFalha só quando declarado (103 ms)
+    ✓ A6: vereditoDoRun([]) é BLOCKED (não PASS) (103 ms)
+    ✓ todo cenário negativo do harness declara assinatura do motivo (106 ms)
+
+PASS tests/unit/governance/releaseAnchorsPreflightBlocking.test.js
+  P1-C — o script real de preflight recusa âncora inválida (fixtures isoladas)
+    ✓ âncora ausente ⇒ exit != 0 e motivo explícito (262 ms)
+    ✓ âncora vazia ⇒ exit != 0 e motivo explícito (229 ms)
+    ✓ âncora malformada ⇒ exit != 0 e motivo explícito (234 ms)
+    ✓ âncora hash divergente ⇒ exit != 0 e motivo explícito (234 ms)
+    ✓ âncora válida em fixture isolada ⇒ exit 0 (242 ms)
+  P1-C — o workflow executa o preflight de forma BLOQUEANTE
+    ✓ o passo de preflight do governance-core não tem continue-on-error (212 ms)
+    ✓ executando o passo real com âncora ausente, o JOB falha (semântica do Actions) (281 ms)
+    ✓ tentativa de continuar após falha (continue-on-error) NÃO salvaguarda o release-gate (541 ms)
+    ✓ o release-gate revalida ANTES de declarar release autorizado (113 ms)
+    ✓ a revalidação do gate usa o ambiente real das âncoras (não um valor fixo) (112 ms)
+    ✓ remaining continue-on-error são apenas uploads de diagnóstico (nunca gate) (117 ms)
+    ✓ o caminho DEVELOPMENT não depende deste workflow (L0/L1 seguem em workflow próprio) (123 ms)
+  P1-C — a atestação do preflight é CONSUMIDA pelo release-gate
+    ✓ release-gate baixa e valida a atestação do preflight deste run (114 ms)
+    ✓ a verificação da atestação acontece ANTES de declarar release autorizado (108 ms)
+  P1-C — atestação é publicada por job NÃO-matrix (A3)
+    ✓ upload-artifact da atestação está em job sem matrix (108 ms)
+    ✓ o job da atestação roda o preflight bloqueante e o gate depende dele (108 ms)
+
+PASS tests/unit/governance/readinessChecksContract.test.js (6.047 s)
+  P1-D — entrada degenerada NUNCA produz READY_GO, mesmo com aprovação humana
+    ✓ checks = [] + aprovacaoHumana=true ⇒ NOT_READY (124 ms)
+    ✓ checks = null + aprovacaoHumana=true ⇒ NOT_READY (105 ms)
+    ✓ checks = undefined + aprovacaoHumana=true ⇒ NOT_READY (104 ms)
+    ✓ checks = [{}] + aprovacaoHumana=true ⇒ NOT_READY (104 ms)
+    ✓ checks = [{ status: "PASS" }] + aprovacaoHumana=true ⇒ NOT_READY (105 ms)
+    ✓ checks = [{ id: "fake", status: "PASS" }] + aprovacaoHumana=true ⇒ NOT_READY (104 ms)
+    ✓ checks = [{ id: "fake", ok: true }] + aprovacaoHumana=true ⇒ NOT_READY (105 ms)
+    ✓ checks = "PASS" + aprovacaoHumana=true ⇒ NOT_READY (103 ms)
+    ✓ checks = 42 + aprovacaoHumana=true ⇒ NOT_READY (104 ms)
+    ✓ checks = [] + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (103 ms)
+    ✓ checks = null + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (102 ms)
+    ✓ checks = undefined + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (104 ms)
+    ✓ checks = [{}] + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (102 ms)
+    ✓ checks = [{ status: "PASS" }] + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (115 ms)
+    ✓ checks = [{ id: "fake", status: "PASS" }] + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (104 ms)
+    ✓ checks = [{ id: "fake", ok: true }] + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (102 ms)
+    ✓ checks = "PASS" + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (111 ms)
+    ✓ checks = 42 + aprovacaoHumana=false ⇒ NOT_READY (nunca PENDING) (106 ms)
+  P1-D — cobertura incompleta, duplicidade e inconclusivo reprovam
+    ✓ catálogo incompleto (um check obrigatório ausente) ⇒ NOT_READY (119 ms)
+    ✓ check duplicado ⇒ NOT_READY (não "o último vence") (103 ms)
+    ✓ check DESCONHECIDO (fora do catálogo) ⇒ NOT_READY (102 ms)
+    ✓ status UNKNOWN com ok:true continua reprovando (não vira PASS) (102 ms)
+    ✓ status NOT_EXECUTED com ok:true continua reprovando (não vira PASS) (104 ms)
+    ✓ status TIMEOUT com ok:true continua reprovando (não vira PASS) (102 ms)
+    ✓ status SKIPPED com ok:true continua reprovando (não vira PASS) (101 ms)
+    ✓ status BLOCKED com ok:true continua reprovando (não vira PASS) (102 ms)
+    ✓ status ERROR com ok:true continua reprovando (não vira PASS) (102 ms)
+    ✓ check sem `ok` booleano ⇒ NOT_READY (103 ms)
+    ✓ check sem evidência (`detalhe` vazio) ⇒ NOT_READY (101 ms)
+  P1-D — identidade de execução
+    ✓ check que declara outro commit ⇒ NOT_READY (102 ms)
+    ✓ check que declara o MESMO commit ⇒ decisão normal (102 ms)
+  P1-D — aprovação humana: necessária e NUNCA suficiente
+    ✓ conjunto completo legítimo sem aprovação ⇒ PENDING_HUMAN_APPROVAL (exit 2) (102 ms)
+    ✓ conjunto completo legítimo com aprovação ⇒ único caso de READY_GO (103 ms)
+    ✓ aprovacaoHumana=true com técnico reprovado ⇒ NOT_READY (nunca substitui) (103 ms)
+    ✓ o catálogo tem os 21 checks e nenhum id duplicado (105 ms)
+  P1-D — parâmetros públicos não podem desligar as guardas
+    ✓ catalogo=[] ou null NÃO desliga a cobertura obrigatória (110 ms)
+    ✓ status inconclusivo com espaço/case diferente continua reprovando (102 ms)
+  P1-D — resíduos do contrato exportado (A7)
+    ✓ catálogo custom não pode OMITIR obrigatórios do canônico (102 ms)
+    ✓ aprovação humana só vale como o booleano `true` (truthiness não aprova) (106 ms)
+    ✓ status inconclusivo com caractere de largura zero ou fullwidth não escapa (106 ms)
+  P1-D — status usa ALLOWLIST de conclusivos (A7-1)
+    ✓ status desconhecido é inconclusivo, não passa por omissão (102 ms)
+    ✓ format chars fora da lista antiga também são removidos (104 ms)
+    ✓ status conclusivo explícito continua passando (102 ms)
+
+PASS tests/unit/governance/regularizadorRunIsolation.test.js (32.069 s)
+  P1-B — identidade de execução
+    ✓ cada execução tem runId próprio, diretório próprio e manifesto com identidade (168 ms)
+    ✓ duas execuções simultâneas não compartilham diretório, manifesto nem log (2062 ms)
+  P1-B — agregação rejeita evidência incompatível (cenários 1–5)
+    ✓ Cenário 1 — SHA diferente: agregação RECUSADA (1828 ms)
+    ✓ Cenário 2 — mesmo SHA, fingerprint diferente: RECUSADA (não vira "não certificante" silencioso) (1277 ms)
+    ✓ Cenário 3 — evidência ADULTERADA: hash do artefato não confere ⇒ RECUSADA (747 ms)
+    ✓ Cenário 4 — execução INTERROMPIDA (RUNNING) ⇒ INCOMPLETA, nunca agregada (124 ms)
+    ✓ Cenário 5 — duplicidade entre execuções compatíveis: RECUSADA (não "o último vence") (1285 ms)
+  P1-B — execução parcial não finge cobertura integral
+    ✓ run PARCIAL com tudo o que selecionou continua “PARCIAL” e não cobre o inventário (1405 ms)
+    ✓ run INTEGRAL que processou menos que o esperado não é COMPLETED (1431 ms)
+    ✓ run INTEGRAL completo é o ÚNICO caso com cobertura integral (1374 ms)
+  P1-B — o regularizador usa a execução isolada (contrato de fonte)
+    ✓ o código não agrega lendo o diretório compartilhado de itens (105 ms)
+  revisão independente — agregação não aceita cobertura declarada
+    ✓ manifesto forjado com escopo.completo=true e ZERO artefatos ⇒ RECUSADO (119 ms)
+    ✓ completo é RECALCULADO dos artefatos: manifesto mentindo `completo` não basta (1245 ms)
+    ✓ finalizar conta os artefatos em vez de confiar no chamador (857 ms)
+  revisão independente — runId entra em caminho, logo tem contrato
+    ✓ runId com traversal é recusado ANTES de qualquer I/O (105 ms)
+  revisão independente 2ª passada (a) — cobertura integral exige a LISTA de ids
+    ✓ N artefatos com ids diferentes mas conteúdo repetido NÃO viram cobertura integral (1551 ms)
+    ✓ cobertura integral só com a lista EXATA de ids esperados (1428 ms)
+  revisão independente 2ª passada — A1/A4/A5/A8
+    ✓ A1: cobertura INTEGRAL é conferida contra o INVENTÁRIO real do root, não contra a lista do manifesto (1437 ms)
+    ✓ A1: hardeningQueueFingerprint precisa ser o hash da fila do rootDir (1329 ms)
+    ✓ A4: symlink em runs/<runId> não escapa (realpath obrigatório) (292 ms)
+    ✓ A5: baseRel com traversal ou absoluto é recusado (118 ms)
+    ✓ A8: id de resultado com traversal é recusado por gravarResultado (120 ms)
+    ✓ A8: finalizar recusa quando o id do CONTEÚDO diverge do nome do arquivo (758 ms)
+  revisão independente 3ª passada — itens/ também é caminho
+    ✓ itens/ que é SYMLINK para fora é recusado (mesmo com artefato válido copiado) (699 ms)
+  revisão independente 3ª passada — escopo derivado da fila (A1-2) e relatório (A1-3)
+    ✓ A1-2: fila com 3 candidatos + manifesto cobrindo 1 NÃO vira cobertura integral (1249 ms)
+    ✓ A1-2: idsEsperados que não são o conjunto derivado da fila reprovam a cobertura (1501 ms)
+    ✓ A2-1: passo POSITIVO com exit 0 não vira INFRASTRUCTURE_ERROR por causa do output (106 ms)
+    ✓ A2-2/C-1: TODO caminho citado no harness existe (arquivo OU diretório) (104 ms)
+  4ª passada (auto-revisão) — cobertura integral exige escopo NEUTRO
+    ✓ declarar INTEGRAL com limite/filtro/ids reduz o conjunto e NÃO vira cobertura integral (1025 ms)
+    ✓ mesmo conteúdo, escopo neutro ⇒ cobertura integral (1315 ms)
+  4ª passada — manifest.json e manifesto sem identidade (F-1/R-1)
+    ✓ F-1: manifest.json symlink é recusado na leitura e na escrita (120 ms)
+    ✓ R-1: manifesto forjado SEM identidade é recusado limpo (não lança) (794 ms)
+  5ª passada — escrita do manifesto é atômica e sem resíduo
+    ✓ falha ao gravar o manifesto preserva o anterior e não deixa .tmp órfão (1432 ms)
+  5ª passada — resíduos do relatório final
+    ✓ limite 5: escopo neutro com idsEsperados CURTO não marca escopo.completo (826 ms)
+    ✓ R-1 residual: manifesto sem `escopo` é recusado (não lança TypeError) (115 ms)
+    ✓ escrever o manifesto verifica bytes efetivamente gravados (sem short write silencioso) (102 ms)
+
+Test Suites: 5 passed, 5 total
+Tests:       127 passed, 127 total
+Snapshots:   0 total
+Time:        32.716 s, estimated 35 s
+Ran all test suites matching /tests\/unit\/governance\/regularizadorPathTraversal|tests\/unit\/governance\/regularizadorRunIsolation|tests\/unit\/governance\/readinessChecksContract|tests\/unit\/governance\/cleanCheckoutTimeoutRag|tests\/unit\/governance\/releaseAnchorsPreflightBlocking/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

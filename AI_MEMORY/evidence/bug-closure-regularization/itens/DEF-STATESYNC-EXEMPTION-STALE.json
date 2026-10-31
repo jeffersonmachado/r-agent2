@@ -1,0 +1,14 @@
+{
+  "id": "DEF-STATESYNC-EXEMPTION-STALE",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Isenção de state-sync declarava 4 setInterval onde havia 3 (resíduo)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/frontend/stateSyncExemptionExactness.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-STATESYNC-EXEMPTION-STALE.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-STATESYNC-EXEMPTION-STALE.json",
+  "camposParaAssinar": 18
+}

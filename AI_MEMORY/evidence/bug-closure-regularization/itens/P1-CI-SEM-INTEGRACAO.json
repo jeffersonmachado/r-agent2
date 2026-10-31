@@ -1,0 +1,8 @@
+{
+  "id": "P1-CI-SEM-INTEGRACAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate/CI do branch de desenvolvimento nao rodava NENHUMA suite de integracao",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

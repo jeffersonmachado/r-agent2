@@ -13,12 +13,17 @@
  *
  *     gh run list --branch dev/engineering-hardening   ->   []
  *
- * E o runner do GitHub não inicia jobs (limite de gastos da conta):
+ * E o runner do GitHub não iniciava jobs (limite de gastos da conta):
  *
  *     gh run view 38881780959  ->  "The job was not started because an Actions
  *     budget is preventing further use."
  *
- * Um workflow que não roda não é gate. A proteção EFETIVA é este runner LOCAL.
+ * ATUALIZAÇÃO MEDIDA (2026-10-30): o bloqueio de billing CAIU. Em
+ * `dev/engineering-hardening` `c7ef74031` os cinco workflows executaram e publicaram resultado
+ * (Jest, Frontend, RAG e E2E SUCCESS; Dev Hardening CI SUCCESS com veredito PASS_PARCIAL). Portanto
+ * "o runner do GitHub não inicia jobs" NÃO é mais verdade e não pode ser afirmado numa evidência:
+ * este runner LOCAL continua sendo a proteção verificável por SHA a qualquer momento, e em CI o
+ * par relatório+md é publicado como artifact (`dev-branch-ci-evidence-<sha>`).
  *
  * O QUE MUDOU NESTA VERSÃO (missão BUG CLOSURE FIRST, 2026-10-17)
  * --------------------------------------------------------------
@@ -36,9 +41,22 @@
  *                     trabalho, dependências, regras preventivas, evidência velha
  *   B  direcionado  — testes de regressão declarados pelos defeitos em escopo
  *   C  L0           — suíte oficial (`npm test`)        exige L0_COMPLETO
- *   D  L1           — gates de governança offline       exige L1_AMPLO
+ *   D  L1           — integridade de DESENVOLVIMENTO    exige L1_AMPLO
+ *                     (release-dag, fila, ai-memory, aderência)
+ *   R  release      — CERTIFICAÇÃO de release            exige SELO_FINAL
+ *                     (cadeia criptográfica, self-proving, decisão canônica)
  *   E  L2/L3        — `test:system` (extensivo)         exige L2_L3_EXTENSIVO
  *   F  release      — gate agregado (63 passos)         exige SELO_FINAL
+ *
+ * POR QUE R É SEPARADA DE D (medido em 2026-10-22, commit `133eb147c`, em checkout LIMPO e no
+ * runner): os três gates de R certificam o PACOTE SELADO — a cadeia encadeia o ZIP, o self-proving
+ * recalcula essa cadeia e a decisão canônica exige GO definitivo. Nenhum dos três pode passar antes
+ * de `npm run release:seal` em `main`, porque os bytes do pacote não são versionáveis (`dist/` é
+ * gitignored). Mantê-los dentro de D fazia o CI do branch de desenvolvimento reprovar para sempre
+ * por um controle de RELEASE — e um gate que nunca pode ficar verde ensina o time a ignorar o
+ * vermelho. Eles continuam OBRIGATÓRIOS para validação completa (R ∈ FASES_OBRIGATORIAS) e são
+ * executados pelo pipeline de selagem; o que muda é que o CI de desenvolvimento mede o que pode
+ * medir e declara o resto como fora de escopo (`PASS_PARCIAL`), em vez de fingir que mediu.
  *
  * Se a autorização for NEGADA, o gate PARA naquele ponto e o veredito é
  * `BLOQUEADO_POR_DEFEITOS` (exit 2). Ele não "pula" a validação e não inventa
@@ -63,7 +81,7 @@
  * Uso:
  *   node scripts/ci/dev-branch-gate.js [--out <json>] [--espera-sha <sha>]
  *                                      [--escopo <defeito[,defeito]>]
- *                                      [--fases A,B,C,D,E,F] [--rapido]
+ *                                      [--fases A,B,C,D,R,E,F] [--rapido]
  *                                      [--requer-limpo] [--extensivo]
  *
  * Códigos de saída: 0 = PASS/PASS_PARCIAL, 1 = FAIL, 2 = BLOQUEADO_POR_DEFEITOS.
@@ -95,6 +113,30 @@ const {
 const PASSOS = Object.freeze({
   C: [
     {
+      /**
+       * PREPARO DE ENTRADAS DO L0 (medido no CI de 2026-10-24, run 40105995013).
+       *
+       * O L0 reprovou no runner com `GRAPH_ABSENT` em `tests/unit/coverage/impactRunner.test.js`:
+       * a suíte consome artefatos IGNORADOS pelo git (`reports/*.json`,
+       * `governance/json-persistence-audit.json`, `qa-mesh/meshRegistry.json`) e nenhum clone
+       * contém esses arquivos. Na máquina de desenvolvimento o vermelho não aparecia porque os
+       * artefatos já existiam de execuções anteriores — reprodutibilidade dependia de estado sujo.
+       *
+       * O gate passa a produzir as entradas com os MESMOS produtores canônicos (`ci:artifacts`,
+       * parte de `ci:bootstrap`) ANTES de cobrar a suíte. Passo que falha aqui derruba a fase:
+       * ausência de artefato é defeito de preparo, não motivo para pular asserção.
+       * Medição de referência: `reports/` vazio ⇒ L0 exit=1 (`Expected "EXPLICIT", Received
+       * "GRAPH_ABSENT"`); `npm run ci:artifacts` ⇒ mesmo conjunto ⇒ exit=0.
+       */
+      id: 'L0a-artefatos-canoeiros',
+      nivel: 'L0',
+      comando: 'npm run ci:artifacts',
+      descricao: 'Produz os artefatos canônicos (ignorados pelo git) que o L0 consome',
+      // Medido em 2026-10-24: 12 produtores + prova de existência/frescor ≈ 60-120 s em árvore
+      // limpa. Orçamento folgado porque produtor lento não é defeito de código.
+      orcamentoMs: Number(process.env.L0A_ORCAMENTO_MS) || 20 * 60 * 1000,
+    },
+    {
       id: 'L0-suite-oficial',
       nivel: 'L0',
       comando: 'npm test',
@@ -105,35 +147,53 @@ const PASSOS = Object.freeze({
       // sobe para 45 min (a suíte roda unit + flow + rpa:jest de uma vez) e pode ser
       // ajustado por `L0_ORCAMENTO_MS` — sempre auditável no relatório.
       orcamentoMs: Number(process.env.L0_ORCAMENTO_MS) || 45 * 60 * 1000,
+      // DETERMINISMO DO L0 (medido 2026-10-21). Com o default do `jest.config.cjs`
+      // (workers = orçamento de conexões ⇒ 11 nesta máquina de 12 CPUs), a MESMA suíte
+      // produzia falsos vermelhos por contenção, sem defeito algum no código:
+      //   * `engineeringRouterExecutionSandboxSecurity` recebia SANDBOX_UNAVAILABLE porque o
+      //     probe `docker info` estourava 5 s com load average 12 (cache negativo envenenava
+      //     o processo — corrigido à parte, em `executionSandbox`);
+      //   * `tenantAiCredentialsSaveRoute` estourava o `testTimeout` de 10 s.
+      // Medição com 4 workers: 1086 suítes / 9214 testes / exit 0 em 358 s. Gate que reprova
+      // por contenção treina todo mundo a ignorar o vermelho — então o L0 fixa 4 workers.
+      // O teto é explícito (não é o default do repo): `npm test` à mão continua com o default.
+      env: { JEST_MAX_WORKERS: process.env.L0_JEST_MAX_WORKERS || '4' },
+    },
+    {
+      id: 'L0b-integracao-engenheiro',
+      nivel: 'L0',
+      // INTEGRAÇÃO REAL (auditoria 2026-10-20, §10). Antes o gate do branch de
+      // desenvolvimento só rodava `npm test` (unit + flow + rpa sem browser):
+      // nenhuma suíte de integração tocava Postgres/sandbox. As suítes de
+      // concorrência agora FALHAM sem banco (fail-closed), então ausência de
+      // Postgres derruba este passo — que é o comportamento correto para um
+      // gate de prontidão.
+      //
+      // SERIALIZAÇÃO OBRIGATÓRIA (medido 2026-10-21, run 39660840381). O padrão
+      // `tests/integration/engineering` casa TODAS as suítes `engineering*` de
+      // `tests/integration/` — inclusive as do laço de bugs, que compartilham estado global
+      // declarado: `config/canonical-release-suites.json` mantém
+      // engineeringBugAutonomousLoopE2E + engineeringBugLoopNaturalPathE2E no MESMO grupo
+      // exclusivo porque usam o mesmo runner de laço (`runBugLoopSweep`/GLOBAL, posse por
+      // finding e LEASE) e o mesmo banco de missões (a varredura de boot recovery processa
+      // TODA missão EXECUTING abandonada). Rodando-as com `--maxWorkers=2`, o job de
+      // integração produziu exatamente o que o grupo existe para impedir:
+      // engineeringBugLoopNaturalPathE2E estourou o próprio timeout de 900 s enquanto
+      // engineeringBugAutonomousLoopE2E falhava em 18 s (`report.fix.fixed` false) — ambas
+      // PASSANDO isoladas (42,9 s e 54,6 s). O gate NÃO inventa uma lista de nomes: usa
+      // `--runInBand`, que satisfaz a exclusividade por construção para qualquer suíte que
+      // venha a compartilhar estado global no futuro.
+      comando: 'npx jest tests/integration/engineering --bail=0 --runInBand --forceExit',
+      descricao: 'Integração real do Engenheiro (Postgres + sandbox; falha sem banco)',
+      orcamentoMs: Number(process.env.L0B_ORCAMENTO_MS) || 40 * 60 * 1000,
     },
   ],
   D: [
-    {
-      id: 'L1-cadeia-criptografica',
-      nivel: 'L1',
-      comando: 'node scripts/governance/validate-governance-chain.js',
-      descricao: 'Cadeia de governança RECALCULADA dos bytes atuais (e declaração auditável)',
-      orcamentoMs: 120 * 1000,
-    },
-    {
-      id: 'L1-self-proving',
-      nivel: 'L1',
-      comando: 'node scripts/governance/validate-self-proving.js',
-      descricao: 'Self-proving sobre a cadeia recalculada',
-      orcamentoMs: 120 * 1000,
-    },
     {
       id: 'L1-release-dag',
       nivel: 'L1',
       comando: 'node scripts/governance/validate-release-dag.js',
       descricao: 'DAG do release sem ciclo e sem violação de ordem de fase',
-      orcamentoMs: 120 * 1000,
-    },
-    {
-      id: 'L1-decisao-canonica',
-      nivel: 'L1',
-      comando: 'node scripts/governance/assert-canonical-release-decision.js',
-      descricao: 'Decisão canônica de release (autoridade única) coerente com os artefatos',
       orcamentoMs: 120 * 1000,
     },
     {
@@ -156,6 +216,44 @@ const PASSOS = Object.freeze({
       comando: 'node scripts/governance/validate-agent-adherence.js',
       descricao: 'Aderência do agente à Constituição',
       orcamentoMs: 60 * 1000,
+    },
+  ],
+
+  /**
+   * CERTIFICAÇÃO DE RELEASE — só é avaliável contra um pacote SELADO (ver docstring).
+   * Executada pelo pipeline de selagem e exigida em `FASES_OBRIGATORIAS_VALIDACAO_COMPLETA`.
+   */
+  R: [
+    {
+      id: 'L1-cadeia-criptografica',
+      nivel: 'L1',
+      comando: 'node scripts/governance/validate-governance-chain.js',
+      descricao: 'Cadeia de governança RECALCULADA dos bytes atuais (e declaração auditável)',
+      orcamentoMs: 120 * 1000,
+    },
+    {
+      id: 'L1-self-proving',
+      nivel: 'L1',
+      comando: 'node scripts/governance/validate-self-proving.js',
+      descricao: 'Self-proving sobre a cadeia recalculada',
+      orcamentoMs: 120 * 1000,
+    },
+    {
+      // Fase 3, missão D: a asserção de ESTADO CANÔNICO das projeções saiu do L2 (dependia de
+      // `governance/rap-master-scorecard.json`, artefato de run governado) e passou a viver aqui,
+      // na fase de CERTIFICAÇÃO. O controle continua exigido — só deixou de contaminar o L2.
+      id: 'L1-projecao-estado-canonico',
+      nivel: 'L1',
+      comando: 'npm run -s test:certification',
+      descricao: 'Projeções canônicas do estado real (BLOCKED_BY_GOVERNED_EVIDENCE sem scorecard governado)',
+      orcamentoMs: 120 * 1000,
+    },
+    {
+      id: 'L1-decisao-canonica',
+      nivel: 'L1',
+      comando: 'node scripts/governance/assert-canonical-release-decision.js',
+      descricao: 'Decisão canônica de release (autoridade única) coerente com os artefatos',
+      orcamentoMs: 120 * 1000,
     },
   ],
   E: [
@@ -184,6 +282,8 @@ const AUTORIZACAO_DA_FASE = Object.freeze({
   B: OPERACOES.TESTES_NEGATIVOS_REGRESSAO,
   C: OPERACOES.L0_COMPLETO,
   D: OPERACOES.L1_AMPLO,
+  // Certificação de release é operação de SELAGEM — não de desenvolvimento.
+  R: OPERACOES.SELO_FINAL,
   E: OPERACOES.L2_L3_EXTENSIVO,
   F: OPERACOES.SELO_FINAL,
 });
@@ -205,7 +305,7 @@ const AUTORIZACAO_DA_FASE = Object.freeze({
 const FASES_CONHECIDAS = Object.freeze(Object.keys(AUTORIZACAO_DA_FASE));
 
 /** Conjunto que caracteriza validação completa — `PASS` exige TODAS em PASS. */
-const FASES_OBRIGATORIAS_VALIDACAO_COMPLETA = Object.freeze(['A', 'B', 'C', 'D', 'E', 'F']);
+const FASES_OBRIGATORIAS_VALIDACAO_COMPLETA = Object.freeze(['A', 'B', 'C', 'D', 'R', 'E', 'F']);
 
 const ESTADOS_DE_FASE = Object.freeze({
   PASS: 'PASS',
@@ -380,6 +480,12 @@ function decidirVeredito({ entradaInvalida, identidade, estados, bloqueio }) {
 
   if (entradaInvalida) return 'ENTRADA_INVALIDA';
   if (!identidade || !identidade.ok) return 'IDENTIDADE_INVALIDA';
+  // UM PASSO QUE FALHOU É FALHA, NÃO TIMEOUT (medido 2026-10-21, run 39614201981): o passo
+  // `L0-suite-oficial` reprovou por asserção real (exit=1) e o veredito publicado foi
+  // `BLOQUEADO_POR_TIMEOUT` — rótulo que manda a investigação para o lado errado e sugere
+  // orçamento de tempo quando o defeito é de código. `timeout` continua tendo veredito próprio
+  // (BLOCKED por sinal), coberto pelo cenário 8 deste contrato.
+  if (bloqueio && bloqueio.code === 'PASSO_FALHOU') return 'FAIL';
   if (algumaFalha) return 'FAIL';
   if (algumBloqueio) {
     return bloqueio && ['FASE_NAO_AUTORIZADA', 'PRE_VOO_FALHOU'].includes(bloqueio.code)
@@ -487,6 +593,15 @@ function definirContextoExecucao(sha) {
   return CONTEXTO_EXECUCAO;
 }
 
+/**
+ * Resultado que o passo DEVERIA ter. Passos negativos declaram `esperado` (ex.: 1); os demais
+ * esperam 0. Usado só para decidir QUANTO da saída guardar (diagnóstico) — nunca no veredito.
+ */
+function esperadoParaEstePasso(passo) {
+  const bruto = passo && passo.esperado;
+  return typeof bruto === 'number' ? bruto : 0;
+}
+
 function executar(passo) {
   const inicio = Date.now();
   // O ORÇAMENTO PRECISA MATAR O PROCESSO. Com `shell: true`, o `timeout` do spawnSync
@@ -501,7 +616,9 @@ function executar(passo) {
     cwd: ROOT,
     encoding: 'utf8',
     shell: true,
-    env: process.env,
+    // `passo.env` permite fixar o ambiente do passo (ex.: `JEST_MAX_WORKERS`) sem variar o
+    // comportamento de quem roda `npm test` à mão.
+    env: { ...process.env, ...(passo.env || {}) },
     maxBuffer: 64 * 1024 * 1024,
     // Backstop: se até o `timeout` falhar, o spawnSync encerra.
     timeout: Number(passo.orcamentoMs || 0) + 30 * 1000,
@@ -531,6 +648,10 @@ function executar(passo) {
     nivel: passo.nivel,
     descricao: passo.descricao,
     comando: passo.comando,
+    // Auditoria: variáveis que o GATE fixou para este passo (ex.: `JEST_MAX_WORKERS`).
+    // Quem lê o relatório depois precisa saber com que ambiente o passo rodou — senão
+    // "passou no gate" e "passou na minha máquina" viram a mesma frase.
+    envFixado: passo.env || null,
     orcamentoMs: Number(passo.orcamentoMs || 0) || null,
     // `status === null` significa morte por sinal/timeout: NUNCA é sucesso.
     exitCode: estourouOrcamento ? null : exitCode,
@@ -540,7 +661,13 @@ function executar(passo) {
     sha: CONTEXTO_EXECUCAO.sha,
     execucaoId: CONTEXTO_EXECUCAO.execucaoId,
     saidaRef,
-    saidaFinal: saida.trim().split('\n').slice(-12).join('\n'),
+    // DIAGNÓSTICO DE FALHA (Fase 3): o `saidaFinal` guardava só a CAUDA (12 linhas). Num passo que
+    // roda a suíte inteira, a cauda traz "Tests: 1 failed" e o RESUMO — mas não o nome do teste nem
+    // `Expected/Received`, que ficam no MEIO da saída. Sem isso, um vermelho no CI obriga a
+    // reexecutar tudo para descobrir o que falhou (medido em 2026-10-24, run 40105995013).
+    saidaFinal: (estourouOrcamento || exitCode !== esperadoParaEstePasso(passo))
+      ? [saida.trim().split('\n').slice(0, 60).join('\n'), saida.trim().split('\n').slice(-25).join('\n')].join('\n…\n')
+      : saida.trim().split('\n').slice(-12).join('\n'),
   };
 }
 
@@ -1053,7 +1180,7 @@ function finalizar({
     branch,
     escopoDefeitos: escopo || null,
     runnerDoGithub: runner,
-    gateEfetivo: 'LOCAL (o runner do GitHub nao inicia jobs por limite de gastos da conta)',
+    gateEfetivo: 'LOCAL (execucao deste runner; em CI o par e publicado como artifact dev-branch-ci-evidence-<sha>)',
     preVoo: faseA ? {
       ok: faseA.ok,
       checks: faseA.checks,
@@ -1093,7 +1220,7 @@ function finalizar({
     `- **branch**: \`${branch}\``,
     `- **sha exato avaliado**: \`${sha || '(vazio)'}\``,
     `- **gerado em**: ${new Date().toISOString()}`,
-    `- **gate efetivo**: LOCAL — o runner do GitHub não inicia jobs por limite de gastos da conta`,
+    `- **gate efetivo**: LOCAL — este arquivo é produzido por este runner; em CI o mesmo par é publicado como artifact \`dev-branch-ci-evidence-<sha>\``,
     '',
     '## Estado por fase (comprovação, não intenção)',
     '',
@@ -1153,6 +1280,15 @@ function finalizar({
   process.stdout.write(
     `[dev-branch-gate] veredito=${veredito} (completo=${nucleo.equivalenteAValidacaoCompleta}) ` +
     `evidencia=${outJson} + ${mdRel}\n`
+  );
+  // CLAREZA DE AUDITORIA (medido 2026-10-30): os caminhos acima são LOCAIS desta execução. No workflow
+  // `dev-branch-ci.yml` o mesmo par é publicado como ARTIFACT (`dev-branch-ci-evidence-<sha>`) e o job
+  // NÃO faz push (`permissions: contents: read`, com passo de asserção de escopo) — então um auditor que
+  // seguir o caminho do repositório num run de CI não encontra o arquivo. Declarar isso aqui evita a
+  // leitura errada de "evidência publicada no repo".
+  process.stdout.write(
+    '[dev-branch-gate] nota: em CI este par é publicado como artifact '
+    + `dev-branch-ci-evidence-${shaCurto}; o repositório NÃO recebe push deste workflow.\n`
   );
 
   if (veredito === 'PASS') return 0;

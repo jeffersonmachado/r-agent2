@@ -1,0 +1,14 @@
+{
+  "id": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "pbx-cdr-health.sh falhava sob pipefail por SIGPIPE (grep -q / head -n1) — falso vermelho recorrente",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.json",
+  "camposParaAssinar": 18
+}

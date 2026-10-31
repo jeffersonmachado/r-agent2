@@ -21,6 +21,7 @@ const {
 const {
   deriveReleaseState,
   VERDICTS,
+  VERIFICATION_GAPS,
 } = require('../../../engine/governance/releaseStateModel');
 
 describe('pendenciesModel', () => {
@@ -113,14 +114,87 @@ describe('releaseStateModel', () => {
     expect(state.explanation).toMatch(/válido NO COMMIT DELE/);
   });
 
-  it('HEAD igual ao commit do run com entregue presente ⇒ DELIVERED_VERIFIED', () => {
+  it('HEAD igual ao commit do run + entrega VERIFICADA ⇒ DELIVERED_VERIFIED', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      deliveredVerdict: 'DELIVERED_VERIFIED',
+      deliveredOk: true,
+    });
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_VERIFIED);
+    expect(state.verificationGaps).toEqual([]);
+    expect(state.deliveredOk).toBe(true);
+  });
+
+  // L-1 (2026-10-20) — DEFEITO MEDIDO: `blockers`, `evidenceUnavailable` e `deliveredVerdict`
+  // eram recebidos pelo modelo e NUNCA consultados. Bastava existir arquivo em `dist/release`
+  // com HEAD == commit do run para o estado dizer "Entregue verificada", mesmo com gate
+  // canônico vermelho ou sem relatório de verificação nenhum.
+  it('DEFEITO: entregue presente sem veredito positivo ⇒ DELIVERED_UNVERIFIED (nunca VERIFIED)', () => {
     const sha = 'a'.repeat(40);
     const state = deriveReleaseState({
       run: { sourceCommit: sha },
       head: { commit: sha, clean: true },
       artifacts,
     });
-    expect(state.verdict).toBe(VERDICTS.DELIVERED_VERIFIED);
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_UNVERIFIED);
+    expect(state.verdict).not.toBe(VERDICTS.DELIVERED_VERIFIED);
+    expect(state.verificationGaps.map((g) => g.code)).toContain(VERIFICATION_GAPS.DELIVERED_VERDICT_NOT_POSITIVE);
+    expect(state.explanation).toMatch(/NÃO está verificada/);
+  });
+
+  it('veredito POSITIVO mas bloqueio canônico ativo ⇒ DELIVERED_UNVERIFIED', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      deliveredVerdict: 'DELIVERED_VERIFIED',
+      deliveredOk: true,
+      blockers: [{ code: 'qa_mesh', decision: 'NO_GO', why: 'QA Mesh não está em GO' }],
+    });
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_UNVERIFIED);
+    const gap = state.verificationGaps.find((g) => g.code === VERIFICATION_GAPS.RELEASE_BLOCKERS_PRESENT);
+    expect(gap).toBeDefined();
+    expect(gap.detail).toContain('qa_mesh');
+  });
+
+  it('evidência indisponível ⇒ DELIVERED_UNVERIFIED (evidência faltante não é verificação)', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      deliveredVerdict: 'DELIVERED_VERIFIED',
+      deliveredOk: true,
+      evidenceUnavailable: [{ code: 'delivered_release', reason: 'relatório ausente ou ilegível' }],
+    });
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_UNVERIFIED);
+    expect(state.verificationGaps.map((g) => g.code)).toContain(VERIFICATION_GAPS.EVIDENCE_UNAVAILABLE);
+  });
+
+  it('run sem sourceCommit ⇒ identidade incompleta, nunca VERIFIED', () => {
+    const state = deriveReleaseState({
+      run: { sourceCommit: null },
+      head: { commit: 'a'.repeat(40), clean: true },
+      artifacts,
+      deliveredVerdict: 'DELIVERED_VERIFIED',
+      deliveredOk: true,
+    });
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_UNVERIFIED);
+    expect(state.verificationGaps.map((g) => g.code)).toContain(VERIFICATION_GAPS.RUN_IDENTITY_INCOMPLETE);
+  });
+
+  it('sem entregue o novo veredito NÃO aparece (estados anteriores preservados)', () => {
+    const onlyCandidate = deriveReleaseState({
+      run: { sourceCommit: 'a'.repeat(40) },
+      head: { commit: 'a'.repeat(40), clean: true },
+      artifacts: { delivered: [], candidate: [{ name: 'r-agent2.candidate.zip' }] },
+    });
+    expect(onlyCandidate.verdict).toBe(VERDICTS.SEALED_ONLY);
+    expect(onlyCandidate.verificationGaps).toEqual([]);
   });
 
   it('guard local que recusa tag DESABILITA publish-tag e mostra o motivo', () => {
@@ -148,6 +222,56 @@ describe('releaseStateModel', () => {
     expect(seal.blockedReason).toMatch(/worktree sujo/);
   });
 
+  // L-1 (2026-10-20) — item B da missão: publicar TAG é ato de release. Estar SELADO não é estar
+  // VERIFICADO. Antes, `releaseName` + ausência de guard bastavam para oferecer o botão que publica
+  // a tag, mesmo com gate canônico vermelho ou sem relatório de entrega.
+  it('publish-tag NÃO é oferecida quando a entrega não está verificada', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      releaseName: 'r-agent2-20261011-083027',
+    });
+    const publish = state.actions.find((a) => a.id === 'publish-tag');
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_UNVERIFIED);
+    expect(publish.enabled).toBe(false);
+    expect(publish.blockedReason).toMatch(/entrega NÃO verificada/);
+    expect(publish.blockedReason).toContain(VERIFICATION_GAPS.DELIVERED_VERDICT_NOT_POSITIVE);
+  });
+
+  it('publish-tag é oferecida SOMENTE com DELIVERED_VERIFIED (sem guard bloqueando)', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      releaseName: 'r-agent2-20261011-083027',
+      deliveredVerdict: 'DELIVERED_RELEASE_VERIFIED',
+      deliveredOk: true,
+      guard: { blocksTagPush: false, reason: null, path: null },
+    });
+    const publish = state.actions.find((a) => a.id === 'publish-tag');
+    expect(state.verdict).toBe(VERDICTS.DELIVERED_VERIFIED);
+    expect(publish.enabled).toBe(true);
+    expect(publish.blockedReason).toBeNull();
+  });
+
+  it('bloqueio canônico ativo também derruba publish-tag (não só o guard local)', () => {
+    const sha = 'a'.repeat(40);
+    const state = deriveReleaseState({
+      run: { sourceCommit: sha },
+      head: { commit: sha, clean: true },
+      artifacts,
+      releaseName: 'r-agent2-20261011-083027',
+      deliveredVerdict: 'DELIVERED_RELEASE_VERIFIED',
+      deliveredOk: true,
+      blockers: [{ code: 'qa_mesh', decision: 'NO_GO' }],
+    });
+    const publish = state.actions.find((a) => a.id === 'publish-tag');
+    expect(publish.enabled).toBe(false);
+    expect(publish.blockedReason).toContain(VERIFICATION_GAPS.RELEASE_BLOCKERS_PRESENT);
+  });
   it('sem artefato nem candidato ⇒ NOT_SEALED; evidência faltante é declarada', () => {
     const state = deriveReleaseState({
       run: null,

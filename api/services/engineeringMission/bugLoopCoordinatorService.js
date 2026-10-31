@@ -137,9 +137,48 @@ function sameCommand(a, b) {
  * Nunca declara FIXED por "task terminou": exige reprodução verde + testes direcionados verdes +
  * parecer aprovado + execuções de regressão.
  */
-async function runFixLoop(findingId, {
+/**
+ * EXECUÇÃO DO FIX sob POSSE do finding.
+ *
+ * DEFEITO MEDIDO (2026-10-25, `governanceApprovalFullWorkerE2E` na bateria): depois do aval humano o
+ * coder foi executado TRÊS vezes (`fixAttempts.length` esperado 1, recebido 3). Causa: `runFixLoop`
+ * chegava por `handleAnomaly` SEM lease, então a varredura podia pegar o mesmo finding e rodar o fix
+ * em paralelo — duplicação de efeitos exatamente no caminho que a missão manda impedir.
+ *
+ * A partir daqui o fix loop adquire o lease quando ninguém o detém; a varredura já o passa adiante.
+ * Posse de outro worker ⇒ recusa explícita (`FINDING_LEASE_HELD_BY_OTHER_WORKER`), nunca execução dupla.
+ */
+async function runFixLoop(findingId, opcoes = {}) {
+  const { findingLease = null, workerInstanceId = null, ...resto } = opcoes;
+  const dono = await bugFindingService.withFindingLeaseOwned(
+    findingId,
+    { lease: findingLease, workerInstanceId },
+    async ({ lease }) => executarFixLoop(findingId, { ...resto, findingLease: lease, workerInstanceId }),
+  );
+  if (dono && dono.skipped) {
+    // Recusa por posse é evento OPERACIONAL: sem esta linha, um fix que NÃO rodou fica
+    // indistinguível de um fix que rodou e não convergiu (mesmo `fixed:false`, causas opostas).
+    logger.warn('[bugLoopCoordinator] fix recusado: finding sob posse de outro worker', {
+      findingId, worker: dono.lease?.worker || null, expiresAt: dono.lease?.expiresAt || null,
+    });
+    return {
+      finding: null,
+      executed: false,
+      fixed: false,
+      blocked: true,
+      stage: 'LEASE_HELD_BY_OTHER_WORKER',
+      code: 'FINDING_LEASE_HELD_BY_OTHER_WORKER',
+      reason: `finding ${findingId} está sob posse de outro worker — o fix não pode rodar em paralelo`,
+      lease: dono.lease || null,
+    };
+  }
+  return dono;
+}
+
+async function executarFixLoop(findingId, {
   actor = null, tenantId = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   credentialScope = undefined, specFreshnessGuard = null, missionLease = null, secondaryFindings = [],
+  findingLease = null,
 } = {}) {
   const finding = await bugFindingService.getFinding(findingId);
   if (!finding) throw Object.assign(new Error(`finding ${findingId} não encontrado`), { code: 'not_found' });
@@ -207,6 +246,7 @@ async function runFixLoop(findingId, {
       // o histórico das tentativas: quem for destravar não recomeça do zero.
       await bugFindingService.blockFinding(findingId, {
         actor,
+        lease: findingLease,
         dependency: 'BUG_FIX_NOT_CONVERGING',
         evidence: [bugFindingService.makeEvidence({
           type: 'LOG_CORRELATION',
@@ -365,6 +405,7 @@ async function runFixLoop(findingId, {
 
     await bugFindingService.markFixed(findingId, {
       actor,
+      lease: findingLease,
       reproductionPassed,
       targetedTestsPassed,
       reviewPassed,
@@ -401,7 +442,7 @@ async function runFixLoop(findingId, {
   let regressionValidated = false;
   let regressionError = null;
   try {
-    await bugFindingService.markRegressionValidated(findingId, { actor, runs, tenantId });
+    await bugFindingService.markRegressionValidated(findingId, { actor, runs, tenantId, lease: findingLease });
     regressionValidated = true;
   } catch (err) {
     regressionError = { code: err.code, message: err.message };
@@ -436,7 +477,7 @@ async function runFixLoop(findingId, {
       });
     }
     try {
-      await bugFindingService.closeFinding(findingId, { actor, reason: 'reprodução verde + testes + parecer + regressão', tenantId });
+      await bugFindingService.closeFinding(findingId, { actor, reason: 'reprodução verde + testes + parecer + regressão', tenantId, lease: findingLease });
       closed = true;
     } catch (err) {
       regressionError = { code: err.code, message: err.message };
@@ -569,21 +610,40 @@ async function resumeOriginalMission({ missionId, findingId = null, fixTaskId = 
         await missionSourceService.ensureMissionSource(missionId, { actor });
         const missionSource = await missionSourceService.resolveTaskSource(missionId);
 
-        const contract = orch.buildTaskContract(spec, {
-          createdBy: actor,
-          sourceCommit: missionSource.currentCommit,
-          sourceRef: missionSource.integrationBranch,
-          sourceMissionFence: missionSource.fence,
-        });
+        // ── ESCOPO DA SUBSTITUTA NUNCA PODE NASCER VAZIO (defeito medido 2026-10-29) ─────────
+        // DEFEITO: a substituta era criada com `scopeDeferred: true` e o escopo do spec, que nasce
+        // `allowedPaths: []` e é enriquecido só em alguns fluxos. Quando o enriquecimento não vinha,
+        // NADA preenchia `allowed_paths` (nenhum caminho de código escreve esse campo depois da
+        // criação), o validador recusava todo patch com `NO_PATCH_SCOPE` e a retomada pós-fix
+        // esgotava as tentativas sem NUNCA conseguir entregar correção — medido em
+        // `engineeringBugLoopNaturalPathE2E` (3 ocorrências no run 40824588991).
+        //
+        // CORREÇÃO: o escopo vem, nesta ordem, do que já foi DECLARADO e validado —
+        //   1. `spec.allowedPaths` (o contrato aprovado da missão);
+        //   2. `originalTask.allowed_paths` (o escopo com que a correção foi de fato validada).
+        // Só quando NENHUM dos dois existe a task nasce `scopeDeferred` (comportamento anterior,
+        // fail-closed preservado: nada é inventado).
+        const escopoSpec = Array.isArray(spec.allowedPaths) ? spec.allowedPaths.filter(Boolean) : [];
+        const escopoOriginal = Array.isArray(originalTask?.allowed_paths) ? originalTask.allowed_paths.filter(Boolean) : [];
+        const escopoHerdado = escopoSpec.length > 0 ? escopoSpec : escopoOriginal;
+        const contract = {
+          ...orch.buildTaskContract(spec, {
+            createdBy: actor,
+            sourceCommit: missionSource.currentCommit,
+            sourceRef: missionSource.integrationBranch,
+            sourceMissionFence: missionSource.fence,
+          }),
+          ...(escopoHerdado.length > 0 ? { allowedPaths: escopoHerdado } : {}),
+        };
         const created = await engineeringTaskService.createTask(contract, {
           createdBy: actor,
           idempotencyKey: `mission:${missionId}:postbug:${findingId || 'na'}`,
-          // Mesma natureza da task inicial da missão: o spec nasce com
-          // `allowedPaths: []` e o escopo é resolvido no planejamento. Sem a
-          // declaração, a retomada pós-bug não conseguiria criar a task
-          // substituta (regressão medida em 2026-10-13).
-          scopeDeferred: true,
+          // `scopeDeferred` SÓ quando não há escopo declarado em lugar nenhum (ver bloco acima).
+          scopeDeferred: escopoHerdado.length === 0,
         });
+        lineage.scopeOrigin = escopoHerdado.length === 0
+          ? 'DEFERRED_NO_SCOPE_DECLARED'
+          : (escopoSpec.length > 0 ? 'MISSION_SPEC' : 'ORIGINAL_TASK');
         replacementTaskId = created.id;
         // UMA TASK CRIADA ANTES DA INTEGRAÇÃO PRECISA SER REANCORADA. A idempotência da chave acima
         // pode devolver uma task substituta de uma retomada ANTERIOR (criada sob um commit antigo):
@@ -866,8 +926,16 @@ async function handleAnomaly(input = {}, {
   if (autoReproduce) {
     const plan = bugReproductionService.buildPlan(finding);
     if (plan.kind !== 'UNAVAILABLE') {
+      // O `lease` repassado é de OUTRO finding por construção (o finding aqui é recém-registrado), então
+      // não é herdado: `reproduce` adquire a posse do finding novo. Recusa por posse devolve
+      // `finding: null` — tratada explicitamente, nunca desreferenciada.
       const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
       report.reproduced = reproduction.outcome;
+      if (reproduction.skipped || !reproduction.finding) {
+        report.outcome = reproduction.outcome || 'SKIPPED_LEASE_HELD';
+        report.skipped = true;
+        return report;
+      }
       finding = reproduction.finding;
     } else {
       report.reproduced = 'PLAN_UNAVAILABLE';
@@ -1043,6 +1111,7 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
   // no produto. `classifySourceFailure` é pura e decide a origem; `classifyStaleCandidateDisposition`
   // já descrevia exatamente este caso e nunca estava ligada ao hook.
   const { classifySourceFailure } = require('../../../engine/engineeringMission/missionSource');
+const { classifyPostFixFailure } = require('../../../engine/engineeringMission/bugFinding/postFixFailure');
   const sourceFailure = classifySourceFailure({
     reasonCode: result.reasonCode || null,
     candidateBaseCommit: extra.candidateBaseCommit || null,
@@ -1058,12 +1127,59 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
     });
   }
 
+  // ── FALHA DE CONTRATO DO CODER NÃO É RECORRÊNCIA DO BUG (medido 2026-10-29) ───────────────────
+  // Distingue as classes antes de tocar no finding: sem isto, um patch recusado na task substituta
+  // (o fix JÁ está na fonte) reabre como REINCIDÊNCIA o finding que acabou de ser fechado. A
+  // classificação é pura e estreita (engine/engineeringMission/bugFinding/postFixFailure.js):
+  // só falha de PATCH conta, e só quando já existe finding pós-correção para a MESMA missão.
+  let postFix = null;
+  if (!sourceFailure.isSourceFailure) {
+    try {
+      const tentativas = await engineeringTaskService.listAttempts(taskId).catch(() => []);
+      const failureKinds = [
+        ...tentativas.map((t) => (t && t.failure_bundle && t.failure_bundle.failureKind) || null),
+        ...tentativas.map((t) => (t && t.error && t.error.failureClass) || null),
+      ].filter(Boolean);
+      const reasonCodes = [
+        // O código REAL da tentativa vive em `attempt.error.code` quando o patch nem chegou a ser
+        // aplicado (ex.: `PATCH_INVALID_FORMAT` do coder que devolveu diff vazio). `failure_bundle`
+        // é do RETRY e pode estar nulo justamente no caso medido.
+        ...tentativas.map((t) => (t && t.error && t.error.code) || null),
+        ...tentativas.map((t) => (t && t.failure_bundle && t.failure_bundle.code) || null),
+      ].filter(Boolean);
+      const tarefaFalha = await engineeringTaskService.getTask(taskId).catch(() => null);
+      const codigoTarefa = tarefaFalha && tarefaFalha.last_error ? tarefaFalha.last_error.code : null;
+      const findingsDaMissao = await bugFindingService.listFindings({ missionId, limit: 20 }).catch(() => []);
+      postFix = classifyPostFixFailure({
+        failureKinds,
+        reasonCodes: [...reasonCodes, codigoTarefa],
+        reasonCode: result.reasonCode || null,
+        findings: findingsDaMissao,
+      });
+      if (postFix.isFalseRecurrence) {
+        logger.warn('[bugLoopCoordinator] falha de contrato do coder pós-correção — registrada SEPARADA da recorrência', {
+          missionId, taskId, failureKinds, reasonCode: result.reasonCode || null, reason: postFix.reason,
+        });
+      }
+    } catch (err) {
+      logger.warn('[bugLoopCoordinator] falha ao classificar falha pós-fix — segue o caminho normal', { missionId, taskId, error: err.message });
+      postFix = null;
+    }
+  }
+  const separarDaRecorrencia = Boolean(postFix && postFix.isFalseRecurrence);
+
   return bugFindingService.registerFinding({
     missionId,
     taskId,
     provenance,
+    // fingerprint explícito pelo ESCOPO decidido pela classificação pura: 'coder_contract' nunca
+    // casa com o fingerprint do bug corrigido (que é de aplicação) e, portanto, nunca o reabre.
+    ...(separarDaRecorrencia ? { fingerprint: `coder-contract:${missionId}:${postFix.fingerprintScope}` } : {}),
+    ...(separarDaRecorrencia ? { symbol: 'mission_task:coder_contract' } : {}),
     source: sourceFailure.isSourceFailure ? 'MISSION_SOURCE' : (extra.source || 'EXCEPTION'),
-    title,
+    title: separarDaRecorrencia
+      ? `Missão ${missionId}: coder não entregou patch aplicável na retomada pós-fix (${postFix.reason})`
+      : title,
     description: sourceFailure.isSourceFailure
       ? `${sourceFailure.reason} (código ${sourceFailure.code}; disposição ${sourceFailure.disposition})`
       : (extra.description || `resultado real da execução: ${status}`),
@@ -1093,55 +1209,60 @@ async function hookMissionFailure({ missionId, taskId, result = {}, extra = {} }
  * Idempotente: nunca duplica task e nunca reabre ciclo já fechado.
  */
 /**
- * POSSE DURÁVEL de um finding durante o processamento (§“dois workers não corrigem o mesmo
- * finding”). Lease adquirido por CAS no banco + heartbeat enquanto o trabalho roda + fence
- * monotônico; se o processo morrer, o lease EXPIRA e o próximo worker assume — sem lease vitalício
- * e sem posse por PID/tempo local.
+ * POSSE DURÁVEL de um finding durante a varredura — DELEGAÇÃO, não segunda implementação.
  *
- * `workerInstanceId` ausente (chamadas administrativas/testes) mantém o comportamento sem posse,
- * explicitamente, em vez de fingir exclusividade.
+ * DEFEITO MEDIDO (2026-10-26, revisão adversarial): existiam DUAS implementações do mesmo ciclo
+ * (adquirir → heartbeat → liberar → fence) — esta e `bugFindingService.withFindingLeaseOwned` — com
+ * semânticas divergentes (aqui, `workerInstanceId` ausente rodava SEM posse; lá, sem identidade
+ * declarada a operação adquiria a própria). Duas cópias do ciclo de vida significam duas chances de
+ * divergir: a segunda já não tinha o vínculo `lease.findingId` que a primeira ganhou.
+ *
+ * A autoridade única passou a ser `withFindingLeaseOwned`; esta função preserva o contrato do
+ * chamador (varredura administrativa sem identidade roda SEM posse, explicitamente) e devolve a
+ * mesma forma de recusa (`{ skipped, code, lease }`).
  */
 async function withFindingLease(findingId, workerInstanceId, fn, { ttlMs = null } = {}) {
   if (!workerInstanceId) return fn({ lease: null });
-  let lease;
-  try {
-    lease = await bugFindingService.acquireFindingLease(findingId, { workerInstanceId, ...(ttlMs ? { ttlMs } : {}) });
-  } catch (err) {
-    if (err.code === 'FINDING_LEASE_HELD_BY_OTHER_WORKER') return { skipped: true, code: err.code, lease: err.lease };
-    throw err;
-  }
-  const ttl = ttlMs || bugFindingService.DEFAULT_LEASE_TTL_MS;
-  const heartbeat = setInterval(() => {
-    bugFindingService.heartbeatFindingLease(findingId, { token: lease.token, ttlMs: ttl }).catch((err) => {
-      logger.warn('[bugLoopCoordinator] heartbeat do lease do finding falhou', { findingId, code: err.code || null });
-    });
-  }, Math.max(5000, Math.floor(ttl / 3)));
-  if (typeof heartbeat.unref === 'function') heartbeat.unref();
-  try {
-    return await fn({ lease });
-  } finally {
-    clearInterval(heartbeat);
-    await bugFindingService.releaseFindingLease(findingId, { token: lease.token }).catch(() => {});
-  }
+  return bugFindingService.withFindingLeaseOwned(findingId, { workerInstanceId, ttlMs }, fn);
 }
 
 async function runBugLoopSweep({
   limit = 10, actor = 'SYSTEM:BUG_LOOP', tenantId = null, autoFix = true,
   runner = bugReproductionService.defaultRunner, invariantResults = null, maxAttempts = DEFAULT_MAX_FIX_ATTEMPTS,
   allowedPaths = null, policy = null, resumeMission = true, workerInstanceId = null,
+  // ESCOPO EXPLÍCITO (§9.3-quater da evidência da missão): sem esta opção a varredura é GLOBAL — o que é
+  // o comportamento de produção — e o custo cresce com o estado acumulado da tabela (medido: BUG-02
+  // levava 53,8 s de 60 s de orçamento só varrendo findings alheios). Com `findingIds` a operação fica
+  // limitada aos findings pedidos, e quem varre um conjunto conhecido não reprocessa o resto.
+  findingIds = null,
 } = {}) {
   const summary = { scanned: 0, confirmed: 0, triaged: 0, fixed: 0, awaitedApproval: 0, resumed: 0, blockedRecursive: 0, leaseSkipped: 0, items: [] };
+  // SEMÂNTICA FECHADA: ausência de escopo (`null`/`undefined`) = varredura GLOBAL, explícita. Lista
+  // VAZIA não pode virar "o mundo inteiro" — quem pediu nenhum finding recebe nenhum (fail-closed), e
+  // tipo inválido é erro de contrato, não varredura global silenciosa.
+  if (findingIds !== null && findingIds !== undefined && !Array.isArray(findingIds)) {
+    const err = new Error('`findingIds` deve ser array de ids ou null para varredura global');
+    err.code = 'INVALID_SWEEP_SCOPE';
+    err.detail = { findingIdsType: typeof findingIds };
+    throw err;
+  }
+  const escopoVazio = Array.isArray(findingIds) && findingIds.length === 0;
+  if (escopoVazio) return summary;
+  const escopo = Array.isArray(findingIds) ? { ids: findingIds } : {};
 
-  const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit });
+  const pending = await bugFindingService.listFindings({ status: ['SUSPECTED', 'REPRODUCING'], limit, ...escopo });
   for (const finding of pending) {
     summary.scanned += 1;
-    const owned = await withFindingLease(finding.id, workerInstanceId, async () => {
+    const owned = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
       const plan = bugReproductionService.buildPlan(finding);
       if (plan.kind === 'UNAVAILABLE') {
         // Motivo EXPLÍCITO persistido na derivação: nunca um silêncio que finge ausência de plano.
         return { action: 'NO_REPRODUCTION_PLAN', detail: finding.reproduction?.derivation?.reason || plan.rationale || null };
       }
-      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults });
+      // O LEASE DA VARREDURA é passado adiante: `reproduce`/`confirmFinding` são donos da posse e não
+      // podem readquiri-la com outra identidade (fariam a própria varredura ser recusada — medido no
+      // E2E do caminho natural, que parava de progredir).
+      const reproduction = await bugReproductionService.reproduce(finding.id, { actor, tenantId, runner, invariantResults, lease });
       if (reproduction.outcome === 'REPRODUCED') summary.confirmed += 1;
       return { action: 'REPRODUCED', outcome: reproduction.outcome };
     });
@@ -1153,7 +1274,7 @@ async function runBugLoopSweep({
     summary.items.push({ findingId: finding.id, ...owned });
   }
 
-  const confirmed = await bugFindingService.listFindings({ status: ['CONFIRMED', 'FIXING'], limit });
+  const confirmed = await bugFindingService.listFindings({ status: ['CONFIRMED', 'FIXING'], limit, ...escopo });
   for (const finding of confirmed) {
     // Finding de missão de VERIFICAÇÃO/teste é registrado e auditável, mas não vira item de correção:
     // corrigir uma missão de prova seria trabalho sobre um artefato de verificação, não sobre o produto.
@@ -1181,7 +1302,7 @@ async function runBugLoopSweep({
       continue;
     }
     if (!finding.fix_task_id) {
-      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
         const triage = await bugTriageService.triage(finding.id, { actor, tenantId, allowedPaths, policy });
         if (triage.requiresHumanApproval || triage.requiresNonApplicationAction) {
           return {
@@ -1192,7 +1313,7 @@ async function runBugLoopSweep({
           };
         }
         if (!autoFix) return { triaged: true, action: 'TRIAGED', taskId: triage.fixTask?.id || null };
-        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts, findingLease: lease });
         if (fix.blocked) {
           return {
             action: fix.stage === 'AWAITING_GOVERNANCE_APPROVAL' ? 'AWAITING_GOVERNANCE_APPROVAL' : 'AWAITING_HUMAN_APPROVAL',
@@ -1215,8 +1336,8 @@ async function runBugLoopSweep({
       continue;
     }
     if (finding.status === 'FIXING' && autoFix) {
-      const outcome = await withFindingLease(finding.id, workerInstanceId, async () => {
-        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts });
+      const outcome = await withFindingLease(finding.id, workerInstanceId, async ({ lease }) => {
+        const fix = await runFixLoop(finding.id, { actor, tenantId, maxAttempts, findingLease: lease });
         return { action: 'FIX_LOOP_RESUME', status: fix.finding?.status || null, closed: Boolean(fix.executed && fix.closed) };
       });
       if (outcome?.skipped) {
@@ -1234,7 +1355,7 @@ async function runBugLoopSweep({
   // substituta sob lease). Idempotente pela linhagem persistida e resiliente a crash: se o processo
   // morreu entre o fechamento e o resume, o próximo worker assume e conclui.
   if (resumeMission) {
-    const closedFindings = await bugFindingService.listFindings({ status: ['CLOSED'], limit });
+    const closedFindings = await bugFindingService.listFindings({ status: ['CLOSED'], limit, ...escopo });
     for (const finding of closedFindings) {
       if (!finding.mission_id) continue;
       const recorded = await isMissionResumeRecorded(finding.mission_id, finding.id);

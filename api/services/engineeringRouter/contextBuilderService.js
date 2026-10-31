@@ -117,6 +117,28 @@ function runGit(args) {
 }
 
 /**
+ * MOTIVO DE FALHA ESTÁVEL para fonte de contexto não materializável.
+ *
+ * Deliberadamente compartilha o vocabulário de `patchApplyService.resolveTaskBaseCommit`
+ * (`MISSION_SOURCE_NOT_INHERITED`, `MISSION_SOURCE_COMMIT_UNRESOLVABLE`): o mesmo fato — "a base
+ * declarada não existe" — recebe o mesmo nome nos dois lados do fluxo (contexto e workspace).
+ */
+const CONTEXT_SOURCE_REASONS = Object.freeze({
+  MISSION_SOURCE_NOT_INHERITED: 'MISSION_SOURCE_NOT_INHERITED',
+  MISSION_SOURCE_COMMIT_UNRESOLVABLE: 'MISSION_SOURCE_COMMIT_UNRESOLVABLE',
+});
+
+function contextSourceError({ task, commit, reason, message }) {
+  const err = new Error(message);
+  err.code = 'CONTEXT_SOURCE_UNRESOLVABLE';
+  err.reason = reason;
+  err.failureClass = 'SOURCE_IDENTITY';
+  err.taskId = task && task.id ? task.id : null;
+  err.sourceCommit = commit || null;
+  return err;
+}
+
+/**
  * HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — COERÊNCIA CONTEXTO↔WORKSPACE.
  *
  * Defeito real medido: o workspace onde o patch é aplicado é materializado do `source_commit` da
@@ -126,16 +148,22 @@ function runGit(args) {
  * (`PATCH_APPLY_FAILED`) ou, pior, aplicava sobre premissas erradas. Medido no INC-2B: 155 linhas
  * existiam na fonte e não no main (`missionReplanService.js`, `missionStoreService.js`).
  *
- * Este resolvedor devolve a fonte de leitura correta para a task:
- *   - `MISSION_SOURCE` quando a task declara `source_commit` válido: listagem por
- *     `git ls-tree -r --name-only <commit>` e leitura por `git show <commit>:<path>`;
- *   - `ROOT` (comportamento anterior) para task avulsa ou commit irresolvível — nunca falha por
- *     causa disso, apenas registra a degradação.
+ * L-1 (2026-10-20) — FALHA EXPLÍCITA, NUNCA DEGRADAÇÃO SILENCIOSA.
+ * O resolvedor anterior lia do checkout principal quando o `source_commit` declarado era
+ * irresolvível (só um `logger.warn`). Isso é o mesmo defeito de origem, um nível acima: o CODER
+ * era alimentado com a base ERRADA e o workspace onde o patch seria aplicado nem existiria
+ * (`patchApplyService` já falhava fechado com `MISSION_SOURCE_COMMIT_UNRESOLVABLE`). Regra agora:
+ *   - `MISSION_SOURCE` quando a task declara `source_commit` VÁLIDO (`git ls-tree`/`git show`);
+ *   - `ROOT` somente para task avulsa que NÃO declara base alguma (compatibilidade);
+ *   - DECLAROU base ⇒ ela precisa existir. Task de missão sem `source_commit` também falha
+ *     (materializar da main reintroduziria o fix que nunca entra na fonte da missão).
  *
  * @returns {{kind:'MISSION_SOURCE'|'ROOT', commit:string|null, listFiles:()=>string[], readFile:(p:string)=>string|null, isFile:(p:string) => boolean}}
+ * @throws {Error} code=`CONTEXT_SOURCE_UNRESOLVABLE` quando a base declarada não pode ser lida.
  */
 function createSourceReader(task = {}) {
   const commit = String(task.source_commit || task.sourceCommit || '').trim();
+  const missionId = task.mission_id || task.missionId || null;
   const rootReader = {
     kind: 'ROOT',
     commit: null,
@@ -145,10 +173,26 @@ function createSourceReader(task = {}) {
       try { return fs.statSync(path.join(ROOT, relPath)).isFile(); } catch (_) { return false; }
     },
   };
-  if (commit === '') return rootReader;
-  if (runGit(['cat-file', '-e', `${commit}^{commit}`]) === null) {
-    logger.warn('[engineeringContextBuilder] source_commit irresolvível — lendo do checkout principal', { taskId: task.id, commit });
+  if (commit === '') {
+    if (missionId) {
+      throw contextSourceError({
+        task,
+        commit: null,
+        reason: CONTEXT_SOURCE_REASONS.MISSION_SOURCE_NOT_INHERITED,
+        message: `task ${task.id} pertence à missão ${missionId} mas não declara \`source_commit\` — `
+          + 'ler do checkout principal produziria contexto de outra base (incoerente com o workspace)',
+      });
+    }
     return rootReader;
+  }
+  if (runGit(['cat-file', '-e', `${commit}^{commit}`]) === null) {
+    throw contextSourceError({
+      task,
+      commit,
+      reason: CONTEXT_SOURCE_REASONS.MISSION_SOURCE_COMMIT_UNRESOLVABLE,
+      message: `\`source_commit\` ${commit.slice(0, 12)} declarado pela task ${task.id} não existe neste `
+        + 'repositório — o contexto NÃO é lido do checkout principal (a base declarada é a única válida)',
+    });
   }
 
   let cachedListing = null;
@@ -251,6 +295,7 @@ function buildContext(task, { failureBundle = null, previousAttempt = null } = {
 
 module.exports = {
   ROOT,
+  CONTEXT_SOURCE_REASONS,
   DEFAULT_MAX_TOTAL_BYTES,
   DEFAULT_MAX_FILES,
   createSourceReader,

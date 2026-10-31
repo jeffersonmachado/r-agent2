@@ -290,7 +290,25 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     message: `Tentativa ${attempt.attempt_number}: ${coderSelection.providerId}:${coderSelection.modelId} gerando patch…`,
   });
 
-  const context = buildContext(task, { failureBundle, previousAttempt });
+  // L-1 (2026-10-20): a fonte do contexto é IDENTIDADE, não conveniência. Se a base declarada pela
+  // task (commit da fonte da missão) não existe, o CODER NÃO é despachado: o attempt é fechado com
+  // código estável e a task termina em RED. Antes, `buildContext` degradava para o checkout
+  // principal e o patch nascia sobre outra base.
+  let context;
+  try {
+    context = buildContext(task, { failureBundle, previousAttempt });
+  } catch (err) {
+    const code = err && err.code ? err.code : 'CONTEXT_BUILD_FAILED';
+    await ts.updateAttempt(attempt.id, {
+      status: 'FAILED',
+      error: { code, reason: err.reason || null, message: err.message },
+      completed_at: new Date(),
+    });
+    logger.warn('[engineeringRouterService] contexto não materializável — nenhum CODER despachado', {
+      taskId: task.id, attemptId: attempt.id, code, reason: err.reason || null, sourceCommit: err.sourceCommit || null,
+    });
+    return { outcome: 'FATAL', reasonCode: code, attempt };
+  }
   await ts.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget, sourceOrigin: context.sourceOrigin || null } });
 
   // HUMAN_EXTERNAL_BOOTSTRAP (2026-10-07) — telemetria POR TENTATIVA de despacho: motivo da
@@ -1268,16 +1286,187 @@ async function rerouteRole({
   };
 }
 
+/**
+ * SPEC JÁ SATISFEITA ANTES DE CODIFICAR (decisão arquitetural 2026-10-29).
+ *
+ * PROBLEMA MEDIDO (run 40786037745, `governanceApprovalFullWorkerE2E`): a missão foi retomada
+ * depois de a correção ter sido integrada na fonte (integração `BUG_FIX_CANDIDATE` 04cad9c1b →
+ * db83173a, 730 ms ANTES do fechamento do finding). A task substituta nasceu JÁ no commit
+ * corrigido — ou seja, o cenário da spec já passava ali — mas o Router despachou o coder assim
+ * mesmo. O modelo devolveu o patch do que já existia, o `git apply` recusou
+ * (`failureKind=PATCH_CONTRACT_VIOLATION`), a task foi a RED e essa falha foi registrada como
+ * RECORRÊNCIA (`recurrenceCount=1`, `previousStatus=CLOSED`) do finding que acabara de ser
+ * fechado — recorrência FALSA, criada por trabalho inventado.
+ *
+ * Regra implementada: quando a missão da task já avançou a fonte (candidato integrado), os
+ * `test_commands` do contrato são executados NO COMMIT DA PRÓPRIA TASK, no mesmo sandbox real da
+ * fase TESTING. Se TODOS passam, a spec está satisfeita naquele commit: a task conclui GREEN, sem
+ * invocar o coder e sem patch (nada de diff vazio artificial).
+ *
+ * Nunca conclui por inferência:
+ *   · sem `mission_id` ou sem `test_commands` → NOT_APPLICABLE (segue o fluxo normal);
+ *   · fonte da missão não avançou → NOT_APPLICABLE (nada a verificar: não há fix integrado);
+ *   · workspace/comando com erro de infraestrutura → INCONCLUSIVE (segue o fluxo normal e o
+ *     motivo fica registrado — inconclusivo NUNCA vira GREEN).
+ */
+async function preVerifySpecSatisfied({ task, eventAudienceTenantId = null }) {
+  const commands = Array.isArray(task.test_commands) ? task.test_commands.filter(Boolean) : [];
+  if (!task.mission_id || commands.length === 0) {
+    return { status: 'NOT_APPLICABLE', reason: 'SEM_MISSAO_OU_SEM_TEST_COMMANDS' };
+  }
+
+  const source = await missionSourceService.getMissionSource(task.mission_id).catch(() => null);
+  const fonteAvancou = Boolean(source && source.baseCommit && source.currentCommit && source.currentCommit !== source.baseCommit);
+  if (!fonteAvancou) {
+    return { status: 'NOT_APPLICABLE', reason: 'MISSION_SOURCE_NOT_ADVANCED' };
+  }
+
+  // ── A TASK TEM DE NASCER NA FONTE JÁ CORRIGIDA ──────────────────────────────────────────────
+  // CONDIÇÃO APRENDIDA POR REGRESSÃO (medida no CI em 2026-10-29, run 40816307878): sem ela, uma
+  // task de trabalho LEGÍTIMO ancorada numa fonte ANTIGA era dada como satisfeita porque o
+  // `test_commands` dela (um smoke que passa em qualquer base) passava — e o Router concluía GREEN
+  // sobre trabalho que a missão não tem, derrubando `missionSourceStaleReplanFullRouterE2E`
+  // (esperado `READY_FOR_PROMOTION`/`STALE_CANDIDATE`, obtido `GREEN`).
+  //
+  // A retomada pós-fix REANCORA a task substituta no commit corrente da fonte
+  // (`reanchorTaskToCurrentSource`): é isso que caracteriza "o trabalho já está feito no ponto de
+  // partida". Task ancorada numa fonte anterior é trabalho PENDENTE e segue o fluxo normal — pelo
+  // Router, com a recusa de stale quando for o caso.
+  const ancoradaNaFonteCorrigida = Boolean(task.source_commit)
+    && String(task.source_commit) === String(source.currentCommit);
+  if (!ancoradaNaFonteCorrigida) {
+    return {
+      status: 'NOT_APPLICABLE',
+      reason: 'TASK_NOT_ANCHORED_ON_CORRECTED_SOURCE',
+      taskSourceCommit: task.source_commit || null,
+      missionCurrentCommit: source.currentCommit,
+    };
+  }
+
+  // ── É RETOMADA PÓS-FIX, E NÃO UMA FASE NORMAL DA MISSÃO ─────────────────────────────────────
+  // SEGUNDA CONDIÇÃO APRENDIDA POR REGRESSÃO (run 40816307878 e reprodução local da suíte
+  // `missionSourceStaleReplanFullRouterE2E`): `test_commands` que PASSA não prova que a spec está
+  // satisfeita — um smoke verde não mostra que o artefato exigido pela spec (ex.: o patch B) foi
+  // criado. A pré-verificação existe para UM caso: a missão foi retomada DEPOIS de uma correção ser
+  // integrada. Esse é o único caso em que a última integração da missão é um `BUG_FIX_CANDIDATE`;
+  // qualquer outra (fase normal, replan, task de implementação) é trabalho PENDENTE e segue o fluxo
+  // normal pelo Router. Sem esta condição, uma task de implementação ancorada na fonte corrente
+  // concluiria GREEN sem nunca produzir o artefato — GREEN falso, que é o pior desfecho possível.
+  const integracoes = await missionSourceService.listIntegrations(task.mission_id, { limit: 200 }).catch(() => []);
+  const ultimaIntegracao = integracoes.length ? integracoes[integracoes.length - 1] : null;
+  const retomadaPosFix = Boolean(ultimaIntegracao
+    // `candidate_commit` é o commit que a integração colocou na fonte; ele É o `currentCommit` quando
+    // a última integração é a que produziu o estado corrente.
+    && String(ultimaIntegracao.candidate_commit || '') === String(source.currentCommit)
+    && String(ultimaIntegracao.integration_type || '').toUpperCase() === 'BUG_FIX_CANDIDATE'
+    && String(ultimaIntegracao.integration_status || 'COMMITTED').toUpperCase() === 'COMMITTED');
+  if (!retomadaPosFix) {
+    return {
+      status: 'NOT_APPLICABLE',
+      reason: 'NOT_A_POST_FIX_RESUME',
+      lastIntegrationType: ultimaIntegracao ? ultimaIntegracao.integration_type || null : null,
+    };
+  }
+
+  let workspace = null;
+  try {
+    workspace = await createWorkspace(task.id, 0);
+    emitTaskStage(eventAudienceTenantId, task.id, {
+      stage: 'SPEC_PRE_VERIFY',
+      status: 'running',
+      message: `Fonte da missão já contém correção integrada (${String(source.baseCommit).slice(0, 7)} → ${String(source.currentCommit).slice(0, 7)}): verificando se a spec já está satisfeita antes de codificar.`,
+      meta: { commands, sourceCommit: task.source_commit || null, missionCurrentCommit: source.currentCommit },
+    });
+    const testResult = await runTestCommands({
+      taskId: task.id,
+      attemptNumber: 'spec-pre-verify',
+      commands,
+      cwd: workspace,
+    });
+    const execucoes = Array.isArray(testResult?.results) ? testResult.results : [];
+    const todasPassaram = execucoes.length === commands.length
+      && execucoes.every((r) => r && r.exitCode === 0);
+    return {
+      status: todasPassaram ? 'SATISFIED' : 'NOT_SATISFIED',
+      sourceCommit: task.source_commit || null,
+      missionCurrentCommit: source.currentCommit,
+      commands,
+      executions: execucoes.map((r) => ({ command: r.command, exitCode: r.exitCode })),
+    };
+  } catch (err) {
+    logger.warn('[engineeringRouterService] pré-verificação de spec INCONCLUSIVA — segue o fluxo normal', {
+      taskId: task.id, missionId: task.mission_id, error: err.message,
+    });
+    return { status: 'INCONCLUSIVE', reason: err.message };
+  } finally {
+    if (workspace) await destroyWorkspace(workspace).catch(() => {});
+  }
+}
+
 async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null, run = null }) {
   const taskId = task.id;
   const ts = writesFor(run);
+
+  // ── SPEC JÁ SATISFEITA: nunca codificar o que já está feito ──────────────────────────────────
+  // Só é consultado quando a fonte da missão já avançou (candidato integrado). Ver
+  // `preVerifySpecSatisfied` para o defeito medido que motivou este caminho.
+  const preVerificacao = await preVerifySpecSatisfied({ task, eventAudienceTenantId });
+  if (preVerificacao.status === 'SATISFIED') {
+    await ts.recordTelemetry({
+      task_id: taskId,
+      attempt_id: null,
+      // `role` é NOT NULL no modelo de telemetria: a pré-verificação não tem provider/model (não
+      // houve chamada de LLM), mas precisa de um papel declarado para a evidência existir.
+      role: 'ROUTER',
+      provider: null,
+      model: null,
+      event_type: 'SPEC_PRE_VERIFIED',
+      result: 'SATISFIED',
+      detail: {
+        sourceCommit: preVerificacao.sourceCommit,
+        missionCurrentCommit: preVerificacao.missionCurrentCommit,
+        commands: preVerificacao.commands,
+        executions: preVerificacao.executions,
+      },
+    }).catch((err) => logger.warn('[engineeringRouterService] falha ao registrar telemetria de pré-verificação', { taskId, error: err.message }));
+    await ts.transitionTask(taskId, 'GREEN');
+    emitTaskStage(eventAudienceTenantId, taskId, {
+      stage: 'GREEN',
+      status: 'success',
+      message: 'Spec já satisfeita no commit da fonte da missão — concluída sem codificar e sem patch.',
+      meta: { reasonCode: FAILURE_CODES.SPEC_ALREADY_SATISFIED, ...preVerificacao },
+    });
+    return {
+      taskId,
+      status: 'GREEN',
+      reasonCode: FAILURE_CODES.SPEC_ALREADY_SATISFIED,
+      specAlreadySatisfied: true,
+      sourceCommit: preVerificacao.sourceCommit,
+      missionCurrentCommit: preVerificacao.missionCurrentCommit,
+    };
+  }
+  if (preVerificacao.status !== 'NOT_APPLICABLE') {
+    // NOT_SATISFIED / INCONCLUSIVE seguem o fluxo normal (codificar). A decisão fica registrada
+    // para auditoria: nunca se conclui GREEN por ausência de informação.
+    logger.info('[engineeringRouterService] pré-verificação de spec não concluiu — seguindo para o coder', {
+      taskId, status: preVerificacao.status, reason: preVerificacao.reason || null,
+    });
+  }
+
   task = await ensureRouted(task, { credentialScope, eventAudienceTenantId, run });
 
   if (!task.routing_decision?.coder?.selected) {
+    // TRANSIÇÃO LEGAL (medido 2026-10-21, run 39624141710): a task está em ROUTED e o mapa do
+    // motor (`engine/engineeringRouter/stateMachine.js`) admite `ROUTED -> CODING|CANCELLED|
+    // BLOCKED` — RED NÃO é alcançável daqui. O código pedia RED e o motor (corretamente) recusava
+    // com INVALID_STATE_TRANSITION: um crash no lugar de um estado terminal. Sem CODER qualificado
+    // a task não falhou DEPOIS de executar, ela está BLOQUEADA por capacidade — então o estado
+    // terminal correto é BLOCKED, e o motivo continua registrado em lastError. O motor não é
+    // alterado para acomodar o chamador.
     await ts.saveLastError(taskId, { code: 'NO_QUALIFIED_CODER', message: 'Nenhum CODER qualificado disponível' });
-    await ts.transitionTask(taskId, 'RED');
-    emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
-    return { taskId, status: 'RED', reasonCode: 'NO_QUALIFIED_CODER' };
+    await ts.transitionTask(taskId, 'BLOCKED');
+    emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
+    return { taskId, status: 'BLOCKED', reasonCode: 'NO_QUALIFIED_CODER' };
   }
 
   const existingAttempts = await engineeringTaskService.listAttempts(taskId);

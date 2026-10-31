@@ -1,0 +1,6 @@
+[bug-closure-status] mecanismo: recusa como deve (13 provas)
+[bug-closure-status] guardas: 9/9 entrypoints consultam elegibilidade
+[bug-closure-status] abertos=135 (P0=0 P1=0 semSeveridade=0 externos=5) bloqueantesParaCertificacao=98
+[bug-closure-status] FAIL: 1 motivo(s)
+  FECHAMENTO_NAO_PROVADO 130 defeito(s) DECLARAM fechamento sem prova válida (P0=31, P1=67) — declarar não é fechar
+[bug-closure-status] relatório: reports/bug-closure-status.json

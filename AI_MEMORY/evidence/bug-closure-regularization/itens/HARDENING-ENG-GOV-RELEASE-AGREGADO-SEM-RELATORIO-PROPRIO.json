@@ -1,0 +1,14 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "O gate agregado nao persiste veredito proprio do run corrente",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/aggregateVerdict.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.json",
+  "camposParaAssinar": 18
+}

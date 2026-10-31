@@ -1,0 +1,18 @@
+MISSÃO B — TOCTOU DE DIRETÓRIO: REPRODUÇÃO ANTES/DEPOIS (escrita real no kernel)
+data: 2026-10-24T09:38Z
+método: interceptação do syscall exato em que o atacante vence a corrida (determinístico).
+        Reprodução: /tmp/p2/repro-toctou2.js  (executado contra HEAD anterior e contra a versão corrigida)
+
+JANELA "antes" — nome do diretório trocado ANTES da abertura:
+  HEAD (sem pin)      : escrita pelo caminho textual; resultado reportado SUCESSO
+  corrigida (pin/fd)  : FALHA:DIR_NAO_E_DIRETORIO:ENOTDIR; sentinela intocada; nada escrito fora
+
+JANELA "depois" — nome do diretório trocado DEPOIS da abertura:
+  HEAD (sem pin)      : ESCAPE REAL — "Y1.json" criado no diretório-sentinela externo e o retorno
+                        foi {ok:true} (sucesso silencioso fora da raiz autorizada)
+  corrigida (pin/fd)  : nenhum arquivo na sentinela; o artefato ficou no INODE aberto (itens-bkp)
+                        e o retorno foi FALHA:DIR_TROCADO_DURANTE_ESCRITA
+
+LIMITAÇÃO DECLARADA: Node.js não expõe openat; a defesa implementada no Linux é o pin por
+descritor (/proc/self/fd/<fd>) + raiz privada 0700. Em plataforma sem /proc resta a DETECÇÃO
+pós-escrita, que recusa o sucesso mas não impede a escrita no inode já aberto.

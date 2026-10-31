@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "f30debb1-17c9-4cf0-a991-e176b8dc0b50",
+  "defectId": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
+      "command": "npx jest tests/unit/engineeringRouterSandboxAvailabilityCache.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:45:00.437Z",
+      "finishedAt": "2026-10-31T19:45:05.202Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-SANDBOX-PROBE-CACHE-NEGATIVO.log",
+      "outputSha256": "95447a14065e0c15de720e6463595e3bf575fff8a4d784afbcfb8a9a8d86546b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
+      "sha256": "66dde7fc8e7db03c2e62d18ebe5d4c18d4f4c347067719c85a09b83c897ab9df"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:45:05.210Z",
+  "proofHash": "565f82ae344644e43b35bc30ba11963359cee0ab8e8ed9bb751e43f012ae6116"
+}

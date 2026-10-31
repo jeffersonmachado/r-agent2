@@ -1,0 +1,14 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
+  "severity": "P1",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Harness aceitava LOG JSON do produto como handshake do worker de lease (selo V2 abortado)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.json",
+  "camposParaAssinar": 18
+}

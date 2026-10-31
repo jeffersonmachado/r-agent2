@@ -91,12 +91,35 @@ describe('engineeringRouter/contextBuilder — fonte do contexto (commit da miss
     expect(context.includedFiles).toContain(FILE_IN_ROOT);
   });
 
-  test('source_commit IRRESOLVÍVEL degrada para o checkout principal sem lançar', () => {
-    const reader = createSourceReader({ id: 't-bad', source_commit: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' });
-    expect(reader.kind).toBe('ROOT');
-    const context = buildContext({ id: 't-bad', allowed_paths: [FILE_IN_ROOT], source_commit: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' });
-    expect(context.sourceOrigin.kind).toBe('ROOT');
-    expect(context.includedFiles).toContain(FILE_IN_ROOT);
+  // L-1 (2026-10-20): a degradação silenciosa para o checkout principal era o defeito. A base
+  // declarada é IDENTIDADE — se ela não existe, o contexto não pode ser construído de outra fonte.
+  test('source_commit IRRESOLVÍVEL FALHA explicitamente (nunca lê o checkout principal)', () => {
+    const commit = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+    let thrown = null;
+    try {
+      createSourceReader({ id: 't-bad', source_commit: commit });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).not.toBeNull();
+    expect(thrown.code).toBe('CONTEXT_SOURCE_UNRESOLVABLE');
+    expect(thrown.reason).toBe('MISSION_SOURCE_COMMIT_UNRESOLVABLE');
+    expect(thrown.sourceCommit).toBe(commit);
+
+    expect(() => buildContext({ id: 't-bad', allowed_paths: [FILE_IN_ROOT], source_commit: commit }))
+      .toThrow(/não existe neste repositório/);
+  });
+
+  test('task de missão SEM source_commit FALHA (não herda a main silenciosamente)', () => {
+    let thrown = null;
+    try {
+      createSourceReader({ id: 't-mission', mission_id: '11111111-2222-3333-4444-555555555555' });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).not.toBeNull();
+    expect(thrown.code).toBe('CONTEXT_SOURCE_UNRESOLVABLE');
+    expect(thrown.reason).toBe('MISSION_SOURCE_NOT_INHERITED');
   });
 
   test('globs são expandidos contra a FONTE (não só arquivos literais)', () => {

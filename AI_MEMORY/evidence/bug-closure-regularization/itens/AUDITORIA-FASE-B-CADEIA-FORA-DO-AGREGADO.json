@@ -1,0 +1,14 @@
+{
+  "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Cadeia criptografica: analise corrigida — elos derivados vs imutaveis, e estado exposto na auditoria",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
+  "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.json",
+  "camposParaAssinar": 18
+}

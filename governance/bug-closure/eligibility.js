@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 /**
  * BUG CLOSURE FIRST — GATE CENTRAL DE ELEGIBILIDADE.
  *
@@ -26,6 +28,7 @@ const {
   normalizarSeveridade,
   eBloqueanteParaCertificacao,
 } = require('./defect-states');
+const { ancoraDoInventario, digestDoInventario } = require('./trusted-authorities');
 
 /** Operações controladas (nome canônico em maiúsculas). */
 const OPERACOES = Object.freeze({
@@ -94,6 +97,11 @@ const CODIGOS = Object.freeze({
   RISCO_ACEITO_INEFICAZ: 'RISCO_ACEITO_INEFICAZ',
   CONTROLE_CRITICO_NAO_DISPENSAVEL: 'CONTROLE_CRITICO_NAO_DISPENSAVEL',
   CERTIFICACAO_AUSENTE: 'CERTIFICACAO_AUSENTE',
+  // CAMADA B (missão P0 2026-10-22): estado de fechamento sem prova válida.
+  FECHAMENTO_SEM_PROVA_VALIDA: 'FECHAMENTO_SEM_PROVA_VALIDA',
+  INVENTARIO_NAO_ANCORADO: 'INVENTARIO_NAO_ANCORADO',
+  INVENTARIO_ADULTERADO: 'INVENTARIO_ADULTERADO',
+  OPERACAO_PENDENTE_DE_RECUPERACAO: 'OPERACAO_PENDENTE_DE_RECUPERACAO',
 });
 
 /**
@@ -180,11 +188,23 @@ function classificarDefeitos(defeitos) {
   const riscoAceito = [];
   const riscoAceitoIneficaz = [];
   const bloqueioExterno = [];
+  const fechamentoNaoProvado = [];
 
   for (let d of Array.isArray(defeitos) ? defeitos : []) {
     if (!d) continue;
     const sev = normalizarSeveridade(d.severity);
+    // O ESTADO EFETIVO é o que decide bloqueio: `RESOLVED`/`VERIFIED` escrito à mão
+    // sem prova válida volta a OPEN em `defect-registry.migrarItem`.
+    d = { ...d, state: d.stateEfetivo || d.state };
     const estado = String(d.state || '').toUpperCase();
+
+    // Fechamento declarado e NÃO provado: não conta como fechado. Fica em bucket
+    // próprio para que operações CERTIFICANTES neguem, sem recriar bloqueio circular
+    // em operações de verificação (missão §8).
+    if (d.fechamentoNaoProvado === true) {
+      fechamentoNaoProvado.push(d);
+      continue;
+    }
 
     // RISK_ACCEPTED só dispensa quando a aceitação é VÁLIDA **e** o defeito não é
     // P0 nem controla um mecanismo crítico. Caso contrário cai na classificação
@@ -216,7 +236,7 @@ function classificarDefeitos(defeitos) {
     else if (sev === SEVERIDADES.P1) p1.push(d);
   }
 
-  return { p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno };
+  return { p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno, fechamentoNaoProvado };
 }
 
 /** Todos os defeitos que precisam de teste direcionado aprovado para liberar condicional. */
@@ -329,7 +349,7 @@ function evaluateExecutionEligibility(context = {}, operation) {
   }
 
   const {
-    p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno,
+    p0, p1, naoDeclarada, riscoAceito, riscoAceitoIneficaz, bloqueioExterno, fechamentoNaoProvado,
   } = classificarDefeitos(context.defects);
 
   // "Publicação solicitada sem certificação" (missão §11 #20): operação de
@@ -339,6 +359,31 @@ function evaluateExecutionEligibility(context = {}, operation) {
     reasonCodes.push(CODIGOS.CERTIFICACAO_AUSENTE);
     blockingFindings.push({ code: CODIGOS.CERTIFICACAO_AUSENTE, detail: 'publicação exige referência de certificação (CERTIFIED_GO) no contexto' });
     requiredActions.push('anexar a certificação canônica antes de autorizar publicação');
+  }
+
+  // ── ÂNCORA EXTERNA DO INVENTÁRIO (membership) ────────────────────────────
+  // 2ª passada do revisor, P0: a Camada B autenticava o FECHAMENTO, mas não a EXISTÊNCIA do
+  // defeito. Apagar a linha (ou apontar o gate para outro inventário) liberava SELO_FINAL.
+  // Operação certificante agora exige que o digest do inventário lido case com o valor
+  // externo `RAP_CLOSURE_INVENTORY_SHA256`, que vive FORA da árvore.
+  if (politica.certifica) {
+    const ancora = ancoraDoInventario();
+    const digest = digestDoInventario(context.defects);
+    if (!ancora) {
+      reasonCodes.push(CODIGOS.INVENTARIO_NAO_ANCORADO);
+      blockingFindings.push({
+        code: CODIGOS.INVENTARIO_NAO_ANCORADO,
+        detail: 'inventário sem âncora externa (RAP_CLOSURE_INVENTORY_SHA256): pertença dos itens não autenticada',
+      });
+      requiredActions.push('fornecer RAP_CLOSURE_INVENTORY_SHA256 do canal externo (operador/CI), fora da árvore do repositório');
+    } else if (ancora !== digest) {
+      reasonCodes.push(CODIGOS.INVENTARIO_ADULTERADO);
+      blockingFindings.push({
+        code: CODIGOS.INVENTARIO_ADULTERADO,
+        detail: `digest do inventário (${digest.slice(0, 12)}…) difere da âncora externa (${ancora.slice(0, 12)}…): item removido, renomeado ou reclassificado`,
+      });
+      requiredActions.push('restaurar o inventário oficial OU atualizar a âncora externa por ato humano auditado');
+    }
   }
 
   for (const d of riscoAceito) {
@@ -369,6 +414,32 @@ function evaluateExecutionEligibility(context = {}, operation) {
       reasonCodes.push(CODIGOS.BLOQUEIO_EXTERNO_NAO_RESOLVE_CERTIFICACAO);
     }
     evidenceRefs.push(`defect:${d.id}:BLOCKED_EXTERNAL`);
+  }
+
+  // ── CAMADA B: fechamento declarado sem prova válida ─────────────────────────
+  // Operação que CERTIFICA exige prova assinada por autoridade registrada. Um JSON
+  // editado não é prova — este é o bloqueio do bypass medido em 2026-10-22.
+  // Em operação NÃO certificante o item não bloqueia (evita o ciclo
+  // L1 → Bug Closure → selo → L1), mas fica registrado como observação.
+  if (fechamentoNaoProvado.length > 0) {
+    if (politica.certifica) {
+      reasonCodes.push(CODIGOS.FECHAMENTO_SEM_PROVA_VALIDA);
+      for (const d of fechamentoNaoProvado) {
+        blockingFindings.push({
+          code: CODIGOS.FECHAMENTO_SEM_PROVA_VALIDA,
+          defectId: d.id,
+          severity: normalizarSeveridade(d.severity),
+          state: d.state,
+          estadoDeclarado: d.estadoDeclarado || null,
+          motivo: (d.provaDeFechamento && d.provaDeFechamento.code) || 'PROVA_DE_FECHAMENTO_AUSENTE',
+        });
+      }
+      requiredActions.push('anexar prova de fechamento válida (testes reais com exit 0, SHA atual, fingerprint, livro de transições e assinatura de autoridade com mayCloseDefects) ou reabrir o defeito');
+    } else {
+      for (const d of fechamentoNaoProvado) {
+        evidenceRefs.push(`defect:${d.id}:FECHAMENTO_NAO_PROVADO`);
+      }
+    }
   }
 
   // ── Regra dura: P0 aberto bloqueia tudo que certifica ──────────────────────
@@ -441,7 +512,51 @@ function evaluateExecutionEligibility(context = {}, operation) {
     };
   }
 
-  const negado = bloquearP0 || bloquearP1 || condicionalPendente
+  // Fechamento declarado sem prova válida NEGA toda operação certificante — é o
+  // bloqueio do bypass por edição de JSON (missão P0 2026-10-22).
+  const fechamentoSemProvaBloqueia = politica.certifica && fechamentoNaoProvado.length > 0;
+
+  // Pertença do inventário não autenticada/adulterada NEGA certificação (2ª passada do
+  // revisor): apagar a linha do defeito não pode liberar o selo.
+  const inventarioNaoAncoradoBloqueia = politica.certifica
+    && (reasonCodes.includes(CODIGOS.INVENTARIO_NAO_ANCORADO) || reasonCodes.includes(CODIGOS.INVENTARIO_ADULTERADO));
+
+  // A4 (missão Codex): diário com efeito parcial (evento sem fila, prova sem fila, operação
+  // interrompida) mantém a certificação NEGADA até recuperação canônica. O livro é append-only
+  // e não se trunca, então a única saída honesta é bloquear e exigir reconciliação.
+  let recuperacaoPendente = false;
+  if (politica.certifica) {
+    // ALERT 6 do revisor (P2): o default era `process.cwd()`, então rodar o gate de um
+    // subdiretório (ou CI com working-directory) desligava a guarda silenciosamente. A raiz
+    // passa a ser derivada do próprio módulo. Erro de leitura do diário é fail-CLOSED
+    // (tratado como pendência), nunca "nada pendente".
+    const raizDoModulo = path.resolve(__dirname, '..', '..');
+    try {
+      // eslint-disable-next-line global-require
+      const jornal = require('./transition-journal');
+      if (jornal.haOperacaoPendente(context.rootDir || raizDoModulo)) {
+        recuperacaoPendente = true;
+        reasonCodes.push(CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO);
+        blockingFindings.push({
+          code: CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO,
+          detail: 'diário de transições tem operação interrompida com efeito parcial — recupere antes de certificar',
+        });
+        requiredActions.push('rodar node scripts/governance/recover-bug-closure-journal.js e resolver as operações pendentes');
+      }
+    } catch (e) {
+      // fail-closed: diário ilegível não é ausência de pendência.
+      recuperacaoPendente = true;
+      reasonCodes.push(CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO);
+      blockingFindings.push({
+        code: CODIGOS.OPERACAO_PENDENTE_DE_RECUPERACAO,
+        detail: `diário de transições ilegível (${e.message}) — tratado como pendência`,
+      });
+    }
+  }
+
+  const negado = bloquearP0 || bloquearP1 || condicionalPendente || fechamentoSemProvaBloqueia
+    || recuperacaoPendente
+    || inventarioNaoAncoradoBloqueia
     || (naoDeclarada.length > 0 && politica.certifica)
     || (op === OPERACOES.PUBLICACAO_RELEASE && !NAO_VAZIO(context.certification));
 

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9464228b-a5ed-46ea-be68-a3c0c9e7d38e",
+  "defectId": "H9-IDENTIDADE-PORTA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/dev/devServicesSupervision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/dev/devServicesSupervision.test.js",
+      "command": "npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:57:50.820Z",
+      "finishedAt": "2026-10-31T19:58:28.174Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H9-IDENTIDADE-PORTA.log",
+      "outputSha256": "6cf4582b2c16db54cc40b5f470e7e5748074d2b4bd43b6763527722bbf1f56e5"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/dev/devServicesSupervision.test.js",
+      "sha256": "62f4628fcf762cbaf0e9e3dad48a45987c36428275e9d683e8f914e661f7f298"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:58:28.182Z",
+  "proofHash": "8d192ff742130b9331d47ab28f452dab31faecf2cc27e0891ccc88270c39f0ad",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "WV39GalU3GPxhu/MeBIZM3Q2X3hrhwjGatMlVSn9wqPWKSi8h9hbOS2HA5yfDv9E8FvYH4l31OX92WQimWWJBw==",
+    "signedAt": "2026-10-31T20:02:54.702Z"
+  }
+}

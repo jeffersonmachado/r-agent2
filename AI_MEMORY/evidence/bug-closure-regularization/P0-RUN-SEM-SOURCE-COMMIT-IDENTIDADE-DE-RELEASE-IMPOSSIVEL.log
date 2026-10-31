@@ -1,0 +1,20 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/runIdentityCommit.test.js
+  (1) o run governado registra o commit
+    ✓ create-governed-run passa gitCommit/branch para createRun (110 ms)
+    ✓ resolveGitIdentity expõe commit, tree AND branch (fonte única do git) (149 ms)
+    ✓ o serviço createRun PERSISTE o commit quando recebido (não descarta em silêncio) (102 ms)
+  (2) o lineage estampa o commit do RUN, nunca do worktree
+    ✓ grava sourceCommit a partir do run (103 ms)
+    ✓ recusa estampar quando o run não tem commit (fail-closed, não fabrica identidade) (102 ms)
+    ✓ não busca o commit do HEAD do worktree para estampar (identidade do run) (103 ms)
+  (3) a exigência e a produção da identidade concordam (não há dead-end)
+    ✓ os campos exigidos pela decisão canônica são os mesmos que o estampador produz (124 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.261 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/runIdentityCommit.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

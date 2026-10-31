@@ -1,0 +1,14 @@
+{
+  "id": "CI-FLOW-GATE-VACUOSO",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "test:flow carregava --passWithNoTests: verde com ZERO testes executados",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-FLOW-GATE-VACUOSO.log",
+  "draft": "governance/bug-closure/proofs-drafts/CI-FLOW-GATE-VACUOSO.json",
+  "camposParaAssinar": 18
+}

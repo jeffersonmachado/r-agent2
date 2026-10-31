@@ -1,0 +1,14 @@
+{
+  "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Lineage de relatorio escolhia o run mais recente e omitia sourceCommit",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/reportLineageExplicit.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-LINEAGE-RUN-MAIS-RECENTE.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-LINEAGE-RUN-MAIS-RECENTE.json",
+  "camposParaAssinar": 18
+}

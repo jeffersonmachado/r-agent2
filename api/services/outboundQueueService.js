@@ -25,12 +25,45 @@ const { sendMessengerMessage } = require('./messengerService');
 const { sendTextViaConnection, sendMediaViaConnection } = require('./whatsappQrBridgeService');
 const { getTicketMediaById } = require('./ticketMediaService');
 const { updateOutboundMessageMeta, getTicket } = require('./queueService');
+const { buildTicketDeliveryStatusUpdate } = require('./queue/ticketDeliveryStatusSql');
 const { emitEvent } = require('./websocketService');
 const { logAction } = require('./auditService');
 const config = require('../utils/config');
 
 function dbAvailable() {
   return !!getSequelize();
+}
+
+/**
+ * Propaga o status de entrega para a mensagem do ticket DIRETO no banco (JSONB pontual).
+ *
+ * Complementa `updateOutboundMessageMeta`, que só alcança o ticket presente na cópia em
+ * memória do QueueService. Medido em 2026-10-21 (stack prod-like real): quando a mensagem
+ * do agente nasce por um caminho que não populou essa cópia, o status terminal nunca era
+ * persistido e a mensagem ficava `pending` indefinidamente — o smoke prod-like reprovava
+ * em `step_assert_whatsapp_delivery` mesmo com a fila de outbound já em `failed`.
+ *
+ * Best-effort consciente: nunca lança (o processamento da fila não pode morrer por causa
+ * do histórico do ticket) e devolve `false` quando não atualizou nada — nunca finge sucesso.
+ */
+async function applyDeliveryStatusToTicket({ ticketId, clientMessageId, patch } = {}) {
+  try {
+    if (!dbAvailable()) return false;
+    const alvo = buildTicketDeliveryStatusUpdate({ ticketId, clientMessageId, patch });
+    if (!alvo) return false;
+    const sequelize = getSequelize();
+    // `RETURNING t.id` dá a prova exata de quantas linhas mudaram, sem depender do formato
+    // de metadata de cada driver (medido: `metadata.rowCount` vinha `undefined` no pg).
+    const [linhas] = await sequelize.query(alvo.sql, { replacements: alvo.replacements });
+    return Array.isArray(linhas) && linhas.length > 0;
+  } catch (err) {
+    logger.warn('[OutboundQueue] falha ao propagar status de entrega ao ticket', {
+      ticketId,
+      clientMessageId,
+      error: safeErrorMessage(err),
+    });
+    return false;
+  }
 }
 
 function safeToString(value, fallback = '') {
@@ -1311,14 +1344,15 @@ async function processDue({ limit = 25, capabilityOverrides = null } = {}) {
         const ticketId = rawTicketId ? safeToString(rawTicketId) : null;
         const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
         if (ticketId) {
-          const updatedTicket = updateOutboundMessageMeta(ticketId, {
+          const patch = {
             clientMessageId,
             deliveryStatus: 'failed',
             reasonCode,
             lastError: safeErrorMessage(err, 'send_failed'),
             failedAt: new Date().toISOString(),
             attempts,
-          });
+          };
+          const updatedTicket = updateOutboundMessageMeta(ticketId, patch);
           if (updatedTicket) {
             emitEvent('ticket.updated', {
               ticketId: updatedTicket.id,
@@ -1326,6 +1360,12 @@ async function processDue({ limit = 25, capabilityOverrides = null } = {}) {
               change: { type: 'message_status', status: 'failed', error: safeErrorMessage(err) },
             }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
           }
+          // ATUALIZAÇÃO PONTUAL NO BANCO (medido 2026-10-21): a cópia em memória do ticket
+          // pode não existir/estar velha, e nesse caso o status terminal nunca era
+          // persistido (mensagem ficava `pending` para sempre, apesar da fila `failed`).
+          // Escrever SÓ o elemento da mensagem (JSONB) não reescreve o resto da linha e
+          // por isso não pode ressuscitar estado anterior.
+          await applyDeliveryStatusToTicket({ ticketId, clientMessageId, patch });
         }
       } catch (_) {}
 

@@ -1,0 +1,34 @@
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/crmTenantIsolation.postgres.test.js
+  P0-02 — matriz adversarial de isolamento (PostgreSQL real)
+    ✓ 1. tenant A cria registro e o SQL confirma tenant_key=A (145 ms)
+    ✓ 2. tenant A lê o próprio registro (115 ms)
+    ✓ 3. tenant B NÃO lê o registro de A (null, sem dado vazado) (107 ms)
+    ✓ 4. tenant B NÃO atualiza o registro de A (0 linhas; SQL intacto) (111 ms)
+    ✓ 5. tenant B NÃO exclui o registro de A (108 ms)
+    ✓ 6. tenant B NÃO cria registro usando o ID de A (409; A intacto) (232 ms)
+    ✓ 7. tenant B NÃO altera tenant_key por payload contaminado (115 ms)
+    ✓ 8. atualização com id divergente no payload não troca de registro (118 ms)
+    ✓ 9. repetir o ataque anterior continua rejeitado (idempotência da recusa) (119 ms)
+    ✓ 10. dados de A permanecem intactos ao final da matriz (104 ms)
+    ✓ 11. B nunca recebe dado confidencial de A em listagens (119 ms)
+    ✓ 12. operações simultâneas: só o dono atualiza; corrida não transfere (131 ms)
+    ✓ 13. transação que falha na atualização não deixa estado parcial (122 ms)
+    ✓ 14. trigger do banco recusa transferência de tenant_key (defesa em profundidade) (107 ms)
+    ✓ 15. criação repetida no mesmo tenant não sobrescreve o existente (108 ms)
+    ✓ 16. registro de tenant INEXISTENTE não pode ser apropriado (108 ms)
+    ✓ 17. entidade diferente não pode sequestrar registro de outra entidade (105 ms)
+    ✓ 18. permissões de criação e atualização são operações distintas (105 ms)
+    ✓ 19. tenant inválido/vazio não grava nada (104 ms)
+    ✓ 20. após reconexão (restart da aplicação) o isolamento continua (176 ms)
+  P0-02 — métricas e persistência após a matriz
+    ✓ 21. contagem por tenant continua consistente (métricas) (105 ms)
+    ✓ 22. nenhuma linha tem tenant_key divergente do dono original (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       22 passed, 22 total
+Snapshots:   0 total
+Time:        4.034 s
+Ran all test suites matching /tests\/integration\/crmTenantIsolation.postgres.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

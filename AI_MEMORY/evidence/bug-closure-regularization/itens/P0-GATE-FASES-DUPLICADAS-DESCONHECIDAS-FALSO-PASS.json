@@ -1,0 +1,17 @@
+{
+  "id": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate de desenvolvimento certificava com fases duplicadas, desconhecidas ou inexistentes (A,A,A,A = PASS)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/devBranchGatePhaseContract.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.json",
+  "camposParaAssinar": 18
+}

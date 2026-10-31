@@ -1,0 +1,16 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/audit/auditEntrypointArtifact.test.js
+  AUDIT_ENTRYPOINT.md — invariantes do ponto de entrada de auditoria
+    ✓ o artefato existe, declara auditEpoch e traz o payload JSON embutido parseável (106 ms)
+    ✓ o estado da cadeia criptografica vem derivado, com classificacao por elo (102 ms)
+    ✓ todo proof registrado tem veredito e sha256 — nenhuma linha oca (123 ms)
+    ✓ o auditEpoch é RECALCULÁVEL de forma independente a partir do payload (108 ms)
+    ✓ audit:json-persistence está PASS e sem alvos UNKNOWN (trava da regressão do agg8) (116 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.761 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/audit\/auditEntrypointArtifact.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

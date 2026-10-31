@@ -10,6 +10,7 @@ import { useExecutionPolling } from '../components/qa-waves/useExecutionPolling'
 import { ExecutionProgress } from '../components/qa-waves/ExecutionProgress';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
+import { LroOperationsPanel } from '../components/lro/LroOperationsPanel';
 import { useWebSocketStatus } from '../utils/webSocketStatusConfig';
 import logger from '../utils/logger';
 import '../components/qa-waves/qaWaves.css';
@@ -400,18 +401,29 @@ export function QaWavesPage() {
   }
 
   async function loadAll() {
-    try {
-      const [journeysData, journeyStatusData] = await Promise.all([
-        fetchJson('/api/qa-waves/journeys'),
-        fetchJson('/api/qa-waves/journey-status'),
-        loadScenarios(),
-        loadExecutions(),
-      ]);
+    // DEFEITO MEDIDO 2026-10-30 (cold load de /dev/qa-waves): `/api/qa-waves/executions`
+    // deu TIMEOUT enquanto `journeys`, `journey-status` e `scenarios` respondiam 200. Com
+    // `Promise.all`, a única falha descartava as três respostas boas e a página ficava em
+    // "0 Cenários / 0% / sem domínio" — sem mensagem, porque o toast já tinha sumido.
+    // Cada dependência é aplicada por si: dado que chegou, dado que fica na tela.
+    const resultados = await Promise.allSettled([
+      fetchJson('/api/qa-waves/journeys'),
+      fetchJson('/api/qa-waves/journey-status'),
+      loadScenarios(),
+      loadExecutions(),
+    ]);
+    const [journeysData, journeyStatusData] = resultados;
 
-      const domains = Array.isArray(journeysData.domains) ? journeysData.domains : [];
+    let domains = [];
+    if (journeysData.status === 'fulfilled') {
+      domains = Array.isArray(journeysData.value?.domains) ? journeysData.value.domains : [];
       setJourneysTree(domains);
-      setJourneyStatus(Array.isArray(journeyStatusData.items) ? journeyStatusData.items : []);
+    }
+    if (journeyStatusData.status === 'fulfilled') {
+      setJourneyStatus(Array.isArray(journeyStatusData.value?.items) ? journeyStatusData.value.items : []);
+    }
 
+    try {
       if (!selectedDomainId && domains.length > 0) {
         const firstDomain = domains[0];
         const firstJourney = firstDomain?.journeys?.[0];
@@ -422,6 +434,15 @@ export function QaWavesPage() {
       }
     } catch (err) {
       notifyRequestError(err, 'Falha ao carregar QA Waves');
+    }
+
+    // Falha parcial continua VISÍVEL: o que não veio é anunciado, o que veio é preservado.
+    // TODAS as quatro dependências são reportadas — `loadScenarios`/`loadExecutions` também
+    // podem falhar e a falha delas não pode ser silenciosa (o defeito medido foi exatamente
+    // `/executions` estourando timeout sem ninguém ver).
+    const falhas = resultados.filter((r) => r.status === 'rejected');
+    if (falhas.length > 0) {
+      notifyRequestError(falhas[0].reason, 'Falha ao carregar QA Waves');
     }
   }
 
@@ -1044,6 +1065,14 @@ export function QaWavesPage() {
           </div>
         </div>
       </header>
+
+      {/* Operações de longa duração (LRO) — superfície DEVELOPMENT.
+          Recolhida por padrão: não compete com o fluxo principal de QA Waves e carrega por si
+          (falha da lista não afeta o painel de domínios). */}
+      <details className="qa-lro-operacoes" style={{ margin: '8px 0' }}>
+        <summary style={{ cursor: 'pointer' }}>Operações (LRO)</summary>
+        <LroOperationsPanel token={typeof window !== 'undefined' ? window.localStorage?.getItem('auth_token') : null} />
+      </details>
 
       {/* Navegação por domínio */}
       <nav className="qa-domain-pills" aria-label="Verticais">

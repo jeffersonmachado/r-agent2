@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "58b728e7-6869-4dab-a787-dd3c803739ed",
+  "defectId": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "command": "npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:34:12.969Z",
+      "finishedAt": "2026-10-31T19:34:20.134Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
+      "outputSha256": "f8e4286027698184693342c28bc40a7295bd7602e2fbf30b89c472c931bd29e6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "sha256": "ff769ca53e44c73b73f33bbadfb702bf8ae1bfe6ed50e5568783bebab89e96ae"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:34:20.142Z",
+  "proofHash": "3677fa6751adbefb0adf68a8c16d715bd38ba8e56d7b3772a806daa2cee8c6c7"
+}

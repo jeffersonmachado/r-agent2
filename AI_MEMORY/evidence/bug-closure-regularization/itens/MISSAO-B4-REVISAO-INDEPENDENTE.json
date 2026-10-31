@@ -1,0 +1,8 @@
+{
+  "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "B4: revisao independente — verificado, NAO e defeito (rigor maximo)",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

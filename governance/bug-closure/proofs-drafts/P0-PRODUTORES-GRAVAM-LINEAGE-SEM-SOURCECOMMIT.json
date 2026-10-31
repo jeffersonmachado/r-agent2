@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "fe71cc07-0037-44e8-8557-f3c80bac0dc7",
+  "defectId": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "tests/unit/governance/producerLineageIdentity.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/producerLineageIdentity.test.js",
+      "command": "npx jest tests/unit/governance/producerLineageIdentity.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:35:35.886Z",
+      "finishedAt": "2026-10-31T19:35:38.875Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
+      "outputSha256": "299c6f24efb2bab98c2761994712d7e27cf15d9acda4f05bfa55f21ac4f64603"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/producerLineageIdentity.test.js",
+      "sha256": "5eb4bf62b13dadae00815182f6e8739c24af649babef8994c246082277e89d20"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:35:38.881Z",
+  "proofHash": "d3c3e5ca60f13a0a29e060aff8307692bf749dbb89c092917d0a9563f8c95a5a"
+}

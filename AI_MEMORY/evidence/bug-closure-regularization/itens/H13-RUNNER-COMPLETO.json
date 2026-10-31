@@ -1,0 +1,14 @@
+{
+  "id": "H13-RUNNER-COMPLETO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Agregado deixa de mascarar falhas: runner completo dos validadores",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/allValidatorsRunner.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H13-RUNNER-COMPLETO.log",
+  "draft": "governance/bug-closure/proofs-drafts/H13-RUNNER-COMPLETO.json",
+  "camposParaAssinar": 18
+}

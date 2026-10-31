@@ -2,15 +2,20 @@
 api/data/
 api/data/config.json
 
-# Node modules
-node_modules/
-frontend/node_modules/
-frontend-e2e/node_modules/
+# Node modules (sem barra final: 'node_modules/' NAO casa com symlink, e um symlink
+# local de node_modules ja entrou no indice por causa disso)
+node_modules
+frontend/node_modules
+frontend-e2e/node_modules
 
 # Logs
 *.log
 npm-debug.log*
 nodemon-debug.log
+# EXCEÇÃO: saídas de teste que a PROVA de fechamento referencia por sha256. Se não forem
+# versionadas, a prova só valida na máquina que a gerou (EVIDENCIA_ADULTERADA em qualquer
+# outro checkout) — é evidência, não log de depuração.
+!AI_MEMORY/evidence/bug-closure-regularization/*.log
 
 # Logs
 logs/
@@ -189,6 +194,7 @@ tmp/*
 !tmp/.gitkeep
 tmp_*
 .jest-engineering-runner.pid
+.jest-engineering-runner-*.pid
 **/*.bkp
 **/*.bak
 **/*.backup
@@ -225,3 +231,7 @@ pbx/asterisk/etc/asterisk/conf/
 # Estado local do hook de continuidade da missao (nao eh artefato de release;
 # um arquivo nao rastreado aqui sujaria o worktree exigido pela selagem).
 .github/hooks/.continue-state.json
+.github/hooks/.worktree-owner.json
+
+# Lock do harness de checkout limpo (estado local, nunca versionado)
+reports/.ci-clean-checkout.lock

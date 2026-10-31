@@ -40,6 +40,22 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+/**
+ * ESCOPO DE CREDENCIAL DO ROUTER = O TENANT DESTA SUÍTE.
+ *
+ * O Router resolve credencial por `ENGINEERING_ROUTER_TENANT_ID` (default `system`) e, no runner
+ * efêmero, `system` não tem credencial nenhuma: a task de correção ia a
+ * `NO_QUALIFIED_CANDIDATE` e a suíte reprovava por DEPENDÊNCIA DE ESTADO AMBIENTAL. O mesmo
+ * defeito já foi medido e corrigido em `engineeringBugLoopNaturalPathE2E` (runs 39673283430 e
+ * 39676752021); aqui vale o MESMO padrão — escopo apontado para o tenant que a suíte cria e limpa,
+ * sem tocar no tenant `system` do operador.
+ *
+ * ORDEM IMPORTA: a variável é lida no carregamento do módulo, então a atribuição vem ANTES dos
+ * `require` que trazem `engineeringRouterService`/`engineeringModelAvailabilityService`.
+ */
+const TEST_TENANT_KEY = 'jest-e2e-stale-full-router';
+process.env.ENGINEERING_ROUTER_TENANT_ID = TEST_TENANT_KEY;
+
 const sequelizeModule = require('../../api/db/sequelize');
 const { skipOrFail } = require('../helpers/infraGate');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
@@ -62,7 +78,6 @@ const SMOKE_COMMAND = `npx jest --testPathIgnorePatterns=/node_modules/ --testPa
 const PATCH_B_FILE = `${FIXTURE_DIR}/staleReplanPatchB.js`;
 const PATCH_B_CONTENT = "'use strict';\n\nmodule.exports = { origin: 'patch-b-stale-replan' };\n";
 
-const TEST_TENANT_KEY = 'jest-e2e-stale-full-router';
 const SUITE_NAME = 'mission-source-stale-replan-full-router-e2e';
 
 /** Conteúdo de `mathUtils.js` DEPOIS do patch da task A (o que faz a fonte virar M2). */
@@ -191,10 +206,48 @@ async function setupTenantAndProviders() {
       },
     };
   }
+  provisionCredentialScope();
   for (const provider of CANDIDATE_PROVIDERS) {
     registerAiProvider(provider, makeFakeProvider(provider));
     await saveAICredentials(TEST_TENANT_KEY, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
   }
+
+}
+
+
+
+/**
+ * Guarda de ORDEM DO ESCOPO (a variável é lida no carregamento dos módulos do Router).
+ *
+ * Chamada no setup: se alguém mover a atribuição de `ENGINEERING_ROUTER_TENANT_ID` para depois dos
+ * `require` — ou sobrescrevê-la no meio do arquivo — o Router volta a resolver credencial no tenant
+ * `system`, e a suíte passa a depender de estado do operador (foi exatamente o defeito medido nos
+ * runs 39673283430/39676752021). Aqui isso falha ALTO, no setup, em vez de virar `BLOCKED` no meio
+ * do ciclo.
+ */
+function provisionCredentialScope() {
+  const escopo = process.env.ENGINEERING_ROUTER_TENANT_ID;
+  if (escopo !== TEST_TENANT_KEY) {
+    throw new Error(
+      `escopo de credencial do Router deveria ser ${TEST_TENANT_KEY} (tenant da suíte) e é ${escopo} — `
+      + 'a env é lida no carregamento do módulo, então a atribuição tem de vir ANTES dos requires',
+    );
+  }
+  return escopo;
+}
+
+/**
+ * Não há nada a restaurar: o escopo é o tenant que esta suíte cria e destrói, e nenhuma credencial é
+ * escrita em tenant de terceiro (o padrão canônico substituiu a fixture que usava `system`).
+ * A função permanece como registro executável dessa garantia — se o escopo divergir no teardown,
+ * algo escreveu no lugar errado e a suíte falha.
+ */
+function restoreCredentialScope() {
+  const escopo = process.env.ENGINEERING_ROUTER_TENANT_ID;
+  if (escopo !== TEST_TENANT_KEY) {
+    throw new Error(`escopo de credencial divergiu no teardown: ${escopo} (esperado ${TEST_TENANT_KEY})`);
+  }
+  return { restored: false, reason: 'escopo é o tenant da suíte; nenhuma credencial de terceiro foi tocada' };
 }
 
 beforeAll(async () => {
@@ -208,6 +261,7 @@ beforeAll(async () => {
 }, 60000);
 
 afterAll(async () => {
+  restoreCredentialScope();
   clearAiProviderConfig();
   if (dbAvailable) {
     const models = require('../../api/db/models');

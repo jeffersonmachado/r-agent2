@@ -1,0 +1,17 @@
+{
+  "id": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Fase do gate era aprovada com apenas PARTE dos passos obrigatorios (fase D: 1 de 7 = PASS)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/phaseStepContract.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.json",
+  "camposParaAssinar": 18
+}

@@ -1,0 +1,14 @@
+{
+  "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "L0 do gate do branch variava de suite vermelha por contencao (11 workers)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/ciGateL0Determinism.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-L0-INDETERMINISTA-POR-CONTENCAO.json",
+  "camposParaAssinar": 18
+}

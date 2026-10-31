@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "0ddb30ce-ae5e-46f7-a73f-0c37e726bfe5",
+  "defectId": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "requiredTests": [
+    "frontend/src/__tests__/supportHeaderEnhancement.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
+      "command": "npm --prefix frontend run test -- src/__tests__/supportHeaderEnhancement.test.js",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T19:37:26.287Z",
+      "finishedAt": "2026-10-31T19:37:29.877Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log",
+      "outputSha256": "a334eb6dc5bc26ffa69581c97da7d2773f48477b852aa35bfdb87e41c8a0f4c1"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
+      "sha256": "ceb887bdf6cedbf2894a2c9c6c8fcb586843e69bfe1a44ae3840c6d8d0494973"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-10-31T19:37:29.885Z",
+  "proofHash": "d908dfa45840c56b728a37460930fd08cb885e393d4af19b8d10d520c5e72e0b",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "SxHxbeELA1Hk2UmNk3+HYPrTCpUwBKdOysekPu4GiMBxpxyYlc+ut8liuR67hPstCIW8ErnbW/0xJ7RRQEmCBg==",
+    "signedAt": "2026-10-31T20:02:52.062Z"
+  }
+}

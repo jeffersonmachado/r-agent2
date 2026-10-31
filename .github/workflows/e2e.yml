@@ -29,11 +29,24 @@ on:
 env:
   NODE_VERSION_LTS: '20'
 
+# IMAGEM DE RUNNER FIXA (política do repositório desde 2026-10-26): `ubuntu-latest` passou a resolver
+# para ubuntu-26.04 e quebra a validação por AMBIENTE, não por código — `npx playwright install
+# --with-deps chromium` morre com "Playwright does not support chromium on ubuntu26.04-x64" e o systemd
+# do 26.04 mudou a redação de diagnósticos que suítes nossas asseveram. Medido no run 40303567233/40303874392
+# (dev-branch-ci). Imagem fixa até que Playwright e as asserções de mensagem suportem 26.04.
 jobs:
   e2e:
     name: "E2E Playwright (stack viva: API + frontend + Postgres + Redis)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     services:
       postgres:
@@ -126,7 +139,7 @@ jobs:
           for i in $(seq 1 60); do
             TOKEN=$(curl -fsS -X POST "http://localhost:3001/auth/login?tenantId=system" \
               -H 'Content-Type: application/json' \
-              -d '{"username":"systemadmin","password":"Admin123!"}' 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j.token||j.accessToken||'')}catch{}})")
+              -d '{"username":"systemadmin","password":"Admin123!"}' 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j.token||j.accessToken||'')}catch{}})") || true
             if [ -n "$TOKEN" ]; then
               echo "Login funcional após ${i}s"
               exit 0

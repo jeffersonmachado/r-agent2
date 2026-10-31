@@ -1,0 +1,17 @@
+{
+  "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
+  "severity": "P0",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "Reuso de lote do runner autoritativo nao pode mascarar exit code divergente",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+  "transicao": "RESOLVED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-6.log",
+  "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-6.json",
+  "camposParaAssinar": 18
+}

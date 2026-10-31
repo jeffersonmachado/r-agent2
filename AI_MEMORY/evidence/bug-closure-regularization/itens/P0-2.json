@@ -1,0 +1,17 @@
+{
+  "id": "P0-2",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Evidencia ausente nunca e PASS (imutabilidade do evidence manifest)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/evidenceManifestHashBaseline.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-2.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-2.json",
+  "camposParaAssinar": 18
+}

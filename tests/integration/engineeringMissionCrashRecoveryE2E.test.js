@@ -227,6 +227,21 @@ describe('Crash real do worker (§9, §40) — evidência runtime de SIGKILL', (
 
     // Frescor: a evidência precisa ser recente, senão deixa de valer como prova de runtime.
     const ageHours = (Date.now() - Date.parse(evidence.finishedAt)) / 3600000;
+    if (ageHours >= 24 * 7) {
+      // Observabilidade (a asserção abaixo permanece idêntica): quando a evidência estiver vencida,
+      // publicar QUAL arquivo foi lido e qual o cwd. MEDIDO 2026-10-29: uma falha de 218 h aqui era
+      // leitura do relatório de OUTRO checkout (o worktree principal), porque o processo Jest subiu
+      // com cwd diferente do checkout sob teste — sem o caminho absoluto no log isso é indiagnosticável.
+      // eslint-disable-next-line no-console
+      console.warn('[crash-recovery-evidence] evidência VENCIDA', JSON.stringify({
+        arquivo: evidencePath,
+        finishedAt: evidence.finishedAt,
+        idadeHoras: Number(ageHours.toFixed(2)),
+        mtimeArquivo: fs.statSync(evidencePath).mtime.toISOString(),
+        status: evidence.status,
+        cwd: process.cwd(),
+      }));
+    }
     expect(ageHours).toBeLessThan(24 * 7);
   });
 

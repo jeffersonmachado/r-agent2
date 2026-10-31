@@ -1,0 +1,8 @@
+{
+  "id": "MISSAO-B8-ESTADOS-FILA",
+  "severity": "P2",
+  "estadoPersistido": "RESOLVED",
+  "titulo": "B8: modelo de estados da fila com hook fail-closed e validador",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+}

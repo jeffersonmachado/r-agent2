@@ -34,7 +34,11 @@ function review(overrides = {}) {
     attempt_id: 'attempt-current',
     decision: 'APPROVE',
     reviewer_provider: 'mistral',
+    // Identidade COMPLETA é requisito desde 2026-10-20: provider sem modelo não
+    // prova quem revisou.
+    reviewer_model: 'mistral-large-latest',
     independent_of_coder: true,
+    created_at: '2026-10-20T12:00:00.000Z',
     ...overrides,
   };
 }
@@ -44,7 +48,7 @@ function gateOf(gates, id) {
 }
 
 describe('deriveGates — categoria da evidência de teste', () => {
-  test('comando genérico satisfaz unit mas o gate de integração DIZ que não tem evidência distinta', () => {
+  test('P1: comando genérico (classificação UNKNOWN) NÃO satisfaz unit', () => {
     const gates = deriveGates({
       task: { status: 'GREEN' },
       testRuns: [run({ command: 'npx jest DR-ALGO --no-coverage' })],
@@ -53,10 +57,25 @@ describe('deriveGates — categoria da evidência de teste', () => {
       greenAttempt: attempt(),
     });
 
-    expect(gateOf(gates, 'unit')).toMatchObject({ status: 'PASS', verification: 'EVIDENCE' });
+    // UNKNOWN não pode satisfazer categoria obrigatória (auditoria 2026-10-20).
+    const unit = gateOf(gates, 'unit');
+    expect(unit.status).not.toBe('PASS');
+    expect(unit.evidence.diagnostic.code).toBe('UNIT_EVIDENCE_MISSING');
     const integration = gateOf(gates, 'integration');
     expect(integration.evidence.hasDistinctIntegrationEvidence).toBe(false);
-    expect(integration.evidence.note).toMatch(/sem evidência de integração distinta/);
+  });
+
+  test('execução classificada como UNIT satisfaz unit', () => {
+    const gates = deriveGates({
+      task: { status: 'GREEN' },
+      testRuns: [run({ command: 'npx jest tests/unit' })],
+      reviews: [review()],
+      regressionRuns: [{ status: 'PASS' }],
+      greenAttempt: attempt(),
+    });
+
+    expect(gateOf(gates, 'unit')).toMatchObject({ status: 'PASS', verification: 'EVIDENCE' });
+    expect(gateOf(gates, 'unit').evidence).toMatchObject({ classification: 'unit', unitRuns: 1 });
   });
 
   test('suíte de integração executada vira evidência distinta', () => {
@@ -99,7 +118,52 @@ describe('deriveGates — revisão vinculada à tentativa que avançou', () => {
 
     const reviewGate = gateOf(gates, 'review');
     expect(reviewGate).toMatchObject({ status: 'PASS', verification: 'EVIDENCE' });
-    expect(reviewGate.evidence).toMatchObject({ providersDiffer: true, independentOfCoder: true });
+    expect(reviewGate.evidence).toMatchObject({
+      providersDiffer: true,
+      independentOfCoder: true,
+      reviewerIdentityComplete: true,
+      attemptId: 'attempt-current',
+    });
+  });
+
+  test('P1: APPROVE SEM declaração de independência NÃO passa (prova positiva obrigatória)', () => {
+    const gates = deriveGates({
+      task: { status: 'GREEN' },
+      testRuns: [run()],
+      reviews: [review({ independent_of_coder: false })],
+      regressionRuns: [{ status: 'PASS' }],
+      greenAttempt: attempt(),
+    });
+
+    const reviewGate = gateOf(gates, 'review');
+    expect(reviewGate.status).not.toBe('PASS');
+    expect(reviewGate.evidence.diagnostic.code).toBe('INDEPENDENT_REVIEW_NOT_PROVEN');
+  });
+
+  test('P1: identidade do revisor incompleta (sem modelo) NÃO passa', () => {
+    const gates = deriveGates({
+      task: { status: 'GREEN' },
+      testRuns: [run()],
+      reviews: [review({ reviewer_model: null })],
+      regressionRuns: [{ status: 'PASS' }],
+      greenAttempt: attempt(),
+    });
+
+    expect(gateOf(gates, 'review').status).not.toBe('PASS');
+    expect(gateOf(gates, 'review').evidence.diagnostic.code).toBe('INDEPENDENT_REVIEW_NOT_PROVEN');
+  });
+
+  test('P1: provider do coder ausente NÃO vira independência por omissão', () => {
+    const gates = deriveGates({
+      task: { status: 'GREEN' },
+      testRuns: [run()],
+      reviews: [review()],
+      regressionRuns: [{ status: 'PASS' }],
+      greenAttempt: attempt({ coder_provider: null }),
+    });
+
+    expect(gateOf(gates, 'review').status).not.toBe('PASS');
+    expect(gateOf(gates, 'review').evidence.diagnostic.code).toBe('INDEPENDENT_REVIEW_NOT_PROVEN');
   });
 });
 

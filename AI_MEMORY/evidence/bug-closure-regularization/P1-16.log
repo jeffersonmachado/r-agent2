@@ -1,0 +1,60 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/releaseSuiteRunner.test.js (7.347 s)
+  run-release-suites — mapSuiteResult
+    ✓ conta os testes por assertionResults (o campo numTotalTests NÃO existe por suíte) (115 ms)
+    ✓ suíte com ZERO testes é FAIL (nunca PASS vacuoso) (105 ms)
+    ✓ um único teste falhando marca a suíte inteira como FAIL (103 ms)
+    ✓ todos os testes pulados é NOT_EXECUTED (não conta como cobertura) (105 ms)
+    ✓ alguns pulados com o restante passando é PASS (pulo parcial é declarado, não é falha) (104 ms)
+    ✓ INFRA_ERROR na mensagem de uma suíte que FALHOU tem estado próprio (não é FAIL genérico) (102 ms)
+    ✓ INFRA_ERROR em failureMessages é detectado (estrutura, não texto de título) (102 ms)
+    ✓ REGRESSÃO: a PALAVRA INFRA_ERROR no título de um teste que PASSOU não classifica a suíte (101 ms)
+    ✓ REGRESSÃO: mensagem de FALHA real sem INFRA_ERROR continua FAIL (não vira estado especial) (103 ms)
+    ✓ suíte marcada failed sem assertions é FAIL (erro de suíte, não zero testes silencioso) (105 ms)
+    ✓ estrutura ausente não derruba o mapeamento (relatório malformado ⇒ FAIL, nunca exceção) (102 ms)
+  run-release-suites — política de execução do lote
+    ✓ desliga o bail EXPLICITAMENTE (o bail do projeto é conveniência de debug, não política de gate) (103 ms)
+    ✓ nenhum `--bail` diferente de 0 pode entrar nos argumentos (104 ms)
+    ✓ mantém a serialização e o transporte do relatório do lote (104 ms)
+  run-release-suites — exit code do lote é autoridade (H1)
+    ✓ JSON PASS com exit 1 ⇒ VIOLAÇÃO (testes aprovados não cancelam o processo) (104 ms)
+    ✓ exit 0 em todos os lotes ⇒ nenhuma violação (não é não-vacuidade às avessas) (103 ms)
+    ✓ morto por sinal (exit null) ⇒ violação nomeada como sinal (105 ms)
+    ✓ lote já reportado como BATCH_REPORT_MISSING não gera violação duplicada (102 ms)
+    ✓ lote REUTILIZADO com exit != 0 É violação (isenção removida no P0-6) (103 ms)
+    ✓ lote REUTILIZADO com exit 0 (o único que o contrato permite) não gera violação (102 ms)
+    ✓ a violação é suficiente para impedir PASS (não-vacuidade do gate) (102 ms)
+  run-release-suites — contrato de reuso de lote (Fase 6)
+    ✓ sem sidecar de binding NÃO reusa (fail-closed: procedência desconhecida) (105 ms)
+    ✓ sem run governado NÃO reusa (103 ms)
+    ✓ runId diferente NÃO reusa (102 ms)
+    ✓ commit diferente NÃO reusa (103 ms)
+    ✓ fingerprint de source diferente NÃO reusa (102 ms)
+    ✓ plano de suítes diferente NÃO reusa (o lote agora contém outras suítes) (104 ms)
+    ✓ hash do resultado diferente NÃO reusa (relatório adulterado/trocado) (103 ms)
+    ✓ com binding completo e idêntico, reusa — e atesta o exit code real (101 ms)
+    ✓ processo original com exit != 0 NÃO reusa (o JSON verde não cancela o processo) (101 ms)
+    ✓ lote morto por SINAL (exit null) NÃO reusa (101 ms)
+    ✓ sidecar do formato ANTERIOR (sem o campo) NÃO reusa — fail-closed, não presumido limpo (102 ms)
+    ✓ relatório do lote SEM `success: true` NÃO reusa (coerência relatório↔processo) (103 ms)
+    ✓ exitCodeDoRelatorioReusado: relatório sem sucesso nunca vale 0 (104 ms)
+    ✓ o fingerprint do plano é insensível à ORDEM mas sensível ao CONTEÚDO (104 ms)
+    ✓ a recusa de reuso é registrada no relatório (não pode ser silenciosa) (104 ms)
+  run-release-suites — prova de saída do grupo do lote (Fase 6)
+    ✓ zumbi NÃO conta como processo vivo do grupo (102 ms)
+    ✓ saída vazia/ilegível não inventa processo (102 ms)
+    ✓ grupo que já não existe ⇒ saída provada por AUSÊNCIA (não por sinal) (152 ms)
+    ✓ grupo que respeita SIGTERM ⇒ exitProof=TERM (sem precisar de KILL) (337 ms)
+    ✓ grupo que IGNORA SIGTERM ⇒ escala para SIGKILL e prova a saída (2081 ms)
+    ✓ a evidência do lote publica a prova de saída e o isolamento (104 ms)
+    ✓ lote que FALHA tem o log integral preservado (e o caminho feliz não escreve nada) (105 ms)
+    ✓ o lote NÃO herda ENGINEERING_RUNNER_URL/TOKEN do ambiente do runner de suítes (104 ms)
+    ✓ o lote impõe teto de pool próprio (DB_POOL_MAX), nunca o valor de dev do .env (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       45 passed, 45 total
+Snapshots:   0 total
+Time:        7.437 s
+Ran all test suites matching /tests\/unit\/governance\/releaseSuiteRunner.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

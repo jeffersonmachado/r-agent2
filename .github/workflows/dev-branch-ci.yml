@@ -45,6 +45,13 @@ on:
   push:
     branches:
       - dev/engineering-hardening
+  # FASE 3 / missão E: o PR #16 (codex/** -> dev/engineering-hardening) NÃO disparava NENHUM
+  # workflow — medido em 2026-10-24 com `gh run list --branch codex/...` (vazio) e
+  # `gh run list --commit a3aa22d28` (vazio). Sem gatilho de PR, o L0/L1 nunca é validado de forma
+  # independente no SHA do PR; a validação só existia como execução local do agente.
+  pull_request:
+    branches:
+      - dev/engineering-hardening
   workflow_dispatch:
 
 permissions:
@@ -53,14 +60,98 @@ permissions:
 env:
   NODE_VERSION_LTS: '20'
 
+# IMAGEM DE RUNNER FIXA (medido 2026-10-26, run 40303567233/40303874392): `ubuntu-latest` passou a
+# resolver para ubuntu-26.04 e os DOIS lados do gate de branch quebram por ambiente, não por código —
+#   * `npx playwright install --with-deps chromium` ⇒ "Playwright does not support chromium on
+#     ubuntu26.04-x64" (Playwright 1.57.0);
+#   * o systemd do 26.04 mudou a REDAÇÃO do diagnóstico ("Unknown key 'X' in section [Unit]") e a
+#     suíte `devServicesSupervision` (que exige a mensagem antiga para provar que a verificação NÃO é
+#     vacuosa) falha.
+# Os runs de 2026-10-25 no mesmo branch eram verdes: a mudança é do runner. Todo o workflow depende de
+# comportamento do sistema (systemd, navegador real, docker), então a imagem fica FIXA em 24.04 até que
+# Playwright e as asserções de mensagem do systemd sejam compatíveis com 26.04.
 jobs:
   dev-branch-gate:
     name: "L0 (Jest oficial) + L1 (gates de governanca)"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+    # O L0 depende do artefato prod-like (gitignored, produzido pelo job acima). Dependência
+    # explícita: se o produtor falhar, o gate NÃO roda com artefato ausente fingindo prova.
+    needs: prod-like-smoke
+
+    # INFRA REAL NO L0 (medido 2026-10-21, run 39587822262): sem Postgres no job, a suíte oficial
+    # reprovou com 'tests/unit/benchmarks/benchmarkChangeProposal.test.js' (9 testes) e antes com
+    # o timeout do QWEN_LIVE — suítes que exercitam PERSISTÊNCIA de verdade. A correção não é
+    # pular: é dar ao L0 a mesma infraestrutura que a máquina de desenvolvimento tem, para que o
+    # teste EXECUTE. Serviços efêmeros, iguais aos do job de integração.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+      # ENGINEERING RUNNER: o globalSetup do Jest sobe o runner REAL em 127.0.0.1:8097 antes da
+      # bateria. O `.env` gerado pelo bootstrap traz ENGINEERING_RUNNER_URL=...:8090 (endereço de
+      # dev) e o worker que recarrega `.env` volta a falar com a porta errada — sintoma medido em
+      # 2026-10-21 (run 39660840381): `SANDBOX_UNAVAILABLE ... fetch failed` em
+      # engineeringRouterExecutionSandboxSecurity, com o runner imprimindo "pronto" depois no log.
+      # Env EXPLÍCITA de job vence o `.env` (política do projeto) e mantém worker e runner no mesmo porto.
+      ENGINEERING_RUNNER_URL: http://127.0.0.1:8097
 
     steps:
-      - name: Checkout
+      # HISTÓRICO COMPLETO — dependência real, medida em 2026-10-21 (run 39620183526).
+      #
+      # Com o checkout padrão (profundidade 1) as suítes de integração do Engenheiro reprovavam com
+      # `fatal: invalid reference: undefined`: o teste deriva o commit anterior com
+      # `git log --format=%H -n 2` para provar `PROMOTION_TARGET_DIVERGED` e, num clone raso, a
+      # segunda linha não existe — o valor vira `undefined` e o comando falha. O mesmo histórico
+      # raso derruba as promoções reais (candidate/worktree a partir de commits anteriores).
+      # Não é defeito de teste nem de produto: é ambiente incompleto, então o ambiente é corrigido.
+      - name: Checkout (histórico completo — as suítes de promoção exigem commits anteriores)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ARTEFATO PROD-LIKE PRODUZIDO PELO JOB ANTERIOR (medido 2026-10-21): o L0 exige
+      # `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` com status=GO e esse
+      # arquivo é gitignored. Sem este download o checkout limpo não tem a prova e a suíte
+      # `modelDrivenE2e` reprova por ausência de artefato — não por defeito de código.
+      - name: Baixar o artefato prod-like (prova de execução do job anterior)
+        uses: actions/download-artifact@v4
+        with:
+          name: prod-like-smoke-${{ github.sha }}
+          path: qa/smoke/prod-like/
+
+      # LINHA PRINCIPAL RASTREADA (medido 2026-10-21, run 39585223390): num checkout de CI não
+      # existe branch LOCAL `main`, e 21 de 40 suítes de integração reprovavam com "não foi
+      # possível resolver o commit de origem 'main'". A resolução da fonte da missão passou a
+      # aceitar `origin/<ref>` (fail-closed preservado: o commit precisa existir) — este passo
+      # garante que a ref rastreada exista de fato no clone raso.
+      - name: Materializar a linha principal (origin/main)
+        run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -74,23 +165,91 @@ jobs:
           echo "HEAD=$(git rev-parse HEAD)"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
-      # Mesma materializacao de pacotes irmaos do jest.yml: o require resolve a
-      # partir do path real (`file:../../packages/auth`), fora do node_modules.
-      - name: Materializar pacotes irmaos @results (fora do checkout)
-        run: |
-          mkdir -p ../../packages ../packages
-          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
-          cp -r vendor/auth ../../packages/auth
-          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
-          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
+      # BOOTSTRAP CANÔNICO (missão CI DEFINITIVO, 2026-10-21).
+      #
+      # Tudo o que o ambiente precisa para rodar a suíte obrigatória em CLONE LIMPO está em UM
+      # entrypoint versionado — `npm run ci:bootstrap` — em vez de passos ad-hoc espalhados no
+      # workflow. Ele: materializa os pacotes irmãos `@results/*` a partir de `vendor/`, roda o
+      # bootstrap oficial (deps, migrações, invariantes, build do frontend, probes de API/preview/
+      # DB/Redis), cria os dados sintéticos mínimos (tenant `system` + superadmin), reconstrói o
+      # índice do QA Mesh e o grafo de impacto e gera os artefatos governados que as suítes leem.
+      #
+      # NÃO há `|| true` nem `continue-on-error`: o bootstrap reprova se um artefato exigido não
+      # existir. Os VEREDITOS dos produtores (ex.: `impact:validate` ESCALATE, `timeout-
+      # architecture` NO_GO) são registrados no relatório do bootstrap exatamente como saíram —
+      # nunca convertidos em PASS.
+      #
+      # Medido em clone limpo (git clone --local, profundidade igual à do runner): depois deste
+      # passo a suíte oficial vai de 13 suítes reprovadas para 1 (a que exige o smoke prod-like
+      # real com navegador; ver reports/ci-bootstrap-report.json e a fila oficial).
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
 
-      - name: Install dependencies
-        run: npm ci
+      # SERVIÇO RAG — DEPENDÊNCIA REAL DO L0b (medido 2026-10-21, run 39614201981).
+      #
+      # O passo `L0b-integracao-engenheiro` reprovou com 16 suítes / 33 testes em vermelho e a
+      # causa única no log foi `ECONNREFUSED 127.0.0.1:8001` (serviço Python `rag-service/`,
+      # uvicorn na porta 8001). Esse serviço existe na máquina de desenvolvimento e NÃO existia
+      # no runner: ausência de infraestrutura, não defeito de código — as mesmas suítes passam
+      # localmente com o serviço de pé.
+      #
+      # A correção não é pular as suítes: é SUBIR o serviço real do repositório. A imagem é a
+      # oficial (`rag-service/Dockerfile`, modelo de embeddings pré-baixado no build, modo
+      # offline em runtime), o token interno é EFÊMERO por execução (nunca versionado) e o
+      # banco é o mesmo serviço efêmero do job.
+      - name: Construir a imagem do serviço RAG (dependência real do L0b)
+        run: docker build -t r-agent2-rag-service:ci rag-service
+
+      - name: Subir o serviço RAG em 127.0.0.1:8001
+        run: |
+          RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          # O MESMO token tem de chegar ao processo de teste (medido no run 39619048989: o
+          # serviço subiu, o app respondeu `401 unauthorized — Token interno ausente ou
+          # inválido` e 16 suítes continuaram vermelhas com VECTOR_RAG_UNAVAILABLE). Exportar
+          # via GITHUB_ENV propaga o token efêmero para os passos seguintes SEM gravar segredo
+          # em arquivo do repositório.
+          echo "RAG_INTERNAL_TOKEN=$RAG_TOKEN" >> "$GITHUB_ENV"
+          docker run -d --name ci-rag --network host \
+            -e HOST=0.0.0.0 \
+            -e PORT=8001 \
+            -e RAG_ENVIRONMENT=development \
+            -e RAG_INTERNAL_TOKEN="$RAG_TOKEN" \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e HF_HUB_OFFLINE=1 \
+            -e TRANSFORMERS_OFFLINE=1 \
+            r-agent2-rag-service:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+              echo "RAG pronto em 127.0.0.1:8001 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "RAG não respondeu em /health após 300s"
+          docker logs ci-rag | tail -60
+          exit 1
+
+      # IMAGEM DO EXECUTION SANDBOX (medido 2026-10-21, run 39593921911):
+      # `engineeringRouterExecutionSandboxSecurity` reprovou com `docker run` exit 125 porque a
+      # imagem `r-agent2-engineering-router-sandbox:latest` não existe no runner. A suíte RECUSA
+      # pular de propósito ("ambiente sem Docker não pode alegar SANDBOX_RUNTIME=PASS"), então a
+      # correção é CONSTRUIR a imagem: o runner do GitHub tem Docker e a prova de isolamento
+      # passa a ser executada de verdade (non-root, sem rede, sem socket, FS read-only).
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
 
       # Toda a bateria L0+L1 roda pelo MESMO runner versionado que qualquer
       # pessoa executa localmente. Sem passos paralelos: uma implementacao so.
+      # ESCOPO DECLARADO (2026-10-22): fases A (pré-voo), B (regressões), C (L0+L0b) e D
+      # (integridade de DESENVOLVIMENTO: release-dag, fila oficial, ai-memory, aderência).
+      # A fase R (certificação de RELEASE: cadeia criptográfica, self-proving, decisão canônica)
+      # NÃO roda aqui de propósito: ela certifica o PACOTE SELADO, cujos bytes não são versionáveis
+      # (`dist/` é gitignored), e só é avaliável depois de `npm run release:seal` em `main`.
+      # O veredito sai `PASS_PARCIAL` com `equivalenteAValidacaoCompleta:false` — nunca `PASS`.
+      # Um gate que nunca pode ficar verde ensina o time a ignorar o vermelho; o controle de
+      # release continua obrigatório em R (validação completa) e no pipeline de selagem.
       - name: L0 + L1 (runner versionado, exit code real)
-        run: node scripts/ci/dev-branch-gate.js --out reports/dev-branch-ci-evidence.json
+        run: node scripts/ci/dev-branch-gate.js --fases A,B,C,D --out reports/dev-branch-ci-evidence.json
         env:
           CI: true
           DEV_BRANCH_GATE_ESPERA_SHA: ${{ github.sha }}
@@ -106,6 +265,18 @@ jobs:
           path: |
             reports/dev-branch-ci-evidence.json
             AI_MEMORY/evidence/dev-branch-ci-*.md
+            # L-1 (2026-10-21): o veredito registra `saidaRef` (log do passo que falhou), mas o
+            # artefato não carregava esses logs — um run vermelho obrigava a reexecutar para
+            # descobrir o motivo. Evidenciar a FALHA inclui o log dela.
+            AI_MEMORY/evidence/dev-branch-gate-logs/**
+            # Diagnóstico específico de systemd-analyze (teste sensível ao ambiente do runner).
+            reports/dev-services-supervision-systemd.log
+            # DIAGNÓSTICO DO ENGINEERING RUNNER (medido 2026-10-21, run 39657773900): a suíte
+            # engineeringRouterExecutionSandboxSecurity falhou com `fetch failed` ao falar com o
+            # runner em 127.0.0.1:8097 e o runner imprimiu "pronto" DEPOIS das falhas — sinal de
+            # que o processo morreu durante a bateria. Este log (stdout/stderr do runner) é a
+            # evidência que faltava para fechar a causa; sem ele cada diagnóstico exige reexecutar.
+            logs/engineering-runner-jest.log
           if-no-files-found: error
           retention-days: 30
 
@@ -114,3 +285,360 @@ jobs:
         if: always()
         run: |
           echo "Este workflow nao cria tag, release, deploy nem push (permissions: contents: read)."
+
+  # ===========================================================================
+  # SMOKE PROD-LIKE REAL — O PRODUTOR DO ARTEFATO QUE O L0 CONSOME.
+  #
+  # POR QUE ESTE JOB EXISTE (medido 2026-10-21): `tests/unit/governance/modelDrivenE2e.test.js`
+  # exige `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json` com `status=GO`, e esse
+  # arquivo é gitignored (artefato de runtime) — num checkout limpo ele NÃO existe e a suíte
+  # reprovava sem que houvesse defeito de código. A correção não é pular a prova: é o CI PRODUZIR
+  # o artefato com o produtor real.
+  #
+  # O smoke exige stack prod-like de verdade: frontend estático servido por nginx COM PROXY para a
+  # API (medido: `vite preview` não substitui — sem proxy de `/tickets` a UI fica sem dados e o
+  # smoke devolve NO_GO falso) e a API em container com migrations+seed do próprio entrypoint.
+  #
+  # Receita validada localmente: imagens `r-agent2-api` e `r-agent2-frontend` (VITE_BASE_PATH=/ e
+  # VITE_API_BASE_URL=/api), API com `--network host` na 3000, frontend publicado na 8080 com
+  # `--add-host api:host-gateway`, e o smoke rodando no HOST contra as duas URLs. Resultado da
+  # execução de referência: status=GO com 9/9 jornadas GO.
+  # ===========================================================================
+  prod-like-smoke:
+    name: "Smoke prod-like real (artefato GO consumido pelo L0)"
+    # Este job precisa de navegador REAL: fica em 24.04 (ver política no topo de `jobs`).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - name: Checkout (histórico completo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar pacotes irmãos @results (fora do checkout)
+        run: |
+          mkdir -p ../../packages ../packages
+          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
+          cp -r vendor/auth ../../packages/auth
+          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
+          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
+
+      - name: Install dependencies (o produtor do smoke roda no host)
+        run: npm ci
+
+      - name: Chromium (Playwright) para o navegador real do smoke
+        run: npx playwright install --with-deps chromium
+
+      # Segredos EFÊMEROS por execução: nada versionado, nada de produção. O host (smoke) e o
+      # container (API) precisam dos MESMOS valores, por isso vão para $GITHUB_ENV.
+      - name: Segredos efêmeros do ambiente de smoke
+        run: |
+          echo "ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")" >> "$GITHUB_ENV"
+          echo "REPLAY_SIGNING_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
+          echo "RAG_INTERNAL_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
+          echo "ENGINEERING_RUNNER_TOKEN=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> "$GITHUB_ENV"
+
+      # BASE DA API PRIMEIRO (medido 2026-10-21, run 39654736835): `api/Dockerfile` faz
+      # `FROM r-agent2-api-base:test` — uma imagem LOCAL, construída por `api/Dockerfile.base`
+      # (é a ordem oficial de `scripts/docker-deploy.sh`). Sem ela o build tenta puxar
+      # `docker.io/library/r-agent2-api-base:test` e falha com "pull access denied".
+      - name: Construir imagem base da API
+        run: docker build -f api/Dockerfile.base -t r-agent2-api-base:test .
+
+      - name: Construir imagem da API
+        run: docker build -f api/Dockerfile --build-arg API_BASE_IMAGE=r-agent2-api-base:test -t r-agent2-api:ci .
+
+      - name: Construir imagem do frontend (servida na raiz, API em /api)
+        run: docker build -f frontend/Dockerfile --build-arg VITE_BASE_PATH=/ --build-arg VITE_API_BASE_URL=/api -t r-agent2-frontend:ci .
+
+      # A API roda com `--network host` para alcançar o Postgres/Redis dos serviços do job em
+      # 127.0.0.1 — exatamente como a receita validada localmente.
+      - name: Subir API (migrations + seed do entrypoint) e aguardar /health
+        run: |
+          docker run -d --name ci-api --network host \
+            -e NODE_ENV=production \
+            -e API_PORT=3000 \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e REDIS_URL="$REDIS_URL" \
+            -e RATE_LIMIT_REDIS_URL="$REDIS_URL" \
+            -e ENCRYPTION_KEY="$ENCRYPTION_KEY" \
+            -e REPLAY_SIGNING_KEY="$REPLAY_SIGNING_KEY" \
+            -e RAG_INTERNAL_TOKEN="$RAG_INTERNAL_TOKEN" \
+            -e RAG_SERVICE_URL=http://127.0.0.1:8001 \
+            -e ENGINEERING_RUNNER_TOKEN="$ENGINEERING_RUNNER_TOKEN" \
+            -e ENGINEERING_RUNNER_URL=http://127.0.0.1:8090 \
+            r-agent2-api:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/health >/dev/null 2>&1; then
+              echo "API pronta em 127.0.0.1:3000 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "API não respondeu em /health após 300s"
+          docker logs ci-api | tail -80
+          exit 1
+
+      - name: Subir frontend (nginx com proxy) e aguardar
+        run: |
+          docker run -d --name ci-frontend -p 8080:80 --add-host api:host-gateway r-agent2-frontend:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/ >/dev/null 2>&1 && curl -fsS http://127.0.0.1:8080/api/health >/dev/null 2>&1; then
+              echo "frontend + proxy prontos em 127.0.0.1:8080 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "frontend ou proxy não respondeu após 150s"
+          docker logs ci-frontend | tail -60
+          exit 1
+
+      - name: Executar o smoke prod-like real (produtor do artefato)
+        run: |
+          RUN_QA_WAVES_PROD_LIKE_SMOKE=1 \
+          FRONTEND_URL=http://127.0.0.1:8080 \
+          API_URL=http://127.0.0.1:3000 \
+          node scripts/smoke/qa-waves-operational-final-smoke.js
+
+      - name: Publicar o artefato prod-like (evidência do próprio run)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-like-smoke-${{ github.sha }}
+          path: |
+            qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json
+            qa/smoke/prod-like/*-replay.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Dump de logs em caso de falha
+        if: failure()
+        run: |
+          docker logs ci-api 2>&1 | tail -100 || true
+          docker logs ci-frontend 2>&1 | tail -50 || true
+
+  # ===========================================================================
+  # INTEGRAÇÃO REAL (auditoria 2026-10-20, §10 do hardening).
+  #
+  # DEFEITO: o gate do branch de desenvolvimento rodava `npm test` (unit + flow +
+  # rpa sem browser) e os gates de governança, mas NENHUMA suíte de integração
+  # com Postgres real. O job `jest-integration` existia apenas em `jest.yml`,
+  # que dispara em main/develop — ou seja, nada de integração rodava para os
+  # commits desta branch.
+  #
+  # Este job usa os MESMOS serviços do jest.yml (pgvector + redis), aplica as
+  # migrações e executa a bateria de integração do Engenheiro. Falha é falha:
+  # sem banco o job não pode passar (as suítes de concorrência exigem Postgres de
+  # verdade).
+  # ===========================================================================
+  dev-branch-integration:
+    name: "Integração real do Engenheiro (Postgres + sandbox)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    # ERREXIT + PIPEFAIL (mesma classe do D1 da Fase 3): o shell PADRÃO do runner tem `-e` mas NÃO
+    # tem `pipefail` — num pipeline o status é o do último elemento, então um comando que reprova
+    # seguido de `| tail`/`| head`/`>> arquivo` deixa o passo VERDE. Passo que TOLERA falha precisa
+    # dizer `|| true` explicitamente (é o caso dos dumps de log com `if: failure()`).
+    defaults:
+      run:
+        shell: bash --noprofile --norc -eo pipefail {0}
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      # HISTÓRICO COMPLETO — dependência real, medida em 2026-10-21 (run 39620183526).
+      #
+      # Com o checkout padrão (profundidade 1) as suítes de integração do Engenheiro reprovavam com
+      # `fatal: invalid reference: undefined`: o teste deriva o commit anterior com
+      # `git log --format=%H -n 2` para provar `PROMOTION_TARGET_DIVERGED` e, num clone raso, a
+      # segunda linha não existe — o valor vira `undefined` e o comando falha. O mesmo histórico
+      # raso derruba as promoções reais (candidate/worktree a partir de commits anteriores).
+      # Não é defeito de teste nem de produto: é ambiente incompleto, então o ambiente é corrigido.
+      - name: Checkout (histórico completo — as suítes de promoção exigem commits anteriores)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materializar a linha principal (origin/main)
+        run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION_LTS }}
+          cache: 'npm'
+
+      - name: Materializar pacotes irmãos @results (fora do checkout)
+        run: |
+          mkdir -p ../../packages ../packages
+          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
+          cp -r vendor/auth ../../packages/auth
+          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
+          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
+
+      - name: Install dependencies
+        run: npm ci
+
+      # IDENTIDADE GIT DO RUNNER EFÊMERO (medido 2026-10-21, run 39670610339).
+      # Várias suítes exercitam git de VERDADE (cenários que criam repositório e commitam:
+      # releaseTagPolicyBlock, integridade de worktree, lineage de produtor). O runner do GitHub
+      # não traz `user.name`/`user.email`, então o `git commit` do cenário morre com exit 128 — o
+      # teste reprova por AMBIENTE, não por código (reproduzido localmente com HOME vazio: 128 em
+      # vez de 3/0; com identidade: 4/4 verdes). Fica ANTES do bootstrap para que o próprio
+      # bootstrap e qualquer passo que commite já encontrem a identidade pronta.
+      - name: Identidade git (commits reais nos cenários de teste)
+        run: |
+          git config --global user.email "ci-runner@r-agent2.invalid"
+          git config --global user.name "RAP CI Runner"
+          git config --get user.email
+          git config --get user.name
+
+      # AMBIENTE CANÔNICO (medido 2026-10-21, run 39673283430): este job era o ÚNICO lugar onde
+      # as suítes de integração rodavam SEM o ambiente canônico — sem `.env`, o runner subia com
+      # `workspaceRoot=(nao definido)` e `engineeringBugLoopNaturalPathE2E` consumiu o próprio
+      # timeout de 900 s (900102 ms) enquanto a MESMA suíte fecha em ~72 s no gate e localmente.
+      # Homogeneizar é a correção honesta: os mesmos testes, do mesmo jeito, no mesmo ambiente —
+      # `ci:bootstrap` é o produtor canônico (cria `.env` com ENCRYPTION_KEY/tokens válidos,
+      # roda migrações, seed sintético, índices e artefatos exigidos pelos gates).
+      - name: Bootstrap canônico do ambiente de CI
+        run: npm run ci:bootstrap
+
+      - name: Migrations (schema completo no banco efêmero)
+        run: npm run db:migrate
+
+      # SERVIÇO RAG — DEPENDÊNCIA REAL DO L0b (medido 2026-10-21, run 39614201981).
+      #
+      # O passo `L0b-integracao-engenheiro` reprovou com 16 suítes / 33 testes em vermelho e a
+      # causa única no log foi `ECONNREFUSED 127.0.0.1:8001` (serviço Python `rag-service/`,
+      # uvicorn na porta 8001). Esse serviço existe na máquina de desenvolvimento e NÃO existia
+      # no runner: ausência de infraestrutura, não defeito de código — as mesmas suítes passam
+      # localmente com o serviço de pé.
+      #
+      # A correção não é pular as suítes: é SUBIR o serviço real do repositório. A imagem é a
+      # oficial (`rag-service/Dockerfile`, modelo de embeddings pré-baixado no build, modo
+      # offline em runtime), o token interno é EFÊMERO por execução (nunca versionado) e o
+      # banco é o mesmo serviço efêmero do job.
+      - name: Construir a imagem do serviço RAG (dependência real do L0b)
+        run: docker build -t r-agent2-rag-service:ci rag-service
+
+      - name: Subir o serviço RAG em 127.0.0.1:8001
+        run: |
+          RAG_TOKEN="$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")"
+          # O MESMO token tem de chegar ao processo de teste (medido no run 39619048989: o
+          # serviço subiu, o app respondeu `401 unauthorized — Token interno ausente ou
+          # inválido` e 16 suítes continuaram vermelhas com VECTOR_RAG_UNAVAILABLE). Exportar
+          # via GITHUB_ENV propaga o token efêmero para os passos seguintes SEM gravar segredo
+          # em arquivo do repositório.
+          echo "RAG_INTERNAL_TOKEN=$RAG_TOKEN" >> "$GITHUB_ENV"
+          docker run -d --name ci-rag --network host \
+            -e HOST=0.0.0.0 \
+            -e PORT=8001 \
+            -e RAG_ENVIRONMENT=development \
+            -e RAG_INTERNAL_TOKEN="$RAG_TOKEN" \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -e HF_HUB_OFFLINE=1 \
+            -e TRANSFORMERS_OFFLINE=1 \
+            r-agent2-rag-service:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+              echo "RAG pronto em 127.0.0.1:8001 (try $i)"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "RAG não respondeu em /health após 300s"
+          docker logs ci-rag | tail -60
+          exit 1
+
+      # IMAGEM DO SANDBOX (medido 2026-10-21, run 39621978537): as suítes de promoção e de
+      # execução do Engenheiro rodam o comando de teste DENTRO do sandbox real
+      # (`r-agent2-engineering-router-sandbox:latest`). O job do gate constrói essa imagem; ESTE
+      # job não construía — e o smoke pós-promoção passava a devolver
+      # `POST_PROMOTION_VERIFY_FAILED` (16 suítes / 32 testes) sem que houvesse defeito algum no
+      # código. Mesma correção do gate: construir a imagem em vez de pular a prova.
+      - name: Construir a imagem do Execution Sandbox
+        run: docker build -t r-agent2-engineering-router-sandbox:latest engineering-router-sandbox
+
+      - name: Integração do Engenheiro (Postgres real)
+        # SERIALIZAÇÃO OBRIGATÓRIA (medido 2026-10-21, run 39660840381): o padrão
+        # `tests/integration/engineering` casa TODAS as suítes `engineering*` de
+        # `tests/integration/` — inclusive as do laço de bugs, que
+        # `config/canonical-release-suites.json` mantém no MESMO grupo exclusivo (mesmo runner de
+        # laço/LEASE e mesmo banco de missões com a varredura de boot recovery). Com
+        # `--maxWorkers=2` duas delas rodaram juntas: `engineeringBugAutonomousLoopE2E` falhou em
+        # 18,31 s (`report.fix.fixed` false) e `engineeringBugLoopNaturalPathE2E` estourou o
+        # timeout de 900 s, ambas PASSANDO isoladas. `--runInBand` satisfaz a exclusividade por
+        # construção. Medido em série: 40 suítes / 219 testes verdes em 24m22s.
+        run: npx jest tests/integration/engineering --bail=0 --runInBand --forceExit
+        env:
+          CI: true

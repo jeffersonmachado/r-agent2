@@ -1,0 +1,14 @@
+{
+  "id": "P1-9",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Contrato unico de evidencias (campos obrigatorios, runId/lineage, FAIL vs INCOMPLETE)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/evidenceContract.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-9.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-9.json",
+  "camposParaAssinar": 18
+}

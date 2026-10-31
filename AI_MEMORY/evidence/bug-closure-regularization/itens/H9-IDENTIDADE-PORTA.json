@@ -1,0 +1,14 @@
+{
+  "id": "H9-IDENTIDADE-PORTA",
+  "severity": "P2",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "D5/D6: unidade ativa que nao serve + porta ocupada por processo estranho (supervisao dev)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/dev/devServicesSupervision.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H9-IDENTIDADE-PORTA.log",
+  "draft": "governance/bug-closure/proofs-drafts/H9-IDENTIDADE-PORTA.json",
+  "camposParaAssinar": 18
+}

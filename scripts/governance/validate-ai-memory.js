@@ -12,41 +12,7 @@ const {
   writeReport,
 } = require('./common');
 
-const requiredFiles = [
-  'AI_MEMORY/architecture.md',
-  'AI_MEMORY/platform-vision.md',
-  'AI_MEMORY/qa-waves.md',
-  'AI_MEMORY/replay-governance.md',
-  'AI_MEMORY/release-process.md',
-  'AI_MEMORY/operational-mesh.md',
-  'AI_MEMORY/coding-standards.md',
-  'AI_MEMORY/operational-rules.md',
-  'AI_MEMORY/anti-patterns.md',
-  'AI_MEMORY/validation-rules.md',
-  'AI_MEMORY/smoke-rules.md',
-  'AI_MEMORY/deployment-rules.md',
-  'AI_MEMORY/workspace.md',
-  'AI_MEMORY/omnichannel.md',
-  'AI_MEMORY/pbx-ivr.md',
-  'AI_MEMORY/rag-rules.md',
-  'AI_MEMORY/replay-engine.md',
-  'AI_MEMORY/self-proving.md',
-  'AI_MEMORY/runtime-navigation.md',
-  'AI_MEMORY/authentication.md',
-  'AI_MEMORY/self-proving-rules.md',
-  'AI_MEMORY/project-map.md',
-  'AI_MEMORY/project-runtime-map.md',
-  'AI_MEMORY/glossary.md',
-  'AI_MEMORY/operational-checklists/release-checklist.md',
-  'AI_MEMORY/operational-checklists/replay-checklist.md',
-  'AI_MEMORY/operational-checklists/qa-checklist.md',
-  'AI_MEMORY/operational-checklists/deployment-checklist.md',
-  'AI_MEMORY/operational-checklists/governance-checklist.md',
-  'AI_MEMORY/operational-checklists/browser-validation-checklist.md',
-  'AGENTS.md',
-  'CLAUDE.md',
-  '.github/copilot-instructions.md',
-];
+const { REQUIRED_AI_GOVERNANCE_FILES: requiredFiles } = require('./lib/required-agent-files');
 
 const requiredTerms = [
   'QA Waves',

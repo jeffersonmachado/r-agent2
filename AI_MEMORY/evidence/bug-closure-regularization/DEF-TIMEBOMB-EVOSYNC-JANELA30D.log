@@ -1,0 +1,141 @@
+  console.info
+    [2026-10-23T16:35:05.565Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.error
+    [2026-10-23T16:35:06.395Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (engine/nodes/aiTaskNode.js:23:19)
+      at Object.require (api/services/messageProcessor.js:25:31)
+      at Object.require (api/services/instagramService.js:12:36)
+      at Object.require (api/services/outboundQueueService.js:23:54)
+      at Object.require (api/services/marketing/marketingService.js:15:30)
+      at require (api/services/integration/importers/memberImporter.js:30:23)
+      at Object.defaultDeps [as importPerson] (api/services/integration/importers/memberImporter.js:73:21)
+      at importPerson (api/services/integration/integrationSyncService.js:74:19)
+      at importRecord (api/services/integration/integrationSyncService.js:168:32)
+      at Object.runInitialSync (api/services/integration/integrationSyncService.js:275:20)
+      at Object.<anonymous> (tests/integration/evoSyncIntegration.test.js:142:20)
+
+  console.log
+    [2026-10-23T16:35:06.558Z] [DEBUG] [QueueService] getMetrics: Map tem 0 ticket(s), Array tem 0 ticket(s)
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:06.562Z] [DEBUG] [QueueService] Métricas calculadas: 0 ticket(s)
+    {
+      "totalTickets": 0,
+      "byStatus": {
+        "waiting": 0,
+        "in_progress": 0,
+        "closed": 0
+      },
+      "byQueue": 0,
+      "queueDetails": {}
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:06.562Z] [DEBUG] [QueueService] Teste de getMetrics após carregar dados:
+    {
+      "totalTickets": 0,
+      "ticketsByStatus": {
+        "waiting": 0,
+        "in_progress": 0,
+        "closed": 0
+      },
+      "ticketsByQueue": {}
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:06.859Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-a-25300750
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:06.888Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-a-25300750
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:06.914Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-a-25300750
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:06.920Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-a-25300750
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:08.285Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-a-25300750
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:08.296Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-a-25300750
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:09.222Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-b-7f52d4e7
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:09.228Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-b-7f52d4e7
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:09.244Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-b-7f52d4e7
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-10-23T16:35:09.248Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant itest-evo-b-7f52d4e7
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-10-23T16:35:10.253Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/evoSyncIntegration.test.js (5.442 s)
+  EVO → RAP: sincronização real contra Postgres
+    ✓ executa o initial sync completo na ordem de dependência (1742 ms)
+    ✓ materializa a cadeia completa do aluno (CRM → Workspace → AccessSubject) (107 ms)
+    ✓ materializa a matrícula com datas e plano mapeados (gap AccessMembership corrigido) (104 ms)
+    ✓ cria telemetria de presença sem duplicar (106 ms)
+    ✓ importa venda e recebível como BillingTransaction (102 ms)
+    ✓ PROVA DE IDEMPOTÊNCIA: reexecutar o initial sync não duplica nada (746 ms)
+    ✓ isola tenants: mesmo external id em outro tenant é outra identidade (1191 ms)
+    ✓ a inteligência Fitness consome os dados sincronizados (frequência real) (104 ms)
+    ✓ persiste watermark e cursor no estado de sync por recurso (101 ms)
+    ✓ a conexão persiste credencial cifrada e nunca em claro (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        5.474 s, estimated 11 s
+Ran all test suites matching /tests\/integration\/evoSyncIntegration.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

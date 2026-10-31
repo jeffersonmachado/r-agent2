@@ -5,7 +5,7 @@ const { exists, failIfNeeded, readText, statusFromIssues, writeReport } = requir
 const issues = [];
 const warnings = [];
 const evidence = 'AI_MEMORY/evidence/browser-validation-2026-05-16.md';
-const agentFiles = ['AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md'];
+const agentFiles = require('./lib/required-agent-files').AGENT_INSTRUCTION_FILES;
 
 for (const file of agentFiles) {
   if (!exists(file)) {

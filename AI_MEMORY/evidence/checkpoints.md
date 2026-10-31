@@ -719,3 +719,141 @@ Force exiting Jest: Have you considered using `--detectOpenHandles` to detect as
 </details>
 
 ---
+## CKPT 7ac639d49ca6 — ci: L0+L0b verdes no runner efemero, sem enfraquecer teste algum
+
+- **Quando**: 2026-10-21T23:51:02.927Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `899f359bfb96606e687a9107e364343972a85f5b`
+- **id** (sha256 do conteúdo do checkpoint): `7ac639d49ca6f7d82a107e6493d85244a07c5ca39583f54451a618b41638dc8e`
+
+**Problema corrigido:** CI do branch de desenvolvimento reprovava por ambiente e por corrida entre sessoes Jest (runner morto por sessao aninhada), nao por defeito de codigo; era preciso provar que a convergencia nao custou nenhuma assercao
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- (nenhum — worktree limpo)
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/cryptoEncryptionKeyFormats.test.js` | 0 | 3.5 s | d2013119a359 |
+| `npx jest tests/unit/ciGateL0Determinism.test.js tests/unit/ci` | 0 | 3.5 s | 66214039c049 |
+| `npx jest tests/unit/governance/bugClosureQueueModel.test.js` | 0 | 5.9 s | b57afd4c4ebd |
+| `npx jest tests/unit/engineeringRunnerPidFileIsolation.test.js tests/unit/governance/engineeringRunnerSetupEnvOrder.test.js` | 0 | 3.7 s | 00f527cbacdc |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/cryptoEncryptionKeyFormats.test.js</code></summary>
+
+```
+    ✓ hex MAIÚSCULO também é aceito (mesma chave, mesma semântica) (341 ms)
+    ✓ chave com tamanho errado é RECUSADA com mensagem acionável (fail-closed) (120 ms)
+    ✓ sem chave configurada a recusa nomeia o que falta (nunca cifra sem segredo) (102 ms)
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        1.404 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/cryptoEncryptionKeyFormats.test.js/i.
+[engineering-runner-jest 2026-10-21T23:51:07.778Z] runner ENCERROU: pid=3987671 code=0 signal=null
+[engineering-runner-jest 2026-10-21T23:51:07.781Z] apos o encerramento, /health na porta 8097: sem resposta
+[jest-global-teardown] Engineering Runner (pid 3987671) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/ciGateL0Determinism.test.js tests/unit/ci</code></summary>
+
+```
+    ✓ o passo L0 fixa JEST_MAX_WORKERS (nunca herda o default de 11 workers) (106 ms)
+    ✓ o teto do L0 é configurável por L0_JEST_MAX_WORKERS (sem editar código) (112 ms)
+    ✓ o passo de integração (L0b) impõe o próprio teto de workers por linha de comando (109 ms)
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.785 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/ciGateL0Determinism.test.js|tests\/unit\/ci/i.
+[engineering-runner-jest 2026-10-21T23:51:11.203Z] runner ENCERROU: pid=3987929 code=0 signal=null
+[engineering-runner-jest 2026-10-21T23:51:11.213Z] apos o encerramento, /health na porta 8097: sem resposta
+[jest-global-teardown] Engineering Runner (pid 3987929) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/bugClosureQueueModel.test.js</code></summary>
+
+```
+    ✓ o motor de elegibilidade RECUSA todas as operações certificantes com P0 aberto (102 ms)
+    ✓ todos os entrypoints reais consultam a elegibilidade (lista não vazia) (102 ms)
+    ✓ o inventário real é legível e não vazio (ausência nunca vira "sem defeitos") (104 ms)
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+Snapshots:   0 total
+Time:        2.88 s, estimated 7 s
+Ran all test suites matching /tests\/unit\/governance\/bugClosureQueueModel.test.js/i.
+[engineering-runner-jest 2026-10-21T23:51:17.148Z] runner ENCERROU: pid=3988055 code=0 signal=null
+[engineering-runner-jest 2026-10-21T23:51:17.150Z] apos o encerramento, /health na porta 8097: sem resposta
+[jest-global-teardown] Engineering Runner (pid 3988055) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/engineeringRunnerPidFileIsolation.test.js tests/unit/governance/engineeringRunnerSetupEnvOrder.test.js</code></summary>
+
+```
+    ✓ o pid file carrega a porta do runner de teste (139 ms)
+    ✓ portas diferentes produzem arquivos diferentes (nenhuma sessão mata o runner da outra) (119 ms)
+    ✓ o arquivo vive na raiz do repositório, não em diretório transitório (121 ms)
+Test Suites: 2 passed, 2 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.542 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/engineeringRunnerPidFileIsolation.test.js|tests\/unit\/governance\/engineeringRunnerSetupEnvOrder.test.js/i.
+[engineering-runner-jest 2026-10-21T23:51:20.766Z] runner ENCERROU: pid=3988426 code=0 signal=null
+[engineering-runner-jest 2026-10-21T23:51:20.768Z] apos o encerramento, /health na porta 8097: sem resposta
+[jest-global-teardown] Engineering Runner (pid 3988426) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---
+## CKPT 1e105722bb68 — docs: prontidao medida do Engineering Router
+
+- **Quando**: 2026-10-22T00:21:36.415Z
+- **Branch**: `dev/engineering-hardening`
+- **SHA de base** (HEAD antes deste commit): `dc629456e134c577ecad798c7f3a3983ede05e1d`
+- **id** (sha256 do conteúdo do checkpoint): `1e105722bb68a93ea876dd4e2bc179f575707f88be10a682f0e071dfc2f20688`
+
+**Problema corrigido:** A prontidao do router para receber missao nao estava documentada: dependia de runner dedicado, token compartilhado, imagem de sandbox e tenant com provider valido, e o sintoma de falha (fetch failed / NO_QUALIFIED_CODER) nao apontava a causa.
+
+**Arquivos modificados (estado no momento do checkpoint):**
+
+- `M AI_MEMORY/engineering-validation.md`
+
+**Testes executados (saída real, exit code real):**
+
+| comando | exit | duração | sha256 da saída (12) |
+|---|---|---|---|
+| `npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=0 --forceExit` | 0 | 17.3 s | 40e1f4dc2604 |
+
+<details><summary>últimas linhas — <code>npx jest tests/unit/governance/allValidatorsRunner.test.js --bail=0 --forceExit</code></summary>
+
+```
+    ✓ atribui SOMENTE falhas de obsolescência (nunca por conveniência) (717 ms)
+    ✓ superfície ESTAVEL não atribui nenhuma falha (805 ms)
+    ✓ o runner mede a superfície ANTES e DEPOIS e publica a atribuição no relatório (105 ms)
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        11.338 s
+Ran all test suites matching /tests\/unit\/governance\/allValidatorsRunner.test.js/i.
+[engineering-runner-jest 2026-10-22T00:21:57.986Z] runner ENCERROU: pid=4047467 code=0 signal=null
+[engineering-runner-jest 2026-10-22T00:21:58.000Z] apos o encerramento, /health na porta 8097: sem resposta
+[jest-global-teardown] Engineering Runner (pid 4047467) encerrado (porta liberada)
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+```
+
+</details>
+
+---

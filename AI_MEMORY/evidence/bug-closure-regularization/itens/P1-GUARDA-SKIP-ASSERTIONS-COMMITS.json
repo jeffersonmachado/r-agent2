@@ -1,0 +1,14 @@
+{
+  "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Guarda de integridade nao via skip/assertion removida nem mutacao commitada",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/worktreeIntegrity.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.json",
+  "camposParaAssinar": 18
+}

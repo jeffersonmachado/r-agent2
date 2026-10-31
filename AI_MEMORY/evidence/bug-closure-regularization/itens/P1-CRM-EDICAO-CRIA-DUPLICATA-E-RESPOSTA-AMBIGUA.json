@@ -1,0 +1,14 @@
+{
+  "id": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Editar oportunidade criava registro novo (POST sem id) e o front lia payload cru da resposta",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/crmOpportunityUpdate.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.json",
+  "camposParaAssinar": 18
+}

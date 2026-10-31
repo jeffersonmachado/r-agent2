@@ -1,0 +1,17 @@
+{
+  "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "state=CERTIFIED_GO coexistindo com veredito nao-ok (consumidor que le state via GO falso)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "COMMIT_DO_FIX",
+  "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.json",
+  "camposParaAssinar": 18
+}

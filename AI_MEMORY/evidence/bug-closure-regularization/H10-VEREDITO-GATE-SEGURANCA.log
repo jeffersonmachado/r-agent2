@@ -1,0 +1,40 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/securityGateState.test.js (5.585 s)
+  composeGateState — estado nunca promove para GO
+    ✓ tudo limpo ⇒ GO com exit 0 (109 ms)
+    ✓ risco real do motor ⇒ NO_GO com exit 1 (104 ms)
+    ✓ análise parcial do motor ⇒ INCOMPLETE com exit 2 (106 ms)
+    ✓ evidência indisponível do motor ⇒ EVIDENCE_UNAVAILABLE com exit 3 (106 ms)
+    ✓ evidência vencida/de outro run é EVIDENCE_UNAVAILABLE, não risco medido (110 ms)
+    ✓ coleta falhou ⇒ EVIDENCE_UNAVAILABLE (não vira GO nem risco medido) (104 ms)
+    ✓ isenções ilegíveis ⇒ EVIDENCE_UNAVAILABLE (o veredito não considerou o que a UI mostra) (103 ms)
+    ✓ o MAIS GRAVE manda: risco + evidência ⇒ NO_GO (103 ms)
+    ✓ código de proveniência DESCONHECIDO ⇒ NO_GO (fail-closed, não relaxa) (103 ms)
+    ✓ proveniência sem código ⇒ NO_GO (não relaxa) (101 ms)
+    ✓ nenhum estado fora de GO tem exit 0 (105 ms)
+    ✓ todo código REAL de proveniência está classificado como evidência (regressão de nomes paralelos) (104 ms)
+  motor puro — resolveState classifica cada bloqueio
+    ✓ sem bloqueio ⇒ GO (101 ms)
+    ✓ risco real ⇒ NO_GO (103 ms)
+    ✓ evidência ausente ⇒ EVIDENCE_UNAVAILABLE (101 ms)
+    ✓ análise parcial ⇒ INCOMPLETE (101 ms)
+    ✓ código desconhecido ⇒ NO_GO (101 ms)
+  motor puro — o estado acompanha a evidência real
+    ✓ estado sadio ⇒ GO (102 ms)
+    ✓ achado HIGH aberto ⇒ NO_GO (risco medido, não evidência) (103 ms)
+    ✓ sem dados de achados ⇒ EVIDENCE_UNAVAILABLE (nunca GO por falta de dado) (102 ms)
+    ✓ SBOM inválido ⇒ NO_GO; SBOM ausente ⇒ EVIDENCE_UNAVAILABLE (102 ms)
+    ✓ cobertura abaixo do mínimo ⇒ INCOMPLETE (mediu menos, não achou risco) (102 ms)
+    ✓ base de advisories vencida ⇒ INCOMPLETE (102 ms)
+    ✓ o contrato antigo segue intacto: decision é GO/NO_GO e bloqueio nunca vira sucesso (107 ms)
+  D7 — veredito impresso casa com o exit code
+    ✓ o resumo do engine vem ROTULADO como avaliação de risco (não como veredito) (106 ms)
+    ✓ EXECUÇÃO REAL: a última linha é o veredito e casa com o exit code (2505 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        5.733 s, estimated 9 s
+Ran all test suites matching /tests\/unit\/governance\/securityGateState.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

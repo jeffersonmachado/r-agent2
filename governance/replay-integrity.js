@@ -346,7 +346,23 @@ function generateReplayIntegrityReport() {
   return report;
 }
 
+/**
+ * Resume o relatório para o CLI. O engine retorna dois shapes distintos:
+ * o completo (com `issues`/`totalReplays`) e o de erro
+ * (`{ generatedAt, pass:false, error }`, quando o artefato de release não
+ * resolve). O resumo precisa cobrir ambos — assumir `issues` presente
+ * derrubava o entrypoint com TypeError em vez de falhar fechado.
+ */
+function formatCliSummary(report) {
+  const r = report || { pass: false, error: 'report_unavailable' };
+  if (Array.isArray(r.issues)) {
+    return `[replay-integrity] pass=${r.pass} replays=${r.totalReplays} issues=${r.issues.length}`;
+  }
+  return `[replay-integrity] pass=${r.pass} error=${r.error || 'unknown'}`;
+}
+
 module.exports = {
+  formatCliSummary,
   generateReplayIntegrityReport,
   buildReplayChain,
   checkProofBinding,
@@ -358,6 +374,6 @@ module.exports = {
 if (require.main === module) {
   const report = generateReplayIntegrityReport();
   // eslint-disable-next-line no-console
-  console.log(`[replay-integrity] pass=${report.pass} replays=${report.totalReplays} issues=${report.issues.length}`);
-  process.exit(report.pass ? 0 : 1);
+  console.log(formatCliSummary(report));
+  process.exit(report && report.pass === true ? 0 : 1);
 }

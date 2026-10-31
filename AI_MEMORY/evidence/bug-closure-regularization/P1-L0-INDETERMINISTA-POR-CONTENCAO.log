@@ -1,0 +1,14 @@
+[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/ciGateL0Determinism.test.js
+  gate do branch — L0 determinístico
+    ✓ o passo L0 fixa JEST_MAX_WORKERS (nunca herda o default de 11 workers) (102 ms)
+    ✓ o teto do L0 é configurável por L0_JEST_MAX_WORKERS (sem editar código) (102 ms)
+    ✓ o passo de integração (L0b) impõe o próprio teto de workers por linha de comando (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.46 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/ciGateL0Determinism.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

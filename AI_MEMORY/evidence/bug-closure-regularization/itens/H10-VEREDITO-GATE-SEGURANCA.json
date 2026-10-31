@@ -1,0 +1,14 @@
+{
+  "id": "H10-VEREDITO-GATE-SEGURANCA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Veredito do Security Release Gate deixa de ser mascarado pela avaliacao de risco",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/securityGateState.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H10-VEREDITO-GATE-SEGURANCA.log",
+  "draft": "governance/bug-closure/proofs-drafts/H10-VEREDITO-GATE-SEGURANCA.json",
+  "camposParaAssinar": 18
+}

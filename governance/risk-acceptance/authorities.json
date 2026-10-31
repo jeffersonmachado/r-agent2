@@ -1,0 +1,37 @@
+{
+  "_doc": "Registro de autoridades HUMANAS que podem assinar aceite de risco. Guarda SOMENTE chaves publicas. Para registrar uma autoridade: gerar par Ed25519 fora do repositorio (openssl genpkey -algorithm ED25519 -out authority.pem), guardar a privada em local protegido e commitar aqui apenas a publica (openssl pkey -in authority.pem -pubout). O agente NAO possui a chave privada e portanto nao consegue assinar — e o gate recusa aceite sem assinatura valida.",
+  "_schema": {
+    "identity": "identificador unico da pessoa (ex.: email corporativo)",
+    "authority": "papel declarado (ex.: PLATFORM_OWNER)",
+    "mayAcceptRisks": "boolean — permissao explicita para aceitar risco",
+    "decisions": "lista de decisoes que esta autoridade pode assinar",
+    "publicKeyPem": "chave publica Ed25519 em PEM",
+    "registeredAt": "ISO-8601"
+  },
+  "authorities": [
+    {
+      "identity": "platform-owner:jeffersonmachado",
+      "authority": "PLATFORM_OWNER",
+      "mayAcceptRisks": true,
+      "mayCloseDefects": true,
+      "decisions": [
+        "REVERIFY_EXISTING_CLOSURE",
+        "ACCEPT_RESIDUAL_RISK",
+        "APPROVE_MISSION"
+      ],
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAfSeDrI1dvgqlG/Y38pr4jxm1hVwHCilwNKvHsWPZ9LU=\n-----END PUBLIC KEY-----",
+      "registeredAt": "2026-10-31T14:06:14.580Z"
+    },
+    {
+      "identity": "platform-approver:jeffersonmachado",
+      "authority": "PLATFORM_OWNER",
+      "mayAcceptRisks": true,
+      "mayCloseDefects": false,
+      "decisions": [
+        "APPROVE_MISSION"
+      ],
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAnIcB2Ev41LmHKgOd+59hvG9LvhTTugxdwE7zcfQCTLg=\n-----END PUBLIC KEY-----",
+      "registeredAt": "2026-10-31T14:06:14.581Z"
+    }
+  ]
+}

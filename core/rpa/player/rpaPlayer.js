@@ -6,7 +6,7 @@
  * - ci: Headless, rápido, sem delays
  */
 
-const { chromium } = require('playwright');
+// (removido) `require('playwright')` no topo sem uso: nunca chamado neste módulo
 const { ActionExecutor } = require('../actionExecutor');
 const { ReplaySystem } = require('../replaySystem');
 const { getModeConfig } = require('../rpaConfig');
