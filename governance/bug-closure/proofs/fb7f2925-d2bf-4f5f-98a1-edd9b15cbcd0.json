@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "fb7f2925-d2bf-4f5f-98a1-edd9b15cbcd0",
+  "defectId": "H11-ESCOPO-DIFERIDO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/engineeringRouter/taskContractScope.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouter/taskContractScope.test.js",
+      "command": "npx jest tests/unit/engineeringRouter/taskContractScope.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:24:55.737Z",
+      "finishedAt": "2026-10-31T21:24:58.859Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H11-ESCOPO-DIFERIDO.log",
+      "outputSha256": "4bcfc3e264a986b09c9bd837d3c68f452e70aac8dbd8fe72e4bd34173cfe98dc"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouter/taskContractScope.test.js",
+      "sha256": "000e5d12e3ade7c4c7050870abf6aed7398704f04b11536b5d6f7cf9731ee87b"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:24:58.866Z",
+  "proofHash": "955318e1a52e6d0224b5d60a3ec25746c38099c6542613428ebe74221094bf0f",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "8yd7vbJg/ikLf6g8gd6dDoV3pB29X76ZtGt38nr8dhkCMEelR/PFKtByHSXvK4nICb5aD380AXqi+D7nHrTTDg==",
+    "signedAt": "2026-10-31T21:49:00.261Z"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "14408d77-5c0f-43b7-827b-b0c53efab969",
+  "defectId": "P1-7",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/securityIntel/triageRemediation.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/securityIntel/triageRemediation.test.js",
+      "command": "npx jest tests/unit/securityIntel/triageRemediation.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:27:32.440Z",
+      "finishedAt": "2026-10-31T21:27:35.639Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-7.log",
+      "outputSha256": "10f098ab0169361aac4b9ad510ccf85e43bf14abd0c92c6ecebf3d3716d62ac0"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/securityIntel/triageRemediation.test.js",
+      "sha256": "0f9e83393a12c6bff940a54d00b69098af7710af0b50b6f5392f825b4c90f035"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:27:35.646Z",
+  "proofHash": "6e97a9dc1212f1584d9ab115cf186bc871a203e5dad0fa6c5891c4e4ee326581",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "ndMeOlSsVKei1ye82KB6ycdhx1UhtiMUbkqAat0zejQGg4pac4I8asRaDGr6Nq/Gx9siemc6AXRKXNT5PRUmAQ==",
+    "signedAt": "2026-10-31T21:49:07.424Z"
+  }
+}

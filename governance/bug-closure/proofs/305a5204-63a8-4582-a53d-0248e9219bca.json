@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "305a5204-63a8-4582-a53d-0248e9219bca",
+  "defectId": "N5-REENTREGA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+      "command": "npx jest tests/integration/missionSourceStaleReplanFullRouterE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:42:57.482Z",
+      "finishedAt": "2026-10-31T21:44:22.018Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log",
+      "outputSha256": "db9143198016209d6de03b86742bbbeecdaf1d31619c8d27c39310be8d4821ef"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+      "sha256": "927798f461030bac288d64a169b77acd574379f91412790ef2c3634f61cdaa71"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:44:22.034Z",
+  "proofHash": "d49803712c33ec8d7725036bdd29afa27d8edc4bcaf33dc1cccb6902b5b4d44d",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "eeExRcdvv+9br85TNRCct+Bujm9akr88griA5G+6oJN1qUSXAikBncypUbS4ECmFKKJ3t2roRPETwCkWydMnDA==",
+    "signedAt": "2026-10-31T21:49:05.258Z"
+  }
+}

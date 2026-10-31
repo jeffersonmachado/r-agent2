@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e415beb4-fbd0-4f33-ae92-bff83b7afbad",
+  "defectId": "PROMPT-P1F-STREAM-ISOLAMENTO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "frontend/src/shared/useLroStream.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/shared/useLroStream.test.jsx",
+      "command": "npm --prefix frontend run test -- src/shared/useLroStream.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:30:19.695Z",
+      "finishedAt": "2026-10-31T21:30:28.608Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1F-STREAM-ISOLAMENTO.log",
+      "outputSha256": "36ef1e83f132773642258576553043d33c239a623fddce6643362c5abcc1ee6f"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/shared/useLroStream.test.jsx",
+      "sha256": "b083c622b7423b46106d9bf412e12a54d5794c1e8199fee512d40915d10ceb36"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:30:28.615Z",
+  "proofHash": "e62538935ec2dc96922e6b13c6dc8881f1c9858106ff9c2d6ba63de062802e13",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "lU0c5jW6QfgVaabXoRvLmrdacEtUh3hfT7SldgVljDi5An06a6edpWVaC0QcIAqfgrz41yeQGZY/kI0dCMpACQ==",
+    "signedAt": "2026-10-31T21:49:11.833Z"
+  }
+}

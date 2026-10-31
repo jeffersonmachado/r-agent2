@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f0c3aa75-7958-4c48-97e1-627f31941a78",
+  "transitionId": "87f75fdd-67ef-4a5e-bcbc-e87cb30333a4",
   "defectId": "L1-WORKTREE-MUTILACAO-RECORRENTE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
-  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
   "requiredTests": [
     "tests/unit/governance/worktreeIntegrity.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T19:34:20.152Z",
-      "finishedAt": "2026-10-31T19:34:25.370Z",
+      "startedAt": "2026-10-31T21:17:49.935Z",
+      "finishedAt": "2026-10-31T21:17:55.277Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
-      "outputSha256": "74342fe8907a20617ddba9d4ff57d950c1ce2a684c6e55e0f365f98893fed2e8"
+      "outputSha256": "3a4152402cef73af5dbb3957946ee4c3ee8fbf9fb1aacf6e02c8845d2f0add4f"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T19:34:25.379Z",
-  "proofHash": "6cad974544fbb2427a67ee8f9b85bf94d37fa59de445e06d01ea9c5a3129217c"
+  "createdAt": "2026-10-31T21:17:55.286Z",
+  "proofHash": "94b846116d3ed8cd5cb80ba0930af7769ca3fd9a4767fe80b777197917786a97"
 }

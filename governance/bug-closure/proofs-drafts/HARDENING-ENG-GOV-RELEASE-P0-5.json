@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "b91dea35-f460-42f2-8953-e192ea0b29b5",
+  "transitionId": "a1698c78-c9b8-4ef2-b7e8-7612ee149a39",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-5",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
-  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
   "requiredTests": [
     "tests/unit/coverage/impactRunnerBinding.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/coverage/impactRunnerBinding.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T19:33:47.814Z",
-      "finishedAt": "2026-10-31T19:33:57.363Z",
+      "startedAt": "2026-10-31T21:17:25.782Z",
+      "finishedAt": "2026-10-31T21:17:34.373Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-5.log",
-      "outputSha256": "5048ba2c1fb3feccbda767b8766641ad8d7a54d7c9053154ee7460ff2c0549f3"
+      "outputSha256": "4bfb961d81b8c9d9223985dc246d6dc6ea5fca504c7c69cfb405e579a030d6c9"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T19:33:57.371Z",
-  "proofHash": "6804a4f8f5483bf801d759e1fcc70931168caf1386c05dc5ae60fbc5c37cd170"
+  "createdAt": "2026-10-31T21:17:34.381Z",
+  "proofHash": "943b6613bd7b7b7303f443fca26828e69a165c53e77d4d04313016b23ae0dca1"
 }

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "047fdb8f-f552-4574-ba0c-eb7bd5fad67e",
+  "defectId": "ENG-RECONCILIACAO-BOOT-STARVATION",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/integration/engineeringMissionSourceE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:24:31.631Z",
+      "finishedAt": "2026-10-31T21:24:40.479Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-RECONCILIACAO-BOOT-STARVATION.log",
+      "outputSha256": "4f558e9be63b4a8ee5c2441e174730cbfc149b53a6da90ff9fe16f017234551e"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "sha256": "e8b417ce6cd96391b8366bb15fd3a992afc34e9c4ecae7072b3df00226768407"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:24:40.488Z",
+  "proofHash": "6cb8513265e005cdb77e2728a3f1c123eea11cfa2f2c61311d77ab16d658fc47",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "9524GUotE1r4zW/CaCUbljcT1vmHriJW/6so+gXkDc03Bcuu5vrxl6FluRCDDxjDdS03g2tDwgvjPAwriVznCw==",
+    "signedAt": "2026-10-31T21:48:59.173Z"
+  }
+}

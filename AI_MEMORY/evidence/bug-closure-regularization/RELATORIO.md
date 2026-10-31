@@ -1,6 +1,7 @@
 # Regularização de fechamentos sem prova
 
-Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb772739810d8` · fingerprint `a351e0628dcd…`
+Gerado em 2026-10-31T21:47:32.825Z · commit `fc08d682044ddb6be24f28c7ad8cfdca7b03b51e` · fingerprint `3f873a4f5e2d…`
+Execução `run-20261031211712-ddaf7ab3` · escopo **INTEGRAL** · processados 167 de 167 · cobertura **INTEGRAL**
 
 > **Não autoritativo.** Este relatório descreve trabalho de re-verificação. A fila oficial não foi
 > alterada por este script, e nenhuma prova foi assinada: a assinatura é do dono da chave ancorada.
@@ -9,9 +10,10 @@ Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb77273
 
 | Classe | Itens |
 |---|---|
-| REQUER_DECISAO_HUMANA | 12 |
-| AGUARDA_INSUMOS_HUMANOS | 30 |
-| AGUARDA_ASSINATURA_E_ANCORA | 88 |
+| REQUER_DECISAO_HUMANA | 14 |
+| AGUARDA_INSUMOS_HUMANOS | 29 |
+| AMBIENTE_INDISPONIVEL | 2 |
+| AGUARDA_ASSINATURA_E_ANCORA | 122 |
 
 ## Itens
 
@@ -37,7 +39,7 @@ Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb77273
 | P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/governanceEnforcementOrder.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log |
 | P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/assertCanonicalReleaseDecision.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log |
 | P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO | P0 | RESOLVED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/governanceChainAppearance.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log |
-| P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/integration/crmTenantIsolation.postgres.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log |
+| P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS | P0 | VERIFIED | AMBIENTE_INDISPONIVEL | tests/integration/crmTenantIsolation.postgres.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log |
 | P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/assertCanonicalReleaseDecision.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.log |
 | P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/governance/canonicalReleaseDecision.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log |
 | P0-FILAS-ISOLAMENTO-TENANT | P0 | VERIFIED | AGUARDA_INSUMOS_HUMANOS | tests/unit/queueTenantIsolation.test.js | AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log |
@@ -52,12 +54,20 @@ Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb77273
 | AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/auditEntrypointArtifact.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log |
 | CI-ADAPTADOR-IA-NAO-VERSIONADO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-ADAPTADOR-IA-NAO-VERSIONADO.log |
 | CI-CHECKOUT-LIMPO-HARNESS | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/bugClosureHistoricalGuards.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-CHECKOUT-LIMPO-HARNESS.log |
+| CI-E2E-CREDENTIAL-SCOPE | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/governanceApprovalFullWorkerE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-E2E-CREDENTIAL-SCOPE.log |
+| CI-MAIN-JEST-AMBIENTE | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/officialTestScriptsNoVacuousPass.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log |
+| CI-WAVE-REFRESH-SEM-RUN-GOVERNADO | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/effectiveAggregateChain.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log |
 | DEF-QUEUE-DELETE-DB-ONLY | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/queueModuleRoutes.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-QUEUE-DELETE-DB-ONLY.log |
 | DEF-REMOVECHILD-HEADER-ENHANCEMENT | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | frontend/src/__tests__/supportHeaderEnhancement.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log |
 | DEF-TEARDOWN-DRAIN-WORKER | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/governanceApprovalFullWorkerE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log |
 | DEF-WS-AUTH-POS-LOGIN | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx | AI_MEMORY/evidence/bug-closure-regularization/DEF-WS-AUTH-POS-LOGIN.log |
+| E2E-REPLAY-DOMINIO-E-TAB | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/backfillRegressionTests.test.js | AI_MEMORY/evidence/bug-closure-regularization/E2E-REPLAY-DOMINIO-E-TAB.log |
+| ENG-LEASE-FENCE-NAO-VALIDADO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringBugLoop.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-LEASE-FENCE-NAO-VALIDADO.log |
+| ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringBugLoop.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA.log |
+| ENG-RECONCILIACAO-BOOT-STARVATION | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionSourceE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-RECONCILIACAO-BOOT-STARVATION.log |
+| ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionSourceE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log |
 | FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT | P1 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | H10-VEREDITO-GATE-SEGURANCA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/securityGateState.test.js | AI_MEMORY/evidence/bug-closure-regularization/H10-VEREDITO-GATE-SEGURANCA.log |
 | H11-ESCOPO-DIFERIDO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRouter/taskContractScope.test.js | AI_MEMORY/evidence/bug-closure-regularization/H11-ESCOPO-DIFERIDO.log |
@@ -71,6 +81,7 @@ Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb77273
 | HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED | P1 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/taskLeaseHandshakeParsing.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log |
 | HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/qa-mesh/meshZeroResultsPromotion.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log |
 | HARDENING-ENG-GOV-RELEASE-P1-11 | P1 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/evidenceTtl.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P1-11.log |
+| JOURNEY-STORE-ESCONDE-DERIVADAS | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | api/services/__tests__/qaWavesService.journey.test.js | AI_MEMORY/evidence/bug-closure-regularization/JOURNEY-STORE-ESCONDE-DERIVADAS.log |
 | L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringRouterContextSourceFailClosed.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log |
 | L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/releaseStateService.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.log |
 | L1-L2-JORNADA-SUPERVISIONADA-MEDIDA | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionFullE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log |
@@ -115,10 +126,32 @@ Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb77273
 | P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/deliveryVerification.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log |
 | P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST | P1 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/devBranchCiGate.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log |
 | P1-UNIT-GATE-ACEITA-UNKNOWN | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringMission/missionGatesEvidence.test.js | AI_MEMORY/evidence/bug-closure-regularization/P1-UNIT-GATE-ACEITA-UNKNOWN.log |
+| PROMPT-P1A-CERTIFICACAO-SKIPPED | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/certificationLadder.test.js | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1A-CERTIFICACAO-SKIPPED.log |
+| PROMPT-P1B-ONLY-RESTRINGE-EXECUCAO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/certificationLadder.test.js | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1B-ONLY-RESTRINGE-EXECUCAO.log |
+| PROMPT-P1C-SWEEP-INDEPENDENTE | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | api/services/lro/__tests__/lroOutboxWorker.test.js | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1C-SWEEP-INDEPENDENTE.log |
+| PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/lroOutboxDispatcher.test.js | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL.log |
+| PROMPT-P1E-FENCING-OBRIGATORIO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/lroServiceTransaction.test.js | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1E-FENCING-OBRIGATORIO.log |
+| PROMPT-P1F-STREAM-ISOLAMENTO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | frontend/src/shared/useLroStream.test.jsx | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1F-STREAM-ISOLAMENTO.log |
+| PROMPT-P1G-QAMESH-GO-EXPLICITO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | qa-mesh/__tests__/executionQueueOutcome.test.js | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1G-QAMESH-GO-EXPLICITO.log |
+| PROMPT-P1H-RUN-CLOSURE-CONDICIONAL | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/runClosureTransition.test.js | AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1H-RUN-CLOSURE-CONDICIONAL.log |
+| RESUME-SUBSTITUTA-SEM-ESCOPO | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringBugLoopNaturalPathE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/RESUME-SUBSTITUTA-SEM-ESCOPO.log |
+| V2-EVIDENCIA-REAL-NO-HEAD | P1 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/governanceApprovalFullWorkerE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/V2-EVIDENCIA-REAL-NO-HEAD.log |
 | AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log |
 | CI-FLOW-GATE-VACUOSO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/officialTestScriptsNoVacuousPass.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-FLOW-GATE-VACUOSO.log |
+| CI-INTEG-JEST-DUAS-SUITES-BLOCKED | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/governanceApprovalFullWorkerE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-INTEG-JEST-DUAS-SUITES-BLOCKED.log |
+| CI-MAIN-MODELDRIVEN-PROD-LIKE | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/modelDrivenE2e.test.js | AI_MEMORY/evidence/bug-closure-regularization/CI-MAIN-MODELDRIVEN-PROD-LIKE.log |
 | DEF-TIMEBOMB-EVOSYNC-JANELA30D | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/evoSyncIntegration.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log |
 | DIV-PUREZA-ENGINE | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engine/enginePurityPorts.test.js | AI_MEMORY/evidence/bug-closure-regularization/DIV-PUREZA-ENGINE.log |
+| E2E-SUPPORT-CENARIO1-PRECONDICAO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/backfillRegressionTests.test.js | AI_MEMORY/evidence/bug-closure-regularization/E2E-SUPPORT-CENARIO1-PRECONDICAO.log |
+| ENG-DIVIDA-REPARO-SEM-SINAL | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionSourceE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-DIVIDA-REPARO-SEM-SINAL.log |
+| ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringBugLoop.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE.log |
+| ENG-FENCING-OPT-IN-NO-FIX-LOOP | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringBugLoop.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-FENCING-OPT-IN-NO-FIX-LOOP.log |
+| ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/engineeringMissionRoutes.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP.log |
+| ENG-REPARO-NAO-VISIVEL-NA-MISSAO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionSourceE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-REPARO-NAO-VISIVEL-NA-MISSAO.log |
+| ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringPromotionService.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO.log |
+| ENG-TESTES-VACUOSOS-PROVADOS-POR-MUTACAO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringBugLoop.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENG-TESTES-VACUOSOS-PROVADOS-POR-MUTACAO.log |
+| ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringBugLoopNaturalPathE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log |
+| FLAKE-B2-REGULARIZADOR-CORRIDA | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/regularizadorFilesystemAttacks.test.js | AI_MEMORY/evidence/bug-closure-regularization/FLAKE-B2-REGULARIZADOR-CORRIDA.log |
 | H12-RAG-REPARO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/ragIndexHealthPolicy.test.js | AI_MEMORY/evidence/bug-closure-regularization/H12-RAG-REPARO.log |
 | H16-MUTACAO-SUPERFICIE-NO-RUN | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/allValidatorsRunner.test.js | AI_MEMORY/evidence/bug-closure-regularization/H16-MUTACAO-SUPERFICIE-NO-RUN.log |
 | H17-PREFLIGHT-ASK-AI-TTL | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js | AI_MEMORY/evidence/bug-closure-regularization/H17-PREFLIGHT-ASK-AI-TTL.log |
@@ -131,19 +164,25 @@ Gerado em 2026-10-23T17:06:17.361Z · commit `32edd8e765ba167e3ed53831caacb77273
 | HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/runtimeEvidenceDiagnosis.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO.log |
 | HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW | P2 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/taskLeaseHandshakeParsing.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log |
 | HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js | AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log |
+| INTERFERENCIA-CRASH-EVIDENCE-L0B | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionCrashRecoveryE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/INTERFERENCIA-CRASH-EVIDENCE-L0B.log |
 | MISSAO-B5-VINCULO-DEFEITO-PREVENCAO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/evoSyncIntegration.test.js | AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B5-VINCULO-DEFEITO-PREVENCAO.log |
 | MISSAO-B8-ESTADOS-FILA | P2 | RESOLVED | REQUER_DECISAO_HUMANA | — | — |
 | N5-REENTREGA | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/missionSourceStaleReplanFullRouterE2E.test.js | AI_MEMORY/evidence/bug-closure-regularization/N5-REENTREGA.log |
 | P2-1 | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/remoteProvenanceAuthority.test.js | AI_MEMORY/evidence/bug-closure-regularization/P2-1.log |
 | P2-2 | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/reportWriteLineage.test.js | AI_MEMORY/evidence/bug-closure-regularization/P2-2.log |
 | P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL | P2 | RESOLVED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/governedArtifactPreservation.test.js | AI_MEMORY/evidence/bug-closure-regularization/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log |
+| QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | qa-mesh/__tests__/meshRunner.test.js | AI_MEMORY/evidence/bug-closure-regularization/QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE.log |
+| QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | qa-mesh/__tests__/scheduler.test.js | AI_MEMORY/evidence/bug-closure-regularization/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log |
+| TESTE-DEV-SUPERVISAO-PORTA-EFEMERA | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/dev/devServicesSupervision.test.js | AI_MEMORY/evidence/bug-closure-regularization/TESTE-DEV-SUPERVISAO-PORTA-EFEMERA.log |
+| TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/integration/engineeringMissionDurableResume.test.js | AI_MEMORY/evidence/bug-closure-regularization/TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO.log |
+| TESTE-FILESYSTEM-ORCAMENTO-10S | P2 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/regularizadorFilesystemAttacks.test.js | AI_MEMORY/evidence/bug-closure-regularization/TESTE-FILESYSTEM-ORCAMENTO-10S.log |
 | AUDITORIA-BRANCH-INVENTORY | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/branchInventory.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-BRANCH-INVENTORY.log |
 | AUDITORIA-CHECKPOINT-PROTOCOL | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/checkpointTool.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-CHECKPOINT-PROTOCOL.log |
 | AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/audit/auditEntrypointArtifact.test.js | AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log |
 | DEF-STATESYNC-EXEMPTION-STALE | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/frontend/stateSyncExemptionExactness.test.js | AI_MEMORY/evidence/bug-closure-regularization/DEF-STATESYNC-EXEMPTION-STALE.log |
 | H18-JORNADA-FUNCIONAL-BROWSER | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/governance/journeyDetectors.test.js | AI_MEMORY/evidence/bug-closure-regularization/H18-JORNADA-FUNCIONAL-BROWSER.log |
 | MISSAO-A-L1-IMPACTO | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/coverage/impactGraph.test.js | AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L1-IMPACTO.log |
-| MISSAO-A-L2-L3-ORQUESTRADOR | P3 | VERIFIED | AGUARDA_ASSINATURA_E_ANCORA | tests/unit/coverage/impactRunner.test.js | AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log |
+| MISSAO-A-L2-L3-ORQUESTRADOR | P3 | VERIFIED | AMBIENTE_INDISPONIVEL | tests/unit/coverage/impactRunner.test.js | AI_MEMORY/evidence/bug-closure-regularization/MISSAO-A-L2-L3-ORQUESTRADOR.log |
 | MISSAO-B3-REUSO-PROVENIENCIA | P3 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | MISSAO-B4-REVISAO-INDEPENDENTE | P3 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |
 | MISSAO-DEMO-SELF-ENGINEERING | P3 | VERIFIED | REQUER_DECISAO_HUMANA | — | — |

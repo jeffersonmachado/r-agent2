@@ -1,0 +1,1936 @@
+{
+  "schemaVersion": 2,
+  "kind": "bug-closure-regularization",
+  "generatedAt": "2026-10-31T14:23:23.210Z",
+  "authoritative": false,
+  "runId": "run-20261031140822-fdc8dcc8",
+  "identidade": {
+    "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+    "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "P1",
+    "limite": 0,
+    "esperadoNoEscopo": 78,
+    "processados": 78,
+    "completoNoEscopo": false,
+    "cobreInventario": false
+  },
+  "resumo": {
+    "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+    "fingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+    "runId": "run-20261031140822-fdc8dcc8",
+    "total": 78,
+    "porClasse": {
+      "AGUARDA_ASSINATURA_E_ANCORA": 69,
+      "REQUER_DECISAO_HUMANA": 7,
+      "TESTE_FALHOU_AGORA": 2
+    },
+    "porSeveridade": {
+      "AGUARDA_ASSINATURA_E_ANCORA:P1": 69,
+      "REQUER_DECISAO_HUMANA:P1": 7,
+      "TESTE_FALHOU_AGORA:P1": 2
+    },
+    "filaAlterada": false,
+    "assinatura": "PENDENTE — este script não assina e não altera a fila"
+  },
+  "resultados": [
+    {
+      "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Travas do ponto de entrada de auditoria (regressão do agg8 + epoch recalculável)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-ENTRYPOINT-TRAVAS.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-ENTRYPOINT-TRAVAS.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "9abcf910028ebb552c460f37c70e7afd198b5daef84e89a53826439e774e81f6"
+    },
+    {
+      "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Teste de unidade regravava artefato governado e derrubava a integridade temporal",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/audit/auditEntrypointArtifact.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log",
+      "draft": "governance/bug-closure/proofs-drafts/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "296bb3e641943dbf10fd93fb33b3c8f105c72f56674acedf256b2b3cfef9b862"
+    },
+    {
+      "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gates de IA exigiam arquivo que nao existia em NENHUM commit (so no disco do desenvolvedor)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-ADAPTADOR-IA-NAO-VERSIONADO.log",
+      "draft": "governance/bug-closure/proofs-drafts/CI-ADAPTADOR-IA-NAO-VERSIONADO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "d51310a74a31e45bc3ddd3ca3ddf59d066cb15617826b9680f5049dd0648ad8f"
+    },
+    {
+      "id": "CI-CHECKOUT-LIMPO-HARNESS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Instalacao limpa nunca era testada: todo diagnostico de CI dependia do estado da maquina do desenvolvedor",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "MAPA_CONFIRMADO",
+      "teste": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-CHECKOUT-LIMPO-HARNESS.log",
+      "draft": "governance/bug-closure/proofs-drafts/CI-CHECKOUT-LIMPO-HARNESS.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "2d9cba698b135c90a10b8d78d1d312681323f0fe43deea57c6c0a534300bfc8f"
+    },
+    {
+      "id": "CI-E2E-CREDENTIAL-SCOPE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Suítes E2E do Router salvavam credencial no tenant do teste (Router resolve pelo ESCOPO)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-E2E-CREDENTIAL-SCOPE.log",
+      "draft": "governance/bug-closure/proofs-drafts/CI-E2E-CREDENTIAL-SCOPE.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "04496313654ccbb695c9995273c73def5ee31cf6d3a68eedc4d856810d15b47e"
+    },
+    {
+      "id": "CI-MAIN-JEST-AMBIENTE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CI de main (jest.yml): 5 lacunas de AMBIENTE reprovavam a suíte oficial",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "601647fccf2524c8e51ec3cfed4e55e528c189186ddfef8fe191615cbf4ea1fc"
+    },
+    {
+      "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Engineering Runner de porta fixa era reutilizado por outra arvore: a prova de sandbox media o codigo do vizinho",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
+      "draft": "governance/bug-closure/proofs-drafts/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "77200aa4009d2a92b1a280eb38909139f60acfdd9edc7036401e883a77956ecb"
+    },
+    {
+      "id": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Refresh agendado das waves falhava por não abrir run governado (evidências de wave venciam)",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "cc496bedbc8b95dd62a45d6be8730dd96cd9b5f0f4369f7b17e9f7350d690196"
+    },
+    {
+      "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "engineeringMissionFullE2E flaky sob carga BLOQUEIA o agregado e a selagem",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/effectiveAggregateChain.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "5b8379b4a6e6e6e856fcbba778a7e96e80f68d95e7764afc5cce9de5c062baaf"
+    },
+    {
+      "id": "DEF-QUEUE-DELETE-DB-ONLY",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "DELETE /queues nao removia fila existente so no banco (reaparecia na listagem)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/queueModuleRoutes.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-QUEUE-DELETE-DB-ONLY.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-QUEUE-DELETE-DB-ONLY.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "436c51ac05fc4ee737b6ac48bbf3a4577dd224ea882c90e91650ba8c9c5a835f"
+    },
+    {
+      "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "removeChild (React) por enhancement de header que movia/substituia nos do React",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "frontend/src/__tests__/supportHeaderEnhancement.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-REMOVECHILD-HEADER-ENHANCEMENT.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-REMOVECHILD-HEADER-ENHANCEMENT.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "3d0efb5f3ea613c137b4e4a15bc7c8452637e7e3f13b4bf0351d6f5c62170c40"
+    },
+    {
+      "id": "DEF-TEARDOWN-DRAIN-WORKER",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
+      "classe": "TESTE_FALHOU_AGORA",
+      "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "exitCode": 1,
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-TEARDOWN-DRAIN-WORKER.log",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "b9551dfdb3531e691b6665f08190c263aeedb89f3ba2aa8fe928d6f53cd361c6"
+    },
+    {
+      "id": "DEF-WS-AUTH-POS-LOGIN",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "WebSocket nao autentica apos o LOGIN: usuario sem tempo real ate dar F5",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/DEF-WS-AUTH-POS-LOGIN.log",
+      "draft": "governance/bug-closure/proofs-drafts/DEF-WS-AUTH-POS-LOGIN.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "d04c922eeac875ee8c86622c10ea195dd55345a0460ef3eb90e4dacac8792b54"
+    },
+    {
+      "id": "E2E-REPLAY-DOMINIO-E-TAB",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "qa-waves-replay: jornada vive em outro domínio e o clique num tab inexistente consumia 420 s",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/backfillRegressionTests.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/E2E-REPLAY-DOMINIO-E-TAB.log",
+      "draft": "governance/bug-closure/proofs-drafts/E2E-REPLAY-DOMINIO-E-TAB.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "cf04d8c4363f8e8ad5156791f0abad0f5159a90318d5c23188d08e890b1cf6c2"
+    },
+    {
+      "id": "ENG-LEASE-FENCE-NAO-VALIDADO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "lease_fence era incrementado e nunca validado por escrita alguma (posse perdida continuava escrevendo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/engineeringBugLoop.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/ENG-LEASE-FENCE-NAO-VALIDADO.log",
+      "draft": "governance/bug-closure/proofs-drafts/ENG-LEASE-FENCE-NAO-VALIDADO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "d319488bbf83dafd1c96903ad270d91225f7445e44c5beb25f0c9e02c9bc2565"
+    },
+    {
+      "id": "ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Plano derivado sobrescrevia o reproduction DECLARADO do finding (strategy/source sumiam na 1a tentativa)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/engineeringBugLoop.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA.log",
+      "draft": "governance/bug-closure/proofs-drafts/ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "c75d17f900a9a12804c5d8a89e72c1cdba11fbea9ffeb039590e0129b23899bc"
+    },
+    {
+      "id": "ENG-RECONCILIACAO-BOOT-STARVATION",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Intent \"requer reparo\" nunca persistia estado: reconciliacao de boot reprocessava sempre os mesmos e nunca alcancava o intent novo",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/ENG-RECONCILIACAO-BOOT-STARVATION.log",
+      "draft": "governance/bug-closure/proofs-drafts/ENG-RECONCILIACAO-BOOT-STARVATION.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "9682636418750df5ce7ea89437d36a2903add6696da0e82b8100a2e9da1d8ea0"
+    },
+    {
+      "id": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Drenagem da reconciliacao de boot por em memoria: head estacionario (PROCEED) travava a fila e o intent novo nunca era alcancado",
+      "classe": "TESTE_FALHOU_AGORA",
+      "teste": "tests/integration/engineeringMissionSourceE2E.test.js",
+      "exitCode": 1,
+      "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "dbb14e58a41ea743bc2cda5edf061363960526033889b037a1327e06383b19a7"
+    },
+    {
+      "id": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fix da FASE 6 mudou o sourceFingerprint: falta gerar novo candidato e nova certificacao preservando o anterior como historico",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "1807319f4f06506346b090d5e13fa3a3300a6451fd7368d509301fa7d2c728e2"
+    },
+    {
+      "id": "H10-VEREDITO-GATE-SEGURANCA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Veredito do Security Release Gate deixa de ser mascarado pela avaliacao de risco",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/securityGateState.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H10-VEREDITO-GATE-SEGURANCA.log",
+      "draft": "governance/bug-closure/proofs-drafts/H10-VEREDITO-GATE-SEGURANCA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "4631b374d81e1ead1d6f19aa546a38e0e3ef106223fdcdb36dbe1655ea6a747c"
+    },
+    {
+      "id": "H11-ESCOPO-DIFERIDO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Regressao da Fase 9: escopo diferido explicito + fixtures com evidencia de integracao",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringRouter/taskContractScope.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H11-ESCOPO-DIFERIDO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H11-ESCOPO-DIFERIDO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "8678eb2aec4dc60c9b2aed600d63277716f40a3cd60a9c9bdd0ef23b07f1d991"
+    },
+    {
+      "id": "H13-RUNNER-COMPLETO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Agregado deixa de mascarar falhas: runner completo dos validadores",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/allValidatorsRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H13-RUNNER-COMPLETO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H13-RUNNER-COMPLETO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "ad8e0e4a4a4a2da9dfc9fdd6e2994180d47a9eee3ebe571f03caf0d52a5aaeee"
+    },
+    {
+      "id": "H14-CDR-SUPERVISIONADO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CDR do Asterisk nao morre mais em silencio (ponte + backend)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H14-CDR-SUPERVISIONADO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H14-CDR-SUPERVISIONADO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "842b9bb20cb8fd590dbaf76ffacb8a6f6e341961ff57dd848946ea5683e8262e"
+    },
+    {
+      "id": "H15-CDR-LAST-FAIL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "CDR nao morre mais em silencio com o backend REGISTRADO sobre conexao que falhou",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H15-CDR-LAST-FAIL.log",
+      "draft": "governance/bug-closure/proofs-drafts/H15-CDR-LAST-FAIL.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "ed126d7581e7579890fff1750f8d9088555df07b1f78df06984a7e0cc1a55cd5"
+    },
+    {
+      "id": "H16-V2SEAL-PASSO-SEM-MOTIVO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Passo obrigatorio do selo V2 que falha passa a registrar o MOTIVO no relatorio",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
+      "draft": "governance/bug-closure/proofs-drafts/H16-V2SEAL-PASSO-SEM-MOTIVO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "fe1373675be146fba5d170dcc925d98ad426d9776e469d218316288c4b8875c8"
+    },
+    {
+      "id": "H17-HOOKS-EDITOR",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Editor: quebra das Rules of Hooks no seletor de modelos (achado da jornada browser)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "frontend/src/components/FlowTemplateSelector.test.jsx",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/H17-HOOKS-EDITOR.log",
+      "draft": "governance/bug-closure/proofs-drafts/H17-HOOKS-EDITOR.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "a1e865a9bb0c5f4265c9f060640c6deb3239b3ad3ece0a1c9760fd603d9a4a28"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "O gate agregado nao persiste veredito proprio do run corrente",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/aggregateVerdict.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "77b44dd9b6fee107f05343f1be14f26d6d311550c74da8353913cd9efa228a5d"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Harness aceitava LOG JSON do produto como handshake do worker de lease (selo V2 abortado)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "0f37c17abb7db93ac343cb866bc88ecb82d0f7f0418d9bf8ed5298379b0bed20"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "FENCE_AVANCOU com antes=undefined: log JSON do produto confundido com handshake (selo V2 abortado)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "7ecd243a374ac92d31e8591ab71bb2ef1ce472506925e37e02fbeb400da6d675"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Malha grava artefato governado mesmo executando ZERO resultados (--scenario-id da wave nao casa)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "915271152ca00d7e218746483818a1393c89337a9291579ebfb200be8078a841"
+    },
+    {
+      "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "TTL/frescor de evidencia: autoridade unica com 5 regras e vinculacao por run",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/evidenceTtl.test.js",
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P1-11.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P1-11.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "e74c6a3e7c0f79ae956faf88d3c2a77caab27f379c1a5cbbaf4d23632b71b109"
+    },
+    {
+      "id": "JOURNEY-STORE-ESCONDE-DERIVADAS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "QA Waves: uma jornada salva escondia TODAS as derivadas dos cenários (produto)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "api/services/__tests__/qaWavesService.journey.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/JOURNEY-STORE-ESCONDE-DERIVADAS.log",
+      "draft": "governance/bug-closure/proofs-drafts/JOURNEY-STORE-ESCONDE-DERIVADAS.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "4033a5a4a50195b1d6ca92e67a463610d5dbc0c2f3da97d2e41b5ec8bd9c7853"
+    },
+    {
+      "id": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Contexto do CODER lia o checkout principal quando o source_commit da missao era irresolvivel",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "fe087be768710300724873d3fba6f931dca5ed97cdf8d6b4c4f4fa1a2c8e762c"
+    },
+    {
+      "id": "L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "DELIVERED_VERIFIED era concedido sem veredito positivo, com bloqueio ativo e lendo um relatorio que nunca existiu",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/releaseStateService.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "0a143fcc25452acbc70cfe90ce2e78a7ccdd83bff07af66c9bd8e490f0b8111a"
+    },
+    {
+      "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L2 (jornada supervisionada 8/8) e L1 (40 suites/221 testes) medidos em isolamento",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/engineeringMissionFullE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "fb6bfd260b9ea809ef215343769886edef85628d165f93cd62953d1ee3a56e55"
+    },
+    {
+      "id": "L1-NPM-TEST-CI-VERMELHO",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "CI do branch de desenvolvimento VERDE: L1 separado em D (desenvolvimento) e R (certificacao de release)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/qaMeshOperationPolicy.test.js",
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-NPM-TEST-CI-VERMELHO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-NPM-TEST-CI-VERMELHO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "b6548743b4bd501938a31da026f7b9956c14d582cbacd007b6b7a69f1e2bf66b"
+    },
+    {
+      "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "publish-tag era oferecida com release selado mas NAO verificado",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/devGovernanceModels.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-PUBLISH-TAG-EXIGE-VERIFICACAO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "d37e986c1f76f0a7590f612e7c20285056228518959e3dd450f89a6d60517324"
+    },
+    {
+      "id": "L1-RUNNER-CONTAINER-MODULE-NOT-FOUND",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Container real do Engineering Runner executava sandbox com MODULE_NOT_FOUND (Dockerfile sem fechamento de dependencias)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log",
+      "draft": "governance/bug-closure/proofs-drafts/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "367ea2a31f0065dc91fe3f7b47ec7f4aba54927aca834306eacd39d8d7985d11"
+    },
+    {
+      "id": "L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Coleta da evidencia de runtime restringia o Jest a um teste e dependia de sobra de execucoes anteriores",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "355b5419090b03607928c974a7a5d26a30c8dc7d55af9f25dfc54c5820bbcdf2"
+    },
+    {
+      "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "B9: bloqueio de budget do GitHub Actions CAIU — workflows voltaram a executar (verificado 2026-10-30)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/devBranchCiGate.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B9-CI-GITHUB-ACTIONS.log",
+      "draft": "governance/bug-closure/proofs-drafts/MISSAO-B9-CI-GITHUB-ACTIONS.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "60f721067a67555048c01b350d96eaf2dcf5f45b63a847e939328e691410a814"
+    },
+    {
+      "id": "P1-1",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gates unit/integration declaram a CATEGORIA da evidencia",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringMission/testSuiteClassifier.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-1.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-1.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "a4dd089636e594ab501c8b64828436002685a30e253071e3838884c6b31e1c66"
+    },
+    {
+      "id": "P1-10",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Self-engineering E2E governado (relatorio agregado obsoleto)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-10.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-10.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "f9adc1b03f382ae060716defc20c6e65fd378c3538f6ab27c81717eba587b178"
+    },
+    {
+      "id": "P1-11",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Destravar empacotamento e selagem (ciclo release:seal completo)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/v2SealOrchestration.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-11.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-11.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "35a3ba6d522b7b7ea9e9dbf087490734c2a9aac763d1c4d9050347d9601c740b"
+    },
+    {
+      "id": "P1-12",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Evidencia STALE declarada valid=true atestando a decisao final do run corrente",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/evidenceFreshness.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-12.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-12.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "188d805875b1f11ec1be27bcaeb77dd47474ec125cdef4bd1fd7147c418e7183"
+    },
+    {
+      "id": "P1-13",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Regenerar qa/smoke-evidence.json (prova exigida cujo produtor esta em workflow DESABILITADO)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/smokeEvidenceSummary.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-13.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-13.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "ff4520d398e9984d639639b7e3034edab07df1ead81d2a78c8bf0e872c88ce08"
+    },
+    {
+      "id": "P1-15",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "PASS 5 escreve membro da chain (evidence-manifest) DEPOIS da atestacao",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/attestationOrder.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-15.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-15.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "1f88081d55fe6e2704be507a65fc7eae3712bf607d2168c5c3a620d5b6c7ff48"
+    },
+    {
+      "id": "P1-16",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Lotes do runner autoritativo nao se isolavam (conexoes e processos-filho vazavam)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-16.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-16.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "174803fdfe831ccefbc4ff7fe73e07377606bc7a3c42f48b4fa18fe9954e00a2"
+    },
+    {
+      "id": "P1-17",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Dívida de segurança do Security Release Gate (47 -> 0 bloqueantes; gate GO)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-17.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-17.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "762c5690bca486f3cf2415c96f265fa1970270e8557159b9ad07f2086b5a5400"
+    },
+    {
+      "id": "P1-2",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Revisao independente verificavel (vinculada a tentativa + independencia nos dados)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringMissionReviewEngines.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-2.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-2.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "6a48c5b4ac3a2126cbd23f6e433e7e22d5a29bbc08ba9b9ab801dc8855767bbc"
+    },
+    {
+      "id": "P1-3",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Promocao verificada obrigatoria para GREEN",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-3.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-3.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "182b5a5eb8815e6b43c86b93132a58bccf8192293f64accf15b5d506f1454cab"
+    },
+    {
+      "id": "P1-4",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Regra preventiva exige teste EXECUTADO e regras ativas passam a ser consultadas",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringMission/activePreventiveRules.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-4.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-4.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "24dca6603c3d49f6fe14dd110992704168c5e71310f9ca352025aee15c943697"
+    },
+    {
+      "id": "P1-5",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Degradacao da busca hibrida do RAG deixa de ser assimetrica",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "4c26efe24c0007fba674a1fd85891944dfbddd6eeba85f33e7591ea2246a6651"
+    },
+    {
+      "id": "P1-6",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "DSN do Postgres resolvido e provas de isolamento realmente EXECUTAM",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "e221b502184e1ebb7c6fa7b07c6c5a07ec8d33e7bacecb877ac5a81e18332ebf"
+    },
+    {
+      "id": "P1-7",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fila de triagem de seguranca mostra o estado da REMEDIACAO submetida",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/securityIntel/triageRemediation.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-7.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-7.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "3e1a1f24a4aaa2eb9fd398f1e06180370615a19e3405a65b3a7cc557647099c3"
+    },
+    {
+      "id": "P1-8",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Inventario do sistema regenerado",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/qa/systemInventoryIntegrity.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-8.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-8.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "136a92ac02c7c78247abc2a1da63f1773b2f0702ccd6378f57e387467bde1fd1"
+    },
+    {
+      "id": "P1-9",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Contrato unico de evidencias (campos obrigatorios, runId/lineage, FAIL vs INCOMPLETE)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/evidenceContract.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-9.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-9.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "12b16a0318a5f533688f320cf99798489dc21e420d36545ae244de7727988a5b"
+    },
+    {
+      "id": "P1-BRANCHES-MISSAO-RESIDUO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Refs engineering/missions/* acumulavam sem poda (3017 residuais degradam medicao)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/pruneEngineeringMissionBranches.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-BRANCHES-MISSAO-RESIDUO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-BRANCHES-MISSAO-RESIDUO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "05fc037d2ca42aa06e67d82ff6bac96d4ed03ab99de3dd5534e1cc8ab928aee7"
+    },
+    {
+      "id": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "pbx-cdr-health.sh falhava sob pipefail por SIGPIPE (grep -q / head -n1) — falso vermelho recorrente",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "e9d07ee2e5f99d6ff3fc93d8bcef5a70a4d888446ebf7fef7fbee18b3df585c3"
+    },
+    {
+      "id": "P1-CI-SEM-INTEGRACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate/CI do branch de desenvolvimento nao rodava NENHUMA suite de integracao",
+      "classe": "REQUER_DECISAO_HUMANA",
+      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "787cd04ecf546bdb7745b92fede4b9402c8132db0e1a8ccaa65d0efa1dbc5618"
+    },
+    {
+      "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Teste de concorrencia HTTP passava sem PostgreSQL (retorno silencioso)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CONCORRENCIA-EXIGE-POSTGRES.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-CONCORRENCIA-EXIGE-POSTGRES.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "16fd46d4aefca4eb53b86300826606d6f7c8bb4f42e3461c291e8e77544a49c8"
+    },
+    {
+      "id": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Editar oportunidade criava registro novo (POST sem id) e o front lia payload cru da resposta",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/crmOpportunityUpdate.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "0b372bc6e72a43509825849af658b8130ef975f856ee99e0e255fb77c649e8e9"
+    },
+    {
+      "id": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Painel CRM sincronizava por setInterval (proibido) e o evento de metricas nao tinha prova de isolamento por tenant",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/realtimeTenantIsolation.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "71a109b5053fc57dbd38f584f639eb9ce0bd4296f469a3b5a638901e446a8009"
+    },
+    {
+      "id": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Verificacao de ENTREGA descartava o exit code e usava grep de texto positivo como autoridade",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/deliveryVerification.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "d0e757587402019a3a9c745341dc110b18d78567891df7f5b60fb8f12aa1f152"
+    },
+    {
+      "id": "P1-EVIDENCIA-COMMIT-ORFAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Fila oficial aceitava prova com commit inexistente (3 itens citavam hash reescrito)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/hardeningQueueCommitExists.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-EVIDENCIA-COMMIT-ORFAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-EVIDENCIA-COMMIT-ORFAO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "406be92cabc297402c64c342b603da00bac64643c60f30b2d0704ddbe7af7661"
+    },
+    {
+      "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Veredito ENGINEER_SUPERVISED_READY_GO vivia em prosa; agora e gate executavel",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/engineerSupervisedReadinessGate.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-GATE-PRONTIDAO-EXECUTAVEL.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-GATE-PRONTIDAO-EXECUTAVEL.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "84272519ac6382a8543551555b6ee3b5073d6303ddfe47fabd5f44b753e12127"
+    },
+    {
+      "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Guarda de integridade nao via skip/assertion removida nem mutacao commitada",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/worktreeIntegrity.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "97535184c4efd9d70af4271ce079c0df482e25b77943d7e9191d8432bf81532e"
+    },
+    {
+      "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "L0 do gate do branch variava de suite vermelha por contencao (11 workers)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/ciGateL0Determinism.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-L0-INDETERMINISTA-POR-CONTENCAO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "4fcefdad925eb192c037f52fe421983c8217117d3c517d276e06271751f77446"
+    },
+    {
+      "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Lineage de relatorio escolhia o run mais recente e omitia sourceCommit",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/reportLineageExplicit.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-LINEAGE-RUN-MAIS-RECENTE.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-LINEAGE-RUN-MAIS-RECENTE.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "7be54838ae47899c4f94d915ed443f0c3cb63ae667f04893ca94a397b8e61f96"
+    },
+    {
+      "id": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "mergeMissionJson (JSONB acumulativo) perdia atualizacao em escrita concorrente",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "e7cd4b6d2de11f8e0f0e4b7994b62f24c467da07ffcf6f203150470a4447c161"
+    },
+    {
+      "id": "P1-PATCH-SYMLINK-ESCAPE",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "validatePatch aceitava symlink (git mode 120000): alvo do link escapa do allowedPaths",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-PATCH-SYMLINK-ESCAPE.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-PATCH-SYMLINK-ESCAPE.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "1136f6281189af2af5542d4546ec1aecaecb76fd78ce038ed29fd86e26999bd3"
+    },
+    {
+      "id": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Projecoes podiam ser gravadas antes da decisao canonica final e ficar stale sem nenhum gate perceber na hora",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "6f3fbd3149ed20507bf0ecbd2ea5a008a115110bbe8997f9542d9c46d86924d6"
+    },
+    {
+      "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate review aceitava APPROVE sem prova positiva de independencia",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "9592532aeb91382df9f3864352b67040edfab2f9445352e783285e6791c60519"
+    },
+    {
+      "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "isSandboxAvailable cacheava NEGATIVO: falso SANDBOX_UNAVAILABLE sob carga",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-SANDBOX-PROBE-CACHE-NEGATIVO.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-SANDBOX-PROBE-CACHE-NEGATIVO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "b4a2beb960ee7499f2012c0c1fcfa46a8c3edf462404a4e7f303dfd7a4f52ea5"
+    },
+    {
+      "id": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Selo publicava ref fixa (main) e imprimia \"push ok\" sem publicar o commit da branch em uso",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/deliveryVerification.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "4309125c331efc6a399b568a2908a4b6c9e5127670686d5522562d06661f59f3"
+    },
+    {
+      "id": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
+      "severity": "P1",
+      "estadoPersistido": "RESOLVED",
+      "titulo": "Certificacao deixa staging transitorio em dist/ e o agregado falha em validate:dist",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/unit/governance/devBranchCiGate.test.js",
+      "transicao": "RESOLVED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "b733e2147c99f674fdaa1488a13d1cd3a01710b12c545a8c44b4704b0a688d98"
+    },
+    {
+      "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Gate unit era satisfeito por qualquer execucao verde (inclusive UNKNOWN/integracao)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P1-UNIT-GATE-ACEITA-UNKNOWN.log",
+      "draft": "governance/bug-closure/proofs-drafts/P1-UNIT-GATE-ACEITA-UNKNOWN.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "2a72dac51b740bcdfc69a85819c05c66f872a26787fac079e271fcdf6aba3715"
+    },
+    {
+      "id": "RESUME-SUBSTITUTA-SEM-ESCOPO",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Substituta da retomada pós-fix nascia sem escopo de patch (NO_PATCH_SCOPE em toda tentativa)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/RESUME-SUBSTITUTA-SEM-ESCOPO.log",
+      "draft": "governance/bug-closure/proofs-drafts/RESUME-SUBSTITUTA-SEM-ESCOPO.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "28dc214f6a27260de1487651be04d358f711b4852d11a5a62e1ae5b19b57ad96"
+    },
+    {
+      "id": "V2-EVIDENCIA-REAL-NO-HEAD",
+      "severity": "P1",
+      "estadoPersistido": "VERIFIED",
+      "titulo": "Router V2: 3 gates provados no HEAD com produtores canônicos (4 falhas → 1)",
+      "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+      "origemDoTeste": "CAMPO_DO_ITEM",
+      "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/V2-EVIDENCIA-REAL-NO-HEAD.log",
+      "draft": "governance/bug-closure/proofs-drafts/V2-EVIDENCIA-REAL-NO-HEAD.json",
+      "camposParaAssinar": 18,
+      "runId": "run-20261031140822-fdc8dcc8",
+      "identidade": {
+        "commit": "078737b84fbd9f53fc0401d5f89280e1cc4de541",
+        "sourceFingerprint": "9cc1970b09096d27bde09e3657b3aa8e95dfdd64024aea48d09a3d16329401cb",
+        "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+        "hardeningQueueFingerprint": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7",
+        "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+      },
+      "artifactSha256": "126648fc1de6b6da852e40130f832b99474d19af0cb26bf598f0e4ce624976ec"
+    }
+  ],
+  "coberturaIntegral": {
+    "motivo": "escopo/lista/inventário não conferem",
+    "inventoryDigest": "9a6540fcd86e38aab328847a6f1c1b627cb202585270e5efee283dfd76ae71c7"
+  },
+  "execucao": {
+    "status": "COMPLETED",
+    "completo": false,
+    "completedAt": "2026-10-31T14:23:22.205Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "fe71cc07-0037-44e8-8557-f3c80bac0dc7",
+  "transitionId": "d260bdd6-c692-4dbb-bf2e-a316545b2065",
   "defectId": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
-  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
   "requiredTests": [
     "tests/unit/governance/producerLineageIdentity.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/producerLineageIdentity.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T19:35:35.886Z",
-      "finishedAt": "2026-10-31T19:35:38.875Z",
+      "startedAt": "2026-10-31T21:19:26.275Z",
+      "finishedAt": "2026-10-31T21:19:31.078Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
-      "outputSha256": "299c6f24efb2bab98c2761994712d7e27cf15d9acda4f05bfa55f21ac4f64603"
+      "outputSha256": "cf56a0ce7fe67f8a6ce75b77074c9a8d5f6eec1cb38181ee82e22780f2f15319"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T19:35:38.881Z",
-  "proofHash": "d3c3e5ca60f13a0a29e060aff8307692bf749dbb89c092917d0a9563f8c95a5a"
+  "createdAt": "2026-10-31T21:19:31.084Z",
+  "proofHash": "fb789741e99b947542ef09d371fbe780242bf4d296750af097362eb8b929aea4"
 }

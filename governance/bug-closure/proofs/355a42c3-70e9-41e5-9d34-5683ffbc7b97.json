@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "355a42c3-70e9-41e5-9d34-5683ffbc7b97",
+  "defectId": "H16-V2SEAL-PASSO-SEM-MOTIVO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/governance/v2SealStepDiagnostics.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "command": "npx jest tests/unit/governance/v2SealStepDiagnostics.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:25:13.682Z",
+      "finishedAt": "2026-10-31T21:25:16.226Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H16-V2SEAL-PASSO-SEM-MOTIVO.log",
+      "outputSha256": "fd58846cb49d0c01f66a87f2a4b582c8714decf1dfa998ddec469b539681b8bd"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/v2SealStepDiagnostics.test.js",
+      "sha256": "fb6d6f394555da944e35fc40d4ac1269816a5285b6000e1b5cd118fed94e4a30"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:25:16.234Z",
+  "proofHash": "52ffd43c80fbc313ad238d6c53b85ae68eccc3f9f3a0029923931a7dca196306",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "dAc9g+znmjH2vPTME8m9F2Fnb5AYfe8WAJrNhcSCCesMhMQhshb8hvO8FmN3dy23mxf7DVWz/dujQ+MAg5UVAw==",
+    "signedAt": "2026-10-31T21:49:01.112Z"
+  }
+}

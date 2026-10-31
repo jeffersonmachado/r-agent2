@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5f3ab4c5-4ba4-437a-b5f3-f9a4ccbef996",
+  "defectId": "PROMPT-P1C-SWEEP-INDEPENDENTE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "api/services/lro/__tests__/lroOutboxWorker.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "api/services/lro/__tests__/lroOutboxWorker.test.js",
+      "command": "npx jest api/services/lro/__tests__/lroOutboxWorker.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:29:16.245Z",
+      "finishedAt": "2026-10-31T21:29:20.018Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1C-SWEEP-INDEPENDENTE.log",
+      "outputSha256": "7679dd85077fdb32bd41e47c061e9c0ca6f3a730f6ff7a533f5a4704db1da20d"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "api/services/lro/__tests__/lroOutboxWorker.test.js",
+      "sha256": "7bbbe5f2b6655ff629ae3a45b211b00b605e377fe2fdca543273043ff1deab7d"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:29:20.026Z",
+  "proofHash": "f0f0134b57c8b7f2ed9ecf862e2a7b9ea63fde8cd140d8c6fd663dc93c99874b",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "bCLK1I/xGGbKPNi0pR45D9fECg9XXaYnsFbdoM9WHYe+mGXcPsvv03gsgyorrzn7lmkxhBBoiPMF2y1Q6eiXDw==",
+    "signedAt": "2026-10-31T21:49:11.398Z"
+  }
+}

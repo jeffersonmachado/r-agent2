@@ -3,7 +3,7 @@
 > VITE_CACHE_DIR=/tmp/r-agent2-vite vitest run --config vitest.config.mjs src/__tests__/supportHeaderEnhancement.test.js
 
 
-[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/tmp/rbc-audit/frontend[39m
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/opt/results/ria/er-fixci/frontend[39m
 
 [90mstdout[2m | src/__tests__/supportHeaderEnhancement.test.js
 [22m[39m⚠️  Proteção contra loops infinitos ativada (monitoramento passivo)
@@ -23,7 +23,7 @@
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m6 passed[39m[22m[90m (6)[39m
-[2m   Start at [22m 13:26:22
-[2m   Duration [22m 3.57s[2m (transform 134ms, setup 639ms, collect 58ms, tests 672ms, environment 786ms, prepare 231ms)[22m
+[2m   Start at [22m 18:21:42
+[2m   Duration [22m 2.62s[2m (transform 80ms, setup 302ms, collect 25ms, tests 676ms, environment 736ms, prepare 150ms)[22m
 
-JUNIT report written to /tmp/rbc-audit/frontend/test-results/junit.xml
+JUNIT report written to /opt/results/ria/er-fixci/frontend/test-results/junit.xml

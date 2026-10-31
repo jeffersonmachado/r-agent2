@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "095978c8-817a-48ed-9dbe-62a3b56a92c1",
+  "defectId": "CI-E2E-CREDENTIAL-SCOPE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/integration/governanceApprovalFullWorkerE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "command": "npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:19:54.215Z",
+      "finishedAt": "2026-10-31T21:21:29.967Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-E2E-CREDENTIAL-SCOPE.log",
+      "outputSha256": "be14840c2900d0bc8fd2fd93eefbbf7492362388ba47b5d29a9e3678c6f51e89"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "sha256": "fadebfb26ad896bc03d702569fb62d65f98222a76d8ef2b2b1abb701de1e157a"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:21:29.991Z",
+  "proofHash": "ed71a0ba878f4bf7ee657809b88bccd8c2279b34af507bd860fd3193cf7bceed",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "zWTVRTIYIi3swfkdiPD+M+qQK5E/vnVHxAGvRv3l0aNYeihf8aCkacHUILnVpjPoDnYAikz8TqCEEYTNIZsiBQ==",
+    "signedAt": "2026-10-31T21:48:56.637Z"
+  }
+}

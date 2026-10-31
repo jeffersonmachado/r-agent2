@@ -1,0 +1,25 @@
+{
+  "id": "H15-CDR-LAST-FAIL",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "CDR nao morre mais em silencio com o backend REGISTRADO sobre conexao que falhou",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/pbx/pbxCdrHealth.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/H15-CDR-LAST-FAIL.log",
+  "draft": "governance/bug-closure/proofs-drafts/H15-CDR-LAST-FAIL.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261031193333-82753453",
+  "identidade": {
+    "commit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
+    "sourceFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "55380cab06973ba3b5b6c844dbe56b9ce75842d630c5dfa9b175b8325aa6c982",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "eb61aa7cfc615ee43b4991fac85a85270831393e23049194f6caf7a3047f371e"
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "44022351-491b-4b3e-b5a9-bc05ef833707",
+  "transitionId": "b89dd232-01a3-4a39-b2d6-85e783e9fd06",
   "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
-  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
   "requiredTests": [
     "tests/unit/qa-mesh/meshZeroResultsPromotion.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/qa-mesh/meshZeroResultsPromotion.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T19:41:10.296Z",
-      "finishedAt": "2026-10-31T19:41:15.198Z",
+      "startedAt": "2026-10-31T21:25:27.189Z",
+      "finishedAt": "2026-10-31T21:25:31.534Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA.log",
-      "outputSha256": "5a9892332ae53b23128477fe304d0c94647047977aadff2e748baea21cf723d1"
+      "outputSha256": "ba1e849c84ec536c74f8b914304576fdb71de0b7493b49cb03298bbbd650b41c"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T19:41:15.207Z",
-  "proofHash": "a1e8e822cd05f69ab554d21c7c71cecbedade98b8608df63580f7a7e9713102f"
+  "createdAt": "2026-10-31T21:25:31.541Z",
+  "proofHash": "f9f75210f6394b75e7323e7a2ccfdb9fe47d3c0598653be7b2db13ab20708012"
 }

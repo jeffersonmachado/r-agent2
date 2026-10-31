@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "6f42864f-9943-4944-b2b2-9f1dd0461358",
+  "defectId": "L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/governance/releaseStateService.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/releaseStateService.test.js",
+      "command": "npx jest tests/unit/governance/releaseStateService.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:25:41.812Z",
+      "finishedAt": "2026-10-31T21:25:44.411Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO.log",
+      "outputSha256": "b5306b04151a2520f916937812748d6567db16c1563e066365c48bb35842533e"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/releaseStateService.test.js",
+      "sha256": "2a1e9cdde875fbb8688e662d343f9f3a6123171a4ea4cc0219d1cc5b369d68b2"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:25:44.419Z",
+  "proofHash": "99b564ffa1bdf82bf231a449c15890a8949fb1f51094dfe00defbe53770793c3",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "zauSRScC17l3PeA5v4JgVcPrcHtsQqg8qrEvEab5WCeKN51fz0xCSXDJTayZI+7l96KUADsQpuYptK35m9EiDA==",
+    "signedAt": "2026-10-31T21:49:04.124Z"
+  }
+}

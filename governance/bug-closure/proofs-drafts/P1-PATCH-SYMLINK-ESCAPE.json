@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "13134c79-1523-4231-be51-0c0a7c28ee10",
+  "transitionId": "b4b28889-cd98-49b2-9695-c9f822bcf92e",
   "defectId": "P1-PATCH-SYMLINK-ESCAPE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
-  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
   "requiredTests": [
     "tests/unit/engineeringRouterPatchSymlinkEscape.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T19:44:41.583Z",
-      "finishedAt": "2026-10-31T19:44:46.357Z",
+      "startedAt": "2026-10-31T21:28:31.029Z",
+      "finishedAt": "2026-10-31T21:28:36.097Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-PATCH-SYMLINK-ESCAPE.log",
-      "outputSha256": "5c310e51f9c0990eaf4e14f3807aed6b5c21e805787e9209827311c907d50057"
+      "outputSha256": "b46d2bbb700e3b27fe45016af10c92091ae76733c2ea604eb4bb9ed46cd786ac"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T19:44:46.364Z",
-  "proofHash": "23714f2238c5c31e708c30ce4df5eeca31099f6e7bbc45e08d5dbc446e369b11"
+  "createdAt": "2026-10-31T21:28:36.104Z",
+  "proofHash": "2743f5871023fe156eec6b1db697f90995779e100bd6420e99c0175743d1049a"
 }

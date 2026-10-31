@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "8187a828-ce3c-4cbd-963f-0e58b6e56720",
+  "defectId": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/governance/modelDrivenE2e.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/modelDrivenE2e.test.js",
+      "command": "npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:34:45.090Z",
+      "finishedAt": "2026-10-31T21:34:52.650Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-MAIN-MODELDRIVEN-PROD-LIKE.log",
+      "outputSha256": "4d1bb587443e0a0e2e2cb95acea96d23d4c9e21079cdb0c637471b8e223bea9c"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/modelDrivenE2e.test.js",
+      "sha256": "50427d46f759f53ea9811a9d8fb6ed8eb2d859d593fcb7cbdd37d52b468b5b2c"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:34:52.661Z",
+  "proofHash": "13639d1122b549d12f842d1df2f5b3b8f16f713f79976619008a8a3fca2587ac",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "2ujSqdb6TQr7ob+1A+qkpwLqLfALtJUD/a5BDuImv2VXmUOTIMF4BsH4nZ6e7L7ZauudYZnLnZN/esrJnF8BDQ==",
+    "signedAt": "2026-10-31T21:48:56.927Z"
+  }
+}

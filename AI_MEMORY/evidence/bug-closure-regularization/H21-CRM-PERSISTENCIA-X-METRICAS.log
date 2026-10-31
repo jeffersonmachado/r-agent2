@@ -1,5 +1,5 @@
   console.error
-    [2026-10-23T16:35:28.626Z] [ERROR] [CRM] Falha de persistência
+    [2026-10-31T21:41:49.054Z] [ERROR] [CRM] Falha de persistência
     {
       "erro": "banco indisponível (teste)"
     }
@@ -16,28 +16,28 @@
       at error (api/modules/crm/routes.js:116:12)
       at api/modules/crm/routes.js:412:5
 
-[jest-global-setup] .env não aplicado: .env ausente
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/crmRealtimeEvents.test.js
   CRM — toda mutação emite crm.metrics.updated
-    ✓ POST /api/crm/accounts emite evento de criação (158 ms)
-    ✓ POST /api/crm/contacts emite evento de criação (105 ms)
-    ✓ POST /api/crm/leads emite evento de criação (105 ms)
-    ✓ POST /api/crm/pipelines emite evento de criação (108 ms)
-    ✓ POST /api/crm/opportunities emite evento de criação (104 ms)
-    ✓ POST /api/crm/activities emite evento de criação (106 ms)
-    ✓ GET não emite evento (leitura não é mutação) (265 ms)
+    ✓ POST /api/crm/accounts emite evento de criação (147 ms)
+    ✓ POST /api/crm/contacts emite evento de criação (121 ms)
+    ✓ POST /api/crm/leads emite evento de criação (120 ms)
+    ✓ POST /api/crm/pipelines emite evento de criação (119 ms)
+    ✓ POST /api/crm/opportunities emite evento de criação (120 ms)
+    ✓ POST /api/crm/activities emite evento de criação (116 ms)
+    ✓ GET não emite evento (leitura não é mutação) (555 ms)
   CRM — persistência de verdade (mesma fonte para escrita e leitura)
-    ✓ conta criada aparece no GET seguinte e sobrevive à releitura (106 ms)
-    ✓ oportunidade criada é lida de volta com os campos do contrato (104 ms)
-    ✓ lead criado aparece na lista de leads E na de contatos (marketing_leads) (110 ms)
-    ✓ DELETE remove de verdade (GET passa a 404) (106 ms)
-    ✓ mover oportunidade persiste a nova etapa (107 ms)
-    ✓ falha de banco responde 500 persistence_required (sem fallback em memória) (151 ms)
+    ✓ conta criada aparece no GET seguinte e sobrevive à releitura (128 ms)
+    ✓ oportunidade criada é lida de volta com os campos do contrato (123 ms)
+    ✓ lead criado aparece na lista de leads E na de contatos (marketing_leads) (121 ms)
+    ✓ DELETE remove de verdade (GET passa a 404) (120 ms)
+    ✓ mover oportunidade persiste a nova etapa (126 ms)
+    ✓ falha de banco responde 500 persistence_required (sem fallback em memória) (263 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       13 passed, 13 total
 Snapshots:   0 total
-Time:        1.957 s, estimated 3 s
+Time:        2.607 s, estimated 3 s
 Ran all test suites matching /tests\/unit\/crmRealtimeEvents.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

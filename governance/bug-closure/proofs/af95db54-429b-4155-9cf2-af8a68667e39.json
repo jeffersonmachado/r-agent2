@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "af95db54-429b-4155-9cf2-af8a68667e39",
+  "defectId": "P1-10",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/engineeringRouterProviderChainPolicy.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "command": "npx jest tests/unit/engineeringRouterProviderChainPolicy.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:26:51.276Z",
+      "finishedAt": "2026-10-31T21:26:56.784Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-10.log",
+      "outputSha256": "03b09b12dcac6ef00435a28f791ba93ff4c53390309d8ed46e8f0ee184c0ca8d"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "sha256": "738b99a486db5a42e87c35b306c06aa616af4abee032b628467f61a695d12959"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:26:56.792Z",
+  "proofHash": "ef5f42b73f8435ba2e089d8ca82dfd03e4c995e34fff1b6077824d71b98563ae",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Oq+c5r3RzVWPYmZlC0asyPkxuwfD63bz7DYGhXZVjOQrWhQdJhWt+yeDwxvsiHnFfX/IotglI0jtroYj06IhCg==",
+    "signedAt": "2026-10-31T21:49:06.060Z"
+  }
+}

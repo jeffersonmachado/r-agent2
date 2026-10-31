@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e23e83b4-28d3-40e6-bb39-d99eb0d918d9",
+  "defectId": "H10-VEREDITO-GATE-SEGURANCA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
+  "requiredTests": [
+    "tests/unit/governance/securityGateState.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/securityGateState.test.js",
+      "command": "npx jest tests/unit/governance/securityGateState.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-10-31T21:24:49.771Z",
+      "finishedAt": "2026-10-31T21:24:55.721Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/H10-VEREDITO-GATE-SEGURANCA.log",
+      "outputSha256": "37d7cc6827ff50d6a157e34f7bc31156e61c1594b94cc2312ded302e68aa45e0"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/securityGateState.test.js",
+      "sha256": "389b4af20ee5684aa1dab21de5dcf315dc1a289f3cb4ea99a9773fc961ccfbcb"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-10-31T21:24:55.729Z",
+  "proofHash": "9ad5fcad2603ace5dbe7069cb4697e87a115c60b545713f7bdfb4f70aac452bb",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "/Td7TQlhP0NPlJEWUU9FqMaKIHF0B2B+/B3yc+shP0qWcBKqaE5iV9tYacvP5OVzvslZExzx31jR4p7OWlP+AQ==",
+    "signedAt": "2026-10-31T21:49:00.092Z"
+  }
+}

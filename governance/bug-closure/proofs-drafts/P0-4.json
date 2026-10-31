@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "37cf2c31-5e46-4258-96b7-536686986ff0",
+  "transitionId": "ad249f47-f1b2-4f77-92b9-273c435b7267",
   "defectId": "P0-4",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "810865f05ff8e16ce0c339540a0a791bf58cbca4",
-  "codeFingerprint": "673645b16d38e249bd742c39d5467a0cbc3b3887b04608ff2ea095b9f0aa4c7a",
+  "evaluatedCommit": "fc08d682044ddb6be24f28c7ad8cfdca7b03b51e",
+  "codeFingerprint": "3f873a4f5e2d9d5ffa3bf6cc40bd8c9278012309c093787538719b4c7f06ea38",
   "requiredTests": [
     "tests/unit/securityIntel/waiverService.test.js"
   ],
@@ -18,13 +18,38 @@
       "command": "npx jest tests/unit/securityIntel/waiverService.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T19:34:37.835Z",
-      "finishedAt": "2026-10-31T19:34:42.520Z",
+      "startedAt": "2026-10-31T21:18:16.147Z",
+      "finishedAt": "2026-10-31T21:18:21.549Z",
       "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-4.log",
-      "outputSha256": "b33430b429dc2e5d2a842eb40604584614349bedf7aa22ee67fc861e52906d15"
+      "outputSha256": "396bbb45c5ce82425e16546ae9f7e809af6e1dff784a6fdff4488611dce6a9de"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "aprovação de waiver deixa de exigir aprovador identificado (segregação de funções quebrada)",
+      "mutatedFromSha256": "b9590b6e856c601cb0974012ffd99a10803453cdeb4f8148d52b224cf4677ce2",
+      "mutatedToSha256": "84af9cd6a34aa87324c197737a853e9e3ccc14301504dc21570970760f13c11b",
+      "testPath": "tests/unit/securityIntel/waiverService.test.js",
+      "command": "npx jest tests/unit/securityIntel/waiverService.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-4-baseline-ced43e5f.log",
+        "logSha256": "a3a55aac12d7f62b6c6fc39dbae76c4afa123d0f1135e0f5ff8aee1794bcb25d"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-4-mutado-ced43e5f.log",
+        "logSha256": "9edc0e6cc24e9f1768ed1d3b11abf33ab53fc980d69beebb8a1989faafb67680"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-4-restaurado-ced43e5f.log",
+        "logSha256": "761d4e8564534ed6fdc18793f5d9c6ad24b4d5da66b852801e9ed51857fe1433"
+      },
+      "capturedAt": "2026-10-31T21:48:47.383Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/unit/securityIntel/waiverService.test.js",
@@ -35,7 +60,13 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-10-31T21:48:54.289Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
@@ -43,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T19:34:42.529Z",
-  "proofHash": "1e0b4318062ebb086ac886b9e404a97ed2b472c7d418c01dc4dbfe8d003ed367"
+  "createdAt": "2026-10-31T21:18:21.556Z",
+  "proofHash": "c3f5d682281917bdf96abdd72b09ad5388772da6cb6630e516cf01f76e0a2abb"
 }
