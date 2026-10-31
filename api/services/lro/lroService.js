@@ -98,18 +98,56 @@ async function createOperation({
 }
 
 /** Leitura simples (sem lock) — usada por REST/SSE e por testes. */
+/**
+ * Serializador ÚNICO da operação (detalhe e item de lista).
+ *
+ * Defeito medido 2026-10-31 na validação com stack real: o detalhe devolvia o plain do Sequelize
+ * (snake_case) enquanto a lista devolvia camelCase — dois contratos para a mesma entidade. A UI de
+ * detalhe lia `progressCurrent` e recebia `undefined`, e a própria rota de detalhe autorizava por
+ * `visibility_class`, acoplando a API ao shape do ORM. Todo campo exposto passa por aqui.
+ */
+function serializarOperacao(plain) {
+  return {
+    id: plain.id,
+    tenantId: plain.tenant_id,
+    operationType: plain.operation_type,
+    visibilityClass: plain.visibility_class,
+    ownerActorId: plain.owner_actor_id,
+    status: plain.status,
+    phase: plain.phase,
+    outcome: plain.outcome,
+    progressCurrent: plain.progress_current,
+    progressTotal: plain.progress_total,
+    progressUnit: plain.progress_unit,
+    progressRevision: plain.progress_revision,
+    messageCode: plain.message_code,
+    resultRef: plain.result_ref,
+    errorCode: plain.error_code,
+    // Necessário para a UI abrir a decisão humana sem uma segunda chamada.
+    feedbackRequestId: plain.feedback_request_id,
+    checkpointRef: plain.checkpoint_ref,
+    correlationId: plain.correlation_id,
+    idempotencyKey: plain.idempotency_key,
+    retentionPolicy: plain.retention_policy,
+    leaseOwner: plain.lease_owner,
+    leaseExpiresAt: plain.lease_expires_at,
+    fencingToken: plain.fencing_token,
+    version: plain.version,
+    createdAt: plain.created_at,
+    startedAt: plain.started_at,
+    updatedAt: plain.updated_at,
+    heartbeatAt: plain.heartbeat_at,
+    completedAt: plain.completed_at,
+  };
+}
+
 async function getOperation(id, { tenantId = null } = {}) {
   const models = modelos();
   const where = { id };
   if (tenantId) where.tenant_id = String(tenantId);
   const op = await models.getLroOperation().findOne({ where });
   if (!op) throw codigoErro('OPERATION_NOT_FOUND', `operação inexistente: ${id}`);
-  const plain = op.get({ plain: true });
-  return {
-    ...plain,
-    fencingToken: plain.fencing_token,
-    version: plain.version,
-  };
+  return serializarOperacao(op.get({ plain: true }));
 }
 
 /**
@@ -131,27 +169,7 @@ async function listOperations({ tenantId, statuses = null, visibilityClasses = n
     order: [['created_at', 'DESC']],
     limit: Math.min(Number(limit) || 50, 200),
   });
-  return linhas.map((l) => {
-    const p = l.get({ plain: true });
-    return {
-      id: p.id,
-      tenantId: p.tenant_id,
-      operationType: p.operation_type,
-      visibilityClass: p.visibility_class,
-      status: p.status,
-      phase: p.phase,
-      outcome: p.outcome,
-      progressCurrent: p.progress_current,
-      progressTotal: p.progress_total,
-      progressUnit: p.progress_unit,
-      messageCode: p.message_code,
-      // Necessário para a UI abrir a decisão humana sem uma segunda chamada.
-      feedbackRequestId: p.feedback_request_id,
-      createdAt: p.created_at,
-      updatedAt: p.updated_at,
-      completedAt: p.completed_at,
-    };
-  });
+  return linhas.map((l) => serializarOperacao(l.get({ plain: true })));
 }
 
 /**
@@ -250,7 +268,7 @@ async function transition(operationId, {
 
     const depois = await getLroOperation().findByPk(operationId, { transaction: t });
     const plain = depois.get({ plain: true });
-    return { ...plain, fencingToken: plain.fencing_token, warnings: decisao.warnings };
+    return { ...serializarOperacao(plain), warnings: decisao.warnings };
   };
 
   if (transaction) return executar(transaction);
@@ -384,7 +402,14 @@ async function recordProgress(operationId, {
       available_at: agora(),
     }, { transaction: t });
 
-    return { ...atual, ...patch, seq: Number(proximo), indeterminate: progresso.indeterminate };
+    // Mesmo contrato do detalhe/lista (camelCase): `patch` é snake_case do ORM, então o retorno
+    // passa pelo serializador único e só acrescenta os campos próprios do evento de progresso.
+    const depois = await getLroOperation().findByPk(operationId, { transaction: t });
+    return {
+      ...serializarOperacao(depois.get({ plain: true })),
+      seq: Number(proximo),
+      indeterminate: progresso.indeterminate,
+    };
   });
 }
 
@@ -410,6 +435,7 @@ module.exports = {
   TOPIC,
   createOperation,
   getOperation,
+  serializarOperacao,
   transition,
   claimLease,
   heartbeat,

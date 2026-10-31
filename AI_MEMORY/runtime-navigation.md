@@ -294,5 +294,26 @@ delta de campos visíveis + `aria-expanded`), nunca por contagem de nós genéri
   ruído e esconde o defeito real (foi exatamente o caso — a quebra de hooks só
   apareceu quando os falsos positivos saíram do caminho).
 
+## LRO no QA Waves — validado no browser real (2026-10-31)
 
+Stack usada na medição: worktree `er-fixci`, API `3101` (código atual), Vite `5199` com
+`VITE_PROXY_TARGET=http://127.0.0.1:3101`, login `systemadmin` / tenant `system`.
 
+- `/dev/qa-waves` → painel `Operações (LRO)` (colapsado por padrão) lista operações REAIS do
+  PostgreSQL: `qa_waves · Em execução · 2/3 scenario` e `qa_waves · Na fila · 0/3 scenario`.
+- Clicar na operação abre `Detalhe da operação` com `conexão: ao vivo · último evento: 4` e os
+  eventos `CREATED → QUEUED → RUNNING → PROGRESS` vindos por SSE (rota `/api/lro/:id/events`).
+
+**Defeito REAL encontrado e corrigido nesta validação** (não aparecia em teste unitário): o detalhe
+abria em `conexão: reconectando` e a requisição SSE voltava `400 {"error":"tenant_required"}` — a
+rota resolve o tenant por `X-Tenant-Id`, e `QaWavesPage` montava o painel só com `token`. O hook
+`useLroStream` agora herda os cabeçalhos da sessão (`getAuthHeaders()`), então nenhum chamador pode
+esquecer o tenant; opções explícitas continuam vencendo. Regressão em
+`frontend/src/shared/useLroStream.test.jsx`.
+
+**Gap de ambiente (NÃO é defeito do LRO, é do dev server)**: `ws://127.0.0.1:<porta>/ws` (e
+`/dev/ws`) falha com `ERR_CONNECTION_REFUSED`/handshake timeout porque `frontend/vite.config.mjs`
+não declara proxy para WebSocket — só HTTP. Consequência: em dev, realtime por WS não funciona via
+Vite, para qualquer porta. O LRO não depende disso (usa SSE por HTTP), o que é justamente o motivo
+de o piloto funcionar onde o WS falha. Não "consertar" adicionando proxy de WS sem decisão, porque
+o comportamento em produção passa por Apache.

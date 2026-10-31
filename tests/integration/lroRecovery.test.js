@@ -75,7 +75,7 @@ describe('LRO recuperação de órfãs', () => {
 
     const recuperada = await recovery.recoverOperation(op.id, { reason: 'worker desapareceu' });
     expect(recuperada.status).toBe('PAUSED');
-    expect(recuperada.lease_owner).toBeNull();
+    expect(recuperada.leaseOwner).toBeNull();
     expect(recuperada.fencingToken).toBeGreaterThan(lease.fencingToken);
 
     const eventos = await lro.listEvents(op.id, { afterSeq: 0 });

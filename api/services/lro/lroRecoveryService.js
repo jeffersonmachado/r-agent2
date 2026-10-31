@@ -144,7 +144,7 @@ async function recoverOperation(operationId, { reason, actorId = 'lro-recovery',
 
     const depois = await getLroOperation().findByPk(operationId, { transaction: t });
     const plain = depois.get({ plain: true });
-    return { ...plain, fencingToken: plain.fencing_token, recovered: true };
+    return { ...lroService.serializarOperacao(plain), recovered: true };
   });
 }
 

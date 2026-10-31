@@ -64,7 +64,7 @@ describe('LRO feedback humano', () => {
     });
     expect(requestId).toBeTruthy();
     expect(operation.status).toBe('WAITING_FEEDBACK');
-    expect(operation.feedback_request_id).toBe(requestId);
+    expect(operation.feedbackRequestId).toBe(requestId);
   }, 60000);
 
   test('#4 resposta de OUTRO tenant é "não encontrada" e não tem efeito', async () => {

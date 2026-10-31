@@ -26,8 +26,34 @@ const bloco = (seq, tipo, extra = {}) => `id: ${seq}\nevent: ${tipo}\ndata: ${JS
 describe('useLroStream (LRO — UI DEVELOPMENT)', () => {
   const fetchOriginal = global.fetch;
 
-  beforeEach(() => { vi.restoreAllMocks(); });
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    window.localStorage.clear();
+  });
   afterEach(() => { global.fetch = fetchOriginal; });
+
+  // DEFEITO MEDIDO 2026-10-31 no browser real (/dev/qa-waves, stack viva): o detalhe da operação
+  // abria com "conexão: reconectando" e a requisição SSE voltava 400 `tenant_required`. A rota
+  // resolve o tenant por `X-Tenant-Id`; o painel montava o hook sem `tenantId`, então o header não
+  // ia. O hook passa a herdar os cabeçalhos da sessão (`getAuthHeaders`) — nenhum chamador pode
+  // esquecer o tenant e derrubar o stream.
+  it('sem opções explícitas, usa os cabeçalhos da sessão (token + X-Tenant-Id)', async () => {
+    window.localStorage.setItem('auth_token', 'tk-sessao');
+    window.localStorage.setItem('auth_effective_tenant_id', 'system');
+
+    const chamadas = [];
+    global.fetch = vi.fn(async (url, init) => {
+      chamadas.push({ url, init });
+      return { ok: true, status: 200, body: streamDe([]) };
+    });
+
+    renderHook(() => useLroStream({ operationId: 'op-sessao' }));
+
+    await waitFor(() => expect(chamadas.length).toBeGreaterThan(0));
+    const headers = chamadas[0].init.headers;
+    expect(headers.Authorization).toBe('Bearer tk-sessao');
+    expect(headers['X-Tenant-Id']).toBe('system');
+  });
 
   it('entrega eventos PROGRESSIVAMENTE e expõe o último seq', async () => {
     const chamadas = [];

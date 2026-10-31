@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { getAuthHeaders } from '../api/auth';
 
 const ESTADOS = Object.freeze({
   CONNECTING: 'connecting',
@@ -87,6 +88,10 @@ export function useLroStream({
         const resposta = await fetch(`${baseUrl}/api/lro/${encodeURIComponent(operationId)}/events`, {
           headers: {
             Accept: 'text/event-stream',
+            // A rota resolve o tenant por `X-Tenant-Id`; herdar os cabeçalhos da sessão evita o
+            // 400 `tenant_required` medido no browser (painel montado só com `operationId`).
+            // Opções explícitas continuam vencendo.
+            ...getAuthHeaders(),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...(tenantId ? { 'X-Tenant-Id': String(tenantId) } : {}),
             ...(cursorRef.current > 0 ? { 'Last-Event-ID': String(cursorRef.current) } : {}),

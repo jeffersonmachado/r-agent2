@@ -95,4 +95,21 @@ describe('adaptador LRO do QA Waves', () => {
     await expect(adaptador.iniciar({ tenantId: 'system', executionId: 'exec-3' })).resolves.toBeNull();
     await expect(adaptador.finalizar('op-4', { goNoGo: 'GO' })).resolves.toBeUndefined();
   });
+
+  test('falha SEM código ainda deixa causa no log (não só `code: null`)', async () => {
+    // Defeito medido em 2026-10-31: um erro sem `.code` (ex.: "Sequelize não inicializado") produzia
+    // apenas `{ code: null }` — o operador não tinha como saber o que falhou no espelho.
+    process.env.LRO_QA_WAVES_MIRROR = '1';
+    const logger = require('../../../utils/logger');
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => {});
+    lroService.createOperation.mockRejectedValue(new Error('Sequelize não inicializado'));
+
+    await adaptador.iniciar({ tenantId: 'system', executionId: 'exec-5' });
+
+    expect(warn).toHaveBeenCalledWith(
+      '[lro:qa-waves] falha ao iniciar espelho',
+      expect.objectContaining({ executionId: 'exec-5', code: null, error: 'Sequelize não inicializado' }),
+    );
+    warn.mockRestore();
+  });
 });

@@ -3261,3 +3261,74 @@ Antes desta rodada havia dois riscos de leitura errada: (a) supor que os gates e
 vermelhos, e (b) tratar `replay_report_stale` como defeito de código à espera de correção. Medido: os 15
 gates estáticos estão verdes; o vermelho é **um**, de dono, com nove dependentes transitivos. Nenhum gate
 foi afrouxado, nenhuma âncora foi inventada, nenhum relatório de selagem foi editado à mão.
+
+### 11.55. Validação do piloto LRO no browser real — três defeitos que teste unitário não via
+
+A rodada anterior fechou 18 degraus de escada com um único FAIL de dono. Faltava o teste que o
+mandato exige (§9/§13): **o piloto funcionando com stack viva**, e não só em Jest. Medido com API
+`3101` (código do worktree) + Vite `5199` (`VITE_PROXY_TARGET`), login `systemadmin` / tenant
+`system`.
+
+#### 11.55.1 Defeito 1 — dois contratos para a mesma entidade (lista camelCase, detalhe snake_case)
+
+`GET /api/lro` devolvia `progressCurrent`/`visibilityClass`; `GET /api/lro/:id` devolvia o plain do
+Sequelize (`progress_current`/`visibility_class`). A UI de detalhe lê camelCase e recebia
+`undefined`; e a própria rota de detalhe **autorizava** por `operacao.visibility_class`, ou seja, a
+API dependia do shape do ORM enquanto a lista expunha outro.
+
+Correção: serializador ÚNICO (`serializarOperacao`) usado por lista, detalhe, `recordProgress`,
+`transition` e recuperação de órfãs. Prova em `tests/integration/lroOperationContract.test.js`
+(5 casos, escritos vermelhos antes): mesmos nomes e valores nos dois lados, snake_case proibido,
+campos de controle (lease/fencing/version/correlação) preservados, tenant errado = 404.
+
+Confirmação pela API real, depois do restart:
+
+```
+camel: progressCurrent=2 progressTotal=3 visibilityClass="DEVELOPMENT" operationType="qa_waves"
+snake vazou? false false
+controle: version=3 fencingToken=0 leaseOwner=null correlationId="e2e-ui-…" idempotencyKey="qa_waves:…"
+```
+
+#### 11.55.2 Defeito 2 — detalhe da operação nunca conectava (400 `tenant_required`)
+
+No browser: `Detalhe da operação → "conexão: reconectando"` e `GET /api/lro/:id/events` em **400**.
+Causa: a rota resolve o tenant por `X-Tenant-Id`; `useLroStream` só enviava o header se o chamador
+passasse `tenantId`, e `QaWavesPage` montava o painel apenas com `token`. O list funcionava porque
+passa pelo `fetchJson` do app, que já injeta o header — a assimetria escondia o problema.
+
+Correção: o hook herda os cabeçalhos da sessão (`getAuthHeaders()`), então nenhum chamador pode
+esquecer o tenant; opções explícitas continuam vencendo. Regressão em
+`frontend/src/shared/useLroStream.test.jsx` (asserta `Authorization` + `X-Tenant-Id`).
+
+Prova no browser real, depois do fix: `conexão: ao vivo · último evento: 4`, com
+`CREATED → QUEUED → RUNNING → PROGRESS` renderizados a partir do SSE.
+
+#### 11.55.3 Defeito 3 — falha do espelho logava `code: null` sem causa
+
+Medido ao rodar o adaptador fora do app: `{"executionId":"…","code":null}`. Erro sem `.code`
+(ex.: "Sequelize não inicializado") não deixava rastro do motivo. Log agora carrega `error.message`.
+Regressão em `api/services/lro/__tests__/qaWavesAdapter.test.js` (verde depois de vermelho).
+
+#### 11.55.4 O que ficou provado no browser
+
+| Alvo | Medição |
+|---|---|
+| Tabela de operações | `qa_waves · Em execução · 2/3 scenario` + `qa_waves · Na fila · 0/3 scenario` (dados REAIS do PostgreSQL) |
+| Detalhe ao vivo | `conexão: ao vivo · último evento: 4`, eventos `CREATED, QUEUED, RUNNING, PROGRESS` |
+| Cabeçalho de sessão | `X-Tenant-Id` presente no SSE (antes: 400) |
+| Migrations | `20261030120000-create-lro-core.js` e `20261030140000-create-lro-feedback.js` aplicadas no banco de dev |
+
+Duas linhas de demonstração (`qa_waves`) permanecem no banco de dev para o painel não aparecer vazio
+na aba do usuário; remoção explícita, se desejada:
+`DELETE FROM lro_operations WHERE operation_type='qa_waves' AND correlation_id LIKE 'e2e-ui-%';`
+(eventos/outbox caem por FK em cascata da migration).
+
+#### 11.55.5 Gap de ambiente registrado (não é do LRO)
+
+`ws://127.0.0.1:<porta>/ws` e `/dev/ws` falham com handshake timeout porque
+`frontend/vite.config.mjs` não declara proxy de WebSocket — só HTTP. Isso vale para qualquer porta
+em dev e é pré-existente. O piloto LRO não depende disso: usa SSE sobre HTTP, que é exatamente por
+que funciona onde o WS falha. Registrado em `AI_MEMORY/runtime-navigation.md`.
+
+Suítes após as correções: frontend **144 arquivos / 1081 testes**; LRO + governança **84 testes**
+(12 suítes), zero falhas.

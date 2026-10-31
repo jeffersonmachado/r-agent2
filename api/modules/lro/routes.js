@@ -7,7 +7,7 @@
  * comandos. O navegador é consumidor de estado — nunca executor.
  *
  * Segurança (mandato §8/§10): autorização em CADA subscribe e em CADA replay, contra a
- * `visibility_class` DA OPERAÇÃO (não contra o menu). Tenant vem do ator autenticado, nunca da query.
+ * `visibilityClass` DA OPERAÇÃO (não contra o menu). Tenant vem do ator autenticado, nunca da query.
  * Operação de outro tenant responde 404 — não confirma existência.
  */
 
@@ -59,7 +59,7 @@ function criarRouterLro() {
       throw error;
     }
 
-    const classe = String(operacao.visibility_class || 'DEVELOPMENT').toUpperCase();
+    const classe = String(operacao.visibilityClass || 'DEVELOPMENT').toUpperCase();
     const veredito = checkClassification(req, classe);
     if (!veredito.allowed) {
       res.status(403).json({
@@ -283,7 +283,7 @@ function criarRouterLro() {
           outcome,
           reason,
           feedbackRequestId,
-          visibilityClass: ctx.operacao.visibility_class,
+          visibilityClass: ctx.operacao.visibilityClass,
         },
       });
       return res.json({ operation: atualizada });

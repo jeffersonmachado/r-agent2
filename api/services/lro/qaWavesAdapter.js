@@ -55,7 +55,7 @@ async function iniciar({ tenantId, executionId, scenarioIds = [] } = {}) {
     }
     return operacao.id;
   } catch (error) {
-    logger.warn('[lro:qa-waves] falha ao iniciar espelho', { executionId, code: error.code || null });
+    logger.warn('[lro:qa-waves] falha ao iniciar espelho', { executionId, code: error.code || null, error: error.message });
     return null;
   }
 }
@@ -70,7 +70,7 @@ async function marcarExecutando(operationId) {
       to: 'RUNNING', actorId: 'qa_mesh', context: { phase: 'execution' },
     });
   } catch (error) {
-    logger.warn('[lro:qa-waves] falha ao marcar RUNNING', { operationId, code: error.code || null });
+    logger.warn('[lro:qa-waves] falha ao marcar RUNNING', { operationId, code: error.code || null, error: error.message });
   }
 }
 
@@ -81,7 +81,7 @@ async function progresso(operationId, { index = null, total = null, phase = 'exe
       current: index, total, unit: 'scenario', phase, actorId: 'qa_mesh',
     });
   } catch (error) {
-    logger.warn('[lro:qa-waves] falha ao registrar progresso', { operationId, code: error.code || null });
+    logger.warn('[lro:qa-waves] falha ao registrar progresso', { operationId, code: error.code || null, error: error.message });
   }
 }
 
@@ -109,7 +109,7 @@ async function finalizar(operationId, { goNoGo = null, errorCode = null } = {}) 
       context: { outcome: goNoGo === 'NO_GO' ? 'NO_GO' : (goNoGo === 'GO' ? 'GO' : 'INCONCLUSIVE') },
     });
   } catch (error) {
-    logger.warn('[lro:qa-waves] falha ao finalizar espelho', { operationId, code: error.code || null });
+    logger.warn('[lro:qa-waves] falha ao finalizar espelho', { operationId, code: error.code || null, error: error.message });
   }
 }
 

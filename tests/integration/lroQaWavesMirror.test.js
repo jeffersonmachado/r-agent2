@@ -71,9 +71,9 @@ describe('LRO × QA Waves — espelho real (flag ligada)', () => {
 
     const aposInicio = await lro.getOperation(operationId);
     expect(aposInicio.status).toBe('QUEUED');
-    expect(aposInicio.progress_total).toBe(3);
-    expect(aposInicio.visibility_class).toBe('DEVELOPMENT');
-    expect(aposInicio.correlation_id).toBe(executionId);
+    expect(aposInicio.progressTotal).toBe(3);
+    expect(aposInicio.visibilityClass).toBe('DEVELOPMENT');
+    expect(aposInicio.correlationId).toBe(executionId);
 
     await adaptador.marcarExecutando(operationId);
     expect((await lro.getOperation(operationId)).status).toBe('RUNNING');
@@ -128,6 +128,6 @@ describe('LRO × QA Waves — espelho real (flag ligada)', () => {
 
     const final = await lro.getOperation(operationId);
     expect(final.status).toBe('FAILED');
-    expect(final.error_code).toBe('SANDBOX_INDISPONIVEL');
+    expect(final.errorCode).toBe('SANDBOX_INDISPONIVEL');
   }, 60000);
 });
