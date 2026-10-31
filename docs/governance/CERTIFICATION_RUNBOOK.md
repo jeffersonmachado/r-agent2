@@ -4,21 +4,42 @@
 `npm run cert:ladder` (escada ordenada, com `PASS`/`FAIL`/`BLOCKED` e o pré-requisito que faltou) —
 `BLOCKED` nunca significa `PASS`.
 
-Estado medido em 2026-10-30 (`dev` `c76d52b8c`): `PASS=3, FAIL=1, BLOCKED=6, certificavel=false`.
-O único `FAIL` é **âncoras**; todo o resto está bloqueado em cascata por ele.
+Estado medido em 2026-10-31 (`fix/jest-ci-history` `7429eb1ae`): **`PASS=8, FAIL=1, BLOCKED=9,
+SKIPPED=0, certificavel=false`** (escada com 18 degraus). O único `FAIL` é **âncoras**; todo o resto
+está bloqueado em cascata por ele.
 
 ```
-OK   fila                    npm run validate:hardening-queue
-OK   memoria                 npm run validate:ai-memory
-OK   dag                     npm run validate:release-dag
+OK   fila · memoria · dag · higiene · rotas · segregacao · visibilidade · camadas
 FALHA ancoras                node scripts/governance/provision-closure-anchors.js --check
 BLOQ  fechamentos            npm run validate:bug-closure-status
 BLOQ  execucao-autoritativa  RELEASE_AUTHORITATIVE=1 node scripts/governance/run-release-suites.js
 BLOQ  required-tests         npm run validate:required-tests
-BLOQ  waves                 wave:db-integrity + wave:api-surface + wave:page-surface
+BLOQ  waves                  wave:db-integrity + wave:api-surface + wave:page-surface
 BLOQ  cobertura              npm run validate:coverage-gate
+BLOQ  dist                   npm run validate:dist
+BLOQ  projecao               npm run validate:final-status-projection
+BLOQ  resumo                 npm run validate:governance-summary
 BLOQ  agregado               npm run validate:governance-enforcement
 ```
+
+### Quais passos exigem DECISÃO HUMANA e quais são só consequência
+
+Os 7 passos se dividem em **4 ações humanas** (entradas que só o dono pode fornecer) e **3 passos
+mecânicos** que destravam sozinhos depois delas:
+
+| # | Passo | Natureza | Por que é humano |
+|---|---|---|---|
+| 1 | Pins versionados | **decisão** | escolher as chaves e commitar o fingerprint é ato de política |
+| 2 | Segredos no cofre | **segredo** | valores não podem existir na árvore nem ser gerados por agente |
+| 3 | Assinar provas + resolver os 11 itens | **decisão + autoridade** | assinatura com `mayCloseDefects` e aceite de risco declarado |
+| 4 | Execução autoritativa | mecânico | guard libera quando 3 passar |
+| 5 | Testes obrigatórios | mecânico | depende do artefato de 4 |
+| 6 | Waves frescas | mecânico | guard `QA_WAVES_COMPLETA` libera quando 3 passar |
+| 7 | Veredito | mecânico | zero `FAIL`/`BLOCKED` |
+
+Os "11 itens" citados no Passo 3 são `FECHAMENTOS-SEM-SUITE-DE-REGRESSAO` — itens fechados sem
+suíte de regressão. Cada um só admite três saídas: escrever a suíte, reabrir (`VERIFIED -> OPEN`) ou
+aceitar risco declarado. Não existe quarta opção.
 
 ---
 
