@@ -2779,9 +2779,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
-      "closureProof": "governance/bug-closure/proofs/98fba458-4636-446c-aeea-ddf55230951d.json",
-      "attestationId": "98fba458-4636-446c-aeea-ddf55230951d",
-      "attestedAt": "2026-11-01T09:57:11.696Z"
+      "closureProof": "governance/bug-closure/proofs/2aa9c6eb-9aa2-4776-9c9d-37476893f817.json",
+      "attestationId": "2aa9c6eb-9aa2-4776-9c9d-37476893f817",
+      "attestedAt": "2026-11-01T13:44:50.030Z"
     },
     {
       "id": "ENG-LEASE-FENCE-NAO-VALIDADO",
@@ -3078,9 +3078,9 @@
       "severitySource": "medicao-ci-2026-10-29",
       "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:35.740Z)",
-      "closureProof": "governance/bug-closure/proofs/2881c530-8519-4151-8075-16a53ba6acf9.json",
-      "attestationId": "2881c530-8519-4151-8075-16a53ba6acf9",
-      "attestedAt": "2026-11-01T09:56:38.506Z"
+      "closureProof": "governance/bug-closure/proofs/e699a933-ccbf-4251-9860-44bd94544e9b.json",
+      "attestationId": "e699a933-ccbf-4251-9860-44bd94544e9b",
+      "attestedAt": "2026-11-01T13:44:49.547Z"
     },
     {
       "id": "INTERFERENCIA-CRASH-EVIDENCE-L0B",
