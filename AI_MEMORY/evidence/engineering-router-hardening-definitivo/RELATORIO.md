@@ -3907,3 +3907,30 @@ Prova da correção: árvore limpa do commit novo → `ALLOWED ... abertos=7 blo
 CI fe762c9d8 — Release Governance: chave ✅ · âncoras ✅ · guard AUTORIZADO ✅ · selo V2 ❌ (por desenho)
 Demais workflows: L0+L1 ✅ Jest ✅ Frontend ✅ E2E ✅ RAG ✅
 ```
+
+### 11.73. Por que as últimas 7 portas ficam vermelhas — e por que isso NÃO é defeito de código
+
+Medi as três raízes que mantêm o caminho de autoridade de release fechado. Nenhuma é bug; todas são
+decisões estruturais que precisam de um **run governado real** para deixarem de existir:
+
+1. **Selo V2 em checkout limpo é impossível.** `npm run engineering-router:v2-seal:plan` declara
+   **21 passos** (`V1_RUNTIME_EVIDENCE` com 25 testes de runtime, crash recovery com SIGKILL,
+   arquitetura de timeouts, RAG health, envelope generate+verify, decisão). Nenhum workflow o
+   executa, e `reports/*` é gitignored — então `zip:release` em CI morre em `V2_SEAL_NOT_FRESH` por
+   construção, não por defeito. É o contrário de um gate frouxo: é um gate inalcançável sem ciclo
+   de release.
+2. **Projeções canônicas dependem de artefato que não se versiona.**
+   `generate:final-status-projections` e `validate:final-status-projection` falham com
+   `canonical_unreadable: governance/rap-master-scorecard.json` — o scorecard só existe após run
+   governado, e `governance/*.json` é gitignored (política). Reproduzido localmente, não é CI.
+3. **A prova de fechamento vive fora do git por política** — o carrier versionado é
+   `AI_MEMORY/evidence/AUDIT_ENTRYPOINT.md` (payload embutido), regenerado nesta rodada:
+   `auditEpoch=88b22571… · provas=13 (7 com veredito, 6 ausentes) · fila: 175 itens, 0 não fechados`.
+
+Consequência honesta: `Release Governance` continuará vermelho neste repositório até que alguém
+autorize um ciclo de selo real. Isso está alinhado com o que a fila já registra nos 7
+`blocked_external` — não com um defeito que eu possa corrigir sem violar a missão.
+
+O que MUDOU nesta rodada e é verificável: o gate que antes negava **todas as 168 provas** em CI agora
+AUTORIZA (causa-raiz em §11.72: `.gitignore` `logs/`), e o entrypoint de auditoria externa passou a
+refletir o estado medido de hoje.
