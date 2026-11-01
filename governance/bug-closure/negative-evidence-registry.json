@@ -40,6 +40,22 @@
       "find": "  if (!cleanApprover) throw codedError('waiver_approver_required');",
       "replace": "  if (false && !cleanApprover) throw codedError('waiver_approver_required');",
       "test": "tests/unit/securityIntel/waiverService.test.js"
+    },
+    {
+      "defectId": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "certificação deixa de exigir identidade completa (run/commit/fingerprint) no contrato",
+      "find": "  if (faltandoIdentidade.length > 0) {",
+      "replace": "  if (false && faltandoIdentidade.length > 0) {",
+      "test": "tests/unit/governance/canonicalReleaseDecisionIdentityContract.test.js"
+    },
+    {
+      "defectId": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+      "targetFile": "governance/governance-chain.js",
+      "control": "conferência da raiz da cadeia desligada (o campo `valid` gravado passa a ser a autoridade)",
+      "find": "  const chainRootValid = cumHash === storedChain.chainRoot;",
+      "replace": "  const chainRootValid = true; // mutação: raiz não é recomputada",
+      "test": "tests/unit/governance/governanceChainAppearance.test.js"
     }
   ]
 }
