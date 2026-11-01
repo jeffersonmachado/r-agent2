@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "be5e91f5-8889-4a18-8a08-327713c20b95",
+  "defectId": "MISSAO-DEMO-SELF-ENGINEERING",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "tests/unit/governance/selfEngineeringDemonstration.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/selfEngineeringDemonstration.test.js",
+      "command": "npx jest tests/unit/governance/selfEngineeringDemonstration.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T10:01:02.906Z",
+      "finishedAt": "2026-11-01T10:01:06.695Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101100102-c20acc3b/logs/MISSAO-DEMO-SELF-ENGINEERING.log",
+      "outputSha256": "f4e4a6a2d8d44ee3f9a5c141e2c4fed93bd073dec4a9d37f2025308830dae27e"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/selfEngineeringDemonstration.test.js",
+      "sha256": "31f4ed15662d228168a8c3f356abf015bca9ed866025e1aa94cb3534ff3bd011"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T10:01:06.706Z",
+  "proofHash": "b3bac51931da96940bfc25886080b6a0eda1228fe1a746e8af026acfa6e121be"
+}

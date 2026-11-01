@@ -3779,3 +3779,35 @@ FECHAMENTO_NAO_PROVADO: 5 -> 3   (P0 = 0, P1 = 0)
 
 Restam **três P3** sem suíte: `MISSAO-B3-REUSO-PROVENIENCIA`, `MISSAO-B4-REVISAO-INDEPENDENTE`
 (processo humano de revisão) e `MISSAO-DEMO-SELF-ENGINEERING` (demonstração end-to-end).
+
+### 11.69. FECHAMENTO_NAO_PROVADO = 0 — o gate de fechamento passou
+
+```
+início da missão: 159 defeitos declarando fechamento sem prova (P0=31, P1=86)
+agora:              0   ·  bloqueantesParaCertificacao = 0  ·  validate:bug-closure-status = PASS
+```
+
+Os três últimos itens eram "verificados, NÃO é defeito" (B3, B4) e uma demonstração (DEMO). Cada um
+recebeu uma suíte que mede a AFIRMAÇÃO, não a repete:
+
+- **`MISSAO-B3-REUSO-PROVENIENCIA`** — o código é `avaliarReusoDeLote`/`exitCodeDoRelatorioReusado`
+  em `run-release-suites.js`; a cobertura é `releaseSuiteRunner.test.js`, a mesma que já prova o
+  `HARDENING-ENG-GOV-RELEASE-P0-6` (reuso de lote que ignorava o exit code real).
+- **`MISSAO-B4-REVISAO-INDEPENDENTE`** — suíte nova
+  (`reviewIndependenceProof.test.js`, 10 casos) exercitando `deriveGates`: declaração explícita,
+  identidade completa (provider E modelo) e provider do revisor ≠ do coder. Inclui o caso perigoso —
+  `independent_of_coder: true` com o MESMO provider (atestado do executor contrariado pelos dados) —
+  e o APPROVE de outra tentativa, que não vale.
+- **`MISSAO-DEMO-SELF-ENGINEERING`** — suíte nova
+  (`selfEngineeringDemonstration.test.js`, 21 casos): os seis defeitos citados têm de existir na
+  fila, cada um com `closureProof` em disco, **assinatura Ed25519** com `keyId`/`signedAt`,
+  `policyDecision` declarada e `regressionTest` existente. Uma narrativa de demonstração envelhece
+  mal; agora ela quebra o teste se alguém apagar a prova que a sustenta.
+
+Correção de rumo durante a escrita: minhas primeiras asserções esperavam `signature` e
+`policyDecision` como STRING. São objetos (`{alg, keyId, value, signedAt}` e
+`{decision, policyId, policyVersion, natureza}`). Ajustar o teste ao formato real é diferente de
+afrouxar a exigência — os campos conferidos aumentaram (alg, keyId, signedAt, policyId).
+
+Estado final da fila: **175 itens · 8 `blocked_external`** (dependem de ação externa: chave de
+atestação no CI, decisões de política, ambiente) — nenhum item aberto por falta de prova.

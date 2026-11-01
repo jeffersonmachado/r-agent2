@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization-run",
+  "authoritative": false,
+  "runId": "run-20261101095922-26a73190",
+  "versaoRegularizador": "2.0.0",
+  "identidade": {
+    "commit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
+    "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "d5abac8c627872211360917eba7d3b1fac318aaf311a2e2a15445599151ce27c",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "ambiente": {
+    "node": "v22.12.0",
+    "plataforma": "linux-x64",
+    "host": "jmachado-Precision-5530",
+    "runnerDeTeste": "jest",
+    "bancoDeTeste": "padrao",
+    "runnerEngenharia": "ENGINEERING_RUNNER_URL"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "idsSelecionados": [
+      "MISSAO-B3-REUSO-PROVENIENCIA",
+      "MISSAO-B4-REVISAO-INDEPENDENTE"
+    ],
+    "limite": 0,
+    "esperadoNoEscopo": 2,
+    "idsEsperados": [
+      "MISSAO-B3-REUSO-PROVENIENCIA",
+      "MISSAO-B4-REVISAO-INDEPENDENTE"
+    ],
+    "completo": false
+  },
+  "status": "COMPLETED",
+  "startedAt": "2026-11-01T09:59:22.669Z",
+  "completedAt": "2026-11-01T09:59:35.154Z",
+  "resultados": 2,
+  "observacoes": []
+}

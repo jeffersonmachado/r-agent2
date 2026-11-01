@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization-run",
+  "authoritative": false,
+  "runId": "run-20261101100102-c20acc3b",
+  "versaoRegularizador": "2.0.0",
+  "identidade": {
+    "commit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
+    "sourceFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "ab695404b8c05f2e5f48ae4c4eaa9c7da5e0ac6c03479c1e43d96b4644061aa4",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "ambiente": {
+    "node": "v22.12.0",
+    "plataforma": "linux-x64",
+    "host": "jmachado-Precision-5530",
+    "runnerDeTeste": "jest",
+    "bancoDeTeste": "padrao",
+    "runnerEngenharia": "ENGINEERING_RUNNER_URL"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "idsSelecionados": [
+      "MISSAO-DEMO-SELF-ENGINEERING"
+    ],
+    "limite": 0,
+    "esperadoNoEscopo": 1,
+    "idsEsperados": [
+      "MISSAO-DEMO-SELF-ENGINEERING"
+    ],
+    "completo": false
+  },
+  "status": "COMPLETED",
+  "startedAt": "2026-11-01T10:01:02.886Z",
+  "completedAt": "2026-11-01T10:01:06.735Z",
+  "resultados": 1,
+  "observacoes": []
+}
