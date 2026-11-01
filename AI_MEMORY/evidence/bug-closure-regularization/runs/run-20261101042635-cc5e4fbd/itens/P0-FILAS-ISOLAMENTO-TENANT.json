@@ -1,0 +1,27 @@
+{
+  "id": "P0-FILAS-ISOLAMENTO-TENANT",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Exclusao forcada de fila fechava tickets de OUTRO tenant com o mesmo nome",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/queueTenantIsolation.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE",
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ISOLAMENTO-TENANT.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101042635-cc5e4fbd",
+  "identidade": {
+    "commit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "30c119bef196abd381e911d9cad1c981d0cf205eec1c650ff8ecdef23c14eaec",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "8d14100375e12ae5318c0ce6ad170c91a313d9465dce7c85470c043443ebfb05"
+}

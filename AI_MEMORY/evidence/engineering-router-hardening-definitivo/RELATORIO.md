@@ -3511,3 +3511,35 @@ depois: FECHAMENTO_NAO_PROVADO = 33 (P0=19, P1=7)   [com RAP_CLOSURE_TRUST_ANCHO
 Nota de operação que custou uma medição falsa: rodar `validate:bug-closure-status` **sem** as
 âncoras no ambiente devolve `167` (todas as provas recusadas por falta de âncora). O número só é
 válido com `~/.config/ragent2/closure-anchors.env` carregado.
+
+### 11.59. Duas provas de que a correção de durabilidade funciona (e 4 P0 a mais)
+
+O ciclo seguinte foi executado **de propósito pelo caminho que antes corrompia**: batch PARCIAL
+(`--only P0`, 31 itens) + assinatura, sem refazer os outros escopos. Resultado medido:
+
+```
+antes do ciclo:   FECHAMENTO_NAO_PROVADO = 33 (P0=19, P1=7)
+depois do ciclo:  FECHAMENTO_NAO_PROVADO = 29 (P0=15, P1=7)
+```
+
+Queda de exatamente 4 — o número de P0 novos provados — e **nenhuma** prova de P1/P2/P3 foi
+invalidada (com o caminho antigo, o mesmo comando levava o contador para 167). É a correção de
+`runs/<runId>/logs/` medida em uso, não só em teste.
+
+P0 adicionais com evidência negativa nesta rodada (todas com o mesmo protocolo
+baseline→mutação→restauração byte-a-byte→baseline):
+
+| defeito | mutação | teste |
+|---|---|---|
+| `P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS` | fases duplicadas deixam de invalidar | `devBranchGatePhaseContract.test.js` |
+| `P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE` | passos ausentes deixam de bloquear a fase | `phaseStepContract.test.js` |
+| `P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO` | `RISK_ACCEPTED` válido volta a dispensar P0 | `riskAcceptedCriticalControl.test.js` |
+| `P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS` | agregado executa com autorização negada | `governanceEnforcementOrder.test.js` |
+
+Estado consolidado do registro de mutações: **17 mutações / 16 defeitos, 0 bloqueadas**
+(`reports/prova-negativa-report.json`). Restam 15 P0 e 7 P1 sem prova — os P0 que faltam são, em
+sua maioria, de superfície de release (lineage de candidato, ponteiros de closure órfãos, worktree
+congelado no agregado) e exigem montar cenário multi-artefato para mutar com honestidade, não um
+find/replace de um caractere.
+
+Contagem de itens fechados com prova válida: **146 de 175** (era 8 no início da fase).

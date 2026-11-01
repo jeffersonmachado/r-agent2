@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "0208a2b1-2e79-49d1-b678-821f14e87d0e",
+  "transitionId": "4e9f894a-1f0e-421c-8c81-fe93677a62ee",
   "defectId": "P0-4",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/securityIntel/waiverService.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/securityIntel/waiverService.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T03:41:18.861Z",
-      "finishedAt": "2026-11-01T03:41:27.268Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-4.log",
-      "outputSha256": "421c082bed71f30cbedf71a167771f84617b1924c0bb31bc386cb02541ec6b57"
+      "startedAt": "2026-11-01T04:27:42.851Z",
+      "finishedAt": "2026-11-01T04:27:48.735Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-4.log",
+      "outputSha256": "9a4ba788e678831f1a86824b8c24cc30e8a334fa5ce91ad146be24961f88f5e0"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-4-baseline-ced43e5f.log",
-        "logSha256": "2aa1886ea45de42fd2e12fcc9cb1311f7df48450a7239e7c93806c0ce3a0ddfd"
+        "logSha256": "c82651e4be672634720120382c425345fcd5e12cdb167be89ae4c2ceddb7c73d"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-4-mutado-ced43e5f.log",
-        "logSha256": "8af9719ebfc187d7f4d7ace4be2a5152c81d627b0bca03cec189db3b29129a1a"
+        "logSha256": "799cd20f78d80cbfda9f740192c3dd0b0b623716029e458377c0c62193512676"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-4-restaurado-ced43e5f.log",
-        "logSha256": "31bb7911deb1d6315a48435565934f66de88c623b00974e0bcaf8411bb1e38f0"
+        "logSha256": "5541bd26edabbfad1f4692a8e4553821e48783a12a61f24a71f439580ebd6d05"
       },
-      "capturedAt": "2026-11-01T03:28:38.877Z"
+      "capturedAt": "2026-11-01T04:23:07.899Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T04:15:33.196037Z",
+    "at": "2026-11-01T04:29:12.031267Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T03:41:27.281Z",
-  "proofHash": "7230c03d35f6f45c84939bd0e885cffdfaee9f708571ebbd27bc8ab7d5a77f41"
+  "createdAt": "2026-11-01T04:27:48.741Z",
+  "proofHash": "0b8b34d5e3fc56a0fe8ed13f8f09cfeea79fd2fc25520c3c1503ec5ad2effc55"
 }

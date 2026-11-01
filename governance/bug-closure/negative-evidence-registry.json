@@ -112,6 +112,38 @@
       "find": "    gitCommit: git.sourceCommit,",
       "replace": "    gitCommitIgnorado: git.sourceCommit,",
       "test": "tests/unit/governance/runIdentityCommit.test.js"
+    },
+    {
+      "defectId": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
+      "targetFile": "scripts/ci/dev-branch-gate.js",
+      "control": "fases duplicadas deixam de invalidar a entrada e o gate pode certificar",
+      "find": "  if (duplicadas.length > 0) {\n    return {\n      fases: unicas, invalido: true,",
+      "replace": "  if (false && duplicadas.length > 0) {\n    return {\n      fases: unicas, invalido: true,",
+      "test": "tests/unit/governance/devBranchGatePhaseContract.test.js"
+    },
+    {
+      "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
+      "targetFile": "scripts/ci/phase-step-contract.js",
+      "control": "fase é aprovada com apenas PARTE dos passos obrigatórios (ausentes não bloqueiam)",
+      "find": "  const ausentes = esperados.filter((id) => !presentes.has(id));\n  if (ausentes.length > 0) {",
+      "replace": "  const ausentes = esperados.filter((id) => !presentes.has(id));\n  if (false && ausentes.length > 0) {",
+      "test": "tests/unit/governance/phaseStepContract.test.js"
+    },
+    {
+      "defectId": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
+      "targetFile": "governance/bug-closure/eligibility.js",
+      "control": "RISK_ACCEPTED válido volta a dispensar defeito P0 (deixa de ser bloqueante)",
+      "find": "      const avaliacao = avaliarAceitacaoDeRisco(d);\n      riscoAceito.push(d);\n      const dispensa = avaliacao.valida && sev !== SEVERIDADES.P0;",
+      "replace": "      const avaliacao = avaliarAceitacaoDeRisco(d);\n      riscoAceito.push(d);\n      const dispensa = avaliacao.valida;",
+      "test": "tests/unit/governance/riskAcceptedCriticalControl.test.js"
+    },
+    {
+      "defectId": "P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS",
+      "targetFile": "scripts/governance/run-governance-enforcement.js",
+      "control": "agregado executa passos mesmo com autorização NEGADA (decisão deixa de preceder a execução)",
+      "find": "  if (!autorizacao.allowed) {",
+      "replace": "  if (false && !autorizacao.allowed) {",
+      "test": "tests/unit/governance/governanceEnforcementOrder.test.js"
     }
   ]
 }

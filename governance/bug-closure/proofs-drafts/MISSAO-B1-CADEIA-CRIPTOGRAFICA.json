@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a1badd05-8f6e-47a9-9b95-7e37879ae5cf",
+  "transitionId": "ba05a335-50f7-4b4d-8604-4392c2ead7cf",
   "defectId": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/bugClosureHistoricalGuards.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T03:40:49.900Z",
-      "finishedAt": "2026-11-01T03:40:57.794Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
-      "outputSha256": "8c622338ff5c5fd30d2027dc5eeb53a994078e7a167922f95784edc0926bb96b"
+      "startedAt": "2026-11-01T04:27:26.867Z",
+      "finishedAt": "2026-11-01T04:27:30.603Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
+      "outputSha256": "8dca69945db51e57272837651727169b70264447ceb4cf413146ddf3e28dbc06"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-11-01T03:40:57.801Z",
-  "proofHash": "63907b48ce765dda6ffcf8f0332d077acadfcd0a37c8923ee9f6f5f851f58d70"
+  "createdAt": "2026-11-01T04:27:30.609Z",
+  "proofHash": "585c47734e08ae435fa9a9d6d412b86d419031c6a6f20be3017f48d33c5dfee0"
 }

@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "224e06bf-81b4-4e3d-9890-043165c1e4ce",
+  "transitionId": "05e0e330-ad83-4cb5-92a2-804b93b1945d",
   "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/qa-mesh/failureIntelligenceLineage.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/qa-mesh/failureIntelligenceLineage.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T03:39:23.978Z",
-      "finishedAt": "2026-11-01T03:39:29.251Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
-      "outputSha256": "6b7b04afe80dfe4d00b9e51a2c401bc0a49d4e6d4637c68526581d00e55c1723"
+      "startedAt": "2026-11-01T04:26:39.422Z",
+      "finishedAt": "2026-11-01T04:26:42.546Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
+      "outputSha256": "0b9deb55064f62325c68ce03f31fe1361191a6509ecf09904a503a03ad7de95e"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-11-01T03:39:29.272Z",
-  "proofHash": "5a83413c9adee4b5b4b99d4f397e8a4736d7cb5f5ae429469b4f2c5f3c6e1c04"
+  "createdAt": "2026-11-01T04:26:42.556Z",
+  "proofHash": "500202b25f2c3dc29b423b40e369ba330bd444c167fc3efd787e512edea76a47"
 }
