@@ -3678,3 +3678,29 @@ estado final: FECHAMENTO_NAO_PROVADO = 11  (P0 = 0, P1 = 5)
 Nenhum deles foi marcado `done`: sem suíte de regressão não existe prova, e declarar fechamento sem
 prova é exatamente o defeito que a fila existe para impedir. Cada um precisa de uma de três decisões
 humanas — escrever a suíte, reabrir o defeito, ou registrar risco aceito com controle compensatório.
+
+### 11.64. Dois itens fechados escrevendo a suíte que faltava — e um ponteiro quebrado no caminho
+
+`MISSAO-B8-ESTADOS-FILA` e `HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS` não precisavam de
+código novo: precisavam de **suíte**. Ambas foram escritas contra a regra (fixtures), não contra o
+estado do dia.
+
+`tests/unit/governance/hardeningQueueStates.test.js` (14 casos) — o hook `continue-until-done` decide
+se o turno encerra lendo `status`. A suíte prova que: `fixed_unverified` **não** é fechado e recusa
+`evidence` (com evidência o estado é `verified`); typo (`verifed`) vira `STATUS_DESCONHECIDO` e não
+conta em `counts`; commit órfão (`deadbeef…`) é `COMMIT_INEXISTENTE` enquanto o HEAD real é aceito
+(não-vacuidade dos dois lados); `blocked*` exige motivo e continua ABERTO.
+
+`tests/unit/governance/closurePointersOrphans.test.js` (14 casos) — trava a marcação, o aviso e a
+ausência de consumo.
+
+**Achado real no caminho**: `FINAL_RAP_RELEASE_CLOSURE.json` declarava
+`supersededBy: "AI_MEMORY/evidence/AUDIT_ENTRYPOINT.json"` — arquivo que **nunca pode existir**:
+publicar `.json` em `AI_MEMORY/evidence/` reprova o passo bloqueante `json-persistence-audit`
+(documentado em `AGENTS.md`). O ponteiro mandava o auditor para o vazio. Corrigido para `.md`, com
+`supersededByCorrection` registrando o alvo antigo e o motivo — corrigir não pode ser silencioso nem
+apagar a medição original (o teste exige `source.headNow` e `engineeringRouter` preservados).
+
+```
+FECHAMENTO_NAO_PROVADO: 11 -> 9   (P0 = 0)
+```

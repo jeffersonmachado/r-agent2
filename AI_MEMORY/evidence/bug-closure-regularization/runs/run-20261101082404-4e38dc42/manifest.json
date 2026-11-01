@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "bug-closure-regularization-run",
+  "authoritative": false,
+  "runId": "run-20261101082404-4e38dc42",
+  "versaoRegularizador": "2.0.0",
+  "identidade": {
+    "commit": "36606cf05442ef933fca1cf1c27901168aea445a",
+    "sourceFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "fe6bb4b482d5f3ffa8cdde2aa2fbb369e692686c985c097f01556fcc099d89fd",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "ambiente": {
+    "node": "v22.12.0",
+    "plataforma": "linux-x64",
+    "host": "jmachado-Precision-5530",
+    "runnerDeTeste": "jest",
+    "bancoDeTeste": "padrao",
+    "runnerEngenharia": "ENGINEERING_RUNNER_URL"
+  },
+  "escopo": {
+    "tipo": "PARCIAL",
+    "filtroSeveridade": "ALL",
+    "idsSelecionados": [
+      "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS"
+    ],
+    "limite": 0,
+    "esperadoNoEscopo": 1,
+    "idsEsperados": [
+      "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS"
+    ],
+    "completo": false
+  },
+  "status": "COMPLETED",
+  "startedAt": "2026-11-01T08:24:04.658Z",
+  "completedAt": "2026-11-01T08:24:09.782Z",
+  "resultados": 1,
+  "observacoes": []
+}

@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "cb5ef7b9-b254-41fc-85a0-5a2127acbff3",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "36606cf05442ef933fca1cf1c27901168aea445a",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/unit/governance/closurePointersOrphans.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/closurePointersOrphans.test.js",
+      "command": "npx jest tests/unit/governance/closurePointersOrphans.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:24:04.675Z",
+      "finishedAt": "2026-11-01T08:24:09.715Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082404-4e38dc42/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
+      "outputSha256": "6d43820cf5e9c978a0dd082c1c0c9e9e70da20c9aa0be9e19ab9838212437ed5"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/closurePointersOrphans.test.js",
+      "sha256": "77446bb3a94830087a2508fd163a2d4410730fdd481dbaa45d8a5d66ba6913a2"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T08:24:09.729Z",
+  "proofHash": "dd93d897f5dae60701c266dcb19a73d241a7a6d9b15d355c3d37149e0716091f"
+}
