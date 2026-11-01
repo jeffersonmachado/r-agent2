@@ -3811,3 +3811,30 @@ afrouxar a exigência — os campos conferidos aumentaram (alg, keyId, signedAt,
 
 Estado final da fila: **175 itens · 8 `blocked_external`** (dependem de ação externa: chave de
 atestação no CI, decisões de política, ambiente) — nenhum item aberto por falta de prova.
+
+### 11.70. `FECHAMENTOS-SEM-SUITE-DE-REGRESSAO` fechado — e um beco sem saída na máquina de estados
+
+Medição nova (a premissa do item era "11 itens fechados sem suíte identificável"):
+
+```
+167 itens em estado de fechamento · 0 sem regressionTest · 0 com caminho inexistente
+```
+
+Os 11 agora têm suíte própria (ver §11.58–11.69). Guarda nova:
+`tests/unit/governance/closureRequiresSuite.test.js` (9 casos), com as DUAS pontas: sobre a fila real
+(zero violações, com alcance medido — mais de 100 itens fechados) e sobre fila sintética,
+provando que o predicado detecta `SEM_SUITE_DECLARADA`, `SUITE_INEXISTENTE` e `SUITE_NAO_E_CAMINHO`.
+
+**Achado estrutural no caminho**: `defect-states.TRANSICOES` **não tem** transição de
+`BLOCKED_EXTERNAL` para nenhum estado fechado. A cadeia legal é
+`BLOCKED_EXTERNAL → FIX_IN_PROGRESS → FIXED_PENDING_VERIFICATION → VERIFIED`. Consequência prática:
+todo item `blocked_external` cujo bloqueio externo se resolve fica com um caminho de saída que
+NINGUÉM executa — o regularizador só considera candidatos em `VERIFIED/RESOLVED/RISK_ACCEPTED`, e
+nada no código faz as duas transições intermediárias. Um bloqueio externo resolvido vira dead-end
+silencioso (a mesma classe de defeito que esta missão já fechou três vezes).
+
+Fechei este item percorrendo o caminho legal explicitamente (registrado em `verificationNote` com a
+cadeia completa) e deixando a atestação `REVERIFY_EXISTING_CLOSURE` substanciar a declaração com
+execução real no SHA corrente. Os **7 `blocked_external` restantes** continuam bloqueados por motivo
+real (ciclo de selagem proibido pela missão, chave de atestação no CI, decisão de dono) — não por
+falta de prova.
