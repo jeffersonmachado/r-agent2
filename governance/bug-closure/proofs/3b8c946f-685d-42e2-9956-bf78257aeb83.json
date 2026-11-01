@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "3b8c946f-685d-42e2-9956-bf78257aeb83",
+  "defectId": "N5-REENTREGA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+      "command": "npx jest tests/integration/missionSourceStaleReplanFullRouterE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:06:06.643Z",
+      "finishedAt": "2026-11-01T09:07:30.099Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101083447-afdfeb76/logs/N5-REENTREGA.log",
+      "outputSha256": "3a50e52ed7b425d0d241537cc2cbcaaa177a7eaf9db2b049ab90e89211cff327"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/missionSourceStaleReplanFullRouterE2E.test.js",
+      "sha256": "927798f461030bac288d64a169b77acd574379f91412790ef2c3634f61cdaa71"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:07:30.118Z",
+  "proofHash": "17f5c21764e79b836c08a2570d91ea04434edc2ab7f290a2d673b743c3bbed8f",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "C1S4wDwKERKAgMU2wPrgQ8LzIPhOR9wnXhIlgiplhQ0uXP2KaqEp4o9/N1rbR1F2Xt4NpzBohM16ywO/NRGqDA==",
+    "signedAt": "2026-11-01T09:11:18.079Z"
+  }
+}

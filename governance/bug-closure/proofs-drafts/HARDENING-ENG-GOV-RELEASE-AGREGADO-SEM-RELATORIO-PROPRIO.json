@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "62acde28-ee2c-4f5c-82d8-57352cf64029",
+  "transitionId": "13d2fb14-04f9-445a-8ec7-1aa2cd42b0a1",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/aggregateVerdict.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/aggregateVerdict.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:32:51.092Z",
-      "finishedAt": "2026-11-01T06:32:53.514Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
-      "outputSha256": "e0a96dfb01de4a03c22abfe172a0ea47cc1a98d7374869d6c0557ed68982934d"
+      "startedAt": "2026-11-01T09:23:23.643Z",
+      "finishedAt": "2026-11-01T09:23:28.376Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO.log",
+      "outputSha256": "53bd56657262a578e7fbbdd7a927a169289f3d8d65f4ae495caba3c9589a79ab"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:32:53.521Z",
-  "proofHash": "ff186d2238af8959d4a2bd66650bad01551e27e83a64a57fa3b12c65de3f7a06"
+  "createdAt": "2026-11-01T09:23:28.383Z",
+  "proofHash": "3fcb2c42c19db125d5bbdc54d46f22c4a27156395c13b4f7256f407b86ade473"
 }

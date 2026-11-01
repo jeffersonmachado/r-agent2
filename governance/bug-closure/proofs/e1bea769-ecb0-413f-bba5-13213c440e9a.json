@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e1bea769-ecb0-413f-bba5-13213c440e9a",
+  "defectId": "P1-EVIDENCIA-COMMIT-ORFAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "tests/unit/governance/hardeningQueueCommitExists.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/hardeningQueueCommitExists.test.js",
+      "command": "npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:49:35.435Z",
+      "finishedAt": "2026-11-01T08:49:39.353Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101083447-afdfeb76/logs/P1-EVIDENCIA-COMMIT-ORFAO.log",
+      "outputSha256": "8284bac9defef52554eea3ae5af334bd6c50a80fd11f649872ebfc651b9dd64a"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/hardeningQueueCommitExists.test.js",
+      "sha256": "585455636f7f4b60e0b6f858d9d14949434860d691b5e77152a08b8588093325"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T08:49:39.361Z",
+  "proofHash": "0773291e43530c45a619d9a483da14dbb050e21adf878753a398492c97897101",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "6zBMHO148i+g5nSytQsCY6fHt7K8inBG/1nQSmr5qWbtVQhJICsKyhKFAqu1QtnQ5X63bkwXm734dsD3/UJUDA==",
+    "signedAt": "2026-11-01T09:11:27.431Z"
+  }
+}

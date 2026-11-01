@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7be45433-9a9b-4264-a098-14ad13f272bf",
+  "transitionId": "2146b5b5-d6d2-4207-8f2b-4fffcc0151f3",
   "defectId": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "ab6069e0351350a6e14b4961f78f07a9fecfd893",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/ciWorkflowContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/ciWorkflowContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T08:28:41.155Z",
-      "finishedAt": "2026-11-01T08:28:44.676Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082836-451f44b5/logs/CI-WAVE-REFRESH-SEM-RUN-GOVERNADO.log",
-      "outputSha256": "b146ad5beb238c46b21df60bbfcdc1086e96e7fcc5634fef3b75875d2c49ac15"
+      "startedAt": "2026-11-01T09:19:23.339Z",
+      "finishedAt": "2026-11-01T09:19:28.160Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/CI-WAVE-REFRESH-SEM-RUN-GOVERNADO.log",
+      "outputSha256": "4e8a4989f87e5fb6bbf4667791c5dfc3653ca7e452d5c71fc6c3d4dac34a899f"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T08:28:44.682Z",
-  "proofHash": "d325e345dd1b45029d31164230640e3cc98b55ab6c989dcd1c5aa0945a2669c0"
+  "createdAt": "2026-11-01T09:19:28.167Z",
+  "proofHash": "881199bffe00d6f80f8ca4a982c01b89c8503e5bd62bbf7ef77535d5a8519d56"
 }

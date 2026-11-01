@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "df0bc219-2219-4d64-8376-4f4e00419b6e",
+  "transitionId": "1dcc2605-4524-4de3-ad30-5ddad9f31cf7",
   "defectId": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:47:45.417Z",
-      "finishedAt": "2026-11-01T06:49:09.508Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
-      "outputSha256": "34cb3ffea8331f50512fe39169f3fc702888422ee4464301c69e40982a153fce"
+      "startedAt": "2026-11-01T09:44:07.640Z",
+      "finishedAt": "2026-11-01T09:45:56.495Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
+      "outputSha256": "ed0b5cfc445cdaaeff0dc08ab9be4bab88bc95e1bbde6c31025108aecada1021"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:49:09.518Z",
-  "proofHash": "665b857123a51580a655227e10c798dc14d0f04dc93bdff4420dd697c427c368"
+  "createdAt": "2026-11-01T09:45:56.508Z",
+  "proofHash": "2190481b5abbf18f77a75e8827f7e337cdd34f11eb3c2a7045b53beff5fa0a48"
 }

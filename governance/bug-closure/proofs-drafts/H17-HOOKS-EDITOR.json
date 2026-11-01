@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "791847f6-816f-462a-abdb-55f1a4614f1b",
+  "transitionId": "456bd43d-2ad0-4725-9eff-24d59263a13f",
   "defectId": "H17-HOOKS-EDITOR",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "frontend/src/components/FlowTemplateSelector.test.jsx"
   ],
@@ -18,10 +18,10 @@
       "command": "npm --prefix frontend run test -- src/components/FlowTemplateSelector.test.jsx",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:32:46.830Z",
-      "finishedAt": "2026-11-01T06:32:51.079Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/H17-HOOKS-EDITOR.log",
-      "outputSha256": "538e1b12bb4aa45645bb35bbbac4f3ff203ffca5a6dd5263ee0e66375ea373a9"
+      "startedAt": "2026-11-01T09:23:18.767Z",
+      "finishedAt": "2026-11-01T09:23:23.628Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/H17-HOOKS-EDITOR.log",
+      "outputSha256": "bf1a42574a68cfb2a66daab4d1791f5e0701aaf60b29c4d043f5a0af2651abf8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:32:51.085Z",
-  "proofHash": "f09162ced75c206a7c81afeca9f02f10e83f7b443be13e7820301f33cd9b65a6"
+  "createdAt": "2026-11-01T09:23:23.635Z",
+  "proofHash": "2337bf7b5d0bc43f6929bfcec60a9429f8031a9e089bd23ecb2a1f4521c756dd"
 }

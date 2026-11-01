@@ -335,10 +335,13 @@ function verifyReleaseIdentity({
     });
     checks.push({ check: 'delivered_hash_binding', ...binding });
   }
-  if (currentRun) {
-    const isolation = validateRunIsolation({ candidate, delivered, currentRun });
-    checks.push({ check: 'run_isolation', ...isolation });
-  }
+  // FAIL-CLOSED (defeito medido 2026-11-01): com `currentRun` ausente o isolamento era PULADO e a
+  // verificação devolvia `valid: true` — a mesma classe do P0 "identidade ausente tratada como
+  // coerente": ausência de contexto não pode virar aprovação. Sem run corrente não há como provar
+  // que o candidato é o do conteúdo atual, então `validateRunIsolation` (que já devolve
+  // IDENTITY_MISSING nesse caso) passa a rodar SEMPRE.
+  const isolation = validateRunIsolation({ candidate, delivered, currentRun });
+  checks.push({ check: 'run_isolation', ...isolation });
 
   const failed = checks.filter((check) => check.valid === false);
   return Object.freeze({

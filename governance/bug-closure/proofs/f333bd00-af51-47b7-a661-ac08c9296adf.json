@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "f333bd00-af51-47b7-a661-ac08c9296adf",
+  "defectId": "PROMPT-P1E-FENCING-OBRIGATORIO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "tests/integration/lroServiceTransaction.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/lroServiceTransaction.test.js",
+      "command": "npx jest tests/integration/lroServiceTransaction.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:51:12.030Z",
+      "finishedAt": "2026-11-01T08:51:44.442Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101083447-afdfeb76/logs/PROMPT-P1E-FENCING-OBRIGATORIO.log",
+      "outputSha256": "b7013121d37eea2527c4208910d3d7ec2cdc56260052634f85dd005bc3de2544"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/lroServiceTransaction.test.js",
+      "sha256": "e24f02dd2277c36433d17fb61a85cb34962bd2b6571b19f7e837c03e6871c3d7"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T08:51:44.452Z",
+  "proofHash": "4ada34296cd0abe5b4ecf291250b8babd32f40e42eb7d2ba36bcfde361898489",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "0hawe7KCLiEhvgBkt3MXRCWKjZWyFc6CD4s+O/ww5Ku+lwR723DnrF2I/dSemimf+B1GlJxVRXaz1CQvsxIbCg==",
+    "signedAt": "2026-11-01T09:11:31.762Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "739cdbb4-83ab-442b-9d6b-44646e7ba717",
+  "transitionId": "da1416e7-32f3-4271-8ee7-02e8e3fc368a",
   "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/phaseStepContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/phaseStepContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:26:23.066Z",
-      "finishedAt": "2026-11-01T06:26:30.032Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
-      "outputSha256": "416f36945f557e8a4af7ef5a7c1540407bead66b92d5b24a1c72363c291c6617"
+      "startedAt": "2026-11-01T09:16:49.559Z",
+      "finishedAt": "2026-11-01T09:16:54.662Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
+      "outputSha256": "17ae5654e971e161d250a8e7ac75995ddbd80a54df5c66688224aed1bcc3b6c2"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T06:55:23.337183Z",
+    "at": "2026-11-01T09:57:30.438542Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:26:30.038Z",
-  "proofHash": "2055ce0a1e3780a9a76009d4155c7018b52eadf67b73bdebb1cd35bf3debea02"
+  "createdAt": "2026-11-01T09:16:54.669Z",
+  "proofHash": "85a4d4c297e6d3a0d7370b86f8bdfebb19b629a4133a6e2f212dc022dfa6ec1e"
 }

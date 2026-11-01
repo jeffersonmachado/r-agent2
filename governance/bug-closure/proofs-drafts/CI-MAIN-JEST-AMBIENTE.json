@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ea89e620-4834-4080-9602-17605bebe507",
+  "transitionId": "b9314412-da69-462e-9e8e-0da325a9ac5c",
   "defectId": "CI-MAIN-JEST-AMBIENTE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "ab6069e0351350a6e14b4961f78f07a9fecfd893",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/ciWorkflowContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/ciWorkflowContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T08:28:36.057Z",
-      "finishedAt": "2026-11-01T08:28:41.137Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082836-451f44b5/logs/CI-MAIN-JEST-AMBIENTE.log",
-      "outputSha256": "bf6a97892c276bb2a13720bea70d11a0ccfdc7ad1dda0de9f69eee9fe94e2f89"
+      "startedAt": "2026-11-01T09:19:15.748Z",
+      "finishedAt": "2026-11-01T09:19:20.116Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/CI-MAIN-JEST-AMBIENTE.log",
+      "outputSha256": "313c0bf49a1f667df9c6f3803d4e861b6ea9bc37c1907f071154e00d5e75f6a9"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T08:28:41.145Z",
-  "proofHash": "6270f80adace7ecf37608d42f813d018dccfaa34e1578e0644bb96c2cfe6cc57"
+  "createdAt": "2026-11-01T09:19:20.122Z",
+  "proofHash": "2b4af7456a4ade6656e182921ec5495227f0d716ebbadeb375c2e5e7e36efb9e"
 }

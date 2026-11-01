@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e18bc3c4-f3a2-48c4-84b2-353751672b9c",
+  "defectId": "PROMPT-P1F-STREAM-ISOLAMENTO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "frontend/src/shared/useLroStream.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/shared/useLroStream.test.jsx",
+      "command": "npm --prefix frontend run test -- src/shared/useLroStream.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:28:44.599Z",
+      "finishedAt": "2026-11-01T09:28:50.279Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/PROMPT-P1F-STREAM-ISOLAMENTO.log",
+      "outputSha256": "11ce6185d24a263afdcfb20adc6143556c7213f5da27523c1758c556c8c69141"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/shared/useLroStream.test.jsx",
+      "sha256": "b083c622b7423b46106d9bf412e12a54d5794c1e8199fee512d40915d10ceb36"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:28:50.285Z",
+  "proofHash": "bbde3d2d3f22ee09ea0ddc0d545810c6c1ac88728e23139c8384d8f1b2770390",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "LQ4JJ76gOcxsz6AT5mQfTV/M3/hYBQnyWJfsRZhrfw7v3zxPqpaDQeje5obP6pLwmL1C6e1xBFrGWwRDewD/Dw==",
+    "signedAt": "2026-11-01T09:57:08.039Z"
+  }
+}

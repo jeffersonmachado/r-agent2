@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "2de7e86a-872e-4b04-83ba-c23172b00393",
+  "transitionId": "d6da3aef-d6d6-41a0-9180-3c9ffc584e56",
   "defectId": "ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/engineeringMissionRoutes.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMissionRoutes.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:44:32.730Z",
-      "finishedAt": "2026-11-01T06:44:40.021Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP.log",
-      "outputSha256": "333fc96a1e804184fe7e335d150688039bf57ac42892c59aa3e2866a0834ca67"
+      "startedAt": "2026-11-01T09:40:31.849Z",
+      "finishedAt": "2026-11-01T09:40:38.808Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP.log",
+      "outputSha256": "3f4c540303382c662895a89469e7cd7729bd04944adb8e58b2f2b1f1002f9a8c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:44:40.038Z",
-  "proofHash": "e0c45d4f811795816cfe24b780ddf908fe3fa0fcbcfdb6ec7b96d3ffadd4be74"
+  "createdAt": "2026-11-01T09:40:38.816Z",
+  "proofHash": "4bb1d35dac446533771166a066fbcc5a0b586ea4587db79c015cbb45a6442dda"
 }

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "befa6dcb-11b7-49fe-bb8a-fba8123b2ff0",
+  "defectId": "QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "qa-mesh/__tests__/meshRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "qa-mesh/__tests__/meshRunner.test.js",
+      "command": "npx jest qa-mesh/__tests__/meshRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:07:37.985Z",
+      "finishedAt": "2026-11-01T09:07:44.179Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101083447-afdfeb76/logs/QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE.log",
+      "outputSha256": "86e2e51f0ab5de136b7c786a7af4ca6b32f79c3ee96ed2b180812ad5e47d5d6a"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "qa-mesh/__tests__/meshRunner.test.js",
+      "sha256": "2b3d6a7505c1be2d71be0789f9e6fcebd34b3ebaaf8bd039e4c6a540cd2a57cb"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:07:44.191Z",
+  "proofHash": "47185a513cd5dd9279658a374c5a4d8f1cc99aea763d7243b6707e509ea0f88b",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "h2039gROa8hpfiXP5nCNT1LQtXnVtoKKtBB8sqIQFdClJoFfbi7VdZ9DpxUhOAiRRETPzI8QORZ2yXP+2a8cDg==",
+    "signedAt": "2026-11-01T09:11:33.345Z"
+  }
+}

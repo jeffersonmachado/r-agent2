@@ -3741,3 +3741,41 @@ FECHAMENTO_NAO_PROVADO: 8 -> 5   (P0 = 0, P1 = 1)
 
 Nenhum foi marcado `done`. Os três P3 e o P2 precisam de decisão humana (escrever suíte, reabrir ou
 aceitar risco); o P1 precisa de um ciclo de selo controlado para ser observado de verdade.
+
+### 11.67. A regra "worktree congelado" deixou de ser prosa — virou etapa do veredito
+
+`HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO` estava `prevention_active`: a
+prevenção era um parágrafo ("não commite durante o agregado"). Agora o agregado **mede**.
+
+`run-governance-enforcement.js` passou a capturar `HEAD` + impressão de `git status --porcelain` no
+início e no fim, e a decidir por uma etapa nova `CONGELAMENTO`:
+
+- `HEAD_MUDOU_DURANTE_O_RUN` ⇒ **FAIL**, com os dois SHAs no motivo (foi a causa medida do RED do
+  agg7: commitei `602a00a1c` e `afb5e1eaf` durante o run);
+- `ESTADO_NAO_MEDIDO` / `HEAD_NAO_RESOLVIDO` ⇒ FAIL (fail-closed: sem fotografia não há como afirmar
+  congelamento);
+- conteúdo do worktree mudar **não** reprova — e a razão é medida, não estética: os próprios
+  validadores do agregado regravam evidência versionada durante a execução
+  (`AI_MEMORY/evidence/*`, `config/system-inventory.json`). Reprovar por isso deixaria o gate
+  vermelho por desenho. A mudança fica REGISTRADA na etapa (`worktreeMudou` + `avisoWorktree`).
+
+A primeira versão desta guarda reprovava por mudança de conteúdo — e teria quebrado o agregado
+inteiro. Corrigido **antes** de rodar o gate, medindo o que os validadores fazem no disco.
+
+### 11.68. Fail-open encontrado por acidente: candidato aprovado SEM run corrente
+
+Escrevendo a suíte da Fase 6 (`newCandidateOnFingerprintChange.test.js`), um caso falhou: com
+`currentRun: null`, `verifyReleaseIdentity()` devolvia **`valid: true`**.
+
+Causa: `if (currentRun) { ...isolamento... }` — sem run corrente o isolamento era **pulado**, e
+sobrava um PASS sobre artefato que ninguém podia atribuir ao conteúdo atual. É a MESMA classe do
+`P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE` (ausência de contexto virando aprovação), só que em
+outro módulo. Corrigido para fail-closed: `validateRunIsolation` roda **sempre** e devolve
+`IDENTITY_MISSING` sem run. `releaseArtifactIdentity.test.js` (27 casos) continua verde.
+
+```
+FECHAMENTO_NAO_PROVADO: 5 -> 3   (P0 = 0, P1 = 0)
+```
+
+Restam **três P3** sem suíte: `MISSAO-B3-REUSO-PROVENIENCIA`, `MISSAO-B4-REVISAO-INDEPENDENTE`
+(processo humano de revisão) e `MISSAO-DEMO-SELF-ENGINEERING` (demonstração end-to-end).

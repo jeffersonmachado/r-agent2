@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "59b0bd86-49d4-47a3-afae-d41a0e1ed870",
+  "transitionId": "ec421906-668c-4167-b0f1-711aef7aa16e",
   "defectId": "P1-5",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "rag-service/tests/test_hybrid_search.py"
   ],
@@ -18,10 +18,10 @@
       "command": "/tmp/ragvenv/bin/python -m pytest rag-service/tests/test_hybrid_search.py -q -p no:cacheprovider",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:35:09.407Z",
-      "finishedAt": "2026-11-01T06:35:11.758Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P1-5.log",
-      "outputSha256": "630eae5ff25ede799d56ed88a43408dbbf3de0d8746dd65144a64b8a132f3eb9"
+      "startedAt": "2026-11-01T09:25:48.220Z",
+      "finishedAt": "2026-11-01T09:25:49.609Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-5.log",
+      "outputSha256": "eb4a97b63642f8c9f1b8a099a605ee508409bd174b43057d87042a0f9f45f1ea"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:35:11.764Z",
-  "proofHash": "30e23ae203e64ed5c1c77a250fdcc0e72036774c6ecfb9837b3a43a7785f61a8"
+  "createdAt": "2026-11-01T09:25:49.616Z",
+  "proofHash": "d801e7a2a562f4004f04d209575a9a43a7d7f891b9e754d583ad2a483305d871"
 }

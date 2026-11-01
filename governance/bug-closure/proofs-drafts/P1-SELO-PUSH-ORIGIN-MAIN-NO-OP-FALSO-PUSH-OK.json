@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e8367965-ab87-460f-8fed-27213c10c566",
+  "transitionId": "54f70d7e-1372-42a4-9d94-3bd061636a07",
   "defectId": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:36:44.872Z",
-      "finishedAt": "2026-11-01T06:36:48.841Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
-      "outputSha256": "4718f885df6e7a47da9fdf0ad07ffab063e4b77cda8952726f7041be15310702"
+      "startedAt": "2026-11-01T09:27:15.336Z",
+      "finishedAt": "2026-11-01T09:27:19.292Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+      "outputSha256": "add994d06dca337d04a58a8fd876486e6b7a3bafd6ccc014fd1c54fd6cbf19c8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:36:48.851Z",
-  "proofHash": "d04f1215952e8546b41ba35f2bdd7c15e461f043364ca72ff08ae2c035a679bf"
+  "createdAt": "2026-11-01T09:27:19.299Z",
+  "proofHash": "59df43e7abab01ad2081b3cd45d98589861c8a14e613dc47048351e7b1f30aef"
 }

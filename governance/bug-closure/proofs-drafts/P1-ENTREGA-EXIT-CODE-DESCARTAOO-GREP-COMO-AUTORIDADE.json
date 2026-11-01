@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a9c03f83-b4ba-4e17-9abe-5895b4b2181e",
+  "transitionId": "671b66ae-59a2-4215-a86b-8009e95ebe07",
   "defectId": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:36:00.837Z",
-      "finishedAt": "2026-11-01T06:36:05.671Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
-      "outputSha256": "dfabec3c601f59b57be2aae1efde891054273b36854977ada98370ffca6ab2e5"
+      "startedAt": "2026-11-01T09:26:39.767Z",
+      "finishedAt": "2026-11-01T09:26:43.197Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "outputSha256": "d4ce0ddc454044987b2edd8029f906bcedbc3e49d8d8b3f5d74cbf0986dcc0d3"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:36:05.679Z",
-  "proofHash": "f06e3dd5bfdc64cb512ccbd6f09b98cd2023b8213f0227e324a7f065292faff1"
+  "createdAt": "2026-11-01T09:26:43.204Z",
+  "proofHash": "6a770af19da1af17d52eb7b666d72e45cb615f8df1a343e97393ad816610d7b4"
 }

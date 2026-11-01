@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "9aa03660-6c96-45cc-984c-092543677901",
+  "defectId": "MISSAO-A-L2-L3-ORQUESTRADOR",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "tests/unit/coverage/impactRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/coverage/impactRunner.test.js",
+      "command": "npx jest tests/unit/coverage/impactRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:11:49.414Z",
+      "finishedAt": "2026-11-01T09:11:53.502Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091149-421f536e/logs/MISSAO-A-L2-L3-ORQUESTRADOR.log",
+      "outputSha256": "21975d933bd989423cff8c4c6277de9bd50169fa4881a93832968af8a0918036"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/coverage/impactRunner.test.js",
+      "sha256": "b464454abc0f1043c0d4b71217e6c1d535d7ef3914ca6250d8f50a841fc594b1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:11:53.512Z",
+  "proofHash": "9755ec119d6fc2de79ebb38050160c0a66b31c9c7d2f0bbc85b0490042185c14",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "FLxS3q1N9ytL6PojEDzj4KHBKxC4Eu9jxUITS3NgeRaSXaBEC7UN0fwXPaDtTLv3ISLVajjLFYqpU/cmqvAYCA==",
+    "signedAt": "2026-11-01T09:12:06.567Z"
+  }
+}

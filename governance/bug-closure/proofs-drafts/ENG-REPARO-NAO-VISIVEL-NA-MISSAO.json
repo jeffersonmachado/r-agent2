@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e0880bcd-7b14-4160-8abe-11729a618ad9",
+  "transitionId": "23f53a8b-d326-497c-ac25-8cdbe8a0894e",
   "defectId": "ENG-REPARO-NAO-VISIVEL-NA-MISSAO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/integration/engineeringMissionSourceE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:44:40.045Z",
-      "finishedAt": "2026-11-01T06:44:50.418Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/ENG-REPARO-NAO-VISIVEL-NA-MISSAO.log",
-      "outputSha256": "26f5b88572df3e017e8a97accab586d3aa6542bc67cdc5ae545c8a8ad52669ac"
+      "startedAt": "2026-11-01T09:40:38.825Z",
+      "finishedAt": "2026-11-01T09:40:47.852Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/ENG-REPARO-NAO-VISIVEL-NA-MISSAO.log",
+      "outputSha256": "ccbcea2a313fb1371e8354328366ac1e10106db49af569a7446d99610974d3cc"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:44:50.427Z",
-  "proofHash": "4f47c1eef7103c0e04817f1a42e1666aaee3e0f6f510a697cf026a71471b41eb"
+  "createdAt": "2026-11-01T09:40:47.862Z",
+  "proofHash": "8500dce50e197f74f4131a2bc06f5d8beb140d52a5530c2164d0360dc562f113"
 }

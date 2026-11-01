@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "13f2852a-5489-4db0-ac91-d7a1310aa0a8",
+  "transitionId": "39a832ed-913a-43d9-b61e-63f4cbcde715",
   "defectId": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/runtimeEvidenceDiagnosis.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/runtimeEvidenceDiagnosis.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:50:37.199Z",
-      "finishedAt": "2026-11-01T06:50:40.207Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO.log",
-      "outputSha256": "95efbd43eaa387e916b86f9232f8e6417a722963272aa5fd7503be574d34513f"
+      "startedAt": "2026-11-01T09:47:25.551Z",
+      "finishedAt": "2026-11-01T09:47:27.851Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO.log",
+      "outputSha256": "d052da119f570412ff1fb39ae93020f694d0e99d3c907d4c093503ee53fe9152"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:50:40.215Z",
-  "proofHash": "82dc4c351ad9c9001da1507ccf42e1b059599cd04cf57d9743f11f5ae75f40b6"
+  "createdAt": "2026-11-01T09:47:27.859Z",
+  "proofHash": "bbec39db467fb0e3fb5e9d1ae6c6793d27de596b7070faa14ca8c937e9547729"
 }

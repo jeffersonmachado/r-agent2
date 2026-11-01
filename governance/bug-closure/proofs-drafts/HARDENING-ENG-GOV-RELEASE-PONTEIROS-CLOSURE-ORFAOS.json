@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cb5ef7b9-b254-41fc-85a0-5a2127acbff3",
+  "transitionId": "2f7090da-312e-44f7-bde2-27a8b4b731ec",
   "defectId": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "36606cf05442ef933fca1cf1c27901168aea445a",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/closurePointersOrphans.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/closurePointersOrphans.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T08:24:04.675Z",
-      "finishedAt": "2026-11-01T08:24:09.715Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082404-4e38dc42/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
-      "outputSha256": "6d43820cf5e9c978a0dd082c1c0c9e9e70da20c9aa0be9e19ab9838212437ed5"
+      "startedAt": "2026-11-01T09:47:21.898Z",
+      "finishedAt": "2026-11-01T09:47:25.535Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
+      "outputSha256": "dad4274adf5ab1556c41de80b2df89faa03717f01e291818cea7f5e4cad03f5e"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T08:24:09.729Z",
-  "proofHash": "dd93d897f5dae60701c266dcb19a73d241a7a6d9b15d355c3d37149e0716091f"
+  "createdAt": "2026-11-01T09:47:25.542Z",
+  "proofHash": "7d1d32916db8855e69274e75a84957c1760c986f9d746f43c839374d24a2bb2b"
 }

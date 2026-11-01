@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "6762134d-e943-4983-94e7-ff4d238bb923",
+  "transitionId": "a542f007-d3e1-4e0c-910b-ac7ca8a3aea1",
   "defectId": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:50:40.226Z",
-      "finishedAt": "2026-11-01T06:50:43.368Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
-      "outputSha256": "f60c8b2fefc46cd24b2411c8d7bab4448d43fd3236b8dd387e00d1770f60babb"
+      "startedAt": "2026-11-01T09:47:27.867Z",
+      "finishedAt": "2026-11-01T09:47:30.453Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
+      "outputSha256": "5baa6735472ef2c0daa7a43cc3aae01ae7b34fe4ce7933ebfe4f7fdb29d118dd"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:50:43.374Z",
-  "proofHash": "d928232efe140a259dc63be64823ba9fad18e8205929a9eee86ad95c8f766520"
+  "createdAt": "2026-11-01T09:47:30.462Z",
+  "proofHash": "50088b33238c35694f6022a367ed1fb5c2de28a3031344f3f5f9fa61c2ccd9f4"
 }

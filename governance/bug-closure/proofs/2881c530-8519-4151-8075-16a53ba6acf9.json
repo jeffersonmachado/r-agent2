@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "2881c530-8519-4151-8075-16a53ba6acf9",
+  "defectId": "FLAKE-B2-REGULARIZADOR-CORRIDA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "command": "npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:45:56.517Z",
+      "finishedAt": "2026-11-01T09:46:08.690Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/FLAKE-B2-REGULARIZADOR-CORRIDA.log",
+      "outputSha256": "c7b70ee8a38b70c35d334398848b0c3b2f4d61ed620a32d7e98d96a1ccad65b7"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "sha256": "77dcd36c5649783e7feb69cf14ae94a5a335a75dd53dd4fb2efa8fc557c67c5f"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:46:08.696Z",
+  "proofHash": "0b9d6c9327338738145a8d883f44a691397642ed67a01255d94ac87c42a359d3",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "p8sW8YaVQg3sfPq+gPWopZ1otLiBb6wbexnznp8884ED8D7eSctBuyOjJfBCC9RDAp+BCKaU0LNfus5GBqYZBg==",
+    "signedAt": "2026-11-01T09:56:38.254Z"
+  }
+}

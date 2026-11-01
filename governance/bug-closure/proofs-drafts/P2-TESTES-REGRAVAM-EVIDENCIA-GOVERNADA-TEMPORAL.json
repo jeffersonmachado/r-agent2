@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "abca395a-7535-464b-8a76-a033c55d625c",
+  "transitionId": "2b69f7fe-0ab7-43e4-80ec-3bca0c3efd7d",
   "defectId": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/governedArtifactPreservation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governedArtifactPreservation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:52:39.449Z",
-      "finishedAt": "2026-11-01T06:52:42.634Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
-      "outputSha256": "7f7a7f105feb91221b82c5a571e8c6ac21487e0af020844d5b62e864dc89b1ea"
+      "startedAt": "2026-11-01T09:49:33.430Z",
+      "finishedAt": "2026-11-01T09:49:36.897Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "outputSha256": "cd2bf6ca86789dd4ec9af42103e8167402fd09f82111ac02e8c808dcdb768a69"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:52:42.642Z",
-  "proofHash": "0f45bddf288f87a0a27129bf5fada4417fe418deca9b7589b293d7f8f622563b"
+  "createdAt": "2026-11-01T09:49:36.904Z",
+  "proofHash": "5b3857f399e8cd925fd34984f554a72e64b70cf6597bc905f81e6770968f626c"
 }

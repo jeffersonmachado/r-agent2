@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "6bb1bc60-2885-4e16-b639-971b54b527e8",
+  "transitionId": "858231f8-3993-4157-b279-18660edbb1ea",
   "defectId": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/engineeringMission/missionGatesEvidence.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:36:38.093Z",
-      "finishedAt": "2026-11-01T06:36:42.197Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log",
-      "outputSha256": "0eafc4505714e00bdd8d4953c5953c2553498ff8e6a6f73b3656d007cccfe2e2"
+      "startedAt": "2026-11-01T09:27:08.501Z",
+      "finishedAt": "2026-11-01T09:27:12.530Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log",
+      "outputSha256": "a4fa03123f5302051e1f97638d89643e21561d36cca9225f6959cc5c0ef9498c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:36:42.204Z",
-  "proofHash": "4bdd60f82aa4d68266d7c725eaac0c4288d0e678a1dcb2aec95448e058091d04"
+  "createdAt": "2026-11-01T09:27:12.538Z",
+  "proofHash": "35ddb0ba6c4002d607c26cde218f1a85dc8bdb19b58044211533714a225f778f"
 }

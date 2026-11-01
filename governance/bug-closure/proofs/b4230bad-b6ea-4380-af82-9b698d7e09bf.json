@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b4230bad-b6ea-4380-af82-9b698d7e09bf",
+  "defectId": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "tests/unit/ciGateL0Determinism.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/ciGateL0Determinism.test.js",
+      "command": "npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:49:46.859Z",
+      "finishedAt": "2026-11-01T08:49:49.021Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101083447-afdfeb76/logs/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
+      "outputSha256": "e68dfb88233845fb173ea2a706ddf560a14b9f4dcba1c49103c8c709bc95ed0f"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/ciGateL0Determinism.test.js",
+      "sha256": "03c38792d35c7eaf06c23966104f7ab2d60f76bf45882207112a9ea4d8326cf6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T08:49:49.029Z",
+  "proofHash": "739cfa844bdbb149e8818f5310094ba1d67357fc2cdf3e202ab140f4ba8f7192",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "4lmkR0KL8NOIBTwQN46KfSRvk964B7ntGNUgv8SQaArKww3ojuLfWdzmBxC936A481c6+OsSsb2X+KAF4g6PCg==",
+    "signedAt": "2026-11-01T09:11:27.983Z"
+  }
+}

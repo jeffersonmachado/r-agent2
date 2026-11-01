@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "093fd18f-dd61-43fd-ad8e-d54829b4541d",
+  "defectId": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "tests/unit/governance/newCandidateOnFingerprintChange.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/newCandidateOnFingerprintChange.test.js",
+      "command": "npx jest tests/unit/governance/newCandidateOnFingerprintChange.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:22:47.362Z",
+      "finishedAt": "2026-11-01T09:22:49.663Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT.log",
+      "outputSha256": "1641d7ba4f5954a4b7abc66248f88d2acabdc487769bda11eee6841f520f2945"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/newCandidateOnFingerprintChange.test.js",
+      "sha256": "7fc05d55df39d25f003feb142d4ccd38512ca6eed4a30e606b190286bf437eb8"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T09:22:49.672Z",
+  "proofHash": "e2f1e6c7bcae14d96a8e3c61d95f981a2e4b0ce15b576272963143def42272bd"
+}

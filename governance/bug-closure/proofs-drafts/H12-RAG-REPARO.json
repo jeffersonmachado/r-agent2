@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "80f50ef5-88c0-4ebc-8b12-9736a396eb3a",
+  "transitionId": "426eeaf2-20ed-4eda-bb28-328bb3bf164c",
   "defectId": "H12-RAG-REPARO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/ragIndexHealthPolicy.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/ragIndexHealthPolicy.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:49:24.836Z",
-      "finishedAt": "2026-11-01T06:49:28.331Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/H12-RAG-REPARO.log",
-      "outputSha256": "565361a7bdc8bc92349c9feac2ce4702698140889f36bc87660846b624913f32"
+      "startedAt": "2026-11-01T09:46:08.706Z",
+      "finishedAt": "2026-11-01T09:46:12.933Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/H12-RAG-REPARO.log",
+      "outputSha256": "fce0d4bc117323653894278027afb924488733e9d95623aee578b89582b05ba9"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:49:28.337Z",
-  "proofHash": "277f70d4fe02fec2f44532edaa48286ad1b044afc73e88dcf3fb666edb9315bd"
+  "createdAt": "2026-11-01T09:46:12.943Z",
+  "proofHash": "a5fcff86a4fa0ed38d2ba92ae06c4f1521906849e1ecbde38f56cc2a06132f10"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "595a476a-c31a-417d-9881-a61841571147",
+  "transitionId": "79455f82-d7fb-49c0-918a-f6d794fbd26a",
   "defectId": "MISSAO-A-L2-L3-ORQUESTRADOR",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/coverage/impactRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/coverage/impactRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:57:07.076Z",
-      "finishedAt": "2026-11-01T06:57:10.244Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101065707-6738559c/logs/MISSAO-A-L2-L3-ORQUESTRADOR.log",
-      "outputSha256": "0045f107b0306240bfc8848028b53baeac0950f050f8453d794abe650c0448f3"
+      "startedAt": "2026-11-01T09:56:14.210Z",
+      "finishedAt": "2026-11-01T09:56:19.472Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101095442-003acd6b/logs/MISSAO-A-L2-L3-ORQUESTRADOR.log",
+      "outputSha256": "f68c1d4b3921b5f8f54e20c2bfaf4868fe37ce9f68bade10d1d2937390d6bf87"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:57:10.252Z",
-  "proofHash": "d0e2ce620ce184e3b7bdc4bd1a00dc28613329c1f9549fcd061d2c3d84bdbbcc"
+  "createdAt": "2026-11-01T09:56:19.490Z",
+  "proofHash": "be58aee55d4bd910abfbf03670c86162cc91521093d029e61b75f8509a94a339"
 }

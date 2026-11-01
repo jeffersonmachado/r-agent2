@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "f64f2d4c-3a70-4ab6-97a2-3f632604b1c4",
+  "defectId": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "tests/unit/ciGateL0Determinism.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/ciGateL0Determinism.test.js",
+      "command": "npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:26:53.313Z",
+      "finishedAt": "2026-11-01T09:26:55.523Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
+      "outputSha256": "a9fb023a42e50635544b04c7fd37de5396a92dbdfdf2a9d37b7b246af545c2d9"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/ciGateL0Determinism.test.js",
+      "sha256": "03c38792d35c7eaf06c23966104f7ab2d60f76bf45882207112a9ea4d8326cf6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:26:55.530Z",
+  "proofHash": "285bdcda8e76c9215f35a1baa2d844c61316404f0d568f8078812db3c532c26e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "xbR4ZAmlvIzJq+KSmLVoyRTgV74J76GN+gpzHE/3pVJQfTURNT5sZWQE+SiDbDMemOLRXWjWvQazSwgWHZp7AA==",
+    "signedAt": "2026-11-01T09:57:00.537Z"
+  }
+}

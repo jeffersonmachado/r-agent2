@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "926b8822-5f51-4f1c-92d6-14b795e11dfb",
+  "transitionId": "cde73b0a-4b6a-4dde-9cba-e87393bb6613",
   "defectId": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:28:43.693Z",
-      "finishedAt": "2026-11-01T06:28:46.989Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
-      "outputSha256": "e66342a8bc05d105bcd9599342502223a105bef1c56bc2e476b6617295ca08ef"
+      "startedAt": "2026-11-01T09:19:20.132Z",
+      "finishedAt": "2026-11-01T09:19:23.321Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
+      "outputSha256": "f723739d15c2c94942d2ce542bc1251679cd1c1e7783cc40c81de60890b83cd3"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:28:46.995Z",
-  "proofHash": "ac3cc23da24629e570e11558becbc4840b0c6e2dace115c901cc64836dfb8a73"
+  "createdAt": "2026-11-01T09:19:23.328Z",
+  "proofHash": "5eb20bada3b05fef116cbf059378f82c12ab8b8d5306e43d30551058f1b222e7"
 }

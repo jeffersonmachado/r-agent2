@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "874daf7e-f6c9-4636-8f25-13c35f8b1a3b",
+  "transitionId": "5a6c4eb8-efc3-422b-bcb5-4e7be3e1242c",
   "defectId": "MISSAO-B8-ESTADOS-FILA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "36606cf05442ef933fca1cf1c27901168aea445a",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/governance/hardeningQueueStates.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/hardeningQueueStates.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T08:20:57.454Z",
-      "finishedAt": "2026-11-01T08:21:00.983Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082057-5349ee1c/logs/MISSAO-B8-ESTADOS-FILA.log",
-      "outputSha256": "725104cd5d86fa315f67fa5f95b64af8c0aacbeda5f8cf90b2d5af35263e22e7"
+      "startedAt": "2026-11-01T09:47:52.199Z",
+      "finishedAt": "2026-11-01T09:47:55.612Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/MISSAO-B8-ESTADOS-FILA.log",
+      "outputSha256": "3bcf6fc5b1ddf58a76236e56be0dd83173338e0de7e36ea0c6e35f6ca5b0b711"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T08:21:00.990Z",
-  "proofHash": "a74e0275042b2b8d68d10d8be6c34f2b3089b4ff3633ba6aff2cba645ba98f80"
+  "createdAt": "2026-11-01T09:47:55.619Z",
+  "proofHash": "b5634c589e868a21b22dccddb4849b19abe49547ef84208ee3e3a3505bc17066"
 }

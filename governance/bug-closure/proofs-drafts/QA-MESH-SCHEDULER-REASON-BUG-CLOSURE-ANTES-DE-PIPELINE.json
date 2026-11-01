@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "049eab67-3fb7-4915-a1b4-24755d715442",
+  "transitionId": "ada44cf4-def4-472c-b252-120c76445a58",
   "defectId": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "qa-mesh/__tests__/scheduler.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest qa-mesh/__tests__/scheduler.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:52:51.212Z",
-      "finishedAt": "2026-11-01T06:52:56.461Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
-      "outputSha256": "8860b00b711e137382a4deb623298d0e98cdf7281ce6e50992edce7ed0c46e9a"
+      "startedAt": "2026-11-01T09:49:45.697Z",
+      "finishedAt": "2026-11-01T09:49:51.555Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+      "outputSha256": "20f74f0d6ce3df8ff3899cb38ad5e63dbb282903daa943bc755ad1048c2a2a42"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:52:56.468Z",
-  "proofHash": "047b8b9a09ace8ffd80298ba38b6b1998882b11b739d1d2cbfc52dc6babfa835"
+  "createdAt": "2026-11-01T09:49:51.563Z",
+  "proofHash": "c06ff2578babcede33ff8dd7430e56ceb98e06998511abe10b3f3fccf1ff76b3"
 }

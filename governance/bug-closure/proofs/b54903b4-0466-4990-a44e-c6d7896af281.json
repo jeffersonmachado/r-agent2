@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b54903b4-0466-4990-a44e-c6d7896af281",
+  "defectId": "RESUME-SUBSTITUTA-SEM-ESCOPO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+      "command": "npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:52:03.334Z",
+      "finishedAt": "2026-11-01T08:53:52.565Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101083447-afdfeb76/logs/RESUME-SUBSTITUTA-SEM-ESCOPO.log",
+      "outputSha256": "cf395cb2c6e20f7a57624cb2b751eb609a3c3ac6d9c77520ba3514d79b26a4a8"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
+      "sha256": "2c23e00d78c28e59ee3b345922a5afaa2f9e6ecb1efdc5f4b8cb0cfc498872c1"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T08:53:52.575Z",
+  "proofHash": "44d78108c11d04e5023027e942ebea09643d2454462ab95403f1a481c9617563",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "1pSw+l5Sr2ZqwdgCvDmMS+YwFxqJLMmtsG0CGlxI9ACi0OVrguauQVZXjnTN+/Ksf4En1V7LMfcG9gO5j85nAg==",
+    "signedAt": "2026-11-01T09:11:33.905Z"
+  }
+}

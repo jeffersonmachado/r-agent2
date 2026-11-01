@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "81c33a78-30ea-4349-a414-2bfadc4b138f",
+  "transitionId": "aeafd05f-6ebf-4ff9-8e84-9ad80d4e7aa2",
   "defectId": "P1-PATCH-SYMLINK-ESCAPE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/engineeringRouterPatchSymlinkEscape.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:36:33.197Z",
-      "finishedAt": "2026-11-01T06:36:35.852Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P1-PATCH-SYMLINK-ESCAPE.log",
-      "outputSha256": "f497d6d4b8e91e3b926e67b48090513df5a7760ba37d11e210b119876445886b"
+      "startedAt": "2026-11-01T09:27:03.344Z",
+      "finishedAt": "2026-11-01T09:27:06.203Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-PATCH-SYMLINK-ESCAPE.log",
+      "outputSha256": "858d689d0c7d4703bafc66baa86d5ba64083cfab342fc464bdab38c2ec5d379e"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:36:35.860Z",
-  "proofHash": "19bab27490a0d01a4b1ebe2932195961ef6f3f5272a18661f7a551c73fb50f9f"
+  "createdAt": "2026-11-01T09:27:06.214Z",
+  "proofHash": "9dd69ebfb86ad65ca56066d593f2379345b70eaf80def3bb56b6ce2e50bfff3c"
 }

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "7e372133-0a5d-4837-8820-92a3178c96b5",
+  "defectId": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "697aa0f8201edbe4d39f44d4e75d756b4361d7cba4403e3de57266a0e1f8da00",
+  "requiredTests": [
+    "tests/integration/engineeringMissionFullE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionFullE2E.test.js",
+      "command": "npx jest tests/integration/engineeringMissionFullE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:46:45.000Z",
+      "finishedAt": "2026-11-01T08:47:42.800Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101083447-afdfeb76/logs/L1-L2-JORNADA-SUPERVISIONADA-MEDIDA.log",
+      "outputSha256": "43ba716ca342ab2727b3bee2bb71e1b715dfcbd9180fed292a25e1bc074e2eae"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionFullE2E.test.js",
+      "sha256": "5412fcb5d91a730baffddd416cb76eed6a98a0cd94cec44329aa1e81e7f0bb5e"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T08:47:42.818Z",
+  "proofHash": "0127d44dc0136246fa7ba1fc3397e1bcd86e00e683736e1abb39fba8033c5482",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "/+T6Dz8XlYZHg1zIbpdKtR6WnJRi94KPc1bMqtf3w4/aobViW/08RYfw5SyjzZJC6gSgOOVAHVeh6Sxgg4nJDg==",
+    "signedAt": "2026-11-01T09:11:16.151Z"
+  }
+}

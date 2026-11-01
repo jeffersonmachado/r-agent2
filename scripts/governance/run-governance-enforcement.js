@@ -71,7 +71,7 @@ const PASSOS_OBRIGATORIOS = Object.freeze([
   'npm run validate:hardening-queue',
 ]);
 
-const ETAPAS = Object.freeze(['IDENTIDADE', 'AUTORIZACAO', 'ESCOPO', 'CADEIA', 'EXECUCAO', 'EVIDENCIAS', 'DECISAO']);
+const ETAPAS = Object.freeze(['IDENTIDADE', 'AUTORIZACAO', 'ESCOPO', 'CADEIA', 'EXECUCAO', 'EVIDENCIAS', 'CONGELAMENTO', 'DECISAO']);
 
 /** Operação de elegibilidade que governa o gate agregado (é o SELO final). */
 function avaliarAutorizacao(id) {
@@ -160,6 +160,70 @@ function identidadeCompleta(id) {
  * Executa a cadeia e devolve o veredito (sem I/O de disco além dos subprocessos).
  * @param {{cadeia?: string[], executor?: Function, id?: object}} [opcoes]
  */
+/**
+ * Fotografia do estado da árvore — HEAD + impressão do worktree.
+ *
+ * DEFEITO MEDIDO (2026-10-16, agg7): eu commitei DUAS vezes (`602a00a1c` 15:30:42 e
+ * `afb5e1eaf` 15:32:18) enquanto o agregado rodava (terminou 15:37:17). O passo de runtime do
+ * Engineering Router deriva `expectedBaseCommit` do HEAD REAL e calcula tree hashes; com o HEAD
+ * andando no meio, `expected != validated` e a promoção foi recusada — o gate ficou RED por causa
+ * do MEU commit, não do código. Sem medir o estado antes e depois, esse RED é indistinguível de
+ * uma regressão real.
+ */
+function capturarEstadoDaArvore() {
+  const git = (args) => {
+    const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
+    return r.status === 0 ? String(r.stdout || '').trim() : null;
+  };
+  const head = git(['rev-parse', 'HEAD']);
+  const status = git(['status', '--porcelain']);
+  return {
+    head,
+    worktreeLimpo: status === '',
+    impressaoWorktree: status === null ? null : crypto.createHash('sha256').update(status).digest('hex'),
+  };
+}
+
+/**
+ * A árvore ficou CONGELADA durante a execução?
+ *
+ * Congelado = mesmo HEAD e mesma impressão do worktree no início e no fim. Não exige árvore
+ * LIMPA: exigir limpeza bloquearia o trabalho normal de desenvolvimento — o que a regra proíbe é
+ * o estado MUDAR embaixo do medidor.
+ *
+ * @returns {{congelado: boolean, codigo: string|null, detalhe: string|null}}
+ */
+function avaliarCongelamento(inicio, fim) {
+  if (!inicio || !fim) {
+    return { congelado: false, codigo: 'ESTADO_NAO_MEDIDO', detalhe: 'sem fotografia do estado da árvore — não há como afirmar congelamento' };
+  }
+  if (!inicio.head || !fim.head) {
+    return { congelado: false, codigo: 'HEAD_NAO_RESOLVIDO', detalhe: 'HEAD não resolvido — a atribuição do veredito a um commit é impossível' };
+  }
+  if (inicio.head !== fim.head) {
+    return {
+      congelado: false,
+      codigo: 'HEAD_MUDOU_DURANTE_O_RUN',
+      detalhe: `HEAD ${inicio.head.slice(0, 9)} -> ${fim.head.slice(0, 9)}: commit (ou checkout) durante o agregado. O veredito mediu DUAS árvores diferentes.`,
+    };
+  }
+  // CONTEÚDO do worktree NÃO reprova — e a razão é medida, não estética: os próprios validadores
+  // do agregado regravam evidência versionada durante a execução (`AI_MEMORY/evidence/*`,
+  // `config/system-inventory.json`, relatórios de governança). Reprovar por isso tornaria o gate
+  // permanentemente vermelho por desenho. O que invalida o veredito é a IDENTIDADE da árvore
+  // (HEAD/commit) mudar embaixo do medidor — foi exatamente a causa do RED do agg7.
+  const worktreeMudou = inicio.impressaoWorktree !== fim.impressaoWorktree;
+  return {
+    congelado: true,
+    codigo: null,
+    detalhe: null,
+    worktreeMudou,
+    avisoWorktree: worktreeMudou
+      ? 'conteúdo do worktree mudou durante o run (esperado: validadores regravam evidência versionada); a IDENTIDADE (HEAD) ficou estável'
+      : null,
+  };
+}
+
 function executarCadeia(opcoes = {}) {
   const cadeia = opcoes.cadeia || lerCadeia();
   const id = opcoes.id || identidade();
@@ -177,6 +241,9 @@ function executarCadeia(opcoes = {}) {
       saidaFinal: saida.trim().split('\n').slice(-6).join('\n'),
     };
   });
+
+  const capturarEstado = opcoes.capturarEstado || capturarEstadoDaArvore;
+  const estadoInicial = capturarEstado();
 
   const etapas = [{ etapa: 'IDENTIDADE', iniciadaEm: new Date().toISOString() }];
   const idCheck = identidadeCompleta(id);
@@ -240,14 +307,29 @@ function executarCadeia(opcoes = {}) {
   };
   etapas.push({ etapa: 'EVIDENCIAS', iniciadaEm: new Date().toISOString(), resultado: evidencia.ok ? 'OK' : 'AUSENTE', semDigest: evidencia.semDigest });
 
-  // ── 7) DECISÃO ──────────────────────────────────────────────────────────
+  // ── 7) CONGELAMENTO — o estado medido não pode ter mudado embaixo do medidor ──
+  const estadoFinal = capturarEstado();
+  const congelamento = avaliarCongelamento(estadoInicial, estadoFinal);
+  etapas.push({
+    etapa: 'CONGELAMENTO',
+    iniciadaEm: new Date().toISOString(),
+    resultado: congelamento.congelado ? 'CONGELADO' : 'MUDOU',
+    codigo: congelamento.codigo,
+    detalhe: congelamento.detalhe,
+    worktreeMudou: congelamento.worktreeMudou === true,
+    avisoWorktree: congelamento.avisoWorktree || null,
+  });
+
+  // ── 8) DECISÃO ──────────────────────────────────────────────────────────
   const todosPassaram = passos.length === cadeia.length
     && passos.every((p) => p.exitCode === 0)
     && evidencia.ok;
 
   let status;
   let motivo = null;
-  if (todosPassaram) status = 'PASS';
+  // Árvore que mudou invalida até o PASS: o veredito mediu um estado que não existe mais.
+  if (!congelamento.congelado) { status = 'FAIL'; motivo = `${congelamento.codigo}: ${congelamento.detalhe}`; }
+  else if (todosPassaram) status = 'PASS';
   else if (interrompidoEm) { status = 'FAIL'; motivo = `passo falhou: ${interrompidoEm}`; }
   else if (!evidencia.ok) { status = 'FAIL'; motivo = `passo sem evidência (digest ausente): ${evidencia.semDigest.join(',')}`; }
   else { status = 'FAIL'; motivo = `cadeia incompleta: ${passos.length}/${cadeia.length} passos`; }
@@ -314,5 +396,6 @@ if (require.main === module) {
 
 module.exports = {
   main, executarCadeia, lerCadeia, identidadeCompleta,
+  avaliarCongelamento, capturarEstadoDaArvore,
   validarEscopo, avaliarAutorizacao, PASSOS_OBRIGATORIOS, ETAPAS,
 };

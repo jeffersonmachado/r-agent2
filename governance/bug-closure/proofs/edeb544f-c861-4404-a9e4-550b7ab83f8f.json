@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "edeb544f-c861-4404-a9e4-550b7ab83f8f",
+  "defectId": "P1-6",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "rag-service/tests/test_hybrid_isolation_real_db.py"
+  ],
+  "executions": [
+    {
+      "testPath": "rag-service/tests/test_hybrid_isolation_real_db.py",
+      "command": "/tmp/ragvenv/bin/python -m pytest rag-service/tests/test_hybrid_isolation_real_db.py -q -p no:cacheprovider",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:25:49.622Z",
+      "finishedAt": "2026-11-01T09:25:51.993Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-6.log",
+      "outputSha256": "b5b06f23bd44fc64e45aef169d85a9f25d3ea0c7c74be1c683bfb947e8397989"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "rag-service/tests/test_hybrid_isolation_real_db.py",
+      "sha256": "a4d08bd20c11b03ecca33d213e30c9d62c8c75830d7dcdd15dca1c3cbdfe53a5"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:25:52.000Z",
+  "proofHash": "e842d90673c3c577548d85c37d09320e9d61b94a2d5d9ebda24dd947b519425f",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "ej/oyF+JK4CvzpUNhjwJkizd2HvQqFXHWVqrp+PsBwUHnjX89mO0FiieZEEf7jgdH9AdTgI20RxPmj8FgQzGDQ==",
+    "signedAt": "2026-11-01T09:56:55.264Z"
+  }
+}

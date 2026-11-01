@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "8e22ff5d-ecd6-4abe-b47a-071265fd3689",
+  "transitionId": "686968c2-2ee5-4bda-b2b8-64c8c14350bd",
   "defectId": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
-  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/integration/crmTenantIsolation.postgres.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/crmTenantIsolation.postgres.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T06:25:55.899Z",
-      "finishedAt": "2026-11-01T06:26:02.019Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
-      "outputSha256": "9d7d5e5f3075578930a91810c226a731c88c0474847c617e25e6eb0c155a4251"
+      "startedAt": "2026-11-01T09:16:27.604Z",
+      "finishedAt": "2026-11-01T09:16:33.187Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
+      "outputSha256": "6e08f317518fab39aa64d363e91f4616a1e93faba4e47ccfc949b5bbba34bc1b"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T06:55:23.337183Z",
+    "at": "2026-11-01T09:57:30.438542Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T06:26:02.029Z",
-  "proofHash": "33644109a34a3b85fccdc2d8d68f3c017c27418a0812156bd71619586a3dd38f"
+  "createdAt": "2026-11-01T09:16:33.196Z",
+  "proofHash": "af3c49ee15864931f01c1158edb614f1040116a5943dd8b556e7986a1a66c75a"
 }

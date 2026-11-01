@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "2f7090da-312e-44f7-bde2-27a8b4b731ec",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "tests/unit/governance/closurePointersOrphans.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/closurePointersOrphans.test.js",
+      "command": "npx jest tests/unit/governance/closurePointersOrphans.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:47:21.898Z",
+      "finishedAt": "2026-11-01T09:47:25.535Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
+      "outputSha256": "dad4274adf5ab1556c41de80b2df89faa03717f01e291818cea7f5e4cad03f5e"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/closurePointersOrphans.test.js",
+      "sha256": "77446bb3a94830087a2508fd163a2d4410730fdd481dbaa45d8a5d66ba6913a2"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:47:25.542Z",
+  "proofHash": "8bc223428a9d291726ed1ce1ecc06037dacfe378e08c0bd1749d0f39b788676c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "CBOSqkhMofqI6u2T8MErOB2U6y232NAoJzLvQ9DZIu3tDGmqYhDSyIyCtV8nPoSblLhKSNAKUyReGWazcFaiDA==",
+    "signedAt": "2026-11-01T09:56:44.814Z"
+  }
+}

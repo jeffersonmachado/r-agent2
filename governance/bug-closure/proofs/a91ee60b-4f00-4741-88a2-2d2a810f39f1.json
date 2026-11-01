@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a91ee60b-4f00-4741-88a2-2d2a810f39f1",
+  "defectId": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "requiredTests": [
+    "tests/integration/engineeringMissionMergeConcurrency.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+      "command": "npx jest tests/integration/engineeringMissionMergeConcurrency.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T09:26:58.483Z",
+      "finishedAt": "2026-11-01T09:27:03.327Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO.log",
+      "outputSha256": "007b821d5c81da41b0edcfb0b6e9d5db61905e1d393b5ae92651ae9d9a23fb17"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/engineeringMissionMergeConcurrency.test.js",
+      "sha256": "3fbc81c07106e08a315f8027ff3e78f8c5d71173adc84eeb0e339af9ee494798"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T09:27:03.335Z",
+  "proofHash": "7756b1041d29964f8b34aa0cf3647ee27a2ee6ee5cf8a199501110b2a2077995",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Zu2V91CNIrg9FqGMD112WBhRO8lfj+1q3tAJrJRFWKzimTB1iDh/L2ewsGyl5RQMpx1bnJ8nNMGybB5E6DvOCA==",
+    "signedAt": "2026-11-01T09:57:01.557Z"
+  }
+}
