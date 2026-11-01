@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e053fe15-83c5-4109-8e88-d467916ef0ef",
+  "transitionId": "9349abcf-d62a-41f4-bcd7-d3933b62bb6e",
   "defectId": "P0-FILAS-ROLLBACK-DESTRUTIVO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/queueCreatePersistBeforeResponse.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T04:28:28.531Z",
-      "finishedAt": "2026-11-01T04:28:31.988Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
-      "outputSha256": "80c4138f84593bae9255cd30723dfe3ca4e28b3487dea2becd59d1e97f25b5c8"
+      "startedAt": "2026-11-01T05:01:06.952Z",
+      "finishedAt": "2026-11-01T05:01:10.132Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
+      "outputSha256": "d976157d27755a6f99f57bc119e67e95fdf811daa81300413bc947aa4dc1718e"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ROLLBACK-DESTRUTIVO-baseline-ad5219c3.log",
-        "logSha256": "1da95dfcc7eae48e06348df5ccef43c3b6e18fc9c44b6c5284efe2f829683bd4"
+        "logSha256": "73c04905ca5fa69eb4df7ca0de80fa74005ba5fa46bb67371a307143d170038f"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ROLLBACK-DESTRUTIVO-mutado-ad5219c3.log",
-        "logSha256": "40f599588fa58778d6d69f8a74b9622917707e2d2a30de22cff6345d6ef6ab6e"
+        "logSha256": "903a841d46b05be6c7ac21ea96cddb80fbde9aea9152e83f88558c7dfa069d36"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ROLLBACK-DESTRUTIVO-restaurado-ad5219c3.log",
-        "logSha256": "4274cf07b4fbf686085f634b46f97c2ae61770cf245c42c6d2b890bbc9371e44"
+        "logSha256": "906fa3c0c66b50136d7fcb764742aad6f72a7218908760fe7997f9a88e9418c6"
       },
-      "capturedAt": "2026-11-01T04:24:53.356Z"
+      "capturedAt": "2026-11-01T04:54:09.290Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T04:29:12.031267Z",
+    "at": "2026-11-01T05:01:52.486971Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T04:28:31.995Z",
-  "proofHash": "c0b5e33f417b9a33ac6808d77416b8876ba8fd8a218f2b324545c4ddd14f6b13"
+  "createdAt": "2026-11-01T05:01:10.138Z",
+  "proofHash": "6f7b46a028bdb6ec1583e2d9dbc9e4b84602fbf4854019e88d30d1205226a187"
 }

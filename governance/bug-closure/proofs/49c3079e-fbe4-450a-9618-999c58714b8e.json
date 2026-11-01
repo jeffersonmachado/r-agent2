@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "49c3079e-fbe4-450a-9618-999c58714b8e",
+  "defectId": "P0-3",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/securityIntel/securityGateProvenance.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "command": "npx jest tests/unit/securityIntel/securityGateProvenance.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:00:19.764Z",
+      "finishedAt": "2026-11-01T05:00:23.570Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-3.log",
+      "outputSha256": "1f68ca0d5f99a190cdc439f6f5b0e16d5bf5d429afa85f39161796d66f6366e9"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/lib/security-gate-provenance.js",
+      "control": "run SUPERSEDED/ABANDONED deixa de bloquear a avaliação de evidência (run encerrado passaria como corrente)",
+      "mutatedFromSha256": "37ffd106789ebbe6f8a95ef36ef7805879fdf7a2e7015cab43ba85f8a9cfae5d",
+      "mutatedToSha256": "7f00ec5ee46eb169fc40dd19c6407e48f51d553b75403b6555daa9e3f28b78bc",
+      "testPath": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "command": "npx jest tests/unit/securityIntel/securityGateProvenance.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-3-baseline-ee88b492.log",
+        "logSha256": "c649d9c835400e1512f7380752762cf0e8e7d60be6d18bf352e6df2f1b8dbb1e"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-3-mutado-ee88b492.log",
+        "logSha256": "a5eceb2b52ec3fea2ca0f83072ef238583b660f62ada1e98de4a827a19149938"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-3-restaurado-ee88b492.log",
+        "logSha256": "c32de26a6478e0095fb275b3b417138caee636a553f968d5336a86c2d290c565"
+      },
+      "capturedAt": "2026-11-01T04:52:21.314Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/securityIntel/securityGateProvenance.test.js",
+      "sha256": "2db3fa33a089631062c2f234cf0157553cba01b92202d697b9f136aa0f5c02f4"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:01:52.486971Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:00:23.577Z",
+  "proofHash": "9d3c1ca9a86e267d3e1ac5b7d68dde2938e08d5bed216338f47cd8b5150a9cf6",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "5yUOUVe3txYKLn3ZUCb52tU1wvOZSFCKiS5mC7a/SH6P81MHR2U7oyjGfnMvQSi/e3G3U1TM8wU0OBJcmRnyDw==",
+    "signedAt": "2026-11-01T05:01:54.182Z"
+  }
+}

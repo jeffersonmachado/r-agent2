@@ -144,6 +144,102 @@
       "find": "  if (!autorizacao.allowed) {",
       "replace": "  if (false && !autorizacao.allowed) {",
       "test": "tests/unit/governance/governanceEnforcementOrder.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-6",
+      "targetFile": "scripts/governance/run-release-suites.js",
+      "control": "reuso de lote volta a ignorar o exit code REAL do processo (falso verde do JSON)",
+      "find": "  if (meta.exitCode !== 0) return { reuse: false, reason: 'ORIGINAL_EXIT_CODE_NONZERO' };",
+      "replace": "  if (false && meta.exitCode !== 0) return { reuse: false, reason: 'ORIGINAL_EXIT_CODE_NONZERO' };",
+      "test": "tests/unit/governance/releaseSuiteRunner.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-5",
+      "targetFile": "scripts/governance/run-impact-validation.js",
+      "control": "grafo construído de OUTRO source deixa de escalar (decide sobre árvore que não analisou)",
+      "find": "  } else if (grafo && fingerprintAtual && grafo.sourceFingerprint !== fingerprintAtual) {",
+      "replace": "  } else if (false) {",
+      "test": "tests/unit/coverage/impactRunnerBinding.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-7",
+      "targetFile": "scripts/governance/verify-branch-protection.js",
+      "control": "corpo do PUT volta a omitir required_status_checks (HTTP 422 silencioso, --apply nunca funciona)",
+      "find": "    required_status_checks: desired.required_status_checks === undefined ? null : desired.required_status_checks,",
+      "replace": "    required_status_checks_omitido: desired.required_status_checks === undefined ? null : desired.required_status_checks,",
+      "test": "tests/unit/governance/branchProtectionApplyPayload.test.js"
+    },
+    {
+      "defectId": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
+      "targetFile": "governance/governance-chain.js",
+      "control": "verificador deixa de recalcular o hash do elo (aceita a cadeia como ela se declara)",
+      "find": "    if (link.exists && exists && currentHash !== link.hash) {",
+      "replace": "    if (false && link.exists && exists && currentHash !== link.hash) {",
+      "test": "tests/unit/governance/bugClosureHistoricalGuards.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
+      "targetFile": "qa-mesh/intelligence/failureIntelligence.js",
+      "control": "execução SEM lineage volta a sobrescrever a evidência governada (latest.json)",
+      "find": "  const temLineage = Boolean(intelligence.runId && intelligence.sourceFingerprint);",
+      "replace": "  const temLineage = true;",
+      "test": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
+      "targetFile": "scripts/governance/check-wave-evidence-same-run.js",
+      "control": "evidência de wave de OUTRO run deixa de ser violação (passa como se fosse do run atual)",
+      "find": "    if (runDaEvidencia !== runId) {",
+      "replace": "    if (false && runDaEvidencia !== runId) {",
+      "test": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js"
+    },
+    {
+      "defectId": "P0-1",
+      "targetFile": "api/modules/security-intel/approvalAuthority.js",
+      "control": "identidade de aprovação volta a ser aceita do CORPO (autodeclaração de autoridade)",
+      "find": "    if (isUsefulValue(body[field])) {",
+      "replace": "    if (false && isUsefulValue(body[field])) {",
+      "test": "tests/unit/securityIntel/approvalAuthority.test.js"
+    },
+    {
+      "defectId": "L1-WORKTREE-MUTILACAO-RECORRENTE",
+      "targetFile": "governance/worktree-integrity.js",
+      "control": "remoção de casos de teste deixa de ser violação (worktree mutilado passa como PASS)",
+      "find": "    if (file.removedTests > file.addedTests) {",
+      "replace": "    if (false && file.removedTests > file.addedTests) {",
+      "test": "tests/unit/governance/worktreeIntegrity.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-2",
+      "targetFile": "governance/governance-chain.js",
+      "control": "certificação volta a NÃO recalcular a cadeia (sela sobre declaração, não sobre bytes)",
+      "find": "  const resultado  = verificar(chain);",
+      "replace": "  const resultado  = { valid: true, failures: [] };",
+      "test": "tests/unit/governance/governanceChainCertification.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-3",
+      "targetFile": "scripts/governance/seal-release.sh",
+      "control": "selo publica ANTES de certificar (artefato publicado sem certificação)",
+      "find": "PHASES=(prepare candidate final consolidate certify publish verify-delivery)",
+      "replace": "PHASES=(prepare candidate final consolidate publish certify verify-delivery)",
+      "test": "tests/unit/governance/sealPhaseOrder.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-P0-4",
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "decisão volta a ser comparada por SUBSTRING (literal desconhecido contendo GO aprova)",
+      "find": "  const jaEstado = Object.values(STATES).includes(texto);",
+      "replace": "  const jaEstado = /GO/i.test(texto);",
+      "test": "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
+      "targetFile": "governance/release-artifact-identity.js",
+      "control": "isolamento de run deixa de reprovar candidato/entregue de OUTRO run",
+      "find": "    if (manifest.governanceRunId !== currentRun.runId) {",
+      "replace": "    if (false && manifest.governanceRunId !== currentRun.runId) {",
+      "test": "tests/unit/governance/releaseArtifactIdentity.test.js"
     }
   ]
 }

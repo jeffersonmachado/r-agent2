@@ -1,21 +1,19 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-11-01T04:28:59.715Z",
+  "generatedAt": "2026-11-01T05:01:40.303Z",
   "authoritative": false,
   "resumo": {
-    "commit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
+    "commit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
     "fingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
-    "runId": "run-20261101042635-cc5e4fbd",
+    "runId": "run-20261101045911-1945195a",
     "total": 31,
     "porClasse": {
-      "REQUER_DECISAO_HUMANA": 1,
-      "AGUARDA_INSUMOS_HUMANOS": 29,
+      "AGUARDA_INSUMOS_HUMANOS": 30,
       "AMBIENTE_INDISPONIVEL": 1
     },
     "porSeveridade": {
-      "REQUER_DECISAO_HUMANA:P0": 1,
-      "AGUARDA_INSUMOS_HUMANOS:P0": 29,
+      "AGUARDA_INSUMOS_HUMANOS:P0": 30,
       "AMBIENTE_INDISPONIVEL:P0": 1
     },
     "filaAlterada": false,
@@ -27,8 +25,18 @@
       "severity": "P0",
       "estadoPersistido": "VERIFIED",
       "titulo": "Criar run governado novo torna o CANDIDATO entregue um artefato de outro run",
-      "classe": "REQUER_DECISAO_HUMANA",
-      "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO"
+      "classe": "AGUARDA_INSUMOS_HUMANOS",
+      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "teste": "tests/unit/governance/releaseArtifactIdentity.test.js",
+      "transicao": "VERIFIED → RESOLVED",
+      "provasAusentes": [
+        "EVIDENCIA_NEGATIVA_AUSENTE",
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
+      ],
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN.log",
+      "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN.json",
+      "camposParaAssinar": 18
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
@@ -44,7 +52,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.json",
       "camposParaAssinar": 18
     },
@@ -62,7 +70,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.json",
       "camposParaAssinar": 18
     },
@@ -80,7 +88,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-P0-2.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-P0-2.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-2.json",
       "camposParaAssinar": 18
     },
@@ -98,7 +106,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-P0-3.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-P0-3.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-3.json",
       "camposParaAssinar": 18
     },
@@ -116,7 +124,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-4.json",
       "camposParaAssinar": 18
     },
@@ -134,7 +142,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-P0-5.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-P0-5.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-5.json",
       "camposParaAssinar": 18
     },
@@ -152,7 +160,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-P0-6.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-P0-6.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-6.json",
       "camposParaAssinar": 18
     },
@@ -170,7 +178,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-P0-7.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-P0-7.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-7.json",
       "camposParaAssinar": 18
     },
@@ -188,7 +196,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
       "draft": "governance/bug-closure/proofs-drafts/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.json",
       "camposParaAssinar": 18
     },
@@ -206,7 +214,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
       "draft": "governance/bug-closure/proofs-drafts/L1-WORKTREE-MUTILACAO-RECORRENTE.json",
       "camposParaAssinar": 18
     },
@@ -224,7 +232,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
       "draft": "governance/bug-closure/proofs-drafts/MISSAO-B1-CADEIA-CRIPTOGRAFICA.json",
       "camposParaAssinar": 18
     },
@@ -242,7 +250,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-1.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-1.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-1.json",
       "camposParaAssinar": 18
     },
@@ -260,7 +268,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-2.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-2.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-2.json",
       "camposParaAssinar": 18
     },
@@ -278,7 +286,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-3.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-3.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-3.json",
       "camposParaAssinar": 18
     },
@@ -296,7 +304,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-4.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-4.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-4.json",
       "camposParaAssinar": 18
     },
@@ -314,7 +322,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-5.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-5.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-5.json",
       "camposParaAssinar": 18
     },
@@ -332,7 +340,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.json",
       "camposParaAssinar": 18
     },
@@ -350,7 +358,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.json",
       "camposParaAssinar": 18
     },
@@ -368,7 +376,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.json",
       "camposParaAssinar": 18
     },
@@ -381,7 +389,7 @@
       "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
       "exitCode": 1,
       "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log"
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log"
     },
     {
       "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
@@ -397,7 +405,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.json",
       "camposParaAssinar": 18
     },
@@ -415,7 +423,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.json",
       "camposParaAssinar": 18
     },
@@ -433,7 +441,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ISOLAMENTO-TENANT.json",
       "camposParaAssinar": 18
     },
@@ -451,7 +459,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ROLLBACK-DESTRUTIVO.json",
       "camposParaAssinar": 18
     },
@@ -469,7 +477,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.json",
       "camposParaAssinar": 18
     },
@@ -487,7 +495,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.json",
       "camposParaAssinar": 18
     },
@@ -505,7 +513,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.json",
       "camposParaAssinar": 18
     },
@@ -523,7 +531,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.json",
       "camposParaAssinar": 18
     },
@@ -541,7 +549,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.json",
       "camposParaAssinar": 18
     },
@@ -559,7 +567,7 @@
         "APROVACAO_HUMANA_AUSENTE",
         "ASSINATURA_INVALIDA"
       ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.json",
       "camposParaAssinar": 18
     }

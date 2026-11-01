@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "d10b4db4-2571-476d-9145-17cf538c5795",
+  "transitionId": "d0ae0109-da56-4707-ad35-a40ebedacb16",
   "defectId": "P0-2",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/evidenceManifestHashBaseline.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/evidenceManifestHashBaseline.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T04:27:34.932Z",
-      "finishedAt": "2026-11-01T04:27:38.445Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-2.log",
-      "outputSha256": "1ea0b300668fe2d5ea62bad83acad2b8651b9639dd19501cde45156f7822847a"
+      "startedAt": "2026-11-01T05:00:16.541Z",
+      "finishedAt": "2026-11-01T05:00:19.748Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-2.log",
+      "outputSha256": "ddd05f56df62c769a2824caacab7650374a115397427cfd0e90c67be8af575ef"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-baseline-729b5335.log",
-        "logSha256": "4a629684127ae262aa43a3135c556b90acff4b9ac7809cec21d22b8da8c1317a"
+        "logSha256": "fefccf16a3d4014671738c3722c02a11b972e2c0a6e6acc0447fa8763ffb4189"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-mutado-729b5335.log",
-        "logSha256": "4af41aa5313ebaca54b8d94936e08427e7becf7af5677e399bab7ed8913f6e53"
+        "logSha256": "4624b2278080ca8b703d98973ac96931c7a5dc65668c7bdc4b6e3519f2b47c95"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-restaurado-729b5335.log",
-        "logSha256": "ed7cfb5bcb7788eebe0322b9f763285ddb8d24edcb8ddcf8ad3a91379adb4253"
+        "logSha256": "c57e4b804a1a7b988e099b1371b9f8a0afc376ad8b5f6af9d419ac11f3e87eb2"
       },
-      "capturedAt": "2026-11-01T04:22:24.768Z"
+      "capturedAt": "2026-11-01T04:52:04.925Z"
     },
     {
       "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
@@ -59,19 +59,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-baseline-8dcb35ff.log",
-        "logSha256": "390d63f5bf598008f8a418d3b27400d41c5f7d7e00570b8d0e7041e3c12d40df"
+        "logSha256": "75843cbda9f2e47763d0cd58b946145402b5d3d37c40657571a6a25672d11050"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-mutado-8dcb35ff.log",
-        "logSha256": "fba5d1629245026694bac396016331dc82b5aae225a0213bc397d20cc7c76a2b"
+        "logSha256": "0e97475e154c2430aeff8d35d50b86cd55f5f9924d412773b508a9275bdb3bf1"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-restaurado-8dcb35ff.log",
-        "logSha256": "46a0892e7f6bcbfa497c06072b62e87d07f453cb7d996217956ea1dfc972b06a"
+        "logSha256": "25e990f303169567970e8dcb5856732223aa07840ff7156bd11b6fa77ce3035c"
       },
-      "capturedAt": "2026-11-01T04:22:33.968Z"
+      "capturedAt": "2026-11-01T04:52:12.760Z"
     }
   ],
   "artifactHashes": [
@@ -87,7 +87,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T04:29:12.031267Z",
+    "at": "2026-11-01T05:01:52.486971Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -98,6 +98,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T04:27:38.453Z",
-  "proofHash": "c4cec3f2caf6b2a9af9b10c3bf576ffb3d1d09ed0bb84b5ad059576de2d5d36e"
+  "createdAt": "2026-11-01T05:00:19.756Z",
+  "proofHash": "435cfae3dae2e3a6e201f2c7982a07b652ebf63ae044e784f706968b8845af7c"
 }

@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "eae33884-1ec9-405a-8d5d-c4a7c3ca50da",
+  "defectId": "P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/governanceEnforcementOrder.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/governanceEnforcementOrder.test.js",
+      "command": "npx jest tests/unit/governance/governanceEnforcementOrder.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:00:34.223Z",
+      "finishedAt": "2026-11-01T05:00:37.970Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log",
+      "outputSha256": "576d002d8323a9bc74707878f52f1f6556624b61378a0840b0ebc898f195984b"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/run-governance-enforcement.js",
+      "control": "agregado executa passos mesmo com autorização NEGADA (decisão deixa de preceder a execução)",
+      "mutatedFromSha256": "4a2d7eb8b3a383f31e124667cdf7e4e4aa277cb3f2e96cf246df116e65dfc75e",
+      "mutatedToSha256": "378347713fb6edbb66b384e4e3edc794f37cb8e944797351e71582f481adc38e",
+      "testPath": "tests/unit/governance/governanceEnforcementOrder.test.js",
+      "command": "npx jest tests/unit/governance/governanceEnforcementOrder.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS-baseline-c5f3e564.log",
+        "logSha256": "93b90fcd65e8c3b485c0f2efcfdbc0d7b68015a2d7b1529002d0d9b4cf8d101b"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS-mutado-c5f3e564.log",
+        "logSha256": "3808f42a9a420aeb33476039e2cebfbc0d97b95a2851ff1dfec9e7258eb3e90b"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS-restaurado-c5f3e564.log",
+        "logSha256": "856d1258d54ff747d2ceb34f43935297b7d29a8edebfd42c52682285ad115277"
+      },
+      "capturedAt": "2026-11-01T04:55:47.512Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/governanceEnforcementOrder.test.js",
+      "sha256": "e436033730b0258b988b022a515b3caa554d86b8c61c8dc1afdf4808568354c8"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:01:52.486971Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:00:37.977Z",
+  "proofHash": "d67ddf3c6e2fb52e97f213dde11e53e3334d97ffc03b44c9ca0d75b9f5723604",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "bUkOqLFQPiQUgJBzmoAsr+CmVqkm120OlB7bVq+N5oOupXZgQr28uslm30r1voFtyBIvJJX4+e0ztIa8P7KtDw==",
+    "signedAt": "2026-11-01T05:01:54.447Z"
+  }
+}

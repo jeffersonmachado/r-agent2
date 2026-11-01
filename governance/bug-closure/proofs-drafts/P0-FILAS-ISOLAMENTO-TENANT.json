@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cb458052-a33a-4d8a-b71a-37bc73b51f06",
+  "transitionId": "69a1faa2-2e14-4b0f-a060-83f3018d7a9c",
   "defectId": "P0-FILAS-ISOLAMENTO-TENANT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/queueTenantIsolation.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T04:28:25.134Z",
-      "finishedAt": "2026-11-01T04:28:28.515Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
-      "outputSha256": "d5a0d937528c59954eb411a9f23c08b0acb2a0b549ddc0b95c0e3c29e8e21396"
+      "startedAt": "2026-11-01T05:01:03.712Z",
+      "finishedAt": "2026-11-01T05:01:06.933Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
+      "outputSha256": "44b6f26ac378f7be903275d12aa80e8363ffab02c6f66525fc6e88f1e938dc10"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ISOLAMENTO-TENANT-baseline-96faeeff.log",
-        "logSha256": "9157555ee982ed61d26eee866bda4d3a12717801d760f014bbc687f258e3bb61"
+        "logSha256": "bd2c0172de7a60199ef1699cdf7974be028a3b23d00d4a0b02b52e92b07f4136"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ISOLAMENTO-TENANT-mutado-96faeeff.log",
-        "logSha256": "c53dcad1eff1ad1513b9e96cc541b765694920af36b4b84ca5fc9f29f1450813"
+        "logSha256": "bfec49aad52cf5404ab55057ac4751d6c6fa6ca2cb9375a0bbe0aaa5f7f4514e"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ISOLAMENTO-TENANT-restaurado-96faeeff.log",
-        "logSha256": "9b2fe1cf9b578e09eedb0c1688870eb2986aaa575acfdc6704d63533963d6a63"
+        "logSha256": "89c3da7e32abb3ab553d69b38a60ebe610038e96c4e93746c3f64f89d79932e7"
       },
-      "capturedAt": "2026-11-01T04:25:03.808Z"
+      "capturedAt": "2026-11-01T04:54:18.367Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T04:29:12.031267Z",
+    "at": "2026-11-01T05:01:52.486971Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T04:28:28.521Z",
-  "proofHash": "366df726d9b14b4671a2664fe3e3ebc117eba9cc090019b1d08967bacdf1f21a"
+  "createdAt": "2026-11-01T05:01:06.940Z",
+  "proofHash": "0b9f150b1269fe477752fcfa68e7155a337d230848fd55695d8ab329aff6e0a3"
 }

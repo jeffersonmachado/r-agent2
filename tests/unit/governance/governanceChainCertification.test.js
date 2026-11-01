@@ -25,6 +25,7 @@ const path = require('path');
 
 const {
   verifyChain,
+  certifyChain,
   caminhosCanonicos,
   GENESIS_HASH,
   ORDEM_CANONICA,
@@ -198,5 +199,37 @@ describe('selo — a certificação da cadeia está na ORDEM certa (tripwire de 
   it('propaga o atestado para o workspace (a cópia lida pelo self-proving não fica stale)', () => {
     expect(fonte()).toContain('governance-attestation.json');
     expect(fonte()).toMatch(/cp "\$src" "\$ROOT\/governance\/governance-attestation\.json"/);
+  });
+});
+
+describe('certifyChain — certifica o MEDIDO, nunca o declarado', () => {
+  /**
+   * GAP DE COBERTURA MEDIDO (2026-11-01): os testes acima exercitam `verifyChain`, mas não
+   * `certifyChain`. Mutar `certifyChain` para não recalcular (aceitar o `valid: true` que o
+   * artefato já declara) deixava a suíte inteira verde — ou seja, o defeito original podia voltar
+   * sem ninguém ver. Este bloco fecha exatamente essa lacuna.
+   */
+  const verificarSandbox = (cadeia) => verifyChain(cadeia, VERIFICAR);
+
+  it('cadeia com hash adulterado NÃO é certificada (estado DIVERGENTE)', () => {
+    const cadeia = cadeiaCanonica(ALVO_REL, JSON.stringify({ estado: 'congelado' }));
+    fs.writeFileSync(ALVO_ABS, JSON.stringify({ estado: 'alterado depois do hash' }));
+    expect(cadeia.valid).toBe(true); // o artefato se DECLARA válido; isso não é autoridade
+
+    const r = certifyChain(cadeia, { verificar: verificarSandbox, origem: 'teste' });
+    expect(r.certificada).toBe(false);
+    expect(cadeia.valid).toBe(false);
+    expect(cadeia.certification.state).toBe('DIVERGENTE');
+    expect(cadeia.certification.divergencias.map((d) => d.reason)).toContain('hash_mismatch');
+  });
+
+  it('cadeia íntegra é certificada e o veredito é o RECALCULADO', () => {
+    const cadeia = cadeiaCanonica();
+    const r = certifyChain(cadeia, { verificar: verificarSandbox, origem: 'teste' });
+    expect(r.certificada).toBe(true);
+    expect(cadeia.valid).toBe(true);
+    expect(cadeia.verification).toBe('RECALCULADA_INTEGRA');
+    expect(cadeia.certification.state).toBe('CERTIFICADA');
+    expect(cadeia.certification.certifiedAt).toBeTruthy();
   });
 });

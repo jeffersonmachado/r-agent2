@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "831a41ef-1286-4783-8af2-00e38d4698bf",
+  "defectId": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/producerLineageIdentity.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/producerLineageIdentity.test.js",
+      "command": "npx jest tests/unit/governance/producerLineageIdentity.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:01:26.720Z",
+      "finishedAt": "2026-11-01T05:01:30.795Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
+      "outputSha256": "0ef68807ba0f6a09db17d3bb6ea35d78c25a1efc0e8cc2346c18a55f013764a2"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/export-governance-artifacts.js",
+      "control": "produtor volta a gravar lineage sem sourceCommit (identidade INCOMPLETA para sempre)",
+      "mutatedFromSha256": "cb02a885501ef56b413b01f9a93c629b4b2ae4c626de18ee8f6dad2480030f51",
+      "mutatedToSha256": "8405990a760181c4dd663e7fe6cbd1df649f6b0280e331c5fdeb9ad31ad75a35",
+      "testPath": "tests/unit/governance/producerLineageIdentity.test.js",
+      "command": "npx jest tests/unit/governance/producerLineageIdentity.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT-baseline-28647abd.log",
+        "logSha256": "bbb22f9dfe65a3b9f091450cfca28564e62e83c040f2829ff7974843137af274"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT-mutado-28647abd.log",
+        "logSha256": "2c49a0e58490ea5c31c0768f45b6c3f4614bf6303d2bdd7f6280aea1b9e69430"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT-restaurado-28647abd.log",
+        "logSha256": "613a7cb8c7db99f1e5f306835d376c6d14ed191ae83fce626835c31f220cc9d8"
+      },
+      "capturedAt": "2026-11-01T04:53:48.561Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/producerLineageIdentity.test.js",
+      "sha256": "5eb4bf62b13dadae00815182f6e8739c24af649babef8994c246082277e89d20"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:01:52.486971Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:01:30.801Z",
+  "proofHash": "dc3fd1dd1b4cd243a97e82b113d7e5d03da71a20dcd6bfd96f9e044b152cd341",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "fOZgxVbJnwKGP7WKZnYGD30ulAPtI6CRWrZdVX/T6/sPkH7+nFg05LtwVAZ49xrul1I5jyMWqlCgK6Apqh7yAQ==",
+    "signedAt": "2026-11-01T05:01:55.874Z"
+  }
+}

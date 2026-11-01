@@ -3543,3 +3543,46 @@ congelado no agregado) e exigem montar cenário multi-artefato para mutar com ho
 find/replace de um caractere.
 
 Contagem de itens fechados com prova válida: **146 de 175** (era 8 no início da fase).
+
+### 11.60. P0 de superfície de release: 15 novos + 1 lacuna de cobertura fechada com teste
+
+Terceiro e quarto ciclos parciais, mesmo protocolo. O saldo medido:
+
+```
+início desta fase: FECHAMENTO_NAO_PROVADO = 42 (P0=28, P1=7)
+agora:             FECHAMENTO_NAO_PROVADO = 17 (P0=3,  P1=7)
+```
+
+Provas novas (baseline→mutação→restauração→baseline), todas em
+`governance/bug-closure/negative-evidence-registry.json` (**29 entradas / 28 defeitos, 0 bloqueadas**):
+
+| defeito | mutação | teste |
+|---|---|---|
+| `P0-1` | identidade de aprovação aceita do CORPO | `approvalAuthority.test.js` |
+| `L1-WORKTREE-MUTILACAO-RECORRENTE` | remoção de casos de teste não é violação | `worktreeIntegrity.test.js` |
+| `MISSAO-B1-CADEIA-CRIPTOGRAFICA` | verificador não recalcula hash do elo | `bugClosureHistoricalGuards.test.js` |
+| `...-MESH-EVIDENCE-POISONING` | execução sem lineage sobrescreve `latest.json` | `failureIntelligenceLineage.test.js` |
+| `...-EVIDENCIA-DENTRO-DO-RUN` | wave de outro run deixa de violar | `waveEvidenceSameRunPreflight.test.js` |
+| `...-P0-6` | reuso de lote ignora exit code real | `releaseSuiteRunner.test.js` |
+| `...-P0-5` | grafo de outro source não escala | `impactRunnerBinding.test.js` |
+| `...-P0-7` | corpo do PUT omite `required_status_checks` | `branchProtectionApplyPayload.test.js` |
+| `...-P0-3` | selo publica antes de certificar | `sealPhaseOrder.test.js` |
+| `...-P0-4` | decisão comparada por substring (`/GO/i`) | `assertCanonicalReleaseDecision.test.js` |
+| `...-CANDIDATE-IDENTIDADE-FOREIGN-RUN` | isolamento de run não reprova artefato alheio | `releaseArtifactIdentity.test.js` |
+
+**Terceira lacuna de cobertura** (as duas primeiras estão em §11.58): `..._P0-2` — a suíte do
+`governanceChainCertification` exercitava `verifyChain`, mas **nunca** `certifyChain`. Mutar
+`certifyChain` para não recalcular (aceitar o `valid: true` declarado) deixava tudo verde. Não
+"ajustei a mutação até passar": escrevi o teste que o defeito exige — cadeia adulterada **não** é
+certificada (estado `DIVERGENTE`, `hash_mismatch` nas divergências) e cadeia íntegra é certificada
+com `RECALCULADA_INTEGRA` — e só então a mutação reprovou.
+
+Item `...-CANDIDATE-IDENTIDADE-FOREIGN-RUN` estava sem `regressionTest` declarado embora o teste
+existisse desde antes (`releaseArtifactIdentity.test.js`, casos C5 de isolamento). Declarei o teste
+já existente na fila — corrigir a declaração é diferente de inventar prova: o digest do inventário
+não mudou (`4366c7b1f201…`), então nenhuma âncora foi reprovisionada.
+
+Restam **3 P0**, todos de integração com Postgres real (`P0-5` do Security Gate, upsert do CRM
+transferindo propriedade entre tenants, e duplo-accept concorrente do engineering router). Eles não
+são mutáveis por find/replace: exigem o banco vivo, e é justamente por isso que a evidência deles
+tem de vir de execução real, não de simulação.

@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "c0ba980b-57ae-43cd-bcd8-7423a67e71de",
+  "transitionId": "b03b2e99-b664-4406-8d53-332edac221ee",
   "defectId": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/waveEvidenceSameRunPreflight.test.js"
@@ -18,13 +18,38 @@
       "command": "npx jest tests/unit/governance/waveEvidenceSameRunPreflight.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T04:26:35.967Z",
-      "finishedAt": "2026-11-01T04:26:39.399Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.log",
-      "outputSha256": "37f9b7f816c4504c74953eed631dbd0baf86507e5071b65ea4650c40194a89e9"
+      "startedAt": "2026-11-01T04:59:17.307Z",
+      "finishedAt": "2026-11-01T04:59:21.720Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.log",
+      "outputSha256": "d5b3274abb34509498fa23b1a7de0483f6a43802a8cbdccf7fd9c87869451751"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/check-wave-evidence-same-run.js",
+      "control": "evidência de wave de OUTRO run deixa de ser violação (passa como se fosse do run atual)",
+      "mutatedFromSha256": "0440079e4cecb7f24d4996aae1cc57fc96638c911ba83c662aff676e42384209",
+      "mutatedToSha256": "8b7d89f4444f6065828132af725e7911c550b2ac4b9a3d52cb13f9cbea5a8e72",
+      "testPath": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js",
+      "command": "npx jest tests/unit/governance/waveEvidenceSameRunPreflight.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN-baseline-63be8afe.log",
+        "logSha256": "a6061cdb8c6bf39f1302ef0e99ee866a480822ead86a6576714c76f255e4115d"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN-mutado-63be8afe.log",
+        "logSha256": "04c7ece3efd95fc51dee5d3e0732e15b996bae54ce0d493dde5ce78dbd93caa5"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN-restaurado-63be8afe.log",
+        "logSha256": "041d5e52b5b8659b8f048df17d62f2736cd1050bff7946208977c5f87e1adcd2"
+      },
+      "capturedAt": "2026-11-01T04:57:47.490Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js",
@@ -35,14 +60,20 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:01:52.486971Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T04:26:39.410Z",
-  "proofHash": "2ac8fdabac43f25724713f1ba3ce17a6f446da52ff24b0fa713861f59b30059d"
+  "createdAt": "2026-11-01T04:59:21.728Z",
+  "proofHash": "4b8328f3a25262de9f417320f989fd359520d65b9fb0cbc7c40530bd621e00f1"
 }

@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "20851f73-406f-4c1e-afd0-53e46eeacc3a",
+  "transitionId": "4c831e31-b236-407c-9ea7-c34da6f0c428",
   "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d703cb9a999bb8c8ce71ead629073dd970deb443",
+  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/phaseStepContract.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/phaseStepContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T04:28:32.006Z",
-      "finishedAt": "2026-11-01T04:28:37.885Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101042635-cc5e4fbd/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
-      "outputSha256": "b3f9d0fab857f85463cc98f09b447bc4b187e4125a48771a606e7af76cba997e"
+      "startedAt": "2026-11-01T05:01:10.145Z",
+      "finishedAt": "2026-11-01T05:01:15.783Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
+      "outputSha256": "9ef8d3937206e8dd3761760ee8e73f88b7a6a47e3eede12fb09cd5f0a9231307"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE-baseline-7c324f95.log",
-        "logSha256": "fdb4d1c6b6e0f30bbec025d8f7f6156b033ca16f5419467bf592519fbf753adb"
+        "logSha256": "407ec82101663babcf31ff91afcba0734c78c2e491addd0a077c22beb451ac65"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE-mutado-7c324f95.log",
-        "logSha256": "65f3cd8a6e900982a1f8fd73d400ec1d841699b90cfb9f35a6ab0e5f59cc074a"
+        "logSha256": "46ae2197b5afd275879d47b6b420c961da387dd94cd89b36fadce55a82bfb519"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE-restaurado-7c324f95.log",
-        "logSha256": "73ae4ddac1be80856fa52048fd30f4489cb1e3dd2f97fbc0571e7d15c08b6617"
+        "logSha256": "b3b2c0a7b5234bc23952ab848ba452a0db701f10db71b4721b89a6e1779a4c44"
       },
-      "capturedAt": "2026-11-01T04:26:00.000Z"
+      "capturedAt": "2026-11-01T04:55:15.395Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T04:29:12.031267Z",
+    "at": "2026-11-01T05:01:52.486971Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -72,8 +72,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T04:28:37.893Z",
-  "proofHash": "3e4e634b590727e03399557c05edcfccfb2d461c308cf192c4e974018e77e9b8"
+  "createdAt": "2026-11-01T05:01:15.790Z",
+  "proofHash": "eacd733511c6539cb92654ebf7e7918f7594aa0422355377060268e01a8899a8"
 }
