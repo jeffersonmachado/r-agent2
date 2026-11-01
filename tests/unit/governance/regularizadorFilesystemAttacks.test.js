@@ -244,9 +244,35 @@ describe('P2-B — ataques de filesystem com processos concorrentes', () => {
     expect(fs.readdirSync(sen.dir)).toEqual(['sentinela.txt']);
     expect(crypto.createHash('sha256').update(fs.readFileSync(sen.arquivo)).digest('hex')).toBe(sen.hash);
     // Invariante 2: toda gravação reportada como sucesso é verificável DENTRO da raiz.
+    //
+    // FLAKE MEDIDA (run 40853040259 e de novo em 2026-11-01/run 41301815415): o atacante pode
+    // RENOMEAR um diretório para outro lugar DENTRO da própria raiz antes de morrer. Nesse caso o
+    // caminho exato deixa de existir (`existsSync(retorno.abs) === false`) sem que nada tenha saído
+    // da raiz — invariante 1 continua válida e nenhuma escrita "sumiu": ela mudou de endereço por
+    // ação do processo hostil. Falhar aqui mandava a investigação para "fuga de contenção" quando
+    // o fenômeno é outro. A verificação passa a procurar o arquivo em qualquer ponto da raiz e a
+    // exigir que ele esteja sob `root` (o que importa: nada fora).
+    const arquivosSobARaiz = new Set();
+    const coletar = (dir) => {
+      for (const entrada of fs.readdirSync(dir, { withFileTypes: true })) {
+        const filho = path.join(dir, entrada.name);
+        if (entrada.isDirectory()) coletar(filho);
+        else arquivosSobARaiz.add(fs.realpathSync(filho));
+      }
+    };
+    coletar(root);
+    const raizReal = fs.realpathSync(root);
     for (const retorno of retornos.filter((x) => x.ok)) {
-      expect(fs.existsSync(retorno.abs)).toBe(true);
-      expect(fs.realpathSync(retorno.abs).startsWith(fs.realpathSync(root))).toBe(true);
+      const existeNoCaminho = fs.existsSync(retorno.abs);
+      if (!existeNoCaminho) {
+        // Rename interno: o arquivo existe, mas em outro diretório — ainda DENTRO da raiz.
+        const alvo = path.basename(retorno.abs);
+        const encontrado = [...arquivosSobARaiz].filter((abs) => path.basename(abs) === alvo);
+        expect(encontrado.length).toBeGreaterThan(0);
+        for (const abs of encontrado) expect(abs.startsWith(raizReal)).toBe(true);
+        continue;
+      }
+      expect(fs.realpathSync(retorno.abs).startsWith(raizReal)).toBe(true);
     }
     // Invariante 3: nada "sumiu em silêncio" — cada id tem sucesso OU motivo explícito.
     for (const retorno of retornos) {
