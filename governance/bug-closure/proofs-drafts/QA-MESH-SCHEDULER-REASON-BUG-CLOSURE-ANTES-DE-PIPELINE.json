@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "65af76af-0b40-45f4-9e85-cfea37a75f4d",
+  "transitionId": "e4b535b9-d081-4621-88a8-0c93885a0728",
   "defectId": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "qa-mesh/__tests__/scheduler.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest qa-mesh/__tests__/scheduler.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:53:10.155Z",
-      "finishedAt": "2026-10-31T22:53:18.193Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
-      "outputSha256": "013a3fd941b88888add99dfd94d495d6f7436e4f9dd154b5e7ac06d7169ff723"
+      "startedAt": "2026-11-01T04:12:46.304Z",
+      "finishedAt": "2026-11-01T04:12:53.145Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+      "outputSha256": "6c01110704c60e51cfcf1720498c236c3a230aa37b56c40b78800de61c70c12e"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:53:18.201Z",
-  "proofHash": "de6467126c0fac0d18dcbf697a09c2e3d6756d4913d43aa6b1e31eade811798f"
+  "createdAt": "2026-11-01T04:12:53.151Z",
+  "proofHash": "c7825811359ec38d52cc2c82f8c8516c5218dc0c3300d836097abfc9ef07e0b1"
 }

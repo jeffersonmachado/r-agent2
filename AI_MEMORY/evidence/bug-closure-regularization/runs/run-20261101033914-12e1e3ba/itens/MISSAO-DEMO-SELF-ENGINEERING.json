@@ -1,0 +1,17 @@
+{
+  "id": "MISSAO-DEMO-SELF-ENGINEERING",
+  "severity": "P3",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Demonstracao de self-engineering: o RAP encontrou defeitos reais que passaram por todos os gates",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+  "runId": "run-20261101033914-12e1e3ba",
+  "identidade": {
+    "commit": "3441bcacac223f381adfbc749bff054c58fdf358",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "36ca0d6fcc472d5d75ad821c12966ab791abb42189d8503e78a9b4990c850d52",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "b6f621ec1f77024b0400a6c7953c7cdf533b8c201355a6c3f77b2a2e8e56ce7e"
+}

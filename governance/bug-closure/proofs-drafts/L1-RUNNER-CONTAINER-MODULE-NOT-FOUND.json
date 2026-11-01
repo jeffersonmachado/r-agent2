@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "bcb6a4e9-55bb-4036-b03a-bb20d5d09af5",
+  "transitionId": "b91a463c-73ec-4930-8555-561a78a11978",
   "defectId": "L1-RUNNER-CONTAINER-MODULE-NOT-FOUND",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/engineeringRunnerDockerfileClosure.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRunnerDockerfileClosure.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:31:28.216Z",
-      "finishedAt": "2026-10-31T22:31:31.394Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log",
-      "outputSha256": "30cc9a37aab157cb054f8c630bee074e490bd5d6f5c5cc50cec8fd170162a838"
+      "startedAt": "2026-11-01T03:52:04.896Z",
+      "finishedAt": "2026-11-01T03:52:08.161Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log",
+      "outputSha256": "c1a3dafcab32757ec143f66dc080bd89ca605c43c5fea96a2df6bd7de149c3aa"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:31:31.401Z",
-  "proofHash": "a66a6fdab0645c03e7793002e6f07016cbfa09579e2e4e9cb755bee0546d9b53"
+  "createdAt": "2026-11-01T03:52:08.167Z",
+  "proofHash": "4476d93543448eb4340df0db191e52fbde06328c9f3c0e9a7f0d9b5b960ee998"
 }

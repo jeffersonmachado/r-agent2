@@ -1,19 +1,22 @@
 {
   "schemaVersion": 1,
   "kind": "bug-closure-regularization",
-  "generatedAt": "2026-10-23T02:00:11.390Z",
+  "generatedAt": "2026-11-01T03:33:58.775Z",
   "authoritative": false,
   "resumo": {
-    "commit": "e747bac4c5c8e7d9a6807040197b6f6d7f1ce700",
-    "fingerprint": "5151d5b684871d2f24984591cc81e63cf5e293b62f9f43516d9e9f9c67482f16",
+    "commit": "3441bcacac223f381adfbc749bff054c58fdf358",
+    "fingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+    "runId": "run-20261101033054-af53064a",
     "total": 31,
     "porClasse": {
       "REQUER_DECISAO_HUMANA": 1,
-      "AGUARDA_INSUMOS_HUMANOS": 30
+      "AGUARDA_INSUMOS_HUMANOS": 29,
+      "AMBIENTE_INDISPONIVEL": 1
     },
     "porSeveridade": {
       "REQUER_DECISAO_HUMANA:P0": 1,
-      "AGUARDA_INSUMOS_HUMANOS:P0": 30
+      "AGUARDA_INSUMOS_HUMANOS:P0": 29,
+      "AMBIENTE_INDISPONIVEL:P0": 1
     },
     "filaAlterada": false,
     "assinatura": "PENDENTE — este script não assina e não altera a fila"
@@ -33,12 +36,13 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Evidencia runtime so vale se produzida DENTRO da janela de um run governado aberto",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN.json",
@@ -55,7 +59,8 @@
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING.json",
@@ -67,12 +72,13 @@
       "estadoPersistido": "RESOLVED",
       "titulo": "Cadeia criptografica reconstruida e assinada a cada ciclo (selo imutavel)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/governanceChainCertification.test.js",
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-2.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-2.json",
@@ -84,12 +90,13 @@
       "estadoPersistido": "RESOLVED",
       "titulo": "Certificar ANTES de publicar (ordem de fase do selo)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/sealPhaseOrder.test.js",
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-3.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-3.json",
@@ -101,12 +108,13 @@
       "estadoPersistido": "RESOLVED",
       "titulo": "Autoridade unica de decisao de release (fim da comparacao por substring)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-4.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-4.json",
@@ -118,12 +126,13 @@
       "estadoPersistido": "RESOLVED",
       "titulo": "Eliminar falsos verdes de cobertura (L1) e fazer a malha REALMENTE executar",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/coverage/impactRunnerBinding.test.js",
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-5.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-5.json",
@@ -135,12 +144,13 @@
       "estadoPersistido": "RESOLVED",
       "titulo": "Reuso de lote do runner autoritativo nao pode mascarar exit code divergente",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/releaseSuiteRunner.test.js",
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-6.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-6.json",
@@ -157,7 +167,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-P0-7.log",
       "draft": "governance/bug-closure/proofs-drafts/HARDENING-ENG-GOV-RELEASE-P0-7.json",
@@ -174,7 +185,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.log",
       "draft": "governance/bug-closure/proofs-drafts/L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT.json",
@@ -191,7 +203,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/L1-WORKTREE-MUTILACAO-RECORRENTE.log",
       "draft": "governance/bug-closure/proofs-drafts/L1-WORKTREE-MUTILACAO-RECORRENTE.json",
@@ -208,7 +221,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
       "draft": "governance/bug-closure/proofs-drafts/MISSAO-B1-CADEIA-CRIPTOGRAFICA.json",
@@ -225,7 +239,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-1.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-1.json",
@@ -242,7 +257,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-2.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-2.json",
@@ -259,7 +275,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-3.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-3.json",
@@ -276,7 +293,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-4.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-4.json",
@@ -293,7 +311,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-5.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-5.json",
@@ -310,7 +329,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.json",
@@ -322,12 +342,13 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Avaliador canonico confiava no campo chain.valid GRAVADO em vez de recalcular a cadeia",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.json",
@@ -344,7 +365,8 @@
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.json",
@@ -355,17 +377,11 @@
       "severity": "P0",
       "estadoPersistido": "VERIFIED",
       "titulo": "CRM usava upsert com PK apenas `id`: tenant B sobrescrevia e TRANSFERIA registro do tenant A",
-      "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+      "classe": "AMBIENTE_INDISPONIVEL",
       "teste": "tests/integration/crmTenantIsolation.postgres.test.js",
-      "transicao": "VERIFIED → RESOLVED",
-      "provasAusentes": [
-        "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
-      ],
-      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log",
-      "draft": "governance/bug-closure/proofs-drafts/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.json",
-      "camposParaAssinar": 18
+      "exitCode": 1,
+      "motivo": "teste exige infraestrutura ausente neste ambiente — não é veredito sobre o defeito",
+      "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS.log"
     },
     {
       "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
@@ -373,12 +389,13 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "state=CERTIFIED_GO coexistindo com veredito nao-ok (consumidor que le state via GO falso)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.json",
@@ -395,7 +412,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.json",
@@ -412,7 +430,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ISOLAMENTO-TENANT.json",
@@ -429,7 +448,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-FILAS-ROLLBACK-DESTRUTIVO.json",
@@ -446,7 +466,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.json",
@@ -463,7 +484,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS.json",
@@ -475,12 +497,13 @@
       "estadoPersistido": "VERIFIED",
       "titulo": "Identidade ausente era tratada como identidade coerente (aprovava sem runId/commit/fingerprint)",
       "classe": "AGUARDA_INSUMOS_HUMANOS",
-      "origemDoTeste": "COMMIT_DO_FIX",
+      "origemDoTeste": "CAMPO_DO_ITEM",
       "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.json",
@@ -497,7 +520,8 @@
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.json",
@@ -514,7 +538,8 @@
       "transicao": "VERIFIED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO.json",
@@ -531,7 +556,8 @@
       "transicao": "RESOLVED → RESOLVED",
       "provasAusentes": [
         "EVIDENCIA_NEGATIVA_AUSENTE",
-        "APROVACAO_HUMANA_AUSENTE"
+        "APROVACAO_HUMANA_AUSENTE",
+        "ASSINATURA_INVALIDA"
       ],
       "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
       "draft": "governance/bug-closure/proofs-drafts/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.json",

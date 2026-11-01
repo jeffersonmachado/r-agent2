@@ -8,24 +8,24 @@
 [L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build
 [L1] ESCALATE: artefato do grafo ilegível (Expected property name or '}' in JSON at position 15 (line 1 column 16)) — rode: npm run impact:build
 [L1] ERRO: artefato do grafo ausente (rode: node scripts/governance/build-impact-graph.js)
-PASS tests/unit/coverage/impactRunnerBinding.test.js (11.317 s)
+PASS tests/unit/coverage/impactRunnerBinding.test.js (8.003 s)
   run-impact-validation — extrairUltimoJson (veredito do mesh)
-    ✓ extrai o JSON final mesmo com logs antes (112 ms)
-    ✓ aceita JSON puro na saída (sem log antes) (104 ms)
-    ✓ saída sem JSON devolve null (o chamador ESCALA — nunca presume veredito) (105 ms)
+    ✓ extrai o JSON final mesmo com logs antes (108 ms)
+    ✓ aceita JSON puro na saída (sem log antes) (103 ms)
+    ✓ saída sem JSON devolve null (o chamador ESCALA — nunca presume veredito) (102 ms)
   run-impact-validation — vínculo e integridade do grafo (P0-5)
-    ✓ grafo de OUTRO source ⇒ ESCALATE (nunca decidir sobre árvore que não é a analisada) (2744 ms)
-    ✓ grafo SEM vínculo (formato anterior) ⇒ ESCALATE (2685 ms)
-    ✓ artefato estruturalmente inútil (sem `reverse`) ⇒ ESCALATE (2084 ms)
-    ✓ artefato ilegível (JSON quebrado) ⇒ ESCALATE, não INFRA silencioso (836 ms)
-    ✓ artefato AUSENTE ⇒ INFRA (erro de infraestrutura, não de decisão) (278 ms)
+    ✓ grafo de OUTRO source ⇒ ESCALATE (nunca decidir sobre árvore que não é a analisada) (1570 ms)
+    ✓ grafo SEM vínculo (formato anterior) ⇒ ESCALATE (1454 ms)
+    ✓ artefato estruturalmente inútil (sem `reverse`) ⇒ ESCALATE (1305 ms)
+    ✓ artefato ilegível (JSON quebrado) ⇒ ESCALATE, não INFRA silencioso (813 ms)
+    ✓ artefato AUSENTE ⇒ INFRA (erro de infraestrutura, não de decisão) (216 ms)
   run-impact-validation — dry-run é NOT_EXECUTED, nunca verde (P0-5)
-    ✓ --dry-run devolve exit 4 e estado explícito no relatório (1656 ms)
-    ✓ o código de NOT_EXECUTED é distinto de TODOS os outros (nenhum consumidor confunde) (103 ms)
+    ✓ --dry-run devolve exit 4 e estado explícito no relatório (1725 ms)
+    ✓ o código de NOT_EXECUTED é distinto de TODOS os outros (nenhum consumidor confunde) (104 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       10 passed, 10 total
 Snapshots:   0 total
-Time:        11.432 s
+Time:        8.151 s, estimated 12 s
 Ran all test suites matching /tests\/unit\/coverage\/impactRunnerBinding.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

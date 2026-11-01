@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cbb2faaf-f074-42cd-a0fb-2b0bf8cf3eed",
+  "transitionId": "13eb05d4-d023-4929-8131-5cd8a9f5b186",
   "defectId": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/runIdentityCommit.test.js"
   ],
@@ -18,13 +18,38 @@
       "command": "npx jest tests/unit/governance/runIdentityCommit.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:22:45.660Z",
-      "finishedAt": "2026-10-31T22:22:48.598Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
-      "outputSha256": "34b398a6abd83f441a24032b909d132196b3130af881fb6d209b4774af7ef06b"
+      "startedAt": "2026-11-01T03:43:11.249Z",
+      "finishedAt": "2026-11-01T03:43:18.173Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL.log",
+      "outputSha256": "990a3cc60c9264153f115bce751f8a651a9e2ba219ec583f06f91e7e5e380bdf"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/create-governed-run.js",
+      "control": "run governado volta a nascer sem gitCommit (identidade de release IMPOSSIVEL para sempre)",
+      "mutatedFromSha256": "81e3ff06cb51ff74d7e28a8effdbc213ae96b00cc7baa72b5650038c72072b97",
+      "mutatedToSha256": "28e47d6cfd47b91f15da3f6e9b3d25025a5327fc03ab9431821e265ba4d6e6a8",
+      "testPath": "tests/unit/governance/runIdentityCommit.test.js",
+      "command": "npx jest tests/unit/governance/runIdentityCommit.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL-baseline-72969031.log",
+        "logSha256": "9b4c41afbc6c07a18af89134fabdd6396cb2075ed94e655c2c1e16a4d0484bbb"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL-mutado-72969031.log",
+        "logSha256": "643e44654abf2f24f7a255f66728e2029a9762135553660580b0fc7901d7f3f1"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL-restaurado-72969031.log",
+        "logSha256": "52a6ef70c6d1d0d98b4e5e737832c15788c4d4181795db439696ce0ef781065c"
+      },
+      "capturedAt": "2026-11-01T03:30:39.561Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/unit/governance/runIdentityCommit.test.js",
@@ -35,14 +60,20 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T04:15:33.196037Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:22:48.605Z",
-  "proofHash": "4ffb610f0b72f7d5273260f2ab81da6a879fdf66df06485a468021b72c924eb4"
+  "createdAt": "2026-11-01T03:43:18.193Z",
+  "proofHash": "8fccf912671130bd39600bebb120c035a8a3911703a6b984a1f992b6c13e1a93"
 }

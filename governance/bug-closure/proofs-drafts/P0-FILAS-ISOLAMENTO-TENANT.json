@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "caeabc2f-a0c4-451d-bf53-e3bf9d8daacb",
+  "transitionId": "8b8b9d09-dce0-4540-baaf-13296f3eac06",
   "defectId": "P0-FILAS-ISOLAMENTO-TENANT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/queueTenantIsolation.test.js"
   ],
@@ -18,13 +18,38 @@
       "command": "npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:22:18.112Z",
-      "finishedAt": "2026-10-31T22:22:20.770Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ISOLAMENTO-TENANT.log",
-      "outputSha256": "dbecdaed0e8b9087b6cf9c87c74a675732530152833761d74fc241bee6f3e4cd"
+      "startedAt": "2026-11-01T03:42:20.322Z",
+      "finishedAt": "2026-11-01T03:42:26.849Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-FILAS-ISOLAMENTO-TENANT.log",
+      "outputSha256": "b1674a2799d8e3bee0d2040bf26b163d1b607df1fa7faf6734ba0debf59ba5dc"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/queue/queueAdminOperations.js",
+      "control": "getQueueStats volta a rodar sem escopo de tenant (force do tenant A fecha tickets do B)",
+      "mutatedFromSha256": "a51bac8163270153ec3deedcf0aa3af13fc46983b8a5940b7d919942fa536c64",
+      "mutatedToSha256": "91a0578560078b82598368cacbc8b4bf96722ce692cff54d949cc7a6539803ea",
+      "testPath": "tests/unit/queueTenantIsolation.test.js",
+      "command": "npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ISOLAMENTO-TENANT-baseline-96faeeff.log",
+        "logSha256": "3a69f30e23f39976df6e89a5f390ed3111a5cf13c2a91e160c68e564ea0b95b4"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ISOLAMENTO-TENANT-mutado-96faeeff.log",
+        "logSha256": "2c8f371a4dafe8ab382a88995924931a1a15b82c2f0c376dec2e366dbae0448f"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ISOLAMENTO-TENANT-restaurado-96faeeff.log",
+        "logSha256": "368937fffe364fc350d4c5d9e58bf041b205beea8c0ce8570739d75c41c92ece"
+      },
+      "capturedAt": "2026-11-01T03:30:28.361Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/unit/queueTenantIsolation.test.js",
@@ -35,14 +60,20 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T04:15:33.196037Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:22:20.778Z",
-  "proofHash": "f00189f220a36762b19fd5eed6316725ea0766a51f22d56739726a9d27eb1c11"
+  "createdAt": "2026-11-01T03:42:29.966Z",
+  "proofHash": "869702bb4bac953358f38c236e5996363ce0a0b4430ce90f3621fc9a1c2fe65f"
 }

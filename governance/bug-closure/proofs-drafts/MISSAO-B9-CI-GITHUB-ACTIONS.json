@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5c585099-6708-4080-a13a-80169f8518b4",
+  "transitionId": "6464c809-8e6e-40a3-b536-369e4e6eda37",
   "defectId": "MISSAO-B9-CI-GITHUB-ACTIONS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/devBranchCiGate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:31:31.431Z",
-      "finishedAt": "2026-10-31T22:31:35.940Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/MISSAO-B9-CI-GITHUB-ACTIONS.log",
-      "outputSha256": "8ff842ddad77da973ce898e03486979da3dce33ed12878f21cd4d03591afca23"
+      "startedAt": "2026-11-01T03:52:08.186Z",
+      "finishedAt": "2026-11-01T03:52:13.594Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/MISSAO-B9-CI-GITHUB-ACTIONS.log",
+      "outputSha256": "e92f0afb138c13d655a38cd8cc9b761fcb34a49afd0473eae6d2e0ceaaea7405"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:31:35.948Z",
-  "proofHash": "5758c26650a5c875d897489aa2b1515a61e702a1fe458ae481df5c0c6a12e369"
+  "createdAt": "2026-11-01T03:52:13.602Z",
+  "proofHash": "7904659bcb48d38f450f1fa457c29c3cc444edc582caad5721de6e024120cdb5"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "20bbb826-d202-4171-9874-6cd2dde7b63e",
+  "transitionId": "bac7b422-36fb-4f20-96e0-4ed5fc1f6c76",
   "defectId": "PROMPT-P1F-STREAM-ISOLAMENTO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "frontend/src/shared/useLroStream.test.jsx"
   ],
@@ -18,10 +18,10 @@
       "command": "npm --prefix frontend run test -- src/shared/useLroStream.test.jsx",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:35:43.264Z",
-      "finishedAt": "2026-10-31T22:35:49.663Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/PROMPT-P1F-STREAM-ISOLAMENTO.log",
-      "outputSha256": "33e6a3fe3f93dd476b29d621e0baa72b831bf390deb15f48304d22425daa0262"
+      "startedAt": "2026-11-01T03:56:23.149Z",
+      "finishedAt": "2026-11-01T03:56:30.241Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/PROMPT-P1F-STREAM-ISOLAMENTO.log",
+      "outputSha256": "b683c8841a1d99d8eb9a59ab593887e013a83d9d1ef8b3ea73aae48a6d8d2cc6"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:35:49.671Z",
-  "proofHash": "c22f3d63605dc18e9d4cecfff8a8cb4aac5160d93667ab99f3c6cccc4a8e9489"
+  "createdAt": "2026-11-01T03:56:30.249Z",
+  "proofHash": "45f9cf29aeb392540164db83612c486fc93ea1024856939a838116a071f729ff"
 }

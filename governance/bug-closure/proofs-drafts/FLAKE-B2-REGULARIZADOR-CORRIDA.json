@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a193f71a-b092-487a-a011-a542be70a78c",
+  "transitionId": "05b94b61-992c-46a4-bfce-4baa25387043",
   "defectId": "FLAKE-B2-REGULARIZADOR-CORRIDA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:48:57.935Z",
-      "finishedAt": "2026-10-31T22:49:07.994Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/FLAKE-B2-REGULARIZADOR-CORRIDA.log",
-      "outputSha256": "dc1fb3c7b03d65ad7356205b45eb26618f011bc97bd7a1a2fc2d4f9eee7cc51a"
+      "startedAt": "2026-11-01T04:09:08.446Z",
+      "finishedAt": "2026-11-01T04:09:18.431Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/FLAKE-B2-REGULARIZADOR-CORRIDA.log",
+      "outputSha256": "87a00a97ab67b048f7199c82c54133966e716106f1914f17851027b0a803d5cb"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:49:08.003Z",
-  "proofHash": "236ad495e5b60b034cc3ce6bc2557eac8162f9c491604ddd2321653e4da0563b"
+  "createdAt": "2026-11-01T04:09:18.439Z",
+  "proofHash": "f5c7e4d6ba09fb4fce106864649fb97cbace72fe6eeea46581c05e42abf22617"
 }

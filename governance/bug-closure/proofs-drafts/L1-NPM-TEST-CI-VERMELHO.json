@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "41adb5f0-1ef9-4c39-9509-582093cdebc2",
+  "transitionId": "621848c7-cc96-4faa-b507-d27e495b3e62",
   "defectId": "L1-NPM-TEST-CI-VERMELHO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/qaMeshOperationPolicy.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/qaMeshOperationPolicy.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:31:17.116Z",
-      "finishedAt": "2026-10-31T22:31:22.829Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/L1-NPM-TEST-CI-VERMELHO.log",
-      "outputSha256": "0164ac69812eca344a5f03d681ee22d00935eed3cddc9f0587aa55508f561a49"
+      "startedAt": "2026-11-01T03:51:55.637Z",
+      "finishedAt": "2026-11-01T03:51:59.036Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/L1-NPM-TEST-CI-VERMELHO.log",
+      "outputSha256": "077147c800185daad9c36801caba484540ea075a2cbb6e99224be0cf60807cb2"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:31:22.836Z",
-  "proofHash": "7caf6bcd32b7eb592255fe3a3b7d38dce89a70720bbc6a91698da6d1c7431743"
+  "createdAt": "2026-11-01T03:51:59.043Z",
+  "proofHash": "d212b1b28c2324a6d0beb6c3d8f9a539126c20e3192229c47daa09ea1ece6547"
 }

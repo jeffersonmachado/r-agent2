@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "d19c4c13-0c36-4804-8713-acf456fd9e20",
+  "transitionId": "00031206-5812-44fb-90cc-744897d2c9fe",
   "defectId": "P0-2",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/evidenceManifestHashBaseline.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/evidenceManifestHashBaseline.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:21:28.875Z",
-      "finishedAt": "2026-10-31T22:21:34.005Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-2.log",
-      "outputSha256": "3f74ef99bbd177dbb110ccf96cd9fd3cce9ce1a7c185337813e4bb293e0271d1"
+      "startedAt": "2026-11-01T03:41:05.500Z",
+      "finishedAt": "2026-11-01T03:41:14.807Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-2.log",
+      "outputSha256": "40a7acff9661ab8b12f044e44614b818e8af8cd5c085d4a95421f7ee24e6ef91"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-baseline-729b5335.log",
-        "logSha256": "78bd21d2c1608f17a72b8181c5b6fb46b43574a62fafc5d7bcb23e8ec02a8aea"
+        "logSha256": "267996cb330eb055a45a625978abad6277a3ee79e628445945c02ef20a8eb0bf"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-mutado-729b5335.log",
-        "logSha256": "eb4406acf87a28359c9521831ad4a54a1415961af6837ad6a1fd42dc7c04360a"
+        "logSha256": "3595980aecdc87e8880b636f56f2562e81fe45b53e9d9846f6b9dca69584cb01"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-restaurado-729b5335.log",
-        "logSha256": "be7797777586aa995f10fa89bcf71d3555a315913cf409402fefd7d4e02e1674"
+        "logSha256": "6490eb8ef2025d635de44630ef56132c2a15b0c9ac1705bc92d07360992ec5ce"
       },
-      "capturedAt": "2026-10-31T21:48:08.464Z"
+      "capturedAt": "2026-11-01T03:28:06.398Z"
     },
     {
       "targetFile": "governance/lib/evidence-manifest-hash-baseline.js",
@@ -59,19 +59,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-baseline-8dcb35ff.log",
-        "logSha256": "3ca90ef157dbe4dd0d6c01d05c01d3f4acd26b387eadf916c8e189062e3a1e7e"
+        "logSha256": "1adc10bffe5baed25469eee4450609cae5c3824ebb7bee5f32d65cedc51486b5"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-mutado-8dcb35ff.log",
-        "logSha256": "466d8a9f2a4eb5adecd08795340ddf704cf293748f163aedadf376a86e5f212a"
+        "logSha256": "d102d20f6f0d99178ceaf936d9adb360bd1e15c347d6e9887a7a2405bf650fd9"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-2-restaurado-8dcb35ff.log",
-        "logSha256": "786c6057827c6021e837bbf447e9d4433fa1aa176f4347cb037122c7842c05fd"
+        "logSha256": "37728cedd66b73409526601849fd8cbaa492210b10af79750baa18901e726f88"
       },
-      "capturedAt": "2026-10-31T21:48:18.792Z"
+      "capturedAt": "2026-11-01T03:28:15.307Z"
     }
   ],
   "artifactHashes": [
@@ -87,7 +87,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-10-31T22:56:18.315Z",
+    "at": "2026-11-01T04:15:33.196037Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -98,6 +98,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:21:34.013Z",
-  "proofHash": "faf1bcd973e4c3212dae301987a4cae8b64d1ddcec3289c032dfb9c9f5ba7e69"
+  "createdAt": "2026-11-01T03:41:14.833Z",
+  "proofHash": "fb6c222e38750f79b63a7def489adcb6509e4e0bdc13f5ba93d15a6526add538"
 }

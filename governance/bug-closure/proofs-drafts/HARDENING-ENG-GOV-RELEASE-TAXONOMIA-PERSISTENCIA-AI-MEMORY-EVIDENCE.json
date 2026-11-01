@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a0529f12-d72d-4b43-9ef2-6ee6d00303e9",
+  "transitionId": "daadcd6b-5dd0-4ec1-91dc-b3b45bde6920",
   "defectId": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:50:30.751Z",
-      "finishedAt": "2026-10-31T22:50:34.580Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
-      "outputSha256": "ec65261f1becebdbb37fb117c7edc8abd390a4440ed192fc2dbfd5b6a37643e8"
+      "startedAt": "2026-11-01T04:10:29.491Z",
+      "finishedAt": "2026-11-01T04:10:31.658Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
+      "outputSha256": "7d18d24416a14029cde39fc3f87270cb761428218ef76fcb390a1c2742d94cab"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:50:34.587Z",
-  "proofHash": "fb7e8b364ec53289ed8be0cf0b7449b9f5108a3380e5419e93a9144ad30cb279"
+  "createdAt": "2026-11-01T04:10:31.666Z",
+  "proofHash": "f820274cb99a4f5abb70721fa44d123779d71e536221a1b3e0e8fe7c44721788"
 }

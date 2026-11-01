@@ -1,0 +1,27 @@
+{
+  "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "state=CERTIFIED_GO coexistindo com veredito nao-ok (consumidor que le state via GO falso)",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "CAMPO_DO_ITEM",
+  "teste": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE",
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.log",
+  "draft": "governance/bug-closure/proofs-drafts/P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101033054-af53064a",
+  "identidade": {
+    "commit": "3441bcacac223f381adfbc749bff054c58fdf358",
+    "sourceFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "3aab5e1761217f6bd507cd32b2460efe227d00231a94bd7fce86e6793a6a9f3b",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "ac1ae16906e3eace54e0ebfe02d091100b0a074fb49a359de68fc1eb44d42222"
+}

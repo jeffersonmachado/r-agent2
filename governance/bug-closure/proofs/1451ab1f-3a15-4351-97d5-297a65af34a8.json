@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "1451ab1f-3a15-4351-97d5-297a65af34a8",
+  "defectId": "P0-FILAS-ROLLBACK-DESTRUTIVO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "requiredTests": [
+    "tests/unit/queueCreatePersistBeforeResponse.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+      "command": "npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T03:33:17.364Z",
+      "finishedAt": "2026-11-01T03:33:21.099Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FILAS-ROLLBACK-DESTRUTIVO.log",
+      "outputSha256": "a65b3b8b26cfc1d9921ad630fcc5ced66c06544ba70992cf6d1c5b74ca21d2fa"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/modules/queue/service.js",
+      "control": "rollback de criacao volta a apagar fila PREEXISTENTE (fechando atendimentos anteriores)",
+      "mutatedFromSha256": "343e580d1acdfc9f4d283c8c0e53153b54b7add86a04ccad2603b91815ddfb54",
+      "mutatedToSha256": "26659753569027ff37c4e42dcef613e5fc26f1a18e7cec14e20fd9f0cf053546",
+      "testPath": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+      "command": "npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ROLLBACK-DESTRUTIVO-baseline-ad5219c3.log",
+        "logSha256": "cd56ba8ccf533856297da1e8c049a70424001715580438331b7d15c86843ead2"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ROLLBACK-DESTRUTIVO-mutado-ad5219c3.log",
+        "logSha256": "d1f4fe3141fbb0fde42eb4a4ac4990d47e8465789ff5c56181cde9b905ee3116"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FILAS-ROLLBACK-DESTRUTIVO-restaurado-ad5219c3.log",
+        "logSha256": "326da3483913d82a743289da6960279bea81d74f86a2ff3ee7462fd1c1f2cdb1"
+      },
+      "capturedAt": "2026-11-01T03:30:13.070Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/queueCreatePersistBeforeResponse.test.js",
+      "sha256": "9512984c1b0721bd22feae7ea6ac8c5f430ff87ccf764c10094cd14381b6bb1a"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T03:34:59.590036Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T03:33:21.107Z",
+  "proofHash": "99649d554a4420e4c2e3006f1cb9b408cfd393d3dd21556d9f2385856bfced5f",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "zaUZMtlBw5gQOsKW+5X3Gidj8BOsQqdIPdD/2m6SebIAB5vvfQp/9eYwI9GHjnD19goq4l55WES5uXsuhXNjCg==",
+    "signedAt": "2026-11-01T03:35:20.553Z"
+  }
+}

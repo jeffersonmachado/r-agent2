@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "fb51b065-09dd-4168-88e1-cbab98a5d416",
+  "transitionId": "9a2e5f59-3797-4f23-a8af-30848d6de56f",
   "defectId": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/canonicalReleaseDecision.test.js"
   ],
@@ -18,13 +18,38 @@
       "command": "npx jest tests/unit/governance/canonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:22:11.181Z",
-      "finishedAt": "2026-10-31T22:22:18.086Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
-      "outputSha256": "db29e13a449b3ec1cdfebbce0bed988cd982f20e12124baceb81f0197e721b5f"
+      "startedAt": "2026-11-01T03:42:09.607Z",
+      "finishedAt": "2026-11-01T03:42:20.279Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
+      "outputSha256": "a0ba8ba28646058e4ab7b198c9921acaea1f87324654d80f90a9cbdc8116670c"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "gate com status fora dos permitidos (UNKNOWN/SKIPPED/NOT_EXECUTED) deixa de bloquear a certificação",
+      "mutatedFromSha256": "816f829db017a4353fa3b75fdaf0bfe86cfa203d9d0a7825eff705c12dca326d",
+      "mutatedToSha256": "438c3d7452ea8a76a8f3b63fd879b746f732ca99eaac67e0e9a2e9844015e905",
+      "testPath": "tests/unit/governance/canonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/canonicalReleaseDecision.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO-baseline-93a1dc38.log",
+        "logSha256": "9b24caedd4cf8af5e9f6b9db59401ab9f43fc63bad8c3eb8c9587297799777b3"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO-mutado-93a1dc38.log",
+        "logSha256": "b452ada3727f1ea01ed4893deee83b63c45b662b37da1478dc07a97b2485b3f9"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO-restaurado-93a1dc38.log",
+        "logSha256": "08587cc374bb690a72fe97d30251b188856b26d88178c5bccf31a50124216aba"
+      },
+      "capturedAt": "2026-11-01T03:29:35.898Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/unit/governance/canonicalReleaseDecision.test.js",
@@ -35,14 +60,20 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T04:15:33.196037Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:22:18.095Z",
-  "proofHash": "8a50cebd194f233e3859d34d8d2058dc07335d09c114b589d0dbe7e0739a764f"
+  "createdAt": "2026-11-01T03:42:20.304Z",
+  "proofHash": "3d27fe8befe15da8f5e07a6b5f262ebd062b17b94c1ea68560bd55ace69a7869"
 }

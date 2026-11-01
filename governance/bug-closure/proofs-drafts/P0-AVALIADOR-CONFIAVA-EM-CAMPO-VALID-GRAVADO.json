@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "c23e893d-fb26-4459-8189-eb29fb2d8c76",
+  "transitionId": "0518a88f-2c2c-41d6-8a0d-63b2416cef56",
   "defectId": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
   ],
@@ -18,13 +18,38 @@
       "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:21:55.484Z",
-      "finishedAt": "2026-10-31T22:21:58.857Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
-      "outputSha256": "9e5180426c010edcfdfbcd9db10b458c23fd0b31711cb19bd13ad58caf71132a"
+      "startedAt": "2026-11-01T03:41:44.684Z",
+      "finishedAt": "2026-11-01T03:41:52.657Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
+      "outputSha256": "5b8df421647ef316521759577fa5f6fd553dcc6a548990b033fc8e1cac6f6750"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/assert-canonical-release-decision.js",
+      "control": "veredito da cadeia volta a vir do campo `valid` GRAVADO em vez da recomputação dos bytes",
+      "mutatedFromSha256": "4aa740c25686d1688e8b10870feafbb0b0b98080d5f33adac2c12a701d6b50c9",
+      "mutatedToSha256": "f5637ca98b6f974f4c6b1da1b9637281fa374cdc2d26441767dfcb6116abdbe6",
+      "testPath": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-baseline-47bd2581.log",
+        "logSha256": "f78b8668dbce95681c5fff25748f74ecdb3b14c956418497bc5a0edb9b846208"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-mutado-47bd2581.log",
+        "logSha256": "a8b4f0e2de433d9c6800489d3a3118465489efce43dccd8ed4f9705ba01c4b02"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-restaurado-47bd2581.log",
+        "logSha256": "b64ae65844590b17921f916aa28dc4bef8cbee55085d9e6072ec37af3ce1252b"
+      },
+      "capturedAt": "2026-11-01T03:29:11.444Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
@@ -35,14 +60,20 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T04:15:33.196037Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:21:58.865Z",
-  "proofHash": "ce4a5e51f655c6f69f85388f4db46cd22ba618eb01ade04f3783ee1757f43d21"
+  "createdAt": "2026-11-01T03:41:52.672Z",
+  "proofHash": "221d1566e36110138a9b197b2720df02ef344486187b6b7114a377fee83cb9b4"
 }

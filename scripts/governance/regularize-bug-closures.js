@@ -182,9 +182,23 @@ function testeCitado(item) {
   return testeDaEvidencia(item || {}) || testeDoCommitDoFix(item || {});
 }
 
+/**
+ * Run corrente, usado para ESCOPAR o caminho do log de teste.
+ *
+ * DEFEITO MEDIDO (2026-11-01): o log era gravado em `<EVIDENCIA_REL>/<ID>.log`, caminho estável.
+ * Uma execução PARCIAL (`--only P0`) reescrevia os logs de itens já atestados, mudava o sha256 do
+ * artefato de saída e invalidava provas assinadas de OUTROS escopos — FECHAMENTO_NAO_PROVADO
+ * voltou de 42 para 167 sem que nenhuma prova tivesse sido revogada. Caminho por execução
+ * (`runs/<runId>/logs/`) torna cada rodada append-only: nada é sobrescrito.
+ */
+let RUN_ID_DOS_LOGS = null;
+
 /** Executa o teste e devolve execução + saída REAL em disco. */
 function executarTeste(idDefeito, relTeste) {
-  const alvoLog = resolverCaminhoDeEvidencia({ id: idDefeito, dirRel: EVIDENCIA_REL, ext: '.log', criarDir: true });
+  const dirLogs = RUN_ID_DOS_LOGS
+    ? path.join(EVIDENCIA_REL, 'runs', RUN_ID_DOS_LOGS, 'logs')
+    : EVIDENCIA_REL;
+  const alvoLog = resolverCaminhoDeEvidencia({ id: idDefeito, dirRel: dirLogs, ext: '.log', criarDir: true });
   if (!alvoLog.ok) throw new Error(`ID_INVALIDO:${alvoLog.motivo}:${String(idDefeito).slice(0, 40)}`);
   const saidaRel = alvoLog.rel;
   const saidaAbs = alvoLog.abs;
@@ -397,6 +411,7 @@ function main() {
     sourceFingerprint: fingerprint, inventoryFingerprint, hardeningQueueFingerprint,
     testManifestFingerprint, escopo,
   });
+  if (execucao && execucao.runId) RUN_ID_DOS_LOGS = execucao.runId;
 
   // ── MODO PROPOSTA ────────────────────────────────────────────────────────
   // Para itens SEM teste citado, PROCURA candidatos no repositório por sobreposição de

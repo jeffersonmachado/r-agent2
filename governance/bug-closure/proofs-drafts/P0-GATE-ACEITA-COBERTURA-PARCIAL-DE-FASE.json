@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "df0c62ef-f60a-4d55-9f20-aa77aae7d7b2",
+  "transitionId": "81df8a9b-79cd-4310-a0d1-a58f45e6d3de",
   "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/phaseStepContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/phaseStepContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:22:23.269Z",
-      "finishedAt": "2026-10-31T22:22:28.318Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
-      "outputSha256": "3dc980aac55347a1ba5491e65c221e45619e069961aa8b16587c903413285a59"
+      "startedAt": "2026-11-01T03:42:36.228Z",
+      "finishedAt": "2026-11-01T03:42:43.680Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
+      "outputSha256": "9752d076ed2b382e97e7736ea7c234ef251dee58829f6f7edc8cfdfb40f43f54"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T22:22:28.325Z",
-  "proofHash": "fd4973ec203178adda6c1cac8fb9ad4f7da23033f5b65c0466eb7ceaead24f74"
+  "createdAt": "2026-11-01T03:42:43.746Z",
+  "proofHash": "05bb777c9992aeb8ba251094d4dfe2bb940483e293f27f0902019bd1d58168d3"
 }

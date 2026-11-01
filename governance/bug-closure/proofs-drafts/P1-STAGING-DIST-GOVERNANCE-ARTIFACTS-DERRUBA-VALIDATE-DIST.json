@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9aae562a-1b53-48bc-a361-a403ba94cf34",
+  "transitionId": "008911f3-db64-423e-93d2-be47878a9a2e",
   "defectId": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/devBranchCiGate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:34:20.436Z",
-      "finishedAt": "2026-10-31T22:34:24.960Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log",
-      "outputSha256": "22ff3b9ebab97b78221b92fcd0c811c29e60a4fa154d9942b19226c0084b726c"
+      "startedAt": "2026-11-01T03:54:44.000Z",
+      "finishedAt": "2026-11-01T03:54:48.139Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log",
+      "outputSha256": "30234a010a04890dff609583241b1eec42f65e37100d72e3e2baac85f5dec1f5"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:34:24.966Z",
-  "proofHash": "57c467e5c74167ca7180e40cacbef250bb551b9e622765fa380f31cff44ed10f"
+  "createdAt": "2026-11-01T03:54:48.146Z",
+  "proofHash": "533a0c2c1d8c800caa96e53a1928b0208261964082ae512067913b31653c7e89"
 }

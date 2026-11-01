@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7c6f2117-d1e6-46a6-8a14-81d77407cc2b",
+  "transitionId": "780ce735-a130-453c-87ef-9a98b49027bb",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:29:34.043Z",
-      "finishedAt": "2026-10-31T22:29:39.029Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
-      "outputSha256": "7250ca894f24fafaf73b17413592dac9df2f4115893626b92d41f9c8df916299"
+      "startedAt": "2026-11-01T03:50:15.668Z",
+      "finishedAt": "2026-11-01T03:50:18.645Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "outputSha256": "56c628ae2ab968f6382a28bd99b8df17129eca5eac9d85e8902b0e0404bde7fc"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:29:39.036Z",
-  "proofHash": "eca67b182e08d5e203da85a8d820bc136f1e0f128b5e6c93a30c02804392dffa"
+  "createdAt": "2026-11-01T03:50:18.653Z",
+  "proofHash": "ac8b087f06fc2f9c09d685daf056151e0ca21ca165fb4acfe308b1e6f99c7e40"
 }

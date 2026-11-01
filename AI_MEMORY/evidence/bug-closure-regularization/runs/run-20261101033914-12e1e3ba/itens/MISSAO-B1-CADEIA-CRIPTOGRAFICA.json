@@ -1,0 +1,27 @@
+{
+  "id": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
+  "severity": "P0",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "B1: cadeia criptografica existia mas NENHUM gate a recalculava",
+  "classe": "AGUARDA_INSUMOS_HUMANOS",
+  "origemDoTeste": "MAPA_CONFIRMADO",
+  "teste": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "EVIDENCIA_NEGATIVA_AUSENTE",
+    "APROVACAO_HUMANA_AUSENTE",
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/MISSAO-B1-CADEIA-CRIPTOGRAFICA.log",
+  "draft": "governance/bug-closure/proofs-drafts/MISSAO-B1-CADEIA-CRIPTOGRAFICA.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101033914-12e1e3ba",
+  "identidade": {
+    "commit": "3441bcacac223f381adfbc749bff054c58fdf358",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "36ca0d6fcc472d5d75ad821c12966ab791abb42189d8503e78a9b4990c850d52",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "27c49ac8c7d7a9b88004eca2ab65e0febd260f8f32ac63ce5b96f30c511f48f5"
+}

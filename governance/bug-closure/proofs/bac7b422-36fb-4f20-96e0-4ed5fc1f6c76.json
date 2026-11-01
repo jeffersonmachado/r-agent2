@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "bac7b422-36fb-4f20-96e0-4ed5fc1f6c76",
+  "defectId": "PROMPT-P1F-STREAM-ISOLAMENTO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "frontend/src/shared/useLroStream.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/shared/useLroStream.test.jsx",
+      "command": "npm --prefix frontend run test -- src/shared/useLroStream.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T03:56:23.149Z",
+      "finishedAt": "2026-11-01T03:56:30.241Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/PROMPT-P1F-STREAM-ISOLAMENTO.log",
+      "outputSha256": "b683c8841a1d99d8eb9a59ab593887e013a83d9d1ef8b3ea73aae48a6d8d2cc6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/shared/useLroStream.test.jsx",
+      "sha256": "b083c622b7423b46106d9bf412e12a54d5794c1e8199fee512d40915d10ceb36"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T03:56:30.249Z",
+  "proofHash": "d0b373335f3b6951dddc36fae8e7b3bda72b494347ba159663db89d7c934329d",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "AHlGo/JxVdvZLVoZ6cEps9EWT95Y4B69B2Re5Pb3ZhwD4basQpY+Xv+no7jlJYUyvi6pF6YuTvWCd61+LyjGDQ==",
+    "signedAt": "2026-11-01T04:16:01.267Z"
+  }
+}

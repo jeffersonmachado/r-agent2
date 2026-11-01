@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "2897165f-aadb-4af7-bfd4-c225221013e8",
+  "transitionId": "3b1b694f-4630-4986-aa3c-ca5c46da9a87",
   "defectId": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:24:41.094Z",
-      "finishedAt": "2026-10-31T22:24:45.172Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
-      "outputSha256": "7d2fcf868e1c4665c80b82464b8966a49ad7b433e3b4e0992548109dd8cbd8dc"
+      "startedAt": "2026-11-01T03:45:42.124Z",
+      "finishedAt": "2026-11-01T03:45:45.127Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
+      "outputSha256": "56986a208aaaeab5dc3251920dd26828c5f0f6213bb8f27b2ade3fde82a92cd4"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:24:45.180Z",
-  "proofHash": "d13e91b73e0d0d4f5e58121cd7d80ee463928bb0aeed3db9734482fb00d603e2"
+  "createdAt": "2026-11-01T03:45:45.133Z",
+  "proofHash": "58f4c4e014bca3df2800f1a5630f247f5af7d7f333c4953e0be0ccc55928345a"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ca874a79-a6b2-4b55-b1ec-b545dabe361a",
+  "transitionId": "080d0987-0352-478e-b06b-b1a822130a6c",
   "defectId": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/governanceChainAppearance.test.js"
   ],
@@ -18,13 +18,38 @@
       "command": "npx jest tests/unit/governance/governanceChainAppearance.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:21:58.876Z",
-      "finishedAt": "2026-10-31T22:22:03.656Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
-      "outputSha256": "e7db9b36ece17167a95cd7c28f59607a812d39949485c985320ff9e37f7c25e2"
+      "startedAt": "2026-11-01T03:41:52.690Z",
+      "finishedAt": "2026-11-01T03:41:57.983Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
+      "outputSha256": "755bb6184e84281e6c3574b38d296f6c6a48f9f7efbb1d9ba847a339c9838291"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/governance-chain.js",
+      "control": "artefato pode declarar valid=true sobre conteudo alterado sem reprovar a auto-declaracao",
+      "mutatedFromSha256": "3ab195249af732ce6c376f3e8ba0cbe132598eab9a592fe4d84eb6c511fc1eb1",
+      "mutatedToSha256": "99b63ebb61b593b6e85f293e2c617c17e21bde6603e5a550596988552932e0e1",
+      "testPath": "tests/unit/governance/governanceChainAppearance.test.js",
+      "command": "npx jest tests/unit/governance/governanceChainAppearance.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO-baseline-557c5be9.log",
+        "logSha256": "1a707d1ed4463978acb16c0609ada600b953561775a1437587193deb41ddd14f"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO-mutado-557c5be9.log",
+        "logSha256": "f1ab4fcec475ab248b2dd5c64facb4c61adba52a9ffe4bb95559c1738879ff0d"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO-restaurado-557c5be9.log",
+        "logSha256": "04ac5cfde2917d79d8a37cda129f4a6204200a0bf4acfec94fb6d0d942be73b6"
+      },
+      "capturedAt": "2026-11-01T03:30:04.453Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/unit/governance/governanceChainAppearance.test.js",
@@ -35,14 +60,20 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T04:15:33.196037Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:22:03.664Z",
-  "proofHash": "a7bc7fefcc5f9a9ec7dfdd4ff2668459eb2c5102a8b71d8436c4a60c9451f132"
+  "createdAt": "2026-11-01T03:41:57.999Z",
+  "proofHash": "46bf4c19d0a949d3d2a37c9e6b112e9f38a2c0209ee30a32bae9cc5d75f0dec3"
 }

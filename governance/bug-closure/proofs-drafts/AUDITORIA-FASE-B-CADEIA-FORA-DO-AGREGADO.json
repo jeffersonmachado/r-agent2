@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "d25eeda8-f1d6-4143-addc-1f9076c77e58",
+  "transitionId": "736297b5-746e-444c-a0a5-adf34789cc23",
   "defectId": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:55:46.654Z",
-      "finishedAt": "2026-10-31T22:55:49.290Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
-      "outputSha256": "2411e9aadc3b03aacc157ed55af2bc4fb6c1607535784e7946a63a87c471230d"
+      "startedAt": "2026-11-01T04:15:06.537Z",
+      "finishedAt": "2026-11-01T04:15:08.613Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO.log",
+      "outputSha256": "d0f11ba588763640305a46dd9fa66e5020206e8599e51179e3dd217a351ddf8b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:55:49.298Z",
-  "proofHash": "6caa62f7cf52cfb49608e4a94233c6ed238fb8e1cb34210cf914bdef90304c11"
+  "createdAt": "2026-11-01T04:15:08.620Z",
+  "proofHash": "6e8def325463a3aa3e131f586aa89da0e15156749e61a22b4b8c01af05dd8586"
 }

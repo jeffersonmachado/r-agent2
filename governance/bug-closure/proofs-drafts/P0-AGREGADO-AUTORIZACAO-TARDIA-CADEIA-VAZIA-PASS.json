@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a8660eeb-11cd-49b4-8739-7f572736c12a",
+  "transitionId": "a21d9eeb-17b2-47fb-8a2f-60659dcd0551",
   "defectId": "P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/governanceEnforcementOrder.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governanceEnforcementOrder.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:21:52.116Z",
-      "finishedAt": "2026-10-31T22:21:55.466Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log",
-      "outputSha256": "c3735db5fe40276cb46bd095043cb12d7a0c3e072d0ef73553d6d6bd70bc49ce"
+      "startedAt": "2026-11-01T03:41:37.347Z",
+      "finishedAt": "2026-11-01T03:41:44.648Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS.log",
+      "outputSha256": "ae8e9364696f3eec1585ccc66f7d2252a8c62c4735497b4d69fb4434fdfd4390"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-10-31T22:21:55.474Z",
-  "proofHash": "2874b193be72d8267ab0196eb9f9072d136a35c3d384fb85b67fc489f13dd38c"
+  "createdAt": "2026-11-01T03:41:44.661Z",
+  "proofHash": "c46f5f5050f78823b698d462e48a221ca7a932c7f89cb4bfa8f4dce04c07e548"
 }

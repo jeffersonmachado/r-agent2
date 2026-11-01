@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "393de797-a3b3-4048-b81a-0f76ad9bdc77",
+  "transitionId": "6d5cf919-4db7-4a9b-a7b9-851f101cb157",
   "defectId": "ENG-LEASE-FENCE-NAO-VALIDADO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/integration/engineeringBugLoop.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringBugLoop.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:26:48.695Z",
-      "finishedAt": "2026-10-31T22:27:31.794Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/ENG-LEASE-FENCE-NAO-VALIDADO.log",
-      "outputSha256": "0f24a74c0ba1ec6428b53d224b222c6dfc16b09eb5184d83d639c987ed53cd32"
+      "startedAt": "2026-11-01T03:47:51.217Z",
+      "finishedAt": "2026-11-01T03:48:29.074Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/ENG-LEASE-FENCE-NAO-VALIDADO.log",
+      "outputSha256": "2ecd0f6386ecd50ca47d78d8f91ef0ecebb78a77a871ffdafaa038391c067a74"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:27:31.814Z",
-  "proofHash": "121656e15f8059c9f0c92173f1b2f2c4ddbdef8beb642ada3607d04141efac5c"
+  "createdAt": "2026-11-01T03:48:29.082Z",
+  "proofHash": "d5603b051d7fb1225b2d2d8c81cdcb27434ad57fb59a7925e57f1e6435e3dc1a"
 }

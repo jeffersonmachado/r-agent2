@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "d983dd69-b9f6-4930-b52b-aaa17eb77e22",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-P1-11",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/evidenceTtl.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/evidenceTtl.test.js",
+      "command": "npx jest tests/unit/governance/evidenceTtl.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T03:50:25.173Z",
+      "finishedAt": "2026-11-01T03:50:29.727Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/HARDENING-ENG-GOV-RELEASE-P1-11.log",
+      "outputSha256": "9879417586fbc030b1716c9199dc9f555459d68cd467cb6e1fafda7c7a645f48"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/evidenceTtl.test.js",
+      "sha256": "25e4a2a26b32c1f86031961fe283a7f8a6e2a7d1d1fc19eaeed600d30aad17c6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T03:50:29.734Z",
+  "proofHash": "e81d1176afefd8555b0cd50cbc9dc7f2f927ee0b1c9f2c1e4e316037bccdf84c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "QNzze4Rtmor/GQoh3HK5/dXZ19T6mpZ9AMcF0x2DP1K8cuzEFAP+SMclH+s6b7BsUKrH9cQzpmRfkXf0wBdfAA==",
+    "signedAt": "2026-11-01T04:15:51.428Z"
+  }
+}

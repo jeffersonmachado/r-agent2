@@ -204,3 +204,37 @@ describe('regularizador: classificação da pendência (assinatura não é defei
     expect(classificarPendencia(true, [])).toBe('PRONTA');
   });
 });
+
+describe('regularização — log de teste é ESCOPADO por execução (append-only)', () => {
+  /**
+   * DEFEITO MEDIDO (2026-11-01): o log ia para `<EVIDENCIA>/<ID>.log` — caminho estável. Uma
+   * execução PARCIAL reescrevia logs de itens JÁ atestados; como a prova assinada guarda
+   * `outputPath` + `outputSha256`, o sha256 deixava de casar com o arquivo e provas de outros
+   * escopos eram invalidadas em massa (FECHAMENTO_NAO_PROVADO 42 -> 167 sem revogação).
+   */
+  test('a execução grava o log em runs/<runId>/logs e não no caminho compartilhado', () => {
+    const base = path.join(RAIZ, 'AI_MEMORY', 'evidence', 'bug-closure-regularization');
+    const antes = new Set(fs.readdirSync(path.join(base, 'runs'), { withFileTypes: true })
+      .filter((e) => e.isDirectory()).map((e) => e.name));
+
+    const r = rodar('scripts/governance/regularize-bug-closures.js',
+      ['--only', 'P3', '--limit', '1', '--json']);
+    expect(r.status).toBe(0);
+
+    const novos = fs.readdirSync(path.join(base, 'runs'), { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !antes.has(e.name)).map((e) => e.name);
+    expect(novos.length).toBe(1);
+
+    const dirLogs = path.join(base, 'runs', novos[0], 'logs');
+    expect(fs.existsSync(dirLogs)).toBe(true);
+    const logs = fs.readdirSync(dirLogs).filter((f) => f.endsWith('.log'));
+    expect(logs.length).toBeGreaterThan(0);
+
+    const rascunhos = fs.readdirSync(path.join(RAIZ, 'governance', 'bug-closure', 'proofs-drafts'))
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => JSON.parse(fs.readFileSync(path.join(RAIZ, 'governance', 'bug-closure', 'proofs-drafts', f), 'utf8')))
+      .filter((d) => d.negativeEvidence !== undefined || d.execution);
+    const caminhos = JSON.stringify(rascunhos);
+    expect(caminhos).toContain(`runs/${novos[0]}/logs/`);
+  }, 240000);
+});

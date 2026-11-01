@@ -1,5 +1,5 @@
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-intelligence-erJmpc/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-intelligence-6m1hh3/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -13,7 +13,7 @@
       at Object.buildFailureIntelligence (tests/unit/qa-mesh/failureIntelligenceLineage.test.js:73:17)
 
   console.warn
-    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-intelligence-Syl5YO/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
+    [mesh-intelligence] execucao SEM lineage governado (runId/sourceFingerprint ausentes): artefato escrito em /tmp/mesh-intelligence-Uw7O4m/latest-ungoverned.json e o artefato governado latest.json foi PRESERVADO. Para produzir evidencia governada rode a malha dentro do run (GOVERNANCE_RUN_ID/GOVERNANCE_SOURCE_FINGERPRINT).
 
     [0m [90m 129 |[39m     intelligence[33m.[39misGovernedEvidence [33m=[39m temLineage[33m;[39m
      [90m 130 |[39m     [36mif[39m ([33m![39mtemLineage) {
@@ -30,14 +30,14 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/qa-mesh/failureIntelligenceLineage.test.js
   qa-mesh/intelligence — lineage não pode ser destruído por execução manual
-    ✓ execução COM lineage escreve latest.json (evidência governada) (107 ms)
-    ✓ execução SEM lineage NÃO sobrescreve a evidência governada (regressão do QA_EVIDENCE_LINEAGE_MISSING) (136 ms)
-    ✓ lineage parcial (só runId, sem fingerprint) NÃO é tratado como governado (119 ms)
-    ✓ sem outputDir nada é escrito (função pura) (102 ms)
+    ✓ execução COM lineage escreve latest.json (evidência governada) (139 ms)
+    ✓ execução SEM lineage NÃO sobrescreve a evidência governada (regressão do QA_EVIDENCE_LINEAGE_MISSING) (297 ms)
+    ✓ lineage parcial (só runId, sem fingerprint) NÃO é tratado como governado (138 ms)
+    ✓ sem outputDir nada é escrito (função pura) (105 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       4 passed, 4 total
 Snapshots:   0 total
-Time:        0.789 s, estimated 1 s
+Time:        1.67 s
 Ran all test suites matching /tests\/unit\/qa-mesh\/failureIntelligenceLineage.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

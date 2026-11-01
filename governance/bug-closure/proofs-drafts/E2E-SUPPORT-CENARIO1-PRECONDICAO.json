@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "2eda349a-9f3d-4623-8ae9-14801c70ec44",
+  "transitionId": "862a80a4-d656-40d8-b39f-5f45f9f15d74",
   "defectId": "E2E-SUPPORT-CENARIO1-PRECONDICAO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c6d329bb4f6ee7ee71843f172f858ce4058d48f8",
-  "codeFingerprint": "610692fa9b2b9ba7ea763e58595b391001b2c0636e486582e7f13c58fae7b5e2",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/backfillRegressionTests.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-10-31T22:41:34.927Z",
-      "finishedAt": "2026-10-31T22:41:38.966Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/E2E-SUPPORT-CENARIO1-PRECONDICAO.log",
-      "outputSha256": "5f507d158ffde7ad7859083c81bf959951cac554f0e78832a67ee8e2106b1f91"
+      "startedAt": "2026-11-01T04:02:37.932Z",
+      "finishedAt": "2026-11-01T04:02:43.494Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/E2E-SUPPORT-CENARIO1-PRECONDICAO.log",
+      "outputSha256": "169647cb065289a840e09f9fc555bdfb46268dfa962b8be8606665f3e06f0a03"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-10-31T22:41:38.972Z",
-  "proofHash": "0c1bdf01883a29484e7cab6c05c418ec783391f18f3718cf1e28425523ad6e1e"
+  "createdAt": "2026-11-01T04:02:43.505Z",
+  "proofHash": "14a92e24c06ac0e725c757273164a0f1647a96dca2cf4116d4cbc6bea020c0ec"
 }

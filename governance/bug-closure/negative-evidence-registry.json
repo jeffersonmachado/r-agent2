@@ -51,11 +51,67 @@
     },
     {
       "defectId": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+      "targetFile": "scripts/governance/assert-canonical-release-decision.js",
+      "control": "veredito da cadeia volta a vir do campo `valid` GRAVADO em vez da recomputação dos bytes",
+      "find": "    valid: r && r.valid === true,",
+      "replace": "    valid: chainPersistido.valid === true,",
+      "test": "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "gate com status fora dos permitidos (UNKNOWN/SKIPPED/NOT_EXECUTED) deixa de bloquear a certificação",
+      "find": "  if (naoPermitidos.length > 0) {",
+      "replace": "  if (false && naoPermitidos.length > 0) {",
+      "test": "tests/unit/governance/canonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
+      "targetFile": "scripts/governance/assert-canonical-release-decision.js",
+      "control": "veredito `ok` deixa de derivar do estado decidido e passa a aprovar um estado pré-pacote",
+      "find": "  const ok = isFinalGo(decisao.state) && divergencias.length === 0;",
+      "replace": "  const ok = divergencias.length === 0;",
+      "test": "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+    },
+    {
+      "defectId": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
+      "targetFile": "governance/export-governance-artifacts.js",
+      "control": "produtor volta a gravar lineage sem sourceCommit (identidade INCOMPLETA para sempre)",
+      "find": "    sourceCommit: run.git_commit || null,",
+      "replace": "    sourceCommit: null,",
+      "test": "tests/unit/governance/producerLineageIdentity.test.js"
+    },
+    {
+      "defectId": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
       "targetFile": "governance/governance-chain.js",
-      "control": "conferência da raiz da cadeia desligada (o campo `valid` gravado passa a ser a autoridade)",
-      "find": "  const chainRootValid = cumHash === storedChain.chainRoot;",
-      "replace": "  const chainRootValid = true; // mutação: raiz não é recomputada",
+      "control": "artefato pode declarar valid=true sobre conteudo alterado sem reprovar a auto-declaracao",
+      "find": "  let autoDeclaracao = 'AUSENTE';\n  if (declaraValidade) {",
+      "replace": "  let autoDeclaracao = 'AUSENTE';\n  if (false && declaraValidade) {",
       "test": "tests/unit/governance/governanceChainAppearance.test.js"
+    },
+    {
+      "defectId": "P0-FILAS-ROLLBACK-DESTRUTIVO",
+      "targetFile": "api/modules/queue/service.js",
+      "control": "rollback de criacao volta a apagar fila PREEXISTENTE (fechando atendimentos anteriores)",
+      "find": "        if (result.created === true) {",
+      "replace": "        if (true) {",
+      "test": "tests/unit/queueCreatePersistBeforeResponse.test.js"
+    },
+    {
+      "defectId": "P0-FILAS-ISOLAMENTO-TENANT",
+      "targetFile": "api/services/queue/queueAdminOperations.js",
+      "control": "getQueueStats volta a rodar sem escopo de tenant (force do tenant A fecha tickets do B)",
+      "find": "  const { ticketIds, activeTickets } = getQueueStats({ tickets, queues, queueName: normalizedName, tenantId });",
+      "replace": "  const { ticketIds, activeTickets } = getQueueStats({ tickets, queues, queueName: normalizedName });",
+      "test": "tests/unit/queueTenantIsolation.test.js"
+    },
+    {
+      "defectId": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
+      "targetFile": "scripts/governance/create-governed-run.js",
+      "control": "run governado volta a nascer sem gitCommit (identidade de release IMPOSSIVEL para sempre)",
+      "find": "    gitCommit: git.sourceCommit,",
+      "replace": "    gitCommitIgnorado: git.sourceCommit,",
+      "test": "tests/unit/governance/runIdentityCommit.test.js"
     }
   ]
 }

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "99030f42-c5d3-450a-be5a-e6e2649479ae",
+  "defectId": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/effectiveAggregateChain.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/effectiveAggregateChain.test.js",
+      "command": "npx jest tests/unit/governance/effectiveAggregateChain.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T03:45:45.148Z",
+      "finishedAt": "2026-11-01T03:45:48.135Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
+      "outputSha256": "4c7ffaabe9941325436a4117d3d898d7caee18ae1448ba203bac6b7bed2e53e6"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/effectiveAggregateChain.test.js",
+      "sha256": "a5d233f6acba53881da9b4bf7adf93f72557692c128d38856722fdd61329269a"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T03:45:48.143Z",
+  "proofHash": "7e06789f5c4907c7b64bb87622b75f4def5b2abb7870675ffd0c27918a39b080",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "haCijDeJJHVEn8jqbUOXfhF1RKchzoV7UqHY1RAvdpCee4hg572c1U0izUZqzjONypsjUNf5NH17QPzZHK9tDQ==",
+    "signedAt": "2026-11-01T04:15:42.253Z"
+  }
+}

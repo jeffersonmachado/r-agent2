@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "cc7e265e-ebfb-44fc-91da-d4fb0edd5dfc",
+  "defectId": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T03:42:50.615Z",
+      "finishedAt": "2026-11-01T03:42:54.084Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
+      "outputSha256": "376d8914ed06986cf90d9fb6c54b419c1517f062f3f460325684f67efa9693c0"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "certificação deixa de exigir identidade completa (run/commit/fingerprint) no contrato",
+      "mutatedFromSha256": "816f829db017a4353fa3b75fdaf0bfe86cfa203d9d0a7825eff705c12dca326d",
+      "mutatedToSha256": "6b2e289fd0f52e95f663009b7c87934ea88dc71b164c7d64aed04cc0cf5cfefc",
+      "testPath": "tests/unit/governance/canonicalReleaseDecisionIdentityContract.test.js",
+      "command": "npx jest tests/unit/governance/canonicalReleaseDecisionIdentityContract.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE-baseline-4905dfaa.log",
+        "logSha256": "8cbae8d73177be0d548698fc3bbb713e68a1f51467191387f5f2cd446e7556f2"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE-mutado-4905dfaa.log",
+        "logSha256": "b45e1eac9a148aa3aa42c780074fc2b3b2d88eb9af196a96ee277d14909c54f8"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE-restaurado-4905dfaa.log",
+        "logSha256": "8943e738d063b977f6eb0c0fc89d7c02890fd11c76127eb7388323ed4979e1f8"
+      },
+      "capturedAt": "2026-11-01T03:28:53.450Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "sha256": "89ff645c3d9b701c188b76512bec44088eed4cfecc3095e1849e306bfe43b0be"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T04:15:33.196037Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T03:42:54.097Z",
+  "proofHash": "aff9aeeeacb91d347e2def7ebffa6bf3455f4e4b68418c26fee733b89b5118c9",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "oHdEh3cFTXYdjNPNm/Vvfv+DwWzjmvuYWfwP8hoIWg7yOhDgls1S+doceTMV18T3B8y1ieJ7fanaBiJkoBgcAQ==",
+    "signedAt": "2026-11-01T04:15:55.186Z"
+  }
+}

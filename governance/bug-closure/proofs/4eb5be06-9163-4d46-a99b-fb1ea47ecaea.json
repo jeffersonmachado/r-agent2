@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "4eb5be06-9163-4d46-a99b-fb1ea47ecaea",
+  "defectId": "TESTE-DEV-SUPERVISAO-PORTA-EFEMERA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/dev/devServicesSupervision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/dev/devServicesSupervision.test.js",
+      "command": "npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T04:12:53.159Z",
+      "finishedAt": "2026-11-01T04:13:32.554Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/TESTE-DEV-SUPERVISAO-PORTA-EFEMERA.log",
+      "outputSha256": "4a09bb51fadb7cc970b9bb99f61239c9e17ccf18e188897b6ab1640bfc346b6a"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/dev/devServicesSupervision.test.js",
+      "sha256": "62f4628fcf762cbaf0e9e3dad48a45987c36428275e9d683e8f914e661f7f298"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T04:13:32.560Z",
+  "proofHash": "5a348ea59030b508032ebffaa341f1ebd323124803b5734a106d0d2bf6562066",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "lZaEicQ5t5zelyc+lhjNvYKFhU59vym3jfN/rVkjh7chMomBqgsUpDG8IduaY/Q45Q7nIqnLVUfNW1bLkoDMDA==",
+    "signedAt": "2026-11-01T04:16:02.445Z"
+  }
+}

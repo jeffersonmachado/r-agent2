@@ -2,33 +2,33 @@
 [jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
 PASS tests/unit/governance/governanceChainAppearance.test.js
   (1) DECLARAÇÃO — o build não declara validade que não mediu
-    ✓ buildChain marca valid=false e diz explicitamente que NÃO verificou (123 ms)
-    ✓ buildChain continua medindo COMPLETUDE (não confundir os dois conceitos) (180 ms)
-    ✓ todo elo declara classe, escritor e imutabilidade pós-selo (classificação exigida pela FASE 6) (236 ms)
-    ✓ a classificação separa fontes canônicas de relatórios derivados (10 elos conhecidos) (105 ms)
+    ✓ buildChain marca valid=false e diz explicitamente que NÃO verificou (156 ms)
+    ✓ buildChain continua medindo COMPLETUDE (não confundir os dois conceitos) (156 ms)
+    ✓ todo elo declara classe, escritor e imutabilidade pós-selo (classificação exigida pela FASE 6) (154 ms)
+    ✓ a classificação separa fontes canônicas de relatórios derivados (10 elos conhecidos) (104 ms)
   (2) CONTRADIÇÃO — declarar validade contra a recalculação é FAIL nomeado
-    ✓ cadeia declarada válida com elo ALTERADO ⇒ AUTO_DECLARACAO_DE_VALIDADE_FALSA (108 ms)
-    ✓ o caso MEDIDO no repositório: valid=true + completeChain=true + divergência nunca é PASS (104 ms)
-    ✓ declarar validade SEM declarar quem/quando certificou é FAIL (declaração não auditável) (104 ms)
-    ✓ cadeia coerente e certificada, sem escritas posteriores ⇒ PASS (107 ms)
-    ✓ cadeia íntegra mas apenas construída (não certificada) ⇒ PASS sem auto-declaração (106 ms)
+    ✓ cadeia declarada válida com elo ALTERADO ⇒ AUTO_DECLARACAO_DE_VALIDADE_FALSA (109 ms)
+    ✓ o caso MEDIDO no repositório: valid=true + completeChain=true + divergência nunca é PASS (109 ms)
+    ✓ declarar validade SEM declarar quem/quando certificou é FAIL (declaração não auditável) (107 ms)
+    ✓ cadeia coerente e certificada, sem escritas posteriores ⇒ PASS (106 ms)
+    ✓ cadeia íntegra mas apenas construída (não certificada) ⇒ PASS sem auto-declaração (107 ms)
   (3) TEMPO — escritas posteriores à certificação
-    ✓ conteúdo IDÊNTICO reescrito depois ⇒ registra a informação e NÃO reprova (104 ms)
-    ✓ conteúdo ALTERADO depois da certificação ⇒ CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA (105 ms)
-    ✓ a referência de tempo é a da CERTIFICAÇÃO, não a do build (111 ms)
+    ✓ conteúdo IDÊNTICO reescrito depois ⇒ registra a informação e NÃO reprova (107 ms)
+    ✓ conteúdo ALTERADO depois da certificação ⇒ CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA (108 ms)
+    ✓ a referência de tempo é a da CERTIFICAÇÃO, não a do build (106 ms)
   certifyChain — recalcula antes de rotular
-    ✓ cadeia coerente ⇒ CERTIFICADA com data e raiz medidas (110 ms)
-    ✓ cadeia divergente ⇒ NÃO certifica, grava DIVERGENTE e mantém valid=false (109 ms)
-    ✓ certificar não é tautológico: o veredito deriva dos bytes, não do rótulo de entrada (182 ms)
+    ✓ cadeia coerente ⇒ CERTIFICADA com data e raiz medidas (106 ms)
+    ✓ cadeia divergente ⇒ NÃO certifica, grava DIVERGENTE e mantém valid=false (104 ms)
+    ✓ certificar não é tautológico: o veredito deriva dos bytes, não do rótulo de entrada (148 ms)
   fiação — os gates consomem o veredito recalculado, nunca o campo persistido
     ✓ validate:self-proving recalcula e compara declaração com realidade (103 ms)
     ✓ o gate da cadeia publica os códigos de aparência de validade no relatório (103 ms)
-    ✓ o caminho canônico de assinatura certifica antes de assinar (103 ms)
-    ✓ verifyChain continua sendo a autoridade de hash usada pela avaliação (260 ms)
+    ✓ o caminho canônico de assinatura certifica antes de assinar (104 ms)
+    ✓ verifyChain continua sendo a autoridade de hash usada pela avaliação (288 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       19 passed, 19 total
 Snapshots:   0 total
-Time:        2.778 s, estimated 4 s
+Time:        2.971 s, estimated 3 s
 Ran all test suites matching /tests\/unit\/governance\/governanceChainAppearance.test.js/i.
 Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "94bb8626-c667-4750-bdaa-22b1d8aab99a",
+  "defectId": "DEF-QUEUE-DELETE-DB-ONLY",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/queueModuleRoutes.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/queueModuleRoutes.test.js",
+      "command": "npx jest tests/unit/queueModuleRoutes.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T03:45:48.154Z",
+      "finishedAt": "2026-11-01T03:45:52.238Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/DEF-QUEUE-DELETE-DB-ONLY.log",
+      "outputSha256": "2401d3cc0f21d004d77f0efd79d040c5115f3ff9aa3e44eea58bc558ade9f757"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/queueModuleRoutes.test.js",
+      "sha256": "5324570bf5f001c5b976c59c05694130791425cdefe99162ea19c941d1b358c2"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T03:45:52.244Z",
+  "proofHash": "53e900ca80e86aabe3d3a28d584f00bdb4cf1e63e210f4eca21e3e568dd7a2b8",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "9JRJQ9dRJPIQZ4kabLfiWSixAd2omP0u68PVaObCW/FG1PJEP41y90e4/IK1Q42OmQjJ/vrPrBvMfBcox3OCAA==",
+    "signedAt": "2026-11-01T04:15:42.439Z"
+  }
+}

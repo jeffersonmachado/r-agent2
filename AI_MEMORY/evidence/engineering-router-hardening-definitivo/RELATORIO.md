@@ -3456,3 +3456,58 @@ E na UI DEVELOPMENT: a linha aparece como **`Expirada`** com progresso `—` (in
 100% presumido).
 
 Suítes LRO após as correções: **81 testes / 11 suítes**, zero falhas.
+
+### 11.58. Prova negativa em massa (13 mutações) + o defeito que ela desenterrou
+
+Duas rodadas separadas, cada uma com o mesmo protocolo auditável: **baseline PASSA → mutação
+controlada FAZ FALHAR → arquivo restaurado byte-a-byte (sha256 conferido) → teste PASSA de novo**.
+Nenhuma prova foi escrita à mão: o registro canônico das mutações é
+`governance/bug-closure/negative-evidence-registry.json` (find/replace exato, revisável).
+
+Mutações provadas nesta rodada (12 defeitos):
+
+| defeito | mutação aplicada | teste que reprova |
+|---|---|---|
+| `P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO` | gate com status não permitido deixa de bloquear | `canonicalReleaseDecision.test.js` |
+| `P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR` | `ok` deixa de derivar do estado decidido | `assertCanonicalReleaseDecision.test.js` |
+| `P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO` | veredito volta a vir do campo `valid` gravado | `assertCanonicalReleaseDecision.test.js` |
+| `P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT` | produtor grava lineage sem `sourceCommit` | `producerLineageIdentity.test.js` |
+| `P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO` | auto-declaração de validade não reprova | `governanceChainAppearance.test.js` |
+| `P0-FILAS-ROLLBACK-DESTRUTIVO` | rollback apaga fila preexistente | `queueCreatePersistBeforeResponse.test.js` |
+| `P0-FILAS-ISOLAMENTO-TENANT` | `getQueueStats` sem escopo de tenant | `queueTenantIsolation.test.js` |
+| `P0-RUN-SEM-SOURCE-COMMIT-...` | run nasce sem `gitCommit` | `runIdentityCommit.test.js` |
+| `P0-2` (×2), `P0-3`, `P0-4`, `P0-IDENTIDADE-...` | (rodada anterior, revalidada no mesmo relatório) | — |
+
+Duas mutações **falharam em reprovar** na primeira tentativa, e isso não foi "ajustado" até passar —
+foi investigado:
+
+1. `P0-AVALIADOR`: mutar a conferência da RAIZ da cadeia não derrubava `governanceChainAppearance`
+   porque os fixtures já tinham divergências por elo (o teste passava por outro motivo). A mutação
+   foi **reapontada** para o ponto exato do defeito — ler `chainPersistido.valid` em vez de
+   recomputar — e aí sim reprova. Fica registrado: cobertura de teste não é cobertura de guarda.
+2. `P0-FILAS-ISOLAMENTO-TENANT`: eu havia mirado o wrapper de módulo (`api/modules/queue/service.js`)
+   enquanto o teste exercita `api/services/queue/queueAdminOperations.js`. Reapontada para o
+   `getQueueStats({..., tenantId})` real, reprova.
+
+**O achado**: ao refazer o batch **parcialmente** (`--only P0`) para gerar rascunhos frescos, o
+`FECHAMENTO_NAO_PROVADO` saltou de **42 para 167** sem que nenhuma prova tivesse sido revogada.
+Causa medida: o log de execução de cada teste era gravado em caminho ESTÁVEL
+(`AI_MEMORY/evidence/bug-closure-regularization/<ID>.log`) e o rascunho guarda `outputPath` +
+`outputSha256`. Rodar um subconjunto reescrevia os logs de itens já atestados ⇒ sha256 deixava de
+casar ⇒ a prova virava `EVIDENCIA_ADULTERADA` (correto: o verificador recusou). O defeito era de
+**durabilidade da evidência**, não do verificador.
+
+Correção: o log passou a ser escopado por execução — `runs/<runId>/logs/<ID>.log` — tornando cada
+rodada append-only. Regressão: `bugClosureRegularization.test.js` › "log de teste é ESCOPADO por
+execução", que roda o regularizador de verdade (`--limit 1`) e exige o diretório novo.
+
+Ciclo completo refeito no fingerprint novo (167 itens), 134 provas atestadas com âncora externa:
+
+```
+antes:  FECHAMENTO_NAO_PROVADO = 42 (P0=28, P1=7)
+depois: FECHAMENTO_NAO_PROVADO = 33 (P0=19, P1=7)   [com RAP_CLOSURE_TRUST_ANCHOR_SHA256 no ambiente]
+```
+
+Nota de operação que custou uma medição falsa: rodar `validate:bug-closure-status` **sem** as
+âncoras no ambiente devolve `167` (todas as provas recusadas por falta de âncora). O número só é
+válido com `~/.config/ragent2/closure-anchors.env` carregado.
