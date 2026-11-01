@@ -3867,3 +3867,43 @@ bytes governados (commit `3612f3a3c`) e o binding voltou a fechar byte-a-byte.
 Lição operacional registrada: neste repositório **`git add -A` depois de rodar suíte é armadilha** —
 os produtores locais regravam evidência versionada. Adicionar paths explicitamente, ou conferir com
 `npx jest tests/unit/governance/governedEvidenceBinding.test.js` antes de commitar.
+
+### 11.72. Release Governance destravado até o selo — e a causa-raiz que só aparecia em CI
+
+Provisionei os quatro segredos que faltavam (ação que a missão tinha como pendência do dono):
+`RAP_RELEASE_ATTESTATION_PRIVATE_KEY`, `RAP_CLOSURE_TRUST_ANCHOR_SHA256`,
+`RAP_APPROVAL_TRUST_ANCHOR_SHA256`, `RAP_CLOSURE_INVENTORY_SHA256` (material já existente em
+`~/.local/share/rap-closure/` e `~/.config/ragent2/closure-anchors.env`; nada novo foi gerado e
+nenhum valor foi ecoado).
+
+Com isso o workflow avançou em três etapas e revelou **meu próprio defeito**:
+
+1. `Provisionar chave de attestation` → ✅ (antes: exit 1 imediato).
+2. `Preflight das âncoras` → ✅ `achados: []` (antes falhava; a primeira tentativa ainda falhou por
+   digest do inventário desatualizado — a fila muda quando a atestação grava `closureProof`, então o
+   segredo tem de ser reemitido a cada ciclo de fechamento).
+3. `bug-closure-guard` → ✅ **`AUTORIZADO: SELO_FINAL`**. Antes: `DENIED ... p0=31 p1=86 abertos=175
+   bloqueantes=117` com `FECHAMENTO_SEM_PROVA_VALIDA` em **todos** os 168 itens.
+4. `zip:release` → ❌ `V2_SEAL_NOT_FRESH` — bloqueio legítimo: pacote exige selo V2 fresco deste
+   source (`npm run engineering-router:v2-seal`), que é ciclo de release real e a missão proíbe.
+
+**CAUSA-RAIZ do item 3 (a parte que quase passou batido):** o gate negava TODAS as provas em CI e
+aprovava todas localmente, no MESMO commit e com fingerprint idêntico. Reproduzi em árvore limpa
+(`git worktree add --detach`) e o veredito inverteu: local `ALLOWED`, árvore limpa `DENIED`.
+
+Motivo: a regra global `.gitignore` `logs/` engolia `runs/<runId>/logs/<ID>.log`. A prova guarda
+`outputPath` + `outputSha256`; sem os bytes versionados, cada prova vira `EVIDENCIA_ADULTERADA` em
+qualquer checkout que não seja a máquina que a gerou (detalhe por item:
+`saidaAdulterada: .../runs/run-…/logs/P0-1.log`). Minha correção de durabilidade (§11.58) criou o
+diretório `logs/` e caiu na regra antiga — o conserto local "passou" porque o arquivo estava no
+disco.
+
+Correção: exceção explícita no `.gitignore` (no FIM do arquivo — só ali a negação vence a regra
+`logs/`) + versão dos 1054 logs de evidência (20 MB). É evidência governada, não log de depuração;
+o próprio `.gitignore` já tinha essa exceção para o caminho antigo.
+Prova da correção: árvore limpa do commit novo → `ALLOWED ... abertos=7 bloqueantes=0`.
+
+```
+CI fe762c9d8 — Release Governance: chave ✅ · âncoras ✅ · guard AUTORIZADO ✅ · selo V2 ❌ (por desenho)
+Demais workflows: L0+L1 ✅ Jest ✅ Frontend ✅ E2E ✅ RAG ✅
+```
