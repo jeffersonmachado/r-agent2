@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "486b1c62-47a4-4043-b643-c43d88b33a8f",
+  "transitionId": "e0ac709d-3312-4c7c-889b-e623673d3b4c",
   "defectId": "E2E-REPLAY-DOMINIO-E-TAB",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/backfillRegressionTests.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T03:47:44.860Z",
-      "finishedAt": "2026-11-01T03:47:51.200Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/E2E-REPLAY-DOMINIO-E-TAB.log",
-      "outputSha256": "3b130c239b80872555c478962173bcb252d31832ee053129163b203fb23a3692"
+      "startedAt": "2026-11-01T05:20:00.343Z",
+      "finishedAt": "2026-11-01T05:20:05.738Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/E2E-REPLAY-DOMINIO-E-TAB.log",
+      "outputSha256": "e16b5027fae598a702e264f87e25426a7ceeed906414dc7d1ba30d8eb8d4dcb0"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T03:47:51.208Z",
-  "proofHash": "df2577917da1388174d326ce01a49c11a2e1adfe6e5c32e7488083ecc835ebc8"
+  "createdAt": "2026-11-01T05:20:05.745Z",
+  "proofHash": "6ef735624f27b3937135542c47c9fbef539096e1259af18dec40811887734871"
 }

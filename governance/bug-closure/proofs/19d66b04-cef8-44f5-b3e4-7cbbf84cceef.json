@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "19d66b04-cef8-44f5-b3e4-7cbbf84cceef",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:40:05.676Z",
+      "finishedAt": "2026-11-01T05:40:09.024Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE.log",
+      "outputSha256": "171133dc886cd5f832a4dc51a466f686aab7cecaa36e7df0a9af1b77a3340d30"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js",
+      "sha256": "7fce957e336d1928efadaef558488c04fd43a4db2df989cf589e7d7d6b5aa8fb"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:40:09.032Z",
+  "proofHash": "2730afea09fe2fa73e9f65ca8719e787902c990093b0ca352d542f158220257e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "4ZnUxWr2V7HTaQl9FRJVB0TVaQTl/qyLEWOxylmLyIo2yxIj/8OgReWasojv7bXUHZa1q/cir5/cF+cNhhsKBw==",
+    "signedAt": "2026-11-01T05:45:52.324Z"
+  }
+}

@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "589e2f78-346b-479a-933c-a858ffe56ab0",
+  "transitionId": "cd936a3f-9450-4d44-9da3-c680831eec7f",
   "defectId": "P0-5",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/integration/securityWaiverApprovalE2E.test.js"
@@ -18,13 +18,38 @@
       "command": "npx jest tests/integration/securityWaiverApprovalE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:00:29.101Z",
-      "finishedAt": "2026-11-01T05:00:34.209Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-5.log",
-      "outputSha256": "924ef2c1d541a7f81494d072d231c213ca91a3422d24b63ba01ac1c64203ca28"
+      "startedAt": "2026-11-01T05:15:14.815Z",
+      "finishedAt": "2026-11-01T05:15:19.485Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P0-5.log",
+      "outputSha256": "329fb85e7cd588bc9672163b85525b6af7d4e125a2610d290c9c02ac8d37ecac"
     }
   ],
-  "negativeEvidence": [],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "waiver EXPIRADO volta a poder ser aprovado (isenção vencida passa a valer)",
+      "mutatedFromSha256": "b9590b6e856c601cb0974012ffd99a10803453cdeb4f8148d52b224cf4677ce2",
+      "mutatedToSha256": "940d2e79eb20707525f25f3a4dc5ee43c6992cb56545318c7bfd12d40cb3ab76",
+      "testPath": "tests/integration/securityWaiverApprovalE2E.test.js",
+      "command": "npx jest tests/integration/securityWaiverApprovalE2E.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-5-baseline-2a7ea2c7.log",
+        "logSha256": "1c57bafca2dd63863f0940fb1e554d50f0664ce54bdf4524d23c50aaf3ebf798"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-5-mutado-2a7ea2c7.log",
+        "logSha256": "4d2d4503d3561bc5f2386e54ff16f1b354b1d4d6b255175ab1559f5de14142bc"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-5-restaurado-2a7ea2c7.log",
+        "logSha256": "e88fb8bb25237a378d9eb326391c034f7d9c574dfc195be5d4a26a4ef512693f"
+      },
+      "capturedAt": "2026-11-01T05:13:57.226Z"
+    }
+  ],
   "artifactHashes": [
     {
       "path": "tests/integration/securityWaiverApprovalE2E.test.js",
@@ -35,7 +60,13 @@
     "id": "owner@results.invalid",
     "kind": "humano"
   },
-  "humanAuthorization": null,
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:45:40.950931Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
   "policyDecision": {
     "decision": "REVERIFY_EXISTING_CLOSURE",
     "policyId": "BUG_CLOSURE_FIRST",
@@ -43,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
   },
-  "createdAt": "2026-11-01T05:00:34.216Z",
-  "proofHash": "6b74fa1f1525540c23716b29635f37f3c3b73ae31daf3b6bfc0e2455669fdb4a"
+  "createdAt": "2026-11-01T05:15:19.492Z",
+  "proofHash": "1963c78035c7246bfecb035b7ca1bd5f238ca2080fa4a33f642345f7a9604c35"
 }

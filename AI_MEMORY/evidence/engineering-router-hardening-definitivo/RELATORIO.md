@@ -3586,3 +3586,42 @@ Restam **3 P0**, todos de integração com Postgres real (`P0-5` do Security Gat
 transferindo propriedade entre tenants, e duplo-accept concorrente do engineering router). Eles não
 são mutáveis por find/replace: exigem o banco vivo, e é justamente por isso que a evidência deles
 tem de vir de execução real, não de simulação.
+
+### 11.61. ZERO P0 sem prova — o banco real era o que faltava
+
+Ciclo COMPLETO no fingerprint de `66159b64d` (167 itens), com Postgres real disponibilizado para as
+suítes de integração. Resultado medido:
+
+```
+início da missão: FECHAMENTO_NAO_PROVADO = 159 (P0=31, P1=86)
+início desta fase:                       42 (P0=28, P1=7)
+agora:                                   14 (P0=0,  P1=7)
+```
+
+**P0 não provado = 0.** 153 provas atestadas nesta rodada, 31 delas com evidência negativa
+(`governance/bug-closure/negative-evidence-registry.json`: **32 mutações / 31 defeitos, 0 bloqueadas**).
+
+Os três P0 finais só eram mutáveis com banco vivo, e foi assim que foram provados:
+
+| defeito | mutação | prova |
+|---|---|---|
+| `P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS` | `create` volta a ser `upsert` com PK só `id` | `crmTenantIsolation.postgres.test.js` (22 casos, migrations reais) |
+| `P0-5` | waiver EXPIRADO volta a ser aprovado | `securityWaiverApprovalE2E.test.js` (7 casos) |
+| `L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT` | lease aceita reentrada de QUALQUER worker | `engineeringRouterConcurrentRunHttp.test.js` (2 requisições reais simultâneas) |
+
+Nota honesta sobre a quarta tentativa: a primeira mutação de concorrência que tentei (voltar o
+`runnerId` para `Date.now()`) **não reprovou** — a colisão depende de dois pedidos caírem no mesmo
+milissegundo, ou seja, o teste pegava o defeito por sorte de timing, não por guarda. Reapontei a
+mutação para a cláusula de reentrada do lease (`lease_worker_instance_id = :workerInstanceId`), que
+é determinística, e aí reprova. O registro guarda a versão determinística.
+
+Como rodar as suítes de integração localmente (sem isso o batch as marca indisponíveis):
+
+```bash
+# banco descartável no Postgres local; a suíte cria as próprias tabelas via migrations reais
+CRM_PG_TEST_URL=<url-do-db-crm_p0_test> CRM_PG_REQUIRED=1 npx jest tests/integration/crmTenantIsolation.postgres.test.js
+```
+
+Restam **14 itens**: 7 P1 e 7 P2/P3. Os P1 são (a) dois do `rag-service` que exigem venv com
+torch/psycopg2 — ambiente não provisionado nesta máquina, e (b) cinco de CI/Fase 6 sem suíte
+citada, que precisam de decisão humana (escrever suíte, reabrir ou aceitar risco declarado).

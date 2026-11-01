@@ -240,6 +240,30 @@
       "find": "    if (manifest.governanceRunId !== currentRun.runId) {",
       "replace": "    if (false && manifest.governanceRunId !== currentRun.runId) {",
       "test": "tests/unit/governance/releaseArtifactIdentity.test.js"
+    },
+    {
+      "defectId": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
+      "targetFile": "api/services/crm/crmRecordStore.js",
+      "control": "criação volta a usar upsert com PK só `id` (tenant B sobrescreve e transfere registro de A)",
+      "find": "    const row = await model().create({\n      id: registroId,\n      tenant_key: chave,\n      entity: alvo,\n      payload: sanitizarPayload(payload),\n    });",
+      "replace": "    const [row] = await model().upsert({\n      id: registroId,\n      tenant_key: chave,\n      entity: alvo,\n      payload: sanitizarPayload(payload),\n    });",
+      "test": "tests/integration/crmTenantIsolation.postgres.test.js"
+    },
+    {
+      "defectId": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
+      "targetFile": "api/services/engineeringRouter/engineeringTaskService.js",
+      "control": "aquisição de lease volta a aceitar reentrada de QUALQUER worker (segunda execução concorrente re-adquire o fence em vez de 409)",
+      "find": "          AND (t.lease_token IS NULL OR t.lease_expires_at IS NULL OR t.lease_expires_at < NOW() OR t.lease_worker_instance_id = :workerInstanceId)",
+      "replace": "          AND (t.lease_token IS NULL OR t.lease_expires_at IS NULL OR t.lease_expires_at < NOW() OR TRUE)",
+      "test": "tests/integration/engineeringRouterConcurrentRunHttp.test.js"
+    },
+    {
+      "defectId": "P0-5",
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "waiver EXPIRADO volta a poder ser aprovado (isenção vencida passa a valer)",
+      "find": "  if (!Number.isNaN(expiry.getTime()) && expiry.getTime() <= now.getTime()) {",
+      "replace": "  if (false && !Number.isNaN(expiry.getTime()) && expiry.getTime() <= now.getTime()) {",
+      "test": "tests/integration/securityWaiverApprovalE2E.test.js"
     }
   ]
 }

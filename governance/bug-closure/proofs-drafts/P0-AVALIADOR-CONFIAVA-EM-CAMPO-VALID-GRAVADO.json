@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "1bb0d77d-fc19-4e73-95ce-05aebe102fc2",
+  "transitionId": "25c700fe-75b8-4d1c-9d02-c1b6dd42e6d0",
   "defectId": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:00:37.987Z",
-      "finishedAt": "2026-11-01T05:00:41.999Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
-      "outputSha256": "4df40a49d36762de599127c3e1e5611f572c7469f3994d2e213248bafc71010b"
+      "startedAt": "2026-11-01T05:15:23.528Z",
+      "finishedAt": "2026-11-01T05:15:27.778Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
+      "outputSha256": "58160ad6e866e3e3cb50d1d6b0a020fc3f90dd54987e680e62497c486bdff98e"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-baseline-47bd2581.log",
-        "logSha256": "1174ecd9654fb73b53a33c72f4008b175295e6e456fdd454d184e2de9687ca24"
+        "logSha256": "335b8d1ff3ad5092d7782c1f98f5734c9b7592324ec854c1d58923f8144c2fcc"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-mutado-47bd2581.log",
-        "logSha256": "c88734279bf2485233a709a80d97eea02564ae3ea1f37501cf013bd54b422db2"
+        "logSha256": "0975643c7a62798557753f2c7f013b0ab3a174abb2336f6f63d0e4b66d8edcbc"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-restaurado-47bd2581.log",
-        "logSha256": "af6c0eaa2b03b0ced66ac3caeb34f1398dc42ddf0a1a5d7f4425bf21a6f44a19"
+        "logSha256": "04295237df05349f7cd4caded3b0fa1fc7929226d933845d49c644bda6b315a5"
       },
-      "capturedAt": "2026-11-01T04:53:04.359Z"
+      "capturedAt": "2026-11-01T05:06:43.313Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T05:01:52.486971Z",
+    "at": "2026-11-01T05:45:40.950931Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:00:42.007Z",
-  "proofHash": "88e0fa8e1c7de90f89a56432e8bfc996d0fda01f604b56084ce322c9d64183a6"
+  "createdAt": "2026-11-01T05:15:27.785Z",
+  "proofHash": "9c4e72a1799abbbb6350987d0d393b9e6747b6110165f2ee38bcb4b552eecb56"
 }

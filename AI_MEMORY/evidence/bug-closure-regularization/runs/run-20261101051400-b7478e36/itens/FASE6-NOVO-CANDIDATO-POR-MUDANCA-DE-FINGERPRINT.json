@@ -1,0 +1,17 @@
+{
+  "id": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Fix da FASE 6 mudou o sourceFingerprint: falta gerar novo candidato e nova certificacao preservando o anterior como historico",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+  "runId": "run-20261101051400-b7478e36",
+  "identidade": {
+    "commit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "4ff67e1567aae758fcf4df936325d6f7e57ceea0803b2dfa43bb3fad2ac4c6ca",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "08f6db903c28957bcce488fce7143754d8cb86bc9ca152fdf82733b4f8e680d1"
+}

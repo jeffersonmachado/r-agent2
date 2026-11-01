@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "62f8f3ad-ac60-4c67-91fd-34f554c1780c",
+  "defectId": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/canonicalReleaseDecision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/canonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/canonicalReleaseDecision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:15:43.182Z",
+      "finishedAt": "2026-11-01T05:15:50.779Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO.log",
+      "outputSha256": "5b63bbcd084ec601649018fde2b80c5375e5ce22470a14b91438a788fde39df8"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/canonical-release-decision.js",
+      "control": "gate com status fora dos permitidos (UNKNOWN/SKIPPED/NOT_EXECUTED) deixa de bloquear a certificação",
+      "mutatedFromSha256": "816f829db017a4353fa3b75fdaf0bfe86cfa203d9d0a7825eff705c12dca326d",
+      "mutatedToSha256": "438c3d7452ea8a76a8f3b63fd879b746f732ca99eaac67e0e9a2e9844015e905",
+      "testPath": "tests/unit/governance/canonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/canonicalReleaseDecision.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO-baseline-93a1dc38.log",
+        "logSha256": "ec091ba24b3c22c7b1ddc25fa1025875bbd5a3135ada1378d97207f7f6715f88"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO-mutado-93a1dc38.log",
+        "logSha256": "55a852b2853d7865c87d036d9dd5ddaba2493f55dbc4d3fb877437e68003074c"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO-restaurado-93a1dc38.log",
+        "logSha256": "ddd65cb4b5c00b57e306ac73c9c4cd2a3ecbd92a75cda17ee485b61a4bf09bef"
+      },
+      "capturedAt": "2026-11-01T05:07:09.332Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/canonicalReleaseDecision.test.js",
+      "sha256": "aadd764318945753990d2b0a742e6ee1e34123727f8fce8812541ec545f526de"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T05:45:40.950931Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:15:50.786Z",
+  "proofHash": "fefdb06c38d0317c5709dd63f3e54c96f77d6bc20cc0bbd11aefc11f241330da",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "0KwdQoIw7VpVPTSXOyFYroO+8H+5L/b8O7e2Bct0/ZaTtgDSR81FbIYanUwfgi5U1gHyZR40lVVogV+KIfRGBA==",
+    "signedAt": "2026-11-01T05:45:58.196Z"
+  }
+}

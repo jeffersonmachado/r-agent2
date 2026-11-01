@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "1e189e02-2305-4089-a1b3-ac1c2dd8960f",
+  "transitionId": "f88b04d3-da06-449e-b6a7-970920ed3f3b",
   "defectId": "P1-BRANCHES-MISSAO-RESIDUO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/pruneEngineeringMissionBranches.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/pruneEngineeringMissionBranches.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T03:53:24.477Z",
-      "finishedAt": "2026-11-01T03:53:28.061Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P1-BRANCHES-MISSAO-RESIDUO.log",
-      "outputSha256": "96a2f68736457bb04b60321c0733fa601f0e81c5bb672495e4e73486f80b2ea7"
+      "startedAt": "2026-11-01T05:24:55.452Z",
+      "finishedAt": "2026-11-01T05:24:58.039Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P1-BRANCHES-MISSAO-RESIDUO.log",
+      "outputSha256": "90ec2ecec72401e47f65923bcc65e3d8947d3ab7756d0878c466bbd1bc8b50dd"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T03:53:28.068Z",
-  "proofHash": "af657e1408b7a63ec099f86851d3789ca9fee4baea2f4911fbf18908643edd54"
+  "createdAt": "2026-11-01T05:24:58.048Z",
+  "proofHash": "1adad9c24a054bd73dddcc06342c5f2a5ada9a005a1eb703ba59ff72c71108cc"
 }

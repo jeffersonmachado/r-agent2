@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "0ec429d4-1052-4fa8-aa7e-30c2dc2803fa",
+  "transitionId": "f0e384cd-0296-44cc-b044-f0472b302915",
   "defectId": "TESTE-FILESYSTEM-ORCAMENTO-10S",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T04:14:51.504Z",
-      "finishedAt": "2026-11-01T04:15:00.167Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/TESTE-FILESYSTEM-ORCAMENTO-10S.log",
-      "outputSha256": "ca202ae5387b58b0a99a51c5f7b8751ed85b3b30276be7518d97cc6ef46639aa"
+      "startedAt": "2026-11-01T05:44:51.623Z",
+      "finishedAt": "2026-11-01T05:45:02.020Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/TESTE-FILESYSTEM-ORCAMENTO-10S.log",
+      "outputSha256": "6d4c0bb760af27411f32641a7d759a4607e15974e895233fbb7e48a9d3c2b666"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T04:15:00.177Z",
-  "proofHash": "bbce9ed3c1001b9d23a7dee46dcb7f05bb413da31542675f3f9c735fca5cf838"
+  "createdAt": "2026-11-01T05:45:02.031Z",
+  "proofHash": "e0a4c59563e71ff3dbd06a78a611abcbe1f17baf4e04e8b022b9252fc6a2bc4e"
 }

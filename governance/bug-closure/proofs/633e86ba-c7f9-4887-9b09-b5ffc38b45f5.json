@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "633e86ba-c7f9-4887-9b09-b5ffc38b45f5",
+  "defectId": "P1-3",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/engineeringMission/deriveGatesEvidence.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
+      "command": "npx jest tests/unit/engineeringMission/deriveGatesEvidence.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:24:38.348Z",
+      "finishedAt": "2026-11-01T05:24:42.218Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P1-3.log",
+      "outputSha256": "fade70df336664feb5fe44109bd57cb2448821e0ed7589612c4ad11f517c2549"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMission/deriveGatesEvidence.test.js",
+      "sha256": "ff13352481e3a987bf4a5d0dcef940e4dc5c6c64ee5567a741ffe8f29bafa8c4"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:24:42.226Z",
+  "proofHash": "d251df4e70759807a24203ed16783f26734b4e225dd8ec611213e3427c20196e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Iwf3OxCtuL7oLEc6dAwZvND18XZKmcuIG2JcYWXc897DJuLA4ZwHxdEUTf/B6qxqsOkuWLLX++i1m75gVc4xCg==",
+    "signedAt": "2026-11-01T05:46:00.970Z"
+  }
+}

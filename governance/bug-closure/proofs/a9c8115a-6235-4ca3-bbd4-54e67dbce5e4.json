@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a9c8115a-6235-4ca3-bbd4-54e67dbce5e4",
+  "defectId": "MISSAO-B9-CI-GITHUB-ACTIONS",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/devBranchCiGate.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/devBranchCiGate.test.js",
+      "command": "npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:23:46.001Z",
+      "finishedAt": "2026-11-01T05:23:50.132Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/MISSAO-B9-CI-GITHUB-ACTIONS.log",
+      "outputSha256": "09f124567b1a66eb0373e0135c64ddce189a8c1e4861d2e1cb32755888f36923"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/devBranchCiGate.test.js",
+      "sha256": "0fbf926905c371c76cb36f10c22f7560cc0d0b954554712fcedeb0fdb32bcc29"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:23:50.140Z",
+  "proofHash": "8a36d8c54ea3d141d0dc32808886e4dec76f2d2149587c4463860fb0cb003c8e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "vOgxBkMTZ2uP1xCKeIByPBGPnkDMw7wTDHWifKikJ/OeGHMSspQ3/owSILxMMjNdtqn3lYu/fyZn9lXJG9XzDQ==",
+    "signedAt": "2026-11-01T05:45:55.555Z"
+  }
+}

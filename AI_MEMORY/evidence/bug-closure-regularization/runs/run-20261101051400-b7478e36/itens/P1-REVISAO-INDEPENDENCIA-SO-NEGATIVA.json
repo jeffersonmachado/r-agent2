@@ -1,0 +1,25 @@
+{
+  "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate review aceitava APPROVE sem prova positiva de independencia",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101051400-b7478e36",
+  "identidade": {
+    "commit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+    "sourceFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "4ff67e1567aae758fcf4df936325d6f7e57ceea0803b2dfa43bb3fad2ac4c6ca",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "0c0a8dc1d92fb104e09f3b810966ef312be3625ada983b61ef65498e3115eca7"
+}

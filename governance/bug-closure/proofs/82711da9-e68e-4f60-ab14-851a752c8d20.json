@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "82711da9-e68e-4f60-ab14-851a752c8d20",
+  "defectId": "P1-4",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/engineeringMission/activePreventiveRules.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMission/activePreventiveRules.test.js",
+      "command": "npx jest tests/unit/engineeringMission/activePreventiveRules.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:24:42.236Z",
+      "finishedAt": "2026-11-01T05:24:46.415Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P1-4.log",
+      "outputSha256": "5c619ebdebfc84c4c90ed0099978dca0be4b0355700e966cfe7610157d40c31e"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMission/activePreventiveRules.test.js",
+      "sha256": "2aa4c2bcf27e2d8d4b57fa36c2e44ba2a6c8a06a2e9fee6be92650a5ee812343"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:24:46.422Z",
+  "proofHash": "e5e81df515a2bf91e6b7b109a152ab4a4bb573e3819c3ba8079bde95b699d1db",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "KWx1oRaSGaPmnsLBCHWzm5VYgsAynKMUG2nXi7FgxAhO1iq4TX8qBXi+P5gx7qWUWJJ6vcBFPZPlNCTKRa2wCg==",
+    "signedAt": "2026-11-01T05:46:01.126Z"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "2e91a1d7-5397-4244-acbe-ab80401953f6",
+  "defectId": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/governance/effectiveAggregateChain.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/effectiveAggregateChain.test.js",
+      "command": "npx jest tests/unit/governance/effectiveAggregateChain.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:18:11.636Z",
+      "finishedAt": "2026-11-01T05:18:15.403Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
+      "outputSha256": "2b1052a9b6da04ad8dd609df6b157e5f0c8dbf62e625f914f8fa60ad87c29af4"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/effectiveAggregateChain.test.js",
+      "sha256": "a5d233f6acba53881da9b4bf7adf93f72557692c128d38856722fdd61329269a"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:18:15.409Z",
+  "proofHash": "fc4aa0ea01a2b7781bdbc809c22e541a08151b40d52d2082b3fb775e2f62c48d",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "uSA8Ah4vm61Y8S4C4UEI4YSpKoQwUg/sy/mH83cO3fyWFxjsI8GOzhL1XEo1j8W6C/EnxkXu+Nsu209/RKCJCA==",
+    "signedAt": "2026-11-01T05:45:42.641Z"
+  }
+}

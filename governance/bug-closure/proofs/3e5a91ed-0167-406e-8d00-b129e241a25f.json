@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "3e5a91ed-0167-406e-8d00-b129e241a25f",
+  "defectId": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/unit/engineeringRouterContextSourceFailClosed.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
+      "command": "npx jest tests/unit/engineeringRouterContextSourceFailClosed.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:22:47.132Z",
+      "finishedAt": "2026-11-01T05:22:51.665Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL.log",
+      "outputSha256": "81050972f97ff2c6e5c0f02689aaeae7123a0b89fe17d9e8a32f8ad97ca6e1a2"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
+      "sha256": "3331cfbe5eaeaf43c8126596d43ac325495e70c6bfd07eb4b4a3336dde4419a8"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:22:51.673Z",
+  "proofHash": "8d5abdfef9fc6818275d37be1002e5f8221a243414d2c539c4b15b129297ec0a",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "mdr7cFKUlJMRTJOoRUpNvNNTx+cykloVFkVp1Gsfp8fUmXnVap3W1hDrd1II8a+Rxj2jk53ouFxQQL9UhUjDAw==",
+    "signedAt": "2026-11-01T05:45:53.121Z"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "033d6655-97fc-4562-b9b9-85443b1b92b7",
+  "defectId": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
+  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "requiredTests": [
+    "tests/integration/evoSyncIntegration.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/evoSyncIntegration.test.js",
+      "command": "npx jest tests/integration/evoSyncIntegration.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:32:18.553Z",
+      "finishedAt": "2026-11-01T05:32:28.847Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/DEF-TIMEBOMB-EVOSYNC-JANELA30D.log",
+      "outputSha256": "94da112d594914c8cf77cb4c9c88603113a60f07bafcea4a6de539d0799f9cdd"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/evoSyncIntegration.test.js",
+      "sha256": "9fb6d413ab86e96f07a296e543f0e4f868e60b15b4120968f63e4da4958e78b6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:32:28.854Z",
+  "proofHash": "9e8396730e703b0fa0f307d18b4f5fe6ea86226247222bc5a8e22a1bc3639826",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "JlpNfHYS4tdiI8fI8tNYFZCTZiv1dWR1rwmfEfdX+sPY2NEx7oyl2nFw6d1E6PSQis5X7JO9vvgkOqnZf7lMCg==",
+    "signedAt": "2026-11-01T05:45:43.058Z"
+  }
+}

@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a7d7dbd3-ecf6-4d6f-92e5-7e3f84cbab90",
+  "transitionId": "d2d297c8-3de8-4418-817b-7ad7da9e81a9",
   "defectId": "P1-EVIDENCIA-COMMIT-ORFAO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "3441bcacac223f381adfbc749bff054c58fdf358",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/hardeningQueueCommitExists.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T03:54:02.675Z",
-      "finishedAt": "2026-11-01T03:54:07.387Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101033914-12e1e3ba/logs/P1-EVIDENCIA-COMMIT-ORFAO.log",
-      "outputSha256": "db79ceb6f25a957831884ffde7cd8de756cc2fef84662cddf632a55a9577cd43"
+      "startedAt": "2026-11-01T05:25:22.955Z",
+      "finishedAt": "2026-11-01T05:25:25.481Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P1-EVIDENCIA-COMMIT-ORFAO.log",
+      "outputSha256": "0a01d91b66086a5f81043e1dce6c74ee92bb68469ca303cfe35f87da7bfcd258"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T03:54:07.394Z",
-  "proofHash": "3cbbca7eff80ada5af766df629cd6298637ae349004119dcdb1565b51a5e2d93"
+  "createdAt": "2026-11-01T05:25:25.487Z",
+  "proofHash": "9c93c20de593c8139884d719d7a501b397e120731408604eb0670ff7c906134e"
 }

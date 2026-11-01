@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "6465ba2c-b3ca-4a20-bfbb-aeedcc6f8d44",
+  "transitionId": "40c476e7-ac19-42de-828b-b8908c79f135",
   "defectId": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "f4122cc89d078ead01a16658a2e0a21fd50af83f",
+  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
   "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
   "requiredTests": [
     "tests/unit/governance/governanceChainAppearance.test.js"
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governanceChainAppearance.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:00:42.018Z",
-      "finishedAt": "2026-11-01T05:00:46.773Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101045911-1945195a/logs/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
-      "outputSha256": "ce2f8bf9ef5e13be34deb0028bcb6d41b7930dc08696a6733b6619559b415274"
+      "startedAt": "2026-11-01T05:15:27.792Z",
+      "finishedAt": "2026-11-01T05:15:32.987Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO.log",
+      "outputSha256": "93f76ab83284e2141760b1ce00adb494b6ce62dd34c3b1612c8bd415514bdf42"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO-baseline-557c5be9.log",
-        "logSha256": "7daa0de2054ef88741010e0945bb26a18f1bbd83fe93f717ca97766a5b68201e"
+        "logSha256": "85165598f43f0818f2e756b24b25289902ad0494a62504363366a1e6fe2e89c4"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO-mutado-557c5be9.log",
-        "logSha256": "ab3e17e32ecc62a4a51ac707340fae2df7c41dc965797f18666680c09dc832c9"
+        "logSha256": "5c1efdca37c2a70179c91dd85b4992dfca5af8a43ba18d659765d1989458f572"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO-restaurado-557c5be9.log",
-        "logSha256": "338e8d70c6059582b39d1b9589da264927c6184ea6fd51120eebd20529abe979"
+        "logSha256": "de195dd5cfa1eb79031f36b6539f2821019ea3f9759f054d4ae25b4b72856e33"
       },
-      "capturedAt": "2026-11-01T04:54:01.803Z"
+      "capturedAt": "2026-11-01T05:07:47.557Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T05:01:52.486971Z",
+    "at": "2026-11-01T05:45:40.950931Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:00:46.780Z",
-  "proofHash": "cf5bb67237c0c12bc48a50e3bb21f0a21c87c7396caf1a163e6c0ead9f548bd3"
+  "createdAt": "2026-11-01T05:15:32.997Z",
+  "proofHash": "313261c7f1b80ff3c7d897b6356f0584c4128dc1ac459949604f0f09c2d28971"
 }
