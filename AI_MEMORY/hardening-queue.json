@@ -2489,7 +2489,7 @@
       "title": "Gate/CI do branch de desenvolvimento nao rodava NENHUMA suite de integracao",
       "status": "prevention_active",
       "commit": "a67a99835",
-      "evidence": "scripts/ci/dev-branch-gate.js passo L0b (npx jest tests/integration/engineering --maxWorkers=2, fail-closed) + .github/workflows/dev-branch-ci.yml job dev-branch-integration com services pgvector/redis e migrations. Prova: a primeira execucao do passo reprovou 2 suites e expôs P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
+      "evidence": "scripts/ci/dev-branch-gate.js passo L0b (npx jest tests/integration/engineering --maxWorkers=2, fail-closed) + .github/workflows/dev-branch-ci.yml job dev-branch-integration com services pgvector/redis e migrations. Prova: a primeira execucao do passo reprovou 2 suites e expôs P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO | suíte de regressão: tests/unit/governance/ciWorkflowContract.test.js (estrutura e ORDEM dos passos do workflow)",
       "resolution": "dev-branch-ci.yml rodava apenas `node scripts/ci/dev-branch-gate.js` (npm test + gates de governanca). O job de integracao existia so em jest.yml, que dispara em main/develop: nenhum commit desta branch executava tests/integration (Postgres real). Agora o gate tem o passo L0b e o workflow tem o job dev-branch-integration.",
       "prevention": "Integracao real no gate local + job de workflow com servicos, ambos fail-closed (sem banco o passo falha, nao pula).",
       "severity": "P1",
@@ -2497,7 +2497,11 @@
       "state": "VERIFIED",
       "legacyStatus": "prevention_active",
       "severityBasis": "commits do branch podiam chegar ao remoto sem prova de integracao",
-      "severitySource": "auditoria-externa-2026-10-20"
+      "severitySource": "auditoria-externa-2026-10-20",
+      "regressionTest": "tests/unit/governance/ciWorkflowContract.test.js",
+      "closureProof": "governance/bug-closure/proofs/59a545e3-1a4f-4173-a8f1-05b066cdb989.json",
+      "attestationId": "59a545e3-1a4f-4173-a8f1-05b066cdb989",
+      "attestedAt": "2026-11-01T08:29:03.565Z"
     },
     {
       "id": "P1-BRANCHES-MISSAO-RESIDUO",
@@ -2918,14 +2922,18 @@
       "title": "CI de main (jest.yml): 5 lacunas de AMBIENTE reprovavam a suíte oficial",
       "status": "verified",
       "commit": "251a11a20",
-      "evidence": "RELATORIO.md §11.7 + report.json ciMainJestWorkflow. Progressão medida em runner limpo (mesma suíte npm test): run 40726692268 (fetch-depth 0) 47 suítes/9 falhas PostgreSQL; 40728206519 (+services) 17 falhas relation \"mcp_connections\" does not exist; 40729073198 (+db:migrate) 1 falha ENOENT reports/benchmark-sufficiency-report.json; 40730595851 (+ci:artifacts) 8 falhas docker run exit 125; 40734125941 (+imagem do sandbox) 1 falha; sonda 40735242329 --bail=0 mediu a suíte inteira: 1121 suítes / 9785 testes, 4 suítes e 10 testes vermelhos; 40737265748 (+ci:bootstrap +identidade git) fechou 3 das 4 suítes — 327/328 PASS. Nenhuma asserção de teste foi tocada: as lacunas eram clone raso, banco ausente, banco sem schema, artefatos governados/.env ausentes, imagem do sandbox ausente e identidade git ausente. Gate canônico dev-branch-ci PASS nos 3 últimos commits (runs 40729083196, 40730607495, 40734136725). | AMPLIADO 2026-10-28 (integração): o job jest-integration morria em 15m16s–15m18s com timeout-minutes: 15 SEM publicar nenhum Tests: — corrida 40737265748 (timeout 90 min) 5 suítes/26 testes ✕; 40741496599 (lotes canônicos do manifesto + crm_p0_test) 2 suítes/2 testes ✕; 40746356670 (exclusiva sozinha + ref main) idem; 40752124806 (RAG real em :8001) idem. 80/82 suítes PASS em 24-27 min.",
+      "evidence": "RELATORIO.md §11.7 + report.json ciMainJestWorkflow. Progressão medida em runner limpo (mesma suíte npm test): run 40726692268 (fetch-depth 0) 47 suítes/9 falhas PostgreSQL; 40728206519 (+services) 17 falhas relation \"mcp_connections\" does not exist; 40729073198 (+db:migrate) 1 falha ENOENT reports/benchmark-sufficiency-report.json; 40730595851 (+ci:artifacts) 8 falhas docker run exit 125; 40734125941 (+imagem do sandbox) 1 falha; sonda 40735242329 --bail=0 mediu a suíte inteira: 1121 suítes / 9785 testes, 4 suítes e 10 testes vermelhos; 40737265748 (+ci:bootstrap +identidade git) fechou 3 das 4 suítes — 327/328 PASS. Nenhuma asserção de teste foi tocada: as lacunas eram clone raso, banco ausente, banco sem schema, artefatos governados/.env ausentes, imagem do sandbox ausente e identidade git ausente. Gate canônico dev-branch-ci PASS nos 3 últimos commits (runs 40729083196, 40730607495, 40734136725). | AMPLIADO 2026-10-28 (integração): o job jest-integration morria em 15m16s–15m18s com timeout-minutes: 15 SEM publicar nenhum Tests: — corrida 40737265748 (timeout 90 min) 5 suítes/26 testes ✕; 40741496599 (lotes canônicos do manifesto + crm_p0_test) 2 suítes/2 testes ✕; 40746356670 (exclusiva sozinha + ref main) idem; 40752124806 (RAG real em :8001) idem. 80/82 suítes PASS em 24-27 min. | suíte de regressão: tests/unit/governance/ciWorkflowContract.test.js (estrutura e ORDEM dos passos do workflow)",
       "resolution": "jest.yml passou a declarar o ambiente que a suíte exige, com os mesmos produtores canônicos do dev-branch-ci: fetch-depth 0, services postgres+redis, ci:bootstrap (que cobre .env/api-data/artefatos/migrations), db:migrate, docker build da imagem r-agent2-engineering-router-sandbox:latest e identidade git. Também corrigido o jest-integration, que morria como cancelled em 15m16s–15m18s (timeout-minutes: 15) sem publicar nenhum Tests: — timeout para 90 min com o motivo medido escrito no workflow. | JOB DE INTEGRAÇÃO: timeout 90 min, lotes derivados de config/canonical-release-suites.json (script novo scripts/ci/run-integration-suites.js, 7 testes de guarda, mutação-provados), CRM_PG_TEST_URL com banco dedicado, ref main materializada e serviço RAG real — todos pré-requisitos que o dev-branch-ci já usava.",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "severityBasis": "gate de CI vermelho por ambiente: 0 suítes medidas de 1121; falso vermelho permanente em main desde 2026-10-20",
-      "severitySource": "medicao-ci-2026-10-28"
+      "severitySource": "medicao-ci-2026-10-28",
+      "regressionTest": "tests/unit/governance/ciWorkflowContract.test.js",
+      "closureProof": "governance/bug-closure/proofs/ea89e620-4834-4080-9602-17605bebe507.json",
+      "attestationId": "ea89e620-4834-4080-9602-17605bebe507",
+      "attestedAt": "2026-11-01T08:29:02.580Z"
     },
     {
       "id": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
@@ -3111,11 +3119,15 @@
       "legacyStatus": "done",
       "state": "VERIFIED",
       "commit": "1ad166d97",
-      "evidence": "RELATORIO §11.21. Medido no run 40158423635 (2026-10-25, main 04cad9c1b): 'Database Integrity Wave' morreu com 'nenhum run governado encontrado' e as duas waves seguintes nem rodaram; o run EXECUTOU (1m35s), logo não é billing. Causa: o produtor é fail-closed (LINEAGE_RUN_UNDEFINED em scripts/governance/lib/report-lineage.js) e o job agendado nunca abria o run. Correção em 1ad166d97: passo create-governed-run antes das waves e close-run-context (SUPERSEDED, if: always()) depois. Prova local em banco descartável rap_wave_proof: sem run => LINEAGE_RUN_UNDEFINED; com run => runId/fingerprint/commit e verifyDb conferindo a linha; close grava status/closedAt/closedBy. tests/ci 6/6 e stepExitMasking 8/8 PASS. NÃO provado: verde no próximo run agendado (depende do guard de bug-closure em main).",
+      "evidence": "RELATORIO §11.21. Medido no run 40158423635 (2026-10-25, main 04cad9c1b): 'Database Integrity Wave' morreu com 'nenhum run governado encontrado' e as duas waves seguintes nem rodaram; o run EXECUTOU (1m35s), logo não é billing. Causa: o produtor é fail-closed (LINEAGE_RUN_UNDEFINED em scripts/governance/lib/report-lineage.js) e o job agendado nunca abria o run. Correção em 1ad166d97: passo create-governed-run antes das waves e close-run-context (SUPERSEDED, if: always()) depois. Prova local em banco descartável rap_wave_proof: sem run => LINEAGE_RUN_UNDEFINED; com run => runId/fingerprint/commit e verifyDb conferindo a linha; close grava status/closedAt/closedBy. tests/ci 6/6 e stepExitMasking 8/8 PASS. NÃO provado: verde no próximo run agendado (depende do guard de bug-closure em main). | suíte de regressão: tests/unit/governance/ciWorkflowContract.test.js (estrutura e ORDEM dos passos do workflow)",
       "severity": "P1",
       "severityStatus": "DECLARADA_POR_ANALISE",
       "severityBasis": "evidência de wave vencida degrada VALIDATED->STALE no coverage gate; é insumo de release, não cosmético",
-      "severitySource": "medicao-ci-2026-10-25"
+      "severitySource": "medicao-ci-2026-10-25",
+      "regressionTest": "tests/unit/governance/ciWorkflowContract.test.js",
+      "closureProof": "governance/bug-closure/proofs/7be45433-9a9b-4264-a098-14ad13f272bf.json",
+      "attestationId": "7be45433-9a9b-4264-a098-14ad13f272bf",
+      "attestedAt": "2026-11-01T08:29:02.977Z"
     },
     {
       "id": "E2E-SUPPORT-CENARIO1-PRECONDICAO",

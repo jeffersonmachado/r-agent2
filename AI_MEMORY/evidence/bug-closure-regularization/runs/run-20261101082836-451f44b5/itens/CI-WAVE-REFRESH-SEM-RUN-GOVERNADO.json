@@ -1,0 +1,25 @@
+{
+  "id": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Refresh agendado das waves falhava por não abrir run governado (evidências de wave venciam)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/governance/ciWorkflowContract.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082836-451f44b5/logs/CI-WAVE-REFRESH-SEM-RUN-GOVERNADO.log",
+  "draft": "governance/bug-closure/proofs-drafts/CI-WAVE-REFRESH-SEM-RUN-GOVERNADO.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101082836-451f44b5",
+  "identidade": {
+    "commit": "ab6069e0351350a6e14b4961f78f07a9fecfd893",
+    "sourceFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "91f1641832f31f33a0596647b97911238d3accd0906725890c5eb6abf5dd15ba",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "a807452c5d9a0969b2daefa866642b5568f1d310495650d43f30b7e5a2188ae9"
+}

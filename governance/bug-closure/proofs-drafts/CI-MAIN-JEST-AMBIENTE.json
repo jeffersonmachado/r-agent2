@@ -1,0 +1,48 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ea89e620-4834-4080-9602-17605bebe507",
+  "defectId": "CI-MAIN-JEST-AMBIENTE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "ab6069e0351350a6e14b4961f78f07a9fecfd893",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/unit/governance/ciWorkflowContract.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/ciWorkflowContract.test.js",
+      "command": "npx jest tests/unit/governance/ciWorkflowContract.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:28:36.057Z",
+      "finishedAt": "2026-11-01T08:28:41.137Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082836-451f44b5/logs/CI-MAIN-JEST-AMBIENTE.log",
+      "outputSha256": "bf6a97892c276bb2a13720bea70d11a0ccfdc7ad1dda0de9f69eee9fe94e2f89"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/ciWorkflowContract.test.js",
+      "sha256": "9f8716d05bc3e2364c9137dbf5dc580a44b9fb3d0f4eeb8b94f21735f7bbbc4c"
+    }
+  ],
+  "actor": {
+    "id": "owner@results.invalid",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T08:28:41.145Z",
+  "proofHash": "6270f80adace7ecf37608d42f813d018dccfaa34e1578e0644bb96c2cfe6cc57"
+}

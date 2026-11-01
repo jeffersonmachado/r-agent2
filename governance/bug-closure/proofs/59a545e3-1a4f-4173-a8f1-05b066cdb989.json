@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "59a545e3-1a4f-4173-a8f1-05b066cdb989",
+  "defectId": "P1-CI-SEM-INTEGRACAO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "ab6069e0351350a6e14b4961f78f07a9fecfd893",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/unit/governance/ciWorkflowContract.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/ciWorkflowContract.test.js",
+      "command": "npx jest tests/unit/governance/ciWorkflowContract.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T08:28:44.690Z",
+      "finishedAt": "2026-11-01T08:28:48.549Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101082836-451f44b5/logs/P1-CI-SEM-INTEGRACAO.log",
+      "outputSha256": "e599b52b749b2c18d75cf9026472441e6481e85c15142c56308c9bd225ff01ca"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/ciWorkflowContract.test.js",
+      "sha256": "9f8716d05bc3e2364c9137dbf5dc580a44b9fb3d0f4eeb8b94f21735f7bbbc4c"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+  },
+  "createdAt": "2026-11-01T08:28:48.556Z",
+  "proofHash": "cd8e968a5e1130163486a99d061c4a36801e383fb1857114c24fa53d67849d5e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "zjp7Gt4wJ/lmkzPHOJVfBt1jstqcu/uR1+PnXKs4tbnx9t4iRtoaqgdTh4mOD7M+4/wlMallV5kMFVyVpIP5BA==",
+    "signedAt": "2026-11-01T08:29:03.258Z"
+  }
+}

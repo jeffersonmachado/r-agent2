@@ -3704,3 +3704,40 @@ apagar a medição original (o teste exige `source.headNow` e `engineeringRouter
 ```
 FECHAMENTO_NAO_PROVADO: 11 -> 9   (P0 = 0)
 ```
+
+### 11.65. Os itens de CI: a "implementação" é o workflow, então a verificação é a ORDEM dos passos
+
+Três P1 fechados com uma suíte única (`tests/unit/governance/ciWorkflowContract.test.js`, 11 casos).
+Aqui não existe código de produção a testar: o artefato É o arquivo de workflow. Por isso a suíte
+verifica **estrutura e ordem**, e uma armadilha foi medida e corrigida no próprio teste:
+
+> A primeira versão procurava `npm run wave:db-integrity` no arquivo e **passava pelo comentário**
+> de linha 191 que documenta o defeito. Uma asserção que aceita comentário não é contrato. Passou a
+> exigir `run: npm run wave:` — forma executável.
+
+Contratos travados:
+
+- `P1-CI-SEM-INTEGRACAO`: job de integração existe, sobe serviço `postgres` real (`POSTGRES_USER`,
+> `pg_isready`) e referencia suíte que existe em `tests/integration`;
+- `CI-MAIN-JEST-AMBIENTE`: `npm run ci:bootstrap` e `npm run db:migrate` vêm **antes** de
+> `run: npm test`, e os três nomes existem em `package.json` (nada de script inventado);
+- `CI-WAVE-REFRESH-SEM-RUN-GOVERNADO`: `create-governed-run.js` abre o run **antes** da primeira
+> wave, o fechamento é `if: always()` com `--status SUPERSEDED --reason --evidence`, o ponteiro do
+> run não entra no `git add` e o commit usa `[skip ci]`.
+
+```
+FECHAMENTO_NAO_PROVADO: 8 -> 5   (P0 = 0, P1 = 1)
+```
+
+### 11.66. Os 5 que sobram (documentado, com o que cada um exige)
+
+| item | sev | o que falta |
+|---|---|---|
+| `FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT` | P1 | comportamento só observável em ciclo de release com DOIS candidatos e mudança de fingerprint; exige orquestração de selo (prepare→candidate→final) com árvore congelada |
+| `HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO` | P2 | a prevenção é regra OPERACIONAL (não commitar durante o agregado); não existe guarda de código que detecte HEAD mudando no meio — escrever o teste exige antes implementar a detecção |
+| `MISSAO-B3-REUSO-PROVENIENCIA` | P3 | sem suíte; exige cenário de reuso de proveniência entre execuções |
+| `MISSAO-B4-REVISAO-INDEPENDENTE` | P3 | sem suíte; é processo de revisão (humano) |
+| `MISSAO-DEMO-SELF-ENGINEERING` | P3 | sem suíte; é demonstração end-to-end do self-engineering |
+
+Nenhum foi marcado `done`. Os três P3 e o P2 precisam de decisão humana (escrever suíte, reabrir ou
+aceitar risco); o P1 precisa de um ciclo de selo controlado para ser observado de verdade.
