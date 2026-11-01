@@ -17,7 +17,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const RAIZ = path.resolve(__dirname, '..', '..', '..');
-const { testeCitado, testeDaEvidencia } = require('../../../scripts/governance/regularize-bug-closures');
+const { testeCitado, testeDaEvidencia, comandoDoTeste } = require('../../../scripts/governance/regularize-bug-closures');
 const {
   fingerprintDaChavePem, digestDoInventario,
 } = require('../../../governance/bug-closure/trusted-authorities');
@@ -261,4 +261,46 @@ describe('regularização — log de teste é ESCOPADO por execução (append-on
       }
     }
   }, 240000);
+});
+
+describe('regularização — runner por ÁREA do teste citado', () => {
+  /**
+   * DEFEITO MEDIDO (2026-11-01): suíte em `rag-service/**` era executada em Jest. O runner errado
+   * devolvia "TESTE_FALHOU_AGORA" falso e o item ficava permanentemente sem prova — dois P1 do
+   * RAG nunca podiam ser fechados, mesmo com a suíte verde em pytest.
+   */
+  test('suíte Python usa pytest e o interpretador vem de RAG_PYTHON', () => {
+    const anterior = process.env.RAG_PYTHON;
+    process.env.RAG_PYTHON = '/tmp/venv-rag/bin/python';
+    try {
+      const cmd = comandoDoTeste('rag-service/tests/test_hybrid_search.py');
+      expect(cmd.runner).toBe('pytest');
+      expect(cmd.argv[0]).toBe('/tmp/venv-rag/bin/python');
+      expect(cmd.argv[1]).toEqual(['-m', 'pytest', 'rag-service/tests/test_hybrid_search.py', '-q', '-p', 'no:cacheprovider']);
+      expect(cmd.log).toBe('/tmp/venv-rag/bin/python -m pytest rag-service/tests/test_hybrid_search.py -q -p no:cacheprovider');
+    } finally {
+      if (anterior === undefined) delete process.env.RAG_PYTHON; else process.env.RAG_PYTHON = anterior;
+    }
+  });
+
+  test('suíte do frontend usa o Vitest do próprio pacote (nunca `npx vitest`)', () => {
+    const cmd = comandoDoTeste('frontend/src/shared/__tests__/x.test.jsx');
+    expect(cmd.runner).toBe('vitest');
+    expect(cmd.argv[0]).toBe('npm');
+    expect(cmd.argv[1]).toEqual(['--prefix', 'frontend', 'run', 'test', '--', 'src/shared/__tests__/x.test.jsx']);
+  });
+
+  test('suíte Python citada é ACEITA como teste do item (não cai em decisão humana)', () => {
+    // DEFEITO MEDIDO (2026-11-01): o filtro de extensão só aceitava `.test.js`, então os dois P1
+    // do rag-service iam para "decisão humana" apesar de terem suíte real e verde.
+    expect(testeCitado({ id: 'P1-5', regressionTest: 'rag-service/tests/test_hybrid_search.py' }))
+      .toBe('rag-service/tests/test_hybrid_search.py');
+    expect(testeCitado({ id: 'Z', regressionTest: 'rag-service/tests/nao-existe.py' })).toBeNull();
+  });
+
+  test('suíte de backend continua em Jest', () => {
+    const cmd = comandoDoTeste('tests/unit/governance/worktreeIntegrity.test.js');
+    expect(cmd.runner).toBe('jest');
+    expect(cmd.argv[1]).toEqual(['jest', 'tests/unit/governance/worktreeIntegrity.test.js', '--bail=1', '--ci']);
+  });
 });

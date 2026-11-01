@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "049eab67-3fb7-4915-a1b4-24755d715442",
+  "defectId": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "qa-mesh/__tests__/scheduler.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "qa-mesh/__tests__/scheduler.test.js",
+      "command": "npx jest qa-mesh/__tests__/scheduler.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:52:51.212Z",
+      "finishedAt": "2026-11-01T06:52:56.461Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+      "outputSha256": "8860b00b711e137382a4deb623298d0e98cdf7281ce6e50992edce7ed0c46e9a"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "qa-mesh/__tests__/scheduler.test.js",
+      "sha256": "f1a9e9ab121dce205d14254b97861d5afe66777227fda56001b72d799c8feb72"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:52:56.468Z",
+  "proofHash": "e51f84894a7239258f4bfd085ab7f9a0cbc8912a8c97d1271f1bbe95f4467fb4",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "5ADp8XjoPogPWtTNmC0CNl9mxorPGfclEY47laM0x8lm+I4sKS67r3OCCiw3W2DB65UVLcno1mdX3MRxcyxMBA==",
+    "signedAt": "2026-11-01T06:55:49.657Z"
+  }
+}

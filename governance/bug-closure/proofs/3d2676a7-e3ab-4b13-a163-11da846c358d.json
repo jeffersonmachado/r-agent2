@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "3d2676a7-e3ab-4b13-a163-11da846c358d",
+  "defectId": "ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+  "requiredTests": [
+    "tests/unit/engineeringMissionRoutes.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMissionRoutes.test.js",
+      "command": "npx jest tests/unit/engineeringMissionRoutes.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:10:02.145Z",
+      "finishedAt": "2026-11-01T06:10:09.042Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP.log",
+      "outputSha256": "4fc15b00d952f16a9a237023934e4bd838c0517b1097608bad2af02f869a744c"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMissionRoutes.test.js",
+      "sha256": "b899bbd3e6288a94cc6d2018c9c3ae545aecf8ea3e2f80c972a46dcb32095b3c"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:10:09.049Z",
+  "proofHash": "520f576fe2ad721d26f894d0702df7f6a7891afafabda047cce4a3e97a934313",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "ymUCOC1ur5ygz3e8GrrMNqTCBoZ8MAnlvUm9BnKT+2cF3+3yUbueR3CukzZfOK3XA9XlzqPnIFSZAkvH5deqAQ==",
+    "signedAt": "2026-11-01T06:22:09.086Z"
+  }
+}

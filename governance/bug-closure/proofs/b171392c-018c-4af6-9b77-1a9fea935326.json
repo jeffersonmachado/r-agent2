@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b171392c-018c-4af6-9b77-1a9fea935326",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-P0-6",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/unit/governance/releaseSuiteRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "command": "npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:24:49.880Z",
+      "finishedAt": "2026-11-01T06:24:59.041Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/HARDENING-ENG-GOV-RELEASE-P0-6.log",
+      "outputSha256": "bf5639286cee820dcd433c73fd28cd2e52b9efb1ad264bc5a746aef26e9fef74"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/run-release-suites.js",
+      "control": "reuso de lote volta a ignorar o exit code REAL do processo (falso verde do JSON)",
+      "mutatedFromSha256": "526182474e71348ea52fe0d6c9cfe7fa2d06b8393614f3b03aea402b0dd8fe7c",
+      "mutatedToSha256": "304d238864b0107e53a2d209484ad666d6f4011b8ca8b8a8f2fa55b95098c0e4",
+      "testPath": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "command": "npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-6-baseline-9891de62.log",
+        "logSha256": "4d31412c07e5efd5d278efe57061525cadbdf54dba136ed09ec24f66ea4aca9e"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-6-mutado-9891de62.log",
+        "logSha256": "3e39755d8e552a563b0aba6aefaf25c27ce3d658f07623c6291c62c5eea60f35"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-6-restaurado-9891de62.log",
+        "logSha256": "d04b0dd1fd16dbef02a01a6dcd5565bd33f6e5f3a2c5b0afa094219499e79331"
+      },
+      "capturedAt": "2026-11-01T05:10:06.097Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "sha256": "d429565a42351d23896c1e325281bcb34faa2a4f80fe7673a24fe7e1ec1080b2"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T06:55:23.337183Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:24:59.048Z",
+  "proofHash": "5b88d249b88e08b26fc7e4f4e8f032586f5792173e7de1d2843c42c988ec252d",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "mOdJRTfkEQgKtKzcuL4dHY7vERO5XRsSnLZG71WEHXvYBAMDcqNqPidxs/cpiPa6pmXuPzEJo7l1lnPHlBZkCw==",
+    "signedAt": "2026-11-01T06:55:32.343Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "2e91a1d7-5397-4244-acbe-ab80401953f6",
+  "transitionId": "34d9c087-180b-4e4f-a87c-05ee55d7d38c",
   "defectId": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/governance/effectiveAggregateChain.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/effectiveAggregateChain.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:18:11.636Z",
-      "finishedAt": "2026-11-01T05:18:15.403Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
-      "outputSha256": "2b1052a9b6da04ad8dd609df6b157e5f0c8dbf62e625f914f8fa60ad87c29af4"
+      "startedAt": "2026-11-01T06:28:47.019Z",
+      "finishedAt": "2026-11-01T06:28:50.397Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA.log",
+      "outputSha256": "1db0b5756ae7a690a887dbe24e6f01b746e406c50425c3e294c43077f15dcacf"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:18:15.409Z",
-  "proofHash": "1a2c02898cacc03f252ccb1a484c262232d5a6146be276ec9b48beba682ebca9"
+  "createdAt": "2026-11-01T06:28:50.404Z",
+  "proofHash": "458c9d97e7b881dc4c60c840da9cc8e1010231360cd75cfc814243b6e34ae7ce"
 }

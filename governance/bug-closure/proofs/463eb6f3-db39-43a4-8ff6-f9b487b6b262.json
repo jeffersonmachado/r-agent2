@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "463eb6f3-db39-43a4-8ff6-f9b487b6b262",
+  "defectId": "H10-VEREDITO-GATE-SEGURANCA",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/unit/governance/securityGateState.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/securityGateState.test.js",
+      "command": "npx jest tests/unit/governance/securityGateState.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:32:10.139Z",
+      "finishedAt": "2026-11-01T06:32:17.199Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/H10-VEREDITO-GATE-SEGURANCA.log",
+      "outputSha256": "64578893dd631fa7a7f5aedf4b1990f4a77d5db59a9787d0c7f1a98ac36e9be0"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/securityGateState.test.js",
+      "sha256": "389b4af20ee5684aa1dab21de5dcf315dc1a289f3cb4ea99a9773fc961ccfbcb"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:32:17.208Z",
+  "proofHash": "79cb88399ce3e34427f184d82d6dec85dd3f03263915b50b812682af756fb2bc",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "WoY1X12r1JE1fmP5KcZ+QAWZax8xXe2TCsWXjBCDHn1tiWqdpkWdCEn5zlYl9b1TcvqOQJiiLvZsRZau0D5hBg==",
+    "signedAt": "2026-11-01T06:55:28.157Z"
+  }
+}

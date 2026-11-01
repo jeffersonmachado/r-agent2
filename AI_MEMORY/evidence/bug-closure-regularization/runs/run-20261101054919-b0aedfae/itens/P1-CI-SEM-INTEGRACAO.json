@@ -1,0 +1,17 @@
+{
+  "id": "P1-CI-SEM-INTEGRACAO",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Gate/CI do branch de desenvolvimento nao rodava NENHUMA suite de integracao",
+  "classe": "REQUER_DECISAO_HUMANA",
+  "motivo": "SEM_TESTE_DE_REGRESSAO_CITADO",
+  "runId": "run-20261101054919-b0aedfae",
+  "identidade": {
+    "commit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+    "sourceFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "72544e691e26ba4f446ddca340ae714466713386b304fdc4302be1c665f39ca4",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "74a5eaf7ec9559a54eb3c48cc77249816f7e6c7a064573efd4a0c692626f6ab8"
+}

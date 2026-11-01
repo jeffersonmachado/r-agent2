@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9df9c7e0-50b7-4027-a371-5f30fc09066c",
+  "transitionId": "1de52e53-d566-4f32-a67c-464c12131822",
   "defectId": "AUDITORIA-ENTRYPOINT-TRAVAS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:16:22.736Z",
-      "finishedAt": "2026-11-01T05:16:24.860Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/AUDITORIA-ENTRYPOINT-TRAVAS.log",
-      "outputSha256": "bcc8fff5b17aab1b4870c78e5df0bc98a06c63c2844ac7e1c737b92f904e1272"
+      "startedAt": "2026-11-01T06:26:55.924Z",
+      "finishedAt": "2026-11-01T06:26:59.392Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/AUDITORIA-ENTRYPOINT-TRAVAS.log",
+      "outputSha256": "95f2330541c86199ead0fec0124d79c57a2e1f61cc86a34fcf7ca39ecc50c29a"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:16:24.868Z",
-  "proofHash": "e69039d21d340476880e414525f2cdb498bd23d210d33d57cc57a9650dc77591"
+  "createdAt": "2026-11-01T06:26:59.399Z",
+  "proofHash": "3c1feddcecf5ec33c6a61e9fc4e40739c654289576686137fc7fbfaf85d9096c"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cf39fe64-d98b-4006-9734-24aa0435c938",
+  "transitionId": "abca395a-7535-464b-8a76-a033c55d625c",
   "defectId": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/governance/governedArtifactPreservation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governedArtifactPreservation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:42:19.992Z",
-      "finishedAt": "2026-11-01T05:42:22.487Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
-      "outputSha256": "6fb5349804e1ee43494c99178b57809941785155a4b3f4181e12cac9033d5f0d"
+      "startedAt": "2026-11-01T06:52:39.449Z",
+      "finishedAt": "2026-11-01T06:52:42.634Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "outputSha256": "7f7a7f105feb91221b82c5a571e8c6ac21487e0af020844d5b62e864dc89b1ea"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:42:22.494Z",
-  "proofHash": "3f24abfb7fd36f6d7b21eb55e0ea7e5bf3a28f02a06131d7ead06307bed31c74"
+  "createdAt": "2026-11-01T06:52:42.642Z",
+  "proofHash": "0f45bddf288f87a0a27129bf5fada4417fe418deca9b7589b293d7f8f622563b"
 }

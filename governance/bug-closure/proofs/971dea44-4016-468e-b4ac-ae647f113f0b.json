@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "971dea44-4016-468e-b4ac-ae647f113f0b",
+  "defectId": "P2-2",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+  "requiredTests": [
+    "tests/unit/governance/reportWriteLineage.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/reportWriteLineage.test.js",
+      "command": "npx jest tests/unit/governance/reportWriteLineage.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:18:31.566Z",
+      "finishedAt": "2026-11-01T06:18:34.480Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/P2-2.log",
+      "outputSha256": "2725007655e55f29d4efb6ab0f4284d8593b6e208839df6074df210d51d42651"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/reportWriteLineage.test.js",
+      "sha256": "525adcfa80252a7dae8773c319bdf1fe059f0d5b7fbf88e7ea8ce7bc784055a0"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:18:34.487Z",
+  "proofHash": "587b65ddeb9e3e839b50104f0bbf87c8758bd171897cf510b50ef71ac6bc3350",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "pILjgW7rv0VKokpRHDh1hysRecXEDRz9XqfeOwcEDHd0nPqOJFMt73DWhmg2UUkHDMve6upbX4wXslYP0Y4XCw==",
+    "signedAt": "2026-11-01T06:22:29.729Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4182a0a8-00d3-4114-afdd-9fb75a074789",
+  "transitionId": "b6043976-8547-4852-a288-dd6914ce6760",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:22:24.990Z",
-      "finishedAt": "2026-11-01T05:22:28.593Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
-      "outputSha256": "ee84878424c25d95b6f1d454154d4a8e13c509be73313f2c8784997b174973e7"
+      "startedAt": "2026-11-01T06:32:53.531Z",
+      "finishedAt": "2026-11-01T06:32:56.054Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
+      "outputSha256": "f46c358716d7c68d6c329e8ad52c268cf0fe21094dffdd8dfa7be8ae9c11d5b3"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:22:28.602Z",
-  "proofHash": "f59b58028ca8779455735d6febdf6d9c14587b12df12cf0a9399010e11b08034"
+  "createdAt": "2026-11-01T06:32:56.062Z",
+  "proofHash": "6822d28b77638bd268d922ba37cd6cf91c4c86f26926b80be2e8bbf3ad6b7fb9"
 }

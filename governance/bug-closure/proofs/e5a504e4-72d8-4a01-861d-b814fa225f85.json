@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e5a504e4-72d8-4a01-861d-b814fa225f85",
+  "defectId": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+  "requiredTests": [
+    "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "command": "npx jest tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:51:47.734Z",
+      "finishedAt": "2026-11-01T05:51:50.946Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/CI-ADAPTADOR-IA-NAO-VERSIONADO.log",
+      "outputSha256": "6950b90c4bbbac82c27bcb9a88d0257e0df97d78fe4ad9207d79f08ec0e71240"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
+      "sha256": "26238c5848d11f21ab65aae9229c61a269b348abad9ce1bf957b762a63eb201f"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:51:50.953Z",
+  "proofHash": "ccd614888d55bbc2edefbdbe614c70a7fee9ae0e7dd566364b75405ce43405a6",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "18sXK0INvTswcPktjGQmZADklJDdx2eirbubCAruDQLurv48Fw3deySTJZCmH2Sk3sOwnoJHmMuY7UGPiOXfDQ==",
+    "signedAt": "2026-11-01T06:22:06.414Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7bedd344-fb00-4327-b085-18d4e89ef494",
+  "transitionId": "ff4ea54e-5e34-44e3-b506-079e85c099f2",
   "defectId": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/governance/worktreeIntegrity.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:25:27.945Z",
-      "finishedAt": "2026-11-01T05:25:32.803Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.log",
-      "outputSha256": "96f8e5b4f6f5f2150e8ca292873057f80a84c59e61ede9be2f429ac44a183a11"
+      "startedAt": "2026-11-01T06:36:14.480Z",
+      "finishedAt": "2026-11-01T06:36:20.900Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P1-GUARDA-SKIP-ASSERTIONS-COMMITS.log",
+      "outputSha256": "c086ec962085e2c494fe99c3551b44f3d1982159da12a6d1399d4d2ee9767590"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:25:32.810Z",
-  "proofHash": "4ce5fb0a5731e685b805838253f3ca68b4da4245a0011738ee673946c81fffad"
+  "createdAt": "2026-11-01T06:36:20.908Z",
+  "proofHash": "be9d523f70fce8929b80dfc8d4b21a3548b792828cfceb57522dded4e36dae40"
 }

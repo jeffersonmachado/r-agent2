@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "b08cfde5-5b3a-43d5-b673-eb8191bbc249",
+  "transitionId": "e8367965-ab87-460f-8fed-27213c10c566",
   "defectId": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:25:56.448Z",
-      "finishedAt": "2026-11-01T05:26:00.866Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
-      "outputSha256": "9af33ffdb374af30c6fce87ad775f8e0554bb0dc5dd7ae6a604dfb7a2ab8c120"
+      "startedAt": "2026-11-01T06:36:44.872Z",
+      "finishedAt": "2026-11-01T06:36:48.841Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+      "outputSha256": "4718f885df6e7a47da9fdf0ad07ffab063e4b77cda8952726f7041be15310702"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:26:00.876Z",
-  "proofHash": "f7ff8a33686ea7f2a97f17201ef6f7c65dada18b975cc667a10484f2ab7eaa74"
+  "createdAt": "2026-11-01T06:36:48.851Z",
+  "proofHash": "d04f1215952e8546b41ba35f2bdd7c15e461f043364ca72ff08ae2c035a679bf"
 }

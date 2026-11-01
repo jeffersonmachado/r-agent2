@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e4108ba8-3101-4046-8b11-31e93fd325f3",
+  "transitionId": "e96835ff-e13a-4cca-950c-38995a06a051",
   "defectId": "PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/integration/lroOutboxDispatcher.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/lroOutboxDispatcher.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:26:30.105Z",
-      "finishedAt": "2026-11-01T05:26:56.817Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL.log",
-      "outputSha256": "9b82e94018c68bb24e6642b8653428d5f2df07e3095ae55734b9a2c5882031a0"
+      "startedAt": "2026-11-01T06:37:08.675Z",
+      "finishedAt": "2026-11-01T06:37:36.213Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL.log",
+      "outputSha256": "090e3f24b8a4744ba4f97514ca3d21a8ff96730cbeb279c663c5e251430ddbe1"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:26:56.826Z",
-  "proofHash": "e81eea7e6138981e77b77b9ae1b77bf38c885a219af617205712e3f5d181d67e"
+  "createdAt": "2026-11-01T06:37:36.223Z",
+  "proofHash": "0d01f0f9417d8c5f6f25144094d0d7a3c10c0145cd558a3c7fe8bf71503e3cdf"
 }

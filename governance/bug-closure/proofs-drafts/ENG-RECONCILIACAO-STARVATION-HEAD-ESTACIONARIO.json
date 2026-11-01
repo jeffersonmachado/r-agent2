@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cb331734-11dc-4e11-87bc-f1a7f2a85863",
+  "transitionId": "91451d22-1956-4ae2-a256-cb6e83bef561",
   "defectId": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/integration/engineeringMissionSourceE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:21:32.212Z",
-      "finishedAt": "2026-11-01T05:21:42.814Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
-      "outputSha256": "2e01093ba63a96a4e359c26414d8760acfba83a8ddb678421b16dbafc7056232"
+      "startedAt": "2026-11-01T06:32:00.171Z",
+      "finishedAt": "2026-11-01T06:32:10.102Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
+      "outputSha256": "7344527df15b7449f24f8ee40ffb83b1aa11f32cdaa32928ce787e2a822be2db"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:21:42.823Z",
-  "proofHash": "72da43da187523be62907601cf191c656a34db5fe09e741d54403c7d525890db"
+  "createdAt": "2026-11-01T06:32:10.118Z",
+  "proofHash": "aa06101fb4c2dac3305982223f67f90bb6b04d7c2dd0b4d883200a91429cd7ed"
 }

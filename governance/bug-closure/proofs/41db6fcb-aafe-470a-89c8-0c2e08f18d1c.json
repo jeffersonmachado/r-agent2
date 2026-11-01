@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "41db6fcb-aafe-470a-89c8-0c2e08f18d1c",
+  "defectId": "P0-5",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/integration/securityWaiverApprovalE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/securityWaiverApprovalE2E.test.js",
+      "command": "npx jest tests/integration/securityWaiverApprovalE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:25:36.627Z",
+      "finishedAt": "2026-11-01T06:25:41.940Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P0-5.log",
+      "outputSha256": "d910815ce8b26bff200561bd1a4987217d318fcee9bd79204d1c6072d02982dd"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/services/securityIntel/waiverService.js",
+      "control": "waiver EXPIRADO volta a poder ser aprovado (isenção vencida passa a valer)",
+      "mutatedFromSha256": "b9590b6e856c601cb0974012ffd99a10803453cdeb4f8148d52b224cf4677ce2",
+      "mutatedToSha256": "940d2e79eb20707525f25f3a4dc5ee43c6992cb56545318c7bfd12d40cb3ab76",
+      "testPath": "tests/integration/securityWaiverApprovalE2E.test.js",
+      "command": "npx jest tests/integration/securityWaiverApprovalE2E.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-5-baseline-2a7ea2c7.log",
+        "logSha256": "1c57bafca2dd63863f0940fb1e554d50f0664ce54bdf4524d23c50aaf3ebf798"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-5-mutado-2a7ea2c7.log",
+        "logSha256": "4d2d4503d3561bc5f2386e54ff16f1b354b1d4d6b255175ab1559f5de14142bc"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-5-restaurado-2a7ea2c7.log",
+        "logSha256": "e88fb8bb25237a378d9eb326391c034f7d9c574dfc195be5d4a26a4ef512693f"
+      },
+      "capturedAt": "2026-11-01T05:13:57.226Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/securityWaiverApprovalE2E.test.js",
+      "sha256": "34437af4c2029a534b42b145ff0338626bfcbfd9688b9c18748486a7742338e3"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T06:55:23.337183Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:25:41.947Z",
+  "proofHash": "027b6055a510542a2313b996a964dbcf9561930b52fcd23b2b1b18fa18ea3e12",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "gnhXUlUY9MUdr2NCrxGqZSxSm91HaWh18t9RJfQQk70EXGQHF/wv0WXn7DkSGyI5XlflquqbjtgeMyd9VVDeDQ==",
+    "signedAt": "2026-11-01T06:55:37.017Z"
+  }
+}

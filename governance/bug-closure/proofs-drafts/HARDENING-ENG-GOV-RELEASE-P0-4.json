@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "372029a0-0d13-400d-9df9-834ad8a8e796",
+  "transitionId": "7ed71eb7-3529-421e-af2c-392ea2b4c408",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-4",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:14:17.349Z",
-      "finishedAt": "2026-11-01T05:14:21.106Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
-      "outputSha256": "c3336c1d2a9b2a57098277621d6113c3bd62f4f26f6c57e0f3c5cc5ba0e9a26b"
+      "startedAt": "2026-11-01T06:24:34.408Z",
+      "finishedAt": "2026-11-01T06:24:39.747Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
+      "outputSha256": "0ef5e0fdffb1106c12b9b902180230ddc98cfe03cbace045e26820cd7689e7e0"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T05:45:40.950931Z",
+    "at": "2026-11-01T06:55:23.337183Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:14:21.113Z",
-  "proofHash": "e9519d5a975106cebe8dd13d64147c46f8c8c549738a86fb7f3f52c7ab226a53"
+  "createdAt": "2026-11-01T06:24:39.755Z",
+  "proofHash": "d7a1a7512a7ae57e8764ab05a1564ef99f27e1f305c8df12b62c22288d4d35c6"
 }

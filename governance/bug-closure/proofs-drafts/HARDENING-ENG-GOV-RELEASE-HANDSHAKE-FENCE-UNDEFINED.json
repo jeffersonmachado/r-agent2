@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e82fd0a1-d389-4409-bfc3-391e4f79cd1b",
+  "transitionId": "90b91524-118e-4390-8dfa-740159b37375",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:22:28.610Z",
-      "finishedAt": "2026-11-01T05:22:32.028Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
-      "outputSha256": "38fd8e9d3d4d9a1bf7c8f6605b950492ac19f83359962386ece84cac51ed5d7b"
+      "startedAt": "2026-11-01T06:32:56.071Z",
+      "finishedAt": "2026-11-01T06:32:58.721Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "outputSha256": "032448f01845d9832c3b1229c63b5ba2ce0d904f5dbbb728cc82cf5fcde7be8d"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:22:32.038Z",
-  "proofHash": "b1e9cfbfa116aa200e5225d9e6a96659786a94bc3fdb1dd5911d7cb9df16c249"
+  "createdAt": "2026-11-01T06:32:58.727Z",
+  "proofHash": "7f67ca7543d4653da2face972340da6cd1127783916878b2cb999a8174fcb8a6"
 }

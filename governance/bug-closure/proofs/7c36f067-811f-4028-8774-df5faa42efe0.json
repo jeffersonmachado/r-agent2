@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "7c36f067-811f-4028-8774-df5faa42efe0",
+  "defectId": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+  "requiredTests": [
+    "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T05:50:42.153Z",
+      "finishedAt": "2026-11-01T05:50:45.142Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO.log",
+      "outputSha256": "139eafeac2fd4420b82dd3767dfa7ca4e8dd58e729fd095f6da3d778ad28a1ab"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/governance/assert-canonical-release-decision.js",
+      "control": "veredito da cadeia volta a vir do campo `valid` GRAVADO em vez da recomputação dos bytes",
+      "mutatedFromSha256": "4aa740c25686d1688e8b10870feafbb0b0b98080d5f33adac2c12a701d6b50c9",
+      "mutatedToSha256": "f5637ca98b6f974f4c6b1da1b9637281fa374cdc2d26441767dfcb6116abdbe6",
+      "testPath": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-baseline-47bd2581.log",
+        "logSha256": "335b8d1ff3ad5092d7782c1f98f5734c9b7592324ec854c1d58923f8144c2fcc"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-mutado-47bd2581.log",
+        "logSha256": "0975643c7a62798557753f2c7f013b0ab3a174abb2336f6f63d0e4b66d8edcbc"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO-restaurado-47bd2581.log",
+        "logSha256": "04295237df05349f7cd4caded3b0fa1fc7929226d933845d49c644bda6b315a5"
+      },
+      "capturedAt": "2026-11-01T05:06:43.313Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
+      "sha256": "89ff645c3d9b701c188b76512bec44088eed4cfecc3095e1849e306bfe43b0be"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T06:22:05.168613Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T05:50:45.149Z",
+  "proofHash": "7b52822414aa1ab13a115fd963cefa3e4557e91933c8e23710bca5870b1046e7",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Cga0J46w84TUmmDHrxPHyyXOKrZdIrsah6w09+C58IbakR91vaIgbYZpI84RXkeH2QhLBz/pIZEEozYBJJ2cAg==",
+    "signedAt": "2026-11-01T06:22:19.820Z"
+  }
+}

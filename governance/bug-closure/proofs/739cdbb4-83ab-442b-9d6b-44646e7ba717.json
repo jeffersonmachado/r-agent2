@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "739cdbb4-83ab-442b-9d6b-44646e7ba717",
+  "defectId": "P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
+  "requiredTests": [
+    "tests/unit/governance/phaseStepContract.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/phaseStepContract.test.js",
+      "command": "npx jest tests/unit/governance/phaseStepContract.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-01T06:26:23.066Z",
+      "finishedAt": "2026-11-01T06:26:30.032Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE.log",
+      "outputSha256": "416f36945f557e8a4af7ef5a7c1540407bead66b92d5b24a1c72363c291c6617"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "scripts/ci/phase-step-contract.js",
+      "control": "fase é aprovada com apenas PARTE dos passos obrigatórios (ausentes não bloqueiam)",
+      "mutatedFromSha256": "da83171d1845e56fded05cfec95b9da23e7097dfb00600f8d07c4720e61527e2",
+      "mutatedToSha256": "bc0e1331b665f1b0ec48aa7a016881410e8b1baf091259e2dce613b436665ff3",
+      "testPath": "tests/unit/governance/phaseStepContract.test.js",
+      "command": "npx jest tests/unit/governance/phaseStepContract.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE-baseline-7c324f95.log",
+        "logSha256": "b58126480635be2faa13c9cc336003f6c7c9d4f5f34c51288c1b4031b59d659f"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE-mutado-7c324f95.log",
+        "logSha256": "62f4d4c7c3da7e44c7a2b34cee2940847a59ea09749b1da2a3132dfb357ef252"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-GATE-ACEITA-COBERTURA-PARCIAL-DE-FASE-restaurado-7c324f95.log",
+        "logSha256": "c02c7d40ccd7261d3349aa2233b8ff3d78d42a18eb5d7816a86b9c5603dd1fbc"
+      },
+      "capturedAt": "2026-11-01T05:09:04.231Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/phaseStepContract.test.js",
+      "sha256": "ff91bddb2808b723f243b1a4faa085609174152daf118187398da6f9ad217366"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-01T06:55:23.337183Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-01T06:26:30.038Z",
+  "proofHash": "c38383128e77e807244c98635ba4bb5a92da8d720fe809de1e5cf02e8e6dfb9c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "ZJ5FGBu7UH0BclY5/qF7D7UhwuPQf8yCUskH0g8BpQOeA80b9CNYqLaXzerTMpftwsFxeh0LjeD4EwgWT6wgDg==",
+    "signedAt": "2026-11-01T06:55:38.593Z"
+  }
+}

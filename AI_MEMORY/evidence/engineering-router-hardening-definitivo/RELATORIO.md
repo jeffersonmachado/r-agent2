@@ -3625,3 +3625,56 @@ CRM_PG_TEST_URL=<url-do-db-crm_p0_test> CRM_PG_REQUIRED=1 npx jest tests/integra
 Restam **14 itens**: 7 P1 e 7 P2/P3. Os P1 são (a) dois do `rag-service` que exigem venv com
 torch/psycopg2 — ambiente não provisionado nesta máquina, e (b) cinco de CI/Fase 6 sem suíte
 citada, que precisam de decisão humana (escrever suíte, reabrir ou aceitar risco declarado).
+
+### 11.62. P1 do RAG fechados: o regularizador só sabia rodar Jest
+
+Fechar `P1-5`/`P1-6` não era problema de código de produto: as suítes passavam. O bloqueio era do
+**regularizador**, que só tinha runners para Jest e Vitest. Duas causas medidas, ambas no mesmo
+arquivo:
+
+1. `testeCitado()` filtrava a extensão `.test.js`. Caminho `rag-service/tests/*.py` era **descartado**,
+   então o item caía em `REQUER_DECISAO_HUMANA` (SEM_TESTE_DE_REGRESSAO_CITADO) mesmo citando uma
+   suíte real.
+2. `executarTeste()` montava `npx jest <arquivo>.py` — o runner errado. Mesmo aceitando o caminho, o
+   resultado seria "TESTE_FALHOU_AGORA" falso.
+
+Correção: `comandoDoTeste()` escolhe o runner por área (Jest / Vitest / pytest) e o interpretador
+Python vem de `RAG_PYTHON` (o venv do serviço tem numpy/pydantic/psycopg2 que o python do sistema não
+tem). Regressão em `bugClosureRegularization.test.js` cobre os três runners e a aceitação de `.py`.
+
+Suítes verificadas de verdade, com venv mínimo criado fora do repositório:
+
+```
+test_hybrid_search.py        -> 18 passed
+test_hybrid_isolation_real_db.py -> 4 passed (Postgres real)
+```
+
+Também foi preciso corrigir a MEDIÇÃO de outro item: `MISSAO-A-L2-L3-ORQUESTRADOR` estava
+`AMBIENTE_INDISPONIVEL` porque o grafo de impacto estava velho. O comando certo é
+**`npm run impact:build`** (`reports/impact-graph.json`) — `npm run analyze:impact` gera OUTRO
+artefato (`reports/impact-analysis.json`) e não satisfaz o runner. Com o grafo fresco: 11/11.
+
+```
+estado final: FECHAMENTO_NAO_PROVADO = 11  (P0 = 0, P1 = 5)
+155 provas atestadas com âncora externa · 32 mutações provadas / 31 defeitos / 0 bloqueadas
+```
+
+### 11.63. Os 11 que restam e o que cada um exige (decisão humana, não código mecânico)
+
+| item | severidade | por que ainda não tem prova |
+|---|---|---|
+| `FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT` | P1 | sem suíte citada — comportamento só é observável em ciclo real de release (2 candidatos) |
+| `P1-CI-SEM-INTEGRACAO` | P1 | sem suíte — é sobre o CI executar integração; prova exige workflow |
+| `CI-MAIN-JEST-AMBIENTE` | P1 | sem suíte — idem |
+| `CI-WAVE-REFRESH-SEM-RUN-GOVERNADO` | P1 | sem suíte — idem |
+| `L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL` | P1 | `regressionTest` aponta para um SCRIPT (`collect-engineering-router-runtime-evidence.js`), não para teste — declaração inválida, precisa de suíte |
+| `HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS` | P2 | sem suíte |
+| `HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO` | P2 | sem suíte |
+| `MISSAO-B8-ESTADOS-FILA` | P2 | sem suíte |
+| `MISSAO-B3-REUSO-PROVENIENCIA` | P3 | sem suíte |
+| `MISSAO-B4-REVISAO-INDEPENDENTE` | P3 | sem suíte |
+| `MISSAO-DEMO-SELF-ENGINEERING` | P3 | sem suíte |
+
+Nenhum deles foi marcado `done`: sem suíte de regressão não existe prova, e declarar fechamento sem
+prova é exatamente o defeito que a fila existe para impedir. Cada um precisa de uma de três decisões
+humanas — escrever a suíte, reabrir o defeito, ou registrar risco aceito com controle compensatório.

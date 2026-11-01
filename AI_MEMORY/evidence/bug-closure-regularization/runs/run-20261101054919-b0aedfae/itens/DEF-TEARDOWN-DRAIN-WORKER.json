@@ -1,0 +1,25 @@
+{
+  "id": "DEF-TEARDOWN-DRAIN-WORKER",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "BATCH_EXIT_CODE_NONZERO: worker drenando depois do Sequelize fechar (0 testes falhados, exit=1)",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101054919-b0aedfae/logs/DEF-TEARDOWN-DRAIN-WORKER.log",
+  "draft": "governance/bug-closure/proofs-drafts/DEF-TEARDOWN-DRAIN-WORKER.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261101054919-b0aedfae",
+  "identidade": {
+    "commit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+    "sourceFingerprint": "05ceb9b066e95a3c94affb0c3b960c5570ba3c4e4df42f81e4dbf214bc2b4ee2",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "72544e691e26ba4f446ddca340ae714466713386b304fdc4302be1c665f39ca4",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "f612a6bd2d97d9e8804c4635cca0827984345624a3b205d4214e9bd0d86f95de"
+}

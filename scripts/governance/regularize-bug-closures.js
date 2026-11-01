@@ -175,7 +175,10 @@ function testeCitado(item) {
     const valores = Array.isArray(bruto) ? bruto : (bruto ? [bruto] : []);
     const achado = valores
       .map((v) => String(v).trim())
-      .filter((v) => v && !/\s/.test(v) && v.endsWith('.test.js'))
+      // Extensões aceitas: `.test.js` (Jest/Vitest) e `.py` (pytest em `rag-service/**`).
+      // Antes, `.py` era DESCARTADO aqui: os dois P1 do RAG caíam em "decisão humana" mesmo
+      // tendo suíte real e verde — o item ficava sem prova por causa da extensão do arquivo.
+      .filter((v) => v && !/\s/.test(v) && /\.(test\.js|py)$/.test(v))
       .find((rel) => fs.existsSync(path.join(ROOT, rel)));
     if (achado) return achado;
   }
@@ -193,6 +196,29 @@ function testeCitado(item) {
  */
 let RUN_ID_DOS_LOGS = null;
 
+/**
+ * Runner correto por ÁREA, com o comando que fica REGISTRADO na prova.
+ *
+ * Jest para backend, Vitest para `frontend/`, pytest para `rag-service/**`. Rodar o runner errado
+ * devolvia "TESTE_FALHOU_AGORA" falso (e o item ficava sem prova para sempre). O interpretador
+ * Python é explícito por `RAG_PYTHON`: o venv do serviço tem numpy/pydantic/psycopg2 que o python
+ * do sistema não tem.
+ */
+function comandoDoTeste(relTeste) {
+  const python = process.env.RAG_PYTHON || 'python3';
+  if (relTeste.endsWith('.py')) {
+    return { argv: [python, ['-m', 'pytest', relTeste, '-q', '-p', 'no:cacheprovider']],
+      log: `${python} -m pytest ${relTeste} -q -p no:cacheprovider`, runner: 'pytest' };
+  }
+  if (relTeste.startsWith('frontend/')) {
+    const relFrontend = relTeste.replace(/^frontend\//, '');
+    return { argv: ['npm', ['--prefix', 'frontend', 'run', 'test', '--', relFrontend]],
+      log: `npm --prefix frontend run test -- ${relFrontend}`, runner: 'vitest' };
+  }
+  return { argv: ['npx', ['jest', relTeste, '--bail=1', '--ci']],
+    log: `npx jest ${relTeste} --bail=1 --ci`, runner: 'jest' };
+}
+
 /** Executa o teste e devolve execução + saída REAL em disco. */
 function executarTeste(idDefeito, relTeste) {
   const dirLogs = RUN_ID_DOS_LOGS
@@ -205,13 +231,10 @@ function executarTeste(idDefeito, relTeste) {
 
   // Runner por ÁREA: teste em `frontend/` é Vitest, não Jest. Rodar com o runner errado
   // produzia "TESTE_FALHOU_AGORA" falso — o defeito declarado não era o que falhava.
-  const ehFrontend = relTeste.startsWith('frontend/');
-  // O Vitest do frontend tem config própria (`frontend/vitest.config.mjs`); rodar `npx vitest`
-  // baixava OUTRA versão e falhava por reporter inexistente — falso vermelho.
-  const relFrontend = relTeste.replace(/^frontend\//, '');
-  const comando = ehFrontend
-    ? ['npm', ['--prefix', 'frontend', 'run', 'test', '--', relFrontend]]
-    : ['npx', ['jest', relTeste, '--bail=1', '--ci']];
+  // Runner por ÁREA (ver `comandoDoTeste`): frontend é Vitest (config própria em
+  // `frontend/vitest.config.mjs` — `npx vitest` baixava outra versão e falhava por reporter);
+  // `rag-service/**` é pytest; o resto é Jest.
+  const { argv: comando, log: comandoLog } = comandoDoTeste(relTeste);
   const inicio = new Date().toISOString();
   const r = spawnSync(comando[0], comando[1], {
     cwd: ROOT, encoding: 'utf8', shell: process.platform === 'win32', timeout: TIMEOUT_MS,
@@ -224,7 +247,7 @@ function executarTeste(idDefeito, relTeste) {
 
   return {
     testPath: relTeste,
-    command: ehFrontend ? `npm --prefix frontend run test -- ${relFrontend}` : `npx jest ${relTeste} --bail=1 --ci`,
+    command: comandoLog,
     exitCode: r.status === null ? null : r.status,
     signal: r.signal || null,
     timeout: r.error && /ETIMEDOUT|timed? ?out/i.test(String(r.error.message || '')) ? true : undefined,
@@ -802,6 +825,7 @@ if (require.main === module) {
 
 module.exports = {
   classificarPendencia,
+  comandoDoTeste,
   testeCitado,
   testeDaEvidencia,
   testeDoCommitDoFix,

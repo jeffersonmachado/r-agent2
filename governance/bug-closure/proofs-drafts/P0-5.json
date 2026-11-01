@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cd936a3f-9450-4d44-9da3-c680831eec7f",
+  "transitionId": "41db6fcb-aafe-470a-89c8-0c2e08f18d1c",
   "defectId": "P0-5",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "66159b64dcdfd0c7fdabfb70628395370c1f42b8",
-  "codeFingerprint": "85fb543ba3a3485d76b13f0ff8e3964d0f9dfc693ffb0ced15430557754079ea",
+  "evaluatedCommit": "68a1da1922d793a5937fcfa9a0c4441a7d734594",
+  "codeFingerprint": "f11b8df06b0649b60593c1dfdf19732315a805dad802c1669dfdd11de376e649",
   "requiredTests": [
     "tests/integration/securityWaiverApprovalE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/securityWaiverApprovalE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T05:15:14.815Z",
-      "finishedAt": "2026-11-01T05:15:19.485Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101051400-b7478e36/logs/P0-5.log",
-      "outputSha256": "329fb85e7cd588bc9672163b85525b6af7d4e125a2610d290c9c02ac8d37ecac"
+      "startedAt": "2026-11-01T06:25:36.627Z",
+      "finishedAt": "2026-11-01T06:25:41.940Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101062413-edded68d/logs/P0-5.log",
+      "outputSha256": "d910815ce8b26bff200561bd1a4987217d318fcee9bd79204d1c6072d02982dd"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T05:45:40.950931Z",
+    "at": "2026-11-01T06:55:23.337183Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -72,8 +72,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T05:15:19.492Z",
-  "proofHash": "1963c78035c7246bfecb035b7ca1bd5f238ca2080fa4a33f642345f7a9604c35"
+  "createdAt": "2026-11-01T06:25:41.947Z",
+  "proofHash": "501b8fdb30ca4bef342747b3f4cb86fefdc2a5ad657b22857f73543df88a6bd1"
 }
