@@ -2270,16 +2270,19 @@
       "title": "Coleta da evidencia de runtime restringia o Jest a um teste e dependia de sobra de execucoes anteriores",
       "status": "done",
       "commit": "42dd5f34b",
-      "evidence": "scripts/governance/collect-engineering-router-runtime-evidence.js (executa o ARQUIVO inteiro e extrai o teste-alvo de assertionResults); medicao: em arvore limpa EXACT_PATCH_PROMOTION dava promoted=false e PROVIDER_MODEL_FAILURE_REROUTE terminava READY_FOR_PROMOTION, enquanto a suíte inteira passava 221/221",
+      "evidence": "scripts/governance/collect-engineering-router-runtime-evidence.js (executa o ARQUIVO inteiro e extrai o teste-alvo de assertionResults); medicao: em arvore limpa EXACT_PATCH_PROMOTION dava promoted=false e PROVIDER_MODEL_FAILURE_REROUTE terminava READY_FOR_PROMOTION, enquanto a suíte inteira passava 221/221 | suíte de regressão: tests/unit/governance/runtimeEvidenceReproducibility.test.js (11 casos: recusa de ambiente, identidade por item, determinismo do hash)",
       "resolution": "DEFEITO MEDIDO (L-1): o coletor rodava 'jest <arquivo> --testNamePattern <id>', executando SOMENTE o teste nomeado. Testes que dependem de estado produzido por outro teste do MESMO arquivo falhavam em arvore limpa e passavam quando havia estado residual de execucoes anteriores — a certificacao de runtime era dependente de sujeira previa (falso verde com residuo, falso vermelho em arvore limpa). CORRECAO: roda o arquivo inteiro (o mesmo comando que o gate L1 usa) e o veredito do item vem do status do teste-ALVO em assertionResults + exit code real; teste ausente/renomeado/skipado continua FALHANDO; arquivo vermelho com alvo verde e reportado com causa explicita; timeout 120s -> 600s.",
       "prevention": "REGRA: evidencia de runtime tem de reproduzir exatamente o comando que o gate executa. Restringir a execucao por nome de teste cria dependencia de ordem/estado e transforma certificacao em sorte.",
       "severity": "P1",
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "done",
-      "regressionTest": "scripts/governance/collect-engineering-router-runtime-evidence.js",
+      "regressionTest": "tests/unit/governance/runtimeEvidenceReproducibility.test.js",
       "severityBasis": "certificacao de runtime nao reproduzivel: falso verde com estado residual e falso vermelho em arvore limpa",
-      "severitySource": "missao-L1-criterio-7"
+      "severitySource": "missao-L1-criterio-7",
+      "closureProof": "governance/bug-closure/proofs/1e1fc97b-a515-45f1-bc20-0cc44eee8a89.json",
+      "attestationId": "1e1fc97b-a515-45f1-bc20-0cc44eee8a89",
+      "attestedAt": "2026-11-01T08:26:21.128Z"
     },
     {
       "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
