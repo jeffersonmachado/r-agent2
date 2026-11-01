@@ -125,46 +125,302 @@
   },
   "sameRunRule": "generatedAt >= governanceRun.startedAt — evidência PRÉ-RUN nunca ganha autoridade no run atual. Estampar runId/sourceFingerprint sobre artefato antigo é PROIBIDO: reexecute o produtor.",
   "producers": {
-    "governance/system-scope-audit.json": { "command": "node scripts/governance/generate-system-scope-audit.js", "kind": "node", "phase": "CONVERGE", "note": "produtor real do converge 6/12" },
-    "governance/replay-hardening-report.json": { "command": "node governance/replay-hardening-engine.js", "kind": "node", "phase": "CONVERGE", "note": "produtor real do converge 6/12" },
-    "governance/model-driven-e2e-report.json": { "command": "npm run validate:model-driven-e2e", "kind": "npm", "phase": "CONVERGE", "note": "consome o go-no-go do mesh do run (passo 8) e o replay-hardening; por isso o ensure do passo 8.7 reexecuta DEPOIS do mesh" },
-    "governance/mutable-json-state-validation-report.json": { "command": "npm run verify:no-mutable-json-state", "kind": "npm" },
-    "governance/json-persistence-audit.json": { "command": "npm run audit:json-persistence", "kind": "npm" },
-    "reports/release-dag-report.json": { "command": "npm run validate:release-dag", "kind": "npm" },
-    "reports/release-artifact-identity-report.json": { "command": "npm run validate:release-artifact-identity", "kind": "npm" },
-    "reports/route-mount-report.json": { "command": "npm run validate:route-mounts", "kind": "npm" },
-    "reports/coverage-gate-report.json": { "command": "npm run validate:coverage-gate", "kind": "npm" },
-    "reports/coverage-completeness-report.json": { "command": "npm run validate:coverage-completeness", "kind": "npm" },
-    "reports/db-integrity-report.json": { "command": "npm run wave:db-integrity", "kind": "npm" },
-    "reports/tenant-isolation-report.json": { "command": "npm run report:tenant-isolation", "kind": "npm" },
-    "reports/api-surface-report.json": { "command": "npm run wave:api-surface", "kind": "npm" },
-    "reports/page-surface-report.json": { "command": "npm run wave:page-surface", "kind": "npm" },
-    "reports/visibility-policy-report.json": { "command": "npm run validate:visibility-policy", "kind": "npm" },
-    "reports/experience-segregation-report.json": { "command": "npm run validate:experience-segregation", "kind": "npm" },
-    "governance/experience-segregation-report.json": { "command": "npm run validate:experience-segregation", "kind": "npm" },
-    "reports/experience-api-segregation-report.json": { "command": "npm run validate:experience-api-segregation", "kind": "npm" },
-    "governance/experience-api-segregation-report.json": { "command": "npm run validate:experience-api-segregation", "kind": "npm" },
-    "reports/source-remote-provenance-report.json": { "command": "npm run validate:remote-provenance", "kind": "npm" },
-    "governance/source-remote-provenance-report.json": { "command": "npm run validate:remote-provenance", "kind": "npm" },
-    "governance/self-proving-report.json": { "command": "npm run validate:self-proving", "kind": "npm" },    "governance/report-contamination-report.json": { "command": "node governance/report-contamination-cleaner.js", "kind": "node" },
-    "reports/inventory-build-report.json": { "command": "npm run inventory:build", "kind": "npm" },
-    "reports/rag-domain-segregation-report.json": { "command": "npm run report:rag-domain-segregation", "kind": "npm" },
-    "qa/qa-waves-enterprise-governance.json": { "command": "npm run qa:waves:enterprise-governance", "kind": "npm" },
-    "governance/delivered-release-verification-report.json": { "command": "npm run verify:delivered-release", "kind": "npm", "phase": "DELIVERED" },
-    "qa-mesh/release-gate-report.json": { "command": "npm run qa:mesh", "kind": "npm" },
-    "qa-mesh/go-no-go-report.json": { "command": "npm run qa:mesh", "kind": "npm" },
-    "governance/self-proving-report.json": { "command": "npm run validate:self-proving", "kind": "npm", "phase": "FINAL" },
-    "governance/tamper-detection-report.json": { "command": "npm run validate:self-proving", "kind": "npm", "phase": "FINAL" },
-    "governance/certification-snapshot.json": { "command": "node governance/export-certification-snapshot.js", "kind": "node", "phase": "FINAL" },
-    "governance/final-consistency-report.json": { "command": "node governance/final-consistency-gate.js", "kind": "node", "phase": "FINAL" },
-    "governance/final-consistency-gate-report.json": { "command": "node governance/final-consistency-gate.js", "kind": "node", "phase": "FINAL" },
-    "governance/final-governance-report.json": { "command": "node governance/final-governance-engine.js", "kind": "node", "phase": "FINAL" },
-    "governance/final-readiness-report.json": { "command": "npm run system:platform-readiness", "kind": "npm", "note": "PROJECAO do estado do run: producao obrigatoria DENTRO do run, em qualquer fase (nao depende do pacote). Antes estava como fase FINAL e por isso ficava pre-run no prepare — e o seal-time-gate consumia a decisao de readiness do run ANTERIOR (adocao retroativa de veredito)." },
-    "governance/final-proof-report.json": { "command": "npm run system:platform-readiness", "kind": "npm", "note": "escrito por tools/system/platform-readiness.js (writeJson em :1756), junto com final-readiness: mesma correcao de fase" },
-    "governance/evidence-manifest.json": { "command": null, "phase": "FINAL", "note": "produzido por materialize-proof-artifacts no empacotamento" },
-    "governance/package-integrity-report.json": { "command": null, "phase": "FINAL", "note": "produzido pelo two-pass-release no empacotamento" },
-    "governance/package-validation-report.json": { "command": null, "phase": "FINAL", "note": "produzido pelo package-validator" },
-    "governance/replay-integrity-report.json": { "command": null, "phase": "FINAL", "note": "produzido pelo replay-integrity no empacotamento" },
-    "governance/outbound-reliability-report.json": { "command": "node scripts/governance/generate-outbound-reliability-evidence.js", "kind": "node" }
+    "governance/system-scope-audit.json": {
+      "command": "node scripts/governance/generate-system-scope-audit.js",
+      "kind": "node",
+      "phase": "CONVERGE",
+      "note": "produtor real do converge 6/12"
+    },
+    "governance/replay-hardening-report.json": {
+      "command": "node governance/replay-hardening-engine.js",
+      "kind": "node",
+      "phase": "CONVERGE",
+      "note": "produtor real do converge 6/12"
+    },
+    "governance/model-driven-e2e-report.json": {
+      "command": "npm run validate:model-driven-e2e",
+      "kind": "npm",
+      "phase": "CONVERGE",
+      "note": "consome o go-no-go do mesh do run (passo 8) e o replay-hardening; por isso o ensure do passo 8.7 reexecuta DEPOIS do mesh"
+    },
+    "governance/mutable-json-state-validation-report.json": {
+      "command": "npm run verify:no-mutable-json-state",
+      "kind": "npm"
+    },
+    "governance/json-persistence-audit.json": {
+      "command": "npm run audit:json-persistence",
+      "kind": "npm"
+    },
+    "reports/release-dag-report.json": {
+      "command": "npm run validate:release-dag",
+      "kind": "npm"
+    },
+    "reports/release-artifact-identity-report.json": {
+      "command": "npm run validate:release-artifact-identity",
+      "kind": "npm"
+    },
+    "reports/route-mount-report.json": {
+      "command": "npm run validate:route-mounts",
+      "kind": "npm"
+    },
+    "reports/coverage-gate-report.json": {
+      "command": "npm run validate:coverage-gate",
+      "kind": "npm"
+    },
+    "reports/coverage-completeness-report.json": {
+      "command": "npm run validate:coverage-completeness",
+      "kind": "npm"
+    },
+    "reports/db-integrity-report.json": {
+      "command": "npm run wave:db-integrity",
+      "kind": "npm"
+    },
+    "reports/tenant-isolation-report.json": {
+      "command": "npm run report:tenant-isolation",
+      "kind": "npm"
+    },
+    "reports/api-surface-report.json": {
+      "command": "npm run wave:api-surface",
+      "kind": "npm"
+    },
+    "reports/page-surface-report.json": {
+      "command": "npm run wave:page-surface",
+      "kind": "npm"
+    },
+    "reports/visibility-policy-report.json": {
+      "command": "npm run validate:visibility-policy",
+      "kind": "npm"
+    },
+    "reports/experience-segregation-report.json": {
+      "command": "npm run validate:experience-segregation",
+      "kind": "npm"
+    },
+    "governance/experience-segregation-report.json": {
+      "command": "npm run validate:experience-segregation",
+      "kind": "npm"
+    },
+    "reports/experience-api-segregation-report.json": {
+      "command": "npm run validate:experience-api-segregation",
+      "kind": "npm"
+    },
+    "governance/experience-api-segregation-report.json": {
+      "command": "npm run validate:experience-api-segregation",
+      "kind": "npm"
+    },
+    "reports/source-remote-provenance-report.json": {
+      "command": "npm run validate:remote-provenance",
+      "kind": "npm"
+    },
+    "governance/source-remote-provenance-report.json": {
+      "command": "npm run validate:remote-provenance",
+      "kind": "npm"
+    },
+    "governance/self-proving-report.json": {
+      "command": "npm run validate:self-proving",
+      "kind": "npm",
+      "phase": "FINAL"
+    },
+    "governance/report-contamination-report.json": {
+      "command": "node governance/report-contamination-cleaner.js",
+      "kind": "node"
+    },
+    "reports/inventory-build-report.json": {
+      "command": "npm run inventory:build",
+      "kind": "npm"
+    },
+    "reports/rag-domain-segregation-report.json": {
+      "command": "npm run report:rag-domain-segregation",
+      "kind": "npm"
+    },
+    "qa/qa-waves-enterprise-governance.json": {
+      "command": "npm run qa:waves:enterprise-governance",
+      "kind": "npm"
+    },
+    "governance/delivered-release-verification-report.json": {
+      "command": "npm run verify:delivered-release",
+      "kind": "npm",
+      "phase": "DELIVERED"
+    },
+    "qa-mesh/release-gate-report.json": {
+      "command": "npm run qa:mesh",
+      "kind": "npm"
+    },
+    "qa-mesh/go-no-go-report.json": {
+      "command": "npm run qa:mesh",
+      "kind": "npm"
+    },
+    "governance/tamper-detection-report.json": {
+      "command": "npm run validate:self-proving",
+      "kind": "npm",
+      "phase": "FINAL"
+    },
+    "governance/certification-snapshot.json": {
+      "command": "node governance/export-certification-snapshot.js",
+      "kind": "node",
+      "phase": "FINAL"
+    },
+    "governance/final-consistency-report.json": {
+      "command": "node governance/final-consistency-gate.js",
+      "kind": "node",
+      "phase": "FINAL"
+    },
+    "governance/final-consistency-gate-report.json": {
+      "command": "node governance/final-consistency-gate.js",
+      "kind": "node",
+      "phase": "FINAL"
+    },
+    "governance/final-governance-report.json": {
+      "command": "node governance/final-governance-engine.js",
+      "kind": "node",
+      "phase": "FINAL"
+    },
+    "governance/final-readiness-report.json": {
+      "command": "npm run system:platform-readiness",
+      "kind": "npm",
+      "note": "PROJECAO do estado do run: producao obrigatoria DENTRO do run, em qualquer fase (nao depende do pacote). Antes estava como fase FINAL e por isso ficava pre-run no prepare — e o seal-time-gate consumia a decisao de readiness do run ANTERIOR (adocao retroativa de veredito)."
+    },
+    "governance/final-proof-report.json": {
+      "command": "npm run system:platform-readiness",
+      "kind": "npm",
+      "note": "escrito por tools/system/platform-readiness.js (writeJson em :1756), junto com final-readiness: mesma correcao de fase"
+    },
+    "governance/evidence-manifest.json": {
+      "command": null,
+      "phase": "FINAL",
+      "note": "produzido por materialize-proof-artifacts no empacotamento"
+    },
+    "governance/package-integrity-report.json": {
+      "command": null,
+      "phase": "FINAL",
+      "note": "produzido pelo two-pass-release no empacotamento"
+    },
+    "governance/package-validation-report.json": {
+      "command": null,
+      "phase": "FINAL",
+      "note": "produzido pelo package-validator"
+    },
+    "governance/replay-integrity-report.json": {
+      "command": null,
+      "phase": "FINAL",
+      "note": "produzido pelo replay-integrity no empacotamento"
+    },
+    "governance/outbound-reliability-report.json": {
+      "command": "node scripts/governance/generate-outbound-reliability-evidence.js",
+      "kind": "node"
+    },
+    "reports/billing-entitlement-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js: suítes de billing reconciliation/reconhecimento de webhook)"
+    },
+    "qa/enterprise/pbx-voice-flow-prod-like.json": {
+      "command": "node scripts/smoke/qa-waves-enterprise-proof-smoke.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real: summarizePbxProof + writeJson no smoke enterprise"
+    },
+    "qa/enterprise/omnichannel-unified-replay.json": {
+      "command": "node scripts/smoke/qa-waves-enterprise-proof-smoke.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real: buildUnifiedReplay + writeJson no smoke enterprise"
+    },
+    "reports/rate-limit-validation-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/security-validation-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/idempotency-validation-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/concurrency-validation-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/external-resilience-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/channel-security-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/disaster-recovery-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/deploy-validation-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/privacy-retention-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "reports/webhook-replay-protection-report.json": {
+      "command": "node scripts/governance/generate-domain-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real (matriz DOMAIN_EVIDENCE de generate-domain-evidence.js)"
+    },
+    "qa/enterprise/human-handoff-full-validation.json": {
+      "command": "node scripts/smoke/qa-waves-enterprise-proof-smoke.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real: human handoff no smoke enterprise"
+    },
+    "governance/critical-journey-evidence.json": {
+      "command": "node scripts/governance/generate-critical-journey-evidence-v2.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor v2 da evidência de jornadas críticas"
+    },
+    "governance/governance-persistence-validation-report.json": {
+      "command": "node scripts/governance/generate-persistence-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor da evidência de persistência"
+    },
+    "reports/master-scorecard-test-report.json": {
+      "command": "node scripts/governance/generate-policy-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor da matriz de evidência de política/matriz de testes"
+    },
+    "reports/master-scorecard-regression-report.json": {
+      "command": "node scripts/governance/generate-policy-evidence.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor da matriz de evidência de política/regressão"
+    },
+    "qa-mesh/intelligence/latest.json": {
+      "command": "npm run qa:mesh",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "escrito por buildFailureIntelligence dentro da execução da malha"
+    }
   }
 }

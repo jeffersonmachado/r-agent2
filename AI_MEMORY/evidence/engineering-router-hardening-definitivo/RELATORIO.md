@@ -3934,3 +3934,56 @@ autorize um ciclo de selo real. Isso está alinhado com o que a fila já registr
 O que MUDOU nesta rodada e é verificável: o gate que antes negava **todas as 168 provas** em CI agora
 AUTORIZA (causa-raiz em §11.72: `.gitignore` `logs/`), e o entrypoint de auditoria externa passou a
 refletir o estado medido de hoje.
+
+### 11.74. Ciclo de selo V2 EXECUTADO — veredito medido e onde ele parou
+
+Autorizado o ciclo completo, rodei `npm run engineering-router:v2-seal` (21 passos) com stack real
+(Postgres, Redis, RAG em 8001 e serviço em 8000). Veredito **medido**, não presumido:
+
+```
+[bug-closure] SELO_FINAL @ 40ed6476f7d9: ALLOWED      <- o gate de elegibilidade AUTORIZA
+  [PASS] MANIFEST_CONSISTENT     91 suítes autoritativas, 0 excluídas
+  [PASS] MIGRATIONS
+  [PASS] V1_RUNTIME_EVIDENCE     25 testes de runtime reais
+  [PASS] V1_RUNTIME_VERDICT
+  [PASS] ANTI_GREENWASHING
+  [PASS] SUITE_EXECUTION         suítes canônicas do manifesto
+  [PASS] REQUIREMENTS_MATRIX
+  [FAIL] REQUIRED_TESTS_V2       exit=1
+[seal-v2] status=NO_GO passos=8 falhas-obrigatórias=1
+[seal-v2] RAP_FINAL_RELEASE permanece NO_GO_INDEPENDENTE
+```
+
+`validate:required-tests`: **65/68 PROVEN**. Os 3 restantes são todos TEMPORAL:
+- `TEMPORAL-01`/`TEMPORAL-04` — `reports/current-run-temporal-integrity-report.json` precisa PASS;
+- `TEMPORAL-06` — `governance/authoritative-artifact-refresh-report.json` precisa PASS.
+
+Ambos reprovam porque **artefatos autoritativos não têm produtor declarado na taxonomia** — um
+`config/runtime-evidence-artifacts.json` incompleto, não um bug de código. Medi e corrigi a lacuna
+em duas rodadas: **16 produtores declarados** (11 de `generate-domain-evidence.js`, 3 do smoke
+enterprise, `generate-critical-journey-evidence-v2`, `generate-persistence-evidence`,
+`generate-policy-evidence`, `qa:mesh`) — 41 → 60 entradas. Depois disso o refresh caiu de 7
+desconhecidos para 1 (`agent-policy-compliance-report.json`, produtor
+`governance/verify-agent-policy-compliance.js`) + 2 `qa-mesh/*` que o `qa:mesh` reescreve.
+
+Também rodei, dentro do run governado `rap-governed-20261101151004061-cd9866c7`:
+
+```
+wave:db-integrity    exit=0   233 appends, cadeia íntegra
+wave:page-surface    exit=0   151 VALIDATED · 0 FAILED   (portas canônicas 5173/3001)
+wave:api-surface     exit=0   886 VALIDATED · 0 FAILED
+qa:mesh              > 45 min, interrompido por orçamento da sessão (não é falha do código)
+```
+
+Efeito colateral medido e corrigido: o `page-surface` falhou primeiro apontando para uma instância
+Vite minha em porta alternativa (WS quebrado); nas portas canônicas passou 151/151. Registro porque
+é a mesma classe do §11.58 — ambiente improvisado gera vermelho que não é do código.
+
+**O que falta para o selo**: terminar `qa:mesh` (~horas; valida jornadas/outcomes que o coverage gate
+exige: `criticalJourneysValidated=0` hoje), declarar o último produtor, rodar o refresh + temporal
+dentro do run e então repetir os 21 passos. Tudo com o mesmo run governado, senão `generatedAt <
+runStartedAt` volta a reprovar.
+
+Estado do repositório ao final desta rodada: fila 175 itens, `FECHAMENTO_NAO_PROVADO=0`,
+`validate:bug-closure-status` **PASS**, `governedEvidenceBinding` 3/3 verde, worktree limpo exceto a
+taxonomia (`config/runtime-evidence-artifacts.json`).
