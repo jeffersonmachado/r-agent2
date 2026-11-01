@@ -1,0 +1,342 @@
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+FAIL tests/integration/crmTenantIsolation.postgres.test.js
+  P0-02 — matriz adversarial de isolamento (PostgreSQL real)
+    ✕ 1. tenant A cria registro e o SQL confirma tenant_key=A (104 ms)
+    ✕ 2. tenant A lê o próprio registro (102 ms)
+    ✕ 3. tenant B NÃO lê o registro de A (null, sem dado vazado) (102 ms)
+    ✕ 4. tenant B NÃO atualiza o registro de A (0 linhas; SQL intacto) (104 ms)
+    ✕ 5. tenant B NÃO exclui o registro de A (101 ms)
+    ✕ 6. tenant B NÃO cria registro usando o ID de A (409; A intacto) (101 ms)
+    ✕ 7. tenant B NÃO altera tenant_key por payload contaminado (100 ms)
+    ✕ 8. atualização com id divergente no payload não troca de registro (101 ms)
+    ✕ 9. repetir o ataque anterior continua rejeitado (idempotência da recusa) (101 ms)
+    ✕ 10. dados de A permanecem intactos ao final da matriz (102 ms)
+    ✕ 11. B nunca recebe dado confidencial de A em listagens (101 ms)
+    ✕ 12. operações simultâneas: só o dono atualiza; corrida não transfere (101 ms)
+    ✕ 13. transação que falha na atualização não deixa estado parcial (101 ms)
+    ✕ 14. trigger do banco recusa transferência de tenant_key (defesa em profundidade) (102 ms)
+    ✕ 15. criação repetida no mesmo tenant não sobrescreve o existente (102 ms)
+    ✕ 16. registro de tenant INEXISTENTE não pode ser apropriado (101 ms)
+    ✕ 17. entidade diferente não pode sequestrar registro de outra entidade (102 ms)
+    ✕ 18. permissões de criação e atualização são operações distintas (101 ms)
+    ✕ 19. tenant inválido/vazio não grava nada (101 ms)
+    ✕ 20. após reconexão (restart da aplicação) o isolamento continua (103 ms)
+  P0-02 — métricas e persistência após a matriz
+    ✕ 21. contagem por tenant continua consistente (métricas) (102 ms)
+    ✕ 22. nenhuma linha tem tenant_key divergente do dono original (102 ms)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 1. tenant A cria registro e o SQL confirma tenant_key=A
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 2. tenant A lê o próprio registro
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 3. tenant B NÃO lê o registro de A (null, sem dado vazado)
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 4. tenant B NÃO atualiza o registro de A (0 linhas; SQL intacto)
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 5. tenant B NÃO exclui o registro de A
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 6. tenant B NÃO cria registro usando o ID de A (409; A intacto)
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 7. tenant B NÃO altera tenant_key por payload contaminado
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 8. atualização com id divergente no payload não troca de registro
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 9. repetir o ataque anterior continua rejeitado (idempotência da recusa)
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 10. dados de A permanecem intactos ao final da matriz
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 11. B nunca recebe dado confidencial de A em listagens
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 12. operações simultâneas: só o dono atualiza; corrida não transfere
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 13. transação que falha na atualização não deixa estado parcial
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 14. trigger do banco recusa transferência de tenant_key (defesa em profundidade)
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 15. criação repetida no mesmo tenant não sobrescreve o existente
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 16. registro de tenant INEXISTENTE não pode ser apropriado
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 17. entidade diferente não pode sequestrar registro de outra entidade
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 18. permissões de criação e atualização são operações distintas
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 19. tenant inválido/vazio não grava nada
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — matriz adversarial de isolamento (PostgreSQL real) › 20. após reconexão (restart da aplicação) o isolamento continua
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — métricas e persistência após a matriz › 21. contagem por tenant continua consistente (métricas)
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+  ● P0-02 — métricas e persistência após a matriz › 22. nenhuma linha tem tenant_key divergente do dono original
+
+    SKIPPED_SEM_POSTGRES: connect ECONNREFUSED 127.0.0.1:55432
+
+    [0m [90m 104 |[39m     [36mif[39m ([33m![39mdisponivel) {
+     [90m 105 |[39m       [90m// Falha explícita, nunca verde: certificação exige banco real.[39m
+    [31m[1m>[22m[39m[90m 106 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m([32m`SKIPPED_SEM_POSTGRES: ${motivoIndisponivel}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 107 |[39m     }
+     [90m 108 |[39m     [36mawait[39m fn()[33m;[39m
+     [90m 109 |[39m   })[33m;[39m[0m
+
+      at Object.<anonymous> (tests/integration/crmTenantIsolation.postgres.test.js:106:13)
+
+Test Suites: 1 failed, 1 total
+Tests:       22 failed, 22 total
+Snapshots:   0 total
+Time:        3.651 s, estimated 4 s
+Ran all test suites matching /tests\/integration\/crmTenantIsolation.postgres.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

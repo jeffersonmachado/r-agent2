@@ -1,0 +1,64 @@
+[L1] relatório em reports/impact-validation-report.json (recusa registrada)
+[L1] relatório em reports/impact-validation-report.json (recusa registrada)
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+[L1] ESCALATE: grafo de OUTRO source (artefato=f11b8df06b0649b6… atual=697aa0f8201edbe4…)
+[L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build
+[L1] ESCALATE: grafo de OUTRO source (artefato=f11b8df06b0649b6… atual=697aa0f8201edbe4…)
+[L1] o grafo precisa descrever o source ATUAL — rode: npm run impact:build
+FAIL tests/unit/coverage/impactRunner.test.js
+  runner L1 — separação por runner
+    ✓ testes de frontend vão para o Vitest (105 ms)
+    ✓ testes de backend/engine vão para o Jest (105 ms)
+    ✓ E2E de frontend NÃO é tratado como teste de frontend (é outro pacote) (103 ms)
+    ✓ seleção mista é dividida nos dois grupos (104 ms)
+    ✓ normaliza separadores e prefixo ./ antes de classificar (103 ms)
+    ✓ lista vazia devolve os dois grupos vazios (sem lançar) (104 ms)
+    ✓ os exit codes são estáveis e distintos (contrato com o orquestrador) (105 ms)
+  runner L1 — arquivo de teste alterado é executado
+    ✓ o próprio arquivo de teste alterado entra na seleção (108 ms)
+    ✓ e NÃO arrasta os testes que dependem do que ele importa (101 ms)
+  runner L1 — parsing de argumentos
+    ✕ aceita --files=valor sem cair no git diff (forma com igual) (472 ms)
+    ✕ aceita --files valor (forma separada) (587 ms)
+
+  ● runner L1 — parsing de argumentos › aceita --files=valor sem cair no git diff (forma com igual)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "EXPLICIT"
+    Received: "GRAPH_STALE"
+
+    [0m [90m 120 |[39m       main([[32m'--files=engine/utils.js'[39m[33m,[39m [32m'--dry-run'[39m])[33m;[39m
+     [90m 121 |[39m       [36mconst[39m rel [33m=[39m require(path[33m.[39mjoin(process[33m.[39mcwd()[33m,[39m [32m'reports'[39m[33m,[39m [32m'impact-validation-report.json'[39m))[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m       expect(rel[33m.[39mbase)[33m.[39mtoBe([32m'EXPLICIT'[39m)[33m;[39m
+     [90m     |[39m                        [31m[1m^[22m[39m
+     [90m 123 |[39m       expect(rel[33m.[39mchangedFiles)[33m.[39mtoEqual([[32m'engine/utils.js'[39m])[33m;[39m
+     [90m 124 |[39m     } [36mfinally[39m {
+     [90m 125 |[39m       process[33m.[39margv [33m=[39m antes[33m;[39m[0m
+
+      at Object.toBe (tests/unit/coverage/impactRunner.test.js:122:24)
+
+  ● runner L1 — parsing de argumentos › aceita --files valor (forma separada)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "EXPLICIT"
+    Received: "GRAPH_STALE"
+
+    [0m [90m 130 |[39m     main([[32m'--files'[39m[33m,[39m [32m'engine/utils.js'[39m[33m,[39m [32m'--dry-run'[39m])[33m;[39m
+     [90m 131 |[39m     [36mconst[39m rel [33m=[39m require(path[33m.[39mjoin(process[33m.[39mcwd()[33m,[39m [32m'reports'[39m[33m,[39m [32m'impact-validation-report.json'[39m))[33m;[39m
+    [31m[1m>[22m[39m[90m 132 |[39m     expect(rel[33m.[39mbase)[33m.[39mtoBe([32m'EXPLICIT'[39m)[33m;[39m
+     [90m     |[39m                      [31m[1m^[22m[39m
+     [90m 133 |[39m     expect(rel[33m.[39mchangedFiles)[33m.[39mtoEqual([[32m'engine/utils.js'[39m])[33m;[39m
+     [90m 134 |[39m   })[33m;[39m
+     [90m 135 |[39m })[33m;[39m[0m
+
+      at Object.toBe (tests/unit/coverage/impactRunner.test.js:132:22)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 9 passed, 11 total
+Snapshots:   0 total
+Time:        2.289 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/coverage\/impactRunner.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,13 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringRunnerDockerfileClosure.test.js
+  Engineering Runner — o Dockerfile cobre TODO o fechamento de require do runner
+    ✓ nenhum require relativo fica sem COPY (defeito do command-policy, 2026-10-20) (144 ms)
+    ✓ o fechamento inclui a cadeia que quebrou o container (prova de que o teste olha o lugar certo) (141 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.612 s, estimated 1 s
+Ran all test suites matching /tests\/unit\/engineeringRunnerDockerfileClosure.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

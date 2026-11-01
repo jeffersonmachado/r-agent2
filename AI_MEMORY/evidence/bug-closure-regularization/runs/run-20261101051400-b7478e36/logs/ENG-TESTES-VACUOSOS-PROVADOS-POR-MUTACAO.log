@@ -1,0 +1,2138 @@
+  console.error
+    [2026-11-01T05:36:40.438Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/bugFindingService.js:28:30)
+      at Object.require (tests/integration/engineeringBugLoop.test.js:24:27)
+
+  console.info
+    [2026-11-01T05:36:40.646Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:40.742Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "6466a84f-4174-454a-afaa-f5a48a608784",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:40.908Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "67e29b5e-401f-4428-aef4-d37b5fd2730b",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:40.977Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "67e29b5e-401f-4428-aef4-d37b5fd2730b",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.061Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "67e29b5e-401f-4428-aef4-d37b5fd2730b",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.216Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "d383227a-26f6-4954-a6d0-e6196429d192",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.260Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "d383227a-26f6-4954-a6d0-e6196429d192",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.330Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "d383227a-26f6-4954-a6d0-e6196429d192",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.485Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "c62c8605-17a3-47c3-a9b3-72adf0d4dc85",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.677Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "be7aa197-432a-4511-a819-b62362502629",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:36:41.699Z] [WARN] [bugLoopCoordinator] fix recusado: finding sob posse de outro worker
+    {
+      "findingId": "be7aa197-432a-4511-a819-b62362502629",
+      "worker": "worker-dono",
+      "expiresAt": "2026-11-01T05:38:41.680Z"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as runFixLoop] (api/services/engineeringMission/bugLoopCoordinatorService.js:161:12)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:319:19)
+
+  console.info
+    [2026-11-01T05:36:41.903Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "90e80c4f-133e-4a7a-9b94-be1c984e3574",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.948Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "90e80c4f-133e-4a7a-9b94-be1c984e3574",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:41.983Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "90e80c4f-133e-4a7a-9b94-be1c984e3574",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:42.051Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "134216ff-e5a9-4381-97de-11a79b958ed7",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:42.104Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "134216ff-e5a9-4381-97de-11a79b958ed7",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:43.381Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-bug-134216ff-e5a9-4381-97de-11a79b958ed7-attempt-1-590573bf",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.316Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "134216ff-e5a9-4381-97de-11a79b958ed7",
+      "action": "→ NOT_REPRODUCED",
+      "status": "NOT_REPRODUCED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.474Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "a0a4c0b2-d459-47f7-be45-9c7a4654426e",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.518Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "a0a4c0b2-d459-47f7-be45-9c7a4654426e",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.572Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "a0a4c0b2-d459-47f7-be45-9c7a4654426e",
+      "action": "→ NOT_REPRODUCED",
+      "status": "NOT_REPRODUCED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.699Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "88c0e407-d10f-4a7d-8c7b-053ba910b4a1",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "LOW",
+      "category": "TIMEOUT",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.725Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "88c0e407-d10f-4a7d-8c7b-053ba910b4a1",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "LOW",
+      "category": "TIMEOUT",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.757Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "88c0e407-d10f-4a7d-8c7b-053ba910b4a1",
+      "action": "→ SUSPECTED",
+      "status": "SUSPECTED",
+      "severity": "LOW",
+      "category": "TIMEOUT",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:36:59.894Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "edede20b-7090-4675-9021-4f9ba4c0142b",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.049Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "89e733ac-1395-4863-a724-21b85a5f0c8f",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.079Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "89e733ac-1395-4863-a724-21b85a5f0c8f",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.118Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "89e733ac-1395-4863-a724-21b85a5f0c8f",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.210Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "89e733ac-1395-4863-a724-21b85a5f0c8f",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.227Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "89e733ac-1395-4863-a724-21b85a5f0c8f",
+      "taskId": "d89dda88-d30e-48f3-9bf3-9f8d86ab3a3a",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.329Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "89e733ac-1395-4863-a724-21b85a5f0c8f",
+      "taskId": "d89dda88-d30e-48f3-9bf3-9f8d86ab3a3a",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.457Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "98eb4d91-887a-4f73-8dee-fc2d7a384179",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.484Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "98eb4d91-887a-4f73-8dee-fc2d7a384179",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.530Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "98eb4d91-887a-4f73-8dee-fc2d7a384179",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.600Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "98eb4d91-887a-4f73-8dee-fc2d7a384179",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.606Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "98eb4d91-887a-4f73-8dee-fc2d7a384179",
+      "taskId": "03929811-7ed9-4a76-80aa-7eb5febba781",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:00.679Z] [WARN] [bugLoopCoordinator] FIXED recusado
+    {
+      "findingId": "98eb4d91-887a-4f73-8dee-fc2d7a384179",
+      "code": "FIX_WITHOUT_REPRODUCTION",
+      "message": "FIXED exige reprodução verde + testes direcionados verdes + parecer aprovado (faltando: reproduction_not_green, targeted_tests_not_green, review_not_approved)"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugLoopCoordinatorService.js:429:12)
+      at Object.withFindingLeaseOwned (api/services/engineeringMission/bugFindingService.js:933:12)
+      at Object.runFixLoop (api/services/engineeringMission/bugLoopCoordinatorService.js:153:16)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:438:20)
+
+  console.info
+    [2026-11-01T05:37:00.816Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.840Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.871Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.938Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:00.941Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "taskId": "4246299f-cec6-4543-a24e-9f558a5f19a3",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.029Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "action": "→ FIXED",
+      "status": "FIXED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.063Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "action": "→ REGRESSION_VALIDATED",
+      "status": "REGRESSION_VALIDATED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.116Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "43f5ebf2-9ef9-48f4-a67a-e306493a4955",
+      "action": "→ CLOSED",
+      "status": "CLOSED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.266Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "6e17ebd6-d275-4167-824a-edb59e7f0a4c",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.297Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "6e17ebd6-d275-4167-824a-edb59e7f0a4c",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.337Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "6e17ebd6-d275-4167-824a-edb59e7f0a4c",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.418Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "6e17ebd6-d275-4167-824a-edb59e7f0a4c",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.422Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "6e17ebd6-d275-4167-824a-edb59e7f0a4c",
+      "taskId": "129d0cbe-e022-4d16-9417-b9a178f17fa7",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:01.467Z] [WARN] [bugLoopCoordinator] correção não chegou a GREEN
+    {
+      "findingId": "6e17ebd6-d275-4167-824a-edb59e7f0a4c",
+      "taskStatus": "READY_FOR_PROMOTION",
+      "attempts": 2,
+      "fixAttempts": 2
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugLoopCoordinatorService.js:241:12)
+      at Object.withFindingLeaseOwned (api/services/engineeringMission/bugFindingService.js:933:12)
+      at Object.runFixLoop (api/services/engineeringMission/bugLoopCoordinatorService.js:153:16)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:510:20)
+
+  console.info
+    [2026-11-01T05:37:01.617Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "49ca80e9-b2ae-4bd9-a8ea-4a2301376556",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.660Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "49ca80e9-b2ae-4bd9-a8ea-4a2301376556",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.717Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "49ca80e9-b2ae-4bd9-a8ea-4a2301376556",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.844Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "49ca80e9-b2ae-4bd9-a8ea-4a2301376556",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.852Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "49ca80e9-b2ae-4bd9-a8ea-4a2301376556",
+      "taskId": "14782ff6-8a0a-42de-ad00-290bccb3ed2f",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:01.917Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "8cd6635d-01d5-4f99-99c9-fbfaed194349",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:01.959Z] [WARN] [bugLoopCoordinator] correção não chegou a GREEN
+    {
+      "findingId": "49ca80e9-b2ae-4bd9-a8ea-4a2301376556",
+      "taskStatus": "RED",
+      "attempts": 1,
+      "fixAttempts": 2
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugLoopCoordinatorService.js:241:12)
+      at Object.withFindingLeaseOwned (api/services/engineeringMission/bugFindingService.js:933:12)
+      at Object.runFixLoop (api/services/engineeringMission/bugLoopCoordinatorService.js:153:16)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:525:20)
+
+  console.info
+    [2026-11-01T05:37:02.500Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "c8090c2c-ba32-4975-85fc-26d373287abd",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "RECOVERY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:02.644Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "ba90e282-6158-43c9-a5c8-3f5db88be19a",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "CRITICAL",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:02.689Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "ba90e282-6158-43c9-a5c8-3f5db88be19a",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "CRITICAL",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:02.749Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "ba90e282-6158-43c9-a5c8-3f5db88be19a",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "CRITICAL",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:02.888Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "b13bb5d8-934b-48d3-96cc-e66f6da10131",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "CRITICAL",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.022Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.045Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.079Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.210Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.221Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "taskId": "3cac9b51-ee91-490c-b6a1-01a1516503fc",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.389Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "action": "→ FIXED",
+      "status": "FIXED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.431Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "action": "→ REGRESSION_VALIDATED",
+      "status": "REGRESSION_VALIDATED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:03.441Z] [WARN] [bugLoopCoordinator] problema conhecido não registrado
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "code": "PREVENTIVE_RULE_TEST_PROVENANCE_MISSING",
+      "message": "execução sem procedência (sourceFingerprint/commit) — não é possível ligá-la ao código corrigido"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugLoopCoordinatorService.js:475:14)
+      at Object.withFindingLeaseOwned (api/services/engineeringMission/bugFindingService.js:933:12)
+      at Object.runFixLoop (api/services/engineeringMission/bugLoopCoordinatorService.js:153:16)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:638:17)
+
+  console.info
+    [2026-11-01T05:37:03.468Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "action": "→ CLOSED",
+      "status": "CLOSED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:03.493Z] [WARN] [bugFindingService] reincidência de finding
+    {
+      "findingId": "12f07e40-a72a-480c-9b69-3cabebdef57a",
+      "previousStatus": "CLOSED",
+      "recurrenceCount": 1
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugFindingService.js:224:12)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:642:24)
+
+  console.info
+    [2026-11-01T05:37:03.629Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "bdda1626-9f2b-492f-b83c-96680b7a30ed",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "SECURITY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.680Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "bdda1626-9f2b-492f-b83c-96680b7a30ed",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "HIGH",
+      "category": "SECURITY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.697Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "bdda1626-9f2b-492f-b83c-96680b7a30ed",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "SECURITY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.757Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "bdda1626-9f2b-492f-b83c-96680b7a30ed",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "HIGH",
+      "category": "SECURITY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:03.762Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "bdda1626-9f2b-492f-b83c-96680b7a30ed",
+      "taskId": "48d25530-6794-42ad-a74b-773469de0144",
+      "category": "SECURITY",
+      "severity": "HIGH",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:03.804Z] [WARN] [bugLoopCoordinator] correção não chegou a GREEN
+    {
+      "findingId": "bdda1626-9f2b-492f-b83c-96680b7a30ed",
+      "taskStatus": "CLASSIFIED",
+      "attempts": 2,
+      "fixAttempts": 2
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugLoopCoordinatorService.js:241:12)
+      at Object.withFindingLeaseOwned (api/services/engineeringMission/bugFindingService.js:933:12)
+      at Object.runFixLoop (api/services/engineeringMission/bugLoopCoordinatorService.js:153:16)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:686:17)
+
+  console.info
+    [2026-11-01T05:37:03.959Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "736d64cb-13af-41aa-800b-f7ed25b0bc0a",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.004Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "736d64cb-13af-41aa-800b-f7ed25b0bc0a",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.033Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "736d64cb-13af-41aa-800b-f7ed25b0bc0a",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.281Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "736d64cb-13af-41aa-800b-f7ed25b0bc0a",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.287Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "736d64cb-13af-41aa-800b-f7ed25b0bc0a",
+      "taskId": "e9e14c48-1777-4080-bdb2-08d81609aacd",
+      "category": "GOVERNANCE",
+      "severity": "HIGH",
+      "selfModification": true,
+      "requiresHumanApproval": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:04.400Z] [WARN] [bugLoopCoordinator] correção não chegou a GREEN
+    {
+      "findingId": "736d64cb-13af-41aa-800b-f7ed25b0bc0a",
+      "taskStatus": "READY_FOR_PROMOTION",
+      "attempts": 2,
+      "fixAttempts": 2
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugLoopCoordinatorService.js:241:12)
+      at Object.withFindingLeaseOwned (api/services/engineeringMission/bugFindingService.js:933:12)
+      at Object.runFixLoop (api/services/engineeringMission/bugLoopCoordinatorService.js:153:16)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:732:21)
+
+  console.info
+    [2026-11-01T05:37:04.555Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.604Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.635Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.861Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:04.873Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "taskId": "4fc9a521-fb3d-4f64-b3ab-bd3acd5a4040",
+      "category": "GOVERNANCE",
+      "severity": "HIGH",
+      "selfModification": true,
+      "requiresHumanApproval": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:04.875Z] [WARN] [bugTriageService] aval de self-modification recusado
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "actor": "humano@results",
+      "actorType": null,
+      "code": "SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as approveSelfModification] (api/services/engineeringMission/bugTriageService.js:403:12)
+      at Object.approveSelfModification (tests/integration/engineeringBugLoop.test.js:755:35)
+
+  console.warn
+    [2026-11-01T05:37:04.883Z] [WARN] [bugTriageService] aval de self-modification recusado por divergência de identidade
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "actor": "svc-bug-worker@results",
+      "authenticated": "SERVICE_ACCOUNT",
+      "declared": "HUMAN"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as approveSelfModification] (api/services/engineeringMission/bugTriageService.js:393:12)
+      at Object.approveSelfModification (tests/integration/engineeringBugLoop.test.js:757:35)
+
+  console.warn
+    [2026-11-01T05:37:04.889Z] [WARN] [bugTriageService] aval de self-modification recusado
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "actor": "SYSTEM:bug-loop-worker",
+      "actorType": "HUMAN",
+      "code": "SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as approveSelfModification] (api/services/engineeringMission/bugTriageService.js:403:12)
+      at Object.approveSelfModification (tests/integration/engineeringBugLoop.test.js:761:35)
+
+  console.warn
+    [2026-11-01T05:37:04.897Z] [WARN] [bugTriageService] aval de self-modification recusado
+    {
+      "findingId": "626ed21e-a66a-42c0-abc6-cfccfacab1cc",
+      "actor": "llm-reviewer@results",
+      "actorType": "LLM",
+      "code": "SELF_MODIFICATION_APPROVAL_ACTOR_NOT_HUMAN"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as approveSelfModification] (api/services/engineeringMission/bugTriageService.js:403:12)
+      at Object.approveSelfModification (tests/integration/engineeringBugLoop.test.js:765:35)
+
+  console.info
+    [2026-11-01T05:37:05.148Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:05.187Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:05.216Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:05.464Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:05.476Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "taskId": "dd928d5d-2ce2-42e5-bfcf-269305549162",
+      "category": "GOVERNANCE",
+      "severity": "HIGH",
+      "selfModification": true,
+      "requiresHumanApproval": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:05.661Z] [WARN] [bugTriageService] baseline de governança violado pelo próprio fix
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "code": "GOVERNANCE_BASELINE_VIOLATION",
+      "checked": true
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as verifySelfModificationBaseline] (api/services/engineeringMission/bugTriageService.js:606:12)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:834:22)
+
+  console.info
+    [2026-11-01T05:37:06.029Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "action": "→ FIXED",
+      "status": "FIXED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:06.096Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "action": "→ REGRESSION_VALIDATED",
+      "status": "REGRESSION_VALIDATED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:06.228Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "33a253ec-2949-4b06-82d5-e35e4705e59a",
+      "action": "→ CLOSED",
+      "status": "CLOSED",
+      "severity": "HIGH",
+      "category": "GOVERNANCE",
+      "selfModification": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:06.409Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "6e6d286e-42d6-4132-8e09-9dd4fdb4f63c",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:06.822Z] [INFO] [bugFindingService] deduplicação atômica: corrida resolvida pelo banco
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "fingerprint": "f4b8176b39f3d274cfeef986eb5b8693413e3d34c8dc8a1a4a6143e60ceb4ccb"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 0)
+
+  console.info
+    [2026-11-01T05:37:06.826Z] [INFO] [bugFindingService] deduplicação atômica: corrida resolvida pelo banco
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "fingerprint": "f4b8176b39f3d274cfeef986eb5b8693413e3d34c8dc8a1a4a6143e60ceb4ccb"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 2)
+
+  console.info
+    [2026-11-01T05:37:06.830Z] [INFO] [bugFindingService] deduplicação atômica: corrida resolvida pelo banco
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "fingerprint": "f4b8176b39f3d274cfeef986eb5b8693413e3d34c8dc8a1a4a6143e60ceb4ccb"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 3)
+
+  console.info
+    [2026-11-01T05:37:06.836Z] [INFO] [bugFindingService] deduplicação atômica: corrida resolvida pelo banco
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "fingerprint": "f4b8176b39f3d274cfeef986eb5b8693413e3d34c8dc8a1a4a6143e60ceb4ccb"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 4)
+
+  console.info
+    [2026-11-01T05:37:06.839Z] [INFO] [bugFindingService] deduplicação atômica: corrida resolvida pelo banco
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "fingerprint": "f4b8176b39f3d274cfeef986eb5b8693413e3d34c8dc8a1a4a6143e60ceb4ccb"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 5)
+
+  console.info
+    [2026-11-01T05:37:06.849Z] [INFO] [bugFindingService] deduplicação atômica: corrida resolvida pelo banco
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "fingerprint": "f4b8176b39f3d274cfeef986eb5b8693413e3d34c8dc8a1a4a6143e60ceb4ccb"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 6)
+
+  console.info
+    [2026-11-01T05:37:06.853Z] [INFO] [bugFindingService] deduplicação atômica: corrida resolvida pelo banco
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "fingerprint": "f4b8176b39f3d274cfeef986eb5b8693413e3d34c8dc8a1a4a6143e60ceb4ccb"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 7)
+
+  console.info
+    [2026-11-01T05:37:06.861Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "e1a1fea6-b686-4f4f-8771-93c682ac60ab",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.all (index 1)
+
+  console.info
+    [2026-11-01T05:37:07.045Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "e969c336-c297-4999-9e8a-079fe08ac69f",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:07.102Z] [WARN] [bugFindingService] conflito de versão na transição
+    {
+      "findingId": "e969c336-c297-4999-9e8a-079fe08ac69f",
+      "from": "SUSPECTED",
+      "to": "NOT_REPRODUCED",
+      "currentStatus": "CONFIRMED",
+      "expectedVersion": 0,
+      "currentVersion": 1
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as transitionFinding] (api/services/engineeringMission/bugFindingService.js:439:12)
+          at async Promise.allSettled (index 4)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:913:22)
+
+  console.warn
+    [2026-11-01T05:37:07.113Z] [WARN] [bugFindingService] conflito de versão na transição
+    {
+      "findingId": "e969c336-c297-4999-9e8a-079fe08ac69f",
+      "from": "SUSPECTED",
+      "to": "NOT_REPRODUCED",
+      "currentStatus": "CONFIRMED",
+      "expectedVersion": 0,
+      "currentVersion": 1
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as transitionFinding] (api/services/engineeringMission/bugFindingService.js:439:12)
+          at async Promise.allSettled (index 5)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:913:22)
+
+  console.warn
+    [2026-11-01T05:37:07.146Z] [WARN] [bugFindingService] conflito de versão na transição
+    {
+      "findingId": "e969c336-c297-4999-9e8a-079fe08ac69f",
+      "from": "SUSPECTED",
+      "to": "NOT_REPRODUCED",
+      "currentStatus": "CONFIRMED",
+      "expectedVersion": 0,
+      "currentVersion": 1
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as transitionFinding] (api/services/engineeringMission/bugFindingService.js:439:12)
+          at async Promise.allSettled (index 3)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:913:22)
+
+  console.info
+    [2026-11-01T05:37:07.161Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "e969c336-c297-4999-9e8a-079fe08ac69f",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+          at async Promise.allSettled (index 0)
+
+  console.info
+    [2026-11-01T05:37:07.418Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "1d275f14-e55a-4b77-af8b-837cc491e128",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.437Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "002fcee6-808d-4b79-8906-310014330be6",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.668Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "c67bb96f-f2c3-4ecb-800d-6d60e2dfdf1d",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.689Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "c67bb96f-f2c3-4ecb-800d-6d60e2dfdf1d",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.703Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "c67bb96f-f2c3-4ecb-800d-6d60e2dfdf1d",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:07.726Z] [WARN] [bugFindingService] escrita recusada: fence do lease não é mais o corrente
+    {
+      "findingId": "c67bb96f-f2c3-4ecb-800d-6d60e2dfdf1d",
+      "fenceEsperado": 9,
+      "fenceAtual": 2,
+      "toStatus": "FIXING"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as transitionFinding] (api/services/engineeringMission/bugFindingService.js:424:14)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:1012:7)
+
+  console.info
+    [2026-11-01T05:37:07.747Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "c67bb96f-f2c3-4ecb-800d-6d60e2dfdf1d",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.872Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "75bc2e90-e0a4-46b3-8c88-f1c5de030ef2",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.898Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "75bc2e90-e0a4-46b3-8c88-f1c5de030ef2",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.913Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "75bc2e90-e0a4-46b3-8c88-f1c5de030ef2",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:07.934Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "75bc2e90-e0a4-46b3-8c88-f1c5de030ef2",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:07.951Z] [WARN] [bugFindingService] escrita recusada: fence do lease não é mais o corrente
+    {
+      "findingId": "75bc2e90-e0a4-46b3-8c88-f1c5de030ef2",
+      "fenceEsperado": 2,
+      "fenceAtual": 3,
+      "toStatus": "FIXED"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugFindingService.js:424:14)
+      at Object.markFixed (api/services/engineeringMission/bugFindingService.js:662:18)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:1055:7)
+
+  console.info
+    [2026-11-01T05:37:07.973Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "75bc2e90-e0a4-46b3-8c88-f1c5de030ef2",
+      "action": "→ FIXED",
+      "status": "FIXED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.098Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "5e163dd6-0aef-4e81-b7f0-64ff03b1560b",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.118Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "5e163dd6-0aef-4e81-b7f0-64ff03b1560b",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.132Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "5e163dd6-0aef-4e81-b7f0-64ff03b1560b",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "HIGH",
+      "category": "CONCURRENCY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T05:37:08.161Z] [WARN] [bugReproductionService] tentativa não persistida: posse perdida
+    {
+      "findingId": "5e163dd6-0aef-4e81-b7f0-64ff03b1560b",
+      "fence": 2
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringMission/bugReproductionService.js:265:12)
+      at executarReproducao (api/services/engineeringMission/bugReproductionService.js:166:3)
+      at Object.reproduce (api/services/engineeringMission/bugReproductionService.js:78:16)
+      at Object.<anonymous> (tests/integration/engineeringBugLoop.test.js:1091:7)
+
+  console.info
+    [2026-11-01T05:37:08.287Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "9e8e1531-9409-44b3-b0f8-a853ef0c5aa3",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.346Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "9e8e1531-9409-44b3-b0f8-a853ef0c5aa3",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.398Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "9e8e1531-9409-44b3-b0f8-a853ef0c5aa3",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.541Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "9e8e1531-9409-44b3-b0f8-a853ef0c5aa3",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.551Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "9e8e1531-9409-44b3-b0f8-a853ef0c5aa3",
+      "taskId": "e44995be-a504-4a3a-add8-fe09c26c5719",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.709Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "80523f24-016c-404c-b336-3bf025be745d",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.759Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "e2ce2f5d-a1b6-4789-8950-1d217c20f4a3",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.810Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "846febaf-9d48-457f-ae79-ca7197fdfcca",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.947Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "03efdce6-4a5b-4bf9-a510-63b668bfc514",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "UNKNOWN",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:08.975Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "03efdce6-4a5b-4bf9-a510-63b668bfc514",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "UNKNOWN",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:09.008Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "03efdce6-4a5b-4bf9-a510-63b668bfc514",
+      "action": "→ SUSPECTED",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "UNKNOWN",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:09.142Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "3cc8467b-a4d1-4fb1-89ec-c050cc0f8a83",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "UNKNOWN",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:09.175Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "3cc8467b-a4d1-4fb1-89ec-c050cc0f8a83",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "UNKNOWN",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T05:37:09.215Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "3cc8467b-a4d1-4fb1-89ec-c050cc0f8a83",
+      "action": "→ NOT_REPRODUCED",
+      "status": "NOT_REPRODUCED",
+      "severity": "MEDIUM",
+      "category": "UNKNOWN",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/engineeringBugLoop.test.js (30.272 s)
+  ciclo de bug — detecção, reprodução e deduplicação
+    ✓ BUG-01: falha de teste unitário gera finding SUSPECTED persistido com a fonte correta (148 ms)
+    ✓ BUG-03: reprodução que falha CONFIRMA o bug com base objetiva e evidência (319 ms)
+    ✓ BUG-03b: segunda reprodução concorrente do mesmo finding é recusada (lease), não atropela (273 ms)
+    ✓ BUG-03c: varredura pula finding sob lease de outro worker (SKIPPED_LEASE_HELD) (189 ms)
+    ✓ BUG-03d: fix loop recusa rodar sem a posse do finding (lease de outro worker) (222 ms)
+    ✓ BUG-02: missão de VERIFICAÇÃO/teste gera finding auditável, mas não vira item de correção (17577 ms)
+    ✓ BUG-04: reprodução que passa termina em NOT_REPRODUCED (não se confirma o que não se manifesta) (239 ms)
+    ✓ BUG-12: reprodução com TIMEOUT fica INCONCLUSIVE e o finding volta a SUSPECTED (185 ms)
+    ✓ BUG-05: findings equivalentes são deduplicados (uma linha, occurrences incrementado) (155 ms)
+  ciclo de bug — task de correção e provas do fix
+    ✓ BUG-06 + BUG-07: bug CONFIRMED gera EngineeringTask que referencia o finding (409 ms)
+    ✓ BUG-08: patch aplicado NÃO é fix — sem reprodução/testes/parecer o finding fica em FIXING (365 ms)
+    ✓ BUG-08 + BUG-09: com reprodução verde, testes e parecer reais → FIXED e depois REGRESSION_VALIDATED (445 ms)
+    ✓ BUG-08: READY_FOR_PROMOTION (patch válido, sem promoção) nunca é declarado FIXED (349 ms)
+    ✓ BUG-10: bug secundário encontrado durante o fix entra no loop sem abandonar o primeiro (516 ms)
+  ciclo de bug — missão, telemetria e reincidência
+    ✓ BUG-11: a missão original continua (não é reiniciada nem substituída) (355 ms)
+    ✓ BUG-13: NO_PROGRESS gera diagnóstico (fase/operação) e finding SUSPECTED (144 ms)
+    ✓ BUG-14: invariante de governança violado gera finding CRÍTICO determinístico (252 ms)
+    ✓ BUG-15: stale writer gera finding de CONCURRENCY CRÍTICO (138 ms)
+    ✓ BUG-17 + BUG-18: reincidência de bug corrigido é reconhecida, escala severidade e mantém a identidade (607 ms)
+  ciclo de bug — self-modification (BUG-16, BUG-19, BUG-20)
+    ✓ BUG-16: finding de segurança exige revisor de segurança e independente (318 ms)
+    ✓ BUG-19 + BUG-20: self-modification exige aprovação humana e não roda autonomamente (591 ms)
+    ✓ HUMAN_SELF_MODIFICATION_APPROVAL: service account, worker e modelo NÃO têm autoridade de aval (600 ms)
+    ✓ PROTECTED_GOVERNANCE_BASELINE: fix autônomo que afrouxa o próprio critério não fecha o finding (1255 ms)
+    ✓ BUG_DURABLE_EXECUTION: posse do finding por lease/fence impede dois workers no mesmo bug (189 ms)
+    ✓ CONCURRENT_FINDING_DEDUPLICATION: entregas simultâneas da mesma falha agregam em UM finding canônico (456 ms)
+    ✓ FINDING_STATE_CONCURRENCY: transições concorrentes são serializadas por CAS, nunca vencem as duas (257 ms)
+  ciclo de bug — contrato de posse e escopo da varredura (revisão adversarial)
+    ✓ finding inexistente é NOT_FOUND nos três caminhos (nunca "posse de outro worker") (125 ms)
+    ✓ lease de OUTRO finding não é aceito como posse (FINDING_LEASE_MISMATCH) (146 ms)
+    ✓ escopo vazio não vira varredura global e tipo inválido é erro de contrato (101 ms)
+    ✓ escrita com fence VELHO é recusada (FINDING_LEASE_LOST) e não altera o estado (203 ms)
+    ✓ markFixed com fence VELHO é recusado (posse perdida no fix loop não declara FIXED) (227 ms)
+    ✓ tentativa de reprodução sob posse perdida NÃO é persistida (persistAttempt com fence) (189 ms)
+    ✓ varredura com identidade declara posse de fato (delegação única do ciclo de lease) (402 ms)
+    ✓ escopo explícito não é truncado por `limit` (nem pelo teto de 200) (252 ms)
+  ciclo de bug — proveniência da reprodução sobrevive à tentativa
+    ✓ tentativa INCONCLUSIVA preserva strategy/source declarados (194 ms)
+    ✓ tentativa NOT_REPRODUCED também preserva a proveniência (210 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       36 passed, 36 total
+Snapshots:   0 total
+Time:        30.349 s, estimated 37 s
+Ran all test suites matching /tests\/integration\/engineeringBugLoop.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

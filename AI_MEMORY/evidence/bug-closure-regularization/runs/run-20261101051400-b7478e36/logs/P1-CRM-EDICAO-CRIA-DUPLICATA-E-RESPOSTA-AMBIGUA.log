@@ -1,0 +1,22 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/crmOpportunityUpdate.test.js
+  P1 edição de oportunidade — nunca cria registro novo
+    ✓ PUT atualiza o mesmo registro e a quantidade NÃO aumenta (163 ms)
+    ✓ PATCH também atualiza sem criar (124 ms)
+    ✓ atualizar oportunidade inexistente ⇒ 404 (nunca cria) (126 ms)
+    ✓ id divergente entre URL e corpo ⇒ 400 e nada é alterado (135 ms)
+    ✓ sem permissão de edição ⇒ 403 e nada muda (138 ms)
+    ✓ isolamento de tenant: outro tenant não atualiza e não enxerga (137 ms)
+    ✓ name vazio ⇒ 400 (validação de entrada) (108 ms)
+    ✓ campos não permitidos são ignorados (id/tenantId/createdAt imutáveis) (109 ms)
+    ✓ criações concorrentes de ids distintos não se perdem (127 ms)
+    ✓ atualizações concorrentes do MESMO registro mantêm 1 registro (sem duplicata) (150 ms)
+    ✓ repetir a mesma atualização é idempotente (1 registro, mesmo conteúdo) (129 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.81 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/crmOpportunityUpdate.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

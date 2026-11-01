@@ -1,0 +1,35 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/releaseArtifactIdentity.test.js
+  ReleaseArtifactIdentity — identidade do candidato
+    ✓ candidato bem formado é aceito (109 ms)
+    ✓ C4 — candidato rotulado DELIVERED é promoção artificial (104 ms)
+    ✓ fase do candidato não pode ser DELIVERED/FINAL (104 ms)
+    ✓ campos obrigatórios ausentes reprovam com a lista exata (104 ms)
+    ✓ hash que não é SHA-256 completo reprova (102 ms)
+  ReleaseArtifactIdentity — identidade do payload entregue
+    ✓ payload entregue bem formado é aceito (103 ms)
+    ✓ tipo errado (candidato apresentado como entregue) reprova (101 ms)
+    ✓ identidade incompleta reprova (102 ms)
+  ReleaseArtifactIdentity — cadeia de lineage (R7/R23/R35)
+    ✓ cadeia consistente é aceita e declara a ordem criptográfica (102 ms)
+    ✓ parentCandidateHash diferente do candidato quebra a cadeia (102 ms)
+    ✓ sourceCommit divergente entre candidato e entregue reprova (102 ms)
+    ✓ C5 — runId estrangeiro no entregue reprova (101 ms)
+    ✓ R23 — candidato mutado depois da validação quebra a cadeia (102 ms)
+  ReleaseArtifactIdentity — binding de hash e isolamento de run
+    ✓ G6 — hash declarado igual aos bytes reais é aceito (102 ms)
+    ✓ C4 — payload copiado (bytes diferentes do declarado) reprova (101 ms)
+    ✓ run corrente ausente reprova (não há como provar isolamento) (102 ms)
+    ✓ artefatos do run corrente passam o isolamento (101 ms)
+    ✓ C5 — candidato de run anterior reprova o isolamento (102 ms)
+  ReleaseArtifactIdentity — verificação completa
+    ✓ cadeia completa e hashes corretos => PASS (103 ms)
+    ✓ um único defeito já reprova a verificação completa (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+Snapshots:   0 total
+Time:        2.363 s, estimated 3 s
+Ran all test suites matching /tests\/unit\/governance\/releaseArtifactIdentity.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

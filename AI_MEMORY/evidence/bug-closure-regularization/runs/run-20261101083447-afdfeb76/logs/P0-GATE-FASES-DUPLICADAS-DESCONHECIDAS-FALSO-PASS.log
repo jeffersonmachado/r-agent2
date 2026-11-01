@@ -1,0 +1,35 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/devBranchGatePhaseContract.test.js (6.455 s)
+  P0 gate de fases — entrada inválida é RECUSADA (nunca filtrada em silêncio)
+    ✓ 1. fases duplicadas A,A,A,A (122 ms)
+    ✓ 2. array vazio (105 ms)
+    ✓ 3. fases desconhecidas (106 ms)
+    ✓ lista válida continua aceita (109 ms)
+  P0 gate de fases — identidade de execução
+    ✓ SHA curto e branch vazia são rejeitados (106 ms)
+  P0 gate de fases — comprovação de execução, não intenção
+    ✓ 4. fases corretas mas NÃO executadas não produzem PASS (123 ms)
+    ✓ 5. fase executada SEM evidência (sem digest/sha/execução) é UNKNOWN (108 ms)
+    ✓ 6. fase obrigatória ausente rebaixa para PASS_PARCIAL (nunca PASS) (121 ms)
+    ✓ todas as obrigatórias em PASS e comprovadas ⇒ PASS (124 ms)
+    ✓ 7. exit code não zero reprova a fase (107 ms)
+    ✓ 8. processo encerrado por sinal (timeout do executor) é BLOCKED, não PASS (106 ms)
+    ✓ 8b. passo reprovado no runner REAL (bloqueio PASSO_FALHOU) é FAIL, nunca BLOQUEADO_POR_TIMEOUT (109 ms)
+    ✓ 9. timeout não é confundido com falha de asserção (103 ms)
+    ✓ 10. evidência de outro SHA não conta (108 ms)
+    ✓ 11. evidência de outra execução (runId) não conta (104 ms)
+    ✓ 12. "PASS" no stdout com exit != 0 continua FAIL (103 ms)
+    ✓ 13. evidência antiga reutilizada não preenche fase (106 ms)
+    ✓ 14. fase com passo sintético (não executado) não vira PASS (104 ms)
+  P0 gate de fases — execução real recusa antes de qualquer passo
+    ✓ --fases A,A,A,A ⇒ ENTRADA_INVALIDA, completo=false, exit != 0 (1712 ms)
+    ✓ --fases Z ⇒ ENTRADA_INVALIDA (1606 ms)
+    ✓ o contexto de execução é único por rodada (105 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        6.64 s
+Ran all test suites matching /tests\/unit\/governance\/devBranchGatePhaseContract.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

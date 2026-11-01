@@ -1,0 +1,416 @@
+  console.info
+    [2026-11-01T08:59:36.087Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-promotion-success-1793523573701-attempt-1-41d117f9",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T08:59:39.270Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-promotion-success-1793523573701-expected-3d16c4b3",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T08:59:42.284Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-promotion-success-1793523573701-smoke-eccb0cdc",
+      "commit": "525916f73b2ec8752f15cf86d5073653e559c1ca",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T08:59:56.426Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-promotion-diverged-1793523595028-attempt-1-074c0c35",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:00.328Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-exact-promotion-clean-1793523598838-attempt-1-683e3c36",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:02.460Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-exact-promotion-clean-1793523598838-expected-7aab0918",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:05.604Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-exact-promotion-clean-1793523598838-smoke-5278bb52",
+      "commit": "b646a600ce7965fbd8785cf2faa9e2e4c04e2cfb",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:14.917Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-exact-promotion-side-effect-new-1793523613769-attempt-1-5145cd4c",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:16.785Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-exact-promotion-side-effect-new-1793523613769-expected-696cc6d3",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T09:00:17.713Z] [WARN] [promotionService] PROMOTION_TREE_CONTAMINATED — expectedTreeHash != validatedTreeHash
+    {
+      "taskId": "jest-exact-promotion-side-effect-new-1793523613769",
+      "expectedTreeHash": "2719027949b3e1902b92034439e870557ed7d6b7",
+      "candidateTreeHash": "91fe7ec607d3914c2eae0f36f6dbe23c444392cc",
+      "contaminatingFiles": "A\tINJECTED_BY_TEST_SIDE_EFFECT.txt"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringRouter/promotionService.js:261:12)
+      at promoteValidatedPatch (api/services/engineeringRouter/promotionService.js:424:27)
+      at Object.<anonymous> (tests/integration/engineeringPromotionService.test.js:227:20)
+
+  console.info
+    [2026-11-01T09:00:19.345Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-exact-promotion-side-effect-modify-1793523618050-attempt-1-11b2850b",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:21.154Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-exact-promotion-side-effect-modify-1793523618050-expected-dfa13950",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T09:00:21.783Z] [WARN] [promotionService] PROMOTION_TREE_CONTAMINATED — expectedTreeHash != validatedTreeHash
+    {
+      "taskId": "jest-exact-promotion-side-effect-modify-1793523618050",
+      "expectedTreeHash": "2719027949b3e1902b92034439e870557ed7d6b7",
+      "candidateTreeHash": "0d935690294cfe2faf3019ec7306d117a676068d",
+      "contaminatingFiles": "M\tpackage.json"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringRouter/promotionService.js:261:12)
+      at promoteValidatedPatch (api/services/engineeringRouter/promotionService.js:424:27)
+      at Object.<anonymous> (tests/integration/engineeringPromotionService.test.js:257:20)
+
+  console.info
+    [2026-11-01T09:00:23.377Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-exact-promotion-side-effect-delete-1793523622067-attempt-1-bf1d6a1f",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:25.159Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-exact-promotion-side-effect-delete-1793523622067-expected-a93ef7f3",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.warn
+    [2026-11-01T09:00:25.860Z] [WARN] [promotionService] PROMOTION_TREE_CONTAMINATED — expectedTreeHash != validatedTreeHash
+    {
+      "taskId": "jest-exact-promotion-side-effect-delete-1793523622067",
+      "expectedTreeHash": "2719027949b3e1902b92034439e870557ed7d6b7",
+      "candidateTreeHash": "480e312c034e40bc74e774e8b2d1a30d9f6ef101",
+      "contaminatingFiles": "D\ttests/fixtures/engineering-router-sandbox/printEnvProbe.js"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/engineeringRouter/promotionService.js:261:12)
+      at promoteValidatedPatch (api/services/engineeringRouter/promotionService.js:424:27)
+      at Object.<anonymous> (tests/integration/engineeringPromotionService.test.js:286:20)
+
+  console.info
+    [2026-11-01T09:00:27.426Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-seal-001-untracked-1793523626245-attempt-1-54977666",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:29.397Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-untracked-1793523626245-expected-5c4b7e8a",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:31.264Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-untracked-1793523626245-smoke-a5eb209a",
+      "commit": "0cb34292571cdb9048c2aa747385bc63adc5299f",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:40.635Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-seal-001-unstaged-1793523639715-attempt-1-96e53cc8",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:42.327Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-unstaged-1793523639715-expected-cc89dc17",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:00:44.441Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-unstaged-1793523639715-smoke-dfb494c1",
+      "commit": "6ac349739329c4a0e6adc275e70a94521d760538",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:01:03.362Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-seal-001-staged-1793523662228-attempt-1-8bc64eb4",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:01:05.478Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-staged-1793523662228-expected-be96ac2c",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:01:07.817Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-staged-1793523662228-smoke-f96c0c80",
+      "commit": "d4c4c28fcf980eb096161fdeee35f2feecc0439b",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:01:20.177Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-jest-seal-001-combined-1793523678032-attempt-1-9a94406d",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:01:23.211Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-combined-1793523678032-expected-1a00f599",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T09:01:26.827Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-jest-seal-001-combined-1793523678032-smoke-846bf529",
+      "commit": "89427c10022e7a62419c3142a1b3f74c600fe2e2",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+Preparing worktree (detached HEAD faeb34045)
+Updating files:  52% (3756/7158)Updating files:  53% (3794/7158)Updating files:  54% (3866/7158)Updating files:  55% (3937/7158)Updating files:  56% (4009/7158)Updating files:  57% (4081/7158)Updating files:  58% (4152/7158)Updating files:  59% (4224/7158)Updating files:  60% (4295/7158)Updating files:  61% (4367/7158)Updating files:  62% (4438/7158)Updating files:  63% (4510/7158)Updating files:  64% (4582/7158)Updating files:  65% (4653/7158)Updating files:  66% (4725/7158)Updating files:  67% (4796/7158)Updating files:  68% (4868/7158)Updating files:  69% (4940/7158)Updating files:  70% (5011/7158)Updating files:  71% (5083/7158)Updating files:  72% (5154/7158)Updating files:  73% (5226/7158)Updating files:  74% (5297/7158)Updating files:  75% (5369/7158)Updating files:  76% (5441/7158)Updating files:  77% (5512/7158)Updating files:  78% (5584/7158)Updating files:  79% (5655/7158)Updating files:  80% (5727/7158)Updating files:  81% (5798/7158)Updating files:  82% (5870/7158)Updating files:  83% (5942/7158)Updating files:  84% (6013/7158)Updating files:  85% (6085/7158)Updating files:  86% (6156/7158)Updating files:  87% (6228/7158)Updating files:  88% (6300/7158)Updating files:  89% (6371/7158)Updating files:  90% (6443/7158)Updating files:  91% (6514/7158)Updating files:  92% (6586/7158)Updating files:  93% (6657/7158)Updating files:  94% (6729/7158)Updating files:  95% (6801/7158)Updating files:  96% (6872/7158)Updating files:  97% (6944/7158)Updating files:  98% (7015/7158)Updating files:  99% (7087/7158)Updating files: 100% (7158/7158)Updating files: 100% (7158/7158), done.
+PASS tests/integration/engineeringPromotionService.test.js (126.017 s)
+  ERV1-CLOSE-005 — promotionService.promoteValidatedPatch (git real)
+    ✓ promove com sucesso: commit real + branch real, diff promovido == diff validado, smoke PASS (21326 ms)
+    ✓ target divergido bloqueia a promoção — nunca promove sobre um baseline que já mudou (3810 ms)
+  ER-V1-FINAL-002 — Exact Promotion (prova de tree hash, não só diff --stat)
+    ✓ promoção legítima expõe expectedTreeHash == candidateTreeHash e fileSetHash (prova positiva, cenário A) (14931 ms)
+    ✓ arquivo NOVO gerado como side-effect no workspace (fora do patch) bloqueia a promoção (cenário B) (4281 ms)
+    ✓ arquivo EXISTENTE alterado fora do diff validado bloqueia a promoção (cenário C) (4015 ms)
+    ✓ remoção de arquivo fora do patch validado bloqueia a promoção (cenário D) (4176 ms)
+  ER-V1-SEAL-001 — Immutable Promotion Baseline (dirty working tree nunca contamina o candidate)
+    ✓ achado real: dirty local não relacionado (untracked) NUNCA aparece no candidate promovido (13472 ms)
+    ✓ achado real: modificação unstaged de um arquivo já rastreado NUNCA aparece no candidate promovido (22464 ms)
+    ✓ achado real: alteração STAGED (git add sem commit) de um arquivo já rastreado NUNCA aparece no candidate promovido (15815 ms)
+    ✓ todas as três formas de dirty state simultaneamente (untracked + unstaged + staged) — candidate contém SOMENTE o patch da task (21219 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        126.109 s, estimated 137 s
+Ran all test suites matching /tests\/integration\/engineeringPromotionService.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

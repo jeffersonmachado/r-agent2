@@ -1,0 +1,34 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/governanceChainAppearance.test.js
+  (1) DECLARAÇÃO — o build não declara validade que não mediu
+    ✓ buildChain marca valid=false e diz explicitamente que NÃO verificou (238 ms)
+    ✓ buildChain continua medindo COMPLETUDE (não confundir os dois conceitos) (216 ms)
+    ✓ todo elo declara classe, escritor e imutabilidade pós-selo (classificação exigida pela FASE 6) (226 ms)
+    ✓ a classificação separa fontes canônicas de relatórios derivados (10 elos conhecidos) (116 ms)
+  (2) CONTRADIÇÃO — declarar validade contra a recalculação é FAIL nomeado
+    ✓ cadeia declarada válida com elo ALTERADO ⇒ AUTO_DECLARACAO_DE_VALIDADE_FALSA (128 ms)
+    ✓ o caso MEDIDO no repositório: valid=true + completeChain=true + divergência nunca é PASS (162 ms)
+    ✓ declarar validade SEM declarar quem/quando certificou é FAIL (declaração não auditável) (126 ms)
+    ✓ cadeia coerente e certificada, sem escritas posteriores ⇒ PASS (134 ms)
+    ✓ cadeia íntegra mas apenas construída (não certificada) ⇒ PASS sem auto-declaração (148 ms)
+  (3) TEMPO — escritas posteriores à certificação
+    ✓ conteúdo IDÊNTICO reescrito depois ⇒ registra a informação e NÃO reprova (124 ms)
+    ✓ conteúdo ALTERADO depois da certificação ⇒ CERTIFICACAO_ULTRAPASSADA_POR_ESCRITA (114 ms)
+    ✓ a referência de tempo é a da CERTIFICAÇÃO, não a do build (119 ms)
+  certifyChain — recalcula antes de rotular
+    ✓ cadeia coerente ⇒ CERTIFICADA com data e raiz medidas (113 ms)
+    ✓ cadeia divergente ⇒ NÃO certifica, grava DIVERGENTE e mantém valid=false (117 ms)
+    ✓ certificar não é tautológico: o veredito deriva dos bytes, não do rótulo de entrada (274 ms)
+  fiação — os gates consomem o veredito recalculado, nunca o campo persistido
+    ✓ validate:self-proving recalcula e compara declaração com realidade (105 ms)
+    ✓ o gate da cadeia publica os códigos de aparência de validade no relatório (104 ms)
+    ✓ o caminho canônico de assinatura certifica antes de assinar (104 ms)
+    ✓ verifyChain continua sendo a autoridade de hash usada pela avaliação (341 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       19 passed, 19 total
+Snapshots:   0 total
+Time:        4.12 s
+Ran all test suites matching /tests\/unit\/governance\/governanceChainAppearance.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

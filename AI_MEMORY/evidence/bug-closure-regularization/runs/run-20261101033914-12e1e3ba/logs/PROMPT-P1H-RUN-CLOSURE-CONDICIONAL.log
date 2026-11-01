@@ -1,0 +1,18 @@
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/runClosureTransition.test.js
+  P1-H — encerramento de run é condicional e conta linhas
+    ✓ estados terminais canônicos são reconhecidos (108 ms)
+    ✓ run já TERMINAL é recusado sem tocar o banco (113 ms)
+    ✓ alvo não-terminal é recusado (não existe encerramento em estado aberto) (103 ms)
+    ✓ UPDATE é condicional: WHERE run_id + status IN (não-terminais) (109 ms)
+    ✓ ZERO linhas atualizadas ⇒ RUN_STATUS_NAO_TRANSICIONOU (não é sucesso silencioso) (104 ms)
+    ✓ MAIS de uma linha atualizada também é recusado (exatamente uma) (102 ms)
+    ✓ erro de banco propaga (falha verificável, sem engolir) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.714 s
+Ran all test suites matching /tests\/unit\/governance\/runClosureTransition.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

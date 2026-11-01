@@ -1,0 +1,918 @@
+  console.error
+    [2026-11-01T03:56:43.324Z] [ERROR] [WebScraping] cheerio não instalado. Defina SCRAPING_ALLOW_DEGRADED=true para modo degradado explícito.
+
+    [0m [90m 183 |[39m       
+     [90m 184 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 185 |[39m       console[33m.[39merror(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mERROR[39m[33m,[39m message[33m,[39m errorData))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 186 |[39m     }
+     [90m 187 |[39m   }[33m,[39m
+     [90m 188 |[39m   [0m
+
+      at Object.error (api/utils/logger.js:185:15)
+      at Object.error (api/services/webScrapingService.js:63:12)
+      at Object.require (api/services/tenantService.js:24:28)
+      at Object.require (api/services/authService.js:18:55)
+      at Object.require (api/services/websocketService.js:19:27)
+      at Object.require (api/services/engineeringMission/missionEvents.js:11:23)
+      at Object.require (api/services/engineeringMission/missionCompilerService.js:52:30)
+      at Object.require (tests/integration/engineeringBugLoopNaturalPathE2E.test.js:60:18)
+
+  console.info
+    [2026-11-01T03:57:07.851Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:08.159Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:08.185Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:08.187Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:08.440Z] [INFO] [TenantAIService] Credencial anthropic salva para tenant jest-e2e-bug-natural
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:08.443Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:08.449Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:08.450Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:08.690Z] [INFO] [TenantAIService] Credencial mistral salva para tenant jest-e2e-bug-natural
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:08.692Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:08.698Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:08.700Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:08.998Z] [INFO] [TenantAIService] Credencial kimi salva para tenant jest-e2e-bug-natural
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:09.000Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.005Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.007Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:09.206Z] [INFO] [TenantAIService] Credencial deepseek salva para tenant jest-e2e-bug-natural
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:09.208Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.213Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.215Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:09.397Z] [INFO] [TenantAIService] Credencial openai salva para tenant jest-e2e-bug-natural
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:09.399Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.404Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.406Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:09.579Z] [INFO] [TenantAIService] Credencial qwen salva para tenant jest-e2e-bug-natural
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:09.582Z] [DEBUG] [TenantAIService] saveAICredentials: buscando tenant
+    {
+      "tenantKey": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.587Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:09.589Z] [DEBUG] [TenantAIService] saveAICredentials: tenant encontrado
+    {
+      "tenantKey": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:09.791Z] [INFO] [TenantAIService] Credencial groq salva para tenant jest-e2e-bug-natural
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:09.890Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-01T03:57:14.161Z] [WARN] [TenantService] Tenant não encontrado
+    {
+      "identifier": "system"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/services/tenantService.js:863:10)
+      at findTenantByIdentifier (api/services/tenantAIService.js:73:12)
+      at getCredentialDetailsMap (api/services/tenantAIService.js:464:38)
+      at Object.buildAvailableModels (api/services/engineeringRouter/engineeringModelAvailabilityService.js:101:25)
+      at proposeIntent (api/services/engineeringMission/missionCompilerService.js:135:18)
+      at enrichMission (api/services/engineeringMission/missionCompilerService.js:333:22)
+      at Object.compileMission (api/services/engineeringMission/missionCompilerService.js:519:18)
+      at Object.<anonymous> (tests/integration/engineeringBugLoopNaturalPathE2E.test.js:259:22)
+
+  console.log
+    [2026-11-01T03:57:14.331Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:14.465Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:14.583Z] [INFO] [missionSource] InitializationIntent PREPARED persistido antes de criar a branch da fonte
+    {
+      "missionId": "1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "branch": "engineering/missions/1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "baseCommit": "04cad9c1b639",
+      "worker": "pid-1883242"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:57:14.660Z] [INFO] [missionSource] fonte da missão inicializada
+    {
+      "missionId": "1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "branch": "engineering/missions/1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "baseCommit": "04cad9c1b639",
+      "actor": "jest-natural",
+      "alreadyPersisted": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:14.826Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:14.923Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "e9e2cdb5-5e4a-416a-ba65-b747fee62940",
+      "runnerId": "engineer-jmachado-Precision-5530-2b027835-9495-4380-a178-b8a4eeeb21ac",
+      "fence": 1,
+      "pid": 1883242
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:15.011Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:15.176Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:15.279Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:15.406Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:15.408Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:15.411Z] [INFO] [engineeringRouterService] RED->FIX: nova tentativa
+    {
+      "taskId": "e9e2cdb5-5e4a-416a-ba65-b747fee62940",
+      "iterationsUsed": 1,
+      "reason": "CODER_GENERATION",
+      "failureKind": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:15.460Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:15.504Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:15.598Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:15.626Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:15.645Z] [INFO] [bugLoopWorker] iniciado
+    {
+      "intervalMs": 1000,
+      "limit": 5,
+      "autoFix": true
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:57:15.726Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "action": "→ REPRODUCING",
+      "status": "REPRODUCING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:15.783Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:17.847Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-bug-601a6675-d659-49c0-99c6-821a28d2a011-attempt-1-4f3928ba",
+      "commit": "484eee4788e553907e31f7b0528cac9ee41d9298",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:57:29.330Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "action": "→ CONFIRMED",
+      "status": "CONFIRMED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:29.333Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:29.506Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "action": "→ FIXING",
+      "status": "FIXING",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:29.525Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:29.533Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:29.537Z] [INFO] [bugTriageService] task de correção criada
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "taskId": "40798198-7bc7-4836-95fc-145fab9d5fe4",
+      "category": "BUG",
+      "severity": "MEDIUM",
+      "selfModification": false,
+      "requiresHumanApproval": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:57:29.597Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "40798198-7bc7-4836-95fc-145fab9d5fe4",
+      "runnerId": "engineer-jmachado-Precision-5530-0af90f04-55fa-40a9-b19e-bfda756f55a6",
+      "fence": 1,
+      "pid": 1883242
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:29.609Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:29.695Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:29.751Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:57:32.581Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-40798198-7bc7-4836-95fc-145fab9d5fe4-attempt-1-c80d81ee",
+      "commit": "04cad9c1b639cdae357687f7febf47e490834665",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:57:33.124Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:33.151Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:45.712Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:45.760Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:45.812Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:57:45.854Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:01.151Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:01.180Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:01.441Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:01.466Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:05.236Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-40798198-7bc7-4836-95fc-145fab9d5fe4-expected-3d02725c",
+      "commit": "04cad9c1b639cdae357687f7febf47e490834665",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:06.206Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:06.228Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:08.027Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/promotion-40798198-7bc7-4836-95fc-145fab9d5fe4-smoke-c7ed0e83",
+      "commit": "8d84228a4c3fedaf6481e20c1c07c4ea8b4cb857",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:25.922Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:26.036Z] [INFO] [missionSource] IntegrationIntent PREPARED persistido antes do efeito no git
+    {
+      "missionId": "1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "taskId": "40798198-7bc7-4836-95fc-145fab9d5fe4",
+      "candidateCommit": "8d84228a4c3f",
+      "worker": "pid-1883242"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:58:26.122Z] [INFO] [missionSource] candidate integrado na fonte da missão
+    {
+      "missionId": "1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "taskId": "40798198-7bc7-4836-95fc-145fab9d5fe4",
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "integrationType": "BUG_FIX_CANDIDATE",
+      "from": "04cad9c1b639",
+      "to": "8d84228a4c3f",
+      "actor": null
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:26.142Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:26.189Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:26.842Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "action": "→ FIXED",
+      "status": "FIXED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:26.846Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:26.903Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "action": "→ REGRESSION_VALIDATED",
+      "status": "REGRESSION_VALIDATED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:26.907Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:26.999Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "action": "→ CLOSED",
+      "status": "CLOSED",
+      "severity": "MEDIUM",
+      "category": "BUG",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:27.003Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:27.313Z] [INFO] [engineeringRouterService] execução com posse de lease
+    {
+      "taskId": "43a2114f-4e95-4ab7-970a-ec9d74c64245",
+      "runnerId": "engineer-jmachado-Precision-5530-1f1f3275-6d24-41ac-9e45-ee1719f3c22d",
+      "fence": 1,
+      "pid": 1883242
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:27.328Z] [DEBUG] [TenantService] Tenant encontrado por tenant_key
+    {
+      "identifier": "jest-e2e-bug-natural",
+      "tenant_id": "f409876c-28ad-47c6-a0ab-a5349b1d3528",
+      "tenant_key": "jest-e2e-bug-natural"
+    }
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:27.477Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:27.607Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:30.089Z] [INFO] [patchApplyService] workspace isolado materializado
+    {
+      "workspace": "/tmp/engineering-router-workspaces/task-43a2114f-4e95-4ab7-970a-ec9d74c64245-attempt-1-3c710c95",
+      "commit": "8d84228a4c3fedaf6481e20c1c07c4ea8b4cb857",
+      "seeded": [
+        ".env",
+        "api/data/config.json"
+      ]
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:30.147Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:30.557Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:30.569Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:30.573Z] [INFO] [engineeringRouterService] RED->FIX: nova tentativa
+    {
+      "taskId": "43a2114f-4e95-4ab7-970a-ec9d74c64245",
+      "iterationsUsed": 1,
+      "reason": "PATCH_APPLY",
+      "failureKind": "PATCH_NOT_APPLICABLE"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:30.645Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant jest-e2e-bug-natural
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.log
+    [2026-11-01T03:58:30.716Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.warn
+    [2026-11-01T03:58:30.863Z] [WARN] [bugLoopCoordinator] falha de contrato do coder pós-correção — registrada SEPARADA da recorrência
+    {
+      "missionId": "1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "taskId": "43a2114f-4e95-4ab7-970a-ec9d74c64245",
+      "failureKinds": [],
+      "reasonCode": "ENGINEERING_TASK_EXHAUSTED",
+      "reason": "falha de contrato do coder (PATCH_APPLY_FAILED) com finding pós-correção (CLOSED) para a mesma missão — não é recorrência do bug"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at Object.warn [as hookMissionFailure] (api/services/engineeringMission/bugLoopCoordinatorService.js:1160:16)
+      at withMissionLease.heartbeat (api/services/engineeringMission/missionOrchestratorService.js:264:9)
+      at Object.withMissionLease (api/services/engineeringMission/missionStoreService.js:726:12)
+      at orch.withMissionLease.administrative (api/services/engineeringMission/bugLoopCoordinatorService.js:673:26)
+      at Object.withMissionLease (api/services/engineeringMission/missionStoreService.js:726:12)
+      at resumeOriginalMission (api/services/engineeringMission/bugLoopCoordinatorService.js:574:21)
+      at Object.runBugLoopSweep (api/services/engineeringMission/bugLoopCoordinatorService.js:1366:22)
+      at runBugLoopCycle (api/services/engineeringMission/bugLoopWorker.js:90:21)
+
+  console.info
+    [2026-11-01T03:58:30.921Z] [INFO] [bugFindingService] finding
+    {
+      "findingId": "78bc681c-5d12-4854-ae8f-421bcc575436",
+      "action": "registrado",
+      "status": "SUSPECTED",
+      "severity": "MEDIUM",
+      "category": "RECOVERY",
+      "selfModification": false
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.log
+    [2026-11-01T03:58:30.928Z] [DEBUG] [WebSocketService] Broadcast enviado para 0 cliente(s) do tenant system
+
+      at Object.log [as debug] (api/utils/logger.js:142:15)
+
+  console.info
+    [2026-11-01T03:58:30.972Z] [INFO] [bugLoopCoordinator] missão original retomada
+    {
+      "missionId": "1f7997c5-17df-4615-97d0-730203b6a3b3",
+      "originalTaskId": "e9e2cdb5-5e4a-416a-ba65-b747fee62940",
+      "replacementTaskId": "43a2114f-4e95-4ab7-970a-ec9d74c64245",
+      "decision": "REPLACE_TASK_RESUME_PHASE",
+      "findingId": "601a6675-d659-49c0-99c6-821a28d2a011",
+      "resumedStatus": "RED"
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:58:30.981Z] [INFO] [bugLoopWorker] ciclo executado
+    {
+      "instance": "BUG_LOOP:jmachado-Precision-5530:1883242:1",
+      "scanned": 1,
+      "confirmed": 1,
+      "triaged": 0,
+      "fixed": 1,
+      "resumed": 1,
+      "blockedRecursive": 0,
+      "leaseSkipped": 0,
+      "durationMs": 75310
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:58:31.165Z] [INFO] [bugLoopWorker] ciclo executado
+    {
+      "instance": "BUG_LOOP:jmachado-Precision-5530:1883242:1",
+      "scanned": 1,
+      "confirmed": 0,
+      "triaged": 0,
+      "fixed": 0,
+      "resumed": 0,
+      "blockedRecursive": 0,
+      "leaseSkipped": 0,
+      "durationMs": 25
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:58:31.460Z] [INFO] [bugLoopWorker] parado
+    {
+      "cycles": 2
+    }
+
+      at Object.info (api/utils/logger.js:155:15)
+
+  console.info
+    [2026-11-01T03:58:32.085Z] [INFO] [Sequelize] Conexão fechada
+
+      at Object.info (api/utils/logger.js:155:15)
+
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/integration/engineeringBugLoopNaturalPathE2E.test.js (111.239 s)
+  BUG_AUTONOMOUS_LOOP — CAMINHO NATURAL (sem sweep manual)
+    ✓ task real falha → finding automático → worker deriva reprodução → corrige → retoma a missão (81864 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        111.328 s
+Ran all test suites matching /tests\/integration\/engineeringBugLoopNaturalPathE2E.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
