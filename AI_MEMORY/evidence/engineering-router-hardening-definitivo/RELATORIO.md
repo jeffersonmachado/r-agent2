@@ -3838,3 +3838,32 @@ cadeia completa) e deixando a atestação `REVERIFY_EXISTING_CLOSURE` substancia
 execução real no SHA corrente. Os **7 `blocked_external` restantes** continuam bloqueados por motivo
 real (ciclo de selagem proibido pela missão, chave de atestação no CI, decisão de dono) — não por
 falta de prova.
+
+### 11.71. CI verde em 5 de 6 — e os dois vermelhos que ensinaram algo
+
+Ciclo `03d528284` em `dev/engineering-hardening`:
+
+```
+✅ Dev Hardening CI (L0 + L1)   ✅ Jest   ✅ Frontend   ✅ E2E Playwright   ✅ RAG
+❌ Release Governance — falta o secret RAP_RELEASE_ATTESTATION_PRIVATE_KEY_B64 (ação do dono)
+```
+
+**Vermelho 1 (flake real, fechado).** `L0-suite-oficial exit=1` em 36 s. A causa não era minha
+mudança: `regularizadorFilesystemAttacks.test.js` exigia `existsSync(retorno.abs)` e o processo
+hostil **renomeou o diretório para outro ponto DENTRO da própria raiz** antes de morrer. Nada saiu da
+raiz (invariante 1 passava) e nada sumiu — o arquivo mudou de endereço. O teste já tinha um remendo
+para uma flake anterior (aguardar o `exit`), que não cobria o rename interno. Correção: a verificação
+procura o arquivo em qualquer ponto da raiz e exige que esteja sob `root`; caminho exato continua
+obrigatório quando o arquivo não se moveu. Nenhuma asserção de contenção afrouxada.
+
+**Vermelho 2 (meu erro, pego pelo próprio gate).** `Jest` reprovou em
+`governedEvidenceBinding.test.js`: `git add -A` depois de rodar a suíte levou junto dois relatórios
+REGERADOS localmente (`reports/tenant-isolation-report.json` e
+`reports/rag-domain-segregation-report.json`), quebrando o binding com
+`governance/evidence-manifest.json` (`9340e595…`/`783fb018…`). É literalmente o defeito que aquele
+teste existe para pegar — e ele pegou em CI, no commit seguinte ao meu `git add -A`. Restaurados os
+bytes governados (commit `3612f3a3c`) e o binding voltou a fechar byte-a-byte.
+
+Lição operacional registrada: neste repositório **`git add -A` depois de rodar suíte é armadilha** —
+os produtores locais regravam evidência versionada. Adicionar paths explicitamente, ou conferir com
+`npx jest tests/unit/governance/governedEvidenceBinding.test.js` antes de commitar.
