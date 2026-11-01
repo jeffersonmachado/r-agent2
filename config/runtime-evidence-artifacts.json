@@ -421,6 +421,12 @@
       "kind": "node",
       "phase": "EVIDENCE",
       "note": "escrito por buildFailureIntelligence dentro da execução da malha"
+    },
+    "governance/agent-policy-compliance-report.json": {
+      "command": "node governance/verify-agent-policy-compliance.js",
+      "kind": "node",
+      "phase": "EVIDENCE",
+      "note": "produtor real do relatório de conformidade de política de agentes (enforcement executável da Constituição)"
     }
   }
 }
