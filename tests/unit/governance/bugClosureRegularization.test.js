@@ -214,27 +214,51 @@ describe('regularização — log de teste é ESCOPADO por execução (append-on
    */
   test('a execução grava o log em runs/<runId>/logs e não no caminho compartilhado', () => {
     const base = path.join(RAIZ, 'AI_MEMORY', 'evidence', 'bug-closure-regularization');
+    const dirDrafts = path.join(RAIZ, 'governance', 'bug-closure', 'proofs-drafts');
     const antes = new Set(fs.readdirSync(path.join(base, 'runs'), { withFileTypes: true })
       .filter((e) => e.isDirectory()).map((e) => e.name));
+    // O regularizador é um ESCRITOR real (runs/ + rascunhos). Um teste que dispara efeito
+    // colateral em artefato versionado precisa desfazê-lo, senão suja a árvore de quem roda.
+    const draftsAntes = new Map(fs.readdirSync(dirDrafts).filter((f) => f.endsWith('.json'))
+      .map((f) => [f, fs.readFileSync(path.join(dirDrafts, f))]));
+    // O relatório canônico do escopo (`report-<ESCOPO>.json`) também é reescrito pela execução.
+    const relatoriosAntes = new Map(fs.readdirSync(base)
+      .filter((f) => /^report-.*\.json$/.test(f))
+      .map((f) => [f, fs.readFileSync(path.join(base, f))]));
 
-    const r = rodar('scripts/governance/regularize-bug-closures.js',
-      ['--only', 'P3', '--limit', '1', '--json']);
-    expect(r.status).toBe(0);
+    try {
+      const r = rodar('scripts/governance/regularize-bug-closures.js',
+        ['--only', 'P3', '--limit', '1', '--json']);
+      expect(r.status).toBe(0);
 
-    const novos = fs.readdirSync(path.join(base, 'runs'), { withFileTypes: true })
-      .filter((e) => e.isDirectory() && !antes.has(e.name)).map((e) => e.name);
-    expect(novos.length).toBe(1);
+      const novos = fs.readdirSync(path.join(base, 'runs'), { withFileTypes: true })
+        .filter((e) => e.isDirectory() && !antes.has(e.name)).map((e) => e.name);
+      expect(novos.length).toBe(1);
 
-    const dirLogs = path.join(base, 'runs', novos[0], 'logs');
-    expect(fs.existsSync(dirLogs)).toBe(true);
-    const logs = fs.readdirSync(dirLogs).filter((f) => f.endsWith('.log'));
-    expect(logs.length).toBeGreaterThan(0);
+      const dirLogs = path.join(base, 'runs', novos[0], 'logs');
+      expect(fs.existsSync(dirLogs)).toBe(true);
+      const logs = fs.readdirSync(dirLogs).filter((f) => f.endsWith('.log'));
+      expect(logs.length).toBeGreaterThan(0);
 
-    const rascunhos = fs.readdirSync(path.join(RAIZ, 'governance', 'bug-closure', 'proofs-drafts'))
-      .filter((f) => f.endsWith('.json'))
-      .map((f) => JSON.parse(fs.readFileSync(path.join(RAIZ, 'governance', 'bug-closure', 'proofs-drafts', f), 'utf8')))
-      .filter((d) => d.negativeEvidence !== undefined || d.execution);
-    const caminhos = JSON.stringify(rascunhos);
-    expect(caminhos).toContain(`runs/${novos[0]}/logs/`);
+      // O rascunho regravado é o PORTADOR do caminho: é ele que fixa `outputPath` na prova.
+      const draftsDepois = fs.readdirSync(dirDrafts).filter((f) => f.endsWith('.json'))
+        .map((f) => fs.readFileSync(path.join(dirDrafts, f), 'utf8'));
+      expect(draftsDepois.some((c) => c.includes(`runs/${novos[0]}/logs/`))).toBe(true);
+    } finally {
+      for (const nome of fs.readdirSync(dirDrafts).filter((f) => f.endsWith('.json'))) {
+        const original = draftsAntes.get(nome);
+        const abs = path.join(dirDrafts, nome);
+        if (original === undefined) fs.rmSync(abs, { force: true });
+        else if (!original.equals(fs.readFileSync(abs))) fs.writeFileSync(abs, original);
+      }
+      for (const [nome, bytes] of relatoriosAntes) {
+        const abs = path.join(base, nome);
+        if (!fs.existsSync(abs) || !bytes.equals(fs.readFileSync(abs))) fs.writeFileSync(abs, bytes);
+      }
+      for (const nome of fs.readdirSync(path.join(base, 'runs'), { withFileTypes: true })
+        .filter((e) => e.isDirectory() && !antes.has(e.name)).map((e) => e.name)) {
+        fs.rmSync(path.join(base, 'runs', nome), { recursive: true, force: true });
+      }
+    }
   }, 240000);
 });
