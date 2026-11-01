@@ -3987,3 +3987,55 @@ runStartedAt` volta a reprovar.
 Estado do repositório ao final desta rodada: fila 175 itens, `FECHAMENTO_NAO_PROVADO=0`,
 `validate:bug-closure-status` **PASS**, `governedEvidenceBinding` 3/3 verde, worktree limpo exceto a
 taxonomia (`config/runtime-evidence-artifacts.json`).
+
+### 11.75. Prod-like montado de verdade: a malha saiu de 10 falhas para 1
+
+O bloqueio do §11.74 não era código: as jornadas bloqueantes exigiam evidência operacional
+prod-like (`page_null_blocking_journey`). Montei a stack como o CI monta:
+
+```
+docker build -f api/Dockerfile      -t r-agent2-api:ci      .   -> exit 0
+docker build -f frontend/Dockerfile -t r-agent2-frontend:ci .   -> exit 0
+docker run ci-api (host net, API_PORT=3000)   -> /health 200  (pronta na 4ª tentativa)
+docker run ci-frontend (8080:80, host-gateway) -> / e /api/health 200
+RUN_QA_WAVES_PROD_LIKE_SMOKE=1 FRONTEND_URL=:8080 API_URL=:3000 \
+  node scripts/smoke/qa-waves-operational-final-smoke.js -> exit 0
+qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json -> status=GO (20:24:54Z)
+```
+
+Resultado medido na malha seguinte (**mesmo ambiente, só com a evidência prod-like presente**):
+
+```
+antes: 143 executados · 10 falhas · blockingDomains = [core, fitness, omnichannel]
+agora: 143 executados · 142 passed · 1 falha · blockingDomains = [fitness]
+```
+
+A falha restante é **uma só** e é recorrente (`recurringCount: 5`):
+`fitness-matricula-agendamento-ui` — "RPA: Fitness Matrícula — Agendamento de Aula Experimental via
+UI", com `Tempo limite excedido aguardando execução RPA` e, em execução isolada,
+`infra_error` + "Navegador fechado pelo usuário". É runner de navegador, não regra de negócio.
+
+### Onze verdades incômodas medidas nesta fase
+
+1. A malha executada por `npm run qa:mesh` é **`manual_run`** — `isCanonicalExecution: false`,
+   `canonicalPromotion: null`. O próprio runner avisa: evidência canônica exige `npm run pipeline`.
+2. `qa-mesh/baseline.json` é reescrito por toda execução com `accepted: false` e o passRate da
+   rodada. Commitar isso registraria uma regressão de baseline causada por uma execução NÃO
+   canônica — revertido de propósito.
+3. `qa-mesh/intelligence/latest-ungoverned.json` foi escrito em vez de `latest.json` justamente
+   porque a execução não tem lineage de run: o mecanismo do §11.58 (evidência sem lineage não
+   sobrescreve a governada) funcionou sozinho.
+4. `dbStateStore` falhou 5 escritas no fim da malha (`ConnectionManager.getConnection was called
+   after the connection manager was closed`) — shutdown fecha o pool antes do último flush.
+5. O smoke prod-like gera **18 MB** em `qa/smoke/prod-like/` (replays), tudo gitignored — por isso
+   a evidência que o gate lê é o JSON de 3 KB com `status=GO`, não os replays.
+6. Declarar produtores na taxonomia **fez o refresh EXECUTÁ-LOS**: 16 comandos novos passaram a
+   rodar dentro do refresh, incluindo `npm run qa:mesh`. Rodar o refresh com uma malha em andamento
+   dispara duas malhas — foi o que aconteceu e exigiu matar processos órfãos.
+7. `wave:page-surface` só passa apontando para as portas canônicas (5173/3001); instância Vite em
+   porta alternativa quebra o WebSocket e reprova 1 página (151/151 nas canônicas).
+8. `wave:api-surface`: 886 VALIDATED, 0 FAILED, com a API viva.
+9. `wave:db-integrity`: 233 appends, cadeia íntegra.
+10. Selo V2: 7 passos obrigatórios PASS, NO_GO em REQUIRED_TESTS_V2 (65/68; os 3 são TEMPORAL).
+11. `FECHAMENTO_NAO_PROVADO = 0` e `validate:bug-closure-status` PASS permanecem verdadeiros em
+    todo esse trajeto — a integridade da fila não foi sacrificada para perseguir o selo.
