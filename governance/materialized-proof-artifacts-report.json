@@ -1,12 +1,9 @@
 {
-  "generatedAt": "2026-10-20T16:11:47.933Z",
+  "generatedAt": "2026-11-02T19:30:53.021Z",
   "writtenArtifacts": [
     "qa/enterprise/pbx-asr-transcript.json",
     "qa/enterprise/pbx-tts-prompts.json",
     "qa/enterprise/pbx-recordings-metadata.json",
-    "qa/enterprise/omnichannel-crm-mutations.json",
-    "qa/enterprise/digital-twin-snapshots.json",
-    "qa/enterprise/human-handoff-screenshots.json",
     "governance/proof-signature.json",
     "governance/cleanup-proof.json"
   ]

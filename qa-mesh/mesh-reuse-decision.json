@@ -1,18 +1,59 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-10-20T15:26:30.566Z",
-  "runId": "rap-governed-20261020150721180-09a2168d",
-  "sourceFingerprint": "1580e16621569210a94d73f6f469d41d0e30776e8b521950083910aaf5a7f423",
-  "runStartedAt": "2026-10-20T15:07:21.359Z",
-  "decision": "RERUN",
-  "code": "CANONICAL_HISTORY_MISSING",
-  "detail": "nenhuma execução de qa-mesh/meshHistory pertence a rap-governed-20261020150721180-09a2168d",
-  "registryScenarios": 144,
+  "generatedAt": "2026-11-02T19:09:47.809Z",
+  "runId": "rap-governed-20261102162732564-b5cfae28",
+  "sourceFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "runStartedAt": "2026-11-02T16:27:33.118Z",
+  "decision": "REUSE",
+  "code": "MESH_REUSE_OK",
+  "detail": "execução canônica GO DESTE run cobre o registry corrente: reexecução suprimida",
+  "registryScenarios": 143,
   "evidence": {
-    "goNoGoGeneratedAt": "2026-10-20T14:06:57.902Z",
+    "goNoGoGeneratedAt": "2026-11-02T18:35:21.825Z",
     "goNoGoStatus": "GO",
-    "historyEntry": null
+    "historyEntry": "mesh-2026-11-02T17-51-03-824Z.json"
   },
-  "checks": []
+  "checks": [
+    {
+      "code": "SAME_RUN_ID",
+      "ok": true,
+      "detail": "runId=rap-governed-20261102162732564-b5cfae28"
+    },
+    {
+      "code": "SAME_SOURCE",
+      "ok": true,
+      "detail": "sourceFingerprint=68b2804492d5…"
+    },
+    {
+      "code": "RELEASE_GATE_BOUND",
+      "ok": true,
+      "detail": "qa-mesh/release-gate-report.json do run corrente"
+    },
+    {
+      "code": "CANONICAL_EXECUTION",
+      "ok": true,
+      "detail": "executionOrigin=pipeline"
+    },
+    {
+      "code": "CANONICAL_HISTORY",
+      "ok": true,
+      "detail": "qa-mesh/meshHistory/mesh-2026-11-02T17-51-03-824Z.json"
+    },
+    {
+      "code": "DECISION_GO",
+      "ok": true,
+      "detail": "status=GO"
+    },
+    {
+      "code": "SAME_RUN_TIME",
+      "ok": true,
+      "detail": "generatedAt=2026-11-02T18:35:21.825Z"
+    },
+    {
+      "code": "REGISTRY_COVERED",
+      "ok": true,
+      "detail": "143 cenários cobertos pelo run"
+    }
+  ]
 }

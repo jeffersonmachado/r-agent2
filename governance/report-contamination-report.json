@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-02T13:49:40.523Z",
-  "runId": "rap-governed-20261102124618532-d6ceeade",
+  "generatedAt": "2026-11-02T19:30:40.982Z",
+  "runId": "rap-governed-20261102162732564-b5cfae28",
   "sourceFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
@@ -14,32 +14,8 @@
   "totalContaminations": 0,
   "criticalCount": 0,
   "highCount": 0,
-  "pendingPhaseCount": 8,
+  "pendingPhaseCount": 4,
   "pendingPhase": [
-    {
-      "path": "runId",
-      "value": "rap-governed-20261102100726894-3c098e9a",
-      "term": "PENDING_PHASE_FOREIGN_RUN",
-      "isDecisionField": true,
-      "type": "PENDING_PHASE_FOREIGN_RUN",
-      "severity": "INFO",
-      "file": "governance/agent-policy-compliance-report.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
-      "producerPhase": "EVIDENCE",
-      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
-    },
-    {
-      "path": "runId",
-      "value": "rap-governed-20261102100726894-3c098e9a",
-      "term": "PENDING_PHASE_FOREIGN_RUN",
-      "isDecisionField": true,
-      "type": "PENDING_PHASE_FOREIGN_RUN",
-      "severity": "INFO",
-      "file": "governance/critical-journey-evidence.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
-      "producerPhase": "EVIDENCE",
-      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
-    },
     {
       "path": "runId",
       "value": "rap-governed-20261017053314590-3558e6f4",
@@ -48,20 +24,8 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/final-consistency-report.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
+      "expected": "rap-governed-20261102162732564-b5cfae28",
       "producerPhase": "FINAL",
-      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
-    },
-    {
-      "path": "runId",
-      "value": "rap-governed-20261102100726894-3c098e9a",
-      "term": "PENDING_PHASE_FOREIGN_RUN",
-      "isDecisionField": true,
-      "type": "PENDING_PHASE_FOREIGN_RUN",
-      "severity": "INFO",
-      "file": "governance/governance-persistence-validation-report.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
-      "producerPhase": "EVIDENCE",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
     {
@@ -72,19 +36,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/package-integrity-report.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
-      "producerPhase": "FINAL",
-      "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
-    },
-    {
-      "path": "runId",
-      "value": "rap-governed-20261020150721180-09a2168d",
-      "term": "PENDING_PHASE_FOREIGN_RUN",
-      "isDecisionField": true,
-      "type": "PENDING_PHASE_FOREIGN_RUN",
-      "severity": "INFO",
-      "file": "governance/package-validation-report.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
+      "expected": "rap-governed-20261102162732564-b5cfae28",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -96,7 +48,7 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/replay-integrity-report.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
+      "expected": "rap-governed-20261102162732564-b5cfae28",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     },
@@ -108,12 +60,12 @@
       "type": "PENDING_PHASE_FOREIGN_RUN",
       "severity": "INFO",
       "file": "governance/self-proving-report.json",
-      "expected": "rap-governed-20261102124618532-d6ceeade",
+      "expected": "rap-governed-20261102162732564-b5cfae28",
       "producerPhase": "FINAL",
       "detail": "produtor pertence a fase posterior: a evidencia nasce no empacotamento (nao e contaminacao agora)"
     }
   ],
-  "currentRunId": "rap-governed-20261102124618532-d6ceeade",
+  "currentRunId": "rap-governed-20261102162732564-b5cfae28",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",

@@ -1,11 +1,12 @@
 # Enterprise Readiness
 
-- Decision: NO_GO
-- Canonical mesh execution: mesh-2026-10-20T15-26-31-463Z
+- Decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
+- Canonical mesh execution: mesh-2026-11-02T17-51-03-824Z
 - Enterprise readiness: autonomous-ready
-- Production readiness: NO_GO
-- Blocking gaps: 0
+- Production readiness: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
+- Blocking gaps: 2
 - Blocking domains: none
 
 ## Hard blockers
-- Nenhum
+- gap-proof-missing-artifacts: Proof artifacts obrigatorios ausentes fisicamente (critical)
+- gap-proof-invalid-artifact-semantics: Proof artifacts presentes mas semanticamente invalidos (presenca != validade) (critical)
