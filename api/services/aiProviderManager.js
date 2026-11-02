@@ -125,7 +125,15 @@ function buildCompositeProvider(normalizedTenantId, tenantId, providerList) {
           }
         }
       }
-      throw lastError || new Error(`Nenhum provider de IA disponível para o tenant: ${normalizedTenantId}`);
+      if (lastError) throw lastError;
+      // Sem nenhum provider registrado o erro nasce SEM code e caía como 500
+      // genérico no handler de geração — mesma classe de defeito do timeout
+      // (medido no QA Mesh `mesh-2026-11-02T11-41-51-497Z`). "Nenhum provider
+      // configurado" é configuração do tenant: falha agregada estruturada.
+      throw Object.assign(
+        new Error(`Nenhum provider de IA disponível para o tenant: ${normalizedTenantId}`),
+        { code: 'AI_PROVIDER_NOT_CONFIGURED' },
+      );
     },
   };
 }

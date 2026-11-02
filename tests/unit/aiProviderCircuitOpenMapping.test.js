@@ -21,6 +21,10 @@
  */
 
 const { handleFlowGenerationRoutes } = require('../../api/modules/domain-flow/flow-execution/flowGenerationRoutes');
+jest.mock('../../api/services/generationOrchestrator', () => ({ orchestrateGeneration: jest.fn() }));
+
+const { handleAiChatbotOrchestratorRoutes } = require('../../api/modules/platform-content/handleAiChatbotOrchestratorRoutes');
+const { orchestrateGeneration: realOrchestrator } = require('../../api/services/generationOrchestrator');
 const {
   isStructuredAiClientError,
   AI_STRUCTURED_ERROR_CODES,
@@ -113,5 +117,60 @@ describe('classificação de erro de IA — provider indisponível não é 500',
       expect.objectContaining({ error: 'internal_error' }),
     );
     expect(deps.logger.error).toHaveBeenCalled();
+  });
+});
+
+describe('timeout de provider de IA — falha agregada do contrato, não 500', () => {
+  // Defeito medido no QA Mesh `mesh-2026-11-02T11-41-51-497Z`: o cenário
+  // `business-core-biz-flows-editor` declara em contrato "ai/rpa/generate
+  // responde com contrato estruturado (sucesso ou falha agregada)", mas
+  // `ai_timeout` ficava fora da lista canônica e virava 500 → infra_error no
+  // domínio crítico `core` → mesh NO_GO → convergência abortada no passo 8/12.
+  test('helper reconhece ai_timeout (o código real de aiProviderManager)', () => {
+    expect(isStructuredAiClientError(erroComCodigo('ai_timeout'))).toBe(true);
+    expect(isStructuredAiClientError(erroComCodigo('AI_TIMEOUT'))).toBe(true);
+    expect(AI_STRUCTURED_ERROR_CODES.has('ai_timeout')).toBe(true);
+  });
+
+  test('/ai/rpa/generate responde 400 estruturado quando o provider estoura o timeout', async () => {
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({ userInput: 'Plano RPA simples de boas-vindas', options: {} })),
+    });
+    realOrchestrator.mockImplementation(async () => {
+      throw erroComCodigo('ai_timeout', 'ai_timeout: provider de IA excedeu 45000ms');
+    });
+
+    const handled = await handleAiChatbotOrchestratorRoutes(
+      ctx(deps, '/ai/rpa/generate'),
+    );
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      expect.anything(),
+      400,
+      expect.objectContaining({ error: 'bad_request' }),
+    );
+    expect(deps.sendJson).not.toHaveBeenCalledWith(
+      expect.anything(),
+      500,
+      expect.anything(),
+    );
+  });
+
+  test('/ai/rpa/generate mantém 500 para falha interna real', async () => {
+    const deps = makeDeps({
+      parseJsonBody: jest.fn(async () => ({ userInput: 'Plano RPA simples de boas-vindas', options: {} })),
+    });
+    realOrchestrator.mockImplementation(async () => {
+      throw new Error('falha inesperada no orquestrador');
+    });
+
+    await handleAiChatbotOrchestratorRoutes(ctx(deps, '/ai/rpa/generate'));
+
+    expect(deps.sendJson).toHaveBeenCalledWith(
+      expect.anything(),
+      500,
+      expect.objectContaining({ error: 'internal_error' }),
+    );
   });
 });

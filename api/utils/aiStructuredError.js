@@ -33,6 +33,16 @@ const AI_STRUCTURED_ERROR_CODES = new Set([
   // MESMA classe de indisponibilidade de `AI_GENERATION_FAILED`; ficar de fora
   // era o defeito que produzia 500 e derrubava o gate.
   'provider_circuit_open',
+  // Provider excedeu o timeout (api/services/aiProviderManager.js, code
+  // 'ai_timeout'). Medido no QA Mesh `mesh-2026-11-02T11-41-51-497Z`: o
+  // cenário `business-core-biz-flows-editor` declara em contrato "sucesso ou
+  // falha agregada", mas o timeout caía no `else` → 500 genérico
+  // (`internal_error`) → infra_error no domínio crítico `core` → mesh NO_GO →
+  // convergência abortada no passo 8/12. Indisponibilidade por latência é a
+  // mesma classe de `provider_circuit_open`: falha agregada esperada.
+  'ai_timeout',
+  // Timeout explícito embrulhado pelo mesmo gerenciador (mesma classe).
+  'AI_TIMEOUT',
 ]);
 
 /**
