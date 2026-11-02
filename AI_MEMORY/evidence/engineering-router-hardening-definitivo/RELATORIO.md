@@ -4039,3 +4039,38 @@ UI", com `Tempo limite excedido aguardando execução RPA` e, em execução isol
 10. Selo V2: 7 passos obrigatórios PASS, NO_GO em REQUIRED_TESTS_V2 (65/68; os 3 são TEMPORAL).
 11. `FECHAMENTO_NAO_PROVADO = 0` e `validate:bug-closure-status` PASS permanecem verdadeiros em
     todo esse trajeto — a integridade da fila não foi sacrificada para perseguir o selo.
+
+### 11.76. A falha restante da malha: medida fora e dentro do runner
+
+`fitness-matricula-agendamento-ui` era a única falha da malha em §11.75. Medi o cenário **fora** do
+runner, executando a gravação direto pelo serviço (`executeRecording`, headless, `slowMo: 0`):
+
+| condição | duração | status | steps |
+|---|---|---|---|
+| sem gravação de vídeo | **244 s** | `completed`, `success=true` | 18/18 executados |
+| com gravação de vídeo | **141 s** | `completed`, `success=true` | 18/18 executados |
+| dentro da malha (run completo) | **>600 s** | `timeout` (`QA_MESH_RPA_MAX_WAIT_MS` = 10 min) | — |
+
+Duas conclusões que os números sustentam:
+
+1. **A gravação de vídeo não é a causa.** Com vídeo o cenário terminou em 141 s — mais rápido que sem
+   vídeo (a diferença é cache/warm-up, não vídeo). Descarto a hipótese folclórica de "vídeo deixa o
+   RPA lento".
+2. **O cenário passa de verdade.** 18 passos executados; o passo 10 (`wait`) reprova com
+   `page.waitForSelector: Timeout 15000ms exceeded` e o resultado global continua
+   `success=true, errors=[]` — é espera tolerada, não bloqueio.
+
+Mecanismo ainda **não provado** (não vou chamar de causa): a malha executa os cenários de RPA
+sequencialmente no mesmo processo, e o adaptador faz `QA_MESH_RPA_MAX_ATTEMPTS=2`; se a primeira
+tentativa já consome o orçamento de 10 min, a segunda dobra o tempo de parede. Medição de apoio:
+rodando só o domínio `fitness`, 5 cenários levaram 26 min (~5 min por cenário de RPA) — o domínio é
+lento por natureza, o que coloca o orçamento de 10 min no limite.
+
+Próximo experimento correto (barato): instrumentar o adaptador para registrar, por cenário,
+**quantas tentativas** rodaram e **quanto durou cada uma**. Hoje ele registra apenas o desfecho, e é
+por isso que "timeout dentro da malha vs 244 s fora" ainda é assimetria sem causa nomeada. Não
+inventei um número para fechar o relatório.
+
+Nota de operação: `qa-mesh/baseline.json` foi reescrito por essas execuções com `accepted: false` e
+**revertido** de novo — baseline só pode mudar por execução canônica (`npm run pipeline`), não por
+`manual_run`.
