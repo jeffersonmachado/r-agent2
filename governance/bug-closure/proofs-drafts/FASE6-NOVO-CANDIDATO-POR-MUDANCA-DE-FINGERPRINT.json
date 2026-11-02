@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "093fd18f-dd61-43fd-ad8e-d54829b4541d",
+  "transitionId": "aa9b25f7-51e3-4be1-8b33-62143ad2fb85",
   "defectId": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/newCandidateOnFingerprintChange.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/newCandidateOnFingerprintChange.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:22:47.362Z",
-      "finishedAt": "2026-11-01T09:22:49.663Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT.log",
-      "outputSha256": "1641d7ba4f5954a4b7abc66248f88d2acabdc487769bda11eee6841f520f2945"
+      "startedAt": "2026-11-02T15:07:17.173Z",
+      "finishedAt": "2026-11-02T15:07:22.784Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT.log",
+      "outputSha256": "1bfc325d2afc43795ea1e437742712bc5a8f3164716e09c62fc19b79285c6871"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:22:49.672Z",
-  "proofHash": "e2f1e6c7bcae14d96a8e3c61d95f981a2e4b0ce15b576272963143def42272bd"
+  "createdAt": "2026-11-02T15:07:22.792Z",
+  "proofHash": "a728361765b6fc9d1dc1e11636d151b4c9c22a542ca3658acf59d489994030ff"
 }

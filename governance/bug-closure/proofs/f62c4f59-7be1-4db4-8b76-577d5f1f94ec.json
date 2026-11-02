@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "f62c4f59-7be1-4db4-8b76-577d5f1f94ec",
+  "defectId": "AUDITORIA-BRANCH-INVENTORY",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/audit/branchInventory.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/audit/branchInventory.test.js",
+      "command": "npx jest tests/unit/audit/branchInventory.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:35:30.923Z",
+      "finishedAt": "2026-11-02T15:35:36.024Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/AUDITORIA-BRANCH-INVENTORY.log",
+      "outputSha256": "a4e7d6acd88ebbcce226a6ee57e62d592cba51820b31dfb8899ce39134698f00"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/audit/branchInventory.test.js",
+      "sha256": "649d3a8fe2dc6ebef130fae0a2a0a9e37313ea5fcc5567473161fea811bbde24"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:35:36.031Z",
+  "proofHash": "6364a0d00c19033961b1fce804d9f51e9a8e696ec320186e502a380b8bc76d9e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "mnolhw5UEwkSfwHbHXAGUSZMrzO17LFSskbWGJvaIzX5JsAP/D+2rmvxv04Jtb/VsrwBTGn+uGGTxhmgcLGABg==",
+    "signedAt": "2026-11-02T16:22:14.398Z"
+  }
+}

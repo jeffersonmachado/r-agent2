@@ -1,27 +1,27 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ec421906-668c-4167-b0f1-711aef7aa16e",
+  "transitionId": "abb206d7-bbf0-42cc-9a28-895c072d7aa9",
   "defectId": "P1-5",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "rag-service/tests/test_hybrid_search.py"
   ],
   "executions": [
     {
       "testPath": "rag-service/tests/test_hybrid_search.py",
-      "command": "/tmp/ragvenv/bin/python -m pytest rag-service/tests/test_hybrid_search.py -q -p no:cacheprovider",
+      "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_search.py -q -p no:cacheprovider",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:25:48.220Z",
-      "finishedAt": "2026-11-01T09:25:49.609Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-5.log",
-      "outputSha256": "eb4a97b63642f8c9f1b8a099a605ee508409bd174b43057d87042a0f9f45f1ea"
+      "startedAt": "2026-11-02T15:11:34.102Z",
+      "finishedAt": "2026-11-02T15:11:35.762Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-5.log",
+      "outputSha256": "e79ca878471a6ef816b45b9e05c228d9c566b2bd6ca32a2ac6db4b9a48b09a9c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:25:49.616Z",
-  "proofHash": "d801e7a2a562f4004f04d209575a9a43a7d7f891b9e754d583ad2a483305d871"
+  "createdAt": "2026-11-02T15:11:35.769Z",
+  "proofHash": "c848c7e683de3021278ce00888abda0cba52d1569c57bcf7b88c2a14acd8799b"
 }

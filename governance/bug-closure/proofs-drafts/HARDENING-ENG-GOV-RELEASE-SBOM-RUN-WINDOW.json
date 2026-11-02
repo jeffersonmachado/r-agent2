@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a542f007-d3e1-4e0c-910b-ac7ca8a3aea1",
+  "transitionId": "9a9af723-9b81-46e7-acaa-2682069a11d3",
   "defectId": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:47:27.867Z",
-      "finishedAt": "2026-11-01T09:47:30.453Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
-      "outputSha256": "5baa6735472ef2c0daa7a43cc3aae01ae7b34fe4ce7933ebfe4f7fdb29d118dd"
+      "startedAt": "2026-11-02T15:29:35.668Z",
+      "finishedAt": "2026-11-02T15:29:38.969Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
+      "outputSha256": "6818b59dee33b724538b789c0b0b98001d9e37fa1a11ceaa157b8453aa6e3e2b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:47:30.462Z",
-  "proofHash": "50088b33238c35694f6022a367ed1fb5c2de28a3031344f3f5f9fa61c2ccd9f4"
+  "createdAt": "2026-11-02T15:29:38.977Z",
+  "proofHash": "5253c7f2a6315cc067c33ceccd400477f1a5c209f0d0f0236adff85538f22583"
 }

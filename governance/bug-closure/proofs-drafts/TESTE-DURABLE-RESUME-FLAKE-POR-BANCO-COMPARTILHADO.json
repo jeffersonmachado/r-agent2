@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ca618e5f-1d26-42e5-adb7-f300434013f1",
+  "transitionId": "cb37436b-a21a-4884-9f02-176aa75ae633",
   "defectId": "TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/integration/engineeringMissionDurableResume.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionDurableResume.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:50:33.010Z",
-      "finishedAt": "2026-11-01T09:51:28.628Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO.log",
-      "outputSha256": "31929311ba807a6465534d595650f2b644d8e76a913e16f0ab68cad375aba939"
+      "startedAt": "2026-11-02T15:33:36.328Z",
+      "finishedAt": "2026-11-02T15:35:19.070Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO.log",
+      "outputSha256": "6e8ac0db70df2261ec2255faacb14443734b80f8ea262f410e939ab6fb64d596"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:51:28.638Z",
-  "proofHash": "4fd7db240f0a8b5260efa59e0a20e4ecb6589afa1ef8288d4a5127828d4f4228"
+  "createdAt": "2026-11-02T15:35:19.084Z",
+  "proofHash": "ac33000dded83f9a1bf8eb356a018602d1d05e5da35ab4d914aa7549b5d8331f"
 }

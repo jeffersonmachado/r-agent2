@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ec2e6a2d-6977-45c0-9bf2-1815da997dfc",
+  "transitionId": "497169c8-c841-4841-bcc2-8afb7babf979",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-6",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/releaseSuiteRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:15:25.121Z",
-      "finishedAt": "2026-11-01T09:15:33.720Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-P0-6.log",
-      "outputSha256": "92dddc1ffbc3f417ab5544d9b8c21763764c85239dd7d65225760b0ef1e84107"
+      "startedAt": "2026-11-02T14:50:45.898Z",
+      "finishedAt": "2026-11-02T14:50:56.544Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-P0-6.log",
+      "outputSha256": "e21a16f2dd009a182429b02b6ec4995e6582d6616f13600af1198aa699d33eb0"
     }
   ],
   "negativeEvidence": [
@@ -35,19 +35,19 @@
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-6-baseline-9891de62.log",
-        "logSha256": "4d31412c07e5efd5d278efe57061525cadbdf54dba136ed09ec24f66ea4aca9e"
+        "logSha256": "1787e4650f77ae15d541664ab035b530e095b1b53f5a6395a830cd3a9a16f9dd"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-6-mutado-9891de62.log",
-        "logSha256": "3e39755d8e552a563b0aba6aefaf25c27ce3d658f07623c6291c62c5eea60f35"
+        "logSha256": "69840e9fdc20bf1303c2bf0aa5b2e75917476dc25f60b543eba482678f710a98"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-6-restaurado-9891de62.log",
-        "logSha256": "d04b0dd1fd16dbef02a01a6dcd5565bd33f6e5f3a2c5b0afa094219499e79331"
+        "logSha256": "38952ab6858e93a13035d591011c696be29f8d29101c5f31174210f78748c1cd"
       },
-      "capturedAt": "2026-11-01T05:10:06.097Z"
+      "capturedAt": "2026-11-02T16:06:59.137Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T09:57:30.438542Z",
+    "at": "2026-11-02T16:21:20.308Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:15:33.728Z",
-  "proofHash": "5b467263a005527d1aedccc271a5b3aa06ad6301c7889e1d0e103012eab9bf17"
+  "createdAt": "2026-11-02T14:50:56.553Z",
+  "proofHash": "30a5ba0cf8d142e350ddfcc5b9b6a5a8da9c4388d8d2083a9bcec438dbfb729c"
 }

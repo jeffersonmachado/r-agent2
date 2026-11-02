@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "54f70d7e-1372-42a4-9d94-3bd061636a07",
+  "transitionId": "5f8e8b39-96fa-4849-9db6-a5417618bf07",
   "defectId": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:27:15.336Z",
-      "finishedAt": "2026-11-01T09:27:19.292Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
-      "outputSha256": "add994d06dca337d04a58a8fd876486e6b7a3bafd6ccc014fd1c54fd6cbf19c8"
+      "startedAt": "2026-11-02T15:13:22.167Z",
+      "finishedAt": "2026-11-02T15:13:28.622Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+      "outputSha256": "0b27348e8d0465c9b07b5cd144b840d5ac3d6153b08aa2fac378cfac47dfd3f1"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:27:19.299Z",
-  "proofHash": "59df43e7abab01ad2081b3cd45d98589861c8a14e613dc47048351e7b1f30aef"
+  "createdAt": "2026-11-02T15:13:28.629Z",
+  "proofHash": "66c8ac2db4d677049a453a134764f39c267cf0e187b5361ed9e07e0b8806db34"
 }

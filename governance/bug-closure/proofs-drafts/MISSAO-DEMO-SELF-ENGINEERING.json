@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "be5e91f5-8889-4a18-8a08-327713c20b95",
+  "transitionId": "24a15dc7-1177-4f35-96ff-cac89eb7d750",
   "defectId": "MISSAO-DEMO-SELF-ENGINEERING",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/selfEngineeringDemonstration.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/selfEngineeringDemonstration.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T10:01:02.906Z",
-      "finishedAt": "2026-11-01T10:01:06.695Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101100102-c20acc3b/logs/MISSAO-DEMO-SELF-ENGINEERING.log",
-      "outputSha256": "f4e4a6a2d8d44ee3f9a5c141e2c4fed93bd073dec4a9d37f2025308830dae27e"
+      "startedAt": "2026-11-02T15:36:26.609Z",
+      "finishedAt": "2026-11-02T15:36:33.453Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-DEMO-SELF-ENGINEERING.log",
+      "outputSha256": "6a93ec70b3db7e93dee7f9db9047ea764a4ec9cb9765ed813f9a75c1273c595f"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T10:01:06.706Z",
-  "proofHash": "b3bac51931da96940bfc25886080b6a0eda1228fe1a746e8af026acfa6e121be"
+  "createdAt": "2026-11-02T15:36:33.460Z",
+  "proofHash": "fa5afc9449960ee926264b7f41f88dade99abeb0cfa5348093461c4c395861c6"
 }

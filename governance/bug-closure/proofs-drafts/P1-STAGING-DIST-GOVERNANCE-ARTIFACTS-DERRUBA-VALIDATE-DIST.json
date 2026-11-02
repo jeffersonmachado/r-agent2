@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5e6fb809-0602-4254-8e56-aa12a5892c39",
+  "transitionId": "647f791e-5859-4cc2-9a94-36af33dcc34e",
   "defectId": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/devBranchCiGate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:27:19.308Z",
-      "finishedAt": "2026-11-01T09:27:23.158Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log",
-      "outputSha256": "0a9b37bf0b1c874d12a6e003cf0b3918c6206ef32a41c2d8598ea55034d4febb"
+      "startedAt": "2026-11-02T15:13:28.639Z",
+      "finishedAt": "2026-11-02T15:13:35.107Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST.log",
+      "outputSha256": "a20154534b3e8bbd141adaf82c5f9e99cef5dbde92bb8e5bcf3c83d51f2a4309"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:27:23.165Z",
-  "proofHash": "2f126c373b012c09ef7fabc84377969da6604a92c0bfc7ddcf6f86b36a86f220"
+  "createdAt": "2026-11-02T15:13:35.115Z",
+  "proofHash": "aa2099e9cbe866d1f19f6389278b0de39790cffb1936be29fbcd53b9f5cb09c5"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ada44cf4-def4-472c-b252-120c76445a58",
+  "transitionId": "9cf1703e-4a50-4d20-bb09-c09412cf20ec",
   "defectId": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "qa-mesh/__tests__/scheduler.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest qa-mesh/__tests__/scheduler.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:49:45.697Z",
-      "finishedAt": "2026-11-01T09:49:51.555Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
-      "outputSha256": "20f74f0d6ce3df8ff3899cb38ad5e63dbb282903daa943bc755ad1048c2a2a42"
+      "startedAt": "2026-11-02T15:32:50.156Z",
+      "finishedAt": "2026-11-02T15:32:57.762Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE.log",
+      "outputSha256": "3a72d04f92a972637872c4ac2fad72cf0d1e7a1e52c1cd95ef8bcc8e1a051f9d"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:49:51.563Z",
-  "proofHash": "c06ff2578babcede33ff8dd7430e56ceb98e06998511abe10b3f3fccf1ff76b3"
+  "createdAt": "2026-11-02T15:32:57.769Z",
+  "proofHash": "7d57c0cf766756e048b281de3ba60db87c843b4ebe5f4bfd10e6bf0b88ae490e"
 }

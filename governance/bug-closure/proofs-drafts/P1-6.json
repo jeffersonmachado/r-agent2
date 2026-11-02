@@ -1,27 +1,27 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "edeb544f-c861-4404-a9e4-550b7ab83f8f",
+  "transitionId": "76bdc60f-ecc0-4f9e-8a4a-404dccd5fe41",
   "defectId": "P1-6",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "rag-service/tests/test_hybrid_isolation_real_db.py"
   ],
   "executions": [
     {
       "testPath": "rag-service/tests/test_hybrid_isolation_real_db.py",
-      "command": "/tmp/ragvenv/bin/python -m pytest rag-service/tests/test_hybrid_isolation_real_db.py -q -p no:cacheprovider",
+      "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_isolation_real_db.py -q -p no:cacheprovider",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:25:49.622Z",
-      "finishedAt": "2026-11-01T09:25:51.993Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-6.log",
-      "outputSha256": "b5b06f23bd44fc64e45aef169d85a9f25d3ea0c7c74be1c683bfb947e8397989"
+      "startedAt": "2026-11-02T15:11:35.776Z",
+      "finishedAt": "2026-11-02T15:11:38.659Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-6.log",
+      "outputSha256": "ae225a22b1abdbeb979de00450f5c27e3244ec567fe5ec9d7d4089e05e09c956"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:25:52.000Z",
-  "proofHash": "e8a0d282245305515e11ba40baa2a643979d08210a2f41d11df9bcf5fd29a932"
+  "createdAt": "2026-11-02T15:11:38.666Z",
+  "proofHash": "3d5417461bd008d52cc4a4b71998d251878472bd5217cd09c34ea46c2cfd41e7"
 }

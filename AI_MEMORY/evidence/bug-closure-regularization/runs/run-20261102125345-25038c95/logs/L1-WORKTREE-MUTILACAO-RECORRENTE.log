@@ -1,0 +1,25 @@
+[jest-global-setup] .env carregado (40 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/worktreeIntegrity.test.js
+  guarda de integridade do worktree
+    ✓ worktree idêntico à base é PASS (177 ms)
+    ✓ mudança legítima (adiciona função e teste) continua PASS (165 ms)
+    ✓ teste removido reprova com TEST_CASE_REMOVAL (o falso verde clássico) (169 ms)
+    ✓ função de escopo de módulo removida reprova com SYMBOL_REMOVAL (168 ms)
+    ✓ variável local removida NÃO vira violação (ruído destrói a guarda) (164 ms)
+    ✓ deleção pura em caminho protegido reprova com PURE_DELETION (157 ms)
+    ✓ arquivo protegido apagado reprova com FILE_DELETED (156 ms)
+    ✓ diff dominado por deleção reprova com DELETION_DOMINANT (160 ms)
+    ✓ waiver COM motivo move a violação para waived e libera (157 ms)
+    ✓ waiver SEM motivo é ignorado (fail-closed) (167 ms)
+    ✓ waiver sem AUTORIDADE HUMANA é ignorado (agente não libera a própria alteração) (189 ms)
+    ✓ it.skip adicionado reprova com TEST_SUPPRESSION_ADDED (175 ms)
+    ✓ asserção removida reprova com ASSERTION_REMOVAL (169 ms)
+    ✓ classificação de caminho protegido (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        2.588 s, estimated 6 s
+Ran all test suites matching /tests\/unit\/governance\/worktreeIntegrity.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

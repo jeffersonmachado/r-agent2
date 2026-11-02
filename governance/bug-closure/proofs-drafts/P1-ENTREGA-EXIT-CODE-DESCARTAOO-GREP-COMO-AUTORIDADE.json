@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "671b66ae-59a2-4215-a86b-8009e95ebe07",
+  "transitionId": "7b6dd3ff-528e-4281-a853-cc9e9a88ff61",
   "defectId": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:26:39.767Z",
-      "finishedAt": "2026-11-01T09:26:43.197Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
-      "outputSha256": "d4ce0ddc454044987b2edd8029f906bcedbc3e49d8d8b3f5d74cbf0986dcc0d3"
+      "startedAt": "2026-11-02T15:12:28.137Z",
+      "finishedAt": "2026-11-02T15:12:31.722Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "outputSha256": "e68057e81ed88805f5a2f92981dea362c6faee03e1e1019406e67c4487727c16"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:26:43.204Z",
-  "proofHash": "6a770af19da1af17d52eb7b666d72e45cb615f8df1a343e97393ad816610d7b4"
+  "createdAt": "2026-11-02T15:12:31.729Z",
+  "proofHash": "bd48298e5921c18efbd660917857bc73a0ad7f7b8ea44e4932f4f3c4e7586db0"
 }

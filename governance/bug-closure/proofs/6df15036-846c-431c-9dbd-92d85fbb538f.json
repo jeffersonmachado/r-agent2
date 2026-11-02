@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "6df15036-846c-431c-9dbd-92d85fbb538f",
+  "defectId": "MISSAO-B8-ESTADOS-FILA",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/governance/hardeningQueueStates.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/hardeningQueueStates.test.js",
+      "command": "npx jest tests/unit/governance/hardeningQueueStates.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:30:15.199Z",
+      "finishedAt": "2026-11-02T15:30:21.491Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-B8-ESTADOS-FILA.log",
+      "outputSha256": "4721309f36be0ec4badbf06e3f57445f43871e8f30da92b181fce6eefd145c19"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/hardeningQueueStates.test.js",
+      "sha256": "ee69421f19a4ecb5ed4154886a0ffc42a2dd4d65a47544ed96c82a9d122e85f2"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:30:21.497Z",
+  "proofHash": "31b1666d946968f210992f046b46144643cc62313af59fe71807c1304d373917",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "CzLohvFJIG9UfxKOjclCKcOkpb5wjLvHRvduwpquUx74DDfA+7zgZbGTavXvDOq9oHjW9trhbd8G8SPUJ6ceDg==",
+    "signedAt": "2026-11-02T16:23:10.742Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7b0c88fa-25c2-41c1-a21b-051745519b7f",
+  "transitionId": "9fa0dbb2-4655-4286-8c2a-109a214a63f7",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/aggregateWorktreeFreeze.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/aggregateWorktreeFreeze.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:47:16.316Z",
-      "finishedAt": "2026-11-01T09:47:19.549Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO.log",
-      "outputSha256": "4edc962bc915d6c750dc379f1770ae8c8c00308fc909b890f109c45074d9d43c"
+      "startedAt": "2026-11-02T15:29:13.284Z",
+      "finishedAt": "2026-11-02T15:29:19.394Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO.log",
+      "outputSha256": "3116c87a65baa5c1e78c9cd86c7e8eb113cb10de0c6dace86a8b1fda6b8a3492"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:47:19.555Z",
-  "proofHash": "32063d194c4c90aba6b3d323aee4c848e5e67f39ee1a3cb200fd2da15a725346"
+  "createdAt": "2026-11-02T15:29:19.402Z",
+  "proofHash": "dba06b4a0a142c167d0fa26d101783a2c843a15344802cf5782340fb164e158d"
 }

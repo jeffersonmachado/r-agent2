@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "63d586c6-3023-42e1-ab3b-72232bbee5a4",
+  "defectId": "P0-1",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/securityIntel/approvalAuthority.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/securityIntel/approvalAuthority.test.js",
+      "command": "npx jest tests/unit/securityIntel/approvalAuthority.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T14:51:12.907Z",
+      "finishedAt": "2026-11-02T14:51:17.491Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P0-1.log",
+      "outputSha256": "acf26ee923af858b004d750197ab088706d0f6daebffe783ca7bcce70c1dcda6"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "api/modules/security-intel/approvalAuthority.js",
+      "control": "identidade de aprovação volta a ser aceita do CORPO (autodeclaração de autoridade)",
+      "mutatedFromSha256": "7a7433ff1d57a4a40ac00529f31fdf70daf400e194eeeb7d3a6cf6d3aa52ebd0",
+      "mutatedToSha256": "a14f20d14562b8d8c94ba79b0491d861cf4e9fabba23206e33c20d80947e3634",
+      "testPath": "tests/unit/securityIntel/approvalAuthority.test.js",
+      "command": "npx jest tests/unit/securityIntel/approvalAuthority.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-1-baseline-a7e7d44f.log",
+        "logSha256": "21a8b44a865423a9b2655e95b52b4814490e855842697df11ff1c2a3cf38ecf6"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-1-mutado-a7e7d44f.log",
+        "logSha256": "b3ea66ccb37cb4131c9c53548524f4f2bd8b0c6fae4928a0c84725121bd33ef1"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/P0-1-restaurado-a7e7d44f.log",
+        "logSha256": "c142309750be06a465c95c287e12116cb458accf6f35dae714427db93264fd51"
+      },
+      "capturedAt": "2026-11-02T16:08:56.594Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/securityIntel/approvalAuthority.test.js",
+      "sha256": "409cf58b1ccdf1057846ffb89086067e2c8b041d08d7517a0d685d364209553b"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-02T16:21:20.308Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T14:51:17.497Z",
+  "proofHash": "b69b653eca38c585556d622de1f94f15f69b788b0ae15100c44441f8f89dd18e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "JCMMJg6wZ/JpzfaFKEf8CzZ+6OeEXslUGO7ycqfV7Aw+4qB6/HBAIipM4hi07s831Bzlfsew/TgeCvHelM/0BQ==",
+    "signedAt": "2026-11-02T16:23:12.459Z"
+  }
+}

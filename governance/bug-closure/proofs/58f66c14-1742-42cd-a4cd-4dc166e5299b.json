@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "58f66c14-1742-42cd-a4cd-4dc166e5299b",
+  "defectId": "MISSAO-B4-REVISAO-INDEPENDENTE",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/engineeringMission/reviewIndependenceProof.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringMission/reviewIndependenceProof.test.js",
+      "command": "npx jest tests/unit/engineeringMission/reviewIndependenceProof.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:36:17.444Z",
+      "finishedAt": "2026-11-02T15:36:26.592Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-B4-REVISAO-INDEPENDENTE.log",
+      "outputSha256": "8a9705ad0e9409096cca8e3e1b4be97278261ecb0a57e33c951d1596c1c86502"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringMission/reviewIndependenceProof.test.js",
+      "sha256": "c60c7568bead52dc9c061a977a58c0518ca45cbae52b4f4b30f9880f3356bba6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:36:26.600Z",
+  "proofHash": "a4a8ad4418bf9934cb2391bb8c1be5394cb60f7f8bd1387953389a67172f4924",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "0VNrSpLGR4gb+eN5SA2e2HQHj6ReVdGbzUOBc/Vto5H2OK5D8ZDcqeUVg8bRY4mF4guBqKYCw0GFIsmOxMb3Bw==",
+    "signedAt": "2026-11-02T16:23:09.818Z"
+  }
+}

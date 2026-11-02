@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "4cf496eb-2ee5-41de-b143-0faa7a566b15",
+  "defectId": "P1-10",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/engineeringRouterProviderChainPolicy.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "command": "npx jest tests/unit/engineeringRouterProviderChainPolicy.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:10:39.688Z",
+      "finishedAt": "2026-11-02T15:10:47.318Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P1-10.log",
+      "outputSha256": "2d4871666d093e8fee10f8b8a9387970852b1d6f7c86ca02508c8e824b341034"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouterProviderChainPolicy.test.js",
+      "sha256": "738b99a486db5a42e87c35b306c06aa616af4abee032b628467f61a695d12959"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:10:47.327Z",
+  "proofHash": "aac1d73e82edb4b8bce3b532c491918e818d544e7c281be2f13e4904ae3d4c6c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "4aelqe2awxK5Ghdf/MiCj47LqYfIN2xctjZ3E1Gno+Frmihk1EI3TuL4OHwRpIzrgchN01OMtkua/O4Cl5OCCQ==",
+    "signedAt": "2026-11-02T16:23:26.009Z"
+  }
+}

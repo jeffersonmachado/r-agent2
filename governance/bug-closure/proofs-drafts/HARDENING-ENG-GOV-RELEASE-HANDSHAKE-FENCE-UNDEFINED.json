@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "1ca21a67-cab5-4804-acc4-c7621e5df0df",
+  "transitionId": "05a5235d-42db-45e4-acc7-3c0a0ad18ed9",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:23:33.495Z",
-      "finishedAt": "2026-11-01T09:23:38.741Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
-      "outputSha256": "5171c1a46e27c525805cdbd73d9aacd0245c70af6a9cdb2972b152b26033634e"
+      "startedAt": "2026-11-02T15:08:25.090Z",
+      "finishedAt": "2026-11-02T15:08:31.270Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED.log",
+      "outputSha256": "11e8417d381b48fa4681012bbb4b28e1f08857659a007f03ae7836b9e2277514"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:23:38.748Z",
-  "proofHash": "b5c1e6784776024e67bbde67835c9aee22ee199e50c546e3e5c90ba56893c178"
+  "createdAt": "2026-11-02T15:08:31.277Z",
+  "proofHash": "f1da0cea3f28608036f35bc6d74f1f870f0bf91f19ce2c42662e76cea3595e0d"
 }

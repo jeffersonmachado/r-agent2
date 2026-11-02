@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "e2b1153c-d948-4f01-88b6-9380c8131aa2",
+  "defectId": "MISSAO-B3-REUSO-PROVENIENCIA",
+  "severityBefore": "P3",
+  "severityAfter": "P3",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/governance/releaseSuiteRunner.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "command": "npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:36:07.545Z",
+      "finishedAt": "2026-11-02T15:36:17.423Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-B3-REUSO-PROVENIENCIA.log",
+      "outputSha256": "f00051a088dcd808521e6aecb419930dad08082da739404c65f32db93371b0f0"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/releaseSuiteRunner.test.js",
+      "sha256": "d429565a42351d23896c1e325281bcb34faa2a4f80fe7673a24fe7e1ec1080b2"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:36:17.432Z",
+  "proofHash": "b13ed50d1b9cfa461ae63bfee67c2c46ab4e535fc9dbad466e32cfe0e0d8e544",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "EBgt+lZn5LmcMwd/6R8QWoNLfB6kIiW+paKyp7+K9PhZlZdO8dv+rJ7HM6cMYyMKmXuuXXO99gKqrkifSRXkAw==",
+    "signedAt": "2026-11-02T16:23:09.435Z"
+  }
+}

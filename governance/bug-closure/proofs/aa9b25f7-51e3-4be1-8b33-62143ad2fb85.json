@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "aa9b25f7-51e3-4be1-8b33-62143ad2fb85",
+  "defectId": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/unit/governance/newCandidateOnFingerprintChange.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/newCandidateOnFingerprintChange.test.js",
+      "command": "npx jest tests/unit/governance/newCandidateOnFingerprintChange.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:07:17.173Z",
+      "finishedAt": "2026-11-02T15:07:22.784Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT.log",
+      "outputSha256": "1bfc325d2afc43795ea1e437742712bc5a8f3164716e09c62fc19b79285c6871"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/newCandidateOnFingerprintChange.test.js",
+      "sha256": "7fc05d55df39d25f003feb142d4ccd38512ca6eed4a30e606b190286bf437eb8"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:07:22.792Z",
+  "proofHash": "9d1afda854719d94883d1940ea8b01739b9c184faf350d70275417499588f4fa",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "3JR6NfYvEqH4deSipSZ0FnLc3XHXhQICLED3TlwNfD+MYpIvbT9+AsZ+/fY/aGi0yQ0pA905b8sCLvysaeAgAQ==",
+    "signedAt": "2026-11-02T16:22:28.948Z"
+  }
+}

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "467b63eb-78a1-41e7-aa01-57dbec627473",
+  "transitionId": "22be9ff7-9ca5-4ea6-a375-956833818a35",
   "defectId": "P2-2",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/reportWriteLineage.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/reportWriteLineage.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:49:30.314Z",
-      "finishedAt": "2026-11-01T09:49:33.417Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P2-2.log",
-      "outputSha256": "d1040d5531aeca40e8b937438df5332e7e319211c1aa71582ffe73b43e3fca49"
+      "startedAt": "2026-11-02T15:32:15.124Z",
+      "finishedAt": "2026-11-02T15:32:19.054Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P2-2.log",
+      "outputSha256": "8bed95f59f452d6321629e46c39a0872459904bfa986eb4efc88656952915da2"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:49:33.423Z",
-  "proofHash": "14daf21b0b13e1deeb09bd111216f9e7634540fd6c58b67109f21c92be14673f"
+  "createdAt": "2026-11-02T15:32:19.061Z",
+  "proofHash": "1428a0387f27922c4b0345e440b8b7763d5b98cc99bbb07fe61b34d44c1bb47d"
 }

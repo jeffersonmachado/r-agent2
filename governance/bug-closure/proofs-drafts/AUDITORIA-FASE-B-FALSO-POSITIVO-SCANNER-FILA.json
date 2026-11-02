@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "991f06a0-713f-4bea-9b90-c1c7c46615e5",
+  "transitionId": "8fb544b4-6c82-4738-a3eb-7b261b4c44c7",
   "defectId": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:37:31.224Z",
-      "finishedAt": "2026-11-01T09:37:33.647Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
-      "outputSha256": "c5e7e230615d957c6784f5eee51eef440cbf497d929f79ef12caae5d3af6e13c"
+      "startedAt": "2026-11-02T15:18:37.047Z",
+      "finishedAt": "2026-11-02T15:18:40.454Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
+      "outputSha256": "7622cf526a5602288606510a2e6093a8f03a87097c4032df36994db22a48f787"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:37:33.654Z",
-  "proofHash": "b765586cfe4626fd8c8c73132f99acf8d301b3ed4a0fa5df20551da02d2bc505"
+  "createdAt": "2026-11-02T15:18:40.460Z",
+  "proofHash": "54250da81f92c4e4e58682d957f33af327a2a57e60bb45f65836a3b9811266d0"
 }

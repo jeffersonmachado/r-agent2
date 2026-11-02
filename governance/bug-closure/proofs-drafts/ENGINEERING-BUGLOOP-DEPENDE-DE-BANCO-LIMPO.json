@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "1dcc2605-4524-4de3-ad30-5ddad9f31cf7",
+  "transitionId": "68cb4780-7268-4f21-9f4f-1035ffa58777",
   "defectId": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/integration/engineeringBugLoopNaturalPathE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:44:07.640Z",
-      "finishedAt": "2026-11-01T09:45:56.495Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
-      "outputSha256": "ed0b5cfc445cdaaeff0dc08ab9be4bab88bc95e1bbde6c31025108aecada1021"
+      "startedAt": "2026-11-02T15:26:05.520Z",
+      "finishedAt": "2026-11-02T15:27:40.532Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO.log",
+      "outputSha256": "77f8a91da82162d29d0836acbd26a55c481bab8bc6f534baee81a8a57ad278fe"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:45:56.508Z",
-  "proofHash": "2190481b5abbf18f77a75e8827f7e337cdd34f11eb3c2a7045b53beff5fa0a48"
+  "createdAt": "2026-11-02T15:27:40.558Z",
+  "proofHash": "e9cc1f301c7727c57f7d534ac71e9de5b2c544bdd306d79dd4cb76459dee875c"
 }

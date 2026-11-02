@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4bf28735-5e83-4072-8a46-737ba3b575f5",
+  "transitionId": "dbbe9050-1530-455a-aaa2-b5bed8b3aa72",
   "defectId": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/releaseArtifactIdentity.test.js"
   ],
@@ -18,36 +18,36 @@
       "command": "npx jest tests/unit/governance/releaseArtifactIdentity.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:15:02.376Z",
-      "finishedAt": "2026-11-01T09:15:05.930Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN.log",
-      "outputSha256": "a45d79b585b5110e43a6926ef43b550237779e637c9c448557deb37c7789e3ae"
+      "startedAt": "2026-11-02T14:50:01.343Z",
+      "finishedAt": "2026-11-02T14:50:09.561Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN.log",
+      "outputSha256": "afc7aa4fe0a094c05cf699c20de89243a7ae6abe37f668c02228467eea2c47aa"
     }
   ],
   "negativeEvidence": [
     {
       "targetFile": "governance/release-artifact-identity.js",
       "control": "isolamento de run deixa de reprovar candidato/entregue de OUTRO run",
-      "mutatedFromSha256": "564f6d3742cefb04406b0d58144466a7c5fdd31170ef6b12dcbe7786441653fe",
-      "mutatedToSha256": "03d9b6bfe32df065fc5315bf0c1c64b276d8b16ea67730bf58c1f5daa4120689",
+      "mutatedFromSha256": "81aabc6feb86b07c840c43f4d2fa8f4bb7e2ce0ef401c6336c2dd314ef2ec859",
+      "mutatedToSha256": "f7020f172cc7d0a0870bf17efce8d535106558e5e8ae69bd09ec708a479bb16d",
       "testPath": "tests/unit/governance/releaseArtifactIdentity.test.js",
       "command": "npx jest tests/unit/governance/releaseArtifactIdentity.test.js --bail=1 --ci",
       "baseline": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN-baseline-f456ad5e.log",
-        "logSha256": "7f7ca063a20d0cf61cb482bb943aabcf44c0038bc49822a00f11e58ecfe3edf1"
+        "logSha256": "17ee0c7fb4492c53b315c11361bd616aec4c868f2f8fdd244a251703f57c24ee"
       },
       "mutated": {
         "exitCode": 1,
         "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN-mutado-f456ad5e.log",
-        "logSha256": "a682239c8d4f3ad927795e86cd4bc988d77db7254a684d63aa28197589f9ea5c"
+        "logSha256": "abc8ce7170c0051e98c08bc62bf35d2bc68be809d021d30f350b35a7c1582062"
       },
       "restored": {
         "exitCode": 0,
         "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN-restaurado-f456ad5e.log",
-        "logSha256": "fcaa6d9936719707d590a7a1bdf50bf1cb9fbf43e5bee078f3607e4ec4fcf5ae"
+        "logSha256": "ac61c77b14568bfbafa442cf545516cdffc61922307def26adc05df358d769c3"
       },
-      "capturedAt": "2026-11-01T05:12:45.810Z"
+      "capturedAt": "2026-11-02T16:10:23.327Z"
     }
   ],
   "artifactHashes": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-01T09:57:30.438542Z",
+    "at": "2026-11-02T16:21:20.308Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:15:05.938Z",
-  "proofHash": "3380b05099340cfe7d0c5b4861014de50f6ff6e2d683db63accce162fd6cd7dd"
+  "createdAt": "2026-11-02T14:50:09.571Z",
+  "proofHash": "4876369a40cc16f905b0e0220819569fab04b2eac700fdd202359c69906c1f80"
 }

@@ -1,0 +1,15 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/projectionSyncOnCanonicalWrite.test.js
+  produtor da decisão canônica sincroniza as projeções
+    ✓ as duas ferramentas canônicas existem em disco (113 ms)
+    ✓ main() chama syncDerivedProjections depois de persistReport (107 ms)
+    ✓ syncDerivedProjections executa o gerador E o validador (não só um) (107 ms)
+    ✓ a sincronização é exportada (permite regressão direta) (106 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.153 s
+Ran all test suites matching /tests\/unit\/governance\/projectionSyncOnCanonicalWrite.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

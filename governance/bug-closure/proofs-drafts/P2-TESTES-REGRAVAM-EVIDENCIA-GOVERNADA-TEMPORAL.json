@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "2b69f7fe-0ab7-43e4-80ec-3bca0c3efd7d",
+  "transitionId": "70015fdb-9eb4-45ef-822b-149842fdf218",
   "defectId": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/governedArtifactPreservation.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/governedArtifactPreservation.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:49:33.430Z",
-      "finishedAt": "2026-11-01T09:49:36.897Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
-      "outputSha256": "cd2bf6ca86789dd4ec9af42103e8167402fd09f82111ac02e8c808dcdb768a69"
+      "startedAt": "2026-11-02T15:32:19.071Z",
+      "finishedAt": "2026-11-02T15:32:21.987Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL.log",
+      "outputSha256": "013602489599e4e6aafb98921c321aa23bb838a1bb68cc1ee4a60cb76b451e6c"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:49:36.904Z",
-  "proofHash": "5b3857f399e8cd925fd34984f554a72e64b70cf6597bc905f81e6770968f626c"
+  "createdAt": "2026-11-02T15:32:21.995Z",
+  "proofHash": "ae5af916912639b82fa629b3cbc1abd0791b9afd443cb3197ad920bbe8477833"
 }

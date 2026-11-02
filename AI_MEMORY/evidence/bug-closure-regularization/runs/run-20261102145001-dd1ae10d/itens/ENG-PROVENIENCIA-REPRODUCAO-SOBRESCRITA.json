@@ -1,0 +1,20 @@
+{
+  "id": "ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Plano derivado sobrescrevia o reproduction DECLARADO do finding (strategy/source sumiam na 1a tentativa)",
+  "classe": "TESTE_FALHOU_AGORA",
+  "teste": "tests/integration/engineeringBugLoop.test.js",
+  "exitCode": 1,
+  "motivo": "a correção declarada não se sustenta no código atual — candidato a REABRIR",
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA.log",
+  "runId": "run-20261102145001-dd1ae10d",
+  "identidade": {
+    "commit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+    "sourceFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+    "inventoryFingerprint": "a01d58f5010e4df434f1c33c0f7ab1bdbcc388434ccd52ef32e4080c0762feb1",
+    "hardeningQueueFingerprint": "512a1d3560e6a811cbb0c118830368ea5c47f73518962f7217e270605a3ba77f",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "fc544db0a0c609de8f065300b6809d4380f6e7846c25ec7cfd4dc44707b61db9"
+}

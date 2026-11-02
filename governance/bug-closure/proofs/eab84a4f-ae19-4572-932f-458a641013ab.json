@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "eab84a4f-ae19-4572-932f-458a641013ab",
+  "defectId": "CI-E2E-CREDENTIAL-SCOPE",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/integration/governanceApprovalFullWorkerE2E.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "command": "npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:40:45.716Z",
+      "finishedAt": "2026-11-02T15:42:25.235Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102154045-b7334607/logs/CI-E2E-CREDENTIAL-SCOPE.log",
+      "outputSha256": "561defb6ac75e97776e8e852360fe42fd19b5c45b87a89f6cbfeabe1439ed581"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
+      "sha256": "fadebfb26ad896bc03d702569fb62d65f98222a76d8ef2b2b1abb701de1e157a"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:42:25.245Z",
+  "proofHash": "ad52d7a4fd28ee7a5bb13c19f2b470b1a92c892da6698b59e5e385c5784ac8cc",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "s3Kc54QuuEIXS8DW83WQFeEinbUL0l7vxOpLy0eQYzYZ/QUJkEJIdmks8DM1jc1WVQhD4MQjYDpUvYykQqJzBw==",
+    "signedAt": "2026-11-02T16:22:18.293Z"
+  }
+}

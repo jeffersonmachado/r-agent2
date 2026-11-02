@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "e078c22f-62fa-46e4-8be8-fe2844c90771",
+  "transitionId": "e2b1153c-d948-4f01-88b6-9380c8131aa2",
   "defectId": "MISSAO-B3-REUSO-PROVENIENCIA",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/releaseSuiteRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:59:22.764Z",
-      "finishedAt": "2026-11-01T09:59:31.429Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101095922-26a73190/logs/MISSAO-B3-REUSO-PROVENIENCIA.log",
-      "outputSha256": "1798b32405aecebb163d96ae648a4610ea4a95745705d83a1e02b394bc0b369e"
+      "startedAt": "2026-11-02T15:36:07.545Z",
+      "finishedAt": "2026-11-02T15:36:17.423Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-B3-REUSO-PROVENIENCIA.log",
+      "outputSha256": "f00051a088dcd808521e6aecb419930dad08082da739404c65f32db93371b0f0"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:59:31.441Z",
-  "proofHash": "5ea23e464815898bbdac561fd433394cf276193730d7bd3465bdb4d69254c249"
+  "createdAt": "2026-11-02T15:36:17.432Z",
+  "proofHash": "eac1ff9226d89afa01a7db1ad5e1c6a0d65c3cc532afb60195760c5a54cbd3a3"
 }

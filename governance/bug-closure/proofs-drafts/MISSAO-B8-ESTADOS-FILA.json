@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "5a6c4eb8-efc3-422b-bcb5-4e7be3e1242c",
+  "transitionId": "6df15036-846c-431c-9dbd-92d85fbb538f",
   "defectId": "MISSAO-B8-ESTADOS-FILA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/governance/hardeningQueueStates.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/hardeningQueueStates.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:47:52.199Z",
-      "finishedAt": "2026-11-01T09:47:55.612Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/MISSAO-B8-ESTADOS-FILA.log",
-      "outputSha256": "3bcf6fc5b1ddf58a76236e56be0dd83173338e0de7e36ea0c6e35f6ca5b0b711"
+      "startedAt": "2026-11-02T15:30:15.199Z",
+      "finishedAt": "2026-11-02T15:30:21.491Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-B8-ESTADOS-FILA.log",
+      "outputSha256": "4721309f36be0ec4badbf06e3f57445f43871e8f30da92b181fce6eefd145c19"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:47:55.619Z",
-  "proofHash": "b5634c589e868a21b22dccddb4849b19abe49547ef84208ee3e3a3505bc17066"
+  "createdAt": "2026-11-02T15:30:21.497Z",
+  "proofHash": "4c73a4d4b86741b73d206440542a22f8838f50b50135d62d41e8efcb995eb295"
 }

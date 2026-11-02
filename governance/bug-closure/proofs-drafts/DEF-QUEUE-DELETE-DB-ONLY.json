@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "3927863c-9407-49ff-a36b-6dbaea1fa41c",
+  "transitionId": "6d30934d-51e0-4152-b20e-cb007b3ecec8",
   "defectId": "DEF-QUEUE-DELETE-DB-ONLY",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/queueModuleRoutes.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/queueModuleRoutes.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:19:32.347Z",
-      "finishedAt": "2026-11-01T09:19:36.634Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/DEF-QUEUE-DELETE-DB-ONLY.log",
-      "outputSha256": "2fba8673cc0585b904373cc093dd0c0808a03ffce04eda41ec37b30e8bc95b1b"
+      "startedAt": "2026-11-02T15:03:37.958Z",
+      "finishedAt": "2026-11-02T15:03:40.926Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/DEF-QUEUE-DELETE-DB-ONLY.log",
+      "outputSha256": "fe33bb1b15913e1a98f8b33ab07239a1234e6958f36ba0243b543af59cbe9c8b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:19:36.641Z",
-  "proofHash": "419b6950688100a075bdf850d40c6dc0f9ca565c92b09f1c1b283f364f37641c"
+  "createdAt": "2026-11-02T15:03:40.940Z",
+  "proofHash": "4dc3d67b7bd807a749cf758943f68081d14c6d8a5c21d1ba189a5162a96b7dba"
 }

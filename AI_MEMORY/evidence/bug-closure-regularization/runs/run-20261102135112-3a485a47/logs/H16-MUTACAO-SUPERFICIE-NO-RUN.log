@@ -1,0 +1,35 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+[all-validators] ERRO: --only com validador(es) fora do agregado: validate:inexistente
+PASS tests/unit/governance/allValidatorsRunner.test.js (10.446 s)
+  coerência de lineage: rodar validadores fora do converge regrava artefatos
+    ✓ o runner carimba o lineage ao final (e permite desligar com --no-stamp) (123 ms)
+    ✓ a revalidação pós-carimbo é RESTRITA a causa de lineage (nunca "tentar de novo") (107 ms)
+  lista de validadores vem do package.json (fonte única)
+    ✓ extrai os MESMOS nomes do agregado, na ordem, sem duplicar (107 ms)
+    ✓ agregado ausente ou vazio é erro explícito (nunca lista vazia silenciosa) (180 ms)
+    ✓ o agregado canônico NÃO foi enfraquecido: continua fail-fast com && (105 ms)
+  relatório completo nunca esconde falha
+    ✓ status FAIL se QUALQUER validador falhar e exit 1 (fail-closed) (110 ms)
+    ✓ TODOS os validadores executados aparecem no relatório (nada é omitido) (108 ms)
+    ✓ relatório declara de ONDE veio a lista (auditável) (104 ms)
+    ✓ resumirSaida descarta ruído do npm e preserva o motivo (104 ms)
+  --only não pode virar verde por vacuidade
+    ✓ nome fora do agregado é ERRO (não "nenhum validador, tudo ok") (104 ms)
+    ✓ subset válido preserva a ordem canônica (102 ms)
+  EXECUÇÃO REAL — exit do runner é fail-closed
+    ✓ com subset que passa: exit 0 e relatório com as entradas (3779 ms)
+    ✓ com validador inexistente: exit != 0 (nunca verde por lista vazia) (232 ms)
+  o runner não fica cego à mutação da superfície que ele prova
+    ✓ a superfície provada é lida pelo mecanismo canônico (não por um walk paralelo) (1160 ms)
+    ✓ fotografia igual a si mesma é ESTAVEL; alteração é MUTADA (com o arquivo identificado) (1172 ms)
+    ✓ atribui SOMENTE falhas de obsolescência (nunca por conveniência) (1093 ms)
+    ✓ superfície ESTAVEL não atribui nenhuma falha (1050 ms)
+    ✓ o runner mede a superfície ANTES e DEPOIS e publica a atribuição no relatório (103 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        10.566 s
+Ran all test suites matching /tests\/unit\/governance\/allValidatorsRunner.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

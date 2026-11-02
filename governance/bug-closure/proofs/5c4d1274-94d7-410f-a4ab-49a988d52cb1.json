@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "5c4d1274-94d7-410f-a4ab-49a988d52cb1",
+  "defectId": "PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "tests/integration/lroOutboxDispatcher.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/integration/lroOutboxDispatcher.test.js",
+      "command": "npx jest tests/integration/lroOutboxDispatcher.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:13:56.350Z",
+      "finishedAt": "2026-11-02T15:14:25.334Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/PROMPT-P1D-OUTBOX-CLAIM-RECUPERAVEL.log",
+      "outputSha256": "691008d29a0af6e8192b31d08c322b9e7196f05733522b89f5ff3d7454f3ba20"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/integration/lroOutboxDispatcher.test.js",
+      "sha256": "2163566a5c4955fb53de00b70aeb74c97f5e2179b4c4ead30dc64488a76be912"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:14:25.349Z",
+  "proofHash": "b86eaf4e6901a0f1db1511585a451766217c2d7427489c31322a21259eb26f0e",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "W1VYcLEBn2roz3AeXoFXKfX4OJ8DxaWD+TctRyGwTyy/M4OQKAyLumlAAvcpLyyeVZeS9hmRRjJq7gqFga+ZAg==",
+    "signedAt": "2026-11-02T16:23:51.424Z"
+  }
+}

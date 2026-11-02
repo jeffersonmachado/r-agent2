@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4b1267b4-37b6-4334-a8d7-468beebf0737",
+  "transitionId": "4a65a467-9b5b-4567-8208-bcea914ef438",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "94dfefe68794277f6af617091983fe6496cc3c16",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T04:24:27.809Z",
-      "finishedAt": "2026-11-02T04:24:30.080Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102042422-886d0e34/logs/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
-      "outputSha256": "ae509813e23a103002dc66fb28f310612fee14a3ad8dadc5f6c05ca5231c4608"
+      "startedAt": "2026-11-02T15:29:19.412Z",
+      "finishedAt": "2026-11-02T15:29:25.015Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
+      "outputSha256": "61086dc5506e7c14af4e8d4172c500be7a3e53b2fbb9b2c56efaaaaee8a9415a"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T04:24:30.087Z",
-  "proofHash": "964bd16d4fb6992ddd8673a60227dc21cd7939d431262e75dd7a15d853a70cb2"
+  "createdAt": "2026-11-02T15:29:25.022Z",
+  "proofHash": "695e07c767d64e0c8fd6d6df0a7e8c8442cba5e062802e4ad198336e63a0af82"
 }

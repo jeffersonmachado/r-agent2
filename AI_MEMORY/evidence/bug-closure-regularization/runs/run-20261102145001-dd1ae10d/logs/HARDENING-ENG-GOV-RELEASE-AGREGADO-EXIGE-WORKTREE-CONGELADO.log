@@ -1,0 +1,23 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/aggregateWorktreeFreeze.test.js
+  agregado — árvore congelada é pré-requisito do veredito
+    ✓ mesmo HEAD e mesma impressão ⇒ congelado (113 ms)
+    ✓ árvore SUJA mas estável continua congelada (a regra não exige limpeza) (104 ms)
+    ✓ HEAD mudou durante o run ⇒ HEAD_MUDOU_DURANTE_O_RUN (o defeito do agg7) (104 ms)
+    ✓ worktree mudou com HEAD igual ⇒ NÃO reprova, mas fica REGISTRADO (105 ms)
+    ✓ sem fotografia (ou sem HEAD resolvido) NÃO é congelado — fail-closed (103 ms)
+  agregado — a fotografia real do repositório tem o formato que a regra consome
+    ✓ capturarEstadoDaArvore devolve HEAD de 40 hex e impressão de 64 hex (290 ms)
+    ✓ duas capturas seguidas, sem tocar em arquivo, são idênticas (determinismo) (473 ms)
+  agregado — veredito reprova quando a árvore muda no meio (integração da etapa)
+    ✓ todos os passos passando + árvore congelada ⇒ PASS (112 ms)
+    ✓ todos os passos passando + HEAD movido ⇒ FAIL nomeado (PASS nunca sobrevive à drift) (108 ms)
+    ✓ worktree mexido durante o run mantém o PASS e registra o aviso na etapa (106 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        2.414 s
+Ran all test suites matching /tests\/unit\/governance\/aggregateWorktreeFreeze.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

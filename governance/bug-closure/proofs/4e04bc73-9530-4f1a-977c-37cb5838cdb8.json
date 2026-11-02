@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "4e04bc73-9530-4f1a-977c-37cb5838cdb8",
+  "defectId": "PROMPT-P1F-STREAM-ISOLAMENTO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
+  "requiredTests": [
+    "frontend/src/shared/useLroStream.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/shared/useLroStream.test.jsx",
+      "command": "npm --prefix frontend run test -- src/shared/useLroStream.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-02T15:14:52.121Z",
+      "finishedAt": "2026-11-02T15:15:00.235Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/PROMPT-P1F-STREAM-ISOLAMENTO.log",
+      "outputSha256": "9bb42037659064f83d8fc18537ce13ed44295cd1c7e6900f1f3eaafc6fc67c8b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/shared/useLroStream.test.jsx",
+      "sha256": "b083c622b7423b46106d9bf412e12a54d5794c1e8199fee512d40915d10ceb36"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-02T15:15:00.242Z",
+  "proofHash": "ea26d18bd3a3c859541feeb1052ac2ec0808c8757db9ee525c23eb7437adb629",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Sj6s2NoOL5a0/vGo/v6bT9gxJfr/EXGru/gjrWo1wo3OyfkUjGAgKn45QplWWAvfkDVTxpRLLvi0CFxoz9BnAQ==",
+    "signedAt": "2026-11-02T16:23:51.991Z"
+  }
+}

@@ -1,0 +1,39 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/securityIntel/waiverService.test.js
+  waiverService — solicitação (não isenta nada)
+    ✓ recusa solicitação sem expiração (isenção perpétua não é representável) (226 ms)
+    ✓ recusa expiração no passado (105 ms)
+    ✓ recusa prazo acima do limite da política e aceita dentro do limite (108 ms)
+    ✓ recusa motivo sem substância e SOLICITANTE ausente (sem autor não é trilha) (104 ms)
+    ✓ recusa isentar achado que NÃO é risco aberto (VEX ou resolvido) (106 ms)
+    ✓ recusa waiver para achado inexistente (nada de isenção de fantasma) (104 ms)
+    ✓ SOLICITAR registra PENDING e NÃO mitiga o achado (110 ms)
+    ✓ é idempotente: a mesma solicitação não duplica registro (105 ms)
+  waiverService — aprovação (segregação de funções e escopo)
+    ✓ AUTOAPROVAÇÃO é proibida: quem solicita não concede (106 ms)
+    ✓ compara solicitante e aprovador sem depender de caixa/espaços (103 ms)
+    ✓ exige aprovador identificado (sem identidade não há aprovação) (105 ms)
+    ✓ waiver inexistente, revogado ou expirado não pode ser aprovado (104 ms)
+    ✓ já aprovado é idempotente (não mitiga duas vezes) (103 ms)
+    ✓ CANCELA o perdedor da corrida: CAS de PENDING→ACTIVE (aprovação concorrente/replay) (105 ms)
+    ✓ ESCOPO alterado após a solicitação é recusado (aprovação não é reaproveitável) (104 ms)
+    ✓ caminho válido: aprova, mitiga o achado e registra o evento com proveniência (108 ms)
+  waiverService — revogação e vigência
+    ✓ revogação concorrente: só um revoga (104 ms)
+    ✓ revogar uma SOLICITAÇÃO pendente não mexe no achado (nada estava mitigado) (103 ms)
+    ✓ revogar um waiver APROVADO devolve o achado ao risco aberto com evento (103 ms)
+    ✓ vigentes exigem status ACTIVE na própria query (PENDING não isenta) (720 ms)
+    ✓ classifica o estado sem confundir pendente, expirado e revogado (104 ms)
+  waiverService — contrato com o gate de release
+    ✓ entrega o formato consumido pelo motor (findingKey + expiresAt) (107 ms)
+    ✓ RECUSA entregar como isenção um waiver cujo escopo mudou (e diz o motivo) (105 ms)
+    ✓ normalizeCreation é puro, deriva o hash de escopo e não depende de banco (105 ms)
+    ✓ hash de escopo muda quando o escopo muda (pacote, serviço, severidade ou prazo) (104 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       25 passed, 25 total
+Snapshots:   0 total
+Time:        4.136 s, estimated 5 s
+Ran all test suites matching /tests\/unit\/securityIntel\/waiverService.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "1452a73b-2110-49b5-ab5b-f3f61f0bd82e",
+  "transitionId": "58f66c14-1742-42cd-a4cd-4dc166e5299b",
   "defectId": "MISSAO-B4-REVISAO-INDEPENDENTE",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "c92fa9432b5a8645cd77f8c9ea57839f1f3f56c4",
-  "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
+  "evaluatedCommit": "a15f550e3522b48a49fb2d7cc6c948fdf2b60f01",
+  "codeFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "requiredTests": [
     "tests/unit/engineeringMission/reviewIndependenceProof.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringMission/reviewIndependenceProof.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:59:31.453Z",
-      "finishedAt": "2026-11-01T09:59:35.101Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101095922-26a73190/logs/MISSAO-B4-REVISAO-INDEPENDENTE.log",
-      "outputSha256": "49ec5224ef28a8333d8e53d6ddcb8a0ada6151d94027cc6b5870ff03af97a8fd"
+      "startedAt": "2026-11-02T15:36:17.444Z",
+      "finishedAt": "2026-11-02T15:36:26.592Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102145001-dd1ae10d/logs/MISSAO-B4-REVISAO-INDEPENDENTE.log",
+      "outputSha256": "8a9705ad0e9409096cca8e3e1b4be97278261ecb0a57e33c951d1596c1c86502"
     }
   ],
   "negativeEvidence": [],
@@ -41,8 +41,8 @@
     "policyId": "BUG_CLOSURE_FIRST",
     "policyVersion": "1.0.0",
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
-    "motivoOriginal": "PROVA_DE_FECHAMENTO_AUSENTE"
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:59:35.109Z",
-  "proofHash": "d21b939f628b2e341cf7979d168d62875998282c924d23cc8f91a09643da8d84"
+  "createdAt": "2026-11-02T15:36:26.600Z",
+  "proofHash": "998ef6dcb6fdda9aa288f4e669ab91429edc00cfad7899c41d7a2bbc7cf0a94e"
 }
