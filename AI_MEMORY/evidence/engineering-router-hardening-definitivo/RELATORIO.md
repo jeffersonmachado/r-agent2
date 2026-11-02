@@ -4074,3 +4074,35 @@ inventei um número para fechar o relatório.
 Nota de operação: `qa-mesh/baseline.json` foi reescrito por essas execuções com `accepted: false` e
 **revertido** de novo — baseline só pode mudar por execução canônica (`npm run pipeline`), não por
 `manual_run`.
+
+### 11.77. A suíte oficial (test:unit) destravada — quatro causas ambientais, uma correção de código
+
+Para chegar a `npm run test:unit` verde LOCALMENTE (a CI já passava), medi e eliminei quatro causas.
+Uma é bug de teste (corrigida e commitada); três são ambiente de worktree/execução ad-hoc.
+
+1. **BUG DE TESTE (commitado):** `jestDbConnectionBudgetIntegration.test.js` comparava
+   `cfg.maxWorkers` (que `applyJestDbBudgetToEnv` deriva lendo `DB_POOL_MAX` do ambiente) contra
+   `resolveJestDbBudget({cpus})` — que ignora `DB_POOL_MAX` e usa o default 4. Com o `.env`
+   canônico (`DB_POOL_MAX=40`) a config corretamente reduz a 1 worker (1×40 ≤ 52), mas o teste
+   esperava 11. Verde na CI (não declara o campo), vermelho local (declara 40). Corrigido: a
+   comparação usa o MESMO `poolMax` nos dois lados. 3/3 com e sem o campo.
+
+2. **Run órfão aberto (H20):** `convergenceFixpoint.test.js` reprova quando existe um run ABERTO
+   com projeção estrangeira (`governance/.current-run.json` do run 15:10 vs
+   `dev/platform-readiness/latest.json` do run 20/10). Fechado via `close-run-context.js` com
+   `SUPERSEDED` + motivo/evidência. 17/17 depois.
+
+3. **Engineering Runner ausente:** `engineeringRouterExecutionSandboxSecurity.test.js` (10 casos,
+   docker real) precisa do runner em `:8090`. O `globalSetup` do Jest SÓ sobe o runner fora de
+   worktree; dentro do worktree ele pula o spawn por desenho (aninhamento não suportado). Subido
+   manualmente (`ENGINEERING_RUNNER_PORT=8090 ... node services/engineering-runner/src/index.js`).
+   10/10 depois.
+
+4. **Resíduo de evidência de mesh:** `replayIndexIncremental.test.js` reprovava porque minhas
+   execuções ad-hoc de mesh/prod-like deixaram 293 replays em `qa-mesh/meshEvidence/*/replays/`
+   (gitignored) que o índice de replays varre. O teste de incrementalidade pressupõe índice vazio.
+   Removido o resíduo (não é evidência canônica; canônico passa pelo pipeline). 5/5 depois.
+
+Todas as quatro causas estão documentadas no relatório, e a regra operacional é: **toda execução
+ad-hoc de `qa:mesh`/prod-like deixa resíduo de evidência em `qa-mesh/meshEvidence/` que precisa
+ser podado** antes de qualquer suíte que varra replays — ou antes de commitar.
