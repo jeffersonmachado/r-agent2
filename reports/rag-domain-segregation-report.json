@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T19:29:31.263Z",
+  "generatedAt": "2026-11-02T21:29:34.633Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -9,17 +9,15 @@
     "indexedSecrets": 0,
     "operationalAccessToSystemDomain": 0,
     "dbChecksFailed": 0,
-    "runtimeChecksFailed": 1,
+    "runtimeChecksFailed": 0,
     "internalTokenMissing": 0
   },
   "probes": {
     "serviceReachable": true,
-    "crossDomainLeakage": "skipped",
-    "crossTenantLeakage": "skipped",
+    "crossDomainLeakage": 0,
+    "crossTenantLeakage": 0,
     "operationalAccessToSystemDomain": 0,
-    "details": [
-      "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 200"
-    ]
+    "details": []
   },
   "distribution": [
     {
@@ -35,7 +33,7 @@
     {
       "domain": "SYSTEM",
       "classification": "DEVELOPMENT",
-      "count": 3043
+      "count": 3045
     },
     {
       "domain": "SYSTEM",
@@ -43,10 +41,8 @@
       "count": 5860
     }
   ],
-  "details": [
-    "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 200"
-  ],
-  "status": "FAIL",
+  "details": [],
+  "status": "PASS",
   "runId": "rap-governed-20261102162732564-b5cfae28",
   "sourceFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
   "sourceCommit": "d21a66196f3012440f9c16e402353c94bc44bf53",
