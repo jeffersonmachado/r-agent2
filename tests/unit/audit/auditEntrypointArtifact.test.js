@@ -80,12 +80,35 @@ describe('AUDIT_ENTRYPOINT.md — invariantes do ponto de entrada de auditoria',
 
   test('todo proof registrado tem veredito e sha256 — nenhuma linha oca', () => {
     const doc = extrairPayload(fs.readFileSync(ARTEFATO, 'utf8'));
+    expect(Array.isArray(doc.payload.provas)).toBe(true);
+    expect(doc.payload.provas.length).toBeGreaterThan(0);
     for (const p of doc.payload.provas) {
       expect(typeof p.path).toBe('string');
       expect(p.existe).toBe(true);
       expect(p.sha256).toMatch(/^[0-9a-f]{64}$/);
       expect(p.veredito).not.toBeNull();
     }
+  });
+
+  test('provas AUSENTES são separadas e honestas — sem sha256/veredito fabricados', () => {
+    // DEFEITO MEDIDO (2026-11-01): regenerar o entrypoint numa máquina sem os relatórios de
+    // release listava as provas ausentes DENTRO de `provas` com existe:false/sha256:null —
+    // a "linha oca" que o teste acima proíbe. Agora `provas` só contém o que existe, e o que
+    // falta vai para `provasAusentes` com NADA além de path/gitTracked/campoVeredito.
+    const doc = extrairPayload(fs.readFileSync(ARTEFATO, 'utf8'));
+    const ausentes = doc.payload.provasAusentes;
+    expect(Array.isArray(ausentes)).toBe(true);
+    for (const a of ausentes) {
+      expect(typeof a.path).toBe('string');
+      expect(typeof a.gitTracked).toBe('boolean');
+      expect(typeof a.campoVeredito).toBe('string');
+      expect(a.existe).toBeUndefined();
+      expect(a.sha256).toBeUndefined();
+      expect(a.veredito).toBeUndefined();
+    }
+    // Nenhuma prova aparece nos dois lados ao mesmo tempo.
+    const presentes = new Set(doc.payload.provas.map((p) => p.path));
+    for (const a of ausentes) expect(presentes.has(a.path)).toBe(false);
   });
 
   test('o auditEpoch é RECALCULÁVEL de forma independente a partir do payload', () => {
