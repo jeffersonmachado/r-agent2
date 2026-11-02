@@ -169,9 +169,25 @@ release_payload_scan_list() {
   [[ "$found" == false ]]
 }
 
+# Nome do diretório raiz do checkout, que aparece como PRIMEIRO segmento de todo
+# caminho dentro do ZIP. O valor era `r-agent2/` fixo no código, então empacotar
+# de um checkout com outro nome (worktree de auditoria, clone local) fazia TODO
+# asset aprovado virar "runtime-image-outside-approved-assets": o prefixo não era
+# removido e `docs/`/`frontend/public/` deixavam de casar com a allowlist.
+# DEFEITO MEDIDO (2026-11-02): `bash scripts/generate-zip.sh` em
+# `/opt/results/ria/er-fixci` reprovou 9 PNGs legítimos (docs/manual/img/*,
+# frontend/public/icons/*) e o release:seal abortou no PASS 1 sem produzir o ZIP.
+# A remoção continua sendo SÓ do segmento raiz declarado pelo empacotador: um
+# caminho como `outro/frontend/public/x.png` segue sem normalização e é barrado.
+RELEASE_PAYLOAD_ROOT_BASENAME="${RELEASE_PAYLOAD_ROOT_BASENAME:-r-agent2}"
+
 release_payload_normalize_entry() {
   local entry="$1"
+  local root="${RELEASE_PAYLOAD_ROOT_BASENAME:-r-agent2}"
   entry="${entry#./}"
+  entry="${entry#${root}/}"
+  # Compatibilidade: payloads antigos nomeados `r-agent2` continuam normalizando
+  # mesmo quando o empacotador declarou outro nome de raiz.
   entry="${entry#r-agent2/}"
   printf '%s\n' "$entry"
 }

@@ -11,6 +11,11 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 SCRIPT_DIR="$PROJECT_DIR/scripts"
 source "$SCRIPT_DIR/release-payload-blocklist.sh"
+# Raiz do checkout define o prefixo que aparece em cada entrada do ZIP; o
+# normalizador da blocklist precisa saber o nome REAL (não `r-agent2` fixo),
+# senão todo asset aprovado é reprovado quando o checkout tem outro nome.
+RELEASE_PAYLOAD_ROOT_BASENAME="$PROJECT_NAME"
+export RELEASE_PAYLOAD_ROOT_BASENAME
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 DEFAULT_OUTPUT_DIR="$PROJECT_DIR/dist"
 DEFAULT_ZIP_NAME="${PROJECT_NAME}-${TIMESTAMP}.zip"
@@ -41,7 +46,19 @@ REQUIRED_PROOF_ENTRIES=(
   'governance/cleanup-proof.json'
 )
 
-REQUIRED_PROOF_REGEX='^(r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof)\.json)$'
+# Isenção dos PROVAS OBRIGATÓRIAS do padrão proibido acima.
+#
+# O prefixo de raiz era `r-agent2/` FIXO. Empacotando de um checkout com outro
+# nome (worktree de auditoria), o ZIP entra com `er-fixci/qa/smoke/prod-like/...`
+# e a isenção NÃO casava — a própria prova obrigatória era reprovada por
+# `(^|/)qa/smoke/`, o ZIP era apagado e o release abortava. Medido em
+# 2026-11-02 ao empacotar `/opt/results/ria/er-fixci`:
+#   Erro: padrao proibido detectado no ZIP ((^|/)qa/smoke/):
+#   er-fixci/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json
+# A raiz é declarada pelo empacotador (RELEASE_PAYLOAD_ROOT_BASENAME) e a forma
+# histórica `r-agent2/` segue aceita.
+REQUIRED_PROOF_ROOT_PREFIX="${RELEASE_PAYLOAD_ROOT_BASENAME//[^A-Za-z0-9._-]/}"
+REQUIRED_PROOF_REGEX="^(${REQUIRED_PROOF_ROOT_PREFIX}/|r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof)\.json)$"
 
 OUTPUT_DIR="$DEFAULT_OUTPUT_DIR"
 ZIP_NAME="$DEFAULT_ZIP_NAME"
