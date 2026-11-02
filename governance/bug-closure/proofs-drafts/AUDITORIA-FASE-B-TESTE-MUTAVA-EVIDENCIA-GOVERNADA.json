@@ -1,13 +1,13 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cbc815f0-d242-4e03-b19a-26bc1638ecb0",
+  "transitionId": "a56c962a-d7f4-4553-a041-d10fca24a6d5",
   "defectId": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "d1b052e33910a2936d0095a5bd061a77c561210c",
+  "evaluatedCommit": "94dfefe68794277f6af617091983fe6496cc3c16",
   "codeFingerprint": "ba0673e3cf2795172599b93da74b6d875c8d0f36c7fa569b0953fd34c7154bed",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
@@ -18,17 +18,17 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-01T09:17:26.550Z",
-      "finishedAt": "2026-11-01T09:17:30.596Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261101091502-3f7f94bc/logs/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log",
-      "outputSha256": "1699a40a131eb54460159b8fb33372818184a655b53b0e7c86c33a82fd99db65"
+      "startedAt": "2026-11-02T04:24:25.042Z",
+      "finishedAt": "2026-11-02T04:24:27.794Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102042422-886d0e34/logs/AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA.log",
+      "outputSha256": "d74f8352fdc3598b8671adf0aebca892d4642d3634be1680eb03808750018b3f"
     }
   ],
   "negativeEvidence": [],
   "artifactHashes": [
     {
       "path": "tests/unit/audit/auditEntrypointArtifact.test.js",
-      "sha256": "1635749c1e0ea9f49cb4d15a9e45615fca09a52f862a7b75b4e1d12d8a4dc9e4"
+      "sha256": "2a104e9cba8d86d88de32e8f5e8e55e06ddd29e3f8fdd02d231cede8a6f9d65f"
     }
   ],
   "actor": {
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-01T09:17:30.603Z",
-  "proofHash": "d921556d419bd73973e8ced6bee808808b2d95c217051adca59ed88889c2d21e"
+  "createdAt": "2026-11-02T04:24:27.802Z",
+  "proofHash": "f41bb62e9a6aa3fef45abef43d6b5eeef7d651df70cbc4941fff9032a034f058"
 }

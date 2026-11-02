@@ -3,7 +3,7 @@
   "repository": "jeffersonmachado/r-agent2",
   "branch": "mission/p0p1-hardening-20261010",
   "baseline": "2f1795454",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-02",
   "consumers": [
     ".github/hooks/continue-until-done.cjs (eventos Stop/SessionStart)"
   ],
@@ -1440,9 +1440,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "525116fd2828038fcd414a08e830dcdb75b15f1e",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 525116fd2828",
-      "closureProof": "governance/bug-closure/proofs/f1fbe147-f9e7-432a-ae68-a763f55317d3.json",
-      "attestationId": "f1fbe147-f9e7-432a-ae68-a763f55317d3",
-      "attestedAt": "2026-11-01T09:56:43.366Z"
+      "closureProof": "governance/bug-closure/proofs/4b1267b4-37b6-4334-a8d7-468beebf0737.json",
+      "attestationId": "4b1267b4-37b6-4334-a8d7-468beebf0737",
+      "attestedAt": "2026-11-02T04:24:47.548Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
@@ -1609,9 +1609,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/2bf02dcc-b97e-465a-8a5c-d901d63dd62f.json",
-      "attestationId": "2bf02dcc-b97e-465a-8a5c-d901d63dd62f",
-      "attestedAt": "2026-11-01T09:56:28.867Z"
+      "closureProof": "governance/bug-closure/proofs/cbba8604-91e1-4b4d-8250-662205d6dbb2.json",
+      "attestationId": "cbba8604-91e1-4b4d-8250-662205d6dbb2",
+      "attestedAt": "2026-11-02T04:24:47.102Z"
     },
     {
       "id": "AUDITORIA-BRANCH-INVENTORY",
@@ -1655,9 +1655,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/cbc815f0-d242-4e03-b19a-26bc1638ecb0.json",
-      "attestationId": "cbc815f0-d242-4e03-b19a-26bc1638ecb0",
-      "attestedAt": "2026-11-01T09:56:29.869Z"
+      "closureProof": "governance/bug-closure/proofs/a56c962a-d7f4-4553-a041-d10fca24a6d5.json",
+      "attestationId": "a56c962a-d7f4-4553-a041-d10fca24a6d5",
+      "attestedAt": "2026-11-02T04:24:47.401Z"
     },
     {
       "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
@@ -1679,9 +1679,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/85a79f28-b15d-44af-81bf-5b021e693963.json",
-      "attestationId": "85a79f28-b15d-44af-81bf-5b021e693963",
-      "attestedAt": "2026-11-01T09:56:29.270Z"
+      "closureProof": "governance/bug-closure/proofs/927dbee4-44ad-49db-8428-0facaf3e506e.json",
+      "attestationId": "927dbee4-44ad-49db-8428-0facaf3e506e",
+      "attestedAt": "2026-11-02T04:24:47.248Z"
     },
     {
       "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
