@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "ae669f0e-f417-48a0-9629-93713c5bc2db",
+  "defectId": "H17-HOOKS-EDITOR",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "frontend/src/components/FlowTemplateSelector.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/components/FlowTemplateSelector.test.jsx",
+      "command": "npm --prefix frontend run test -- src/components/FlowTemplateSelector.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:26:46.165Z",
+      "finishedAt": "2026-11-03T21:26:49.642Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/H17-HOOKS-EDITOR.log",
+      "outputSha256": "4a111f9818464e963a85b86b211597a962b940b30232fc5085736a93a0f774c3"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/components/FlowTemplateSelector.test.jsx",
+      "sha256": "be2a03af7ab6f0929162dd250343ae2ea4b443a96d646bdd42bebb9a387a7790"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:26:49.648Z",
+  "proofHash": "5dbad3e663fe3c0af6bdff17c4a408776711e96beacd546a04079a395ede7a68",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "520XwiS/0oR16iPDeJLgf6Yl+S7DnuD/zYyOyTc4zR9/PlXZ003z/ECGf/9MmTfv+Nbx5vzTiXiFietNyiP8Ag==",
+    "signedAt": "2026-11-03T22:11:14.960Z"
+  }
+}

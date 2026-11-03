@@ -1,0 +1,17 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/reportWriteLineage.test.js
+  writeReport — todo relatório nasce com lineage (P2-2)
+    ✓ runId e sourceFingerprint do run corrente entram no relatório (119 ms)
+    ✓ artifactType é derivado do nome do arquivo quando o relatório não declara um (104 ms)
+    ✓ artifactType declarado pelo produtor é preservado (idempotente, não sobrescreve) (107 ms)
+    ✓ runId já preenchido pelo produtor NÃO é sobrescrito (107 ms)
+    ✓ sem run governado o relatório ainda é escrito, com lineage nulo explícito (não quebra o produtor) (125 ms)
+    ✓ não-vacuidade: o payload ANTIGO (sem withLineage) não tinha runId (109 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        1.133 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/reportWriteLineage.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b4b68b0d-3ac0-4e95-b7ce-38eb1fe8ae73",
+  "defectId": "DEF-WS-AUTH-POS-LOGIN",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx"
+  ],
+  "executions": [
+    {
+      "testPath": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "command": "npm --prefix frontend run test -- src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:24:38.521Z",
+      "finishedAt": "2026-11-03T21:24:43.543Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/DEF-WS-AUTH-POS-LOGIN.log",
+      "outputSha256": "fcb036bbc3df0f4db65a2ad7b3fd3ba9a1b355e015919029e8bdacc43e85823d"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
+      "sha256": "f5e9b22cb017852c22a4b7ca058f8e4294e3cc62ea53d5d2ea8cd4bcb5020017"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:24:43.550Z",
+  "proofHash": "82760a77af677a91a6a87ff20221e24b2a6e8a18ad76a2f3a2b1bb8abb2bf565",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "YaTc93+dx/coWaT01UGCMEoDON3l5AcvIQjAyprNs3Gqt0arJC62/wqYimmLcm7uyaoco74MIpXqLyju1qdFAA==",
+    "signedAt": "2026-11-03T22:10:49.602Z"
+  }
+}

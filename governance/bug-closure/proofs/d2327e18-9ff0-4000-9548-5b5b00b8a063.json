@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "d2327e18-9ff0-4000-9548-5b5b00b8a063",
+  "defectId": "P1-13",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/governance/smokeEvidenceSummary.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/smokeEvidenceSummary.test.js",
+      "command": "npx jest tests/unit/governance/smokeEvidenceSummary.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:29:20.346Z",
+      "finishedAt": "2026-11-03T21:29:22.771Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/P1-13.log",
+      "outputSha256": "050136c64f1114fad4639486c63be06e5e06ba3897dc3a5b7ac16efa9ebec387"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/smokeEvidenceSummary.test.js",
+      "sha256": "d1218c60bc0ee5f0a8570e7e5890edc2c919151420efc90218aaa5af9c0ac314"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:29:22.779Z",
+  "proofHash": "a571fb029b1fb39d6a74845f2cf1154ab0f1ff9ba10e9bdb67893037c7bb9cbb",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "eGGjOAasY0bQelIPf6Fdo5Rrg+BwJYIOO5TxaogDnmg8ILdf+ZmsmHm1R7Ie9J97d1rWlPZ7qcX9wY5Siv1VAQ==",
+    "signedAt": "2026-11-03T22:11:54.423Z"
+  }
+}

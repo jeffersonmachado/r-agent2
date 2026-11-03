@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "2d9fc682-316b-4439-9fae-c2affbede1fd",
+  "defectId": "L1-RUNNER-CONTAINER-MODULE-NOT-FOUND",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/engineeringRunnerDockerfileClosure.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
+      "command": "npx jest tests/unit/engineeringRunnerDockerfileClosure.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T22:39:49.370Z",
+      "finishedAt": "2026-11-03T22:39:58.885Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/L1-RUNNER-CONTAINER-MODULE-NOT-FOUND.log",
+      "outputSha256": "25ffa2039db92aa7ee96c23b6a0480f09a479e873dce6f6c21ae916ffbfe4f42"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
+      "sha256": "294f9e1bbe93b80c8a3a438d0fe16528d6460dece3cb58461c6e9b9671844a84"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T22:39:58.895Z",
+  "proofHash": "2177ed61ae6fef56c2fc005019ce21109973503721c5296f85b3b70b6242f868",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "OfHxrW+v/MefsrpGD2E6Z6e2oNkwCmwaqGMrKVEa4DLvuW9aCKNCBx5nxtPJTQkBPYGyFa1vFIbiNxFt1o9/Dg==",
+    "signedAt": "2026-11-03T23:21:20.044Z"
+  }
+}

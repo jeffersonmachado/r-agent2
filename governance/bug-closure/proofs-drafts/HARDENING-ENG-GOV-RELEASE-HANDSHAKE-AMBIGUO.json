@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "12991bea-3045-44f8-a27a-b25a1eb32288",
+  "transitionId": "83269716-7eff-4e38-83d9-105efbff6f96",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:38:28.364Z",
-      "finishedAt": "2026-11-03T14:38:31.155Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
-      "outputSha256": "d89ad731c7290991f1ca018d3cbfe3360007d42f71963f8c2e4f10ebb31dae89"
+      "startedAt": "2026-11-03T22:37:29.700Z",
+      "finishedAt": "2026-11-03T22:37:35.785Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
+      "outputSha256": "f902e07b2951802d0ac145e22b6bf89d396bee8344b516af27be0e0aff024173"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:38:31.161Z",
-  "proofHash": "d59fe872ba12c3c1cdc7431bc604acacea5840eb0176d19e7f33f82a83ee654d"
+  "createdAt": "2026-11-03T22:37:35.792Z",
+  "proofHash": "d75f6401dbbf6930fa9bd4faabc0e638b38f8b9b0f5e31cf4d710898db28b01b"
 }

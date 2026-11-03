@@ -40,9 +40,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/approvalAuthority.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/15f612b3-0147-4f41-8c44-2a8a8d7f9994.json",
-      "attestationId": "15f612b3-0147-4f41-8c44-2a8a8d7f9994",
-      "attestedAt": "2026-11-03T15:50:19.085Z"
+      "closureProof": "governance/bug-closure/proofs/7757f86d-f74e-49bd-8735-134cd7c37157.json",
+      "attestationId": "7757f86d-f74e-49bd-8735-134cd7c37157",
+      "attestedAt": "2026-11-03T23:21:29.522Z"
     },
     {
       "id": "P0-2",
@@ -60,9 +60,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceManifestHashBaseline.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/d537ac1e-074d-407c-a1a9-33c3f91d50cc.json",
-      "attestationId": "d537ac1e-074d-407c-a1a9-33c3f91d50cc",
-      "attestedAt": "2026-11-03T15:50:19.509Z"
+      "closureProof": "governance/bug-closure/proofs/32a5b44c-29e8-46b5-b41b-945e9c8aeaed.json",
+      "attestationId": "32a5b44c-29e8-46b5-b41b-945e9c8aeaed",
+      "attestedAt": "2026-11-03T23:21:30.394Z"
     },
     {
       "id": "P0-3",
@@ -80,9 +80,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "9308a01d944eac08b98dd3b7861c39be81ac90e8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/securityGateProvenance.test.js exit=0 em 9308a01d944e",
-      "closureProof": "governance/bug-closure/proofs/08948b2b-2b2a-4a85-b075-4e053d435a4f.json",
-      "attestationId": "08948b2b-2b2a-4a85-b075-4e053d435a4f",
-      "attestedAt": "2026-11-03T15:50:20.070Z"
+      "closureProof": "governance/bug-closure/proofs/8ec8dd5c-e2ae-46c1-bca1-dd4a4e1de4b0.json",
+      "attestationId": "8ec8dd5c-e2ae-46c1-bca1-dd4a4e1de4b0",
+      "attestedAt": "2026-11-03T23:21:31.073Z"
     },
     {
       "id": "P0-4",
@@ -100,9 +100,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/waiverService.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/1e817d38-8864-4a3a-8bbb-b64cbe3abbec.json",
-      "attestationId": "1e817d38-8864-4a3a-8bbb-b64cbe3abbec",
-      "attestedAt": "2026-11-03T15:50:20.627Z"
+      "closureProof": "governance/bug-closure/proofs/a6f8ee59-6aa7-44ec-a2e3-a45c93e1fe34.json",
+      "attestationId": "a6f8ee59-6aa7-44ec-a2e3-a45c93e1fe34",
+      "attestedAt": "2026-11-03T23:21:31.691Z"
     },
     {
       "id": "P0-5",
@@ -120,9 +120,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/integration/securityWaiverApprovalE2E.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/85ff3a50-3c95-443f-ad27-87fec8fb8c10.json",
-      "attestationId": "85ff3a50-3c95-443f-ad27-87fec8fb8c10",
-      "attestedAt": "2026-11-03T15:50:21.057Z"
+      "closureProof": "governance/bug-closure/proofs/2250868c-8772-4e81-a285-0abac382a131.json",
+      "attestationId": "2250868c-8772-4e81-a285-0abac382a131",
+      "attestedAt": "2026-11-03T23:21:32.340Z"
     },
     {
       "id": "P1-1",
@@ -140,9 +140,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/testSuiteClassifier.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/8118c70d-8038-4985-a07b-7e45137d228b.json",
-      "attestationId": "8118c70d-8038-4985-a07b-7e45137d228b",
-      "attestedAt": "2026-11-03T15:50:27.920Z"
+      "closureProof": "governance/bug-closure/proofs/afdf0c41-6122-4d07-bdc1-d0c9a1951833.json",
+      "attestationId": "afdf0c41-6122-4d07-bdc1-d0c9a1951833",
+      "attestedAt": "2026-11-03T23:21:43.613Z"
     },
     {
       "id": "P1-2",
@@ -160,9 +160,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "64ea653190c5b5fe49614277f99229a6fb004397",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMissionReviewEngines.test.js exit=0 em 64ea653190c5",
-      "closureProof": "governance/bug-closure/proofs/e9fb1c76-88ea-4050-9621-424b0d61d3a7.json",
-      "attestationId": "e9fb1c76-88ea-4050-9621-424b0d61d3a7",
-      "attestedAt": "2026-11-03T15:50:31.599Z"
+      "closureProof": "governance/bug-closure/proofs/d1971e57-c2da-4b10-8b9b-a5f681cee575.json",
+      "attestationId": "d1971e57-c2da-4b10-8b9b-a5f681cee575",
+      "attestedAt": "2026-11-03T23:21:49.438Z"
     },
     {
       "id": "P1-3",
@@ -180,9 +180,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "64ea653190c5b5fe49614277f99229a6fb004397",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/deriveGatesEvidence.test.js exit=0 em 64ea653190c5",
-      "closureProof": "governance/bug-closure/proofs/22d9c7ba-76b4-4140-a715-b94d1ff57297.json",
-      "attestationId": "22d9c7ba-76b4-4140-a715-b94d1ff57297",
-      "attestedAt": "2026-11-03T15:50:32.030Z"
+      "closureProof": "governance/bug-closure/proofs/99aacba8-766b-4d87-81a1-9d584937f91a.json",
+      "attestationId": "99aacba8-766b-4d87-81a1-9d584937f91a",
+      "attestedAt": "2026-11-03T23:21:49.817Z"
     },
     {
       "id": "P1-4",
@@ -200,9 +200,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "64ea653190c5b5fe49614277f99229a6fb004397",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringMission/activePreventiveRules.test.js exit=0 em 64ea653190c5",
-      "closureProof": "governance/bug-closure/proofs/79515cb4-7c89-4576-98de-95e2bd2561b4.json",
-      "attestationId": "79515cb4-7c89-4576-98de-95e2bd2561b4",
-      "attestedAt": "2026-11-03T15:50:32.557Z"
+      "closureProof": "governance/bug-closure/proofs/eeb9f8fb-26c1-41da-b26d-22483e675d48.json",
+      "attestationId": "eeb9f8fb-26c1-41da-b26d-22483e675d48",
+      "attestedAt": "2026-11-03T23:21:50.289Z"
     },
     {
       "id": "P1-5",
@@ -220,9 +220,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "2f35742d23c7c551e4d978ca0516bb6dde88842c",
       "verificationNote": "reconcile-hardening-queue.js: rag-service/tests/test_hybrid_search.py exit=0 em 2f35742d23c7",
-      "closureProof": "governance/bug-closure/proofs/305ad9f8-6204-4042-b42f-de4a9806de25.json",
-      "attestationId": "305ad9f8-6204-4042-b42f-de4a9806de25",
-      "attestedAt": "2026-11-03T15:50:33.034Z"
+      "closureProof": "governance/bug-closure/proofs/d7505d34-aa8c-44c8-af49-04de0147a1b9.json",
+      "attestationId": "d7505d34-aa8c-44c8-af49-04de0147a1b9",
+      "attestedAt": "2026-11-03T23:21:50.653Z"
     },
     {
       "id": "P1-6",
@@ -240,9 +240,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "2f35742d23c7c551e4d978ca0516bb6dde88842c",
       "verificationNote": "reconcile-hardening-queue.js: rag-service/tests/test_hybrid_isolation_real_db.py exit=0 em 2f35742d23c7",
-      "closureProof": "governance/bug-closure/proofs/f4a278ed-6024-441a-964a-bec64a5bcde1.json",
-      "attestationId": "f4a278ed-6024-441a-964a-bec64a5bcde1",
-      "attestedAt": "2026-11-03T15:50:33.533Z"
+      "closureProof": "governance/bug-closure/proofs/46589cfe-6d8e-448e-b969-bb482efafb29.json",
+      "attestationId": "46589cfe-6d8e-448e-b969-bb482efafb29",
+      "attestedAt": "2026-11-03T23:21:51.021Z"
     },
     {
       "id": "P1-7",
@@ -260,9 +260,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "6c5b105469beba5647f2d523676c6bbd3f9edcad",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/triageRemediation.test.js exit=0 em 6c5b105469be",
-      "closureProof": "governance/bug-closure/proofs/7caeb636-71b0-4fb2-aef1-40f5c6a0ad18.json",
-      "attestationId": "7caeb636-71b0-4fb2-aef1-40f5c6a0ad18",
-      "attestedAt": "2026-11-03T15:50:34.156Z"
+      "closureProof": "governance/bug-closure/proofs/8639cdcb-1089-4a2f-aa3a-a12cc126b4d4.json",
+      "attestationId": "8639cdcb-1089-4a2f-aa3a-a12cc126b4d4",
+      "attestedAt": "2026-11-03T23:21:51.399Z"
     },
     {
       "id": "P1-8",
@@ -280,9 +280,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "f8b28264914a5d6c2658cf4be852886dc7480fbf",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/qa/systemInventoryIntegrity.test.js exit=0 em f8b28264914a",
-      "closureProof": "governance/bug-closure/proofs/4fbf1dc4-55f3-4dac-b7b8-828ace4c67ae.json",
-      "attestationId": "4fbf1dc4-55f3-4dac-b7b8-828ace4c67ae",
-      "attestedAt": "2026-11-03T15:50:34.694Z"
+      "closureProof": "governance/bug-closure/proofs/56084a44-68b3-4db9-a5b8-c77003d22112.json",
+      "attestationId": "56084a44-68b3-4db9-a5b8-c77003d22112",
+      "attestedAt": "2026-11-03T23:21:51.852Z"
     },
     {
       "id": "P2-1",
@@ -300,9 +300,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/remoteProvenanceAuthority.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/43b426dc-1110-43f3-b9cb-1e615273e339.json",
-      "attestationId": "43b426dc-1110-43f3-b9cb-1e615273e339",
-      "attestedAt": "2026-11-03T15:50:50.981Z"
+      "closureProof": "governance/bug-closure/proofs/f262b721-9caa-477e-93ca-cd34adf9e6d9.json",
+      "attestationId": "f262b721-9caa-477e-93ca-cd34adf9e6d9",
+      "attestedAt": "2026-11-03T23:21:59.966Z"
     },
     {
       "id": "P1-9",
@@ -320,9 +320,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceContract.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/fd9bb50c-0299-446a-99f2-ad9b2f2265e2.json",
-      "attestationId": "fd9bb50c-0299-446a-99f2-ad9b2f2265e2",
-      "attestedAt": "2026-11-03T15:50:35.263Z"
+      "closureProof": "governance/bug-closure/proofs/d3ec4cf9-df3d-449a-9ebe-f02337d4d91b.json",
+      "attestationId": "d3ec4cf9-df3d-449a-9ebe-f02337d4d91b",
+      "attestedAt": "2026-11-03T23:21:52.219Z"
     },
     {
       "id": "P1-12",
@@ -340,9 +340,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/evidenceFreshness.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/89f08106-84b3-43d9-9604-7360fd2a9b54.json",
-      "attestationId": "89f08106-84b3-43d9-9604-7360fd2a9b54",
-      "attestedAt": "2026-11-03T15:50:29.299Z"
+      "closureProof": "governance/bug-closure/proofs/9798d102-d88b-4e24-904f-a72ce2f19f14.json",
+      "attestationId": "9798d102-d88b-4e24-904f-a72ce2f19f14",
+      "attestedAt": "2026-11-03T23:21:46.040Z"
     },
     {
       "id": "P1-13",
@@ -361,9 +361,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "2dc073a8b57941059bef45abe9c710e4733d55b2",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/smokeEvidenceSummary.test.js exit=0 em 2dc073a8b579",
-      "closureProof": "governance/bug-closure/proofs/0766451b-1d2f-4f73-a7a9-48701c4eb2f8.json",
-      "attestationId": "0766451b-1d2f-4f73-a7a9-48701c4eb2f8",
-      "attestedAt": "2026-11-03T15:50:29.755Z"
+      "closureProof": "governance/bug-closure/proofs/70439782-0db5-4168-a85f-e8c007bac57e.json",
+      "attestationId": "70439782-0db5-4168-a85f-e8c007bac57e",
+      "attestedAt": "2026-11-03T23:21:46.831Z"
     },
     {
       "id": "P1-10",
@@ -381,9 +381,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringRouterProviderChainPolicy.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/96f5c548-fa0b-4d14-9244-4c57fdf5bc01.json",
-      "attestationId": "96f5c548-fa0b-4d14-9244-4c57fdf5bc01",
-      "attestedAt": "2026-11-03T15:50:28.367Z"
+      "closureProof": "governance/bug-closure/proofs/20ca2c23-f3e8-4e16-b1c9-a94d26f3004c.json",
+      "attestationId": "20ca2c23-f3e8-4e16-b1c9-a94d26f3004c",
+      "attestedAt": "2026-11-03T23:21:44.519Z"
     },
     {
       "id": "P1-11",
@@ -402,9 +402,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/v2SealOrchestration.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/f14b520b-4ba2-4d2d-89d0-8dad78ba25d3.json",
-      "attestationId": "f14b520b-4ba2-4d2d-89d0-8dad78ba25d3",
-      "attestedAt": "2026-11-03T15:50:28.834Z"
+      "closureProof": "governance/bug-closure/proofs/086ed51c-b465-4740-8357-2fcd35a61723.json",
+      "attestationId": "086ed51c-b465-4740-8357-2fcd35a61723",
+      "attestedAt": "2026-11-03T23:21:45.286Z"
     },
     {
       "id": "P1-15",
@@ -422,9 +422,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "c81f11081b77",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/attestationOrder.test.js exit=0 em c81f11081b77",
-      "closureProof": "governance/bug-closure/proofs/1595c5f2-5d9d-415c-a862-e9bce2bfdde6.json",
-      "attestationId": "1595c5f2-5d9d-415c-a862-e9bce2bfdde6",
-      "attestedAt": "2026-11-03T15:50:30.221Z"
+      "closureProof": "governance/bug-closure/proofs/ca1784e0-670e-4372-9cd2-fae4197b85b1.json",
+      "attestationId": "ca1784e0-670e-4372-9cd2-fae4197b85b1",
+      "attestedAt": "2026-11-03T23:21:47.541Z"
     },
     {
       "id": "P1-16",
@@ -442,9 +442,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "1de31fa4a17687b29c475c1af9c426d6c4b2c220",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/releaseSuiteRunner.test.js exit=0 em 1de31fa4a176",
-      "closureProof": "governance/bug-closure/proofs/20c89ac5-724a-4f14-871e-bd07320ff975.json",
-      "attestationId": "20c89ac5-724a-4f14-871e-bd07320ff975",
-      "attestedAt": "2026-11-03T15:50:30.635Z"
+      "closureProof": "governance/bug-closure/proofs/66cf6ac2-69cb-4be7-95a0-995744d87866.json",
+      "attestationId": "66cf6ac2-69cb-4be7-95a0-995744d87866",
+      "attestedAt": "2026-11-03T23:21:48.294Z"
     },
     {
       "id": "P2-2",
@@ -462,9 +462,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/reportWriteLineage.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/e9f1c6a6-950c-44ab-86c1-311ee56ce82a.json",
-      "attestationId": "e9f1c6a6-950c-44ab-86c1-311ee56ce82a",
-      "attestedAt": "2026-11-03T15:50:51.724Z"
+      "closureProof": "governance/bug-closure/proofs/8bf264f4-67a1-4b89-9420-6eaa0e749f75.json",
+      "attestationId": "8bf264f4-67a1-4b89-9420-6eaa0e749f75",
+      "attestedAt": "2026-11-03T23:22:00.365Z"
     },
     {
       "id": "P1-17",
@@ -482,9 +482,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "0f6957675d9f03c4e68493f618ef570b06ecc15b",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/securityIntel/securityGateProvenance.test.js exit=0 em 0f6957675d9f",
-      "closureProof": "governance/bug-closure/proofs/84f01352-7651-46d4-b1c0-b722650a7765.json",
-      "attestationId": "84f01352-7651-46d4-b1c0-b722650a7765",
-      "attestedAt": "2026-11-03T15:50:31.105Z"
+      "closureProof": "governance/bug-closure/proofs/4712f74f-93ff-4e19-ac3a-a19d9fc39637.json",
+      "attestationId": "4712f74f-93ff-4e19-ac3a-a19d9fc39637",
+      "attestedAt": "2026-11-03T23:21:48.926Z"
     },
     {
       "id": "H9-IDENTIDADE-PORTA",
@@ -504,9 +504,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/dev/devServicesSupervision.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/c490d431-88fb-411f-9306-605a2a75e288.json",
-      "attestationId": "c490d431-88fb-411f-9306-605a2a75e288",
-      "attestedAt": "2026-11-03T15:49:52.099Z"
+      "closureProof": "governance/bug-closure/proofs/b941b51d-8338-4366-a38a-005bc4d24061.json",
+      "attestationId": "b941b51d-8338-4366-a38a-005bc4d24061",
+      "attestedAt": "2026-11-03T23:21:10.568Z"
     },
     {
       "id": "H10-VEREDITO-GATE-SEGURANCA",
@@ -526,9 +526,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/securityGateState.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/930531bd-2469-466c-8854-5ca6b3262d1d.json",
-      "attestationId": "930531bd-2469-466c-8854-5ca6b3262d1d",
-      "attestedAt": "2026-11-03T15:49:44.434Z"
+      "closureProof": "governance/bug-closure/proofs/254892fa-f197-41eb-b11b-7e301c1e78b4.json",
+      "attestationId": "254892fa-f197-41eb-b11b-7e301c1e78b4",
+      "attestedAt": "2026-11-03T23:21:06.851Z"
     },
     {
       "id": "H11-ESCOPO-DIFERIDO",
@@ -548,9 +548,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/engineeringRouter/taskContractScope.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/51728801-1f44-4161-b19d-121cab930175.json",
-      "attestationId": "51728801-1f44-4161-b19d-121cab930175",
-      "attestedAt": "2026-11-03T15:49:44.992Z"
+      "closureProof": "governance/bug-closure/proofs/f2a42bc8-6077-4c25-8d7c-08efacd3d168.json",
+      "attestationId": "f2a42bc8-6077-4c25-8d7c-08efacd3d168",
+      "attestedAt": "2026-11-03T23:21:07.129Z"
     },
     {
       "id": "H12-RAG-REPARO",
@@ -570,9 +570,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "e8ee2116d73102a7935c036f6125bf90548088df",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/ragIndexHealthPolicy.test.js exit=0 em e8ee2116d731",
-      "closureProof": "governance/bug-closure/proofs/78ad4a07-f71c-4c03-88df-8e1c52c9745e.json",
-      "attestationId": "78ad4a07-f71c-4c03-88df-8e1c52c9745e",
-      "attestedAt": "2026-11-03T15:49:45.719Z"
+      "closureProof": "governance/bug-closure/proofs/58e9fed2-17d1-4071-89a5-4fde42d25d9f.json",
+      "attestationId": "58e9fed2-17d1-4071-89a5-4fde42d25d9f",
+      "attestedAt": "2026-11-03T23:21:07.408Z"
     },
     {
       "id": "H13-RUNNER-COMPLETO",
@@ -592,9 +592,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/allValidatorsRunner.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/aed73105-2d08-4703-a569-d84bec6f75c6.json",
-      "attestationId": "aed73105-2d08-4703-a569-d84bec6f75c6",
-      "attestedAt": "2026-11-03T15:49:46.233Z"
+      "closureProof": "governance/bug-closure/proofs/66c3da68-8c19-4d1e-97f3-985d843dc5cc.json",
+      "attestationId": "66c3da68-8c19-4d1e-97f3-985d843dc5cc",
+      "attestedAt": "2026-11-03T23:21:07.683Z"
     },
     {
       "id": "H14-CDR-SUPERVISIONADO",
@@ -614,9 +614,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/pbx/pbxCdrHealth.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/d396ae8e-990b-4d62-a6b5-8a313d6e6bf7.json",
-      "attestationId": "d396ae8e-990b-4d62-a6b5-8a313d6e6bf7",
-      "attestedAt": "2026-11-03T15:49:46.720Z"
+      "closureProof": "governance/bug-closure/proofs/9bce83f7-7922-4556-a70e-f99fb70f464b.json",
+      "attestationId": "9bce83f7-7922-4556-a70e-f99fb70f464b",
+      "attestedAt": "2026-11-03T23:21:07.942Z"
     },
     {
       "id": "H15-DIST-RECIBO-STALE",
@@ -650,9 +650,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/allValidatorsRunner.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/72796bd1-38b0-4410-9e05-d34c96b99daa.json",
-      "attestationId": "72796bd1-38b0-4410-9e05-d34c96b99daa",
-      "attestedAt": "2026-11-03T15:49:47.737Z"
+      "closureProof": "governance/bug-closure/proofs/3d7a5c15-724e-4152-9583-56e03a3b621a.json",
+      "attestationId": "3d7a5c15-724e-4152-9583-56e03a3b621a",
+      "attestedAt": "2026-11-03T23:21:08.492Z"
     },
     {
       "id": "H17-HOOKS-EDITOR",
@@ -672,9 +672,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
       "verificationNote": "reconcile-hardening-queue.js: frontend/src/components/FlowTemplateSelector.test.jsx exit=0 em 3a824ad53d87",
-      "closureProof": "governance/bug-closure/proofs/00d4feeb-ac70-4103-86da-c4f09d9d0836.json",
-      "attestationId": "00d4feeb-ac70-4103-86da-c4f09d9d0836",
-      "attestedAt": "2026-11-03T15:49:48.963Z"
+      "closureProof": "governance/bug-closure/proofs/096a9e3a-ef3d-43bc-9849-a8959d9b95a2.json",
+      "attestationId": "096a9e3a-ef3d-43bc-9849-a8959d9b95a2",
+      "attestedAt": "2026-11-03T23:21:08.976Z"
     },
     {
       "id": "H18-JORNADA-FUNCIONAL-BROWSER",
@@ -694,9 +694,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "02f9367db40a00b32642cc13bf47fff5b18b1225",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/journeyDetectors.test.js exit=0 em 02f9367db40a",
-      "closureProof": "governance/bug-closure/proofs/0282af5b-dfde-40dd-a8c3-57f2e9e6d884.json",
-      "attestationId": "0282af5b-dfde-40dd-a8c3-57f2e9e6d884",
-      "attestedAt": "2026-11-03T15:49:50.054Z"
+      "closureProof": "governance/bug-closure/proofs/73957052-7987-47ac-a1a7-87f2346b9060.json",
+      "attestationId": "73957052-7987-47ac-a1a7-87f2346b9060",
+      "attestedAt": "2026-11-03T23:21:09.720Z"
     },
     {
       "id": "H19-DIST-CAUSA-UNICA",
@@ -732,9 +732,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/engine/enginePurityPorts.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/b2b4b5e7-b166-4838-a9ef-fb389647cf6b.json",
-      "attestationId": "b2b4b5e7-b166-4838-a9ef-fb389647cf6b",
-      "attestedAt": "2026-11-03T15:49:36.220Z"
+      "closureProof": "governance/bug-closure/proofs/f272e811-105e-4855-addb-07b54533eebb.json",
+      "attestationId": "f272e811-105e-4855-addb-07b54533eebb",
+      "attestedAt": "2026-11-03T23:21:02.430Z"
     },
     {
       "id": "N5-REENTREGA",
@@ -754,9 +754,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "2bfa8199829f1285fdc206dba6cec8909286fad5",
       "verificationNote": "reconcile-hardening-queue.js: tests/integration/missionSourceStaleReplanFullRouterE2E.test.js exit=0 em 2bfa8199829f",
-      "closureProof": "governance/bug-closure/proofs/4daf201e-ef5d-4ce6-b470-96916a9ad9c6.json",
-      "attestationId": "4daf201e-ef5d-4ce6-b470-96916a9ad9c6",
-      "attestedAt": "2026-11-03T15:50:18.660Z"
+      "closureProof": "governance/bug-closure/proofs/ca419ba5-baec-4f13-a888-4c8ca057534f.json",
+      "attestationId": "ca419ba5-baec-4f13-a888-4c8ca057534f",
+      "attestedAt": "2026-11-03T23:21:28.740Z"
     },
     {
       "id": "DEF-TEARDOWN-DRAIN-WORKER",
@@ -778,9 +778,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "da1b9be965c22dba2cbbc9a3b96284171b913233",
       "blocked_reason": null,
-      "closureProof": "governance/bug-closure/proofs/04337b51-4a05-4ed8-8cb5-e700639777ad.json",
-      "attestationId": "04337b51-4a05-4ed8-8cb5-e700639777ad",
-      "attestedAt": "2026-11-03T15:49:34.138Z"
+      "closureProof": "governance/bug-closure/proofs/54a70935-76f6-426a-9ac1-4ab746103a12.json",
+      "attestationId": "54a70935-76f6-426a-9ac1-4ab746103a12",
+      "attestedAt": "2026-11-03T23:21:01.770Z"
     },
     {
       "id": "DEF-WS-AUTH-POS-LOGIN",
@@ -801,9 +801,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
       "verificationNote": "reconcile-hardening-queue.js: frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx exit=0 em 3a824ad53d87",
-      "closureProof": "governance/bug-closure/proofs/06b61119-d860-4044-b82b-b09d238a9a9f.json",
-      "attestationId": "06b61119-d860-4044-b82b-b09d238a9a9f",
-      "attestedAt": "2026-11-03T15:49:35.646Z"
+      "closureProof": "governance/bug-closure/proofs/7fd5ffec-f4b9-424e-8639-bfa207b740ed.json",
+      "attestationId": "7fd5ffec-f4b9-424e-8639-bfa207b740ed",
+      "attestedAt": "2026-11-03T23:21:02.218Z"
     },
     {
       "id": "DEF-REMOVECHILD-HEADER-ENHANCEMENT",
@@ -824,9 +824,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "3a824ad53d874673fd6dd2c8d69075c63083c1d4",
       "verificationNote": "reconcile-hardening-queue.js: frontend/src/__tests__/supportHeaderEnhancement.test.js exit=0 em 3a824ad53d87",
-      "closureProof": "governance/bug-closure/proofs/eb95dcc5-85e4-44ed-b313-aca5d4c7b37d.json",
-      "attestationId": "eb95dcc5-85e4-44ed-b313-aca5d4c7b37d",
-      "attestedAt": "2026-11-03T15:49:32.742Z"
+      "closureProof": "governance/bug-closure/proofs/0b52cd0c-db7b-49c3-89a7-9557cb4a21a1.json",
+      "attestationId": "0b52cd0c-db7b-49c3-89a7-9557cb4a21a1",
+      "attestedAt": "2026-11-03T23:21:01.049Z"
     },
     {
       "id": "DEF-QUEUE-DELETE-DB-ONLY",
@@ -847,9 +847,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/queueModuleRoutes.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/44b9b7a5-3209-4626-9dab-3f02374f619f.json",
-      "attestationId": "44b9b7a5-3209-4626-9dab-3f02374f619f",
-      "attestedAt": "2026-11-03T15:49:32.040Z"
+      "closureProof": "governance/bug-closure/proofs/02b41dcb-48e4-4547-9eec-21523935f92d.json",
+      "attestationId": "02b41dcb-48e4-4547-9eec-21523935f92d",
+      "attestedAt": "2026-11-03T23:21:00.761Z"
     },
     {
       "id": "MISSAO-A-L1-IMPACTO",
@@ -870,9 +870,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "0224b5ebadee043b9e95e54da9f4a4d20bb72535",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/coverage/impactGraph.test.js exit=0 em 0224b5ebadee",
-      "closureProof": "governance/bug-closure/proofs/4b97c849-6b10-4c19-ba83-3eb909e16d67.json",
-      "attestationId": "4b97c849-6b10-4c19-ba83-3eb909e16d67",
-      "attestedAt": "2026-11-03T15:50:13.659Z"
+      "closureProof": "governance/bug-closure/proofs/4f6350cf-c7a2-49a5-bda2-c0e81e8f490b.json",
+      "attestationId": "4f6350cf-c7a2-49a5-bda2-c0e81e8f490b",
+      "attestedAt": "2026-11-03T23:21:22.169Z"
     },
     {
       "id": "DEF-TIMEBOMB-EVOSYNC-JANELA30D",
@@ -893,9 +893,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/integration/evoSyncIntegration.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/6f35badc-78c7-40c3-b2e5-7f9c542a8d37.json",
-      "attestationId": "6f35badc-78c7-40c3-b2e5-7f9c542a8d37",
-      "attestedAt": "2026-11-03T15:49:34.953Z"
+      "closureProof": "governance/bug-closure/proofs/b4e38198-932d-4dcc-8d1d-55202c69a304.json",
+      "attestationId": "b4e38198-932d-4dcc-8d1d-55202c69a304",
+      "attestedAt": "2026-11-03T23:21:01.984Z"
     },
     {
       "id": "DEF-STATESYNC-EXEMPTION-STALE",
@@ -916,9 +916,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "df8a47f65a710b56506f0d257efc3f2787a59eec",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/frontend/stateSyncExemptionExactness.test.js exit=0 em df8a47f65a71",
-      "closureProof": "governance/bug-closure/proofs/164c2431-30a3-460e-91f1-d1f985193a64.json",
-      "attestationId": "164c2431-30a3-460e-91f1-d1f985193a64",
-      "attestedAt": "2026-11-03T15:49:33.358Z"
+      "closureProof": "governance/bug-closure/proofs/3eb70baa-5722-4272-99d1-40bcd78d0aec.json",
+      "attestationId": "3eb70baa-5722-4272-99d1-40bcd78d0aec",
+      "attestedAt": "2026-11-03T23:21:01.488Z"
     },
     {
       "id": "MISSAO-A-L2-L3-ORQUESTRADOR",
@@ -939,9 +939,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "0224b5ebadee043b9e95e54da9f4a4d20bb72535",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/coverage/impactRunner.test.js exit=0 em 0224b5ebadee",
-      "closureProof": "governance/bug-closure/proofs/ff735558-8e69-4a91-9e69-e17591ab158c.json",
-      "attestationId": "ff735558-8e69-4a91-9e69-e17591ab158c",
-      "attestedAt": "2026-11-03T15:50:14.256Z"
+      "closureProof": "governance/bug-closure/proofs/ce7e5ea6-ce6c-4b9e-925b-c633c5d51c09.json",
+      "attestationId": "ce7e5ea6-ce6c-4b9e-925b-c633c5d51c09",
+      "attestedAt": "2026-11-03T23:21:22.761Z"
     },
     {
       "id": "DEF-FLAKY-MISSIONFULLE2E-SOB-CARGA",
@@ -963,9 +963,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "fd6cdeed4afad932da4f8ada1c85af49115df429",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/effectiveAggregateChain.test.js exit=0 em fd6cdeed4afa",
-      "closureProof": "governance/bug-closure/proofs/f69c51ee-868a-4057-b112-0646ba063781.json",
-      "attestationId": "f69c51ee-868a-4057-b112-0646ba063781",
-      "attestedAt": "2026-11-03T15:49:31.346Z"
+      "closureProof": "governance/bug-closure/proofs/e8e3b1fe-5d4e-451f-8867-d9d94f6ea78f.json",
+      "attestationId": "e8e3b1fe-5d4e-451f-8867-d9d94f6ea78f",
+      "attestedAt": "2026-11-03T23:21:00.528Z"
     },
     {
       "id": "MISSAO-B8-ESTADOS-FILA",
@@ -982,9 +982,9 @@
       "severityBasis": "modelo de estados com hook fail-closed; defeito original na logica do hook",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/hardeningQueueStates.test.js",
-      "closureProof": "governance/bug-closure/proofs/39d04c05-19dd-480d-bf94-ed010344c5db.json",
-      "attestationId": "39d04c05-19dd-480d-bf94-ed010344c5db",
-      "attestedAt": "2026-11-03T15:50:17.251Z"
+      "closureProof": "governance/bug-closure/proofs/cc5460cd-b08b-4630-9ff8-b7bad9c1a02d.json",
+      "attestationId": "cc5460cd-b08b-4630-9ff8-b7bad9c1a02d",
+      "attestedAt": "2026-11-03T23:21:26.579Z"
     },
     {
       "id": "MISSAO-B1-CADEIA-CRIPTOGRAFICA",
@@ -1001,9 +1001,9 @@
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/bugClosureHistoricalGuards.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/bugClosureHistoricalGuards.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:18.298Z)",
-      "closureProof": "governance/bug-closure/proofs/1d7b1d0a-aa41-467f-a006-21ed0fb6511b.json",
-      "attestationId": "1d7b1d0a-aa41-467f-a006-21ed0fb6511b",
-      "attestedAt": "2026-11-03T15:50:14.874Z"
+      "closureProof": "governance/bug-closure/proofs/fcc80b05-a856-4138-88ed-5daf82fb454c.json",
+      "attestationId": "fcc80b05-a856-4138-88ed-5daf82fb454c",
+      "attestedAt": "2026-11-03T23:21:23.477Z"
     },
     {
       "id": "MISSAO-B9-CI-GITHUB-ACTIONS",
@@ -1024,9 +1024,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/devBranchCiGate.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/be0f7721-85cb-49f6-af28-3efbd56ed793.json",
-      "attestationId": "be0f7721-85cb-49f6-af28-3efbd56ed793",
-      "attestedAt": "2026-11-03T15:50:17.732Z"
+      "closureProof": "governance/bug-closure/proofs/bb2b886f-9a67-4469-81b8-8d0c51c82023.json",
+      "attestationId": "bb2b886f-9a67-4469-81b8-8d0c51c82023",
+      "attestedAt": "2026-11-03T23:21:27.298Z"
     },
     {
       "id": "MISSAO-B3-REUSO-PROVENIENCIA",
@@ -1042,9 +1042,9 @@
       "severityBasis": "verificado: nao e defeito (rigor por desenho)",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/releaseSuiteRunner.test.js",
-      "closureProof": "governance/bug-closure/proofs/6a34bc40-6ff7-451f-8a8a-3fe9ac485046.json",
-      "attestationId": "6a34bc40-6ff7-451f-8a8a-3fe9ac485046",
-      "attestedAt": "2026-11-03T15:50:15.564Z"
+      "closureProof": "governance/bug-closure/proofs/d6afc58e-766b-4fb8-ad3b-8f3a39a9c806.json",
+      "attestationId": "d6afc58e-766b-4fb8-ad3b-8f3a39a9c806",
+      "attestedAt": "2026-11-03T23:21:24.204Z"
     },
     {
       "id": "MISSAO-B4-REVISAO-INDEPENDENTE",
@@ -1060,9 +1060,9 @@
       "severityBasis": "verificado: nao e defeito (rigor maximo)",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/engineeringMission/reviewIndependenceProof.test.js",
-      "closureProof": "governance/bug-closure/proofs/76402de3-0fe1-479e-89e7-a7cda3fa803e.json",
-      "attestationId": "76402de3-0fe1-479e-89e7-a7cda3fa803e",
-      "attestedAt": "2026-11-03T15:50:16.283Z"
+      "closureProof": "governance/bug-closure/proofs/00a85139-2239-40a7-9fc0-3f60556a1761.json",
+      "attestationId": "00a85139-2239-40a7-9fc0-3f60556a1761",
+      "attestedAt": "2026-11-03T23:21:24.918Z"
     },
     {
       "id": "MISSAO-B5-VINCULO-DEFEITO-PREVENCAO",
@@ -1078,9 +1078,9 @@
       "regressionTest": "tests/integration/evoSyncIntegration.test.js",
       "severityBasis": "rastreabilidade defeito->commit->prevencao (governanca, nao controle inegociavel)",
       "severitySource": "analise-tecnica-2026-10-17",
-      "closureProof": "governance/bug-closure/proofs/fb21a010-8361-4c46-bb3e-5dcd2f34bac7.json",
-      "attestationId": "fb21a010-8361-4c46-bb3e-5dcd2f34bac7",
-      "attestedAt": "2026-11-03T15:50:16.753Z"
+      "closureProof": "governance/bug-closure/proofs/2166bf79-d15b-47cc-a5fd-8be7b63c5570.json",
+      "attestationId": "2166bf79-d15b-47cc-a5fd-8be7b63c5570",
+      "attestedAt": "2026-11-03T23:21:25.597Z"
     },
     {
       "id": "MISSAO-DEMO-SELF-ENGINEERING",
@@ -1096,9 +1096,9 @@
       "severityBasis": "demonstracao; agrega defeitos individuais",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/selfEngineeringDemonstration.test.js",
-      "closureProof": "governance/bug-closure/proofs/69d252b1-d355-4a72-8298-ca96d29edd98.json",
-      "attestationId": "69d252b1-d355-4a72-8298-ca96d29edd98",
-      "attestedAt": "2026-11-03T15:50:18.201Z"
+      "closureProof": "governance/bug-closure/proofs/4b3d4497-0bc6-440b-ba2a-f4ff17067832.json",
+      "attestationId": "4b3d4497-0bc6-440b-ba2a-f4ff17067832",
+      "attestedAt": "2026-11-03T23:21:28.004Z"
     },
     {
       "id": "H15-CDR-LAST-FAIL",
@@ -1118,9 +1118,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/pbx/pbxCdrHealth.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/3b07f9be-a3e1-4108-8372-c27e52338bab.json",
-      "attestationId": "3b07f9be-a3e1-4108-8372-c27e52338bab",
-      "attestedAt": "2026-11-03T15:49:47.227Z"
+      "closureProof": "governance/bug-closure/proofs/b9e2618e-418e-4a05-8dac-c04bf06af302.json",
+      "attestationId": "b9e2618e-418e-4a05-8dac-c04bf06af302",
+      "attestedAt": "2026-11-03T23:21:08.211Z"
     },
     {
       "id": "H16-V2SEAL-PASSO-SEM-MOTIVO",
@@ -1140,9 +1140,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/v2SealStepDiagnostics.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/bbefd91b-df63-4c6f-9318-971f2946aed3.json",
-      "attestationId": "bbefd91b-df63-4c6f-9318-971f2946aed3",
-      "attestedAt": "2026-11-03T15:49:48.380Z"
+      "closureProof": "governance/bug-closure/proofs/bf419adc-1827-429e-b11a-c802011039ea.json",
+      "attestationId": "bf419adc-1827-429e-b11a-c802011039ea",
+      "attestedAt": "2026-11-03T23:21:08.725Z"
     },
     {
       "id": "H17-PREFLIGHT-ASK-AI-TTL",
@@ -1162,9 +1162,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/askAiRuntimeEvidenceTtlPreflight.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/e76f4a72-7f47-4980-a661-163970f58b12.json",
-      "attestationId": "e76f4a72-7f47-4980-a661-163970f58b12",
-      "attestedAt": "2026-11-03T15:49:49.531Z"
+      "closureProof": "governance/bug-closure/proofs/a4b8f3f9-6dd0-4f1d-a4e0-fa345a7512d4.json",
+      "attestationId": "a4b8f3f9-6dd0-4f1d-a4e0-fa345a7512d4",
+      "attestedAt": "2026-11-03T23:21:09.338Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-6",
@@ -1179,9 +1179,9 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/releaseSuiteRunner.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:27.324Z)",
-      "closureProof": "governance/bug-closure/proofs/e8349118-539e-42dd-b1e2-d3e667068eee.json",
-      "attestationId": "e8349118-539e-42dd-b1e2-d3e667068eee",
-      "attestedAt": "2026-11-03T15:49:59.502Z"
+      "closureProof": "governance/bug-closure/proofs/58f77670-ebcf-43c0-85e2-388ea760a753.json",
+      "attestationId": "58f77670-ebcf-43c0-85e2-388ea760a753",
+      "attestedAt": "2026-11-03T23:21:14.271Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-5",
@@ -1196,9 +1196,9 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/coverage/impactRunnerBinding.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/coverage/impactRunnerBinding.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:36.134Z)",
-      "closureProof": "governance/bug-closure/proofs/19ab12f4-bea8-494f-a0e8-b39525c429ba.json",
-      "attestationId": "19ab12f4-bea8-494f-a0e8-b39525c429ba",
-      "attestedAt": "2026-11-03T15:49:58.780Z"
+      "closureProof": "governance/bug-closure/proofs/5a403572-b205-4656-9111-98f4170e2c5a.json",
+      "attestationId": "5a403572-b205-4656-9111-98f4170e2c5a",
+      "attestedAt": "2026-11-03T23:21:13.831Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-2",
@@ -1213,9 +1213,9 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/governanceChainCertification.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/governanceChainCertification.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:39.687Z)",
-      "closureProof": "governance/bug-closure/proofs/cc0ef9d6-0deb-4371-8c49-a75b956075e7.json",
-      "attestationId": "cc0ef9d6-0deb-4371-8c49-a75b956075e7",
-      "attestedAt": "2026-11-03T15:49:56.987Z"
+      "closureProof": "governance/bug-closure/proofs/08d9a3c5-621a-4067-9e58-b63d841905de.json",
+      "attestationId": "08d9a3c5-621a-4067-9e58-b63d841905de",
+      "attestedAt": "2026-11-03T23:21:12.856Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-3",
@@ -1230,9 +1230,9 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/sealPhaseOrder.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/sealPhaseOrder.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:43.635Z)",
-      "closureProof": "governance/bug-closure/proofs/fff6354b-b5e0-451e-bd23-76d7b2d52058.json",
-      "attestationId": "fff6354b-b5e0-451e-bd23-76d7b2d52058",
-      "attestedAt": "2026-11-03T15:49:57.488Z"
+      "closureProof": "governance/bug-closure/proofs/6261c132-8d57-4422-b679-2d740ab4aed4.json",
+      "attestationId": "6261c132-8d57-4422-b679-2d740ab4aed4",
+      "attestedAt": "2026-11-03T23:21:13.128Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-4",
@@ -1247,9 +1247,9 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:48.644Z)",
-      "closureProof": "governance/bug-closure/proofs/957b0c51-ec90-4641-834a-b2c552549a81.json",
-      "attestationId": "957b0c51-ec90-4641-834a-b2c552549a81",
-      "attestedAt": "2026-11-03T15:49:58.050Z"
+      "closureProof": "governance/bug-closure/proofs/90933eef-4690-4481-a5ed-23a676f5e071.json",
+      "attestationId": "90933eef-4690-4481-a5ed-23a676f5e071",
+      "attestedAt": "2026-11-03T23:21:13.500Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P0-7",
@@ -1268,9 +1268,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "9458c7132ac2e151ebc7b0a6e9a4c0928d2d0289",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/branchProtectionApplyPayload.test.js exit=0 em 9458c7132ac2",
-      "closureProof": "governance/bug-closure/proofs/833436e2-7ad4-4979-9789-cd75877ecfc6.json",
-      "attestationId": "833436e2-7ad4-4979-9789-cd75877ecfc6",
-      "attestedAt": "2026-11-03T15:50:00.246Z"
+      "closureProof": "governance/bug-closure/proofs/bb304497-89ed-493e-89aa-250153c008b0.json",
+      "attestationId": "bb304497-89ed-493e-89aa-250153c008b0",
+      "attestedAt": "2026-11-03T23:21:14.606Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-P1-11",
@@ -1285,9 +1285,9 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/evidenceTtl.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/evidenceTtl.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:45:54.813Z)",
-      "closureProof": "governance/bug-closure/proofs/a0915c2f-a401-475a-abb0-0b32bbe24d34.json",
-      "attestationId": "a0915c2f-a401-475a-abb0-0b32bbe24d34",
-      "attestedAt": "2026-11-03T15:50:00.947Z"
+      "closureProof": "governance/bug-closure/proofs/ac384f22-4e0f-437c-92da-88188870a334.json",
+      "attestationId": "ac384f22-4e0f-437c-92da-88188870a334",
+      "attestedAt": "2026-11-03T23:21:14.935Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EVIDENCE-POISONING",
@@ -1303,9 +1303,9 @@
       "regressionTest": "tests/unit/qa-mesh/failureIntelligenceLineage.test.js",
       "severityBasis": "evidencia governada destruida por execucao sem lineage (integridade da prova)",
       "severitySource": "analise-tecnica-2026-10-17",
-      "closureProof": "governance/bug-closure/proofs/db0e38f4-645e-4487-930c-7b2ae2ac6c94.json",
-      "attestationId": "db0e38f4-645e-4487-930c-7b2ae2ac6c94",
-      "attestedAt": "2026-11-03T15:49:55.777Z"
+      "closureProof": "governance/bug-closure/proofs/66bdb158-9152-46b2-9c10-e985fe271e76.json",
+      "attestationId": "66bdb158-9152-46b2-9c10-e985fe271e76",
+      "attestedAt": "2026-11-03T23:21:12.403Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-EVIDENCIA-DENTRO-DO-RUN",
@@ -1321,9 +1321,9 @@
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/waveEvidenceSameRunPreflight.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/waveEvidenceSameRunPreflight.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:00.083Z)",
-      "closureProof": "governance/bug-closure/proofs/aefe820b-7825-47ea-aa6f-72831d35f8a7.json",
-      "attestationId": "aefe820b-7825-47ea-aa6f-72831d35f8a7",
-      "attestedAt": "2026-11-03T15:49:54.342Z"
+      "closureProof": "governance/bug-closure/proofs/e8c835c2-1623-4193-a872-ce1797a873d9.json",
+      "attestationId": "e8c835c2-1623-4193-a872-ce1797a873d9",
+      "attestedAt": "2026-11-03T23:21:11.686Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-CANDIDATE-IDENTIDADE-FOREIGN-RUN",
@@ -1338,9 +1338,9 @@
       "severityBasis": "artefato de OUTRO run aceito como candidato entregue (identidade de artefato)",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/releaseArtifactIdentity.test.js",
-      "closureProof": "governance/bug-closure/proofs/23711e2d-d78b-43dd-b74c-0e5b867783c0.json",
-      "attestationId": "23711e2d-d78b-43dd-b74c-0e5b867783c0",
-      "attestedAt": "2026-11-03T15:49:53.948Z"
+      "closureProof": "governance/bug-closure/proofs/29a74a94-b902-47a8-8770-610903286ded.json",
+      "attestationId": "29a74a94-b902-47a8-8770-610903286ded",
+      "attestedAt": "2026-11-03T23:21:11.468Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-MESH-EXECUCAO-VAZIA-AINDA-GERA-EVIDENCIA",
@@ -1361,9 +1361,9 @@
       "verificationCommit": "c81f11081b77",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/qa-mesh/meshZeroResultsPromotion.test.js exit=0 em c81f11081b77",
       "blocked_reason": "RESOLVIDO 2026-10-17: a decisao de politica foi tomada no sentido mais restritivo (prova de execucao exige execucao); nao ha mais decisao pendente do dono.",
-      "closureProof": "governance/bug-closure/proofs/ecf7fd06-25e8-4538-9ded-b67548a2fad2.json",
-      "attestationId": "ecf7fd06-25e8-4538-9ded-b67548a2fad2",
-      "attestedAt": "2026-11-03T15:49:56.364Z"
+      "closureProof": "governance/bug-closure/proofs/555ef57e-e486-446c-8987-d8e617be8a2e.json",
+      "attestationId": "555ef57e-e486-446c-8987-d8e617be8a2e",
+      "attestedAt": "2026-11-03T23:21:12.612Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
@@ -1380,9 +1380,9 @@
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:05.629Z)",
-      "closureProof": "governance/bug-closure/proofs/12991bea-3045-44f8-a27a-b25a1eb32288.json",
-      "attestationId": "12991bea-3045-44f8-a27a-b25a1eb32288",
-      "attestedAt": "2026-11-03T15:49:54.715Z"
+      "closureProof": "governance/bug-closure/proofs/83269716-7eff-4e38-83d9-105efbff6f96.json",
+      "attestationId": "83269716-7eff-4e38-83d9-105efbff6f96",
+      "attestedAt": "2026-11-03T23:21:11.914Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-FENCE-UNDEFINED",
@@ -1398,9 +1398,9 @@
       "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
       "severityBasis": "FENCE_AVANCOU com antes=undefined: mesmo defeito de parsing de handshake",
       "severitySource": "analise-tecnica-2026-10-17",
-      "closureProof": "governance/bug-closure/proofs/93163bbe-f0f4-4960-9d51-feed3c254a0f.json",
-      "attestationId": "93163bbe-f0f4-4960-9d51-feed3c254a0f",
-      "attestedAt": "2026-11-03T15:49:55.204Z"
+      "closureProof": "governance/bug-closure/proofs/9808b66b-635b-434c-8a79-6e9969b32ac4.json",
+      "attestationId": "9808b66b-635b-434c-8a79-6e9969b32ac4",
+      "attestedAt": "2026-11-03T23:21:12.161Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
@@ -1417,9 +1417,9 @@
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/taskLeaseHandshakeParsing.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:14.953Z)",
-      "closureProof": "governance/bug-closure/proofs/000749c5-c1e1-4c94-be87-457283158fed.json",
-      "attestationId": "000749c5-c1e1-4c94-be87-457283158fed",
-      "attestedAt": "2026-11-03T15:50:03.328Z"
+      "closureProof": "governance/bug-closure/proofs/d869f9ec-e9d2-4e65-b28f-9fc1d524b857.json",
+      "attestationId": "d869f9ec-e9d2-4e65-b28f-9fc1d524b857",
+      "attestedAt": "2026-11-03T23:21:16.213Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
@@ -1440,9 +1440,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "525116fd2828038fcd414a08e830dcdb75b15f1e",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 525116fd2828",
-      "closureProof": "governance/bug-closure/proofs/696e76b5-e580-4d57-bece-cde34a8ed7d2.json",
-      "attestationId": "696e76b5-e580-4d57-bece-cde34a8ed7d2",
-      "attestedAt": "2026-11-03T15:49:53.542Z"
+      "closureProof": "governance/bug-closure/proofs/3a838eee-6d52-4033-a7c6-4cf706b679b7.json",
+      "attestationId": "3a838eee-6d52-4033-a7c6-4cf706b679b7",
+      "attestedAt": "2026-11-03T23:21:11.254Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-SEM-RELATORIO-PROPRIO",
@@ -1463,9 +1463,9 @@
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/aggregateVerdict.test.js exit=0 em 261095f66ade",
       "commit": "261095f66ade",
       "blocked_reason": "RESOLVIDO 2026-10-17: o custo alegado (mudar sourceFingerprint invalida o release selado) deixou de ser bloqueio — o release sera re-selado apos o fechamento dos P0/P1; a correcao e aditiva e nao altera o veredito.",
-      "closureProof": "governance/bug-closure/proofs/7f04871b-bdd5-44af-bbc5-e845e9515b1f.json",
-      "attestationId": "7f04871b-bdd5-44af-bbc5-e845e9515b1f",
-      "attestedAt": "2026-11-03T15:49:53.086Z"
+      "closureProof": "governance/bug-closure/proofs/8ef8cdcb-eedb-489c-af73-4bcb7e5f1d0f.json",
+      "attestationId": "8ef8cdcb-eedb-489c-af73-4bcb7e5f1d0f",
+      "attestedAt": "2026-11-03T23:21:11.032Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
@@ -1481,9 +1481,9 @@
       "severityBasis": "ponteiros stale na raiz (risco de leitura errada de estado)",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/closurePointersOrphans.test.js",
-      "closureProof": "governance/bug-closure/proofs/92434e9d-cc5e-48c5-8a4b-93223cc64a5b.json",
-      "attestationId": "92434e9d-cc5e-48c5-8a4b-93223cc64a5b",
-      "attestedAt": "2026-11-03T15:50:01.586Z"
+      "closureProof": "governance/bug-closure/proofs/20ff0d08-fbb3-4830-955d-0bac46747c88.json",
+      "attestationId": "20ff0d08-fbb3-4830-955d-0bac46747c88",
+      "attestedAt": "2026-11-03T23:21:15.378Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-AGREGADO-EXIGE-WORKTREE-CONGELADO",
@@ -1499,9 +1499,9 @@
       "severityBasis": "commitar durante o run quebra promocao do E2E (processo/diagnostico)",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/aggregateWorktreeFreeze.test.js",
-      "closureProof": "governance/bug-closure/proofs/c1592aad-d2aa-4932-9cac-7af6d6b65d16.json",
-      "attestationId": "c1592aad-d2aa-4932-9cac-7af6d6b65d16",
-      "attestedAt": "2026-11-03T15:49:52.644Z"
+      "closureProof": "governance/bug-closure/proofs/429ba459-95f5-4639-a229-b13c00462faf.json",
+      "attestationId": "429ba459-95f5-4639-a229-b13c00462faf",
+      "attestedAt": "2026-11-03T23:21:10.824Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-RUNTIME-EVIDENCE-DIAGNOSTICO-ENGANOSO",
@@ -1521,9 +1521,9 @@
       "verificationCommit": "92e7410464fda6890aa7ad8633b6ea27c8778c5a",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/runtimeEvidenceDiagnosis.test.js exit=0 em 92e7410464fd",
       "commit": "92e7410464fd",
-      "closureProof": "governance/bug-closure/proofs/f5dac1be-dc07-452d-b68d-ce59c007f673.json",
-      "attestationId": "f5dac1be-dc07-452d-b68d-ce59c007f673",
-      "attestedAt": "2026-11-03T15:50:02.373Z"
+      "closureProof": "governance/bug-closure/proofs/709ffe99-dc41-45d4-879a-c829da83d2cd.json",
+      "attestationId": "709ffe99-dc41-45d4-879a-c829da83d2cd",
+      "attestedAt": "2026-11-03T23:21:15.800Z"
     },
     {
       "id": "HARDENING-ENG-GOV-RELEASE-TAXONOMIA-PERSISTENCIA-AI-MEMORY-EVIDENCE",
@@ -1563,9 +1563,9 @@
       "verificationCommit": "ffc746419a72d6d507e518047c9538523ab94b3e",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js exit=0 em ffc746419a72",
       "commit": "ffc746419a72",
-      "closureProof": "governance/bug-closure/proofs/e53f5354-8c31-4d73-828d-33149cc5f88d.json",
-      "attestationId": "e53f5354-8c31-4d73-828d-33149cc5f88d",
-      "attestedAt": "2026-11-03T15:50:04.185Z"
+      "closureProof": "governance/bug-closure/proofs/de4f7da8-d5b0-42ab-98bc-54cc58b05833.json",
+      "attestationId": "de4f7da8-d5b0-42ab-98bc-54cc58b05833",
+      "attestedAt": "2026-11-03T23:21:16.572Z"
     },
     {
       "id": "AUDITORIA-CHECKPOINT-PROTOCOL",
@@ -1586,9 +1586,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/checkpointTool.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/06c5fedb-f2c6-4363-bc28-b91a2f7b6f5e.json",
-      "attestationId": "06c5fedb-f2c6-4363-bc28-b91a2f7b6f5e",
-      "attestedAt": "2026-11-03T15:49:20.910Z"
+      "closureProof": "governance/bug-closure/proofs/17d801ce-9807-41bf-a55d-d870147bc8e5.json",
+      "attestationId": "17d801ce-9807-41bf-a55d-d870147bc8e5",
+      "attestedAt": "2026-11-03T23:20:57.211Z"
     },
     {
       "id": "AUDITORIA-ENTRYPOINT-TRAVAS",
@@ -1609,9 +1609,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/b73ccf83-d426-4393-b233-fdfbef90812d.json",
-      "attestationId": "b73ccf83-d426-4393-b233-fdfbef90812d",
-      "attestedAt": "2026-11-03T15:49:21.472Z"
+      "closureProof": "governance/bug-closure/proofs/c241d3c4-b2b7-4013-bc88-12f946459149.json",
+      "attestationId": "c241d3c4-b2b7-4013-bc88-12f946459149",
+      "attestedAt": "2026-11-03T23:20:57.496Z"
     },
     {
       "id": "AUDITORIA-BRANCH-INVENTORY",
@@ -1632,9 +1632,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/branchInventory.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/ba3ecb48-f1b3-4ef3-93f8-e1b11d08e37a.json",
-      "attestationId": "ba3ecb48-f1b3-4ef3-93f8-e1b11d08e37a",
-      "attestedAt": "2026-11-03T15:49:20.416Z"
+      "closureProof": "governance/bug-closure/proofs/432ec7b3-963b-444b-b031-851601128a5c.json",
+      "attestationId": "432ec7b3-963b-444b-b031-851601128a5c",
+      "attestedAt": "2026-11-03T23:20:56.891Z"
     },
     {
       "id": "AUDITORIA-FASE-B-TESTE-MUTAVA-EVIDENCIA-GOVERNADA",
@@ -1655,9 +1655,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/476024fb-5155-466b-9d63-9e3679b5af1d.json",
-      "attestationId": "476024fb-5155-466b-9d63-9e3679b5af1d",
-      "attestedAt": "2026-11-03T15:49:23.579Z"
+      "closureProof": "governance/bug-closure/proofs/96ff049f-0762-4db9-a918-570efd3ff20d.json",
+      "attestationId": "96ff049f-0762-4db9-a918-570efd3ff20d",
+      "attestedAt": "2026-11-03T23:20:58.265Z"
     },
     {
       "id": "AUDITORIA-FASE-B-CADEIA-FORA-DO-AGREGADO",
@@ -1679,9 +1679,9 @@
       "targetedTestExit": 0,
       "verificationCommit": "868822ab0101e9dcf47292830c78cec096a740a8",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/audit/auditEntrypointArtifact.test.js exit=0 em 868822ab0101",
-      "closureProof": "governance/bug-closure/proofs/b5e04d3b-c682-45b1-b120-59f904f5cae0.json",
-      "attestationId": "b5e04d3b-c682-45b1-b120-59f904f5cae0",
-      "attestedAt": "2026-11-03T15:49:22.200Z"
+      "closureProof": "governance/bug-closure/proofs/664140ba-fbca-444c-bb89-53523a48cf0d.json",
+      "attestationId": "664140ba-fbca-444c-bb89-53523a48cf0d",
+      "attestedAt": "2026-11-03T23:20:57.772Z"
     },
     {
       "id": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
@@ -1708,9 +1708,9 @@
       "verificationCommit": "ffc746419a72d6d507e518047c9538523ab94b3e",
       "verificationNote": "reconcile-hardening-queue.js: tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js exit=0 em ffc746419a72",
       "commit": "ffc746419a72",
-      "closureProof": "governance/bug-closure/proofs/f85d8339-664e-454e-a72d-8c501b69acc0.json",
-      "attestationId": "f85d8339-664e-454e-a72d-8c501b69acc0",
-      "attestedAt": "2026-11-03T15:49:22.708Z"
+      "closureProof": "governance/bug-closure/proofs/9ee14327-d530-4c9f-8469-7b8cdb7e4e89.json",
+      "attestationId": "9ee14327-d530-4c9f-8469-7b8cdb7e4e89",
+      "attestedAt": "2026-11-03T23:20:58.016Z"
     },
     {
       "id": "P0-FALSO-GO-ESTADO-DE-GATE-NAO-PERMITIDO",
@@ -1725,9 +1725,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/canonicalReleaseDecision.test.js",
-      "closureProof": "governance/bug-closure/proofs/f6d1c0d6-cc77-4a77-b479-463c369ee891.json",
-      "attestationId": "f6d1c0d6-cc77-4a77-b479-463c369ee891",
-      "attestedAt": "2026-11-03T15:50:23.717Z"
+      "closureProof": "governance/bug-closure/proofs/71b3d629-1883-4371-8b07-1cfd35eb690c.json",
+      "attestationId": "71b3d629-1883-4371-8b07-1cfd35eb690c",
+      "attestedAt": "2026-11-03T23:21:36.502Z"
     },
     {
       "id": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
@@ -1743,9 +1743,9 @@
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:20.201Z)",
-      "closureProof": "governance/bug-closure/proofs/6734a7c8-7f80-4f61-92de-bbda4998b14e.json",
-      "attestationId": "6734a7c8-7f80-4f61-92de-bbda4998b14e",
-      "attestedAt": "2026-11-03T15:50:26.019Z"
+      "closureProof": "governance/bug-closure/proofs/14a4c0dd-9011-44f1-bfd1-360b2b741a33.json",
+      "attestationId": "14a4c0dd-9011-44f1-bfd1-360b2b741a33",
+      "attestedAt": "2026-11-03T23:21:40.113Z"
     },
     {
       "id": "P0-AVALIADOR-CONFIAVA-EM-CAMPO-VALID-GRAVADO",
@@ -1761,9 +1761,9 @@
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:23.753Z)",
-      "closureProof": "governance/bug-closure/proofs/8b9b9856-658c-4f64-becf-38d22b21db4c.json",
-      "attestationId": "8b9b9856-658c-4f64-becf-38d22b21db4c",
-      "attestedAt": "2026-11-03T15:50:21.950Z"
+      "closureProof": "governance/bug-closure/proofs/60ed7384-b9de-43d2-a5c4-f9170f604e1c.json",
+      "attestationId": "60ed7384-b9de-43d2-a5c4-f9170f604e1c",
+      "attestedAt": "2026-11-03T23:21:33.793Z"
     },
     {
       "id": "P0-ESTADO-E-VEREDITO-PODEM-DISCORDAR",
@@ -1779,9 +1779,9 @@
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/assertCanonicalReleaseDecision.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:27.056Z)",
-      "closureProof": "governance/bug-closure/proofs/e74f2538-8d42-4d14-b9b8-0884c00bb608.json",
-      "attestationId": "e74f2538-8d42-4d14-b9b8-0884c00bb608",
-      "attestedAt": "2026-11-03T15:50:23.280Z"
+      "closureProof": "governance/bug-closure/proofs/fb1287aa-14c1-46aa-8ac8-c456abb3051b.json",
+      "attestationId": "fb1287aa-14c1-46aa-8ac8-c456abb3051b",
+      "attestedAt": "2026-11-03T23:21:35.870Z"
     },
     {
       "id": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
@@ -1796,9 +1796,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/deliveryVerification.test.js",
-      "closureProof": "governance/bug-closure/proofs/faeed27a-723e-42cd-acfa-e84c901ca574.json",
-      "attestationId": "faeed27a-723e-42cd-acfa-e84c901ca574",
-      "attestedAt": "2026-11-03T15:50:40.931Z"
+      "closureProof": "governance/bug-closure/proofs/301e293f-e14c-4552-b8aa-758a9070a501.json",
+      "attestationId": "301e293f-e14c-4552-b8aa-758a9070a501",
+      "attestedAt": "2026-11-03T23:21:54.968Z"
     },
     {
       "id": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
@@ -1814,9 +1814,9 @@
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/deliveryVerification.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:30.810Z)",
-      "closureProof": "governance/bug-closure/proofs/866694b9-a21e-4a2f-91c6-edcdd643c89e.json",
-      "attestationId": "866694b9-a21e-4a2f-91c6-edcdd643c89e",
-      "attestedAt": "2026-11-03T15:50:48.905Z"
+      "closureProof": "governance/bug-closure/proofs/a9e75347-0898-4779-a286-31a78d2e7507.json",
+      "attestationId": "a9e75347-0898-4779-a286-31a78d2e7507",
+      "attestedAt": "2026-11-03T23:21:59.097Z"
     },
     {
       "id": "P0-CADEIA-APARENCIA-DE-VALIDA-APOS-ALTERACAO",
@@ -1831,9 +1831,9 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/governanceChainAppearance.test.js",
-      "closureProof": "governance/bug-closure/proofs/6044ed19-541e-42f4-b293-c38019c6b7ab.json",
-      "attestationId": "6044ed19-541e-42f4-b293-c38019c6b7ab",
-      "attestedAt": "2026-11-03T15:50:22.397Z"
+      "closureProof": "governance/bug-closure/proofs/d7946669-224b-4a7d-be53-4148d2dac0bc.json",
+      "attestationId": "d7946669-224b-4a7d-be53-4148d2dac0bc",
+      "attestedAt": "2026-11-03T23:21:34.506Z"
     },
     {
       "id": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
@@ -1849,9 +1849,9 @@
       "severityBasis": "candidato/certificacao desatualizados apos mudanca de fingerprint (risco de GO sobre artefato antigo)",
       "severitySource": "analise-tecnica-2026-10-17",
       "regressionTest": "tests/unit/governance/newCandidateOnFingerprintChange.test.js",
-      "closureProof": "governance/bug-closure/proofs/312726d0-7f6b-49ca-8de1-d3224649e7cf.json",
-      "attestationId": "312726d0-7f6b-49ca-8de1-d3224649e7cf",
-      "attestedAt": "2026-11-03T15:49:43.265Z"
+      "closureProof": "governance/bug-closure/proofs/b1eff431-151d-455a-9ee2-08ea6817d3a4.json",
+      "attestationId": "b1eff431-151d-455a-9ee2-08ea6817d3a4",
+      "attestedAt": "2026-11-03T23:21:06.152Z"
     },
     {
       "id": "P0-RUN-SEM-SOURCE-COMMIT-IDENTIDADE-DE-RELEASE-IMPOSSIVEL",
@@ -1866,9 +1866,9 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/runIdentityCommit.test.js",
-      "closureProof": "governance/bug-closure/proofs/fea594b5-4dc9-4662-9414-e0196137c04d.json",
-      "attestationId": "fea594b5-4dc9-4662-9414-e0196137c04d",
-      "attestedAt": "2026-11-03T15:50:27.487Z"
+      "closureProof": "governance/bug-closure/proofs/401055cb-0627-46af-bb1f-4682ae9b7465.json",
+      "attestationId": "401055cb-0627-46af-bb1f-4682ae9b7465",
+      "attestedAt": "2026-11-03T23:21:42.572Z"
     },
     {
       "id": "P1-STAGING-DIST-GOVERNANCE-ARTIFACTS-DERRUBA-VALIDATE-DIST",
@@ -1884,9 +1884,9 @@
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/devBranchCiGate.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/devBranchCiGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:34.685Z)",
-      "closureProof": "governance/bug-closure/proofs/0da5aeeb-0748-4036-9973-68c2c058ddd2.json",
-      "attestationId": "0da5aeeb-0748-4036-9973-68c2c058ddd2",
-      "attestedAt": "2026-11-03T15:50:49.645Z"
+      "closureProof": "governance/bug-closure/proofs/48a01d7c-2500-4b9a-8f3a-8a35154fd6d3.json",
+      "attestationId": "48a01d7c-2500-4b9a-8f3a-8a35154fd6d3",
+      "attestedAt": "2026-11-03T23:21:59.412Z"
     },
     {
       "id": "P2-TESTES-REGRAVAM-EVIDENCIA-GOVERNADA-TEMPORAL",
@@ -1901,9 +1901,9 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/governedArtifactPreservation.test.js",
-      "closureProof": "governance/bug-closure/proofs/4b28d675-6085-4608-96cb-4870fd11ace9.json",
-      "attestationId": "4b28d675-6085-4608-96cb-4870fd11ace9",
-      "attestedAt": "2026-11-03T15:50:52.473Z"
+      "closureProof": "governance/bug-closure/proofs/cc06e9e0-f85d-4a73-8172-1958b6dcd9e8.json",
+      "attestationId": "cc06e9e0-f85d-4a73-8172-1958b6dcd9e8",
+      "attestedAt": "2026-11-03T23:22:00.656Z"
     },
     {
       "id": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
@@ -1918,9 +1918,9 @@
       "state": "RESOLVED",
       "legacyStatus": "prevention_active",
       "regressionTest": "tests/unit/governance/producerLineageIdentity.test.js",
-      "closureProof": "governance/bug-closure/proofs/1af61d0d-1c57-4377-9172-ea386fd5b1e1.json",
-      "attestationId": "1af61d0d-1c57-4377-9172-ea386fd5b1e1",
-      "attestedAt": "2026-11-03T15:50:26.498Z"
+      "closureProof": "governance/bug-closure/proofs/96c8fd60-f1ed-43f4-bd0b-aff8013e39e4.json",
+      "attestationId": "96c8fd60-f1ed-43f4-bd0b-aff8013e39e4",
+      "attestedAt": "2026-11-03T23:21:40.883Z"
     },
     {
       "id": "H20-RUN-ORFAO-PROJECAO-STALE",
@@ -1940,9 +1940,9 @@
       "verificationCommit": "3486717b0678",
       "verificationNote": "reconcile: convergenceFixpoint PASS em arvore limpa",
       "commit": "3486717b0678",
-      "closureProof": "governance/bug-closure/proofs/763b84f2-3d05-4535-9040-dcfae93c24a5.json",
-      "attestationId": "763b84f2-3d05-4535-9040-dcfae93c24a5",
-      "attestedAt": "2026-11-03T15:49:50.863Z"
+      "closureProof": "governance/bug-closure/proofs/277a53ca-423c-4b9d-a087-f7946806d97b.json",
+      "attestationId": "277a53ca-423c-4b9d-a087-f7946806d97b",
+      "attestedAt": "2026-11-03T23:21:10.036Z"
     },
     {
       "id": "H20-CADEIA-POS-CERTIFICACAO-DIVERGENTE",
@@ -1973,9 +1973,9 @@
       "severitySource": "medicao-2026-10-19-browser-crm",
       "regressionTest": "tests/unit/crmRealtimeEvents.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/crmRealtimeEvents.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:39.618Z)",
-      "closureProof": "governance/bug-closure/proofs/ba659e75-dca9-4d8d-b671-7ed31feb87d5.json",
-      "attestationId": "ba659e75-dca9-4d8d-b671-7ed31feb87d5",
-      "attestedAt": "2026-11-03T15:49:51.544Z"
+      "closureProof": "governance/bug-closure/proofs/246a947c-13bf-43e6-aadc-71f65bfa2bca.json",
+      "attestationId": "246a947c-13bf-43e6-aadc-71f65bfa2bca",
+      "attestedAt": "2026-11-03T23:21:10.296Z"
     },
     {
       "id": "P0-GATE-FASES-DUPLICADAS-DESCONHECIDAS-FALSO-PASS",
@@ -1992,9 +1992,9 @@
       "regressionTest": "tests/unit/governance/devBranchGatePhaseContract.test.js",
       "severityBasis": "bloqueia certificacao de release ou produz falso verde/go",
       "severitySource": "auditoria-2026-10-19-missao-hardening",
-      "closureProof": "governance/bug-closure/proofs/cea60959-c3a7-4ee8-8e25-65e25f83b98d.json",
-      "attestationId": "cea60959-c3a7-4ee8-8e25-65e25f83b98d",
-      "attestedAt": "2026-11-03T15:50:25.465Z"
+      "closureProof": "governance/bug-closure/proofs/ea0f7c8e-2d5b-4030-916d-324ac3573ae9.json",
+      "attestationId": "ea0f7c8e-2d5b-4030-916d-324ac3573ae9",
+      "attestedAt": "2026-11-03T23:21:39.245Z"
     },
     {
       "id": "P0-AGREGADO-AUTORIZACAO-TARDIA-CADEIA-VAZIA-PASS",
@@ -2011,9 +2011,9 @@
       "regressionTest": "tests/unit/governance/governanceEnforcementOrder.test.js",
       "severityBasis": "bloqueia certificacao de release ou produz falso verde/go",
       "severitySource": "auditoria-2026-10-19-missao-hardening",
-      "closureProof": "governance/bug-closure/proofs/1fb4be88-fedd-4678-8ff7-32dc0efe7c7d.json",
-      "attestationId": "1fb4be88-fedd-4678-8ff7-32dc0efe7c7d",
-      "attestedAt": "2026-11-03T15:50:21.497Z"
+      "closureProof": "governance/bug-closure/proofs/65f7c04f-c3a5-4153-954b-a62f43750827.json",
+      "attestationId": "65f7c04f-c3a5-4153-954b-a62f43750827",
+      "attestedAt": "2026-11-03T23:21:33.075Z"
     },
     {
       "id": "P0-RISCO-ACEITO-DISPENSA-CONTROLE-CRITICO",
@@ -2030,9 +2030,9 @@
       "regressionTest": "tests/unit/governance/riskAcceptedCriticalControl.test.js",
       "severityBasis": "bloqueia certificacao de release ou produz falso verde/go",
       "severitySource": "auditoria-2026-10-19-missao-hardening",
-      "closureProof": "governance/bug-closure/proofs/4aff20a2-6098-4408-9509-f69987b94cdb.json",
-      "attestationId": "4aff20a2-6098-4408-9509-f69987b94cdb",
-      "attestedAt": "2026-11-03T15:50:27.003Z"
+      "closureProof": "governance/bug-closure/proofs/8ecdc8ef-8719-4c75-9402-a3411976b947.json",
+      "attestationId": "8ecdc8ef-8719-4c75-9402-a3411976b947",
+      "attestedAt": "2026-11-03T23:21:41.837Z"
     },
     {
       "id": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
@@ -2052,9 +2052,9 @@
       "reanchoredFrom": "5f6d0c1c9",
       "reanchoredAt": "2026-10-21",
       "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9",
-      "closureProof": "governance/bug-closure/proofs/edad52d9-2713-468b-997f-69eab53b119b.json",
-      "attestationId": "edad52d9-2713-468b-997f-69eab53b119b",
-      "attestedAt": "2026-11-03T15:50:39.063Z"
+      "closureProof": "governance/bug-closure/proofs/f88088f3-6f9f-4a51-a877-abc2c7c96b69.json",
+      "attestationId": "f88088f3-6f9f-4a51-a877-abc2c7c96b69",
+      "attestedAt": "2026-11-03T23:21:54.186Z"
     },
     {
       "id": "P1-CRM-POLLING-EM-VEZ-DE-PUSH-E-ISOLAMENTO-WS",
@@ -2074,9 +2074,9 @@
       "reanchoredFrom": "5f6d0c1c9",
       "reanchoredAt": "2026-10-21",
       "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por 5d451e1c9",
-      "closureProof": "governance/bug-closure/proofs/3b1631f8-1961-4aae-9433-e80e114f4595.json",
-      "attestationId": "3b1631f8-1961-4aae-9433-e80e114f4595",
-      "attestedAt": "2026-11-03T15:50:40.003Z"
+      "closureProof": "governance/bug-closure/proofs/7317ea37-5de8-4f8b-a2fa-313b3fb61958.json",
+      "attestationId": "7317ea37-5de8-4f8b-a2fa-313b3fb61958",
+      "attestedAt": "2026-11-03T23:21:54.585Z"
     },
     {
       "id": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
@@ -2096,9 +2096,9 @@
       "reanchoredFrom": "5f6d0c1c9",
       "reanchoredAt": "2026-10-21",
       "reanchoredReason": "commit 5f6d0c1c9 não existe no repositório (hash reescrito); as provas citadas existem e foram introduzidas por ad92da172",
-      "closureProof": "governance/bug-closure/proofs/4f9dd354-acb8-421b-9b53-bd01a1d20015.json",
-      "attestationId": "4f9dd354-acb8-421b-9b53-bd01a1d20015",
-      "attestedAt": "2026-11-03T15:50:36.520Z"
+      "closureProof": "governance/bug-closure/proofs/decde7d4-fb21-43dc-891f-8434c69619d9.json",
+      "attestationId": "decde7d4-fb21-43dc-891f-8434c69619d9",
+      "attestedAt": "2026-11-03T23:21:53.004Z"
     },
     {
       "id": "P1-PROJECAO-FINAL-DIVERGE-DA-CANONICA-DE-RUN-ABANDONADO",
@@ -2147,9 +2147,9 @@
       "regressionTest": "tests/unit/governance/phaseStepContract.test.js",
       "severityBasis": "permitia certificar fase inteira com 1 de 7 verificacoes (falso PASS de gate)",
       "severitySource": "auditoria-2026-10-19-sha-511ae5249",
-      "closureProof": "governance/bug-closure/proofs/66f1ec46-ae77-45d1-8a00-18ee790c777e.json",
-      "attestationId": "66f1ec46-ae77-45d1-8a00-18ee790c777e",
-      "attestedAt": "2026-11-03T15:50:25.000Z"
+      "closureProof": "governance/bug-closure/proofs/aa1f58a2-17d1-4172-84e3-058cfb9eb6ea.json",
+      "attestationId": "aa1f58a2-17d1-4172-84e3-058cfb9eb6ea",
+      "attestedAt": "2026-11-03T23:21:38.497Z"
     },
     {
       "id": "P0-CRM-UPSERT-TRANSFERE-PROPRIEDADE-ENTRE-TENANTS",
@@ -2166,9 +2166,9 @@
       "regressionTest": "tests/integration/crmTenantIsolation.postgres.test.js",
       "severityBasis": "violacao de isolamento multitenant com confidencialidade e integridade (OWASP A01)",
       "severitySource": "auditoria-2026-10-19-sha-511ae5249",
-      "closureProof": "governance/bug-closure/proofs/e1d9a033-20f1-49ad-900d-017d35d92cb9.json",
-      "attestationId": "e1d9a033-20f1-49ad-900d-017d35d92cb9",
-      "attestedAt": "2026-11-03T15:50:22.841Z"
+      "closureProof": "governance/bug-closure/proofs/9fd12932-e313-48b6-913c-7e46d2b3e3d7.json",
+      "attestationId": "9fd12932-e313-48b6-913c-7e46d2b3e3d7",
+      "attestedAt": "2026-11-03T23:21:35.221Z"
     },
     {
       "id": "P1-PROJECAO-GRAVADA-ANTES-DA-DECISAO-FINAL-JANELA-ABERTA",
@@ -2185,9 +2185,9 @@
       "regressionTest": "tests/unit/governance/projectionSyncOnCanonicalWrite.test.js",
       "severityBasis": "docs publicavam decisao diferente da canonica (falso verde documental)",
       "severitySource": "auditoria-2026-10-19-projecao-stale",
-      "closureProof": "governance/bug-closure/proofs/047b0c40-cb88-47b7-8807-2886e61ded88.json",
-      "attestationId": "047b0c40-cb88-47b7-8807-2886e61ded88",
-      "attestedAt": "2026-11-03T15:50:46.722Z"
+      "closureProof": "governance/bug-closure/proofs/f57fe943-2d1e-4016-8b92-950caffc55c9.json",
+      "attestationId": "f57fe943-2d1e-4016-8b92-950caffc55c9",
+      "attestedAt": "2026-11-03T23:21:58.136Z"
     },
     {
       "id": "L1-CONTEXTO-FONTE-NAO-MATERIALIZAVEL",
@@ -2204,9 +2204,9 @@
       "regressionTest": "tests/unit/engineeringRouterContextSourceFailClosed.test.js",
       "severityBasis": "patch gerado sobre base errada: correcao silenciosamente ineficaz (falso verde de engenharia)",
       "severitySource": "missao-L1-item-F",
-      "closureProof": "governance/bug-closure/proofs/0cdd7190-eb65-4292-ba00-ae706f0f8dfd.json",
-      "attestationId": "0cdd7190-eb65-4292-ba00-ae706f0f8dfd",
-      "attestedAt": "2026-11-03T15:50:07.441Z"
+      "closureProof": "governance/bug-closure/proofs/845c4402-5697-448d-892a-37095f38f60b.json",
+      "attestationId": "845c4402-5697-448d-892a-37095f38f60b",
+      "attestedAt": "2026-11-03T23:21:17.990Z"
     },
     {
       "id": "L1-ENTREGA-VERIFICADA-SEM-VERIFICACAO",
@@ -2223,9 +2223,9 @@
       "regressionTest": "tests/unit/governance/releaseStateService.test.js",
       "severityBasis": "release declarado 'entregue verificado' com gate canonico vermelho (falso GO de entrega)",
       "severitySource": "missao-L1-itens-A-C",
-      "closureProof": "governance/bug-closure/proofs/ca22d706-5234-49c7-8f5a-0b483fbee95a.json",
-      "attestationId": "ca22d706-5234-49c7-8f5a-0b483fbee95a",
-      "attestedAt": "2026-11-03T15:50:08.245Z"
+      "closureProof": "governance/bug-closure/proofs/b80619a6-8860-4d0e-be3c-d0ade0252419.json",
+      "attestationId": "b80619a6-8860-4d0e-be3c-d0ade0252419",
+      "attestedAt": "2026-11-03T23:21:18.492Z"
     },
     {
       "id": "L1-RUNNER-CONTAINER-MODULE-NOT-FOUND",
@@ -2242,9 +2242,9 @@
       "regressionTest": "tests/unit/engineeringRunnerDockerfileClosure.test.js",
       "severityBasis": "todo trabalho de execucao do Engenheiro em deploy containerizado falhava em silencio contra a API real",
       "severitySource": "missao-L1-execucao-isolada",
-      "closureProof": "governance/bug-closure/proofs/4ce2e49d-30bd-4327-8079-d13d7c1bb8f7.json",
-      "attestationId": "4ce2e49d-30bd-4327-8079-d13d7c1bb8f7",
-      "attestedAt": "2026-11-03T15:50:11.622Z"
+      "closureProof": "governance/bug-closure/proofs/2d9fc682-316b-4439-9fae-c2affbede1fd.json",
+      "attestationId": "2d9fc682-316b-4439-9fae-c2affbede1fd",
+      "attestedAt": "2026-11-03T23:21:20.320Z"
     },
     {
       "id": "L1-PUBLISH-TAG-EXIGE-VERIFICACAO",
@@ -2261,9 +2261,9 @@
       "regressionTest": "tests/unit/governance/devGovernanceModels.test.js",
       "severityBasis": "ato irreversivel de release oferecido a partir de estado nao verificado",
       "severitySource": "missao-L1-item-B",
-      "closureProof": "governance/bug-closure/proofs/24ac402a-a980-4a28-a3d1-684eb70ddb04.json",
-      "attestationId": "24ac402a-a980-4a28-a3d1-684eb70ddb04",
-      "attestedAt": "2026-11-03T15:50:10.754Z"
+      "closureProof": "governance/bug-closure/proofs/6b61c380-ceb8-455c-b659-ebebb77a6ebe.json",
+      "attestationId": "6b61c380-ceb8-455c-b659-ebebb77a6ebe",
+      "attestedAt": "2026-11-03T23:21:19.797Z"
     },
     {
       "id": "L1-WORKTREE-MUTILACAO-RECORRENTE",
@@ -2281,9 +2281,9 @@
       "severitySource": "medicao-direta-2026-10-20",
       "regressionTest": "tests/unit/governance/worktreeIntegrity.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:46:49.708Z)",
-      "closureProof": "governance/bug-closure/proofs/9711a195-8461-4341-be5d-b256b8e4014c.json",
-      "attestationId": "9711a195-8461-4341-be5d-b256b8e4014c",
-      "attestedAt": "2026-11-03T15:50:12.961Z"
+      "closureProof": "governance/bug-closure/proofs/557c445c-e0e2-4282-b772-4e937f0b71ee.json",
+      "attestationId": "557c445c-e0e2-4282-b772-4e937f0b71ee",
+      "attestedAt": "2026-11-03T23:21:21.394Z"
     },
     {
       "id": "L1-RUNTIME-EVIDENCE-NAO-REPRODUZIVEL",
@@ -2300,9 +2300,9 @@
       "regressionTest": "tests/unit/governance/runtimeEvidenceReproducibility.test.js",
       "severityBasis": "certificacao de runtime nao reproduzivel: falso verde com estado residual e falso vermelho em arvore limpa",
       "severitySource": "missao-L1-criterio-7",
-      "closureProof": "governance/bug-closure/proofs/fa0e700b-a0e2-4a11-8b9a-8c1faac7bc73.json",
-      "attestationId": "fa0e700b-a0e2-4a11-8b9a-8c1faac7bc73",
-      "attestedAt": "2026-11-03T15:50:12.306Z"
+      "closureProof": "governance/bug-closure/proofs/d1709fe9-8a72-47c3-8b27-278da6599bc0.json",
+      "attestationId": "d1709fe9-8a72-47c3-8b27-278da6599bc0",
+      "attestedAt": "2026-11-03T23:21:20.849Z"
     },
     {
       "id": "L1-L2-JORNADA-SUPERVISIONADA-MEDIDA",
@@ -2320,9 +2320,9 @@
       "severitySource": "medicao-direta-2026-10-20",
       "regressionTest": "tests/integration/engineeringMissionFullE2E.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionFullE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:52.469Z)",
-      "closureProof": "governance/bug-closure/proofs/55bd7c2b-6020-410f-8ceb-992e7cc58c69.json",
-      "attestationId": "55bd7c2b-6020-410f-8ceb-992e7cc58c69",
-      "attestedAt": "2026-11-03T15:50:09.032Z"
+      "closureProof": "governance/bug-closure/proofs/085aaa40-d479-4f56-b36e-4a4e99e36794.json",
+      "attestationId": "085aaa40-d479-4f56-b36e-4a4e99e36794",
+      "attestedAt": "2026-11-03T23:21:18.957Z"
     },
     {
       "id": "L1-CONCORRENCIA-HTTP-DUPLO-ACCEPT",
@@ -2340,9 +2340,9 @@
       "severitySource": "medicao-direta-2026-10-20",
       "regressionTest": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:56.731Z)",
-      "closureProof": "governance/bug-closure/proofs/274e078e-1c7b-428d-a368-586b9936836b.json",
-      "attestationId": "274e078e-1c7b-428d-a368-586b9936836b",
-      "attestedAt": "2026-11-03T15:50:06.636Z"
+      "closureProof": "governance/bug-closure/proofs/09e78d80-de74-4f89-8254-3bdbd80366e1.json",
+      "attestationId": "09e78d80-de74-4f89-8254-3bdbd80366e1",
+      "attestedAt": "2026-11-03T23:21:17.622Z"
     },
     {
       "id": "P0-FILAS-ROLLBACK-DESTRUTIVO",
@@ -2360,9 +2360,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/queueCreatePersistBeforeResponse.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/queueCreatePersistBeforeResponse.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:47:59.731Z)",
-      "closureProof": "governance/bug-closure/proofs/51e7e163-2d8b-4ade-826e-bc317fde8342.json",
-      "attestationId": "51e7e163-2d8b-4ade-826e-bc317fde8342",
-      "attestedAt": "2026-11-03T15:50:24.580Z"
+      "closureProof": "governance/bug-closure/proofs/c268de06-3349-42db-a802-8e5112983aa8.json",
+      "attestationId": "c268de06-3349-42db-a802-8e5112983aa8",
+      "attestedAt": "2026-11-03T23:21:37.843Z"
     },
     {
       "id": "P0-FILAS-ISOLAMENTO-TENANT",
@@ -2380,9 +2380,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/queueTenantIsolation.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/queueTenantIsolation.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:02.393Z)",
-      "closureProof": "governance/bug-closure/proofs/fe2c55cc-8215-4219-b4b8-35a6b42f99af.json",
-      "attestationId": "fe2c55cc-8215-4219-b4b8-35a6b42f99af",
-      "attestedAt": "2026-11-03T15:50:24.139Z"
+      "closureProof": "governance/bug-closure/proofs/82cbb01f-06f0-4a43-a498-4a57a7208c47.json",
+      "attestationId": "82cbb01f-06f0-4a43-a498-4a57a7208c47",
+      "attestedAt": "2026-11-03T23:21:37.189Z"
     },
     {
       "id": "P1-REVISAO-INDEPENDENCIA-SO-NEGATIVA",
@@ -2400,9 +2400,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:06.319Z)",
-      "closureProof": "governance/bug-closure/proofs/9e48ebaa-12e8-4d0d-a3d5-d5e895a95faa.json",
-      "attestationId": "9e48ebaa-12e8-4d0d-a3d5-d5e895a95faa",
-      "attestedAt": "2026-11-03T15:50:47.407Z"
+      "closureProof": "governance/bug-closure/proofs/cde3b2fd-7478-4049-9cec-241f2de4468e.json",
+      "attestationId": "cde3b2fd-7478-4049-9cec-241f2de4468e",
+      "attestedAt": "2026-11-03T23:21:58.436Z"
     },
     {
       "id": "P1-UNIT-GATE-ACEITA-UNKNOWN",
@@ -2420,9 +2420,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/engineeringMission/missionGatesEvidence.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringMission/missionGatesEvidence.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:10.552Z)",
-      "closureProof": "governance/bug-closure/proofs/8c15f11a-4bdb-404c-9027-fd48c7dad74f.json",
-      "attestationId": "8c15f11a-4bdb-404c-9027-fd48c7dad74f",
-      "attestedAt": "2026-11-03T15:50:50.304Z"
+      "closureProof": "governance/bug-closure/proofs/e3fe5e76-25da-447e-a074-1c6b85d54652.json",
+      "attestationId": "e3fe5e76-25da-447e-a074-1c6b85d54652",
+      "attestedAt": "2026-11-03T23:21:59.673Z"
     },
     {
       "id": "P1-CONCORRENCIA-EXIGE-POSTGRES",
@@ -2440,9 +2440,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/integration/engineeringRouterConcurrentRunHttp.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringRouterConcurrentRunHttp.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:14.225Z)",
-      "closureProof": "governance/bug-closure/proofs/268cea71-1e8a-4d68-9dde-fc42b135cc2e.json",
-      "attestationId": "268cea71-1e8a-4d68-9dde-fc42b135cc2e",
-      "attestedAt": "2026-11-03T15:50:38.212Z"
+      "closureProof": "governance/bug-closure/proofs/5cd1e7c9-9ef6-408e-8767-d2fc61088e28.json",
+      "attestationId": "5cd1e7c9-9ef6-408e-8767-d2fc61088e28",
+      "attestedAt": "2026-11-03T23:21:53.739Z"
     },
     {
       "id": "P1-GUARDA-SKIP-ASSERTIONS-COMMITS",
@@ -2460,9 +2460,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/governance/worktreeIntegrity.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/worktreeIntegrity.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:19.072Z)",
-      "closureProof": "governance/bug-closure/proofs/2707d95f-66bf-4f18-8e65-5e83aa5496f1.json",
-      "attestationId": "2707d95f-66bf-4f18-8e65-5e83aa5496f1",
-      "attestedAt": "2026-11-03T15:50:43.238Z"
+      "closureProof": "governance/bug-closure/proofs/65f59555-8f56-48eb-bf14-b0c7d20d986c.json",
+      "attestationId": "65f59555-8f56-48eb-bf14-b0c7d20d986c",
+      "attestedAt": "2026-11-03T23:21:56.338Z"
     },
     {
       "id": "P1-LINEAGE-RUN-MAIS-RECENTE",
@@ -2480,9 +2480,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/governance/reportLineageExplicit.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/reportLineageExplicit.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:21.969Z)",
-      "closureProof": "governance/bug-closure/proofs/28d77ab2-485d-4a34-8a63-a04d5008b7dd.json",
-      "attestationId": "28d77ab2-485d-4a34-8a63-a04d5008b7dd",
-      "attestedAt": "2026-11-03T15:50:44.735Z"
+      "closureProof": "governance/bug-closure/proofs/71fed6c9-7a20-45ca-86ac-e02a06b10582.json",
+      "attestationId": "71fed6c9-7a20-45ca-86ac-e02a06b10582",
+      "attestedAt": "2026-11-03T23:21:57.200Z"
     },
     {
       "id": "P1-MERGE-MISSAO-PERDA-DE-ATUALIZACAO",
@@ -2500,9 +2500,9 @@
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/integration/engineeringMissionMergeConcurrency.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionMergeConcurrency.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:26.394Z)",
-      "closureProof": "governance/bug-closure/proofs/c935e460-472b-4999-87ff-45f1e0ca8e76.json",
-      "attestationId": "c935e460-472b-4999-87ff-45f1e0ca8e76",
-      "attestedAt": "2026-11-03T15:50:45.423Z"
+      "closureProof": "governance/bug-closure/proofs/f1e47d7e-fe66-448a-9dba-aac2856c5922.json",
+      "attestationId": "f1e47d7e-fe66-448a-9dba-aac2856c5922",
+      "attestedAt": "2026-11-03T23:21:57.515Z"
     },
     {
       "id": "P1-CI-SEM-INTEGRACAO",
@@ -2519,9 +2519,9 @@
       "severityBasis": "commits do branch podiam chegar ao remoto sem prova de integracao",
       "severitySource": "auditoria-externa-2026-10-20",
       "regressionTest": "tests/unit/governance/ciWorkflowContract.test.js",
-      "closureProof": "governance/bug-closure/proofs/01e1153a-5f58-4d4e-ad31-17e75659d9f1.json",
-      "attestationId": "01e1153a-5f58-4d4e-ad31-17e75659d9f1",
-      "attestedAt": "2026-11-03T15:50:37.342Z"
+      "closureProof": "governance/bug-closure/proofs/70e266ef-a64f-4221-8cc4-a7a1770585a3.json",
+      "attestationId": "70e266ef-a64f-4221-8cc4-a7a1770585a3",
+      "attestedAt": "2026-11-03T23:21:53.372Z"
     },
     {
       "id": "P1-BRANCHES-MISSAO-RESIDUO",
@@ -2540,9 +2540,9 @@
       "approved_by": "dono do repositorio (decisao explicita na sessao de 2026-10-21): \"Aplicar tudo (3007)\"",
       "regressionTest": "tests/unit/governance/pruneEngineeringMissionBranches.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/pruneEngineeringMissionBranches.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:28.796Z)",
-      "closureProof": "governance/bug-closure/proofs/48be92b5-8cb3-40a0-958b-58c1ab51f795.json",
-      "attestationId": "48be92b5-8cb3-40a0-958b-58c1ab51f795",
-      "attestedAt": "2026-11-03T15:50:35.894Z"
+      "closureProof": "governance/bug-closure/proofs/b8e570c9-d1a4-4c10-b963-f7443fc15e75.json",
+      "attestationId": "b8e570c9-d1a4-4c10-b963-f7443fc15e75",
+      "attestedAt": "2026-11-03T23:21:52.635Z"
     },
     {
       "id": "P1-PATCH-SYMLINK-ESCAPE",
@@ -2560,9 +2560,9 @@
       "severitySource": "auditoria-adversarial-2026-10-21",
       "regressionTest": "tests/unit/engineeringRouterPatchSymlinkEscape.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterPatchSymlinkEscape.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:31.578Z)",
-      "closureProof": "governance/bug-closure/proofs/1e7bca97-1a5f-43d1-837b-5ddf779750f2.json",
-      "attestationId": "1e7bca97-1a5f-43d1-837b-5ddf779750f2",
-      "attestedAt": "2026-11-03T15:50:46.103Z"
+      "closureProof": "governance/bug-closure/proofs/cb33011d-f45e-4bab-a366-1560024ac4a4.json",
+      "attestationId": "cb33011d-f45e-4bab-a366-1560024ac4a4",
+      "attestedAt": "2026-11-03T23:21:57.823Z"
     },
     {
       "id": "P1-EVIDENCIA-COMMIT-ORFAO",
@@ -2580,9 +2580,9 @@
       "severitySource": "auditoria-adversarial-2026-10-21",
       "regressionTest": "tests/unit/governance/hardeningQueueCommitExists.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/hardeningQueueCommitExists.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:33.837Z)",
-      "closureProof": "governance/bug-closure/proofs/29fbe75a-9730-42c7-b29e-6ba6cb1c66f2.json",
-      "attestationId": "29fbe75a-9730-42c7-b29e-6ba6cb1c66f2",
-      "attestedAt": "2026-11-03T15:50:41.825Z"
+      "closureProof": "governance/bug-closure/proofs/2cf4ec49-ffc9-4039-8400-c09b7431fb0e.json",
+      "attestationId": "2cf4ec49-ffc9-4039-8400-c09b7431fb0e",
+      "attestedAt": "2026-11-03T23:21:55.338Z"
     },
     {
       "id": "P1-GATE-PRONTIDAO-EXECUTAVEL",
@@ -2600,9 +2600,9 @@
       "severitySource": "missao-engineer-supervised-2026-10-21",
       "regressionTest": "tests/unit/governance/engineerSupervisedReadinessGate.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/engineerSupervisedReadinessGate.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:36.381Z)",
-      "closureProof": "governance/bug-closure/proofs/ff0305ad-c95b-4af3-a010-6e6baf3d2916.json",
-      "attestationId": "ff0305ad-c95b-4af3-a010-6e6baf3d2916",
-      "attestedAt": "2026-11-03T15:50:42.530Z"
+      "closureProof": "governance/bug-closure/proofs/8bacae2a-4e87-470f-91d9-bb937ee1cb52.json",
+      "attestationId": "8bacae2a-4e87-470f-91d9-bb937ee1cb52",
+      "attestedAt": "2026-11-03T23:21:55.883Z"
     },
     {
       "id": "P1-SANDBOX-PROBE-CACHE-NEGATIVO",
@@ -2620,9 +2620,9 @@
       "severitySource": "auditoria-2026-10-21",
       "regressionTest": "tests/unit/engineeringRouterSandboxAvailabilityCache.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/engineeringRouterSandboxAvailabilityCache.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:38.989Z)",
-      "closureProof": "governance/bug-closure/proofs/229a054a-dbcb-4f6a-af28-c0458c316980.json",
-      "attestationId": "229a054a-dbcb-4f6a-af28-c0458c316980",
-      "attestedAt": "2026-11-03T15:50:48.125Z"
+      "closureProof": "governance/bug-closure/proofs/9f39d459-b514-4d1b-b86e-4d0cde322ab4.json",
+      "attestationId": "9f39d459-b514-4d1b-b86e-4d0cde322ab4",
+      "attestedAt": "2026-11-03T23:21:58.773Z"
     },
     {
       "id": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
@@ -2640,9 +2640,9 @@
       "severitySource": "auditoria-2026-10-21",
       "regressionTest": "tests/unit/ciGateL0Determinism.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:40.939Z)",
-      "closureProof": "governance/bug-closure/proofs/cdde7abb-5191-481d-930a-7e8b5e19cf24.json",
-      "attestationId": "cdde7abb-5191-481d-930a-7e8b5e19cf24",
-      "attestedAt": "2026-11-03T15:50:43.876Z"
+      "closureProof": "governance/bug-closure/proofs/c7fb5be8-74c8-44d2-a4c4-34424d4debde.json",
+      "attestationId": "c7fb5be8-74c8-44d2-a4c4-34424d4debde",
+      "attestedAt": "2026-11-03T23:21:56.789Z"
     },
     {
       "id": "L1-NPM-TEST-CI-VERMELHO",
@@ -2662,9 +2662,9 @@
       "blocked_reason": "Escopo de CI/testes CONCLUIDO e verificado no runner. O que resta vermelho e o passo L1 de DECISAO de release: a cadeia de governanca nao cobre o conteudo atual porque o release nao esta selado (dist/ vazio em checkout) e o bootstrap regenera elos derivados. Resolver exige `npm run release:seal` + publicacao do artefato — mission separada e maior, fora do escopo desta fila de CI. Nao pode ser declarado verde sem isso (Constituicao: nunca declarar release com governanca canonica NO_GO).",
       "commit": "e503591b5",
       "resolution": "CI de desenvolvimento pode ficar verde porque passou a medir o que pode medir; a certificacao de release continua obrigatoria (em R e no pipeline de selagem) e bloqueada pelos mesmos P1 que bloqueiam a selagem.",
-      "closureProof": "governance/bug-closure/proofs/f56337f1-a8da-4fda-ada2-1ff54fac79ed.json",
-      "attestationId": "f56337f1-a8da-4fda-ada2-1ff54fac79ed",
-      "attestedAt": "2026-11-03T15:50:09.854Z"
+      "closureProof": "governance/bug-closure/proofs/3994c059-caa9-4fef-8069-581931ac2312.json",
+      "attestationId": "3994c059-caa9-4fef-8069-581931ac2312",
+      "attestedAt": "2026-11-03T23:21:19.342Z"
     },
     {
       "id": "CI-ADAPTADOR-IA-NAO-VERSIONADO",
@@ -2680,9 +2680,9 @@
       "commit": "c4b3fc70e",
       "regressionTest": "tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/aiGovernanceRequiredFilesTracked.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:43.795Z)",
-      "closureProof": "governance/bug-closure/proofs/6a134011-599e-4c04-bc8b-3be9dd95e3c0.json",
-      "attestationId": "6a134011-599e-4c04-bc8b-3be9dd95e3c0",
-      "attestedAt": "2026-11-03T15:49:24.228Z"
+      "closureProof": "governance/bug-closure/proofs/4b203dfb-d316-4cee-99cf-290f1a6f25e6.json",
+      "attestationId": "4b203dfb-d316-4cee-99cf-290f1a6f25e6",
+      "attestedAt": "2026-11-03T23:20:58.502Z"
     },
     {
       "id": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
@@ -2698,9 +2698,9 @@
       "commit": "3f97c7b65",
       "regressionTest": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:46.182Z)",
-      "closureProof": "governance/bug-closure/proofs/7921bc51-d22f-492c-bea6-2c40e5290e0f.json",
-      "attestationId": "7921bc51-d22f-492c-bea6-2c40e5290e0f",
-      "attestedAt": "2026-11-03T15:49:29.544Z"
+      "closureProof": "governance/bug-closure/proofs/7013e21e-e01b-4ce6-8129-205198e18701.json",
+      "attestationId": "7013e21e-e01b-4ce6-8129-205198e18701",
+      "attestedAt": "2026-11-03T23:21:00.065Z"
     },
     {
       "id": "CI-FLOW-GATE-VACUOSO",
@@ -2716,9 +2716,9 @@
       "commit": "3f97c7b65",
       "regressionTest": "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:48.557Z)",
-      "closureProof": "governance/bug-closure/proofs/c8b2b71e-0a7c-4080-8be3-8053f92469d4.json",
-      "attestationId": "c8b2b71e-0a7c-4080-8be3-8053f92469d4",
-      "attestedAt": "2026-11-03T15:49:26.415Z"
+      "closureProof": "governance/bug-closure/proofs/e5d78d99-a5e2-45b7-9c39-2c17d57778cc.json",
+      "attestationId": "e5d78d99-a5e2-45b7-9c39-2c17d57778cc",
+      "attestedAt": "2026-11-03T23:20:59.180Z"
     },
     {
       "id": "CI-CHECKOUT-LIMPO-HARNESS",
@@ -2734,9 +2734,9 @@
       "commit": "2f8b5aa29",
       "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:52.200Z)",
-      "closureProof": "governance/bug-closure/proofs/192795ff-1293-4f9d-8083-2c6dc7099dc1.json",
-      "attestationId": "192795ff-1293-4f9d-8083-2c6dc7099dc1",
-      "attestedAt": "2026-11-03T15:49:25.048Z"
+      "closureProof": "governance/bug-closure/proofs/67caf191-af95-41e0-8df6-ab84307cc428.json",
+      "attestationId": "67caf191-af95-41e0-8df6-ab84307cc428",
+      "attestedAt": "2026-11-03T23:20:58.750Z"
     },
     {
       "id": "ENG-TESTE-MEDE-REPO-DIFERENTE-DO-SERVICO",
@@ -2749,9 +2749,9 @@
       "state": "VERIFIED",
       "regressionTest": "tests/integration/engineeringPromotionService.test.js",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/2e6aa1d2-9fe7-4652-b3c5-c129e1fe28d6.json",
-      "attestationId": "2e6aa1d2-9fe7-4652-b3c5-c129e1fe28d6",
-      "attestedAt": "2026-11-03T15:49:41.975Z"
+      "closureProof": "governance/bug-closure/proofs/478dfb2e-a917-4127-9994-55b7d0f19987.json",
+      "attestationId": "478dfb2e-a917-4127-9994-55b7d0f19987",
+      "attestedAt": "2026-11-03T23:21:05.497Z"
     },
     {
       "id": "ENG-PROVENIENCIA-REPRODUCAO-SOBRESCRITA",
@@ -2764,9 +2764,9 @@
       "state": "VERIFIED",
       "regressionTest": "tests/integration/engineeringBugLoop.test.js",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/951634ae-3026-4c68-a6a8-3b9390fc9334.json",
-      "attestationId": "951634ae-3026-4c68-a6a8-3b9390fc9334",
-      "attestedAt": "2026-11-03T15:49:40.429Z"
+      "closureProof": "governance/bug-closure/proofs/67b71b05-07fc-4dc8-b205-98bebf678c50.json",
+      "attestationId": "67b71b05-07fc-4dc8-b205-98bebf678c50",
+      "attestedAt": "2026-11-03T23:21:04.583Z"
     },
     {
       "id": "TESTE-FILESYSTEM-ORCAMENTO-10S",
@@ -2779,9 +2779,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
-      "closureProof": "governance/bug-closure/proofs/b277edf1-044b-4b00-a991-09fe5228a91c.json",
-      "attestationId": "b277edf1-044b-4b00-a991-09fe5228a91c",
-      "attestedAt": "2026-11-03T15:51:01.614Z"
+      "closureProof": "governance/bug-closure/proofs/410b2ef4-dbc2-44c0-b046-5d03cd9e8527.json",
+      "attestationId": "410b2ef4-dbc2-44c0-b046-5d03cd9e8527",
+      "attestedAt": "2026-11-03T23:22:05.952Z"
     },
     {
       "id": "ENG-LEASE-FENCE-NAO-VALIDADO",
@@ -2794,9 +2794,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/integration/engineeringBugLoop.test.js",
-      "closureProof": "governance/bug-closure/proofs/f61b5ef2-c0e1-43e3-b69a-9c8322d8b987.json",
-      "attestationId": "f61b5ef2-c0e1-43e3-b69a-9c8322d8b987",
-      "attestedAt": "2026-11-03T15:49:40.035Z"
+      "closureProof": "governance/bug-closure/proofs/57a4fcb6-063b-4f0c-9e98-f11ef9b34574.json",
+      "attestationId": "57a4fcb6-063b-4f0c-9e98-f11ef9b34574",
+      "attestedAt": "2026-11-03T23:21:04.285Z"
     },
     {
       "id": "ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE",
@@ -2809,9 +2809,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/integration/engineeringBugLoop.test.js",
-      "closureProof": "governance/bug-closure/proofs/0ba3bf08-866a-44ee-821e-c7f2c9c0bd70.json",
-      "attestationId": "0ba3bf08-866a-44ee-821e-c7f2c9c0bd70",
-      "attestedAt": "2026-11-03T15:49:38.649Z"
+      "closureProof": "governance/bug-closure/proofs/bfb9b15c-dd6f-4748-8058-9c71d54bdc8d.json",
+      "attestationId": "bfb9b15c-dd6f-4748-8058-9c71d54bdc8d",
+      "attestedAt": "2026-11-03T23:21:03.392Z"
     },
     {
       "id": "ENG-RECONCILIACAO-BOOT-STARVATION",
@@ -2824,9 +2824,9 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/a80dc066-741f-4ad8-b26a-b10e85748dcb.json",
-      "attestationId": "a80dc066-741f-4ad8-b26a-b10e85748dcb",
-      "attestedAt": "2026-11-03T15:49:40.817Z"
+      "closureProof": "governance/bug-closure/proofs/3ea4f795-643e-4f8b-aa51-e759b75ebeff.json",
+      "attestationId": "3ea4f795-643e-4f8b-aa51-e759b75ebeff",
+      "attestedAt": "2026-11-03T23:21:04.842Z"
     },
     {
       "id": "ENG-FENCING-OPT-IN-NO-FIX-LOOP",
@@ -2839,9 +2839,9 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/9e2f9a20-9f68-4ae4-ae6e-9615c26a8234.json",
-      "attestationId": "9e2f9a20-9f68-4ae4-ae6e-9615c26a8234",
-      "attestedAt": "2026-11-03T15:49:39.144Z"
+      "closureProof": "governance/bug-closure/proofs/fca1eb24-1502-45c4-abde-23c8a6e4e89e.json",
+      "attestationId": "fca1eb24-1502-45c4-abde-23c8a6e4e89e",
+      "attestedAt": "2026-11-03T23:21:03.704Z"
     },
     {
       "id": "ENG-LEASE-ERROR-SEM-MAPEAMENTO-HTTP",
@@ -2854,9 +2854,9 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/d3fc0218-8a79-4a8e-a707-7ba05ba3e609.json",
-      "attestationId": "d3fc0218-8a79-4a8e-a707-7ba05ba3e609",
-      "attestedAt": "2026-11-03T15:49:39.605Z"
+      "closureProof": "governance/bug-closure/proofs/7d56a577-8dfe-45b3-95b4-7c6a4ac29d06.json",
+      "attestationId": "7d56a577-8dfe-45b3-95b4-7c6a4ac29d06",
+      "attestedAt": "2026-11-03T23:21:03.989Z"
     },
     {
       "id": "ENG-TESTES-VACUOSOS-PROVADOS-POR-MUTACAO",
@@ -2869,9 +2869,9 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/39e5ce49-c7d7-48d8-9232-945601124cf4.json",
-      "attestationId": "39e5ce49-c7d7-48d8-9232-945601124cf4",
-      "attestedAt": "2026-11-03T15:49:42.449Z"
+      "closureProof": "governance/bug-closure/proofs/308df560-e5ac-42cd-ab0a-7fd77121b141.json",
+      "attestationId": "308df560-e5ac-42cd-ab0a-7fd77121b141",
+      "attestedAt": "2026-11-03T23:21:05.698Z"
     },
     {
       "id": "ENG-REPARO-NAO-VISIVEL-NA-MISSAO",
@@ -2884,9 +2884,9 @@
       "state": "VERIFIED",
       "legacyStatus": "verified",
       "regressionTest": "tests/integration/engineeringMissionSourceE2E.test.js",
-      "closureProof": "governance/bug-closure/proofs/c12652fe-7716-4b3b-8435-e434ce8a5700.json",
-      "attestationId": "c12652fe-7716-4b3b-8435-e434ce8a5700",
-      "attestedAt": "2026-11-03T15:49:41.612Z"
+      "closureProof": "governance/bug-closure/proofs/f0656150-0449-4a9c-90a6-01c8e60a9914.json",
+      "attestationId": "f0656150-0449-4a9c-90a6-01c8e60a9914",
+      "attestedAt": "2026-11-03T23:21:05.289Z"
     },
     {
       "id": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
@@ -2899,9 +2899,9 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/4c65c561-3bdf-4e08-899f-a170a839b47f.json",
-      "attestationId": "4c65c561-3bdf-4e08-899f-a170a839b47f",
-      "attestedAt": "2026-11-03T15:49:41.202Z"
+      "closureProof": "governance/bug-closure/proofs/1ea39055-38b9-4dde-9ced-3e1b72dcaf75.json",
+      "attestationId": "1ea39055-38b9-4dde-9ced-3e1b72dcaf75",
+      "attestedAt": "2026-11-03T23:21:05.070Z"
     },
     {
       "id": "ENG-DIVIDA-REPARO-SEM-SINAL",
@@ -2914,9 +2914,9 @@
       "severityStatus": "DECLARADA",
       "state": "VERIFIED",
       "legacyStatus": "verified",
-      "closureProof": "governance/bug-closure/proofs/10ccc947-360d-43bd-b1a7-60fe50ff8f30.json",
-      "attestationId": "10ccc947-360d-43bd-b1a7-60fe50ff8f30",
-      "attestedAt": "2026-11-03T15:49:38.197Z"
+      "closureProof": "governance/bug-closure/proofs/9c04d90d-4e4a-4742-913e-73afea206a76.json",
+      "attestationId": "9c04d90d-4e4a-4742-913e-73afea206a76",
+      "attestedAt": "2026-11-03T23:21:03.094Z"
     },
     {
       "id": "TESTE-DURABLE-RESUME-FLAKE-POR-BANCO-COMPARTILHADO",
@@ -2933,9 +2933,9 @@
       "verificationNote": "backfill manual 2026-10-30: a opcao (a) \"banco/schema dedicado por suite\" foi IMPLEMENTADA e medida no MESMO Postgres de dev compartilhado com o servidor vivo na 3001 — tests/helpers/suiteDatabase.js cria rap_suite_<slug>_<hex>, aplica as migrations, executa e destroi. Suite: 3/3 execucoes isoladas PASS (6/6 testes; 44,7s/56,0s/60,4s) e PASS dentro do lote L0b (41/41 suites, 238/238 testes, exit 0 em 1249s). Antes: 1/3 isoladas e 2/2 lotes falhando. Bancos residuais: zero. sha 0bfda6315522",
       "verifiedAt": "2026-10-30T05:56:06.473Z",
       "commit": "0bfda6315",
-      "closureProof": "governance/bug-closure/proofs/d0424e7e-a371-46bd-8281-ff1af27db1cc.json",
-      "attestationId": "d0424e7e-a371-46bd-8281-ff1af27db1cc",
-      "attestedAt": "2026-11-03T15:51:01.056Z"
+      "closureProof": "governance/bug-closure/proofs/568e6b29-ddd4-44cd-85d4-6f9745cbbca8.json",
+      "attestationId": "568e6b29-ddd4-44cd-85d4-6f9745cbbca8",
+      "attestedAt": "2026-11-03T23:22:05.551Z"
     },
     {
       "id": "CI-MAIN-JEST-AMBIENTE",
@@ -2951,9 +2951,9 @@
       "severityBasis": "gate de CI vermelho por ambiente: 0 suítes medidas de 1121; falso vermelho permanente em main desde 2026-10-20",
       "severitySource": "medicao-ci-2026-10-28",
       "regressionTest": "tests/unit/governance/ciWorkflowContract.test.js",
-      "closureProof": "governance/bug-closure/proofs/b19086a0-23de-473e-b378-f7ccbdbd2f75.json",
-      "attestationId": "b19086a0-23de-473e-b378-f7ccbdbd2f75",
-      "attestedAt": "2026-11-03T15:49:27.893Z"
+      "closureProof": "governance/bug-closure/proofs/9e0650ef-43d0-43be-8f66-de7a22587d6c.json",
+      "attestationId": "9e0650ef-43d0-43be-8f66-de7a22587d6c",
+      "attestedAt": "2026-11-03T23:20:59.654Z"
     },
     {
       "id": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
@@ -2969,9 +2969,9 @@
       "severitySource": "medicao-ci-2026-10-28",
       "regressionTest": "tests/unit/governance/modelDrivenE2e.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:48:56.702Z)",
-      "closureProof": "governance/bug-closure/proofs/b53ee948-8b95-4218-9755-6c5c4220ab13.json",
-      "attestationId": "b53ee948-8b95-4218-9755-6c5c4220ab13",
-      "attestedAt": "2026-11-03T15:49:28.736Z"
+      "closureProof": "governance/bug-closure/proofs/961ea1b8-603a-4881-958a-39043089d01c.json",
+      "attestationId": "961ea1b8-603a-4881-958a-39043089d01c",
+      "attestedAt": "2026-11-03T23:20:59.863Z"
     },
     {
       "id": "CI-INTEG-JEST-DUAS-SUITES-BLOCKED",
@@ -2988,9 +2988,9 @@
       "resolution": "Implementado em api/services/engineeringRouter/engineeringRouterService.js (preVerifySpecSatisfied + transições ROUTED→GREEN e CLASSIFIED→GREEN), engine/engineeringMission/bugFinding/postFixFailure.js (classificador puro) e bugLoopCoordinatorService.hookMissionFailure (fingerprint separado). Testes: engineeringRouterSpecPreVerification (3), postFixFailureVsRecurrence (2), postFixFailureClassification (9).",
       "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:50:02.476Z)",
-      "closureProof": "governance/bug-closure/proofs/f14be33d-aa35-47f9-a54b-6add437155c1.json",
-      "attestationId": "f14be33d-aa35-47f9-a54b-6add437155c1",
-      "attestedAt": "2026-11-03T15:49:27.126Z"
+      "closureProof": "governance/bug-closure/proofs/28d37432-b5e0-40f8-8023-a9ec5023df90.json",
+      "attestationId": "28d37432-b5e0-40f8-8023-a9ec5023df90",
+      "attestedAt": "2026-11-03T23:20:59.425Z"
     },
     {
       "id": "CI-E2E-CREDENTIAL-SCOPE",
@@ -3007,9 +3007,9 @@
       "severitySource": "medicao-local-e-ci-2026-10-29",
       "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:51:24.183Z)",
-      "closureProof": "governance/bug-closure/proofs/63ecc2eb-f071-47ff-aa87-58a6db560317.json",
-      "attestationId": "63ecc2eb-f071-47ff-aa87-58a6db560317",
-      "attestedAt": "2026-11-03T15:49:25.773Z"
+      "closureProof": "governance/bug-closure/proofs/20c736ca-a947-45dd-99a4-67a4ea62b78b.json",
+      "attestationId": "20c736ca-a947-45dd-99a4-67a4ea62b78b",
+      "attestedAt": "2026-11-03T23:20:58.966Z"
     },
     {
       "id": "REQUIRED-TESTS-ANCORA-EXTERNA",
@@ -3040,9 +3040,9 @@
       "severitySource": "medicao-local-2026-10-29",
       "regressionTest": "tests/integration/governanceApprovalFullWorkerE2E.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/governanceApprovalFullWorkerE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:52:55.375Z)",
-      "closureProof": "governance/bug-closure/proofs/17660be6-5b3b-4985-814d-5b6ff5024ea5.json",
-      "attestationId": "17660be6-5b3b-4985-814d-5b6ff5024ea5",
-      "attestedAt": "2026-11-03T15:51:02.097Z"
+      "closureProof": "governance/bug-closure/proofs/617abd8c-eb08-417f-ae0f-c74177703bd4.json",
+      "attestationId": "617abd8c-eb08-417f-ae0f-c74177703bd4",
+      "attestedAt": "2026-11-03T23:22:06.398Z"
     },
     {
       "id": "RESUME-SUBSTITUTA-SEM-ESCOPO",
@@ -3059,9 +3059,9 @@
       "severitySource": "medicao-local-e-ci-2026-10-29",
       "regressionTest": "tests/integration/engineeringBugLoopNaturalPathE2E.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringBugLoopNaturalPathE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:25.543Z)",
-      "closureProof": "governance/bug-closure/proofs/8706b2c4-9e76-4ec5-aa5a-194674d7a64d.json",
-      "attestationId": "8706b2c4-9e76-4ec5-aa5a-194674d7a64d",
-      "attestedAt": "2026-11-03T15:51:00.092Z"
+      "closureProof": "governance/bug-closure/proofs/f411fac0-dcb9-42c9-8d5f-bd1fc75413e3.json",
+      "attestationId": "f411fac0-dcb9-42c9-8d5f-bd1fc75413e3",
+      "attestedAt": "2026-11-03T23:22:04.746Z"
     },
     {
       "id": "FLAKE-B2-REGULARIZADOR-CORRIDA",
@@ -3078,9 +3078,9 @@
       "severitySource": "medicao-ci-2026-10-29",
       "regressionTest": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:35.740Z)",
-      "closureProof": "governance/bug-closure/proofs/d112d092-a7dd-4080-b762-a61b13da8f1a.json",
-      "attestationId": "d112d092-a7dd-4080-b762-a61b13da8f1a",
-      "attestedAt": "2026-11-03T15:49:44.052Z"
+      "closureProof": "governance/bug-closure/proofs/1a2c535e-b16d-4b6f-843b-f4b2317e2343.json",
+      "attestationId": "1a2c535e-b16d-4b6f-843b-f4b2317e2343",
+      "attestedAt": "2026-11-03T23:21:06.599Z"
     },
     {
       "id": "INTERFERENCIA-CRASH-EVIDENCE-L0B",
@@ -3096,9 +3096,9 @@
       "severitySource": "medicao-local-2026-10-29",
       "regressionTest": "tests/integration/engineeringMissionCrashRecoveryE2E.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/integration/engineeringMissionCrashRecoveryE2E.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:54:43.650Z)",
-      "closureProof": "governance/bug-closure/proofs/2456c779-fc44-4ab0-98e4-563778a2dd23.json",
-      "attestationId": "2456c779-fc44-4ab0-98e4-563778a2dd23",
-      "attestedAt": "2026-11-03T15:50:05.032Z"
+      "closureProof": "governance/bug-closure/proofs/e5442925-fe5e-4c15-bcf2-3669a8673936.json",
+      "attestationId": "e5442925-fe5e-4c15-bcf2-3669a8673936",
+      "attestedAt": "2026-11-03T23:21:16.920Z"
     },
     {
       "id": "POLITICA-PROD-LIKE-EM-MAIN",
@@ -3128,9 +3128,9 @@
       "severitySource": "medicao-local-2026-10-29",
       "regressionTest": "tests/unit/dev/devServicesSupervision.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/dev/devServicesSupervision.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:22.750Z)",
-      "closureProof": "governance/bug-closure/proofs/7723c362-efd8-4997-afb0-7042cd3c5177.json",
-      "attestationId": "7723c362-efd8-4997-afb0-7042cd3c5177",
-      "attestedAt": "2026-11-03T15:51:00.570Z"
+      "closureProof": "governance/bug-closure/proofs/fdea29e2-fae0-406c-bb4a-b456e45e4e82.json",
+      "attestationId": "fdea29e2-fae0-406c-bb4a-b456e45e4e82",
+      "attestedAt": "2026-11-03T23:22:05.151Z"
     },
     {
       "id": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
@@ -3145,9 +3145,9 @@
       "severityBasis": "evidência de wave vencida degrada VALIDATED->STALE no coverage gate; é insumo de release, não cosmético",
       "severitySource": "medicao-ci-2026-10-25",
       "regressionTest": "tests/unit/governance/ciWorkflowContract.test.js",
-      "closureProof": "governance/bug-closure/proofs/15160260-08bc-4ae4-b943-cd9917e00feb.json",
-      "attestationId": "15160260-08bc-4ae4-b943-cd9917e00feb",
-      "attestedAt": "2026-11-03T15:49:30.471Z"
+      "closureProof": "governance/bug-closure/proofs/f2a056ba-460e-49c4-a76e-06f2ee5388e1.json",
+      "attestationId": "f2a056ba-460e-49c4-a76e-06f2ee5388e1",
+      "attestedAt": "2026-11-03T23:21:00.320Z"
     },
     {
       "id": "E2E-SUPPORT-CENARIO1-PRECONDICAO",
@@ -3163,9 +3163,9 @@
       "severitySource": "medicao-ci-2026-10-29",
       "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:26.121Z)",
-      "closureProof": "governance/bug-closure/proofs/f058f4bf-e498-4c8d-937c-f2bac7f7e03f.json",
-      "attestationId": "f058f4bf-e498-4c8d-937c-f2bac7f7e03f",
-      "attestedAt": "2026-11-03T15:49:37.497Z"
+      "closureProof": "governance/bug-closure/proofs/7ab491a6-4189-463d-9d28-8d1b46f9d1f5.json",
+      "attestationId": "7ab491a6-4189-463d-9d28-8d1b46f9d1f5",
+      "attestedAt": "2026-11-03T23:21:02.868Z"
     },
     {
       "id": "E2E-REPLAY-DOMINIO-E-TAB",
@@ -3181,9 +3181,9 @@
       "severitySource": "medicao-ci-2026-10-29",
       "regressionTest": "tests/unit/governance/backfillRegressionTests.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest tests/unit/governance/backfillRegressionTests.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:29.636Z)",
-      "closureProof": "governance/bug-closure/proofs/f4073073-1c1c-489b-8fd8-9700e76b2afc.json",
-      "attestationId": "f4073073-1c1c-489b-8fd8-9700e76b2afc",
-      "attestedAt": "2026-11-03T15:49:36.813Z"
+      "closureProof": "governance/bug-closure/proofs/69c325e3-8f32-49d3-ab0b-27b68224daf8.json",
+      "attestationId": "69c325e3-8f32-49d3-ab0b-27b68224daf8",
+      "attestedAt": "2026-11-03T23:21:02.626Z"
     },
     {
       "id": "JOURNEY-STORE-ESCONDE-DERIVADAS",
@@ -3199,9 +3199,9 @@
       "severitySource": "medicao-servico-2026-10-29",
       "regressionTest": "api/services/__tests__/qaWavesService.journey.test.js",
       "verificationNote": "backfill-regression-tests.js: npx jest api/services/__tests__/qaWavesService.journey.test.js --bail=1 --ci --forceExit exit=0 em 0bfda6315522 (2026-10-30T05:55:32.970Z)",
-      "closureProof": "governance/bug-closure/proofs/968251ce-ac7c-4f01-9b92-acc0ecae3c15.json",
-      "attestationId": "968251ce-ac7c-4f01-9b92-acc0ecae3c15",
-      "attestedAt": "2026-11-03T15:50:05.845Z"
+      "closureProof": "governance/bug-closure/proofs/745dd884-dde6-4419-8a27-9aa5c48aa29d.json",
+      "attestationId": "745dd884-dde6-4419-8a27-9aa5c48aa29d",
+      "attestedAt": "2026-11-03T23:21:17.235Z"
     },
     {
       "id": "ENGINEERING-BUGLOOP-DEPENDE-DE-BANCO-LIMPO",
@@ -3220,9 +3220,9 @@
       "verificationCommit": "0bfda6315522",
       "verificationNote": "backfill manual 2026-10-30: a suite PROVISIONA o proprio banco e passou 4/4 execucoes no Postgres de dev COMPARTILHADO (88,2s/82,5s/87,2s/77,5s) — a mesma configuracao em que falhava em 65s com lineage.replacementTaskId === originalTaskId. Dentro do lote L0b: PASS (41/41 suites, 238/238 testes, exit 0). Bancos residuais: zero. sha 0bfda6315522",
       "verifiedAt": "2026-10-30T05:56:06.473Z",
-      "closureProof": "governance/bug-closure/proofs/fe09edc2-0658-4412-9f78-f938dbc901a1.json",
-      "attestationId": "fe09edc2-0658-4412-9f78-f938dbc901a1",
-      "attestedAt": "2026-11-03T15:49:42.898Z"
+      "closureProof": "governance/bug-closure/proofs/64c43c21-1f60-4242-9183-e434a2dd4b86.json",
+      "attestationId": "64c43c21-1f60-4242-9183-e434a2dd4b86",
+      "attestedAt": "2026-11-03T23:21:05.916Z"
     },
     {
       "id": "FECHAMENTOS-SEM-SUITE-DE-REGRESSAO",
@@ -3239,9 +3239,9 @@
       "regressionTest": "tests/unit/governance/closureRequiresSuite.test.js",
       "verificationNote": "DESBLOQUEIO 2026-11-01 (operador, dentro do caminho LEGAL de defect-states): BLOCKED_EXTERNAL -> FIX_IN_PROGRESS -> FIXED_PENDING_VERIFICATION -> VERIFIED. O bloqueio era \"11 itens sem suíte identificável\"; cada um recebeu suíte própria e verde. Medição nova: 167 fechados, 0 sem regressionTest, 0 com caminho inexistente. A atestação abaixo (REVERIFY_EXISTING_CLOSURE) substancia a declaração com execução real no SHA corrente.",
       "legacyStatus": "blocked_external",
-      "closureProof": "governance/bug-closure/proofs/911d1bbb-839d-40cd-9f7e-e229ccf1922c.json",
-      "attestationId": "911d1bbb-839d-40cd-9f7e-e229ccf1922c",
-      "attestedAt": "2026-11-03T15:49:43.650Z"
+      "closureProof": "governance/bug-closure/proofs/811d68ba-b66f-457b-bc83-9c34ee74d4d6.json",
+      "attestationId": "811d68ba-b66f-457b-bc83-9c34ee74d4d6",
+      "attestedAt": "2026-11-03T23:21:06.367Z"
     },
     {
       "id": "QA-MESH-SCHEDULER-REASON-BUG-CLOSURE-ANTES-DE-PIPELINE",
@@ -3260,9 +3260,9 @@
       "blocked_reason_historico": "DECISÃO DE GOVERNAÇA (não é bug novo): o scheduler hoje recusa com reason=bug_closure_blocked ANTES do caminho pipeline_active. Fail-closed parece CORRETO (não rodar mesh com fechamento sem prova), mas o teste automatizado assevera a razão antiga. Duas saídas legítimas: (a) aceitar o comportamento e atualizar a expectativa do teste declarando a ordem dos guards — exige decisão explícita, porque mexer em expectativa é justamente o que a missão proíbe fazer sem justificar; (b) mudar a ordem/precedência dos guards no produto. Não escolhi por conta própria. Enquanto isso, a suíte fica vermelha fora dos gates padrão (não roda em test:unit nem no L0b).",
       "verificationCommit": "e3fb9d6015ae",
       "verifiedAt": "2026-10-30T17:39:45.569Z",
-      "closureProof": "governance/bug-closure/proofs/3a9d1ff3-9abb-4af3-b4ba-1e4aefe3fea2.json",
-      "attestationId": "3a9d1ff3-9abb-4af3-b4ba-1e4aefe3fea2",
-      "attestedAt": "2026-11-03T15:50:59.593Z"
+      "closureProof": "governance/bug-closure/proofs/bb17820d-734a-4e75-897f-477c7eb6dfff.json",
+      "attestationId": "bb17820d-734a-4e75-897f-477c7eb6dfff",
+      "attestedAt": "2026-11-03T23:22:04.293Z"
     },
     {
       "id": "QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE",
@@ -3281,9 +3281,9 @@
       "blocked_reason_historico": "DECISAO NECESSARIA: (a) o produto deve sempre emitir repairPlan (mesmo vazio) para dar previsibilidade ao consumidor, ou (b) o teste deve refletir que o arquivo so existe quando ha o que reparar. Nenhuma das duas e mudanca que eu deva fazer sem decisao — (b) altera expectativa de teste e (a) muda contrato de artefato.",
       "verificationCommit": "e3fb9d6015ae",
       "verifiedAt": "2026-10-30T17:39:45.569Z",
-      "closureProof": "governance/bug-closure/proofs/ae111a14-9f52-4d73-b423-9a907366b5f0.json",
-      "attestationId": "ae111a14-9f52-4d73-b423-9a907366b5f0",
-      "attestedAt": "2026-11-03T15:50:59.052Z"
+      "closureProof": "governance/bug-closure/proofs/f39dfc05-6267-47d2-959c-4ad8abf34c40.json",
+      "attestationId": "f39dfc05-6267-47d2-959c-4ad8abf34c40",
+      "attestedAt": "2026-11-03T23:22:03.884Z"
     },
     {
       "status": "done",
@@ -3299,9 +3299,9 @@
       "commit": "be004faa2",
       "evidence": "tests/unit/governance/certificationLadder.test.js (20 casos, inclui 18 degraus SKIPPED e degrau folha)",
       "regressionTest": "tests/unit/governance/certificationLadder.test.js",
-      "closureProof": "governance/bug-closure/proofs/82c744b8-2a70-4523-ad06-66c45c74872b.json",
-      "attestationId": "82c744b8-2a70-4523-ad06-66c45c74872b",
-      "attestedAt": "2026-11-03T15:50:53.159Z"
+      "closureProof": "governance/bug-closure/proofs/173d9447-053c-4861-bc57-044993945f86.json",
+      "attestationId": "173d9447-053c-4861-bc57-044993945f86",
+      "attestedAt": "2026-11-03T23:22:00.930Z"
     },
     {
       "status": "done",
@@ -3317,9 +3317,9 @@
       "commit": "be004faa2",
       "evidence": "tests/unit/governance/certificationLadder.test.js + CLI real: --only fila executa so fila, invalido exit 2",
       "regressionTest": "tests/unit/governance/certificationLadder.test.js",
-      "closureProof": "governance/bug-closure/proofs/4f316f6c-52b9-4e49-99e2-dc1c8b6e36b3.json",
-      "attestationId": "4f316f6c-52b9-4e49-99e2-dc1c8b6e36b3",
-      "attestedAt": "2026-11-03T15:50:53.883Z"
+      "closureProof": "governance/bug-closure/proofs/dd3aa7f0-aceb-4e5a-80cc-9e7cf4129eb0.json",
+      "attestationId": "dd3aa7f0-aceb-4e5a-80cc-9e7cf4129eb0",
+      "attestedAt": "2026-11-03T23:22:01.219Z"
     },
     {
       "status": "done",
@@ -3335,9 +3335,9 @@
       "commit": "be004faa2",
       "evidence": "api/services/lro/__tests__/lroOutboxWorker.test.js (falha persistente do dispatch nao impede sweep)",
       "regressionTest": "api/services/lro/__tests__/lroOutboxWorker.test.js",
-      "closureProof": "governance/bug-closure/proofs/62c5f51f-f44f-4f16-9be0-406223108dec.json",
-      "attestationId": "62c5f51f-f44f-4f16-9be0-406223108dec",
-      "attestedAt": "2026-11-03T15:50:54.920Z"
+      "closureProof": "governance/bug-closure/proofs/e45b5d7a-515e-47c8-bf5d-c64461136708.json",
+      "attestationId": "e45b5d7a-515e-47c8-bf5d-c64461136708",
+      "attestedAt": "2026-11-03T23:22:01.540Z"
     },
     {
       "status": "done",
@@ -3353,9 +3353,9 @@
       "commit": "884b3fb83",
       "evidence": "tests/integration/lroOutboxDispatcher.test.js (topic/topico, claim expirado, claim recente) + worker stop",
       "regressionTest": "tests/integration/lroOutboxDispatcher.test.js",
-      "closureProof": "governance/bug-closure/proofs/44babf3e-16e6-4461-8e23-da88f8f68ea5.json",
-      "attestationId": "44babf3e-16e6-4461-8e23-da88f8f68ea5",
-      "attestedAt": "2026-11-03T15:50:55.798Z"
+      "closureProof": "governance/bug-closure/proofs/60361e51-4623-4ee9-8721-ed6b432b4523.json",
+      "attestationId": "60361e51-4623-4ee9-8721-ed6b432b4523",
+      "attestedAt": "2026-11-03T23:22:01.879Z"
     },
     {
       "status": "done",
@@ -3371,9 +3371,9 @@
       "commit": "e2369c7c8",
       "evidence": "tests/integration/lroServiceTransaction.test.js P1-E (7 casos)",
       "regressionTest": "tests/integration/lroServiceTransaction.test.js",
-      "closureProof": "governance/bug-closure/proofs/e84b3ffe-d2d1-4605-99b6-4e707bb06963.json",
-      "attestationId": "e84b3ffe-d2d1-4605-99b6-4e707bb06963",
-      "attestedAt": "2026-11-03T15:50:56.472Z"
+      "closureProof": "governance/bug-closure/proofs/10bc7f2d-785e-43e8-a502-e51bf4e32b3d.json",
+      "attestationId": "10bc7f2d-785e-43e8-a502-e51bf4e32b3d",
+      "attestedAt": "2026-11-03T23:22:02.341Z"
     },
     {
       "status": "done",
@@ -3389,9 +3389,9 @@
       "commit": "8f9b8332b",
       "evidence": "frontend/src/shared/useLroStream.test.jsx (troca de operacao sem perda e sem contaminacao)",
       "regressionTest": "frontend/src/shared/useLroStream.test.jsx",
-      "closureProof": "governance/bug-closure/proofs/41d1af8f-bf28-4b74-8118-b83fbecd9e36.json",
-      "attestationId": "41d1af8f-bf28-4b74-8118-b83fbecd9e36",
-      "attestedAt": "2026-11-03T15:50:57.175Z"
+      "closureProof": "governance/bug-closure/proofs/595b9815-010c-4f87-aef5-88183f3a2464.json",
+      "attestationId": "595b9815-010c-4f87-aef5-88183f3a2464",
+      "attestedAt": "2026-11-03T23:22:02.714Z"
     },
     {
       "status": "done",
@@ -3407,9 +3407,9 @@
       "commit": "f7ac63b96",
       "evidence": "qa-mesh/__tests__/executionQueueOutcome.test.js (9 casos)",
       "regressionTest": "qa-mesh/__tests__/executionQueueOutcome.test.js",
-      "closureProof": "governance/bug-closure/proofs/06afe96b-e74b-466b-817e-c9afd45707b6.json",
-      "attestationId": "06afe96b-e74b-466b-817e-c9afd45707b6",
-      "attestedAt": "2026-11-03T15:50:57.832Z"
+      "closureProof": "governance/bug-closure/proofs/20c37a77-2780-4682-a644-fbd19e6a8f03.json",
+      "attestationId": "20c37a77-2780-4682-a644-fbd19e6a8f03",
+      "attestedAt": "2026-11-03T23:22:03.149Z"
     },
     {
       "status": "done",
@@ -3425,9 +3425,9 @@
       "commit": "6210241fd",
       "evidence": "tests/unit/governance/runClosureTransition.test.js (7 casos) + deliveryVerification/lineageRepair ja verdes",
       "regressionTest": "tests/unit/governance/runClosureTransition.test.js",
-      "closureProof": "governance/bug-closure/proofs/6200e6c4-8370-42e0-a996-676c5cbb3881.json",
-      "attestationId": "6200e6c4-8370-42e0-a996-676c5cbb3881",
-      "attestedAt": "2026-11-03T15:50:58.531Z"
+      "closureProof": "governance/bug-closure/proofs/d2f5fddf-9c77-4457-bc19-2e1d99823361.json",
+      "attestationId": "d2f5fddf-9c77-4457-bc19-2e1d99823361",
+      "attestedAt": "2026-11-03T23:22:03.518Z"
     }
   ],
   "schemaVersion": 2,

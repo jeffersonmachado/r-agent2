@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.2, pluggy-1.6.0
+rootdir: /opt/results/ria/er-fixci/rag-service
+configfile: pytest.ini
+plugins: cov-7.1.0, anyio-4.14.2
+collected 4 items
+
+rag-service/tests/test_hybrid_isolation_real_db.py ....                  [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.3-final-0 ________________
+
+Name                                                 Stmts   Miss  Cover   Missing
+----------------------------------------------------------------------------------
+rag-service/config/__init__.py                           0      0   100%
+rag-service/config/settings.py                         131     52    60%   24, 38, 41, 57-59, 82-86, 101-143, 229-241, 282, 322-323
+rag-service/models/__init__.py                           0      0   100%
+rag-service/models/document.py                          52      0   100%
+rag-service/services/__init__.py                         0      0   100%
+rag-service/services/domain_policy.py                   88     35    60%   58-59, 69-117, 125-131, 145, 164, 166, 208, 222
+rag-service/services/hybrid_search.py                   66      7    89%   72, 80, 86, 137, 176, 178, 184
+rag-service/services/vector_store.py                   246     89    64%   26, 29-30, 40-45, 48-49, 69-74, 88-93, 110, 154-156, 159-161, 194, 206-210, 245-326, 330, 332, 344, 385-386, 414, 455-456, 499-500, 505-508, 529, 572-586, 589-595
+rag-service/tests/__init__.py                            0      0   100%
+rag-service/tests/conftest.py                           45     10    78%   29, 53, 57-58, 67-73
+rag-service/tests/test_hybrid_isolation_real_db.py      55      4    93%   30, 34-35, 86
+----------------------------------------------------------------------------------
+TOTAL                                                  683    197    71%
+Coverage HTML written to dir htmlcov
+============================== 4 passed in 3.31s ===============================

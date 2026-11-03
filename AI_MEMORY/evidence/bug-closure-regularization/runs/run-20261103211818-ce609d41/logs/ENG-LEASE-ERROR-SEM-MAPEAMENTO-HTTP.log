@@ -1,0 +1,222 @@
+  console.warn
+    [2026-11-03T21:42:06.245Z] [WARN] [security] classification_required
+    {
+      "required": "DEVELOPMENT",
+      "classification": "PRODUCTION",
+      "role": null,
+      "method": "GET",
+      "path": "/engineering/missions"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/middleware/requireClassification.js:45:12)
+      at checkClassification (api/modules/engineering-missions/routes.js:132:19)
+      at guard (api/modules/engineering-missions/routes.js:314:10)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:117:7)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at expressInit (node_modules/express/lib/middleware/init.js:40:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at query (node_modules/express/lib/middleware/query.js:45:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at Function.handle (node_modules/express/lib/application.js:181:10)
+      at Server.app (node_modules/express/lib/express.js:39:9)
+
+  console.warn
+    [2026-11-03T21:42:06.654Z] [WARN] [security] classification_required
+    {
+      "required": "DEVELOPMENT",
+      "classification": "PRODUCTION",
+      "role": null,
+      "method": "GET",
+      "path": "/engineering/missions"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/middleware/requireClassification.js:45:12)
+      at checkClassification (api/modules/engineering-missions/routes.js:132:19)
+      at guard (api/modules/engineering-missions/routes.js:314:10)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:117:7)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at expressInit (node_modules/express/lib/middleware/init.js:40:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at query (node_modules/express/lib/middleware/query.js:45:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at Function.handle (node_modules/express/lib/application.js:181:10)
+      at Server.app (node_modules/express/lib/express.js:39:9)
+
+  console.warn
+    [2026-11-03T21:42:06.811Z] [WARN] [security] classification_required
+    {
+      "required": "DEVELOPMENT",
+      "classification": "SUPPORT",
+      "role": null,
+      "method": "GET",
+      "path": "/engineering/missions"
+    }
+
+    [0m [90m 166 |[39m     [36mif[39m (level [33m<=[39m [33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m) {
+     [90m 167 |[39m       [90m// eslint-disable-next-line no-console[39m
+    [31m[1m>[22m[39m[90m 168 |[39m       console[33m.[39mwarn(formatMessage([33mLOG_LEVELS[39m[33m.[39m[33mWARN[39m[33m,[39m message[33m,[39m data))[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 169 |[39m     }
+     [90m 170 |[39m   }[33m,[39m
+     [90m 171 |[39m   [0m
+
+      at Object.warn (api/utils/logger.js:168:15)
+      at warn (api/middleware/requireClassification.js:45:12)
+      at checkClassification (api/modules/engineering-missions/routes.js:132:19)
+      at guard (api/modules/engineering-missions/routes.js:314:10)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at next (node_modules/express/lib/router/route.js:149:13)
+      at Route.dispatch (node_modules/express/lib/router/route.js:119:3)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at node_modules/express/lib/router/index.js:284:15
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at router (node_modules/express/lib/router/index.js:47:12)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:117:7)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at expressInit (node_modules/express/lib/middleware/init.js:40:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at query (node_modules/express/lib/middleware/query.js:45:5)
+      at Layer.handle [as handle_request] (node_modules/express/lib/router/layer.js:95:5)
+      at trim_prefix (node_modules/express/lib/router/index.js:328:13)
+      at node_modules/express/lib/router/index.js:286:9
+      at Function.process_params (node_modules/express/lib/router/index.js:346:12)
+      at next (node_modules/express/lib/router/index.js:280:10)
+      at Function.handle (node_modules/express/lib/router/index.js:175:3)
+      at Function.handle (node_modules/express/lib/application.js:181:10)
+      at Server.app (node_modules/express/lib/express.js:39:9)
+
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/engineeringMissionRoutes.test.js (6.307 s)
+  engineering-missions routes
+    ✓ ADV-16: 401 sem autenticação (333 ms)
+    ✓ ADV-16: classificação: 403 sem platformClassification (PRODUCTION default) (410 ms)
+    ✓ ADV-16: classificação: 403 para PRODUCTION explícito (161 ms)
+    ✓ ADV-16: classificação: 403 para SUPPORT explícito (148 ms)
+    ✓ classificação: 200 para DEVELOPMENT na listagem, com displayStatus derivado (125 ms)
+    ✓ classificação: overview agrega por displayStatus e expõe a política (130 ms)
+    ✓ ADV-17: POST sem missão retorna 400 antes de qualquer persistência (179 ms)
+    ✓ ADV-17: POST com missionType desconhecido retorna 400 (125 ms)
+    ✓ POST válido compila e devolve preview (201) (171 ms)
+    ✓ PUT /policy rejeita autoaprovação habilitada em modo MANUAL (422) (129 ms)
+    ✓ execução sem aprovação responde 409 com a causa exata (não 500) (124 ms)
+    ✓ missão inexistente responde 404 (114 ms)
+    ✓ relatório de auditoria é servido com artefato identificado (115 ms)
+    ✓ REGRESSÃO de ordem de rota: /self-assessment NÃO pode ser capturado por /:id (116 ms)
+    ✓ revisão: POST /:id/review rejeita kind desconhecido com 400 (121 ms)
+    ✓ revisão: POST /:id/review devolve findings e bloqueio quando existir (121 ms)
+  engineering-missions routes — aprovação de self-modification (HTTP real)
+    ✓ GOV_HTTP_01 a rota ENCAMINHA o consentimento explícito de governança ao serviço (124 ms)
+    ✓ GOV_HTTP_02 ausência de consentimento explícito NÃO vira true (nunca presumido) (122 ms)
+    ✓ GOV_HTTP_03 a identidade do aprovador vem da AUTENTICAÇÃO — `actor` do corpo é ignorado (116 ms)
+    ✓ GOV_HTTP_04 conta de serviço é recusada com 403 (identidade autenticada, não declarada) (119 ms)
+    ✓ GOV_HTTP_05 recusa de governança tem causa de CLIENTE e código estável (nunca 500) (122 ms)
+    ✓ GOV_HTTP_06 sem a permissão ESPECÍFICA o boundary responde 403 antes de chamar o serviço (114 ms)
+  engineering-missions routes — confirmação de finding encaminha o contrato de reprodução
+    ✓ reproduction de COMANDO atravessa o boundary e produz testCommands não vazio na fix task (124 ms)
+    ✓ reproduction de INVARIANTE é aceito (plano INVARIANT tem caminho próprio) (119 ms)
+    ✓ reproduction inválido é recusado no boundary (nunca vira plano silenciosamente inútil) (236 ms)
+    ✓ confirmar SEM reproduction continua válido (o campo é opcional, não uma exigência nova) (116 ms)
+    ✓ FINDING_LEASE_LOST no boundary é 409 (conflito de estado), nunca 500 (117 ms)
+    ✓ FINDING_LEASE_HELD_BY_OTHER_WORKER no boundary é 409 (conflito de estado), nunca 500 (113 ms)
+    ✓ FINDING_LEASE_MISMATCH no boundary é 409 (conflito de estado), nunca 500 (117 ms)
+    ✓ FINDING_STATE_CONFLICT no boundary é 409 (conflito de estado), nunca 500 (118 ms)
+  resolveAuthenticatedActorType
+    ✓ sessão de usuário autenticado ⇒ HUMAN (104 ms)
+    ✓ conta de serviço ⇒ SERVICE (nunca HUMAN) (103 ms)
+    ✓ tipo explícito do principal autenticado prevalece (103 ms)
+    ✓ principal ausente ⇒ null (fail-closed no serviço) (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       34 passed, 34 total
+Snapshots:   0 total
+Time:        6.462 s
+Ran all test suites matching /tests\/unit\/engineeringMissionRoutes.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

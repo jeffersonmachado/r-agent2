@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "347cd08f-3eb3-47f6-8569-4dff88ef38e6",
+  "defectId": "P1-5",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "rag-service/tests/test_hybrid_search.py"
+  ],
+  "executions": [
+    {
+      "testPath": "rag-service/tests/test_hybrid_search.py",
+      "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_search.py -q -p no:cacheprovider",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:30:01.457Z",
+      "finishedAt": "2026-11-03T21:30:07.624Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/P1-5.log",
+      "outputSha256": "9cdcf2e35f9912a2115c85ea89c525fd56bae362d91122094d989b4514864217"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "rag-service/tests/test_hybrid_search.py",
+      "sha256": "7014c15096d65e060522d28133c583ab923437933293256087c07ce306017461"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:30:07.632Z",
+  "proofHash": "f467861177f38b8804447695879971aeafd53ccceb74e4333eb805ba46d112b7",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "0goDFToUohZQwIFL/RZw/7hYwRlv9xnHX7H7dLjIDRtGQYptPVAid1SF2PczuhsYDWk448dYRwMXDX3MXpozBw==",
+    "signedAt": "2026-11-03T22:11:57.071Z"
+  }
+}

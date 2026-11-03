@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "15160260-08bc-4ae4-b943-cd9917e00feb",
+  "transitionId": "f2a056ba-460e-49c4-a76e-06f2ee5388e1",
   "defectId": "CI-WAVE-REFRESH-SEM-RUN-GOVERNADO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/governance/ciWorkflowContract.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/ciWorkflowContract.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:33:39.825Z",
-      "finishedAt": "2026-11-03T14:33:47.438Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/CI-WAVE-REFRESH-SEM-RUN-GOVERNADO.log",
-      "outputSha256": "670e1f0417941f7a179239ecef83b968722f1bea2438cb4ce84813c06817ab3c"
+      "startedAt": "2026-11-03T22:32:14.300Z",
+      "finishedAt": "2026-11-03T22:32:18.442Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/CI-WAVE-REFRESH-SEM-RUN-GOVERNADO.log",
+      "outputSha256": "2ffe7da70152114a895e88e72f626c96b7347f6ada6c5b691e37575bdb4c8be1"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:33:47.444Z",
-  "proofHash": "e18b15c0afccf8a5cd73b62214cb6fbed6a826f31cb1b7ef756493302fdf80b5"
+  "createdAt": "2026-11-03T22:32:18.450Z",
+  "proofHash": "8cfb79c65461d5bc28d6ade7e04e79561ee3ceb6f32eaca4a2f075859a604770"
 }

@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "867deddd-496c-4691-a7e1-c362f1e78ce3",
+  "defectId": "H20-RUN-ORFAO-PROJECAO-STALE",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/governance/convergenceFixpoint.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/convergenceFixpoint.test.js",
+      "command": "npx jest tests/unit/governance/convergenceFixpoint.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T22:04:58.272Z",
+      "finishedAt": "2026-11-03T22:05:02.016Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103220457-c3298e61/logs/H20-RUN-ORFAO-PROJECAO-STALE.log",
+      "outputSha256": "b44d6f30f04d0de6da9b005cf69a1a36b4715306c34ee88d03bbdd97f89a474f"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/convergenceFixpoint.test.js",
+      "sha256": "1193ee3ac11fa30221cf63760d312469b0ef189f3aa2a06adc209a9026113fec"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T22:05:02.025Z",
+  "proofHash": "3714ff72ac15325869f53b3405955468d8410c71cc537dbe1f9fbbbfef621391",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Yfpj+eZmZquAipA8ht7nEkrNADuBa6WFcnFuRgr8Kx9Cv7qIEOZJboWCpAsuSIGBUFuqdFPWvSvb1scXYerzDw==",
+    "signedAt": "2026-11-03T22:11:16.940Z"
+  }
+}

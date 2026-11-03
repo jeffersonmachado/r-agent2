@@ -1,0 +1,27 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/closurePointersOrphans.test.js
+  ponteiros de closure — o histórico está MARCADO, não apagado
+    ✓ FINAL_RAP_RELEASE_CLOSURE.json declara SUPERSEDED apontando para arquivo que existe (125 ms)
+    ✓ o conteúdo ORIGINAL foi preservado (marcar não pode destruir a evidência) (107 ms)
+    ✓ o aviso de staleness acompanha o artefato (não só o campo de status) (105 ms)
+  ponteiros de closure — o entrypoint AVISA sobre cada um que existe
+    ✓ existe a seção explícita que proíbe usá-los como estado atual (103 ms)
+    ✓ FINAL_RAP_RELEASE_CLOSURE.json é citado no aviso do entrypoint (102 ms)
+    ✓ FINAL_RELEASE_CLOSURE.md é citado no aviso do entrypoint (102 ms)
+    ✓ ENGINEERING_ROUTER_V1_SEAL_REPORT.json é citado no aviso do entrypoint (102 ms)
+    ✓ ENGINEERING_ROUTER_V1_FINAL_SEAL.md é citado no aviso do entrypoint (102 ms)
+    ✓ o entrypoint aponta para a fonte correta do estado (não para os ponteiros) (105 ms)
+  ponteiros de closure — nenhum gate os consome como autoridade
+    ✓ FINAL_RAP_RELEASE_CLOSURE.json não é lido por nenhum gate executável (422 ms)
+    ✓ FINAL_RELEASE_CLOSURE.md não é lido por nenhum gate executável (237 ms)
+    ✓ ENGINEERING_ROUTER_V1_SEAL_REPORT.json não é lido por nenhum gate executável (246 ms)
+    ✓ ENGINEERING_ROUTER_V1_FINAL_SEAL.md não é lido por nenhum gate executável (292 ms)
+    ✓ a varredura tem alcance real (não passa por diretório vazio) (234 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        3.275 s
+Ran all test suites matching /tests\/unit\/governance\/closurePointersOrphans.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

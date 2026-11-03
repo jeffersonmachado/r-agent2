@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "19d20c53-78f8-4a0e-818c-0b31432a53c6",
+  "defectId": "TESTE-FILESYSTEM-ORCAMENTO-10S",
+  "severityBefore": "P2",
+  "severityAfter": "P2",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/governance/regularizadorFilesystemAttacks.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "command": "npx jest tests/unit/governance/regularizadorFilesystemAttacks.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:56:53.605Z",
+      "finishedAt": "2026-11-03T21:57:12.018Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/TESTE-FILESYSTEM-ORCAMENTO-10S.log",
+      "outputSha256": "7c25a3a648ba84c996b10157c30cd3d8807790823efdd6e3b81fd5dc31f7b119"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/regularizadorFilesystemAttacks.test.js",
+      "sha256": "563cdadc9045f89ee45728fa8252ce9936b19352ec65b7fbc8ce6e12708b6f11"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:57:12.030Z",
+  "proofHash": "7c3149c48d22a93b157f949af2e1b573ae856e38e4bec37504f999d57f6a8829",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "An43TDnJnMh4PQCtagP29fiumfKJlexHIP/WyKGw+3zHzpzfl7Njfptp9AawnsWu8q//5wjd/KouNEHP1xWWAg==",
+    "signedAt": "2026-11-03T22:12:17.703Z"
+  }
+}

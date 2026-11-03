@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "06c5fedb-f2c6-4363-bc28-b91a2f7b6f5e",
+  "transitionId": "17d801ce-9807-41bf-a55d-d870147bc8e5",
   "defectId": "AUDITORIA-CHECKPOINT-PROTOCOL",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/audit/checkpointTool.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/checkpointTool.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T15:25:32.269Z",
-      "finishedAt": "2026-11-03T15:25:38.608Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/AUDITORIA-CHECKPOINT-PROTOCOL.log",
-      "outputSha256": "73f5e7ff9d8778b4fb0ccdab866beaf40596ddd09e0be51d12e2c12c80648d02"
+      "startedAt": "2026-11-03T23:16:03.728Z",
+      "finishedAt": "2026-11-03T23:16:07.487Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/AUDITORIA-CHECKPOINT-PROTOCOL.log",
+      "outputSha256": "1471ef6d74f37ef22e44cce26ee6aac986c4a638c1edd79603dda11655625d4f"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T15:25:38.616Z",
-  "proofHash": "1db7d89d7882a5d4d7a6d6d85278561748a320c74f8977dd9288eb4ca3532fe1"
+  "createdAt": "2026-11-03T23:16:07.493Z",
+  "proofHash": "65b66aa678bb61e9ce3d946e23bce47efadea5fea6ad209872768c2c2fe508af"
 }

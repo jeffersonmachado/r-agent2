@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "0ba3bf08-866a-44ee-821e-c7f2c9c0bd70",
+  "transitionId": "bfb9b15c-dd6f-4748-8058-9c71d54bdc8d",
   "defectId": "ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/integration/engineeringBugLoop.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringBugLoop.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T15:08:37.970Z",
-      "finishedAt": "2026-11-03T15:09:29.480Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE.log",
-      "outputSha256": "8997ab50e35c1194c2a81032769f1f44f2a98e657f75b7a9ed34820fec970d70"
+      "startedAt": "2026-11-03T22:56:12.704Z",
+      "finishedAt": "2026-11-03T22:57:08.305Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/ENG-DUAS-IMPLEMENTACOES-DO-CICLO-DE-LEASE.log",
+      "outputSha256": "4b0ff17f05645bb7f410a54dff9f45593965f3c8c40a6dd66bb9913c77c60980"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T15:09:29.492Z",
-  "proofHash": "32b856be6e47a6b2fdb1fb18c891c949a825873f1f94bad640ae94e31f9bd4de"
+  "createdAt": "2026-11-03T22:57:08.316Z",
+  "proofHash": "322983b5f9258de63b35f09a5d663b3b416dc578d3be5bbf349fae8b04494840"
 }

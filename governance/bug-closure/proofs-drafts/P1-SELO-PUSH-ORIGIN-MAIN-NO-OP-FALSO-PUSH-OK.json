@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "866694b9-a21e-4a2f-91c6-edcdd643c89e",
+  "transitionId": "a9e75347-0898-4779-a286-31a78d2e7507",
   "defectId": "P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:43:55.135Z",
-      "finishedAt": "2026-11-03T14:44:02.666Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
-      "outputSha256": "c2888bf6709ef372a60fe77d2348bfd1a47e9b122be0b746012a4f483f721ab8"
+      "startedAt": "2026-11-03T22:46:10.284Z",
+      "finishedAt": "2026-11-03T22:46:15.720Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-SELO-PUSH-ORIGIN-MAIN-NO-OP-FALSO-PUSH-OK.log",
+      "outputSha256": "bc3521252e0fe26b41009692833ce203500b1ff550fdb4cecf0025ecf1701bd6"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:44:02.673Z",
-  "proofHash": "a6ad8236a732ad7466dd1ac740cf44601222255a41f3299ac99dd36293782d97"
+  "createdAt": "2026-11-03T22:46:19.491Z",
+  "proofHash": "0997c838eb1001110fc7311ba88e7c0ae08a25762bb40873ca75dce0b1edcbee"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "4c65c561-3bdf-4e08-899f-a170a839b47f",
+  "transitionId": "1ea39055-38b9-4dde-9ced-3e1b72dcaf75",
   "defectId": "ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/integration/engineeringMissionSourceE2E.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/integration/engineeringMissionSourceE2E.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:37:16.945Z",
-      "finishedAt": "2026-11-03T14:37:34.529Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
-      "outputSha256": "2439740932ee508042e468fc9eafc5a601fed71580b847247c56331fa6b9b1b7"
+      "startedAt": "2026-11-03T22:36:16.643Z",
+      "finishedAt": "2026-11-03T22:36:28.014Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/ENG-RECONCILIACAO-STARVATION-HEAD-ESTACIONARIO.log",
+      "outputSha256": "7ca74f9fac4c7dd153cbd54eab159cc5019891da360752ccf6bde368386185dd"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:37:34.540Z",
-  "proofHash": "a82167b789fd2adeca0b37669a964754bb405ae5b49314758b10b3c58a23b73f"
+  "createdAt": "2026-11-03T22:36:28.023Z",
+  "proofHash": "8d22a09b7bd0c9f7e1b6d730dc39c8eb13d56f19813da2ac4b7e2fcaed8b4da8"
 }

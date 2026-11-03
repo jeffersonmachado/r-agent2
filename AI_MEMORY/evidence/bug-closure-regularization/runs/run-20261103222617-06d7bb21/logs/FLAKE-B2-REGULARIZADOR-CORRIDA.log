@@ -1,0 +1,29 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/regularizadorFilesystemAttacks.test.js (21.482 s)
+  P2-B — ataques de filesystem com processos concorrentes
+    ✓ B1 — troca do diretório `itens/` por symlink ANTES da gravação é recusada (214 ms)
+    ✓ B2 — troca REPETIDA de symlink durante a gravação: nada escapa para a sentinela (548 ms)
+    ✓ B2b — janela ANTES da abertura: nome do diretório trocado ⇒ gravação RECUSADA (552 ms)
+    ✓ B2c — janela DEPOIS da abertura: escrita fica no INODE aberto e o resultado é FALHA (447 ms)
+    ✓ B3 — substituição de diretório ANCESTRAL da execução é recusada nas duas pontas (134 ms)
+    ✓ B3b — troca do diretório ANCESTRAL da BASE (achado 2 da revisão): nada é escrito no alvo (153 ms)
+    ✓ B3c — SEM `/proc` (plataforma sem primitiva): escrita RECUSADA, nada escapa (missão B) (3398 ms)
+    ✓ B4 — destino substituído por symlink para a sentinela não é seguido (132 ms)
+    ✓ B5 — duas gravações CONCORRENTES do mesmo id: exatamente uma vence e a divergente é recusada (468 ms)
+    ✓ B6 — reexecução IDEMPOTENTE do mesmo conteúdo é aceita e não altera a prova (170 ms)
+    ✓ B7 — tentativa de SOBRESCREVER o manifesto de outra execução não é aceita como sucesso (2982 ms)
+    ✓ B8 — processo MORTO antes do rename não deixa artefato parcial nem manifesto truncado (2116 ms)
+    ✓ B9 — recuperação após falha: nova execução completa e a anterior fica intacta (5672 ms)
+    ✓ B10 — diretório somente-leitura falha com motivo explícito (nunca sucesso silencioso) (135 ms)
+    ✓ B11 — symlink dentro de `runs/` (diretório da execução) é recusado nas duas pontas (426 ms)
+    ✓ B12 — symlink dentro de `itens/` para sentinela não é lido como artefato válido (175 ms)
+    ✓ B13 — raiz com escrita para grupo/outros é recusada (defesa preventiva contra atacante local) (116 ms)
+    ✓ B14 — agregação recusa execução com artefato incompleto (nada de integral com dado parcial) (2535 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        21.668 s
+Ran all test suites matching /tests\/unit\/governance\/regularizadorFilesystemAttacks.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

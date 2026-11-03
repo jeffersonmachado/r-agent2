@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7921bc51-d22f-492c-bea6-2c40e5290e0f",
+  "transitionId": "7013e21e-e01b-4ce6-8129-205198e18701",
   "defectId": "CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/governance/officialTestScriptsNoVacuousPass.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/officialTestScriptsNoVacuousPass.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:33:33.323Z",
-      "finishedAt": "2026-11-03T14:33:39.806Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
-      "outputSha256": "5e446a9f8d92c39e3bbf26e0b8887b90484e7a28b1b84d5914a11aef07014a22"
+      "startedAt": "2026-11-03T22:32:10.889Z",
+      "finishedAt": "2026-11-03T22:32:14.286Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/CI-RUNNER-COMPARTILHADO-ENTRE-ARVORES.log",
+      "outputSha256": "311e1f85ade38965a17eff7cf74729b4dad92439128c05e8cf549bd2908fa8a7"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:33:39.814Z",
-  "proofHash": "337292bfe33cb7dbcc8152becec88e58bf9a8eb3239f65085175844391a67e58"
+  "createdAt": "2026-11-03T22:32:14.292Z",
+  "proofHash": "ebf234637cac72b58c46adcc8585cfb8432fa85898f72348e9e161892a6ecabf"
 }

@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ba659e75-dca9-4d8d-b671-7ed31feb87d5",
+  "transitionId": "246a947c-13bf-43e6-aadc-71f65bfa2bca",
   "defectId": "H21-CRM-PERSISTENCIA-X-METRICAS",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/crmRealtimeEvents.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/crmRealtimeEvents.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T15:17:30.079Z",
-      "finishedAt": "2026-11-03T15:17:39.734Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/H21-CRM-PERSISTENCIA-X-METRICAS.log",
-      "outputSha256": "b54123ce5d65f9236a157ea6ff9925856fe0e00e2fb4ac13850f76b978b7f139"
+      "startedAt": "2026-11-03T23:07:52.712Z",
+      "finishedAt": "2026-11-03T23:08:01.806Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/H21-CRM-PERSISTENCIA-X-METRICAS.log",
+      "outputSha256": "31b6a94df7983222e0147ef3a05f68699a28ede666775bffb8c2e8e8a4ff579f"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T15:17:39.742Z",
-  "proofHash": "c41efb7a739f51d33d1f14a18c377b51ed9660a0159892bbe7b133d4eb41a186"
+  "createdAt": "2026-11-03T23:08:01.813Z",
+  "proofHash": "90f0082ce77c76c80da69824193cf7ba75b86c663d95232245771343786dc42d"
 }

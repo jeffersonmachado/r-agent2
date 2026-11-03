@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f4a278ed-6024-441a-964a-bec64a5bcde1",
+  "transitionId": "46589cfe-6d8e-448e-b969-bb482efafb29",
   "defectId": "P1-6",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "rag-service/tests/test_hybrid_isolation_real_db.py"
   ],
@@ -18,10 +18,10 @@
       "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_isolation_real_db.py -q -p no:cacheprovider",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:41:58.387Z",
-      "finishedAt": "2026-11-03T14:42:01.785Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P1-6.log",
-      "outputSha256": "01ede927ca917dd03f5fe62f39d05e524c715d573ab1f40ab42de3766f685b8f"
+      "startedAt": "2026-11-03T22:42:17.374Z",
+      "finishedAt": "2026-11-03T22:42:22.932Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-6.log",
+      "outputSha256": "bfe59a4a4143bcacfaf658e920b995899b73cd80f0924c22b4958f6f4130a24b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:42:01.792Z",
-  "proofHash": "80d0a13eedda4876bc42c894ed40828515fdedff547842c2b61b791abc0513ca"
+  "createdAt": "2026-11-03T22:42:22.943Z",
+  "proofHash": "53f2967540f36baee3f3b5ba09c03beafe4948a3bd5f32a0d69679a8598367cf"
 }

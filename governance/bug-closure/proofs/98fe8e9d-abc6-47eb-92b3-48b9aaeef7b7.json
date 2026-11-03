@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "98fe8e9d-abc6-47eb-92b3-48b9aaeef7b7",
+  "defectId": "H11-ESCOPO-DIFERIDO",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/engineeringRouter/taskContractScope.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/engineeringRouter/taskContractScope.test.js",
+      "command": "npx jest tests/unit/engineeringRouter/taskContractScope.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:26:26.537Z",
+      "finishedAt": "2026-11-03T21:26:29.724Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/H11-ESCOPO-DIFERIDO.log",
+      "outputSha256": "df1b17f5112c46751f10e74a609f946953822a57e4aa795301bb14cdb1cc42b0"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/engineeringRouter/taskContractScope.test.js",
+      "sha256": "000e5d12e3ade7c4c7050870abf6aed7398704f04b11536b5d6f7cf9731ee87b"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:26:29.732Z",
+  "proofHash": "282dbc4a51590b5f8a96604f1655b6a6266bb36d590b20ec98745cff3ebc193c",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "GXA+ImlEP47JdXtmxY2Ev0iVMN4Yycvb9HjNoiNtlNOpwW34UNjVZEADVXBOhvFigsbDs9tDYrfX0YVVKigwDQ==",
+    "signedAt": "2026-11-03T22:11:09.165Z"
+  }
+}

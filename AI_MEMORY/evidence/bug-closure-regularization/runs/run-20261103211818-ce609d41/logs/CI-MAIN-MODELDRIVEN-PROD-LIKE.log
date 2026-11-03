@@ -1,0 +1,17 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/modelDrivenE2e.test.js (5.467 s)
+  validate-model-driven-e2e — pipeline REAL, não simulação
+    ✓ Verificação estática: script não usa simulateCandidateJourneyPipeline (109 ms)
+    ✓ Verificação estática: script não hardcoda listas de entidades como prova (106 ms)
+    ✓ inferJourneysFromModels retorna jornadas reais (integração pipeline sem DB) (1355 ms)
+    ✓ topologicalSort com modelos reais — Tenant não pode ser filho de ninguém (215 ms)
+    ✓ Script passa com smoke report real presente (3147 ms)
+    ✓ Engine é v2-real-pipeline (não v1 de simulação) (101 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        5.544 s
+Ran all test suites matching /tests\/unit\/governance\/modelDrivenE2e.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

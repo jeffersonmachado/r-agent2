@@ -1,0 +1,29 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/securityIntel/approvalAuthority.test.js
+  approvalAuthority — identidade derivada (nunca declarada)
+    ✓ deriva id/label/key do ator autenticado (110 ms)
+    ✓ usa e-mail quando não há username e cai no label quando não há id (103 ms)
+    ✓ key é case-insensitive (comparação de SoD/idempotência não depende de caixa) (103 ms)
+    ✓ ator sem identidade utilizável devolve null (chamador deve negar) (102 ms)
+    ✓ corpo com approvedBy/authorizedBy é RECUSADO com código nomeado (142 ms)
+    ✓ corpo que NÃO declara identidade é aceito (null/vazio/false não declaram nada) (102 ms)
+  approvalAuthority — autorização POR AÇÃO com o RBAC real
+    ✓ owner e admin têm as CINCO ações da capacidade (108 ms)
+    ✓ papéis operacionais NÃO ganham nenhuma ação (fail-closed) (106 ms)
+    ✓ super_admin mantém bypass (engenharia de plataforma autorizada) (102 ms)
+    ✓ DENIAL: capacidade de LER não implica capacidade de APROVAR risco (103 ms)
+    ✓ sem identidade não há autoridade; sem checagem de permissão, nega (102 ms)
+    ✓ ação vazia/desconhecida é negada (101 ms)
+    ✓ a decisão é memorizada por ação (uma consulta ao RBAC por ação) (101 ms)
+  routes.js — não-vacuidade do enforcement por ação
+    ✓ TODA rota declarada tem ação na tabela (rota nova sem ação = 403 silencioso) (103 ms)
+    ✓ a taxonomia morta foi removida (ROUTE_ACTIONS agora é enforcement) (101 ms)
+    ✓ a identidade do aprovador não é mais lida do corpo da requisição (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        2.179 s
+Ran all test suites matching /tests\/unit\/securityIntel\/approvalAuthority.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

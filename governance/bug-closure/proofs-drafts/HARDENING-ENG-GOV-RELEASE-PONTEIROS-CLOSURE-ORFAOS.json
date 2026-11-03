@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "92434e9d-cc5e-48c5-8a4b-93223cc64a5b",
+  "transitionId": "20ff0d08-fbb3-4830-955d-0bac46747c88",
   "defectId": "HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/governance/closurePointersOrphans.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/closurePointersOrphans.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T15:18:37.509Z",
-      "finishedAt": "2026-11-03T15:18:45.633Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
-      "outputSha256": "1029faf6a6dd0a0809c285b5b8dc1f05551f6be0a5b9d43987c12bee3e6c5497"
+      "startedAt": "2026-11-03T23:09:05.998Z",
+      "finishedAt": "2026-11-03T23:09:13.833Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-PONTEIROS-CLOSURE-ORFAOS.log",
+      "outputSha256": "dc3b6898b7d05bcc6f22b419b5ed6b7c6d608e6e0f9c62a44bb1efd3d388c985"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T15:18:45.642Z",
-  "proofHash": "711e682f2506c6f30fb2803ab0a1519ef90daa0e929398a217f6d9b467855d4c"
+  "createdAt": "2026-11-03T23:09:13.841Z",
+  "proofHash": "1130ae053461dc76f6fc55d290f203a376aba6fb5b42c15134bc76e2328b9c72"
 }

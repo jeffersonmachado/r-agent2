@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "8639cdcb-1089-4a2f-aa3a-a12cc126b4d4",
+  "defectId": "P1-7",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/securityIntel/triageRemediation.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/securityIntel/triageRemediation.test.js",
+      "command": "npx jest tests/unit/securityIntel/triageRemediation.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T22:42:22.959Z",
+      "finishedAt": "2026-11-03T22:42:30.303Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-7.log",
+      "outputSha256": "cd6d2f7bd45c638f342d9737ef2344f7c547df32b3678ec4b7118ee66294c61c"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/securityIntel/triageRemediation.test.js",
+      "sha256": "0f9e83393a12c6bff940a54d00b69098af7710af0b50b6f5392f825b4c90f035"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T22:42:30.317Z",
+  "proofHash": "a24a618931fd95ed39ad7728c27697b9f67d67b2791425887d47d872fc4b8105",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "Qhvs/zKIyuVIswO22y709/0r14zB51lPija6UlZMh/Z0ippLFk6EQ/Yu5qIcmrj8zZsOVkB+wEeGAOb0fUPoAw==",
+    "signedAt": "2026-11-03T23:21:51.179Z"
+  }
+}

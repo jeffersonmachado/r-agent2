@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "957b0c51-ec90-4641-834a-b2c552549a81",
+  "transitionId": "90933eef-4690-4481-a5ed-23a676f5e071",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-4",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:28:48.533Z",
-      "finishedAt": "2026-11-03T14:28:52.838Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
-      "outputSha256": "1443d701db80d6b45565fadc0859e398ea43510ceeed3496b2f2d0f289928086"
+      "startedAt": "2026-11-03T22:26:47.863Z",
+      "finishedAt": "2026-11-03T22:26:51.667Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-P0-4.log",
+      "outputSha256": "31ebd9b8432cb470bbcff62c3b32a34779fa5465878bee3be2d0b3ddb58f9f91"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T14:31:20.738Z",
+    "at": "2026-11-03T23:20:56.166Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:28:52.846Z",
-  "proofHash": "eb7e8f1a7ebaf3dcb8e940677c5d149c67f4d349a51885071e029ef7fce748a5"
+  "createdAt": "2026-11-03T22:26:51.676Z",
+  "proofHash": "b12d0eb72cff6b5fe87cc3dddc92b59c6c48b58cab9d65cbf9ab1aa4da52a3a2"
 }

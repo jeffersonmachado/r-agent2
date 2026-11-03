@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "edad52d9-2713-468b-997f-69eab53b119b",
+  "transitionId": "f88088f3-6f9f-4a51-a877-abc2c7c96b69",
   "defectId": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/crmOpportunityUpdate.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/crmOpportunityUpdate.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:42:44.438Z",
-      "finishedAt": "2026-11-03T14:42:47.953Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
-      "outputSha256": "db3da42c51b17e9f5c6e5acfe39eb82527df4aa59a561afde6ec963ca8379b39"
+      "startedAt": "2026-11-03T22:43:42.141Z",
+      "finishedAt": "2026-11-03T22:43:51.426Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
+      "outputSha256": "9dbe17b03ccba275ea70343de2f4e67d798a14c441cd5e13ea56ed3e75cfb05b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:42:47.959Z",
-  "proofHash": "e4af3e90f9572d23032a5289f3ace4ab5257bb92553a401b7d14727f9f80211d"
+  "createdAt": "2026-11-03T22:43:52.903Z",
+  "proofHash": "8223cebc9a1f4ef3a9ebc317782b9255fa00820c2c157bccd7086c535b07c046"
 }

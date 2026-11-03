@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "a35f9724-940a-4c44-bb02-51abfda68051",
+  "defectId": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/pbx/pbxCdrHealthSigpipe.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
+      "command": "npx jest tests/unit/pbx/pbxCdrHealthSigpipe.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:30:34.739Z",
+      "finishedAt": "2026-11-03T21:30:45.225Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
+      "outputSha256": "97b35415d28e103507466e46304a77e55b3905a7869fb7ef7ca52bd22a06786b"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
+      "sha256": "a8793cc042da95beab7ba668f538ff172bf3ac111def4763c2a141ac49ceedd6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:30:45.232Z",
+  "proofHash": "2581d618691bb4e2375a0c7fcb40501a8b7296b15f7640e1cf45e047c1e8b422",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "KiReI5rGEFarBG1BoduT5KGRge4XsU59dNHi6XJPrW+E87CtMBqVBhfilCNkg5ajzCyTfGzcLhEos9cO6ErIBQ==",
+    "signedAt": "2026-11-03T22:11:59.299Z"
+  }
+}

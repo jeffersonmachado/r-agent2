@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "decde7d4-fb21-43dc-891f-8434c69619d9",
+  "defectId": "P1-CDR-HEALTH-SIGPIPE-PIPEFAIL",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/pbx/pbxCdrHealthSigpipe.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
+      "command": "npx jest tests/unit/pbx/pbxCdrHealthSigpipe.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T22:43:07.373Z",
+      "finishedAt": "2026-11-03T22:43:20.165Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P1-CDR-HEALTH-SIGPIPE-PIPEFAIL.log",
+      "outputSha256": "47499abd6dede922d6621bffbbc0d3e197c8656ba5aec9540116cbef647244bf"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/pbx/pbxCdrHealthSigpipe.test.js",
+      "sha256": "a8793cc042da95beab7ba668f538ff172bf3ac111def4763c2a141ac49ceedd6"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T22:43:20.180Z",
+  "proofHash": "94007d3e01c2f65e659b15cb2cdd045e9c8bf18924275dbc3d36d7a2058250b6",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "y7H2lFdEgWZ+0VHJFw5NF4w4SrPDyH7YCSqu4QaJbBeqpYYh3JQumJHs9WauSsdekUiYcMyZeS+vt4b4oAHWBA==",
+    "signedAt": "2026-11-03T23:21:52.782Z"
+  }
+}

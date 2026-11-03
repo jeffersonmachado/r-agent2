@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "6734a7c8-7f80-4f61-92de-bbda4998b14e",
+  "transitionId": "14a4c0dd-9011-44f1-bfd1-360b2b741a33",
   "defectId": "P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "78418d2761910a724cc57d577a83da102231f1d4",
-  "codeFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
   "requiredTests": [
     "tests/unit/governance/assertCanonicalReleaseDecision.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/assertCanonicalReleaseDecision.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T14:31:09.073Z",
-      "finishedAt": "2026-11-03T14:31:13.562Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103142831-15e0ade6/logs/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
-      "outputSha256": "17c51baf39f77fd377dac38fe02092aff4eddbf80d63e7397e8a58c736a0a5ec"
+      "startedAt": "2026-11-03T22:29:23.229Z",
+      "finishedAt": "2026-11-03T22:29:30.662Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/P0-IDENTIDADE-AUSENTE-E-ACEITA-COMO-COERENTE.log",
+      "outputSha256": "37f7923c359d3905bca9c519784affd4941ba9903258350fb43699504fabbee2"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T14:31:20.738Z",
+    "at": "2026-11-03T23:20:56.166Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T14:31:13.569Z",
-  "proofHash": "642ffceeabcc8d49850f6aae3efaa39320572dae75fc4cc0d11128d221d76ba0"
+  "createdAt": "2026-11-03T22:29:30.678Z",
+  "proofHash": "6bb400a8583942b8f60ed923a0697502cc5ee9feda3c881a64e26d1e2dc7beac"
 }

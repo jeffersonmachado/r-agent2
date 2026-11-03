@@ -1,0 +1,85 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "08d9a3c5-621a-4067-9e58-b63d841905de",
+  "defectId": "HARDENING-ENG-GOV-RELEASE-P0-2",
+  "severityBefore": "P0",
+  "severityAfter": "P0",
+  "fromState": "RESOLVED",
+  "toState": "RESOLVED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/governance/governanceChainCertification.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/governanceChainCertification.test.js",
+      "command": "npx jest tests/unit/governance/governanceChainCertification.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T22:26:40.282Z",
+      "finishedAt": "2026-11-03T22:26:44.505Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/HARDENING-ENG-GOV-RELEASE-P0-2.log",
+      "outputSha256": "349cf24b4451b99fe113f56540c4ee5064667ee17d4a084f345032aabcbce346"
+    }
+  ],
+  "negativeEvidence": [
+    {
+      "targetFile": "governance/governance-chain.js",
+      "control": "certificação volta a NÃO recalcular a cadeia (sela sobre declaração, não sobre bytes)",
+      "mutatedFromSha256": "3ab195249af732ce6c376f3e8ba0cbe132598eab9a592fe4d84eb6c511fc1eb1",
+      "mutatedToSha256": "73b5b5c3d067cac0412e2674171118b4b1251c887f6a3b313da706b667f3435a",
+      "testPath": "tests/unit/governance/governanceChainCertification.test.js",
+      "command": "npx jest tests/unit/governance/governanceChainCertification.test.js --bail=1 --ci",
+      "baseline": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-2-baseline-43f82d62.log",
+        "logSha256": "ae52c3364a25e1c87ac8dd36413fed0e79cd3335a3eb48d4fed4069bd385e1de"
+      },
+      "mutated": {
+        "exitCode": 1,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-2-mutado-43f82d62.log",
+        "logSha256": "bd0da0b422218e5bb20238b1442cc80a49d44d28a3022546b4eae5284a8dae6e"
+      },
+      "restored": {
+        "exitCode": 0,
+        "log": "AI_MEMORY/evidence/prova-negativa/HARDENING-ENG-GOV-RELEASE-P0-2-restaurado-43f82d62.log",
+        "logSha256": "4efe095a7d05268442fba44d43f163ddcfcb0682e8985ba1c43ea84ee2fd23ee"
+      },
+      "capturedAt": "2026-11-02T16:09:32.119Z"
+    }
+  ],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/governanceChainCertification.test.js",
+      "sha256": "f8e9a709ed58ebbd9a1f9473ff0361e7d7f8f150fb327d92b04ef37431f2ba33"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": {
+    "channel": "VSCODE_AGENT",
+    "by": "platform-owner:jeffersonmachado",
+    "at": "2026-11-03T23:20:56.166Z",
+    "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
+    "agentSession": "session:e92510ac-0f54-41c6-bb85-90f42042999c"
+  },
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T22:26:44.514Z",
+  "proofHash": "321a9c002742c09b011f535aba0e7acc2b78c9a978f5c89f58b990f582892e94",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "u9FHpPotighGKfenkQabkLFf1G0f/WV5oifUyX/nppVeNHgtQzYWiyoaovpb+hBuUqhQOP+/cEJ7JFNXbiU3Bw==",
+    "signedAt": "2026-11-03T23:21:12.693Z"
+  }
+}

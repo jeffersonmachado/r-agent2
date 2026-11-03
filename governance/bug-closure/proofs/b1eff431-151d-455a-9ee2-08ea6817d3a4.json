@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "b1eff431-151d-455a-9ee2-08ea6817d3a4",
+  "defectId": "FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "tests/unit/governance/newCandidateOnFingerprintChange.test.js"
+  ],
+  "executions": [
+    {
+      "testPath": "tests/unit/governance/newCandidateOnFingerprintChange.test.js",
+      "command": "npx jest tests/unit/governance/newCandidateOnFingerprintChange.test.js --bail=1 --ci",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T22:36:28.034Z",
+      "finishedAt": "2026-11-03T22:36:32.640Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103222617-06d7bb21/logs/FASE6-NOVO-CANDIDATO-POR-MUDANCA-DE-FINGERPRINT.log",
+      "outputSha256": "5dee0bc2a8ac11d5703669282cbe7d9cbe1fdc068c228ba6e206591b5b2e5a6d"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "tests/unit/governance/newCandidateOnFingerprintChange.test.js",
+      "sha256": "7fc05d55df39d25f003feb142d4ccd38512ca6eed4a30e606b190286bf437eb8"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T22:36:32.647Z",
+  "proofHash": "77a7b8f9543b7f69dce043d4982905b8654263a64a1d67cf36e61c9ffa531e43",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "zQ3MfP0czu5DQSJK3+3SymIYxtVy8dAVoeF1HpRDWA0fWVPGtlVnGe8xQk7PRsvaZDqHVPm9meMnqISZdSfHAw==",
+    "signedAt": "2026-11-03T23:21:06.005Z"
+  }
+}

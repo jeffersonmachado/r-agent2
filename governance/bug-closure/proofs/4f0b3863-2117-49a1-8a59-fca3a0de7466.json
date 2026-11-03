@@ -1,0 +1,54 @@
+{
+  "artifactType": "defect-closure-proof",
+  "artifactVersion": "1.0.0",
+  "transitionId": "4f0b3863-2117-49a1-8a59-fca3a0de7466",
+  "defectId": "P1-6",
+  "severityBefore": "P1",
+  "severityAfter": "P1",
+  "fromState": "VERIFIED",
+  "toState": "VERIFIED",
+  "evaluatedCommit": "39b224fb7312e099180cf2c681d003fadda85a41",
+  "codeFingerprint": "f3a14b820d6374c9ed00b1a5999baee1c0534006f9053002740c70f5c81521b2",
+  "requiredTests": [
+    "rag-service/tests/test_hybrid_isolation_real_db.py"
+  ],
+  "executions": [
+    {
+      "testPath": "rag-service/tests/test_hybrid_isolation_real_db.py",
+      "command": "/opt/results/ria/r-agent2/rag-service/venv/bin/python -m pytest rag-service/tests/test_hybrid_isolation_real_db.py -q -p no:cacheprovider",
+      "exitCode": 0,
+      "signal": null,
+      "startedAt": "2026-11-03T21:30:07.642Z",
+      "finishedAt": "2026-11-03T21:30:11.979Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103211818-ce609d41/logs/P1-6.log",
+      "outputSha256": "31dbecd07b1baa78acd39cd09f98c7dbb540fa4efecd532dbc2dd84ed6cfe434"
+    }
+  ],
+  "negativeEvidence": [],
+  "artifactHashes": [
+    {
+      "path": "rag-service/tests/test_hybrid_isolation_real_db.py",
+      "sha256": "a4d08bd20c11b03ecca33d213e30c9d62c8c75830d7dcdd15dca1c3cbdfe53a5"
+    }
+  ],
+  "actor": {
+    "id": "platform-owner:jeffersonmachado",
+    "kind": "humano"
+  },
+  "humanAuthorization": null,
+  "policyDecision": {
+    "decision": "REVERIFY_EXISTING_CLOSURE",
+    "policyId": "BUG_CLOSURE_FIRST",
+    "policyVersion": "1.0.0",
+    "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
+    "motivoOriginal": "FINGERPRINT_DIVERGENTE"
+  },
+  "createdAt": "2026-11-03T21:30:11.986Z",
+  "proofHash": "f47bbf917c63e36929d4cc77060e6f4cc42bf6863d81e274ed44516071de34da",
+  "signature": {
+    "alg": "Ed25519",
+    "keyId": "platform-owner:jeffersonmachado",
+    "value": "NLRJa6DqVaZWN9iXLLuROV2XEwJlmXrj1H1EwYIqZiVG7PMgng65h9SkRG7cg8bFtXHmYQJNASRjCeS+Le77AQ==",
+    "signedAt": "2026-11-03T22:11:57.457Z"
+  }
+}
