@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-11-03T10:08:35.509Z",
+  "generatedAt": "2026-11-03T20:08:14.605Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20261103-064958.zip",
-  "zipHash": "02d87b6dccdf2d3fd3964849f49af7921869a6a4e155d931c655fc992abb248b",
-  "manifestHash": "48ac8bdfe543cfe679263891021a9920bf57a59eac3fbb1251dfbeb9ae8145f0",
-  "replayHash": "5d8fb52222cd1d0c6e562a8ca0af2d9e3b630304c58c7b99ded44d0c2bdf1934",
-  "governanceHash": "c6ec411067b125d7856fac64a51cfb84db758ed94cce60d8224c08a18d295f56",
-  "readinessHash": "6ce41497692aca55594cf4c08c49cb78145d10d158ef65b204db93ec6003d051",
-  "consistencyHash": "7d9b8c3bb75d958cf0da19c1e94c054972619005d5130a7176f3a03cb06229ee",
-  "contaminationHash": "ffa366ee648f1c13e7e6a03c945e0e99f9e03bcbd3f22b35fffab26b081b479f",
-  "packageIntegrityHash": "7cf37d4621989a25b1d5d5e4cddeb39f940adcc7dc4987e72cc39c517a78d570",
+  "zipName": "r-agent2-20261103-164919.zip",
+  "zipHash": "bd7e34ce116fce15d6f233a63f49fd09acca5b4d8df3b9ed20eee1697744565e",
+  "manifestHash": "1143893bea45f4a0a390ea677dd2999d0fe11cf8ad100dd687949268120ed50d",
+  "replayHash": "4b61802cdf6ded4a9639405398be821a881c275f1b1d26a76b799537d90a7ac4",
+  "governanceHash": "8e38b7031f5f6e837ae270375df51f518460e2ac7d8bdf403a97226873e0b714",
+  "readinessHash": "031bf0684034b773b6918a13ecdf11595d3fa3586bea7e1c168e3b535547a002",
+  "consistencyHash": "7f952b2d9c1941ddc0718f774aaa90b6e551dd1a8c09f405efce54b938826b17",
+  "contaminationHash": "70df88832cb70b62bf481d793476d8f1dcba34534dc19a9307bd6b44dcc94a89",
+  "packageIntegrityHash": "24add5d0810a9574986365bdca97156078fc185509f2a56471387c43287e0ba6",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "12ccdac6fe8614678845abec914ff0737d203dbcf9c11683dca285e5d81393db",
+  "gateHash": "c74aecf9306cc307a4d3f84819b260e9fa72d12faede0411495638291ad11f72",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
@@ -37,5 +37,5 @@
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20261103-064958.zip. Package: ÍNTEGRO. Validadores falhos: 2."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20261103-164919.zip. Package: ÍNTEGRO. Validadores falhos: 2."
 }

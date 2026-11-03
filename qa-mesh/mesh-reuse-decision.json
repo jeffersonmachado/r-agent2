@@ -1,18 +1,18 @@
 {
   "artifactType": "mesh-reuse-decision",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-11-03T17:21:10.494Z",
+  "generatedAt": "2026-11-03T20:00:24.166Z",
   "runId": "rap-governed-20261103142739249-066256bb",
   "sourceFingerprint": "025726e0cbee6873d83d35f7f4a11270d1f7fd12d68d4ea648f2f85553d29ab8",
   "runStartedAt": "2026-11-03T14:27:39.632Z",
-  "decision": "RERUN",
-  "code": "MESH_EVIDENCE_NOT_GO",
-  "detail": "status=NO_GO reasons=[\"CRITICAL_DOMAIN_FAILED:omnichannel\",\"BASELINE_PASS_RATE_REGRESSION\",\"BASELINE_INFRA_REGRESSION\"]",
+  "decision": "REUSE",
+  "code": "MESH_REUSE_OK",
+  "detail": "execução canônica GO DESTE run cobre o registry corrente: reexecução suprimida",
   "registryScenarios": 143,
   "evidence": {
-    "goNoGoGeneratedAt": "2026-11-03T17:04:13.007Z",
-    "goNoGoStatus": "NO_GO",
-    "historyEntry": "mesh-2026-11-03T16-19-40-463Z.json"
+    "goNoGoGeneratedAt": "2026-11-03T18:06:11.669Z",
+    "goNoGoStatus": "GO",
+    "historyEntry": "mesh-2026-11-03T17-21-12-568Z.json"
   },
   "checks": [
     {
@@ -38,7 +38,22 @@
     {
       "code": "CANONICAL_HISTORY",
       "ok": true,
-      "detail": "qa-mesh/meshHistory/mesh-2026-11-03T16-19-40-463Z.json"
+      "detail": "qa-mesh/meshHistory/mesh-2026-11-03T17-21-12-568Z.json"
+    },
+    {
+      "code": "DECISION_GO",
+      "ok": true,
+      "detail": "status=GO"
+    },
+    {
+      "code": "SAME_RUN_TIME",
+      "ok": true,
+      "detail": "generatedAt=2026-11-03T18:06:11.669Z"
+    },
+    {
+      "code": "REGISTRY_COVERED",
+      "ok": true,
+      "detail": "143 cenários cobertos pelo run"
     }
   ]
 }
