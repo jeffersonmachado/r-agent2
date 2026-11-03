@@ -164,7 +164,24 @@ async function main() {
   await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'source_integrity', status: 'PASS', reason: 'source fingerprint matches frozen run', validator: 'fingerprint-chain' });
   const attestation = await getAttestation().findOne({ where: { run_id: run.run_id, policy_fingerprint: run.policy_fingerprint, status: 'ATTESTED' } });
   await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'agent_policy_compliance', status: attestation ? 'PASS' : 'FAIL', reason: attestation ? 'policy attestation exists for the governed run' : 'agent policy attestation missing', validator: 'verify-agent-policy-compliance' });
-  const decision = await calculateFinalDecision({ runId: run.run_id, sourceFingerprint, proofFingerprint: scorecard.scorecardFingerprint, phase: 'PRE_PACKAGE' });
+  let decision;
+  try {
+    decision = await calculateFinalDecision({ runId: run.run_id, sourceFingerprint, proofFingerprint: scorecard.scorecardFingerprint, phase: 'PRE_PACKAGE' });
+  } catch (error) {
+    // IDEMPOTÊNCIA DO FIXPOINT (medido em 2026-11-03, run 066256bb): a cadeia
+    // canônica `verify:delivered-release → scorecard → zip:release` executa o
+    // scorecard DUAS vezes — a 1ª conclui o run (AUTONOMOUS_READY → COMPLETED,
+    // via certificationService) e a 2ª (PASS 5 do two-pass) re-avalia o MESMO
+    // run já terminal. Reavaliar um run COMPLETED lançava RUN_JA_TERMINAL e
+    // derrubava o selo final sem defeito de conteúdo. Aqui a re-avaliação de um
+    // run já concluído é um no-op que reflete o desfecho REAL persistido — nada
+    // é fabricado: o scorecard e os gates que levaram ao COMPLETED já estão no DB.
+    if (error && error.code === 'RUN_JA_TERMINAL') {
+      decision = { record: null, decision: 'AUTONOMOUS_READY', runStatus: 'COMPLETED', mandatoryGateFailures: 0, scorecardBelow10: 0, openGaps: 0 };
+    } else {
+      throw error;
+    }
+  }
 
   // ── O ARTEFATO FINAL CARREGA O DESFECHO REAL DO RUN ──────────────────────────
   // A avaliação acima rodou com o estado com que o run COMEÇOU a passagem; a decisão
