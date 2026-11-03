@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-11-03T18:24:27.232Z
+- Generated at: 2026-11-03T19:20:38.841Z
 - Canonical mesh execution: mesh-2026-11-03T17-21-12-568Z
 - Canonical mesh decision: GO
-- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
+- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_GOVERNANCE declara GO, mas o filho obrigatório PLATFORM_READINESS está NOT_GO (PASS_WITH_DEFERRED_PACKAGE_GATE)]]
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
