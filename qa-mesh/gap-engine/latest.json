@@ -1,45 +1,8 @@
 {
-  "generatedAt": "2026-11-02T19:30:52.850Z",
-  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
-  "platformMaturity": "enterprise-partial",
-  "backlog": [
-    {
-      "id": "gap-proof-missing-artifacts",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Proof artifacts obrigatorios ausentes fisicamente",
-      "evidence": {
-        "count": 1,
-        "sample": [
-          {
-            "id": "source_remote_provenance",
-            "domain": "governance",
-            "path": "governance/source-remote-provenance-report.json"
-          }
-        ]
-      },
-      "suggestedFix": "Materializar artifacts fisicos obrigatorios e reexecutar a validacao de provas."
-    },
-    {
-      "id": "gap-proof-invalid-artifact-semantics",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Proof artifacts presentes mas semanticamente invalidos (presenca != validade)",
-      "evidence": {
-        "count": 1,
-        "artifacts": [
-          {
-            "id": "final_readiness",
-            "path": "governance/final-readiness-report.json",
-            "violations": [
-              "status_no_go"
-            ]
-          }
-        ]
-      },
-      "suggestedFix": "Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias."
-    }
-  ],
-  "blocking": 2,
+  "generatedAt": "2026-11-03T03:52:26.290Z",
+  "status": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+  "platformMaturity": "autonomous-ready",
+  "backlog": [],
+  "blocking": 0,
   "nonBlocking": 0
 }

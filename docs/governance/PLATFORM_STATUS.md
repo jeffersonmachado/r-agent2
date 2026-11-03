@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-11-03T00:14:02.553Z
-- Canonical mesh execution: mesh-2026-11-02T17-51-03-824Z
+- Generated at: 2026-11-03T03:52:26.290Z
+- Canonical mesh execution: mesh-2026-11-03T02-35-16-144Z
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO
+- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -13,7 +13,7 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/er-fixci/qa-mesh/meshHistory/mesh-2026-11-02T17-51-03-824Z.json
+- History: /opt/results/ria/er-fixci/qa-mesh/meshHistory/mesh-2026-11-03T02-35-16-144Z.json
 - Summary: /opt/results/ria/er-fixci/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/er-fixci/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/er-fixci/qa-mesh/metrics.json
@@ -23,5 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Proof artifacts obrigatorios ausentes fisicamente [gap-proof-missing-artifacts]
-- Proof artifacts presentes mas semanticamente invalidos (presenca != validade) [gap-proof-invalid-artifact-semantics]
+- Sem bloqueadores ativos.

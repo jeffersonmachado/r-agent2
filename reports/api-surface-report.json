@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-11-02T19:16:12.497Z",
-  "commit": "d21a66196f3012440f9c16e402353c94bc44bf53",
+  "generatedAt": "2026-11-03T03:41:38.457Z",
+  "commit": "480d1ba44f1394f1886bb8a0061950fafd1a2822",
   "baseUrl": "http://127.0.0.1:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 918,
+    "items": 924,
     "byState": {
-      "VALIDATED": 885,
+      "VALIDATED": 891,
       "VISITED": 12,
       "NOT_APPLICABLE": 21
     }
@@ -4014,6 +4014,87 @@
       }
     },
     {
+      "id": "api:GET:/api/lro",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/lro/:id",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 500,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/lro/:id/events",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 500,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:GET:/api/market-discovery/runs",
       "state": "VALIDATED",
       "assertions": [
@@ -5198,7 +5279,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "network-error",
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -6309,7 +6393,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/executions/:executionId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6319,8 +6403,7 @@
         {
           "name": "authEnforced",
           "passed": true,
-          "detail": "P1 com erro de rede",
-          "notEvaluated": true
+          "detail": "anônimo rejeitado com 401"
         },
         {
           "name": "classificationEnforced",
@@ -6334,7 +6417,10 @@
         }
       ],
       "probes": {
-        "p1": "network-error",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": {
           "status": 403,
           "notFoundFallback": false
@@ -6385,7 +6471,7 @@
     },
     {
       "id": "api:GET:/api/qa-waves/governance",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -6400,7 +6486,8 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+          "detail": "P2 com erro de rede",
+          "notEvaluated": true
         },
         {
           "name": "developmentReachable",
@@ -6413,10 +6500,7 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 403,
-          "notFoundFallback": false
-        },
+        "p2": "network-error",
         "p3": {
           "status": 200,
           "notFoundFallback": false
@@ -16879,6 +16963,78 @@
       }
     },
     {
+      "id": "api:POST:/api/lro/:id/feedback",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/lro/:id/transition",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/lro/feedback/:requestId/respond",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/api/market-discovery/runs",
       "state": "VALIDATED",
       "assertions": [
@@ -26000,10 +26156,10 @@
       }
     }
   ],
-  "runId": "rap-governed-20261102162732564-b5cfae28",
-  "sourceFingerprint": "68b2804492d5bf2d9b5e02a86ba0dd1f8846917384d13b61d18ab7fad7dce0c4",
-  "sourceCommit": "d21a66196f3012440f9c16e402353c94bc44bf53",
-  "sourceTree": "127c03e4ef97919c9d67965317c55522a7e45c2d",
+  "runId": "rap-governed-20261102232414231-478234b9",
+  "sourceFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "sourceCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
+  "sourceTree": "17507ada838d6865608fc34f8dcfb43620628aff",
   "artifactType": "api-surface-report",
   "artifactVersion": "1.0.0"
 }
