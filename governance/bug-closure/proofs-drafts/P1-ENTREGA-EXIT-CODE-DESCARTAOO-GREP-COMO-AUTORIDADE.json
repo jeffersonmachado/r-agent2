@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "6114d16d-f995-45f4-9b69-bc23df5309b2",
+  "transitionId": "e0644859-d230-4987-9327-73e030dcedf1",
   "defectId": "P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/deliveryVerification.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/deliveryVerification.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:47:08.629Z",
-      "finishedAt": "2026-11-02T23:47:15.154Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
-      "outputSha256": "622163cad112459bd3175e28efcebdb2fcfcd01535f9a2839a8c565377463a98"
+      "startedAt": "2026-11-03T10:39:03.133Z",
+      "finishedAt": "2026-11-03T10:39:07.127Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P1-ENTREGA-EXIT-CODE-DESCARTAOO-GREP-COMO-AUTORIDADE.log",
+      "outputSha256": "738aba4c1d6ce375c04865e534faea9f9383da1e4ca3749447a88d7be8eeffc2"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:47:15.161Z",
-  "proofHash": "fa39f817cb1bb9677d7519aeb3d6ea4e94f21821167e8ce06da6419632426991"
+  "createdAt": "2026-11-03T10:39:07.134Z",
+  "proofHash": "6ea9a68f57fad36b25b44270c5020d3479e88a169aa62c6a8c52d8303bebc60c"
 }

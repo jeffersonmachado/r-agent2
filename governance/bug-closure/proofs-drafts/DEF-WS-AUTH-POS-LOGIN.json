@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "d963cdea-ba0c-4316-8c56-233d87030848",
+  "transitionId": "7281bfab-bd34-4da0-aafe-f789a5c4a6ed",
   "defectId": "DEF-WS-AUTH-POS-LOGIN",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "frontend/src/context/__tests__/WebSocketContext.loginAuth.test.jsx"
   ],
@@ -18,10 +18,10 @@
       "command": "npm --prefix frontend run test -- src/context/__tests__/WebSocketContext.loginAuth.test.jsx",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:40:31.138Z",
-      "finishedAt": "2026-11-02T23:40:39.684Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/DEF-WS-AUTH-POS-LOGIN.log",
-      "outputSha256": "dba3defbbf02bed47a82e4ee078ad12f0a7bcfc6a372cc2e7f989adfb64316cb"
+      "startedAt": "2026-11-03T10:31:55.813Z",
+      "finishedAt": "2026-11-03T10:32:06.451Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/DEF-WS-AUTH-POS-LOGIN.log",
+      "outputSha256": "931d56966b8a8d2f968e5baa2bd155c64d9003bf9d512639fd1f701d119f9dab"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:40:39.690Z",
-  "proofHash": "74c7f4e2f9cf756577282e0010bd23aea2b53ff3a9d39091e1c8f84babdebf04"
+  "createdAt": "2026-11-03T10:32:06.459Z",
+  "proofHash": "335cfe360e4232a46b9c535f1824efcdb8723aeb58c86fdf101b6fdfee61474e"
 }

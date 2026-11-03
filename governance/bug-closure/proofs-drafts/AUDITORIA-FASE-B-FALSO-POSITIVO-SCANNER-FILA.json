@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "df5b4274-a384-41ba-ba43-a3e0893e1cc4",
+  "transitionId": "5b532848-8b8c-45a3-818e-28f751d4cb4a",
   "defectId": "AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/jsonPersistenceNoPhantomWrite.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:53:00.079Z",
-      "finishedAt": "2026-11-02T23:53:03.360Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
-      "outputSha256": "a7933eefd984a6cfc2db47b6cc0312b32807d3eb0be12355344ee7046f907a03"
+      "startedAt": "2026-11-03T10:45:08.724Z",
+      "finishedAt": "2026-11-03T10:45:13.944Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/AUDITORIA-FASE-B-FALSO-POSITIVO-SCANNER-FILA.log",
+      "outputSha256": "60c010e458258bc9804f73e2ea9a11802e89a38bbf6cff64dd29f861785ab427"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:53:03.367Z",
-  "proofHash": "e6541e92b7b435a5924900f24dc8c1424c85e3b63eb934e56fb58116842df9e3"
+  "createdAt": "2026-11-03T10:45:13.951Z",
+  "proofHash": "0c5c6a5e61071dac1184aebd650d685328fd7f5c887c23225076faa7e8bfe3d7"
 }

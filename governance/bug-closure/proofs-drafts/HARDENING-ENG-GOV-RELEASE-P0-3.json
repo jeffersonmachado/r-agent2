@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "95fc2b2a-aafb-4475-acbf-7550e89038c6",
+  "transitionId": "566e4cc5-0aff-400e-99ab-7c7153e2abd3",
   "defectId": "HARDENING-ENG-GOV-RELEASE-P0-3",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/sealPhaseOrder.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/sealPhaseOrder.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:34:25.627Z",
-      "finishedAt": "2026-11-02T23:34:28.596Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-P0-3.log",
-      "outputSha256": "c6006404d49c7f491eabc76bfb30ee5c86fc1d367827169c02b1cbcccd2f1144"
+      "startedAt": "2026-11-03T10:16:28.155Z",
+      "finishedAt": "2026-11-03T10:16:32.361Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/HARDENING-ENG-GOV-RELEASE-P0-3.log",
+      "outputSha256": "8e9796b932faabe58c02efcf57ab97aa82ef4d9037a5f0ca87bce6bfd8d5695d"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T00:18:10.301Z",
+    "at": "2026-11-03T11:10:47.699Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:34:28.603Z",
-  "proofHash": "dac22bf3631f5d56c96179de66f1abc18940fd8bc973aa48fc8684727411b1b9"
+  "createdAt": "2026-11-03T10:16:32.369Z",
+  "proofHash": "a1cc17e7466fe872171f9bfcbf8ecb5b9a32b575dabc71774bd3a9dc7015c6fd"
 }

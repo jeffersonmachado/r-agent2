@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "393d7c20-e2d6-4e33-be5a-0533af8cd3c7",
+  "transitionId": "9a54d2dd-7a63-4238-a9af-1cae4f7372af",
   "defectId": "P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT",
   "severityBefore": "P0",
   "severityAfter": "P0",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/producerLineageIdentity.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/producerLineageIdentity.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:36:39.521Z",
-      "finishedAt": "2026-11-02T23:36:42.985Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
-      "outputSha256": "82eaede5478516a55c25d60b476089224e816790e6d8911362699107d0831e9f"
+      "startedAt": "2026-11-03T10:18:57.326Z",
+      "finishedAt": "2026-11-03T10:19:01.422Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P0-PRODUTORES-GRAVAM-LINEAGE-SEM-SOURCECOMMIT.log",
+      "outputSha256": "5c03856520ac4a093aae18aae002efc4891743622d784e655fd3d5fc5c7235e5"
     }
   ],
   "negativeEvidence": [
@@ -63,7 +63,7 @@
   "humanAuthorization": {
     "channel": "VSCODE_AGENT",
     "by": "platform-owner:jeffersonmachado",
-    "at": "2026-11-03T00:18:10.301Z",
+    "at": "2026-11-03T11:10:47.699Z",
     "ref": "session:e92510ac-0f54-41c6-bb85-90f42042999c",
     "agentSession": "e92510ac-0f54-41c6-bb85-90f42042999c"
   },
@@ -74,6 +74,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:36:42.992Z",
-  "proofHash": "2f2ec3c1446957c1f3ee71847ca53393baa07084a375071aad974b1b467332b5"
+  "createdAt": "2026-11-03T10:19:01.428Z",
+  "proofHash": "ce34baf261e6788dbac91e4a4ff692f867cf8fd56524e1ab3e0b1775a6a76782"
 }

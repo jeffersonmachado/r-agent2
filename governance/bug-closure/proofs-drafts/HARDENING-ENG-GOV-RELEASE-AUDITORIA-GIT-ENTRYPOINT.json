@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "25a6bfaa-d55a-4a42-b53c-9f8b6da86c1e",
+  "transitionId": "b8618146-ece1-4733-b96c-12dbfd16c3e9",
   "defectId": "HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/audit/auditEntrypointArtifact.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/audit/auditEntrypointArtifact.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T00:03:30.003Z",
-      "finishedAt": "2026-11-03T00:03:32.755Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
-      "outputSha256": "0eea1918bd2e28534f2c032c96f35c92ec6a2d021da9e635c4db1e48938d70b1"
+      "startedAt": "2026-11-03T10:56:16.135Z",
+      "finishedAt": "2026-11-03T10:56:20.879Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/HARDENING-ENG-GOV-RELEASE-AUDITORIA-GIT-ENTRYPOINT.log",
+      "outputSha256": "cf9157701a202b6fb8889830c1bf900977aacd07a201412a17bc898bb6841db7"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T00:03:32.762Z",
-  "proofHash": "a5dbf026b577e69e61a5872b7eb556abf4218067a2b358be0623ac8f7b916484"
+  "createdAt": "2026-11-03T10:56:20.887Z",
+  "proofHash": "7c36de27447bb9230167db32119698bf471f0922e6d67e93a89accabc0f6267d"
 }

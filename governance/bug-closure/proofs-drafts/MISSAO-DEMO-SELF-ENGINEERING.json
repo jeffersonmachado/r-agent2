@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "cc65ed8b-05f0-4db1-a3ec-8f869b9de1d2",
+  "transitionId": "0eb600e2-247f-429b-9824-7691ae98ebe3",
   "defectId": "MISSAO-DEMO-SELF-ENGINEERING",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/selfEngineeringDemonstration.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/selfEngineeringDemonstration.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T00:09:58.293Z",
-      "finishedAt": "2026-11-03T00:10:04.830Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/MISSAO-DEMO-SELF-ENGINEERING.log",
-      "outputSha256": "fff35afa7715c8a2478a77ad72be8da1f2b9d9fabf89891bf4f1c7324d8449cd"
+      "startedAt": "2026-11-03T11:03:07.337Z",
+      "finishedAt": "2026-11-03T11:03:11.749Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/MISSAO-DEMO-SELF-ENGINEERING.log",
+      "outputSha256": "719962907efb0d31e5414c1d2f615d7e9a81cd9cbae4a69688c583462fe355c8"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T00:10:04.839Z",
-  "proofHash": "e3b02cabef5d1dcf0b78128439ff89d9421aa990c505519fc8cca1d9118e0f7e"
+  "createdAt": "2026-11-03T11:03:11.757Z",
+  "proofHash": "8fbcbcceb306f6becbc480e894a21feaf25085311b2a86a3c9605160973077ac"
 }

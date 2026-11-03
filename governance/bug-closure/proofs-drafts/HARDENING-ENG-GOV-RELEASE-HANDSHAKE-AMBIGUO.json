@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "ca86d197-81d1-4ef7-b645-c5a1c7450830",
+  "transitionId": "7b8b6362-888a-4191-981d-8221cf8f0f8c",
   "defectId": "HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:43:28.261Z",
-      "finishedAt": "2026-11-02T23:43:34.125Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
-      "outputSha256": "755886f5509e309c3072859a265b6cbb51fe69f6f4589a92bc2cf18913fcd159"
+      "startedAt": "2026-11-03T10:34:54.733Z",
+      "finishedAt": "2026-11-03T10:34:57.433Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/HARDENING-ENG-GOV-RELEASE-HANDSHAKE-AMBIGUO.log",
+      "outputSha256": "b9692148ac176a162486226ff4778281b68ea9ff7ebd5ab3c66444cb11b6967f"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:43:34.133Z",
-  "proofHash": "6f75588efcb8f36eb98f694bea8777cf5f5339ffe25812ca2b93fc3bd864bc0e"
+  "createdAt": "2026-11-03T10:34:57.443Z",
+  "proofHash": "0b5d911e411fd1e936502462d658294513ed80cdabf4e8eb3439cc4e8dc54f9c"
 }

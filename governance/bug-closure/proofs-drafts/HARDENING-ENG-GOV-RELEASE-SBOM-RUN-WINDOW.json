@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "a04af65a-8c93-4dd4-a93b-d4d93c2808d5",
+  "transitionId": "6e7a5671-41c1-43da-92b3-dbf37c013d68",
   "defectId": "HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "RESOLVED",
   "toState": "RESOLVED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/taskLeaseHandshakeParsing.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/taskLeaseHandshakeParsing.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T00:03:39.168Z",
-      "finishedAt": "2026-11-03T00:03:42.116Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
-      "outputSha256": "ece7fe63b4187c513586c2e1dcd9482f45a1f0f93435c4f806bae2f3c8f0bd41"
+      "startedAt": "2026-11-03T10:56:28.401Z",
+      "finishedAt": "2026-11-03T10:56:31.737Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/HARDENING-ENG-GOV-RELEASE-SBOM-RUN-WINDOW.log",
+      "outputSha256": "e9f02b01bbbbe9a9c5f2809db3c40cac693c3322f391c26ff625f3a84355f106"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T00:03:42.124Z",
-  "proofHash": "223a60d71fe7f66cfef60359c7e11097d83557984671c1fad789dc461ed66c29"
+  "createdAt": "2026-11-03T10:56:31.745Z",
+  "proofHash": "a8d1f792d419accd69fde0fb6ddd6c4c5141e688cb88ae527a9a30a0b6f83de0"
 }

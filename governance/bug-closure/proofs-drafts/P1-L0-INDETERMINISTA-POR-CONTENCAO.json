@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "7adf30a5-21c7-43c8-bed7-cc230b04e784",
+  "transitionId": "2a47a940-27ff-44dd-b36c-abaaf7db60d5",
   "defectId": "P1-L0-INDETERMINISTA-POR-CONTENCAO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/ciGateL0Determinism.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/ciGateL0Determinism.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:47:30.386Z",
-      "finishedAt": "2026-11-02T23:47:32.325Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
-      "outputSha256": "872b49bb669a070ba15910534228bef9997cdef9d02c1d8badaa4fda1829ddb0"
+      "startedAt": "2026-11-03T10:39:26.473Z",
+      "finishedAt": "2026-11-03T10:39:29.814Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P1-L0-INDETERMINISTA-POR-CONTENCAO.log",
+      "outputSha256": "c7b017baa342b4d78072eaff433e8338ab5cf1d6770dc5410c56b53cbce059d5"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:47:32.332Z",
-  "proofHash": "974699f278d8455fe5f7c6ac36cd122453dabb7adbf8724aed8490027431a120"
+  "createdAt": "2026-11-03T10:39:29.820Z",
+  "proofHash": "1a77ffea18372659efa3a427b873242d4f235f42d44c745ce64bf45d728d604b"
 }

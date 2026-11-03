@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "f3e22620-5193-4195-8a29-b09abdb6ba9d",
+  "transitionId": "281b75b0-b8c7-4fd1-892d-aca6bb454136",
   "defectId": "H11-ESCOPO-DIFERIDO",
   "severityBefore": "P1",
   "severityAfter": "P1",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/engineeringRouter/taskContractScope.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engineeringRouter/taskContractScope.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:42:43.672Z",
-      "finishedAt": "2026-11-02T23:42:47.798Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/H11-ESCOPO-DIFERIDO.log",
-      "outputSha256": "80b97de8097cc6f108353e3687b7d4c7d611d65a726f134d2cbea7b407fb1b4f"
+      "startedAt": "2026-11-03T10:34:11.961Z",
+      "finishedAt": "2026-11-03T10:34:15.993Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/H11-ESCOPO-DIFERIDO.log",
+      "outputSha256": "dd06d5f65ae35a683a33949f51d84d0f1b6e82f043002868c81497e5d000b95b"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:42:47.809Z",
-  "proofHash": "d9c5f2143e63da719fcedbbbc84557a8b8c05966c5c869147abbffcbc7b49a45"
+  "createdAt": "2026-11-03T10:34:16.000Z",
+  "proofHash": "ec1f6308eb411cabe76819592d5d30e9eac1166e937f647ed8a20622032053c3"
 }

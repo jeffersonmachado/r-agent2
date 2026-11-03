@@ -1,0 +1,24 @@
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/governance/ciWorkflowContract.test.js
+  P1-CI-SEM-INTEGRACAO — integração roda no pipeline, com Postgres real
+    ✓ existe job de integração declarado (110 ms)
+    ✓ o job de integração sobe serviço Postgres (não simula banco) (103 ms)
+    ✓ o comando de integração aponta para uma suíte que existe no repositório (104 ms)
+  CI-MAIN-JEST-AMBIENTE — o job principal prepara o ambiente antes de testar
+    ✓ `npm test` é executado (suíte oficial), nunca um subconjunto silencioso (102 ms)
+    ✓ bootstrap canônico e migrations vêm ANTES do `npm test` (103 ms)
+    ✓ os comandos de preparo existem no package.json (não são nomes inventados) (104 ms)
+  CI-WAVE-REFRESH-SEM-RUN-GOVERNADO — evidência de wave só nasce DENTRO de um run
+    ✓ o run governado é aberto ANTES da primeira wave (102 ms)
+    ✓ o run é fechado ao final, mesmo quando uma wave falha (`if: always()`) (103 ms)
+    ✓ o fechamento declara status, motivo e evidência (não fecha em silêncio) (103 ms)
+    ✓ as três waves rodam depois do run aberto (103 ms)
+    ✓ o ponteiro do run NÃO entra no commit (só os relatórios) e o commit usa [skip ci] (102 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.638 s, estimated 2 s
+Ran all test suites matching /tests\/unit\/governance\/ciWorkflowContract.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

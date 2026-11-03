@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "0384105e-9d19-4e23-bbc6-0a55ffd2b884",
+  "transitionId": "55951ce5-5aba-4d5d-8ad8-c8860ffb5f55",
   "defectId": "CI-MAIN-MODELDRIVEN-PROD-LIKE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/modelDrivenE2e.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/modelDrivenE2e.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:54:30.759Z",
-      "finishedAt": "2026-11-02T23:54:37.338Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/CI-MAIN-MODELDRIVEN-PROD-LIKE.log",
-      "outputSha256": "ddac47983863f5cb40ba054353fc819e52c9de271933c4cbf76fb4ff7826ad7a"
+      "startedAt": "2026-11-03T10:46:57.736Z",
+      "finishedAt": "2026-11-03T10:47:04.115Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/CI-MAIN-MODELDRIVEN-PROD-LIKE.log",
+      "outputSha256": "8f5f2f0970b0e8cb6f896301a25bf4df76f916808b974c0c81b1b311b786a199"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:54:37.345Z",
-  "proofHash": "21d455ab22384b0263a92f0fa38c5a0d0764093b9f636fbb889b3508e62af1f8"
+  "createdAt": "2026-11-03T10:47:04.124Z",
+  "proofHash": "0c08ebaf4a51e0c07c410b8f46420272c8a1791034801e1a1ce0a67a88dcd068"
 }

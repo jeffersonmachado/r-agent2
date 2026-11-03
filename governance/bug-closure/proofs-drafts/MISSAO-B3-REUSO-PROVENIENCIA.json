@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9af12f7c-9f9c-4031-809f-abf2bc7d436a",
+  "transitionId": "4ca58f6f-0d1f-4307-a931-436734ee2a21",
   "defectId": "MISSAO-B3-REUSO-PROVENIENCIA",
   "severityBefore": "P3",
   "severityAfter": "P3",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/governance/releaseSuiteRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/governance/releaseSuiteRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T00:09:39.028Z",
-      "finishedAt": "2026-11-03T00:09:48.571Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/MISSAO-B3-REUSO-PROVENIENCIA.log",
-      "outputSha256": "b87ab3ad6a52563c06f6766348278eccc1d9eef657085f5c291ad1603110fcfc"
+      "startedAt": "2026-11-03T11:02:53.187Z",
+      "finishedAt": "2026-11-03T11:03:01.701Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/MISSAO-B3-REUSO-PROVENIENCIA.log",
+      "outputSha256": "00b305738ed558f909ac0874875c172bd212a6ba44256c8a9b4642c4830764cc"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T00:09:48.579Z",
-  "proofHash": "0a93e3cdeb9fe613522f0d9c98372a3f494838318c5dfdb92cb6fb6a1e069005"
+  "createdAt": "2026-11-03T11:03:01.709Z",
+  "proofHash": "bcccdf0ef7461027b917083084d718650e2a503c3f7a3085214ae51ee294cc49"
 }

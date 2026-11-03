@@ -1,0 +1,28 @@
+[L1] alterados=1 testes=248 camadas(t/j/v)=248/0/0
+[L1] dry-run: NENHUMA suíte executada — estado NOT_EXECUTED (não é validação)
+[L1] alterados=1 testes=248 camadas(t/j/v)=248/0/0
+[L1] dry-run: NENHUMA suíte executada — estado NOT_EXECUTED (não é validação)
+[jest-global-setup] .env carregado (0 chave(s) aplicada(s); ambiente explícito vence)
+[jest-global-setup] rodando dentro de um git worktree isolado (workspace do Engineering Router) — pulando spawn do Engineering Runner (aninhamento não suportado/não necessário aqui).
+PASS tests/unit/coverage/impactRunner.test.js
+  runner L1 — separação por runner
+    ✓ testes de frontend vão para o Vitest (106 ms)
+    ✓ testes de backend/engine vão para o Jest (106 ms)
+    ✓ E2E de frontend NÃO é tratado como teste de frontend (é outro pacote) (105 ms)
+    ✓ seleção mista é dividida nos dois grupos (104 ms)
+    ✓ normaliza separadores e prefixo ./ antes de classificar (104 ms)
+    ✓ lista vazia devolve os dois grupos vazios (sem lançar) (104 ms)
+    ✓ os exit codes são estáveis e distintos (contrato com o orquestrador) (104 ms)
+  runner L1 — arquivo de teste alterado é executado
+    ✓ o próprio arquivo de teste alterado entra na seleção (110 ms)
+    ✓ e NÃO arrasta os testes que dependem do que ele importa (104 ms)
+  runner L1 — parsing de argumentos
+    ✓ aceita --files=valor sem cair no git diff (forma com igual) (626 ms)
+    ✓ aceita --files valor (forma separada) (679 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        2.541 s, estimated 6 s
+Ran all test suites matching /tests\/unit\/coverage\/impactRunner.test.js/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

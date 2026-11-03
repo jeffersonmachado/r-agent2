@@ -1,0 +1,25 @@
+{
+  "id": "P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA",
+  "severity": "P1",
+  "estadoPersistido": "VERIFIED",
+  "titulo": "Editar oportunidade criava registro novo (POST sem id) e o front lia payload cru da resposta",
+  "classe": "AGUARDA_ASSINATURA_E_ANCORA",
+  "origemDoTeste": "EVIDENCIA_DECLARADA_PELO_AUTOR",
+  "teste": "tests/unit/crmOpportunityUpdate.test.js",
+  "transicao": "VERIFIED → RESOLVED",
+  "provasAusentes": [
+    "ASSINATURA_INVALIDA"
+  ],
+  "log": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.log",
+  "draft": "governance/bug-closure/proofs-drafts/P1-CRM-EDICAO-CRIA-DUPLICATA-E-RESPOSTA-AMBIGUA.json",
+  "camposParaAssinar": 18,
+  "runId": "run-20261103101609-e015b999",
+  "identidade": {
+    "commit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+    "sourceFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
+    "inventoryFingerprint": "39003d9ea50ba5df64c09cac080101b8cfe1011e0128cbf74c0f5c426d38ce8c",
+    "hardeningQueueFingerprint": "600da24c0515b6d1d9076b2356d196463066f13ae986679cf91189d454974a22",
+    "testManifestFingerprint": "cef56a2b343afa8d4db8c3217a90356a01e1109eef8e9a7d2d5b4fd94e2cb903"
+  },
+  "artifactSha256": "45f3e7f85595e453d7167e417d3829b9f26f0212190d9125beb88f7f34dce3db"
+}

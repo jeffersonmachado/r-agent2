@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "9e23986a-1c2c-4264-9f17-77a7a587e465",
+  "transitionId": "570a7d0d-8845-48f0-9268-8ef76088d3ee",
   "defectId": "DIV-PUREZA-ENGINE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "tests/unit/engine/enginePurityPorts.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest tests/unit/engine/enginePurityPorts.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-02T23:54:54.368Z",
-      "finishedAt": "2026-11-02T23:55:00.546Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/DIV-PUREZA-ENGINE.log",
-      "outputSha256": "1a9ac8b0781f25bf4f615ef291f4b5443c3fefd1f1f9f5cc78d79ba31e907221"
+      "startedAt": "2026-11-03T10:47:15.566Z",
+      "finishedAt": "2026-11-03T10:47:20.094Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/DIV-PUREZA-ENGINE.log",
+      "outputSha256": "eedc0c8919834410adfdb2aceff913d24ed4939dd35a3f67472df14c89017f62"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-02T23:55:00.553Z",
-  "proofHash": "5e8fd3cac9c1670f40f42b2eab172c643daf1cb3a3418f2706688b6dc98def77"
+  "createdAt": "2026-11-03T10:47:20.102Z",
+  "proofHash": "c9417aaa2eaa8143abfef85af071be70badff273dcb7431ded38cec4431b9ab4"
 }

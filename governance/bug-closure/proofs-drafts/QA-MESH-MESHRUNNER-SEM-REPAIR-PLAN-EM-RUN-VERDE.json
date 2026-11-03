@@ -1,14 +1,14 @@
 {
   "artifactType": "defect-closure-proof",
   "artifactVersion": "1.0.0",
-  "transitionId": "766fd71a-3d88-4ccc-9509-80ef822d4bff",
+  "transitionId": "e4268ead-7671-44d9-a23c-c45d149cff66",
   "defectId": "QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE",
   "severityBefore": "P2",
   "severityAfter": "P2",
   "fromState": "VERIFIED",
   "toState": "VERIFIED",
-  "evaluatedCommit": "7f7840aef2b83dedaf64b6aec85e0842dd7e4708",
-  "codeFingerprint": "203f3dc5115a2b7f367695b50541b80d6132aacff3e71d4a90925f6338fa2052",
+  "evaluatedCommit": "c43614969fa7e5eafcf680b4028097b25143cd94",
+  "codeFingerprint": "330ad47b88702d47d7e21c625a1e77f0b4c8570f55d13be8e8dbc2fc64212ad6",
   "requiredTests": [
     "qa-mesh/__tests__/meshRunner.test.js"
   ],
@@ -18,10 +18,10 @@
       "command": "npx jest qa-mesh/__tests__/meshRunner.test.js --bail=1 --ci",
       "exitCode": 0,
       "signal": null,
-      "startedAt": "2026-11-03T00:06:05.945Z",
-      "finishedAt": "2026-11-03T00:06:29.172Z",
-      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261102233411-b9202e36/logs/QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE.log",
-      "outputSha256": "91c75fa0374941415255b90ba6f5f7c88c864f23694978c25a6be76d4fe3c1d7"
+      "startedAt": "2026-11-03T10:59:13.684Z",
+      "finishedAt": "2026-11-03T10:59:44.301Z",
+      "outputPath": "AI_MEMORY/evidence/bug-closure-regularization/runs/run-20261103101609-e015b999/logs/QA-MESH-MESHRUNNER-SEM-REPAIR-PLAN-EM-RUN-VERDE.log",
+      "outputSha256": "2fbcb214bb9b6c24d1acefbd3fba015e7569061c6396e10803c044166ca7141f"
     }
   ],
   "negativeEvidence": [],
@@ -43,6 +43,6 @@
     "natureza": "REGULARIZACAO_DE_FECHAMENTO_HISTORICO",
     "motivoOriginal": "FINGERPRINT_DIVERGENTE"
   },
-  "createdAt": "2026-11-03T00:06:29.181Z",
-  "proofHash": "4a543959a6fdb094bcdc45976b6d180b1a8df9479f0e3fe39aa2f94d213899c1"
+  "createdAt": "2026-11-03T10:59:44.314Z",
+  "proofHash": "23918915073d7523ad42c340d992c6aa7557dd829f0432a0d6f7a6e7503d99f1"
 }
