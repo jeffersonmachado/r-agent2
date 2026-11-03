@@ -11,10 +11,14 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_NAME="$(basename "$PROJECT_DIR")"
 SCRIPT_DIR="$PROJECT_DIR/scripts"
 source "$SCRIPT_DIR/release-payload-blocklist.sh"
-# Raiz do checkout define o prefixo que aparece em cada entrada do ZIP; o
-# normalizador da blocklist precisa saber o nome REAL (não `r-agent2` fixo),
-# senão todo asset aprovado é reprovado quando o checkout tem outro nome.
-RELEASE_PAYLOAD_ROOT_BASENAME="$PROJECT_NAME"
+# RAIZ CANÔNICA DO PAYLOAD — o ZIP tem a raiz INTERNA fixa `r-agent2/`, NÃO o
+# basename do checkout. Todo o pipeline de release (two-pass, verify-payload,
+# final-consistency-gate, envelope) referencia essa raiz canônica; empacotar de
+# um checkout com outro nome (worktree de auditoria) produzia o ZIP com raiz
+# `er-fixci/` e quebrava o passo "Saneando payload" com
+# `zip error: Nothing to do!` — medido em 2026-11-03 no PASS 4b do two-pass.
+PACKAGE_ROOT_NAME="${PACKAGE_ROOT_NAME:-r-agent2}"
+RELEASE_PAYLOAD_ROOT_BASENAME="$PACKAGE_ROOT_NAME"
 export RELEASE_PAYLOAD_ROOT_BASENAME
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 DEFAULT_OUTPUT_DIR="$PROJECT_DIR/dist"
@@ -106,10 +110,10 @@ ensure_zip_extension() {
 to_project_pattern() {
   local pattern="$1"
   local cleaned="${pattern#./}"
-  if [[ "$cleaned" == "$PROJECT_NAME/"* ]]; then
+  if [[ "$cleaned" == "$PACKAGE_ROOT_NAME/"* ]]; then
     echo "$cleaned"
   else
-    echo "${PROJECT_NAME}/${cleaned}"
+    echo "${PACKAGE_ROOT_NAME}/${cleaned}"
   fi
 }
 
@@ -174,13 +178,13 @@ if [[ -f "$ZIP_FILE" ]]; then
 fi
 
 STAGE_ROOT="$(mktemp -d -t r-agent2-zip-stage-XXXXXX)"
-STAGE_DIR="$STAGE_ROOT/$PROJECT_NAME"
+STAGE_DIR="$STAGE_ROOT/$PACKAGE_ROOT_NAME"
 cleanup() {
   rm -rf "$STAGE_ROOT"
 }
 trap cleanup EXIT
 
-echo -e "${YELLOW}Gerando ZIP deterministico de ${PROJECT_NAME}...${NC}"
+echo -e "${YELLOW}Gerando ZIP deterministico de ${PACKAGE_ROOT_NAME} (checkout: ${PROJECT_NAME})...${NC}"
 echo "Saida: $ZIP_FILE"
 
 RSYNC_EXCLUDES=(
@@ -367,7 +371,7 @@ release_payload_remove_forbidden_from_tree "$STAGE_DIR"
 
 (
   cd "$STAGE_ROOT"
-  ZIP_CMD=(zip -qry "$ZIP_FILE" "$PROJECT_NAME")
+  ZIP_CMD=(zip -qry "$ZIP_FILE" "$PACKAGE_ROOT_NAME")
   if [[ ${#CUSTOM_INCLUDES[@]} -gt 0 ]]; then
     ZIP_CMD+=(-i "${CUSTOM_INCLUDES[@]}")
   fi

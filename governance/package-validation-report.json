@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-11-03T09:45:08.435Z",
-  "zipPath": "/opt/results/ria/er-fixci/dist/r-agent2-20261103-062854.zip",
-  "zipName": "r-agent2-20261103-062854.zip",
-  "zipSha256": "d77ae657b91ecd071b91c62ca766e0b28a33539360ef6e78a952eb03823e9e3f",
+  "generatedAt": "2026-11-03T10:09:22.536Z",
+  "zipPath": "/opt/results/ria/er-fixci/dist/r-agent2-20261103-064958.zip",
+  "zipName": "r-agent2-20261103-064958.zip",
+  "zipSha256": "02d87b6dccdf2d3fd3964849f49af7921869a6a4e155d931c655fc992abb248b",
   "payloadCentric": false,
   "envelopePath": null,
-  "selectionMode": "explicit",
+  "selectionMode": "audited",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/er-fixci/dist/r-agent2-20261103-062854.manifest.json",
+  "manifestPath": "/opt/results/ria/er-fixci/dist/r-agent2-20261103-064958.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -44,46 +44,14 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
-  "entryCount": 12597,
-  "missingEntries": [
-    "qa/smoke-evidence.json",
-    "qa/l01-physical-queue-evidence.json",
-    "qa/l02-ura-publish-rollback-evidence.json",
-    "qa/l03-pbx-voice-tts-asr-evidence.json",
-    "qa/l04-pbx-call-events-runtime-evidence.json",
-    "qa/l05-chatpro-omnichannel-evidence.json"
-  ],
-  "missingEntryCodes": [
-    {
-      "entry": "qa/smoke-evidence.json",
-      "code": "PROOF_ENTRY_MISSING"
-    },
-    {
-      "entry": "qa/l01-physical-queue-evidence.json",
-      "code": "PROOF_ENTRY_MISSING"
-    },
-    {
-      "entry": "qa/l02-ura-publish-rollback-evidence.json",
-      "code": "PROOF_ENTRY_MISSING"
-    },
-    {
-      "entry": "qa/l03-pbx-voice-tts-asr-evidence.json",
-      "code": "PROOF_ENTRY_MISSING"
-    },
-    {
-      "entry": "qa/l04-pbx-call-events-runtime-evidence.json",
-      "code": "PROOF_ENTRY_MISSING"
-    },
-    {
-      "entry": "qa/l05-chatpro-omnichannel-evidence.json",
-      "code": "PROOF_ENTRY_MISSING"
-    }
-  ],
-  "ok": false,
+  "entryCount": 12607,
+  "missingEntries": [],
+  "missingEntryCodes": [],
+  "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20261103-062854.zip",
-    "sha256": "d77ae657b91ecd071b91c62ca766e0b28a33539360ef6e78a952eb03823e9e3f",
+    "boundTo": "r-agent2-20261103-064958.zip",
+    "sha256": "02d87b6dccdf2d3fd3964849f49af7921869a6a4e155d931c655fc992abb248b",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
@@ -100,10 +68,10 @@
   "testPlanHash": null,
   "testResultHash": null,
   "evidenceManifestHash": null,
-  "startedAt": "2026-11-03T09:45:07.154Z",
-  "finishedAt": "2026-11-03T09:45:08.437Z",
-  "producer": "governance/package-validator.js",
-  "gitCommit": "fffa00997e277257c8d918f1a48a6effe23441b1",
-  "gitTree": "e5d8a9163e3b440547d4eb7011c974860ef08888",
+  "startedAt": "2026-11-03T10:08:41.869Z",
+  "finishedAt": "2026-11-03T10:09:22.536Z",
+  "producer": "tools/system/platform-readiness.js",
+  "gitCommit": "d3c3d1451e096fef28bb9125b78e6fe30edf94a0",
+  "gitTree": "4604db2b4bc1d45375498a22cd639a6ab678b5f0",
   "blockingFindings": []
 }
